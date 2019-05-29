@@ -20,11 +20,11 @@
  * @author Robert Lion Gottwald
  */
 
-#include "scip/symmetry.h"
-#include "scip/scip.h"
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/symmetry.h"
+#include "scip/scip.h"
+#include "scip/misc.h"
 
 /** compute non-trivial orbits of symmetry group
  *
@@ -513,6 +513,208 @@ SCIP_RETCODE SCIPextendSubOrbitope(
       *infeasible = TRUE;
    else if ( nintersections == nrows )
       *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
+/** compute components of symmetry group */
+SCIP_RETCODE SCIPcomputeComponents(
+   SCIP*                 scip,               /**< SCIP instance */
+   int**                 perms,              /**< permutation generators as
+                                              *   (either nperms x npermvars or npermvars x nperms) matrix */
+   int                   nperms,             /**< number of permutations */
+   SCIP_VAR**            permvars,           /**< variables on which permutations act */
+   int                   npermvars,          /**< number of variables for permutations */
+   SCIP_Bool             transposed,         /**< transposed permutation generators as (npermvars x nperms) matrix */
+   int**                 components,         /**< array containing the indices of permutations sorted by components */
+   int**                 componentbegins,    /**< array containing in i-th position the first position of
+                                              *   component i in components array */
+   int**                 vartocomponent,     /**< array containing for each permvar the index of the component it is
+                                              *   contained in (-1 if not affected) */
+   SCIP_Shortbool**      componentblocked,   /**< array to store whether a component is blocked to be considered by
+                                              *   further symmetry handling techniques */
+   int*                  ncomponents         /**< pointer to store number of components of symmetry group */
+   )
+{
+   SCIP_DISJOINTSET* componentstovar = NULL;
+   int* permtovarcomp;
+   int* permtocomponent;
+   int p;
+   int i;
+   int idx;
+
+   assert( scip != NULL );
+   assert( permvars != NULL );
+   assert( npermvars > 0 );
+   assert( perms != NULL );
+   assert( components != NULL );
+   assert( componentbegins != NULL );
+   assert( vartocomponent != NULL );
+   assert( componentblocked != NULL );
+   assert( ncomponents != NULL );
+
+   if ( nperms <= 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPdisjointsetCreate(&componentstovar, SCIPblkmem(scip), npermvars) );
+   *ncomponents = npermvars;
+
+   /* init array that stores for each permutation the representative of its affected variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &permtovarcomp, nperms) );
+   for (p = 0; p < nperms; ++p)
+      permtovarcomp[p] = -1;
+
+   /* find permutation components and store for each variable an affecting permutation (or -1)  */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, vartocomponent, npermvars) );
+   for (i = 0; i < npermvars; ++i)
+   {
+      (*vartocomponent)[i] = -1;
+
+      for (p = 0; p < nperms; ++p)
+      {
+         int img;
+
+         img = transposed ? perms[i][p] : perms[p][i];
+
+         /* perm p affects i -> possibly merge var components */
+         if ( img != i )
+         {
+            int component1;
+            int component2;
+            int representative;
+
+            component1 = SCIPdisjointsetFind(componentstovar, i);
+            component2 = SCIPdisjointsetFind(componentstovar, img);
+            (*vartocomponent)[i] = p;
+            (*vartocomponent)[img] = p;
+
+            /* ensure component1 <= component2 */
+            if ( component2 < component1 )
+            {
+               int swap;
+
+               swap = component1;
+               component1 = component2;
+               component2 = swap;
+            }
+
+            /* init permtovarcomp[p] to component of first moved variable or update the value */
+            if ( permtovarcomp[p] == -1 )
+            {
+               permtovarcomp[p] = component1;
+               representative = component1;
+            }
+            else
+            {
+               permtovarcomp[p] = SCIPdisjointsetFind(componentstovar, permtovarcomp[p]);
+               representative = permtovarcomp[p];
+            }
+
+            /* merge both components if they differ */
+            if ( component1 != component2 )
+            {
+               SCIPdisjointsetUnion(componentstovar, component1, component2, TRUE);
+               --(*ncomponents);
+            }
+
+            /* possibly merge new component and permvartocom[p] and ensure the latter
+             * to have the smallest value */
+            if ( representative != component1 && representative != component2 )
+            {
+               if ( representative > component1 )
+               {
+                  SCIPdisjointsetUnion(componentstovar, component1, representative, TRUE);
+                  permtovarcomp[p] = component1;
+               }
+               else
+                  SCIPdisjointsetUnion(componentstovar, representative, component1, TRUE);
+               --(*ncomponents);
+            }
+            else if ( representative > component1 )
+            {
+               assert( representative == component2 );
+               permtovarcomp[p] = component1;
+            }
+         }
+      }
+
+      /* reduce number of components by singletons */
+      if ( (*vartocomponent)[i] == -1 )
+         --(*ncomponents);
+   }
+   assert( *ncomponents > 0 );
+
+   /* update permvartocomp array to final variable representatives */
+   for (p = 0; p < nperms; ++p)
+      permtovarcomp[p] = SCIPdisjointsetFind(componentstovar, permtovarcomp[p]);
+
+   /* init components array by trivial natural order of permutations */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, components, nperms) );
+   for (p = 0; p < nperms; ++p)
+      (*components)[p] = p;
+
+   /* get correct order of components array */
+   SCIPsortIntInt(permtovarcomp, *components, nperms);
+
+   /* determine componentbegins and store components for each permutation */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, componentbegins, *ncomponents + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &permtocomponent, nperms) );
+
+   (*componentbegins)[0] = 0;
+   permtocomponent[(*components)[0]] = 0;
+   idx = 0;
+
+   for (p = 1; p < nperms; ++p)
+   {
+      if ( permtovarcomp[p] > permtovarcomp[p - 1] )
+         (*componentbegins)[++idx] = p;
+
+      assert( (*components)[p] >= 0 );
+      assert( (*components)[p] < nperms );
+      permtocomponent[(*components)[p]] = idx;
+   }
+   assert( *ncomponents == idx + 1 );
+   (*componentbegins)[++idx] = nperms;
+
+   /* determine vartocomponent */
+   for (i = 0; i < npermvars; ++i)
+   {
+      int permidx;
+      permidx = (*vartocomponent)[i];
+      assert( -1 <= permidx && permidx < nperms );
+
+      if ( permidx != -1 )
+      {
+         assert( 0 <= permtocomponent[permidx] );
+         assert( permtocomponent[permidx] < *ncomponents );
+
+         (*vartocomponent)[i] = permtocomponent[permidx];
+      }
+   }
+
+   /* init componentblocked */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, componentblocked, *ncomponents) );
+   for (i = 0; i < *ncomponents; ++i)
+      (*componentblocked)[i] = FALSE;
+
+   SCIPfreeBufferArray(scip, &permtocomponent);
+   SCIPfreeBufferArray(scip, &permtovarcomp);
+   SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
+
+
+#if SCIP_OUTPUT
+   printf("number of components: %d\n", propdata->ncomponents);
+   for (i = 0; i < *ncomponents; ++i)
+   {
+      printf("Component %d contains the following permutations:\n\t", i);
+      for (p = (*componentbegins)[i]; p < (*componentbegins)[i + 1]; ++p)
+      {
+         printf("%d, ", (*components)[p]);
+      }
+      printf("\n");
+   }
+#endif
 
    return SCIP_OKAY;
 }

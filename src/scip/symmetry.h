@@ -106,6 +106,7 @@ SCIP_RETCODE SCIPgetPermProperties(
 
 
 /** determine whether binary variable is affected (and potentially compute number of affected variables) */
+SCIP_EXPORT
 SCIP_RETCODE SCIPdetermineBinvarAffected(
    SCIP*                 scip,               /**< SCIP instance */
    int**                 perms,              /**< permutations */
@@ -116,6 +117,26 @@ SCIP_RETCODE SCIPdetermineBinvarAffected(
    int*                  naffected           /**< pointer to store number of affected vars */
    );
 
+
+/** compute components of symmetry group */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeComponents(
+   SCIP*                 scip,               /**< SCIP instance */
+   int**                 perms,              /**< permutation generators as
+                                              *   (either nperms x npermvars or npermvars x nperms) matrix */
+   int                   nperms,             /**< number of permutations */
+   SCIP_VAR**            permvars,           /**< variables on which permutations act */
+   int                   npermvars,          /**< number of variables for permutations */
+   SCIP_Bool             transposed,         /**< transposed permutation generators as (npermvars x nperms) matrix */
+   int**                 components,         /**< array containing the indices of permutations sorted by components */
+   int**                 componentbegins,    /**< array containing in i-th position the first position of
+                                              *   component i in components array */
+   int**                 vartocomponent,     /**< array containing for each permvar the index of the component it is
+                                              *   contained in (-1 if not affected) */
+   SCIP_Shortbool**      componentblocked,   /**< array to store whether a component is blocked to be considered by
+                                              *   further symmetry handling techniques */
+   int*                  ncomponents         /**< pointer to store number of components of symmetry group */
+   );
 
 /** Given a matrix with nrows and \#perms + 1 columns whose first nfilledcols columns contain entries of variables, this routine
  *  checks whether the 2-cycles of perm intersect each row of column coltoextend in exactly one position. In this case,

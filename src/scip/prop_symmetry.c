@@ -1525,220 +1525,6 @@ SCIP_RETCODE computeSymmetryGroup(
 }
 
 
-/** compute components of symmetry group */
-static
-SCIP_RETCODE computeComponents(
-   SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROPDATA*        propdata            /**< propagator data */
-   )
-{
-   SCIP_DISJOINTSET* componentstovar = NULL;
-   int** perms;
-   int** permstrans;
-   int* permtovarcomp;
-   int* permtocomponent;
-   int nperms;
-   int npermvars;
-   int ncomponents;
-   int p;
-   int i;
-   int idx;
-
-   assert( scip != NULL );
-   assert( propdata != NULL );
-
-   assert( propdata->ncomponents == -1 );
-   assert( propdata->components == NULL );
-   assert( propdata->componentbegins == NULL );
-   assert( propdata->vartocomponent == NULL );
-   assert( propdata->componentblocked == NULL );
-
-#if SCIP_OUTPUT_COMPONENT
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
-#endif
-
-   /* get data */
-   nperms = propdata->nperms;
-
-   if ( nperms <= 0 )
-      return SCIP_OKAY;
-
-   npermvars = propdata->npermvars;
-   perms = propdata->perms;
-   permstrans = propdata->permstrans;
-   assert( npermvars > 0 );
-   assert( (! ISORBITALFIXINGACTIVE(propdata->usesymmetry) && perms != NULL)
-      || (ISORBITALFIXINGACTIVE(propdata->usesymmetry) && permstrans != NULL) );
-
-   SCIP_CALL( SCIPdisjointsetCreate(&componentstovar, SCIPblkmem(scip), npermvars) );
-   ncomponents = npermvars;
-
-   /* init array that stores for each permutation the representative of its affected variables */
-   SCIP_CALL( SCIPallocBufferArray(scip, &permtovarcomp, nperms) );
-   for (p = 0; p < nperms; ++p)
-      permtovarcomp[p] = -1;
-
-   /* find permutation components and store for each variable an affecting permutation (or -1)  */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->vartocomponent, npermvars) );
-   for (i = 0; i < npermvars; ++i)
-   {
-      propdata->vartocomponent[i] = -1;
-
-      for (p = 0; p < nperms; ++p)
-      {
-         int img;
-
-         img = ISORBITALFIXINGACTIVE(propdata->usesymmetry) ? permstrans[i][p] : perms[p][i]; /*lint !e613*/
-
-         /* perm p affects i -> possibly merge var components */
-         if ( img != i )
-         {
-            int component1;
-            int component2;
-            int representative;
-
-            component1 = SCIPdisjointsetFind(componentstovar, i);
-            component2 = SCIPdisjointsetFind(componentstovar, img);
-            propdata->vartocomponent[i] = p;
-            propdata->vartocomponent[img] = p;
-
-            /* ensure component1 <= component2 */
-            if ( component2 < component1 )
-            {
-               int swap;
-
-               swap = component1;
-               component1 = component2;
-               component2 = swap;
-            }
-
-            /* init permtovarcomp[p] to component of first moved variable or update the value */
-            if ( permtovarcomp[p] == -1 )
-            {
-               permtovarcomp[p] = component1;
-               representative = component1;
-            }
-            else
-            {
-               permtovarcomp[p] = SCIPdisjointsetFind(componentstovar, permtovarcomp[p]);
-               representative = permtovarcomp[p];
-            }
-
-            /* merge both components if they differ */
-            if ( component1 != component2 )
-            {
-               SCIPdisjointsetUnion(componentstovar, component1, component2, TRUE);
-               --ncomponents;
-            }
-
-            /* possibly merge new component and permvartocom[p] and ensure the latter
-             * to have the smallest value */
-            if ( representative != component1 && representative != component2 )
-            {
-               if ( representative > component1 )
-               {
-                  SCIPdisjointsetUnion(componentstovar, component1, representative, TRUE);
-                  permtovarcomp[p] = component1;
-               }
-               else
-                  SCIPdisjointsetUnion(componentstovar, representative, component1, TRUE);
-               --ncomponents;
-            }
-            else if ( representative > component1 )
-            {
-               assert( representative == component2 );
-               permtovarcomp[p] = component1;
-            }
-         }
-      }
-
-      /* reduce number of components by singletons */
-      if ( propdata->vartocomponent[i] == -1 )
-         --ncomponents;
-      else if ( SCIPvarIsBinary(propdata->permvars[i]) )
-         propdata->binvaraffected = TRUE;
-   }
-   assert( ncomponents > 0 );
-   propdata->ncomponents = ncomponents;
-
-   /* update permvartocomp array to final variable representatives */
-   for (p = 0; p < nperms; ++p)
-      permtovarcomp[p] = SCIPdisjointsetFind(componentstovar, permtovarcomp[p]);
-
-   /* init components array by trivial natural order of permutations */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->components, nperms) );
-   for (p = 0; p < nperms; ++p)
-      propdata->components[p] = p;
-
-   /* get correct order of components array */
-   SCIPsortIntInt(permtovarcomp, propdata->components, nperms);
-
-   /* determine componentbegins and store components for each permutation */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->componentbegins, ncomponents + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &permtocomponent, nperms) );
-
-   propdata->componentbegins[0] = 0;
-   permtocomponent[propdata->components[0]] = 0;
-   idx = 0;
-
-   for (p = 1; p < nperms; ++p)
-   {
-      if ( permtovarcomp[p] > permtovarcomp[p - 1] )
-         propdata->componentbegins[++idx] = p;
-
-      assert( propdata->components[p] >= 0 );
-      assert( propdata->components[p] < nperms );
-      permtocomponent[propdata->components[p]] = idx;
-   }
-   assert( ncomponents == idx + 1 );
-   propdata->componentbegins[++idx] = nperms;
-
-   /* determine vartocomponent */
-   for (i = 0; i < npermvars; ++i)
-   {
-      int permidx;
-      permidx = propdata->vartocomponent[i];
-      assert( -1 <= permidx && permidx < nperms );
-
-      if ( permidx != -1 )
-      {
-         assert( 0 <= permtocomponent[permidx] );
-         assert( permtocomponent[permidx] < ncomponents );
-
-         propdata->vartocomponent[i] = permtocomponent[permidx];
-      }
-   }
-
-   /* init componentblocked */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->componentblocked, ncomponents) );
-   for (i = 0; i < ncomponents; ++i)
-      propdata->componentblocked[i] = FALSE;
-
-   SCIPfreeBufferArray(scip, &permtocomponent);
-   SCIPfreeBufferArray(scip, &permtovarcomp);
-   SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
-
-#if SCIP_OUTPUT_COMPONENT
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation finished\n", SCIPgetSolvingTime(scip));
-#endif
-
-#if SCIP_OUTPUT
-   printf("number of components: %d\n", propdata->ncomponents);
-   for (i = 0; i < ncomponents; ++i)
-   {
-      printf("Component %d contains the following permutations:\n\t", i);
-      for (p = propdata->componentbegins[i]; p < propdata->componentbegins[i + 1]; ++p)
-      {
-         printf("%d, ", propdata->components[p]);
-      }
-      printf("\n");
-   }
-#endif
-
-   return SCIP_OKAY;
-}
-
-
 /** determine symmetry */
 static
 SCIP_RETCODE determineSymmetry(
@@ -3753,7 +3539,26 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
       /* components might have been already computed if orbitopes and orbital fixing are both used */
       if ( propdata->ncomponents == -1 )
       {
-         SCIP_CALL( computeComponents(scip, propdata) );
+#if SCIP_OUTPUT_COMPONENT
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
+#endif
+
+         if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
+         {
+            SCIP_CALL( SCIPcomputeComponents(scip, propdata->permstrans, propdata->nperms, propdata->permvars,
+                  propdata->npermvars, TRUE, &propdata->components, &propdata->componentbegins,
+                  &propdata->vartocomponent, &propdata->componentblocked, &propdata->ncomponents) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcomputeComponents(scip, propdata->perms, propdata->nperms, propdata->permvars,
+                  propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
+                  &propdata->vartocomponent, &propdata->componentblocked, &propdata->ncomponents) );
+         }
+
+#if SCIP_OUTPUT_COMPONENT
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation finished\n", SCIPgetSolvingTime(scip));
+#endif
       }
 
       if ( components != NULL )
