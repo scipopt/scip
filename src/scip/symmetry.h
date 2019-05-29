@@ -70,7 +70,7 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
  *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
  */
 SCIP_EXPORT
-SCIP_RETCODE computeGroupOrbitsFilter(
+SCIP_RETCODE SCIPcomputeGroupOrbitsFilter(
    SCIP*                 scip,               /**< SCIP instance */
    int                   npermvars,          /**< length of a permutation array */
    int**                 permstrans,         /**< transposed matrix containing in each column a
@@ -95,7 +95,7 @@ SCIP_RETCODE computeGroupOrbitsFilter(
 
 /** check whether a permutation is a composition of 2-cycles of binary variables and in this case determines the number of 2-cycles */
 SCIP_EXPORT
-SCIP_RETCODE getPermProperties(
+SCIP_RETCODE SCIPgetPermProperties(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< array of variables perm is acting on */
    int                   nvars,              /**< number of variables */
@@ -125,7 +125,7 @@ SCIP_RETCODE SCIPdetermineBinvarAffected(
  *  @pre perm has nrows many 2-cycles
  */
 SCIP_EXPORT
-SCIP_RETCODE extendSubOrbitope(
+SCIP_RETCODE SCIPextendSubOrbitope(
    int**                 suborbitope,        /**< matrix containing suborbitope entries */
    int                   nrows,              /**< number of rows of suborbitope */
    int                   nfilledcols,        /**< number of columns of suborbitope which are filled with entries */
@@ -140,7 +140,7 @@ SCIP_RETCODE extendSubOrbitope(
 
 /** generate variable matrix for orbitope constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE generateOrbitopeVarsMatrix(
+SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    SCIP_VAR****          vars,               /**< pointer to matrix of orbitope variables */
    int                   nrows,              /**< number of rows of orbitope */
    int                   ncols,              /**< number of columns of orbitope */

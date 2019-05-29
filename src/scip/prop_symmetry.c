@@ -1976,7 +1976,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_Bool allvarsbinary = TRUE;
          int ntwocyclesperm = 0;
 
-         SCIP_CALL( getPermProperties(perms[components[j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
+         SCIP_CALL( SCIPgetPermProperties(perms[components[j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
 
          /* if we are checking the first permutation */
          if ( ntwocyclescomp == INT_MAX )
@@ -2063,7 +2063,7 @@ SCIP_RETCODE detectOrbitopes(
          if ( usedperm[j] )
             continue;
 
-         SCIP_CALL( extendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
+         SCIP_CALL( SCIPextendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
                perms[components[componentbegins[i] + j]], TRUE, &nusedelems, &success, &infeasible) );
 
          if ( infeasible )
@@ -2096,7 +2096,7 @@ SCIP_RETCODE detectOrbitopes(
          if ( usedperm[j] )
             continue;
 
-         SCIP_CALL( extendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
+         SCIP_CALL( SCIPextendSubOrbitope(orbitopevaridx, ntwocyclescomp, nfilledcols, coltoextend,
                perms[components[componentbegins[i] + j]], FALSE, &nusedelems, &success, &infeasible) );
 
          if ( infeasible )
@@ -2130,7 +2130,7 @@ SCIP_RETCODE detectOrbitopes(
 
       /* prepare variable matrix (reorder columns of orbitopevaridx) */
       infeasibleorbitope = FALSE;
-      SCIP_CALL( generateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent + 1, permvars, npermvars,
+      SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent + 1, permvars, npermvars,
             orbitopevaridx, columnorder, nusedelems, &infeasibleorbitope) );
 
       if ( ! infeasibleorbitope )
@@ -2994,7 +2994,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( computeGroupOrbitsFilter(scip, npermvars, permstrans, nperms, inactiveperms,
+   SCIP_CALL( SCIPcomputeGroupOrbitsFilter(scip, npermvars, permstrans, nperms, inactiveperms,
          orbits, orbitbegins, &norbits, components, componentbegins, vartocomponent, propdata->componentblocked, ncomponents, propdata->nmovedpermvars) );
 
    if ( norbits > 0 )
