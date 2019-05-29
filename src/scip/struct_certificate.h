@@ -43,14 +43,30 @@ struct SCIP_CertificateBound
    SCIP_Bool             isupper;            /**< is it the upper bound? */
 };
 
+struct SCIP_Certnodedata
+{
+   SCIP_Longint          assumptionindex_self;/**< Line Index where assumption is printed */
+   SCIP_Longint          assumptionindex_left;/**< Line Index of left branch assumption */
+   SCIP_Longint          derindex_left;      /**< Line Index of derivation assuming assumption left */
+   SCIP_Rational*        derbound_left;      /**< Bound of left derivation */
+   SCIP_Longint          assumptionindex_right;/**< Line Index of right branch assumption */
+   SCIP_Longint          derindex_right;     /**< Line Index of derivation assuming assumption right */
+   SCIP_Rational*        derbound_right;     /**< Bound of right derivation */
+   unsigned int          leftfilled:1;       /**< Is the left node filled ? */
+   unsigned int          leftinfeas:1;       /**< Is the left node infeasible ? */
+   unsigned int          rightfilled:1;      /**< Is the node right filled ? */
+   unsigned int          rightinfeas:1;      /**< Is the node right infeasible ? */
+};
+
 /** certificate data structure */
 struct SCIP_Certificate
 {
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler to use */
    SCIP_HASHTABLE*       varboundtable;      /**< hash table for mapping variable bounds to line index in file */
-   SCIP_CERTIFICATEBOUND** boundvals;          /**< array to store rationals in varboundtable to avoid memory leak */
-   int boundvalsize;
-   struct SCIP_CertificateBound* workbound;  /**< temporary memory for hashing bound information */
+   SCIP_CERTIFICATEBOUND** boundvals;        /**< array to store rationals in varboundtable to avoid memory leak */
+   int                   boundvalsize;       /**< size of boundvals array */
+   SCIP_HASHMAP*         nodedatahash;       /**< Hashmap storing pointer to data of each node */
+   SCIP_CERTIFICATEBOUND* workbound;         /**< temporary memory for hashing bound information */
    BMS_BLKMEM*           blkmem;             /**< SCIP block memory */
    SCIP_Longint          indexcounter;       /**< counter for line indices in file */
    SCIP_Longint          conscounter;        /**< counter for line indices in constraint section */
@@ -60,6 +76,10 @@ struct SCIP_Certificate
    char*                 objstring;          /**< string for buffering the objective function */
    SCIP_Real             filesize;           /**< size of derivation file in MB */
    SCIP_HASHMAP*         rowdatahash;        /**< Hashmap storing mapping between rows and file index */
+   SCIP_Rational*        rootbound;          /**< the bound for the root node */
+   SCIP_Longint          derindex_root;      /**< index of root bound in certificate */
+   SCIP_Bool             rootinfeas;         /**< is the root node infeasible */
+   SCIP_Bool             objintegral;        /**< is the objective always integral? copy this so we don't need the prob everywhere */
 };
 
 #ifdef __cplusplus

@@ -27,6 +27,7 @@
 #include "lpi/lpi.h"
 #include "scip/bounding_exact.h"
 #include "scip/branch.h"
+#include "scip/certificate.h"
 #include "scip/clock.h"
 #include "scip/concurrent.h"
 #include "scip/conflict.h"
@@ -2782,6 +2783,7 @@ SCIP_RETCODE priceAndCutLoop(
    if( *cutoff )
    {
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
+      SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, SCIPtreeGetFocusNode(tree), transprob, TRUE);
    }
    else if( !(*lperror) )
    {
@@ -2872,6 +2874,8 @@ SCIP_RETCODE applyBounding(
          SCIPnodeGetLowerbound(focusnode), SCIPprobExternObjval(transprob, origprob, set, SCIPnodeGetLowerbound(focusnode)) + SCIPgetOrigObjoffset(set->scip),
          pseudoobjval, SCIPprobExternObjval(transprob, origprob, set, pseudoobjval) + SCIPgetOrigObjoffset(set->scip),
          primal->cutoffbound, SCIPprobExternObjval(transprob, origprob, set, primal->cutoffbound) + SCIPgetOrigObjoffset(set->scip));
+
+      SCIP_CALL( SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex, focusnode, set, transprob, FALSE) );
 
       /* check for infeasible node by bounding */
       if( (set->misc_exactsolve && SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound)
@@ -4641,6 +4645,12 @@ SCIP_RETCODE solveNode(
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
       *infeasible = TRUE;
       SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
+
+      /** @todo exip: these ifs are temporary */
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+         SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, SCIPtreeGetFocusNode(tree), transprob, TRUE) );
+      else
+         SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, SCIPtreeGetFocusNode(tree), transprob, FALSE) );
 
       /* the LP might have been unbounded but not enforced, because the node is cut off anyway */
       *unbounded = FALSE;

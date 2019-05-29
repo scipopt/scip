@@ -84,29 +84,6 @@ struct SCIP_Sol
                                               * could also be implemented as a counter for the number of infinite
                                               * values, to avoid redundant checks when resetting inf. solution values
                                               */
-  SCIP_SOLEX*           solex;               /**< exact solution values, NULL if not in exact solving mode */
-};
-
-/** exact primal CIP solution
- *
- *  For reasons of efficiency, a working solution only stores values that have been accessed at least once,
- *  or that have been changed from the value in the solution's source.
- *  The user has to call SCIPsolUnlink() in order to retrieve all non-cached elements from the solution's source
- *  and to store the values in the solution's own array. This changes the solution's origin to SCIP_SOLORIGIN_ZERO.
- *  A linked solution with origin SCIP_SOLORIGIN_LPSOL or SCIP_SOLORIGIN_PSEUDOSOL becomes invalid after the
- *  next node is focused (i.e. the LP and pseudo solutions changed) and cannot be accessed anymore.
- *
- *  Solutions with origin ORIGINAL contain the values for original variables. The stored objective value also
- *  corresponds to the original problem.
- */
-struct SCIP_SolEx
-{
-   SCIP_Rational*        obj;                /**< objective value of solution */
-   SCIP_RATIONALARRAY**  vals;               /**< solution values for variables */
-   SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from
-                                              *   origin */
-   SCIP_BOOLARRAY*       fprep;              /**< is the exact solution value fp-representable and therefore stored in
-                                              *   the fpsol */
 };
 
 #ifdef __cplusplus

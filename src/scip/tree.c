@@ -1019,6 +1019,9 @@ SCIP_RETCODE SCIPnodeCreateChild(
    /* output node creation to visualization file */
    SCIP_CALL( SCIPvisualNewChild(stat->visual, set, stat, *node) );
 
+   /* create certificate data for this node */
+   SCIP_CALL( SCIPcertificateNewNodeData(set, stat->certificate, stat, *node) );
+
    SCIPsetDebugMsg(set, "created child node #%" SCIP_LONGINT_FORMAT " at depth %u (prio: %g)\n", SCIPnodeGetNumber(*node), (*node)->depth, nodeselprio);
 
    return SCIP_OKAY;
@@ -1044,6 +1047,9 @@ SCIP_RETCODE SCIPnodeFree(
    assert(tree != NULL);
 
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
+
+   /* if certificate is active, unsplit current node and free the memory in hashmap of certificate */
+   SCIPcertificatePrintUnsplitting(set, SCIPgetCertificate(set->scip), *node);
 
    /* inform solution debugger, that the node has been freed */
    SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, *node) );
@@ -2370,9 +2376,10 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
 
    if( SCIPcertificateIsActive(stat->certificate) && lpobjval > node->lowerbound )
    {
-      SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, transprob) );
+      SCIP_Bool usefarkas;
+      usefarkas = SCIPsetIsInfinity(set, lpobjval);
+      SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpex, set, node, transprob, usefarkas) );
    }
-
 
    SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
 
@@ -5631,6 +5638,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
 
+      /* print branching information to certificate, if certificate is active */
+      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
+
       if( downchild != NULL )
          *downchild = node;
    }
@@ -5656,6 +5666,10 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
 
+      /* print branching information to certificate, if certificate is active */
+      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
+      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, downub) );
+
       if( eqchild != NULL )
          *eqchild = node;
    }
@@ -5675,6 +5689,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
             NULL, var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
+
+      /* print branching information to certificate, if certificate is active */
+      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, uplb) );
 
       if( upchild != NULL )
          *upchild = node;

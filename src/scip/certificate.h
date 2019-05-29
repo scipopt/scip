@@ -27,10 +27,12 @@
 
 #include "scip/def.h"
 #include "scip/type_set.h"
+#include "scip/type_stat.h"
 #include "scip/type_tree.h"
 #include "scip/type_certificate.h"
 #include "scip/type_solex.h"
 #include "scip/type_lpex.h"
+#include "scip/type_var.h"
 #include "scip/pub_fileio.h"
 #include "scip/type_prob.h"
 #include "gmp.h"
@@ -205,36 +207,75 @@ SCIP_Longint SCIPcertificatePrintBoundAssumption(
    SCIP_Bool             isupper             /**< is it the upper bound? */
    );
 
+/** installs updated node data in parent node */
+SCIP_RETCODE SCIPcertificateUpdateParentData(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_NODE*            node,               /**< node data structure */
+   SCIP_Longint          fileindex,          /**< index of new bound */
+   SCIP_Rational*        newbound            /**< pointer to value of new bound, NULL if infeasible */
+   );
+
 /** prints dual bound to proof section */
 extern
 SCIP_Longint SCIPcertificatePrintDualbound(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
-   SCIP_PROB*            prob,               /**< problem data */
    const char*           linename,           /**< name of the unsplitting line */
    SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
    int                   len,                /**< number of dual multipiers */
-   int*                  ind,                /**< index array */
+   SCIP_Longint*         ind,                /**< index array */
    SCIP_Rational**       val                 /**< array of dual multipliers */
    );
 
 /** Print a dual bound from an exact lp solution */
+extern
 SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
    SCIP_LPEX*            lpex,               /**< the exact lp */
    SCIP_SET*             set,                /**< scip settings */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_NODE*            node,               /**< the current node */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Bool             usefarkas           /**< should an infeasibility proof be printed? */
+   );
+
+/** Print a dual bound from an exact lp solution */
+extern
+SCIP_RETCODE SCIPcertificatePrintDualPseudoObj(
+   SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
+   SCIP_LPEX*            lpex,               /**< the exact lp */
+   SCIP_NODE*            node,               /**< current node */
+   SCIP_SET*             set,                /**< scip settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             psval               /**< the pseudo obj value */
+   );
+
+/** update the parent certificate node data when branching, print branching into certificate if not already present */
+extern
+SCIP_RETCODE SCIPcertificatePrintBranching(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_LP*              lp,                 /**< LP informations */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NODE*            node,                /**< node data */
+   SCIP_VAR*             branchvar,          /**< the variable that gets branched on */
+   SCIP_BOUNDTYPE        boundtype,          /**< the bounding type */
+   SCIP_Real             newbound            /**< the new bound */
+   );
+
+/** create a new node data structure for the current node */
+SCIP_RETCODE SCIPcertificateNewNodeData(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_NODE*            node                /**< new node, that was created */
    );
 
 /** prints unsplitting information to proof section */
-extern
 int SCIPcertificatePrintUnsplitting(
+   SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
-   const char*           linename,           /**< name of the unsplitting line */
-   SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
-   int                   derindex_left,      /**< index of the first derivation */
-   int                   assumptionindex_left,/**< index of the first unsplitting assumption */
-   int                   derindex_right,     /**< index of the second derivation */
-   int                   assumptionindex_right/**< index of the second unsplitting assumption */
+   SCIP_NODE*            node                /**< node data */
    );
 
 /** prints RTP section with lowerbound and upperbound range */
@@ -243,6 +284,13 @@ void SCIPcertificatePrintRtpRange(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective */
    SCIP_Rational*        upperbound          /**< pointer to upper bound on the objective */
+   );
+
+/** prints the last part of the certification file (RTP range/sol, ...) */
+SCIP_RETCODE SCIPcertificatePrintResult(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
 

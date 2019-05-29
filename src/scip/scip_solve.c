@@ -1789,6 +1789,9 @@ SCIP_RETCODE freeSolve(
    /* switch stage to EXITSOLVE */
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
+   /* Print last part of certificate file */
+   SCIP_CALL( SCIPcertificatePrintResult(scip, scip->set, SCIPgetCertificate(scip)) );
+
    /* cleanup the conflict storage */
    SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
 
@@ -1819,12 +1822,6 @@ SCIP_RETCODE freeSolve(
     * subroots have to be released
     */
    SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
-
-   /* print DER header after clearing the tree in order to get the count right */
-   if( SCIPgetCertificate(scip) != NULL )
-   {
-      SCIPcertificatePrintDerHeader(SCIPgetCertificate(scip));
-   }
 
    /* deinitialize transformed problem */
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, restart) );

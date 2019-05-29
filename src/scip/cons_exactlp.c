@@ -15541,14 +15541,18 @@ SCIP_RETCODE printCertificateConsLinear(
          rhs = consdata->rhs;
 
          /* coefficient is positive -> lhs corresponds to lower bound, if negative to upper bound */
-         isupper = RisPositive(vals[0]) ? FALSE : TRUE;
-
-         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), lhs, isupper) );
+         if( !RisAbsInfinity(lhs) )
+         {
+            isupper = RisPositive(vals[0]) ? FALSE : TRUE;
+            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), lhs, isupper) );
+         }
 
          /* coefficient is positive -> rhs corresponds to upper bound, if negative to lower bound */
-         isupper = RisPositive(vals[0]) ? TRUE : FALSE;
-
-         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), rhs, isupper) );
+         if( !RisAbsInfinity(rhs) )
+         {
+            isupper = RisPositive(vals[0]) ? TRUE : FALSE;
+            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), rhs, isupper) );
+         }
       }
       else
       {
@@ -15580,9 +15584,9 @@ SCIP_RETCODE printCertificateConsLinear(
          else
          {
             if( !RisNegInfinity(consdata->lhs) )
-               SCIPcertificatePrintCons(certificate, NULL, 'L', consdata->lhs, consdata->nvars, varsindex, consdata->vals);
+               SCIPcertificatePrintCons(certificate, NULL, 'G', consdata->lhs, consdata->nvars, varsindex, consdata->vals);
             if( !RisInfinity(consdata->rhs) )
-               SCIPcertificatePrintCons(certificate, NULL, 'G', consdata->rhs, consdata->nvars, varsindex, consdata->vals);
+               SCIPcertificatePrintCons(certificate, NULL, 'L', consdata->rhs, consdata->nvars, varsindex, consdata->vals);
          }
          SCIPfreeBufferArray(scip, &varsindex);
       }

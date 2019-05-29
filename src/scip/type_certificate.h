@@ -28,6 +28,7 @@
 extern "C" {
 #endif
 
+typedef struct SCIP_Certnodedata SCIP_CERTNODEDATA;               /**< branching information for nodes */
 typedef struct SCIP_Certificate SCIP_CERTIFICATE;                 /**< certificate data structure */
 typedef struct SCIP_CertificateBound SCIP_CERTIFICATEBOUND;       /**< data structure for hashing bounds of variables in
                                                                    *   a certificate file
