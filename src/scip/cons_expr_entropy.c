@@ -150,7 +150,7 @@ SCIP_RETCODE reverseProp(
    /*
     * check whether lower bound of child can be improved
     */
-   SCIPintervalSetBounds(&tmp, childinf, childinf);
+   SCIPintervalSet(&tmp, childinf);
    SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, &tmp, tmp);
 
    /* entropy(childinf) < intersection.inf -> consider [childinf, MIN(childsup, extremum)] */
@@ -171,7 +171,7 @@ SCIP_RETCODE reverseProp(
     */
    if( childsup < SCIP_INTERVAL_INFINITY )
    {
-      SCIPintervalSetBounds(&tmp, childsup, childsup);
+      SCIPintervalSet(&tmp, childsup);
       SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, &tmp, tmp);
    }
    else
