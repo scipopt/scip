@@ -225,10 +225,6 @@ struct SCIP_PropData
    int                   nsymresacks;        /**< number of symresack constraints */
    SCIP_Bool             detectorbitopes;    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
    int                   norbitopes;         /**< number of orbitope constraints */
-   int                   norbits;            /**< number of non-trivial orbits of permutation group */
-   SCIP_Bool             computeorbits;      /**< whether the orbits of the symmetry group should be computed */
-   int*                  orbits;             /**< array containing the indices of variables sorted by orbits */
-   int*                  orbitbegins;        /**< array containing in i-th position the first position of orbit i in orbits array */
 
    /* data necessary for orbital fixing */
    SCIP_Bool             ofenabled;          /**< Run orbital branching? */
@@ -2424,15 +2420,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->genconss), propdata->nperms) );
 
-         if ( propdata->computeorbits )
-         {
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->orbits, propdata->npermvars) );
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->orbitbegins, propdata->npermvars) );
-
-            SCIP_CALL( SCIPcomputeGroupOrbitsSymbreak(scip, propdata->permvars, propdata->npermvars, propdata->perms, propdata->nperms,
-                  propdata->orbits, propdata->orbitbegins, &propdata->norbits) );
-         }
-
          if ( propdata->detectorbitopes )
          {
             SCIP_CALL( detectOrbitopes(scip, propdata, components, componentbegins, ncomponents) );
@@ -3396,17 +3383,8 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
 
       /* free pointers to symmetry group and binary variables */
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->genconss, propdata->nperms);
-
-      /* free orbit structures */
-      if ( propdata->norbits >= 0 )
-      {
-         SCIPfreeBlockMemoryArray(scip, &propdata->orbitbegins, propdata->npermvars);
-         SCIPfreeBlockMemoryArray(scip, &propdata->orbits, propdata->npermvars);
-      }
    }
    assert( propdata->genconss == NULL );
-   assert( propdata->orbitbegins == NULL );
-   assert( propdata->orbits == NULL );
 
    /* general */
    if ( propdata->nperms > 0 )
@@ -3463,9 +3441,6 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
    propdata->ngenconss = 0;
    propdata->nsymresacks = 0;
    propdata->norbitopes = 0;
-   propdata->norbits = -1;
-   propdata->orbits = NULL;
-   propdata->orbitbegins = NULL;
 
    propdata->ofenabled = FALSE;
    propdata->bg0 = NULL;
@@ -3568,9 +3543,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->ngenconss = 0;
    propdata->nsymresacks = 0;
    propdata->norbitopes = 0;
-   propdata->norbits = -1;
-   propdata->orbits = NULL;
-   propdata->orbitbegins = NULL;
 
    propdata->ofenabled = FALSE;
    propdata->bg0 = NULL;
@@ -3639,11 +3611,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/addsymresacks",
          "Add inequalities for symresacks for each generator?",
          &propdata->addsymresacks, TRUE, DEFAULT_ADDSYMRESACKS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/computeorbits",
-         "Should the orbits of the symmetry group be computed?",
-         &propdata->computeorbits, TRUE, DEFAULT_COMPUTEORBITS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/detectorbitopes",
