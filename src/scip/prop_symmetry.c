@@ -151,7 +151,7 @@
 #define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 
 /* default parameters for orbital fixing */
-#define DEFAULT_SYMCOMPTIMING           2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
+#define DEFAULT_OFSYMCOMPTIMING         2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING   FALSE    /**< Run orbital fixing during presolving? */
 #define DEFAULT_RECOMPUTERESTART     TRUE    /**< Recompute symmetries after a restart has occurred? */
 
@@ -238,7 +238,7 @@ struct SCIP_PropData
    int                   nmovedpermvars;     /**< number of variables moved by any permutation in a symmetry component that is handled by OF */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
    SCIP_Bool             recomputerestart;   /**< Recompute symmetries after a restart has occured? */
-   int                   symcomptiming;      /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
+   int                   ofsymcomptiming;    /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
    int                   nfixedzero;         /**< number of variables fixed to 0 */
    int                   nfixedone;          /**< number of variables fixed to 1 */
@@ -2949,8 +2949,8 @@ SCIP_DECL_PROPPRESOL(propExecpresolSymmetry)
 
 
    /* run OF presolving */
-   assert( 0 <= propdata->symcomptiming && propdata->symcomptiming <= 2 );
-   if ( propdata->ofenabled && propdata->performpresolving && propdata->symcomptiming <= 1 )
+   assert( 0 <= propdata->ofsymcomptiming && propdata->ofsymcomptiming <= 2 );
+   if ( propdata->ofenabled && propdata->performpresolving && propdata->ofsymcomptiming <= 1 )
    {
       SCIP_Bool infeasible;
       int nprop;
@@ -2969,7 +2969,7 @@ SCIP_DECL_PROPPRESOL(propExecpresolSymmetry)
          *nfixedvars += nprop;
       }
    }
-   else if ( propdata->symcomptiming == 1 )
+   else if ( propdata->ofsymcomptiming == 1 )
    {
       /* otherwise compute symmetry if timing requests it */
       SCIP_CALL( getSymmetries(scip, propdata) );
@@ -3351,9 +3351,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    /* add parameters for orbital fixing */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/" PROP_NAME "/symcomptiming",
+         "propagating/" PROP_NAME "/ofsymcomptiming",
          "timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call)",
-         &propdata->symcomptiming, TRUE, DEFAULT_SYMCOMPTIMING, 0, 2, NULL, NULL) );
+         &propdata->ofsymcomptiming, TRUE, DEFAULT_OFSYMCOMPTIMING, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/performpresolving",
