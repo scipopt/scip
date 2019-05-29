@@ -1035,8 +1035,8 @@ SCIP_RETCODE forwardPropExpr(
                   SCIP_INTERVAL auxvarbounds;
                   auxvarbounds = intevalvar(scip, child->auxvar, intevalvardata);
                   assert(reversepropqueue == NULL || child->inqueue ||
-                     ((auxvarbounds.inf < -SCIP_INTERVAL_INFINITY || SCIPisGE(scip, child->activity.inf, auxvarbounds.inf)) &&
-                      (auxvarbounds.sup >  SCIP_INTERVAL_INFINITY || SCIPisLE(scip, child->activity.sup, auxvarbounds.sup))));
+                     ((auxvarbounds.inf <= -SCIP_INTERVAL_INFINITY || SCIPisGE(scip, child->activity.inf, auxvarbounds.inf)) &&
+                      (auxvarbounds.sup >=  SCIP_INTERVAL_INFINITY || SCIPisLE(scip, child->activity.sup, auxvarbounds.sup))));
                }
 #endif
 

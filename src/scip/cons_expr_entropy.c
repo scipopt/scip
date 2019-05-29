@@ -150,38 +150,43 @@ SCIP_RETCODE reverseProp(
    /*
     * check whether lower bound of child can be improved
     */
-   SCIPintervalSetBounds(&tmp, childinf, childinf);
+   SCIPintervalSet(&tmp, childinf);
    SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, &tmp, tmp);
 
    /* entropy(childinf) < intersection.inf -> consider [childinf, MIN(childsup, extremum)] */
-   if( SCIPisLT(scip, SCIPintervalGetSup(tmp), SCIPintervalGetInf(intersection)) )
+   if( SCIPintervalGetInf(intersection) > -SCIP_INTERVAL_INFINITY && SCIPintervalGetSup(tmp) < SCIPintervalGetInf(intersection) )
    {
       boundinf = reversePropBinarySearch(scip, childinf, MIN(extremum, childsup), TRUE,
          SCIPintervalGetInf(intersection));
    }
    /* entropy(childinf) > intersection.sup -> consider [MAX(childinf,extremum), childsup] */
-   else if( SCIPisGT(scip, SCIPintervalGetInf(tmp), SCIPintervalGetSup(intersection)) )
+   else if( SCIPintervalGetSup(intersection) < SCIP_INTERVAL_INFINITY && SCIPintervalGetInf(tmp) > SCIPintervalGetSup(intersection) )
    {
-      boundinf = reversePropBinarySearch(scip, MAX(childinf,extremum), childsup, FALSE,
+      boundinf = reversePropBinarySearch(scip, MAX(childinf, extremum), childsup, FALSE,
          SCIPintervalGetSup(intersection));
    }
 
    /*
     * check whether upper bound of child can be improved
     */
-   SCIPintervalSetBounds(&tmp, childsup, childsup);
-   SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, &tmp, tmp);
+   if( childsup < SCIP_INTERVAL_INFINITY )
+   {
+      SCIPintervalSet(&tmp, childsup);
+      SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, &tmp, tmp);
+   }
+   else
+      SCIPintervalSetBounds(&tmp, -SCIP_INTERVAL_INFINITY, -SCIP_INTERVAL_INFINITY);  /* entropy(inf) = -inf */
 
    /* entropy(childsup) < intersection.inf -> consider [MAX(childinf,extremum), childsup] */
-   if( SCIPisLT(scip, SCIPintervalGetSup(tmp), SCIPintervalGetInf(intersection)) )
+   if( SCIPintervalGetInf(intersection) > -SCIP_INTERVAL_INFINITY && SCIPintervalGetSup(tmp) < SCIPintervalGetInf(intersection) )
    {
       boundsup = reversePropBinarySearch(scip, MAX(childinf,extremum), childsup, FALSE,
          SCIPintervalGetInf(intersection));
    }
    /* entropy(childsup) > intersection.sup -> consider [childinf, MIN(childsup,extremum)] */
-   else if( SCIPisGT(scip, SCIPintervalGetInf(tmp), SCIPintervalGetSup(intersection)) )
+   else if( SCIPintervalGetSup(intersection) < SCIP_INTERVAL_INFINITY && SCIPintervalGetInf(tmp) > SCIPintervalGetSup(intersection) )
    {
-      boundsup = reversePropBinarySearch(scip, childinf, MIN(childsup,extremum), TRUE,
+      boundsup = reversePropBinarySearch(scip, childinf, MIN(childsup, extremum), TRUE,
          SCIPintervalGetSup(intersection));
    }
 
