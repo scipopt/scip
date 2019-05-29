@@ -1695,6 +1695,113 @@ SCIP_RETCODE determineSymmetry(
 }
 
 
+/** possibly get symmetries */
+static
+SCIP_RETCODE getSymmetries(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   SCIP_Bool recompute = FALSE;
+   SCIP_VAR** permvars;
+   int v;
+   int componentidx;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+
+   /* free symmetries after a restart to recompute them later or deactivate OF if used together with orbitopes */
+   if ( propdata->recomputerestart && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
+   {
+      int usesymmetry;
+
+      /* reset symmetry information */
+      assert( propdata->npermvars > 0 );
+      assert( propdata->permvarmap != NULL );
+      assert( propdata->permvars != NULL );
+      assert( propdata->bg0list != NULL );
+      assert( propdata->bg0 != NULL );
+      assert( propdata->bg1list != NULL );
+      assert( propdata->bg1 != NULL );
+      assert( propdata->inactiveperms != NULL );
+
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
+
+      propdata->nperms = -1;
+      propdata->permstrans = NULL;
+      propdata->permvars = NULL;
+      propdata->bg0 = NULL;
+      propdata->bg0list = NULL;
+      propdata->nbg0 = 0;
+      propdata->bg1 = NULL;
+      propdata->bg1list = NULL;
+      propdata->nbg1 = 0;
+      propdata->npermvars = -1;
+      propdata->permvarmap = NULL;
+      propdata->components = NULL;
+      propdata->componentbegins = NULL;
+      propdata->vartocomponent = NULL;
+      propdata->ncomponents = -1;
+      propdata->nmovedpermvars = 0;
+
+      recompute = TRUE;
+
+      /* deactivate OF after a restart if used together with orbitopes */
+      SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+      if ( ISSYMRETOPESACTIVE(usesymmetry) )
+         propdata->ofenabled = FALSE;
+   }
+
+   /* now possibly (re)compute symmetries */
+   if ( propdata->nperms < 0 )
+   {
+      int i;
+
+      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, recompute,
+            &(propdata->npermvars), &permvars, &(propdata->nperms), NULL, &(propdata->permstrans), NULL, NULL,
+            &(propdata->components), &(propdata->componentbegins), &(propdata->vartocomponent),
+            &(propdata->ncomponents)) );
+
+      /* store restart level */
+      propdata->lastrestart = SCIPgetNRuns(scip);
+
+      if ( propdata->nperms == 0 )
+      {
+         propdata->npermvars = -1;
+         return SCIP_OKAY;
+      }
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->permvars, permvars, propdata->npermvars) );
+
+      /* prepare permutations for orbital fixing (ignore symmetry information on non-binary variables) */
+      for (i = 0; i < propdata->npermvars; ++i)
+      {
+         if ( SCIPvarIsBinary(propdata->permvars[i]) )
+            continue;
+
+         for (v = 0; v < propdata->nperms; ++v)
+            propdata->permstrans[i][v] = i;
+      }
+
+      /* prepare array for active permutations */
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->inactiveperms, propdata->nperms) );
+      for (v = 0; v < propdata->nperms; ++v)
+         propdata->inactiveperms[v] = FALSE;
+
+      /* collect number of moved permvars that are handled by OF */
+      for (v = 0; v < propdata->npermvars; ++v)
+      {
+         componentidx = propdata->vartocomponent[v];
+
+         if ( componentidx > -1 && ! propdata->componentblocked[componentidx] )
+            propdata->nmovedpermvars += 1;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 
 /*
  * Functions for symmetry constraints
@@ -2179,113 +2286,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
  * Local methods for orbital fixing
  */
 
-
-
-/** possibly get symmetries */
-static
-SCIP_RETCODE getSymmetries(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_PROPDATA*        propdata            /**< propagator data */
-   )
-{
-   SCIP_Bool recompute = FALSE;
-   SCIP_VAR** permvars;
-   int v;
-   int componentidx;
-
-   assert( scip != NULL );
-   assert( propdata != NULL );
-
-   /* free symmetries after a restart to recompute them later or deactivate OF if used together with orbitopes */
-   if ( propdata->recomputerestart && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
-   {
-      int usesymmetry;
-
-      /* reset symmetry information */
-      assert( propdata->npermvars > 0 );
-      assert( propdata->permvarmap != NULL );
-      assert( propdata->permvars != NULL );
-      assert( propdata->bg0list != NULL );
-      assert( propdata->bg0 != NULL );
-      assert( propdata->bg1list != NULL );
-      assert( propdata->bg1 != NULL );
-      assert( propdata->inactiveperms != NULL );
-
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
-
-      propdata->nperms = -1;
-      propdata->permstrans = NULL;
-      propdata->permvars = NULL;
-      propdata->bg0 = NULL;
-      propdata->bg0list = NULL;
-      propdata->nbg0 = 0;
-      propdata->bg1 = NULL;
-      propdata->bg1list = NULL;
-      propdata->nbg1 = 0;
-      propdata->npermvars = -1;
-      propdata->permvarmap = NULL;
-      propdata->components = NULL;
-      propdata->componentbegins = NULL;
-      propdata->vartocomponent = NULL;
-      propdata->ncomponents = -1;
-      propdata->nmovedpermvars = 0;
-
-      recompute = TRUE;
-
-      /* deactivate OF after a restart if used together with orbitopes */
-      SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
-      if ( ISSYMRETOPESACTIVE(usesymmetry) )
-         propdata->ofenabled = FALSE;
-   }
-
-   /* now possibly (re)compute symmetries */
-   if ( propdata->nperms < 0 )
-   {
-      int i;
-
-      SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0, recompute,
-            &(propdata->npermvars), &permvars, &(propdata->nperms), NULL, &(propdata->permstrans), NULL, NULL,
-            &(propdata->components), &(propdata->componentbegins), &(propdata->vartocomponent),
-            &(propdata->ncomponents)) );
-
-      /* store restart level */
-      propdata->lastrestart = SCIPgetNRuns(scip);
-
-      if ( propdata->nperms == 0 )
-      {
-         propdata->npermvars = -1;
-         return SCIP_OKAY;
-      }
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->permvars, permvars, propdata->npermvars) );
-
-      /* prepare permutations for orbital fixing (ignore symmetry information on non-binary variables) */
-      for (i = 0; i < propdata->npermvars; ++i)
-      {
-         if ( SCIPvarIsBinary(propdata->permvars[i]) )
-            continue;
-
-         for (v = 0; v < propdata->nperms; ++v)
-            propdata->permstrans[i][v] = i;
-      }
-
-      /* prepare array for active permutations */
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->inactiveperms, propdata->nperms) );
-      for (v = 0; v < propdata->nperms; ++v)
-         propdata->inactiveperms[v] = FALSE;
-
-      /* collect number of moved permvars that are handled by OF */
-      for (v = 0; v < propdata->npermvars; ++v)
-      {
-         componentidx = propdata->vartocomponent[v];
-
-         if ( componentidx > -1 && ! propdata->componentblocked[componentidx] )
-            propdata->nmovedpermvars += 1;
-      }
-   }
-
-   return SCIP_OKAY;
-}
 
 /** perform orbital fixing
  *
