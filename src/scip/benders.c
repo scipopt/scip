@@ -2345,6 +2345,7 @@ SCIP_RETCODE setAndUpdateCorePoint(
 
       case 'l':
          SCIP_CALL( SCIPcreateLPSol(scip, &benders->corepoint, NULL) );
+         SCIP_CALL( SCIPunlinkSol(scip, benders->corepoint) );
          break;
       case 'f':
       case 'i':
@@ -2367,6 +2368,7 @@ SCIP_RETCODE setAndUpdateCorePoint(
          else
          {
             SCIP_CALL( SCIPcreateLPSol(scip, &benders->corepoint, NULL) );
+            SCIP_CALL( SCIPunlinkSol(scip, benders->corepoint) );
          }
          break;
       case 'z':
@@ -2386,6 +2388,7 @@ SCIP_RETCODE setAndUpdateCorePoint(
          break;
       default:
          SCIP_CALL( SCIPcreateLPSol(scip, &benders->corepoint, NULL) );
+         SCIP_CALL( SCIPunlinkSol(scip, benders->corepoint) );
    }
 
    return SCIP_OKAY;
