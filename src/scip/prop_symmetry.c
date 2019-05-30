@@ -505,6 +505,163 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
  * Local methods
  */
 
+/** free symmetry data */
+static
+SCIP_RETCODE freeSymmetryData(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   int i;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+
+   if ( propdata->permvarmap != NULL )
+   {
+      SCIPhashmapFree(&propdata->permvarmap);
+   }
+
+   /* drop events and release variables */
+   if ( propdata->permvarsevents != NULL )
+   {
+      assert( propdata->permvars != NULL );
+      assert( propdata->npermvars > 0 );
+
+      for (i = 0; i < propdata->npermvars; ++i)
+      {
+         if ( SCIPvarGetType(propdata->permvars[i]) == SCIP_VARTYPE_BINARY && propdata->permvarsevents[i] >= 0 )
+         {
+            /* If symmetry is computed before presolving, it might happen that some variables are turned into binary
+             * variables, for which no event has been catched. Since there currently is no way of checking whether a var
+             * event has been caught for a particular variable, we use the stored eventfilter positions. */
+            SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[i], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
+                  propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[i]) );
+         }
+         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+      }
+      SCIPfreeBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars);
+   }
+
+   /* free lists for orbitopal fixing */
+   if ( propdata->bg0list != NULL )
+   {
+      assert( propdata->bg0 != NULL );
+      assert( propdata->bg1list != NULL );
+      assert( propdata->bg1 != NULL );
+
+      SCIPfreeBlockMemoryArray(scip, &propdata->bg0list, propdata->npermvars);
+      SCIPfreeBlockMemoryArray(scip, &propdata->bg0, propdata->npermvars);
+      SCIPfreeBlockMemoryArray(scip, &propdata->bg1list, propdata->npermvars);
+      SCIPfreeBlockMemoryArray(scip, &propdata->bg1, propdata->npermvars);
+
+      propdata->nbg0 = 0;
+      propdata->nbg1 = 0;
+   }
+
+   /* other data */
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
+
+   /* free permstrans matrix*/
+   if ( propdata->permstrans != NULL )
+   {
+      assert( propdata->nperms > 0 );
+      assert( propdata->permvars != NULL );
+      assert( propdata->npermvars > 0 );
+      assert( propdata->nmaxperms > 0 );
+
+      for (i = 0; i < propdata->npermvars; ++i)
+      {
+         SCIPfreeBlockMemoryArray(scip, &propdata->permstrans[i], propdata->nmaxperms);
+      }
+      SCIPfreeBlockMemoryArray(scip, &propdata->permstrans, propdata->npermvars);
+   }
+
+   /* free data of added constraints */
+   if ( propdata->genconss != NULL )
+   {
+      assert( propdata->ngenconss > 0 );
+
+      /* release constraints */
+      for (i = 0; i < propdata->ngenconss; ++i)
+      {
+         assert( propdata->genconss[i] != NULL );
+         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genconss[i]) );
+      }
+
+      /* free pointers to symmetry group and binary variables */
+      SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
+   }
+
+   /* free components */
+   if ( propdata->ncomponents > 0 )
+   {
+      assert( propdata->componentblocked != NULL );
+      assert( propdata->vartocomponent != NULL );
+      assert( propdata->componentbegins != NULL );
+      assert( propdata->components != NULL );
+
+      SCIPfreeBlockMemoryArray(scip, &propdata->componentblocked, propdata->ncomponents);
+      SCIPfreeBlockMemoryArray(scip, &propdata->vartocomponent, propdata->npermvars);
+      SCIPfreeBlockMemoryArray(scip, &propdata->componentbegins, propdata->ncomponents + 1);
+      SCIPfreeBlockMemoryArray(scip, &propdata->components, propdata->nperms);
+
+      propdata->ncomponents = -1;
+   }
+
+   /* free main symmetry data */
+   if ( propdata->nperms > 0 )
+   {
+      assert( propdata->permvars != NULL );
+      assert( propdata->permvarsobj != NULL );
+      assert( propdata->perms != NULL );
+
+      SCIPfreeBlockMemoryArray(scip, &propdata->permvars, propdata->npermvars);
+      SCIPfreeBlockMemoryArray(scip, &propdata->permvarsobj, propdata->npermvars);
+      for (i = 0; i < propdata->nperms; ++i)
+      {
+         SCIPfreeBlockMemoryArray(scip, &propdata->perms[i], propdata->npermvars);
+      }
+      SCIPfreeBlockMemoryArray(scip, &propdata->perms, propdata->nmaxperms);
+
+      propdata->npermvars = 0;
+      propdata->nperms = -1;
+      propdata->nmaxperms = 0;
+      propdata->nmovedpermvars = 0;
+      propdata->log10groupsize = -1.0;
+      propdata->binvaraffected = FALSE;
+   }
+
+   assert( propdata->permvarmap == NULL );
+   assert( propdata->permvarsevents == NULL );
+   assert( propdata->bg0list == NULL );
+   assert( propdata->bg0 == NULL );
+   assert( propdata->bg1list == NULL );
+   assert( propdata->bg1 == NULL );
+   assert( propdata->nbg0 == 0 );
+   assert( propdata->nbg1 == 0 );
+   assert( propdata->genconss == NULL );
+
+   assert( propdata->permvars == NULL );
+   assert( propdata->permvarsobj == NULL );
+   assert( propdata->inactiveperms == NULL );
+   assert( propdata->perms == NULL );
+   assert( propdata->permstrans == NULL );
+   assert( propdata->npermvars == 0 );
+   assert( propdata->nperms == -1 );
+   assert( propdata->nmaxperms == 0 );
+   assert( propdata->nmovedpermvars == 0 );
+   assert( propdata->binvaraffected == FALSE );
+
+   assert( propdata->componentblocked == NULL );
+   assert( propdata->componentbegins == NULL );
+   assert( propdata->components == NULL );
+   assert( propdata->ncomponents == -1 );
+
+   return SCIP_OKAY;
+}
+
+
 /** determines whether variable should be fixed by permutations */
 static
 SCIP_Bool SymmetryFixVar(
@@ -1729,25 +1886,7 @@ SCIP_RETCODE getSymmetries(
       assert( propdata->bg1 != NULL );
       assert( propdata->inactiveperms != NULL );
 
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
-
-      propdata->nperms = -1;
-      propdata->permstrans = NULL;
-      propdata->permvars = NULL;
-      propdata->bg0 = NULL;
-      propdata->bg0list = NULL;
-      propdata->nbg0 = 0;
-      propdata->bg1 = NULL;
-      propdata->bg1list = NULL;
-      propdata->nbg1 = 0;
-      propdata->npermvars = -1;
-      propdata->permvarmap = NULL;
-      propdata->components = NULL;
-      propdata->componentbegins = NULL;
-      propdata->vartocomponent = NULL;
-      propdata->ncomponents = -1;
-      propdata->nmovedpermvars = 0;
+      SCIP_CALL( freeSymmetryData(scip, propdata) );
 
       recompute = TRUE;
 
@@ -2213,7 +2352,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
-   /* symmetries have already been computed */
+   /* if symmetries have already been computed */
    if ( propdata->addedconss )
    {
       assert( propdata->nperms > 0 );
@@ -3047,7 +3186,6 @@ static
 SCIP_DECL_PROPEXIT(propExitSymmetry)
 {
    SCIP_PROPDATA* propdata;
-   int i;
 
    assert( scip != NULL );
    assert( prop != NULL );
@@ -3058,128 +3196,15 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
-   /* first free data of orbital fixing */
-   if ( propdata->ofenabled )
-   {
-      if ( propdata->permvarmap != NULL )
-      {
-         SCIPhashmapFree(&propdata->permvarmap);
-      }
-
-      /* free variables */
-      for (i = 0; i < propdata->npermvars; ++i)
-      {
-         if ( SCIPvarGetType(propdata->permvars[i]) == SCIP_VARTYPE_BINARY && propdata->permvarsevents[i] >= 0 )
-         {
-            /* If symmetry is computed before presolving, it might happen that some variables are turned into binary
-             * variables, for which no event has been catched. Since there currently is no way of checking whether a var
-             * event has been caught for a particular variable, we use the stored eventfilter positions. */
-            SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[i], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
-                  propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[i]) );
-         }
-         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
-      }
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg0list, propdata->npermvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg0, propdata->npermvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1list, propdata->npermvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1, propdata->npermvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvarsevents, propdata->npermvars);
-
-      /* free permstrans matrix*/
-      assert( propdata->permstrans != NULL || propdata->nperms == 0 );
-      for (i = 0; i < propdata->npermvars; ++i)
-      {
-         SCIPfreeBlockMemoryArray(scip, &propdata->permstrans[i], propdata->nmaxperms);
-      }
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permstrans, propdata->npermvars);
-   }
-   assert( propdata->permvarmap == NULL );
-   assert( propdata->bg0list == NULL );
-   assert( propdata->bg0 == NULL );
-   assert( propdata->bg1list == NULL );
-   assert( propdata->bg1 == NULL );
-   assert( propdata->permvarsevents == NULL );
-
-   /* free data of added constraints */
-   if ( propdata->symconsenabled )
-   {
-      /* release constraints */
-      for (i = 0; i < propdata->ngenconss; ++i)
-      {
-         assert( propdata->genconss[i] != NULL );
-         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genconss[i]) );
-      }
-
-      /* free pointers to symmetry group and binary variables */
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->genconss, propdata->nperms);
-   }
-   assert( propdata->genconss == NULL );
-
-   /* general */
-   if ( propdata->nperms > 0 )
-   {
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvarsobj, propdata->npermvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->inactiveperms, propdata->nperms);
-      if ( propdata->ncomponents > 0 )
-      {
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->componentblocked, propdata->ncomponents);
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->vartocomponent, propdata->npermvars);
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->componentbegins, propdata->ncomponents + 1);
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->components, propdata->nperms);
-      }
-      assert( propdata->perms != NULL || propdata->nperms == 0 );
-      for (i = 0; i < propdata->nperms; ++i)
-      {
-         SCIPfreeBlockMemoryArray(scip, &propdata->perms[i], propdata->npermvars);
-      }
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->perms, propdata->nmaxperms);
-   }
-   assert( propdata->permvars == NULL );
-   assert( propdata->permvarsobj == NULL );
-   assert( propdata->inactiveperms == NULL );
-   assert( propdata->componentblocked == NULL );
-   assert( propdata->componentbegins == NULL );
-   assert( propdata->components == NULL );
-   assert( propdata->perms == NULL );
+   SCIP_CALL( freeSymmetryData(scip, propdata) );
 
    /* reset basic data */
-   propdata->npermvars = 0;
-   propdata->permvars = NULL;
-   propdata->permvarsobj = NULL;
-   propdata->nperms = -1;
-   propdata->nmaxperms = 0;
-   propdata->perms = NULL;
-   propdata->permstrans = NULL;
-   propdata->permvarmap = NULL;
-
-   propdata->ncomponents = -1;
-   propdata->components = NULL;
-   propdata->componentbegins = NULL;
-   propdata->vartocomponent = NULL;
-   propdata->componentblocked = NULL;
-
-   propdata->log10groupsize = -1.0;
-   propdata->binvaraffected = FALSE;
-
-   propdata->usesymmetry = 0;
+   propdata->usesymmetry = -1;
    propdata->symconsenabled = FALSE;
    propdata->addedconss = FALSE;
-   propdata->genconss = NULL;
-   propdata->ngenconss = 0;
    propdata->nsymresacks = 0;
    propdata->norbitopes = 0;
-
    propdata->ofenabled = FALSE;
-   propdata->bg0 = NULL;
-   propdata->bg0list = NULL;
-   propdata->nbg0 = 0;
-   propdata->bg1 = NULL;
-   propdata->bg1list = NULL;
-   propdata->nbg1 = 0;
-   propdata->permvarsevents = NULL;
-   propdata->inactiveperms = NULL;
-   propdata->nmovedpermvars = 0;
    propdata->lastrestart = 0;
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
@@ -3263,7 +3288,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->log10groupsize = -1.0;
    propdata->binvaraffected = FALSE;
 
-   propdata->usesymmetry = 0;
+   propdata->usesymmetry = -1;
    propdata->symconsenabled = FALSE;
    propdata->addedconss = FALSE;
    propdata->genconss = NULL;
@@ -3376,7 +3401,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 }
 
 
-
 /** return symmetry group generators */
 SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3423,81 +3447,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    /* free symmetry information if we recompute symmetries */
    if ( recompute )
    {
-      int i;
-
-      if ( propdata->ncomponents > 0 )
-      {
-         assert( propdata->componentblocked != NULL );
-         assert( propdata->vartocomponent != NULL );
-         assert( propdata->componentbegins != NULL );
-         assert( propdata->components != NULL );
-         SCIPfreeBlockMemoryArray(scip, &propdata->componentblocked, propdata->ncomponents);
-         SCIPfreeBlockMemoryArray(scip, &propdata->vartocomponent, propdata->npermvars);
-         SCIPfreeBlockMemoryArray(scip, &propdata->componentbegins, propdata->ncomponents + 1);
-         SCIPfreeBlockMemoryArray(scip, &propdata->components, propdata->nperms);
-
-         propdata->ncomponents = -1;
-      }
-
-      /* free data needed for orbital fixing */
-      if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
-      {
-         int v;
-
-         SCIPhashmapFree(&propdata->permvarmap);
-
-         /* free variables */
-         for (v = 0; v < propdata->npermvars; ++v)
-         {
-            if ( SCIPvarGetType(propdata->permvars[v]) == SCIP_VARTYPE_BINARY && propdata->permvarsevents[v] >= 0 )
-            {
-               /* If symmetry is computed before presolving, it might happen that some variables are turned into binary
-                * variables, for which no event has been catched. Since there currently is no way of checking whether a var
-                * event has been caught for a particular variable, we use the stored eventfilter positions. */
-               SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[v], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
-                     propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[v]) );
-            }
-            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[v]) );
-         }
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg0list, propdata->npermvars);
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg0, propdata->npermvars);
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1list, propdata->npermvars);
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->bg1, propdata->npermvars);
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvarsevents, propdata->npermvars);
-
-         assert( propdata->permstrans != NULL );
-         for (i = 0; i < propdata->npermvars; ++i)
-         {
-            SCIPfreeBlockMemoryArray(scip, &propdata->permstrans[i], propdata->nmaxperms);
-         }
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->permstrans, propdata->npermvars);
-      }
-
-      /* free data needed for symretopes */
-      if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
-      {
-         assert( propdata->perms != NULL );
-         for (i = 0; i < propdata->nperms; ++i)
-         {
-            SCIPfreeBlockMemoryArray(scip, &propdata->perms[i], propdata->npermvars);
-         }
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->perms, propdata->nmaxperms);
-      }
-
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvars, propdata->npermvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvarsobj, propdata->npermvars);
-
-      /* reset settings */
-      propdata->npermvars = 0;
-      propdata->nperms = 0;
-      propdata->nmaxperms = 0;
-      propdata->binvaraffected = FALSE;
-      propdata->computedsymmetry = FALSE;
-      propdata->ncomponents = -1;
-      propdata->nbg0 = 0;
-      propdata->nbg1 = 0;
-      propdata->permvarmap = NULL;
-      propdata->permvarsevents = NULL;
+      SCIP_CALL( freeSymmetryData(scip, propdata) );
    }
 
    /* if not already done before, compute symmetries; store old value (might get manipulated by determineSymmetry()) */
