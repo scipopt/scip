@@ -1897,13 +1897,14 @@ SCIP_RETCODE determineSymmetry(
       assert( propdata->permvarmap == NULL );
       SCIP_CALL( SCIPhashmapCreate(&propdata->permvarmap, SCIPblkmem(scip), propdata->npermvars) );
 
-      /* insert variables into hashmap and capture variables */
+      /* prepare data structures */
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->bg0, propdata->npermvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->bg0list, propdata->npermvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->bg1, propdata->npermvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->bg1list, propdata->npermvars) );
 
+      /* insert variables into hashmap  */
       for (v = 0; v < propdata->npermvars; ++v)
       {
          SCIP_CALL( SCIPhashmapInsertInt(propdata->permvarmap, propdata->permvars[v], v) );
@@ -2942,10 +2943,7 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
       propdata->symconsenabled = TRUE;
    else
-   {
-      SCIP_CALL( SCIPsetIntParam(scip, "presolving/symbreak/maxrounds", 0) );
       propdata->symconsenabled = FALSE;
-   }
 
    if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
       propdata->ofenabled = TRUE;
