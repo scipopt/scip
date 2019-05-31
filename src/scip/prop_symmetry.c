@@ -1913,7 +1913,7 @@ SCIP_RETCODE determineSymmetry(
          propdata->permvarsevents[v] = -1;
 
          /* collect number of moved permvars that are handled by OF */
-         componentidx = propdata->vartocomponent[j];
+         componentidx = propdata->vartocomponent[v];
          if ( componentidx > -1 && ! propdata->componentblocked[componentidx] )
             propdata->nmovedpermvars += 1;
 
