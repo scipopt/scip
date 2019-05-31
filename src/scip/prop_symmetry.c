@@ -542,6 +542,13 @@ SCIP_RETCODE freeSymmetryData(
       }
       SCIPfreeBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars);
    }
+   else
+   {
+      for (i = 0; i < propdata->npermvars; ++i)
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+      }
+   }
 
    /* free lists for orbitopal fixing */
    if ( propdata->bg0list != NULL )
@@ -1899,7 +1906,6 @@ SCIP_RETCODE determineSymmetry(
       for (v = 0; v < propdata->npermvars; ++v)
       {
          SCIP_CALL( SCIPhashmapInsertInt(propdata->permvarmap, propdata->permvars[v], v) );
-         SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[v]) );
 
          propdata->bg0[v] = FALSE;
          propdata->bg1[v] = FALSE;
@@ -1922,13 +1928,20 @@ SCIP_RETCODE determineSymmetry(
       assert( propdata->nbg1 == 0 );
    }
 
-   /* symmetric variables are not allowed to be multi-aggregated */
-   /* TODO: Do we have to forbid multi-aggregation in any case? */
+
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permvarsobj, propdata->npermvars) );
    for (j = 0; j < propdata->npermvars; ++j)
    {
+      /* symmetric variables are not allowed to be multi-aggregated */
+      /* TODO: Do we have to forbid multi-aggregation in any case? */
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+
+      /* store objective */
+      /* TODO: Check whether we actually need this. */
       propdata->permvarsobj[j] = SCIPvarGetObj(propdata->permvars[j]);
+
+      /* capture all variables */
+      SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
    }
 
    return SCIP_OKAY;
