@@ -638,7 +638,7 @@ SCIP_RETCODE freeSymmetryData(
       propdata->log10groupsize = -1.0;
       propdata->binvaraffected = FALSE;
    }
-   propdata->nperms = 0;
+   propdata->nperms = -1;
 
    assert( propdata->permvarmap == NULL );
    assert( propdata->permvarsevents == NULL );
