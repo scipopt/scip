@@ -736,6 +736,15 @@ void SCIPprintRowprep(
    FILE*                 file                /**< file to print to, or NULL for stdout */
 );
 
+/** prints a rowprep and values in solution */
+SCIP_EXPORT
+void SCIPprintRowprepSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
+   SCIP_SOL*             sol,                /**< solution for activity */
+   FILE*                 file                /**< file to print to, or NULL for stdout */
+);
+
 /** adds a term coef*var to a rowprep */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddRowprepTerm(

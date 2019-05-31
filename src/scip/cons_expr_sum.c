@@ -1093,7 +1093,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
 #ifdef SCIP_DEBUG
          SCIPinfoMessage(scip, NULL, "adding row ");
          SCIPprintRow(scip, row, NULL);
-         SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
          SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
@@ -1163,6 +1162,7 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    viol = SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable);
 
    SCIPdebugMsg(scip, "sepaSum %p with %d children sol %p: rowprep viol %g (reliable: %d min: %g)\n", (void*) expr, SCIPgetConsExprExprNChildren(expr), sol, viol, violreliable, mincutviolation);
+   SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
    if( SCIPisZero(scip, viol) )
    {
       SCIPfreeRowprep(scip, &rowprep);
@@ -1175,7 +1175,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
       SCIP_VAR* auxvarchild = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[i]);
       printf("%g %s[%g,%g] %g\n", SCIPgetConsExprExprData(expr)->coefficients[i], SCIPvarGetName(auxvarchild), SCIPgetSolVal(scip, sol, auxvarchild), SCIPvarGetLbGlobal(auxvarchild), SCIPvarGetUbGlobal(auxvarchild));
    }
-   SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
    /* first try scale-up rowprep to get rid of within-epsilon of integer in coefficients and get above mincutviolation
@@ -1198,6 +1197,8 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
    {
       SCIP_ROW* row;
       SCIP_Bool infeasible;
+
+      SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
 
       /* this assert may fail in unfortunate situations, e.g., a violation may initially look reliable
        * this should not really change due to scaleup, but if it barely looked reliable at the beginning
@@ -1267,11 +1268,15 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
    SCIP_CALL( separatePointSum(scip, expr, violation > 0.0, &rowprep) );
    assert(rowprep != NULL);
 
+   SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
+
    /* clean-up rowprep and remember where modifications happened */
    rowprep->recordmodifications = TRUE;
    SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPfeastol(scip), &rowviol, NULL) );
 
    SCIPdebugMsg(scip, "cleanupRowprep modified %d coefficents and %smodified side\n", rowprep->nmodifiedvars, rowprep->modifiedside ? "" : "not ");
+
+   SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
 
    /* separation must have failed because we had to relax the row (?)
     * or the minimal cut violation was too large during separation

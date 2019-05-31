@@ -16078,6 +16078,70 @@ void SCIPprintRowprep(
    SCIPinfoMessage(scip, file, rowprep->sidetype == SCIP_SIDETYPE_LEFT ? ">= %.15g\n" : "<= %.15g\n", rowprep->side);
 }
 
+/** prints a rowprep and values in solution */
+void SCIPprintRowprepSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
+   SCIP_SOL*             sol,                /**< solution for activity */
+   FILE*                 file                /**< file to print to, or NULL for stdout */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real coef;
+   SCIP_Real term;
+   SCIP_Real maxterm;
+   SCIP_Real activity;
+   SCIP_Real violation;
+   SCIP_Real fracviol;
+   int expviol;
+   SCIP_Real fracmaxterm;
+   int expmaxterm;
+   int maxtermidx;
+   int i;
+
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+
+   if( *rowprep->name != '\0' )
+   {
+      SCIPinfoMessage(scip, file, "[%s](%c) ", rowprep->name, rowprep->local ? 'l' : 'g');
+   }
+
+   activity = 0.0;
+   maxterm = REALABS(rowprep->side);
+   maxtermidx = -1;
+   for( i = 0; i < rowprep->nvars; ++i )
+   {
+      coef = rowprep->coefs[i];
+      var = rowprep->vars[i];
+      SCIPinfoMessage(scip, file, "%+.15g*<%s>(%.15g) ", coef, SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var));
+
+      term = coef * SCIPgetSolVal(scip, sol, var);
+      if( REALABS(term) > maxterm )
+      {
+         maxterm = term;
+         maxtermidx = i;
+      }
+   }
+
+   SCIPinfoMessage(scip, file, rowprep->sidetype == SCIP_SIDETYPE_LEFT ? ">= %.15g" : "<= %.15g", rowprep->side);
+
+   if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+      /* cut is activity <= side -> violation is activity - side (if positive) */
+      violation = activity - rowprep->side;
+   else
+      /* cut is activity >= side -> violation is side - activity (if positive) */
+      violation = rowprep->side - activity;
+
+   SCIPinfoMessage(scip, file, "; activity %.15g", activity);
+
+   fracviol = frexp(violation, &expviol);
+   fracmaxterm = frexp(maxterm, &expmaxterm);
+
+   SCIPinfoMessage(scip, file, "; violation %e", violation, fracviol, expviol);
+   SCIPinfoMessage(scip, file, "; maxterm %e at pos %d\n", maxterm, fracmaxterm, expmaxterm, maxtermidx);
+}
+
 /** adds a term coef*var to a rowprep */
 SCIP_RETCODE SCIPaddRowprepTerm(
    SCIP*                 scip,               /**< SCIP data structure */
