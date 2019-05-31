@@ -613,16 +613,16 @@ SCIP_RETCODE freeSymmetryData(
    if ( propdata->nperms > 0 )
    {
       assert( propdata->permvars != NULL );
-      assert( propdata->permvarsobj != NULL );
       assert( propdata->perms != NULL );
 
       SCIPfreeBlockMemoryArray(scip, &propdata->permvars, propdata->npermvars);
-      SCIPfreeBlockMemoryArray(scip, &propdata->permvarsobj, propdata->npermvars);
       for (i = 0; i < propdata->nperms; ++i)
       {
          SCIPfreeBlockMemoryArray(scip, &propdata->perms[i], propdata->npermvars);
       }
       SCIPfreeBlockMemoryArray(scip, &propdata->perms, propdata->nmaxperms);
+
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvarsobj, propdata->npermvars);
 
       propdata->npermvars = 0;
       propdata->nperms = -1;
@@ -1933,11 +1933,9 @@ SCIP_RETCODE determineSymmetry(
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
    }
 
-#ifndef NDEBUG
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permvarsobj, propdata->npermvars) );
    for (j = 0; j < propdata->npermvars; ++j)
       (propdata->permvarsobj)[j] = SCIPvarGetObj(propdata->permvars[j]);
-#endif
 
    return SCIP_OKAY;
 }
@@ -2663,9 +2661,6 @@ SCIP_RETCODE propagateOrbitalFixing(
    int* componentbegins;
    int* vartocomponent;
    int ncomponents;
-#ifndef NDEBUG
-   SCIP_Real* permvarsobj = NULL;
-#endif
    int* bg0list;
    int nbg0;
    int* bg1list;
@@ -2745,11 +2740,6 @@ SCIP_RETCODE propagateOrbitalFixing(
       return SCIP_OKAY;
    }
 
-#ifndef NDEBUG
-   SCIP_CALL( SCIPgetPermvarsObjSymmetry(scip, &permvarsobj) );
-   assert( permvarsobj != NULL );
-#endif
-
    /* reset inactive permutations */
    nactiveperms = nperms;
    for (p = 0; p < nperms; ++p)
@@ -2811,7 +2801,7 @@ SCIP_RETCODE propagateOrbitalFixing(
                (SCIPvarGetType(varv) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(varimg) == SCIP_VARTYPE_IMPLINT &&
                   SCIPisEQ(scip, SCIPvarGetLbGlobal(varv), SCIPvarGetLbGlobal(varimg)) &&
                   SCIPisEQ(scip, SCIPvarGetUbGlobal(varv), SCIPvarGetUbGlobal(varimg))) );
-            assert( SCIPisEQ(scip, permvarsobj[v], permvarsobj[img]) );
+            assert( SCIPisEQ(scip, propdata->permvarsobj[v], propdata->permvarsobj[img]) );
 #endif
 
             /* we are moving a variable globally fixed to 0 to a variable not of this type */
@@ -2870,7 +2860,7 @@ SCIP_RETCODE propagateOrbitalFixing(
                (SCIPvarGetType(varv) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(varimg) == SCIP_VARTYPE_IMPLINT &&
                   SCIPisEQ(scip, SCIPvarGetLbGlobal(varv), SCIPvarGetLbGlobal(varimg)) &&
                   SCIPisEQ(scip, SCIPvarGetUbGlobal(varv), SCIPvarGetUbGlobal(varimg))) );
-            assert( SCIPisEQ(scip, permvarsobj[v], permvarsobj[img]) );
+            assert( SCIPisEQ(scip, propdata->permvarsobj[v], propdata->permvarsobj[img]) );
 #endif
 
             /* we are moving a variable globally fixed or branched to 1 to a variable not of this type */
@@ -3457,37 +3447,6 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
    if ( ncomponents )
       *ncomponents = propdata->ncomponents;
-
-   return SCIP_OKAY;
-}
-
-
-/** return objective coefficients of permuted variables at time of symmetry computation */
-SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real**           permvarsobj         /**< pointer to store objective coefficients of permuted variables (NULL if not available) */
-   )
-{
-   SCIP_PROPDATA* propdata;
-   SCIP_PROP* prop;
-
-   assert( scip != NULL );
-   assert( permvarsobj != NULL );
-
-   /* find symmetry propagator */
-   prop = SCIPfindProp(scip, "symmetry");
-   if ( prop == NULL )
-   {
-      SCIPerrorMessage("Could not find symmetry propagator.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   assert( prop != NULL );
-   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
-
-   propdata = SCIPpropGetData(prop);
-   assert( propdata != NULL );
-
-   *permvarsobj = propdata->permvarsobj;
 
    return SCIP_OKAY;
 }

@@ -60,13 +60,6 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    int*                  ncomponents         /**< pointer to store number of components (or NULL) */
    );
 
-/** return objective coefficients of permuted variables at time of symmetry computation */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real**           permvarsobj         /**< pointer to store objective coefficients of permuted variables (NULL if not available) */
-   );
-
 /** return symmetry information on globally fixed variables */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetSyminfoGloballyFixedVars(
