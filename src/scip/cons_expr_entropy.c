@@ -154,17 +154,18 @@ SCIP_RETCODE reverseProp(
    SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, &tmp, tmp);
 
    /* entropy(childinf) < intersection.inf -> consider [childinf, MIN(childsup, extremum)] */
-   if( SCIPintervalGetInf(intersection) > -SCIP_INTERVAL_INFINITY && SCIPintervalGetSup(tmp) < SCIPintervalGetInf(intersection) )
+   if( SCIPintervalGetInf(intersection) > -SCIP_INTERVAL_INFINITY && SCIPintervalGetSup(tmp) - SCIPintervalGetInf(intersection) < -SCIPepsilon(scip) )
    {
       boundinf = reversePropBinarySearch(scip, childinf, MIN(extremum, childsup), TRUE,
          SCIPintervalGetInf(intersection));
    }
    /* entropy(childinf) > intersection.sup -> consider [MAX(childinf,extremum), childsup] */
-   else if( SCIPintervalGetSup(intersection) < SCIP_INTERVAL_INFINITY && SCIPintervalGetInf(tmp) > SCIPintervalGetSup(intersection) )
+   else if( SCIPintervalGetSup(intersection) < SCIP_INTERVAL_INFINITY && SCIPintervalGetInf(tmp) - SCIPintervalGetSup(intersection) > SCIPepsilon(scip) )
    {
       boundinf = reversePropBinarySearch(scip, MAX(childinf, extremum), childsup, FALSE,
          SCIPintervalGetSup(intersection));
    }
+   /* using a strict greater-than here because we expect a tightening because we saw an at-least-epsilon-potential above */
    assert(boundinf == SCIP_INVALID || boundinf > childinf);
 
    /*
@@ -179,17 +180,18 @@ SCIP_RETCODE reverseProp(
       SCIPintervalSetBounds(&tmp, -SCIP_INTERVAL_INFINITY, -SCIP_INTERVAL_INFINITY);  /* entropy(inf) = -inf */
 
    /* entropy(childsup) < intersection.inf -> consider [MAX(childinf,extremum), childsup] */
-   if( SCIPintervalGetInf(intersection) > -SCIP_INTERVAL_INFINITY && SCIPintervalGetSup(tmp) < SCIPintervalGetInf(intersection) )
+   if( SCIPintervalGetInf(intersection) > -SCIP_INTERVAL_INFINITY && SCIPintervalGetSup(tmp) - SCIPintervalGetInf(intersection) < -SCIPepsilon(scip) )
    {
       boundsup = reversePropBinarySearch(scip, MAX(childinf, extremum), childsup, FALSE,
          SCIPintervalGetInf(intersection));
    }
    /* entropy(childsup) > intersection.sup -> consider [childinf, MIN(childsup,extremum)] */
-   else if( SCIPintervalGetSup(intersection) < SCIP_INTERVAL_INFINITY && SCIPintervalGetInf(tmp) > SCIPintervalGetSup(intersection) )
+   else if( SCIPintervalGetSup(intersection) < SCIP_INTERVAL_INFINITY && SCIPintervalGetInf(tmp) - SCIPintervalGetSup(intersection) > SCIPepsilon(scip) )
    {
       boundsup = reversePropBinarySearch(scip, childinf, MIN(childsup, extremum), TRUE,
          SCIPintervalGetSup(intersection));
    }
+   /* using a strict smaller-than here because we expect a tightening because we saw an at-least-epsilon-potential above */
    assert(boundsup == SCIP_INVALID || boundsup < childsup);
 
    if( boundinf != SCIP_INVALID ) /*lint !e777*/
