@@ -16294,15 +16294,19 @@ SCIP_Real SCIPgetRowprepViolation(
     * Therefore, if the exponent in the violation is 52 (or more) less than the one of maxterm,
     * then it is essentially random.
     * We require here that the exponents differ by at most 50.
+    * To be more robust w.r.t. scaling of the row, we look at the exponent of the quotient maxterm/violation
+    * instead of the difference of the exponents of maxterm and violation.
     */
    if( reliable != NULL )
    {
-      int expviol;
-      int expterm;
-
-      (void) frexp(violation, &expviol);  /* exponent in violation */
-      (void) frexp(maxterm, &expterm);    /* exponent in maxterm */
-      *reliable = expterm - expviol <= 50;
+      if( violation != 0.0 )
+      {
+         int exponent;
+         (void) frexp(maxterm / violation, &exponent);  /* difference in exponents for maxterm and violation */
+         *reliable = exponent <= 50;
+      }
+      else
+         *reliable = TRUE;  /* not clear how to evaluate reliability here, so think positive */
    }
 
    return MAX(violation, 0.0);

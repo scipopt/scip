@@ -1200,11 +1200,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 
       SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
 
-      /* this assert may fail in unfortunate situations, e.g., a violation may initially look reliable
-       * this should not really change due to scaleup, but if it barely looked reliable at the beginning
-       * (difference of exponents == 50), then sceleup can tip it over to non-reliable by increasing the
-       * difference of exponents by one (essentially due to a different "rounding")
-       */
       assert(SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable) >= mincutviolation && violreliable);
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
