@@ -1093,9 +1093,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   int***                permstrans,         /**< pointer to store permutation generators as (npermvars x nperms) matrix */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
-   int                   usesymmetry,        /**< identifier of active symmetry handling routines */
    SCIP_Bool*            success             /**< pointer to store whether symmetry computation was successful */
    )
 {
@@ -1138,7 +1136,6 @@ SCIP_RETCODE computeSymmetryGroup(
    *nperms = -1;
    *nmaxperms = 0;
    *perms = NULL;
-   *permstrans = NULL;
    *log10groupsize = 0;
    *success = FALSE;
 
@@ -1770,8 +1767,7 @@ SCIP_RETCODE determineSymmetry(
    /* actually compute (global) symmetry */
    SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries,
          &propdata->npermvars, &propdata->permvars, &propdata->permvarsobj, &propdata->nperms,
-         &propdata->nmaxperms, &propdata->perms, &propdata->permstrans,
-         &propdata->log10groupsize, propdata->usesymmetry, &successful) );
+         &propdata->nmaxperms, &propdata->perms, &propdata->log10groupsize, &successful) );
 
    /* mark that we have computed the symmetry group */
    propdata->computedsymmetry = TRUE;
