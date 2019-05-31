@@ -638,6 +638,7 @@ SCIP_RETCODE freeSymmetryData(
       propdata->log10groupsize = -1.0;
       propdata->binvaraffected = FALSE;
    }
+   propdata->nperms = 0;
 
    assert( propdata->permvarmap == NULL );
    assert( propdata->permvarsevents == NULL );
@@ -1142,7 +1143,7 @@ SCIP_RETCODE computeSymmetryGroup(
    *npermvars = 0;
    *permvars = NULL;
    *permvarsobj = NULL;
-   *nperms = -1;
+   *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
    *log10groupsize = 0;
@@ -1178,6 +1179,7 @@ SCIP_RETCODE computeSymmetryGroup(
    {
       /* In this case we found unkown constraints and we exit, since we cannot handle them. */
       *success = FALSE;
+      *nperms = -1;
       return SCIP_OKAY;
    }
 
