@@ -4318,8 +4318,8 @@ SCIP_RETCODE filterCandidates(
                maxgain = MAX(maxgain, scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)]);
                maxgain = MAX(maxgain, scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)]);
             }
-            if( SCIPisLT(scip, maxgain, scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)])
-               || SCIPisLT(scip, maxgain, scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)]) )
+            if( SCIPisSumRelLE(scip, maxgain, scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)])
+               || SCIPisSumRelLE(scip, maxgain, scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)]) )
             {
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Stop lookahead branching, because the best candidate has gains %g/%g and the maximum gain of the remaining candidates is %g\n",
                   scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
