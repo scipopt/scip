@@ -1120,6 +1120,32 @@ SCIP_RETCODE computeSymmetryGroup(
       }
    }
 
+   /* If every variable is unique, terminate. -> no symmetries can be present */
+   if ( matrixdata.nuniquevars == nvars )
+   {
+      *success = TRUE;
+
+      /* free matrix data */
+      SCIPfreeBlockMemoryArray(scip, &uniquevararray, nvars);
+
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoefcolors, matrixdata.nrhscoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoefcolors, matrixdata.nmatcoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
+      SCIPhashtableFree(&vartypemap);
+
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoef, 2 * nactiveconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matvaridx, matrixdata.nmaxmatcoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matrhsidx, matrixdata.nmaxmatcoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matidx, matrixdata.nmaxmatcoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef);
+
+      SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+
+      return SCIP_OKAY;
+   }
+
    /* find non-equivalent matrix entries (use sorting to avoid too many map calls) */
    for (j = 0; j < matrixdata.nmatcoef; ++j)
    {
