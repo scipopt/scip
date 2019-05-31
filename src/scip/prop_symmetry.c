@@ -665,6 +665,8 @@ SCIP_RETCODE freeSymmetryData(
    assert( propdata->components == NULL );
    assert( propdata->ncomponents == -1 );
 
+   propdata->computedsymmetry = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -1723,7 +1725,6 @@ SCIP_RETCODE determineSymmetry(
 
       /* reset symmetry information */
       SCIP_CALL( freeSymmetryData(scip, propdata) );
-      propdata->computedsymmetry = FALSE;
 
       /* deactivate OF after a restart if used together with orbitopes */
       if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
@@ -3257,6 +3258,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    propdata->log10groupsize = -1.0;
    propdata->binvaraffected = FALSE;
+   propdata->computedsymmetry = FALSE;
 
    propdata->usesymmetry = -1;
    propdata->symconsenabled = FALSE;
