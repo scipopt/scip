@@ -377,6 +377,14 @@ SCIP_Bool RisEqual(
     SCIP_Rational*  r2                  /**< the second rational */
    );
 
+/** check if two rationals are equal */
+EXTERN
+SCIP_Bool RisAbsEqual(
+    SCIP_Rational*  r1,                 /**< the first rational */
+    SCIP_Rational*  r2                  /**< the second rational */
+   );
+
+
 /** check if a rational and a real are equal */
 EXTERN
 SCIP_Bool RisEqualReal(
@@ -394,6 +402,13 @@ SCIP_Bool RApproxEqualReal(
 /** check if the first rational is greater than the second*/
 EXTERN
 SCIP_Bool RisGT(
+    SCIP_Rational*  r1,                 /**< the first rational */
+    SCIP_Rational*  r2                  /**< the second rational */
+   );
+
+/** check if the first rational is greater than the second*/
+EXTERN
+SCIP_Bool RisAbsGT(
     SCIP_Rational*  r1,                 /**< the first rational */
     SCIP_Rational*  r2                  /**< the second rational */
    );

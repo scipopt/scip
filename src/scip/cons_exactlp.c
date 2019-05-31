@@ -1294,10 +1294,9 @@ void consdataComputePseudoActivity(
    int i;
    int pseudoactivityposinf;
    int pseudoactivityneginf;
-   SCIP_Rational* val;
    SCIP_Rational* bound;
+   SCIP_Rational* val;
 
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &val) );
    RsetInt(pseudoactivity, 0, 1);
 
    pseudoactivityposinf = 0;
@@ -1305,7 +1304,7 @@ void consdataComputePseudoActivity(
 
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
-      Rset(val, consdata->vals[i]);
+      val = consdata->vals[i];
       /** todo exip: should bound be rational? */
       bound = (SCIPvarGetBestBoundType(consdata->vars[i]) == SCIP_BOUNDTYPE_LOWER) ? SCIPvarGetLbLocalExact(consdata->vars[i]) : SCIPvarGetUbLocalExact(consdata->vars[i]);
       if( RisInfinity(bound) )
@@ -1339,7 +1338,6 @@ void consdataComputePseudoActivity(
    else if( pseudoactivityposinf > 0 )
       RsetString(pseudoactivity, "inf");
 
-   RdeleteTemp(SCIPbuffer(scip), &val);
 }
 
 /** recompute the minactivity of a constraint */
@@ -1465,10 +1463,7 @@ void consdataCalcMaxAbsval(
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
-   SCIP_Rational* absval;
    int i;
-
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &absval) );
 
    assert(consdata != NULL);
    assert(!consdata->validmaxabsval);
@@ -1477,12 +1472,9 @@ void consdataCalcMaxAbsval(
    RsetReal(consdata->maxabsval, 0.0);
    for( i = 0; i < consdata->nvars; ++i )
    {
-      Rabs(absval, consdata->vals[i]);
-      if( RisGT(absval, consdata->maxabsval) )
-         Rset(consdata->maxabsval, absval);
+      if( RisAbsGT(consdata->vals[i], consdata->maxabsval) )
+         Rabs(consdata->maxabsval, consdata->vals[i]);
    }
-
-   RdeleteTemp(SCIPbuffer(scip), &absval);
 }
 
 /** calculates minimum absolute value of coefficients */
@@ -1492,13 +1484,11 @@ void consdataCalcMinAbsval(
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
-   SCIP_Rational* absval;
    int i;
 
    assert(consdata != NULL);
    assert(!consdata->validminabsval);
 
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &absval) );
    consdata->validminabsval = TRUE;
 
    if( consdata->nvars > 0 )
@@ -1508,12 +1498,9 @@ void consdataCalcMinAbsval(
 
    for( i = 1; i < consdata->nvars; ++i )
    {
-      Rabs(absval, consdata->vals[i]);
-      if( RisLT(absval, consdata->minabsval) )
-         Rset(consdata->minabsval, absval);
+      if( RisAbsGT(consdata->minabsval, consdata->vals[i]) )
+         Rabs(consdata->minabsval, consdata->vals[i]);
    }
-
-   RdeleteTemp(SCIPbuffer(scip), &absval);
 }
 
 /** checks the type of all variables of the constraint and sets hasnonbinvar and hascontvar flags accordingly */
@@ -1598,7 +1585,7 @@ void checkMaxActivityDelta(
 
 /** recompute maximal activity contribution for a single variable */
 static
-void consdataRecomputeMaxActivityDelta(
+SCIP_RETCODE consdataRecomputeMaxActivityDelta(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
@@ -1631,7 +1618,7 @@ void consdataRecomputeMaxActivityDelta(
             }
          }
       }
-      return;
+      return SCIP_OKAY;
    }
 
    for( v = consdata->nvars - 1; v >= 0; --v )
@@ -1662,11 +1649,13 @@ void consdataRecomputeMaxActivityDelta(
 
    RdeleteTemp(SCIPbuffer(scip), &domain);
    RdeleteTemp(SCIPbuffer(scip), &delta);
+
+   return SCIP_OKAY;
 }
 
 /** updates activities for a change in a bound */
 static
-void consdataUpdateActivities(
+SCIP_RETCODE consdataUpdateActivities(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_VAR*             var,                /**< variable that has been changed; can be NULL for global bound changes */
@@ -1866,7 +1855,7 @@ void consdataUpdateActivities(
             }
             /* "normal case": just add the contribution to the activity */
             else
-               delta = newcontribution;
+               Rset(delta newcontribution);
          }
       }
       /* old bound was -infinity */
@@ -1894,7 +1883,7 @@ void consdataUpdateActivities(
             }
             /* "normal case": just add the contribution to the activity */
             else
-               delta = newcontribution;
+               Rset(delta, newcontribution);
          }
       }
    }
@@ -1956,6 +1945,8 @@ void consdataUpdateActivities(
    RdeleteTemp(SCIPbuffer(scip), &delta);
    RdeleteTemp(SCIPbuffer(scip), &newcontribution);
    RdeleteTemp(SCIPbuffer(scip), &oldcontribution);
+
+   return SCIP_OKAY;
 }
 
 /** updates minimum and maximum activity for a change in lower bound */
@@ -2064,38 +2055,31 @@ void consdataUpdateAddCoef(
    SCIP_Bool             checkreliability    /**< should the reliability of the recalculated activity be checked? */
    )
 {
-   SCIP_Rational* absval;   
-
    assert(scip != NULL);
    assert(consdata != NULL);
    assert(var != NULL);
 
-    SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &absval) );
-
    /* update maximum absolute value */
    if( consdata->validmaxabsval )
    {
-      Rabs(absval, val);
-      Rmax(consdata->maxabsval, consdata->maxabsval, absval);
+      if( RisAbsGT(val, consdata->maxabsval) )
+         Rabs(consdata->maxabsval, val);
    }
 
    if( consdata->validminabsval )
    {
-      Rabs(absval, val);
-      Rmin(consdata->minabsval, consdata->minabsval, absval);
+      if( RisAbsGT(consdata->minabsval, val) )
+         Rabs(consdata->minabsval, val);
    }
 
    /* update minimal and maximal activity */
    if( consdata->validactivities )
    {
-      RsetReal(absval, 0.0);
-      consdataUpdateActivitiesLb(scip, consdata, var, absval, SCIPvarGetLbLocalExact(var), val, checkreliability);
-      consdataUpdateActivitiesUb(scip, consdata, var, absval, SCIPvarGetUbLocalExact(var), val, checkreliability);
-      consdataUpdateActivitiesGlbLb(scip, consdata, absval, SCIPvarGetLbGlobalExact(var), val, checkreliability);
-      consdataUpdateActivitiesGlbUb(scip, consdata, absval, SCIPvarGetUbGlobalExact(var), val, checkreliability);
+      consdataUpdateActivitiesLb(scip, consdata, var, NULL, SCIPvarGetLbLocalExact(var), val, checkreliability);
+      consdataUpdateActivitiesUb(scip, consdata, var, NULL, SCIPvarGetUbLocalExact(var), val, checkreliability);
+      consdataUpdateActivitiesGlbLb(scip, consdata, NULL, SCIPvarGetLbGlobalExact(var), val, checkreliability);
+      consdataUpdateActivitiesGlbUb(scip, consdata, NULL, SCIPvarGetUbGlobalExact(var), val, checkreliability);
    }
-
-   RdeleteTemp(SCIPbuffer(scip), &absval);
 }
 
 /** updates minimum and maximum activity for coefficient deletion, invalidates maximum absolute value if necessary */
@@ -2108,19 +2092,14 @@ void consdataUpdateDelCoef(
    SCIP_Bool             checkreliability    /**< should the reliability of the recalculated activity be checked? */
    )
 {
-   SCIP_Rational* absval;
-
    assert(scip != NULL);
    assert(consdata != NULL);
    assert(var != NULL);
 
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &absval) );
-
    /* invalidate maximum absolute value, if this coefficient was the maximum */
    if( consdata->validmaxabsval )
    {
-      Rabs(absval, val);
-      if( RisEqual(absval, consdata->maxabsval) )
+      if( RisAbsEqual(val, consdata->maxabsval) )
       {
          consdata->validmaxabsval = FALSE;
          RsetString(consdata->maxabsval, "inf");
@@ -2130,8 +2109,7 @@ void consdataUpdateDelCoef(
    /* invalidate minimum absolute value, if this coefficient was the minimum */
    if( consdata->validminabsval )
    {
-      Rabs(absval, val);
-      if( RisEqual(absval, consdata->minabsval) )
+      if( RisAbsEqual(val, consdata->minabsval) )
       {
          consdata->validminabsval = FALSE;
          RsetString(consdata->minabsval, "inf");
@@ -2141,14 +2119,11 @@ void consdataUpdateDelCoef(
    /* update minimal and maximal activity */
    if( consdata->validactivities )
    {
-      RsetReal(absval, 0.0);
-      consdataUpdateActivitiesLb(scip, consdata, var, SCIPvarGetLbLocalExact(var), absval, val, checkreliability);
-      consdataUpdateActivitiesUb(scip, consdata, var, SCIPvarGetUbLocalExact(var), absval, val, checkreliability);
-      consdataUpdateActivitiesGlbLb(scip, consdata, SCIPvarGetLbGlobalExact(var), absval, val, checkreliability);
-      consdataUpdateActivitiesGlbUb(scip, consdata, SCIPvarGetUbGlobalExact(var), absval, val, checkreliability);
+      consdataUpdateActivitiesLb(scip, consdata, var, SCIPvarGetLbLocalExact(var), NULL, val, checkreliability);
+      consdataUpdateActivitiesUb(scip, consdata, var, SCIPvarGetUbLocalExact(var), NULL, val, checkreliability);
+      consdataUpdateActivitiesGlbLb(scip, consdata, SCIPvarGetLbGlobalExact(var), NULL, val, checkreliability);
+      consdataUpdateActivitiesGlbUb(scip, consdata, SCIPvarGetUbGlobalExact(var), NULL, val, checkreliability);
    }
-
-   RdeleteTemp(SCIPbuffer(scip), &absval);
 }
 
 /** updates minimum and maximum activity for coefficient change, invalidates maximum absolute value if necessary */
@@ -2162,8 +2137,6 @@ void consdataUpdateChgCoef(
    SCIP_Bool             checkreliability    /**< should the reliability of the recalculated activity be checked? */
    )
 {
-   SCIP_Rational* absval;
-
    assert(scip != NULL);
    assert(consdata != NULL);
    assert(var != NULL);
@@ -2174,23 +2147,17 @@ void consdataUpdateChgCoef(
    /* new zero coefficients should be handled by consdataUpdateDelCoef() */
    assert(!RisZero(newval));
 
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &absval) );
-
    /* update maximum absolute value */
    if( consdata->validmaxabsval )
    {
-      Rabs(absval, newval);
-
-      if( RisGE(absval, consdata->maxabsval) )
+      if( RisAbsGT(newval, consdata->maxabsval) )
       {
-         Rset(consdata->maxabsval, absval);
+         Rabs(consdata->maxabsval, newval);
       }
       else
       {
-         Rabs(absval, oldval);
-
          /* invalidate maximum absolute value */
-         if( RisEqual(absval, consdata->maxabsval) )
+         if( RisAbsEqual(oldval, consdata->maxabsval) )
          {
             consdata->validmaxabsval = FALSE;
             RsetString(consdata->maxabsval, "inf");
@@ -2201,18 +2168,14 @@ void consdataUpdateChgCoef(
    /* update minimum absolute value */
    if( consdata->validminabsval )
    {
-      Rabs(absval, newval);
-
-      if( RisLE(absval, consdata->minabsval) )
+      if( RisAbsGT(consdata->minabsval, newval) )
       {
-         Rset(consdata->minabsval, absval);
+         Rabs(consdata->minabsval, newval);
       }
       else
       {
-         Rabs(absval, oldval);
-
          /* invalidate minimum absolute value */
-         if( RisEqual(absval, consdata->minabsval) )
+         if( RisAbsEqual(newval, consdata->minabsval) )
          {
             consdata->validminabsval = FALSE;
             RsetString(consdata->minabsval, "inf");
@@ -2229,16 +2192,15 @@ void consdataUpdateChgCoef(
       assert(!RisInfinity(SCIPvarGetLbLocalExact(var)));
       assert(!RisInfinity(SCIPvarGetUbLocalExact(var)));
 
-      SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &domain) );
-      SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &delta) );
+      RcreateTemp(SCIPbuffer(scip), &domain);
+      RcreateTemp(SCIPbuffer(scip), &delta);
 
       Rdiff(domain, SCIPvarGetUbLocalExact(var), SCIPvarGetLbLocalExact(var));
-      Rabs(absval, newval);
-      Rmult(delta, absval, domain);
+      Rmult(delta, newval, domain);
 
-      if( RisGT(delta, consdata->maxactdelta) )
+      if( RisAbsGT(delta, consdata->maxactdelta) )
       {
-         Rset(consdata->maxactdelta, delta);
+         Rabs(consdata->maxactdelta, delta);
          consdata->maxactdeltavar = var;
       }
       else
@@ -2255,8 +2217,6 @@ void consdataUpdateChgCoef(
    /* @todo do something more clever here, e.g. if oldval * newval >= 0, do the update directly */
    consdataUpdateDelCoef(scip, consdata, var, oldval, checkreliability);
    consdataUpdateAddCoef(scip, consdata, var, newval, checkreliability);
-
-   RdeleteTemp(SCIPbuffer(scip), &absval);
 }
 
 /** returns the maximum absolute value of all coefficients in the constraint */
@@ -2397,7 +2357,6 @@ void getMinActivity(
    else
    {
       SCIP_Rational* tmpactivity;
-      SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &tmpactivity) );
 
       /* recompute minactivity if it is not valid */
       if( global )
@@ -2406,7 +2365,7 @@ void getMinActivity(
             consdataRecomputeGlbMinactivity(scip, consdata);
          assert(consdata->validglbminact);
 
-         Rset(tmpactivity, consdata->glbminactivity);
+         tmpactivity = consdata->glbminactivity;
       }
       else
       {
@@ -2414,14 +2373,12 @@ void getMinActivity(
             consdataRecomputeMinactivity(scip, consdata);
          assert(consdata->validminact);
 
-         Rset(tmpactivity, consdata->minactivity);
+         tmpactivity = consdata->minactivity;
       }
 
       Rdiff(minactivity, tmpactivity, delta);
       *issettoinfinity = FALSE;
       *isrelax = FALSE;
-
-      RdeleteTemp(SCIPbuffer(scip), &tmpactivity);
    }
 }
 
@@ -2469,8 +2426,6 @@ void getMaxActivity(
    else
    {
       SCIP_Rational* tmpactivity;
-      
-      SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &tmpactivity) );
 
       /* recompute maxactivity if it is not valid */
       if( global )
@@ -2479,7 +2434,7 @@ void getMaxActivity(
             consdataRecomputeGlbMaxactivity(scip, consdata);
          assert(consdata->validglbmaxact);
 
-         Rset(tmpactivity, consdata->glbmaxactivity);
+         tmpactivity = consdata->glbmaxactivity;
       }
       else
       {
@@ -2487,14 +2442,12 @@ void getMaxActivity(
             consdataRecomputeMaxactivity(scip, consdata);
          assert(consdata->validmaxact);
 
-         Rset(tmpactivity, consdata->maxactivity);
+         tmpactivity = consdata->maxactivity;
       }
 
       Rdiff(maxactivity, tmpactivity, delta);
       *issettoinfinity = FALSE;
       *isrelax = FALSE;
-
-      RdeleteTemp(SCIPbuffer(scip), &tmpactivity);
    }
 }
 
@@ -2523,7 +2476,7 @@ void consdataGetActivityBounds(
    assert(minactivity != NULL);
    assert(maxactivity != NULL);
 
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &tmpdelta) );
+   RcreateTemp(SCIPbuffer(scip), &tmpdelta);
 
    if( !consdata->validactivities )
    {
@@ -2654,10 +2607,10 @@ void consdataGetActivityResiduals(
    SCIP_Rational* maxactbound;
    SCIP_Rational* absval;
    SCIP_Rational* tmp;
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &minactbound) );
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &maxactbound) );
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &absval) );
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &tmp) );
+   RcreateTemp(SCIPbuffer(scip), &minactbound);
+   RcreateTemp(SCIPbuffer(scip), &maxactbound);
+   RcreateTemp(SCIPbuffer(scip), &absval);
+   RcreateTemp(SCIPbuffer(scip), &tmp);
 
    assert(scip != NULL);
    assert(consdata != NULL);
@@ -2782,8 +2735,8 @@ void consdataGetGlbActivityBounds(
    )
 {
    SCIP_Rational* tmpzero;
-   
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &tmpzero) );
+
+   RcreateTemp(SCIPbuffer(scip), &tmpzero);
 
    assert(scip != NULL);
    assert(consdata != NULL);
@@ -2854,10 +2807,10 @@ void consdataGetGlbActivityResiduals(
    SCIP_Rational* absval;
    SCIP_Rational* tmp;
    
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &minactbound) );
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &maxactbound) );
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &absval) );
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &tmp) );
+   RcreateTemp(SCIPbuffer(scip), &minactbound);
+   RcreateTemp(SCIPbuffer(scip), &maxactbound);
+   RcreateTemp(SCIPbuffer(scip), &absval);
+   RcreateTemp(SCIPbuffer(scip), &tmp);
 
    assert(scip != NULL);
    assert(consdata != NULL);
@@ -2985,7 +2938,7 @@ void consdataGetActivity(
       SCIP_Bool negsign;
       int v;
 
-      SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &solval) );
+      RcreateTemp(SCIPbuffer(scip), &solval);
 
       RsetInt(activity, 0, 1);
       nposinf = 0;
@@ -3007,7 +2960,6 @@ void consdataGetActivity(
          else
          {
             RaddProd(activity, solval, consdata->vals[v]);
-
          }
       }
       assert(nneginf >= 0 && nposinf >= 0);
@@ -3046,9 +2998,9 @@ void consdataGetFeasibility(
    assert(scip != NULL);
    assert(consdata != NULL);
 
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &activity) );
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &op1) );
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &op2) );
+   RcreateTemp(SCIPbuffer(scip), &activity);
+   RcreateTemp(SCIPbuffer(scip), &op1);
+   RcreateTemp(SCIPbuffer(scip), &op2);
 
    consdataGetActivity(scip, consdata, sol, activity);
    Rdiff(op1, consdata->rhs, activity);

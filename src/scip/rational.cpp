@@ -857,6 +857,20 @@ SCIP_Bool RisEqual(
    return FALSE;
 }
 
+/** check if two rationals are equal */
+SCIP_Bool RisAbsEqual(
+   SCIP_Rational*        r1,                 /**< the first rational */
+   SCIP_Rational*        r2                  /**< the second rational */
+   )
+{
+   assert(r1 != NULL && r2 != NULL);
+
+   if( abs(*(r1->r)) == abs(*(r2->r)) )
+      return (r1->isinf == r2->isinf);
+
+   return FALSE;
+}
+
 /** check if a rational and a real are equal */
 SCIP_Bool RisEqualReal(
    SCIP_Rational*        r1,                 /**< the rational */
@@ -912,6 +926,22 @@ SCIP_Bool RisGT(
    {
       return *(r1->r) > *(r2->r);
    }
+}
+
+/** check if the first rational is greater than the second*/
+SCIP_Bool RisAbsGT(
+   SCIP_Rational*        r1,                 /**< The first rational */
+   SCIP_Rational*        r2                  /**< The second rational */
+   )
+{
+   assert(r1 != NULL && r2 != NULL);
+
+   if( r1->isinf && !r2->isinf )
+      return TRUE;
+   else if( r2->isinf )
+      return FALSE;
+   else
+      return abs(*(r1->r)) > abs(*(r2->r));
 }
 
 /** check if the first rational is smaller than the second*/
