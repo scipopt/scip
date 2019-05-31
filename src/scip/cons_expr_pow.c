@@ -113,7 +113,7 @@ SCIP_RETCODE computeSignpowerRoot(
    else
       *root = signpow_roots[(int)SCIPfloor(scip, exponent)];
 
-   for(iter = 0; iter < 1000; ++iter )
+   for( iter = 0; iter < 1000; ++iter )
    {
       polyval = (exponent - 1.0) * pow(*root, exponent) + exponent * pow(*root, exponent - 1.0) - 1.0;
       if( fabs(polyval) < 1e-12 && SCIPisZero(scip, polyval) )
