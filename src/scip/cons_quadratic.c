@@ -16092,10 +16092,6 @@ void SCIPprintRowprepSol(
    SCIP_Real maxterm;
    SCIP_Real activity;
    SCIP_Real violation;
-   SCIP_Real fracviol;
-   int expviol;
-   SCIP_Real fracmaxterm;
-   int expmaxterm;
    int maxtermidx;
    int i;
 
@@ -16134,12 +16130,8 @@ void SCIPprintRowprepSol(
       violation = rowprep->side - activity;
 
    SCIPinfoMessage(scip, file, "; activity %.15g", activity);
-
-   fracviol = frexp(violation, &expviol);
-   fracmaxterm = frexp(maxterm, &expmaxterm);
-
-   SCIPinfoMessage(scip, file, "; violation %e", violation, fracviol, expviol);
-   SCIPinfoMessage(scip, file, "; maxterm %e at pos %d\n", maxterm, fracmaxterm, expmaxterm, maxtermidx);
+   SCIPinfoMessage(scip, file, "; violation %e", violation);
+   SCIPinfoMessage(scip, file, "; maxterm %e at pos %d\n", maxterm, maxtermidx);
 }
 
 /** adds a term coef*var to a rowprep */
