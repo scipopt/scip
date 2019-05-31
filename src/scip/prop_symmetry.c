@@ -1870,9 +1870,9 @@ SCIP_RETCODE determineSymmetry(
          }
       }
 
+      /* free original perms matrix if no symmetry constraints are added */
       if ( ! propdata->symconsenabled )
       {
-         /* free original perms matrix */
          for (p = 0; p < propdata->nperms; ++p)
          {
             SCIPfreeBlockMemoryArray(scip, &(propdata->perms)[p], nvars);
@@ -1924,14 +1924,12 @@ SCIP_RETCODE determineSymmetry(
 
    /* symmetric variables are not allowed to be multi-aggregated */
    /* TODO: Do we have to forbid multi-aggregation in any case? */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permvarsobj, propdata->npermvars) );
    for (j = 0; j < propdata->npermvars; ++j)
    {
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+      propdata->permvarsobj[j] = SCIPvarGetObj(propdata->permvars[j]);
    }
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permvarsobj, propdata->npermvars) );
-   for (j = 0; j < propdata->npermvars; ++j)
-      (propdata->permvarsobj)[j] = SCIPvarGetObj(propdata->permvars[j]);
 
    return SCIP_OKAY;
 }
