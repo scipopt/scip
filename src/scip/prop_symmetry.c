@@ -2978,6 +2978,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+   assert( propdata->usesymmetry >= 0 );
 
    /* guarantee that symmetries are computed (and handled) if the solving process hat not been interrupted
     * and even if presolving has been disabled */
@@ -3006,6 +3007,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+   assert( propdata->usesymmetry >= 0 );
 
    /* possibly create symmetry handling constraints */
    if ( propdata->symconsenabled && ! propdata->addedconss )
@@ -3121,6 +3123,22 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    /* get data */
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+
+   /* if not presolving has been performed, we need to get usesymmetry */
+   if ( propdata->usesymmetry < 0 )
+   {
+      SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
+      if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
+         propdata->symconsenabled = TRUE;
+      else
+         propdata->symconsenabled = FALSE;
+
+      if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
+         propdata->ofenabled = TRUE;
+      else
+         propdata->ofenabled = FALSE;
+   }
+   assert( propdata->usesymmetry );
 
    /* do not run if not enabled */
    if ( ! propdata->ofenabled )
