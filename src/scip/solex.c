@@ -320,7 +320,7 @@ SCIP_RETCODE SCIPsolexCreate(
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
    (*sol)->solorigin = SCIP_SOLORIGIN_ZERO;
-   (*sol)->obj = Rcreate(blkmem);
+   SCIP_CALL( Rcreate(blkmem, &(*sol)->obj) );
    (*sol)->primalindex = -1;
    (*sol)->hasinfval = FALSE;
    //SCIPsolResetViolations(*sol);
@@ -386,7 +386,7 @@ SCIP_RETCODE SCIPsolexCopy(
    SCIP_CALL( SCIPrationalarrayCopy(&(*sol)->vals, blkmem, sourcesol->vals) );
    SCIP_CALL( SCIPboolarrayCopy(&(*sol)->valid, blkmem, sourcesol->valid) );
    (*sol)->heur = sourcesol->heur;
-   (*sol)->obj = Rcopy(blkmem, sourcesol->obj);
+   SCIP_CALL( Rcopy(blkmem, &(*sol)->obj, sourcesol->obj) );
    (*sol)->primalindex = -1;
    (*sol)->solorigin = sourcesol->solorigin;
    (*sol)->hasinfval = sourcesol->hasinfval;
@@ -1045,7 +1045,7 @@ SCIP_RETCODE SCIPsolexSetVal(
 
    SCIPsetDebugMsg(set, "setting value of <%s> in exact solution %p to %g\n", SCIPvarGetName(var), (void*)sol, RgetRealApprox(val));
 
-   oldval = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &oldval) );
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
    switch( SCIPvarGetStatusExact(var) )
@@ -1232,9 +1232,11 @@ void SCIPsolexGetVal(
    {
       SCIP_RETCODE retcode;
       SCIP_VAR* origvar;
-      SCIP_Rational* scalar = RcreateTemp(set->buffer);
-      SCIP_Rational* constant = RcreateTemp(set->buffer);
+      SCIP_Rational* scalar; 
+      SCIP_Rational* constant; 
 
+      SCIP_CALL( RcreateTemp(set->buffer, &scalar) );
+      SCIP_CALL( RcreateTemp(set->buffer, &constant) );
       /* we cannot get the value of a transformed variable for a solution that lives in the original problem space
        * -> get the corresponding original variable first
        */
@@ -1894,15 +1896,17 @@ SCIP_Bool SCIPsolexsAreEqual(
    )
 {
    SCIP_PROB* prob;
-   SCIP_Rational* tmp1 = RcreateTemp(set->buffer);
-   SCIP_Rational* tmp2 = RcreateTemp(set->buffer);
+   SCIP_Rational* tmp1; 
+   SCIP_Rational* tmp2; 
    int v;
    SCIP_Bool result = TRUE;
 
    assert(sol1 != NULL);
    assert(sol2 != NULL);
    assert((sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL) && (sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL) || transprob != NULL);
-
+   
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp1) );
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp2) );
    /* if both solutions are original or both are transformed, take the objective values stored in the solutions */
    if( (sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL) == (sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL) )
    {
@@ -1957,12 +1961,14 @@ SCIP_RETCODE SCIPsolexPrint(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
-   SCIP_Rational* solval = RcreateTemp(set->buffer);
+   SCIP_Rational* solval;
    int v;
 
    assert(sol != NULL);
    assert(prob != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || prob->transformed || transprob != NULL);
+
+   SCIP_CALL( RcreateTemp(set->buffer, &solval) );
 
    /* display variables of problem data */
    for( v = 0; v < prob->nfixedvars; ++v )

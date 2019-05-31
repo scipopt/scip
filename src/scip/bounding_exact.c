@@ -220,14 +220,14 @@ SCIP_RETCODE allocIntMem(
    assert(set != NULL);
 
    /* allocate memory for aux problem */
-   *psobj = RcreateArrayTemp(set->buffer, psncols);
-   *pslb = RcreateArrayTemp(set->buffer, psncols);
-   *psub = RcreateArrayTemp(set->buffer, psncols);
-   *pslhs = RcreateArrayTemp(set->buffer, psnrows);
-   *psrhs = RcreateArrayTemp(set->buffer, psnrows);
-   *psval = RcreateArrayTemp(set->buffer, psnnonz);
-   *sol = RcreateArrayTemp(set->buffer, psncols);
-   *objval = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateArrayTemp(set->buffer, psobj, psncols) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, pslb, psncols) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, psub, psncols) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, pslhs, psnrows) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, psrhs, psnrows) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, psval, psnnonz) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, sol, psncols) );
+   SCIP_CALL( RcreateTemp(set->buffer, objval) );
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, psbeg, psnrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, pslen, psnrows) );
@@ -308,8 +308,8 @@ SCIP_RETCODE psChooseS(
 
       solveLpExact(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, 100, &lperror, FALSE);
 
-      rootprimal = RcreateArrayTemp(set->buffer, ncols);
-      rootactivity = RcreateArrayTemp(set->buffer, nrows);
+      SCIP_CALL( RcreateArrayTemp(set->buffer, &rootprimal, ncols) );
+      SCIP_CALL( RcreateArrayTemp(set->buffer, &rootactivity, nrows) );
 
       /* get the primal solution and activity */
       SCIP_CALL( SCIPlpiexGetSol(lpex->lpiex, NULL, rootprimal, NULL, rootactivity, NULL) );
@@ -408,7 +408,7 @@ SCIP_RETCODE psFactorizeD(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projind, 2*nnonz + 2*ncols) );
    for( i = 0; i < 2*nnonz + 2*ncols; i++)
       projind[i]=0;
-   projval = RcreateArrayTemp(set->buffer, 2*nnonz + 2*ncols);
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &projval, 2*nnonz + 2*ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projvalgmp, 2*nnonz + 2*ncols) );
 
    /* allocate memory for the basis mapping */
@@ -1385,10 +1385,9 @@ SCIP_RETCODE psComputeSintPointRay(
    int psnrows;
    int psnnonz;
    int nobjnz;
-
-   SCIP_Rational* tmp = RcreateTemp(set->buffer);
-   SCIP_Rational* alpha = RcreateTemp(set->buffer);
-   SCIP_Rational* beta = RcreateTemp(set->buffer);
+   SCIP_Rational* tmp;   
+   SCIP_Rational* alpha; 
+   SCIP_Rational* beta;  
 
    /* lpiex and data used for the aux. problem */
    SCIP_LPIEX* pslpiex;
@@ -1435,6 +1434,9 @@ SCIP_RETCODE psComputeSintPointRay(
     *   (reduced from nextendedrows to ndvarmap)
     * - dvarincidence gives the incidence vector of variables used in aux problem
     */
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
+   SCIP_CALL( RcreateTemp(set->buffer, &alpha) );
+   SCIP_CALL( RcreateTemp(set->buffer, &beta) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dvarmap, nextendedrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dvarincidence, nextendedrows) );
    {
@@ -2012,7 +2014,7 @@ SCIP_RETCODE constructPSData(
    psdata->psdatacon = TRUE;
 
    SCIPdebugMessage("calling constructPSdata()\n");
-   psdata->commonslack = Rcreate(blkmem);
+   SCIP_CALL( Rcreate(blkmem, &psdata->commonslack) );
 
    /* process the bound changes */
    SCIP_CALL( SCIPsepastoreexApplyCuts(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
@@ -2034,13 +2036,13 @@ SCIP_RETCODE constructPSData(
       if( TRUE || !psdata->psuseintpoint )
       {
          /* try to compute the S-interior ray if we want to use it for bounding or infeasibility */
-         psdata->interiorray = RcreateArray(blkmem, psdata->nextendedrows);
+         SCIP_CALL( RcreateArray(blkmem, &psdata->interiorray, psdata->nextendedrows) );
          SCIP_CALL( psComputeSintPointRay(lp, lpex, set, prob, blkmem, FALSE) );
       }
       if( psdata->psuseintpoint || !psdata->pshasray )
       {
          /* now, compute S-interior point if we need it OR if the ray construction failed */
-         psdata->interiorpt = RcreateArray(blkmem, psdata->nextendedrows);
+         SCIP_CALL( RcreateArray(blkmem, &psdata->interiorpt, psdata->nextendedrows) );
          SCIP_CALL( psComputeSintPointRay(lp, lpex, set, prob, blkmem, TRUE) );
       }
    }
@@ -2147,12 +2149,12 @@ SCIP_RETCODE getPSdual(
       useinteriorpoint = FALSE;
    }
 
-   tmp = RcreateTemp(set->buffer);
-   tmp2 = RcreateTemp(set->buffer);
-   lambda1 = RcreateTemp(set->buffer);
-   lambda2 = RcreateTemp(set->buffer);
-   maxv = RcreateTemp(set->buffer);
-   dualbound = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp2) );
+   SCIP_CALL( RcreateTemp(set->buffer, &lambda1) );
+   SCIP_CALL( RcreateTemp(set->buffer, &lambda2) );
+   SCIP_CALL( RcreateTemp(set->buffer, &maxv) );
+   SCIP_CALL( RcreateTemp(set->buffer, &dualbound) );
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
@@ -2166,10 +2168,10 @@ SCIP_RETCODE getPSdual(
    approxsize = 2 * (nrows + ncols);
 
    /* allocate memory for approximate dual solution, dual cost vector, violation and correction */
-   approxdual = RcreateArrayTemp(set->buffer, nextendedrows);
-   costvect = RcreateArrayTemp(set->buffer, nextendedrows);
-   violation = RcreateArrayTemp(set->buffer, ncols);
-   correction = RcreateArrayTemp(set->buffer, nextendedrows);
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &approxdual, nextendedrows) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &costvect, nextendedrows) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &violation, ncols) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &correction, nextendedrows) );
 
    /* recover the objective coefs and approximate solution value of dual solution;
     * dual vars of lhs constraints (including -inf) and rhs constraints (including +inf),

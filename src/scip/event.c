@@ -87,9 +87,11 @@ SCIP_RETCODE updateLpexBdChg(
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN ||
          SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE )
    {
-      SCIP_Rational* newbound = RcreateTemp(set->buffer);
-      SCIP_Rational* oldbound = RcreateTemp(set->buffer);
+      SCIP_Rational* newbound; 
+      SCIP_Rational* oldbound; 
 
+      SCIP_CALL( RcreateTemp(set->buffer, &newbound) );
+      SCIP_CALL( RcreateTemp(set->buffer, &oldbound) );
       RsetReal(newbound, event->data.eventbdchg.newbound);
       RsetReal(oldbound, event->data.eventbdchg.oldbound);
 
@@ -1635,9 +1637,11 @@ SCIP_RETCODE SCIPeventProcess(
       /* if in exact solving mode, adjust rational lp data */
       if( set->misc_exactsolve )
       {
-         SCIP_Rational* newobj = RcreateTemp(set->buffer);
-         SCIP_Rational* oldobj = RcreateTemp(set->buffer);
-
+         SCIP_Rational* newobj; 
+         SCIP_Rational* oldobj; 
+         
+         SCIP_CALL( RcreateTemp(set->buffer, &newobj) );
+         SCIP_CALL( RcreateTemp(set->buffer, &oldobj) );
          RsetReal(newobj, event->data.eventobjchg.newobj);
          RsetReal(oldobj, event->data.eventobjchg.oldobj);
 

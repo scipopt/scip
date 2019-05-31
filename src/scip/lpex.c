@@ -599,7 +599,7 @@ SCIP_RETCODE colexEnsureSize(
       /* realloc colex */
       for( i = col->size; i < newsize; ++i )
       {
-         col->vals[i] = Rcreate(blkmem);
+         SCIP_CALL( Rcreate(blkmem, &col->vals[i]) );
       }
 
       col->size = newsize;
@@ -1008,7 +1008,7 @@ void colexSwapCoefs(
    if( pos1 == pos2 )
       return;
 
-   tmpval = RcreateTemp(buffer);
+   SCIP_CALL( RcreateTemp(buffer, &tmpval) );
    /* swap coefficients */
    tmprow = col->rows[pos2];
    Rset(tmpval, col->vals[pos2]);
@@ -1113,7 +1113,7 @@ void rowexSwapCoefs(
    if( pos1 == pos2 )
       return;
 
-   tmpval = RcreateTemp(buffer);
+   SCIP_CALL( RcreateTemp(buffer, &tmpval) );
    /* swap coefficients */
    tmpcol = row->cols[pos2];
    tmpindex = row->cols_index[pos2];
@@ -1249,7 +1249,7 @@ SCIP_RETCODE colexAddCoef(
    if( col->vals[pos] != NULL )
       Rset(col->vals[pos], val);
    else
-      col->vals[pos] = Rcopy(blkmem, val);
+      SCIP_CALL( Rcopy(blkmem, &col->vals[pos], val) );
 
    col->linkpos[pos] = linkpos;
    if( linkpos == -1 )
@@ -1462,7 +1462,7 @@ SCIP_RETCODE rowexAddCoef(
    row->cols[pos] = col;
    row->cols_index[pos] = col->index;
    if( row->vals[pos] == NULL )
-      row->vals[pos] = Rcopy(blkmem, val);
+      SCIP_CALL( Rcopy(blkmem, &row->vals[pos], val) );
    else
       Rset(row->vals[pos], val);
 
@@ -2091,10 +2091,10 @@ SCIP_RETCODE lpexFlushAddCols(
    assert(naddcols > 0);
 
    /* get temporary memory for changes */
-   obj = RcreateArrayTemp(set->buffer, naddcols);
-   lb = RcreateArrayTemp(set->buffer, naddcols);
-   ub = RcreateArrayTemp(set->buffer, naddcols);
-   val = RcreateArrayTemp(set->buffer, naddcoefs);
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &obj, naddcols) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &lb, naddcols) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &ub, naddcols) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &val, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &beg, naddcols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &name, naddcols) );
@@ -2294,9 +2294,9 @@ SCIP_RETCODE lpexFlushAddRows(
    assert(naddrows > 0);
 
    /* get temporary memory for changes */
-   lhs = RcreateArrayTemp(set->buffer, naddrows);
-   rhs = RcreateArrayTemp(set->buffer, naddrows);
-   val = RcreateArrayTemp(set->buffer, naddcoefs);
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &lhs, naddrows) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &rhs, naddrows) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &val, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &beg, naddrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, naddcoefs) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &name, naddrows) );
@@ -2410,9 +2410,9 @@ SCIP_RETCODE lpexFlushChgCols(
    /* get temporary memory for changes */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &objind, lp->ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &bdind, lp->ncols) );
-   obj = RcreateArrayTemp(set->buffer, lp->ncols);
-   lb = RcreateArrayTemp(set->buffer, lp->ncols);
-   ub = RcreateArrayTemp(set->buffer, lp->ncols);
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &obj, lp->ncols) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &lb, lp->ncols) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &ub, lp->ncols) );
 
    /* collect all cached bound and objective changes */
    nobjchg = 0;
@@ -2431,9 +2431,13 @@ SCIP_RETCODE lpexFlushChgCols(
          /* do not check consistency of data with LPI in case of LPI=none */
          if( !lpinone )
          {
-            SCIP_Rational* lpiobj = RcreateTemp(set->buffer);
-            SCIP_Rational* lpilb = RcreateTemp(set->buffer);
-            SCIP_Rational* lpiub = RcreateTemp(set->buffer);
+            SCIP_Rational* lpiobj;
+            SCIP_Rational* lpiub;
+            SCIP_Rational* lpilb;
+
+            SCIP_CALL( RcreateTemp(set->buffer, &lpiobj) );
+            SCIP_CALL( RcreateTemp(set->buffer, &lpilb) );
+            SCIP_CALL( RcreateTemp(set->buffer, &lpiub) );
 
             SCIP_CALL( SCIPlpiexGetObj(lp->lpiex, col->lpipos, col->lpipos, &lpiobj) );
             SCIP_CALL( SCIPlpiexGetBounds(lp->lpiex, col->lpipos, col->lpipos, &lpilb, &lpiub) );
@@ -2540,8 +2544,8 @@ SCIP_RETCODE lpexFlushChgRows(
 
    /* get temporary memory for changes */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, lp->nrows) );
-   lhs = RcreateArrayTemp(set->buffer, lp->nrows);
-   rhs = RcreateArrayTemp(set->buffer, lp->nrows);
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &lhs, lp->nrows) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &rhs, lp->nrows) );
 
    /* collect all cached left and right hand side changes */
    nchg = 0;
@@ -2556,8 +2560,11 @@ SCIP_RETCODE lpexFlushChgRows(
          /* do not check consistency of data with LPI in case of LPI=none */
          if( !lpinone )
          {
-            SCIP_Rational* lpilhs = RcreateTemp(set->buffer);
-            SCIP_Rational* lpirhs = RcreateTemp(set->buffer);
+            SCIP_Rational* lpirhs;
+            SCIP_Rational* lpilhs;
+
+            SCIP_CALL( RcreateTemp(set->buffer, &lpilhs) );
+            SCIP_CALL( RcreateTemp(set->buffer, &lpirhs) );
 
             SCIP_CALL( SCIPlpiexGetSides(lp->lpiex, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
             assert(RisEqual(lpilhs, row->flushedlhs));
@@ -2569,8 +2576,11 @@ SCIP_RETCODE lpexFlushChgRows(
 #endif
          if( row->lhschanged || row->rhschanged )
          {
-            SCIP_Rational* newlhs = RcreateTemp(set->buffer);
-            SCIP_Rational* newrhs = RcreateTemp(set->buffer);
+            SCIP_Rational* newlhs;
+            SCIP_Rational* newrhs;
+
+            SCIP_CALL( RcreateTemp(set->buffer, &newlhs) );
+            SCIP_CALL( RcreateTemp(set->buffer, &newrhs) );
 
             Rdiff(newlhs, row->lhs, row->constant);
             Rdiff(newrhs, row->rhs, row->constant);
@@ -2670,26 +2680,26 @@ SCIP_RETCODE SCIPcolexCreate(
    }
 
    (*col)->var = var;
-   (*col)->obj = Rcopy(blkmem, SCIPvarGetObjExact(var));
-   (*col)->lb = Rcopy(blkmem, SCIPvarGetLbLocalExact(var));
-   (*col)->ub = Rcopy(blkmem, SCIPvarGetUbLocalExact(var));
-   //(*col)->unchangedobj = Rcopy(blkmem, SCIPvarGetUnchangedObjExact(var));
-   //(*col)->lazylb = Rcopy(blkmem, SCIPvarGetLbLazyExact(var));
-   //(*col)->lazyub = Rcopy(blkmem, SCIPvarGetUbLazyExact(var));
+   SCIP_CALL( Rcopy(blkmem, &(*col)->obj, SCIPvarGetObjExact(var)) );
+   SCIP_CALL( Rcopy(blkmem, &(*col)->lb, SCIPvarGetLbLocalExact(var)) );
+   SCIP_CALL( Rcopy(blkmem, &(*col)->ub, SCIPvarGetUbLocalExact(var)) );
+   //SCIP_CALL( Rcopy(blkmem, &(*col)->unchangedobj, SCIPvarGetUnchangedObjExact(var)) );
+   //SCIP_CALL( Rcopy(blkmem, &(*col)->lazylb, SCIPvarGetLbLazyExact(var)) );
+   //SCIP_CALL( Rcopy(blkmem, &(*col)->lazyub, SCIPvarGetUbLazyExact(var)) );
    (*col)->index = (*col)->fpcol->index;
-   (*col)->flushedobj = Rcreate(blkmem);
-   (*col)->flushedlb = Rcreate(blkmem);
-   (*col)->flushedub = Rcreate(blkmem);
-   (*col)->primsol = Rcreate(blkmem);
-   (*col)->redcost = RcreateString(blkmem, "inf");
-   (*col)->farkascoef = RcreateString(blkmem, "inf");
-   (*col)->minprimsol = Rcopy(blkmem, (*col)->ub);
-   (*col)->maxprimsol = Rcopy(blkmem, (*col)->lb);
+   SCIP_CALL( Rcreate(blkmem, &(*col)->flushedobj) );
+   SCIP_CALL( Rcreate(blkmem, &(*col)->flushedlb) );
+   SCIP_CALL( Rcreate(blkmem, &(*col)->flushedub) );
+   SCIP_CALL( Rcreate(blkmem, &(*col)->primsol) );
+   SCIP_CALL( RcreateString(blkmem, &(*col)->redcost, "inf") );
+   SCIP_CALL( RcreateString(blkmem, &(*col)->farkascoef, "inf") );
+   SCIP_CALL( Rcopy(blkmem, &(*col)->minprimsol, (*col)->ub) );
+   SCIP_CALL( Rcopy(blkmem, &(*col)->maxprimsol, (*col)->lb) );
    (*col)->removable = FALSE;
-   //(*col)->sbdown = Rcreate(blkmem);
-   //(*col)->sbup = Rcreate(blkmem);
-   //(*col)->sbsolval = Rcreate(blkmem);
-   //(*col)->sblpobjval = Rcreate(blkmem);
+   //(*col)->SCIP_CALL( Rcreate(blkmem, &sbdown) );
+   //(*col)->SCIP_CALL( Rcreate(blkmem, &sbup) );
+   //(*col)->SCIP_CALL( Rcreate(blkmem, &sbsolval) );
+   //(*col)->SCIP_CALL( Rcreate(blkmem, &sblpobjval) );
    (*col)->integral = SCIPvarIsIntegral(var);
 
 
@@ -3196,20 +3206,20 @@ SCIP_RETCODE SCIProwCreateExact(
       (*row)->cols_index = NULL;
    }
 
-   (*row)->lhs = Rcopy(blkmem, lhs);
-   (*row)->rhs = Rcopy(blkmem, rhs);
-   (*row)->flushedlhs = RcreateString(blkmem, "-inf");
-   (*row)->flushedrhs = RcreateString(blkmem, "inf");
-   (*row)->objprod = RcreateString(blkmem, "0");
-   (*row)->maxval = RcreateString(blkmem, "0");
-   (*row)->minval = RcreateString(blkmem, "inf");
-   (*row)->dualsol = RcreateString(blkmem, "0");
-   (*row)->activity = RcreateString(blkmem, "inf");
-   (*row)->dualfarkas = RcreateString(blkmem, "0");
-   (*row)->pseudoactivity = RcreateString(blkmem, "inf");
-   (*row)->minactivity = RcreateString(blkmem, "inf");
-   (*row)->maxactivity = RcreateString(blkmem, "inf");
-   (*row)->constant = RcreateString(blkmem, "0");
+   SCIP_CALL( Rcopy(blkmem, &(*row)->lhs, lhs) );
+   SCIP_CALL( Rcopy(blkmem, &(*row)->rhs, rhs) );
+   SCIP_CALL( RcreateString(blkmem, &(*row)->flushedlhs, "-inf") );
+   SCIP_CALL( RcreateString(blkmem, &(*row)->flushedrhs, "inf") );
+   SCIP_CALL( RcreateString(blkmem, &(*row)->objprod, "0") );
+   SCIP_CALL( RcreateString(blkmem, &(*row)->maxval, "0") );
+   SCIP_CALL( RcreateString(blkmem, &(*row)->minval, "inf") );
+   SCIP_CALL( RcreateString(blkmem, &(*row)->dualsol, "0") );
+   SCIP_CALL( RcreateString(blkmem, &(*row)->activity, "inf") );
+   SCIP_CALL( RcreateString(blkmem, &(*row)->dualfarkas, "0") );
+   SCIP_CALL( RcreateString(blkmem, &(*row)->pseudoactivity, "inf") );
+   SCIP_CALL( RcreateString(blkmem, &(*row)->minactivity, "inf") );
+   SCIP_CALL( RcreateString(blkmem, &(*row)->maxactivity, "inf") );
+   SCIP_CALL( RcreateString(blkmem, &(*row)->constant, "0") );
 
    (*row)->origin = origin;
    (*row)->eventfilter = NULL;
@@ -3520,17 +3530,17 @@ SCIP_RETCODE SCIPlpexCreate(
    (*lp)->glbpseudoobjvalinf = 0;
    (*lp)->interleavedbfreq = 0;
    (*lp)->ninfiniteboundcols = 0;
-   (*lp)->lpobjval = Rcreate(blkmem);
-   (*lp)->pseudoobjval = Rcreate(blkmem);
-   (*lp)->glbpseudoobjval = Rcreate(blkmem);
-   (*lp)->looseobjval = Rcreate(blkmem);
-   (*lp)->relglbpseudoobjval = Rcreate(blkmem);
-   (*lp)->rellooseobjval = Rcreate(blkmem);
-   (*lp)->relpseudoobjval = Rcreate(blkmem);
-   (*lp)->rootlpobjval = Rcreate(blkmem);
-   (*lp)->rootlooseobjval = Rcreate(blkmem);
-   (*lp)->cutoffbound = Rcreate(blkmem);
-   (*lp)->lpiobjlim = Rcreate(blkmem);
+   SCIP_CALL( Rcreate(blkmem, &(*lp)->lpobjval) );
+   SCIP_CALL( Rcreate(blkmem, &(*lp)->pseudoobjval) );
+   SCIP_CALL( Rcreate(blkmem, &(*lp)->glbpseudoobjval) );
+   SCIP_CALL( Rcreate(blkmem, &(*lp)->looseobjval) );
+   SCIP_CALL( Rcreate(blkmem, &(*lp)->relglbpseudoobjval) );
+   SCIP_CALL( Rcreate(blkmem, &(*lp)->rellooseobjval) );
+   SCIP_CALL( Rcreate(blkmem, &(*lp)->relpseudoobjval) );
+   SCIP_CALL( Rcreate(blkmem, &(*lp)->rootlpobjval) );
+   SCIP_CALL( Rcreate(blkmem, &(*lp)->rootlooseobjval) );
+   SCIP_CALL( Rcreate(blkmem, &(*lp)->cutoffbound) );
+   SCIP_CALL( Rcreate(blkmem, &(*lp)->lpiobjlim) );
 
    //(*lp)->validsollp = stat->lpcount; /* the initial (empty) SCIP_LP is solved with primal and dual solution of zero */
    //(*lp)->validfarkaslp = -1;
@@ -3881,7 +3891,7 @@ void SCIPcolexCalcFarkasRedcostCoef(
    else
       Rset(result, col->obj);
 
-   tmp = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
 
    for( i = 0; i < col->nlprows; ++i )
    {
@@ -4194,7 +4204,7 @@ SCIP_RETCODE SCIProwexAddConstant(
 
    if( !RisZero(addval) )
    {
-      tmp = RcreateTemp(set->buffer);
+      SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
       Radd(tmp, row->constant, addval);
       SCIP_CALL( SCIProwexChgConstant(row, blkmem, set, stat, eventqueue, lp, tmp) );
 
@@ -4214,8 +4224,11 @@ void SCIProwexGetSolFeasibility(
    )
 {
    SCIP_Real activity;
-   SCIP_Rational* temp1 = RcreateTemp(set->buffer);
-   SCIP_Rational* temp2 = RcreateTemp(set->buffer);
+   SCIP_Rational* temp1;    
+   SCIP_Rational* temp2; 
+
+   SCIP_CALL( RcreateTemp(set->buffer, &temp1) );
+   SCIP_CALL( RcreateTemp(set->buffer, &temp2) );
 
    assert(row != NULL);
 
@@ -4241,11 +4254,12 @@ void SCIProwexGetSolActivity(
    /** todo: exip: rational solution might be necessary */
    SCIP_COLEX* colex;
    SCIP_Real inf;
-   SCIP_Rational* solval = RcreateTemp(set->buffer);
+   SCIP_Rational* solval;
    int i;
 
    assert(rowex != NULL);
 
+   SCIP_CALL( RcreateTemp(set->buffer, &solval) );
    Rset(result, rowex->constant);
    for( i = 0; i < rowex->len; ++i )
    {
@@ -4358,9 +4372,11 @@ void SCIProwexGetLPFeasibility(
    )
 {
    SCIP_Rational* activity;
-   SCIP_Rational* actrhs = RcreateTemp(set->buffer);
-   SCIP_Rational* actlhs = RcreateTemp(set->buffer);
+   SCIP_Rational* actrhs; 
+   SCIP_Rational* actlhs; 
 
+   SCIP_CALL( RcreateTemp(set->buffer, &actrhs) );
+   SCIP_CALL( RcreateTemp(set->buffer, &actlhs) );
    assert(row != NULL);
 
    activity = SCIProwexGetLPActivity(row, set, stat, lp);
@@ -4382,10 +4398,13 @@ void SCIProwexGetPseudoFeasibility(
    )
 {
    SCIP_Rational* pseudoactivity;
-   SCIP_Rational* actrhs = RcreateTemp(set->buffer);
-   SCIP_Rational* actlhs = RcreateTemp(set->buffer);
+   SCIP_Rational* actrhs; 
+   SCIP_Rational* actlhs; 
 
    assert(row != NULL);
+
+   SCIP_CALL( RcreateTemp(set->buffer, &actrhs) );
+   SCIP_CALL( RcreateTemp(set->buffer, &actlhs) );
 
    pseudoactivity = SCIProwexGetPseudoActivity(row, set, stat);
 
@@ -4451,7 +4470,6 @@ void SCIProwexRecalcLPActivity(
    SCIP_COLEX* colex;
    SCIP_COL* col;
    SCIP_ROW* row;
-   SCIP_Rational*  tmp = RcreateTemp(set->buffer);
    int c;
 
    assert(rowex != NULL);
@@ -4460,7 +4478,6 @@ void SCIProwexRecalcLPActivity(
 
    assert(row != NULL);
    assert(stat != NULL);
-
 
    Rset(rowex->activity, rowex->constant);
    for( c = 0; c < row->nlpcols; ++c )
@@ -4514,8 +4531,6 @@ void SCIProwexRecalcLPActivity(
 
    row->activity = RgetRealApprox(rowex->activity);
    row->validactivitylp = stat->lpcount;
-
-   RdeleteTemp(set->buffer, &tmp);
 }
 
  /** calculates the current pseudo activity of a row */
@@ -4529,7 +4544,6 @@ void SCIProwexRecalcPseudoActivity(
    SCIP_COL* col;
    SCIP_ROW* row;
 
-   SCIP_Rational* tmp = RcreateTemp(set->buffer);
    int i;
 
    assert(rowex != NULL);
@@ -4552,13 +4566,11 @@ void SCIProwexRecalcPseudoActivity(
       assert(col->var != NULL);
       assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
 
-      Rmult(tmp, rowex->vals[i], SCIPcolexGetBestBound(colex));
-      Radd(rowex->pseudoactivity, rowex->pseudoactivity, tmp);
+      RaddProd(rowex->pseudoactivity, rowex->vals[i], SCIPcolexGetBestBound(colex));
    }
+
    row->validpsactivitydomchg = stat->domchgcount;
    row->pseudoactivity = RgetRealApprox(rowex->pseudoactivity);
-
-   RdeleteTemp(set->buffer, &tmp);
 }
 
 /** gets objective value of column */
@@ -4660,7 +4672,7 @@ SCIP_RETCODE SCIProwexEnsureSize(
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &row->vals, row->size, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &row->valsinterval, row->size, newsize) );
       for( i = row->size; i < newsize; ++i )
-         row->vals[i] = Rcreate(blkmem);
+         SCIP_CALL( Rcreate(blkmem, &row->vals[i]) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &row->linkpos, row->size, newsize) );
       row->size = newsize;
    }
@@ -4694,7 +4706,7 @@ void getObjvalDeltaObjExact(
    assert(!RisEqual(oldobj, newobj));
 
    RsetReal(deltaval, 0);
-   tmp = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
    (*deltainf) = 0;
 
    if( RisPositive(oldobj) )
@@ -5002,7 +5014,7 @@ SCIP_RETCODE SCIPlpexUpdateVarObj(
 
    if( !RisEqual(oldobj, newobj) )
    {
-      SCIP_Rational* deltaval = RcreateTemp(set->buffer);
+      SCIP_Rational* deltaval;
       int deltainf;
 
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
@@ -5012,6 +5024,8 @@ SCIP_RETCODE SCIPlpexUpdateVarObj(
        */
       assert(lp->fplp->probing || RisEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)));
       assert(lp->fplp->probing || RisEqual(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbLocalExact(var)));
+
+      SCIP_CALL( RcreateTemp(set->buffer, &deltaval) );
 
       /* compute the pseudo objective delta due the new objective coefficient */
       getObjvalDeltaObjExact(set, oldobj, newobj, SCIPvarGetLbLocalExact(var),
@@ -5048,9 +5062,10 @@ SCIP_RETCODE SCIPlpexUpdateVarLbGlobal(
 
    if( !RisEqual(oldlb, newlb) && RisPositive(SCIPvarGetObjExact(var)) )
    {
-      SCIP_Rational* deltaval = RcreateTemp(set->buffer);
+      SCIP_Rational* deltaval; 
       int deltainf;
 
+      SCIP_CALL( RcreateTemp(set->buffer, &deltaval) );
       /* compute the pseudo objective delta due the new lower bound */
       getObjvalDeltaLbExact(set, SCIPvarGetObjExact(var), oldlb, newlb, deltaval, &deltainf);
 
@@ -5078,12 +5093,13 @@ SCIP_RETCODE SCIPlpexUpdateVarLb(
 
    if( !RisEqual(oldlb, newlb) && RisPositive(SCIPvarGetObjExact(var)) )
    {
-      SCIP_Rational* deltaval = RcreateTemp(set->buffer);
+      SCIP_Rational* deltaval;
       int deltainf;
 
       assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
       assert(SCIPvarGetProbindex(var) >= 0);
 
+      SCIP_CALL( RcreateTemp(set->buffer, &deltaval) );
       /* compute the pseudo objective delta due the new lower bound */
       getObjvalDeltaLbExact(set, SCIPvarGetObjExact(var), oldlb, newlb, deltaval, &deltainf);
 
@@ -5109,8 +5125,10 @@ SCIP_RETCODE SCIPlpexUpdateVarUbGlobal(
 
    if( !RisEqual(oldub, newub) && RisNegative(SCIPvarGetObjExact(var)) )
    {
-      SCIP_Rational* deltaval = RcreateTemp(set->buffer);
+      SCIP_Rational* deltaval;
       int deltainf;
+
+      SCIP_CALL( RcreateTemp(set->buffer, &deltaval) );
 
       /* compute the pseudo objective delta due the new lower bound */
       getObjvalDeltaUbExact(set, SCIPvarGetObjExact(var), oldub, newub, deltaval, &deltainf);
@@ -5139,11 +5157,13 @@ SCIP_RETCODE SCIPlpexUpdateVarUb(
 
    if( !RisEqual(oldub, newub) && RisNegative(SCIPvarGetObjExact(var)) )
    {
-      SCIP_Rational* deltaval = RcreateTemp(set->buffer);
+      SCIP_Rational* deltaval;
       int deltainf;
 
       assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
       assert(SCIPvarGetProbindex(var) >= 0);
+
+      SCIP_CALL( RcreateTemp(set->buffer, &deltaval) );
 
       /* compute the pseudo objective delta due the new lower bound */
       getObjvalDeltaUbExact(set, SCIPvarGetObjExact(var), oldub, newub, deltaval, &deltainf);
@@ -5172,7 +5192,7 @@ SCIP_RETCODE SCIPlpexUpdateAddVar(
    assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetProbindex(var) >= 0);
 
-   tmp = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
 
    /* add the variable to the loose objective value sum */
    SCIP_CALL( SCIPlpexUpdateVarObj(lpex, set, var, tmp, SCIPvarGetObjExact(var)) );
@@ -5221,7 +5241,7 @@ SCIP_RETCODE SCIPlpexUpdateVarColumn(
    SCIP_Rational* lb;
    SCIP_Rational* ub;
 
-   tmp = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
 
    assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetProbindex(var) >= 0);
@@ -5274,7 +5294,7 @@ SCIP_RETCODE SCIPlpexUpdateVarLoose(
    SCIP_Rational* lb;
    SCIP_Rational* ub;
 
-   tmp = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
 
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarGetProbindex(var) >= 0);
@@ -5404,13 +5424,13 @@ SCIP_RETCODE SCIPlpexGetSol(
    lpcount = stat->lpcount;
 
    /* get temporary memory */
-   primalbound = RcreateTemp(set->buffer);
-   dualbound = RcreateTemp(set->buffer);
-   tmp = RcreateTemp(set->buffer);
-   primsol = RcreateArrayTemp(set->buffer, nlpicols);
-   dualsol = RcreateArrayTemp(set->buffer, nlpirows);
-   activity = RcreateArrayTemp(set->buffer, nlpirows);
-   redcost = RcreateArrayTemp(set->buffer, nlpicols);
+   SCIP_CALL( RcreateTemp(set->buffer, &primalbound) );
+   SCIP_CALL( RcreateTemp(set->buffer, &dualbound) );
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &primsol, nlpicols) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &dualsol, nlpirows) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &activity, nlpirows) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &redcost, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
 
@@ -5639,12 +5659,12 @@ SCIP_RETCODE SCIPlpexGetUnboundedSol(
    SCIPsetDebugMsg(set, "getting new unbounded LP solution %" SCIP_LONGINT_FORMAT "\n", stat->lpcount);
 
    /* get temporary memory */
-   rayobjval = RcreateTemp(set->buffer);
-   rayscale = RcreateTemp(set->buffer);
-   tmp = RcreateTemp(set->buffer);
-   primsol = RcreateArrayTemp(set->buffer, lp->nlpicols);
-   activity = RcreateArrayTemp(set->buffer, lp->nlpirows);
-   ray = RcreateArrayTemp(set->buffer, lp->nlpicols);
+   SCIP_CALL( RcreateTemp(set->buffer, &rayobjval) );
+   SCIP_CALL( RcreateTemp(set->buffer, &rayscale) );
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &primsol, lp->nlpicols) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &activity, lp->nlpirows) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &ray, lp->nlpicols) );
 
    /* get primal unbounded ray */
    SCIP_CALL( SCIPlpiexGetPrimalRay(lp->lpiex, ray) );
@@ -5699,7 +5719,7 @@ SCIP_RETCODE SCIPlpexGetUnboundedSol(
    /* check feasibility of heuristic solution and compute activity */
    for( r = 0; r < nlpirows; ++r )
    {
-      SCIP_Rational* act = RcreateTemp(set->buffer);
+      SCIP_Rational* SCIP_CALL( RcreateTemp(set->buffer, &act) );
       SCIP_ROWEX* row;
 
       row = lpirows[r];
@@ -5885,7 +5905,7 @@ SCIP_RETCODE SCIPlpexGetPrimalRay(
    }
 
    /* get temporary memory */
-   lpiray = RcreateArrayTemp(set->buffer, lp->nlpicols);
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &lpiray, lp->nlpicols) );
 
    SCIPsetDebugMsg(set, "getting primal ray values\n");
 
@@ -5948,17 +5968,17 @@ SCIP_RETCODE SCIPlpexGetDualfarkas(
       *valid = TRUE;
 
    farkascoefs = NULL;
-   maxactivity = RcreateTemp(set->buffer);
-   farkaslhs = RcreateTemp(set->buffer);
-   tmp = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &maxactivity) );
+   SCIP_CALL( RcreateTemp(set->buffer, &farkaslhs) );
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
 
    checkfarkas = (set->lp_checkfarkas && valid != NULL);
 
    /* get temporary memory */
-   dualfarkas = RcreateArrayTemp(set->buffer, lp->nlpirows);
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &dualfarkas, lp->nlpirows) );
 
    if( checkfarkas )
-      farkascoefs = RcreateArrayTemp(set->buffer, lp->nlpicols);
+      SCIP_CALL( RcreateArrayTemp(set->buffer, &farkascoefs, lp->nlpicols) );
 
    /* get dual Farkas infeasibility proof */
    SCIP_CALL( SCIPlpiexGetDualfarkas(lp->lpiex, dualfarkas) );

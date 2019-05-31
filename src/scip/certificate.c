@@ -173,7 +173,7 @@ SCIP_Longint printBoundAssumption(
 
       /* insertion */
       SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
-      insertbound->boundval = Rcreate(certificate->blkmem);
+      SCIP_CALL( Rcreate(certificate->blkmem, &insertbound->boundval) );
       Rset(insertbound->boundval, boundval);
 
       /* ensure size and insert boundval in array to be able to free it at the end */
@@ -248,7 +248,7 @@ SCIP_RETCODE SCIPcertificatePrintSol(
    /* get variables and number of the transformed problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   vals = RcreateArrayTemp(SCIPbuffer(scip), nvars);
+   SCIP_CALL( RcreateArrayTemp(SCIPbuffer(scip), &vals, nvars) );
 
    /* get number of non-zero coefficient in the solution */
    nnonz = 0;
@@ -451,7 +451,9 @@ SCIP_RETCODE SCIPcertificateInit(
    }
 
    {
-      SCIP_Rational** objcoefs = RcreateArrayTemp(SCIPbuffer(scip), nvars);
+      SCIP_Rational** objcoefs;
+      SCIP_CALL( RcreateArrayTemp(SCIPbuffer(scip), &objcoefs, nvars) );
+
       for( j = 0; j < nvars; j++)
          Rset(objcoefs[j], SCIPvarGetObjExact(vars[j]));
 
@@ -511,7 +513,7 @@ SCIP_RETCODE SCIPcertificateInit(
       }
    }
 
-   certificate->rootbound = Rcreate(blkmem);
+   SCIP_CALL( Rcreate(blkmem, &certificate->rootbound) );
 
    return SCIP_OKAY;
 }
@@ -649,7 +651,7 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
 
    /* create working memory for bound struct */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &certificate->workbound) );
-   certificate->workbound->boundval = Rcreate(blkmem);
+   SCIP_CALL( Rcreate(blkmem, &certificate->workbound->boundval) );
 
    nnonz = 0;
    buflength = SCIP_MAXSTRLEN - 2;
@@ -728,8 +730,8 @@ SCIP_RETCODE SCIPcertificatePrintResult(
    if( certificate->file == NULL)
       return SCIP_OKAY;
 
-   primalbound = RcreateTemp(set->buffer);
-   dualbound = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &primalbound) );
+   SCIP_CALL( RcreateTemp(set->buffer, &dualbound) );
 
    /* check status first: OPTIMAL / INFEAS / NOT OPTIMAL */
    if( SCIPisInRestart(scip) )
@@ -1048,7 +1050,7 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
       SCIP_CERTIFICATEBOUND* insertbound;
 
       SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
-      insertbound->boundval = Rcopy(certificate->blkmem, boundval);
+      SCIP_CALL( Rcopy(certificate->blkmem, &insertbound->boundval, boundval) );
       /* ensure size and insert boundval in array to be able to free it at the end */
       if( SCIPhashtableGetNElements(certificate->varboundtable) >= certificate->boundvalsize )
       {
@@ -1123,7 +1125,7 @@ SCIP_Longint SCIPcertificatePrintBoundAssumption(
          certificate->workbound->fileindex, varindex, (isupper ? "<=" : ">="), RgetRealApprox(boundval));
 
       SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
-      insertbound->boundval = Rcopy(certificate->blkmem, boundval);
+      SCIP_CALL( Rcopy(certificate->blkmem, &insertbound->boundval, boundval) );
       
       /* ensure size and insert boundval in array to be able to free it at the end */
       if( SCIPhashtableGetNElements(certificate->varboundtable) >= certificate->boundvalsize )
@@ -1237,9 +1239,9 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    assert(lpex!= NULL);
    assert(certificate->file != NULL);
 
-   vals = RcreateArrayTemp(set->buffer, lpex->nrows + lpex->ncols);
-   farkasrhs = RcreateTemp(set->buffer);
-   tmp = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &vals, lpex->nrows + lpex->ncols) );
+   SCIP_CALL( RcreateTemp(set->buffer, &farkasrhs) );
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
 
    SCIPsetAllocBufferArray(set, &ind, lpex->nrows);
 
@@ -1332,7 +1334,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
       }
    }
 
-   lowerbound = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &lowerbound) );
    if( usefarkas )
    {
       RsetString(lowerbound, "-inf");
@@ -1386,8 +1388,8 @@ SCIP_RETCODE SCIPcertificatePrintDualPseudoObj(
 
       vars = SCIPprobGetVars(prob);
       nvars = SCIPprobGetNVars(prob);
-      pseudoobjval = RcreateTemp(set->buffer);
-      bounds = RcreateArrayTemp(set->buffer, lpex->ncols);
+      SCIP_CALL( RcreateTemp(set->buffer, &pseudoobjval) );
+      SCIP_CALL( RcreateArrayTemp(set->buffer, &bounds, lpex->ncols) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &dualind, lpex->ncols) );
 
       certindex = -1;
@@ -1550,7 +1552,7 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
    if ( certificate->file == NULL )
       return SCIP_OKAY;
 
-   branchbound = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &branchbound) );
    RsetReal(branchbound, newbound);
 
    assert(RisIntegral(branchbound));
@@ -1616,8 +1618,8 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
    nodedata->derindex_right = -1;
    nodedata->assumptionindex_left = -1;
    nodedata->assumptionindex_right = -1;
-   nodedata->derbound_left = RcreateString(certificate->blkmem, "-inf");
-   nodedata->derbound_right = RcreateString(certificate->blkmem, "-inf");
+   SCIP_CALL( RcreateString(certificate->blkmem, &nodedata->derbound_left, "-inf") );
+   SCIP_CALL( RcreateString(certificate->blkmem, &nodedata->derbound_right, "-inf") );
    nodedata->assumptionindex_self = -1;
    nodedata->leftinfeas = FALSE;
    nodedata->leftfilled = FALSE;
@@ -1650,7 +1652,7 @@ int SCIPcertificatePrintUnsplitting(
 
    /* get the current node data */
    nodedata = (SCIP_CERTNODEDATA*) SCIPhashmapGetImage(certificate->nodedatahash, node);
-   lowerbound = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &lowerbound) );
    infeas = FALSE;
 
    assert(nodedata != NULL);
@@ -1693,7 +1695,9 @@ int SCIPcertificatePrintUnsplitting(
       SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound) );
       if( SCIPnodeGetParent(node) == NULL && certificate->derindex_root >= 0 )
       {
-         SCIP_Rational* ratone = RcreateTemp(set->buffer);
+         SCIP_Rational* ratone;
+         
+         SCIP_CALL( RcreateTemp(set->buffer, &ratone) );
 
          if( certificate->rootinfeas )
             infeas = TRUE;
@@ -1786,7 +1790,7 @@ void SCIPcertificatePrintSolex(
 
    SCIP_CALL_ABORT( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   solval = RcreateTemp(SCIPbuffer(scip));
+   RcreateTemp(SCIPbuffer(scip), &solval);
    nnonz = 0;
    for( i = 0; i < nvars; i ++)
    {

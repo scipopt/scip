@@ -266,16 +266,16 @@ SCIP_RETCODE addConsTerm(
       switch( type )
       {
       case CON_FREE:
-         ratlhs = RcreateString(SCIPblkmem(scip), "-inf"); // todo: set this to infinity
-         ratrhs = RcreateString(SCIPblkmem(scip), "inf");
+         SCIP_CALL( RcreateString(SCIPblkmem(scip), &ratlhs, "-inf") ); // todo: set this to infinity
+         SCIP_CALL( RcreateString(SCIPblkmem(scip), &ratrhs, "inf") );
          break;
       case CON_LHS:
          ratlhs = RcreateNumb(SCIPblkmem(scip), lhs);
-         ratrhs = RcreateString(SCIPblkmem(scip), "inf");
+         SCIP_CALL( RcreateString(SCIPblkmem(scip), &ratrhs, "inf") );
          break;
       case CON_RHS:
          ratrhs = RcreateNumb(SCIPblkmem(scip), rhs);
-         ratlhs = RcreateString(SCIPblkmem(scip), "-inf");
+         SCIP_CALL( RcreateString(SCIPblkmem(scip), &ratlhs, "-inf") );
          break;
       case CON_RANGE:
          ratlhs = RcreateNumb(SCIPblkmem(scip), lhs);
@@ -1006,17 +1006,17 @@ SCIP_RETCODE addVar(
          lb = RgetRealApprox(lbrat);
          break;
       case BOUND_INFTY:
-         lbrat = RcreateString(SCIPblkmem(scip), "inf");
+         SCIP_CALL( RcreateString(SCIPblkmem(scip), &lbrat, "inf") );
          lb = SCIPinfinity(scip);
          break;
       case BOUND_MINUS_INFTY:
-         lbrat = RcreateString(SCIPblkmem(scip), "-inf");
+         SCIP_CALL( RcreateString(SCIPblkmem(scip), &lbrat, "-inf") );
          lb = -SCIPinfinity(scip);
          break;
       case BOUND_ERROR:
       default:
          SCIPerrorMessage("invalid lower bound type <%d> in ZIMPL reader\n", bound_get_type(lower));
-         lbrat = Rcreate(SCIPblkmem(scip));
+         SCIP_CALL( Rcreate(SCIPblkmem(scip), &lbrat) );
          lb = 0.0;
          break;
       }
@@ -1029,17 +1029,17 @@ SCIP_RETCODE addVar(
          ub = RgetRealApprox(ubrat);
          break;
       case BOUND_INFTY:
-         ubrat = RcreateString(SCIPblkmem(scip), "inf");
+         SCIP_CALL( RcreateString(SCIPblkmem(scip), &ubrat, "inf") );
          ub = SCIPinfinity(scip);
          break;
       case BOUND_MINUS_INFTY:
-         ubrat = RcreateString(SCIPblkmem(scip), "-inf");
+         SCIP_CALL( RcreateString(SCIPblkmem(scip), &ubrat, "-inf") );
          ub = -SCIPinfinity(scip);
          break;
       case BOUND_ERROR:
       default:
          SCIPerrorMessage("invalid upper bound type <%d> in ZIMPL reader\n", bound_get_type(upper));
-         ubrat = Rcreate(SCIPblkmem(scip));
+         SCIP_CALL( Rcreate(SCIPblkmem(scip), &ubrat) );
          ub = 0.0;
          break;
       }

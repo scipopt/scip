@@ -89,192 +89,149 @@ long Rdenominator(
 }
 
 /** allocate and create a rational from nominator and denominator */
-SCIP_Rational* RcreateNoMem(void)
+SCIP_RETCODE RcreateNoMem(
+   SCIP_Rational**       rational            /**< pointer to the rational to create */
+)
 {
-   SCIP_Rational* retrat;
+   SCIP_ALLOC( BMSallocMemory(rational) );
+   (*rational)->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
 
-   BMSallocMemory(&retrat);
-   retrat->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
+   (*rational)->isinf = FALSE;
+   (*rational)->fpexact = SCIP_FPEXACT_TRUE;
+   new ((*rational)->r) Rational(0);
 
-   retrat->isinf = FALSE;
-   retrat->fpexact = SCIP_FPEXACT_TRUE;
-   new (retrat->r) Rational(0);
-
-   return retrat;
+   return SCIP_OKAY;
 }
 
 /** allocate and create a rational from nominator and denominator */
-SCIP_Rational* Rcreate(
-   BMS_BLKMEM*           mem                 /**< block memory */
-   )
-{
-   SCIP_Rational* retrat;
-   Rational* r;
-
-   BMSallocBlockMemory(mem, &retrat);
-   retrat->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
-
-   retrat->isinf = FALSE;
-   retrat->fpexact = SCIP_FPEXACT_TRUE;
-   new (retrat->r) Rational(0);
-
-   return retrat;
-}
-
-/** allocate and create a rational from nominator and denominator */
-SCIP_Rational* RcreateTemp(
-   BMS_BUFMEM*           mem                 /**< block memory */
-   )
-{
-   SCIP_Rational* retrat;
-
-   BMSallocBufferMemory(mem, &retrat);
-   retrat->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
-
-   retrat->isinf = FALSE;
-   retrat->fpexact = SCIP_FPEXACT_TRUE;
-   new (retrat->r) Rational(0);
-
-   return retrat;
-}
-
-/** allocate and create a rational from nominator and denominator */
-SCIP_Rational* RcreateInt(
+SCIP_RETCODE Rcreate(
    BMS_BLKMEM*           mem,                /**< block memory */
-   int                   nom,                /**< the nominator */
-   int                   denom               /**< the denominator */
+   SCIP_Rational**       rational            /**< pointer to the rational to create */
    )
 {
-   SCIP_Rational* retrat;
+   SCIP_ALLOC( BMSallocBlockMemory(mem, rational) );
+   (*rational)->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
 
-   BMSallocBlockMemory(mem, &retrat);
-   retrat->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
+   (*rational)->isinf = FALSE;
+   (*rational)->fpexact = SCIP_FPEXACT_TRUE;
+   new ((*rational)->r) Rational(0);
 
-   retrat->isinf = FALSE;
-   retrat->fpexact = SCIP_FPEXACT_UNKNOWN;
-   new (retrat->r) Rational(nom, denom);
+   return SCIP_OKAY;
+}
 
-   return retrat;
+/** allocate and create a rational from nominator and denominator */
+SCIP_RETCODE RcreateTemp(
+   BMS_BUFMEM*           mem,                /**< block memory */
+   SCIP_Rational**       rational            /**< pointer to the rational to create */
+   )
+{
+   BMSallocBufferMemory(mem, rational);
+   (*rational)->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
+
+   (*rational)->isinf = FALSE;
+   (*rational)->fpexact = SCIP_FPEXACT_TRUE;
+   new ((*rational)->r) Rational(0);
+
+   return SCIP_OKAY;
 }
 
 /** allocate and create a rational from a string in the format, e.g. "12/35" */
-SCIP_Rational* RcreateString(
+SCIP_RETCODE RcreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational**       rational,            /**< pointer to the rational to create */
    char*                 desc                /**< the String describing the rational */
 )
 {
-   SCIP_Rational* retrat;
-
-   BMSallocBlockMemory(mem, &retrat);
-   retrat->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
+   BMSallocBlockMemory(mem, rational);
+   (*rational)->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
    if( 0 == strcmp(desc, "inf") )
    {
-      new (retrat->r) Rational(1);
-      retrat->isinf = TRUE;
+      new ((*rational)->r) Rational(1);
+      (*rational)->isinf = TRUE;
    }
    else if ( 0 == strcmp(desc, "-inf") )
    {
-      new (retrat->r) Rational(-1);
-      retrat->isinf = TRUE;
+      new ((*rational)->r) Rational(-1);
+      (*rational)->isinf = TRUE;
    }
    else
    {
-      new (retrat->r) Rational(desc);
-      retrat->isinf = FALSE;
+      new ((*rational)->r) Rational(desc);
+      (*rational)->isinf = FALSE;
    }
-   retrat->fpexact = SCIP_FPEXACT_UNKNOWN;
-   return retrat;
-}
-
-/** allocate and create a rational from a string in the format, e.g. "12/35" */
-SCIP_Rational* RcreateReal(
-   BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Real             dbl                 /**< the string describing the rational */
-   )
-{
-   SCIP_Rational* retrat;
-
-   BMSallocBlockMemory(mem, &retrat);
-   retrat->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
-   retrat->isinf = FALSE;
-   new (retrat->r) Rational(dbl);
-   retrat->fpexact = SCIP_FPEXACT_TRUE;
-
-   return retrat;
+   (*rational)->fpexact = SCIP_FPEXACT_UNKNOWN;
+   return SCIP_OKAY;
 }
 
 /** create an array of rationals */
-SCIP_Rational** RcreateArray(
+SCIP_RETCODE RcreateArray(
    BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational***      rational,           /**< pointer to the array to create */
    int                   size                /** the size of the array */
    )
 {
-   SCIP_Rational** retrat;
-
-   BMSallocBlockMemoryArray(mem, &retrat, size);
+   BMSallocBlockMemoryArray(mem, rational, size);
 
    for( int i = 0; i < size; ++i )
    {
-      retrat[i] = Rcreate(mem);
-      retrat[i]->fpexact = SCIP_FPEXACT_TRUE;
+      SCIP_CALL( Rcreate(mem, &(*rational)[i]) );
+      (*rational)[i]->fpexact = SCIP_FPEXACT_TRUE;
    }
 
-   return retrat;
+   return SCIP_OKAY;
 }
 
 /** create an array of rationals */
-SCIP_Rational** RcreateArrayTemp(
+SCIP_RETCODE RcreateArrayTemp(
    BMS_BUFMEM*           mem,                /**< block memory */
+   SCIP_Rational***      rational,           /**< pointer to the arrat to create */
    int                   size                /** the size of the array */
    )
 {
-   SCIP_Rational** retrat;
-
-   BMSallocBufferMemoryArray(mem, &retrat, size);
+   BMSallocBufferMemoryArray(mem, rational, size);
 
    for( int i = 0; i < size; ++i )
    {
-      retrat[i] = RcreateTemp(mem);
-      retrat[i]->fpexact = SCIP_FPEXACT_TRUE;
+      SCIP_CALL( RcreateTemp(mem, &(*rational)[i]) );
+      (*rational)[i]->fpexact = SCIP_FPEXACT_TRUE;
    }
 
-   return retrat;
+   return SCIP_OKAY;
 }
 
 /** copy an array of rationals */
-void* RcopyArray(
+SCIP_RETCODE RcopyArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      target,             /**< address to copy to */
    SCIP_Rational**       src,                /**< src array */
    int                   len                 /**< size of src array */
    )
 {
-   void* ptr;
    int i;
 
-   ptr = BMSduplicateBlockMemoryArray(mem, target, src, len);
+   BMSduplicateBlockMemoryArray(mem, target, src, len);
 
    for( i = 0; i < len; ++i )
    {
-      (*target)[i] = Rcopy(mem, src[i]);
+      SCIP_CALL( Rcopy(mem, &(*target)[i], src[i]) );
    }
 
-   return ptr;
+   return SCIP_OKAY;
 }
 
 
 
 /* create a copy of a rational */
-SCIP_Rational* Rcopy(
+SCIP_RETCODE Rcopy(
    BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational**       rational,           /**< pointer to the rational to create */
    SCIP_Rational*        src                 /**< rational to copy */
    )
 {
-   SCIP_Rational* ret;
-   ret = RcreateInt(mem, 0,1);
+   Rcreate(mem, rational);
 
-   Rset(ret, src);
-   return ret;
+   Rset(*rational, src);
+   return SCIP_OKAY;
 }
 
 
@@ -1310,8 +1267,8 @@ void testNumericsRational(
 void testRuntimesRational(
    )
 {
-   SCIP_Rational* r = RcreateNoMem();
-   SCIP_Rational* r2 = RcreateNoMem();
+   SCIP_Rational* r; 
+   SCIP_Rational* r2;  
 
    clock_t startt, endt;
    int niterations = 1000000;
@@ -1320,6 +1277,9 @@ void testRuntimesRational(
    double runtime = 0;
    double runtime2 = 0;
    double addval;
+
+   RcreateNoMem(&r);
+   RcreateNoMem(&r2);
 
    srand((unsigned int)time(NULL));
 
@@ -1571,7 +1531,7 @@ SCIP_RETCODE SCIPrationalarrayExtend(
       if( rationalarray->firstidx != -1 )
       {
          for( i = 0; i < rationalarray->minusedidx - newfirstidx; ++i )
-            newvals[i] = Rcreate(rationalarray->blkmem);
+            SCIP_CALL( Rcreate(rationalarray->blkmem, &newvals[i]) );
 
          /* check for possible overflow or negative value */
          assert(rationalarray->maxusedidx - rationalarray->minusedidx + 1 > 0);
@@ -1583,12 +1543,12 @@ SCIP_RETCODE SCIPrationalarrayExtend(
          }
 
          for( i = rationalarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
-            newvals[i] = Rcreate(rationalarray->blkmem);
+            SCIP_CALL( Rcreate(rationalarray->blkmem, &newvals[i]) );
       }
       else
       {
          for( i = 0; i < newvalssize; ++i )
-            newvals[i] = Rcreate(rationalarray->blkmem);
+            SCIP_CALL( Rcreate(rationalarray->blkmem, &newvals[i]) );
       }
 
       /* free old memory storage, and set the new array parameters */

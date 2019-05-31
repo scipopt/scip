@@ -79,36 +79,32 @@ SCIP_Rational* RcreateInt(
  * Creation methods
  */
 
-/** Allocate and create a rational from a scip_real */
-EXTERN
-SCIP_Rational* RcreateReal(
-   BMS_BLKMEM*           mem,
-    SCIP_Real       num                 /**< the scip_real */
-   );
-
 /** Allocate and create a rational from a string in the format, e.g. "12/35" */
 EXTERN
-SCIP_Rational* RcreateString(
+SCIP_RETCODE RcreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
-    char*           desc                /**< the String describing the rational */
+   SCIP_Rational**       rational,           /**< pointer to the rational to create */
+   char*                 desc                /**< the String describing the rational */
    );
 
 /** create an array of rationals */
 EXTERN
-SCIP_Rational** RcreateArray(
+SCIP_RETCODE RcreateArray(
    BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational***      rational,           /**< pointer to the array to create */
    int                   size                /**< the size of the array */
    );
 
 /** create an array of rationals */
 EXTERN
-SCIP_Rational** RcreateArrayTemp(
+SCIP_RETCODE RcreateArrayTemp(
    BMS_BUFMEM*           mem,                /**< block memory */
+   SCIP_Rational***      rational,           /**< pointer to the array to create */
    int                   size                /** the size of the array */
    );
 
 /** copy an array of rationals */
-void* RcopyArray(
+SCIP_RETCODE RcopyArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      target,             /**< address to copy to */
    SCIP_Rational**       src,                /**< src array */
@@ -117,22 +113,27 @@ void* RcopyArray(
 
 /** create a copy of a rational */
 EXTERN
-SCIP_Rational* Rcopy(
+SCIP_RETCODE Rcopy(
    BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational**       rational,           /**< pointer to the rational to create */
    SCIP_Rational*        src                 /**< rational to copy */
    );
 
 EXTERN
-SCIP_Rational* RcreateTemp(
-   BMS_BUFMEM*           buf
+SCIP_RETCODE RcreateTemp(
+   BMS_BUFMEM*           buf,
+   SCIP_Rational**       rational            /**< pointer to the rational to create */
    );
 
 EXTERN
-SCIP_Rational* RcreateNoMem(void);
+SCIP_RETCODE RcreateNoMem(
+   SCIP_Rational**       rational            /**< pointer to the rational to create */
+   );
 
 EXTERN
-SCIP_Rational* Rcreate(
-   BMS_BLKMEM*           buf
+SCIP_RETCODE Rcreate(
+   BMS_BLKMEM*           blkmem,
+   SCIP_Rational**       rational            /**< pointer to the rational to create */
    );
 
 #ifdef SCIP_WITH_GMP

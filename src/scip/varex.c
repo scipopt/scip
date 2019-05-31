@@ -149,7 +149,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       /* add globally fixed variables as constant */
       if( RisEqual(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub) )
       {
-         tmp = RcreateTemp(set->buffer);
+         SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
          Rmult(tmp, val, var->exactdata->glbdom.lb);
          SCIP_CALL( SCIProwexAddConstant(rowex, blkmem, set, stat, eventqueue, lpex, tmp) );
          RdeleteTemp(set->buffer, &tmp);
@@ -172,7 +172,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       assert(RisEqual(var->exactdata->locdom.lb, var->exactdata->glbdom.lb)); /*lint !e777*/
       assert(!RisAbsInfinity(var->exactdata->locdom.lb));
 
-      tmp = RcreateTemp(set->buffer);
+      SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
 
       Rmult(tmp, val, var->exactdata->locdom.lb);
       SCIP_CALL( SCIProwexAddConstant(rowex, blkmem, set, stat, eventqueue, lpex, tmp) );
@@ -194,7 +194,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       assert(SCIPvarGetStatusExact(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
 
-      tmp = RcreateTemp(set->buffer);
+      SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
 
       Rneg(tmp, val);
       SCIP_CALL( SCIPvarAddToRowExact(var->negatedvar, blkmem, set, stat, eventqueue, prob, lpex, rowex, tmp) );
@@ -537,13 +537,13 @@ SCIP_RETCODE SCIPvarNegateExactData(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(negvar->exactdata)) );
 
-   negvar->exactdata->glbdom.ub = Rcreate(blkmem);
-   negvar->exactdata->glbdom.lb = Rcreate(blkmem);
+   SCIP_CALL( Rcreate(blkmem, &negvar->exactdata->glbdom.ub) );
+   SCIP_CALL( Rcreate(blkmem, &negvar->exactdata->glbdom.lb) );
 
-   negvar->exactdata->locdom.lb = Rcreate(blkmem);
-   negvar->exactdata->locdom.ub = Rcreate(blkmem);
+   SCIP_CALL( Rcreate(blkmem, &negvar->exactdata->glbdom.lb) );
+   SCIP_CALL( Rcreate(blkmem, &negvar->exactdata->glbdom.ub) );
 
-   negvar->exactdata->obj = Rcreate(blkmem);
+   SCIP_CALL( Rcreate(blkmem, &negvar->exactdata->obj) );
 
    RdiffReal(negvar->exactdata->glbdom.ub, origvar->exactdata->glbdom.lb, constant);
    Rneg(negvar->exactdata->glbdom.ub, negvar->exactdata->glbdom.ub);
@@ -584,19 +584,19 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(var->exactdata)) );
 
-   var->exactdata->glbdom.lb = Rcopy(blkmem, lb);
-   var->exactdata->glbdom.ub = Rcopy(blkmem, ub);
+   SCIP_CALL( Rcopy(blkmem, &var->exactdata->glbdom.lb, lb) );
+   SCIP_CALL( Rcopy(blkmem, &var->exactdata->glbdom.ub, ub) );
 
-   var->exactdata->locdom.lb = Rcopy(blkmem, lb);
-   var->exactdata->locdom.ub = Rcopy(blkmem, ub);
+   SCIP_CALL( Rcopy(blkmem, &var->exactdata->locdom.lb, lb) );
+   SCIP_CALL( Rcopy(blkmem, &var->exactdata->locdom.ub, ub) );
 
    var->exactdata->excol = NULL;
    var->exactdata->exvarstatus = SCIP_VARSTATUS_LOOSE;
 
    if( obj != NULL )
-      var->exactdata->obj = Rcopy(blkmem, obj);
+      SCIP_CALL( Rcopy(blkmem, &var->exactdata->obj, obj) );
    else
-      var->exactdata->obj = Rcreate(blkmem);
+      SCIP_CALL( Rcreate(blkmem, &var->exactdata->obj) );
 
    return SCIP_OKAY;
 }
@@ -619,11 +619,11 @@ SCIP_RETCODE SCIPvarCopyExactData(
    }
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(targetvar->exactdata)) );
 
-   targetvar->exactdata->glbdom.lb = Rcopy(blkmem, sourcevar->exactdata->glbdom.lb);
-   targetvar->exactdata->glbdom.ub = Rcopy(blkmem, sourcevar->exactdata->glbdom.ub);
-   targetvar->exactdata->locdom.lb = Rcopy(blkmem, sourcevar->exactdata->locdom.lb);
-   targetvar->exactdata->locdom.ub = Rcopy(blkmem, sourcevar->exactdata->locdom.ub);
-   targetvar->exactdata->obj = Rcopy(blkmem, sourcevar->exactdata->obj);
+   SCIP_CALL( Rcopy(blkmem, &targetvar->exactdata->glbdom.lb, sourcevar->exactdata->glbdom.lb) );
+   SCIP_CALL( Rcopy(blkmem, &targetvar->exactdata->glbdom.ub, sourcevar->exactdata->glbdom.ub) );
+   SCIP_CALL( Rcopy(blkmem, &targetvar->exactdata->locdom.lb, sourcevar->exactdata->locdom.lb) );
+   SCIP_CALL( Rcopy(blkmem, &targetvar->exactdata->locdom.ub, sourcevar->exactdata->locdom.ub) );
+   SCIP_CALL( Rcopy(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
    targetvar->exactdata->excol = NULL;
    targetvar->exactdata->exvarstatus = SCIP_VARSTATUS_LOOSE;
 
@@ -718,7 +718,7 @@ SCIP_RETCODE SCIPvarScaleObjExact(
    assert(var->exactdata != NULL);
    assert(var->scip == set->scip);
 
-   tmp = RcreateTemp(set->buffer);
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
 
    RmultReal(tmp, SCIPvarGetObjExact(var), scale);
 
@@ -753,7 +753,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
    assert(var->exactdata != NULL);
    assert(var->scip == set->scip);
 
-   tmp = Rcreate(blkmem);
+   SCIP_CALL( Rcreate(blkmem, &tmp) );
    newobjreal = RgetRealApprox(newobj);
 
    SCIPsetDebugMsg(set, "changing exact objective value of <%s> from %g to %g\n", var->name, var->obj, newobjreal);
