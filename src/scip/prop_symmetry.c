@@ -204,7 +204,6 @@ struct SCIP_PropData
    SCIP_Real             log10groupsize;     /**< log10 of size of symmetry group */
    SCIP_Bool             binvaraffected;     /**< whether binary variables are affected by some symmetry */
 
-
    /* for symmetry computation */
    int                   maxgenerators;      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
    SCIP_Bool             checksymmetries;    /**< Should all symmetries be checked after computation? */
@@ -1932,7 +1931,7 @@ SCIP_RETCODE determineSymmetry(
       assert( propdata->nbg1 == 0 );
    }
 
-
+   /* handle several general aspects */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permvarsobj, propdata->npermvars) );
    for (j = 0; j < propdata->npermvars; ++j)
    {
@@ -2885,8 +2884,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    }
 
    /* Clean bg1 list - need to do this after the main loop! (Not needed for bg0.)
-    * Note that variables globally fixed to 1 are not resetted, since the loop starts at propdata->nbg1.
-    */
+    * Note that variables globally fixed to 1 are not resetted, since the loop starts at propdata->nbg1. */
    for (j = propdata->nbg1; j < nbg1; ++j)
       bg1[bg1list[j]] = FALSE;
 
@@ -3059,7 +3057,6 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       *result = SCIP_SUCCESS;
    }
 
-
    /* run OF presolving */
    assert( 0 <= propdata->ofsymcomptiming && propdata->ofsymcomptiming <= 2 );
    if ( propdata->ofenabled && propdata->performpresolving && propdata->ofsymcomptiming <= 1 )
@@ -3124,7 +3121,7 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
-   /* if not presolving has been performed, we need to get usesymmetry */
+   /* if no presolving has been performed, we need to get usesymmetry */
    if ( propdata->usesymmetry < 0 )
    {
       SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
@@ -3326,7 +3323,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          NULL, tableFreeOrbitalfixing, NULL, NULL, NULL, NULL, tableOutputOrbitalfixing,
          tabledata, TABLE_POSITION_ORBITALFIXING, TABLE_EARLIEST_ORBITALFIXING) );
 
-
    /* add parameters for computing symmetry */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/maxgenerators",
@@ -3380,7 +3376,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "recompute symmetries after a restart has occured?",
          &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, NULL, NULL) );
 
-
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
    {
@@ -3432,9 +3427,9 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
-   if ( SCIPgetStage(scip) != SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING &&
-      SCIPgetStage(scip) != SCIP_STAGE_EXITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING &&
-      SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE && SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   if ( SCIPgetStage(scip) != SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING
+      && SCIPgetStage(scip) != SCIP_STAGE_EXITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING
+      && SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE && SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
    {
       SCIPerrorMessage("Cannot call symmetry detection outside of presolving.\n");
       return SCIP_INVALIDCALL;
@@ -3446,11 +3441,13 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    *npermvars = propdata->npermvars;
    *permvars = propdata->permvars;
    *nperms = propdata->nperms;
+
    if ( perms != NULL )
    {
       *perms = propdata->perms;
       assert( *perms != NULL || *nperms == 0 );
    }
+
    if ( permstrans != NULL )
    {
       *permstrans = propdata->permstrans;
@@ -3459,6 +3456,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
    if ( log10groupsize != NULL )
       *log10groupsize = propdata->log10groupsize;
+
    if ( binvaraffected != NULL )
       *binvaraffected = propdata->binvaraffected;
 

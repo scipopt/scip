@@ -26,6 +26,7 @@
 #include "scip/scip.h"
 #include "scip/misc.h"
 
+
 /** compute non-trivial orbits of symmetry group
  *
  *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
@@ -701,7 +702,6 @@ SCIP_RETCODE SCIPcomputeComponents(
    SCIPfreeBufferArray(scip, &permtocomponent);
    SCIPfreeBufferArray(scip, &permtovarcomp);
    SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
-
 
 #ifdef SCIP_OUTPUT
    printf("number of components: %d\n", propdata->ncomponents);
