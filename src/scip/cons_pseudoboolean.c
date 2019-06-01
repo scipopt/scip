@@ -38,6 +38,7 @@
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_xor.h"
@@ -57,6 +58,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
+#include "nlpi/pub_expr.h"
 #include <string.h>
 
 #ifdef WITHEQKNAPSACK
@@ -82,6 +84,7 @@
 #define DEFAULT_PROPAGATENONLINEAR TRUE /**< if decomposed, should the nonlinear constraints be propagated during node processing */
 #define DEFAULT_REMOVABLENONLINEAR TRUE /**< if decomposed, should the nonlinear constraints be removable */
 #define USEINDICATOR               TRUE
+#define NONLINCONSUPGD_PRIORITY   60000 /**< priority of upgrading nonlinear constraints */
 
 /*
  * Data structures
@@ -7559,6 +7562,212 @@ SCIP_RETCODE findAggregation(
  * Callback methods of constraint handler
  */
 
+/** tries to upgrade a nonlinear constraint into a pseudoboolean constraint */
+static
+SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdPseudoboolean)
+{
+   SCIP_EXPRGRAPH* exprgraph;
+   SCIP_EXPRGRAPHNODE* node;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   SCIP_VAR* var;
+   SCIP_VAR* objvar = NULL;
+   SCIP_VAR** linvars = NULL;
+   int nlinvars;
+   SCIP_VAR*** terms;
+   int nterms;
+   int* ntermvars;
+   SCIP_Real* termvals;
+   int i;
+   int j;
+
+   assert(nupgdconss != NULL);
+   assert(upgdconss != NULL);
+
+   *nupgdconss = 0;
+
+   node = SCIPgetExprgraphNodeNonlinear(scip, cons);
+
+   /* no interest in linear constraints */
+   if( node == NULL )
+      return SCIP_OKAY;
+
+   switch( SCIPexprgraphGetNodeOperator(node) )
+   {
+   case SCIP_EXPR_VARIDX:
+   case SCIP_EXPR_CONST:
+   case SCIP_EXPR_PLUS:
+   case SCIP_EXPR_MINUS:
+   case SCIP_EXPR_SUM:
+   case SCIP_EXPR_LINEAR:
+      /* these should not appear as exprgraphnodes after constraint presolving */
+      return SCIP_OKAY;
+
+   case SCIP_EXPR_MUL:
+   case SCIP_EXPR_DIV:
+   case SCIP_EXPR_SQUARE:
+   case SCIP_EXPR_SQRT:
+   case SCIP_EXPR_REALPOWER:
+   case SCIP_EXPR_INTPOWER:
+   case SCIP_EXPR_SIGNPOWER:
+   case SCIP_EXPR_EXP:
+   case SCIP_EXPR_LOG:
+   case SCIP_EXPR_SIN:
+   case SCIP_EXPR_COS:
+   case SCIP_EXPR_TAN:
+      /* case SCIP_EXPR_ERF: */
+      /* case SCIP_EXPR_ERFI: */
+   case SCIP_EXPR_MIN:
+   case SCIP_EXPR_MAX:
+   case SCIP_EXPR_ABS:
+   case SCIP_EXPR_SIGN:
+   case SCIP_EXPR_PRODUCT:
+   case SCIP_EXPR_USER:
+      /* these do not look like a proper pseudoboolean expression (assuming the expression graph simplifier did run) */
+      return SCIP_OKAY;
+
+   case SCIP_EXPR_QUADRATIC:  /* let cons_quadratic still handle these for now */
+      return SCIP_OKAY;
+
+   case SCIP_EXPR_POLYNOMIAL:
+      /* these mean that we have something polynomial */
+      break;
+
+   case SCIP_EXPR_PARAM:
+   case SCIP_EXPR_LAST:
+   default:
+      SCIPwarningMessage(scip, "unexpected expression operator %d in nonlinear constraint <%s>\n", SCIPexprgraphGetNodeOperator(node), SCIPconsGetName(cons));
+      return SCIP_OKAY;
+   }
+
+   lhs = SCIPgetLhsNonlinear(scip, cons);
+   rhs = SCIPgetRhsNonlinear(scip, cons);
+
+   /* we need all linear variables to be binary, except for one that was added to reformulate an objective function */
+   for( i = 0; i < SCIPgetNLinearVarsNonlinear(scip, cons); ++i )
+   {
+      var = SCIPgetLinearVarsNonlinear(scip, cons)[i];
+      assert(var != NULL);
+
+      if( SCIPvarIsBinary(var) )
+         continue;
+
+#ifdef SCIP_DISABLED_CODE /* not working in cons_pseudoboolean yet, see cons_pseudoboolean.c:7925 */
+      /* check whether the variable may have been added to represent the objective function */
+      if( objvar == NULL && SCIPgetLinearCoefsNonlinear(scip, cons)[i] == -1.0 && /*TODO we could divide by the coefficient*/
+          SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == (SCIPisInfinity(scip,  rhs) ? 0 : 1) &&  /*TODO correct?*/
+          SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == (SCIPisInfinity(scip, -lhs) ? 0 : 1) &&  /*TODO correct?*/
+          SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) &&
+          SCIPvarGetObj(var) == 1.0 )  /*TODO we need this or just positive?*/
+      {
+         objvar = var;
+         continue;
+      }
+#endif
+
+      SCIPdebugMsg(scip, "not pseudoboolean because linear variable <%s> is not binary or objective\n", SCIPvarGetName(var));
+      return SCIP_OKAY;
+   }
+
+   /* if simplified, then all children of root node should be variables, we need all of them to be binary */
+   exprgraph = SCIPgetExprgraphNonlinear(scip, SCIPconsGetHdlr(cons));
+   for( i = 0; i < SCIPexprgraphGetNodeNChildren(node); ++i )
+   {
+      SCIP_EXPRGRAPHNODE* child;
+
+      child = SCIPexprgraphGetNodeChildren(node)[i];
+      assert(child != NULL);
+      if( SCIPexprgraphGetNodeOperator(child) != SCIP_EXPR_VARIDX )
+      {
+         SCIPdebugMsg(scip, "not pseudoboolean because child %d is not a variable\n", i);
+         return SCIP_OKAY;
+      }
+
+      var = (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, child);
+      assert(var != NULL);
+      if( !SCIPvarIsBinary(var) )
+      {
+         SCIPdebugMsg(scip, "not pseudoboolean because nonlinear var <%s> is not binary\n", SCIPvarGetName(var));
+         return SCIP_OKAY;
+      }
+   }
+
+   /* setup a pseudoboolean constraint */
+
+   if( upgdconsssize < 1 )
+   {
+      /* request larger upgdconss array */
+      *nupgdconss = -1;
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMsg(scip, "upgrading nonlinear constraint <%s> to pseudo-boolean\n", SCIPconsGetName(cons));
+
+   if( !SCIPisInfinity(scip, -lhs) )
+      lhs -= SCIPexprgraphGetNodePolynomialConstant(node);
+   if( !SCIPisInfinity(scip, -rhs) )
+      rhs -= SCIPexprgraphGetNodePolynomialConstant(node);
+
+   /* setup linear part, if not identical */
+   if( objvar != NULL )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &linvars, SCIPgetNLinearVarsNonlinear(scip, cons)-1) );
+      nlinvars = 0;
+      for( i = 0; i < SCIPgetNLinearVarsNonlinear(scip, cons); ++i )
+      {
+         var = SCIPgetLinearVarsNonlinear(scip, cons)[i];
+         if( var != objvar )
+            linvars[nlinvars++] = var;
+      }
+   }
+   else
+      nlinvars = SCIPgetNLinearVarsNonlinear(scip, cons);
+
+   /* setup nonlinear terms */
+   nterms = SCIPexprgraphGetNodePolynomialNMonomials(node);
+   SCIP_CALL( SCIPallocBufferArray(scip, &terms, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ntermvars, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termvals, nterms) );
+
+   for( i = 0; i < nterms; ++i )
+   {
+      SCIP_EXPRDATA_MONOMIAL* monomial;
+
+      monomial = SCIPexprgraphGetNodePolynomialMonomials(node)[i];
+      assert(monomial != NULL);
+
+      ntermvars[i] = SCIPexprGetMonomialNFactors(monomial);
+      SCIP_CALL( SCIPallocBufferArray(scip, &terms[i], ntermvars[i]) );
+
+      for( j = 0; j < SCIPexprGetMonomialNFactors(monomial); ++j )
+      {
+         terms[i][j] = (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, SCIPexprgraphGetNodeChildren(node)[SCIPexprGetMonomialChildIndices(monomial)[j]]);
+         assert(SCIPexprGetMonomialExponents(monomial)[j] > 0.0);
+      }
+
+      termvals[i] = SCIPexprGetMonomialCoef(monomial);
+   }
+
+   *nupgdconss = 1;
+   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &upgdconss[0], SCIPconsGetName(cons),
+         objvar != NULL ? linvars : SCIPgetLinearVarsNonlinear(scip, cons), nlinvars, SCIPgetLinearCoefsNonlinear(scip, cons),
+         terms, nterms, ntermvars, termvals, NULL, 0.0, FALSE, objvar,
+         lhs, rhs,
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+   for( i = nterms-1; i >= 0; --i )
+      SCIPfreeBufferArray(scip, &terms[i]);
+
+   SCIPfreeBufferArray(scip, &terms);
+   SCIPfreeBufferArray(scip, &ntermvars);
+   SCIPfreeBufferArray(scip, &termvals);
+   SCIPfreeBufferArrayNull(scip, &linvars);
+
+   return SCIP_OKAY;
+}
+
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyPseudoboolean)
@@ -8889,6 +9098,9 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/nlcremovable", "should the nonlinear constraints be removable?",
          NULL, TRUE, DEFAULT_REMOVABLENONLINEAR, NULL, NULL) );
+
+   /* include the quadratic constraint upgrade in the nonlinear constraint handler */
+   SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdPseudoboolean, NULL, NONLINCONSUPGD_PRIORITY, FALSE, CONSHDLR_NAME) );
 
    return SCIP_OKAY;
 }
