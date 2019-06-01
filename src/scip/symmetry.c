@@ -13,11 +13,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cuts.c
+/**@file   symmetry.c
  * @ingroup OTHER_CFILES
- * @brief  methods for aggregation of rows
- * @author Jakob Witzig
- * @author Robert Lion Gottwald
+ * @brief  methods for handling symmetries
+ * @author Christopher Hojny
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
