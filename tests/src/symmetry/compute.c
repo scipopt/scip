@@ -20,8 +20,8 @@
 
 #include <scip/scip.h>
 #include <include/scip_test.h>
-#include <scip/presol_symmetry.h>
-#include <scip/presol_symbreak.h>
+#include <scip/symmetry.h>
+#include <scip/prop_symmetry.h>
 #include <symmetry/compute_symmetry.h>
 #include <scip/scipdefplugins.h>
 
@@ -38,7 +38,7 @@ void setup(void)
    SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 1) );
 
 #ifdef SCIP_DEBUG
-   /* output external codes in order to see which esternal symmetry computation code is used */
+   /* output external codes in order to see which external symmetry computation code is used */
    SCIPprintExternalCodes(scip, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
 #endif
@@ -118,13 +118,13 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
    /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/symmetry/checksymmetries", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
 
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE,
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0,
          &npermvars, &permvars, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
    cr_assert( nperms == 3 );
@@ -264,7 +264,7 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE,
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0,
          &npermvars, &permvars, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
    cr_assert( nperms == 1 );
@@ -398,7 +398,7 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE,
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0,
          &npermvars, &permvars, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
    cr_assert( nperms == 0 );  /* problem should be empty */
@@ -490,7 +490,7 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE,
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0,
          &npermvars, &permvars, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
    cr_assert( nperms == 2 );
