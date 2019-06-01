@@ -3430,11 +3430,12 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
-   if ( SCIPgetStage(scip) != SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING
-      && SCIPgetStage(scip) != SCIP_STAGE_EXITPRESOLVE && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING
-      && SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE && SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   if ( SCIPgetStage(scip) != SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) != SCIP_STAGE_INITPRESOLVE
+      && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) != SCIP_STAGE_EXITPRESOLVE
+      && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVED  && SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE
+      && SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
    {
-      SCIPerrorMessage("Cannot call symmetry detection outside of presolving.\n");
+      SCIPerrorMessage("Cannot call symmetry detection at stage <%d>.\n", SCIPgetStage(scip));
       return SCIP_INVALIDCALL;
    }
 
