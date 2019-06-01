@@ -430,12 +430,30 @@ END {
                pass++;
             }
          }
-         else
+         else if( (!maxobj[m] && pb < infty) || (maxobj[m] && pb > -infty) )
          {
             # feasible for an infeasible problem
             status = "fail (infeas.)";
             failtime += tottime;
             fail++;
+         }
+         else
+         {
+            # no feasible solution
+            if( timeout )
+            {
+               # time or node limit reached
+               status = "timeout";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+              # gap not closed, but no timeout
+              status = "fail (gap)";
+              failtime += tottime;
+              fail++;
+            }
          }
       }
       else
