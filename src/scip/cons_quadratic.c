@@ -16118,6 +16118,8 @@ void SCIPprintRowprepSol(
          maxterm = term;
          maxtermidx = i;
       }
+
+      activity += term;
    }
 
    SCIPinfoMessage(scip, file, rowprep->sidetype == SCIP_SIDETYPE_LEFT ? ">= %.15g" : "<= %.15g", rowprep->side);
