@@ -1838,8 +1838,7 @@ SCIP_RETCODE determineSymmetry(
    else if ( propdata->usesymmetry == 1 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
-
-      return SCIP_OKAY;
+      assert( ! propdata->ofenabled );
    }
 
    assert( propdata->nperms > 0 );
