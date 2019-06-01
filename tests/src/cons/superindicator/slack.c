@@ -811,7 +811,7 @@ SCIP_RETCODE SCIPsolveSlack(
    {
       SCIP_Bool stored;
 
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "solving the realaxed original problem with original objective function\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "solving the relaxed original problem with original objective function\n");
 
       /* adding the last set of solutions */
       for(c = 0; c < nsols; ++c)
