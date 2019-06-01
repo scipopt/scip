@@ -49,7 +49,7 @@ extern "C" {
  *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
+SCIP_RETCODE SCIPcomputeOrbitsSym(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_VAR**            permvars,           /**< variables considered by symbreak presolver */
    int                   npermvars,          /**< length of a permutation array */
@@ -70,7 +70,7 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsSymbreak(
  *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeGroupOrbitsFilter(
+SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
    SCIP*                 scip,               /**< SCIP instance */
    int                   npermvars,          /**< length of a permutation array */
    int**                 permstrans,         /**< transposed matrix containing in each column a
@@ -95,7 +95,7 @@ SCIP_RETCODE SCIPcomputeGroupOrbitsFilter(
 
 /** check whether a permutation is a composition of 2-cycles of binary variables and in this case determines the number of 2-cycles */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetPermProperties(
+SCIP_RETCODE SCIPgetPropertiesPerm(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< array of variables perm is acting on */
    int                   nvars,              /**< number of variables */
@@ -105,9 +105,9 @@ SCIP_RETCODE SCIPgetPermProperties(
    );
 
 
-/** determine whether binary variable is affected (and potentially compute number of affected variables) */
+/** determine whether binary variable is affected by symmetry group (and potentially compute number of affected variables) */
 SCIP_EXPORT
-SCIP_RETCODE SCIPdetermineBinvarAffected(
+SCIP_RETCODE SCIPdetermineBinvarAffectedSym(
    SCIP*                 scip,               /**< SCIP instance */
    int**                 perms,              /**< permutations */
    int                   nperms,             /**< number of permutations in perms */
@@ -120,7 +120,7 @@ SCIP_RETCODE SCIPdetermineBinvarAffected(
 
 /** compute components of symmetry group */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeComponents(
+SCIP_RETCODE SCIPcomputeComponentsSym(
    SCIP*                 scip,               /**< SCIP instance */
    int**                 perms,              /**< permutation generators as
                                               *   (either nperms x npermvars or npermvars x nperms) matrix */

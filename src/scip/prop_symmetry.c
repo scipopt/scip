@@ -1815,14 +1815,14 @@ SCIP_RETCODE determineSymmetry(
    /* TODO: Can the determination of affected variables be integrated somewhere? */
    if ( propdata->displaynorbitvars )
    {
-      SCIP_CALL( SCIPdetermineBinvarAffected(scip, propdata->perms, propdata->nperms, propdata->permvars,
+      SCIP_CALL( SCIPdetermineBinvarAffectedSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
             propdata->npermvars, TRUE, &norbitbinvars) );
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", norbitbinvars);
    }
    else if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
    {
-      SCIP_CALL( SCIPdetermineBinvarAffected(scip, propdata->perms, propdata->nperms, propdata->permvars,
+      SCIP_CALL( SCIPdetermineBinvarAffectedSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
             propdata->npermvars, FALSE, &norbitbinvars) );
    }
 
@@ -1850,7 +1850,7 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
 #endif
 
-   SCIP_CALL( SCIPcomputeComponents(scip, propdata->perms, propdata->nperms, propdata->permvars,
+   SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
          propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
          &propdata->vartocomponent, &propdata->componentblocked, &propdata->ncomponents) );
 
@@ -2018,7 +2018,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_Bool allvarsbinary = TRUE;
          int ntwocyclesperm = 0;
 
-         SCIP_CALL( SCIPgetPermProperties(perms[components[j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
+         SCIP_CALL( SCIPgetPropertiesPerm(perms[components[j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
 
          /* if we are checking the first permutation */
          if ( ntwocyclescomp == INT_MAX )
@@ -2895,7 +2895,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeGroupOrbitsFilter(scip, npermvars, permstrans, nperms, inactiveperms,
+   SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, npermvars, permstrans, nperms, inactiveperms,
          orbits, orbitbegins, &norbits, components, componentbegins, vartocomponent, propdata->componentblocked, ncomponents, propdata->nmovedpermvars) );
 
    if ( norbits > 0 )
