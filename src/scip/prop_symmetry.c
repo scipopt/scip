@@ -1689,7 +1689,10 @@ SCIP_RETCODE determineSymmetry(
    /* avoid trivial cases */
    nvars = SCIPgetNVars(scip);
    if ( nvars <= 0 )
+   {
+      propdata->nperms = 0;
       return SCIP_OKAY;
+   }
 
    /* determine symmetry specification */
    if ( SCIPgetNBinVars(scip) > 0 )
