@@ -435,7 +435,7 @@ SCIP_RETCODE consdataCreate(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
-#ifdef SCI_DEBUG
+#ifdef SCIP_DEBUG
    consdata->debugcnt = 0;
 #endif
 
@@ -1121,6 +1121,7 @@ SCIP_RETCODE separateSymresackCovers(
 }
 
 
+/** check whether solution is feasible for symresacks */
 static
 SCIP_RETCODE checkSymresackSolution(
    SCIP*                 scip,               /**< SCIP pointer */
