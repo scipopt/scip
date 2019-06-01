@@ -14616,7 +14616,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       primsol[c] = MAX(primsol[c], col->lb);
       primsol[c] = MIN(primsol[c], col->ub);
 
-      assert( SCIPsetIsFeasGE(set, primsol[c], col->lb) && SCIPsetIsFeasGE(set, primsol[c], col->lb) );
+      assert( !SCIPsetIsFeasNegative(set, primsol[c] - col->lb) && !SCIPsetIsFeasPositive(set, primsol[c] - col->ub) );
    }
 
    /* check feasibility of heuristic solution and compute activity */
@@ -14654,8 +14654,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       }
 
       /* check feasibility */
-      if( (! SCIPsetIsInfinity(set, -row->lhs) && SCIPsetIsFeasLT(set, act, row->lhs) ) ||
-          (! SCIPsetIsInfinity(set, row->rhs)  && SCIPsetIsFeasGT(set, act, row->rhs) ) )
+      if( (! SCIPsetIsInfinity(set, -row->lhs) && SCIPsetIsFeasNegative(set, act - row->lhs) ) ||
+          (! SCIPsetIsInfinity(set,  row->rhs) && SCIPsetIsFeasPositive(set, act - row->rhs) ) )
          break;
 
       activity[r] = act;
@@ -14771,8 +14771,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       /* check for feasibility of the rows */
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
-            && (SCIPsetIsInfinity(set, -lpirows[r]->lhs) || SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs))
-            && (SCIPsetIsInfinity(set, lpirows[r]->rhs) || SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs));
+            && (SCIPsetIsInfinity(set, -lpirows[r]->lhs) || !SCIPsetIsFeasNegative(set, lpirows[r]->activity - lpirows[r]->lhs))
+            && (SCIPsetIsInfinity(set,  lpirows[r]->rhs) || !SCIPsetIsFeasPositive(set, lpirows[r]->activity - lpirows[r]->rhs));
    }
 
    /* free temporary memory */
