@@ -597,6 +597,7 @@ SCIP_RETCODE freeSymmetryData(
 
       /* free pointers to symmetry group and binary variables */
       SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
+      propdata->ngenconss = 0;
    }
 
    /* free components */
@@ -2187,8 +2188,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
-         propdata->genconss[propdata->ngenconss] = cons;
-         ++propdata->ngenconss;
+         propdata->genconss[propdata->ngenconss++] = cons;
          ++propdata->norbitopes;
          propdata->addedconss = TRUE;
 
@@ -2273,8 +2273,7 @@ SCIP_RETCODE addSymresackConss(
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
             /* do not release constraint here - will be done later */
-            propdata->genconss[propdata->ngenconss] = cons;
-            ++propdata->ngenconss;
+            propdata->genconss[propdata->ngenconss++] = cons;
             ++propdata->nsymresacks;
             ++nsymresackcons;
             SCIPdebugMsg(scip, "Added symresack constraint: %d.\n", nsymresackcons);
@@ -2296,8 +2295,7 @@ SCIP_RETCODE addSymresackConss(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
-         propdata->genconss[propdata->ngenconss] = cons;
-         ++propdata->ngenconss;
+         propdata->genconss[propdata->ngenconss++] = cons;
          ++propdata->nsymresacks;
          ++nsymresackcons;
          SCIPdebugMsg(scip, "Added symresack constraint: %d.\n", nsymresackcons);
@@ -2380,7 +2378,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    }
    assert( propdata->nperms > 0 );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->genconss), propdata->nperms) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genconss, propdata->nperms) );
 
    if ( propdata->detectorbitopes )
    {
