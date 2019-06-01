@@ -156,19 +156,17 @@ set(scipsources
     scip/presol_redvub.c
     scip/presol_sparsify.c
     scip/presol_stuffing.c
-    scip/presol_symbreak.c
-    scip/presol_symmetry.c
     scip/presol_trivial.c
     scip/presol_tworowbnd.c
     scip/prop_dualfix.c
     scip/prop_genvbounds.c
     scip/prop_nlobbt.c
     scip/prop_obbt.c
-    scip/prop_orbitalfixing.c
     scip/prop_probing.c
     scip/prop_pseudoobj.c
     scip/prop_redcost.c
     scip/prop_rootredcost.c
+    scip/prop_symmetry.c
     scip/prop_vbounds.c
     scip/prop_sync.c
     scip/reader_bnd.c
@@ -314,6 +312,7 @@ set(scipsources
     scip/sol.c
     scip/solve.c
     scip/stat.c
+    scip/symmetry.c
     scip/syncstore.c
     scip/table.c
     scip/tree.c
