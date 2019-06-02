@@ -63,7 +63,7 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
 
 /** compute non-trivial orbits of symmetry group using filtered generators
  *
- *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
  *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
  *  consecutively in the orbits array. The variables of the i-th orbit have indices
  *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].

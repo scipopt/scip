@@ -37,7 +37,7 @@
  */
 SCIP_RETCODE SCIPcomputeOrbitsSym(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_VAR**            permvars,           /**< variables considered by symbreak presolver */
+   SCIP_VAR**            permvars,           /**< variables considered in a permutation */
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
    int                   nperms,             /**< number of permutations encoded in perms */
@@ -139,7 +139,7 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
 
 /** compute non-trivial orbits of symmetry group using filtered generators
  *
- *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
  *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
  *  consecutively in the orbits array. The variables of the i-th orbit have indices
  *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
@@ -164,7 +164,7 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
                                               *   further symmetry handling techniques */
    int                   ncomponents,        /**< number of components of symmetry group */
    int                   nmovedpermvars      /**< number of variables moved by any permutation in a symmetry component
-                                              *   that is handled by OF */
+                                              *   that is handled by orbital fixing */
    )
 {
    SCIP_Shortbool* varadded;
@@ -286,7 +286,7 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
 }
 
 
-/** check whether a permutation is a composition of 2-cycles of binary variables and in this case determines the number of 2-cycles */
+/** check whether a permutation is a composition of 2-cycles of binary variables and in this case determine the number of 2-cycles */
 SCIP_RETCODE SCIPgetPropertiesPerm(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< array of variables perm is acting on */
