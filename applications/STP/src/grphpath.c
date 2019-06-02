@@ -1060,6 +1060,7 @@ void graph_sdPaths(
 void graph_sdStar(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
+   SCIP_Bool             with_zero_edges,    /**< telling name */
    int                   star_root,          /**< root of the start */
    int                   edgelimit,          /**< maximum number of edges to consider during execution */
    int*                  star_base,          /**< star base node, must be initially set to SDSTAR_BASE_UNSET */
@@ -1122,6 +1123,7 @@ void graph_sdStar(
          distlimit = cost_csr[e];
    }
 
+
    nchecks = 0;
    nstarhits = 0;
 
@@ -1135,6 +1137,9 @@ void graph_sdStar(
       assert(k != star_root);
       assert(state[k] == CONNECT);
       assert(SCIPisLE(scip, dist[k], distlimit));
+
+      if( with_zero_edges && star_base[k] == k )
+         state[k] = UNKNOWN;
 
       /* correct incident nodes */
       for( int e = k_start; e < k_end; e++ )
@@ -1168,6 +1173,9 @@ void graph_sdStar(
             }
             else if( SCIPisEQ(scip, distnew, dist[m]) && star_base[m] == m )
             {
+               if( with_zero_edges && star_base[k] == star_base[m] )
+                  continue;
+
                assert(visited[m]);
                nstarhits++;
 

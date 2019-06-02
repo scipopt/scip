@@ -142,9 +142,8 @@ SCIP_RETCODE reduce_checkSdWalk(
    }
    else
    {
-  //    SCIP_CALL( reduce_sdWalk_csr(scip, 200, NULL, graph, nodearr_int1,        nodearrreal1, heap, nodearrchar, dheap, nelims));
-
-      SCIP_CALL( reduce_sdStar(scip, 200, NULL, graph, nodearrreal1, nodearr_int1, nodearr_int2, nodearrchar, dheap, nelims));
+    //  SCIP_CALL( reduce_sdWalk_csr(scip, 200, NULL, graph, nodearr_int1, nodearrreal1, heap, nodearrchar, dheap, nelims));
+          SCIP_CALL( reduce_sdStarPc(scip, 200, NULL, graph, nodearrreal1, nodearr_int1, nodearr_int2, nodearrchar, dheap, nelims));
    }
 
    /* clean up */
@@ -526,7 +525,7 @@ SCIP_RETCODE reduce_sdPcMwTest4(
 
    /* lower hat */
    graph_edge_add(scip, graph, 0, 4, 0.5, 0.5);
-   graph_edge_add(scip, graph, 1, 4, 0.4, 0.4);
+   graph_edge_add(scip, graph, 1, 4, 0.5, 0.5);
 
 
    graph_pc_init(scip, graph, nnodes, -1);

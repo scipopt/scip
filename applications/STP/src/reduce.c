@@ -1661,9 +1661,17 @@ SCIP_RETCODE redLoopPc(
 
       if( sdstar || extensive )
       {
+         int sdstarpcnelims = 0;
          SCIP_CALL( reduce_sdStar(scip, getWorkLimits_pc(g, rounds, pc_sdstar), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarnelims));
 
-        // printf("sdstarnelims %d \n", sdstarnelims);
+      //   printf("sdstarnelims %d \n", sdstarnelims);
+
+         SCIP_CALL( reduce_sdStarPc(scip, getWorkLimits_pc(g, rounds, pc_sdstar), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
+
+
+       //  printf("sdstarpcnelims %d \n", sdstarpcnelims);
+         sdstarnelims += sdstarpcnelims;
+         //exit(1);
 
          if( sdstarnelims <= reductbound )
             sdstar = FALSE;

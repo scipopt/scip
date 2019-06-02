@@ -5659,6 +5659,8 @@ SCIP_RETCODE graph_init_dcsr(
    dcsr->edgeid = edgeid_csr;
    dcsr->id2csredge = id2csr_csr;
    dcsr->cost = cost_csr;
+   dcsr->cost2 = NULL;
+   dcsr->cost3 = NULL;
 
    /* now fill the data in */
 
@@ -5749,6 +5751,8 @@ void graph_dcsr_deleteEdge(
    int* const edgeid = dcsr->edgeid;
    int* const id2csredge = dcsr->id2csredge;
    SCIP_Real* const cost = dcsr->cost;
+   SCIP_Real* const cost2 = dcsr->cost2;
+   SCIP_Real* const cost3 = dcsr->cost3;
    int last;
 
    assert(dcsr);
@@ -5769,12 +5773,22 @@ void graph_dcsr_deleteEdge(
       edgeid[e_csr] = edgeid[last];
       id2csredge[edgeid[last]] = e_csr;
       cost[e_csr] = cost[last];
+
+      if( cost2 )
+         cost2[e_csr] = cost2[last];
+
+      if( cost3 )
+         cost3[e_csr] = cost3[last];
    }
 
 #ifndef NDEBUG
    head[last] = -1;
    edgeid[last] = -1;
    cost[last] = -FARAWAY;
+   if( cost2 )
+      cost2[last] = -FARAWAY;
+   if( cost3 )
+      cost3[last] = -FARAWAY;
 #endif
 
 }
