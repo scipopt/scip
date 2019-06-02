@@ -68,6 +68,9 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
  *  consecutively in the orbits array. The variables of the i-th orbit have indices
  *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
  *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
+ *
+ *  Only permutations that are not inactive (as marked by @p inactiveperms) are used. Thus, one can use this array to
+ *  filter out permutations.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
