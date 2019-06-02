@@ -56,6 +56,7 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
    assert( nperms > 0 );
    assert( npermvars > 0 );
    assert( orbits != NULL );
+   assert( orbitbegins != NULL );
    assert( norbits != NULL );
 
    /* init data structures*/
@@ -178,6 +179,7 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
    assert( npermvars > 0 );
    assert( inactiveperms != NULL );
    assert( orbits != NULL );
+   assert( orbitbegins != NULL );
    assert( norbits != NULL );
    assert( components != NULL );
    assert( componentbegins != NULL );
@@ -300,6 +302,7 @@ SCIP_RETCODE SCIPgetPropertiesPerm(
    int i;
 
    assert( perm != NULL );
+   assert( vars != NULL );
    assert( iscompoftwocycles != NULL );
    assert( ntwocyclesperm != NULL );
    assert( allvarsbinary != NULL );
@@ -358,6 +361,7 @@ SCIP_RETCODE SCIPdetermineBinvarAffectedSym(
    assert( scip != NULL );
    assert( perms != NULL );
    assert( nperms > 0 );
+   assert( permvars != NULL );
    assert( npermvars > 0 );
    assert( naffected != NULL );
 
@@ -419,7 +423,9 @@ SCIP_RETCODE SCIPextendSubOrbitope(
    int idx2;
 
    assert( suborbitope != NULL );
+   assert( nrows > 0 );
    assert( nfilledcols > 0 );
+   assert( coltoextend >= 0 );
    assert( perm != NULL );
    assert( nusedelems != NULL );
    assert( success != NULL );
