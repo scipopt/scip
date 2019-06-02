@@ -3203,9 +3203,9 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
  *
  *  @todo Implement reverse propagation.
  *
- *  Note that this is relatively difficult to obtain: One needs to include all bounds of variables to would lead to a
- *  different orbit in which the variables that was propagated lies. This includes all variables that are moved by the
- *  permutations which are involved in creating the orbit.
+ *  Note that this is relatively difficult to obtain: One needs to include all bounds of variables that are responsible
+ *  for creating the orbit in which the variables that was propagated lies. This includes all variables that are moved
+ *  by the permutations which are involved in creating the orbit.
  */
 static
 SCIP_DECL_PROPRESPROP(propRespropSymmetry)
