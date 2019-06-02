@@ -5607,6 +5607,12 @@ SCIP_RETCODE enforceConflictgraph(
 	 conshdlrdata->isconflocal = FALSE;
       }
 
+      /* free memory */
+      SCIPfreeBufferArrayNull(scip, &fixingsnode2);
+      SCIPfreeBufferArrayNull(scip, &fixingsnode1);
+      SCIPfreeBufferArrayNull(scip, &verticesarefixed);
+
+      assert( branchvertex >= 0 && branchvertex < nsos1vars );
       if ( SCIPvarIsBinary(SCIPnodeGetVarSOS1(conflictgraph, branchvertex)) )
       {
          *result = SCIP_INFEASIBLE;
