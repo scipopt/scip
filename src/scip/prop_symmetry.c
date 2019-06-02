@@ -2394,7 +2394,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( ! propdata->addedconss || propdata->norbitopes > 0 );
 
    /* if orbital fixing is used outside orbitopes, do not add further constraints */
-   if ( propdata->symconsenabled )
+   if ( ! propdata->ofenabled )
    {
       SCIP_CALL( addSymmetryBreakingConstraints(scip, prop, propdata->components, propdata->componentbegins, propdata->ncomponents) );
    }
