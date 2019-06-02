@@ -51,7 +51,7 @@ extern "C" {
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeOrbitsSym(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_VAR**            permvars,           /**< variables considered by symbreak presolver */
+   SCIP_VAR**            permvars,           /**< variables considered in a permutation array */
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
    int                   nperms,             /**< number of permutations encoded in perms */
@@ -89,11 +89,11 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
                                               *   further symmetry handling techniques */
    int                   ncomponents,        /**< number of components of symmetry group */
    int                   nmovedpermvars      /**< number of variables moved by any permutation in a symmetry component
-                                              *   that is handled by OF */
+                                              *   that is handled by orbital fixing */
    );
 
 
-/** check whether a permutation is a composition of 2-cycles of binary variables and in this case determines the number of 2-cycles */
+/** check whether a permutation is a composition of 2-cycles of binary variables and in this case determine the number of 2-cycles */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetPropertiesPerm(
    int*                  perm,               /**< permutation */
