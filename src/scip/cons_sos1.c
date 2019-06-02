@@ -4250,8 +4250,6 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
    {
       SCIP_Real prior;
       SCIP_Real solval;
-      SCIP_Real sum1;
-      SCIP_Real sum2;
       int nfixingsnode1;
       int nfixingsnode2;
       int nsucc;
@@ -4265,12 +4263,13 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
       {
          SCIP_Bool iszero1 = TRUE;
          SCIP_Bool iszero2 = TRUE;
+         SCIP_Real sum1 = 0.0;
+         SCIP_Real sum2 = 0.0;
 
          /* get vertices of variables that will be fixed to zero for each strong branching execution */
          assert( ! verticesarefixed[i] );
          SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, i, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
 
-         sum1 = 0.0;
          for (j = 0; j < nfixingsnode1; ++j)
          {
             solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]));
@@ -4281,7 +4280,6 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
             }
          }
 
-         sum2 = 0.0;
          for (j = 0; j < nfixingsnode2; ++j)
          {
             solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]));
@@ -4595,7 +4593,8 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
 
          /* get vertices of variables that will be fixed to zero for each strong branching execution */
          assert( ! verticesarefixed[testvertex] );
-         SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, testvertex, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
+         SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, testvertex,
+               fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
 
          /* get information for first strong branching execution */
          SCIP_CALL( performStrongbranchSOS1(scip, conflictgraph, fixingsnode1, nfixingsnode1, fixingsnode2, nfixingsnode2,
@@ -4629,7 +4628,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
             /* if domain has not been reduced in this for-loop */
             if ( ndomainfixings == 0 )
             {
-               score = MAX( REALABS( objval1 - lpobjval ), SCIPfeastol(scip) ) * MAX( REALABS( objval2 - lpobjval ), SCIPfeastol(scip) );/*lint !e666*/
+               score = MAX( REALABS(objval1 - lpobjval), SCIPfeastol(scip) ) * MAX( REALABS(objval2 - lpobjval), SCIPfeastol(scip) );/*lint !e666*/
 
                if ( SCIPisPositive(scip, score - bestscore) )
                {
@@ -5391,7 +5390,8 @@ SCIP_RETCODE enforceConflictgraph(
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
-      SCIP_Bool cutoff;int ngen;
+      SCIP_Bool cutoff;
+      int ngen = 0;
 
       cons = conss[c];
       assert( cons != NULL );
@@ -5403,7 +5403,6 @@ SCIP_RETCODE enforceConflictgraph(
          continue;
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
-      ngen = 0;
       SCIP_CALL( propConsSOS1(scip, cons, consdata, &cutoff, &ngen) );
       SCIPdebugMsg(scip, "propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, ngen);
       if ( cutoff )
@@ -5548,7 +5547,8 @@ SCIP_RETCODE enforceConflictgraph(
       SCIP_Bool relsolfeas;
 
       /* get branching vertex using most infeasible branching */
-      SCIP_CALL( getBranchingPrioritiesSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, verticesarefixed, bipbranch, fixingsnode1, fixingsnode2, NULL, &branchvertex, &relsolfeas) );
+      SCIP_CALL( getBranchingPrioritiesSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, verticesarefixed,
+            bipbranch, fixingsnode1, fixingsnode2, NULL, &branchvertex, &relsolfeas) );
 
       /* if LP relaxation solution is feasible */
       if ( relsolfeas )
@@ -5576,8 +5576,9 @@ SCIP_RETCODE enforceConflictgraph(
    else
    {
       /* get branching vertex using strong branching */
-      SCIP_CALL( getBranchingDecisionStrongbranchSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, lpobjval, bipbranch, nstrongrounds, verticesarefixed,
-            fixingsnode1, fixingsnode2, &branchvertex, &bestobjval1, &bestobjval2, result) );
+      SCIP_CALL( getBranchingDecisionStrongbranchSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, lpobjval,
+            bipbranch, nstrongrounds, verticesarefixed, fixingsnode1, fixingsnode2, &branchvertex, &bestobjval1,
+            &bestobjval2, result) );
 
       if ( *result == SCIP_CUTOFF || *result == SCIP_FEASIBLE || *result == SCIP_REDUCEDDOM )
       {
@@ -5597,7 +5598,7 @@ SCIP_RETCODE enforceConflictgraph(
       }
    }
 
-   /* if we shouldleave branching decision to branching rules */
+   /* if we should leave branching decision to branching rules */
    if ( ! conshdlrdata->branchsos )
    {
       /* remove local conflicts from conflict graph */
@@ -5630,7 +5631,8 @@ SCIP_RETCODE enforceConflictgraph(
    /* get vertices of variables that will be fixed to zero for each node */
    assert( branchvertex >= 0 && branchvertex < nsos1vars );
    assert( ! verticesarefixed[branchvertex] );
-   SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, branchvertex, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
+   SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, branchvertex,
+         fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
 
    /* calculate node selection and objective estimate for node 1 */
    nodeselest = 0.0;
@@ -5689,6 +5691,7 @@ SCIP_RETCODE enforceConflictgraph(
          }
       }
    }
+
    for (j = 0; j < nfixingsnode1; ++j)
    {
       /* fix variable to zero */
