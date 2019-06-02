@@ -612,7 +612,6 @@ set(scipheaders
     scip/prop.h
     scip/prop_nlobbt.h
     scip/prop_obbt.h
-    scip/prop_orbitalfixing.h
     scip/prop_probing.h
     scip/prop_pseudoobj.h
     scip/prop_redcost.h
