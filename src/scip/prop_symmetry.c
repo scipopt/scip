@@ -436,7 +436,7 @@ struct SYM_Sortrhstype
 };
 typedef struct SYM_Sortrhstype SYM_SORTRHSTYPE;
 
-/** sort rhs types - first by sense, then by value
+/** sorts rhs types - first by sense, then by value
  *
  *  Due to numerical issues, we first sort by sense, then by value.
  *
@@ -472,7 +472,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortRhsTypes)
    return 0;
 }
 
-/** sort matrix coefficients
+/** sorts matrix coefficients
  *
  *  result:
  *    < 0: ind1 comes before (is better than) ind2
@@ -503,7 +503,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
  * Local methods
  */
 
-/** free symmetry data */
+/** frees symmetry data */
 static
 SCIP_RETCODE freeSymmetryData(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -738,7 +738,7 @@ SCIP_RETCODE getActiveVariables(
 }
 
 
-/** fill in matrix elements into coefficient arrays */
+/** fills in matrix elements into coefficient arrays */
 static
 SCIP_RETCODE collectCoefficients(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1088,7 +1088,7 @@ int getNSymhandableConss(
    return nhandleconss;
 }
 
-/** compute symmetry group of MIP */
+/** computes symmetry group of a MIP */
 static
 SCIP_RETCODE computeSymmetryGroup(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1643,7 +1643,7 @@ SCIP_RETCODE computeSymmetryGroup(
 }
 
 
-/** determine symmetry */
+/** determines symmetry */
 static
 SCIP_RETCODE determineSymmetry(
    SCIP*                 scip,               /**< SCIP instance */
@@ -1959,7 +1959,7 @@ SCIP_RETCODE determineSymmetry(
  */
 
 
-/** check whether components of the symmetry group can be completely handled by orbitopes */
+/** checks whether components of the symmetry group can be completely handled by orbitopes */
 static
 SCIP_RETCODE detectOrbitopes(
    SCIP*                 scip,               /**< SCIP instance */
@@ -2211,7 +2211,7 @@ SCIP_RETCODE detectOrbitopes(
 }
 
 
-/** add symresack constraints */
+/** adds symresack constraints */
 static
 SCIP_RETCODE addSymresackConss(
    SCIP*                 scip,               /**< SCIP instance */
@@ -2307,11 +2307,11 @@ SCIP_RETCODE addSymresackConss(
 }
 
 
-/** analyze generators and add symmetry breaking constraints */
+/** analyzes generators and adds symmetry breaking constraints */
 static
 SCIP_RETCODE addSymmetryBreakingConstraints(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_PROP*            prop,               /**< symmetry breaking propagator */
    int*                  components,         /**< array containing components of symmetry group */
    int*                  componentbegins,    /**< array containing begin positions of components in components array */
    int                   ncomponents         /**< number of components */
@@ -2338,11 +2338,11 @@ SCIP_RETCODE addSymmetryBreakingConstraints(
 }
 
 
-/** find problem symmetries */
+/** finds problem symmetries */
 static
 SCIP_RETCODE tryAddSymmetryHandlingConss(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROP*            prop                /**< propagator */
+   SCIP_PROP*            prop                /**< symmetry breaking propagator */
    )
 {
    SCIP_PROPDATA* propdata;
@@ -2409,7 +2409,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
  */
 
 
-/** perform orbital fixing
+/** performs orbital fixing
  *
  *  Note that we do not have to distinguish between variables that have been fixed or branched to 1, since the
  *  stabilizer is with respect to the variables that have been branched to 1. Thus, if an orbit contains a variable that
@@ -2549,7 +2549,7 @@ SCIP_RETCODE performOrbitalFixing(
    return SCIP_OKAY;
 }
 
-/** Get branching variables on the path to root
+/** Gets branching variables on the path to root
  *
  *  The variables are added to bg1 and bg1list, which are prefilled with the variables globally fixed to 1.
  */
@@ -2650,11 +2650,11 @@ SCIP_RETCODE computeBranchingVariables(
 }
 
 
-/** propagate orbital fixing */
+/** propagates orbital fixing */
 static
 SCIP_RETCODE propagateOrbitalFixing(
    SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   SCIP_PROPDATA*        propdata,           /**< data of symmetry breaking propagator */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the node is detected to be infeasible */
    int*                  nprop               /**< pointer to store the number of propagations */
    )
