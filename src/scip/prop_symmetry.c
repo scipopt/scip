@@ -24,7 +24,7 @@
  * - It allows to compute symmetries of the problem and to store this information in adequate form. The symmetry
  *   information can be accessed through external functions.
  * - It allows to add the following symmetry breaking constraints:
- *    - symresacks constraints, which separate minimal cover inequalities
+ *    - symresack constraints, which separate minimal cover inequalities
  *    - orbitope constraints, if special symmetry group structures are detected
  * - It allows to apply orbital fixing.
  *
@@ -38,8 +38,7 @@
  *   no distinction between implicit integer and implicit binary. Moreover, currently implicit integer variables hurt
  *   our code more than continuous/real variables (we basically do not handle integral variables at all).
  * - We do not copy symmetry information, since it is not clear how this information transfers. Moreover, copying
- *   symmetry might inhibit heuristics. But note that solving the a sub-SCIP might then happen without symmetry
- *   information!
+ *   symmetry might inhibit heuristics. But note that solving a sub-SCIP might then happen without symmetry information!
  *
  *
  * @section SYMBREAK Symmetry Handling Constraints
@@ -224,7 +223,7 @@ struct SCIP_PropData
    int                   norbitopes;         /**< number of orbitope constraints */
 
    /* data necessary for orbital fixing */
-   SCIP_Bool             ofenabled;          /**< Run orbital branching? */
+   SCIP_Bool             ofenabled;          /**< Run orbital fixing? */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for handling global variable fixings */
    SCIP_Shortbool*       bg0;                /**< bitset to store variables globally fixed to 0 */
    int*                  bg0list;            /**< list of variables globally fixed to 0 */
@@ -250,7 +249,7 @@ struct SCIP_PropData
  * Event handler callback methods
  */
 
-/** exec the event handler for handling global variable lower bound changes (necessary for orbital fixing)
+/** exec the event handler for handling global variable bound changes (necessary for orbital fixing)
  *
  *  Global variable fixings during the solving process might arise because parts of the tree are pruned or if certain
  *  preprocessing steps are performed that do not correspond to strict setting algorithms. Since these fixings might be
@@ -926,7 +925,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 
    SCIPdebugMsg(scip, "Checking whether symmetries are symmetries (generators: %u).\n", nperms);
 
-   /* set up dense arrow for permuted row */
+   /* set up dense row for permuted row */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &permrow, matrixdata->npermvars) );
 
    /* set up map between rows and first entry in matcoef array */
@@ -1257,7 +1256,7 @@ SCIP_RETCODE computeSymmetryGroup(
          int* curconsvals;
          int i;
 
-         /* get constraint variables and their amount */
+         /* get constraint variables and their coefficients */
          curconsvals = SCIPgetValsLinking(scip, cons);
          SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
          /* SCIPgetBinVarsLinking returns the number of binary variables, but we also need the integer variable */
@@ -1482,7 +1481,7 @@ SCIP_RETCODE computeSymmetryGroup(
       var = vars[j];
       assert( var != NULL );
 
-      /* if the variable type should be fixed just increase the color */
+      /* if the variable type should be fixed, just increase the color */
       if ( SymmetryFixVar(fixedtype, var) )
       {
          matrixdata.permvarcolors[j] = matrixdata.nuniquevars++;
@@ -1964,7 +1963,7 @@ SCIP_RETCODE determineSymmetry(
 static
 SCIP_RETCODE detectOrbitopes(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROPDATA*        propdata,           /**< pointer to data of symbreak propagator */
+   SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
    int*                  components,         /**< array containing components of symmetry group */
    int*                  componentbegins,    /**< array containing begin positions of components in components array */
    int                   ncomponents         /**< number of components */
@@ -2254,7 +2253,7 @@ SCIP_RETCODE addSymresackConss(
       /* loop through components */
       for (i = 0; i < ncomponents; ++i)
       {
-         /* skip components that were treated by different symemtry handling techniques */
+         /* skip components that were treated by different symmetry handling techniques */
          if ( propdata->componentblocked[i] )
             continue;
 
