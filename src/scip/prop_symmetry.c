@@ -3024,36 +3024,36 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
 
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop) );
 
-      /* terminate if no symmetry handling constraints have been added */
-      if ( ! propdata->addedconss )
-         return SCIP_OKAY;
-
-      /* at this point, the symmetry group should be computed and nontrivial */
-      assert( propdata->nperms > 0 );
-      assert( propdata->ngenconss > 0 );
-
-      *result = SCIP_DIDNOTFIND;
-
-      *naddconss += propdata->ngenconss - noldngenconns;
-      SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", propdata->ngenconss - noldngenconns);
-
-      /* if constraints have been added, loop through generated constraints and presolve each */
-      for (i = 0; i < propdata->ngenconss; ++i)
+      /* if symmetry handling constraints have been added, presolve each */
+      if ( propdata->addedconss )
       {
-         SCIP_CALL( SCIPpresolCons(scip, propdata->genconss[i], nrounds, SCIP_PROPTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
-               nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
-               nchgvartypes, nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
+         /* at this point, the symmetry group should be computed and nontrivial */
+         assert( propdata->nperms > 0 );
+         assert( propdata->ngenconss > 0 );
 
-         /* exit if cutoff or unboundedness has been detected */
-         if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
+         *result = SCIP_DIDNOTFIND;
+
+         *naddconss += propdata->ngenconss - noldngenconns;
+         SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", propdata->ngenconss - noldngenconns);
+
+         /* if constraints have been added, loop through generated constraints and presolve each */
+         for (i = 0; i < propdata->ngenconss; ++i)
          {
-            SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(propdata->genconss[i]));
-            return SCIP_OKAY;
-         }
-      }
-      SCIPdebugMsg(scip, "Presolved %d generated constraints.\n", propdata->ngenconss);
+            SCIP_CALL( SCIPpresolCons(scip, propdata->genconss[i], nrounds, SCIP_PROPTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
+                  nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
+                  nchgvartypes, nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
-      *result = SCIP_SUCCESS;
+            /* exit if cutoff or unboundedness has been detected */
+            if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
+            {
+               SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(propdata->genconss[i]));
+               return SCIP_OKAY;
+            }
+         }
+         SCIPdebugMsg(scip, "Presolved %d generated constraints.\n", propdata->ngenconss);
+
+         *result = SCIP_SUCCESS;
+      }
    }
 
    /* run OF presolving */
