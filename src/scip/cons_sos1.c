@@ -4242,6 +4242,10 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
 
    bestprior = -SCIPinfinity(scip);
 
+   /* make sure data is initialized */
+   if ( vertexbestprior != NULL )
+      *vertexbestprior = -1;
+
    for (i = 0; i < nsos1vars; ++i)
    {
       SCIP_Real prior;
@@ -4514,6 +4518,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
    if ( relsolfeas )
    {
       SCIPdebugMsg(scip, "all the SOS1 constraints are feasible.\n");
+      *vertexbestprior = -1;
       *result = SCIP_FEASIBLE;
 
       /* free memory */
@@ -4563,6 +4568,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
    /* determine branching variable by strong branching or reduce domain */
    ndomainfixings = 0;
    lastscorechange = -1;
+   assert( nsos1vars > 0 );
    *vertexbestprior = indsos1vars[0]; /* for the case that nstrongrounds = 0 */
    bestscore = -SCIPinfinity(scip);
    *bestobjval1 = -SCIPinfinity(scip);
@@ -5368,6 +5374,13 @@ SCIP_RETCODE enforceConflictgraph(
 
    /* get number of SOS1 variables */
    nsos1vars = conshdlrdata->nsos1vars;
+
+   /* exit for trivial cases */
+   if ( nsos1vars == 0 || nconss == 0 )
+   {
+      *result = SCIP_FEASIBLE;
+      return SCIP_OKAY;
+   }
 
    /* get conflict graph */
    conflictgraph = conshdlrdata->conflictgraph;
