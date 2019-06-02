@@ -600,8 +600,6 @@ set(scipheaders
     scip/presol_redvub.h
     scip/presol_sparsify.h
     scip/presol_stuffing.h
-    scip/presol_symbreak.h
-    scip/presol_symmetry.h
     scip/presol_trivial.h
     scip/presol_tworowbnd.h
     scip/presolve.h
@@ -619,6 +617,7 @@ set(scipheaders
     scip/prop_pseudoobj.h
     scip/prop_redcost.h
     scip/prop_rootredcost.h
+    scip/prop_symmetry.h
     scip/prop_sync.h
     scip/prop_vbounds.h
     scip/pub_branch.h
@@ -807,6 +806,7 @@ set(scipheaders
     scip/struct_tree.h
     scip/struct_var.h
     scip/struct_visual.h
+    scip/symmetry.h
     scip/syncstore.h
     scip/table_default.h
     scip/table.h
