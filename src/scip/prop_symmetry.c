@@ -1987,6 +1987,7 @@ SCIP_RETCODE detectOrbitopes(
    assert( components != NULL );
    assert( componentbegins != NULL );
    assert( ncomponents > 0 );
+   assert( propdata->nperms >= 0 );
 
    /* exit if no symmetry is present */
    if ( propdata->nperms == 0 )
@@ -2006,11 +2007,12 @@ SCIP_RETCODE detectOrbitopes(
    {
       SCIP_VAR*** vars;
       SCIP_CONS* cons;
-      SCIP_Bool isorbitope = TRUE;
       SCIP_Bool* usedperm;
+      SCIP_Bool isorbitope = TRUE;
+      SCIP_Bool infeasibleorbitope;
       int** orbitopevaridx;
       int* columnorder;
-      int npermsincomponent = componentbegins[i + 1] - componentbegins[i];
+      int npermsincomponent;
       int ntwocyclescomp = INT_MAX;
       int nfilledcols;
       int nusedperms;
@@ -2018,9 +2020,9 @@ SCIP_RETCODE detectOrbitopes(
       int coltoextend;
       int j;
       int row;
-      SCIP_Bool infeasibleorbitope;
 
       /* get properties of permutations */
+      npermsincomponent = componentbegins[i + 1] - componentbegins[i];
       assert( npermsincomponent > 0 );
       for (j = componentbegins[i]; j < componentbegins[i + 1]; ++j)
       {
@@ -2078,7 +2080,9 @@ SCIP_RETCODE detectOrbitopes(
       row = 0;
       for (j = 0; j < npermvars; ++j)
       {
-         int permidx = components[componentbegins[i]];
+         int permidx;
+
+         permidx = components[componentbegins[i]];
 
          /* avoid adding the same 2-cycle twice */
          if ( perms[permidx][j] > j )
