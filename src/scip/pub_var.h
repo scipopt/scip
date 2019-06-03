@@ -894,17 +894,29 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns whether a cut containing this variable is invalid after a restart */
+/** returns whether a variable has been introduced to define a relaxation
+ *
+ * These variables are only valid for the current SCIP solve round,
+ * they are not contained in any (checked) constraints, but may be used
+ * in cutting planes, for example.
+ * Relaxation-only variables are not copied by SCIPcopyVars and cuts
+ * that contain these variables are not added as linear constraints when
+ * restarting or transferring information from a copied SCIP to a SCIP.
+ * Also conflicts with relaxation-only variables are not generated at
+ * the moment.
+ */
 SCIP_EXPORT
-SCIP_Bool SCIPvarIsCutInvalidAfterRestart(
+SCIP_Bool SCIPvarIsRelaxationOnly(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** sets whether a cut containing this variable is invalid after a restart */
+/** sets that this variable has only been introduced to define a relaxation
+ *
+ * @see SCIPvarSetRelaxationOnly
+ */
 SCIP_EXPORT
-void SCIPvarSetCutInvalidAfterRestart(
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Bool             invalid             /**< value */
+void SCIPvarSetRelaxationOnly(
+   SCIP_VAR*             var                 /**< problem variable */
    );
 
 #ifdef NDEBUG
@@ -1003,8 +1015,8 @@ void SCIPvarSetCutInvalidAfterRestart(
 #define SCIPvarGetNBdchgInfosUb(var)      ((var)->nubchginfos)
 #define SCIPvarGetValuehistory(var)       (var)->valuehistory
 #define SCIPvarGetCliqueComponentIdx(var) ((var)->clqcomponentidx)
-#define SCIPvarIsCutInvalidAfterRestart(var)((var)->invalidrestart)
-#define SCIPvarSetCutInvalidAfterRestart(var, val)((var)->invalidrestart = (val))
+#define SCIPvarIsRelaxationOnly(var)((var)->relaxationonly)
+#define SCIPvarSetRelaxationOnly(var, val)((var)->relaxationonly = TRUE)
 
 #endif
 

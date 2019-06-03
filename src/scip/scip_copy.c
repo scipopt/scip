@@ -235,7 +235,7 @@ SCIP_RETCODE copyCuts(
          for( i = 0; i < ncols && takecut; ++i )
          {
             vars[i] = SCIPcolGetVar(cols[i]);
-            takecut = !SCIPvarIsCutInvalidAfterRestart(vars[i]);
+            takecut = !SCIPvarIsRelaxationOnly(vars[i]);
          }
 
          /* discard cut if it contains a variable which is invalid after a restart */
@@ -1049,7 +1049,7 @@ SCIP_RETCODE copyVars(
       SCIP_Bool success;
       SCIP_VAR* targetvar;
 
-      if( SCIPvarIsCutInvalidAfterRestart(sourcevars[i]) )
+      if( SCIPvarIsRelaxationOnly(sourcevars[i]) )
       {
 #ifndef NDEBUG
          switch( SCIPvarGetType(sourcevars[i]) )
@@ -1087,7 +1087,7 @@ SCIP_RETCODE copyVars(
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
 
-      if( SCIPvarIsCutInvalidAfterRestart(sourcevars[i]) )
+      if( SCIPvarIsRelaxationOnly(sourcevars[i]) )
          continue;
 
       /* retrieve target variable as image of the source variable */

@@ -16610,8 +16610,8 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarDropEvent
 #undef SCIPvarGetVSIDS
 #undef SCIPvarGetCliqueComponentIdx
-#undef SCIPvarIsCutInvalidAfterRestart
-#undef SCIPvarSetCutInvalidAfterRestart
+#undef SCIPvarIsRelaxationOnly
+#undef SCIPvarSetRelaxationOnly
 #undef SCIPbdchgidxGetPos
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
@@ -17013,26 +17013,37 @@ SCIP_Bool SCIPvarIsMarkedDeleteGlobalStructures(
    return var->delglobalstructs;
 }
 
-/** returns whether a cut containing this variable is valid after a restart */
-SCIP_Bool SCIPvarIsCutInvalidAfterRestart(
+/** returns whether a variable has been introduced to define a relaxation
+ *
+ * These variables are only valid for the current SCIP solve round,
+ * they are not contained in any (checked) constraints, but may be used
+ * in cutting planes, for example.
+ * Relaxation-only variables are not copied by SCIPcopyVars and cuts
+ * that contain these variables are not added as linear constraints when
+ * restarting or transferring information from a copied SCIP to a SCIP.
+ * Also conflicts with relaxation-only variables are not generated at
+ * the moment.
+ */
+SCIP_Bool SCIPvarIsRelaxationOnly(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
    assert(var != NULL);
 
-   return var->invalidrestart;
+   return var->relaxationonly;
 }
 
-
-/** sets whether a cut containing this variable is invalid after a restart */
-void SCIPvarSetCutInvalidAfterRestart(
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Bool             invalid             /**< value */
+/** sets that this variable has only been introduced to define a relaxation
+ *
+ * @see SCIPvarSetRelaxationOnly
+ */
+void SCIPvarSetRelaxationOnly(
+   SCIP_VAR*             var                 /**< problem variable */
    )
 {
    assert(var != NULL);
 
-   var->invalidrestart = invalid;
+   var->relaxationonly = TRUE;
 }
 
 /** returns whether variable is allowed to be deleted completely from the problem */
