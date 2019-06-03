@@ -23,6 +23,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 #include <assert.h>
 #include <string.h>
 
@@ -238,7 +239,13 @@ SCIP_RETCODE createSepaData(
 
                /* no linearization variable available */
                if( auxvar == NULL )
+               {
+                  SCIPdebugMsg(scip, "auxvar = NULL, ignoring the product ");
+#ifdef SCIP_DEBUG
+                  SCIPprintConsExprExpr(scip, sepadata->conshdlr, expr, NULL);
+#endif
                   break;
+               }
 
                x = NULL;
                y = NULL;
@@ -273,6 +280,8 @@ SCIP_RETCODE createSepaData(
                   /* switch variables if necessary */
                   if( SCIPvarComp(x, y) > 0 )
                      SCIPswapPointers((void**)&x, (void**)&y);
+
+                  SCIPdebugMsg(scip, "found a product of vars %s and %s\n", SCIPvarGetName(x), SCIPvarGetName(y));
 
                   assert(auxvar != NULL);
 
@@ -1035,12 +1044,16 @@ void freeProjLP(
  */
 static
 void addRowMark(
-   int*          row_marks,    /**< array to store the marks */
-   int           pos,          /**< row position */
-   SCIP_Real     value         /**< ai*(w - xy) */
+   int           ridx,         /**< row index */
+   SCIP_Real     value,        /**< ai*(w - xy) */
+   int*          row_idcs,     /**< sparse array with indices of marked rows */
+   int*          row_marks,    /**< sparse array to store the marks */
+   int*          nmarked       /**< number of marked rows */
 )
 {
    int newmark;
+   int pos;
+   SCIP_Bool exists;
 
    assert(value != 0.0);
 
@@ -1048,10 +1061,31 @@ void addRowMark(
       newmark = 1;
    else newmark = 2;
 
-   if( (newmark == 1 && row_marks[pos] == 2) || (newmark == 2 && row_marks[pos] == 1) )
-      newmark = 3;
+   /* find row idx in row_idcs */
+   exists = SCIPsortedvecFindInt(row_idcs, ridx, *nmarked, &pos);
 
-   row_marks[pos] = newmark;
+   if( exists )
+   {
+      /* we found the row index: update the mark at pos1 */
+      if( (newmark == 1 && row_marks[pos] == 2) || (newmark == 2 && row_marks[pos] == 1) )
+      {
+         row_marks[pos] = 3;
+      }
+   }
+   else /* the given row index does not yet exist in row_idcs */
+   {
+      int i;
+
+      /* insert variable at the correct position */
+      for( i = *nmarked; i > pos; --i )
+      {
+         row_idcs[i] = row_idcs[i-1];
+         row_marks[i] = row_marks[i-1];
+      }
+      row_idcs[pos] = ridx;
+      row_marks[pos] = newmark;
+      (*nmarked)++;
+   }
 }
 
 /* mark all rows that should be multiplied by xj */
@@ -1062,10 +1096,10 @@ SCIP_RETCODE markRowsXj(
    SCIP_CONSHDLR* conshdlr,   /**< constraint handler */
    SCIP_SOL*      sol,        /**< point to be separated (can be NULL) */
    SCIP_HASHMAP*  row_to_pos, /**< hashmap linking row index to position in row_marks */
-   SCIP_ROW**     rows,       /**< problem rows */
-   int            nrows,      /**< number of rows in the problem */
    int            j,          /**< index of the multiplier variable in sepadata */
-   int*           row_marks   /**< hashmap storing the row marks */
+   int*           row_marks,  /**< sparse array storing the row marks */
+   int*           row_idcs,   /**< sparse array storing the marked row positions */
+   int*           nmarked     /**< number of marked rows */
 )
 {
    int i, idx, img, ncolrows, r, ridx, rpos;
@@ -1075,17 +1109,12 @@ SCIP_RETCODE markRowsXj(
    SCIP_COL* coli;
    SCIP_Real* colvals;
    SCIP_ROW** colrows;
-   SCIP_Bool accepted, buildeqcut, iseqrow;
+
+   *nmarked = 0;
 
    xj = sepadata->varssorted[j];
    assert(xj != NULL);
    /* TODO will checking val and bounds here help? (same for xi) */
-
-   /* mark the unsuitable rows with -1 */
-   for( r = 0; r < nrows; ++r )
-   {
-
-   }
 
    /* for each var which appears in a bilinear product together with xj, mark rows */
    for( i = 0; i < sepadata->nvarbilinvars[j]; ++i )
@@ -1127,21 +1156,18 @@ SCIP_RETCODE markRowsXj(
       {
          ridx = SCIProwGetIndex(colrows[r]);
 
+            /* TODO move this */
          if( SCIPhashmapExists(row_to_pos, (void*)(size_t)ridx) )
             rpos = SCIPhashmapGetImageInt(row_to_pos, (void*)(size_t)ridx);
-         else
+         else /* if row index is not in row_to_pos, it means that storeSuitableRows decided to ignore this row */
             continue;
-
-         /* check if the row already has a mark */
-         if( row_marks[rpos] == -1 || row_marks[rpos] == 3 )
-            continue;  /* the row is not suitable or has already been marked for generation of all cuts */
 
          a = colvals[r];
          if( a == 0.0 )
             continue;
 
          SCIPdebugMsg(scip, NULL, "Marking row %d (name = %s)\n", ridx, SCIProwGetName(colrows[r]));
-         addRowMark(row_marks, rpos, a*prod_viol);
+         addRowMark(ridx, a*prod_viol, row_idcs, row_marks, nmarked);
       }
    }
 
@@ -1164,9 +1190,10 @@ SCIP_RETCODE separateRltCuts(
    SCIP_RESULT*   result
 )
 {
-   int j, r, k;
+   int j, r, k, nmarked;
    SCIP_VAR* xj;
    int* row_marks;
+   int* row_idcs;
    SCIP_ROW* cut;
    SCIP_Bool uselb[4] = {TRUE, TRUE, FALSE, FALSE};
    SCIP_Bool uselhs[4] = {TRUE, FALSE, TRUE, FALSE};
@@ -1178,6 +1205,7 @@ SCIP_RETCODE separateRltCuts(
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &row_marks, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &row_idcs, nrows) );
 
    /* loop through all variables that appear in bilinear products */
    for( j = 0; j < sepadata->nbilinvars && (sepadata->maxusedvars < 0 || j < sepadata->maxusedvars); ++j )
@@ -1185,25 +1213,28 @@ SCIP_RETCODE separateRltCuts(
       xj = sepadata->varssorted[j];
 
       /* mark all rows for multiplier xj */
-      SCIP_CALL( markRowsXj(scip, sepadata, conshdlr, sol, row_to_pos, rows, nrows, j, row_marks) );
+      SCIP_CALL( markRowsXj(scip, sepadata, conshdlr, sol, row_to_pos, j, row_marks, row_idcs, &nmarked) );
 
+      /* TODO if there are marked rows and xj is binary mark cliques where xj or its compliment appears */
       /* generate the projected cut and if it is violated, generate the actual cut */
-      for( r = 0; r < nrows; ++r )
+      for( r = 0; r < nmarked; ++r )
       {
-         if( row_marks[r] == 0 )
-            continue;
-         if( row_marks[r] == -1 )
-         {
-            row_marks[r] = 0;
-            continue;
-         }
+         int pos;
+         SCIP_ROW* row;
+
+         assert(row_marks[r] != 0);
+         assert(SCIPhashmapExists(row_to_pos, (void*)(size_t)row_idcs[r])); /* TODO might not be true */
+
+         pos = SCIPhashmapGetImageInt(row_to_pos, (void*)(size_t)row_idcs[r]);
+         row = rows[pos];
+         assert(SCIProwGetIndex(row) == row_idcs[r]);
 
          /* check whether this row and var fulfill the conditions */
-         SCIP_CALL( isAcceptableRow(scip, sepadata, rows[r], xj, sepadata->varpriorities[j], &accepted) );
+         SCIP_CALL( isAcceptableRow(scip, sepadata, row, xj, sepadata->varpriorities[j], &accepted) );
 
          if( !accepted )
          {
-            SCIPdebugMsg(scip, "rejected row %s for variable %s\n", SCIProwGetName(rows[r]), SCIPvarGetName(xj));
+            SCIPdebugMsg(scip, "rejected row %s for variable %s\n", SCIProwGetName(row), SCIPvarGetName(xj));
             row_marks[r] = 0;
             continue;
          }
@@ -1212,7 +1243,7 @@ SCIP_RETCODE separateRltCuts(
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPprintRow(scip, rows[r], NULL) );
 #endif
-         iseqrow = SCIPisEQ(scip, SCIProwGetLhs(rows[r]), SCIProwGetRhs(rows[r]));
+         iseqrow = SCIPisEQ(scip, SCIProwGetLhs(row), SCIProwGetRhs(row));
 
          /* if all terms are known and it is an equality row, compute equality cuts */
          buildeqcut = (sepadata->currentnunknown == 0 && iseqrow);
@@ -1222,7 +1253,7 @@ SCIP_RETCODE separateRltCuts(
          {
             /* if equality cuts are possible, lhs and rhs cuts are equal so skip rhs */
             if( buildeqcut )
-            {  /* TODO do we want to generate equalities when only one side will be violated? */
+            {
                if( k % 2 == 1 )
                   continue;
             }
@@ -1240,11 +1271,11 @@ SCIP_RETCODE separateRltCuts(
             SCIPdebugMsg(scip, "uselb = %d, uselhs = %d\n", uselb[k], uselhs[k]);
 
             /* if no variables are left in the projected row, the RLT cut will not be violated */
-            if( projlp->nNonz[r] == 0 )
+            if( projlp->nNonz[pos] == 0 )
                continue;
 
             /* compute the rlt cut for a projected row first */
-            SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, r, sol, xj, &success, uselb[k], uselhs[k],
+            SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, pos, sol, xj, &success, uselb[k], uselhs[k],
                                       allowlocal, buildeqcut) );
 
             /* if the projected cut is not violated, set success to FALSE */
@@ -1262,7 +1293,7 @@ SCIP_RETCODE separateRltCuts(
 
             /* if the projected cut was generated successfully and is violated, generate the actual cut */
             if( success )
-               SCIP_CALL( computeRltCuts(scip, sepa, sepadata, &cut, rows[r], sol, xj, &success, uselb[k], uselhs[k],
+               SCIP_CALL( computeRltCuts(scip, sepa, sepadata, &cut, row, sol, xj, &success, uselb[k], uselhs[k],
                   allowlocal, buildeqcut) );
 
             /* if the cut was created successfully and is violated, it is added to SCIP */
@@ -1301,7 +1332,7 @@ SCIP_RETCODE separateRltCuts(
                SCIPdebugMsg(scip, "maxncuts = %d, ncuts = %d\n", sepadata->maxncuts, *ncuts);
                SCIPdebugMsg(scip, "result = %d\n", *result);
                /* entries of row_marks must be set to 0 before the array is freed */
-               for( int r1 = r; r1 < nrows; ++r1 )
+               for( int r1 = r; r1 < nmarked; ++r1 )
                   row_marks[r1] = 0;
                goto TERMINATE;
             }
@@ -1315,6 +1346,7 @@ SCIP_RETCODE separateRltCuts(
 
    TERMINATE:
    SCIPfreeCleanBufferArray(scip, &row_marks);
+   SCIPfreeBufferArray(scip, &row_idcs);
    return SCIP_OKAY;
 }
 
