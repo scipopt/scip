@@ -975,9 +975,11 @@ SCIP_RETCODE SCIPgetVarCopy(
    return SCIP_OKAY;
 }
 
-/** copies all original or active variables from source-SCIP and adds these variable to the target-SCIP; the mapping
- *  between these variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed
- *  and aggregated variables do not get copied
+/** copies all original or active variables from source-SCIP except those that are marked as relaxation-only, fixed, or aggregated
+ *  and adds these variable to the target-SCIP
+ *
+ *  the mapping between these variables are stored in the variable hashmap
+ *  target-SCIP has to be in problem creation stage
  */
 static
 SCIP_RETCODE copyVars(
@@ -1177,9 +1179,12 @@ SCIP_RETCODE copyVars(
    return SCIP_OKAY;
 }
 
-/** copies all active variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
- *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed and aggregated
- *  variables are not copied
+/** Copies all active (thus unfixed) variables from source-SCIP, except those that are marked as relaxation only,
+ *  and adds these variable to the target-SCIP.
+ *
+ *  The mapping between these variables are stored in the variable hashmap.
+ *
+ *  The target-SCIP has to be in problem creation stage.
  *
  *  @note the variables are added to the target-SCIP but not captured
  *
@@ -1299,8 +1304,8 @@ SCIP_RETCODE SCIPcopyOrigVars(
 SCIP_RETCODE SCIPmergeVariableStatistics(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_VAR**            sourcevars,         /**< source variables for history merge */
-   SCIP_VAR**            targetvars,         /**< target variables for history merge */
+   SCIP_VAR**            sourcevars,         /**< source variables for history merge, NULL entries are ignored */
+   SCIP_VAR**            targetvars,         /**< target variables for history merge, NULL entries are ignored */
    int                   nvars               /**< number of variables in both variable arrays */
    )
 {
@@ -1900,6 +1905,8 @@ SCIP_RETCODE SCIPconvertCutsToConss(
 }
 
 /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip
+ *
+ *  Cuts that contain variables that are marked as relaxation-only are skipped.
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -2635,7 +2642,7 @@ SCIP_RETCODE doCopy(
  *  1) copy the plugins
  *  2) copy the settings
  *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
- *  4) copy all active variables
+ *  4) copy all active variables except those that are marked as relaxation-only
  *  5) copy all constraints
  *
  *  The source problem depends on the stage of the \p sourcescip - In SCIP_STAGE_PROBLEM, the original problem is copied,
@@ -2724,7 +2731,7 @@ SCIP_RETCODE SCIPcopy(
  *  1) copy the plugins
  *  2) copy the settings
  *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
- *  4) copy all active variables
+ *  4) copy all active variables except those that are marked as relaxation-only
  *     a) fix all variable copies specified by \p fixedvars, \p fixedvals, and \p nfixedvars
  *     b) enable constraint compression
  *  5) copy all constraints

@@ -1019,7 +1019,11 @@ SCIP_RETCODE translateSubSol(
 
    return SCIP_OKAY;
 }
-/** checks the solutions from the subscip and adds them to the master SCIP is feasible */
+
+/** checks the solutions from the subscip and adds them to the master SCIP is feasible
+ *
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0.
+ */
 SCIP_RETCODE SCIPtranslateSubSols(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
@@ -1078,7 +1082,7 @@ SCIP_RETCODE SCIPtranslateSubSols(
 SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    SCIP*                 sourcescip,         /**< the data structure for the main SCIP instance */
    SCIP*                 targetscip,         /**< SCIP data structure of the subproblem */
-   SCIP_VAR**            subvars,            /**< variables of the subproblem */
+   SCIP_VAR**            subvars,            /**< variables of the subproblem, NULL entries are ignored */
    SCIP_Real             violpenalty         /**< the penalty for violating the trust region */
    )
 {
@@ -1106,7 +1110,7 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    /* memory allocation */
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &consvars, nbinvars + 1) );
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &consvals, nbinvars + 1) );
-   nconsvars =0;
+   nconsvars = 0;
 
    /* set initial left and right hand sides of trust region constraint */
    rhs = 0.0;
