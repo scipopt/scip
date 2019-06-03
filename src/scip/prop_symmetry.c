@@ -2297,37 +2297,6 @@ SCIP_RETCODE addSymresackConss(
 }
 
 
-/** analyzes generators and adds symmetry breaking constraints */
-static
-SCIP_RETCODE addSymmetryBreakingConstraints(
-   SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROP*            prop,               /**< symmetry breaking propagator */
-   int*                  components,         /**< array containing components of symmetry group */
-   int*                  componentbegins,    /**< array containing begin positions of components in components array */
-   int                   ncomponents         /**< number of components */
-   )
-{
-   SCIP_PROPDATA* propdata;
-
-   assert( scip != NULL );
-   assert( prop != NULL );
-
-   propdata = SCIPpropGetData(prop);
-   assert( propdata != NULL );
-
-   /* exit if no or only trivial symmetry group is available */
-   if ( propdata->nperms < 1 || ! propdata->binvaraffected )
-      return SCIP_OKAY;
-
-   if ( propdata->addsymresacks )
-   {
-      SCIP_CALL( addSymresackConss(scip, prop, components, componentbegins, ncomponents) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** finds problem symmetries */
 static
 SCIP_RETCODE tryAddSymmetryHandlingConss(
@@ -2386,7 +2355,14 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    /* if orbital fixing is used outside orbitopes, do not add further constraints */
    if ( ! propdata->ofenabled )
    {
-      SCIP_CALL( addSymmetryBreakingConstraints(scip, prop, propdata->components, propdata->componentbegins, propdata->ncomponents) );
+      /* exit if no or only trivial symmetry group is available */
+      if ( propdata->nperms < 1 || ! propdata->binvaraffected )
+         return SCIP_OKAY;
+
+      if ( propdata->addsymresacks )
+      {
+         SCIP_CALL( addSymresackConss(scip, prop, propdata->components, propdata->componentbegins, propdata->ncomponents) );
+      }
    }
 
    return SCIP_OKAY;
