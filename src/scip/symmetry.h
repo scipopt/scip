@@ -34,7 +34,7 @@
 extern "C" {
 #endif
 
-/**@addtogroup PublicCutMethods
+/**@addtogroup PublicSymmetryMethods
  *
  * @{
  */
