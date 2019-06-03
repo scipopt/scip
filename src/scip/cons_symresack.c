@@ -146,10 +146,10 @@ SCIP_RETCODE consdataFree(
 
    if ( nvars == 0 )
    {
-      assert( (*consdata)->perm = NULL );
-      assert( (*consdata)->invperm = NULL );
-      assert( (*consdata)->ncycles = 0 );
-      assert( (*consdata)->cycledecomposition = NULL );
+      assert( (*consdata)->perm == NULL );
+      assert( (*consdata)->invperm == NULL );
+      assert( (*consdata)->ncycles == 0 );
+      assert( (*consdata)->cycledecomposition == NULL );
 
       SCIPfreeBlockMemory(scip, consdata);
 
