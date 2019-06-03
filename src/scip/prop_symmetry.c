@@ -182,7 +182,9 @@ struct SCIP_PropData
    /* symmetry group information */
    int                   npermvars;          /**< number of variables for permutations */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
+#ifndef NDEBUG
    SCIP_Real*            permvarsobj;        /**< objective values of permuted variables (for debugging) */
+#endif
    int                   nperms;             /**< number of permutations */
    int                   nmaxperms;          /**< maximal number of permutations (needed for freeing storage) */
    int**                 perms;              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
@@ -628,7 +630,9 @@ SCIP_RETCODE freeSymmetryData(
       }
       SCIPfreeBlockMemoryArray(scip, &propdata->perms, propdata->nmaxperms);
 
+#ifndef NDEBUG
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvarsobj, propdata->npermvars);
+#endif
 
       propdata->npermvars = 0;
       propdata->nperms = -1;
@@ -650,7 +654,9 @@ SCIP_RETCODE freeSymmetryData(
    assert( propdata->genconss == NULL );
 
    assert( propdata->permvars == NULL );
+#ifndef NDEBUG
    assert( propdata->permvarsobj == NULL );
+#endif
    assert( propdata->inactiveperms == NULL );
    assert( propdata->perms == NULL );
    assert( propdata->permstrans == NULL );
@@ -1098,7 +1104,6 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_Bool             checksymmetries,    /**< Should all symmetries be checked after computation? */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
-   SCIP_Real**           permvarsobj,        /**< objective values of permuted variables */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
@@ -1130,7 +1135,6 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( scip != NULL );
    assert( npermvars != NULL );
    assert( permvars != NULL );
-   assert( permvarsobj != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
@@ -1141,7 +1145,6 @@ SCIP_RETCODE computeSymmetryGroup(
    /* init */
    *npermvars = 0;
    *permvars = NULL;
-   *permvarsobj = NULL;
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
@@ -1752,7 +1755,9 @@ SCIP_RETCODE determineSymmetry(
 
    assert( propdata->npermvars == 0 );
    assert( propdata->permvars == NULL );
+#ifndef NDEBUG
    assert( propdata->permvarsobj == NULL );
+#endif
    assert( propdata->nperms < 0 );
    assert( propdata->nmaxperms == 0 );
    assert( propdata->perms == NULL );
@@ -1778,8 +1783,8 @@ SCIP_RETCODE determineSymmetry(
 
    /* actually compute (global) symmetry */
    SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries,
-         &propdata->npermvars, &propdata->permvars, &propdata->permvarsobj, &propdata->nperms,
-         &propdata->nmaxperms, &propdata->perms, &propdata->log10groupsize, &successful) );
+         &propdata->npermvars, &propdata->permvars, &propdata->nperms, &propdata->nmaxperms, &propdata->perms,
+         &propdata->log10groupsize, &successful) );
 
    /* mark that we have computed the symmetry group */
    propdata->computedsymmetry = TRUE;
@@ -1934,7 +1939,9 @@ SCIP_RETCODE determineSymmetry(
    }
 
    /* handle several general aspects */
+#ifndef NDEBUG
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permvarsobj, propdata->npermvars) );
+#endif
    for (j = 0; j < propdata->npermvars; ++j)
    {
       /* symmetric variables are not allowed to be multi-aggregated */
@@ -1942,8 +1949,9 @@ SCIP_RETCODE determineSymmetry(
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
 
       /* store objective */
-      /* TODO: Check whether we actually need this. */
+#ifndef NDEBUG
       propdata->permvarsobj[j] = SCIPvarGetObj(propdata->permvars[j]);
+#endif
 
       /* capture all variables */
       SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
@@ -3257,7 +3265,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    propdata->npermvars = 0;
    propdata->permvars = NULL;
+#ifndef NDEBUG
    propdata->permvarsobj = NULL;
+#endif
    propdata->nperms = -1;
    propdata->nmaxperms = 0;
    propdata->perms = NULL;
