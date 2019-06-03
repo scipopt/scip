@@ -2515,6 +2515,7 @@ SCIP_RETCODE performOrbitalFixing(
    return SCIP_OKAY;
 }
 
+
 /** Gets branching variables on the path to root
  *
  *  The variables are added to bg1 and bg1list, which are prefilled with the variables globally fixed to 1.
@@ -3360,6 +3361,7 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    SYM_SPEC              symspecrequirefixed,/**< symmetry specification of variables which must be fixed by symmetries */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
+   SCIP_HASHMAP**        permvarmap,         /**< pointer to store hash map of permvars (or NULL) */
    int*                  nperms,             /**< pointer to store number of permutations */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix (or NULL)*/
    int***                permstrans,         /**< pointer to store permutation generators as (npermvars x nperms) matrix (or NULL)*/
@@ -3408,8 +3410,11 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
    *npermvars = propdata->npermvars;
    *permvars = propdata->permvars;
-   *nperms = propdata->nperms;
 
+   if ( permvarmap != NULL )
+      *permvarmap = propdata->permvarmap;
+
+   *nperms = propdata->nperms;
    if ( perms != NULL )
    {
       *perms = propdata->perms;
@@ -3439,54 +3444,6 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
    if ( ncomponents )
       *ncomponents = propdata->ncomponents;
-
-   return SCIP_OKAY;
-}
-
-
-
-/** return symmetry information on globally fixed variables */
-SCIP_RETCODE SCIPgetSyminfoGloballyFixedVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Shortbool**      bg0,                /**< pointer to store array indicating whether var is globally fixed to 0 */
-   int**                 bg0list,            /**< pointer to store list of vars globally fixed to 0 */
-   int**                 nbg0,               /**< pointer to store memory position of number of vars globally fixed to 0 */
-   SCIP_Shortbool**      bg1,                /**< pointer to store array indicating whether var is globally fixed to 1 */
-   int**                 bg1list,            /**< pointer to store list of vars globally fixed to 1 */
-   int**                 nbg1,               /**< pointer to store memory position of number of vars globally fixed to 1 */
-   SCIP_HASHMAP**        permvarmap          /**< pointer to store hash map of permvars */
-   )
-{
-   SCIP_PROPDATA* propdata;
-   SCIP_PROP* prop;
-
-   assert( scip != NULL );
-   assert( permvarmap != NULL );
-   assert( bg0 != NULL );
-   assert( bg0list != NULL );
-   assert( bg1 != NULL );
-   assert( bg1list != NULL );
-
-   /* find symmetry propagator */
-   prop = SCIPfindProp(scip, "symmetry");
-   if ( prop == NULL )
-   {
-      SCIPerrorMessage("Could not find symmetry propagator.\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   assert( prop != NULL );
-   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
-
-   propdata = SCIPpropGetData(prop);
-   assert( propdata != NULL );
-
-   *permvarmap = propdata->permvarmap;
-   *bg0 = propdata->bg0;
-   *bg0list = propdata->bg0list;
-   *nbg0 = &(propdata->nbg0);
-   *bg1 = propdata->bg1;
-   *bg1list = propdata->bg1list;
-   *nbg1 = &(propdata->nbg1);
 
    return SCIP_OKAY;
 }
