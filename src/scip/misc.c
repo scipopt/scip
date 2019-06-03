@@ -2954,9 +2954,9 @@ void SCIPhashmapFree(
                        (unsigned int)(*hashmap)->nelements, (unsigned int)(*hashmap)->nelements, (unsigned int)nslots,
                        100.0*(SCIP_Real)(*hashmap)->nelements/(SCIP_Real)(nslots));
       if( (*hashmap)->nelements > 0 )
-         SCIPdebugMessage(", avg. probe length is %.1f, max. probe length is %u",
+         SCIPdebugPrintf(", avg. probe length is %.1f, max. probe length is %u",
                           (SCIP_Real)(probelensum)/(SCIP_Real)(*hashmap)->nelements, (unsigned int)maxprobelen);
-      SCIPdebugMessage("\n");
+      SCIPdebugPrintf("\n");
    }
 #endif
 
