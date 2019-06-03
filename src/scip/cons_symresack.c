@@ -411,7 +411,7 @@ SCIP_RETCODE packingUpgrade(
 
 /** creates symresack constraint data
  *
- *  If the input data contain non-binary variables of fixed
+ *  If the input data contains non-binary variables or fixed
  *  points, we delete these variables in a preprocessing step.
  */
 static
@@ -901,7 +901,7 @@ SCIP_RETCODE separateSymresackCovers(
    assert( scip != NULL );
    assert( consdata != NULL );
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
       return SCIP_OKAY;
 
@@ -1148,7 +1148,7 @@ SCIP_RETCODE checkSymresackSolution(
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL);
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
       return SCIP_OKAY;
 
@@ -2064,7 +2064,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
       return SCIP_OKAY;
 
@@ -2175,7 +2175,7 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
       return SCIP_OKAY;
 
@@ -2230,7 +2230,7 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 
    SCIPdebugMsg(scip, "Printing method for symresack constraint handler\n");
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
    {
       SCIPinfoMessage(scip, file, "symresack()");
