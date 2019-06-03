@@ -665,11 +665,11 @@ SCIP_RETCODE addCut(
    if( success )
    {
       SCIP_Bool infeasible;
+
+      SCIPdebugMsg(scip, "Separating sol point by perspective cut\n");
+      SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
+
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-#ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "Separating sol point by perspective cut ");
-      SCIP_CALL( SCIPprintRow(scip, row, NULL) );
-#endif
 
       SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 

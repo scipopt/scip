@@ -10087,7 +10087,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 /* #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "Trying to tighten bounds of expr ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, CONSHDLR_NAME), expr, NULL) );
-   SCIPdebugMsgPrint(scip, " from [%.15g,%.15g] to [%.15g,%.15g]\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds));
+   SCIPdebugMsgPrint(scip, " from [%.15g,%.15g] to [%.15g,%.15g] (force=%d)\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds), force);
 #endif */
 
    /* check if the new bounds lead to an empty interval */
