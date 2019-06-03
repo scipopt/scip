@@ -35,7 +35,7 @@ if [ "${GITBRANCH}" == "" ]; then
   # GIT_BRANCH is a jenkins variable, if not present, try to get it from the git repository. The second thing is not robust because there may be more branches that this HEAD is present in.
   GITBRANCH=`echo ${GIT_BRANCH} | cut -d / -f 2`
   if [ "${GITBRANCH}" == "" ]; then
-      GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2`
+      GITBRANCH=`git show -s --pretty=%D | cut -s -d , -f 2 | cut -d / -f 2`
   fi
 fi
 
