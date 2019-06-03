@@ -1982,7 +1982,7 @@ SCIP_RETCODE varCreate(
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
    (*var)->delglobalstructs = FALSE;
-   (*var)->invalidrestart = FALSE;
+   (*var)->relaxationonly = FALSE;
 
    for( i = 0; i < NLOCKTYPES; i++ )
    {
