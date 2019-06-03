@@ -3085,7 +3085,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
          *nfixedvars += nprop;
       }
    }
-   else if ( propdata->ofsymcomptiming == 1 )
+   else if ( propdata->ofenabled && propdata->ofsymcomptiming == 1 )
    {
       /* otherwise compute symmetry if timing requests it */
       SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
