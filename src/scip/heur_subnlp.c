@@ -281,15 +281,22 @@ SCIP_RETCODE createSubSCIP(
 
          assert(heurdata->var_subscip2scip[SCIPvarGetProbindex(subvar)] == NULL);  /* assert that we have no mapping for this subvar yet */
          heurdata->var_subscip2scip[SCIPvarGetProbindex(subvar)] = var;
-
-         SCIP_CALL( SCIPcaptureVar(scip, var) );
-         SCIP_CALL( SCIPcaptureVar(heurdata->subscip, subvar) );
-
-         assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetLbGlobal(subvar)));
-         assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), SCIPvarGetUbGlobal(subvar)));
-
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, NULL) );
       }
+   }
+
+   for( i = 0; i < heurdata->nsubvars; ++i )
+   {
+      subvar = SCIPgetVars(heurdata->subscip)[i];
+      assert(SCIPvarGetProbindex(subvar) == i);
+      var = heurdata->var_subscip2scip[i];
+
+      SCIP_CALL( SCIPcaptureVar(scip, var) );
+      SCIP_CALL( SCIPcaptureVar(heurdata->subscip, subvar) );
+
+      assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetLbGlobal(subvar)));
+      assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), SCIPvarGetUbGlobal(subvar)));
+
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, NULL) );
    }
 
 #ifndef NDEBUG
