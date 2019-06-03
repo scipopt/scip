@@ -146,6 +146,11 @@ SCIP_RETCODE consdataFree(
 
    if ( nvars == 0 )
    {
+      assert( (*consdata)->perm = NULL );
+      assert( (*consdata)->invperm = NULL );
+      assert( (*consdata)->ncycles = 0 );
+      assert( (*consdata)->cycledecomposition = NULL );
+
       SCIPfreeBlockMemory(scip, consdata);
 
       return SCIP_OKAY;
@@ -463,6 +468,13 @@ SCIP_RETCODE consdataCreate(
    if ( naffectedvariables == 0 )
    {
       SCIPfreeBufferArrayNull(scip, &indexcorrection);
+
+      (*consdata)->perm = NULL;
+      (*consdata)->invperm = NULL;
+      (*consdata)->ppupgrade = FALSE;
+      (*consdata)->ncycles = 0;
+      (*consdata)->cycledecomposition = NULL;
+
       return SCIP_OKAY;
    }
 
@@ -697,7 +709,6 @@ SCIP_RETCODE propVariables(
    /* get data of constraint */
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->nvars > 0 );
    nvars = consdata->nvars;
 
    /* avoid trivial problems */
@@ -1414,13 +1425,15 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
    assert( sourcedata != NULL);
-   assert( sourcedata->nvars != 0 );
-   assert( sourcedata->vars != NULL );
-   assert( sourcedata->perm != NULL );
-   assert( sourcedata->invperm != NULL );
+
+   /* constraint might be empty and not deleted if no presolving took place */
+   assert( sourcedata->nvars == 0 || sourcedata->vars != NULL );
+   assert( sourcedata->nvars == 0 || sourcedata->perm != NULL );
+   assert( sourcedata->nvars == 0 || sourcedata->invperm != NULL );
 #ifndef NDEBUG
    if ( sourcedata->ppupgrade )
    {
+      assert( sourcedata->nvars > 0 );
       assert( sourcedata->ncycles != 0 );
       assert( sourcedata->cycledecomposition != NULL );
       for (i = 0; i < sourcedata->ncycles; ++i)
@@ -1464,6 +1477,14 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
             SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->cycledecomposition[i], sourcedata->cycledecomposition[i], nvars + 1) ); /*lint !e866*/
          }
       }
+   }
+   else
+   {
+      consdata->perm = NULL;
+      consdata->invperm = NULL;
+      consdata->ppupgrade = FALSE;
+      consdata->ncycles = 0;
+      consdata->cycledecomposition = NULL;
    }
 
    /* create transformed constraint */
@@ -1590,6 +1611,9 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
 
+      if ( consdata->nvars == 0 )
+         continue;
+
       /* get solution */
       assert( consdata->nvars <= maxnvars );
       SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nvars, consdata->vars, vals) );
@@ -1656,6 +1680,9 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
       /* get data of constraint */
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
+
+      if ( consdata->nvars == 0 )
+         continue;
 
       /* get solution */
       assert( consdata->nvars <= maxnvars );
@@ -1731,6 +1758,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
          /* get data of constraint */
          assert( conss[c] != NULL );
          consdata = SCIPconsGetData(conss[c]);
+
+         if ( consdata->nvars == 0 )
+            continue;
 
          /* get solution */
          assert( consdata->nvars <= maxnvars );
@@ -1836,6 +1866,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
          /* get data of constraint */
          assert( conss[c] != NULL );
          consdata = SCIPconsGetData(conss[c]);
+
+         if ( consdata->nvars == 0 )
+            continue;
 
           /* get solution */
          assert( consdata->nvars <= maxnvars );
