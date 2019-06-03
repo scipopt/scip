@@ -1306,7 +1306,8 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
          SCIPdebugMsg(scip, "added branchingscore for expr %p with auxvar <%s> (coef %g)\n", SCIPgetConsExprExprChildren(expr)[i], SCIPvarGetName(auxvar), SCIPgetConsExprExprData(expr)->coefficients[i]);
       }
    }
-   assert(*success); /* for all of the modified variables, a branching score should have been added */
+   /* for all of the modified variables, a branching score should have been added, except if the auxvar of this expression was modified/removed */
+   assert(*success || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == SCIPgetConsExprExprAuxVar(expr)));
 
    SCIPfreeRowprep(scip, &rowprep);
 
