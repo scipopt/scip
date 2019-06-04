@@ -1503,8 +1503,11 @@ SCIP_Real adjustedLb(
       return SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetFeasCeil(set, lb);
+#ifdef SCIP_DISABLED_CODE
+   /* for numerically bad instances it might happen that variables have tiny bounds */
    else if( SCIPsetIsZero(set, lb) )
       return 0.0;
+#endif
    else
       return lb;
 }
@@ -1523,8 +1526,11 @@ SCIP_Real adjustedUb(
       return -SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetFeasFloor(set, ub);
+#ifdef SCIP_DISABLED_CODE
+   /* for numerically bad instances it might happen that variables have tiny bounds */
    else if( SCIPsetIsZero(set, ub) )
       return 0.0;
+#endif
    else
       return ub;
 }
