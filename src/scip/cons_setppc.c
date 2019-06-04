@@ -1505,7 +1505,7 @@ SCIP_RETCODE dualPresolving(
       }
    }
 
-   /* if all variables but the domination variable is fixed and the constraint is not modifiables or the constraint is a
+   /* if all variables but the domination variable is fixed and the constraint is not modifiable or the constraint is a
     * covering constraint and the bestobjval is less than or equal to zero, we can fix the domination variable (with best
     * objective coefficient) and the constraint gets redundant
     */
@@ -2790,7 +2790,7 @@ SCIP_RETCODE addExtraCliques(
 	 cliqueconsdata = SCIPconsGetData(cliquecons);
 	 assert(cliqueconsdata != NULL);
 
-	 /* the artificial constraints could be deleled while merging */
+	 /* the artificial constraints could be deleted while merging */
 	 if( !SCIPconsIsDeleted(cliquecons) && nadded - cliqueconsdata->nfixedzeros >= 2 )
 	 {
 	    assert(cliqueconsdata->nfixedones == 0);
@@ -2904,7 +2904,7 @@ SCIP_RETCODE collectCliqueConss(
    return SCIP_OKAY;
 }
 
-/** creating all necessary data in array structure, collect all clique constraint variables and occurances,
+/** creating all necessary data in array structure, collect all clique constraint variables and occurrences,
  *  @note works only with merged and active not set-covering constraints
  */
 static
@@ -2916,7 +2916,7 @@ SCIP_RETCODE collectCliqueData(
    int*const             nusefulvars,        /**< pointer to store number of added variables */
    SCIP_HASHMAP*const    vartoindex,         /**< hashmap mapping variables to indices */
    int*const             varnconss,          /**< storage for remembering the number of constraints a variable occurs */
-   int*const             maxnvarconsidx,     /**< storage for the maximal number of occurances of a variable */
+   int*const             maxnvarconsidx,     /**< storage for the maximal number of occurrences of a variable */
    int**const            varconsidxs,        /**< storage for constraint indices in which the corresponding variable exists */
    int*const             maxnvars            /**< pointer to store maximal number of variables of a constraint */
    )
@@ -2959,7 +2959,7 @@ SCIP_RETCODE collectCliqueData(
       if( consdata->nvars > *maxnvars )
          *maxnvars = consdata->nvars;
 
-      /* adding variables and information about occurances to local data structure */
+      /* adding variables and information about occurrences to local data structure */
       for( v = consdata->nvars - 1; v >= 0; --v )
       {
          SCIP_VAR* var;
@@ -2971,7 +2971,7 @@ SCIP_RETCODE collectCliqueData(
          if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5 )
             continue;
 
-	 /* only collect active or negated active varibels */
+	 /* only collect active or negated active variables */
 	 assert(SCIPvarIsActive(var) || (SCIPvarIsNegated(var) && SCIPvarIsActive(SCIPvarGetNegationVar(var))));
 
          if( !SCIPhashmapExists(vartoindex, (void*) var) )
@@ -2983,7 +2983,7 @@ SCIP_RETCODE collectCliqueData(
             varindex = *nusefulvars;
             SCIP_CALL( SCIPhashmapInsertInt(vartoindex, (void*) var, varindex) );
 
-            /* get the maximal number of occurances of this variable, if this variables  */
+            /* get the maximal number of occurrences of this variable, if this variables  */
             tmpvar = SCIPvarIsNegated(var) ? SCIPvarGetNegatedVar(var) : var;
             maxnvarconsidx[varindex] = SCIPvarGetNLocksDownType(tmpvar, SCIP_LOCKTYPE_MODEL)
                + SCIPvarGetNLocksUpType(tmpvar, SCIP_LOCKTYPE_MODEL);
@@ -2995,7 +2995,7 @@ SCIP_RETCODE collectCliqueData(
             varindex = SCIPhashmapGetImageInt(vartoindex, (void*) var);
          }
 
-         /* the number of occurances of a variable is not limited by the locks (so maybe we have to increase memory),
+         /* the number of occurrences of a variable is not limited by the locks (so maybe we have to increase memory),
           * because for examples converted cuts are not check and therefore they have no locks on their variables */
          if( varnconss[varindex] == maxnvarconsidx[varindex] )
          {
@@ -3006,7 +3006,7 @@ SCIP_RETCODE collectCliqueData(
          assert(varnconss[varindex] < maxnvarconsidx[varindex]);
          /* add the constraint number to the variable list */
          varconsidxs[varindex][varnconss[varindex]] = c;
-         /* increase number of occurances for variables */
+         /* increase number of occurrences for variables */
          ++(varnconss[varindex]);
       }
    } /* data structure created */
@@ -3067,7 +3067,7 @@ SCIP_RETCODE addCliqueDataEntry(
    int*const             nusefulvars,        /**< pointer to store number of added variables */
    SCIP_HASHMAP*const    vartoindex,         /**< hashmap mapping variables to indices */
    int*const             varnconss,          /**< storage for remembering the number of constraints a variable occurs */
-   int*const             maxnvarconsidx,     /**< storage for the maximal number of occurances of a variable */
+   int*const             maxnvarconsidx,     /**< storage for the maximal number of occurrences of a variable */
    int**const            varconsidxs         /**< storage for constraint indices in which the corresponding variable exists */
    )
 {
@@ -3089,7 +3089,7 @@ SCIP_RETCODE addCliqueDataEntry(
       assert(SCIPvarIsActive(addvar) || SCIPvarIsNegated(addvar));
       assert(SCIPvarGetNegatedVar(addvar) != NULL && SCIPhashmapExists(vartoindex, (void*) SCIPvarGetNegatedVar(addvar)));
 
-      /* @note because we can only have created a negated variable, and we already alloacted enough memory for
+      /* @note because we can only have created a negated variable, and we already allocated enough memory for
        * all (even not existing) negated variables the usefulvars array should be big enough
        */
       SCIPsortedvecInsertDownPtr((void**)usefulvars, SCIPvarCompActiveAndNegated, addvar, nusefulvars, NULL);
@@ -3116,7 +3116,7 @@ SCIP_RETCODE addCliqueDataEntry(
    assert(varnconss[varindex] < maxnvarconsidx[varindex]);
    varconsidxs[varindex][varnconss[varindex]] = considx;
 
-   /* increase number of occurances for variables */
+   /* increase number of occurrences for variables */
    ++(varnconss[varindex]);
 
    return SCIP_OKAY;
@@ -3439,7 +3439,7 @@ SCIP_RETCODE presolvePropagateCons(
 		     BMSclearMemoryArray(&(undoneaggrtypes[*naggregations]), *saggregations - *naggregations); /*lint !e866*/
 		  }
 
-		  /* memorize aagregation variables*/
+		  /* memorize aggregation variables*/
 		  assert(undoneaggrtypes[*naggregations] == FALSE);
 		  undoneaggrvars[2 * (*naggregations)] = var;
 		  undoneaggrvars[2 * (*naggregations) + 1] = vars[v];
@@ -3473,7 +3473,7 @@ static
 SCIP_RETCODE checkForOverlapping(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< constraint which may overlap */
-   int const             considx,            /**< constriant index to avoid checking against itself */
+   int const             considx,            /**< constraint index to avoid checking against itself */
    int const             endidx,             /**< end index to check against given constraint */
    SCIP_CONS**const      usefulconss,        /**< clique constraints */
    int const             nusefulconss,       /**< number of clique constraints */
@@ -3481,7 +3481,7 @@ SCIP_RETCODE checkForOverlapping(
    int*const             nusefulvars,        /**< pointer to store number of added variables */
    SCIP_HASHMAP*const    vartoindex,         /**< hashmap mapping variables to indices */
    int*const             varnconss,          /**< storage for remembering the number of constraints a variable occurs */
-   int*const             maxnvarconsidx,     /**< storage for the maximal number of occurances of a variable */
+   int*const             maxnvarconsidx,     /**< storage for the maximal number of occurrences of a variable */
    int**const            varconsidxs,        /**< storage for constraint indices in which the corresponding variable exists */
    int*const             countofoverlapping, /**< the amount of variables of cons which overlap in all other constraint */
    SCIP_Bool const       shrinking,          /**< try to replace some variables with one variable */
@@ -3946,7 +3946,7 @@ SCIP_RETCODE checkForOverlapping(
 	    ++(*ndelconss);
 	 }
       }
-      /* if cons has only one unfixed variable which is not in cons1 and cons1 has one variable which does not appaer in
+      /* if cons has only one unfixed variable which is not in cons1 and cons1 has one variable which does not appear in
        * cons and both constraints are setpartitioning constraints we might aggregate both not overlapping variables and
        * delete one constraint
        */
@@ -4106,7 +4106,7 @@ SCIP_RETCODE checkForOverlapping(
 	    BMSclearMemoryArray(&(undoneaggrtypes[*naggregations]), *saggregations - *naggregations); /*lint !e866*/
 	 }
 
-	 /* memorize aagregation variables*/
+	 /* memorize aggregation variables*/
 	 undoneaggrtypes[*naggregations] = TRUE;
 	 undoneaggrvars[2 * (*naggregations)] = aggvar1;
 	 undoneaggrvars[2 * (*naggregations) + 1] = aggvar2;
@@ -4245,7 +4245,7 @@ SCIP_RETCODE checkForOverlapping(
 	    else
 	    {
 	       /* because the constraint's are merged it is not possible that one constraint contains a negated variable
-		* of another, but both constraint might have a variable in neagted form of the other
+		* of another, but both constraint might have a variable in negated form of the other
 		*/
 	       if( negated0 != negated1 )
 	       {
@@ -4276,7 +4276,7 @@ SCIP_RETCODE checkForOverlapping(
 		  deleteCliqueDataEntry(varstochange[v1], constochangeidx, vartoindex, varnconss, varconsidxs);
 
 		  SCIPdebugMsg(scip, " -> deleting variable <%s> in constraint <%s> number %d, because it will be replaced\n", SCIPvarGetName(varstochange[v1]), SCIPconsGetName(constochange), constochangeidx);
-		  /* delete overlapping variabes in constochange */
+		  /* delete overlapping variables in constochange */
 		  SCIP_CALL( delCoefPos(scip, constochange, v1) );
 		  ++(*nchgcoefs);
 	       }
@@ -4333,7 +4333,7 @@ SCIP_RETCODE checkForOverlapping(
 
 /** try to lift variables to given constraint */
 /** @todo try another variant by determine lifting variables as the intersection of all cliques variables of the
- *        constraint variables, note that the insection changes after one variable was added
+ *        constraint variables, note that the intersection changes after one variable was added
  */
 static
 SCIP_RETCODE liftCliqueVariables(
@@ -4344,12 +4344,12 @@ SCIP_RETCODE liftCliqueVariables(
    int*const             nusefulvars,        /**< pointer to store number of added variables */
    int const             endidx,             /**< end index for possible lifting variables */
    SCIP_Bool**           cliquevalues,       /**< pointer to clique values of constraint-variables, either one if the
-					      *   varibale is active or zero if the variable is negated
+					      *   variable is active or zero if the variable is negated
 					      *   @note this array can be resized in this method
 					      */
    SCIP_HASHMAP*const    vartoindex,         /**< hashmap mapping variables to indices */
    int*const             varnconss,          /**< array with number of constraints a variable occurs */
-   int*const             maxnvarconsidx,     /**< array with the maximal number of occurances of a variable */
+   int*const             maxnvarconsidx,     /**< array with the maximal number of occurrences of a variable */
    int**const            varconsidxs,        /**< array with constraint indices in which the corresponding variable
 					      *   exists
 					      */
@@ -4836,7 +4836,7 @@ SCIP_RETCODE performAggregations(
    assert(naggrvars != NULL);
    assert(cutoff != NULL);
 
-   /* loop over all open aggreagtions and try to aggregate them */
+   /* loop over all open aggregations and try to aggregate them */
    for( a = 0; a < naggregations; ++a  )
    {
       var1 = undoneaggrvars[2 * a];
@@ -4914,9 +4914,9 @@ SCIP_RETCODE preprocessCliques(
    SCIP_VAR** usefulvars;                    /* array with pointers of variables in setpartitioning and setpacking constraints */
    int** varconsidxs;                        /* array consisting of constraint indices in which the corresponding variable exists */
    int* varnconss;                           /* array consisting of number of constraints the variable occurs */
-   int* maxnvarconsidx;                      /* maximal number of occurances of a variable */
+   int* maxnvarconsidx;                      /* maximal number of occurrences of a variable */
    int* countofoverlapping = NULL;           /* the amount of variables which are in another constraint */
-   SCIP_Bool* cliquevalues = NULL;           /* values of clique-variables, either one if the varibale is active or zero if the variable is negated */
+   SCIP_Bool* cliquevalues = NULL;           /* values of clique-variables, either one if the variable is active or zero if the variable is negated */
 
    SCIP_HASHMAP* vartoindex;                 /* mapping of SCIP variables to indices */
    SCIP_CONSDATA* consdata;
@@ -4998,7 +4998,7 @@ SCIP_RETCODE preprocessCliques(
       SCIP_CALL( SCIPduplicateBufferArray(scip, &binvars, vars, nbinvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &cliquepartition, nbinvars) );
 
-      /* @todo: check for better permutations/don't permutate the first round
+      /* @todo: check for better permutations/don't permute the first round
        * @todo: take binary variables which are not of vartype SCIP_VARTYPE_BINARY into account
        */
       SCIPrandomPermuteArray(conshdlrdata->randnumgen, (void**)binvars, 0, nbinvars);
@@ -5035,7 +5035,7 @@ SCIP_RETCODE preprocessCliques(
     */
    SCIP_CALL( collectCliqueConss(scip, conss, nconss, usefulconss, &nusefulconss, nfixedvars, ndelconss, nchgcoefs, cutoff) );
    /* @Note: Even after the call above some constraints can have fixed variables, because it might happen that caused by
-    * mergeMultiplies some variables were fixed which occured already in previous constraints
+    * mergeMultiplies some variables were fixed which occurred already in previous constraints
     */
    if( *cutoff )
       goto TERMINATE;
@@ -5053,7 +5053,7 @@ SCIP_RETCODE preprocessCliques(
     */
    SCIPsortDownPtr((void**)usefulconss, setppcConssSort, nusefulconss);
 
-   /* creating all necessary data in array structure, collect all clique constraint variables and occurances */
+   /* creating all necessary data in array structure, collect all clique constraint variables and occurrences */
    SCIP_CALL( collectCliqueData(scip, usefulconss, nusefulconss, usefulvars, &nusefulvars, vartoindex, varnconss, maxnvarconsidx, varconsidxs, &maxnvars) );
    assert(maxnvars > 0);
 
@@ -5343,7 +5343,7 @@ SCIP_RETCODE addCliques(
    int                   lastclique,         /**< last constraint to start to add cliques */
    int*                  naddconss,          /**< pointer to count number of added constraints */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
-   int*                  nchgbds,            /**< pointer to count number of chnaged bounds */
+   int*                  nchgbds,            /**< pointer to count number of changed bounds */
    SCIP_Bool*            cutoff              /**< pointer to store if the problem is infeasible due to a fixing */
    )
 {
@@ -5420,7 +5420,7 @@ SCIP_RETCODE addCliques(
 static
 SCIP_RETCODE multiAggregateBinvar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             linearconshdlrexist,/**< does the linear constraint handler exist, necessaray for multi-aggregations */
+   SCIP_Bool             linearconshdlrexist,/**< does the linear constraint handler exist, necessary for multi-aggregations */
    SCIP_VAR**            vars,               /**< all variables including the variable to which will be multi-aggregated */
    int                   nvars,              /**< number of all variables */
    int                   pos,                /**< position of variable for multi-aggregation */
@@ -5524,7 +5524,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    SCIP_CONS**           conss,              /**< constraint set */
    int                   nconss,             /**< number of constraints in constraint set */
    SCIP_Bool             dualpresolvingenabled,/**< is dual presolving enabled */
-   SCIP_Bool             linearconshdlrexist,/**< does the linear constraint handler exist, necessaray for
+   SCIP_Bool             linearconshdlrexist,/**< does the linear constraint handler exist, necessary for
                                               *   multi-aggregations
                                               */
    int*                  nfixedvars,         /**< pointer to count number of deleted variables */
@@ -5532,7 +5532,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
    int*                  nchgsides,          /**< pointer to count number of changed left hand sides */
-   SCIP_Bool*            cutoff              /**< pointer to store if a cut off was detedcted */
+   SCIP_Bool*            cutoff              /**< pointer to store if a cut off was detected */
    )
 {
    SCIP_CONS** usefulconss;
@@ -6600,7 +6600,7 @@ SCIP_RETCODE removeRedundantConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraint set */
    int                   firstchange,        /**< first constraint that changed since last pair preprocessing round */
-   int                   chkind,             /**< index of constraint to check against all prior indices upto startind */
+   int                   chkind,             /**< index of constraint to check against all prior indices up to startind */
    SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff was found */
    int*                  nfixedvars,         /**< pointer to count number of fixed variables */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
@@ -8243,7 +8243,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       firstclique = nconss;
       lastclique = -1;
 
-      /* lift variables and check for fixings due to clique infomation */
+      /* lift variables and check for fixings due to clique information */
       SCIP_CALL( preprocessCliques(scip, conshdlrdata, conss, nconss, nrounds, &firstchange, &firstclique,
             &lastclique, nfixedvars, naggrvars, ndelconss, nchgcoefs, &cutoff) );
       ++(conshdlrdata->nclqpresolve);
@@ -8339,7 +8339,7 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
       SCIP_Bool confvarfound;
 #endif
 
-      /* the inference constraint is a set partitioning or covering constraint with the inference variable infered to 1.0:
+      /* the inference constraint is a set partitioning or covering constraint with the inference variable inferred to 1.0:
        * the reason for the deduction is the assignment of 0.0 to all other variables
        */
 #ifndef NDEBUG
@@ -8365,7 +8365,7 @@ SCIP_DECL_CONSRESPROP(consRespropSetppc)
    }
    else
    {
-      /* the inference constraint is a set partitioning or packing constraint with the inference variable infered to 0.0:
+      /* the inference constraint is a set partitioning or packing constraint with the inference variable inferred to 0.0:
        * the reason for the deduction is the assignment of 1.0 to a single variable
        */
       assert(SCIPgetVarUbAtIndex(scip, infervar, bdchgidx, TRUE) < 0.5);

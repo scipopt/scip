@@ -5436,12 +5436,12 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* if only one aggregation variable is left, we perform a normal aggregation instead of a multi-aggregation */
       if( ntmpvars == 1 )
       {
-            SCIPsetDebugMsg(set, "Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n",
-                  SCIPvarGetName(var), SCIPvarGetName(tmpvars[0]), 1.0, -tmpscalars[0], tmpconstant);
+         SCIPsetDebugMsg(set, "Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n",
+            SCIPvarGetName(var), SCIPvarGetName(tmpvars[0]), 1.0, -tmpscalars[0], tmpconstant);
 
-            SCIP_CALL( SCIPvarTryAggregateVars(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lp,
-                  cliquetable, branchcand, eventfilter, eventqueue, var, tmpvars[0], 1.0, -tmpscalars[0], tmpconstant,
-                  infeasible, aggregated) );
+         SCIP_CALL( SCIPvarTryAggregateVars(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lp,
+               cliquetable, branchcand, eventfilter, eventqueue, var, tmpvars[0], 1.0, -tmpscalars[0], tmpconstant,
+               infeasible, aggregated) );
 
          goto TERMINATE;
       }

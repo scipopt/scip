@@ -6737,8 +6737,6 @@ SCIP_Bool SCIPsetIsLbBetter(
    SCIP_Real             oldub               /**< old upper bound */
    )
 {
-   SCIP_Real eps;
-
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
 
@@ -6746,9 +6744,7 @@ SCIP_Bool SCIPsetIsLbBetter(
    if( oldlb < 0.0 && newlb >= 0.0 )
       return TRUE;
 
-   eps = REALABS(oldlb);
-   eps = MIN(oldub - oldlb, eps);
-   return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(eps, 1e-3));
+   return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(MIN(oldub - oldlb, REALABS(oldlb)), 1e-3));  /*lint !e666*/
 }
 
 /** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
@@ -6762,8 +6758,6 @@ SCIP_Bool SCIPsetIsUbBetter(
    SCIP_Real             oldub               /**< old upper bound */
    )
 {
-   SCIP_Real eps;
-
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
 
@@ -6771,9 +6765,7 @@ SCIP_Bool SCIPsetIsUbBetter(
    if( oldub > 0.0 && newub <= 0.0 )
       return TRUE;
 
-   eps = REALABS(oldub);
-   eps = MIN(oldub - oldlb, eps);
-   return EPSLT(newub, oldub, set->num_boundstreps * MAX(eps, 1e-3));
+   return EPSLT(newub, oldub, set->num_boundstreps * MAX(MIN(oldub - oldlb, REALABS(oldub)), 1e-3));  /*lint !e666*/
 }
 
 /** checks, if the given cut's efficacy is larger than the minimal cut efficacy */

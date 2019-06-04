@@ -3826,7 +3826,6 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
-   SCIP_ORBITOPETYPE type;
 
    /* find the orbitope constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -3888,8 +3887,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    if ( conshdlrdata->checkpporbitope && orbitopetype != SCIP_ORBITOPETYPE_PARTITIONING
       && orbitopetype != SCIP_ORBITOPETYPE_PACKING )
    {
-      type = SCIP_ORBITOPETYPE_FULL;
-      SCIP_CALL( strenghtenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &type) );
+      SCIP_CALL( strenghtenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &orbitopetype) );
    }
 
    /* create constraint data */
