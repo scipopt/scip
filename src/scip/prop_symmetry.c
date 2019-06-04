@@ -214,7 +214,7 @@ struct SCIP_PropData
 
    /* for symmetry constraints */
    SCIP_Bool             symconsenabled;     /**< Should symmetry constraints be added? */
-   SCIP_Bool             addedconss;         /**< whether we already added symmetry breaking constraints */
+   SCIP_Bool             triedaddconss;      /**< whether we already tried to add symmetry breaking constraints */
    SCIP_Bool             conssaddlp;         /**< Should the symmetry breaking constraints be added to the LP? */
    SCIP_Bool             addsymresacks;      /**< Add symresack constraints for each generator? */
    int                   addconsstiming;     /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
@@ -2200,7 +2200,6 @@ SCIP_RETCODE detectOrbitopes(
          /* do not release constraint here - will be done later */
          propdata->genconss[propdata->ngenconss++] = cons;
          ++propdata->norbitopes;
-         propdata->addedconss = TRUE;
 
          propdata->componentblocked[i] = TRUE;
       }
@@ -2287,9 +2286,6 @@ SCIP_RETCODE addSymresackConss(
    }
    SCIPdebugMsg(scip, "Added %d symresack constraints.\n", nsymresackcons);
 
-   if ( nsymresackcons > 0 )
-      propdata->addedconss = TRUE;
-
    return SCIP_OKAY;
 }
 
@@ -2311,7 +2307,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( propdata->symconsenabled );
 
    /* if constraints have already been added */
-   if ( propdata->addedconss )
+   if ( propdata->triedaddconss )
    {
       assert( propdata->nperms > 0 );
 
@@ -2331,6 +2327,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
    }
    assert( propdata->nperms > 0 );
+   propdata->triedaddconss = TRUE;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genconss, propdata->nperms) );
 
@@ -2339,17 +2336,11 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
    }
 
-   /* at this point, the symmetry group should be computed and nontrivial */
-   assert( propdata->nperms > 0 );
-
    /* possibly stop */
    if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   /* add symmetry breaking constraints */
-   assert( ! propdata->addedconss || propdata->norbitopes > 0 );
-
-   /* if orbital fixing is used outside orbitopes, do not add further constraints */
+   /* add symmetry breaking constraints if orbital fixing is not used outside orbitopes */
    if ( ! propdata->ofenabled )
    {
       /* exit if no or only trivial symmetry group is available */
@@ -2943,7 +2934,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
 
    /* guarantee that symmetries are computed (and handled) if the solving process hat not been interrupted
     * and even if presolving has been disabled */
-   if ( propdata->symconsenabled && ! propdata->addedconss && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
+   if ( propdata->symconsenabled && ! propdata->triedaddconss && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
    {
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop) );
    }
@@ -2971,7 +2962,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    assert( propdata->usesymmetry >= 0 );
 
    /* possibly create symmetry handling constraints */
-   if ( propdata->symconsenabled && ! propdata->addedconss )
+   if ( propdata->symconsenabled && ! propdata->triedaddconss )
    {
       int noldngenconns;
 
@@ -2989,11 +2980,11 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop) );
 
       /* if symmetry handling constraints have been added, presolve each */
-      if ( propdata->addedconss )
+      if ( propdata->ngenconss > 0 )
       {
          /* at this point, the symmetry group should be computed and nontrivial */
          assert( propdata->nperms > 0 );
-         assert( propdata->ngenconss > 0 );
+         assert( propdata->triedaddconss );
 
          *result = SCIP_DIDNOTFIND;
 
@@ -3150,7 +3141,7 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
    /* reset basic data */
    propdata->usesymmetry = -1;
    propdata->symconsenabled = FALSE;
-   propdata->addedconss = FALSE;
+   propdata->triedaddconss = FALSE;
    propdata->nsymresacks = 0;
    propdata->norbitopes = 0;
    propdata->ofenabled = FALSE;
@@ -3242,7 +3233,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    propdata->usesymmetry = -1;
    propdata->symconsenabled = FALSE;
-   propdata->addedconss = FALSE;
+   propdata->triedaddconss = FALSE;
    propdata->genconss = NULL;
    propdata->ngenconss = 0;
    propdata->nsymresacks = 0;
