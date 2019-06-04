@@ -159,7 +159,7 @@ SCIP_DECL_HEUREXEC(heurExecStaircase)
 
    /* author bzfhende
     *
-    * TODO query if there is a user decomposition
+    * TODO query if there is a user decomposition (see methods in decomp.h)
     */
 
    /* author bzfhende

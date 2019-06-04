@@ -123,6 +123,7 @@ set(scipsources
     scip/heur_shiftandpropagate.c
     scip/heur_shifting.c
     scip/heur_simplerounding.c
+    scip/heur_staircase.c
     scip/heur_subnlp.c
     scip/heur_sync.c
     scip/heur_trivial.c
@@ -556,6 +557,7 @@ set(scipheaders
     scip/heur_shiftandpropagate.h
     scip/heur_shifting.h
     scip/heur_simplerounding.h
+    scip/heur_staircase.h
     scip/heur_subnlp.h
     scip/heur_sync.h
     scip/heur_trivial.h
