@@ -30,7 +30,7 @@
  *
  * Polytopes Associated with Symmetry Handling@n
  * Christopher Hojny and Marc E. Pfetsch,@n
- * (2017), preprint available at http://www.optimization-online.org/DB_HTML/2017/01/5835.html
+ * Mathematical Programming 175, No. 1, 197-240, 2019
  *
  * This paper describes an almost linear time separation routine for so-called cove
  * inequalities of symresacks. In our implementation, however, we use a separation routine with
