@@ -1844,7 +1844,9 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    {
       /* adjust lower bound w.r.t. to integrality */
       SCIPvarAdjustLb(var, set, &newbound);
-      assert(SCIPsetIsGT(set, newbound, oldlb));
+
+      /* note that a tiny improvement is accepted in SCIPisLbBetter() if the sign of a variable changes */
+      assert(SCIPsetIsGT(set, newbound, oldlb) || (newbound > oldlb && newbound * oldlb <= 0.0));
       assert(SCIPsetIsFeasLE(set, newbound, oldub));
       oldbound = oldlb;
       newbound = MIN(newbound, oldub);
@@ -1862,7 +1864,9 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       /* adjust the new upper bound */
       SCIPvarAdjustUb(var, set, &newbound);
-      assert(SCIPsetIsLT(set, newbound, oldub));
+
+      /* note that a tiny improvement is accepted in SCIPisUbBetter() if the sign of a variable changes */
+      assert(SCIPsetIsLT(set, newbound, oldub) || (newbound < oldub && newbound * oldub <= 0.0));
       assert(SCIPsetIsFeasGE(set, newbound, oldlb));
       oldbound = oldub;
       newbound = MAX(newbound, oldlb);
