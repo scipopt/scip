@@ -418,6 +418,7 @@ SCIP_RETCODE packingUpgrade(
 static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< symresack constraint handler */
    SCIP_CONSDATA**       consdata,           /**< pointer to store constraint data */
    SCIP_VAR*const*       inputvars,          /**< input variables of the constraint handler */
    int                   inputnvars,         /**< input number of variables of the constraint handler*/
@@ -425,7 +426,6 @@ SCIP_RETCODE consdataCreate(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** vars;
    SCIP_Bool upgrade;
    int* indexcorrection;
@@ -436,6 +436,8 @@ SCIP_RETCODE consdataCreate(
    int j = 0;
 
    assert( consdata != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
@@ -516,14 +518,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->invperm = invperm;
 
    /* check for upgrade to packing/partitioning symresacks*/
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   if ( conshdlr == NULL )
-   {
-      SCIPerrorMessage("symresack constraint handler not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
    upgrade = FALSE;
    if ( conshdlrdata->checkppsymresack )
    {
@@ -2431,7 +2426,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    }
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, vars, nvars, perm) );
+   SCIP_CALL( consdataCreate(scip, conshdlr, &consdata, vars, nvars, perm) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate && (! consdata->ppupgrade), enforce, check, propagate,
