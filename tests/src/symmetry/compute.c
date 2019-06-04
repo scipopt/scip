@@ -125,7 +125,7 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
 
    /* get symmetry */
    SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0,
-         &npermvars, &permvars, &nperms, &perms, NULL, NULL, NULL,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
    cr_assert( nperms == 3 );
    cr_assert( ncomponents == 1 );
@@ -265,7 +265,7 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
 
    /* get symmetry */
    SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0,
-         &npermvars, &permvars, &nperms, &perms, NULL, NULL, NULL,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
    cr_assert( nperms == 1 );
    cr_assert( ncomponents == 1 );
@@ -399,7 +399,7 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
 
    /* get symmetry */
    SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0,
-         &npermvars, &permvars, &nperms, &perms, NULL, NULL, NULL,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
    cr_assert( nperms == 0 );  /* problem should be empty */
    cr_assert( ncomponents == -1 );
@@ -491,7 +491,7 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
 
    /* get symmetry */
    SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0,
-         &npermvars, &permvars, &nperms, &perms, NULL, NULL, NULL,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
    cr_assert( nperms == 2 );
    cr_assert( ncomponents == 2 );
