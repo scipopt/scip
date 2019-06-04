@@ -123,6 +123,7 @@
 #include "scip/heur_shiftandpropagate.h"
 #include "scip/heur_shifting.h"
 #include "scip/heur_simplerounding.h"
+#include "scip/heur_staircase.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trivial.h"
 #include "scip/heur_trivialnegation.h"
