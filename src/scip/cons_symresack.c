@@ -146,6 +146,7 @@ SCIP_RETCODE consdataFree(
 
    if ( nvars == 0 )
    {
+      assert( (*consdata)->vars == NULL );
       assert( (*consdata)->perm == NULL );
       assert( (*consdata)->invperm == NULL );
       assert( (*consdata)->ncycles == 0 );
@@ -469,6 +470,7 @@ SCIP_RETCODE consdataCreate(
    {
       SCIPfreeBufferArrayNull(scip, &indexcorrection);
 
+      (*consdata)->vars = NULL;
       (*consdata)->perm = NULL;
       (*consdata)->invperm = NULL;
       (*consdata)->ppupgrade = FALSE;
