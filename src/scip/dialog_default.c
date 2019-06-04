@@ -1728,7 +1728,20 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
                   SCIPdialogMessage(scip, NULL, "\n");
                   SCIPdialogMessage(scip, NULL, "Subproblem %d\n", subidx);
                   if( SCIPbendersSubproblemIsConvex(benders[idx], subidx) )
-                     SCIP_CALL( SCIPprintSol(subproblem, NULL, NULL, printzeros) );
+                  {
+                     /* need to check whether the subproblem is an NLP and solved as an NLP */
+                     if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) > 0 )
+                     {
+                        SCIP_SOL* nlpsol;
+                        SCIP_CALL( SCIPcreateNLPSol(subproblem, &nlpsol, NULL) );
+                        SCIP_CALL( SCIPprintSol(subproblem, nlpsol, NULL, FALSE) );
+                        SCIP_CALL( SCIPfreeSol(subproblem, &nlpsol) );
+                     }
+                     else
+                     {
+                        SCIP_CALL( SCIPprintSol(subproblem, NULL, NULL, printzeros) );
+                     }
+                  }
                   else
                      SCIP_CALL( SCIPprintBestSol(subproblem, NULL, printzeros) );
                   SCIPdialogMessage(scip, NULL, "\n");
