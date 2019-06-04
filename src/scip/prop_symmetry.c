@@ -2237,7 +2237,6 @@ SCIP_RETCODE addSymresackConss(
    SCIP_VAR** permvars;
    SCIP_Bool conssaddlp;
    int** perms;
-   int nperms;
    int nsymresackcons = 0;
    int npermvars;
    int i;
@@ -2250,12 +2249,10 @@ SCIP_RETCODE addSymresackConss(
    assert( propdata != NULL );
 
    perms = propdata->perms;
-   nperms = propdata->nperms;
-   permvars = propdata->permvars;
    npermvars = propdata->npermvars;
    conssaddlp = propdata->conssaddlp;
 
-   assert( nperms <= 0 || perms != NULL );
+   assert( propdata->nperms <= 0 || perms != NULL );
    assert( permvars != NULL );
    assert( npermvars > 0 );
    assert( ncomponents > 0 );
