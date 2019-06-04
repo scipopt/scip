@@ -439,7 +439,7 @@ SCIP_RETCODE consdataCreate(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
-#ifdef SCI_DEBUG
+#ifdef SCIP_DEBUG
    consdata->debugcnt = 0;
 #endif
 
@@ -507,14 +507,12 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->vars = vars;
    (*consdata)->perm = perm;
 
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &invperm, naffectedvariables) );
    for (i = 0; i < naffectedvariables; ++i)
    {
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[i]) );
-   }
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &invperm, naffectedvariables) );
-   for (i = 0; i < naffectedvariables; ++i)
       invperm[perm[i]] = i;
+   }
    (*consdata)->invperm = invperm;
 
    /* check for upgrade to packing/partitioning symresacks*/
