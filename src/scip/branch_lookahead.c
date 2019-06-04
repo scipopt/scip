@@ -43,7 +43,7 @@
  * PRINTNODECONS: prints the binary constraints added
  * SCIP_DEBUG: prints detailed execution information
  * SCIP_STATISTIC: prints some statistics after the branching rule is freed */
-//#define SCIP_DEBUG
+#define SCIP_DEBUG
 #define SCIP_STATISTIC
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -116,6 +116,7 @@
                                                     *   candidates be reused? */
 #define DEFAULT_ABBREVPSEUDO                 FALSE /**< If abbreviated: Use pseudo costs to estimate the score of a
                                                     *   candidate. */
+#define DEFAULT_LEVEL2AVGSCORE               FALSE /**< should the average score be used for uninitialized scores in level 2? */
 #define DEFAULT_SCORINGFUNCTION              'd'   /**< scoring function to be used at the base level */
 #define DEFAULT_DEEPERSCORINGFUNCTION        'd'   /**< scoring function to be used at deeper levels */
 #define DEFAULT_SCORINGSCORINGFUNCTION       'd'   /**< scoring function to be used for FSB scoring */
@@ -1052,6 +1053,7 @@ typedef struct
                                               *   after adding the constraints/domreds? */
    SCIP_Bool             abbrevpseudo;       /**< If abbreviated == TRUE, should pseudocost values be used, to approximate
                                               *   the scoring? */
+   SCIP_Bool             level2avgscore;     /**< should the average score be used for uninitialized scores in level 2? */
    SCIP_Bool             addclique;          /**< add binary constraints with two variables found at the root node also as a clique? */
    SCIP_Bool             propagate;          /**< Should the problem be propagated before solving each inner node? */
    SCIP_Bool             uselevel2data;      /**< should branching data generated at depth level 2 be stored for re-using it? */
@@ -1649,6 +1651,7 @@ SCIP_RETCODE candidateListGetAllFractionalCandidates(
 
       SCIP_CALL( candidateCreate(scip, &candidate) );
       assert(candidate != NULL);
+      printf("##### created candidate %p\n", (void*)candidate);
 
       candidate->branchvar = lpcands[i];
       candidate->branchval = lpcandssol[i];
@@ -1683,6 +1686,7 @@ SCIP_RETCODE candidateListFree(
          CANDIDATE* cand = (*candidatelist)->candidates[i];
          if( cand != NULL )
          {
+            printf("##### free candidate %p\n", (void*)cand);
             SCIP_CALL( candidateFree(scip, &cand) );
          }
       }
@@ -1715,6 +1719,7 @@ SCIP_RETCODE candidateListKeep(
       CANDIDATE* cand = candidatelist->candidates[i];
       if( cand != NULL )
       {
+         printf("##### free2 candidate %p\n", (void*)cand);
          SCIP_CALL( candidateFree(scip, &cand) );
          candidatelist->candidates[i] = NULL;
       }
@@ -1859,6 +1864,8 @@ typedef struct
    SCIP_Real*            upgains;            /**< the upgains for each problem variable */
    CANDIDATE**           bestsortedcands;    /**< array containing the best sorted variable indices w.r.t. their score */
    int                   nbestsortedindices; /**< number of elements in bestsortedindices */
+   SCIP_Real             scoresum;           /**< sum of set scores */
+   int                   nsetscores;         /**< number of set scores */
 } SCORECONTAINER;
 
 /** resets the array containing the sorted indices w.r.t. their score. */
@@ -1900,6 +1907,8 @@ SCIP_RETCODE scoreContainerCreate(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->bestsortedcands, ncands) );
 
    (*scorecontainer)->nbestsortedindices = ncands;
+   (*scorecontainer)->scoresum = 0.0;
+   (*scorecontainer)->nsetscores = 0;
 
    scoreContainterResetBestSortedIndices(*scorecontainer);
 
@@ -2009,6 +2018,16 @@ SCIP_RETCODE scoreContainerSetScore(
 
    probindex = SCIPvarGetProbindex(cand->branchvar);
    assert(probindex >= 0);
+
+   if( scorecontainer->scores[probindex] < 0.0 )
+   {
+      ++scorecontainer->nsetscores;
+      scorecontainer->scoresum += score;
+   }
+   else
+   {
+      scorecontainer->scoresum += (score -  scorecontainer->scores[probindex]);
+   }
 
    scorecontainer->scores[probindex] = score;
    scorecontainer->downgains[probindex] = downgain;
@@ -4158,7 +4177,7 @@ SCIP_RETCODE ensureScoresPresent(
          else
          {
             SCIP_Real score = calculateScoreFromPseudocosts(scip, lpcand);
-            SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand, score, 0, 0) );
+            SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand, score, 0.0, 0.0) );
          }
       }
       else
@@ -4168,9 +4187,19 @@ SCIP_RETCODE ensureScoresPresent(
 
          if( SCIPisLT(scip, knownscore, 0.0) )
          {
-            /* score is unknown and needs to be calculated */
-            candidateunscored[nunscoredcandidates] = i;
-            nunscoredcandidates++;
+            if( FALSE && config->level2avgscore && SCIPgetProbingDepth(scip) > 0 )
+            {
+               assert(scorecontainer->nsetscores > 0);
+               printf("store %p score\n", (void*)lpcand);
+               SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand,
+                     scorecontainer->scoresum / scorecontainer->nsetscores, 0.0, 0.0) );
+            }
+            else
+            {
+               /* score is unknown and needs to be calculated */
+               candidateunscored[nunscoredcandidates] = i;
+               nunscoredcandidates++;
+            }
          }
       }
    }
@@ -4201,18 +4230,29 @@ SCIP_RETCODE ensureScoresPresent(
 #endif
 
       /* Calculate all remaining FSB scores and collect the scores in the container */;
+      if( !config->level2avgscore || SCIPgetProbingDepth(scip) == 0 )
+      {
 #ifdef SCIP_STATISTIC
-      SCIP_CALL( getFSBResult(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, unscoredcandidates,
-            decision, scorecontainer, level2data, recursiondepth, lpobjval, statistics, localstats) );
+         SCIP_CALL( getFSBResult(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, unscoredcandidates,
+               decision, scorecontainer, level2data, recursiondepth, lpobjval, statistics, localstats) );
 #else
-      SCIP_CALL( getFSBResult(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, unscoredcandidates,
-            decision, scorecontainer, level2data, recursiondepth, lpobjval) );
+         SCIP_CALL( getFSBResult(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, unscoredcandidates,
+               decision, scorecontainer, level2data, recursiondepth, lpobjval) );
 #endif
+      }
 
       /* move the now scored candidates back to the original list */
       for( i = 0; i < nunscoredcandidates; i++ )
       {
          assert(allcandidates->candidates[candidateunscored[i]] == unscoredcandidates->candidates[i]);
+
+         if( config->level2avgscore && SCIPgetProbingDepth(scip) > 0 )
+         {
+            assert(scorecontainer->nsetscores > 0);
+            printf("store %p score\n", (void*)unscoredcandidates->candidates[i]);
+            SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, unscoredcandidates->candidates[i],
+                  scorecontainer->scoresum / scorecontainer->nsetscores, 0.0, 0.0) );
+         }
 
          assert(unscoredcandidates->candidates[i] != NULL);
          unscoredcandidates->candidates[i] = NULL;
@@ -4223,7 +4263,9 @@ SCIP_RETCODE ensureScoresPresent(
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Calculated the scores for the remaining candidates\n");
 
+      printf("free unsorted candidates\n");
       SCIP_CALL( candidateListFree(scip, &unscoredcandidates) );
+      printf("freed unsorted candidates\n");
    }
 
    SCIPfreeBufferArray(scip, &candidateunscored);
@@ -4318,8 +4360,8 @@ SCIP_RETCODE filterCandidates(
                maxgain = MAX(maxgain, scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)]);
                maxgain = MAX(maxgain, scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)]);
             }
-            if( SCIPisSumRelLE(scip, maxgain, scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)])
-               || SCIPisSumRelLE(scip, maxgain, scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)]) )
+            if( SCIPisSumLE(scip, maxgain / scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)], 1.0)
+               || SCIPisSumLE(scip, maxgain / scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)], 1.0) )
             {
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Stop lookahead branching, because the best candidate has gains %g/%g and the maximum gain of the remaining candidates is %g\n",
                   scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
@@ -6240,6 +6282,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent) );
    branchruledata->persistent->restartindex = 0;
    branchruledata->isinitialized = FALSE;
+   branchruledata->config->inscoring = FALSE;
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
@@ -6321,6 +6364,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/abbrevpseudo",
          "if abbreviated: Use pseudo costs to estimate the score of a candidate.",
          &branchruledata->config->abbrevpseudo, TRUE, DEFAULT_ABBREVPSEUDO, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/level2avgscore",
+         "should the average score be used for uninitialized scores in level 2?",
+         &branchruledata->config->level2avgscore, TRUE, DEFAULT_LEVEL2AVGSCORE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/addclique",
          "add binary constraints with two variables found at the root node also as a clique",
