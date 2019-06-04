@@ -53,6 +53,7 @@
 #include "scip/cons_symresack.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "scip/pub_var.h"
 #include "scip/scip.h"
 #include "scip/scip_branch.h"
