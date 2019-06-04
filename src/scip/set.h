@@ -1655,9 +1655,9 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetDualfeasRound(set, val)         ( EPSROUND(val, (set)->num_dualfeastol) )
 #define SCIPsetDualfeasFrac(set, val)          ( EPSFRAC(val, (set)->num_dualfeastol) )
 
-#define SCIPsetIsLbBetter(set, newlb, oldlb, oldub) ( EPSGT(newlb, oldlb, \
+#define SCIPsetIsLbBetter(set, newlb, oldlb, oldub) ( ((oldlb) < 0.0 && (newlb) >= 0.0) || EPSGT(newlb, oldlb, \
          set->num_boundstreps * MAX(MIN((oldub) - (oldlb), REALABS(oldlb)), 1e-3)) )
-#define SCIPsetIsUbBetter(set, newub, oldlb, oldub) ( EPSLT(newub, oldub, \
+#define SCIPsetIsUbBetter(set, newub, oldlb, oldub) ( ((oldub) > 0.0 && (newub) <= 0.0) || EPSLT(newub, oldub, \
          set->num_boundstreps * MAX(MIN((oldub) - (oldlb), REALABS(oldub)), 1e-3)) )
 #define SCIPsetIsEfficacious(set, root, efficacy) \
    ( root ? EPSP(efficacy, (set)->sepa_minefficacyroot) : EPSP(efficacy, (set)->sepa_minefficacy) )

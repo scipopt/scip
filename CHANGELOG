@@ -76,6 +76,7 @@ Fixed bugs
 - set STD FENV_ACCESS pragma to on in code that changes floating-point rounding mode
 - disable GCC optimizations in main interval arithmetic code to prevent wrong optimizations
 - fixed wrong assert in cons_xor concerning the variable type
+- fixed different behavior of SCIPisLbBetter and SCIPisUbBetter between having NDEBUG defined or not
 
 Miscellaneous
 -------------
