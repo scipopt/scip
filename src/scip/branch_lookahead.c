@@ -43,7 +43,7 @@
  * PRINTNODECONS: prints the binary constraints added
  * SCIP_DEBUG: prints detailed execution information
  * SCIP_STATISTIC: prints some statistics after the branching rule is freed */
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 #define SCIP_STATISTIC
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -1651,7 +1651,6 @@ SCIP_RETCODE candidateListGetAllFractionalCandidates(
 
       SCIP_CALL( candidateCreate(scip, &candidate) );
       assert(candidate != NULL);
-      printf("##### created candidate %p\n", (void*)candidate);
 
       candidate->branchvar = lpcands[i];
       candidate->branchval = lpcandssol[i];
@@ -1686,7 +1685,6 @@ SCIP_RETCODE candidateListFree(
          CANDIDATE* cand = (*candidatelist)->candidates[i];
          if( cand != NULL )
          {
-            printf("##### free candidate %p\n", (void*)cand);
             SCIP_CALL( candidateFree(scip, &cand) );
          }
       }
@@ -1719,7 +1717,6 @@ SCIP_RETCODE candidateListKeep(
       CANDIDATE* cand = candidatelist->candidates[i];
       if( cand != NULL )
       {
-         printf("##### free2 candidate %p\n", (void*)cand);
          SCIP_CALL( candidateFree(scip, &cand) );
          candidatelist->candidates[i] = NULL;
       }
@@ -1863,20 +1860,20 @@ typedef struct
    SCIP_Real*            downgains;          /**< the downgains for each problem variable */
    SCIP_Real*            upgains;            /**< the upgains for each problem variable */
    CANDIDATE**           bestsortedcands;    /**< array containing the best sorted variable indices w.r.t. their score */
-   int                   nbestsortedindices; /**< number of elements in bestsortedindices */
+   int                   nbestsortedcands;   /**< number of elements in bestsortedcands */
    SCIP_Real             scoresum;           /**< sum of set scores */
    int                   nsetscores;         /**< number of set scores */
 } SCORECONTAINER;
 
 /** resets the array containing the sorted indices w.r.t. their score. */
 static
-void scoreContainterResetBestSortedIndices(
+void scoreContainterResetBestSortedCands(
    SCORECONTAINER*       scorecontainer      /**< the score container to reset */
    )
 {
    assert(scorecontainer != NULL);
 
-   BMSclearMemoryArray(scorecontainer->bestsortedcands, scorecontainer->nbestsortedindices);
+   BMSclearMemoryArray(scorecontainer->bestsortedcands, scorecontainer->nbestsortedcands);
 }
 
 /** allocates the score container and inits it with default values */
@@ -1906,11 +1903,11 @@ SCIP_RETCODE scoreContainerCreate(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->upgains, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->bestsortedcands, ncands) );
 
-   (*scorecontainer)->nbestsortedindices = ncands;
+   (*scorecontainer)->nbestsortedcands = ncands;
    (*scorecontainer)->scoresum = 0.0;
    (*scorecontainer)->nsetscores = 0;
 
-   scoreContainterResetBestSortedIndices(*scorecontainer);
+   scoreContainterResetBestSortedCands(*scorecontainer);
 
    /* init the scores to something negative, as scores are always non negative */
    for( i = 0; i < ntotalvars; i++ )
@@ -1986,7 +1983,7 @@ CANDIDATE* scoreContainerUpdateSortOrder(
    assert(candidate != NULL);
    assert(insertpoint >= 0);
 
-   for( i = insertpoint; i < scorecontainer->nbestsortedindices; i++ )
+   for( i = insertpoint; i < scorecontainer->nbestsortedcands; i++ )
    {
       CANDIDATE* oldcand = scorecontainer->bestsortedcands[i];
       scorecontainer->bestsortedcands[i] = movecand;
@@ -2035,7 +2032,7 @@ SCIP_RETCODE scoreContainerSetScore(
 
    /* find the point in the sorted array where the new score should be inserted */
    insertpoint =  findInsertionPoint(scip, scorecontainer, score, scorecontainer->bestsortedcands,
-      scorecontainer->nbestsortedindices);
+      scorecontainer->nbestsortedcands);
 
    /* insert the current variable (cand) at the position calculated above, returning the candidate that
     * was removed at the end of the list; this candidate can be the given candidate for the case that the score does not
@@ -4187,10 +4184,9 @@ SCIP_RETCODE ensureScoresPresent(
 
          if( SCIPisLT(scip, knownscore, 0.0) )
          {
-            if( FALSE && config->level2avgscore && SCIPgetProbingDepth(scip) > 0 )
+            if( config->level2avgscore && SCIPgetProbingDepth(scip) > 0 )
             {
                assert(scorecontainer->nsetscores > 0);
-               printf("store %p score\n", (void*)lpcand);
                SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand,
                      scorecontainer->scoresum / scorecontainer->nsetscores, 0.0, 0.0) );
             }
@@ -4230,43 +4226,30 @@ SCIP_RETCODE ensureScoresPresent(
 #endif
 
       /* Calculate all remaining FSB scores and collect the scores in the container */;
-      if( !config->level2avgscore || SCIPgetProbingDepth(scip) == 0 )
-      {
 #ifdef SCIP_STATISTIC
-         SCIP_CALL( getFSBResult(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, unscoredcandidates,
-               decision, scorecontainer, level2data, recursiondepth, lpobjval, statistics, localstats) );
+      SCIP_CALL( getFSBResult(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, unscoredcandidates,
+            decision, scorecontainer, level2data, recursiondepth, lpobjval, statistics, localstats) );
 #else
-         SCIP_CALL( getFSBResult(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, unscoredcandidates,
-               decision, scorecontainer, level2data, recursiondepth, lpobjval) );
+      SCIP_CALL( getFSBResult(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, unscoredcandidates,
+            decision, scorecontainer, level2data, recursiondepth, lpobjval) );
 #endif
-      }
 
       /* move the now scored candidates back to the original list */
       for( i = 0; i < nunscoredcandidates; i++ )
       {
          assert(allcandidates->candidates[candidateunscored[i]] == unscoredcandidates->candidates[i]);
 
-         if( config->level2avgscore && SCIPgetProbingDepth(scip) > 0 )
-         {
-            assert(scorecontainer->nsetscores > 0);
-            printf("store %p score\n", (void*)unscoredcandidates->candidates[i]);
-            SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, unscoredcandidates->candidates[i],
-                  scorecontainer->scoresum / scorecontainer->nsetscores, 0.0, 0.0) );
-         }
-
          assert(unscoredcandidates->candidates[i] != NULL);
          unscoredcandidates->candidates[i] = NULL;
       }
 
-      /* reset the best sorted indices, as those are only valid on the FSB run already completed */
-      scoreContainterResetBestSortedIndices(scorecontainer);
-
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Calculated the scores for the remaining candidates\n");
 
-      printf("free unsorted candidates\n");
       SCIP_CALL( candidateListFree(scip, &unscoredcandidates) );
-      printf("freed unsorted candidates\n");
    }
+
+   /* reset the best sorted indices, as those are only valid on the FSB run already completed */
+   scoreContainterResetBestSortedCands(scorecontainer);
 
    SCIPfreeBufferArray(scip, &candidateunscored);
 
