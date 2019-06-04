@@ -2248,6 +2248,7 @@ SCIP_RETCODE addSymresackConss(
    assert( propdata != NULL );
 
    perms = propdata->perms;
+   permvars = propdata->permvars;
    npermvars = propdata->npermvars;
    conssaddlp = propdata->conssaddlp;
 
