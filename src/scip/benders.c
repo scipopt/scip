@@ -1,5 +1,3 @@
-//#define SCIP_DEBUG
-//#define SCIP_MOREDEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -3173,7 +3171,8 @@ SCIP_RETCODE generateBendersCuts(
          /* cuts can only be generated if the subproblem is not independent and if it has been solved. The subproblem
           * solved flag is important for the user-defined subproblem solving methods
           */
-         if( subproblemIsActive(benders, i) && subprobsolved[i] )
+         if( subproblemIsActive(benders, i) && subprobsolved[i]
+            && !(substatus[i] == SCIP_BENDERSSUBSTATUS_INFEAS && benders->strengthenround) )
          {
             subprobresult = SCIP_DIDNOTRUN;
             for( j = 0; j < nbenderscuts; j++ )
@@ -4178,6 +4177,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    assert(set != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
+   (*infeasible) = FALSE;
+
    /* the subproblem must be set up before this function is called. */
    if( SCIPbendersSubproblem(benders, probnumber) != NULL && !SCIPbendersSubproblemIsSetup(benders, probnumber)
       && !SCIPbendersSubproblemIsIndependent(benders, probnumber) )
@@ -4417,6 +4418,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 {
    SCIP* subproblem;
    SCIP_SUBPROBPARAMS* origparams;
+   SCIP_Bool solvenlp;
 
    assert(benders != NULL);
    assert(solvestatus != NULL);
@@ -4427,6 +4429,13 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
     * Need to change status check for checking the LP. */
    subproblem = SCIPbendersSubproblem(benders, probnumber);
    assert(subproblem != NULL);
+
+   /* only solve the NLP relaxation if the NLP has been constructed and there exists an NLPI. If it is not possible to
+    * solve the NLP relaxation, then the LP relaxation is used to generate Benders' cuts
+    */
+   solvenlp = FALSE;
+   if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) > 0 )
+      solvenlp = TRUE;
 
    *objective = SCIPinfinity(subproblem);
 
@@ -4442,10 +4451,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    /* setting the subproblem parameters */
    SCIP_CALL( setSubproblemParams(scip, subproblem) );
 
-   /* only solve the NLP relaxation if the NLP has been constructed and there exists an NLPI. If it is not possible to
-    * solve the NLP relaxation, then the LP relaxation is used to generate Benders' cuts
-    */
-   if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) > 0 )
+   if( solvenlp )
    {
       SCIP_NLPSOLSTAT nlpsolstat;
       SCIP_NLPTERMSTAT nlptermstat;

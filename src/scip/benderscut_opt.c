@@ -349,7 +349,7 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
    assert(subproblem != NULL);
    assert(benders != NULL);
    assert(SCIPisNLPConstructed(subproblem));
-   assert(SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_LOCOPT || consdualvals != NULL);
+   assert(SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_FEASIBLE || consdualvals != NULL);
    assert(SCIPhasNLPSolution(subproblem) || consdualvals != NULL);
    assert((primalvals == NULL && consdualvals == NULL && varlbdualvals == NULL && varubdualvals == NULL
          && row2idx == NULL && var2idx == NULL)
@@ -560,7 +560,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
     */
    if( SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING &&
       ((!nlprelaxation && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL) ||
-       (nlprelaxation && SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_LOCOPT)) )
+       (nlprelaxation && SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_FEASIBLE)) )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( SCIPgenerateAndApplyBendersOptCut(scip, subproblem, benders, benderscut, sol, probnumber, cutname,
@@ -799,7 +799,10 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
             SCIP_Bool infeasible;
 
             /* adding the auxiliary variable coefficient to the row */
-            SCIP_CALL( SCIPaddVarToRow(masterprob, row, vars[nvars - 1], vals[nvars - 1]) );
+            if( !feasibilitycut )
+            {
+               SCIP_CALL( SCIPaddVarToRow(masterprob, row, vars[nvars - 1], vals[nvars - 1]) );
+            }
 
             if( type == SCIP_BENDERSENFOTYPE_LP || type == SCIP_BENDERSENFOTYPE_RELAX )
             {
@@ -817,11 +820,14 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
          else
          {
             /* adding the auxiliary variable coefficient to the constraint */
-            SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, vars[nvars - 1], vals[nvars - 1]) );
-
-            SCIP_CALL( SCIPaddCons(masterprob, cons) );
+            if( !feasibilitycut )
+            {
+               SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, vars[nvars - 1], vals[nvars - 1]) );
+            }
 
             SCIPdebugPrintCons(masterprob, cons, NULL);
+
+            SCIP_CALL( SCIPaddCons(masterprob, cons) );
 
             (*result) = SCIP_CONSADDED;
          }

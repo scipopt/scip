@@ -302,6 +302,9 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    SCIP_Real obj;
    char cutname[SCIP_MAXSTRLEN];
    SCIP_Bool success;
+#ifdef SCIP_EVENMOREDEBUG
+   int i;
+#endif
 
    assert(masterprob != NULL);
    assert(subproblem != NULL);
@@ -330,11 +333,33 @@ SCIP_RETCODE generateAndApplyBendersCuts(
       (*result) = SCIP_DIDNOTFIND;
       SCIPdebugMsg(masterprob, "Error in generating Benders' feasibility cut for problem %d. "
          "The feasibility subproblem failed to solve with a feasible solution.\n", probnumber);
+      return SCIP_OKAY;
    }
 
    /* getting the solution from the NLPI problem */
    SCIP_CALL( SCIPnlpiGetSolution(benderscutdata->nlpi, benderscutdata->nlpiprob, &primalvals, &consdualvals,
          &varlbdualvals, &varubdualvals, &obj) );
+
+#ifdef SCIP_EVENMOREDEBUG
+   SCIPdebugMsg(masterprob, "NLP Feasibility problem solution.\n");
+   SCIPdebugMsg(masterprob, "Objective: %g.\n", obj);
+   for( i = 0; i < benderscutdata->nlpinvars; i++ )
+   {
+      int varindex;
+      SCIP_Real solval;
+      if( SCIPhashmapExists(benderscutdata->var2idx, benderscutdata->nlpivars[i]) )
+      {
+         varindex = SCIPhashmapGetImageInt(benderscutdata->var2idx, benderscutdata->nlpivars[i]);
+         solval = primalvals[varindex];
+
+         if( !SCIPisZero(masterprob, solval) )
+         {
+            SCIPdebugMsg(masterprob, "%s (obj: %g): %20g\n", SCIPvarGetName(benderscutdata->nlpivars[i]),
+               SCIPvarGetObj(benderscutdata->nlpivars[i]), solval);
+         }
+      }
+   }
+#endif
 
    /* setting the name of the generated cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "altfeasibilitycut_%d_%d", probnumber,
@@ -365,6 +390,19 @@ SCIP_RETCODE generateAndApplyBendersCuts(
  * Callback methods of Benders' decomposition cuts
  */
 
+/** deinitialization method of Benders' decomposition cuts (called before transformed problem is freed) */
+static
+SCIP_DECL_BENDERSCUTEXIT(benderscutExitFeasalt)
+{  /*lint --e{715}*/
+   assert( benderscut != NULL );
+   assert( strcmp(SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME) == 0 );
+
+   /* freeing the non-linear problem information */
+   SCIP_CALL( freeNonlinearProblem(scip, benderscut) );
+
+   return SCIP_OKAY;
+}
+
 /** destructor of the Benders' decomposition cut to free user data (called when SCIP is exiting) */
 SCIP_DECL_BENDERSCUTFREE(benderscutFreeFeasalt)
 {  /*lint --e{715}*/
@@ -376,10 +414,9 @@ SCIP_DECL_BENDERSCUTFREE(benderscutFreeFeasalt)
    benderscutdata = SCIPbenderscutGetData(benderscut);
    assert(benderscutdata != NULL);
 
-   /* freeing the non-linear problem information */
-   SCIP_CALL( freeNonlinearProblem(scip, benderscut) );
-
    SCIPfreeBlockMemory(scip, &benderscutdata);
+
+   return SCIP_OKAY;
 }
 
 /** execution method of Benders' decomposition cuts */
@@ -439,6 +476,10 @@ SCIP_RETCODE SCIPincludeBenderscutFeasalt(
    /* include Benders' decomposition cuts */
    SCIP_CALL( SCIPincludeBenderscutBasic(scip, benders, &benderscut, BENDERSCUT_NAME, BENDERSCUT_DESC,
          BENDERSCUT_PRIORITY, BENDERSCUT_LPCUT, benderscutExecFeasalt, benderscutdata) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetBenderscutFree(scip, benderscut, benderscutFreeFeasalt) );
+   SCIP_CALL( SCIPsetBenderscutExit(scip, benderscut, benderscutExitFeasalt) );
 
    assert(benderscut != NULL);
 
