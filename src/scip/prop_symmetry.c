@@ -1732,7 +1732,7 @@ SCIP_RETCODE determineSymmetry(
       assert( propdata->npermvars > 0 );
       assert( propdata->permvars != NULL );
 #ifndef NDEBUG
-      if ( propdata->enabled )
+      if ( propdata->ofenabled )
       {
          assert( propdata->permvarmap != NULL );
          assert( propdata->bg0list != NULL );
