@@ -2902,17 +2902,20 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    assert( propdata != NULL );
 
    /* check whether we should run */
-   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
+   if ( propdata->usesymmetry < 0 )
+   {
+      SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
 
-   if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
-      propdata->symconsenabled = TRUE;
-   else
-      propdata->symconsenabled = FALSE;
+      if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
+         propdata->symconsenabled = TRUE;
+      else
+         propdata->symconsenabled = FALSE;
 
-   if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
-      propdata->ofenabled = TRUE;
-   else
-      propdata->ofenabled = FALSE;
+      if ( ISORBITALFIXINGACTIVE(propdata->usesymmetry) )
+         propdata->ofenabled = TRUE;
+      else
+         propdata->ofenabled = FALSE;
+   }
 
    /* add symmetry handling constraints if required  */
    if ( propdata->symconsenabled && propdata->addconsstiming == 0 )
