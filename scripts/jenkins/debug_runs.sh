@@ -35,7 +35,7 @@ if [ "${GITBRANCH}" == "" ]; then
   # GIT_BRANCH is a jenkins variable, if not present, try to get it from the git repository. The second thing is not robust because there may be more branches that this HEAD is present in.
   GITBRANCH=`echo ${GIT_BRANCH} | cut -d / -f 2`
   if [ "${GITBRANCH}" == "" ]; then
-      GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2`
+      GITBRANCH=`git show -s --pretty=%D | cut -s -d , -f 2 | cut -d / -f 2`
   fi
 fi
 
@@ -63,9 +63,9 @@ else
 fi
 
 export CRITERION_DIR=/nfs/optimi/usr/sw/criterion
-export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
 export CPLEX_DIR=/nfs/optimi/usr/sw/cplex
-export BLISS_DIR=/nfs/optimi/usr/sw/bliss
+export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
+export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.11~ub18.04
 
 # create all required directories
 mkdir -p settings

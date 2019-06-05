@@ -328,10 +328,9 @@ SECTION: General Questions about SCIP
     <p>
         An alternative definition of the gap is
         <code>(dual bound - primal bound) / abs(primal bound)</code>.
-        Using this definiton, a finite gap is computed as soon as a dual and primal bound have been found.
-        However, the gap may increase during the solving process, if both bounds have opposite signs in the beginning.
+        As in the previous gap definition, if primal and dual bound have opposite signs, the gap is "Infinity".
         In SCIP, this definition can be included in the output by enabling the display column "primalgap":
-        <code>display/primalgap/active = 2</code>
+        <code>display/primalgap/active = 2</code>.
     </p>
 
     QUESTION: SCIP crashes during symmetry detection with bliss. What can I do?

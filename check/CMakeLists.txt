@@ -124,6 +124,7 @@ set(settings_Symmetry
     "orbitalfixing-timing2"
     "orbitopes-timing0"
     "orbitopes-timing2"
+    "orbitopes-timing2-static"
     "packingorbitopes-timing0"
     "packingorbitopes-timing2"
     "symresacks-timing0"
@@ -398,6 +399,8 @@ macro(add_instancetests instances settings prefix)
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
+                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
         endforeach(setting)

@@ -35,7 +35,7 @@ if [ "${GITBRANCH}" == "" ]; then
   # GIT_BRANCH is a jenkins variable, if not present, try to get it from the git repository. The second thing is not robust because there may be more branches that this HEAD is present in.
   GITBRANCH=`echo ${GIT_BRANCH} | cut -d / -f 2`
   if [ "${GITBRANCH}" == "" ]; then
-      GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2`
+      GITBRANCH=`git show -s --pretty=%D | cut -s -d , -f 2 | cut -d / -f 2`
   fi
 fi
 
@@ -63,8 +63,8 @@ else
 fi
 
 export CRITERION_DIR=""
-export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt
-export BLISS_DIR=/nfs/optimi/usr/sw/bliss
+export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
+export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.11~ub18.04
 
 # create required directory
 mkdir -p settings
@@ -127,7 +127,7 @@ if [ "${GITBRANCH}" == "master" ]; then
   TRIGGER[6,3]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_presolve_master_weekly/build?token=weeklysaptoken"
 
   # jobs running on sunday
-  JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
+  #JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
 
 elif [ "${GITBRANCH}" == "consexpr" ]; then
   # running on saturday
@@ -140,7 +140,7 @@ else # on bugfix
   TRIGGER[6,1]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
 
   # jobs running on sunday
-  JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
+  #JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
 
 fi
 

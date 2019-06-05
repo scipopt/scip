@@ -359,7 +359,7 @@ INFERINFO getInferInfo(
 
 /** compute the core of a job which lies in certain interval [begin, end) */
 static
-int computeCoreWithInterval(
+SCIP_Longint computeCoreWithInterval(
    int                   begin,              /**< begin of the interval */
    int                   end,                /**< end of the interval */
    int                   ect,                /**< earliest completion time */
@@ -1191,19 +1191,19 @@ SCIP_RETCODE getActiveVar(
 
 /** computes the total energy of all jobs */
 static
-int computeTotalEnergy(
+SCIP_Longint computeTotalEnergy(
    int*                  durations,          /**< array of job durations */
    int*                  demands,            /**< array of job demands */
    int                   njobs               /**< number of jobs */
    )
 {
-   int energy;
+   SCIP_Longint energy;
    int j;
 
    energy = 0;
 
    for( j = 0; j < njobs; ++j )
-      energy += durations[j] * demands[j];
+      energy += (SCIP_Longint) durations[j] * demands[j];
 
    return energy;
 }
@@ -2867,7 +2867,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
    int* overlaps;
    int* idxs;
 
-   int requiredenergy;
+   SCIP_Longint requiredenergy;
    int v;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &locenergies, nvars) );
@@ -2875,7 +2875,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
    SCIP_CALL( SCIPallocBufferArray(scip, &idxs, nvars) );
 
    /* energy which needs be explained */
-   requiredenergy = (end - begin) * capacity;
+   requiredenergy = ((SCIP_Longint) end - begin) * capacity;
 
    SCIPdebugMsg(scip, "analysis energy load in [%d,%d) (capacity %d, energy %d)\n", begin, end, capacity, requiredenergy);
 
@@ -3014,7 +3014,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
          }
 
          /* subtract the amount of energy which is available due to the overlap of the inference start time */
-         requiredenergy -=  overlap * demand;
+         requiredenergy -= (SCIP_Longint) overlap * demand;
 
          if( explanation != NULL )
             explanation[v] = TRUE;
@@ -3099,7 +3099,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
 
 #ifndef NDEBUG
          requiredenergy += locenergies[v];
-         requiredenergy -= overlap * demand;
+         requiredenergy -= (SCIP_Longint) overlap * demand;
          assert(requiredenergy < 0);
 #endif
       }
@@ -4384,7 +4384,7 @@ void collectDataTTEF(
       permlcts[v] = v;
 
       /* compute core time window which lies within the effective horizon */
-      core = computeCoreWithInterval(hmin, hmax, ect, lst);
+      core = (int) computeCoreWithInterval(hmin, hmax, ect, lst);
 
       /* compute the number of time steps the job could run before the effective horizon */
       leftadjust = MAX(0, hmin - est);
@@ -4426,7 +4426,7 @@ SCIP_RETCODE tightenLbTTEF(
    int                   lct,                /**< latest completion time of the job */
    int                   begin,              /**< begin of the time window under investigation */
    int                   end,                /**< end of the time window under investigation */
-   int                   energy,             /**< available energy for the flexible part of the hob within the time window */
+   SCIP_Longint          energy,             /**< available energy for the flexible part of the hob within the time window */
    int*                  bestlb,             /**< pointer to strope the best lower bound change */
    int*                  inferinfos,         /**< pointer to store the inference information which is need for the (best) lower bound change */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
@@ -4456,7 +4456,7 @@ SCIP_RETCODE tightenLbTTEF(
    /* check if the available energy in the time window is to small to handle the flexible part if it is schedule on its
     * earliest start time
     */
-   if( energy >= demand * (MAX(begin, est) - MIN(end, ect)) )
+   if( energy >= demand * ((SCIP_Longint) MAX(begin, est) - MIN(end, ect)) )
       return SCIP_OKAY;
 
    /* adjust the available energy for the job; the given available energy assumes that the core of the considered job is
@@ -4471,7 +4471,7 @@ SCIP_RETCODE tightenLbTTEF(
     *
     * @note we can round down the compute duration w.r.t. the available energy
     */
-   newlb = end - energy / demand;
+   newlb = end - (int) (energy / demand);
 
    /* check if we detected an infeasibility which is the case if the new lower bound is larger than the current upper
     * bound (latest start time); meaning it is not possible to schedule the job
@@ -4539,7 +4539,7 @@ SCIP_RETCODE tightenUbTTEF(
    int                   lct,                /**< latest completion time of the job */
    int                   begin,              /**< begin of the time window under investigation */
    int                   end,                /**< end of the time window under investigation */
-   int                   energy,             /**< available energy for the flexible part of the hob within the time window */
+   SCIP_Longint          energy,             /**< available energy for the flexible part of the hob within the time window */
    int*                  bestub,             /**< pointer to strope the best upper bound change */
    int*                  inferinfos,         /**< pointer to store the inference information which is need for the (best) upper bound change */
    SCIP_Bool*            initialized,        /**< was conflict analysis initialized */
@@ -4568,7 +4568,7 @@ SCIP_RETCODE tightenUbTTEF(
       return SCIP_OKAY;
 
    /* check if the available energy in the time window is to small to handle the flexible part  of the job */
-   if( energy >= demand * (MIN(end, lct) - MAX(begin, lst)) )
+   if( energy >= demand * ((SCIP_Longint) MIN(end, lct) - MAX(begin, lst)) )
       return SCIP_OKAY;
 
    /* adjust the available energy for the job; the given available energy assumes that the core of the considered job is
@@ -4585,7 +4585,7 @@ SCIP_RETCODE tightenUbTTEF(
     * @note we can round down the compute duration w.r.t. the available energy
     */
    assert(demand > 0);
-   newub = begin - duration + energy / demand;
+   newub = begin - duration + (int) (energy / demand);
 
    /* check if we detected an infeasibility which is the case if the new upper bound is smaller than the current lower
     * bound (earliest start time); meaning it is not possible to schedule the job
@@ -4662,9 +4662,9 @@ SCIP_RETCODE propagateUbTTEF(
    )
 {
    int coreEnergyAfterEnd;
-   int maxavailable;
-   int minavailable;
-   int totalenergy;
+   SCIP_Longint maxavailable;
+   SCIP_Longint minavailable;
+   SCIP_Longint totalenergy;
    int nests;
    int est;
    int lct;
@@ -4692,12 +4692,12 @@ SCIP_RETCODE propagateUbTTEF(
    end = hmax + 1;
    coreEnergyAfterEnd = -1;
 
-   maxavailable = (hmax - hmin) * capacity;
+   maxavailable = ((SCIP_Longint) hmax - hmin) * capacity;
    minavailable = maxavailable;
    totalenergy = computeTotalEnergy(durations, demands, nvars);
 
    /* check if the smallest interval has a size such that the total energy fits, if so we can skip the propagator */
-   if( (lcts[0] - ests[nvars-1]) * capacity >= totalenergy )
+   if( ((SCIP_Longint) lcts[0] - ests[nvars-1]) * capacity >= totalenergy )
       return SCIP_OKAY;
 
    nests = nvars;
@@ -4742,13 +4742,13 @@ SCIP_RETCODE propagateUbTTEF(
        */
       if( !conshdlrdata->ttefinfer && end <= hmax && minavailable < maxavailable )
       {
-         int freeenergy;
+         SCIP_Longint freeenergy;
 
          assert(coreEnergyAfterLct[v] >= coreEnergyAfterEnd);
          assert(coreEnergyAfterEnd >= 0);
 
          /* compute the energy which is not consumed by the cores with in the interval [lct, end) */
-         freeenergy = capacity * (end - lct) - coreEnergyAfterLct[v] + coreEnergyAfterEnd;
+         freeenergy = capacity * ((SCIP_Longint) end - lct) - coreEnergyAfterLct[v] + coreEnergyAfterEnd;
 
          if( freeenergy <= minavailable )
          {
@@ -4775,7 +4775,7 @@ SCIP_RETCODE propagateUbTTEF(
       for( i = nests-1; i >= 0; --i )
       {
          SCIP_VAR* var;
-         int freeenergy;
+         SCIP_Longint freeenergy;
          int duration;
          int demand;
          int begin;
@@ -4802,7 +4802,7 @@ SCIP_RETCODE propagateUbTTEF(
          /* check if the interval has a size such that the total energy fits, if so we can skip all intervals with the
           * current ending time
           */
-         if( (end - est) * capacity >= totalenergy )
+         if( ((SCIP_Longint) end - est) * capacity >= totalenergy )
             break;
 
          var = vars[idx];
@@ -4890,7 +4890,7 @@ SCIP_RETCODE propagateUbTTEF(
          assert(coreEnergyAfterEst[i] >= coreEnergyAfterEnd);
 
          /* compute the energy which is not used yet */
-         freeenergy = capacity * (end - begin) - flexenergy - coreEnergyAfterEst[i] + coreEnergyAfterEnd;
+         freeenergy = capacity * ((SCIP_Longint) end - begin) - flexenergy - coreEnergyAfterEst[i] + coreEnergyAfterEnd;
 
          /* check overload */
          if( freeenergy < 0 )
@@ -4921,7 +4921,7 @@ SCIP_RETCODE propagateUbTTEF(
          /* check if the available energy is not sufficent to schedule the flexible energy of the best candidate job */
          if( lbenergy > 0 && freeenergy < lbenergy )
          {
-            int energy;
+            SCIP_Longint energy;
             int newlb;
             int ect;
 
@@ -4929,7 +4929,7 @@ SCIP_RETCODE propagateUbTTEF(
             lst = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[lbcand]));
 
             /* remove the energy of our job from the ... */
-            energy = freeenergy + (computeCoreWithInterval(begin, end, ect, lst) + MAX(0, end - lsts[lbcand])) * demands[lbcand];
+            energy = freeenergy + (computeCoreWithInterval(begin, end, ect, lst) + MAX(0, (SCIP_Longint) end - lsts[lbcand])) * demands[lbcand];
 
             newlb = end - (int)(energy / demands[lbcand]);
 
@@ -5013,9 +5013,9 @@ SCIP_RETCODE propagateLbTTEF(
    )
 {
    int coreEnergyAfterStart;
-   int maxavailable;
-   int minavailable;
-   int totalenergy;
+   SCIP_Longint maxavailable;
+   SCIP_Longint minavailable;
+   SCIP_Longint totalenergy;
    int nlcts;
    int begin;
    int minest;
@@ -5046,11 +5046,11 @@ SCIP_RETCODE propagateLbTTEF(
    hmin = MAX(hmin, minest);
    hmax = MIN(hmax, maxlct);
 
-   maxavailable = (hmax - hmin) * capacity;
+   maxavailable = ((SCIP_Longint) hmax - hmin) * capacity;
    totalenergy = computeTotalEnergy(durations, demands, nvars);
 
    /* check if the smallest interval has a size such that the total energy fits, if so we can skip the propagator */
-   if( (lcts[0] - ests[nvars-1]) * capacity >= totalenergy )
+   if( ((SCIP_Longint) lcts[0] - ests[nvars-1]) * capacity >= totalenergy )
       return SCIP_OKAY;
 
    nlcts = 0;
@@ -5104,7 +5104,7 @@ SCIP_RETCODE propagateLbTTEF(
       for( i = nlcts; i < nvars; ++i )
       {
          SCIP_VAR* var;
-         int freeenergy;
+         SCIP_Longint freeenergy;
          int duration;
          int demand;
          int idx;
@@ -5131,7 +5131,7 @@ SCIP_RETCODE propagateLbTTEF(
          /* check if the interval has a size such that the total energy fits, if so we can skip all intervals which
           * start with current beginning time
           */
-         if( (lct - begin) * capacity >= totalenergy )
+         if( ((SCIP_Longint) lct - begin) * capacity >= totalenergy )
             break;
 
          var = vars[idx];
@@ -5219,7 +5219,7 @@ SCIP_RETCODE propagateLbTTEF(
          assert(coreEnergyAfterLct[i] <= coreEnergyAfterStart);
 
          /* compute the energy which is not used yet */
-         freeenergy = capacity * (end - begin) - flexenergy - coreEnergyAfterStart + coreEnergyAfterLct[i];
+         freeenergy = capacity * ((SCIP_Longint) end - begin) - flexenergy - coreEnergyAfterStart + coreEnergyAfterLct[i];
 
          /* check overload */
          if( freeenergy < 0 )
@@ -5250,7 +5250,7 @@ SCIP_RETCODE propagateLbTTEF(
          /* check if the available energy is not sufficent to schedule the flexible energy of the best candidate job */
          if( ubenergy > 0 && freeenergy < ubenergy )
          {
-            int energy;
+            SCIP_Longint energy;
             int newub;
             int lst;
 
@@ -5261,7 +5261,7 @@ SCIP_RETCODE propagateLbTTEF(
             lst = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(vars[ubcand]));
 
             /* remove the energy of our job from the ... */
-            energy = freeenergy + (computeCoreWithInterval(begin, end, ect, lst) + MAX(0, ects[ubcand] - begin)) * demands[ubcand];
+            energy = freeenergy + (computeCoreWithInterval(begin, end, ect, lst) + MAX(0, (SCIP_Longint) ects[ubcand] - begin)) * demands[ubcand];
 
             newub = begin - duration + (int)(energy / demands[ubcand]);
 
@@ -5671,10 +5671,10 @@ struct SCIP_NodeData
    int                   duration;           /**< duration of the job if the node data belongs to a leaf */
    int                   leftadjust;         /**< left adjustments of the duration w.r.t. hmin */
    int                   rightadjust;        /**< right adjustments of the duration w.r.t. hmax */
-   int                   enveloptheta;       /**< the maximal energy of a subset of jobs part of the theta set */
+   SCIP_Longint          enveloptheta;       /**< the maximal energy of a subset of jobs part of the theta set */
    int                   energytheta;        /**< energy of the subset of the jobs which are part of theta set */
    int                   energylambda;
-   int                   enveloplambda;
+   SCIP_Longint          enveloplambda;
    int                   idx;                /**< index of the start time variable in the (global) variable array */
    SCIP_Bool             intheta;            /**< belongs the node to the theta set (otherwise to the lambda set) */
 };
@@ -6443,7 +6443,7 @@ SCIP_RETCODE analyzeConflictOverload(
    SCIP_Bool*            explanation         /**< bool array which marks the variable which are part of the explanation if a cutoff was detected, or NULL */
    )
 {
-   int energy;
+   SCIP_Longint energy;
    int j;
 
    /* do nothing if conflict analysis is not applicable */
@@ -6453,7 +6453,7 @@ SCIP_RETCODE analyzeConflictOverload(
    SCIPdebugMsg(scip, "est=%d, lct=%d, propest %u, reportedenergy %d, shift %d\n", est, lct, propest, reportedenergy, shift);
 
    /* compute energy of initial time window */
-   energy = (lct - est) * capacity;
+   energy = ((SCIP_Longint) lct - est) * capacity;
 
    /* sort the start time variables which were added to search tree w.r.t. earliest start time */
    SCIPsortDownPtr((void**)leaves, compNodeEst, nleaves);
@@ -6474,7 +6474,7 @@ SCIP_RETCODE analyzeConflictOverload(
       if( nodedata->est < est )
       {
          est = nodedata->est;
-         energy = (lct - est) * capacity;
+         energy = ((SCIP_Longint) lct - est) * capacity;
       }
    }
    assert(reportedenergy > energy);
@@ -6554,9 +6554,9 @@ int computeEstOmegaset(
 
    assert(scip != NULL);
 
-   if( energy >  (capacity - demand) * (lct - est) )
+   if( energy >  ((SCIP_Longint) capacity - demand) * ((SCIP_Longint) lct - est) )
    {
-      if( energy + demand * duration > capacity * (lct - est) )
+      if( energy + (SCIP_Longint) demand * duration > capacity * ((SCIP_Longint) lct - est) )
       {
          newest =  (int)SCIPfeasCeil(scip, (energy - (SCIP_Real)(capacity - demand) * (lct - est)) / (SCIP_Real)demand);
          newest += est;
@@ -6608,7 +6608,7 @@ SCIP_RETCODE inferboundsEdgeFinding(
       assert(nodedata->est != -1);
 
       /* check if the root lambda envelop exeeds the available capacity */
-      while( !(*cutoff) && rootdata->enveloplambda > capacity * nodedata->lct )
+      while( !(*cutoff) && rootdata->enveloplambda > (SCIP_Longint) capacity * nodedata->lct )
       {
          SCIP_BTNODE** omegaset;
          SCIP_BTNODE* leaf;
@@ -6938,7 +6938,7 @@ SCIP_RETCODE checkOverloadViaThetaTree(
        * before that job can start, that is [0,est). The envelop is later used to compare the energy consumption of a
        * particular time interval [a,b] against the time interval [0,b].
        */
-      nodedata->enveloptheta = capacity * est + energy;
+      nodedata->enveloptheta = (SCIP_Longint) capacity * est + energy;
       nodedata->energytheta = energy;
       nodedata->enveloplambda = -1;
       nodedata->energylambda = -1;
@@ -6968,7 +6968,7 @@ SCIP_RETCODE checkOverloadViaThetaTree(
       /* check if the new job opens a time window which size is so large that it offers more energy than the total
        * energy of all candidate jobs. If so we skip that one.
        */
-      if( (nodedatas[j]->lct - nodedatas[j]->est) * capacity >= totalenergy )
+      if( ((SCIP_Longint) nodedatas[j]->lct - nodedatas[j]->est) * capacity >= totalenergy )
       {
          /* set the earliest start time to minus one to mark that candidate to be not used */
          nodedatas[j]->est = -1;
@@ -6991,7 +6991,7 @@ SCIP_RETCODE checkOverloadViaThetaTree(
       assert(rootdata != NULL);
 
       /* check if the theta set envelops exceeds the available capacity */
-      if( rootdata->enveloptheta > capacity * nodedatas[j]->lct )
+      if( rootdata->enveloptheta > (SCIP_Longint) capacity * nodedatas[j]->lct )
       {
          SCIPdebugMsg(scip, "detects cutoff due to overload in time window [?,%d) (ncands %d)\n", nodedatas[j]->lct, j);
          (*cutoff) = TRUE;

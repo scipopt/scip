@@ -1013,6 +1013,13 @@ set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
   "${CMAKE_BINARY_DIR}/scip-config.cmake" @ONLY)
 
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+${CMAKE_BINARY_DIR}/scip-config-version.cmake
+    VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
+    COMPATIBILITY SameMajorVersion
+    )
+
 #configure the config file for the install
 set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")
 if(SOPLEX_NEEDED)
@@ -1027,4 +1034,6 @@ configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
 # install the targets of the scip export group and the config file so that other projects
 # can link easily against scip
 install(EXPORT scip-targets DESTINATION lib/cmake/scip)
-install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake" DESTINATION lib/cmake/scip)
+install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake"
+              ${CMAKE_BINARY_DIR}/scip-config-version.cmake
+        DESTINATION lib/cmake/scip)

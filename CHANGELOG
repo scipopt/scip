@@ -366,8 +366,13 @@ Fixed bugs
 - fixed statistics of separators
 - improve numerical stability in varbound constraint handler by using double-double arithmetic
 - fixed bug in propagation of dual proofs
+- fixed bugs that arise for multiaggregated indicator variables by disallowing multiaggregation for them
 - improve numerical stability in SCIPcomputeBilinEnvelope* by using double-double arithmetic
 - fixed bug related to releasing pending bound changes in tree.c
+- set STD FENV_ACCESS pragma to on in code that changes floating-point rounding mode
+- disable GCC optimizations in main interval arithmetic code to prevent wrong optimizations
+- fixed wrong assert in cons_xor concerning the variable type
+- fixed different behavior of SCIPisLbBetter and SCIPisUbBetter between having NDEBUG defined or not
 
 Miscellaneous
 -------------
@@ -461,6 +466,7 @@ Fixed bugs
 - fixed wrong hashmap accesses and added sanity check for the correct hashmap type
 - avoid copying of unbounded solutions from sub-SCIPs as those cannot be checked completely
 - corrected the output of the first LP value in case of branch-and-price
+- fixed possible integer overflow, which led to wrong conclusion of infeasibility, in energetic reasoning of cons_cumulative.c
 
 Miscellaneous
 -------------
