@@ -1730,9 +1730,14 @@ SCIP_RETCODE determineSymmetry(
    if ( propdata->recomputerestart && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
    {
       assert( propdata->npermvars > 0 );
-      assert( propdata->permvarmap != NULL );
       assert( propdata->permvars != NULL );
-      assert( propdata->bg0list != NULL );
+#ifndef NDEBUG
+      if ( propdata->enabled )
+      {
+         assert( propdata->permvarmap != NULL );
+         assert( propdata->bg0list != NULL );
+      }
+#endif
 
       /* reset symmetry information */
       SCIP_CALL( freeSymmetryData(scip, propdata) );
