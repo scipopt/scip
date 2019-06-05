@@ -3127,6 +3127,9 @@ SCIP_RETCODE getBinaryProductVarexpr(
          SCIP_Real coefs[3];
          SCIP_VAR* x;
          SCIP_VAR* y;
+         int c;
+         SCIP_CLIQUE** xcliques;
+         SCIP_Bool found_clique = FALSE;
 
          x = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(prodexpr)[0]);
          assert(x != NULL);
@@ -3135,38 +3138,109 @@ SCIP_RETCODE getBinaryProductVarexpr(
          assert(x != y);
 
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s", SCIPvarGetName(x), SCIPvarGetName(y));
-         SCIPdebugMsg(scip, "  create auxiliary variable %s\n", name);
 
-         /* create variable */
-         SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
-         SCIP_CALL( SCIPaddVar(scip, w) );
+         /* first try to find a clique containing both variables */
+         xcliques = SCIPvarGetCliques(x, TRUE);
 
-         /* create and add x - w >= 0 */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_1", SCIPvarGetName(x), SCIPvarGetName(y));
-         SCIP_CALL( SCIPcreateConsBasicVarbound(scip, &cons, name, x, w, -1.0, 0.0, SCIPinfinity(scip)) );
-         SCIP_CALL( SCIPaddCons(scip, cons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+         /* look in cliques containing x */
+         for( c = 0; c < SCIPvarGetNCliques(x, TRUE); ++c )
+         {
+            if( SCIPcliqueHasVar(xcliques[c], y, TRUE) ) /* x + y <= 1 => x*y = 0 */
+            {
+               /* create zero value expression */
+               SCIPcreateConsExprExprValue(scip, conshdlr, varexpr, 0.0);
 
-         /* create and add y - w >= 0 */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_2", SCIPvarGetName(x), SCIPvarGetName(y));
-         SCIP_CALL( SCIPcreateConsBasicVarbound(scip, &cons, name, y, w, -1.0, 0.0, SCIPinfinity(scip)) );
-         SCIP_CALL( SCIPaddCons(scip, cons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+               found_clique = TRUE;
+               break;
+            }
 
-         /* create and add x + y - w <= 1 */
-         vars[0] = x;
-         coefs[0] = 1.0;
-         vars[1] = y;
-         coefs[1] = 1.0;
-         vars[2] = w;
-         coefs[2] = -1.0;
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_3", SCIPvarGetName(x), SCIPvarGetName(y));
-         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 3, vars, coefs, -SCIPinfinity(scip), 1.0) );
-         SCIP_CALL( SCIPaddCons(scip, cons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+            if( SCIPcliqueHasVar(xcliques[c], y, FALSE) ) /* x + (1-y) <= 1 => x*y = x */
+            {
+               /* create variable expression for x */
+               SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, varexpr, x) );
 
-         if( naddconss != NULL )
-            *naddconss += 3;
+               found_clique = TRUE;
+               break;
+            }
+         }
+
+         if(!found_clique)
+         {
+            xcliques = SCIPvarGetCliques(x, FALSE);
+
+            /* look in cliques containing complement of x */
+            for( c = 0; c < SCIPvarGetNCliques(x, FALSE); ++c )
+            {
+               if( SCIPcliqueHasVar(xcliques[c], y, TRUE) ) /* (1-x) + y <= 1 => x*y = y */
+               {
+                  /* create variable expression for y */
+                  SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, varexpr, y) );
+
+                  found_clique = TRUE;
+                  break;
+               }
+
+               if( SCIPcliqueHasVar(xcliques[c], y, FALSE) ) /* (1-x) + (1-y) <= 1 => x*y = x + y - 1 */
+               {
+                  /* create sum expression */
+                  SCIP_CONSEXPR_EXPR* sum_children[2];
+                  SCIP_Real sum_coefs[2];
+                  SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &sum_children[0], x) );
+                  SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &sum_children[1], y) );
+                  sum_coefs[0] = 1;
+                  sum_coefs[1] = 1;
+                  SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, varexpr, 2, sum_children, sum_coefs, -1.0) );
+
+                  SCIPreleaseConsExprExpr(scip, &sum_children[0]);
+                  SCIPreleaseConsExprExpr(scip, &sum_children[1]);
+
+                  found_clique = TRUE;
+                  break;
+               }
+            }
+         }
+
+         /* if the variables are not in a clique, do standard linearisation */
+         if( !found_clique )
+         {
+            SCIPdebugMsg(scip, "  create auxiliary variable %s\n", name);
+
+            /* create variable */
+            SCIP_CALL(SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT));
+            SCIP_CALL(SCIPaddVar(scip, w));
+
+            /* create and add x - w >= 0 */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_1", SCIPvarGetName(x), SCIPvarGetName(y));
+            SCIP_CALL(SCIPcreateConsBasicVarbound(scip, &cons, name, x, w, -1.0, 0.0, SCIPinfinity(scip)));
+            SCIP_CALL(SCIPaddCons(scip, cons));
+            SCIP_CALL(SCIPreleaseCons(scip, &cons));
+
+            /* create and add y - w >= 0 */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_2", SCIPvarGetName(x), SCIPvarGetName(y));
+            SCIP_CALL(SCIPcreateConsBasicVarbound(scip, &cons, name, y, w, -1.0, 0.0, SCIPinfinity(scip)));
+            SCIP_CALL(SCIPaddCons(scip, cons));
+            SCIP_CALL(SCIPreleaseCons(scip, &cons));
+
+            /* create and add x + y - w <= 1 */
+            vars[0] = x;
+            coefs[0] = 1.0;
+            vars[1] = y;
+            coefs[1] = 1.0;
+            vars[2] = w;
+            coefs[2] = -1.0;
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_3", SCIPvarGetName(x), SCIPvarGetName(y));
+            SCIP_CALL(SCIPcreateConsBasicLinear(scip, &cons, name, 3, vars, coefs, -SCIPinfinity(scip), 1.0));
+            SCIP_CALL(SCIPaddCons(scip, cons));
+            SCIP_CALL(SCIPreleaseCons(scip, &cons));
+
+            if( naddconss != NULL)
+               *naddconss += 3;
+
+            assert(w != NULL);
+
+            /* create variable expression */
+            SCIP_CALL(SCIPcreateConsExprExprVar(scip, conshdlr, varexpr, w));
+         }
       }
       else
       {
@@ -3201,16 +3275,19 @@ SCIP_RETCODE getBinaryProductVarexpr(
 
          if( naddconss != NULL )
             *naddconss += 1;
+
+         assert(w != NULL);
+
+         /* create variable expression */
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, varexpr, w) );
       }
 
-      assert(w != NULL);
-
-      /* create and hash variable expression */
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, varexpr, w) );
+      /* hash variable expression */
       SCIP_CALL( SCIPhashmapInsert(exprmap, (void*)prodexpr, *varexpr) );
 
       /* release variable */
-      SCIP_CALL( SCIPreleaseVar(scip, &w) );
+      if( w != NULL )
+        SCIP_CALL( SCIPreleaseVar(scip, &w) );
    }
 
    return SCIP_OKAY;
@@ -3259,7 +3336,7 @@ SCIP_RETCODE replaceBinaryProducts(
          continue;
 
       assert((SCIP_CONSEXPR_EXPR*) SCIPhashmapGetImage(exprmap, (void*)prodexpr) == varexpr);
-      assert(naddconss == NULL || *naddconss > 0);
+      /* assert(naddconss == NULL || *naddconss > 0); TODO fix this assert */
 
       /* replace product expression */
       SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, prodexpridx, varexpr) );

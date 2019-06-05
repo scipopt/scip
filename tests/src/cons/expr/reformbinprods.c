@@ -24,6 +24,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr.c"
+#include "scip/cons_linear.h"
 #include "include/scip_test.h"
 
 static SCIP* scip;
@@ -137,4 +138,46 @@ Test(reformbinprods, presolve_two)
    cr_expect(SCIPgetNConss(scip) == 6, "expect 6 got %d", SCIPgetNConss(scip));
 
    /* SCIPwriteTransProblem(scip, "reform.cip", NULL, FALSE); */
+}
+
+/** tests the reformulation for a product of two variables that are contained in a clique */
+Test(reformbinprods, clique)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONS* conss[2];
+   SCIP_CONS* cons;
+   SCIP_Bool infeasible;
+   int naddconss = 0;
+   SCIP_VAR* clique_vars[2];
+   SCIP_Bool clique_vals[2];
+   int nbdchgs;
+
+   /* create constraint x0 x1 + x2 x3 + sin(x0 x1) <= 1 */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x0>[B] * <x1>[B]", NULL, &expr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "c1", expr, 0.0, 0.5) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   /* go to presolving stage */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, FALSE) );
+   cr_expect(SCIPgetNConss(scip) == 1, "expect 1 got %d", SCIPgetNConss(scip));
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
+
+   /* add a clique */
+   clique_vars[0] = SCIPfindVar(scip, "x0");
+   assert(clique_vars[0] != NULL);
+   clique_vars[1] = SCIPfindVar(scip, "x1");
+   assert(clique_vars[1] != NULL);
+   clique_vals[0] = 1;
+   clique_vals[1] = 1;
+   SCIP_CALL( SCIPaddClique(scip, clique_vars, clique_vals, 2, FALSE, &infeasible, &nbdchgs) );
+
+   /* note that we cannot use SCIPgetConss() directly because canonicalize() adds additional constraints */
+   conss[0] = SCIPgetConss(scip)[0];
+
+   /* call canonizalize() to replace binary products; note that canonicalize is called once in presolving to replace common subexpressions */
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 1, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss) );
+   cr_expect(naddconss == 0, "expect 0 got %d", naddconss);
+   cr_expect(SCIPgetNConss(scip) == 1, "expect 1 got %d", SCIPgetNConss(scip));
 }
