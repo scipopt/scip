@@ -51,6 +51,10 @@ Features
 - Symmetry handling constraints (cons_orbisack, cons_orbitope, cons_symresack) now have an additional parameter to encode
   whether they are model constraints, i.e., define the problem, or whether they are only present to handle symmetries.
 
+- The symmetry code has been completely restructured. The presolvers presol_symbreak and presol_symmetry as well as the propagator
+  prop_orbitalfixing have been merged into the single propagator prop_symmetry to avoid storing the same information
+  multiple times. This propagator is now responsible for adding symmetry handling constraints as well as activating orbital
+  fixing. Moreover, the new file symmetry.c contains general functions for symmetry computations like orbit computations.
 
 Performance improvements
 ------------------------
@@ -104,6 +108,10 @@ Interface changes
   + arguments of functions SCIPcreateConsOrbisack(), SCIPcreateConsBasicOrbisack(), SCIPcreateConsOrbitope(),
     SCIPcreateConsBasicOrbitope(), SCIPcreateConsSymresack(), SCIPcreateConsBasicSymresack(), and SCIPcreateSymbreakCons() extended
     by "ismodelcons" to encode whether the constraints are model constraints or not
+  + the function SCIPgetGeneratorsSymmetry() no longer accepts the parameter recompute, but has parameter permvarmap as new input
+  - removed SCIPgetPermvarsObjSymmetry(), SCIPsetSymmetryComponentblocked(), SCIPgetSymmetryComponentblocked(),
+    SCIPgetSyminfoGloballyFixedVars(), SCIPcomputeGroupOrbitsSymbreak, SCIPincludePresolSymmetry(),SCIPincludePresolSymbreak(),
+    and SCIPincludePropOrbitalfixing()
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 - Benders' decomposition
   + changed SCIPstoreBenderscutCut() in scip_benders.c to SCIPstoreBendersCut(). Where this function used to take a
@@ -149,6 +157,8 @@ Interface changes
 - new API function SCIPgetLPDegeneracy() to get two measures for the degeneracy of the current LP
 - new API functions SCIPdivesetIsAvailable() to check preconditions of a dive set and SCIPdivesetIsPublic() to check if the dive set can be used
   by other primal heuristics.
+- new API functions SCIPcomputeOrbitsSym(), SCIPcomputeOrbitsFilterSym(), SCIPgetPropertiesPerm(), SCIPdetermineBinvarAffectedSym(),
+  SCIPcomputeComponentsSym(), and SCIPextendSubOrbitope(), SCIPgenerateOrbitopeVarsMatrix() for symmetry computations
 
 ### Command line interface
 
@@ -167,6 +177,17 @@ Interface changes
 - deleted parameter "constraints/orbisack/checkalwaysfeas"
 - deleted parameter "constraints/orbitope/checkalwaysfeas"
 - deleted parameter "constraints/symresack/checkalwaysfeas"
+- deleted parameter "presolving/symmetry/maxgenerators"
+- deleted parameter "presolving/symmetry/checksymmetries"
+- deleted parameter "presolving/symmetry/displaynorbitvars"
+- deleted parameter "presolving/symbreak/conssaddlp"
+- deleted parameter "presolving/symbreak/addsymresacks"
+- deleted parameter "presolving/symbreak/computeorbits"
+- deleted parameter "presolving/symbreak/detectorbitopes"
+- deleted parameter "presolving/symbreak/addconsstiming"
+- deleted parameter "propagating/orbitalfixing/symcomptiming"
+- deleted parameter "propagating/orbitalfixing/performpresolving"
+- deleted parameter "propagating/orbitalfixing/recomputerestart"
 
 ### New parameters
 
@@ -216,6 +237,18 @@ Interface changes
     encountered.
   - constraints/benderslp/iterlimit: after the root node, only iterlimit fractional LP solutions are used at each node
     to generate Benders' decomposition cuts.
+
+- new parameters for symmetry handling
+  - new parameter "propagating/symmetry/maxgenerators"
+  - new parameter "propagating/symmetry/checksymmetries"
+  - new parameter "propagating/symmetry/displaynorbitvars"
+  - new parameter "propagating/symmetry/conssaddlp"
+  - new parameter "propagating/symmetry/addsymresacks"
+  - new parameter "propagating/symmetry/detectorbitopes"
+  - new parameter "propagating/symmetry/addconsstiming"
+  - new parameter "propagating/symmetry/ofsymcomptiming"
+  - new parameter "propagating/symmetry/performpresolving"
+  - new parameter "propagating/symmetry/recomputerestart"
 
 ### Data structures
 
