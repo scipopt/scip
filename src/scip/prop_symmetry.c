@@ -621,14 +621,18 @@ SCIP_RETCODE freeSymmetryData(
    if ( propdata->nperms > 0 )
    {
       assert( propdata->permvars != NULL );
-      assert( propdata->perms != NULL );
 
       SCIPfreeBlockMemoryArray(scip, &propdata->permvars, propdata->npermvars);
-      for (i = 0; i < propdata->nperms; ++i)
+
+      /* if orbital fixing runs exclusively, propdata->perms was already freed in determineSymmetry() */
+      if ( propdata->perms != NULL )
       {
-         SCIPfreeBlockMemoryArray(scip, &propdata->perms[i], propdata->npermvars);
+         for (i = 0; i < propdata->nperms; ++i)
+         {
+            SCIPfreeBlockMemoryArray(scip, &propdata->perms[i], propdata->npermvars);
+         }
+         SCIPfreeBlockMemoryArray(scip, &propdata->perms, propdata->nmaxperms);
       }
-      SCIPfreeBlockMemoryArray(scip, &propdata->perms, propdata->nmaxperms);
 
 #ifndef NDEBUG
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->permvarsobj, propdata->npermvars);
