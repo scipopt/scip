@@ -142,8 +142,8 @@ SCIP_RETCODE reduce_checkSdWalk(
    }
    else
    {
-    //  SCIP_CALL( reduce_sdWalk_csr(scip, 200, NULL, graph, nodearr_int1, nodearrreal1, heap, nodearrchar, dheap, nelims));
-          SCIP_CALL( reduce_sdStarPc(scip, 200, NULL, graph, nodearrreal1, nodearr_int1, nodearr_int2, nodearrchar, dheap, nelims));
+     SCIP_CALL( reduce_sdWalkTriangle(scip, 5, NULL, graph, nodearr_int1, nodearrreal1, heap, nodearrchar, dheap, nelims));
+     //     SCIP_CALL( reduce_sdStarPc(scip, 200, NULL, graph, nodearrreal1, nodearr_int1, nodearr_int2, nodearrchar, dheap, nelims));
    }
 
    /* clean up */
@@ -547,7 +547,8 @@ SCIP_RETCODE reduce_sdPcMwTest4(
 
    SCIP_CALL( reduce_checkSdWalk(scip, FALSE, &graph, &nelims) );
 
-   assert(nelims == 1);
+   printf("nelims %d \n", nelims);
+   assert(nelims == 2);
 
    assert(graph == NULL);
 

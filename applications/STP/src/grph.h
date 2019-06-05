@@ -86,6 +86,17 @@ typedef struct dynamic_csr_storage
    int                   nnodes;             /**< number of nodes */
 } DCSR;
 
+/** CSR */
+typedef struct csr_storage
+{
+   int*                  start;              /**< start position for node */
+   int*                  head;               /**< edge head array */
+   int*                  edgeid;             /**< gets id from CSR edge */
+   int*                  id2csredge;         /**< gets CRS edge from id */
+   SCIP_Real*            cost;               /**< edge cost array */
+   int                   nedges;             /**< number of edges */
+   int                   nnodes;             /**< number of nodes */
+} CSR;
 
 typedef struct
 {
@@ -162,9 +173,9 @@ typedef struct
    int                   stp_type;          /**< Steiner problem variant                                                */
    SCIP_Bool             extended;          /**< For (R)PCSTP and (R)MWCSP: signifies whether problem is in extended
                                                  form (TRUE) or not (FALSE) */
-
    /* other adjacency storages */
-   DCSR*                 dcsr_storage;       /**< Dynamic CSR structure */
+   CSR*                  csr_storage;        /**< CSR structure or NULL */
+   DCSR*                 dcsr_storage;       /**< Dynamic CSR structure or NULL */
 } GRAPH;
 
 typedef struct presolve_info
@@ -382,6 +393,7 @@ extern SCIP_RETCODE   graph_voronoiWithRadius(SCIP* scip, const GRAPH*, GRAPH*, 
 extern SCIP_RETCODE   graph_get4nextTTerms(SCIP*, const GRAPH*, SCIP_Real*, PATH*, int*, int*, int*);
 extern SCIP_Bool graph_sdWalks(SCIP*, const GRAPH*, const SCIP_Real*, const int*, SCIP_Real, int, int, int, SCIP_Real*, int*, int*, int*, int*, STP_Bool*);
 extern SCIP_Bool graph_sdWalks_csr(SCIP*, const GRAPH*, const int*, SCIP_Real, int, int, int, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*);
+extern SCIP_Bool graph_sdWalksTriangle(SCIP*, const GRAPH*, const int*, const int*, SCIP_Real, int, int, int, SCIP_Real*, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*);
 extern SCIP_Bool graph_sdWalksExt(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real, int, int, int, int, SCIP_Real*, int*, int*, int*, int*, int*, int*, STP_Bool*);
 extern SCIP_Bool graph_sdWalksExt2(SCIP*, const GRAPH*, const SCIP_Real*, const int*, SCIP_Real, int, int, int, int, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*);
 
@@ -433,6 +445,7 @@ extern SCIP_RETCODE    reduce_sdStar(SCIP*, int, const int*, GRAPH*, SCIP_Real*,
 extern SCIP_RETCODE    reduce_sdStarPc(SCIP*, int, const int*, GRAPH*, SCIP_Real*, int*, int*, STP_Bool*, DHEAP*, int*);
 extern SCIP_RETCODE    reduce_sdWalk(SCIP*, int, const int*, GRAPH*, int*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*);
 extern SCIP_RETCODE    reduce_sdWalk_csr(SCIP*, int, const int*, GRAPH*, int*, SCIP_Real*, int*, STP_Bool*, DHEAP*, int*);
+extern SCIP_RETCODE    reduce_sdWalkTriangle(SCIP*, int, const int*, GRAPH*, int*, SCIP_Real*, int*, STP_Bool*, DHEAP*, int*);
 extern SCIP_RETCODE    reduce_sdWalkExt(SCIP*, int, const int*, GRAPH*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*);
 extern SCIP_RETCODE    reduce_sdWalkExt2(SCIP*, int, const int*, GRAPH*, int*,  SCIP_Real*, int*, int*, int*, STP_Bool*, int*);
 extern SCIP_RETCODE    reduce_sdspSap(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);

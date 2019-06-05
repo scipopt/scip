@@ -2113,6 +2113,86 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 }
 
 
+#if 0
+/** Greedy Extension local heuristic for (R)PC and MW */
+SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge cost array */
+   PATH*                 path,               /**< shortest data structure array */
+   int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
+   STP_Bool*             stvertex            /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
+   )
+{
+   const int nedges = graph->edges;
+   const int nnodes = graph->knots;
+   const int root = graph->source;
+   STP_Bool* stvertextmp;
+   SCIP_Bool extensions = FALSE;
+
+#ifndef NDEBUG
+   const SCIP_Real initialobj = graph_sol_getObj(graph->cost, stedge, 0.0, nedges);
+#endif
+
+   assert(scip && graph && cost && path && stedge && stvertex);
+
+   graph_pc_2transcheck(graph);
+   SCIP_CALL( SCIPallocBufferArray(scip, &stvertextmp, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orgpath, nnodes) );
+
+   /* initialize solution vertex array with FALSE */
+   BMSclearMemoryArray(stvertex, nnodes);
+
+   stvertex[root] = TRUE;
+
+   for( int j = 0; j < nnodes; j++ )
+      path[j].edge = UNKNOWN;
+
+   for( int e = 0; e < nedges; e++ )
+      if( stedge[e] == CONNECT )
+      {
+         path[graph->head[e]].edge = e;
+         stvertex[graph->head[e]] = TRUE;
+      }
+
+   for( int e = 0; e < nedges; e++ )
+      if( stedge[e] == CONNECT )
+         assert(stvertex[graph->tail[e]]);
+
+   /* compute candidates for extension */
+
+   /* main loop */
+   for( ;; )
+   {
+      const int cand = 2;
+      SCIP_Bool success;
+
+      if( success )
+         extensions = TRUE;
+   }
+
+
+   /* have vertices been added? */
+   if( extensions )
+   {
+      for( int e = 0; e < nedges; e++ )
+         stedge[e] = UNKNOWN;
+      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, stedge, stvertex) );
+   }
+
+
+   SCIPfreeBufferArray(scip, &stvertextmp);
+
+
+
+#ifndef NDEBUG
+   assert(SCIPisLE(scip, graph_sol_getObj(graph->cost, stedge, 0.0, nedges), initialobj));
+#endif
+
+   return SCIP_OKAY;
+}
+#endif
+
 
 /*
  * Callback methods of primal heuristic

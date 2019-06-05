@@ -2820,6 +2820,209 @@ SCIP_RETCODE reduce_sdWalk_csr(
 }
 
 
+
+/** SD test for PcMw using limited Dijkstra-like walk from both endpoints of an edge */
+SCIP_RETCODE reduce_sdWalkTriangle(
+   SCIP*                 scip,
+   int                   edgelimit,
+   const int*            edgestate,
+   GRAPH*                g,
+   int*                  termmark,
+   SCIP_Real*            dist,
+   int*                  visitlist,
+   STP_Bool*             visited,
+   DHEAP*                dheap,
+   int*                  nelims
+   )
+{
+   DCSR* dcsr;
+   RANGE* range_csr;
+   int* head_csr;
+   int* edgeid_csr;
+   int* state2;
+   int* visitlist2;
+   SCIP_Real* dist2;
+   SCIP_Real* cost_csr;
+   SCIP_Real* prizeoffset;
+   SCIP_Bool* edge_deletable;
+   STP_Bool* visited2;
+   const int nnodes = g->knots;
+   const int nedges = g->edges;
+   const SCIP_Bool checkstate = (edgestate != NULL);
+
+   assert(g && scip && nelims && visited && visitlist && dheap);
+   assert(!g->extended);
+   assert(graph_pc_isPcMw(g));
+
+   if( edgelimit <= 0 )
+      return SCIP_OKAY;
+
+   graph_heap_clean(TRUE, dheap);
+   graph_init_dcsr(scip, g);
+
+   dcsr = g->dcsr_storage;
+   range_csr = dcsr->range;
+   head_csr = dcsr->head;
+   edgeid_csr = dcsr->edgeid;
+   cost_csr = dcsr->cost;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &dist2, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &state2, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &visited2, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &visitlist2, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prizeoffset, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edge_deletable, nedges / 2) );
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      visited[i] = FALSE;
+      visited2[i] = FALSE;
+      dist[i] = FARAWAY;
+      dist2[i] = FARAWAY;
+      state2[i] = UNKNOWN;
+   }
+
+   for( int e = 0; e < nedges / 2; e++ )
+      edge_deletable[e] = FALSE;
+
+   assert(dcsr && range_csr && edgeid_csr && cost_csr);
+
+   graph_pc_termMarkProper(g, termmark);
+
+   /* main loop */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int enext;
+      const int start = range_csr[i].start;
+
+      /* degree <= 1? */
+      if( range_csr[i].end - start <= 1 )
+         continue;
+
+      /* traverse neighbors of i */
+      for( int e = start; e < range_csr[i].end; e = enext )
+      {
+         SCIP_Bool success;
+         const SCIP_Real ecost = cost_csr[e];
+         int nvisits;
+         const int i2 = head_csr[e];
+
+         assert(g->mark[i] && g->mark[i2]);
+
+         enext = e + 1;
+
+         /* avoid double checking */
+         if( i2 < i && 0 )
+         {
+            int todo;
+            continue;
+         }
+
+         if( checkstate  )
+         {
+            const int orgedge = edgeid_csr[e];
+            if( edgestate[orgedge] == EDGE_BLOCKED )
+               continue;
+         }
+
+         success = graph_sdWalksTriangle(scip, g, termmark, NULL, ecost, i, i2, edgelimit, NULL, dist, visitlist, &nvisits, dheap, visited);
+
+         /* could not reach i2? */
+         if( !success )
+         {
+            int nvisits2;
+            int* const state = dheap->position;
+
+            dheap->position = state2;
+            graph_heap_clean(FALSE, dheap);
+
+#ifndef NDEBUG
+            for( int k = 0; k < nnodes; k++ )
+               prizeoffset[k] = -FARAWAY;
+#endif
+
+            /* run from i2 */
+            success = graph_sdWalksTriangle(scip, g, termmark, state, ecost, i2, i, edgelimit, prizeoffset, dist2, visitlist2, &nvisits2, dheap, visited2);
+
+            /* could not reach i1? */
+            if( !success )
+            {
+               assert(nvisits2 > 0 && visitlist2[0] == i2);
+
+               /* maybe we can connect two walks */
+               for( int k = 1; k < nvisits2; k++ )
+               {
+                  const int node = visitlist2[k];
+                  SCIP_Real dist_combined;
+
+                  assert(visited2[node]);
+                  assert(node != i && node != i2);
+
+                  if( !visited[node] )
+                     continue;
+
+                  dist_combined = dist[node] + dist2[node];
+                  assert(dist_combined < FARAWAY);
+
+                  if( termmark[node] != 0 )
+                  {
+                     dist_combined += prizeoffset[node];
+                     assert(prizeoffset[node] >= 0.0);
+                  }
+
+                  if( SCIPisLE(scip, dist_combined, ecost) )
+                  {
+                     success = TRUE;
+                     break;
+                  }
+               }
+            }
+
+            dheap->position = state;
+            sdwalk_reset(nnodes, nvisits2, visitlist2, dist2, state2, visited2);
+         }
+
+         sdwalk_reset(nnodes, nvisits, visitlist, dist, dheap->position, visited);
+         graph_heap_clean(FALSE, dheap);
+
+         if( success )
+         {
+            edge_deletable[edgeid_csr[e] / 2] = TRUE;
+            graph_dcsr_deleteEdgeBi(scip, dcsr, e);
+
+            (*nelims)++;
+            enext--;
+
+            if( range_csr[i].end - start <= 1 )
+               break;
+         }
+      }
+   }
+
+#ifndef NDEBUG
+   for( int e = 0; e < nedges / 2; e++ )
+   {
+      if( edge_deletable[e] )
+         assert(dcsr->id2csredge[e * 2] == -1);
+      else if( g->oeat[e * 2] != EAT_FREE )
+         assert(dcsr->id2csredge[e * 2] != -1 || !g->mark[g->tail[e * 2]] || !g->mark[g->head[e * 2]]);
+   }
+#endif
+
+   graph_edge_delBlocked(scip, g, edge_deletable, TRUE);
+
+   SCIPfreeBufferArray(scip, &edge_deletable);
+   SCIPfreeBufferArray(scip, &prizeoffset);
+   SCIPfreeBufferArray(scip, &visitlist2);
+   SCIPfreeBufferArray(scip, &visited2);
+   SCIPfreeBufferArray(scip, &state2);
+   SCIPfreeBufferArray(scip, &dist2);
+
+   graph_free_dcsr(scip, g);
+
+   return SCIP_OKAY;
+}
+
 /** SD star test for PcMw and SPG */
 SCIP_RETCODE reduce_sdStar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3374,6 +3577,8 @@ SCIP_RETCODE reduce_sdWalkExt2(
 
    if( edgelimit <= 0 )
       return SCIP_OKAY;
+
+   assert(0 && "triggers bug in STP-DIMACS/PCSPG-hand/HAND_SMALL_ICERM/handsi04.stp");
 
    SCIP_CALL( SCIPallocBufferArray(scip, &prevterms, nnodes * MAXNPREVS) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nprevterms, nnodes) );

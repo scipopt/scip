@@ -1468,6 +1468,174 @@ SCIP_Bool graph_sdWalks_csr(
    return success;
 }
 
+
+/** modified Dijkstra along walks for PcMw, returns special distance between start and end */
+SCIP_Bool graph_sdWalksTriangle(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const int*            termmark,           /**< terminal mark (2 for proper terminal, 1 for non-proper terminal, 0 otherwise) */
+   const int*            stateprev,          /**< state of previous run or NULL */
+   SCIP_Real             distlimit,          /**< distance limit of the search */
+   int                   start,              /**< start */
+   int                   end,                /**< end */
+   int                   edgelimit,          /**< maximum number of edges to consider during execution */
+   SCIP_Real*            prizeoffset,        /**< array for storing prize offset or NULL */
+   SCIP_Real*            dist,               /**< distances array, initially set to FARAWAY */
+   int*                  visitlist,          /**< stores all visited nodes */
+   int*                  nvisits,            /**< number of visited nodes */
+   DHEAP*                dheap,              /**< Dijkstra heap */
+   STP_Bool*             visited             /**< stores whether a node has been visited */
+   )
+{
+   int nchecks;
+   SCIP_Bool success = FALSE;
+   const int edgelimit1 = edgelimit / 2;
+   int* const state = dheap->position;
+   DCSR* const dcsr = g->dcsr_storage;
+   RANGE* const RESTRICT range_csr = dcsr->range;
+   int* const RESTRICT head_csr = dcsr->head;
+   SCIP_Real* const RESTRICT cost_csr = dcsr->cost;
+
+   assert(dcsr && g && dist && visitlist && visited && dheap);
+   assert(graph_pc_isPcMw(g));
+   assert(!g->extended);
+   assert(g->grad[start] != 0 && g->grad[end] != 0);
+   assert(g->mark[start] && g->mark[end]);
+   assert(dheap->size == 0);
+
+   *nvisits = 0;
+
+#ifndef NDEBUG
+   for( int k = 0; k < g->knots; k++ )
+      assert(state[k] == UNKNOWN);
+#endif
+
+   nchecks = 0;
+   dist[start] = 0.0;
+   state[start] = CONNECT;
+   visitlist[(*nvisits)++] = start;
+
+   for( int e = range_csr[start].start; e < range_csr[start].end; e++ )
+   {
+      const int m = head_csr[e];
+      assert(g->mark[m]);
+
+      if( SCIPisLE(scip, cost_csr[e], distlimit) && m != end )
+      {
+         assert(!visited[m]);
+
+         if( stateprev && stateprev[m] == CONNECT )
+            continue;
+
+         visitlist[(*nvisits)++] = m;
+         visited[m] = TRUE;
+
+         if( termmark[m] != 0 )
+         {
+            const SCIP_Real newcost = MAX(cost_csr[e] - g->prize[m], 0.0);
+
+            dist[m] = newcost;
+            graph_heap_correct(m, newcost, dheap);
+
+            if( prizeoffset )
+            {
+               if( g->prize[m] > cost_csr[e] )
+               {
+                  prizeoffset[m] = cost_csr[e];
+                  assert(SCIPisZero(scip, newcost));
+               }
+               else
+                  prizeoffset[m] = g->prize[m];
+            }
+         }
+         else
+         {
+            dist[m] = cost_csr[e];
+            graph_heap_correct(m, cost_csr[e], dheap);
+         }
+
+         if( ++nchecks > edgelimit1 )
+            break;
+      }
+   }
+
+   while( dheap->size > 0 && nchecks <= edgelimit )
+   {
+      /* get nearest labelled node */
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const int k_start = range_csr[k].start;
+      const int k_end = range_csr[k].end;
+
+      assert(k != end && k != start);
+      assert(SCIPisLE(scip, dist[k], distlimit));
+
+      if( termmark[k] == 2 )
+         state[k] = CONNECT;
+      else
+         state[k] = UNKNOWN;
+
+      /* correct incident nodes */
+      for( int e = k_start; e < k_end; e++ )
+      {
+         const int m = head_csr[e];
+
+         if( state[m] != CONNECT && m != start )
+         {
+            SCIP_Real distnew;
+
+            if( stateprev && stateprev[m] == CONNECT )
+                continue;
+
+            distnew = dist[k] + cost_csr[e];
+
+            assert(g->mark[m]);
+
+            if( SCIPisGT(scip, distnew, distlimit) )
+               continue;
+
+            if( termmark[m] != 0 )
+               distnew = MAX(distnew - g->prize[m], 0.0);
+
+            if( distnew < dist[m] )
+            {
+               if( prizeoffset && termmark[m] != 0 )
+               {
+                  const SCIP_Real distnew0 = dist[k] + cost_csr[e];
+
+                  if( g->prize[m] > distnew0 )
+                  {
+                     prizeoffset[m] = distnew0;
+                     assert(SCIPisZero(scip, distnew));
+                  }
+                  else
+                     prizeoffset[m] = g->prize[m];
+               }
+
+               if( !visited[m] )
+               {
+                  visitlist[(*nvisits)++] = m;
+                  visited[m] = TRUE;
+               }
+
+               /* finished already? */
+               if( m == end )
+               {
+                  nchecks = edgelimit + 1;
+                  success = TRUE;
+                  break;
+               }
+
+               dist[m] = distnew;
+               graph_heap_correct(m, distnew, dheap);
+            }
+         }
+         nchecks++;
+      }
+   }
+
+   return success;
+}
+
 /** modified Dijkstra along walks for PcMw, returns special distance between start and end */
 SCIP_Bool graph_sdWalksExt(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1866,6 +2034,8 @@ SCIP_Bool graph_sdWalksConnected(
    return FALSE;
 }
 
+
+
 /** limited Dijkstra for PCSTP, taking terminals into account */
 void graph_path_PcMwSd(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2128,6 +2298,137 @@ void graph_path_invroot(
    }
 }
 
+#if 0
+/** extension heuristic */
+SCIP_Bool graph_path_st_pcmw_extendOut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   start,              /**< start */
+   STP_Bool*             connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
+   SCIP_Real*            dist,               /**< distances array */
+   int*                  pred,               /**< predecessor node */
+   STP_Bool*             connected_out,      /**< array for internal stuff */
+   DHEAP*                dheap,              /**< Dijkstra heap */
+   SCIP_Bool*            success             /**< extension successful? */
+   )
+{
+   int* const state = dheap->position;
+   const CSR* const csr = g->csr_storage;
+   const int* const start_csr = csr->start;
+   const int* const head_csr = csr->head;
+   const SCIP_Real* const cost_csr = csr->cost;
+   SCIP_Real outprofit;
+   const int nnodes = g->knots;
+
+   assert(csr && g && dist && dheap);
+   assert(graph_pc_isPcMw(g));
+   assert(g->extended);
+   assert(dheap->size == 0);
+   assert(!connected[start]);
+
+   *success = FALSE;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      state[k] = UNKNOWN;
+      dist[k] = FARAWAY;
+      connected_out[k] = FALSE;
+#ifndef NDEBUG
+      pred[k] = -1;
+#endif
+   }
+
+   dist[start] = 0.0;
+   graph_heap_correct(start, 0.0, dheap);
+   connected_out[start] = TRUE;
+   outprofit = g->prize[start];
+
+   while( dheap->size > 0 )
+   {
+      /* get nearest labelled node */
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const int k_start = start_csr[k];
+      const int k_end = start_csr[k + 1];
+
+      /* correct incident nodes */
+      for( int e = k_start; e < k_end; e++ )
+      {
+         const int m = head_csr[e];
+
+         if( state[m] != CONNECT )
+         {
+            SCIP_Real distnew = dist[k] + cost_csr[e];
+
+            /* if k is positive vertex and close enough, connect k to current subtree */
+            if( connected[k] || (!connected_out[k] && Is_pterm(g->term[k]) && (g->prize[k] >= dist[k])) )
+            {
+               int node;
+               assert(k != start);
+               outprofit += dist[k] - g->prize[k];
+
+               connected_out[k] = TRUE;
+               dist[k] = 0.0;
+               assert(pred[k] != -1);
+
+               /* connect k to current subtree */
+               node = k;
+
+               while( !connected[node = pred[node]] )
+               {
+                  SCIPdebugMessage("  connect2 %d \n", node);
+
+                  assert(pred[node] != -1);
+                  connected_out[node] = TRUE;
+                  graph_heap_correct(node, 0.0, dheap);
+                  assert(state[node]);
+
+                  if( Is_pterm(g->term[node]) )
+                     nterms++;
+               }
+
+               assert(nterms < ntermspos);
+
+               /* have all biased terminals been reached? */
+               if( ++nterms == ntermspos )
+               {
+                  SCIPdebugMessage("all terms reached \n");
+                  break;
+               }
+            }
+            else
+            {
+               // todo: maxprize test
+            }
+
+
+            if( distnew < dist[m] )
+            {
+               if( !visited[m] )
+               {
+                  visitlist[(*nvisits)++] = m;
+                  visited[m] = TRUE;
+               }
+
+               /* finished already? */
+               if( m == end )
+               {
+                  nchecks = edgelimit + 1;
+                  success = TRUE;
+                  break;
+               }
+
+               dist[m] = distnew;
+               graph_heap_correct(m, distnew, dheap);
+            }
+         }
+         nchecks++;
+      }
+   }
+
+   return success;
+}
+
+#endif
 /** Find a directed tree rooted in node 'start' and spanning all terminals */
 void graph_path_st(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2200,6 +2501,7 @@ void graph_path_st(
             pathdist[k] = 0.0;
             node = k;
 
+            int todo; // what about k?
             if( k != start )
             {
                assert(pathedge[k] != - 1);
@@ -2319,7 +2621,7 @@ void graph_path_st_pcmw(
 
             /* connect k to current subtree */
             node = k;
-
+int todo; // k not inserted!!
             while( !connected[node = g->tail[pathedge[node]]] )
             {
                SCIPdebugMessage("  connect2 %d \n", node);
