@@ -721,7 +721,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int c;
    int j;
    SCIP_Bool firstbounddisjunction = TRUE;
-   SCIP_Real offsetbounddisjunction;
+   SCIP_Real offsetbounddisjunction = 1.0;
 
    assert( scip != NULL );
    assert( npermvars != NULL );
@@ -1044,7 +1044,6 @@ SCIP_RETCODE computeSymmetryGroup(
          SCIP_Bool repetition = FALSE;
 
          nbounddisjvars = SCIPgetNVarsBounddisjunction(scip, cons);
-         bounddisjvars = SCIPgetVarsBounddisjunction(scip, cons);
          boundtypes = SCIPgetBoundtypesBounddisjunction(scip, cons);
          bounds = SCIPgetBoundsBounddisjunction(scip, cons);
 
@@ -1052,7 +1051,6 @@ SCIP_RETCODE computeSymmetryGroup(
          {
             /* detect offset value (only necessary if the detect the first bound disjunction) */
             firstbounddisjunction = FALSE;
-            offsetbounddisjunction = 1.0;
 
             for (j = 0; j < nbounddisjvars; ++j)
             {
@@ -1061,7 +1059,6 @@ SCIP_RETCODE computeSymmetryGroup(
             for (k = c + 1; k < nconss; ++k)
             {
                nbounddisjvars = SCIPgetNVarsBounddisjunction(scip, conss[k]);
-               bounddisjvars = SCIPgetVarsBounddisjunction(scip, conss[k]);
                boundtypes = SCIPgetBoundtypesBounddisjunction(scip, conss[k]);
                bounds = SCIPgetBoundsBounddisjunction(scip, conss[k]);
 
@@ -1106,16 +1103,16 @@ SCIP_RETCODE computeSymmetryGroup(
                SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                   "   Deactivated symmetry handling methods, there exist constraints that cannot be handled by symmetry methods.\n");
 
-               SCIPfreeBlockMemoryArray(scip, &consvals, nallvars);
-               SCIPfreeBlockMemoryArray(scip, &consvars, nallvars);
-               SCIPfreeBlockMemoryArray(scip, &matrixdata.rhsidx, 2 * nactiveconss);
-               SCIPfreeBlockMemoryArray(scip, &matrixdata.rhssense, 2 * nactiveconss);
-               SCIPfreeBlockMemoryArray(scip, &matrixdata.rhscoef, 2 * nactiveconss);
-               SCIPfreeBlockMemoryArray(scip, &matrixdata.matvaridx, matrixdata.nmaxmatcoef);
-               SCIPfreeBlockMemoryArray(scip, &matrixdata.matrhsidx, matrixdata.nmaxmatcoef);
-               SCIPfreeBlockMemoryArray(scip, &matrixdata.matidx, matrixdata.nmaxmatcoef);
-               SCIPfreeBlockMemoryArray(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef);
-               SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+               SCIPfreeBlockMemoryArrayNull(scip, &consvals, nallvars);
+               SCIPfreeBlockMemoryArrayNull(scip, &consvars, nallvars);
+               SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
+               SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
+               SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoef, 2 * nactiveconss);
+               SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matvaridx, matrixdata.nmaxmatcoef);
+               SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matrhsidx, matrixdata.nmaxmatcoef);
+               SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matidx, matrixdata.nmaxmatcoef);
+               SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef);
+               SCIPfreeBlockMemoryArrayNull(scip, &vars, nvars);
 
                return SCIP_OKAY;
             }
@@ -1125,7 +1122,7 @@ SCIP_RETCODE computeSymmetryGroup(
          if ( ! repetition )
          {
             /* add information for bounddisjunction of type 1 */
-            SCIP_CALL( collectCoefficients(scip, consvars, consvals, nbounddisjvars, 0, 0,
+            SCIP_CALL( collectCoefficients(scip, consvars, consvals, nbounddisjvars, 0.0, 0.0,
                   SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDISJUNCTION_TYPE_1, &matrixdata) );
          }
          else
