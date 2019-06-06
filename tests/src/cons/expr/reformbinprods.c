@@ -77,6 +77,7 @@ Test(reformbinprods, presolve_single_2)
    SCIP_CONS* cons;
    SCIP_Bool infeasible;
    int naddconss = 0;
+   int nchgcoefs = 0;
 
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x0>[B] * <x1>[B] + <x2>[B]", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "c1", expr, 1.0, 1.0) );
@@ -93,7 +94,7 @@ Test(reformbinprods, presolve_single_2)
    assert(cons != NULL);
 
    /* call canonizalize() to replace binary products */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss, &nchgcoefs) );
    cr_expect(naddconss == 3, "expect 3 got %d", naddconss);
    cr_expect(SCIPgetNConss(scip) == 4, "expect 4 got %d", SCIPgetNConss(scip));
 
@@ -108,6 +109,7 @@ Test(reformbinprods, presolve_two)
    SCIP_CONS* cons;
    SCIP_Bool infeasible;
    int naddconss = 0;
+   int nchgcoefs = 0;
 
    /* create constraint x0 x1 + x2 x3 + sin(x0 x1) <= 1 */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x0>[B] * <x1>[B] + <x2>[B] * <x3>[B] * <x4>[B] + sin(<x0>[B] * <x1>[B])", NULL, &expr) );
@@ -133,7 +135,7 @@ Test(reformbinprods, presolve_two)
    conss[1] = SCIPgetConss(scip)[1];
 
    /* call canonizalize() to replace binary products; note that cannonizalize is called once in presolving to replace common subexpressions */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 2, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 2, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss, &nchgcoefs) );
    cr_expect(naddconss == 4, "expect 4 got %d", naddconss);
    cr_expect(SCIPgetNConss(scip) == 6, "expect 6 got %d", SCIPgetNConss(scip));
 
@@ -148,12 +150,13 @@ Test(reformbinprods, clique)
    SCIP_CONS* cons;
    SCIP_Bool infeasible;
    int naddconss = 0;
+   int nchgcoefs = 0;
    SCIP_VAR* clique_vars[2];
    SCIP_Bool clique_vals[2];
    int nbdchgs;
 
    /* create constraint x0 x1 + x2 x3 + sin(x0 x1) <= 1 */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x0>[B] * <x1>[B]", NULL, &expr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x0>[B] * <x1>[B] + <x2>[B] * <x3>[B]", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "c1", expr, 0.0, 0.5) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -164,7 +167,7 @@ Test(reformbinprods, clique)
    cr_expect(SCIPgetNConss(scip) == 1, "expect 1 got %d", SCIPgetNConss(scip));
    assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING);
 
-   /* add a clique */
+   /* add a clique x0 + x1 <= 1 */
    clique_vars[0] = SCIPfindVar(scip, "x0");
    assert(clique_vars[0] != NULL);
    clique_vars[1] = SCIPfindVar(scip, "x1");
@@ -173,11 +176,21 @@ Test(reformbinprods, clique)
    clique_vals[1] = 1;
    SCIP_CALL( SCIPaddClique(scip, clique_vars, clique_vals, 2, FALSE, &infeasible, &nbdchgs) );
 
+   /*add a clique (1-x2) + (1-x3) <= 1*/
+   clique_vars[0] = SCIPfindVar(scip, "x2");
+   assert(clique_vars[0] != NULL);
+   clique_vars[1] = SCIPfindVar(scip, "x3");
+   assert(clique_vars[1] != NULL);
+   clique_vals[0] = 0;
+   clique_vals[1] = 0;
+   SCIP_CALL( SCIPaddClique(scip, clique_vars, clique_vals, 2, FALSE, &infeasible, &nbdchgs) );
+
    /* note that we cannot use SCIPgetConss() directly because canonicalize() adds additional constraints */
    conss[0] = SCIPgetConss(scip)[0];
 
    /* call canonizalize() to replace binary products; note that canonicalize is called once in presolving to replace common subexpressions */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 1, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 1, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss, &nchgcoefs) );
    cr_expect(naddconss == 0, "expect 0 got %d", naddconss);
    cr_expect(SCIPgetNConss(scip) == 1, "expect 1 got %d", SCIPgetNConss(scip));
+   cr_expect(nchgcoefs == 4, "expect 4 changed coefs, got %d", nchgcoefs);
 }

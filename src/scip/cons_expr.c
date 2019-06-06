@@ -3087,7 +3087,8 @@ SCIP_RETCODE getBinaryProductVarexpr(
    SCIP_HASHMAP*         exprmap,            /**< map to remember generated variables for visited product expressions */
    SCIP_CONSEXPR_EXPR*   prodexpr,           /**< product expression */
    SCIP_CONSEXPR_EXPR**  varexpr,            /**< pointer to store the variable expression that represents the product */
-   int*                  naddconss           /**< pointer to update the total number of added constraints (might be NULL) */
+   int*                  naddconss,          /**< pointer to update the total number of added constraints (might be NULL) */
+   int*                  nchgcoefs           /**< pointer to update the total number of changed coefficients (might be NULL) */
    )
 {
    int nchildren;
@@ -3150,6 +3151,9 @@ SCIP_RETCODE getBinaryProductVarexpr(
                /* create zero value expression */
                SCIPcreateConsExprExprValue(scip, conshdlr, varexpr, 0.0);
 
+               if( nchgcoefs != NULL )
+                  *nchgcoefs += 1;
+
                found_clique = TRUE;
                break;
             }
@@ -3158,6 +3162,9 @@ SCIP_RETCODE getBinaryProductVarexpr(
             {
                /* create variable expression for x */
                SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, varexpr, x) );
+
+               if( nchgcoefs != NULL )
+                  *nchgcoefs += 2;
 
                found_clique = TRUE;
                break;
@@ -3176,6 +3183,9 @@ SCIP_RETCODE getBinaryProductVarexpr(
                   /* create variable expression for y */
                   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, varexpr, y) );
 
+                  if( nchgcoefs != NULL )
+                     *nchgcoefs += 1;
+
                   found_clique = TRUE;
                   break;
                }
@@ -3193,6 +3203,9 @@ SCIP_RETCODE getBinaryProductVarexpr(
 
                   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum_children[0]) );
                   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum_children[1]) );
+
+                  if( nchgcoefs != NULL )
+                     *nchgcoefs += 3;
 
                   found_clique = TRUE;
                   break;
@@ -3301,7 +3314,8 @@ SCIP_RETCODE replaceBinaryProducts(
    SCIP_CONS*            cons,               /**< expression constraint */
    SCIP_HASHMAP*         exprmap,            /**< map to remember generated variables for visited product expressions */
    SCIP_CONSEXPR_ITERATOR* it,               /**< expression iterator */
-   int*                  naddconss           /**< pointer to update the total number of added constraints (might be NULL) */
+   int*                  naddconss,          /**< pointer to update the total number of added constraints (might be NULL) */
+   int*                  nchgcoefs           /**< pointer to update the total number of changed coefficients (might be NULL) */
    )
 {
    SCIP_CONSEXPR_EXPR* expr;
@@ -3330,12 +3344,12 @@ SCIP_RETCODE replaceBinaryProducts(
       assert(prodexpr != NULL);
 
       /* try to create a variable expression that represents a product of binary variables */
-      SCIP_CALL( getBinaryProductVarexpr(scip, conshdlr, exprmap, prodexpr, &varexpr, naddconss) );
+      SCIP_CALL( getBinaryProductVarexpr(scip, conshdlr, exprmap, prodexpr, &varexpr, naddconss, nchgcoefs) );
       if( varexpr == NULL )
          continue;
 
       assert((SCIP_CONSEXPR_EXPR*) SCIPhashmapGetImage(exprmap, (void*)prodexpr) == varexpr);
-      /* assert(naddconss == NULL || *naddconss > 0); TODO fix this assert */
+      assert((naddconss == NULL && nchgcoefs == NULL) || (*naddconss > 0 || *nchgcoefs > 0));
 
       /* replace product expression */
       SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, prodexpridx, varexpr) );
@@ -3596,7 +3610,8 @@ SCIP_RETCODE presolveBinaryProducts(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONS**           conss,              /**< expression constraints */
    int                   nconss,             /**< total number of expression constraints */
-   int*                  naddconss           /**< pointer to store the total number of added constraints (might be NULL) */
+   int*                  naddconss,          /**< pointer to store the total number of added constraints (might be NULL) */
+   int*                  nchgcoefs           /**< pointer to store the total number of changed coefficients (might be NULL) */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3631,7 +3646,7 @@ SCIP_RETCODE presolveBinaryProducts(
       SCIP_CALL( replaceBinaryProductsFactorize(scip, conshdlr, conss[c], naddconss) );
 
       /* replace each product of binary variables separately */
-      SCIP_CALL( replaceBinaryProducts(scip, conshdlr, conss[c], exprmap, it, naddconss) );
+      SCIP_CALL( replaceBinaryProducts(scip, conshdlr, conss[c], exprmap, it, naddconss, nchgcoefs) );
    }
 
    /* free memory */
@@ -3653,7 +3668,8 @@ SCIP_RETCODE canonicalizeConstraints(
    SCIP_PRESOLTIMING     presoltiming,       /**< presolve timing (SCIP_PRESOLTIMING_ALWAYS if not in presolving) */
    SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility has been detected */
    int*                  ndelconss,          /**< counter to add number of deleted constraints, or NULL */
-   int*                  naddconss           /**< counter to add number of added constraints, or NULL */
+   int*                  naddconss,          /**< counter to add number of added constraints, or NULL */
+   int*                  nchgcoefs           /**< counter to add number of changed coefficients, or NULL */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3871,7 +3887,7 @@ SCIP_RETCODE canonicalizeConstraints(
    /* reformulate products of binary variables */
    if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
-      SCIP_CALL( presolveBinaryProducts(scip, conshdlr, conss, nconss, naddconss) );
+      SCIP_CALL( presolveBinaryProducts(scip, conshdlr, conss, nconss, naddconss, nchgcoefs) );
    }
 
    /* replace common subexpressions */
@@ -7241,7 +7257,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
       return SCIP_OKAY;
 
    /* simplify constraints and replace common subexpressions */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    /* currently SCIP does not offer to communicate this,
     * but at the moment this can only become true if canonicalizeConstraints called detectNlhdlrs (which it doesn't do in EXITPRESOLVE stage)
     * or if a constraint expression became constant
@@ -7767,7 +7783,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    }
 
    /* simplify constraints and replace common subexpressions */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, presoltiming, &infeasible, ndelconss, naddconss) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, presoltiming, &infeasible, ndelconss, naddconss, nchgcoefs) );
    if( infeasible )
    {
       *result = SCIP_CUTOFF;
