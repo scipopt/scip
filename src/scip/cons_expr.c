@@ -3197,8 +3197,8 @@ SCIP_RETCODE getBinaryProductVarexpr(
                   SCIP_Real sum_coefs[2];
                   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &sum_children[0], x) );
                   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &sum_children[1], y) );
-                  sum_coefs[0] = 1;
-                  sum_coefs[1] = 1;
+                  sum_coefs[0] = 1.0;
+                  sum_coefs[1] = 1.0;
                   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, varexpr, 2, sum_children, sum_coefs, -1.0) );
 
                   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum_children[0]) );
@@ -3341,7 +3341,7 @@ SCIP_RETCODE replaceBinaryProducts(
       int prodexpridx;
 
       prodexpridx = SCIPexpriteratorGetChildIdxDFS(it);
-      assert(prodexpridx >= 0 && prodexpridx <= SCIPgetConsExprExprNChildren(expr));
+      assert(prodexpridx >= 0 && prodexpridx < SCIPgetConsExprExprNChildren(expr));
       prodexpr = SCIPexpriteratorGetChildExprDFS(it);
       assert(prodexpr != NULL);
 
@@ -3356,7 +3356,7 @@ SCIP_RETCODE replaceBinaryProducts(
       /* replace product expression */
       SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, prodexpridx, varexpr) );
 
-      /* note that the variable expression has been captures by getBinaryProductVarexpr and SCIPreplaceConsExprExprChild */
+      /* note that the variable expression has been captured by getBinaryProductVarexpr and SCIPreplaceConsExprExprChild */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
    }
 
@@ -3483,7 +3483,7 @@ SCIP_RETCODE replaceBinaryProductsFactorize(
             SCIP_CALL( SCIPaddCons(scip, newcons) );
             SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
             if( naddconss != NULL )
-               ++(naddconss);
+               ++(*naddconss);
          }
 
          /* create and add  0 <= z - minact x */
@@ -3494,7 +3494,7 @@ SCIP_RETCODE replaceBinaryProductsFactorize(
             SCIP_CALL( SCIPaddCons(scip, newcons) );
             SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
             if( naddconss != NULL )
-               ++(naddconss);
+               ++(*naddconss);
          }
 
          /* create and add minact <= sum_j c_j x_j - z + minact x_i */
@@ -3508,7 +3508,7 @@ SCIP_RETCODE replaceBinaryProductsFactorize(
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
          if( naddconss != NULL )
-            ++(naddconss);
+            ++(*naddconss);
 
          /* create and add sum_j c_j x_j - z + maxact x_i <= maxact */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_4", SCIPconsGetName(cons), SCIPvarGetName(facvar));
@@ -3521,7 +3521,7 @@ SCIP_RETCODE replaceBinaryProductsFactorize(
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
          if( naddconss != NULL )
-            ++(naddconss);
+            ++(*naddconss);
 
          /* store auxiliary variable; release it later */
          auxvars[nauxvars] = auxvar;
