@@ -3312,7 +3312,6 @@ SCIP_RETCODE replaceBinaryProducts(
    assert(cons != NULL);
    assert(exprmap != NULL);
    assert(it != NULL);
-   assert(naddconss != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
