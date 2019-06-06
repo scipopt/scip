@@ -53,8 +53,8 @@ Features
 
 - Variables can now be marked as "relaxation-only". This flag should be used to introduce new variables that are required
   to define a relaxation, but that are not part of any checked constraints. Essentially, these variables should only be used
-  in the current SCIP solve and disregarded after a restart or in SCIP copies. Hence, these variablesare not copied by SCIPcopy,
-  they are currently not used in conflict constraints, and cuts involving them are not upgraded to linear constraints.
+  in the current SCIP solve and disregarded after a restart or in SCIP copies. Hence, these variables are not copied by SCIPcopy and
+  SCIPgetVarCopy, they are currently not used in conflict constraints, and cuts involving them are not upgraded to linear constraints.
 
 
 Performance improvements
@@ -137,8 +137,8 @@ Interface changes
   as single (standalone) heuristic or within Adaptive Diving.
 - new parameters "divecontext" and "iterlim" to SCIPperformGenericDivingAlgorithm() to control in which context (single,adaptive) statistics are updated.
 
-- SCIPcopyVars, SCIPcopy, and SCIPcopyConsCompression do not copy variables that are marked as relaxation-only, thus it cannot be assumed anymore
-  that each active variable from the master SCIP also has a counterpart in the copy.
+- SCIPcopyVars, SCIPcopy, SCIPcopyConsCompression, and SCIPgetVarCopy do not copy variables that are marked as relaxation-only,
+  thus it cannot be assumed anymore that each active variable from the master SCIP also has a counterpart in the copy.
 
 ### New API functions
 
