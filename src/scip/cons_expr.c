@@ -3246,7 +3246,7 @@ SCIP_RETCODE getBinaryProductVarexpr(
             SCIP_CALL( SCIPaddCons(scip, cons) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-            if( naddconss != NULL)
+            if( naddconss != NULL )
                *naddconss += 3;
 
             assert(w != NULL);
@@ -3300,7 +3300,9 @@ SCIP_RETCODE getBinaryProductVarexpr(
 
       /* release variable */
       if( w != NULL )
+      {
         SCIP_CALL( SCIPreleaseVar(scip, &w) );
+      }
    }
 
    return SCIP_OKAY;
