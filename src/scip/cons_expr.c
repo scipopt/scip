@@ -7825,7 +7825,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
       SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
    }
 
-   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 || *naddconss > 0 )
+   if( *ndelconss > 0 || *nchgbds > 0 || *nupgdconss > 0 || *naddconss > 0 || *nchgbds > 0 )
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
