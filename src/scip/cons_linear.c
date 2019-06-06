@@ -3692,6 +3692,9 @@ SCIP_RETCODE addCoef(
    assert(cons != NULL);
    assert(var != NULL);
 
+   /* relaxation-only variables must not be used in checked or enforced constraints */
+   assert(!SCIPvarIsRelaxationOnly(var) || (!SCIPconsIsChecked(cons) && !SCIPconsIsEnforced(cons)));
+
    /* ignore coefficient if it is nearly zero */
    if( SCIPisZero(scip, val) )
       return SCIP_OKAY;
@@ -17843,6 +17846,9 @@ SCIP_RETCODE SCIPcopyConsLinear(
    {
       SCIP_VAR* var;
       var = vars[v];
+
+      /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
+      assert(!SCIPvarIsRelaxationOnly(var) || (!check && !enforce));
 
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, consmap, global, &success) );
       assert(!(success) || vars[v] != NULL);
