@@ -3164,7 +3164,7 @@ SCIP_RETCODE getBinaryProductVarexpr(
             }
          }
 
-         if(!found_clique)
+         if( !found_clique )
          {
             xcliques = SCIPvarGetCliques(x, FALSE);
 
@@ -3191,8 +3191,8 @@ SCIP_RETCODE getBinaryProductVarexpr(
                   sum_coefs[1] = 1;
                   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, varexpr, 2, sum_children, sum_coefs, -1.0) );
 
-                  SCIPreleaseConsExprExpr(scip, &sum_children[0]);
-                  SCIPreleaseConsExprExpr(scip, &sum_children[1]);
+                  SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum_children[0]) );
+                  SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum_children[1]) );
 
                   found_clique = TRUE;
                   break;
@@ -3206,20 +3206,20 @@ SCIP_RETCODE getBinaryProductVarexpr(
             SCIPdebugMsg(scip, "  create auxiliary variable %s\n", name);
 
             /* create variable */
-            SCIP_CALL(SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT));
-            SCIP_CALL(SCIPaddVar(scip, w));
+            SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
+            SCIP_CALL( SCIPaddVar(scip, w) );
 
             /* create and add x - w >= 0 */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_1", SCIPvarGetName(x), SCIPvarGetName(y));
-            SCIP_CALL(SCIPcreateConsBasicVarbound(scip, &cons, name, x, w, -1.0, 0.0, SCIPinfinity(scip)));
-            SCIP_CALL(SCIPaddCons(scip, cons));
-            SCIP_CALL(SCIPreleaseCons(scip, &cons));
+            SCIP_CALL( SCIPcreateConsBasicVarbound(scip, &cons, name, x, w, -1.0, 0.0, SCIPinfinity(scip)) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
             /* create and add y - w >= 0 */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_2", SCIPvarGetName(x), SCIPvarGetName(y));
-            SCIP_CALL(SCIPcreateConsBasicVarbound(scip, &cons, name, y, w, -1.0, 0.0, SCIPinfinity(scip)));
-            SCIP_CALL(SCIPaddCons(scip, cons));
-            SCIP_CALL(SCIPreleaseCons(scip, &cons));
+            SCIP_CALL( SCIPcreateConsBasicVarbound(scip, &cons, name, y, w, -1.0, 0.0, SCIPinfinity(scip)) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
             /* create and add x + y - w <= 1 */
             vars[0] = x;
@@ -3229,9 +3229,9 @@ SCIP_RETCODE getBinaryProductVarexpr(
             vars[2] = w;
             coefs[2] = -1.0;
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s_3", SCIPvarGetName(x), SCIPvarGetName(y));
-            SCIP_CALL(SCIPcreateConsBasicLinear(scip, &cons, name, 3, vars, coefs, -SCIPinfinity(scip), 1.0));
-            SCIP_CALL(SCIPaddCons(scip, cons));
-            SCIP_CALL(SCIPreleaseCons(scip, &cons));
+            SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 3, vars, coefs, -SCIPinfinity(scip), 1.0) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
             if( naddconss != NULL)
                *naddconss += 3;
@@ -3239,7 +3239,7 @@ SCIP_RETCODE getBinaryProductVarexpr(
             assert(w != NULL);
 
             /* create variable expression */
-            SCIP_CALL(SCIPcreateConsExprExprVar(scip, conshdlr, varexpr, w));
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, varexpr, w) );
          }
       }
       else
