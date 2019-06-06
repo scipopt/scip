@@ -1523,6 +1523,9 @@ SCIP_RETCODE SCIPgetConsCopy(
  *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
  *  between the constraints of the source and target-SCIP is stored
  *
+ *  *valid is set to TRUE iff all constraints that are marked as checked or enforced were copied successfully.
+ *  If other constraints could not be copied, *valid can still be set to TRUE.
+ *
  *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP. (If you mix
  *        SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add explicitly and what is already
  *        added.) You can check whether a constraint is added by calling SCIPconsIsAdded().
@@ -1563,7 +1566,7 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance?
                                               *   If TRUE, the modifiable flag of constraints will be copied. */
-   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
+   SCIP_Bool*            valid               /**< pointer to store whether all checked or enforced constraints were validly copied */
    )
 {
    SCIP_CONSHDLR** sourceconshdlrs;
@@ -1694,7 +1697,12 @@ SCIP_RETCODE SCIPcopyConss(
          }
          else
          {
-            *valid = (*valid && singlevalid);
+            /* if an enforced or checked constraint could not be copied, then the copy is not valid, i.e.,
+             * the feasible set may be larger; for other constraints, it should be safe if they are omitted
+             * from the copy
+             */
+            if( SCIPconsIsEnforced(sourceconss[c]) || SCIPconsIsChecked(sourceconss[c]) )
+               *valid = FALSE;
             SCIPdebugMsg(sourcescip, "Constraint %s not copied, copy is %svalid\n",
                   SCIPconsGetName(sourceconss[c]), *valid ? "" : "not ");
          }
