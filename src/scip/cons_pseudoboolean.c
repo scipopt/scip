@@ -9105,7 +9105,10 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    return SCIP_OKAY;
 }
 
-/** creates and captures a pseudoboolean constraint, with given linear and and-constraints */
+/** creates and captures a pseudoboolean constraint, with given linear and and-constraints
+ *
+ *  @note intvar must currently be NULL
+ */
 SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -9168,6 +9171,13 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    assert(andcoefs != NULL);
    assert(nandconss >= 1);
    assert(issoftcons == (indvar != NULL));
+
+   if( intvar != NULL )
+   {
+      /* FIXME should work or really be removed */
+      SCIPerrorMessage("intvar currently not supported by pseudo boolean constraint handler\n");
+      return SCIP_INVALIDDATA;
+   }
 
    /* find the pseudoboolean constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -9375,6 +9385,8 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
  *        respectively
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *
+ *  @note intvar must currently be NULL
  */
 SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9437,6 +9449,13 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    assert(nlinvars == 0 || (linvars != NULL && linvals != NULL));
    assert(nterms == 0 || (terms != NULL && termvals != NULL && ntermvars != NULL));
    assert(issoftcons == (indvar != NULL));
+
+   if( intvar != NULL )
+   {
+      /* FIXME should work or really be removed */
+      SCIPerrorMessage("intvar currently not supported by pseudo boolean constraint handler\n");
+      return SCIP_INVALIDDATA;
+   }
 
    /* find the pseudoboolean constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -9522,6 +9541,8 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
  *  in its most basic variant, i. e., with all constraint flags set to their default values
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *
+ *  @note intvar must currently be NULL
  */
 SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
