@@ -156,6 +156,7 @@
 #include "scip/presol_tworowbnd.h"
 #include "scip/presol_tworowcomb.h"
 #include "scip/presol_sparsify.h"
+#include "scip/presol_dualsparsify.h"
 #include "scip/presol_stuffing.h"
 #include "scip/presol_symmetry.h"
 #include "scip/prop_dualfix.h"

@@ -101,6 +101,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolTworowbnd(scip) );
    SCIP_CALL( SCIPincludePresolTworowcomb(scip) );
    SCIP_CALL( SCIPincludePresolSparsify(scip) );
+   SCIP_CALL( SCIPincludePresolDualsparsify(scip) );
    SCIP_CALL( SCIPincludePresolStuffing(scip) );
    SCIP_CALL( SCIPincludePresolSymmetry(scip) );
    SCIP_CALL( SCIPincludePresolSymbreak(scip) );   /* needs to be included after presol_symmetry */
