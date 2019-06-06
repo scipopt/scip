@@ -563,12 +563,7 @@ SCIP_RETCODE copyToSubscip(
    /* copy variables */
    for( i = 0; i < nvars; ++i )
    {
-      if( !SCIPvarIsRelaxationOnly(vars[i]) )
-      {
-         SCIP_CALL( SCIPgetVarCopy(scip, subscip, vars[i], &subvars[i], varmap, consmap, FALSE, success) );
-      }
-      else
-         subvars[i] = NULL;
+      SCIP_CALL( SCIPgetVarCopy(scip, subscip, vars[i], &subvars[i], varmap, consmap, FALSE, success) );
 
       /* abort if variable was not successfully copied */
       if( !(*success) )
