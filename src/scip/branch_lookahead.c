@@ -1929,7 +1929,6 @@ int findInsertionPoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCORECONTAINER*       scorecontainer,     /**< container with all the scores for each candidate */
    SCIP_Real             scoretoinsert,      /**< score to find the insertion index for */
-   int                   basistoinsert,      /**< for how many of the potential child node is basis information available? */
    CANDIDATE**           candidates,         /**< candidate list where the first nsorted elements are sorted (w.r.t. their
                                               *   score) */
    int                   ncandidates         /**< number of elements in candidates to consider, starting from 0 */
@@ -1961,18 +1960,6 @@ int findInsertionPoint(
 
       if( SCIPisGT(scip, scoretoinsert, midscore) )
          right = mid - 1;
-      else if( SCIPisLT(scip, scoretoinsert, midscore) )
-         left = mid + 1;
-      else if( midcand != NULL )
-      {
-         int midbasis = midcand->downwarmstartinfo != NULL ? 1 : 0;
-         if( midcand->upwarmstartinfo != NULL )
-            ++midbasis;
-         if( basistoinsert > midbasis )
-            right = mid - 1;
-         else
-            left = mid + 1;
-      }
       else
          left = mid + 1;
    }
@@ -2020,7 +2007,6 @@ SCIP_RETCODE scoreContainerSetScore(
    CANDIDATE* droppedcandidate;
    int probindex;
    int insertpoint;
-   int candhasbasis = 0;
 
    assert(scip != NULL);
    assert(scorecontainer != NULL);
@@ -2044,13 +2030,8 @@ SCIP_RETCODE scoreContainerSetScore(
    scorecontainer->downgains[probindex] = downgain;
    scorecontainer->upgains[probindex] = upgain;
 
-   if( cand->downwarmstartinfo != NULL )
-      ++candhasbasis;
-   if( cand->upwarmstartinfo != NULL )
-      ++candhasbasis;
-
    /* find the point in the sorted array where the new score should be inserted */
-   insertpoint =  findInsertionPoint(scip, scorecontainer, score, candhasbasis, scorecontainer->bestsortedcands,
+   insertpoint =  findInsertionPoint(scip, scorecontainer, score, scorecontainer->bestsortedcands,
       scorecontainer->nbestsortedcands);
 
    /* insert the current variable (cand) at the position calculated above, returning the candidate that
@@ -4061,22 +4042,17 @@ void sortFirstCandidatesByScore(
       CANDIDATE* movecand = candidatelist->candidates[i];
       int moveprobindex;
       SCIP_Real movescore;
-      int movehasbasis = 0;
       int nsorted;
       int insertionindex;
       assert(movecand != NULL);
 
       moveprobindex = SCIPvarGetProbindex(movecand->branchvar);
       movescore = scorecontainer->scores[moveprobindex];
-      if( movecand->downwarmstartinfo != NULL )
-         ++movehasbasis;
-      if( movecand->upwarmstartinfo != NULL )
-         ++movehasbasis;
 
       /* the length of the sorted portion of the array, starting at 0 */
       nsorted = MIN(i, nbestcandidates);
 
-      insertionindex = findInsertionPoint(scip, scorecontainer, movescore, movehasbasis, candidatelist->candidates, nsorted);
+      insertionindex = findInsertionPoint(scip, scorecontainer, movescore, candidatelist->candidates, nsorted);
 
       assert(insertionindex <= nsorted);
 
