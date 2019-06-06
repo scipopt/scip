@@ -4336,22 +4336,26 @@ SCIP_RETCODE filterCandidates(
 
          if( config->filterbymaxgain && SCIPgetProbingDepth(scip) == 0 )
          {
-            SCIP_Real maxgain = 0.0;
+            SCIP_Real maxgain;
+            SCIP_Real bestmaxgain = MAX(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
+               scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)]);
 
-            for( i = 1; i < nusedcands; ++i )
+            for( i = nusedcands - 1; i >= 1; --i )
             {
-               maxgain = MAX(maxgain, scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)]);
-               maxgain = MAX(maxgain, scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)]);
-            }
-            if( SCIPisSumLE(scip, maxgain / scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)], 1.0)
-               || SCIPisSumLE(scip, maxgain / scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)], 1.0) )
-            {
-               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Stop lookahead branching, because the best candidate has gains %g/%g and the maximum gain of the remaining candidates is %g\n",
-                  scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
-                  scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
-                  maxgain);
+               maxgain = MAX(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)],
+                  scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)]);
 
-               nusedcands = 1;
+               if( SCIPisSumLE(scip, maxgain / bestmaxgain, 1.0) )
+               {
+                  --nusedcands;
+
+                  if( i < nusedcands )
+                  {
+                     CANDIDATE* tmp = candidatelist->candidates[i];
+                     candidatelist->candidates[i] = candidatelist->candidates[nusedcands];
+                     candidatelist->candidates[nusedcands] = tmp;
+                  }
+               }
             }
          }
 
