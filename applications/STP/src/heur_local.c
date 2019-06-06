@@ -1965,7 +1965,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    graph_pc_getBiased(scip, graph, TRUE, costbiased, prizebiased);
    graph_path_st_pcmw_extendBiased(scip, graph, costbiased, prizebiased, path, stvertex, &extensions);
 #else
-   graph_path_st_pcmw_extend(scip, graph, cost, path, stvertex, &extensions);
+   graph_path_st_pcmw_extend(scip, graph, cost, FALSE, path, stvertex, &extensions);
 #endif
 
    BMScopyMemoryArray(orgpath, path, nnodes);
@@ -2041,7 +2041,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
             graph_path_st_pcmw_extendBiased(scip, graph, costbiased, prizebiased, path, stvertextmp, &extensionstmp);
 
 #else
-            graph_path_st_pcmw_extend(scip, graph, cost, path, stvertextmp, &extensionstmp);
+            graph_path_st_pcmw_extend(scip, graph, cost, TRUE, path, stvertextmp, &extensionstmp);
 #endif
 
             for( int j = 0; j < nnodes; j++ )
@@ -2112,86 +2112,132 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    return SCIP_OKAY;
 }
 
-
-#if 0
 /** Greedy Extension local heuristic for (R)PC and MW */
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
-   const SCIP_Real*      cost,               /**< edge cost array */
-   PATH*                 path,               /**< shortest data structure array */
    int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
    STP_Bool*             stvertex            /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
    )
 {
+   int candidates[GREEDY_EXTENSIONS];
+   int ncandidates;
+   DHEAP* dheap;
+   STP_Bool* stvertextmp;
+   SCIP_Real* dist;
+   int* pred;
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
-   const int root = graph->source;
-   STP_Bool* stvertextmp;
    SCIP_Bool extensions = FALSE;
+   int maxnode;
+   const SCIP_Bool isexended = graph->extended;
 
 #ifndef NDEBUG
    const SCIP_Real initialobj = graph_sol_getObj(graph->cost, stedge, 0.0, nedges);
 #endif
 
-   assert(scip && graph && cost && path && stedge && stvertex);
+   assert(scip && graph && stedge && stvertex);
 
-   graph_pc_2transcheck(graph);
-   SCIP_CALL( SCIPallocBufferArray(scip, &stvertextmp, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orgpath, nnodes) );
+   graph_pc_2orgcheck(graph);
 
-   /* initialize solution vertex array with FALSE */
-   BMSclearMemoryArray(stvertex, nnodes);
-
-   stvertex[root] = TRUE;
-
-   for( int j = 0; j < nnodes; j++ )
-      path[j].edge = UNKNOWN;
-
-   for( int e = 0; e < nedges; e++ )
-      if( stedge[e] == CONNECT )
-      {
-         path[graph->head[e]].edge = e;
-         stvertex[graph->head[e]] = TRUE;
-      }
-
-   for( int e = 0; e < nedges; e++ )
-      if( stedge[e] == CONNECT )
-         assert(stvertex[graph->tail[e]]);
+   graph_sol_setVertexFromEdge(graph, stedge, stvertex);
 
    /* compute candidates for extension */
 
-   /* main loop */
-   for( ;; )
+   maxnode = -1;
+   ncandidates = 0;
+
+   for( int k = 0; k < nnodes; k++ )
+      if( graph->mark[k] && !stvertex[k] && Is_term(graph->term[k]) && !graph_pc_termIsNonLeaf(graph, k) )
+      {
+         assert(graph->mark[k]);
+
+         if( maxnode == -1 || graph->prize[k] > graph->prize[maxnode] )
+            maxnode = k;
+      }
+
+   if( maxnode != -1 )
    {
-      const int cand = 2;
-      SCIP_Bool success;
+      SCIP_RANDNUMGEN* randnumgen;
+      int shift;
+
+      SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &dist, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &pred, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &stvertextmp, nnodes) );
+
+      graph_heap_create(scip, nnodes, NULL, NULL, &dheap);
+      graph_init_csr(scip, graph);
+
+      shift = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
+      ncandidates = 1;
+      candidates[0] = maxnode;
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         const int node = (k + shift) % nnodes;
+         if( graph->mark[k] && !stvertex[node] && Is_term(graph->term[node])
+            && !graph_pc_termIsNonLeaf(graph, node) && node != maxnode )
+         {
+            assert(graph->mark[node]);
+            candidates[ncandidates++] = node;
+         }
+      }
+
+      SCIPfreeRandom(scip, &randnumgen);
+   }
+
+   /* main loop */
+   for( int k = 0; k < ncandidates; k++ )
+   {
+      const int cand = candidates[k];
+      SCIP_Bool success = FALSE;
+
+      if( stvertex[cand] )
+      {
+         assert(k > 0);
+         continue;
+      }
+
+      graph_path_st_pcmw_extendOut(scip, graph, cand, stvertex, dist, pred, stvertextmp, dheap, &success);
 
       if( success )
          extensions = TRUE;
    }
 
-
    /* have vertices been added? */
    if( extensions )
    {
+      graph_pc_2trans(graph);
+
       for( int e = 0; e < nedges; e++ )
          stedge[e] = UNKNOWN;
       SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, stedge, stvertex) );
    }
 
+   if( maxnode != -1 )
+   {
+      graph_heap_free(scip, TRUE, TRUE, &dheap);
+      graph_free_csr(scip, graph);
 
-   SCIPfreeBufferArray(scip, &stvertextmp);
-
-
+      SCIPfreeBufferArray(scip, &stvertextmp);
+      SCIPfreeBufferArray(scip, &pred);
+      SCIPfreeBufferArray(scip, &dist);
+   }
 
 #ifndef NDEBUG
    assert(SCIPisLE(scip, graph_sol_getObj(graph->cost, stedge, 0.0, nedges), initialobj));
 #endif
 
+   if( isexended && !graph->extended )
+      graph_pc_2trans(graph);
+
+   if( !isexended && graph->extended )
+      graph_pc_2org(graph);
+
    return SCIP_OKAY;
 }
-#endif
 
 
 /*

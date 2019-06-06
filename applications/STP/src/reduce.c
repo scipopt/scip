@@ -2144,7 +2144,7 @@ SCIP_RETCODE reduce(
    // SCIP_CALL( reduce_extTest1(scip) );
    // SCIP_CALL( reduce_sdPcMwTest4(scip) );
    // SCIP_CALL( dheap_Test1(scip) );
-
+   // SCIP_CALL( heur_extendPcMwOuterTest1(scip) );
 
    SCIP_CALL( level0(scip, graph) );
 

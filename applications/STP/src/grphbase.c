@@ -3943,12 +3943,17 @@ void graph_sol_setVertexFromEdge(
    for( int i = 0; i < nnodes; i++ )
       solnode[i] = FALSE;
 
+   solnode[g->source] = TRUE;
+
    for( int e = 0; e < nedges; e++ )
       if( result[e] == CONNECT )
-      {
          solnode[g->head[e]] = TRUE;
-         solnode[g->tail[e]] = TRUE;
-      }
+
+#ifndef NDEBUG
+   for( int e = 0; e < nedges; e++ )
+      if( result[e] == CONNECT )
+         assert(solnode[g->head[e]] && solnode[g->tail[e]]);
+#endif
 }
 
 /** get original solution */
@@ -4358,6 +4363,7 @@ SCIP_RETCODE graph_init(
    p->term2edge = NULL;
    p->budget = -1.0;
    p->costbudget = NULL;
+   p->csr_storage = NULL;
    p->dcsr_storage = NULL;
 
    SCIPdebugMessage("Initialized new graph \n");
@@ -4507,6 +4513,9 @@ void graph_free(
 
    if( p->term2edge != NULL )
       SCIPfreeMemoryArray(scip, &(p->term2edge));
+
+   if( p->csr_storage != NULL )
+      graph_free_csr(scip, p);
 
    if( p->dcsr_storage != NULL )
       graph_free_dcsr(scip, p);
@@ -5621,6 +5630,133 @@ void graph_heap_correct(
    position[node] = hole;
 }
 
+
+/** initializes CSR storage */
+SCIP_RETCODE graph_init_csr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   CSR* csr;
+   int* start_csr;
+   int* head_csr;
+   SCIP_Real* cost_csr;
+   const int nedges = g->edges;
+   const int nnodes = g->knots;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
+
+   assert(scip && g);
+   assert(nnodes >= 1);
+   assert(g->csr_storage == NULL);
+   assert(!pcmw || !g->extended);
+
+   SCIP_CALL( SCIPallocMemory(scip, &csr) );
+   g->csr_storage = csr;
+
+   csr->nedges = nedges;
+   csr->nnodes = nnodes;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(start_csr), nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(head_csr), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(cost_csr), nedges) );
+
+   csr->start = start_csr;
+   csr->head = head_csr;
+   csr->cost = cost_csr;
+
+   /* now fill the data in */
+
+   start_csr[0] = 0;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      int pos = start_csr[k];
+
+      if( !pcmw || g->mark[k] )
+      {
+         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            const int ehead = g->head[e];
+
+            if( pcmw && !g->mark[ehead] )
+               continue;
+
+            assert(g->cost[e] < FARAWAY && g->cost[flipedge(e)] < FARAWAY);
+
+            head_csr[pos] = ehead;
+            cost_csr[pos++] = g->cost[e];
+         }
+      }
+
+      assert((pos == start_csr[k] + g->grad[k]) || pcmw);
+
+      start_csr[k + 1] = pos;
+   }
+
+   assert(start_csr[nnodes] <= nedges);
+   assert(graph_valid_csr(g, TRUE));
+
+   return SCIP_OKAY;
+}
+
+
+/** frees dynamic CSR storage */
+void graph_free_csr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   CSR* csr = g->csr_storage;
+
+   assert(scip && g);
+   assert(csr != NULL && csr->nnodes >= 1);
+
+   SCIPfreeMemoryArray(scip, &(csr->cost));
+   SCIPfreeMemoryArray(scip, &(csr->head));
+   SCIPfreeMemoryArray(scip, &(csr->start));
+
+   SCIPfreeMemoryArray(scip, &(g->csr_storage));
+   assert(g->csr_storage == NULL);
+}
+
+/** is CSR storage of graph valid? */
+SCIP_Bool graph_valid_csr(
+   const GRAPH*          g,                  /**< the graph */
+   SCIP_Bool             verbose             /**< be verbose? */
+)
+{
+   const CSR* csr = g->csr_storage;
+   const int* start = csr->start;
+   const int nedges = g->edges;
+   const int nnodes = g->knots;
+
+   assert(g && csr && start && csr->head && csr->cost);
+
+   if( nnodes != g->knots || nedges != g->edges )
+   {
+      if( verbose )
+         printf("CSR: wrong node/edge cound \n");
+      return FALSE;
+   }
+
+   if( start[0] != 0 )
+      return FALSE;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( start[i] > start[i + 1] )
+      {
+         if( verbose )
+            printf("CSR: ranges corrupted \n");
+
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
+
 /** initializes dynamic CSR storage */
 SCIP_RETCODE graph_init_dcsr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5700,8 +5836,7 @@ SCIP_RETCODE graph_init_dcsr(
    }
 
    assert(range_csr[nnodes - 1].end <= nedges);
-
-   assert(graph_dcsr_isValid(g, TRUE));
+   assert(graph_valid_dcsr(g, TRUE));
 
    return SCIP_OKAY;
 }
@@ -5819,7 +5954,7 @@ void graph_dcsr_deleteEdgeBi(
 }
 
 /** is DCSR storage of graph valid? */
-SCIP_Bool graph_dcsr_isValid(
+SCIP_Bool graph_valid_dcsr(
    const GRAPH*          g,                  /**< the graph */
    SCIP_Bool             verbose             /**< be verbose? */
 )

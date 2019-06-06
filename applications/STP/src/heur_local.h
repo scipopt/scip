@@ -66,6 +66,14 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    STP_Bool*             stvertex            /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
 );
 
+/** greedy extension local heuristic for (R)PC and MW */
+SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
+   STP_Bool*             stvertex            /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
+);
+
 #ifdef __cplusplus
 }
 #endif

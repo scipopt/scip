@@ -64,6 +64,17 @@ typedef unsigned char STP_Bool;
 
 extern SCIP_Bool show;
 
+/** CSR */
+typedef struct csr_storage
+{
+   int*                  start;              /**< start position for each node */
+   int*                  head;               /**< edge head array */
+   SCIP_Real*            cost;               /**< edge cost array */
+   int                   nedges;             /**< number of edges */
+   int                   nnodes;             /**< number of nodes */
+} CSR;
+
+
 /** for dynamic CSR */
 typedef struct csr_range
 {
@@ -85,18 +96,6 @@ typedef struct dynamic_csr_storage
    int                   nedges;             /**< number of edges */
    int                   nnodes;             /**< number of nodes */
 } DCSR;
-
-/** CSR */
-typedef struct csr_storage
-{
-   int*                  start;              /**< start position for node */
-   int*                  head;               /**< edge head array */
-   int*                  edgeid;             /**< gets id from CSR edge */
-   int*                  id2csredge;         /**< gets CRS edge from id */
-   SCIP_Real*            cost;               /**< edge cost array */
-   int                   nedges;             /**< number of edges */
-   int                   nnodes;             /**< number of nodes */
-} CSR;
 
 typedef struct
 {
@@ -256,13 +255,18 @@ extern int    graph_heap_deleteMinReturnNode(DHEAP*);
 extern void   graph_heap_clean(SCIP_Bool, DHEAP*);
 extern void   graph_heap_correct(int, SCIP_Real, DHEAP*);
 
+/* CSR storage */
+extern SCIP_RETCODE   graph_init_csr(SCIP*, GRAPH*);
+extern void   graph_free_csr(SCIP*, GRAPH*);
+extern SCIP_Bool graph_valid_csr(const GRAPH*, SCIP_Bool verbose);
+
 /* Dynamic CSR storage */
 extern SCIP_RETCODE   graph_init_dcsr(SCIP*, GRAPH*);
-extern void   graph_free_dcsr(SCIP*, GRAPH*);
 extern void   graph_update_dcsr(SCIP*, GRAPH*);
 extern void   graph_dcsr_deleteEdge(DCSR*, int, int);
 extern void   graph_dcsr_deleteEdgeBi(SCIP*, DCSR*, int);
-extern SCIP_Bool graph_dcsr_isValid(const GRAPH*, SCIP_Bool verbose);
+extern void   graph_free_dcsr(SCIP*, GRAPH*);
+extern SCIP_Bool graph_valid_dcsr(const GRAPH*, SCIP_Bool verbose);
 
 extern void   graph_pc_knot2nonTerm(GRAPH*, int);
 extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
@@ -365,8 +369,9 @@ extern void   graph_path_st_rpcmw(SCIP*, GRAPH*, const SCIP_Real*, const int*, c
 extern void   graph_path_st_pcmw(SCIP*, const GRAPH*, const SCIP_Real*, const int*, const SCIP_Real*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_full(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_reduce(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
-extern void   graph_path_st_pcmw_extend(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, STP_Bool*, SCIP_Bool*);
+extern void   graph_path_st_pcmw_extend(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Bool, PATH*, STP_Bool*, SCIP_Bool*);
 extern void   graph_path_st_pcmw_extendBiased(SCIP*, GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, STP_Bool*, SCIP_Bool*);
+extern void   graph_path_st_pcmw_extendOut(SCIP*, const GRAPH*, int, STP_Bool*, SCIP_Real*, int*, STP_Bool*, DHEAP*, SCIP_Bool*);
 extern void   graph_voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, STP_Bool*, int*, PATH*);
 extern void   graph_get2next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern void   graph_get3next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);
@@ -493,6 +498,7 @@ extern SCIP_RETCODE    reduce_sdPcMwTest1(SCIP*);
 extern SCIP_RETCODE    reduce_sdPcMwTest2(SCIP*);
 extern SCIP_RETCODE    reduce_sdPcMwTest3(SCIP*);
 extern SCIP_RETCODE    reduce_sdPcMwTest4(SCIP*);
+extern SCIP_RETCODE    heur_extendPcMwOuterTest1(SCIP*);
 
 
 /* reduce_simple.c

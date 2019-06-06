@@ -27,7 +27,9 @@
 
 #include <stdio.h>
 #include <assert.h>
-#include <grph.h>
+#include "grph.h"
+#include "heur_local.h"
+#include "heur_tm.h"
 
 
 static
@@ -657,6 +659,86 @@ SCIP_RETCODE dheap_Test1(
 
    assert(0);
 
+
+   return SCIP_OKAY;
+}
+
+
+SCIP_RETCODE heur_extendPcMwOuterTest1(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int* stedge;
+   STP_Bool* stvertex;
+   int nnodes = 5;
+   int nedges = 5;
+
+   assert(scip);
+
+   SCIP_CALL(graph_init(scip, &graph, nnodes, 2 * nedges, 1));
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph->source = 0;
+
+   graph_edge_add(scip, graph, 0, 1, 2.0, 2.0);
+   graph_edge_add(scip, graph, 1, 2, 3.0, 3.0);
+   graph_edge_add(scip, graph, 1, 4, 2.0, 2.0);
+   graph_edge_add(scip, graph, 2, 3, 1.0, 1.0);
+   graph_edge_add(scip, graph, 3, 4, 1.0, 1.0);
+
+
+   graph_pc_init(scip, graph, nnodes, -1);
+
+   for( int i = 0; i < nnodes; i++ )
+      graph->prize[i] = 0.0;
+
+   graph->prize[0] = 0.1;
+   graph->prize[2] = 3.1;
+   graph->prize[4] = 3.0;
+
+   graph_knot_chg(graph, 4, 0);
+   graph_knot_chg(graph, 2, 0);
+   graph_knot_chg(graph, 0, 0);
+
+   SCIP_CALL(graph_pc_2pc(scip, graph));
+
+   nnodes = graph->knots;
+   nedges = graph->edges;
+
+   SCIP_CALL(graph_init_history(scip, graph));
+   SCIP_CALL(graph_path_init(scip, graph));
+
+   for( int i = 0; i < nnodes; i++ )
+      graph->mark[i] = (graph->grad[i] > 0);
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &stvertex, nnodes));
+   SCIP_CALL(SCIPallocBufferArray(scip, &stedge, nedges));
+
+   for( int i = 0; i < nedges; i++ )
+      stedge[i] = UNKNOWN;
+
+   for( int i = 0; i < nnodes; i++ )
+      stvertex[i] = FALSE;
+
+   stvertex[0] = TRUE;
+
+   SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, stedge, stvertex) );
+
+   /* actual test */
+   SCIP_CALL( SCIPStpHeurLocalExtendPcMwOut(scip, graph, stedge, stvertex) );
+
+   assert(stvertex[0] && stvertex[1] && stvertex[2] && stvertex[3]);
+
+   /* clean up */
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   SCIPfreeBufferArray(scip, &stedge);
+   SCIPfreeBufferArray(scip, &stvertex);
 
    return SCIP_OKAY;
 }
