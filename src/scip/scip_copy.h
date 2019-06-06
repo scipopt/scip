@@ -314,8 +314,9 @@ SCIP_Bool SCIPisConsCompressionEnabled(
    );
 
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
- *  it is just returned as target variable; elsewise a new variable will be created and added to the target SCIP; this
- *  created variable is added to the variable hash map and returned as target variable
+ *  it is just returned as target variable; otherwise, if the variables it not marked as relaxation-only, a new variable
+ *  will be created and added to the target SCIP; this created variable is added to the variable hash map and returned as target variable;
+ *  relaxation-only variables are not copied and FALSE is returned in *success
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
