@@ -1012,9 +1012,7 @@ SCIP_RETCODE computeSymmetryGroup(
           *    \min\{b'_1, b'_2\} \leq x_1 \leq \max\{b'_1, b'_2\}.
           * \f]
           * Note that problems arise if \fb'_i = 0\f for some variable \fx_i\f, because its coefficient in the
-          * linear constraint is 0. To avoid this, we iterate over all constraints of type bounddisjunction,
-          * check for the minimal \fb'_i\f in any of these constraints, say \fb^*\f, and increase each bound
-          * \fb'_i\f by \f-b^* + 1\f if \fb^* < 0\f. In the following, we refer to \fb^*\f as offset.
+          * linear constraint is 0. To avoid this, we replace 0 by a special number.
           */
          SCIP_VAR** bounddisjvars;
          SCIP_BOUNDTYPE* boundtypes;
