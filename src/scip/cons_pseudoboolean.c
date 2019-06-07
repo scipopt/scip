@@ -86,6 +86,9 @@
 #define USEINDICATOR               TRUE
 #define NONLINCONSUPGD_PRIORITY   60000 /**< priority of upgrading nonlinear constraints */
 
+/* remove this line to compile the upgrade from nonlinear to pseudoboolean constraints */
+#undef NONLINCONSUPGD_PRIORITY  /*lint !e750*/
+
 /*
  * Data structures
  */
@@ -7562,6 +7565,7 @@ SCIP_RETCODE findAggregation(
  * Callback methods of constraint handler
  */
 
+#ifdef NONLINCONSUPGD_PRIORITY
 /** tries to upgrade a nonlinear constraint into a pseudoboolean constraint */
 static
 SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdPseudoboolean)
@@ -7767,6 +7771,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdPseudoboolean)
 
    return SCIP_OKAY;
 }
+#endif
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
@@ -9099,8 +9104,10 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
          "constraints/" CONSHDLR_NAME "/nlcremovable", "should the nonlinear constraints be removable?",
          NULL, TRUE, DEFAULT_REMOVABLENONLINEAR, NULL, NULL) );
 
+#ifdef NONLINCONSUPGD_PRIORITY
    /* include the quadratic constraint upgrade in the nonlinear constraint handler */
-   SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdPseudoboolean, NULL, NONLINCONSUPGD_PRIORITY, FALSE, CONSHDLR_NAME) );
+   SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdPseudoboolean, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+#endif
 
    return SCIP_OKAY;
 }
