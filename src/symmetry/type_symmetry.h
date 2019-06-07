@@ -45,8 +45,8 @@ enum SYM_Rhssense
    SYM_SENSE_XOR        = 3,                 /**< XOR constraint */
    SYM_SENSE_AND        = 4,                 /**< AND constraint */
    SYM_SENSE_OR         = 5,                 /**< OR constrant */
-   SYM_SENSE_BOUNDISJUNCTION_TYPE_1 = 6,     /**< bounddisjunction type 1 */
-   SYM_SENSE_BOUNDISJUNCTION_TYPE_2 = 7      /**< bounddisjunction type 2 */
+   SYM_SENSE_BOUNDIS_TYPE_1 = 6,             /**< bounddisjunction type 1 */
+   SYM_SENSE_BOUNDIS_TYPE_2 = 7              /**< bounddisjunction type 2 */
 };
 typedef enum SYM_Rhssense SYM_RHSSENSE;
 

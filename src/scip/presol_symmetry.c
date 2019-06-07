@@ -63,6 +63,7 @@
 
 /* other defines */
 #define MAXGENNUMERATOR        64000000      /**< determine maximal number of generators by dividing this number by the number of variables */
+#define SCIP_SPECIALVAL 1.12345678912345e+19 /**< special floating point value for handling zeros in bound disjunctions */
 
 
 /** presolver data */
@@ -381,8 +382,9 @@ SCIP_RETCODE collectCoefficients(
 
       /* equality constraint */
       matrixdata->rhscoef[nrhscoef] = rhs;
+
       /* if we deal with special constraints */
-      if ( (int) rhssense >= 3 )
+      if ( (int) rhssense >= SYM_SENSE_XOR )
          matrixdata->rhssense[nrhscoef] = rhssense;
       else
          matrixdata->rhssense[nrhscoef] = SYM_SENSE_EQUATION;
@@ -405,7 +407,7 @@ SCIP_RETCODE collectCoefficients(
    else
    {
 #ifndef NDEBUG
-      if ( rhssense == SYM_SENSE_BOUNDISJUNCTION_TYPE_2 )
+      if ( rhssense == SYM_SENSE_BOUNDIS_TYPE_2 )
       {
          assert( ! SCIPisInfinity(scip, -lhs) );
          assert( ! SCIPisInfinity(scip, rhs) );
@@ -415,10 +417,14 @@ SCIP_RETCODE collectCoefficients(
       if ( ! SCIPisInfinity(scip, -lhs) )
       {
          matrixdata->rhscoef[nrhscoef] = -lhs;
-         if ( rhssense == SYM_SENSE_BOUNDISJUNCTION_TYPE_2 )
-            matrixdata->rhssense[nrhscoef] = SYM_SENSE_BOUNDISJUNCTION_TYPE_2;
+         if ( rhssense >= SYM_SENSE_XOR )
+         {
+            assert( rhssense == SYM_SENSE_BOUNDIS_TYPE_2 );
+            matrixdata->rhssense[nrhscoef] = rhssense;
+         }
          else
             matrixdata->rhssense[nrhscoef] = SYM_SENSE_INEQUALITY;
+
          matrixdata->rhsidx[nrhscoef] = nrhscoef;
 
          for (j = 0; j < nvars; ++j)
@@ -438,10 +444,14 @@ SCIP_RETCODE collectCoefficients(
       if ( ! SCIPisInfinity(scip, rhs) )
       {
          matrixdata->rhscoef[nrhscoef] = rhs;
-         if ( rhssense == SYM_SENSE_BOUNDISJUNCTION_TYPE_2 )
-            matrixdata->rhssense[nrhscoef] = SYM_SENSE_BOUNDISJUNCTION_TYPE_2;
+         if ( rhssense >= SYM_SENSE_XOR )
+         {
+            assert( rhssense == SYM_SENSE_BOUNDIS_TYPE_2 );
+            matrixdata->rhssense[nrhscoef] = rhssense;
+         }
          else
             matrixdata->rhssense[nrhscoef] = SYM_SENSE_INEQUALITY;
+
          matrixdata->rhsidx[nrhscoef] = nrhscoef;
 
          for (j = 0; j < nvars; ++j)
@@ -654,34 +664,6 @@ int getNSymhandableConss(
 }
 
 
-/** updates the offset for modeling bounddisjunctions in symmetry graph */
-static
-SCIP_RETCODE updateOffsetBounddisjunction(
-   SCIP_BOUNDTYPE*       boundtypes,         /**< array of bound types */
-   SCIP_Real*            bounds,             /**< array of bound */
-   int                   nbounds,            /**< number of bounds */
-   SCIP_Real*            offset              /**< pointer to store offset */
-   )
-{
-   int i;
-
-   assert( boundtypes != NULL );
-   assert( bounds != NULL );
-   assert( nbounds > 0 );
-   assert( offset != NULL );
-
-   for (i = 0; i < nbounds; ++i)
-   {
-      if ( boundtypes[i] == SCIP_BOUNDTYPE_LOWER )
-         *offset = MIN(*offset, - bounds[i]);
-      else
-         *offset = MIN(*offset, bounds[i]);
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** compute symmetry group of MIP */
 static
 SCIP_RETCODE computeSymmetryGroup(
@@ -720,8 +702,6 @@ SCIP_RETCODE computeSymmetryGroup(
    int nallvars;
    int c;
    int j;
-   SCIP_Bool firstbounddisjunction = TRUE;
-   SCIP_Real offsetbounddisjunction = 1.0;
 
    assert( scip != NULL );
    assert( npermvars != NULL );
@@ -1018,7 +998,7 @@ SCIP_RETCODE computeSymmetryGroup(
           *   (x_1 \leq b'_1 \vee \ldots \vee (x_n \leq b'_n).
           * \f]
           *
-          * If every variable appears in such a normalized constraint exactly once, we say this bound disjunction
+          * If no variable appears twice in such a normalized constraint, we say this bound disjunction
           * is of type 1. If the bound disjunction has length two and both disjunctions contain the same variable,
           * we say the bound disjunction is of type 2. Further bound disjunctions are possible, but can currently
           * not be handled.
@@ -1036,58 +1016,12 @@ SCIP_RETCODE computeSymmetryGroup(
           * check for the minimal \fb'_i\f in any of these constraints, say \fb^*\f, and increase each bound
           * \fb'_i\f by \f-b^* + 1\f if \fb^* < 0\f. In the following, we refer to \fb^*\f as offset.
           */
-         int k;
-         int nbounddisjvars;
          SCIP_VAR** bounddisjvars;
          SCIP_BOUNDTYPE* boundtypes;
          SCIP_Real* bounds;
          SCIP_Bool repetition = FALSE;
-
-         nbounddisjvars = SCIPgetNVarsBounddisjunction(scip, cons);
-         boundtypes = SCIPgetBoundtypesBounddisjunction(scip, cons);
-         bounds = SCIPgetBoundsBounddisjunction(scip, cons);
-
-         if ( firstbounddisjunction )
-         {
-            /* detect offset value (only necessary if the detect the first bound disjunction) */
-            firstbounddisjunction = FALSE;
-
-            for (j = 0; j < nbounddisjvars; ++j)
-            {
-               SCIP_CALL( updateOffsetBounddisjunction(boundtypes, bounds, nbounddisjvars, &offsetbounddisjunction) );
-            }
-            for (k = c + 1; k < nconss; ++k)
-            {
-               /* get constraint handler */
-               conshdlr = SCIPconsGetHdlr(cons);
-               assert( conshdlr != NULL );
-
-               conshdlrname = SCIPconshdlrGetName(conshdlr);
-               assert( conshdlrname != NULL );
-               /* skip non-bounddisjunctions */
-               if ( strcmp(conshdlrname, "bounddisjunction") != 0 )
-                  continue;
-
-               /* skip non-active constraints */
-               if ( ! SCIPconsIsActive(conss[k]) )
-                  continue;
-
-               /* Skip conflict constraints if we are late in the solving process */
-               if ( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPconsIsConflict(conss[k]) )
-                  continue;
-
-               nbounddisjvars = SCIPgetNVarsBounddisjunction(scip, conss[k]);
-               boundtypes = SCIPgetBoundtypesBounddisjunction(scip, conss[k]);
-               bounds = SCIPgetBoundsBounddisjunction(scip, conss[k]);
-
-               SCIP_CALL( updateOffsetBounddisjunction(boundtypes, bounds, nbounddisjvars, &offsetbounddisjunction) );
-            }
-
-            if ( SCIPisLE(scip, offsetbounddisjunction, 0.0) )
-               offsetbounddisjunction = - offsetbounddisjunction + 1.0;
-            else
-               offsetbounddisjunction = 0.0;
-         }
+         int nbounddisjvars;
+         int k;
 
          /* collect coefficients for normalized constraint */
          nbounddisjvars = SCIPgetNVarsBounddisjunction(scip, cons);
@@ -1102,14 +1036,18 @@ SCIP_RETCODE computeSymmetryGroup(
 
             /* normalize bounddisjunctions to SCIP_BOUNDTYPE_LOWER */
             if ( boundtypes[j] == SCIP_BOUNDTYPE_LOWER )
-               consvals[j] = - bounds[j] + offsetbounddisjunction;
+               consvals[j] = - bounds[j];
             else
-               consvals[j] = bounds[j] + offsetbounddisjunction;
+               consvals[j] = bounds[j];
+
+            /* special treatment of 0 values */
+            if ( SCIPisZero(scip, consvals[j]) )
+               consvals[j] = SCIP_SPECIALVAL;
 
             /* detect whether a variable appears in two literals */
             for (k = 0; k < j && ! repetition; ++k)
             {
-               if ( SCIPvarGetIndex(consvars[j]) == SCIPvarGetIndex(consvars[k]) )
+               if ( consvars[j] == consvars[k] )
                   repetition = TRUE;
             }
 
@@ -1137,16 +1075,16 @@ SCIP_RETCODE computeSymmetryGroup(
          }
          assert( ! repetition || nbounddisjvars == 2 );
 
+         /* if no variable appears twice */
          if ( ! repetition )
          {
             /* add information for bounddisjunction of type 1 */
             SCIP_CALL( collectCoefficients(scip, consvars, consvals, nbounddisjvars, 0.0, 0.0,
-                  SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDISJUNCTION_TYPE_1, &matrixdata) );
+                  SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDIS_TYPE_1, &matrixdata) );
          }
          else
          {
             /* add information for bounddisjunction of type 2 */
-
             SCIP_Real lhs;
             SCIP_Real rhs;
 
@@ -1156,7 +1094,7 @@ SCIP_RETCODE computeSymmetryGroup(
             consvals[0] = 1.0;
 
             SCIP_CALL( collectCoefficients(scip, consvars, consvals, 1, lhs, rhs,
-                  SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDISJUNCTION_TYPE_2, &matrixdata) );
+                  SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDIS_TYPE_2, &matrixdata) );
          }
       }
       else
