@@ -2174,7 +2174,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
       ncandidates = 1;
       candidates[0] = maxnode;
 
-      for( int k = 0; k < nnodes; k++ )
+      for( int k = 0; k < nnodes && ncandidates < GREEDY_EXTENSIONS; k++ )
       {
          const int node = (k + shift) % nnodes;
          if( graph->mark[k] && !stvertex[node] && Is_term(graph->term[node])

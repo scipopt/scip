@@ -2912,11 +2912,8 @@ SCIP_RETCODE reduce_sdWalkTriangle(
          enext = e + 1;
 
          /* avoid double checking */
-         if( i2 < i && 0 )
-         {
-            int todo;
+         if( i2 < i )
             continue;
-         }
 
          if( checkstate  )
          {

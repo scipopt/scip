@@ -2385,7 +2385,7 @@ void graph_path_st_pcmw_extendOut(
 
          /* if k is positive vertex and close enough, connect k to current subtree */
          if( (connected[k] && SCIPisGT(scip, outerprofit, dist[k]))
-               || (!connected_out[k] && Is_term(g->term[k]) && SCIPisGE(scip, g->prize[k], dist[k])) )
+               || (!connected[k] && !connected_out[k] && Is_term(g->term[k]) && SCIPisGE(scip, g->prize[k], dist[k])) )
          {
             assert(k != start);
             assert(pred[k] != -1);
@@ -2405,7 +2405,7 @@ void graph_path_st_pcmw_extendOut(
                graph_heap_correct(node, 0.0, dheap);
 
                if( Is_term(g->term[node]) )
-                  outerprofit += g->prize[k];
+                  outerprofit += g->prize[node];
 
                assert(state[node]);
                assert(pred[node] >= 0);
