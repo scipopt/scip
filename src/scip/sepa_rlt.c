@@ -1154,14 +1154,6 @@ SCIP_RETCODE markRowsXj(
       /* mark the rows */
       for( r = 0; r < ncolrows; ++r )
       {
-         ridx = SCIProwGetIndex(colrows[r]);
-
-            /* TODO move this */
-         if( SCIPhashmapExists(row_to_pos, (void*)(size_t)ridx) )
-            rpos = SCIPhashmapGetImageInt(row_to_pos, (void*)(size_t)ridx);
-         else /* if row index is not in row_to_pos, it means that storeSuitableRows decided to ignore this row */
-            continue;
-
          a = colvals[r];
          if( a == 0.0 )
             continue;
@@ -1176,18 +1168,18 @@ SCIP_RETCODE markRowsXj(
 
 static
 SCIP_RETCODE separateRltCuts(
-   SCIP*          scip,
-   SCIP_SEPA*     sepa,
-   SCIP_SEPADATA* sepadata,
-   SCIP_CONSHDLR* conshdlr,
-   SCIP_SOL*      sol,
-   SCIP_HASHMAP*  row_to_pos,
-   PROJLP*        projlp,
-   SCIP_ROW**     rows,
-   int            nrows,
-   SCIP_Bool      allowlocal,
-   int*           ncuts,
-   SCIP_RESULT*   result
+   SCIP*          scip,         /**< SCIP data structure */
+   SCIP_SEPA*     sepa,         /**< separator */
+   SCIP_SEPADATA* sepadata,     /**< separator data */
+   SCIP_CONSHDLR* conshdlr,     /**< constraint handler */
+   SCIP_SOL*      sol,          /**< the point to be separated (can be NULL) */
+   SCIP_HASHMAP*  row_to_pos,   /**< hashmap linking row indices to positions in array */
+   PROJLP*        projlp,       /**< the projected LP */
+   SCIP_ROW**     rows,         /**< problem rows */
+   int            nrows,        /**< number of problem rows */
+   SCIP_Bool      allowlocal,   /**< are local cuts allowed? */
+   int*           ncuts,        /**< buffer to store the number of generated cuts */
+   SCIP_RESULT*   result        /**< buffer to store whether separation was successful */
 )
 {
    int j, r, k, nmarked;
@@ -1223,7 +1215,9 @@ SCIP_RETCODE separateRltCuts(
          SCIP_ROW* row;
 
          assert(row_marks[r] != 0);
-         assert(SCIPhashmapExists(row_to_pos, (void*)(size_t)row_idcs[r])); /* TODO might not be true */
+
+         if( !SCIPhashmapExists(row_to_pos, (void*)(size_t)row_idcs[r]) )
+            continue; /* if row index is not in row_to_pos, it means that storeSuitableRows decided to ignore this row */
 
          pos = SCIPhashmapGetImageInt(row_to_pos, (void*)(size_t)row_idcs[r]);
          row = rows[pos];
