@@ -3448,6 +3448,10 @@ SCIP_RETCODE replaceBinaryProductsFactorize(
          if( y != facvar )
             break;
 
+         /* skip terms with a small coefficient */
+         if( SCIPisZero(scip, sumcoefs[j]) )
+            continue;
+
          vars[nterms] = x;
          coefs[nterms] = sumcoefs[j];
          maxact += MAX(0.0, coefs[nterms]);
