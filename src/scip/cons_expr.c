@@ -3337,24 +3337,24 @@ SCIP_RETCODE replaceBinaryProducts(
 
    for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
-      SCIP_CONSEXPR_EXPR* prodexpr;
-      int prodexpridx;
+      SCIP_CONSEXPR_EXPR* childexpr;
+      int childexpridx;
 
-      prodexpridx = SCIPexpriteratorGetChildIdxDFS(it);
-      assert(prodexpridx >= 0 && prodexpridx < SCIPgetConsExprExprNChildren(expr));
-      prodexpr = SCIPexpriteratorGetChildExprDFS(it);
-      assert(prodexpr != NULL);
+      childexpridx = SCIPexpriteratorGetChildIdxDFS(it);
+      assert(childexpridx >= 0 && childexpridx < SCIPgetConsExprExprNChildren(expr));
+      childexpr = SCIPexpriteratorGetChildExprDFS(it);
+      assert(childexpr != NULL);
 
       /* try to create an expression that represents a product of binary variables */
-      SCIP_CALL( getBinaryProductExpr(scip, conshdlr, exprmap, prodexpr, &newexpr, naddconss, nchgcoefs) );
+      SCIP_CALL( getBinaryProductExpr(scip, conshdlr, exprmap, childexpr, &newexpr, naddconss, nchgcoefs) );
       if( newexpr == NULL )
          continue;
 
-      assert((SCIP_CONSEXPR_EXPR*) SCIPhashmapGetImage(exprmap, (void*)prodexpr) == newexpr);
+      assert((SCIP_CONSEXPR_EXPR*) SCIPhashmapGetImage(exprmap, (void*)childexpr) == newexpr);
       assert((naddconss == NULL && nchgcoefs == NULL) || (*naddconss > 0 || *nchgcoefs > 0));
 
       /* replace product expression */
-      SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, prodexpridx, newexpr) );
+      SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, childexpridx, newexpr) );
 
       /* note that the expression has been captured by getBinaryProductExpr and SCIPreplaceConsExprExprChild */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newexpr) );
