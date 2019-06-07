@@ -1058,6 +1058,24 @@ SCIP_RETCODE computeSymmetryGroup(
             }
             for (k = c + 1; k < nconss; ++k)
             {
+               /* get constraint handler */
+               conshdlr = SCIPconsGetHdlr(cons);
+               assert( conshdlr != NULL );
+
+               conshdlrname = SCIPconshdlrGetName(conshdlr);
+               assert( conshdlrname != NULL );
+               /* skip non-bounddisjunctions */
+               if ( strcmp(conshdlrname, "bounddisjunction") != 0 )
+                  continue;
+
+               /* skip non-active constraints */
+               if ( ! SCIPconsIsActive(conss[k]) )
+                  continue;
+
+               /* Skip conflict constraints if we are late in the solving process */
+               if ( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPconsIsConflict(conss[k]) )
+                  continue;
+
                nbounddisjvars = SCIPgetNVarsBounddisjunction(scip, conss[k]);
                boundtypes = SCIPgetBoundtypesBounddisjunction(scip, conss[k]);
                bounds = SCIPgetBoundsBounddisjunction(scip, conss[k]);
