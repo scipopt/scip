@@ -3722,14 +3722,30 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    assert(benders != NULL);
    assert(set != NULL);
 
+   if( benders->benderssolvesub != NULL || benders->benderssolvesubconvex != NULL )
+   {
+      (*lowerbound) = SCIPvarGetLbGlobal(SCIPbendersGetAuxiliaryVar(benders, probnumber));
+      (*infeasible) = FALSE;
+
+      SCIPinfoMessage(set->scip, NULL, "Benders' decomposition: a bendersSolvesub or bendersSolvesubconvex has been "
+         "implemented. SCIPbendersComputeSubproblemLowerbound can not be executed.\n");
+      SCIPinfoMessage(set->scip, NULL, "Set the auxiliary variable lower bound by calling "
+         "SCIPbendersUpdateSubproblemLowerbound in bendersCreatesub. The auxiliary variable %d will remain as %g\n",
+         probnumber, (*lowerbound));
+
+      return SCIP_OKAY;
+   }
+   else
+   {
+      SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "Benders' decomposition: Computing a lower bound for"
+         " subproblem %d\n", probnumber);
+   }
+
    /* getting the subproblem to evaluate */
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
    (*lowerbound) = -SCIPinfinity(subproblem);
    (*infeasible) = FALSE;
-
-   SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "Benders' decomposition: Computing a lower bound for"
-      " subproblem %d\n", probnumber);
 
    SCIP_CALL( SCIPgetIntParam(subproblem, "display/verblevel", &verblevel) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
