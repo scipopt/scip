@@ -3079,6 +3079,27 @@ SCIP_Bool isBinaryProduct(
    return TRUE;
 }
 
+/** helper method to generate an expression for a sum of product of binary variables; note that the method capture the generated expression */
+static
+SCIP_RETCODE getBinaryProductExprFactorize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   sumexpr,            /**< sum expression */
+   SCIP_CONSEXPR_EXPR**  newexpr,            /**< pointer to store the expression that represents the sum */
+   int*                  naddconss,          /**< pointer to update the total number of added constraints (might be NULL) */
+   int*                  nchgcoefs           /**< pointer to update the total number of changed coefficients (might be NULL) */
+   )
+{
+   assert(sumexpr != NULL);
+   assert(newexpr != NULL);
+
+   *newexpr = NULL;
+
+   /* TODO */
+
+   return SCIP_OKAY;
+}
+
 /** helper method to generate an expression for the product of binary variables; note that the method capture the generated expression */
 static
 SCIP_RETCODE getBinaryProductExpr(
@@ -3086,7 +3107,7 @@ SCIP_RETCODE getBinaryProductExpr(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_HASHMAP*         exprmap,            /**< map to remember generated variables for visited product expressions */
    SCIP_CONSEXPR_EXPR*   prodexpr,           /**< product expression */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer to store the expression that represents the product */
+   SCIP_CONSEXPR_EXPR**  newexpr,            /**< pointer to store the expression that represents the product */
    int*                  naddconss,          /**< pointer to update the total number of added constraints (might be NULL) */
    int*                  nchgcoefs           /**< pointer to update the total number of changed coefficients (might be NULL) */
    )
@@ -3094,9 +3115,9 @@ SCIP_RETCODE getBinaryProductExpr(
    int nchildren;
 
    assert(prodexpr != NULL);
-   assert(expr != NULL);
+   assert(newexpr != NULL);
 
-   *expr = NULL;
+   *newexpr = NULL;
 
    /* only consider products of binary variables */
    if( !isBinaryProduct(scip, conshdlr, prodexpr) )
@@ -3108,11 +3129,11 @@ SCIP_RETCODE getBinaryProductExpr(
    /* check whether there is already an expression that represents the product */
    if( SCIPhashmapExists(exprmap, (void*)prodexpr) )
    {
-      *expr = (SCIP_CONSEXPR_EXPR*) SCIPhashmapGetImage(exprmap, (void*)prodexpr);
-      assert(*expr != NULL);
+      *newexpr = (SCIP_CONSEXPR_EXPR*) SCIPhashmapGetImage(exprmap, (void*)prodexpr);
+      assert(*newexpr != NULL);
 
       /* capture expression */
-      SCIPcaptureConsExprExpr(*expr);
+      SCIPcaptureConsExprExpr(*newexpr);
    }
    else
    {
@@ -3149,7 +3170,7 @@ SCIP_RETCODE getBinaryProductExpr(
             if( SCIPcliqueHasVar(xcliques[c], y, TRUE) ) /* x + y <= 1 => x*y = 0 */
             {
                /* create zero value expression */
-               SCIPcreateConsExprExprValue(scip, conshdlr, expr, 0.0);
+               SCIPcreateConsExprExprValue(scip, conshdlr, newexpr, 0.0);
 
                if( nchgcoefs != NULL )
                   *nchgcoefs += 1;
@@ -3161,7 +3182,7 @@ SCIP_RETCODE getBinaryProductExpr(
             if( SCIPcliqueHasVar(xcliques[c], y, FALSE) ) /* x + (1-y) <= 1 => x*y = x */
             {
                /* create variable expression for x */
-               SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, expr, x) );
+               SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, newexpr, x) );
 
                if( nchgcoefs != NULL )
                   *nchgcoefs += 2;
@@ -3181,7 +3202,7 @@ SCIP_RETCODE getBinaryProductExpr(
                if( SCIPcliqueHasVar(xcliques[c], y, TRUE) ) /* (1-x) + y <= 1 => x*y = y */
                {
                   /* create variable expression for y */
-                  SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, expr, y) );
+                  SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, newexpr, y) );
 
                   if( nchgcoefs != NULL )
                      *nchgcoefs += 1;
@@ -3199,7 +3220,7 @@ SCIP_RETCODE getBinaryProductExpr(
                   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &sum_children[1], y) );
                   sum_coefs[0] = 1.0;
                   sum_coefs[1] = 1.0;
-                  SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, expr, 2, sum_children, sum_coefs, -1.0) );
+                  SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, newexpr, 2, sum_children, sum_coefs, -1.0) );
 
                   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum_children[0]) );
                   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum_children[1]) );
@@ -3252,7 +3273,7 @@ SCIP_RETCODE getBinaryProductExpr(
             assert(w != NULL);
 
             /* create variable expression */
-            SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, expr, w) );
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, newexpr, w) );
          }
       }
       else
@@ -3292,11 +3313,11 @@ SCIP_RETCODE getBinaryProductExpr(
          assert(w != NULL);
 
          /* create variable expression */
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, expr, w) );
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, newexpr, w) );
       }
 
       /* hash variable expression */
-      SCIP_CALL( SCIPhashmapInsert(exprmap, (void*)prodexpr, *expr) );
+      SCIP_CALL( SCIPhashmapInsert(exprmap, (void*)prodexpr, *newexpr) );
 
       /* release variable */
       if( w != NULL )
@@ -3345,19 +3366,26 @@ SCIP_RETCODE replaceBinaryProducts(
       childexpr = SCIPexpriteratorGetChildExprDFS(it);
       assert(childexpr != NULL);
 
+      /* try to factorize variables in a sum expression that contains several products of binary variables */
+      SCIP_CALL( getBinaryProductExprFactorize(scip, conshdlr, childexpr, &newexpr, naddconss, nchgcoefs) );
+
       /* try to create an expression that represents a product of binary variables */
-      SCIP_CALL( getBinaryProductExpr(scip, conshdlr, exprmap, childexpr, &newexpr, naddconss, nchgcoefs) );
       if( newexpr == NULL )
-         continue;
+      {
+         SCIP_CALL( getBinaryProductExpr(scip, conshdlr, exprmap, childexpr, &newexpr, naddconss, nchgcoefs) );
+      }
 
-      assert((SCIP_CONSEXPR_EXPR*) SCIPhashmapGetImage(exprmap, (void*)childexpr) == newexpr);
-      assert((naddconss == NULL && nchgcoefs == NULL) || (*naddconss > 0 || *nchgcoefs > 0));
+      if( newexpr != NULL )
+      {
+         assert((SCIP_CONSEXPR_EXPR*) SCIPhashmapGetImage(exprmap, (void*)childexpr) == newexpr);
+         assert((naddconss == NULL && nchgcoefs == NULL) || (*naddconss > 0 || *nchgcoefs > 0));
 
-      /* replace product expression */
-      SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, childexpridx, newexpr) );
+         /* replace product expression */
+         SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, childexpridx, newexpr) );
 
-      /* note that the expression has been captured by getBinaryProductExpr and SCIPreplaceConsExprExprChild */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newexpr) );
+         /* note that the expression has been captured by getBinaryProductExpr and SCIPreplaceConsExprExprChild */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newexpr) );
+      }
    }
 
    return SCIP_OKAY;
