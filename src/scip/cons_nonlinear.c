@@ -7958,7 +7958,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
    int                c;
    int                i;
    int                j;
-   SCIP_Bool          solviolbounds;
+   SCIP_Bool          solviolbounds = FALSE;
 
    assert(scip != NULL);
    assert(conss != NULL || nconss == 0);

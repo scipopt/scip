@@ -1017,6 +1017,7 @@ SCIP_RETCODE polynomialdataMultiplyByPolynomial(
       polynomialdataMultiplyByConstant(blkmem, polynomialdata, factordata->constant);
       return SCIP_OKAY;
    }
+   assert(factordata->monomials != NULL);
 
    if( factordata->nmonomials == 1 && factordata->constant == 0.0 )
    {
@@ -14150,7 +14151,7 @@ SCIP_RETCODE SCIPexprgraphNodeSplitOffLinear(
       }
 
       /* if there is no linear part or no space left for linear variables, then stop */
-      if( quaddata->lincoefs != NULL || linvarssize == 0 )
+      if( quaddata->lincoefs == NULL || linvarssize == 0 )
          break;
 
       /* check which childs are used in quadratic terms */
