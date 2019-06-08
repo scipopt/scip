@@ -529,7 +529,7 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->perms == NULL );
    assert( propdata->permstrans == NULL );
    assert( propdata->npermvars == 0 );
-   assert( propdata->nperms == -1 );
+   assert( propdata->nperms == -1 || propdata->nperms == 0 );
    assert( propdata->nmaxperms == 0 );
    assert( propdata->nmovedpermvars == 0 );
    assert( propdata->binvaraffected == FALSE );
