@@ -1669,7 +1669,7 @@ SCIP_RETCODE determineSymmetry(
 
    assert( scip != NULL );
    assert( propdata != NULL );
-   assert( propdata->usesymmetry );
+   assert( propdata->usesymmetry >= 0 );
 
    /* skip symmetry computation if no graph automorphism code was linked */
    if ( ! SYMcanComputeSymmetry() )
@@ -1849,7 +1849,7 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
    /* output waring if no binary variables is affected by some permutations (and we use polyhedral symmetry techniques) */
-   if ( propdata->usesymmetry == 1 && ! propdata->binvaraffected )
+   if ( propdata->usesymmetry == SYM_HANDLETYPE_SYMBREAK && ! propdata->binvaraffected )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
       assert( ! propdata->ofenabled );
