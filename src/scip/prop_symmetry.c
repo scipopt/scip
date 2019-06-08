@@ -1853,6 +1853,9 @@ SCIP_RETCODE determineSymmetry(
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
       assert( ! propdata->ofenabled );
+
+      /* avoid computation of components below in this case */
+      return SCIP_OKAY;
    }
 
    assert( propdata->nperms > 0 );
@@ -2338,6 +2341,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
    }
    assert( propdata->nperms > 0 );
+   assert( propdata->binvaraffected );
    propdata->triedaddconss = TRUE;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genconss, propdata->nperms) );
