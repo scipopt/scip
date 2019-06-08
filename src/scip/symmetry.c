@@ -345,19 +345,16 @@ SCIP_RETCODE SCIPgetPropertiesPerm(
 }
 
 
-/** determine whether binary variable is affected by symmetry group (and potentially compute number of affected variables) */
+/** determine whether some binary variable is affected by symmetry group */
 SCIP_RETCODE SCIPdetermineBinvarAffectedSym(
    SCIP*                 scip,               /**< SCIP instance */
    int**                 perms,              /**< permutations */
    int                   nperms,             /**< number of permutations in perms */
    SCIP_VAR**            permvars,           /**< variables corresponding to permutations */
    int                   npermvars,          /**< number of permvars in perms */
-   SCIP_Bool             completestatistic,  /**< whether number of affected vars should be computed */
-   int*                  naffected           /**< pointer to store number of affected vars */
+   SCIP_Bool*            binvaraffected      /**< pointer to store whether binary variables are affected */
    )
 {
-   SCIP_Shortbool* affected;
-   SCIP_Bool binvaraffected = FALSE;
    int i;
    int p;
 
@@ -366,14 +363,60 @@ SCIP_RETCODE SCIPdetermineBinvarAffectedSym(
    assert( nperms > 0 );
    assert( permvars != NULL );
    assert( npermvars > 0 );
-   assert( naffected != NULL );
+   assert( binvaraffected != NULL );
 
-   *naffected = 0;
+   *binvaraffected = FALSE;
+
+   /* iterate over permutations and check which variables are affected by some symmetry */
+   for (p = 0; p < nperms; ++p)
+   {
+      for (i = 0; i < npermvars; ++i)
+      {
+         if ( perms[p][i] != i )
+         {
+            if ( SCIPvarIsBinary(permvars[i]) )
+            {
+               *binvaraffected = TRUE;
+               return SCIP_OKAY;
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** determine number of variables affected by symmetry group */
+SCIP_RETCODE SCIPdetermineNVarsAffectedSym(
+   SCIP*                 scip,               /**< SCIP instance */
+   int**                 perms,              /**< permutations */
+   int                   nperms,             /**< number of permutations in perms */
+   SCIP_VAR**            permvars,           /**< variables corresponding to permutations */
+   int                   npermvars,          /**< number of permvars in perms */
+   int*                  nbinvarsaffected,   /**< pointer to store number of binary affected variables */
+   int*                  nvarsaffected       /**< pointer to store number of all affected variables */
+   )
+{
+   SCIP_Shortbool* affected;
+   int i;
+   int p;
+
+   assert( scip != NULL );
+   assert( perms != NULL );
+   assert( nperms > 0 );
+   assert( permvars != NULL );
+   assert( npermvars > 0 );
+   assert( nbinvarsaffected != NULL );
+   assert( nvarsaffected != NULL );
+
+   *nbinvarsaffected = 0;
+   *nvarsaffected = 0;
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &affected, npermvars) );
 
    /* iterate over permutations and check which variables are affected by some symmetry */
-   for (p = 0; p < nperms && (completestatistic || ! binvaraffected); ++p)
+   for (p = 0; p < nperms; ++p)
    {
       for (i = 0; i < npermvars; ++i)
       {
@@ -382,16 +425,11 @@ SCIP_RETCODE SCIPdetermineBinvarAffectedSym(
 
          if ( perms[p][i] != i )
          {
-            if ( SCIPvarIsBinary(permvars[i]) )
-            {
-               binvaraffected = TRUE;
-
-               if ( ! completestatistic )
-                  break;
-            }
-
             affected[i] = TRUE;
-            ++(*naffected);
+            ++(*nvarsaffected);
+
+            if ( SCIPvarIsBinary(permvars[i]) )
+               ++(*nbinvarsaffected);
          }
       }
    }

@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPgetPropertiesPerm(
    );
 
 
-/** determine whether binary variable is affected by symmetry group (and potentially compute number of affected variables) */
+/** determine whether some binary variable is affected by symmetry group */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdetermineBinvarAffectedSym(
    SCIP*                 scip,               /**< SCIP instance */
@@ -116,10 +116,20 @@ SCIP_RETCODE SCIPdetermineBinvarAffectedSym(
    int                   nperms,             /**< number of permutations in perms */
    SCIP_VAR**            permvars,           /**< variables corresponding to permutations */
    int                   npermvars,          /**< number of permvars in perms */
-   SCIP_Bool             completestatistic,  /**< whether number of affected vars should be computed */
-   int*                  naffected           /**< pointer to store number of affected vars */
+   SCIP_Bool*            binvaraffected      /**< pointer to store whether binary variables are affected */
    );
 
+/** determine number of variables affected by symmetry group */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdetermineNVarsAffectedSym(
+   SCIP*                 scip,               /**< SCIP instance */
+   int**                 perms,              /**< permutations */
+   int                   nperms,             /**< number of permutations in perms */
+   SCIP_VAR**            permvars,           /**< variables corresponding to permutations */
+   int                   npermvars,          /**< number of permvars in perms */
+   int*                  nbinvarsaffected,   /**< pointer to store number of binary affected variables */
+   int*                  nvarsaffected       /**< pointer to store number of all affected variables */
+   );
 
 /** compute components of symmetry group */
 SCIP_EXPORT

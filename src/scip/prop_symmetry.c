@@ -1660,7 +1660,6 @@ SCIP_RETCODE determineSymmetry(
    )
 {
    SCIP_Bool successful;
-   int norbitbinvars = 0;
    int maxgenerators;
    int nhandleconss;
    int nconss;
@@ -1832,23 +1831,25 @@ SCIP_RETCODE determineSymmetry(
    /* TODO: Can the determination of affected variables be integrated somewhere? */
    if ( propdata->displaynorbitvars )
    {
-      SCIP_CALL( SCIPdetermineBinvarAffectedSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
-            propdata->npermvars, TRUE, &norbitbinvars) );
+      int nbinvarsaffected;
+      int nvarsaffected;
 
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", norbitbinvars);
+      SCIP_CALL( SCIPdetermineNVarsAffectedSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
+            propdata->npermvars, &nbinvarsaffected, &nvarsaffected) );
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", number of affected variables: %d)\n", nvarsaffected);
+      if ( nbinvarsaffected > 0 )
+         propdata->binvaraffected = TRUE;
    }
-   else if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
+   else if ( propdata->symconsenabled )
    {
       SCIP_CALL( SCIPdetermineBinvarAffectedSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
-            propdata->npermvars, FALSE, &norbitbinvars) );
+            propdata->npermvars, &propdata->binvaraffected) );
    }
-
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
-   /* store whether binary variables are affected by some permutations (needed for polyhedral symmetry techniques) */
-   if ( norbitbinvars > 0 )
-      propdata->binvaraffected = TRUE;
-   else if ( propdata->usesymmetry == 1 )
+   /* output waring if no binary variables is affected by some permutations (and we use polyhedral symmetry techniques) */
+   if ( propdata->usesymmetry == 1 && ! propdata->binvaraffected )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
       assert( ! propdata->ofenabled );
