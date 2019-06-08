@@ -505,6 +505,45 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
  * Local methods
  */
 
+#ifndef NDEBUG
+/** checks that symmetry data is all freed */
+static
+SCIP_Bool checkSymmetryDataFree(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   assert( propdata->permvarmap == NULL );
+   assert( propdata->permvarsevents == NULL );
+   assert( propdata->bg0list == NULL );
+   assert( propdata->bg0 == NULL );
+   assert( propdata->bg1list == NULL );
+   assert( propdata->bg1 == NULL );
+   assert( propdata->nbg0 == 0 );
+   assert( propdata->nbg1 == 0 );
+   assert( propdata->genconss == NULL );
+
+   assert( propdata->permvars == NULL );
+   assert( propdata->permvarsobj == NULL );
+   assert( propdata->inactiveperms == NULL );
+   assert( propdata->perms == NULL );
+   assert( propdata->permstrans == NULL );
+   assert( propdata->npermvars == 0 );
+   assert( propdata->nperms == -1 );
+   assert( propdata->nmaxperms == 0 );
+   assert( propdata->nmovedpermvars == 0 );
+   assert( propdata->binvaraffected == FALSE );
+
+   assert( propdata->componentblocked == NULL );
+   assert( propdata->componentbegins == NULL );
+   assert( propdata->components == NULL );
+   assert( propdata->ncomponents == -1 );
+
+   return SCIP_OKAY;
+}
+#endif
+
+
 /** frees symmetry data */
 static
 SCIP_RETCODE freeSymmetryData(
@@ -647,33 +686,7 @@ SCIP_RETCODE freeSymmetryData(
    }
    propdata->nperms = -1;
 
-   assert( propdata->permvarmap == NULL );
-   assert( propdata->permvarsevents == NULL );
-   assert( propdata->bg0list == NULL );
-   assert( propdata->bg0 == NULL );
-   assert( propdata->bg1list == NULL );
-   assert( propdata->bg1 == NULL );
-   assert( propdata->nbg0 == 0 );
-   assert( propdata->nbg1 == 0 );
-   assert( propdata->genconss == NULL );
-
-   assert( propdata->permvars == NULL );
-#ifndef NDEBUG
-   assert( propdata->permvarsobj == NULL );
-#endif
-   assert( propdata->inactiveperms == NULL );
-   assert( propdata->perms == NULL );
-   assert( propdata->permstrans == NULL );
-   assert( propdata->npermvars == 0 );
-   assert( propdata->nperms == -1 );
-   assert( propdata->nmaxperms == 0 );
-   assert( propdata->nmovedpermvars == 0 );
-   assert( propdata->binvaraffected == FALSE );
-
-   assert( propdata->componentblocked == NULL );
-   assert( propdata->componentbegins == NULL );
-   assert( propdata->components == NULL );
-   assert( propdata->ncomponents == -1 );
+   assert( checkSymmetryDataFree(scip, propdata) );
 
    propdata->computedsymmetry = FALSE;
 
@@ -1803,6 +1816,7 @@ SCIP_RETCODE determineSymmetry(
    /* return if not successful */
    if ( ! successful )
    {
+      assert( checkSymmetryDataFree(scip, propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) could not compute symmetry\n", SCIPgetSolvingTime(scip));
       return SCIP_OKAY;
    }
@@ -1810,6 +1824,7 @@ SCIP_RETCODE determineSymmetry(
    /* return if no symmetries found */
    if ( propdata->nperms == 0 )
    {
+      assert( checkSymmetryDataFree(scip, propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
       return SCIP_OKAY;
    }
@@ -1851,8 +1866,8 @@ SCIP_RETCODE determineSymmetry(
    /* output waring if no binary variables is affected by some permutations (and we use polyhedral symmetry techniques) */
    if ( propdata->usesymmetry == SYM_HANDLETYPE_SYMBREAK && ! propdata->binvaraffected )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
       assert( ! propdata->ofenabled );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
 
       /* avoid computation of components below in this case */
       return SCIP_OKAY;
