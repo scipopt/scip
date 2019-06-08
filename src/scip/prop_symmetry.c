@@ -181,6 +181,7 @@ struct SCIP_PropData
 {
    /* symmetry group information */
    int                   npermvars;          /**< number of variables for permutations */
+   int                   npermvarscaptured;  /**< number of captured variables */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
 #ifndef NDEBUG
    SCIP_Real*            permvarsobj;        /**< objective values of permuted variables (for debugging) */
@@ -523,6 +524,7 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->nbg1 == 0 );
    assert( propdata->genconss == NULL );
 
+   assert( propdata->npermvarscaptured == 0 || propdata->npermvarscaptured == propdata->npermvars );
    assert( propdata->permvars == NULL );
    assert( propdata->permvarsobj == NULL );
    assert( propdata->inactiveperms == NULL );
@@ -566,6 +568,7 @@ SCIP_RETCODE freeSymmetryData(
    {
       assert( propdata->permvars != NULL );
       assert( propdata->npermvars > 0 );
+      assert( propdata->npermvarscaptured == propdata->npermvars );
 
       for (i = 0; i < propdata->npermvars; ++i)
       {
@@ -583,10 +586,11 @@ SCIP_RETCODE freeSymmetryData(
    }
    else
    {
-      for (i = 0; i < propdata->npermvars; ++i)
+      for (i = 0; i < propdata->npermvarscaptured; ++i)
       {
          SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
       }
+      propdata->npermvarscaptured = 0;
    }
 
    /* free lists for orbitopal fixing */
@@ -1869,7 +1873,9 @@ SCIP_RETCODE determineSymmetry(
       assert( ! propdata->ofenabled );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
 
-      /* avoid computation of components below in this case */
+      /* free data and avoid computation of components below in this case */
+      SCIP_CALL( freeSymmetryData(scip, propdata) );
+
       return SCIP_OKAY;
    }
 
@@ -1984,6 +1990,7 @@ SCIP_RETCODE determineSymmetry(
       /* capture all variables */
       SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
    }
+   propdata->npermvarscaptured = propdata->npermvars;
 
    return SCIP_OKAY;
 }
@@ -3244,6 +3251,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    assert( propdata != NULL );
 
    propdata->npermvars = 0;
+   propdata->npermvarscaptured = 0;
    propdata->permvars = NULL;
 #ifndef NDEBUG
    propdata->permvarsobj = NULL;
