@@ -524,7 +524,6 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->nbg1 == 0 );
    assert( propdata->genconss == NULL );
 
-   assert( propdata->npermvarscaptured == 0 || propdata->npermvarscaptured == propdata->npermvars );
    assert( propdata->permvars == NULL );
    assert( propdata->permvarsobj == NULL );
    assert( propdata->inactiveperms == NULL );
@@ -540,6 +539,8 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->componentbegins == NULL );
    assert( propdata->components == NULL );
    assert( propdata->ncomponents == -1 );
+
+   assert( propdata->npermvarscaptured == 0 );
 
    return SCIP_OKAY;
 }
@@ -583,6 +584,7 @@ SCIP_RETCODE freeSymmetryData(
          SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
       }
       SCIPfreeBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars);
+      propdata->npermvarscaptured = 0;
    }
    else
    {
