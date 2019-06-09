@@ -3382,9 +3382,12 @@ void SCIPprintSolutionStatistics(
    dualbound = SCIPgetDualbound(scip);
    gap = SCIPgetGap(scip);
 
+   /* We output that the objective limit has been reached if the problem has been solved, no solution respecting the
+    * objective limit has been found (nlimsolsfound == 0) and the primal bound is finite. Note that it still might be
+    * that the original problem is infeasible, even without the objective limit, i.e., we cannot be sure that we
+    * actually reached the objective limit. */
    objlimitreached = FALSE;
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0
-      && !SCIPisInfinity(scip, primalbound)  )
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, primalbound) )
       objlimitreached = TRUE;
 
    if( scip->primal->nsolsfound != scip->primal->nlimsolsfound )
@@ -3396,7 +3399,7 @@ void SCIPprintSolutionStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Solutions found  : %10" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT " improvements%s)\n",
       scip->primal->nsolsfound, scip->primal->nbestsolsfound, limsolstring);
 
-   if( objlimitreached || SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
+   if( SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
    {
       if( scip->set->stage == SCIP_STAGE_SOLVED )
       {
@@ -3428,10 +3431,10 @@ void SCIPprintSolutionStatistics(
    }
    else
    {
-      if( scip->primal->nlimsolsfound == 0 )
+      if( scip->primal->nlimsolsfound == 0 || objlimitreached )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e", primalbound);
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (user objective limit)\n");
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (objective limit)\n");
       }
       else
       {
@@ -3465,7 +3468,7 @@ void SCIPprintSolutionStatistics(
          bestsol = SCIPretransformObj(scip, bestsol);
          if( SCIPsetIsGT(scip->set, bestsol, primalbound) )
          {
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (user objective limit)\n");
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (objective limit)\n");
             SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Best Solution    : %+21.14e", bestsol);
          }
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (in run %d, after %" SCIP_LONGINT_FORMAT " nodes, %.2f seconds, depth %d, found by <%s>)\n",
@@ -3478,10 +3481,12 @@ void SCIPprintSolutionStatistics(
             : (SCIPsolGetRunnum(scip->primal->sols[0]) == 0 ? "initial" : "relaxation"));
       }
    }
-   if( objlimitreached || SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
+
+   if( SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Dual Bound       :          -\n");
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Dual Bound       : %+21.14e\n", dualbound);
+
    if( SCIPsetIsInfinity(scip->set, gap) )
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              :   infinite\n");
    else
@@ -3489,7 +3494,7 @@ void SCIPprintSolutionStatistics(
 
    if( scip->set->misc_calcintegral )
    {
-      if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE )
+      if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE && ! objlimitreached )
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (problem infeasible)\n");
       else
       {
