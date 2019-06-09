@@ -4777,6 +4777,7 @@ SCIP_RETCODE selectVarRecursive(
    int c;
    int nlpcands;
    int probingdepth;
+   SCIP_Bool stopafterinfeasible = FALSE;
 
    assert(scip != NULL);
    assert(status != NULL);
@@ -4824,6 +4825,12 @@ SCIP_RETCODE selectVarRecursive(
 
    assert(downbranchingresult != NULL);
    assert(upbranchingresult != NULL);
+
+   if( config->inscoring )
+   {
+      SCIP_CALL( SCIPgetBoolParam(scip, "branching/forceallchildren", &stopafterinfeasible) );
+      stopafterinfeasible = !stopafterinfeasible;
+   }
 
    SCIP_CALL( SCIPgetLPI(scip, &lpi) );
 
@@ -4962,6 +4969,8 @@ SCIP_RETCODE selectVarRecursive(
                      down ? "down" : "up", down ? "up" : "down");
                }
             }
+            if( stopafterinfeasible &&  k == 0 && localbranchingresult->cutoff )
+               break;
 
             /* the second iteration of the loop should branch in the other direction */
             down = !down;
