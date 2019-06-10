@@ -77,6 +77,7 @@ Fixed bugs
 - disable GCC optimizations in main interval arithmetic code to prevent wrong optimizations
 - fixed wrong assert in cons_xor concerning the variable type
 - fixed different behavior of SCIPisLbBetter and SCIPisUbBetter between having NDEBUG defined or not
+- correctly handle bound disjunctions in symmetry detection
 
 Miscellaneous
 -------------
