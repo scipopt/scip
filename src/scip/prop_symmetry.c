@@ -1760,8 +1760,8 @@ SCIP_RETCODE determineSymmetry(
       /* reset symmetry information */
       SCIP_CALL( freeSymmetryData(scip, propdata) );
 
-      /* deactivate OF after a restart if used together with orbitopes */
-      if ( ISSYMRETOPESACTIVE(propdata->usesymmetry) )
+      /* deactivate OF after a restart if symmetry break constraints have been added */
+      if ( propdata->ngenconss >  0 )
          propdata->ofenabled = FALSE;
    }
 
