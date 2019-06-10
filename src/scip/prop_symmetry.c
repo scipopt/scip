@@ -542,7 +542,7 @@ SCIP_Bool checkSymmetryDataFree(
 
    assert( propdata->npermvarscaptured == 0 );
 
-   return SCIP_OKAY;
+   return TRUE;
 }
 #endif
 
