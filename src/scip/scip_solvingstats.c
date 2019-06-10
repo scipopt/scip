@@ -1559,7 +1559,7 @@ SCIP_RETCODE SCIPupdateCutoffbound(
    assert(cutoffbound <= SCIPgetCutoffbound(scip));
 
    SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, cutoffbound, FALSE) );
+         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, cutoffbound, TRUE) );
 
    return SCIP_OKAY;
 }

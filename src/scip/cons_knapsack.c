@@ -6974,6 +6974,10 @@ SCIP_RETCODE checkParallelObjective(
 
          cutoffbound = (consdata->capacity - offset) / scale;
 
+         SCIPdebugMsg(scip, "constraint <%s> is parallel to objective function and provids a cutoff bound <%g>\n",
+            SCIPconsGetName(cons), cutoffbound);
+
+
          /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are
           * still excepted
           */

@@ -1524,7 +1524,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    {
       transprob->objisintegral = TRUE;
 
-      /* update upper bound and cutoff bound in primal data structure due to new internality information */
+      /* update upper bound and cutoff bound in primal data structure due to new integrality information */
       SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp) );
    }
 
