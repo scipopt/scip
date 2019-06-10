@@ -5607,10 +5607,21 @@ SCIP_RETCODE selectVarStart(
       if( status->domred )
       {
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Lookahead Branching has added domain reductions. LAB restarts.\n");
+
+#ifdef SCIP_STATISTIC
+         if( candidatelist->ncandidates == 1 )
+            statistics->nsinglecandidate--;
+#endif
       }
       else if( status->addedbinconss )
       {
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Lookahead Branching has added binary constraints. LAB restarts.\n");
+
+#ifdef SCIP_STATISTIC
+         if( candidatelist->ncandidates == 1 )
+            statistics->nsinglecandidate--;
+#endif
+
       }
       else if( status->cutoff )
       {
