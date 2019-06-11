@@ -4023,6 +4023,7 @@ SCIP_RETCODE printRow(
    char buffy[FZN_BUFFERLEN];
 
    assert( scip != NULL );
+   assert( vars != NULL || nvars == 0 );
    assert( strcmp(type, "eq") == 0 || strcmp(type, "le") == 0 || strcmp(type, "ge") == 0 );
 
    /* Add a constraint of type float_lin or int_lin, depending on whether there are continuous variables or coefficients */
@@ -4065,7 +4066,7 @@ SCIP_RETCODE printRow(
    /* print all variables but the last one */
    for( v = 0; v < nvars-1; ++v )
    {
-      var = vars[v];
+      var = vars[v];  /*lint !e613*/
       assert( var != NULL );
 
       if( hasfloats )
@@ -4080,9 +4081,9 @@ SCIP_RETCODE printRow(
    {
       if( hasfloats )
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s",SCIPvarGetName(vars[nvars-1]),
-            SCIPvarGetProbindex(vars[nvars-1]) < fznoutput->ndiscretevars ? "_float" : "");
+            SCIPvarGetProbindex(vars[nvars-1]) < fznoutput->ndiscretevars ? "_float" : "");  /*lint !e613*/
       else
-         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s",SCIPvarGetName(vars[nvars-1]));
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s",SCIPvarGetName(vars[nvars-1]));  /*lint !e613*/
 
       SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
    }

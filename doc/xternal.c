@@ -629,7 +629,7 @@
  * GMP                  | on, off                        | GMP=[true, false]      | specify GMP_DIR if not found automatically |
  * IPOPT                | on, off                        | IPOPT=[true,false]     | requires IPOPT version >= 3.12.0; specify IPOPT_DIR if not found automatically |
  * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...                | See \ref LPI for a complete list; specify SOPLEX_DIR, CPLEX_DIR, MOSEK_DIR, ... if LP solver is not found automatically |
- * SYM                  | bliss, none                    | --                     | for bliss, specify BLISS_INCLUDE_DIR and BLISS_LIBRARY |
+ * SYM                  | bliss, none                    | --                     | for bliss, specify BLISS_DIR |
  * WORHP                | on, off                        | WORHP=[true,false]     | should worhp be linked; specify WORHP_DIR if not found automatically |
  * ZIMPL                | on, off                        | ZIMPL=[true, false]    | specify ZIMPL_DIR if not found automatically |
  * READLINE             | on, off                        | READLINE=[true, false] |                                            |
