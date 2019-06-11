@@ -5183,7 +5183,7 @@ SCIP_RETCODE selectVarRecursive(
             branchingResultDataCopy(upbranchingresult, bestupbranchingresult);
 
             /* store domain reductions found at the child nodes */
-            if( updomainreductions != NULL )
+            if( !config->inscoring && updomainreductions != NULL )
             {
                assert(downdomainreductions != NULL);
 
