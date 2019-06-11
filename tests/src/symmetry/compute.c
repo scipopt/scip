@@ -543,8 +543,8 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
 }
 
 
-/* TEST 4 */
-Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simple example with bounddisjunctions")
+/* TEST 5 */
+Test(test_compute_symmetry, basic5, .description = "compute symmetry for a simple example with bounddisjunctions")
 {
    SCIP_VAR* var1;
    SCIP_VAR* var2;
@@ -656,8 +656,8 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
 }
 
 
-/* TEST 5 */
-Test(test_compute_symmetry, basic5, .description = "compute symmetry for a simple example with additional bounddisjunctions")
+/* TEST 6 */
+Test(test_compute_symmetry, basic6, .description = "compute symmetry for a simple example with additional bounddisjunctions")
 {
    SCIP_VAR* var1;
    SCIP_VAR* var2;
