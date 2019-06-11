@@ -613,7 +613,9 @@ Test(test_compute_symmetry, basic5, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE, &npermvars, &permvars, &nperms, &perms, NULL, NULL) );
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE,
+         &npermvars, &permvars, &nperms, &perms, NULL, NULL, NULL,
+         NULL, NULL, NULL, NULL) );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
@@ -765,7 +767,9 @@ Test(test_compute_symmetry, basic6, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip", FALSE) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE, &npermvars, &permvars, &nperms, &perms, NULL, NULL) );
+   SCIP_CALL( SCIPgetGeneratorsSymmetry(scip, SYM_SPEC_BINARY, 0, FALSE,
+         &npermvars, &permvars, &nperms, &perms, NULL, NULL, NULL,
+         NULL, NULL, NULL, NULL) );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
