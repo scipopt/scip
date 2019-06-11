@@ -3036,6 +3036,7 @@ SCIP_Bool isBinaryProduct(
    )
 {
    int nchildren;
+   int i;
 
    assert(expr != NULL);
 
@@ -3045,35 +3046,32 @@ SCIP_Bool isBinaryProduct(
 
    nchildren = SCIPgetConsExprExprNChildren(expr);
 
-   /* don't consider products with a coefficient != 1; simplification will take care of this coefficient later */
-   if( SCIPgetConsExprExprProductCoef(expr) != 1.0 )
+   /* don't consider products with a coefficient != 1 and products with a single child; simplification will take care
+    * of this expression later
+    */
+   if( nchildren <= 1 || SCIPgetConsExprExprProductCoef(expr) != 1.0 )
       return FALSE;
 
-   if( nchildren >= 2 && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrProduct(conshdlr) )
+   for( i = 0; i < nchildren; ++i )
    {
-      int i;
+      SCIP_CONSEXPR_EXPR* child;
+      SCIP_VAR* var;
+      SCIP_Real ub;
+      SCIP_Real lb;
 
-      for( i = 0; i < nchildren; ++i )
-      {
-         SCIP_CONSEXPR_EXPR* child;
-         SCIP_VAR* var;
-         SCIP_Real ub;
-         SCIP_Real lb;
+      child = SCIPgetConsExprExprChildren(expr)[i];
+      assert(child != NULL);
 
-         child = SCIPgetConsExprExprChildren(expr)[i];
-         assert(child != NULL);
+      if( !SCIPisConsExprExprVar(child) )
+         return FALSE;
 
-         if( !SCIPisConsExprExprVar(child) )
-            return FALSE;
+      var = SCIPgetConsExprExprVarVar(child);
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
 
-         var = SCIPgetConsExprExprVarVar(child);
-         lb = SCIPvarGetLbLocal(var);
-         ub = SCIPvarGetUbLocal(var);
-
-         /* check whether variable is integer and has [0,1] as variable bounds */
-         if( !SCIPvarIsIntegral(var) || !SCIPisEQ(scip, lb, 0.0) || !SCIPisEQ(scip, ub, 1.0) )
-            return FALSE;
-      }
+      /* check whether variable is integer and has [0,1] as variable bounds */
+      if( !SCIPvarIsIntegral(var) || !SCIPisEQ(scip, lb, 0.0) || !SCIPisEQ(scip, ub, 1.0) )
+         return FALSE;
    }
 
    return TRUE;
@@ -3081,7 +3079,7 @@ SCIP_Bool isBinaryProduct(
 
 /** helper method to generate an expression for a sum of product of binary variables; note that the method capture the generated expression */
 static
-SCIP_RETCODE getBinaryProductExprFactorize(
+SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   sumexpr,            /**< sum expression */
@@ -3367,7 +3365,7 @@ SCIP_RETCODE replaceBinaryProducts(
       assert(childexpr != NULL);
 
       /* try to factorize variables in a sum expression that contains several products of binary variables */
-      SCIP_CALL( getBinaryProductExprFactorize(scip, conshdlr, childexpr, &newexpr, naddconss, nchgcoefs) );
+      SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, childexpr, &newexpr, naddconss, nchgcoefs) );
 
       /* try to create an expression that represents a product of binary variables */
       if( newexpr == NULL )
