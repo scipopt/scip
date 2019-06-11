@@ -2915,6 +2915,7 @@ SCIP_RETCODE solveNodeLP(
 {
    SCIP_Longint nlpiterations;
    SCIP_Longint nlps;
+   SCIP_Longint nlpswithzeroit;
 
    assert(stat != NULL);
    assert(tree != NULL);
@@ -2927,6 +2928,7 @@ SCIP_RETCODE solveNodeLP(
    assert(*lperror == FALSE);
 
    nlps = stat->nlps;
+   nlpswithzeroit = stat->nlps + stat->ndualzeroitlps + stat->nprimalzeroitlps + stat->nbarrierzeroitlps;
    nlpiterations = stat->nlpiterations;
 
    if( !initiallpsolved )
@@ -3104,7 +3106,7 @@ SCIP_RETCODE solveNodeLP(
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
    /* update node's LP iteration counter */
-   stat->nnodelps += stat->nlps - nlps;
+   stat->nnodelps += stat->nlps + stat->ndualzeroitlps + stat->nprimalzeroitlps + stat->nbarrierzeroitlps - nlpswithzeroit;
    stat->nnodelpiterations += stat->nlpiterations - nlpiterations;
 
    /* update number of root node LPs and iterations if the root node was processed */

@@ -1007,6 +1007,7 @@ typedef struct
    BRANCHINGDECISION*    olddecision;        /**< The previous decision that gets used for the case that in the previous run
                                               *   only non-violating implied binary constraints were added.*/
    SCIP_Longint          oldnnodelpiterations; /**< node LP iterations when previous branching decision was stored */
+   SCIP_Longint          oldnnodelps;        /**< node LPs when previous branching decision was stored */
    SCIP_Longint          oldntotalnodes;     /**< node at which previous branching decision was stored */
    SCIP_Longint*         lastbranchid;       /**< The node id at which the var was last branched on (for a given branching
                                               *   var). */
@@ -2587,12 +2588,14 @@ SCIP_RETCODE branchOnVar(
    bestval = decision->branchval;
    assert(bestvar != NULL);
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Effective branching on var <%s> with value <%g>. Old domain: [%g..%g].\n",
-      SCIPvarGetName(bestvar), bestval, SCIPvarGetLbLocal(bestvar), SCIPvarGetUbLocal(bestvar));
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Effective branching on var <%s> with value <%g(%g)>. Old domain: [%g..%g].\n",
+      SCIPvarGetName(bestvar), bestval, SCIPgetSolVal(scip, NULL, bestvar), SCIPvarGetLbLocal(bestvar), SCIPvarGetUbLocal(bestvar));
 
    assert(!SCIPisIntegral(scip, bestval));
 
    /* branch on the given variable */
+   assert(SCIPisLT(scip, SCIPvarGetLbLocal(bestvar), bestval));
+   assert(SCIPisLT(scip, bestval, SCIPvarGetUbLocal(bestvar)));
    SCIP_CALL( SCIPbranchVarVal(scip, bestvar, bestval, &downchild, NULL, &upchild) );
 
    SCIPdebugMsg(scip, "down child (node %d): branching bound change <%s> <= %g\n",
@@ -3643,7 +3646,7 @@ SCIP_Real calculateScoreFromDeeperscoreAndCutoffs(
    assert(downbranchingresult->deeperscore >= 0 || downbranchingresult->cutoff || SCIPisStopped(scip));
    assert(upbranchingresult->deeperscore >= 0 || upbranchingresult->cutoff || SCIPisStopped(scip));
 
-   nlowestlevelcutoffs = (1.0 * downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs)/(downbranchingresult->ndeepestnodes + upbranchingresult->ndeepestnodes);
+   nlowestlevelcutoffs = (1.0 * downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs)/(MAX(1,downbranchingresult->ndeepestnodes + upbranchingresult->ndeepestnodes));
    totaldowngains = downbranchingresult->totalgains;
    totalupgains = upbranchingresult->totalgains;
    ntotaldowngains = MAX(1, downbranchingresult->ntotalgains);
@@ -4339,6 +4342,9 @@ SCIP_RETCODE filterCandidates(
             SCIP_Real maxgain;
             SCIP_Real bestmaxgain = MAX(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
                scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)]);
+
+            if( bestmaxgain == 0.0 )
+               nusedcands = 1;
 
             for( i = nusedcands - 1; i >= 1; --i )
             {
@@ -5503,11 +5509,14 @@ SCIP_RETCODE selectVarStart(
       /* only unviolating constraints and domain changes: store branching decision */
       if( persistent != NULL && !status->lperror && isStoreDecision(config, binconsdata, domainreductions) )
       {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "store decision: lpiters=%lld, cand <%s>\n",
-            SCIPgetNNodeLPIterations(scip), SCIPvarGetName(decision->branchvar));
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "store decision: lpiters=%lld, cand <%s>[%g,%g - %g]\n",
+            SCIPgetNNodeLPIterations(scip), SCIPvarGetName(decision->branchvar),
+            SCIPvarGetLbLocal(decision->branchvar), SCIPvarGetUbLocal(decision->branchvar),
+            SCIPgetSolVal(scip, NULL, decision->branchvar));
 
          persistent->oldntotalnodes = SCIPgetNTotalNodes(scip);
          persistent->oldnnodelpiterations = SCIPgetNNodeLPIterations(scip);
+         persistent->oldnnodelps = SCIPgetNNodeLPs(scip);
          branchingDecisionCopy(decision, persistent->olddecision);
       }
 
@@ -5743,15 +5752,17 @@ SCIP_Bool isUsePreviousResult(
    persistent = branchruledata->persistent;
    assert(persistent != NULL);
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "check is previous result should be used: valid=%d, "\
-      "nodes=%lld (old=%lld), iterations=%lld (old=%lld)\n",
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "check if previous result should be used: valid=%d, "\
+      "nodes=%lld (old=%lld), iterations=%lld (old=%lld), lps=%lld (old=%lld)\n",
       branchingDecisionIsValid(persistent->olddecision),
       SCIPgetNTotalNodes(scip), persistent->oldntotalnodes,
-      SCIPgetNNodeLPIterations(scip), persistent->oldnnodelpiterations);
+      SCIPgetNNodeLPIterations(scip), persistent->oldnnodelpiterations,
+      SCIPgetNNodeLPs(scip), persistent->oldnnodelps);
 
    return branchingDecisionIsValid(persistent->olddecision)
       && (persistent->oldntotalnodes == SCIPgetNTotalNodes(scip))
-      && (persistent->oldnnodelpiterations == SCIPgetNNodeLPIterations(scip));
+      && (persistent->oldnnodelpiterations == SCIPgetNNodeLPIterations(scip))
+      && (persistent->oldnnodelps == SCIPgetNNodeLPs(scip));
 }
 
 /**
@@ -5877,6 +5888,7 @@ SCIP_RETCODE initBranchruleData(
    branchruledata->persistent->nvars = nvars;
    branchruledata->persistent->oldntotalnodes = -1;
    branchruledata->persistent->oldnnodelpiterations = -1;
+   branchruledata->persistent->oldnnodelps = -1;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata->persistent->olddecision) );
    branchingDecisionInit(scip, branchruledata->persistent->olddecision);
