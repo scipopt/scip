@@ -78,6 +78,7 @@ Fixed bugs
 - fixed wrong assert in cons_xor concerning the variable type
 - fixed different behavior of SCIPisLbBetter and SCIPisUbBetter between having NDEBUG defined or not
 - correctly handle bound disjunctions in symmetry detection
+- fixed issue in reliability branching related to the LP error flag not being reset
 
 Miscellaneous
 -------------
