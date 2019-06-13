@@ -3356,6 +3356,10 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
       }
       assert(ntmpvars >= minterms);
       assert(count[perm[SCIPvarGetProbindex(facvar)]] == 0); /* facvar should not appear in any other bilinear term */
+
+      /* TODO call reformulateFactorizedBinaryQuadratic() and store returned expression in an array */
+      /* TODO consider all expression that have not bee used and store them with their corresponding coefficient in sumexpr in an array */
+      /* TODO create a sum expression in newexpr */
    }
 
 TERMINATE:
