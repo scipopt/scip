@@ -354,6 +354,108 @@ SCIP_EXPRCURV SCIPexprcurvPower(
    return SCIP_EXPRCURV_UNKNOWN;
 }
 
+/** gives required curvature for base so that base^exponent has given curvature under given bounds on base and constant exponent
+ * returns curvature unknown if expected curvature cannot be obtained
+ */
+SCIP_EXPRCURV SCIPexprcurvPowerInv(
+   SCIP_INTERVAL         basebounds,         /**< bounds on base function */
+   SCIP_Real             exponent,           /**< exponent, must not be 0 */
+   SCIP_EXPRCURV         powercurv           /**< expected curvature for power */
+   )
+{
+   SCIP_Bool expisint;
+
+   assert(basebounds.inf <= basebounds.sup);
+   assert(exponent != 0.0);
+   assert(powercurv != SCIP_EXPRCURV_UNKNOWN);
+
+   if( exponent == 1.0 )
+      return powercurv;
+
+   /* power is usually never linear, now that exponent != 1 */
+   if( powercurv == SCIP_EXPRCURV_LINEAR )
+      return SCIP_EXPRCURV_UNKNOWN;
+
+   expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
+
+   /* if exponent is fractional, then power is not defined for a negative base
+    * thus, consider only positive part of basebounds
+    */
+   if( !expisint && basebounds.inf < 0.0 )
+   {
+      basebounds.inf = 0.0;
+      if( basebounds.sup < 0.0 )
+         return SCIP_EXPRCURV_CONVEX;  /* just picked one, any is ok when domain is empty */
+   }
+
+   /* if basebounds contains 0.0, consider negative and positive interval separately, if possible */
+   if( basebounds.inf < 0.0 && basebounds.sup > 0.0 )
+   {
+      SCIP_INTERVAL leftbounds;
+      SCIP_INTERVAL rightbounds;
+
+      /* something like x^(-2) may look convex on each side of zero, but is not convex on the whole interval due to the singularity at 0.0 */
+      if( exponent < 0.0 )
+         return SCIP_EXPRCURV_UNKNOWN;
+
+      SCIPintervalSetBounds(&leftbounds,  basebounds.inf, 0.0);
+      SCIPintervalSetBounds(&rightbounds, 0.0, basebounds.sup);
+
+      return (SCIP_EXPRCURV)(SCIPexprcurvPowerInv(leftbounds, exponent, powercurv) & SCIPexprcurvPowerInv(rightbounds, exponent, powercurv));
+   }
+   assert(basebounds.inf >= 0.0 || basebounds.sup <= 0.0);
+
+   /* inverting the login from SCIPexprcurvPower here */
+   if( powercurv == SCIP_EXPRCURV_CONVEX )
+   {
+      SCIP_Real sign;
+
+      if( basebounds.sup <= 0.0 && exponent < 0.0 && expisint && ((int)exponent)%2 == 0 )
+         return SCIP_EXPRCURV_CONVEX;
+      if( basebounds.inf >= 0.0 && exponent > 1.0 )
+         return SCIP_EXPRCURV_CONVEX;
+      if( basebounds.sup <= 0.0 && exponent > 1.0 && expisint && ((int)exponent)%2 == 0 )
+         return SCIP_EXPRCURV_CONCAVE;
+      if( basebounds.inf >= 0.0 && exponent < 0.0 )
+         return SCIP_EXPRCURV_CONCAVE;
+
+      /* base^(exponent-2) is negative, if base < 0.0 and exponent is odd */
+      sign = exponent * (exponent - 1.0);
+      assert(basebounds.inf >= 0.0 || expisint);
+      if( basebounds.inf < 0.0 && ((int)exponent)%2 != 0 )
+         sign *= -1.0;
+      assert(sign != 0.0);
+
+      if( sign > 0.0 )
+         return SCIP_EXPRCURV_LINEAR;
+   }
+   else
+   {
+      SCIP_Real sign;
+
+      assert(powercurv == SCIP_EXPRCURV_CONCAVE);  /* linear handled at top, unknown should not be the case */
+
+      if( basebounds.sup <= 0.0 && exponent < 0.0 && expisint && ((int)exponent)%2 != 0 )
+         return SCIP_EXPRCURV_CONVEX;
+      if( basebounds.sup <= 0.0 && exponent > 1.0 && expisint && ((int)exponent)%2 != 0 )
+         return SCIP_EXPRCURV_CONCAVE;
+      if( basebounds.inf >= 0.0 && exponent < 1.0 && exponent >= 0.0 )
+         return SCIP_EXPRCURV_CONCAVE;
+
+      /* base^(exponent-2) is negative, if base < 0.0 and exponent is odd */
+      sign = exponent * (exponent - 1.0);
+      assert(basebounds.inf >= 0.0 || expisint);
+      if( basebounds.inf < 0.0 && ((int)exponent)%2 != 0 )
+         sign *= -1.0;
+      assert(sign != 0.0);
+
+      if( sign < 0.0 )
+         return SCIP_EXPRCURV_LINEAR;
+   }
+
+   return SCIP_EXPRCURV_UNKNOWN;
+}
+
 /** gives curvature for a monomial with given curvatures and bounds for each factor
  *
  *  See Maranas and Floudas, Finding All Solutions of Nonlinearly Constrained Systems of Equations, JOGO 7, 1995

@@ -323,10 +323,11 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureVar)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(success != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 0);
 
-   *curvature = SCIP_EXPRCURV_LINEAR;
+   /* x -> x is linear, convex, and concave */
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

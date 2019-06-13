@@ -147,10 +147,10 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureValue)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(success != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 0);
 
-   *curvature = SCIP_EXPRCURV_LINEAR;
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

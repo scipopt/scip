@@ -216,20 +216,32 @@ typedef enum
 
 /** expression curvature detection callback
  *
- * The method computes the curvature of an given expression. It assumes that the interval evaluation of the expression
- * has been called before and the expression has been simplified.
+ * The method returns whether an expression can have a desired curvature under conditions on the
+ * curvature of the children.
+ * That is, the method shall return TRUE in success and requirements on the curvature for each child
+ * which will suffice for this expression to be convex (or concave, or linear, as specified by caller)
+ * w.r.t. the current activities of all children.
+ * It can return "unknown" for a child's curvature if its curvature does not matter (though that's
+ * rarely the case).
+ *
+ * The method assumes that the activity evaluation of the expression has been called before
+ * and the expression has been simplified.
  *
  * input:
  *  - scip : SCIP main data structure
  *  - conshdlr : expression constraint handler
  *  - expr : expression to check the curvature for
- *  - curvature : buffer to store the curvature of the expression
+ *  - exprcurvature : desired curvature of this expression
+ *  - success: buffer to store whether the desired curvature be obtained
+ *  - childcurv: array to store required curvature for each child
  */
 #define SCIP_DECL_CONSEXPR_EXPRCURVATURE(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_EXPRCURV* curvature)
+   SCIP_EXPRCURV exprcurvature, \
+   SCIP_Bool* success, \
+   SCIP_EXPRCURV* childcurv )
 
 /** expression monotonicity detection callback
  *

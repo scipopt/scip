@@ -7511,9 +7511,10 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
 
          /* check for a linear variable that can be increase or decreased without harming feasibility */
          consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
-
+#if 0
          /* call curvature detection of expression handlers */
          SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
+#endif
 
          /* add nlrow representation to NLP, if NLP had been constructed */
          if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
@@ -11596,6 +11597,7 @@ SCIP_EXPRCURV SCIPgetConsExprExprCurvature(
    return expr->curvature;
 }
 
+#if 0
 /** computes the curvature of a given expression and all its subexpressions
  *
  *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
@@ -11641,6 +11643,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** returns the monotonicity of an expression w.r.t. to a given child */
 SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(

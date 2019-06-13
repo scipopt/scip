@@ -74,6 +74,16 @@ SCIP_EXPRCURV SCIPexprcurvPower(
    SCIP_Real             exponent            /**< exponent */
    );
 
+/** gives required curvature for base so that base^exponent has given curvature under given bounds on base and constant exponent
+ * returns curvature unknown if expected curvature cannot be obtained
+ */
+SCIP_EXPORT
+SCIP_EXPRCURV SCIPexprcurvPowerInv(
+   SCIP_INTERVAL         basebounds,         /**< bounds on base function */
+   SCIP_Real             exponent,           /**< exponent, must not be 0 */
+   SCIP_EXPRCURV         powercurv           /**< expected curvature for power */
+   );
+
 /** gives curvature for a monomial with given curvatures and bounds for each factor */
 SCIP_EXPORT
 SCIP_EXPRCURV SCIPexprcurvMonomial(

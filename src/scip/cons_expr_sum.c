@@ -1151,30 +1151,16 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSum)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(childcurv != NULL);
+   assert(success != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   /* start with linear curvature */
-   *curvature = SCIP_EXPRCURV_LINEAR;
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+      childcurv[i] = SCIPexprcurvMultiply(exprdata->coefficients[i], exprcurvature);
 
-   for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && *curvature != SCIP_EXPRCURV_UNKNOWN; ++i )
-   {
-      SCIP_EXPRCURV childcurv = SCIPgetConsExprExprCurvature(SCIPgetConsExprExprChildren(expr)[i]);
-
-      /* consider negative coefficients for the curvature of a child */
-      if( exprdata->coefficients[i] < 0.0 )
-      {
-         if( childcurv == SCIP_EXPRCURV_CONVEX )
-            childcurv = SCIP_EXPRCURV_CONCAVE;
-         else if( childcurv == SCIP_EXPRCURV_CONCAVE )
-            childcurv = SCIP_EXPRCURV_CONVEX;
-      }
-
-      /* use bit operations for determining the resulting curvature */
-      *curvature = (SCIP_EXPRCURV)((*curvature) & childcurv);
-   }
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
