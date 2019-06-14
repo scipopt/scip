@@ -87,6 +87,7 @@
 #include "scip/sol.h"
 #include "scip/solve.h"
 #include "scip/stat.h"
+#include "scip/struct_event.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_primal.h"
 #include "scip/struct_prob.h"
