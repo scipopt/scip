@@ -3284,6 +3284,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
    /* store how often each variable appears in a biliner binary product */
    SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars);
    SCIP_CALL( SCIPallocClearBufferArray(scip, &count, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &perm, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &isused, nchildren) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nchildren) );
@@ -3398,6 +3399,7 @@ TERMINATE:
    SCIPfreeBufferArrayNull(scip, &exprs);
    SCIPfreeBufferArrayNull(scip, &vars);
    SCIPfreeBufferArrayNull(scip, &isused);
+   SCIPfreeBufferArrayNull(scip, &perm);
    SCIPfreeBufferArrayNull(scip, &count);
    SCIPfreeBufferArray(scip, &childidxs);
    SCIPfreeBufferArray(scip, &ys);
