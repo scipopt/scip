@@ -194,3 +194,27 @@ Test(reformbinprods, clique)
    cr_expect(SCIPgetNConss(scip) == 1, "expect 1 got %d", SCIPgetNConss(scip));
    cr_expect(nchgcoefs == 4, "expect 4 changed coefs, got %d", nchgcoefs);
 }
+
+/** tests the reformulation of binary quadratic expressions when factorzing variables */
+Test(reformbinprods, factorize1)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* newexpr;
+   SCIP_CONSEXPR_EXPR** children;
+   SCIP_CONS* cons;
+
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x0>[B] * <x1>[B] + <x0>[B] * <x2>[B] + <x0>[B] * <x3>[B]", NULL, &expr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "c1", expr, 0.0, 0.5) );
+
+   /* not enough terms -> nothing should happen */
+   SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, expr, 4, &newexpr, NULL, NULL) );
+   cr_assert(newexpr == NULL);
+
+   SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, expr, 3, &newexpr, NULL, NULL) );
+   cr_assert(newexpr != NULL);
+   cr_expect(SCIPgetConsExprExprNChildren(newexpr) == 1);
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newexpr) );
+
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
