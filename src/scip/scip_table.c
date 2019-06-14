@@ -40,13 +40,6 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/table.h"
-#include "scip/pub_message.h"
-#include "scip/scip_table.h"
-#include "scip/set.h"
-#include "scip/struct_mem.h"
-#include "scip/struct_scip.h"
-#include "scip/struct_set.h"
-#include "scip/table.h"
 
 
 /** creates a statistics table and includes it in SCIP */

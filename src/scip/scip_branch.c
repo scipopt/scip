@@ -46,19 +46,6 @@
 #include "scip/struct_set.h"
 #include "scip/struct_var.h"
 #include "scip/tree.h"
-#include "scip/debug.h"
-#include "scip/lp.h"
-#include "scip/pub_message.h"
-#include "scip/pub_var.h"
-#include "scip/scip_branch.h"
-#include "scip/scip_numerics.h"
-#include "scip/set.h"
-#include "scip/struct_mem.h"
-#include "scip/struct_primal.h"
-#include "scip/struct_scip.h"
-#include "scip/struct_set.h"
-#include "scip/struct_var.h"
-#include "scip/tree.h"
 
 
 /** creates a branching rule and includes it in SCIP
