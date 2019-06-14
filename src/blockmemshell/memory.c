@@ -281,6 +281,9 @@ long long BMSgetMemoryUsed_call(
 
 #else
 
+#define addMemlistEntry(ptr, size, filename, line) (void)0
+#define removeMemlistEntry(ptr, filename, line) (void)0
+
 /* these methods are implemented even in optimized mode, such that a program, that includes memory.h in debug mode
  * but links the optimized version compiles
  */
@@ -298,9 +301,7 @@ void BMSdisplayMemory_call(
    void
    )
 {
-#ifdef NPARASCIP
-   printInfo("Optimized version of memory shell linked - no memory diagnostics available.\n");
-#endif
+   printInfo("Optimized, threadsafe version of memory shell linked - no memory diagnostics available.\n");
 }
 
 /** displays a warning message on the screen, if allocated memory exists */
@@ -308,9 +309,7 @@ void BMScheckEmptyMemory_call(
    void
    )
 {
-#ifdef NPARASCIP
-   printInfo("Optimized version of memory shell linked - no memory leakage check available.\n");
-#endif
+   printInfo("Optimized, threadsafe version of memory shell linked - no memory leakage check available.\n");
 }
 
 /** returns total number of allocated bytes */
@@ -356,10 +355,8 @@ void* BMSallocClearMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)(num) * (typesize));
    }
-#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(ptr, num*typesize, filename, line);
-#endif
 
    return ptr;
 }
@@ -392,10 +389,8 @@ void* BMSallocMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)size);
    }
-#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(ptr, size, filename, line);
-#endif
 
    return ptr;
 }
@@ -432,10 +427,8 @@ void* BMSallocMemoryArray_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)size);
    }
-#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(ptr, size, filename, line);
-#endif
 
    return ptr;
 }
@@ -450,10 +443,8 @@ void* BMSreallocMemory_call(
 {
    void* newptr;
 
-#if !defined(NDEBUG) && defined(NPARASCIP)
    if( ptr != NULL )
       removeMemlistEntry(ptr, filename, line);
-#endif
 
 #ifndef NDEBUG
    if ( size > MAXMEMSIZE )
@@ -472,10 +463,8 @@ void* BMSreallocMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for reallocation of %llu bytes.\n", (unsigned long long)size);
    }
-#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(newptr, size, filename, line);
-#endif
 
    return newptr;
 }
@@ -492,10 +481,8 @@ void* BMSreallocMemoryArray_call(
    void* newptr;
    size_t size;
 
-#if !defined(NDEBUG) && defined(NPARASCIP)
    if( ptr != NULL )
       removeMemlistEntry(ptr, filename, line);
-#endif
 
 #ifndef NDEBUG
    if ( num > (MAXMEMSIZE / typesize) )
@@ -515,10 +502,8 @@ void* BMSreallocMemoryArray_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for reallocation of %llu bytes.\n", (unsigned long long)size);
    }
-#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(newptr, size, filename, line);
-#endif
 
    return newptr;
 }
@@ -617,9 +602,8 @@ void BMSfreeMemory_call(
    assert( ptr != NULL );
    if( *ptr != NULL )
    {
-#if !defined(NDEBUG) && defined(NPARASCIP)
       removeMemlistEntry(*ptr, filename, line);
-#endif
+
       free(*ptr);
       *ptr = NULL;
    }
@@ -640,9 +624,8 @@ void BMSfreeMemoryNull_call(
    assert( ptr != NULL );
    if ( *ptr != NULL )
    {
-#if !defined(NDEBUG) && defined(NPARASCIP)
       removeMemlistEntry(*ptr, filename, line);
-#endif
+
       free(*ptr);
       *ptr = NULL;
    }
