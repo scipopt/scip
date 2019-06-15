@@ -904,6 +904,7 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
  * restarting or transferring information from a copied SCIP to a SCIP.
  * Also conflicts with relaxation-only variables are not generated at
  * the moment.
+ * Relaxation-only variables do not appear in the objective.
  */
 SCIP_EXPORT
 SCIP_Bool SCIPvarIsRelaxationOnly(

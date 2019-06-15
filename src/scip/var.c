@@ -17043,6 +17043,7 @@ void SCIPvarMarkRelaxationOnly(
    )
 {
    assert(var != NULL);
+   assert(SCIPvarGetObj(var) == 0.0);
 
    var->relaxationonly = TRUE;
 }

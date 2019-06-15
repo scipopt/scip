@@ -489,8 +489,9 @@ SCIP_RETCODE setupAndSolveSubscip(
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       for( i = 0; i < nvars; ++i)
       {
-         if( !SCIPisFeasZero(subscip, SCIPvarGetObj(vars[i])) && subvars[i] != NULL )
+         if( !SCIPisFeasZero(subscip, SCIPvarGetObj(vars[i])) )
          {
+            assert(subvars[i] != NULL);  /* subvars[i] can be NULL for relax-only vars, but they cannot appear in the objective */
             SCIP_CALL( SCIPaddCoefLinear(subscip, origobjcons, subvars[i], SCIPvarGetObj(vars[i])) );
 #ifndef NDEBUG
             nobjvars++;
