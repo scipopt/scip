@@ -159,7 +159,7 @@ Interface changes
 - new API function SCIPgetLPDegeneracy() to get two measures for the degeneracy of the current LP
 - new API functions SCIPdivesetIsAvailable() to check preconditions of a dive set and SCIPdivesetIsPublic() to check if the dive set can be used
   by other primal heuristics.
-- new API functions SCIPvarIsRelaxationOnly() and SCIPvarSetRelaxationOnly() to query and set, resp., whether a variable is marked as relaxation-only
+- new API functions SCIPvarIsRelaxationOnly() and SCIPvarMarkRelaxationOnly() to query and set, resp., whether a variable is marked as relaxation-only
 
 ### Command line interface
 
