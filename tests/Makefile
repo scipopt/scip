@@ -266,7 +266,7 @@ $(OBJDIR)/%.o:	%.cpp
 Criterion:
 	@echo -n "Criterion not found, downloading and building it in"
 	@for (( count=3; $$count ; count-- )) do echo -n " $$count" ; sleep 1 ; done ; echo
-	git clone --depth 1 -b v2.2.2 https://github.com/Snaipe/Criterion
+	git clone --depth 1 -b v2.3.3 https://github.com/Snaipe/Criterion
 	cd Criterion; \
 	mkdir build; \
 	cd build; \
