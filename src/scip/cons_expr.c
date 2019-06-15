@@ -3155,6 +3155,7 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    assert(newexpr != NULL);
 
    /* compute minimum and maximum activity of sum_j c_ij x_j */
+   /* TODO could compute minact and maxact for facvar=0 and facvar=1 separately, taking implied bounds into account, allowing for possibly tighter big-M's below */
    for( i = 0; i < nvars; ++i )
    {
       minact += MIN(coefs[i], 0.0);
@@ -3282,7 +3283,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
       goto TERMINATE;
 
    /* store how often each variable appears in a biliner binary product */
-   SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars);
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &count, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &perm, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &isused, nchildren) );
@@ -3359,7 +3360,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
       assert(ntmpvars >= minterms);
       assert(count[perm[SCIPvarGetProbindex(facvar)]] == 0); /* facvar should not appear in any other bilinear term */
 
-      /* create require constraints and store the generated expression */
+      /* create required constraints and store the generated expression */
       SCIP_CALL( reformulateFactorizedBinaryQuadratic(scip, conshdlr, cons, facvar, tmpvars, tmpcoefs, ntmpvars, &exprs[nexprs], naddconss) );
       exprcoefs[nexprs] = 1.0;
       ++nexprs;
