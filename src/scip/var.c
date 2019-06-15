@@ -16612,7 +16612,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetVSIDS
 #undef SCIPvarGetCliqueComponentIdx
 #undef SCIPvarIsRelaxationOnly
-#undef SCIPvarSetRelaxationOnly
+#undef SCIPvarMarkRelaxationOnly
 #undef SCIPbdchgidxGetPos
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
@@ -17036,9 +17036,9 @@ SCIP_Bool SCIPvarIsRelaxationOnly(
 
 /** sets that this variable has only been introduced to define a relaxation
  *
- * @see SCIPvarSetRelaxationOnly
+ * @see SCIPvarMarkRelaxationOnly
  */
-void SCIPvarSetRelaxationOnly(
+void SCIPvarMarkRelaxationOnly(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {

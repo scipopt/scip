@@ -910,12 +910,14 @@ SCIP_Bool SCIPvarIsRelaxationOnly(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** sets that this variable has only been introduced to define a relaxation
+/** marks that this variable has only been introduced to define a relaxation
  *
- * @see SCIPvarSetRelaxationOnly
+ * The variable must not have a coefficient in the objective.
+ *
+ * @see SCIPvarMarkRelaxationOnly
  */
 SCIP_EXPORT
-void SCIPvarSetRelaxationOnly(
+void SCIPvarMarkRelaxationOnly(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -1016,7 +1018,7 @@ void SCIPvarSetRelaxationOnly(
 #define SCIPvarGetValuehistory(var)       (var)->valuehistory
 #define SCIPvarGetCliqueComponentIdx(var) ((var)->clqcomponentidx)
 #define SCIPvarIsRelaxationOnly(var)((var)->relaxationonly)
-#define SCIPvarSetRelaxationOnly(var, val)((var)->relaxationonly = TRUE)
+#define SCIPvarMarkRelaxationOnly(var, val)((var)->relaxationonly = TRUE)
 
 #endif
 
