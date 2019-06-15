@@ -355,7 +355,7 @@ SCIP_RETCODE setupSubproblem(
    {
       if( ! SCIPisZero(subscip, SCIPvarGetObj(vars[i])) )
       {
-         assert(subvars[i] != NULL);  /* a relaxation-only variable with an objective coefficient ??? */
+         assert(subvars[i] != NULL);  /* a relaxation-only variable cannot have an objective coefficient */
          SCIP_CALL( SCIPaddCoefLinear(subscip, origobjcons, subvars[i], SCIPvarGetObj(vars[i])) );
 #ifndef NDEBUG
          nobjvars++;
