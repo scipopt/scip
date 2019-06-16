@@ -915,7 +915,7 @@ SCIP_Bool SCIPvarIsRelaxationOnly(
  *
  * The variable must not have a coefficient in the objective.
  *
- * @see SCIPvarMarkRelaxationOnly
+ * @see SCIPvarIsRelaxationOnly
  */
 SCIP_EXPORT
 void SCIPvarMarkRelaxationOnly(
@@ -1019,7 +1019,7 @@ void SCIPvarMarkRelaxationOnly(
 #define SCIPvarGetValuehistory(var)       (var)->valuehistory
 #define SCIPvarGetCliqueComponentIdx(var) ((var)->clqcomponentidx)
 #define SCIPvarIsRelaxationOnly(var)((var)->relaxationonly)
-#define SCIPvarMarkRelaxationOnly(var, val)((var)->relaxationonly = TRUE)
+#define SCIPvarMarkRelaxationOnly(var)((var)->relaxationonly = TRUE)
 
 #endif
 
