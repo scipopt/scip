@@ -3570,13 +3570,13 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    if ( perms != NULL )
    {
       *perms = propdata->perms;
-      assert( *perms != NULL || *nperms == 0 );
+      assert( *perms != NULL || *nperms <= 0 );
    }
 
    if ( permstrans != NULL )
    {
       *permstrans = propdata->permstrans;
-      assert( *permstrans != NULL || *nperms == 0 );
+      assert( *permstrans != NULL || *nperms <= 0 );
    }
 
    if ( log10groupsize != NULL )
