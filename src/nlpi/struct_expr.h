@@ -179,6 +179,8 @@ struct SCIP_ExprGraph
    void*                userdata;            /**< user data associated with callback methods */
 
    SCIP_Bool            needvarboundprop;    /**< whether variable bounds need be propagated, e.g., because new nodes have been added to the graph */
+
+   int                  lastreplacechildpos; /**< last position where a child was found that was replaced, used to heuristically speed up consecutive calls to exprgraphNodeReplaceChild */
 };
 
 #ifdef __cplusplus

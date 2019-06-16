@@ -2216,7 +2216,10 @@ SCIP_RETCODE parseValue(
    else
    {
       if( !SCIPstrToRealValue(str, value, endptr) )
+      {
+         SCIPerrorMessage("expected value: %s.\n", str);
          return SCIP_READERROR;
+      }
    }
 
    return SCIP_OKAY;
@@ -2349,6 +2352,11 @@ SCIP_RETCODE varParse(
 
    /* parse global/original bounds */
    SCIP_CALL( parseBounds(set, str, token, lb, ub, endptr) );
+   if ( *endptr == NULL )
+   {
+      SCIPerrorMessage("Expected bound type: %s.\n", token);
+      return SCIP_READERROR;
+   }
    assert(strncmp(token, "global", 6) == 0 || strncmp(token, "original", 8) == 0);
 
    /* initialize the lazy bound */

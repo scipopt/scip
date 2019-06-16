@@ -362,9 +362,9 @@ SCIP_RETCODE SCIPsolveSlack(
          {
             SCIP_CONS* cons;
 
+            /* constraint is captured/release when creating/freeing the superindicator constraint below */
             cons = copiedconsgroups[c][d];
             assert(cons != NULL);
-            SCIP_CALL( SCIPcaptureCons(scip, cons) );
 
             /* avoid to construct a superindicator constraint of a superindicator constraint */
             if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 )
@@ -378,14 +378,12 @@ SCIP_RETCODE SCIPsolveSlack(
             /* constructing the superindicator constraint and capturing (hence have to release it latter) */
             SCIP_CALL( SCIPcreateConsSuperindicator(scip, &supindconsgroups[c][d], name, negbinvar, cons,
                   FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-            SCIP_CALL( SCIPcaptureCons(scip, supindconsgroups[c][d]) );
 
             /* don´t realease the constraint  as it is not yet added to scip and we will use it later */
             assert(supindconsgroups[c][d] != 0);
 
             /* remove the constraint which is now replaced by a superindicator constraint */
             SCIP_CALL( SCIPdelCons(scip, cons) );
-
          }
 
          /* release the binary variable */
@@ -459,10 +457,10 @@ SCIP_RETCODE SCIPsolveSlack(
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_bound_cons", SCIPvarGetName(copiedvargroups[c][0]) );
 
+            /* constraint is captured/released by superindicator constraint */
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 1, &(vargroups[c][d]), &one, lbound, ubound,
                   FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
             assert(cons != NULL);
-            SCIP_CALL( SCIPcaptureCons(scip, cons) );
 
             if(consviols != NULL)
             {
@@ -496,11 +494,9 @@ SCIP_RETCODE SCIPsolveSlack(
             SCIP_CALL ( SCIPcreateConsSuperindicator(scip, &supindvarboundgroups[c][d], name, negbinvar, cons,
                   FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-            SCIP_CALL( SCIPcaptureCons(scip, supindvarboundgroups[c][d]) );
-
             /* remove the constraint which is now replaced by a superindicator constraint */
             SCIP_CALL( SCIPdelCons(scip, cons) );
-
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
          }
 
          /* releasing the variables will add the binvar later */
