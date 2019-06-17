@@ -81,7 +81,9 @@
 #define printError printf
 #endif
 
+#ifdef ENABLE_MEMLIST_CHECKS
 #define warningMessage printf
+#endif
 #define printInfo printf
 
 /* define some macros (if not already defined) */
