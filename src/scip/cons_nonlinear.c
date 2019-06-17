@@ -72,6 +72,13 @@
 #include "scip/scip_var.h"
 #include <string.h>
 
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
+ */
+#ifndef __clang__
+#pragma STD FENV_ACCESS ON
+#endif
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
@@ -1457,6 +1464,8 @@ SCIP_RETCODE chgLinearCoefPos(
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    SCIP_Real coef;
+   SCIP_Bool locked;
+   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -1486,10 +1495,14 @@ SCIP_RETCODE chgLinearCoefPos(
       SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
    }
 
+   locked = FALSE;
+   for( i = 0; i < NLOCKTYPES && !locked; i++ )
+      locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
+
    /* if necessary, remove the rounding locks and event catching of the variable */
    if( newcoef * coef < 0.0 )
    {
-      if( SCIPconsIsLocked(cons) )
+      if( locked )
       {
          assert(SCIPconsIsTransformed(cons));
 
@@ -1510,7 +1523,7 @@ SCIP_RETCODE chgLinearCoefPos(
    /* if necessary, install the rounding locks and event catching of the variable again */
    if( newcoef * coef < 0.0 )
    {
-      if( SCIPconsIsLocked(cons) )
+      if( locked )
       {
          /* install rounding locks for variable with new coefficient */
          SCIP_CALL( lockLinearVariable(scip, cons, var, newcoef) );
@@ -1835,7 +1848,13 @@ SCIP_RETCODE splitOffLinearPart(
          /* setting constraint lhs to -infinity; this may change linear variable locks and events */
          for( i = 0; i < consdata->nlinvars; ++i )
          {
-            if( SCIPconsIsLocked(cons) )
+            SCIP_Bool locked = FALSE;
+            int j;
+
+            for( j = 0; j < NLOCKTYPES && !locked; j++ )
+               locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) j);
+
+            if( locked )
             {
                SCIP_CALL( unlockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
             }
@@ -1849,11 +1868,17 @@ SCIP_RETCODE splitOffLinearPart(
 
          for( i = 0; i < consdata->nlinvars; ++i )
          {
+            SCIP_Bool locked = FALSE;
+            int j;
+
+            for( j = 0; j < NLOCKTYPES && !locked; j++ )
+               locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) j);
+
             if( SCIPconsIsEnabled(cons) )
             {
                SCIP_CALL( catchLinearVarEvents(scip, cons, i) );
             }
-            if( SCIPconsIsLocked(cons) )
+            if( locked )
             {
                SCIP_CALL( lockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
             }
@@ -1873,7 +1898,13 @@ SCIP_RETCODE splitOffLinearPart(
          /* setting constraint rhs to infinity; this may change linear variable locks and events */
          for( i = 0; i < consdata->nlinvars; ++i )
          {
-            if( SCIPconsIsLocked(cons) )
+            SCIP_Bool locked = FALSE;
+            int j;
+
+            for( j = 0; j < NLOCKTYPES && !locked; j++ )
+               locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) j);
+
+            if( locked )
             {
                SCIP_CALL( unlockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
             }
@@ -1887,11 +1918,17 @@ SCIP_RETCODE splitOffLinearPart(
 
          for( i = 0; i < consdata->nlinvars; ++i )
          {
+            SCIP_Bool locked = FALSE;
+            int j;
+
+            for( j = 0; j < NLOCKTYPES && !locked; j++ )
+               locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) j);
+
             if( SCIPconsIsEnabled(cons) )
             {
                SCIP_CALL( catchLinearVarEvents(scip, cons, i) );
             }
-            if( SCIPconsIsLocked(cons) )
+            if( locked )
             {
                SCIP_CALL( lockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
             }
@@ -9990,6 +10027,18 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
 
    /* SCIPdebugMsg(scip, "alpha: %g beta: %g gamma: %g delta: %g\n", *alpha, *beta, *gamma_, *delta); */
 
+   if( SCIPisInfinity(scip, REALABS(*gamma_ * a3)) ||
+      SCIPisInfinity(scip, REALABS(*gamma_ * b3)) ||
+      SCIPisInfinity(scip, REALABS(*gamma_ * c3)) )
+   {
+      SCIPdebugMsg(scip, "activity above SCIP infinity\n");
+      *delta  = 0.0;
+      *alpha  = 0.0;
+      *beta   = 0.0;
+      *gamma_ = 0.0;
+      return SCIP_OKAY;
+   }
+
    /* check if hyperplane contains all three points (necessary because of numerical troubles) */
    if( !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3) ||
       !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3) ||
@@ -10051,7 +10100,7 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
    {
       *alpha  = -*alpha;
       *beta   = -*beta;
-      *gamma_  = -*gamma_;
+      *gamma_ = -*gamma_;
       *delta  = -*delta;
    }
 

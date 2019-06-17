@@ -423,6 +423,7 @@ void transformVariable(
    else if( SCIPisLE(scip, REALABS(lb), REALABS(ub)) )
    {
       assert(!SCIPisInfinity(scip, REALABS(lb)));
+
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_LB;
       deltashift = lb;
       matrix->transformshiftvals[colpos] = lb;

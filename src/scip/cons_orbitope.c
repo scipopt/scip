@@ -335,7 +335,7 @@ SCIP_RETCODE strenghtenOrbitopeConstraint(
 
          /* get set packing/partitioning variables */
          nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
-         assert( nsetppcvars > 0 );
+         assert( nsetppcvars > 0 || ! SCIPconsIsActive(setppcconss[c]) );
 
          /* partitioning constraint contains wrong number of variables */
          if ( nsetppcvars != ncols )
@@ -401,7 +401,7 @@ SCIP_RETCODE strenghtenOrbitopeConstraint(
 
          /* get set packing/partitioning variables */
          nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
-         assert( nsetppcvars > 0 );
+         assert( nsetppcvars > 0 || ! SCIPconsIsActive(setppcconss[c]) );
 
          /* packing/partitioning constraint contains too few variables */
          if ( nsetppcvars < ncols )
@@ -3194,7 +3194,6 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
-   SCIP_ORBITOPETYPE type;
 
    /* find the orbitope constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -3256,8 +3255,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    if ( conshdlrdata->checkpporbitope && orbitopetype != SCIP_ORBITOPETYPE_PARTITIONING
       && orbitopetype != SCIP_ORBITOPETYPE_PACKING )
    {
-      type = SCIP_ORBITOPETYPE_FULL;
-      SCIP_CALL( strenghtenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &type) );
+      SCIP_CALL( strenghtenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &orbitopetype) );
    }
 
    /* create constraint data */

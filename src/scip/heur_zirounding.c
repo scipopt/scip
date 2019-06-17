@@ -673,7 +673,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             lbslackvar = SCIPvarGetLbGlobal(slackvars[i]);
 
             coeffslackvar = slackvarcoeffs[i];
-            assert(!SCIPisFeasZero(scip, coeffslackvar));
+            assert(!SCIPisZero(scip, coeffslackvar));
 
             ubgap = MAX(0.0, ubslackvar - solvalslackvar);
             lbgap = MAX(0.0, solvalslackvar - lbslackvar);

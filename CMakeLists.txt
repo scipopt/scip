@@ -467,6 +467,7 @@ add_subdirectory(check)
 #
 add_custom_target(unittests)
 add_subdirectory(tests EXCLUDE_FROM_ALL)
+add_subdirectory(doc EXCLUDE_FROM_ALL)
 add_custom_target(all_executables DEPENDS scip unittests examples applications)
 #
 # add examples
@@ -497,4 +498,3 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     include(FeatureSummary)
     feature_summary(WHAT ALL)
 endif()
-

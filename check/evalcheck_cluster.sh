@@ -14,6 +14,7 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+# if RBCLI_TAG is set, then it will be passed as tags to rbcli
 export LANG=C
 
 REMOVE=0
@@ -204,7 +205,12 @@ do
               RB_EXP_DATE=`date '+%Y-%b-%d' -d "+2 weeks"`
               rbcli -e $RB_EXP_DATE up $OUTFILE $ERRFILE $SETFILE $METAFILE
           else
-              rbcli up $OUTFILE $ERRFILE $SETFILE $METAFILE
+              if test -z "$RBCLI_TAG"
+              then
+                  rbcli up $OUTFILE $ERRFILE $SETFILE $METAFILE
+              else
+                  rbcli --tags $RBCLI_TAG up $OUTFILE $ERRFILE $SETFILE $METAFILE
+              fi
           fi
       fi
   fi
