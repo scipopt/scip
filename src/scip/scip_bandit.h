@@ -32,7 +32,6 @@
 #define __SCIP_SCIP_BANDIT_H__
 
 
-#include "blockmemshell/memory.h"
 #include "scip/def.h"
 #include "scip/type_bandit.h"
 #include "scip/type_retcode.h"
