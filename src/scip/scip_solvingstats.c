@@ -3431,7 +3431,7 @@ void SCIPprintSolutionStatistics(
    }
    else
    {
-      if( scip->primal->nlimsolsfound == 0 || objlimitreached )
+      if( scip->primal->nlimsolsfound == 0 )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e", primalbound);
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (objective limit)\n");

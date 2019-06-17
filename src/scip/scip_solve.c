@@ -2195,10 +2195,7 @@ SCIP_RETCODE displayRelevantStats(
       }
       if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
       {
-         if( objlimitreached )
-            SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
-         else
-            SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
+         SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
 
          SCIPmessagePrintInfo(scip->messagehdlr, "Gap                : ");
          if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
