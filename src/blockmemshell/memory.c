@@ -292,8 +292,8 @@ long long BMSgetMemoryUsed_call(
 
 #else
 
-#define addMemlistEntry(ptr, size, filename, line) (void)0
-#define removeMemlistEntry(ptr, filename, line) (void)0
+#define addMemlistEntry(ptr, size, filename, line) do { (void) (ptr); (void) (size); (void) (filename); (void) (line); } while(0)
+#define removeMemlistEntry(ptr, filename, line) do { (void) (ptr); (void) (filename); (void) (line); } while(0)
 
 /* these methods are implemented even in optimized mode, such that a program, that includes memory.h in debug mode
  * but links the optimized version compiles
