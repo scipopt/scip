@@ -1990,7 +1990,7 @@ SCIP_RETCODE determineSymmetry(
    }
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
-   /* output waring if no binary variables is affected by some permutations (and we use polyhedral symmetry techniques) */
+   /* output warning if no binary variables are affected by some permutations (and we use polyhedral symmetry techniques) */
    if ( propdata->usesymmetry == SYM_HANDLETYPE_SYMBREAK && ! propdata->binvaraffected )
    {
       assert( ! propdata->ofenabled );
