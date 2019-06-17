@@ -49,12 +49,23 @@
 #include "blockmemshell/memory.h"
 #include "scip/rbtree.h"
 
+/* uncomment the following to enable the use of a memlist in debug mode
+ * that checks for some memory leaks and allows to add the additional
+ * checks enabled with the defines below.
+ * The maintenance of the memlist, however, is not threadsafe.
+ */
+#ifndef NPARASCIP
+/*#define ENABLE_MEMLIST_CHECKS*/
+#endif
+
+#ifdef ENABLE_MEMLIST_CHECKS
 /* uncomment the following for debugging:
  * - CHECKMEM:      run a thorough test on every memory function call, very slow
  * - CHECKCHKFREE:  check for the presence of a pointer in a chunk block
  */
 /*#define CHECKMEM*/
 /*#define CHECKCHKFREE*/
+#endif
 
 /* Uncomment the following for a warnings if buffers are not freed in the reverse order of allocation. */
 /* #define CHECKBUFFERORDER */
@@ -116,7 +127,7 @@
  * allocated memory elements in an allocation list. This can be used as a simple leak
  * detection.
  *************************************************************************************/
-#if !defined(NDEBUG) && defined(NPARASCIP)
+#if !defined(NDEBUG) && defined(ENABLE_MEMLIST_CHECKS)
 
 typedef struct Memlist MEMLIST;         /**< memory list for debugging purposes */
 
