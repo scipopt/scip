@@ -15653,6 +15653,17 @@ SCIP_DECL_CONSTRANS(consTransLinear)
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
 
+#ifndef NDEBUG
+   /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
+   if( SCIPconsIsEnforced(sourcecons) || SCIPconsIsChecked(sourcecons) )
+   {
+      int n;
+      for(n = targetdata->nvars - 1; n >= 0; --n )
+         assert(!SCIPvarIsRelaxationOnly(targetdata->vars[n]));
+   }
+#endif
+
+
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
@@ -17709,6 +17720,16 @@ SCIP_RETCODE SCIPcreateConsLinear(
       SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars, vals, lhs, rhs) );
       assert(consdata != NULL);
    }
+
+#ifndef NDEBUG
+   /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
+   if( check || enforce )
+   {
+      int n;
+      for(n = consdata->nvars - 1; n >= 0; --n )
+         assert(!SCIPvarIsRelaxationOnly(consdata->vars[n]));
+   }
+#endif
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
