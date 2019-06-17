@@ -1287,7 +1287,7 @@ SCIP_RETCODE createSubSCIP(
          /* relax the old indicator variables*/
          for( k = 0; k < nvars; k++ )
          {
-            if( SCIPhashmapGetImage(heurdata->indicators, vars[i]) == NULL )
+            if( SCIPhashmapGetImage(heurdata->indicators, vars[k]) == NULL )
                continue;
 
             tmpvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, vars[k]);
