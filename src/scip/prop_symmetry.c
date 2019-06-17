@@ -861,8 +861,9 @@ SCIP_RETCODE collectCoefficients(
 
       /* equality constraint */
       matrixdata->rhscoef[nrhscoef] = rhs;
+
       /* if we deal with special constraints */
-      if ( (int) rhssense >= SYM_SENSE_XOR ) /*lint !e641*/
+      if ( rhssense >= SYM_SENSE_XOR )
          matrixdata->rhssense[nrhscoef] = rhssense;
       else
          matrixdata->rhssense[nrhscoef] = SYM_SENSE_EQUATION;
