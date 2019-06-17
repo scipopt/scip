@@ -304,6 +304,7 @@ size_t BMSgetPointerSize_call(
    const void*           ptr                 /**< pointer to allocated memory */
    )
 {
+   (void) ptr;
    return 0;
 }
 
