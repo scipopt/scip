@@ -24,7 +24,7 @@
 #include <assert.h>
 
 #include "scip/heur_staircase.h"
-
+#include "scip/decomp.h"
 
 #define HEUR_NAME             "staircase"
 #define HEUR_DESC             "start heuristic for decompositions with staircase structure"
@@ -154,13 +154,26 @@ SCIP_DECL_HEUREXITSOL(heurExitsolStaircase)
 static
 SCIP_DECL_HEUREXEC(heurExecStaircase)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of staircase primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
 
-   /* author bzfhende
-    *
-    * TODO query if there is a user decomposition (see methods in decomp.h)
-    */
+   SCIP_DECOMPSTORE* decompstore;
+   SCIP_DECOMP** decomps;
+   int ndecomps;
+   int d;
+
+   /* query if there is a user decomposition (see methods in decomp.h) */
+   decompstore = SCIPgetDecompstore(scip);
+   assert(decompstore != NULL);
+
+   decomps = SCIPdecompstoreGetDecomps(decompstore);
+   ndecomps = SCIPdecompstoreGetNDecomps(decompstore);
+
+   /* staircase heuristic requires a decomposition to work with */
+   if( ndecomps == 0 )
+      return SCIP_OKAY;
+
+   SCIPdebugMsg(scip, "Staircase heuristic works on %d decomposition%s\n", ndecomps, ndecomps == 1 ? "" : "s");
+
+
 
    /* author bzfhende
     *
@@ -173,6 +186,70 @@ SCIP_DECL_HEUREXEC(heurExecStaircase)
     *    is a path, there are exactly two orders depending on which degree 1 node we start from)
     */
 
+   /* todo comment */
+   for( d = 0; d < ndecomps; ++d )
+   {
+      SCIP_DECOMP* decomp;
+      SCIP_CONS** conss;
+      SCIP_VAR** vars;
+      int* conslabels;
+      int* varlabels;
+      int nlinkingconss = 0;
+      int nlinkingvars = 0;
+      int ncontlinkingvars = 0;
+      int nconss;
+      int nvars;
+      int i;
+      int v;
+
+      nconss = SCIPgetNConss(scip);
+      conss = SCIPgetConss(scip);
+      nvars = SCIPgetNVars(scip);
+      vars = SCIPgetVars(scip);
+
+      decomp = decomps[d];
+
+      /* does the decomposition have linking constraints? */
+      SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, nvars) );
+
+      SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
+
+      SCIPdecompGetVarsLabels(decomp, vars, varlabels, nvars);
+
+      /* todo count number of linking constraints */
+      for( i = 0; i < nconss; ++i )
+      {
+         if( conslabels[i] == SCIP_DECOMP_LINKCONS )
+         {
+            ++nlinkingconss;
+            SCIPdebugMsg(scip, "Constraint %s is a linking constraint\n", SCIPconsGetName(conss[i]));
+
+            SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
+         }
+      }
+
+      SCIPdebugMsg(scip, "Decomposition %d has %d linking constraints\n", d, nlinkingconss);
+
+      /* todo count number of linking variables */
+      for( v = 0; v < nvars; ++v )
+      {
+         if( varlabels[v] == SCIP_DECOMP_LINKVAR )
+         {
+            ++nlinkingvars;
+            if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+               ++ncontlinkingvars;
+         }
+      }
+      SCIPdebugMsg(scip, "Decomposition %d has %d linking variables (%d continuous)\n", d, nlinkingvars, ncontlinkingvars);
+
+      SCIPfreeBufferArray(scip, &varlabels);
+      SCIPfreeBufferArray(scip, &conslabels);
+
+   }
+
+   SCIPerrorMessage("method of staircase primal heuristic not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
    /* author bzfhende
     *
     * TODO create or query a start solution
