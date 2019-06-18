@@ -3507,11 +3507,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 }
 
 
-/** return symmetry group generators */
-SCIP_RETCODE SCIPgetGeneratorsSymmetry(
+/** return currently available symmetry group information */
+SCIP_RETCODE SCIPgetSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
-   SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
-   SYM_SPEC              symspecrequirefixed,/**< symmetry specification of variables which must be fixed by symmetries */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    SCIP_HASHMAP**        permvarmap,         /**< pointer to store hash map of permvars (or NULL) */
@@ -3548,18 +3546,6 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
-
-   if ( SCIPgetStage(scip) != SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) != SCIP_STAGE_INITPRESOLVE
-      && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) != SCIP_STAGE_EXITPRESOLVE
-      && SCIPgetStage(scip) != SCIP_STAGE_PRESOLVED  && SCIPgetStage(scip) != SCIP_STAGE_INITSOLVE
-      && SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
-   {
-      SCIPerrorMessage("Cannot call symmetry detection at stage <%d>.\n", SCIPgetStage(scip));
-      return SCIP_INVALIDCALL;
-   }
-
-   /* if not already done before, compute symmetries; store old value (might get manipulated by determineSymmetry()) */
-   SCIP_CALL( determineSymmetry(scip, propdata, symspecrequire, symspecrequirefixed) );
 
    *npermvars = propdata->npermvars;
    *permvars = propdata->permvars;

@@ -40,12 +40,10 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** return symmetry group generators */
+/** return currently available symmetry group information */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetGeneratorsSymmetry(
+SCIP_RETCODE SCIPgetSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
-   SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
-   SYM_SPEC              symspecrequirefixed,/**< symmetry specification of variables which must be fixed by symmetries */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    SCIP_HASHMAP**        permvarmap,         /**< pointer to store hash map of permvars (or NULL) */
