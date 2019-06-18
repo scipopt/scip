@@ -925,9 +925,7 @@ SCIP_RETCODE createSolFromNLP(
    {
       var = vars[i];
       assert(var != NULL);
-
-      if( !SCIPvarIsActive(var) )
-         continue;
+      assert(SCIPvarIsActive(var));  /* SCIPgetVarsData should have given us only active vars */
 
       subvar = heurdata->var_scip2subscip[i];
       if( subvar == NULL )
@@ -943,9 +941,7 @@ SCIP_RETCODE createSolFromNLP(
    {
       var = vars[i];
       assert(var != NULL);
-
-      if( !SCIPvarIsActive(var) )
-         continue;
+      assert(SCIPvarIsActive(var));  /* SCIPgetVarsData should have given us only active vars */
 
       solval = MIN(MAX(0.0, SCIPvarGetLbLocal(var)), SCIPvarGetUbLocal(var));  /*lint !e666*/
       SCIP_CALL( SCIPsetSolVal(scip, *sol, var, solval) );
