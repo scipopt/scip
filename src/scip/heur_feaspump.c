@@ -473,6 +473,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
    SCIP_VAR** vars;
 
    int nbinvars;
+   int nconsvars;
    int i;
    SCIP_Real lhs;
    SCIP_Real rhs;
@@ -486,6 +487,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
    /* memory allocation */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nbinvars) );
+   nconsvars = 0;
 
    /* set initial left and right hand sides of local branching constraint */
    lhs = 0.0;
@@ -497,24 +499,27 @@ SCIP_RETCODE addLocalBranchingConstraint(
       SCIP_Real solval;
 
       solval = SCIPgetSolVal(scip, bestsol, vars[i]);
-      assert( SCIPisFeasIntegral(scip,solval) );
+      assert( SCIPisFeasIntegral(scip, solval) );
 
       /* is variable i part of the binary support of closest sol? */
       if( SCIPisFeasEQ(scip,solval,1.0) )
       {
-         consvals[i] = -1.0;
+         consvals[nconsvars] = -1.0;
          rhs -= 1.0;
          lhs -= 1.0;
       }
       else
-         consvals[i] = 1.0;
-      consvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-      SCIP_CALL( SCIPchgVarObj(probingscip, consvars[i], consvals[i]) );
-      assert( SCIPvarGetType(consvars[i]) == SCIP_VARTYPE_BINARY );
+         consvals[nconsvars] = 1.0;
+      consvars[nconsvars] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      if( consvars[nconsvars] == NULL )
+         continue;
+      SCIP_CALL( SCIPchgVarObj(probingscip, consvars[nconsvars], consvals[nconsvars]) );
+      assert( SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY );
+      ++nconsvars;
    }
 
    /* creates localbranching constraint and adds it to subscip */
-   SCIP_CALL( SCIPcreateConsLinear(probingscip, &cons, consname, nbinvars, consvars, consvals,
+   SCIP_CALL( SCIPcreateConsLinear(probingscip, &cons, consname, nconsvars, consvars, consvals,
          lhs, rhs, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(probingscip, cons) );
    SCIP_CALL( SCIPreleaseCons(probingscip, &cons) );
@@ -544,17 +549,13 @@ SCIP_RETCODE createNewSols(
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
    int i;
+   int j;
 
    assert(scip != NULL);
    assert(subscip != NULL);
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
 
    /* for copying a solution we need an explicit mapping */
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
@@ -570,7 +571,13 @@ SCIP_RETCODE createNewSols(
    for( i = 0; i < nsubsols && !(*success); ++i )
    {
       /* copy the solution */
-      SCIP_CALL( SCIPgetSolVals(subscip, subsols[i], nvars, subvars, subsolvals) );
+      for( j = 0; j < nvars; ++j )
+      {
+         if( subvars[j] == NULL )
+            subsolvals[j] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[j])), SCIPvarGetUbLocal(vars[j]));  /*lint !e666*/
+         else
+            subsolvals[j] = SCIPgetSolVal(subscip, subsols[i], subvars[j]);
+      }
 
       /* create new solution for the original problem */
       SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );

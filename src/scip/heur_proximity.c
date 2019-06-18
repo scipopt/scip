@@ -230,6 +230,7 @@ SCIP_RETCODE createNewSol(
    int        ncontvars;                     /* the original problem's number of continuous variables */
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
+   int i;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -240,14 +241,16 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
 
-   /* The sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP. */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
    /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
+   for( i = 0; i < nvars; ++i )
+   {
+      if( subvars[i] == NULL )
+         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+      else
+         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
+   }
 
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
@@ -846,6 +849,9 @@ SCIP_RETCODE SCIPapplyProximity(
 
          subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
+         if( subvars[i] == NULL )
+            continue;
+
          SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
 
          lb = SCIPvarGetLbGlobal(subvars[i]);
@@ -900,6 +906,9 @@ SCIP_RETCODE SCIPapplyProximity(
    for( i = 0; i < SCIPgetNBinVars(scip); ++i )
    {
       SCIP_Real solval;
+
+      if( subvars[i] == NULL )
+         continue;
 
       /* objective coefficients are only set for binary variables of the problem */
       assert(SCIPvarIsBinary(subvars[i]));

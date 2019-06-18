@@ -56,6 +56,13 @@ Features
   multiple times. This propagator is now responsible for adding symmetry handling constraints as well as activating orbital
   fixing. Moreover, the new file symmetry.c contains general functions for symmetry computations like orbit computations.
 
+- Variables can now be marked as "relaxation-only". This flag should be used to introduce new variables that are required
+  to define a relaxation, but that are not part of any checked constraints. Essentially, these variables should only be used
+  in the current SCIP solve and disregarded after a restart or in SCIP copies. Hence, these variables are not copied by SCIPcopy and
+  SCIPgetVarCopy, they are currently not used in conflict constraints, and cuts involving them are not upgraded to linear constraints.
+  Relaxation-only variables cannot appear in the objective function.
+
+
 Performance improvements
 ------------------------
 
@@ -141,6 +148,11 @@ Interface changes
   as single (standalone) heuristic or within Adaptive Diving.
 - new parameters "divecontext" and "iterlim" to SCIPperformGenericDivingAlgorithm() to control in which context (single,adaptive) statistics are updated.
 
+- SCIPcopyVars, SCIPcopy, SCIPcopyConsCompression, and SCIPgetVarCopy do not copy variables that are marked as relaxation-only,
+  thus it cannot be assumed anymore that each active variable from the master SCIP also has a counterpart in the copy.
+  SCIPcopy, SCIPcopyConsCompression, and SCIPcopyConss can now return *valid=TRUE if some non-checked and non-enforced constraints were not copied, e.g.,
+  because they involved relaxation-only variables. Thus, a copy is already regarded as valid if all checked or enforced constraints were copied successfully.
+
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
@@ -160,6 +172,7 @@ Interface changes
   by other primal heuristics.
 - new API functions SCIPcomputeOrbitsSym(), SCIPcomputeOrbitsFilterSym(), SCIPgetPropertiesPerm(), SCIPdetermineBinvarAffectedSym(),
   SCIPdetermineNVarsAffectedSym(), SCIPcomputeComponentsSym(), and SCIPextendSubOrbitope(), SCIPgenerateOrbitopeVarsMatrix() for symmetry computations
+- new API functions SCIPvarIsRelaxationOnly() and SCIPvarMarkRelaxationOnly() to query and set, resp., whether a variable is marked as relaxation-only
 
 ### Command line interface
 

@@ -263,7 +263,6 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
 #define SCIPhistoryGetInferenceSum(history,dir)     ((history)->inferencesum[dir])
 #define SCIPhistoryGetAvgInferences(history,dir)   ((history)->nbranchings[dir] > 0 \
       ? (SCIP_Real)(history)->inferencesum[dir]/(SCIP_Real)(history)->nbranchings[dir] : 0.0)
-#define SCIPhistoryGetCutoffSum(history,dir)        ((history)->cutoffsum[dir])
 #define SCIPhistoryGetAvgCutoffs(history,dir)      ((history)->nbranchings[dir] > 0 \
       ? (SCIP_Real)(history)->cutoffsum[dir]/(SCIP_Real)(history)->nbranchings[dir] : 0.0)
 #define SCIPhistoryGetAvgBranchdepth(history,dir)  ((history)->nbranchings[dir] > 0 \

@@ -246,10 +246,7 @@ SCIP_RETCODE createSubSCIP(
 
    SCIP_CALL( SCIPgetVarsData(heurdata->subscip, &subvars, &heurdata->nsubvars, NULL, NULL, NULL, NULL) );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->var_subscip2scip, heurdata->nsubvars) );
-#ifndef NDEBUG
-   BMSclearMemoryArray(heurdata->var_subscip2scip, heurdata->nsubvars);
-#endif
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &heurdata->var_subscip2scip, heurdata->nsubvars) );
 
    heurdata->nvars = nvars;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->var_scip2subscip, heurdata->nvars) );
@@ -268,7 +265,7 @@ SCIP_RETCODE createSubSCIP(
       {
          var    = (SCIP_VAR*) SCIPhashmapEntryGetOrigin(entry);
          subvar = (SCIP_VAR*) SCIPhashmapEntryGetImage(entry);
-
+         assert(subvar != NULL);
          assert(SCIPvarGetProbindex(subvar) >= 0);
          assert(SCIPvarGetProbindex(subvar) <= heurdata->nsubvars);
 
@@ -302,8 +299,7 @@ SCIP_RETCODE createSubSCIP(
 #ifndef NDEBUG
    for( i = 0; i < heurdata->nvars; ++i )
    {
-      assert(heurdata->var_scip2subscip[i] != NULL);
-      assert((SCIP_VAR*)SCIPhashmapGetImage(varsmap, (void*)vars[i]) == heurdata->var_scip2subscip[i]);
+      assert(heurdata->var_scip2subscip[i] == NULL || (SCIP_VAR*)SCIPhashmapGetImage(varsmap, (void*)vars[i]) == heurdata->var_scip2subscip[i]);
    }
    for( i = 0; i < heurdata->nsubvars; ++i )
    {
@@ -899,8 +895,11 @@ SCIP_RETCODE createSolFromNLP(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_VAR**     vars;
+   int            nvars;
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
+   SCIP_Real      solval;
    int            i;
 
    assert(scip != NULL);
@@ -919,22 +918,33 @@ SCIP_RETCODE createSolFromNLP(
       SCIPsolSetHeur(*sol, authorheur);
    }
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */ 
-   assert(heurdata->nsubvars <= SCIPgetNOrigVars(heurdata->subscip));
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   for( i = 0; i < heurdata->nsubvars; ++i )
+   assert(nvars >= heurdata->nvars);
+   for( i = 0; i < heurdata->nvars; ++i )
    {
-      var = heurdata->var_subscip2scip[i];
-      if( var == NULL || !SCIPvarIsActive(var) )
-         continue;
+      var = vars[i];
+      assert(var != NULL);
+      assert(SCIPvarIsActive(var));  /* SCIPgetVarsData should have given us only active vars */
 
-      subvar = SCIPgetOrigVars(heurdata->subscip)[i];
-      assert(subvar != NULL);
+      subvar = heurdata->var_scip2subscip[i];
+      if( subvar == NULL )
+         solval = MIN(MAX(0.0, SCIPvarGetLbLocal(var)), SCIPvarGetUbLocal(var));  /*lint !e666*/
+      else
+         solval = SCIPvarGetNLPSol(subvar);
 
-      assert(SCIPvarGetNLPSol(subvar) != SCIP_INVALID);  /*lint !e777*/
-      SCIP_CALL( SCIPsetSolVal(scip, *sol, var, SCIPvarGetNLPSol(subvar)) );
+      assert(solval != SCIP_INVALID);  /*lint !e777*/
+      SCIP_CALL( SCIPsetSolVal(scip, *sol, var, solval) );
+   }
+
+   for( ; i < nvars; ++i )
+   {
+      var = vars[i];
+      assert(var != NULL);
+      assert(SCIPvarIsActive(var));  /* SCIPgetVarsData should have given us only active vars */
+
+      solval = MIN(MAX(0.0, SCIPvarGetLbLocal(var)), SCIPvarGetUbLocal(var));  /*lint !e666*/
+      SCIP_CALL( SCIPsetSolVal(scip, *sol, var, solval) );
    }
 
    return SCIP_OKAY;
@@ -951,6 +961,11 @@ SCIP_RETCODE createSolFromSubScipSol(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_VAR**     vars;
+   int            nvars;
+   SCIP_VAR*      var;
+   SCIP_VAR*      subvar;
+   SCIP_Real      solval;
    int            i;
 
    assert(scip != NULL);
@@ -970,13 +985,37 @@ SCIP_RETCODE createSolFromSubScipSol(
       SCIPsolSetHeur(*sol, authorheur);
    }
 
-   assert(heurdata->nsubvars == SCIPgetNOrigVars(heurdata->subscip));
-   for( i = 0; i < heurdata->nsubvars; ++i )
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   assert(nvars >= heurdata->nvars);
+   for( i = 0; i < heurdata->nvars; ++i )
    {
-      if( heurdata->var_subscip2scip[i] == NULL || !SCIPvarIsActive(heurdata->var_subscip2scip[i]) )
+      var = vars[i];
+      assert(var != NULL);
+
+      if( !SCIPvarIsActive(var) )
          continue;
-      SCIP_CALL( SCIPsetSolVal(scip, *sol, heurdata->var_subscip2scip[i],
-            SCIPgetSolVal(heurdata->subscip, subsol, SCIPgetOrigVars(heurdata->subscip)[i])) );
+
+      subvar = heurdata->var_scip2subscip[i];
+      if( subvar == NULL )
+         solval = MIN(MAX(0.0, SCIPvarGetLbLocal(var)), SCIPvarGetUbLocal(var));  /*lint !e666*/
+      else
+         solval = SCIPgetSolVal(heurdata->subscip, subsol, subvar);
+
+      assert(solval != SCIP_INVALID);  /*lint !e777*/
+      SCIP_CALL( SCIPsetSolVal(scip, *sol, var, solval) );
+   }
+
+   for( ; i < nvars; ++i )
+   {
+      var = vars[i];
+      assert(var != NULL);
+
+      if( !SCIPvarIsActive(var) )
+         continue;
+
+      solval = MIN(MAX(0.0, SCIPvarGetLbLocal(var)), SCIPvarGetUbLocal(var));  /*lint !e666*/
+      SCIP_CALL( SCIPsetSolVal(scip, *sol, var, solval) );
    }
 
    return SCIP_OKAY;

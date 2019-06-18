@@ -136,4 +136,5 @@ This will give the PID of the process which can then be attached to a `undodb-gd
 >> gdb --pid <pid-number>
 ```
 
-After this, execute `continue` twice in gdb.
+After this, execute `continue` twice (or more, until you find the right place) in gdb.
+Use `bt` to see the backtrace.
