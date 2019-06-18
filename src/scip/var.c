@@ -17034,9 +17034,11 @@ SCIP_Bool SCIPvarIsRelaxationOnly(
    return var->relaxationonly;
 }
 
-/** sets that this variable has only been introduced to define a relaxation
+/** marks that this variable has only been introduced to define a relaxation
  *
- * @see SCIPvarMarkRelaxationOnly
+ * The variable must not have a coefficient in the objective.
+ *
+ * @see SCIPvarIsRelaxationOnly
  */
 void SCIPvarMarkRelaxationOnly(
    SCIP_VAR*             var                 /**< problem variable */
