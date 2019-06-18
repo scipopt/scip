@@ -1162,6 +1162,7 @@ typedef struct
    int*                  domredafterfsb;     /**< If abbreviated, this is the number of times the rule was stopped after
                                               *   scoring candidates by FSB because of a found domain reduction. */
    int                   nsinglecandidate;   /**< number of times a single candidate was given to the recursion routine */
+   int                   nsingleafterfilter; /**< number of times a single candidate remained after filtering */
    int                   noldcandidate;      /**< number of times the old candidate from last call with nonviolating
                                               *   reductions was branched on */
    int                   nlperrorcalls;      /**< number of times an LP error occured and LAB branched without completely
@@ -1197,6 +1198,7 @@ void statisticsInit(
    assert(statistics->recursiondepth > 0);
 
    statistics->nsinglecandidate = 0;
+   statistics->nsingleafterfilter = 0;
    statistics->noldcandidate = 0;
    statistics->nlperrorcalls = 0;
    statistics->nlimitcalls = 0;
@@ -1291,8 +1293,8 @@ void statisticsPrint(
             i, statistics->noldbranchused[i], statistics->noldbranchusedfsb[i]);
       }
 
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "One single branching candidate was given <%i> times.\n",
-         statistics->nsinglecandidate);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "One single branching candidate was given <%i> times, after filtering, a single candidate remained <%i> times.\n",
+         statistics->nsinglecandidate, statistics->nsingleafterfilter);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "The old branching candidate was used <%i> times.\n",
          statistics->noldcandidate);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "An LP error led to branching before all candidates were evaluated <%i> times.\n",
@@ -5478,7 +5480,7 @@ SCIP_RETCODE selectVarStart(
          "calculations.\n", SCIPvarGetName(decision->branchvar));
 
 #ifdef SCIP_STATISTIC
-      statistics->nsinglecandidate++;
+      statistics->nsingleafterfilter++;
 #endif
       goto TERMINATE;
    }
@@ -5624,7 +5626,7 @@ SCIP_RETCODE selectVarStart(
 
 #ifdef SCIP_STATISTIC
          if( candidatelist->ncandidates == 1 )
-            statistics->nsinglecandidate--;
+            statistics->nsingleafterfilter--;
 #endif
       }
       else if( status->addedbinconss )
@@ -5633,7 +5635,7 @@ SCIP_RETCODE selectVarStart(
 
 #ifdef SCIP_STATISTIC
          if( candidatelist->ncandidates == 1 )
-            statistics->nsinglecandidate--;
+            statistics->nsingleafterfilter--;
 #endif
 
       }
@@ -6260,8 +6262,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       int sum;
       int i;
 
-      sum = branchruledata->statistics->nsinglecandidate + branchruledata->statistics->noldcandidate +
-         branchruledata->statistics->nlperrorcalls + branchruledata->statistics->nlimitcalls;
+      sum = branchruledata->statistics->nsinglecandidate + branchruledata->statistics->nsingleafterfilter
+         + branchruledata->statistics->noldcandidate + branchruledata->statistics->nlperrorcalls
+         + branchruledata->statistics->nlimitcalls;
 
       for( i = 0; i < branchruledata->statistics->maxnbestcands; i++ )
       {
@@ -6269,9 +6272,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       }
       if( sum != branchruledata->statistics->nresults[SCIP_BRANCHED] )
       {
-         printf("branched = %d != sum = %d (%d/%d/%d/%d)\n",
+         printf("branched = %d != sum = %d (%d/%d/%d/%d/%d)\n",
             branchruledata->statistics->nresults[SCIP_BRANCHED], sum,
-            branchruledata->statistics->nsinglecandidate, branchruledata->statistics->noldcandidate,
+            branchruledata->statistics->nsinglecandidate, branchruledata->statistics->nsingleafterfilter,
+            branchruledata->statistics->noldcandidate,
             branchruledata->statistics->nlperrorcalls, branchruledata->statistics->nlimitcalls);
          assert(SCIPisStopped(scip));
       }
