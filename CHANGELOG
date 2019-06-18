@@ -84,6 +84,8 @@ Fixed bugs
 Miscellaneous
 -------------
 
+- statistics now output primal/dual bounds if objective limit is reached
+
 Known bugs
 ----------
 

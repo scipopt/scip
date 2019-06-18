@@ -432,7 +432,11 @@ SCIP_RETCODE SCIPprintStage(
       SCIP_CALL( SCIPprintStatus(scip, file) );
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "]");
 
-      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, (int)SCIPgetObjsense(scip) * SCIPgetPrimalbound(scip))  )
+      /* We output that the objective limit has been reached if no solution respecting the objective limit has been
+       * found (nlimsolsfound == 0) and the primal bound is finite. Note that it still might be that the original
+       * problem is infeasible, even without the objective limit, i.e., we cannot be sure that we actually reached the
+       * objective limit. */
+      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, (SCIP_Real)SCIPgetObjsense(scip) * SCIPgetPrimalbound(scip))  )
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " (objective limit reached)");
 
       break;
