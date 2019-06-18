@@ -67,6 +67,7 @@
 #include "scip/solve.h"
 #include "scip/stat.h"
 #include "scip/struct_cons.h"
+#include "scip/struct_event.h"
 #include "scip/struct_lp.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_primal.h"

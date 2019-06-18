@@ -5453,7 +5453,10 @@ SCIP_RETCODE multiAggregateBinvar(
    }
 
    if( !linearconshdlrexist )
+   {
+      *infeasible = FALSE;
       return SCIP_OKAY;
+   }
 
    /* if the last variable will be multi-aggregated, we do not need to copy the variables */
    if( pos == nvars - 1 )
