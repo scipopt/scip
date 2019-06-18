@@ -2693,8 +2693,10 @@ SCIP_RETCODE branchOnVar(
          }
       }
    }
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> down child's lowerbound: %.9g\n", SCIPnodeGetLowerbound(downchild));
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> up child's lowerbound: %.9g\n", SCIPnodeGetLowerbound(upchild));
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> down child's lowerbound: %.9g, estimate: %.9g\n",
+      SCIPnodeGetLowerbound(downchild), SCIPnodeGetEstimate(downchild));
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> up child's lowerbound: %.9g, estimate: %.9g\n",
+      SCIPnodeGetLowerbound(upchild), SCIPnodeGetEstimate(upchild));
 
    return SCIP_OKAY;
 }
@@ -4559,18 +4561,9 @@ SCIP_RETCODE executeBranchingRecursive(
 #endif
    }
 
-   if( solvedlp && !branchingresult->cutoff && !status->lperror && !status->limitreached )
+   if( !branchingresult->cutoff && !status->lperror && !status->limitreached )
    {
       SCIP_Real localgain;
-
-      /* store the warm start information in the candidate, so that it can be reused in a later branching */
-      if( config->reusebasis && config->inscoring )
-      {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Storing warm start information for %s branching on var <%s>\n",
-            downbranching ? "down" : "up", SCIPvarGetName(branchvar));
-
-         SCIP_CALL( candidateStoreWarmStartInfo(scip, candidate, downbranching) );
-      }
 
       localgain = MAX(0, branchingresult->objval - localbaselpsolval);
 
@@ -4582,6 +4575,18 @@ SCIP_RETCODE executeBranchingRecursive(
       else
       {
          SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 1.0 - branchvalfrac, localgain, 1.0) );
+      }
+   }
+
+   if( solvedlp && !branchingresult->cutoff && !status->lperror && !status->limitreached )
+   {
+      /* store the warm start information in the candidate, so that it can be reused in a later branching */
+      if( config->reusebasis && config->inscoring )
+      {
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Storing warm start information for %s branching on var <%s>\n",
+            downbranching ? "down" : "up", SCIPvarGetName(branchvar));
+
+         SCIP_CALL( candidateStoreWarmStartInfo(scip, candidate, downbranching) );
       }
 
       if( recursiondepth > 1 && !config->inscoring )
@@ -6073,7 +6078,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    assert(scip != NULL);
    assert(result != NULL);
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Entering branchExeclpLookahead.\n");
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Entering branchExeclpLookahead at node %lld.\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
@@ -6367,7 +6372,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          &branchruledata->config->abbreviated, TRUE, DEFAULT_ABBREVIATED, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxncands",
          "if abbreviated: The max number of candidates to consider at the node.",
-         &branchruledata->config->maxncands, TRUE, DEFAULT_MAXNCANDS, 2, INT_MAX, NULL, NULL) );
+         &branchruledata->config->maxncands, TRUE, DEFAULT_MAXNCANDS, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/maxndeepercands",
          "if abbreviated: The max number of candidates to consider per deeper node.",
          &branchruledata->config->maxndeepercands, TRUE, DEFAULT_MAXNDEEPERCANDS, 0, INT_MAX, NULL, NULL) );
