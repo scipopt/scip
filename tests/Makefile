@@ -270,6 +270,8 @@ Criterion:
 	cd Criterion; \
 	mkdir build; \
 	cd build; \
-	cmake ..; \
-	make
+	cmake .. -DCMAKE_INSTALL_PREFIX=..; \
+	make; \
+	make install
+
 #---- EOF --------------------------------------------------------------------
