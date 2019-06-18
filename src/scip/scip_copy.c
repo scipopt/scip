@@ -166,8 +166,19 @@ SCIP_RETCODE copyCuts(
 
          /* get all variables of the row */
          SCIP_CALL( SCIPallocBufferArray(targetscip, &vars, ncols) );
-         for( i = 0; i < ncols; ++i )
+         for( i = 0; i < ncols && takecut; ++i )
+         {
             vars[i] = SCIPcolGetVar(cols[i]);
+            takecut = !SCIPvarIsRelaxationOnly(vars[i]);
+         }
+
+         /* discard cut if it contains a variable which is invalid after a restart */
+         if( !takecut )
+         {
+            /* free temporary memory */
+            SCIPfreeBufferArray(targetscip, &vars);
+            continue;
+         }
 
          /* get corresponding variables in targetscip if necessary */
          if( sourcescip != targetscip )
@@ -642,8 +653,9 @@ SCIP_Bool SCIPisConsCompressionEnabled(
 }
 
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
- *  it is just returned as target variable; otherwise a new variable will be created and added to the target SCIP; this
- *  created variable is added to the variable hash map and returned as target variable
+ *  it is just returned as target variable; otherwise, if the variables it not marked as relaxation-only, a new variable
+ *  will be created and added to the target SCIP; this created variable is added to the variable hash map and returned as target variable;
+ *  relaxation-only variables are not copied and FALSE is returned in *success
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -716,6 +728,13 @@ SCIP_RETCODE SCIPgetVarCopy(
       *targetvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, sourcevar);
       if( *targetvar != NULL )
          return SCIP_OKAY;
+   }
+
+   /* reject copying of relaxation-only variables */
+   if( SCIPvarIsRelaxationOnly(sourcevar) )
+   {
+      *success = FALSE;
+      *targetvar = NULL;
    }
 
    /* if the target SCIP is already in solving stage we currently are not copying the variable!
@@ -898,9 +917,11 @@ SCIP_RETCODE SCIPgetVarCopy(
    return SCIP_OKAY;
 }
 
-/** copies all original or active variables from source-SCIP and adds these variable to the target-SCIP; the mapping
- *  between these variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed
- *  and aggregated variables do not get copied
+/** copies all original or active variables from source-SCIP except those that are marked as relaxation-only, fixed, or aggregated
+ *  and adds these variable to the target-SCIP
+ *
+ *  the mapping between these variables are stored in the variable hashmap
+ *  target-SCIP has to be in problem creation stage
  */
 static
 SCIP_RETCODE copyVars(
@@ -923,6 +944,12 @@ SCIP_RETCODE copyVars(
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
    int nsourcevars;
+#ifndef NDEBUG
+   int nrelaxonlybinvars = 0;
+   int nrelaxonlyintvars = 0;
+   int nrelaxonlyimplvars = 0;
+   int nrelaxonlycontvars = 0;
+#endif
    int i;
 
    assert(sourcescip != NULL);
@@ -966,6 +993,31 @@ SCIP_RETCODE copyVars(
       SCIP_Bool success;
       SCIP_VAR* targetvar;
 
+      if( SCIPvarIsRelaxationOnly(sourcevars[i]) )
+      {
+#ifndef NDEBUG
+         switch( SCIPvarGetType(sourcevars[i]) )
+         {
+         case SCIP_VARTYPE_BINARY:
+            nrelaxonlybinvars++;
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            nrelaxonlyintvars++;
+            break;
+         case SCIP_VARTYPE_IMPLINT:
+            nrelaxonlyimplvars++;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
+            nrelaxonlycontvars++;
+            break;
+         default:
+            SCIPerrorMessage("unknown variable type\n");
+            return SCIP_INVALIDDATA;
+         }
+#endif
+         continue;
+      }
+
       /* copy variable and add this copy to the target SCIP if the copying was valid */
       SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevars[i], &targetvar, localvarmap, localconsmap, global, &success) );
       assert(success);
@@ -978,6 +1030,9 @@ SCIP_RETCODE copyVars(
       SCIP_VAR* targetvar;
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
+
+      if( SCIPvarIsRelaxationOnly(sourcevars[i]) )
+         continue;
 
       /* retrieve target variable as image of the source variable */
       targetvar = (SCIP_VAR*) SCIPhashmapGetImage(localvarmap, (void *)fixedvars[i]);
@@ -1041,13 +1096,13 @@ SCIP_RETCODE copyVars(
          }
       }
       assert(nsourcefixedvars == nfixedbinvars + nfixedintvars + nfixedimplvars + nfixedcontvars);
-      assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip));
-      assert(SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) <= SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip)
-         && SCIPgetNIntVars(targetscip) + SCIPgetNBinVars(targetscip) <= SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) + nfixedbinvars + nfixedintvars );
-      assert(SCIPgetNImplVars(sourcescip) <= SCIPgetNImplVars(targetscip)
-         && SCIPgetNImplVars(targetscip) <= SCIPgetNImplVars(sourcescip) + nfixedimplvars);
-      assert(SCIPgetNContVars(sourcescip) <= SCIPgetNContVars(targetscip)
-         && SCIPgetNContVars(targetscip) <= SCIPgetNContVars(targetscip) + nfixedcontvars);
+      assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip) + nrelaxonlybinvars);
+      assert(SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) <= SCIPgetNIntVars(targetscip) + nrelaxonlyintvars + SCIPgetNBinVars(targetscip) + nrelaxonlybinvars);
+      assert(SCIPgetNIntVars(targetscip) + nrelaxonlyintvars + SCIPgetNBinVars(targetscip) + nrelaxonlybinvars <= SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) + nfixedbinvars + nfixedintvars );
+      assert(SCIPgetNImplVars(sourcescip) <= SCIPgetNImplVars(targetscip) + nrelaxonlyimplvars);
+      assert(SCIPgetNImplVars(targetscip) + nrelaxonlyimplvars <= SCIPgetNImplVars(sourcescip) + nfixedimplvars);
+      assert(SCIPgetNContVars(sourcescip) <= SCIPgetNContVars(targetscip) + nrelaxonlycontvars);
+      assert(SCIPgetNContVars(targetscip) + nrelaxonlycontvars <= SCIPgetNContVars(sourcescip) + nfixedcontvars);
    }
 #endif
 
@@ -1066,9 +1121,12 @@ SCIP_RETCODE copyVars(
    return SCIP_OKAY;
 }
 
-/** copies all active variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
- *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed and aggregated
- *  variables are not copied
+/** Copies all active (thus unfixed) variables from source-SCIP, except those that are marked as relaxation only,
+ *  and adds these variable to the target-SCIP.
+ *
+ *  The mapping between these variables are stored in the variable hashmap.
+ *
+ *  The target-SCIP has to be in problem creation stage.
  *
  *  @note the variables are added to the target-SCIP but not captured
  *
@@ -1188,8 +1246,8 @@ SCIP_RETCODE SCIPcopyOrigVars(
 SCIP_RETCODE SCIPmergeVariableStatistics(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_VAR**            sourcevars,         /**< source variables for history merge */
-   SCIP_VAR**            targetvars,         /**< target variables for history merge */
+   SCIP_VAR**            sourcevars,         /**< source variables for history merge, NULL entries are ignored */
+   SCIP_VAR**            targetvars,         /**< target variables for history merge, NULL entries are ignored */
    int                   nvars               /**< number of variables in both variable arrays */
    )
 {
@@ -1215,6 +1273,9 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    for( i = 0; i < nvars; ++i )
    {
       SCIP_VARSTATUS sourcevarstatus;
+
+      if( sourcevars[i] == NULL || targetvars[i] == NULL )
+         continue;
 
       assert(sourcevars[i]->scip == sourcescip);
       assert(targetvars[i]->scip == targetscip);
@@ -1396,6 +1457,9 @@ SCIP_RETCODE SCIPgetConsCopy(
  *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
  *  between the constraints of the source and target-SCIP is stored
  *
+ *  *valid is set to TRUE iff all constraints that are marked as checked or enforced were copied successfully.
+ *  If other constraints could not be copied, *valid can still be set to TRUE.
+ *
  *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP. (If you mix
  *        SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add explicitly and what is already
  *        added.) You can check whether a constraint is added by calling SCIPconsIsAdded().
@@ -1436,7 +1500,7 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance?
                                               *   If TRUE, the modifiable flag of constraints will be copied. */
-   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
+   SCIP_Bool*            valid               /**< pointer to store whether all checked or enforced constraints were validly copied */
    )
 {
    SCIP_CONSHDLR** sourceconshdlrs;
@@ -1567,7 +1631,12 @@ SCIP_RETCODE SCIPcopyConss(
          }
          else
          {
-            *valid = (*valid && singlevalid);
+            /* if an enforced or checked constraint could not be copied, then the copy is not valid, i.e.,
+             * the feasible set may be larger; for other constraints, it should be safe if they are omitted
+             * from the copy
+             */
+            if( SCIPconsIsEnforced(sourceconss[c]) || SCIPconsIsChecked(sourceconss[c]) )
+               *valid = FALSE;
             SCIPdebugMsg(sourcescip, "Constraint %s not copied, copy is %svalid\n",
                   SCIPconsGetName(sourceconss[c]), *valid ? "" : "not ");
          }
@@ -1786,6 +1855,8 @@ SCIP_RETCODE SCIPconvertCutsToConss(
 }
 
 /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip
+ *
+ *  Cuts that contain variables that are marked as relaxation-only are skipped.
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -2521,7 +2592,7 @@ SCIP_RETCODE doCopy(
  *  1) copy the plugins
  *  2) copy the settings
  *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
- *  4) copy all active variables
+ *  4) copy all active variables except those that are marked as relaxation-only
  *  5) copy all constraints
  *
  *  The source problem depends on the stage of the \p sourcescip - In SCIP_STAGE_PROBLEM, the original problem is copied,
@@ -2610,7 +2681,7 @@ SCIP_RETCODE SCIPcopy(
  *  1) copy the plugins
  *  2) copy the settings
  *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
- *  4) copy all active variables
+ *  4) copy all active variables except those that are marked as relaxation-only
  *     a) fix all variable copies specified by \p fixedvars, \p fixedvals, and \p nfixedvars
  *     b) enable constraint compression
  *  5) copy all constraints
