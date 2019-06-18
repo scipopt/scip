@@ -153,7 +153,7 @@ FLAGS 		+= 	-I.
 # Criterion Framework
 #-----------------------------------------------------------------------------
 CR_INC		=	$(wildcard Criterion/include)
-CR_LIBDIR	=	$(wildcard Criterion/build)
+CR_LIBDIR	=	$(wildcard Criterion/lib)
 CR_LIB		=	criterion
 
 #-----------------------------------------------------------------------------
