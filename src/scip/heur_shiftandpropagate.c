@@ -440,7 +440,7 @@ void transformVariable(
 
    /* determine the upper bound for this variable in heuristic transformation (lower bound is implicit; always 0) */
    if( !SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, lb) )
-      matrix->upperbounds[colpos] = MIN(ub - lb, SCIPinfinity(scip));
+      matrix->upperbounds[colpos] = MIN(ub - lb, SCIPinfinity(scip)); /*lint !e666*/
    else
       matrix->upperbounds[colpos] = SCIPinfinity(scip);
 
@@ -1189,7 +1189,7 @@ SCIP_RETCODE updateTransformation(
          matrix->transformshiftvals[varindex] = ub;
 
          if( !SCIPisInfinity(scip, -lb) )
-            matrix->upperbounds[varindex] = MIN(ub - lb, SCIPinfinity(scip));
+            matrix->upperbounds[varindex] = MIN(ub - lb, SCIPinfinity(scip)); /*lint !e666*/
          else
             matrix->upperbounds[varindex] = SCIPinfinity(scip);
       }
