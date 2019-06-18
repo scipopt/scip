@@ -3366,7 +3366,6 @@ void SCIPprintSolutionStatistics(
 {
    SCIP_Real primalbound;
    SCIP_Real dualbound;
-   SCIP_Real bestsol;
    SCIP_Real gap;
    SCIP_Real firstprimalbound;
    SCIP_Bool objlimitreached;
@@ -3433,8 +3432,17 @@ void SCIPprintSolutionStatistics(
    {
       if( scip->primal->nlimsolsfound == 0 )
       {
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e", primalbound);
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (objective limit)\n");
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e   (objective limit)\n", primalbound);
+
+         /* display (best) primal bound */
+         if( scip->primal->nsolsfound > 0 )
+         {
+            SCIP_Real bestsol;
+            bestsol = SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob);
+            bestsol = SCIPretransformObj(scip, bestsol);
+
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Best Solution    : %+21.14e\n", bestsol);
+         }
       }
       else
       {
@@ -3463,14 +3471,6 @@ void SCIPprintSolutionStatistics(
 
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e", primalbound);
 
-         /* display (best) primal bound */
-         bestsol = SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob);
-         bestsol = SCIPretransformObj(scip, bestsol);
-         if( SCIPsetIsGT(scip->set, bestsol, primalbound) )
-         {
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (objective limit)\n");
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Best Solution    : %+21.14e", bestsol);
-         }
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (in run %d, after %" SCIP_LONGINT_FORMAT " nodes, %.2f seconds, depth %d, found by <%s>)\n",
             SCIPsolGetRunnum(scip->primal->sols[0]),
             SCIPsolGetNodenum(scip->primal->sols[0]),

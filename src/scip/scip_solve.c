@@ -2178,8 +2178,15 @@ SCIP_RETCODE displayRelevantStats(
       {
          if( objlimitreached )
          {
-            SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (%" SCIP_LONGINT_FORMAT " solutions, objective limit)\n",
+            SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (objective limit, %" SCIP_LONGINT_FORMAT " solutions",
                SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
+            if( scip->primal->nsolsfound > 0 )
+            {
+               SCIPmessagePrintInfo(scip->messagehdlr, ", best solution %+.14e",
+                  SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
+
+            }
+            SCIPmessagePrintInfo(scip->messagehdlr, ")\n");
          }
          else
          {
