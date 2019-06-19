@@ -993,7 +993,7 @@ SCIP_RETCODE createSolFromSubScipSol(
    {
       var = vars[i];
       assert(var != NULL);
-      assert(!SCIPvarIsActive(var));
+      assert(SCIPvarIsActive(var));
 
       subvar = heurdata->var_scip2subscip[i];
       if( subvar == NULL )
@@ -1009,7 +1009,7 @@ SCIP_RETCODE createSolFromSubScipSol(
    {
       var = vars[i];
       assert(var != NULL);
-      assert(!SCIPvarIsActive(var));
+      assert(SCIPvarIsActive(var));
 
       solval = MIN(MAX(0.0, SCIPvarGetLbLocal(var)), SCIPvarGetUbLocal(var));  /*lint !e666*/
       SCIP_CALL( SCIPsetSolVal(scip, *sol, var, solval) );
