@@ -60,6 +60,7 @@ Miscellaneous
 -------------
 
 - statistics now output primal/dual bounds if objective limit is reached
+- memory check in debug mode is now disabled by default
 
 @section RN601 SCIP 6.0.1
 *************************
