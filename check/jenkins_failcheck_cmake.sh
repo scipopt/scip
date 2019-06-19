@@ -207,30 +207,32 @@ while [ ${SEED} -le ${SEEDS} ]; do
     # we use a name that is unique per test sent to the cluster (a jenkins job
     # can have several tests sent to the cluster, that is why the jenkins job
     # name (i.e, the directory name) is not enough)
-    DATABASE="/nfs/OPTI/adm_timo/databases/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}${SEED_ENDING}${PERM_ENDING}.txt"
-    TMPDATABASE="${DATABASE}.tmp"
-    STILLFAILING="${DATABASE}_SF.tmp"
-    OUTPUT="${DATABASE}_output.tmp"
-    touch ${STILLFAILING}
+    if [ "${PERFORMANCE}" != "mergerequest" ]; then
+      DATABASE="/nfs/OPTI/adm_timo/databases/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}${SEED_ENDING}${PERM_ENDING}.txt"
+      TMPDATABASE="${DATABASE}.tmp"
+      STILLFAILING="${DATABASE}_SF.tmp"
+      OUTPUT="${DATABASE}_output.tmp"
+      touch ${STILLFAILING}
 
-    SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTINGS: $SETTINGS] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM] [SEED: $SEED] [MODE: $MODE]"
+      SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTINGS: $SETTINGS] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM] [SEED: $SEED] [MODE: $MODE]"
 
-    AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTINGS=$SETTINGS -v SCIP_BUILDDIR=$SCIP_BUILDDIR -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM -v SEED=$SEED -v MODE=$MODE"
-    echo $AWKARGS
+      AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTINGS=$SETTINGS -v SCIP_BUILDDIR=$SCIP_BUILDDIR -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM -v SEED=$SEED -v MODE=$MODE"
+      echo $AWKARGS
 
-    # the first time, the file might not exists so we create it
-    # Even more, we have to write something to it, since otherwise
-    # the awk scripts below won't work (NR and FNR will not be different)
-    echo "Preparing database."
-    if ! [[ -s $DATABASE ]]; then  # check that file exists and has size larger that 0
-      echo "Instance Fail_reason Branch Testset Settings Opt_mode SCIP_BUILDDIR" > $DATABASE
-    fi
+      # the first time, the file might not exists so we create it
+      # Even more, we have to write something to it, since otherwise
+      # the awk scripts below won't work (NR and FNR will not be different)
+      echo "Preparing database."
+      if ! [[ -s $DATABASE ]]; then  # check that file exists and has size larger that 0
+        echo "Instance Fail_reason Branch Testset Settings Opt_mode SCIP_BUILDDIR" > $DATABASE
+      fi
 
-    EMAILFROM="adm_timo <timo-admin@zib.de>"
-    EMAILTO="adm_timo <timo-admin@zib.de>"
+      EMAILFROM="adm_timo <timo-admin@zib.de>"
+      EMAILTO="adm_timo <timo-admin@zib.de>"
 
-    if [ "${gitlabUserEmail}" != "" ]; then
-      EMAILTO="${gitlabUserEmail}"
+      if [ "${gitlabUserEmail}" != "" ]; then
+        EMAILTO="${gitlabUserEmail}"
+      fi
     fi
 
 
@@ -274,47 +276,48 @@ while [ ${SEED} -le ${SEEDS} ]; do
     rm ${OUTPUT}
     cd ..
 
-    # check for fixed instances
-    echo "Checking for fixed instances."
-    RESOLVEDINSTANCES=`awk $AWKARGS "$awkscript_checkfixedinstances" $RESFILE $DATABASE`
-    echo "Temporary database: $TMPDATABASE\n"
-    mv $TMPDATABASE $DATABASE
+    if [ "${PERFORMANCE}" != "mergerequest" ]; then
+      # check for fixed instances
+      echo "Checking for fixed instances."
+      RESOLVEDINSTANCES=`awk $AWKARGS "$awkscript_checkfixedinstances" $RESFILE $DATABASE`
+      echo "Temporary database: $TMPDATABASE\n"
+      mv $TMPDATABASE $DATABASE
 
 
-    ###################
-    # Check for fails #
-    ###################
+      ###################
+      # Check for fails #
+      ###################
 
-    # if there are fails; process them and send email when there are new ones
-    NFAILS=`grep -c fail $RESFILE`
-    if [ $NFAILS -gt 0 ]; then
-      echo "Detected ${NFAILS} fails."
-      ## read all known bugs
-      ERRORINSTANCES=`awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE`
-      STILLFAILINGDB=`cat ${STILLFAILING}`
+      # if there are fails; process them and send email when there are new ones
+      NFAILS=`grep -c fail $RESFILE`
+      if [ $NFAILS -gt 0 ]; then
+        echo "Detected ${NFAILS} fails."
+        ## read all known bugs
+        ERRORINSTANCES=`awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE`
+        STILLFAILINGDB=`cat ${STILLFAILING}`
 
-      # check if there are new fails!
-      if [ -n "$ERRORINSTANCES" ]; then
-        ###################
-        ## Process fails ##
-        ###################
+        # check if there are new fails!
+        if [ -n "$ERRORINSTANCES" ]; then
+          ###################
+          ## Process fails ##
+          ###################
 
-        # get SCIP's header
-        SCIP_HEADER=`awk "$awkscript_scipheader" $OUTFILE`
+          # get SCIP's header
+          SCIP_HEADER=`awk "$awkscript_scipheader" $OUTFILE`
 
-        if [ "${PERFORMANCE}" != "performance" ]; then
-          if [ "${PERFORMANCE}" != "mergerequest" ]; then
-            # Get assertions and instance where they were generated
-            ERRORS_INFO=`echo "${ERRORINSTANCES}" | awk "$awkscript_findasserts" - ${ERRFILE}`
+          if [ "${PERFORMANCE}" != "performance" ]; then
+            if [ "${PERFORMANCE}" != "mergerequest" ]; then
+              # Get assertions and instance where they were generated
+              ERRORS_INFO=`echo "${ERRORINSTANCES}" | awk "$awkscript_findasserts" - ${ERRFILE}`
+            fi
           fi
-        fi
 
-        ###############
-        # ERROR EMAIL #
-        ###############
-        echo "Found new errors, sending emails."
-        SUBJECT="FAIL ${SUBJECTINFO}"
-        echo -e "There are newly failed instances.
+          ###############
+          # ERROR EMAIL #
+          ###############
+          echo "Found new errors, sending emails."
+          SUBJECT="FAIL ${SUBJECTINFO}"
+          echo -e "There are newly failed instances.
 The instances run with the following SCIP version and setting file:
 
 \`\`\`
@@ -367,8 +370,9 @@ $RESFILE
 
 The following errors have been fixed:
 ${RESOLVEDINSTANCES}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+      fi
+      rm ${STILLFAILING}
     fi
-    rm ${STILLFAILING}
 
     PERM=$((PERM + 1))
   done
