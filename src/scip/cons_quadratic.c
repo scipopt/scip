@@ -2512,8 +2512,8 @@ SCIP_RETCODE addBilinearTerm(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* check if the bilinear terms are sorted */
-   assert(consdataCheckBilinTermsSort(consdata));
+   /* check if the bilinear terms are sorted (disabled for big constraints as becoming expensive) */
+   assert(consdata->nbilinterms > 10 || consdataCheckBilinTermsSort(consdata));
 
    assert(var1pos >= 0);
    assert(var1pos < consdata->nquadvars);
@@ -2580,8 +2580,8 @@ SCIP_RETCODE addBilinearTerm(
 
    consdata->iscurvchecked = FALSE;
 
-   /* check if the bilinear terms are sorted */
-   assert(consdataCheckBilinTermsSort(consdata));
+   /* check if the bilinear terms are sorted (disabled as expensive if big constraint) */
+   assert(consdata->nbilinterms > 10 || consdataCheckBilinTermsSort(consdata));
 
    return SCIP_OKAY;
 }
