@@ -10403,10 +10403,11 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
       MIN( SCIPinfinity(scip), expr->activity.sup ), 0.0, vartype) ); /*lint !e666*/
    SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
 
-   /* mark the auxiliary variable to be invalid after a restart happened; this prevents SCIP to create linear
-    * constraints from cuts that contain auxiliary variables
+   /* mark the auxiliary variable to be added for the relaxation only
+    * this prevents SCIP to create linear constraints from cuts or conflicts that contain auxiliary variables,
+    * or to copy the variable to a subscip
     */
-   SCIPvarSetCutInvalidAfterRestart(expr->auxvar, TRUE);
+   SCIPvarMarkRelaxationOnly(expr->auxvar);
 
    SCIPdebugMsg(scip, "added auxiliary variable %s [%g,%g] for expression %p\n", SCIPvarGetName(expr->auxvar), SCIPvarGetLbGlobal(expr->auxvar), SCIPvarGetUbGlobal(expr->auxvar), (void*)expr);
 

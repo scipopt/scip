@@ -28,6 +28,12 @@
 #include "scip/scip_randnumgen.h"
 #include "scip/set.h"
 #include "scip/struct_scip.h"
+#include "scip/pub_message.h"
+#include "scip/scip_bandit.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/set.h"
+#include "scip/struct_scip.h"
 
 /** includes a bandit algorithm virtual function table  */
 SCIP_RETCODE SCIPincludeBanditvtable(

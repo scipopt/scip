@@ -173,6 +173,10 @@ SCIP_RETCODE fixVariables(
       if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
          continue;
 
+      /* skip variables not in sub-SCIP (relaxation-only variables)*/
+      if( subvars[i] == NULL )
+         continue;
+
       solval = SCIPgetSolVal(scip, NULL, var);
       col = SCIPvarGetCol(vars[i]);
       assert(col != NULL);
@@ -232,7 +236,7 @@ SCIP_RETCODE createRows(
    /* get the rows and their number */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
 
-   /* copy all rows to linear constraints */
+   /* copy all global rows to linear constraints, unless they contain relaxation-only variables */
    for( i = 0; i < nrows; i++ )
    {
       SCIP_VAR** consvars;                   /* new constraint's variables               */
@@ -273,7 +277,17 @@ SCIP_RETCODE createRows(
       /* allocate memory array to be filled with the corresponding subproblem variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
       for( j = 0; j < nnonz; j++ )
+      {
          consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
+         if( consvars[j] == NULL )
+            break;
+      }
+      /* skip row if not all variables are in sub-SCIP, i.e., relaxation-only variables */
+      if( j < nnonz )
+      {
+         SCIPfreeBufferArray(scip, &consvars);
+         continue;
+      }
 
       dualsol = SCIProwGetDualsol(rows[i]);
       rowsolactivity = SCIPgetRowActivity(scip, rows[i]);
@@ -341,6 +355,7 @@ SCIP_RETCODE setupSubproblem(
    {
       if( ! SCIPisZero(subscip, SCIPvarGetObj(vars[i])) )
       {
+         assert(subvars[i] != NULL);  /* a relaxation-only variable cannot have an objective coefficient */
          SCIP_CALL( SCIPaddCoefLinear(subscip, origobjcons, subvars[i], SCIPvarGetObj(vars[i])) );
 #ifndef NDEBUG
          nobjvars++;
@@ -373,6 +388,7 @@ SCIP_RETCODE createNewSol(
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_Bool printreason;
    SCIP_Bool completely;
+   int i;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -382,15 +398,16 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
    /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
+   for( i = 0; i < nvars; ++i )
+   {
+      if( subvars[i] == NULL )
+         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+      else
+         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
+   }
 
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
@@ -838,7 +855,10 @@ SCIP_RETCODE setupSubscipLpface(
    {
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-      SCIP_CALL( changeSubvariableObjective(scip, subscip, vars[i], subvars[i], heurdata) );
+      if( subvars[i] != NULL )
+      {
+         SCIP_CALL( changeSubvariableObjective(scip, subscip, vars[i], subvars[i], heurdata) );
+      }
    }
 
    /* free hash map */

@@ -417,13 +417,19 @@ SCIP_RETCODE componentSetupWorkingSol(
 
          for( i = 0; i < component->nvars; ++i )
          {
-            SCIP_CALL( SCIPdebugGetSolVal(scip, component->vars[i], &val) );
-            SCIP_CALL( SCIPdebugAddSolVal(component->subscip, component->subvars[i], val) );
+            if( component->subvars[i] != NULL )
+            {
+               SCIP_CALL( SCIPdebugGetSolVal(scip, component->vars[i], &val) );
+               SCIP_CALL( SCIPdebugAddSolVal(component->subscip, component->subvars[i], val) );
+            }
          }
          for( i = 0; i < component->nfixedvars; ++i )
          {
-            SCIP_CALL( SCIPdebugGetSolVal(scip, component->fixedvars[i], &val) );
-            SCIP_CALL( SCIPdebugAddSolVal(component->subscip, component->fixedsubvars[i], val) );
+            if( component->fixedsubvars[i] != NULL )
+            {
+               SCIP_CALL( SCIPdebugGetSolVal(scip, component->fixedvars[i], &val) );
+               SCIP_CALL( SCIPdebugAddSolVal(component->subscip, component->fixedsubvars[i], val) );
+            }
          }
       }
    }
@@ -563,7 +569,6 @@ SCIP_RETCODE copyToSubscip(
       if( !(*success) )
          return SCIP_OKAY;
    }
-   assert(nvars == SCIPgetNOrigVars(subscip));
 
    /* copy constraints */
    for( i = 0; i < nconss; ++i )
@@ -858,7 +863,10 @@ SCIP_RETCODE solveAndEvalSubscip(
             /* set solution values of variables */
             for( i = 0; i < nvars; ++i )
             {
-               SCIP_CALL( SCIPsetSolVal(subscip, sol, subvars[i], fixvals[i]) );
+               if( subvars[i] != NULL )
+               {
+                  SCIP_CALL( SCIPsetSolVal(subscip, sol, subvars[i], fixvals[i]) );
+               }
             }
 
             /* check the solution; integrality and bounds should be fulfilled and do not have to be checked */
@@ -947,7 +955,8 @@ SCIP_RETCODE solveAndEvalSubscip(
 
          for( i = 0; i < nvars; ++i )
          {
-            assert(subvars[i] != NULL);
+            if( subvars[i] == NULL )
+               continue;
 
             SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE,
                   &infeasible, &tightened) );
@@ -1022,12 +1031,16 @@ SCIP_RETCODE solveComponent(
       /* set solution values of component variables */
       for( v = 0; v < nvars; ++v )
       {
-         SCIP_CALL( SCIPsetSolVal(subscip, compsol, subvars[v], SCIPgetSolVal(scip, bestsol, vars[v])) );
+         if( subvars[v] != NULL )
+         {
+            SCIP_CALL( SCIPsetSolVal(subscip, compsol, subvars[v], SCIPgetSolVal(scip, bestsol, vars[v])) );
+         }
       }
 #ifndef NDEBUG
       for( v = 0; v < component->nfixedvars; ++v )
       {
-         assert(SCIPisEQ(scip, SCIPgetSolVal(subscip, compsol, component->fixedsubvars[v]),
+         if( component->fixedsubvars[v] != NULL )
+            assert(SCIPisEQ(scip, SCIPgetSolVal(subscip, compsol, component->fixedsubvars[v]),
                SCIPvarGetLbGlobal(component->fixedsubvars[v])));
       }
 #endif
@@ -1246,8 +1259,10 @@ SCIP_RETCODE solveComponent(
             var = component->vars[v];
             subvar = component->subvars[v];
             assert(var != NULL);
-            assert(subvar != NULL);
             assert(SCIPvarIsActive(var));
+
+            if( subvar == NULL )
+               continue;
 
             SCIP_CALL( SCIPsetSolVal(scip, problem->bestsol, var, SCIPgetSolVal(subscip, sol, subvar)) );
          }
@@ -2419,8 +2434,11 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 
                for( i = 0; i < ncompvars; ++i )
                {
-                  SCIP_CALL( SCIPdebugGetSolVal(scip, compvars[i], &val) );
-                  SCIP_CALL( SCIPdebugAddSolVal(subscip, subvars[i], val) );
+                  if( subvars[i] != NULL )
+                  {
+                     SCIP_CALL( SCIPdebugGetSolVal(scip, compvars[i], &val) );
+                     SCIP_CALL( SCIPdebugAddSolVal(subscip, subvars[i], val) );
+                  }
                }
             }
          }
