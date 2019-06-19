@@ -473,6 +473,7 @@ static
 SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP*                 scip,               /**< SCIP instance */
    bliss::Graph*         G,                  /**< Graph to be constructed */
+   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints*/
    int&                  nnodes,             /**< buffer to store number of nodes in graph */
    int&                  nedges,             /**< buffer to store number of edges in graph */
    int&                  nusedcolors,        /**< number of used colors ind the graph so far */
@@ -494,9 +495,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    int nuniqueconsts = 0;
    int nuniquecoefs = 0;
    int nuniquerhs = 0;
-   int oparraysize = 10 * nexprconss;
-   int constarraysize = 5 * nexprconss;
-   int coefarraysize = 20 * nexprconss;
+   int oparraysize = exprdata->nuniqueoperators;
+   int constarraysize = exprdata->nuniqueconstants;
+   int coefarraysize = exprdata->nuniquecoefs;
    int rhsarraysize = nexprconss;
 
    assert(scip != NULL);
@@ -870,6 +871,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
+   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints*/
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
@@ -920,7 +922,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    }
 
    /* add the nodes for expression constraints to the graph */
-   SCIP_CALL( fillGraphByNonlinearConss(scip, &G, nnodes, nedges, nusedcolors, success) );
+   SCIP_CALL( fillGraphByNonlinearConss(scip, &G, exprdata, nnodes, nedges, nusedcolors, success) );
 
    if( !success )
    {

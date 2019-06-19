@@ -46,8 +46,10 @@
 #include <scip/cons_xor.h>
 #include <scip/cons_linking.h>
 #include <scip/cons_expr.h>
+#include <scip/cons_expr_iterator.h>
 #include <scip/misc.h>
 #include <scip/cons_bounddisjunction.h>
+
 
 #include <scip/presol_symmetry.h>
 #include <symmetry/compute_symmetry.h>
@@ -832,11 +834,13 @@ SCIP_RETCODE computeSymmetryGroup(
 {
    SCIP_CONSHDLR* conshdlr;
    SYM_MATRIXDATA matrixdata;
+   SYM_EXPRDATA exprdata;
    SCIP_HASHTABLE* vartypemap;
    SCIP_VAR** consvars;
    SCIP_Real* consvals;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
+   SCIP_CONSEXPR_ITERATOR* it;
    SYM_VARTYPE* uniquevararray;
    SYM_RHSSENSE oldsense = SYM_SENSE_UNKOWN;
    SYM_SORTRHSTYPE sortrhstype;
@@ -846,6 +850,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int nhandleconss;
    int nactiveconss;
    int nlinconss;
+   int nexprconss;
    int nconss;
    int nvars;
    int nallvars;
@@ -892,7 +897,8 @@ SCIP_RETCODE computeSymmetryGroup(
 
    /* compute the number of active constraints */
    nactiveconss = SCIPgetNActiveConss(scip);
-   nlinconss = nactiveconss - SCIPconshdlrGetNActiveConss(SCIPfindConshdlr(scip, "expr"));
+   nexprconss = SCIPconshdlrGetNActiveConss(SCIPfindConshdlr(scip, "expr"));
+   nlinconss = nactiveconss - nexprconss;
 
    /* exit if no active constraints are available */
    if ( nactiveconss == 0 )
@@ -930,6 +936,11 @@ SCIP_RETCODE computeSymmetryGroup(
    matrixdata.matcoefcolors = NULL;
    matrixdata.rhscoefcolors = NULL;
 
+   /* fill exprdata */
+   exprdata.nuniqueoperators = 0;
+   exprdata.nuniquecoefs= 0;
+   exprdata.nuniqueconstants = 0;
+
    /* prepare matrix data (use block memory, since this can become large) */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matidx, matrixdata.nmaxmatcoef) );
@@ -944,6 +955,12 @@ SCIP_RETCODE computeSymmetryGroup(
    nallvars = nvars + SCIPgetNFixedVars(scip);
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvars, nallvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvals, nallvars) );
+
+   /* create hashset for auxvars */
+   if( nexprconss > 0 )
+   {
+      SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, "expr"), SCIPblkmem(scip)) );
+   }
 
    /* loop through all constraints */
    for (c = 0; c < nconss; ++c)
@@ -1246,9 +1263,44 @@ SCIP_RETCODE computeSymmetryGroup(
                   SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDIS_TYPE_2, &matrixdata) );
          }
       }
-      else if ( strcmp(conshdlrname, "expr") != 0 )
+      else if ( strcmp(conshdlrname, "expr") == 0 )
       {
-         /* if the remaining constraints are not expression constraints, they cannot be handled */
+         SCIP_CONSEXPR_EXPR* expr;
+
+         /* for expression constraints, only collect auxiliary variables for now */
+         SCIP_CALL( SCIPexpriteratorInit(it, SCIPgetExprConsExpr(scip, cons), SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+         SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
+
+         for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it)) /*lint !e441*/
+         {
+            switch( SCIPexpriteratorGetStageDFS(it) )
+            {
+               case SCIP_CONSEXPRITERATOR_ENTEREXPR:
+               {
+                  if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "val") == 0 )
+                     ++exprdata.nuniqueconstants;
+                  else if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum") == 0)
+                  {
+                     ++exprdata.nuniqueoperators;
+                     ++exprdata.nuniqueconstants;
+                     exprdata.nuniquecoefs += SCIPgetConsExprExprNChildren(expr);
+                  }
+                  else if( !SCIPisConsExprExprVar(expr) )
+                     ++exprdata.nuniqueoperators;
+
+                  break;
+
+               }
+
+               default:
+                  SCIPABORT(); /* we should never be called in this stage */
+                  break;
+            }
+         }
+      }
+      else
+      {
+         /* if constraint is not one of the previous types, it cannot be handled */
          SCIPerrorMessage("Cannot determine symmetries for constraint <%s> of constraint handler <%s>.\n",
             SCIPconsGetName(cons), SCIPconshdlrGetName(conshdlr) );
          return SCIP_ERROR;
@@ -1428,7 +1480,7 @@ SCIP_RETCODE computeSymmetryGroup(
    if ( matrixdata.nuniquevars < nvars && (matrixdata.nuniquemat == 0 || matrixdata.nuniquemat < matrixdata.nmatcoef) )
    {
       /* determine generators */
-      SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms, log10groupsize) );
+      SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, &exprdata, nperms, nmaxperms, perms, log10groupsize) );
       assert( *nperms <= *nmaxperms );
 
       /* SCIPisStopped() might call SCIPgetGap() which is only available after initpresolve */
@@ -1498,6 +1550,12 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoefcolors, matrixdata.nmatcoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
    SCIPhashtableFree(&vartypemap);
+
+   /* free cons expr specific data */
+   if( nexprconss > 0 )
+   {
+      SCIPexpriteratorFree(&it);
+   }
 
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nlinconss);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nlinconss);
