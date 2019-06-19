@@ -3253,7 +3253,6 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
       else
          propdata->ofenabled = FALSE;
    }
-   assert( propdata->usesymmetry );
 
    /* do not run if not enabled */
    if ( ! propdata->ofenabled )
