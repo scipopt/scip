@@ -153,7 +153,8 @@ int GamsScip::readyAPI(
       XPlicenseInit_t initType;
       int initRC;
       gevxpressliceInitTS(gev, pal, gmoM(gmo), gmoN(gmo), gmoNZ(gmo), gmoNLNZ(gmo), gmoNDisc(gmo), 0, &initType, &initRC, buffer, sizeof(buffer));
-      calledxprslicense = true;
+      if( initRC >= 0 )  /* if initRC < 0, then gevxpressliceInitTS decided to do nothing because no GAMS/Xpress or XpressLink license available */
+         calledxprslicense = true;
    }
 #endif
 #endif
