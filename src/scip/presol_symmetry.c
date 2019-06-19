@@ -840,7 +840,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_Real* consvals;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
-   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_ITERATOR* it = NULL;
    SYM_VARTYPE* uniquevararray;
    SYM_RHSSENSE oldsense = SYM_SENSE_UNKOWN;
    SYM_SORTRHSTYPE sortrhstype;
