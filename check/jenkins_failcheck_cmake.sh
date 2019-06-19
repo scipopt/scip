@@ -174,14 +174,14 @@ EOF
 #################################
 
 # EXECUTABLE has form 'scipoptspx_bugfix_20180401/bin/scip', we only want 'scipoptspx'
-SCIP_BUILDDIR=`echo ${EXECUTABLE}| cut -d '/' -f 1|cut -d '_' -f 1`
+SCIP_BUILDDIR=$(echo ${EXECUTABLE}| cut -d '/' -f 1|cut -d '_' -f 1)
 
-NEWTIMESTAMP=`date '+%F-%H-%M'`
+NEWTIMESTAMP=$(date '+%F-%H-%M')
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
 if [ "${PERFORMANCE}" == "performance" ]; then
   RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}_rbdb.txt"
   touch $RBDB
-  OLDTIMESTAMP=`tail -n 1 ${RBDB}|cut -d ' ' -f 1`
+  OLDTIMESTAMP=$(tail -n 1 ${RBDB}|cut -d ' ' -f 1)
 elif [ "${PERFORMANCE}" == "mergerequest" ]; then
   RBDB="${PWD}/performance_mergerequest_${OUTPUTDIR}"
   touch $RBDB
@@ -209,32 +209,34 @@ while [ ${SEED} -le ${SEEDS} ]; do
     # name (i.e, the directory name) is not enough)
     if [ "${PERFORMANCE}" != "mergerequest" ]; then
       DATABASE="/nfs/OPTI/adm_timo/databases/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}${SEED_ENDING}${PERM_ENDING}.txt"
-      TMPDATABASE="${DATABASE}.tmp"
-      STILLFAILING="${DATABASE}_SF.tmp"
-      OUTPUT="${DATABASE}_output.tmp"
-      touch ${STILLFAILING}
+    elif [ "${PERFORMANCE}" == "mergerequest" ]; then
+      DATABASE="${PWD}/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}${SEED_ENDING}${PERM_ENDING}.txt"
+      touch $DATABASE
+    fi
+    TMPDATABASE="${DATABASE}.tmp"
+    STILLFAILING="${DATABASE}_SF.tmp"
+    OUTPUT="${DATABASE}_output.tmp"
+    touch ${STILLFAILING}
 
-      SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTINGS: $SETTINGS] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM] [SEED: $SEED] [MODE: $MODE]"
+    SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTINGS: $SETTINGS] [SCIP_BUILDDIR: $SCIP_BUILDDIR] [GITHASH: $GITHASH] [PERM: $PERM] [SEED: $SEED] [MODE: $MODE]"
 
-      AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTINGS=$SETTINGS -v SCIP_BUILDDIR=$SCIP_BUILDDIR -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM -v SEED=$SEED -v MODE=$MODE"
-      echo $AWKARGS
+    AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTINGS=$SETTINGS -v SCIP_BUILDDIR=$SCIP_BUILDDIR -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM -v SEED=$SEED -v MODE=$MODE"
+    echo $AWKARGS
 
-      # the first time, the file might not exists so we create it
-      # Even more, we have to write something to it, since otherwise
-      # the awk scripts below won't work (NR and FNR will not be different)
+    # the first time, the file might not exists so we create it
+    # Even more, we have to write something to it, since otherwise
+    # the awk scripts below won't work (NR and FNR will not be different)
+    if ! [[ -s $DATABASE ]]; then  # check that file exists and has size larger that 0
       echo "Preparing database."
-      if ! [[ -s $DATABASE ]]; then  # check that file exists and has size larger that 0
-        echo "Instance Fail_reason Branch Testset Settings Opt_mode SCIP_BUILDDIR" > $DATABASE
-      fi
-
-      EMAILFROM="adm_timo <timo-admin@zib.de>"
-      EMAILTO="adm_timo <timo-admin@zib.de>"
-
-      if [ "${gitlabUserEmail}" != "" ]; then
-        EMAILTO="${gitlabUserEmail}"
-      fi
+      echo "Instance Fail_reason Branch Testset Settings Opt_mode SCIP_BUILDDIR" > $DATABASE
     fi
 
+    EMAILFROM="adm_timo <timo-admin@zib.de>"
+    EMAILTO="adm_timo <timo-admin@zib.de>"
+
+    if [ "${gitlabUserEmail}" != "" ]; then
+      EMAILTO="${gitlabUserEmail}"
+    fi
 
     #################
     # FIND evalfile #
@@ -242,11 +244,11 @@ while [ ${SEED} -le ${SEEDS} ]; do
 
     # SCIP check files are in check/${OUTPUTDIR}
     BASEFILE="check/${OUTPUTDIR}/check.${TESTSET}.*.${SETTINGS}${SEED_ENDING}${PERM_ENDING}."
-    EVALFILE=`ls ${BASEFILE}*eval`
+    EVALFILE=$(ls ${BASEFILE}*eval)
 
     # at this point we have exactly one evalfile
     BASENAME=${EVALFILE%.*} # remove extension
-    WORKINGDIR=`pwd -P`
+    WORKINGDIR=$(pwd -P)
 
     # Store paths of err out res and set file
     ERRFILE="${WORKINGDIR}/${BASENAME}.err"
@@ -265,9 +267,9 @@ while [ ${SEED} -le ${SEEDS} ]; do
     PERF_MAIL=""
     if [ "${PERFORMANCE}" = "performance" ] || [ "${PERFORMANCE}" = "mergerequest" ]; then
       # add tags to uploaded run
-      export RBCLI_TAG=${GITBRANCH}
+      export RBCLI_TAG="${GITBRANCH} ${PERFORMANCE}"
       ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
-      NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
+      NEWRBID=$(cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||')
       echo "${NEWTIMESTAMP} ${NEWRBID} p=${PERM} s=${SEED}" >> $RBDB
     else
       ./evalcheck_cluster.sh -r "-v useshortnames=0" ${EVALFILE} > ${OUTPUT}
@@ -279,45 +281,45 @@ while [ ${SEED} -le ${SEEDS} ]; do
     if [ "${PERFORMANCE}" != "mergerequest" ]; then
       # check for fixed instances
       echo "Checking for fixed instances."
-      RESOLVEDINSTANCES=`awk $AWKARGS "$awkscript_checkfixedinstances" $RESFILE $DATABASE`
+      RESOLVEDINSTANCES=$(awk $AWKARGS "$awkscript_checkfixedinstances" $RESFILE $DATABASE)
       echo "Temporary database: $TMPDATABASE\n"
       mv $TMPDATABASE $DATABASE
+    fi
 
+    ###################
+    # Check for fails #
+    ###################
 
-      ###################
-      # Check for fails #
-      ###################
+    # if there are fails; process them and send email when there are new ones
+    NFAILS=$(grep -c fail $RESFILE)
+    if [ $NFAILS -gt 0 ]; then
+      echo "Detected ${NFAILS} fails."
+      ## read all known bugs
+      ERRORINSTANCES=$(awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE)
+      STILLFAILINGDB=$(cat ${STILLFAILING})
 
-      # if there are fails; process them and send email when there are new ones
-      NFAILS=`grep -c fail $RESFILE`
-      if [ $NFAILS -gt 0 ]; then
-        echo "Detected ${NFAILS} fails."
-        ## read all known bugs
-        ERRORINSTANCES=`awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE`
-        STILLFAILINGDB=`cat ${STILLFAILING}`
+      # check if there are new fails!
+      if [ -n "$ERRORINSTANCES" ]; then
+        ###################
+        ## Process fails ##
+        ###################
 
-        # check if there are new fails!
-        if [ -n "$ERRORINSTANCES" ]; then
-          ###################
-          ## Process fails ##
-          ###################
+        # get SCIP's header
+        SCIP_HEADER=$(awk "$awkscript_scipheader" $OUTFILE)
 
-          # get SCIP's header
-          SCIP_HEADER=`awk "$awkscript_scipheader" $OUTFILE`
-
-          if [ "${PERFORMANCE}" != "performance" ]; then
-            if [ "${PERFORMANCE}" != "mergerequest" ]; then
-              # Get assertions and instance where they were generated
-              ERRORS_INFO=`echo "${ERRORINSTANCES}" | awk "$awkscript_findasserts" - ${ERRFILE}`
-            fi
+        if [ "${PERFORMANCE}" != "performance" ]; then
+          if [ "${PERFORMANCE}" != "mergerequest" ]; then
+            # Get assertions and instance where they were generated
+            ERRORS_INFO=$(echo "${ERRORINSTANCES}" | awk "$awkscript_findasserts" - ${ERRFILE})
           fi
+        fi
 
-          ###############
-          # ERROR EMAIL #
-          ###############
-          echo "Found new errors, sending emails."
-          SUBJECT="FAIL ${SUBJECTINFO}"
-          echo -e "There are newly failed instances.
+        ###############
+        # ERROR EMAIL #
+        ###############
+        echo "Found new errors, sending emails."
+        SUBJECT="FAIL ${SUBJECTINFO}"
+        echo -e "There are newly failed instances.
 The instances run with the following SCIP version and setting file:
 
 \`\`\`
@@ -352,13 +354,14 @@ Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFRO
       echo "No fails detected."
     fi
 
-    # send email if there are fixed instances
-    if [ -n "$RESOLVEDINSTANCES" ]; then
-      #########################
-      # RESOLVED ERRORS EMAIL #
-      #########################
-      SUBJECT="FIX ${SUBJECTINFO}"
-      echo -e "Congratulations, see bottom for fixed instances!
+    if [ "${PERFORMANCE}" != "mergerequest" ]; then
+      # send email if there are fixed instances
+      if [ -n "$RESOLVEDINSTANCES" ]; then
+        #########################
+        # RESOLVED ERRORS EMAIL #
+        #########################
+        SUBJECT="FIX ${SUBJECTINFO}"
+        echo -e "Congratulations, see bottom for fixed instances!
 
 The following instances are still failing:
 ${STILLFAILINGDB}
