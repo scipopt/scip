@@ -249,10 +249,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &heurdata->var_subscip2scip, heurdata->nsubvars) );
 
    heurdata->nvars = nvars;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->var_scip2subscip, heurdata->nvars) );
-#ifndef NDEBUG
-   BMSclearMemoryArray(heurdata->var_scip2subscip, heurdata->nvars);
-#endif
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &heurdata->var_scip2subscip, heurdata->nvars) );
 
    /* we need to get all subscip variables, also those which are copies of fixed variables from the main scip
     * therefore we iterate over the hashmap
