@@ -67,6 +67,9 @@ Fixed bugs
 - fixed bug with upgrading to packing/partitioning orbitopes
 - fixed bug with the status while upgrading in presol_symbreak.c
 - fixed wrong stage while clearing the conflict store
+- fixed behavior of SCIPfixVar() by setting infeasible pointer to TRUE if fixval lies outside variable domain
+- allow tightenVar() in SCIP_STAGE_PROBLEM stage
+
 
 
 Miscellaneous
