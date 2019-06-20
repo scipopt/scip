@@ -58,6 +58,10 @@ Fixed bugs
 - correctly handle bound disjunctions in symmetry detection
 - fixed issue in reliability branching related to the LP error flag not being reset
 - fixed treatment of near-infinite bounds in shiftandpropagate's problem transformation
+- fixed handling of infinite values in SCIPcomputeHyperplaneThreePoints()
+- fixed comparisons of infinite values in heur_intshifting.c and heur_shifting.c
+- fixed bug related to updating unprocessed cuts in the cutpool
+- fixed bug related to enabling quadratic constraints during `CONSINITLP`
 - add missing SCIP_EXPORT for functions used by GCG
 
 Miscellaneous
