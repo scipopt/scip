@@ -77,6 +77,7 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
+    "components_during_solve"
 )
 #
 # settings to run a reduced MIP test
@@ -188,6 +189,7 @@ set(instances_MIP
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
+    "instances/MIP/lseu_dcmulti.cip\;189302"
     )
 
 #
@@ -453,6 +455,7 @@ set(basenames_opb_wrongformat
     misc03.mps
     rgn.mps
     vpm2.fzn
+    lseu_dcmulti.cip
     )
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 
