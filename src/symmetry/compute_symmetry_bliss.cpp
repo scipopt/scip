@@ -567,15 +567,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                {
                   SYM_CONSTTYPE* ct;
 
-                  /* check whether we have to resize */
-                  if ( nuniqueconsts >= constarraysize )
-                  {
-                     int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
-                     assert(newsize >= 0);
-                     SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize, newsize) );
-                     constarraysize = newsize;
-                  }
-
                   assert(nuniqueconsts < constarraysize);
 
                   ct = &uniqueconstarray[nuniqueconsts];
@@ -597,15 +588,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                else
                {
                   SYM_OPTYPE* ot;
-
-                  /* check whether we have to resize */
-                  if( nuniqueops >= oparraysize )
-                  {
-                     int newsize = SCIPcalcMemGrowSize(scip, nuniqueops+1);
-                     assert(newsize >= 0);
-                     SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueoparray, oparraysize, newsize) );
-                     oparraysize = newsize;
-                  }
 
                   assert(nuniqueops < oparraysize);
 
@@ -633,15 +615,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   /* add the node corresponding to the constraint */
                   SYM_RHSTYPE* rt;
                   int parentcolor;
-
-                  /* check whether we have to resize */
-                  if ( nuniquerhs >= rhsarraysize )
-                  {
-                     int newsize = SCIPcalcMemGrowSize(scip, nuniquerhs+1);
-                     assert(newsize >= 0);
-                     SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniquerhsarray, rhsarraysize, newsize) );
-                     rhsarraysize = newsize;
-                  }
 
                   assert(nuniquerhs < rhsarraysize);
 
@@ -703,15 +676,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   for( int j = SCIPgetConsExprExprNChildren(expr) - 1; j >= 0; --j )
                   {
                      SYM_CONSTTYPE* ct;
-
-                     /* check whether we have to resize */
-                     if ( nuniquecoefs >= coefarraysize )
-                     {
-                        int newsize = SCIPcalcMemGrowSize(scip, nuniquecoefs+1);
-                        assert(newsize >= 0);
-                        SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sumcoefarray, coefarraysize, newsize) );
-                        coefarraysize = newsize;
-                     }
 
                      assert(nuniquecoefs < coefarraysize);
 
