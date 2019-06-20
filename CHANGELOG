@@ -30,6 +30,8 @@ Build system
 ### Cmake
 
 - new target to 'doc' to build documentation
+- ctests now fail if parameter file not found
+- add flag STATIC_GMP and improve GMP find module
 
 Fixed bugs
 ----------
@@ -59,6 +61,7 @@ Fixed bugs
 - fixed comparisons of infinite values in heur_intshifting.c and heur_shifting.c
 - fixed bug related to updating unprocessed cuts in the cutpool
 - fixed bug related to enabling quadratic constraints during `CONSINITLP`
+- add missing SCIP_EXPORT for functions used by GCG
 
 Miscellaneous
 -------------
