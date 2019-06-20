@@ -30,6 +30,8 @@ Build system
 ### Cmake
 
 - new target to 'doc' to build documentation
+- ctests now fail if parameter file not found
+- add flag STATIC_GMP and improve GMP find module
 
 Fixed bugs
 ----------
@@ -55,6 +57,7 @@ Fixed bugs
 - correctly handle bound disjunctions in symmetry detection
 - fixed issue in reliability branching related to the LP error flag not being reset
 - fixed treatment of near-infinite bounds in shiftandpropagate's problem transformation
+- add missing SCIP_EXPORT for functions used by GCG
 
 Miscellaneous
 -------------
