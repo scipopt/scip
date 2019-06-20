@@ -77,8 +77,13 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
-    "components_during_solve"
 )
+#
+# settings for the componentshandler test
+#
+set(settings_compHandlerTest
+    "components_during_solve"
+    )
 #
 # settings to run a reduced MIP test
 #
@@ -189,9 +194,13 @@ set(instances_MIP
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
+    )
+#
+# Instances for component handler test
+#
+set(instances_compHandlerTest
     "instances/MIP/lseu_dcmulti.cip\;189302"
     )
-
 #
 # Reduced set of MIP instances for more expensive settings
 #
@@ -408,6 +417,7 @@ endmacro(add_instancetests)
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_default "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
+add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
