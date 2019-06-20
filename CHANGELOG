@@ -55,6 +55,7 @@ Fixed bugs
 - correctly handle bound disjunctions in symmetry detection
 - fixed issue in reliability branching related to the LP error flag not being reset
 - fixed treatment of near-infinite bounds in shiftandpropagate's problem transformation
+- fixed issues with integer overflow in cumulative constraint handler
 
 Miscellaneous
 -------------
