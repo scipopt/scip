@@ -70,6 +70,8 @@ Fixed bugs
 - fixed behavior of SCIPfixVar() by setting infeasible pointer to TRUE if fixval lies outside variable domain
 - allow tightenVar() in SCIP_STAGE_PROBLEM stage
 - fixed bug in cumulative constraint handler when separating the LP solution
+- fixed bug where the convexity of Benders' decomposition subproblems was checked even when users defined subproblem
+  solving methods. Now, as per the documentation, the user must explicitly state whether the subproblem is convex
 
 
 
@@ -78,6 +80,8 @@ Miscellaneous
 
 - statistics now output primal/dual bounds if objective limit is reached
 - memory check in debug mode is now disabled by default
+- message is now provided to the user to inform that automatic Benders' auxiliary variable lower bound computations are
+  not activated when user defined subproblem solving methods are present
 
 @section RN601 SCIP 6.0.1
 *************************
