@@ -50,7 +50,6 @@
 #include <scip/misc.h>
 #include <scip/cons_bounddisjunction.h>
 
-
 #include <scip/presol_symmetry.h>
 #include <symmetry/compute_symmetry.h>
 
@@ -833,6 +832,7 @@ SCIP_RETCODE computeSymmetryGroup(
    )
 {
    SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLR* exprconshdlr;
    SYM_MATRIXDATA matrixdata;
    SYM_EXPRDATA exprdata;
    SCIP_HASHTABLE* vartypemap;
@@ -938,7 +938,7 @@ SCIP_RETCODE computeSymmetryGroup(
 
    /* fill exprdata */
    exprdata.nuniqueoperators = 0;
-   exprdata.nuniquecoefs= 0;
+   exprdata.nuniquecoefs = 0;
    exprdata.nuniqueconstants = 0;
 
    /* prepare matrix data (use block memory, since this can become large) */
@@ -956,10 +956,11 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvars, nallvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvals, nallvars) );
 
-   /* create hashset for auxvars */
+   /* create iterator for expression constraints */
+   exprconshdlr = SCIPfindConshdlr(scip, "expr");
    if( nexprconss > 0 )
    {
-      SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, "expr"), SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriteratorCreate(&it, exprconshdlr, SCIPblkmem(scip)) );
    }
 
    /* loop through all constraints */
@@ -1267,7 +1268,7 @@ SCIP_RETCODE computeSymmetryGroup(
       {
          SCIP_CONSEXPR_EXPR* expr;
 
-         /* for expression constraints, only collect auxiliary variables for now */
+         /* for expression constraints, collect the number of constants, coefficients and operators */
          SCIP_CALL( SCIPexpriteratorInit(it, SCIPgetExprConsExpr(scip, cons), SCIP_CONSEXPRITERATOR_DFS, FALSE) );
          SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
 
@@ -1277,9 +1278,9 @@ SCIP_RETCODE computeSymmetryGroup(
             {
                case SCIP_CONSEXPRITERATOR_ENTEREXPR:
                {
-                  if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "val") == 0 )
+                  if( SCIPgetConsExprExprHdlr(expr) == SCIPfindConsExprExprHdlr(exprconshdlr, "val") )
                      ++exprdata.nuniqueconstants;
-                  else if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum") == 0)
+                  else if( SCIPgetConsExprExprHdlr(expr) == SCIPfindConsExprExprHdlr(exprconshdlr, "sum") )
                   {
                      ++exprdata.nuniqueoperators;
                      ++exprdata.nuniqueconstants;
@@ -1313,7 +1314,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArray(scip, &consvars, nallvars);
 
    /* if no active constraint contains active variables */
-   if ( SCIPconshdlrGetNActiveConss(SCIPfindConshdlr(scip, "expr")) == 0 && matrixdata.nrhscoef == 0 )
+   if ( nexprconss == 0 && matrixdata.nrhscoef == 0 )
    {
       *success = TRUE;
 
@@ -1552,7 +1553,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPhashtableFree(&vartypemap);
 
    /* free cons expr specific data */
-   if( nexprconss > 0 )
+   if( it != NULL )
    {
       SCIPexpriteratorFree(&it);
    }

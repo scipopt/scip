@@ -473,7 +473,7 @@ static
 SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP*                 scip,               /**< SCIP instance */
    bliss::Graph*         G,                  /**< Graph to be constructed */
-   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints*/
+   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
    int&                  nnodes,             /**< buffer to store number of nodes in graph */
    int&                  nedges,             /**< buffer to store number of edges in graph */
    int&                  nusedcolors,        /**< number of used colors ind the graph so far */
@@ -871,7 +871,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
-   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints*/
+   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
