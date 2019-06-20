@@ -5172,7 +5172,7 @@ SCIP_RETCODE selectVarRecursive(
 
 
          /* the current candidate variable has a better score than the best candidate investigated so far */
-         if( SCIPisGT(scip, score, bestscore) )
+         if( SCIPisRelGT(scip, score, bestscore) )
          {
             int nvars = SCIPgetNVars(scip);
 
