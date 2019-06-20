@@ -951,7 +951,8 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhsidx, 2 * nlinconss) );
 
    /* prepare temporary constraint data (use block memory, since this can become large);
-    * also allocate memory for fixed vars since some vars might have been deactivated meanwhile */
+    * also allocate memory for fixed vars since some vars might have been deactivated meanwhile
+    */
    nallvars = nvars + SCIPgetNFixedVars(scip);
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvars, nallvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvals, nallvars) );
@@ -1272,7 +1273,7 @@ SCIP_RETCODE computeSymmetryGroup(
          SCIP_CALL( SCIPexpriteratorInit(it, SCIPgetExprConsExpr(scip, cons), SCIP_CONSEXPRITERATOR_DFS, FALSE) );
          SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
 
-         for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it)) /*lint !e441*/
+         for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
          {
             switch( SCIPexpriteratorGetStageDFS(it) )
             {
@@ -1552,7 +1553,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
    SCIPhashtableFree(&vartypemap);
 
-   /* free cons expr specific data */
+   /* free expression iterator */
    if( it != NULL )
    {
       SCIPexpriteratorFree(&it);
