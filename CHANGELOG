@@ -69,6 +69,7 @@ Fixed bugs
 - fixed wrong stage while clearing the conflict store
 - fixed behavior of SCIPfixVar() by setting infeasible pointer to TRUE if fixval lies outside variable domain
 - allow tightenVar() in SCIP_STAGE_PROBLEM stage
+- fixed bug in cumulative constraint handler when separating the LP solution
 
 
 
