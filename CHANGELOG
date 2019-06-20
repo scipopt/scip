@@ -63,6 +63,11 @@ Fixed bugs
 - fixed bug related to updating unprocessed cuts in the cutpool
 - fixed bug related to enabling quadratic constraints during `CONSINITLP`
 - add missing SCIP_EXPORT for functions used by GCG
+- fixed memory leak and wrong initialization for trival cases in cons_symresack.c
+- fixed bug with upgrading to packing/partitioning orbitopes
+- fixed bug with the status while upgrading in presol_symbreak.c
+- fixed bug with clearing the conflict store in wrong stage
+
 
 Miscellaneous
 -------------
