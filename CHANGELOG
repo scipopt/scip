@@ -72,8 +72,7 @@ Fixed bugs
 - fixed bug in cumulative constraint handler when separating the LP solution
 - fixed bug where the convexity of Benders' decomposition subproblems was checked even when users defined subproblem
   solving methods. Now, as per the documentation, the user must explicitly state whether the subproblem is convex
-
-
+- fixed wrong indexing in heur_dualval
 
 Miscellaneous
 -------------
@@ -82,6 +81,7 @@ Miscellaneous
 - memory check in debug mode is now disabled by default
 - message is now provided to the user to inform that automatic Benders' auxiliary variable lower bound computations are
   not activated when user defined subproblem solving methods are present
+- corrected documentation of the primalgap in SCIP; describe when it will be infinite
 
 @section RN601 SCIP 6.0.1
 *************************
