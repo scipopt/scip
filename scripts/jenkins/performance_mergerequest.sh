@@ -179,6 +179,9 @@ if [ "${N_JOBS}" != "0" ]; then
   ln -fs /nfs/optimi/kombadon/IP check/
   ln -fs /nfs/optimi/kombadon/MINLP check/
 
+  # get testset files to the correct place
+  cp check/IP/instancedata/testsets/*.test check/testset/
+
   #######################
   ### Submit Testruns ###
   #######################
@@ -189,6 +192,7 @@ if [ "${N_JOBS}" != "0" ]; then
       unset $j
     done
     export ${FLAGS}
+
     echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
     make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
   done
