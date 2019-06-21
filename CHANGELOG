@@ -77,6 +77,7 @@ Fixed bugs
 - fixed bug where the convexity of Benders' decomposition subproblems was checked even when users defined subproblem
   solving methods. Now, as per the documentation, the user must explicitly state whether the subproblem is convex
 - fixed wrong indexing in heur_dualval
+- fixed issue with basis status in SoPlex LPi
 
 Miscellaneous
 -------------
