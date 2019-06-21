@@ -27,6 +27,7 @@
 
 #include "scip/cons_expr_nlhdlr_convex.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_iterator.h"
 #include "scip/cons_expr_var.h"
 
 /* fundamental nonlinear handler properties */
@@ -109,6 +110,131 @@ SCIP_RETCODE freeNlhdlrExprData(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE enforceCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*   rootexpr,           /**< expression */
+   SCIP_EXPRCURV         curv,               /**< curvature to achieve */
+   SCIP_Bool*            success             /**< whether we were successful in enforcing this curvature */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPRITERATOR_USERDATA itdata;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPRCURV* childcurv;
+   int childcurvsize;
+   int maxdepth;
+   SCIP_Bool localsuccess;
+   SCIP_CONSEXPR_EXPR** leafexprs = NULL;
+   int nleafexprs = 0;
+   int leafexprssize = 0;
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(curv == SCIP_EXPRCURV_CONVEX || curv == SCIP_EXPRCURV_CONCAVE);
+   assert(success != NULL);
+
+   childcurvsize = SCIPgetConsExprExprNChildren(expr);
+   SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, childcurvsize) );
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+
+   /* allow revisit exprs since we may require them both convex and concave FIXME collecting leafexprs doesn't work this way! */
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   itdata.intvals[0] = (int)curv;  /* desired curvature */
+   itdata.intvals[1] = 0;          /* depth in exprtree (w.r.t. root expression) */
+   SCIPexpriteratorSetCurrentUserData(it, itdata);
+
+   maxdepth = 0;
+   expr = rootexpr;
+   while( !SCIPexpriteratorIsEnd(it) )
+   {
+      itdata = SCIPexpriteratorGetCurrentUserData(it);
+
+      maxdepth = MAX(maxdepth, itdata.intvals[1]);
+
+      /* TODO if sum with > N children, then always turn into variable?
+       * especially if we have a big linear term, this would help to consider less vars for vertex-polyhedral funcs
+       */
+
+      if( childcurvsize < SCIPgetConsExprExprNChildren(expr) )
+      {
+         childcurvsize = SCIPcalcMemGrowSize(scip, SCIPgetConsExprExprNChildren(expr));
+         SCIP_CALL( SCIPreallocBufferArray(scip, &childcurv, childcurvsize) );
+      }
+
+      /* check whether and under which conditions expr can have desired curvature (itdata[0]) */
+      if( (SCIP_EXPRCURV)itdata.intvals[0] != SCIP_EXPRCURV_UNKNOWN )
+      {
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, (SCIP_EXPRCURV)itdata.intvals[0], &localsuccess, childcurv) );
+      }
+      else
+      {
+         /* if we don't care about curvature in this subtree anymore (very unlikely),
+          * then only continue iterating this subtree to assemble leaf expressions
+          */
+         for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+            childcurv[c] = SCIP_EXPRCURV_UNKNOWN;
+      }
+
+      if( localsuccess && SCIPgetConsExprExprNChildren(expr) > 0 )
+      {
+         /* store curvature conditions on children and depth in children */
+         SCIP_CONSEXPRITERATOR_USERDATA itdatachild;
+
+         itdatachild.intvals[1] = itdata.intvals[1] + 1;
+         for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+         {
+            SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[c];
+
+            itdatachild.intvals[0] = (int)childcurv[c];
+            SCIPexpriteratorSetExprUserData(it, child, itdatachild);
+         }
+
+         expr = SCIPexpriteratorGetNext(it);
+      }
+      else
+      {
+         /* either expr cannot have the desired curvature, or we are at a variable (or constant?)
+          * so remember that expr should be handled as if a variable (i.e., add auxvar if not a var)
+          */
+         if( nleafexprs + 1 > leafexprssize )
+         {
+            leafexprssize = SCIPcalcMemGrowSize(scip, nleafexprs+1);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &leafexprs, leafexprssize) );
+         }
+         leafexprs[nleafexprs++] = expr;
+
+         /* skip remaining subtree */
+         expr = SCIPexpriteratorSkipDFS(it);
+      }
+   }
+
+   if( maxdepth <= 1 )
+   {
+      /* maxdepth = 0: root expression couldn't have the desired curvature
+       * maxdepth = 1: only has desired curvature if all immediate children are (made) variables: better let exprhdlr handle then
+       */
+      *success = FALSE;
+   }
+   else
+   {
+      *success = TRUE;
+      /* TODO ensure auxvars for leafexprs, store in nlhdlr exprdata */
+   }
+
+
+   SCIPfreeBufferArray(scip, &childcurv);
+   SCIPfreeBufferArrayNull(scip, &leafexprs);
+
+   SCIPexpriteratorFree(&it);
+
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of nonlinear handler
  */
@@ -126,7 +252,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvex)
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 { /*lint --e{715}*/
-   SCIP_EXPRCURV curvature;
+   SCIP_Bool success2;
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -147,24 +273,34 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    if( !DETECTSUM && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
       return SCIP_OKAY;
 
-   curvature = SCIPgetConsExprExprCurvature(expr);
+   /* TODO we are also interested in handling the concave side */
 
-   /* check whether expression is nonlinear, convex or concave, and is not handled by another nonlinear handler */
-   if( curvature == SCIP_EXPRCURV_CONVEX && !*enforcedbelow )
+   if( !*enforcedbelow )
    {
-      *enforcedbelow = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-      *success = TRUE;
+      SCIP_CALL( enforceCurvature(scip, conshdlr, expr, SCIP_EXPRCURV_CONVEX, &success2) );
 
-      SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
+      if( success2 )
+      {
+         *enforcedbelow = TRUE;
+         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+         *success = TRUE;
+
+         SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
+      }
    }
-   else if( curvature == SCIP_EXPRCURV_CONCAVE && !*enforcedabove )
-   {
-      *enforcedabove = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-      *success = TRUE;
 
-      SCIPdebugMsg(scip, "detected expr %p to be concave -> can enforce expr >= auxvar\n", (void*)expr);
+   if( !*enforcedabove )
+   {
+      SCIP_CALL( enforceCurvature(scip, conshdlr, expr, SCIP_EXPRCURV_CONCAVE, &success2) );
+
+      if( success2 )
+      {
+         *enforcedabove = TRUE;
+         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+         *success = TRUE;
+
+         SCIPdebugMsg(scip, "detected expr %p to be concave -> can enforce expr >= auxvar\n", (void*)expr);
+      }
    }
 
    /* store variable expressions into the expression data of the nonlinear handler */
