@@ -33,8 +33,8 @@ namespace tsp
 /** C++ rounding heuristic for TSP */
 class HeurFrats : public scip::ObjHeur
 {
-   GRAPH*             graph;             /**< the underlying graph of the TSP */
-   SCIP_SOL*          sol;               /**< current solution */
+   GRAPH*                graph;              /**< the underlying graph of the TSP */
+   SCIP_SOL*             sol;                /**< current solution */
 
 public:
    /** default constructor */

@@ -24,7 +24,6 @@
 #define __TSPCONSHDLRSUBTOUR_H__
 
 #include "objscip/objscip.h"
-#include "GomoryHuTree.h"
 #include "ProbDataTSP.h"
 
 namespace tsp
@@ -49,11 +48,7 @@ public:
    {
    }
 
-   /** frees specific constraint data
-    *
-    *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
-    *  the corresponding bound change event was not yet processed.
-    */
+   /** frees specific constraint data */
    virtual SCIP_DECL_CONSDELETE(scip_delete);
 
    /** transforms constraint data into data belonging to the transformed problem */
@@ -167,7 +162,7 @@ public:
    /** feasibility check method of constraint handler for primal solutions
     *
     *  The given solution has to be checked for feasibility.
-    *  
+    *
     *  The check methods of the active constraint handlers are called in decreasing order of their check
     *  priorities until the first constraint handler returned with the result SCIP_INFEASIBLE.
     *  The integrality constraint handler has a check priority of zero. A constraint handler which can

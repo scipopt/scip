@@ -46,7 +46,7 @@ public:
       /* add TSP reader parameters */
       (void) SCIPaddBoolParam(scip,
          "reading/tspreader/round_lengths", "should lenghts of edges be rounded to nearest integer?",
-            &round_lengths_, FALSE, TRUE, NULL, NULL);
+         &round_lengths_, FALSE, TRUE, NULL, NULL);
    }
 
    /** destructor */
@@ -101,9 +101,9 @@ private:
 
    /** adds a variable to both halfedges and captures it for usage in the graph */
    SCIP_RETCODE addVarToEdges(
-      SCIP*                 scip,               /**< SCIP data structure */
-      GRAPHEDGE*            edge,               /**< an edge of the graph */
-      SCIP_VAR*             var                 /**< variable corresponding to that edge */
+      SCIP*              scip,               /**< SCIP data structure */
+      GRAPHEDGE*         edge,               /**< an edge of the graph */
+      SCIP_VAR*          var                 /**< variable corresponding to that edge */
       );
 
 };/*lint !e1712*/
