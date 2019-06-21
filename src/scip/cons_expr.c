@@ -9007,6 +9007,16 @@ SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
    return exprhdlr->simplify != NULL;
 }
 
+/** returns whether expression handler implements the curvature callback */
+SCIP_Bool SCIPhasConsExprExprHdlrCurvature(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->curvature != NULL;
+}
+
 /** returns whether expression handler implements the reverse propagation callback */
 SCIP_Bool SCIPhasConsExprExprHdlrReverseProp(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
@@ -9319,6 +9329,24 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(SCIPsimplifyConsExprExprHdlr)
 
    return SCIP_OKAY;
 }
+
+/** calls the curvature check method of an expression handler */
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(SCIPcurvatureConsExprExprHdlr)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   if( SCIPhasConsExprExprHdlrCurvature(expr->exprhdlr) )
+   {
+      SCIP_CALL( expr->exprhdlr->curvature(scip, conshdlr, expr, exprcurvature, success, childcurv) );
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** calls the expression callback for reverse propagation */
 SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(SCIPreversepropConsExprExprHdlr)

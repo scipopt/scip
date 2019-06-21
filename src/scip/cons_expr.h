@@ -293,6 +293,12 @@ SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
+/** returns whether expression handler implements the curvature callback */
+SCIP_EXPORT
+SCIP_Bool SCIPhasConsExprExprHdlrCurvature(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
 /** returns whether expression handler implements the reverse propagation callback */
 SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrReverseProp(
@@ -363,6 +369,10 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(SCIPestimateConsExprExprHdlr);
 /** calls the simplification method of an expression handler */
 SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(SCIPsimplifyConsExprExprHdlr);
+
+/** calls the curvature check method of an expression handler */
+SCIP_EXPORT
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(SCIPcurvatureConsExprExprHdlr);
 
 /** calls the expression callback for reverse propagation */
 SCIP_EXPORT
