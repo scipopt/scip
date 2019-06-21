@@ -267,7 +267,7 @@ while [ ${SEED} -le ${SEEDS} ]; do
     PERF_MAIL=""
     if [ "${PERFORMANCE}" = "performance" ] || [ "${PERFORMANCE}" = "mergerequest" ]; then
       # add tags to uploaded run
-      export RBCLI_TAG="${GITBRANCH} ${PERFORMANCE}"
+      export RBCLI_TAG="${GITBRANCH}"
       ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
       NEWRBID=$(cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||')
       echo "${NEWTIMESTAMP} ${NEWRBID} p=${PERM} s=${SEED}" >> $RBDB
