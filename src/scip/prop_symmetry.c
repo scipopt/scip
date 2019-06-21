@@ -153,7 +153,7 @@
 /* default parameters for orbital fixing */
 #define DEFAULT_OFSYMCOMPTIMING         2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING   FALSE    /**< Run orbital fixing during presolving? */
-#define DEFAULT_RECOMPUTERESTART    FALSE    /**< Recompute symmetries after a restart has occurred? */
+#define DEFAULT_RECOMPUTERESTART     TRUE    /**< Recompute symmetries after a restart has occurred? */
 
 
 /* event handler properties */
@@ -1904,7 +1904,7 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
-   /* free symmetries after a restart to recompute them later or deactivate OF if used together with orbitopes */
+   /* free symmetries after a restart to recompute them later */
    if ( propdata->recomputerestart && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
    {
       assert( propdata->npermvars > 0 );
@@ -1919,10 +1919,6 @@ SCIP_RETCODE determineSymmetry(
 
       /* reset symmetry information */
       SCIP_CALL( freeSymmetryData(scip, propdata) );
-
-      /* deactivate OF after a restart if symmetry break constraints have been added */
-      if ( propdata->ngenconss >  0 )
-         propdata->ofenabled = FALSE;
    }
 
    /* skip computation if symmetry has already been computed */
