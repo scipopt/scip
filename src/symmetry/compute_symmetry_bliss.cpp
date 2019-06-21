@@ -473,6 +473,7 @@ static
 SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP*                 scip,               /**< SCIP instance */
    bliss::Graph*         G,                  /**< Graph to be constructed */
+   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
    int&                  nnodes,             /**< buffer to store number of nodes in graph */
    int&                  nedges,             /**< buffer to store number of edges in graph */
    int&                  nusedcolors,        /**< number of used colors ind the graph so far */
@@ -494,9 +495,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    int nuniqueconsts = 0;
    int nuniquecoefs = 0;
    int nuniquerhs = 0;
-   int oparraysize = 10 * nexprconss;
-   int constarraysize = 5 * nexprconss;
-   int coefarraysize = 20 * nexprconss;
+   int oparraysize = exprdata->nuniqueoperators;
+   int constarraysize = exprdata->nuniqueconstants;
+   int coefarraysize = exprdata->nuniquecoefs;
    int rhsarraysize = nexprconss;
 
    assert(scip != NULL);
@@ -566,15 +567,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                {
                   SYM_CONSTTYPE* ct;
 
-                  /* check whether we have to resize */
-                  if ( nuniqueconsts >= constarraysize )
-                  {
-                     int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
-                     assert(newsize >= 0);
-                     SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize, newsize) );
-                     constarraysize = newsize;
-                  }
-
                   assert(nuniqueconsts < constarraysize);
 
                   ct = &uniqueconstarray[nuniqueconsts];
@@ -596,15 +588,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                else
                {
                   SYM_OPTYPE* ot;
-
-                  /* check whether we have to resize */
-                  if( nuniqueops >= oparraysize )
-                  {
-                     int newsize = SCIPcalcMemGrowSize(scip, nuniqueops+1);
-                     assert(newsize >= 0);
-                     SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueoparray, oparraysize, newsize) );
-                     oparraysize = newsize;
-                  }
 
                   assert(nuniqueops < oparraysize);
 
@@ -632,15 +615,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   /* add the node corresponding to the constraint */
                   SYM_RHSTYPE* rt;
                   int parentcolor;
-
-                  /* check whether we have to resize */
-                  if ( nuniquerhs >= rhsarraysize )
-                  {
-                     int newsize = SCIPcalcMemGrowSize(scip, nuniquerhs+1);
-                     assert(newsize >= 0);
-                     SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniquerhsarray, rhsarraysize, newsize) );
-                     rhsarraysize = newsize;
-                  }
 
                   assert(nuniquerhs < rhsarraysize);
 
@@ -702,15 +676,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   for( int j = SCIPgetConsExprExprNChildren(expr) - 1; j >= 0; --j )
                   {
                      SYM_CONSTTYPE* ct;
-
-                     /* check whether we have to resize */
-                     if ( nuniquecoefs >= coefarraysize )
-                     {
-                        int newsize = SCIPcalcMemGrowSize(scip, nuniquecoefs+1);
-                        assert(newsize >= 0);
-                        SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sumcoefarray, coefarraysize, newsize) );
-                        coefarraysize = newsize;
-                     }
 
                      assert(nuniquecoefs < coefarraysize);
 
@@ -870,6 +835,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
+   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
@@ -920,7 +886,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    }
 
    /* add the nodes for expression constraints to the graph */
-   SCIP_CALL( fillGraphByNonlinearConss(scip, &G, nnodes, nedges, nusedcolors, success) );
+   SCIP_CALL( fillGraphByNonlinearConss(scip, &G, exprdata, nnodes, nedges, nusedcolors, success) );
 
    if( !success )
    {
