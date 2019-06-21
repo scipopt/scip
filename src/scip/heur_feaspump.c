@@ -1059,31 +1059,35 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             SCIP_Real ubprobing;
 
             probingvar = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, var);
-            lbprobing = SCIPvarGetLbLocal(probingvar);
-            ubprobing = SCIPvarGetUbLocal(probingvar);
-
-            solval = MAX(solval, lbprobing);
-            solval = MIN(solval, ubprobing);
-
-            /* fix the variable and propagate the domain change */
-            if( !SCIPisFeasEQ(probingscip, lbprobing, ubprobing) && SCIPvarIsActive(SCIPvarGetTransVar(probingvar)) )
+            /* skip if variable does not exist in probingscip */
+            if( probingvar != NULL )
             {
-               assert(SCIPisFeasLE(probingscip, lbprobing, ubprobing));
-               SCIPdebugMsg(scip, "try to fix variable <%s> (domain [%f,%f] to %f\n", SCIPvarGetName(probingvar), lbprobing, ubprobing,
-                  solval);
-               SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
-               SCIP_CALL( SCIPpropagateProbing(probingscip, -1, &infeasible, &ndomreds) );
-               SCIPdebugMsg(scip, "  -> reduced %" SCIP_LONGINT_FORMAT " domains\n", ndomreds);
+               lbprobing = SCIPvarGetLbLocal(probingvar);
+               ubprobing = SCIPvarGetUbLocal(probingvar);
 
-               if( infeasible )
+               solval = MAX(solval, lbprobing);
+               solval = MIN(solval, ubprobing);
+
+               /* fix the variable and propagate the domain change */
+               if( !SCIPisFeasEQ(probingscip, lbprobing, ubprobing) && SCIPvarIsActive(SCIPvarGetTransVar(probingvar)) )
                {
-                  SCIPdebugMsg(scip, "  -> infeasible!\n");
-                  SCIP_CALL( SCIPbacktrackProbing(probingscip, 0) );
+                  assert(SCIPisFeasLE(probingscip, lbprobing, ubprobing));
+                  SCIPdebugMsg(scip, "try to fix variable <%s> (domain [%f,%f] to %f\n", SCIPvarGetName(probingvar), lbprobing, ubprobing,
+                     solval);
+                  SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
+                  SCIP_CALL( SCIPpropagateProbing(probingscip, -1, &infeasible, &ndomreds) );
+                  SCIPdebugMsg(scip, "  -> reduced %" SCIP_LONGINT_FORMAT " domains\n", ndomreds);
+
+                  if( infeasible )
+                  {
+                     SCIPdebugMsg(scip, "  -> infeasible!\n");
+                     SCIP_CALL( SCIPbacktrackProbing(probingscip, 0) );
+                  }
                }
-            }
-            else
-            {
-               SCIPdebugMsg(scip, "variable <%s> is already fixed to %f\n", SCIPvarGetName(probingvar), solval);
+               else
+               {
+                  SCIPdebugMsg(scip, "variable <%s> is already fixed to %f\n", SCIPvarGetName(probingvar), solval);
+               }
             }
          }
 
