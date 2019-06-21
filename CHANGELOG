@@ -30,6 +30,9 @@ Build system
 ### Cmake
 
 - new target to 'doc' to build documentation
+- remove non-API methods from library (API methods use new macro SCIP_EXPORT)
+- increase minimal required CMake version to 3.3
+- correct paths and dependency information when installing SCIP
 
 Fixed bugs
 ----------
