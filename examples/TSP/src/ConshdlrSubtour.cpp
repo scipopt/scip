@@ -30,76 +30,76 @@
 
 #include "scip/cons_linear.h"
 
+#include "GomoryHuTree.h"
+
 using namespace tsp;
 using namespace scip;
 using namespace std;
 
+/** data structure for subtour elimination constraints */
 struct SCIP_ConsData
 {
    GRAPH* graph;
 };
 
-/* checks whether proposed solution contains a subtour */
+
+/** checks whether proposed solution contains a subtour
+ *
+ *  We assume that the solution is binary.
+ */
 static
-SCIP_Bool findSubtour( 
-   SCIP*              scip,               /**< SCIP data structure */
-   GRAPH*             graph,              /**< underlying graph */
-   SCIP_SOL*          sol                 /**< proposed solution */
+SCIP_Bool findSubtour(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< underlying graph */
+   SCIP_SOL*             sol                 /**< proposed solution */
    )
-{  
+{
    GRAPHNODE* node;
    GRAPHNODE* startnode;
-   GRAPHEDGE* lastedge;
    GRAPHEDGE* edge;
    GRAPHEDGE* nextedge;
-   int tourlength;
-   SCIP_Bool foundnextedge;
+   GRAPHEDGE* lastedge = NULL;
+   int tourlength = 0;
 
-   if(graph->nnodes <= 1)
+   assert(scip != NULL);
+   assert(graph != NULL);
+
+   if( graph->nnodes <= 1 )
       return FALSE;
 
    startnode = &graph->nodes[0];
-
-   tourlength = 0;
-   lastedge = NULL;
    node = startnode;
 
-   // follow the (sub?)tour until you come back to the startnode
+   /* follow the (sub?)tour until you come back to the startnode */
    do
    {
       edge = node->first_edge;
-      foundnextedge = FALSE;
       nextedge = NULL;
 
-      // look for an outgoing edge to proceed
+      /* look for an outgoing edge to proceed */
       while( edge != NULL )
       {
-         // if a new edge with value numerical equal to one is found, we proceed
+         /* if a new edge with value 1 is found, we proceed */
          if( edge->back != lastedge && SCIPgetSolVal(scip, sol, edge->var) > 0.5 )
-         {          
-            tourlength++;
-            
-            if( foundnextedge || tourlength > graph->nnodes )
-            {
-               /* we found a subtour without the starting node, e.g. 0 - 1 - 2 - 3 - 1 - 2 - ...;
-                * this can only happen, if the degree constraints are violated;
-                * start again with the last visited node as starting node, because this must be member of the subtour;
-                * thus, in the second run we will find the subtour!
-                */
-               return TRUE;
-            }
+         {
+            ++tourlength;
 
-            foundnextedge= TRUE;
-            nextedge = edge;            
-            
+            /* if we found a subtour without the starting node, e.g. 0 - 1 - 2 - 3 - 1 - 2 - ...;
+             * this can only happen, if the degree constraints are violated; */
+            if( nextedge != NULL || tourlength > graph->nnodes )
+               return TRUE;
+
+            nextedge = edge;
+
+            /* only use the first edge for the start node */
             if( node == startnode )
                break;
-         }    
-      
-         edge = edge->next;        
+         }
+
+         edge = edge->next;
       }
-   
-      /* we didn't find an outgoing edge in the solution: the degree constraints must be violated; abort! */
+
+      /* no outgoing edge found in the solution: the degree constraints must be violated; abort! */
       if( nextedge == NULL )
          return TRUE;
 
