@@ -41,6 +41,16 @@ SCIP_RETCODE SCIPcreateConsExprExprPow(
    SCIP_Real             exponent            /**< exponent of the power expression */
    );
 
+/** creates a signpower expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsExprExprSignPower(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPR*   child,              /**< single child */
+   SCIP_Real             exponent            /**< exponent of the power expression */
+   );
+
 /** creates the handler for power expression and includes it into the expression constraint handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
@@ -51,6 +61,12 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
 /** gets the exponent of a power expression */
 SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprPowExponent(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** returns whether power expression is signpower */
+SCIP_EXPORT
+SCIP_Bool SCIPisConsExprExprPowSignpower(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 

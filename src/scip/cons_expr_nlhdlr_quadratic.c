@@ -467,7 +467,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       assert(child != NULL);
 
       if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 &&
-            SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
+            SCIPgetConsExprExprPowExponent(child) == 2.0 && !SCIPisConsExprExprPowSignpower(child) ) /* quadratic term */
       {
          SCIP_CALL( processQuadraticExpr(SCIPgetConsExprExprChildren(child)[0], seenexpr, &properquadratic, &nquadterms,
                   &nlinterms) );
@@ -537,7 +537,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       assert(coef != 0.0);
 
       if( strcmp("pow", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))) == 0 &&
-            SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
+            SCIPgetConsExprExprPowExponent(child) == 2.0 && !SCIPisConsExprExprPowSignpower(child) ) /* quadratic term */
       {
          SCIP_QUADEXPRTERM* quadexprterm;
          assert(SCIPgetConsExprExprNChildren(child) == 1);

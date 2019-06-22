@@ -4731,7 +4731,7 @@ SCIP_RETCODE makeClassicExpr(
    {
       assert(nchildren == 1);
       assert(children != NULL && children[0] != NULL);
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_REALPOWER, *children,
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIPisConsExprExprPowSignpower(sourceexpr) ? SCIP_EXPR_SIGNPOWER : SCIP_EXPR_REALPOWER, *children,
             SCIPgetConsExprExprPowExponent(sourceexpr)) );
    }
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "prod") == 0 )
@@ -4851,7 +4851,7 @@ SCIP_RETCODE createNlRow(
             SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(child), coefs[i]) );
          }
          else if( SCIPgetConsExprExprHdlr(child) == conshdlrdata->exprpowhdlr &&
-            SCIPgetConsExprExprPowExponent(child) == 2.0 &&
+            SCIPgetConsExprExprPowExponent(child) == 2.0 && !SCIPisConsExprExprPowSignpower(child) &&
             SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(child)[0]) )
          {
             /* square term  */
@@ -4951,7 +4951,7 @@ SCIP_RETCODE createNlRow(
       }
    }
    else if( SCIPgetConsExprExprHdlr(consdata->expr) == conshdlrdata->exprpowhdlr &&
-      SCIPgetConsExprExprPowExponent(consdata->expr) == 2.0 &&
+      SCIPgetConsExprExprPowExponent(consdata->expr) == 2.0 && !SCIPisConsExprExprPowSignpower(consdata->expr) &&
       SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(consdata->expr)[0]) )
    {
       /* if root is a x^2, then set the quadratic part of the nlrow */
@@ -9727,6 +9727,20 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          break;
       }
 
+      case SCIP_EXPR_SIGNPOWER:
+      {
+         SCIP_Real exponent;
+
+         exponent = (SCIP_Real)SCIPexprgraphGetNodeSignPowerExponent(node);
+
+         assert(nchildren == 1);
+         assert(children != NULL && children[0] != NULL);
+
+         SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, consexprhdlr, expr, *children, exponent) );
+
+         break;
+      }
+
       case SCIP_EXPR_SUM:
       {
          SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, nchildren, children, NULL, 0.0) );
@@ -9899,7 +9913,6 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
 
          break;
       }
-      case SCIP_EXPR_SIGNPOWER:
       case SCIP_EXPR_TAN:
       case SCIP_EXPR_MIN:
       case SCIP_EXPR_MAX:
@@ -10564,7 +10577,15 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
             else if(strcmp(type, "val") == 0)
                SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprValueValue(expr));
             else if(strcmp(type, "pow") == 0)
-               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprPowExponent(expr));
+               SCIPinfoMessage(scip, NULL, "%g %d", SCIPgetConsExprExprPowExponent(expr), SCIPisConsExprExprPowSignpower(expr));
+            else if(strcmp(type, "exp") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else if(strcmp(type, "log") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else if(strcmp(type, "abs") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else
+               SCIPinfoMessage(scip, NULL, "NOT IMPLEMENTED YET\n");
 
             if(expr->nenfos > 0 )
             {
@@ -11605,6 +11626,7 @@ int SCIPcompareConsExprExprs(
    if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "prod") == 0 )
       return -SCIPcompareConsExprExprs(expr2, expr1);
 
+   /* TODO handle signpower */
    /* enforces OR9 */
    if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "pow") == 0 )
    {

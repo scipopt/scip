@@ -481,6 +481,7 @@ SCIP_RETCODE mergeProductExprlist(
          continue;
       }
 
+      /* TODO handle signpower */
       /* they were not exponentials, so collect bases and exponents */
       if( SCIPgetConsExprExprHdlr(current->expr) == SCIPgetConsExprExprHdlrPower(conshdlr) )
       {
