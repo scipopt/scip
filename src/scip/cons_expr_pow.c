@@ -18,6 +18,7 @@
  * @author Benjamin Mueller
  *
  * @todo initsepaPow
+ * @todo signpower for exponent < 1 ?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -216,12 +217,17 @@ SCIP_RETCODE createData(
 
 /** computes a tangent at a reference point by linearization
  *
- * linearization in xref is xref^exponent + exponent * xref^(exponent-1) (x - xref)
+ * for a normal power, linearization in xref is xref^exponent + exponent * xref^(exponent-1) (x - xref)
  * = (1-exponent) * xref^exponent + exponent * xref^(exponent-1) * x
+ *
+ * for a signpower, linearization is the same if xref is positive
+ * for xref negative it is -(-xref)^exponent + exponent * (-xref)^(exponent-1) (x-xref)
+ * = (1-exponent) * (-xref)^(exponent-1) * xref + exponent * (-xref)^(exponent-1) * x
  */
 static
 void computeTangent(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             signpower,          /**< are we signpower or normal power */
    SCIP_Real             exponent,           /**< exponent */
    SCIP_Real             xref,               /**< reference point where to linearize */
    SCIP_Real*            constant,           /**< buffer to store constant term of secant */
@@ -236,17 +242,17 @@ void computeTangent(
    assert(slope != NULL);
    assert(success != NULL);
    assert(xref != 0.0 || exponent > 0.0);
-   assert(EPSISINT(exponent, 0.0) || !SCIPisNegative(scip, xref)); /* non-integral exponent -> reference point must be >= 0 */
+   assert(EPSISINT(exponent, 0.0) || signpower || !SCIPisNegative(scip, xref)); /* non-integral exponent -> reference point must be >= 0 or we do signpower */
 
    /* TODO power is not differentiable at 0.0 for exponent < 0
     * should we forbid here that xref > 0, do something smart here, or just return success=FALSE?
     */
    /* assert(exponent >= 1.0 || xref > 0.0); */
 
-   if( !EPSISINT(exponent, 0.0) && xref < 0.0 )
+   if( !EPSISINT(exponent, 0.0) && !signpower && xref < 0.0 )
       xref = 0.0;
 
-   xrefpow = pow(xref, exponent - 1.0);
+   xrefpow = pow(signpower ? REALABS(xref) : xref, exponent - 1.0);
 
    /* if huge xref and/or exponent too large, then pow may overflow */
    if( !SCIPisFinite(xrefpow) )
@@ -264,10 +270,12 @@ void computeTangent(
  *
  * secant is xlb^exponent + (xub^exponent - xlb^exponent) / (xub - xlb) * (x - xlb)
  * = xlb^exponent - slope * xlb + slope * x  with slope = (xub^exponent - xlb^exponent) / (xub - xlb)
+ * same if signpower
  */
 static
 void computeSecant(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             signpower,          /**< are we signpower or normal power */
    SCIP_Real             exponent,           /**< exponent */
    SCIP_Real             xlb,                /**< lower bound on x */
    SCIP_Real             xub,                /**< upper bound on x */
@@ -281,8 +289,8 @@ void computeSecant(
    assert(slope != NULL);
    assert(success != NULL);
    assert(!SCIPisEQ(scip, xlb, xub)); /* taken care of in separatePointPow */
-   assert(xlb >= 0.0 || EPSISINT(exponent, 0.0));
-   assert(xub >= 0.0 || EPSISINT(exponent, 0.0));
+   assert(xlb >= 0.0 || EPSISINT(exponent, 0.0) || signpower);
+   assert(xub >= 0.0 || EPSISINT(exponent, 0.0) || signpower);
    assert(exponent != 1.0);
 
    *success = FALSE;
@@ -292,9 +300,9 @@ void computeSecant(
       return;
 
    /* first handle some special cases */
-   if( EPSISINT(exponent / 2.0, 0.0) && xub > 0.1 && SCIPisFeasEQ(scip, xlb, -xub) )
+   if( EPSISINT(exponent / 2.0, 0.0) && !signpower && xub > 0.1 && SCIPisFeasEQ(scip, xlb, -xub) )
    {
-      /* for even exponents with xlb ~ -xub the slope would be very close to 0
+      /* for normal power with even exponents with xlb ~ -xub the slope would be very close to 0
        * since xub^n - xlb^n is prone to cancellation here, we omit computing this secant (it's probably useless)
        * unless the bounds are close to 0 as well (xub <= 0.1 in the "if" above)
        * or we have exactly xlb=-xub, where we can return a clean 0.0 (though it's probably useless)
@@ -312,12 +320,20 @@ void computeSecant(
    }
    else if( xlb == 0.0 && exponent > 0.0 ) /*lint !e777*/
    {
+      assert(xub >= 0.0);
       *slope = pow(xub, exponent-1.0);
       *constant = 0.0;
    }
    else if( xub == 0.0 && exponent > 0.0 ) /*lint !e777*/
    {
-      *slope = pow(xlb, exponent-1.0);
+      /* normal pow: slope = - xlb^exponent / (-xlb) = xlb^(exponent-1)
+       * signpower:  slope = (-xlb)^exponent / (-xlb) = (-xlb)^(exponent-1)
+       */
+      assert(xlb <= 0.0);  /* so signpower or exponent is integral */
+      if( signpower )
+         *slope = pow(-xlb, exponent-1.0);
+      else
+         *slope = pow(xlb, exponent-1.0);
       *constant = 0.0;
    }
    else
@@ -325,11 +341,17 @@ void computeSecant(
       SCIP_Real lbval;
       SCIP_Real ubval;
 
-      lbval = pow(xlb, exponent);
+      if( signpower )
+         lbval = SIGN(xlb) * pow(REALABS(xlb), exponent);
+      else
+         lbval = pow(xlb, exponent);
       if( !SCIPisFinite(lbval) )
          return;
 
-      ubval = pow(xub, exponent);
+      if( signpower )
+         ubval = SIGN(xub) * pow(REALABS(xub), exponent);
+      else
+         ubval = pow(xub, exponent);
       if( !SCIPisFinite(ubval) )
          return;
 
@@ -404,13 +426,13 @@ void estimateParabola(
 
    if( !overestimate )
    {
-      computeTangent(scip, exponent, xref, constant, slope, success);
+      computeTangent(scip, FALSE, exponent, xref, constant, slope, success);
       *islocal = FALSE;
    }
    else
    {
       /* overestimation -> secant */
-      computeSecant(scip, exponent, xlb, xub, constant, slope, success);
+      computeSecant(scip, FALSE, exponent, xlb, xub, constant, slope, success);
       *islocal = TRUE;
    }
 }
@@ -475,21 +497,19 @@ void estimateSignpower(
 
    *success = FALSE;
 
-   /* TODO computeSecant and computeTangent do not know if we are a real signpower (not just an odd power) */
-
    if( !SCIPisPositive(scip, xub) )
    {
       /* easy case */
       if( !overestimate )
       {
          /* underestimator is secant */
-         computeSecant(scip, exponent, xlb, xub, constant, slope, success);
+         computeSecant(scip, TRUE, exponent, xlb, xub, constant, slope, success);
          *islocal = TRUE;
       }
       else
       {
          /* overestimator is tangent */
-         computeTangent(scip, exponent, xref, constant, slope, success);
+         computeTangent(scip, TRUE, exponent, xref, constant, slope, success);
 
          /* if global upper bound is > 0, then the tangent is only valid locally if the reference point is right of -root*xubglobal */
          *islocal = SCIPisPositive(scip, xubglobal) && xref > -root * xubglobal;
@@ -507,13 +527,13 @@ void estimateSignpower(
          if( xref < c )
          {
             /* underestimator is secant between xlb and c */
-            computeSecant(scip, exponent, xlb, c, constant, slope, success);
+            computeSecant(scip, TRUE, exponent, xlb, c, constant, slope, success);
             *islocal = TRUE;
          }
          else
          {
             /* underestimator is tangent */
-            computeTangent(scip, exponent, xref, constant, slope, success);
+            computeTangent(scip, TRUE, exponent, xref, constant, slope, success);
 
             /* if reference point is left of -root*xlbglobal (c w.r.t. global bounds), then tangent is not valid w.r.t. global bounds */
             *islocal = xref < -root * xlbglobal;
@@ -527,7 +547,7 @@ void estimateSignpower(
          if( xref <= c )
          {
             /* overestimator is tangent */
-            computeTangent(scip, exponent, xref, constant, slope, success);
+            computeTangent(scip, TRUE, exponent, xref, constant, slope, success);
 
             /* if reference point is right of -root*xubglobal (c w.r.t. global bounds), then tangent is not valid w.r.t. global bounds */
             *islocal = xref > -root * xubglobal;
@@ -535,7 +555,7 @@ void estimateSignpower(
          else
          {
             /* overestimator is secant */
-            computeSecant(scip, exponent, c, xub, constant, slope, success);
+            computeSecant(scip, TRUE, exponent, c, xub, constant, slope, success);
             *islocal = TRUE;
          }
       }
@@ -631,7 +651,7 @@ void estimateHyperbolaPositive(
                return;
          }
 
-         computeTangent(scip, exponent, xref, constant, slope, success);
+         computeTangent(scip, FALSE, exponent, xref, constant, slope, success);
 
          if( EPSISINT(exponent/2.0, 0.0) )
          {
@@ -710,7 +730,7 @@ void estimateHyperbolaPositive(
                 * secant between xlb and root*xlb (= tangent at root*xlb).
                 * However, if xub < root*xlb, then we can tilt the estimator to be the secant between xlb and xub.
                 */
-               computeSecant(scip, exponent, xlb, MIN(xlb * root, xub), constant, slope, success);
+               computeSecant(scip, FALSE, exponent, xlb, MIN(xlb * root, xub), constant, slope, success);
                *islocal = TRUE;
             }
             else
@@ -719,7 +739,7 @@ void estimateHyperbolaPositive(
                 * This will still be underestimating for x in [xlb,0], too.
                 * The tangent is globally valid, if we had also generated w.r.t. global bounds.
                 */
-               computeTangent(scip, exponent, xref, constant, slope, success);
+               computeTangent(scip, FALSE, exponent, xref, constant, slope, success);
                *islocal = xref < xlbglobal * root;
             }
          }
@@ -732,7 +752,7 @@ void estimateHyperbolaPositive(
          return;
 
       /* overestimate and fixed sign -> secant */
-      computeSecant(scip, exponent, xlb, xub, constant, slope, success);
+      computeSecant(scip, FALSE, exponent, xlb, xub, constant, slope, success);
       *islocal = TRUE;
    }
 
@@ -799,7 +819,7 @@ void estimateHyperbolaMixed(
       if( !overestimate )
       {
          /* underestimation -> secant */
-         computeSecant(scip, exponent, xlb, xub, constant, slope, success);
+         computeSecant(scip, FALSE, exponent, xlb, xub, constant, slope, success);
          *islocal = TRUE;
       }
       else if( !SCIPisZero(scip, xlb/10.0) )
@@ -817,7 +837,7 @@ void estimateHyperbolaMixed(
                xref = 0.1;
          }
 
-         computeTangent(scip, exponent, xref, constant, slope, success);
+         computeTangent(scip, FALSE, exponent, xref, constant, slope, success);
          /* if x does not have a fixed sign globally, then our tangent is not globally valid (power is not convex on global domain) */
          *islocal = xlbglobal * xubglobal < 0.0;
       }
@@ -880,7 +900,7 @@ void estimateRoot(
    if( !overestimate )
    {
       /* underestimate -> secant */
-      computeSecant(scip, exponent, xlb, xub, constant, slope, success);
+      computeSecant(scip, FALSE, exponent, xlb, xub, constant, slope, success);
       *islocal = TRUE;
    }
    else
@@ -895,7 +915,7 @@ void estimateRoot(
             xref = 0.1;
       }
 
-      computeTangent(scip, exponent, xref, constant, slope, success);
+      computeTangent(scip, FALSE, exponent, xref, constant, slope, success);
       *islocal = FALSE;
    }
 }
@@ -1486,6 +1506,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
    SCIP_Real childub;
    SCIP_Real exponent;
    SCIP_Real refpoint;
+   SCIP_Bool issignpower;
    SCIP_Bool isinteger;
    SCIP_Bool iseven;
 
@@ -1502,9 +1523,6 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
 
    *success = FALSE;
 
-   if( SCIPisConsExprExprPowSignpower(expr) )  /* TODO implement */
-      return SCIP_OKAY;
-
    /* get aux variables: we over- or underestimate childvar^exponent  */
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
@@ -1513,7 +1531,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
 
    refpoint = SCIPgetSolVal(scip, sol, childvar);
 
-   SCIPdebugMsg(scip, "%sestimation of x^%g at x=%g\n", overestimate ? "over" : "under", SCIPgetConsExprExprData(expr)->exponent, refpoint);
+   SCIPdebugMsg(scip, "%sestimation of %s x^%g at x=%g\n", overestimate ? "over" : "under", SCIPisConsExprExprPowSignpower(expr) ? "signed" : "", SCIPgetConsExprExprData(expr)->exponent, refpoint);
 
    /* we can not generate a cut at +/- infinity */
    if( SCIPisInfinity(scip, REALABS(refpoint)) )
@@ -1533,13 +1551,16 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
    isinteger = EPSISINT(exponent, 0.0);
    iseven = isinteger && EPSISINT(exponent/2.0, 0.0);
 
+   issignpower = exprdata->signpower;
+   assert(!issignpower || exponent > 1.0);
+
    /* adjust the reference point */
    refpoint = SCIPisLT(scip, refpoint, childlb) ? childlb : refpoint;
    refpoint = SCIPisGT(scip, refpoint, childub) ? childub : refpoint;
    assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
 
-   /* if exponent is not integral, then child must be non-negative */
-   if( !isinteger && childlb < 0.0 )
+   /* if exponent is not integral and not signpower, then child must be non-negative */
+   if( !isinteger && !issignpower && childlb < 0.0 )
    {
       /* somewhere we should have tightened the bound on x, but small tightening are not always applied by SCIP
        * it is ok to do this tightening here, but let's assert that we were close to 0.0 already
@@ -1548,9 +1569,9 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
       childlb = 0.0;
       refpoint = MAX(refpoint, 0.0);
    }
-   assert(isinteger || childlb >= 0.0);
+   assert(isinteger || issignpower || childlb >= 0.0);
 
-   if( exponent == 2.0 )
+   if( exponent == 2.0 && !issignpower )
    {
       /* initialize, because SCIPaddSquareXyz only adds to existing values */
       *success = TRUE;
@@ -1569,16 +1590,32 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
          *islocal = FALSE; /* linearizations are globally valid */
       }
    }
-   else if( exponent > 0.0 && iseven )
+   else if( exponent > 0.0 && iseven && !issignpower )
    {
       estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
    }
    else if( exponent > 1.0 && childlb >= 0.0 )
    {
-      /* FIXME tangents on parabola are only globally valid if global lower bound is also >= 0.0 (thus not signpower) */
+      SCIP_Real glb;
       estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
+
+      /* if odd or signed power, then check whether tangent on parabola is also globally valid, that is reference point is right of -root*global-lower-bound */
+      glb = SCIPvarGetLbGlobal(childvar);
+      if( !*islocal && (issignpower || !iseven) && glb < 0.0 )
+      {
+         if( SCIPisInfinity(scip, -glb) )
+            *islocal = TRUE;
+         else
+         {
+            if( exprdata->root == SCIP_INVALID ) /*lint !e777*/
+            {
+               SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
+            }
+            *islocal = refpoint < exprdata->root * (-glb);
+         }
+      }
    }
-   else if( exponent > 1.0 )  /* and !iseven && childlb < 0.0 due to previous if */
+   else if( exponent > 1.0 )  /* and (!iseven || issignpower) && childlb < 0.0 due to previous if */
    {
       /* compute root if not known yet; only needed if mixed sign (global child ub > 0) */
       if( exprdata->root == SCIP_INVALID && SCIPvarGetUbGlobal(childvar) > 0.0 ) /*lint !e777*/

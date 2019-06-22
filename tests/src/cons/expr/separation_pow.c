@@ -52,7 +52,7 @@ Test(estimation, tangent, .description = "test computation of tangent")
          constant = DBL_MAX;
          slope = DBL_MAX;
 
-         computeTangent(scip, exponent, xref, &constant, &slope, &success);
+         computeTangent(scip, FALSE, exponent, xref, &constant, &slope, &success);
 
          /* x^p -> x0^p + p*x0^{p-1} (x-x0) */
 
@@ -99,7 +99,7 @@ Test(estimation, secant, .description = "test computation of secant")
             constant = DBL_MAX;
             slope = DBL_MAX;
 
-            computeSecant(scip, exponent, xlb, xub, &constant, &slope, &success);
+            computeSecant(scip, FALSE, exponent, xlb, xub, &constant, &slope, &success);
 
             /* x^p -> xlb^p + (xub^p - xlb^p) / (xub - xlb) * (x - xlb) */
 
@@ -132,7 +132,7 @@ Test(estimation, secant, .description = "test computation of secant")
    /* in double precision, xlb^exponent looks the same as xub^exponent */
    /* cr_assert_eq(pow(xlb, exponent), pow(xub, exponent)); */ /* assert fails only on some architectures */
 
-   computeSecant(scip, exponent, xlb, xub, &constant, &slope, &success);
+   computeSecant(scip, FALSE, exponent, xlb, xub, &constant, &slope, &success);
 
    /* computeSecant should either fail or produce a positive slope */
    cr_assert(!success || (slope > 0.0));
