@@ -63,6 +63,7 @@ Features
   Relaxation-only variables cannot appear in the objective function.
 
 - The OSiL reader now supports nonlinear expressions of type "signpower".
+- Expressions of form abs(x)^p * x in a nonlinear constraint are now sometimes recognized and handled by abspower constraints.
 
 
 Performance improvements
