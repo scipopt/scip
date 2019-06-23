@@ -1402,6 +1402,55 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printPow)
    return SCIP_OKAY;
 }
 
+/** expression parse callback
+ * this callback is only called for signpower, since normal power are written via ^ operator and parsed by consexpr core */
+static
+SCIP_DECL_CONSEXPR_EXPRPARSE(parsePow)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* childexpr;
+   SCIP_Real exponent;
+
+   assert(expr != NULL);
+
+   /* parse child expression string */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, consexprhdlr, string, endstring, &childexpr) );
+   assert(childexpr != NULL);
+
+   string = *endstring;
+   while( *string == ' ' )
+      ++string;
+
+   if( *string != ',' )
+   {
+      SCIPerrorMessage("Expected comma after first argument of signpower().\n");
+      return SCIP_READERROR;
+   }
+   ++string;
+
+   if( !SCIPparseReal(scip, string, &exponent, (char**)endstring) )
+   {
+      SCIPerrorMessage("Expected numeric exponent for second argument of signpower().\n");
+      return SCIP_READERROR;
+   }
+
+   if( exponent <= 1.0 || SCIPisInfinity(scip, exponent) )
+   {
+      SCIPerrorMessage("Expected finite exponent >= 1.0 for signpower().\n");
+      return SCIP_READERROR;
+   }
+
+   /* create signpower expression */
+   SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, consexprhdlr, expr, childexpr, exponent) );
+   assert(*expr != NULL);
+
+   /* release child expression since it has been captured by the signpower expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childexpr) );
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** expression point evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalPow)
@@ -1894,6 +1943,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataPow, freedataPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printPow) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parsePow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, NULL, estimatePow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropPow) );

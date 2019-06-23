@@ -4301,6 +4301,10 @@ SCIP_RETCODE parseBase(
       /* search for expression handler */
       exprhdlr = SCIPfindConsExprExprHdlr(conshdlr, operatorname);
 
+      /* pow() writes signpower for signpower contraints */
+      if( exprhdlr == NULL && strcmp(operatorname, "signpower") == 0 )
+         exprhdlr = SCIPgetConsExprExprHdlrPower(conshdlr);
+
       /* check expression handler exists and has a parsing method */
       if( exprhdlr == NULL )
       {
