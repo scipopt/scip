@@ -37,7 +37,8 @@
 #define EXPRHDLR_NAME         "pow"
 #define EXPRHDLR_DESC         "power expression"
 #define EXPRHDLR_PRECEDENCE  55000
-#define EXPRHDLR_HASHKEY     SCIPcalcFibHash(21163.0)
+#define EXPRHDLR_HASHKEY1    SCIPcalcFibHash(21163.0)
+#define EXPRHDLR_HASHKEY2    SCIPcalcFibHash(21163.1)
 
 /*
  * Data structures
@@ -1660,28 +1661,27 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
    SCIP_INTERVAL interval;
    SCIP_INTERVAL child;
    SCIP_Real exponent;
+   SCIP_Bool signpower;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(nreductions != NULL);
 
-   if( SCIPisConsExprExprPowSignpower(expr) )  /* TODO implement */
-      return SCIP_OKAY;
-
    *nreductions = 0;
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
+   signpower = SCIPisConsExprExprPowSignpower(expr);
 
    interval = SCIPgetConsExprExprActivity(scip, expr);
    child = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
 
-   SCIPdebugMsg(scip, "reverseprop x^%g in [%.15g,%.15g], x = [%.15g,%.15g]", exponent, interval.inf, interval.sup, child.inf, child.sup);
+   SCIPdebugMsg(scip, "reverseprop %sx^%g in [%.15g,%.15g], x = [%.15g,%.15g]", signpower ? "signed " : "", exponent, interval.inf, interval.sup, child.inf, child.sup);
 
    if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, interval) )
    {
       /* if exponent is not integral, then make sure that child is non-negative */
-      if( !EPSISINT(exponent, 0.0) && child.inf < 0.0 )
+      if( !EPSISINT(exponent, 0.0) && !signpower && child.inf < 0.0 )
       {
          SCIPintervalSetBounds(&interval, 0.0, child.sup);
       }
@@ -1694,7 +1694,27 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
    else
    {
       /* f = pow(c0, alpha) -> c0 = pow(f, 1/alpha) */
-      SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &interval, child, exponent, interval);
+      if( signpower )
+      {
+         SCIP_INTERVAL exprecip;
+         SCIPintervalSet(&exprecip, exponent);
+         SCIPintervalReciprocal(SCIP_INTERVAL_INFINITY, &exprecip, exprecip);
+         if( exprecip.inf == exprecip.sup )  /*lint !e777*/
+         {
+            SCIPintervalSignPowerScalar(SCIP_INTERVAL_INFINITY, &interval, interval, exprecip.inf);
+         }
+         else
+         {
+            SCIP_INTERVAL interval1, interval2;
+            SCIPintervalSignPowerScalar(SCIP_INTERVAL_INFINITY, &interval1, interval, exprecip.inf);
+            SCIPintervalSignPowerScalar(SCIP_INTERVAL_INFINITY, &interval2, interval, exprecip.sup);
+            SCIPintervalUnify(&interval, interval1, interval2);
+         }
+      }
+      else
+      {
+         SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &interval, child, exponent, interval);
+      }
    }
 
    SCIPdebugMsgPrint(scip, " -> [%.15g,%.15g]\n", interval.inf, interval.sup);
@@ -1716,8 +1736,11 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashPow)
    assert(hashkey != NULL);
    assert(childrenhashes != NULL);
 
-   /* TODO include exponent and signpower yes/no into hashkey */
-   *hashkey = EXPRHDLR_HASHKEY;
+   /* TODO include exponent into hashkey */
+   if( !SCIPisConsExprExprPowSignpower(expr) )
+      *hashkey = EXPRHDLR_HASHKEY1;
+   else
+      *hashkey = EXPRHDLR_HASHKEY2;
    *hashkey ^= childrenhashes[0];
 
    return SCIP_OKAY;
@@ -1730,6 +1753,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvaturePow)
    SCIP_CONSEXPR_EXPR* child;
    SCIP_INTERVAL childinterval;
    SCIP_Real exponent;
+   SCIP_Bool signpower;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1739,6 +1763,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvaturePow)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
+   signpower = SCIPisConsExprExprPowSignpower(expr);
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    childinterval = SCIPgetConsExprExprActivity(scip, child);
@@ -1747,7 +1772,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvaturePow)
    /* SCIPexprcurvPowerInv return unknown actually means that curv cannot be obtained */
    *success = *childcurv != SCIP_EXPRCURV_UNKNOWN;
 
-   if( SCIPisConsExprExprPowSignpower(expr) )  /* TODO implement */
+   if( signpower )  /* TODO implement */
       *success = FALSE;
 
    return SCIP_OKAY;
@@ -1778,8 +1803,11 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityPow)
    exponent = SCIPgetConsExprExprPowExponent(expr);
    expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
 
-   if( SCIPisConsExprExprPowSignpower(expr) )  /* TODO implement */
+   if( SCIPisConsExprExprPowSignpower(expr) )
+   {
+      *result = SCIP_MONOTONE_INC;
       return SCIP_OKAY;
+   }
 
    if( expisint )
    {
