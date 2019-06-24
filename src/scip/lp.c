@@ -4084,6 +4084,7 @@ SCIP_Real colCalcInternalFarkasCoef(
    {
       row = col->rows[i];
       assert(row != NULL);
+      
       assert(row->dualfarkas < SCIP_INVALID);
       assert(row->lppos >= 0);
       assert(col->linkpos[i] >= 0);
@@ -8675,7 +8676,7 @@ SCIP_RETCODE SCIPlpFlush(
    }
 
    /* if the cutoff bound was changed in between, we want to re-optimize the LP even if nothing else has changed */
-   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 ) /*lint !e777*/
+   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 && !set->misc_exactsolve ) /*lint !e777*/
    {
       lp->solved = FALSE;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -13202,7 +13203,7 @@ SCIP_Real SCIPlpGetPseudoObjval(
    else
    {
       /* recalculate the pseudo solution value, if needed */
-      if( !lp->pseudoobjvalid )
+      if( !lp->pseudoobjvalid && !set->misc_exactsolve )
          recomputePseudoObjectiveValue(lp, set, prob);
 
       /* if the pseudo objective value is smaller than -infinity, we just return -infinity */

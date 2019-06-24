@@ -1243,7 +1243,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_CALL( RcreateTemp(set->buffer, &farkasrhs) );
    SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
 
-   SCIPsetAllocBufferArray(set, &ind, lpex->nrows);
+   SCIPsetAllocBufferArray(set, &ind, lpex->nrows + lpex->ncols);
 
    len = 0;
    for( i = 0; i < lpex->ncols; ++i )

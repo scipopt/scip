@@ -1855,7 +1855,7 @@ SCIP_RETCODE consdataUpdateActivities(
             }
             /* "normal case": just add the contribution to the activity */
             else
-               Rset(delta newcontribution);
+               Rset(delta, newcontribution);
          }
       }
       /* old bound was -infinity */

@@ -1,6 +1,3 @@
-
-
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -1008,7 +1005,8 @@ void colexSwapCoefs(
    if( pos1 == pos2 )
       return;
 
-   SCIP_CALL( RcreateTemp(buffer, &tmpval) );
+   RcreateTemp(buffer, &tmpval);
+
    /* swap coefficients */
    tmprow = col->rows[pos2];
    Rset(tmpval, col->vals[pos2]);
@@ -1113,7 +1111,7 @@ void rowexSwapCoefs(
    if( pos1 == pos2 )
       return;
 
-   SCIP_CALL( RcreateTemp(buffer, &tmpval) );
+   RcreateTemp(buffer, &tmpval);
    /* swap coefficients */
    tmpcol = row->cols[pos2];
    tmpindex = row->cols_index[pos2];
@@ -2661,7 +2659,7 @@ SCIP_RETCODE SCIPcolexCreate(
 
    if( len > 0 )
    {
-      SCIP_ALLOC( RcopyArray(blkmem, &(*col)->vals, vals, len) );
+      SCIP_CALL( RcopyArray(blkmem, &(*col)->vals, vals, len) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*col)->linkpos, len) );
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*col)->rows, rows, len) );
 
@@ -3178,7 +3176,7 @@ SCIP_RETCODE SCIProwCreateExact(
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*row)->cols_index, len) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*row)->linkpos, len) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*row)->valsinterval, len) );
-      SCIP_ALLOC( RcopyArray(blkmem, &(*row)->vals, vals, len) );
+      SCIP_CALL( RcopyArray(blkmem, &(*row)->vals, vals, len) );
 
       for( i = 0; i < len; ++i )
       {
@@ -3340,6 +3338,9 @@ SCIP_RETCODE SCIPlpPsdataCreate(
 
    psdata->interiorpt = NULL;
    psdata->interiorray = NULL;
+   psdata->approxdual = NULL;
+   psdata->violation = NULL;
+   psdata->commonslack = NULL;
    psdata->includedrows = NULL;
    psdata->psbasis = NULL;
    psdata->rectfactor = (qsnum_factor_work*) NULL;
@@ -3347,6 +3348,7 @@ SCIP_RETCODE SCIPlpPsdataCreate(
 
    psdata->nextendedrows = 0;
    psdata->npsbasis = 0;
+   psdata->approxdualsize = 0;
 
    psdata->psdatacon = FALSE;
    psdata->psdatafail = FALSE;
@@ -3380,6 +3382,10 @@ SCIP_RETCODE SCIPlpPsdataFree(
    {
       RdeleteArray(blkmem, &psdata->interiorpt, psdata->nextendedrows);
       RdeleteArray(blkmem, &psdata->interiorray, psdata->nextendedrows);
+      RdeleteArray(blkmem, &psdata->violation, lp->ncols);
+      RdeleteArray(blkmem, &psdata->correction, psdata->nextendedrows);
+      RdeleteArray(blkmem, &psdata->approxdual, psdata->approxdualsize);
+
       Rdelete(blkmem, &psdata->commonslack);
 
       BMSfreeBlockMemoryArrayNull(blkmem, &psdata->includedrows, psdata->nextendedrows);
@@ -3528,7 +3534,7 @@ SCIP_RETCODE SCIPlpexCreate(
    (*lp)->looseobjvalinf = 0;
    (*lp)->pseudoobjvalinf = 0;
    (*lp)->glbpseudoobjvalinf = 0;
-   (*lp)->interleavedbfreq = 0;
+   (*lp)->interleavedbfreq = 10;
    (*lp)->ninfiniteboundcols = 0;
    SCIP_CALL( Rcreate(blkmem, &(*lp)->lpobjval) );
    SCIP_CALL( Rcreate(blkmem, &(*lp)->pseudoobjval) );
@@ -3891,7 +3897,7 @@ void SCIPcolexCalcFarkasRedcostCoef(
    else
       Rset(result, col->obj);
 
-   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
+   RcreateTemp(set->buffer, &tmp);
 
    for( i = 0; i < col->nlprows; ++i )
    {
@@ -4227,8 +4233,8 @@ void SCIProwexGetSolFeasibility(
    SCIP_Rational* temp1;    
    SCIP_Rational* temp2; 
 
-   SCIP_CALL( RcreateTemp(set->buffer, &temp1) );
-   SCIP_CALL( RcreateTemp(set->buffer, &temp2) );
+   RcreateTemp(set->buffer, &temp1);
+   RcreateTemp(set->buffer, &temp2);
 
    assert(row != NULL);
 
@@ -4259,7 +4265,7 @@ void SCIProwexGetSolActivity(
 
    assert(rowex != NULL);
 
-   SCIP_CALL( RcreateTemp(set->buffer, &solval) );
+   RcreateTemp(set->buffer, &solval);
    Rset(result, rowex->constant);
    for( i = 0; i < rowex->len; ++i )
    {
@@ -4375,8 +4381,8 @@ void SCIProwexGetLPFeasibility(
    SCIP_Rational* actrhs; 
    SCIP_Rational* actlhs; 
 
-   SCIP_CALL( RcreateTemp(set->buffer, &actrhs) );
-   SCIP_CALL( RcreateTemp(set->buffer, &actlhs) );
+   RcreateTemp(set->buffer, &actrhs);
+   RcreateTemp(set->buffer, &actlhs);
    assert(row != NULL);
 
    activity = SCIProwexGetLPActivity(row, set, stat, lp);
@@ -4403,8 +4409,8 @@ void SCIProwexGetPseudoFeasibility(
 
    assert(row != NULL);
 
-   SCIP_CALL( RcreateTemp(set->buffer, &actrhs) );
-   SCIP_CALL( RcreateTemp(set->buffer, &actlhs) );
+   RcreateTemp(set->buffer, &actrhs);
+   RcreateTemp(set->buffer, &actlhs);
 
    pseudoactivity = SCIProwexGetPseudoActivity(row, set, stat);
 
@@ -4706,7 +4712,7 @@ void getObjvalDeltaObjExact(
    assert(!RisEqual(oldobj, newobj));
 
    RsetReal(deltaval, 0);
-   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
+   RcreateTemp(set->buffer, &tmp);
    (*deltainf) = 0;
 
    if( RisPositive(oldobj) )
