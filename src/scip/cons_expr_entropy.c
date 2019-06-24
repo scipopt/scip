@@ -166,7 +166,8 @@ SCIP_RETCODE reverseProp(
          SCIPintervalGetSup(intersection));
    }
    /* using a strict greater-than here because we expect a tightening because we saw an at-least-epsilon-potential above */
-   assert(boundinf == SCIP_INVALID || boundinf > childinf);
+   assert(boundinf == SCIP_INVALID || boundinf > childinf); /*lint !e777*/
+
 
    /*
     * check whether upper bound of child can be improved
@@ -192,7 +193,7 @@ SCIP_RETCODE reverseProp(
          SCIPintervalGetSup(intersection));
    }
    /* using a strict smaller-than here because we expect a tightening because we saw an at-least-epsilon-potential above */
-   assert(boundsup == SCIP_INVALID || boundsup < childsup);
+   assert(boundsup == SCIP_INVALID || boundsup < childsup); /*lint !e777*/
 
    if( boundinf != SCIP_INVALID ) /*lint !e777*/
    {
