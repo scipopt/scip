@@ -2507,8 +2507,8 @@ SCIP_RETCODE addBilinearTerm(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* check if the bilinear terms are sorted */
-   assert(consdataCheckBilinTermsSort(consdata));
+   /* check if the bilinear terms are sorted (disabled for big constraints as becoming expensive) */
+   assert(consdata->nbilinterms > 10 || consdataCheckBilinTermsSort(consdata));
 
    assert(var1pos >= 0);
    assert(var1pos < consdata->nquadvars);
@@ -2575,8 +2575,8 @@ SCIP_RETCODE addBilinearTerm(
 
    consdata->iscurvchecked = FALSE;
 
-   /* check if the bilinear terms are sorted */
-   assert(consdataCheckBilinTermsSort(consdata));
+   /* check if the bilinear terms are sorted (disabled as expensive if big constraint) */
+   assert(consdata->nbilinterms > 10 || consdataCheckBilinTermsSort(consdata));
 
    return SCIP_OKAY;
 }
@@ -6432,9 +6432,6 @@ SCIP_Bool generateCutLTIfindIntersection(
    SCIP_Real tl;
    SCIP_Real tu;
 
-   assert(wl == SCIP_INVALID || (xl != NULL && yl != NULL));  /*lint !e777 */
-   assert(wu == SCIP_INVALID || (xu != NULL && yu != NULL));  /*lint !e777 */
-
    /* The parametric line is of the form
     *
     *  x = x0 + t (x1-x0)
@@ -6520,10 +6517,13 @@ SCIP_Bool generateCutLTIfindIntersection(
 
    if( wl != SCIP_INVALID )  /*lint !e777 */
    {
+      assert(xl != NULL);
+      assert(yl != NULL);
+
       *xl = (SCIP_Real)(x0  + tl * (x1  - x0 ));
       *yl = (SCIP_Real)(y0_ + tl * (y1_ - y0_));
 
-      if( !SCIPisRelEQ(scip, *xl * *yl, wl) )
+      if( SCIPisInfinity(scip, -*xl) || SCIPisInfinity(scip, -*yl) || !SCIPisRelEQ(scip, *xl * *yl, wl) )
       {
          SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
          return TRUE;
@@ -6532,22 +6532,17 @@ SCIP_Bool generateCutLTIfindIntersection(
 
    if( wu != SCIP_INVALID )  /*lint !e777 */
    {
+      assert(xu != NULL);
+      assert(yu != NULL);
+
       *xu = (SCIP_Real)(x0  + tu * (x1 -  x0));
       *yu = (SCIP_Real)(y0_ + tu * (y1_ - y0_));
 
-      if( !SCIPisRelEQ(scip, *xu * *yu, wu) )
+      if( SCIPisInfinity(scip, *xu) || SCIPisInfinity(scip, *yu) || !SCIPisRelEQ(scip, *xu * *yu, wu) )
       {
          SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
          return TRUE;
       }
-   }
-
-   /* do not use the computed points if one of the components is infinite */
-   if( (xu != NULL && SCIPisInfinity(scip, *xu)) || (xl != NULL && SCIPisInfinity(scip, -*xl)) ||
-      (yu != NULL && SCIPisInfinity(scip, *yu)) || (yl != NULL && SCIPisInfinity(scip, -*yl)) )
-   {
-      SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
-      return TRUE;
    }
 
    return FALSE;
@@ -6640,10 +6635,10 @@ void generateCutLTIcomputeCoefs(
    SCIP_Bool flipy;
    SCIP_Bool flipw;
    SCIP_Real tmp;
-   SCIP_Real xlow;
-   SCIP_Real ylow;
-   SCIP_Real xupp;
-   SCIP_Real yupp;
+   SCIP_Real xlow = 0.0;
+   SCIP_Real ylow = 0.0;
+   SCIP_Real xupp = 0.0;
+   SCIP_Real yupp = 0.0;
    SCIP_Real c0x;
    SCIP_Real c0y;
    SCIP_Real c0w;

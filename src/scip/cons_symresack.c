@@ -31,7 +31,7 @@
  *
  * Polytopes Associated with Symmetry Handling@n
  * Christopher Hojny and Marc E. Pfetsch,@n
- * (2017), preprint available at http://www.optimization-online.org/DB_HTML/2017/01/5835.html
+ * Mathematical Programming 175, No. 1, 197-240, 2019
  *
  * This paper describes an almost linear time separation routine for so-called cove
  * inequalities of symresacks. In our implementation, however, we use a separation routine with
@@ -53,6 +53,7 @@
 #include "scip/cons_symresack.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "scip/pub_var.h"
 #include "scip/scip.h"
 #include "scip/scip_branch.h"
@@ -147,6 +148,12 @@ SCIP_RETCODE consdataFree(
 
    if ( nvars == 0 )
    {
+      assert( (*consdata)->vars == NULL );
+      assert( (*consdata)->perm == NULL );
+      assert( (*consdata)->invperm == NULL );
+      assert( (*consdata)->ncycles == 0 );
+      assert( (*consdata)->cycledecomposition == NULL );
+
       SCIPfreeBlockMemory(scip, consdata);
 
       return SCIP_OKAY;
@@ -407,12 +414,13 @@ SCIP_RETCODE packingUpgrade(
 
 /** creates symresack constraint data
  *
- *  If the input data contain non-binary variables of fixed
+ *  If the input data contains non-binary variables or fixed
  *  points, we delete these variables in a preprocessing step.
  */
 static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< symresack constraint handler */
    SCIP_CONSDATA**       consdata,           /**< pointer to store constraint data */
    SCIP_VAR*const*       inputvars,          /**< input variables of the constraint handler */
    int                   inputnvars,         /**< input number of variables of the constraint handler*/
@@ -421,7 +429,6 @@ SCIP_RETCODE consdataCreate(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** vars;
    SCIP_Bool upgrade;
    int* indexcorrection;
@@ -432,10 +439,12 @@ SCIP_RETCODE consdataCreate(
    int j = 0;
 
    assert( consdata != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
-#ifdef SCI_DEBUG
+#ifdef SCIP_DEBUG
    consdata->debugcnt = 0;
 #endif
 
@@ -465,6 +474,14 @@ SCIP_RETCODE consdataCreate(
    if ( naffectedvariables == 0 )
    {
       SCIPfreeBufferArrayNull(scip, &indexcorrection);
+
+      (*consdata)->vars = NULL;
+      (*consdata)->perm = NULL;
+      (*consdata)->invperm = NULL;
+      (*consdata)->ppupgrade = FALSE;
+      (*consdata)->ncycles = 0;
+      (*consdata)->cycledecomposition = NULL;
+
       return SCIP_OKAY;
    }
 
@@ -496,25 +513,16 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->perm = perm;
    (*consdata)->ismodelcons = ismodelcons;
 
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &invperm, naffectedvariables) );
    for (i = 0; i < naffectedvariables; ++i)
    {
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[i]) );
-   }
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &invperm, naffectedvariables) );
-   for (i = 0; i < naffectedvariables; ++i)
       invperm[perm[i]] = i;
+   }
    (*consdata)->invperm = invperm;
 
    /* check for upgrade to packing/partitioning symresacks*/
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   if ( conshdlr == NULL )
-   {
-      SCIPerrorMessage("symresack constraint handler not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
    upgrade = FALSE;
    if ( conshdlrdata->checkppsymresack )
    {
@@ -700,7 +708,6 @@ SCIP_RETCODE propVariables(
    /* get data of constraint */
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->nvars > 0 );
    nvars = consdata->nvars;
 
    /* avoid trivial problems */
@@ -893,7 +900,7 @@ SCIP_RETCODE separateSymresackCovers(
    assert( scip != NULL );
    assert( consdata != NULL );
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
       return SCIP_OKAY;
 
@@ -1121,6 +1128,7 @@ SCIP_RETCODE separateSymresackCovers(
 }
 
 
+/** check whether solution is feasible for symresacks */
 static
 SCIP_RETCODE checkSymresackSolution(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1140,7 +1148,7 @@ SCIP_RETCODE checkSymresackSolution(
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL);
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
       return SCIP_OKAY;
 
@@ -1436,13 +1444,15 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
    assert( sourcedata != NULL);
-   assert( sourcedata->nvars != 0 );
-   assert( sourcedata->vars != NULL );
-   assert( sourcedata->perm != NULL );
-   assert( sourcedata->invperm != NULL );
+
+   /* constraint might be empty and not deleted if no presolving took place */
+   assert( sourcedata->nvars == 0 || sourcedata->vars != NULL );
+   assert( sourcedata->nvars == 0 || sourcedata->perm != NULL );
+   assert( sourcedata->nvars == 0 || sourcedata->invperm != NULL );
 #ifndef NDEBUG
    if ( sourcedata->ppupgrade )
    {
+      assert( sourcedata->nvars > 0 );
       assert( sourcedata->ncycles != 0 );
       assert( sourcedata->cycledecomposition != NULL );
       for (i = 0; i < sourcedata->ncycles; ++i)
@@ -1487,6 +1497,14 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
             SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->cycledecomposition[i], sourcedata->cycledecomposition[i], nvars + 1) ); /*lint !e866*/
          }
       }
+   }
+   else
+   {
+      consdata->perm = NULL;
+      consdata->invperm = NULL;
+      consdata->ppupgrade = FALSE;
+      consdata->ncycles = 0;
+      consdata->cycledecomposition = NULL;
    }
 
    /* create transformed constraint */
@@ -1613,6 +1631,9 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
 
+      if ( consdata->nvars == 0 )
+         continue;
+
       /* get solution */
       assert( consdata->nvars <= maxnvars );
       SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nvars, consdata->vars, vals) );
@@ -1679,6 +1700,9 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
       /* get data of constraint */
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
+
+      if ( consdata->nvars == 0 )
+         continue;
 
       /* get solution */
       assert( consdata->nvars <= maxnvars );
@@ -1758,6 +1782,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
 
          /* do not enforce non-model constraints */
          if ( !consdata->ismodelcons )
+            continue;
+
+         if ( consdata->nvars == 0 )
             continue;
 
          /* get solution */
@@ -1876,6 +1903,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
 
          /* do not enforce non-model constraints */
          if ( !consdata->ismodelcons )
+            continue;
+
+         if ( consdata->nvars == 0 )
             continue;
 
           /* get solution */
@@ -2073,7 +2103,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
       return SCIP_OKAY;
 
@@ -2184,7 +2214,7 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
       return SCIP_OKAY;
 
@@ -2247,7 +2277,7 @@ SCIP_DECL_CONSCOPY(consCopySymresack)
    if ( !sourcedata->ismodelcons )
    {
       *valid = FALSE;
-      
+
       return SCIP_OKAY;
    }
 
@@ -2304,7 +2334,7 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 
    SCIPdebugMsg(scip, "Printing method for symresack constraint handler\n");
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
    {
       SCIPinfoMessage(scip, file, "symresack()");
@@ -2502,7 +2532,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    }
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, vars, nvars, perm, ismodelcons) );
+   SCIP_CALL( consdataCreate(scip, conshdlr, &consdata, vars, nvars, perm, ismodelcons) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate && (! consdata->ppupgrade), enforce, check, propagate,

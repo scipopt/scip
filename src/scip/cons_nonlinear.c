@@ -2117,6 +2117,7 @@ SCIP_RETCODE presolveUpgrade(
       if( nupgdconss_ > 0 )
       {
          /* got upgrade */
+         SCIP_CONSDATA* consdata;
          int j;
 
          SCIPdebugMsg(scip, " -> upgraded to %d constraints:\n", nupgdconss_);
@@ -2139,6 +2140,12 @@ SCIP_RETCODE presolveUpgrade(
          /* delete upgraded constraint */
          SCIPdebugMsg(scip, "delete constraint <%s> after upgrade\n", SCIPconsGetName(cons));
          SCIP_CALL( SCIPdelCons(scip, cons) );
+
+         /* make sure node is disabled now, so that reformulation within this presolve round does not work on it */
+         consdata = SCIPconsGetData(cons);
+         assert(consdata != NULL);
+         if( consdata->exprgraphnode != NULL )
+            SCIPexprgraphDisableNode(conshdlrdata->exprgraph, consdata->exprgraphnode);
 
          break;
       }
@@ -7959,7 +7966,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
    int                c;
    int                i;
    int                j;
-   SCIP_Bool          solviolbounds;
+   SCIP_Bool          solviolbounds = FALSE;
 
    assert(scip != NULL);
    assert(conss != NULL || nconss == 0);

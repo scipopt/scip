@@ -35,7 +35,7 @@ if [ "${GITBRANCH}" == "" ]; then
   # GIT_BRANCH is a jenkins variable, if not present, try to get it from the git repository. The second thing is not robust because there may be more branches that this HEAD is present in.
   GITBRANCH=`echo ${GIT_BRANCH} | cut -d / -f 2`
   if [ "${GITBRANCH}" == "" ]; then
-      GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2`
+      GITBRANCH=`git show -s --pretty=%D | cut -s -d , -f 2 | cut -d / -f 2`
   fi
 fi
 
@@ -66,6 +66,7 @@ export CRITERION_DIR=/nfs/optimi/usr/sw/criterion
 export CPLEX_DIR=/nfs/optimi/usr/sw/cplex
 export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
 export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.11~ub18.04
+export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 
 # create all required directories
 mkdir -p settings
@@ -222,6 +223,9 @@ ${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set
 ln -fs /nfs/optimi/kombadon/IP check/
 ln -fs /nfs/optimi/kombadon/MINLP check/
 
+# get testset files to the correct place
+cp check/IP/instancedata/testsets/*.test check/testset/
+
 #######################
 ### Submit Testruns ###
 #######################
@@ -232,8 +236,6 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
     unset $j
   done
   export ${FLAGS}
-
-  cp check/IP/instancedata/testsets/*.test check/testset/
 
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
   make testcluster DEBGUTOOL=gdb ${FLAGS} | check/jenkins_check_results_cmake.sh

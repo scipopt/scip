@@ -22,14 +22,14 @@ echo "This is performance_mergerequest.sh running."
 : ${TESTMODE:="all"}
 
 if [ "${TESTMODE}" == "all" ]; then
-  #echo "Testing mipdev-solvable, minlpdev-solvable and sapdev-solvable"
-  echo "Testing mipdev-solvable and minlpdev-solvable"
+  #echo "Testing mip, minlp and sapdev-solvable"
+  echo "Testing mip and minlp"
 elif [ "${TESTMODE}" == "short" ]; then
   echo "Testing short"
-elif [ "${TESTMODE}" == "mipdev-solvable" ]; then
-  echo "Testing mipdev-solvable"
-elif [ "${TESTMODE}" == "minlpdev-solvable" ]; then
-  echo "Testing minlpdev-solvable"
+elif [ "${TESTMODE}" == "mip" ]; then
+  echo "Testing mip"
+elif [ "${TESTMODE}" == "minlp" ]; then
+  echo "Testing minlp"
 # elif [ "${TESTMODE}" == "sapdev-solvable" ]; then
 #   echo "Testing sapdev-solvable"
 else
@@ -68,6 +68,7 @@ fi
 export CRITERION_DIR=""
 export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
 export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.11~ub18.04
+export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 
 # create required directory
 mkdir -p settings
@@ -96,16 +97,16 @@ declare -A JOBS
 # jobs running
 
 if [ "${TESTMODE}" == "all" ]; then
-  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=mergerequest SEEDS=4"
+  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev12merged-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
   JOBS[2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=mergerequest PERMUTE=4"
   #JOBS[3]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=mergerequest SEEDS=2"
 elif [ "${TESTMODE}" == "short" ]; then
   JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=false MEM=5000 QUEUE=opt TEST=short TIME=60 SETTINGS=default PERFORMANCE=mergerequest SEEDS=0"
-elif [ "${TESTMODE}" == "mipdev-solvable" ]; then
-  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev-solvable TIME=7200 SETTINGS=default PERFORMANCE=mergerequest SEEDS=4"
-elif [ "${TESTMODE}" == "minlpdev-solvable" ]; then
+elif [ "${TESTMODE}" == "mip" ]; then
+  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev12merged-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
+elif [ "${TESTMODE}" == "minlp" ]; then
   JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=mergerequest PERMUTE=4"
-#elif [ "${TESTMODE}" == "sapdev-solvable" ]; then
+#elif [ "${TESTMODE}" == "sap" ]; then
 #  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=mergerequest SEEDS=2"
 fi
 
@@ -178,6 +179,9 @@ if [ "${N_JOBS}" != "0" ]; then
   ln -fs /nfs/optimi/kombadon/IP check/
   ln -fs /nfs/optimi/kombadon/MINLP check/
 
+  # get testset files to the correct place
+  cp check/IP/instancedata/testsets/*.test check/testset/
+
   #######################
   ### Submit Testruns ###
   #######################
@@ -188,6 +192,7 @@ if [ "${N_JOBS}" != "0" ]; then
       unset $j
     done
     export ${FLAGS}
+
     echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
     make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
   done

@@ -1976,6 +1976,7 @@ SCIP_RETCODE varCreate(
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
    (*var)->delglobalstructs = FALSE;
+   (*var)->relaxationonly = FALSE;
 
    for( i = 0; i < NLOCKTYPES; i++ )
    {
@@ -2216,7 +2217,10 @@ SCIP_RETCODE parseValue(
    else
    {
       if( !SCIPstrToRealValue(str, value, endptr) )
+      {
+         SCIPerrorMessage("expected value: %s.\n", str);
          return SCIP_READERROR;
+      }
    }
 
    return SCIP_OKAY;
@@ -2349,6 +2353,11 @@ SCIP_RETCODE varParse(
 
    /* parse global/original bounds */
    SCIP_CALL( parseBounds(set, str, token, lb, ub, endptr) );
+   if ( *endptr == NULL )
+   {
+      SCIPerrorMessage("Expected bound type: %s.\n", token);
+      return SCIP_READERROR;
+   }
    assert(strncmp(token, "global", 6) == 0 || strncmp(token, "original", 8) == 0);
 
    /* initialize the lazy bound */
@@ -5436,12 +5445,12 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* if only one aggregation variable is left, we perform a normal aggregation instead of a multi-aggregation */
       if( ntmpvars == 1 )
       {
-            SCIPsetDebugMsg(set, "Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n",
-                  SCIPvarGetName(var), SCIPvarGetName(tmpvars[0]), 1.0, -tmpscalars[0], tmpconstant);
+         SCIPsetDebugMsg(set, "Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n",
+            SCIPvarGetName(var), SCIPvarGetName(tmpvars[0]), 1.0, -tmpscalars[0], tmpconstant);
 
-            SCIP_CALL( SCIPvarTryAggregateVars(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lp,
-                  cliquetable, branchcand, eventfilter, eventqueue, var, tmpvars[0], 1.0, -tmpscalars[0], tmpconstant,
-                  infeasible, aggregated) );
+         SCIP_CALL( SCIPvarTryAggregateVars(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lp,
+               cliquetable, branchcand, eventfilter, eventqueue, var, tmpvars[0], 1.0, -tmpscalars[0], tmpconstant,
+               infeasible, aggregated) );
 
          goto TERMINATE;
       }
@@ -16602,6 +16611,8 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarDropEvent
 #undef SCIPvarGetVSIDS
 #undef SCIPvarGetCliqueComponentIdx
+#undef SCIPvarIsRelaxationOnly
+#undef SCIPvarMarkRelaxationOnly
 #undef SCIPbdchgidxGetPos
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
@@ -17001,6 +17012,42 @@ SCIP_Bool SCIPvarIsMarkedDeleteGlobalStructures(
    assert(var != NULL);
 
    return var->delglobalstructs;
+}
+
+/** returns whether a variable has been introduced to define a relaxation
+ *
+ * These variables are only valid for the current SCIP solve round,
+ * they are not contained in any (checked) constraints, but may be used
+ * in cutting planes, for example.
+ * Relaxation-only variables are not copied by SCIPcopyVars and cuts
+ * that contain these variables are not added as linear constraints when
+ * restarting or transferring information from a copied SCIP to a SCIP.
+ * Also conflicts with relaxation-only variables are not generated at
+ * the moment.
+ */
+SCIP_Bool SCIPvarIsRelaxationOnly(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->relaxationonly;
+}
+
+/** marks that this variable has only been introduced to define a relaxation
+ *
+ * The variable must not have a coefficient in the objective.
+ *
+ * @see SCIPvarIsRelaxationOnly
+ */
+void SCIPvarMarkRelaxationOnly(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetObj(var) == 0.0);
+
+   var->relaxationonly = TRUE;
 }
 
 /** returns whether variable is allowed to be deleted completely from the problem */

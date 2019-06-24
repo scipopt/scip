@@ -32,6 +32,13 @@
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
 
+/* In optimized mode, some function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms. For this, we need to include struct_event.h.
+ */
+#ifdef NDEBUG
+#include "scip/struct_event.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
