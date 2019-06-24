@@ -92,17 +92,15 @@ SCIP_RETCODE simplifyTerm(
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
    SCIP_CONSEXPR_EXPR** children;
    SCIP_CONSEXPR_EXPR* expr;
-   int nchildren;
    SCIP_Real* coefs;
    SCIP_Real constant ;
    SCIP_Real coef;
 
    children  = SCIPgetConsExprExprChildren(duplicate);
-   nchildren = SCIPgetConsExprExprNChildren(duplicate);
    coefs     = SCIPgetConsExprExprSumCoefs(duplicate);
    constant  = SCIPgetConsExprExprSumConstant(duplicate);
 
-   assert(0 < idx && idx < nchildren);
+   assert(0 <= idx && idx < SCIPgetConsExprExprNChildren(duplicate));
 
    coef = coefs[idx];
    expr = children[idx];
