@@ -76,14 +76,9 @@ struct SCIP_ConsExpr_ExprData
  * Local methods
  */
 
-/** 
- * TODO: fix documentation
- * simplifies a term of a sum expression: constant * expr, so that it is a valid child of a simplified sum expr.
- * @note: in contrast to other simplify methods, this does *not* return a simplified expression.
- * Instead, the method is intended to be called only when simplifying a sum expression,
- * Since in general, constant*expr is not a simplified child of a sum expression, this method returns
- * a list of expressions L, such that (sum L) = constant * expr *and* each expression in L
- * is a valid child of a simplified sum expression.
+/** simplifies the `idx`-th child of the sum expression `duplicate` in order for it to be able to be a child of a
+ * simplified sum; for example, this means that the `idx`-th child cannot be itself a sum; if it is, we have to flatten
+ * it, i.e., take all its children and make them children of `duplicate`
  */
 static
 SCIP_RETCODE simplifyTerm(
@@ -123,7 +118,7 @@ SCIP_RETCODE simplifyTerm(
       constant += coef * SCIPgetConsExprExprValueValue(expr);
       SCIPsetConsExprExprSumConstant(duplicate, constant);
 
-      /* TODO: remove child */
+      /* TODO: remove child? */
       coefs[idx] = 0.0;
 
       return SCIP_OKAY;
@@ -310,20 +305,12 @@ SCIP_DECL_SORTPTRCOMP(sortExprComp)
 
    return SCIPcompareConsExprExprs(expr1, expr2);
 }
+
 /** simplifies a sum expression
  *
- * TODO: FIX DOCUMENTATION!
- * Summary: we first build a list of expressions (called finalchildren) which will be the children of the simplified sum
- * and then we process this list in order to enforce SS6 and SS7.
- * Description: To build finalchildren, each child of sum is manipulated in order to satisfy
- * SS2, SS3 and SS8 as follows
- * SS8: if the child's coefficient is 0, ignore it
- * SS3: if the child is a value, add the value to the sum's constant
- * SS2: if the child is a sum, we distribution that child's coefficient to its children and then build a list with the
- *      child's children. Note that distributing will not render the child unsimplified.
- * Otherwise (if it satisfies SS2, SS3 and SS8) we build a list with that child.
- * Then, we merge the built list into finalchildren (see mergeSumExprlist).
- * After finalchildren is done, we build the simplified sum expression out of it, taking care that SS6 and SS7 are satisfied
+ * goes through each child and simplifies it; then sorts the simplified children; then sum the children that are equal;
+ * finally creates a sum expression with all the children that do not have a 0 coefficient and post-process so that SS6
+ * and SS7 are satisfied
  */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
@@ -346,6 +333,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
 
    changed = FALSE;
 
+   /* TODO: maybe have a flag to know if it is simplified ? */
    SCIP_CALL( SCIPduplicateConsExprExpr(scip, conshdlr, expr, &duplicate) );
 
    nchildren = SCIPgetConsExprExprNChildren(duplicate);
