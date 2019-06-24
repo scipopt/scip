@@ -97,13 +97,13 @@ declare -A JOBS
 # jobs running
 
 if [ "${TESTMODE}" == "all" ]; then
-  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev12merged-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
+  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev12merged-solvable TIME=7200 SETTINGS=default PERFORMANCE=mergerequest SEEDS=4"
   JOBS[2]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=mergerequest PERMUTE=4"
   #JOBS[3]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=mergerequest SEEDS=2"
 elif [ "${TESTMODE}" == "short" ]; then
   JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=false MEM=5000 QUEUE=opt TEST=short TIME=60 SETTINGS=default PERFORMANCE=mergerequest SEEDS=0"
 elif [ "${TESTMODE}" == "mip" ]; then
-  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev12merged-solvable TIME=7200 SETTINGS=default PERFORMANCE=performance SEEDS=4"
+  JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev12merged-solvable TIME=7200 SETTINGS=default PERFORMANCE=mergerequest SEEDS=4"
 elif [ "${TESTMODE}" == "minlp" ]; then
   JOBS[1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=mergerequest PERMUTE=4"
 #elif [ "${TESTMODE}" == "sap" ]; then
@@ -179,6 +179,9 @@ if [ "${N_JOBS}" != "0" ]; then
   ln -fs /nfs/optimi/kombadon/IP check/
   ln -fs /nfs/optimi/kombadon/MINLP check/
 
+  # get testset files to the correct place
+  cp check/IP/instancedata/testsets/*.test check/testset/
+
   #######################
   ### Submit Testruns ###
   #######################
@@ -189,6 +192,8 @@ if [ "${N_JOBS}" != "0" ]; then
       unset $j
     done
     export ${FLAGS}
+    export PERFORMANCE=mergerequest
+
     echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
     make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
   done

@@ -84,8 +84,8 @@ mkdir -p settings
 #  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
 #  - The check/jenkins_*_cmake.sh evaluation scripts don't work yet if you use a global seed shift.
 # FORMAT:
-#    JOBS[x,y]="EXECUTABLE=scipdbgspx/bin/scip BINID=scipdbgspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
-#    JOBS[x,y]="EXECUTABLE=scipdbgcpx/bin/scip BINID=scipdbgcpx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
+#    JOBS[x,y]="EXECUTABLE=scipdbgspx/bin/scip BINID=scipdbgspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default"
+#    JOBS[x,y]="EXECUTABLE=scipdbgcpx/bin/scip BINID=scipdbgcpx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default"
 
 RANDOMSEED=`date +%Y%m%d`
 
@@ -223,6 +223,9 @@ ${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set
 ln -fs /nfs/optimi/kombadon/IP check/
 ln -fs /nfs/optimi/kombadon/MINLP check/
 
+# get testset files to the correct place
+cp check/IP/instancedata/testsets/*.test check/testset/
+
 #######################
 ### Submit Testruns ###
 #######################
@@ -233,8 +236,6 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
     unset $j
   done
   export ${FLAGS}
-
-  cp check/IP/instancedata/testsets/*.test check/testset/
 
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
   make testcluster DEBGUTOOL=gdb ${FLAGS} | check/jenkins_check_results_cmake.sh

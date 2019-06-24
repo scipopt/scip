@@ -62,6 +62,8 @@ Features
   SCIPgetVarCopy, they are currently not used in conflict constraints, and cuts involving them are not upgraded to linear constraints.
   Relaxation-only variables cannot appear in the objective function.
 
+- The OSiL reader now supports nonlinear expressions of type "signpower".
+
 - If polyhedral symmetry handling methods are used (cons_orbisack, cons_orbitope, cons_symresack), it is now possible to
   recompute symmetries if a restart occured.
 

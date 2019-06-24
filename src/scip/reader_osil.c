@@ -1481,6 +1481,7 @@ SCIP_RETCODE readExpression(
       strcmp(exprname, "times") == 0 ||
       strcmp(exprname, "divide") == 0 ||
       strcmp(exprname, "power") == 0 ||
+      strcmp(exprname, "signpower") == 0 ||
       strcmp(exprname, "log") == 0
      )
    {
@@ -1593,6 +1594,29 @@ SCIP_RETCODE readExpression(
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &arg2, SCIP_EXPR_MUL, arg1, arg2) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_EXP, arg2) );
          }
+      }
+      else if( strcmp(exprname, "signpower") == 0 )
+      {
+         /* signpower(expr,number) with number > 1 is the only one we can handle */
+         if( SCIPexprGetOperator(arg2) != SCIP_EXPR_CONST )
+         {
+            SCIPerrorMessage("Signpower only supported for constant exponents, but got %s.\n", SCIPexpropGetName(SCIPexprGetOperator(arg2)));
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
+            *doingfine = FALSE;
+            return SCIP_OKAY;
+         }
+         if( SCIPexprGetOpReal(arg2) <= 1.0 )
+         {
+            SCIPerrorMessage("Signpower only supported for exponents > 1, but got %g.\n", SCIPexprGetOpReal(arg2));
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
+            *doingfine = FALSE;
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_SIGNPOWER, arg1, SCIPexprGetOpReal(arg2)) );
+         SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
       }
       else if( strcmp(exprname, "log") == 0 )
       {
