@@ -202,17 +202,29 @@ Test(reformbinprods, factorize1)
    SCIP_CONSEXPR_EXPR* newexpr;
    SCIP_CONSEXPR_EXPR** children;
    SCIP_CONS* cons;
+   SCIP_VAR* var;
+   int naddconss = 0;
 
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x0>[B] * <x1>[B] + <x0>[B] * <x2>[B] + <x0>[B] * <x3>[B]", NULL, &expr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x0>[B] * <x1>[B] - <x0>[B] * <x2>[B] - <x0>[B] * <x3>[B]", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "c1", expr, 0.0, 0.5) );
 
    /* not enough terms -> nothing should happen */
    SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, expr, 4, &newexpr, NULL, NULL) );
    cr_assert(newexpr == NULL);
 
-   SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, expr, 3, &newexpr, NULL, NULL) );
+   SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, expr, 3, &newexpr, &naddconss, NULL) );
    cr_assert(newexpr != NULL);
+   cr_expect(naddconss == 4);
    cr_expect(SCIPgetConsExprExprNChildren(newexpr) == 1);
+   cr_expect(SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(newexpr)[0]));
+
+   /* newexpr is a sum with only one variable; the bounds of the variable correspond to the activities of the bilinear binary terms */
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(newexpr)[0]);
+   cr_assert(var != NULL);
+   cr_expect(SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+   cr_expect(SCIPvarGetLbGlobal(var) == -2.0);
+   cr_expect(SCIPvarGetUbGlobal(var) == 1.0);
+
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newexpr) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
