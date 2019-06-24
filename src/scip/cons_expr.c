@@ -3239,18 +3239,17 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
    int*                  nchgcoefs           /**< pointer to update the total number of changed coefficients (might be NULL) */
    )
 {
-   SCIP_CONSEXPR_EXPR** exprs;
-   SCIP_VAR** tmpvars;
-   SCIP_VAR** vars;
-   SCIP_VAR** xs;
-   SCIP_VAR** ys;
-   SCIP_Real* exprcoefs;
-   SCIP_Real* tmpcoefs;
-   SCIP_Real* sumcoefs;
-   SCIP_Bool* isused;
-   int* childidxs;
-   int* count;
-   int* perm;
+   SCIP_CONSEXPR_EXPR** exprs = NULL;
+   SCIP_VAR** tmpvars = NULL;
+   SCIP_VAR** vars = NULL;
+   SCIP_VAR** xs = NULL;
+   SCIP_VAR** ys = NULL;
+   SCIP_Real* exprcoefs = NULL;
+   SCIP_Real* tmpcoefs = NULL;
+   SCIP_Real* sumcoefs = NULL;
+   SCIP_Bool* isused  = NULL;
+   int* childidxs = NULL;
+   int* count = NULL;
    int nchildren;
    int nexprs = 0;
    int nterms;
@@ -3262,13 +3261,14 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
    assert(newexpr != NULL);
 
    *newexpr = NULL;
-   nchildren = SCIPgetConsExprExprNChildren(sumexpr);
-   sumcoefs = SCIPgetConsExprExprSumCoefs(sumexpr);
-   nvars = SCIPgetNVars(scip);
 
    /* check whether sumexpr is indeed a sum */
    if( SCIPgetConsExprExprHdlr(sumexpr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
       return SCIP_OKAY;
+
+   nchildren = SCIPgetConsExprExprNChildren(sumexpr);
+   sumcoefs = SCIPgetConsExprExprSumCoefs(sumexpr);
+   nvars = SCIPgetNVars(scip);
 
    /* check whether there are enough terms available */
    if( nchildren < minterms )
@@ -3289,7 +3289,6 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
    /* store how often each variable appears in a biliner binary product */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &count, nvars) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &perm, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &isused, nchildren) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nchildren) );
@@ -3310,14 +3309,19 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
 
       ++count[xidx];
       ++count[yidx];
+
+      SCIPdebugMsg(scip, "increase counter for %s to %d\n", SCIPvarGetName(xs[i]), count[xidx]);
+      SCIPdebugMsg(scip, "increase counter for %s to %d\n", SCIPvarGetName(ys[i]), count[yidx]);
    }
 
-   /* remember original order after sorting variables */
-   for( i = 0; i < nvars; ++i )
-      perm[i] = i;
+   /* sort variables; don't change order of count array because it depends on problem indices */
+   {
+      int* tmpcount;
 
-   /* sort variables */
-   SCIPsortDownIntIntPtr(count, perm, (void**)vars, nvars);
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpcount, count, nvars) );
+      SCIPsortDownIntPtr(tmpcount, (void**)vars, nvars);
+      SCIPfreeBufferArray(scip, &tmpcount);
+   }
 
    for( i = 0; i < nvars; ++i )
    {
@@ -3326,8 +3330,10 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
       int j;
 
       /* terminate if there are not enough terms available */
-      if( count[i] < minterms )
+      if( count[SCIPvarGetProbindex(vars[i])] < minterms )
          break;
+
+      SCIPdebugMsg(scip, "consider facvar = %s with count = %d\n", SCIPvarGetName(facvar), count[SCIPvarGetProbindex(vars[i])]);
 
       /* collect variables for x_i * sum_j c_ij x_j */
       for( j = 0; j < nterms; ++j )
@@ -3352,17 +3358,17 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
             /* update counters */
             xidx = SCIPvarGetProbindex(xs[j]);
             yidx = SCIPvarGetProbindex(ys[j]);
-            --count[perm[xidx]];
-            --count[perm[yidx]];
-            assert(count[perm[xidx]] >= 0);
-            assert(count[perm[yidx]] >= 0);
+            --count[xidx];
+            --count[yidx];
+            assert(count[xidx] >= 0);
+            assert(count[yidx] >= 0);
 
             /* mark term to be used */
             isused[childidx] = TRUE;
          }
       }
       assert(ntmpvars >= minterms);
-      assert(count[perm[SCIPvarGetProbindex(facvar)]] == 0); /* facvar should not appear in any other bilinear term */
+      assert(count[SCIPvarGetProbindex(facvar)] == 0); /* facvar should not appear in any other bilinear term */
 
       /* create required constraints and store the generated expression */
       SCIP_CALL( reformulateFactorizedBinaryQuadratic(scip, conshdlr, cons, facvar, tmpvars, tmpcoefs, ntmpvars, &exprs[nexprs], naddconss) );
@@ -3404,7 +3410,6 @@ TERMINATE:
    SCIPfreeBufferArrayNull(scip, &exprs);
    SCIPfreeBufferArrayNull(scip, &vars);
    SCIPfreeBufferArrayNull(scip, &isused);
-   SCIPfreeBufferArrayNull(scip, &perm);
    SCIPfreeBufferArrayNull(scip, &count);
    SCIPfreeBufferArray(scip, &childidxs);
    SCIPfreeBufferArray(scip, &ys);

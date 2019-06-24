@@ -230,3 +230,41 @@ Test(reformbinprods, factorize1)
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
+
+/** tests the reformulation of binary quadratic expressions when factorzing variables */
+Test(reformbinprods, factorize2)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* newexpr;
+   SCIP_CONSEXPR_EXPR** children;
+   SCIP_CONS* cons;
+   SCIP_VAR* var;
+   int naddconss = 0;
+
+   /* expression is equivalent to  x0 * (x1 - x2 + x7) + x3 * (-x4 -x5) + sin(x0) */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x0>[B] * <x1>[B] + <x0>[B] * <x7>[B] - <x4>[B] * <x3>[B] + sin(<x0>[B]) - <x0>[B] * <x2>[B] - <x3>[B] * <x5>[B]", NULL, &expr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "c1", expr, 0.0, 0.5) );
+
+   SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, expr, 2, &newexpr, &naddconss, NULL) );
+   cr_assert(newexpr != NULL);
+   cr_expect(naddconss == 7);
+   cr_expect(SCIPgetConsExprExprNChildren(newexpr) == 3);
+   cr_expect(SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(newexpr)[0]));
+
+   /* first variable represents x0 * (x1 - x2 + x7) and thus has bounds [-1,2]*/
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(newexpr)[0]);
+   cr_expect(SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+   cr_expect(SCIPvarGetLbGlobal(var) == -1.0);
+   cr_expect(SCIPvarGetUbGlobal(var) == 2.0);
+
+   /* second variable represents  x3 * (-x4 -x5) and thus has bounds [-2,0]*/
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(newexpr)[1]);
+   cr_expect(SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+   cr_expect(SCIPvarGetLbGlobal(var) == -2.0);
+   cr_expect(SCIPvarGetUbGlobal(var) == 0.0);
+
+   /* release memory */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newexpr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
