@@ -4588,6 +4588,19 @@ SCIP_CONS** SCIPconshdlrGetCheckConss(
    return conshdlr->checkconss;
 }
 
+/** gets array with delayed update constraints
+ *
+ * @attention Usually, there should be no need to access this array. Use this only if you are absolutely sure what you are doing.
+ */
+SCIP_CONS** SCIPconshdlrGetUpdateConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->updateconss;
+}
+
 /** gets total number of existing transformed constraints of constraint handler */
 int SCIPconshdlrGetNConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -4640,6 +4653,16 @@ int SCIPconshdlrGetNEnabledConss(
    assert(conshdlr != NULL);
 
    return conshdlr->nenabledconss;
+}
+
+/** gets number of constraints that have delayed updates */
+int SCIPconshdlrGetNUpdateConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nupdateconss;
 }
 
 /** enables or disables all clocks of \p conshdlr, depending on the value of the flag */
