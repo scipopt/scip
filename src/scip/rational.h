@@ -243,6 +243,12 @@ void RsetReal(
  * Computing methods
  */
 
+/* transform rational into canonical form */
+EXTERN
+void Rcanonicalize(
+   SCIP_Rational*        r                   /**< rational to put in canonical form */
+   );
+
 /** add two rationals and save the result in res*/
 EXTERN
 void Radd(

@@ -245,12 +245,16 @@ struct SCIP_Psdata
 {
    SCIP_Rational**       interiorpt;         /**< stores S-interior point for root node dual problem */
    SCIP_Rational**       interiorray;        /**< stores S-interior ray for root node dual problem */
+   SCIP_Rational**       violation;          /**< needed on every iteration, so only construct once and possibly resize */
+   SCIP_Rational**       correction;         /**< needed on every iteration, so only construct once and possibly resize */
+   SCIP_Rational**       approxdual;         /**< needed on every iteration, so only construct once and possibly resize */
    int*                  includedrows;       /**< 1 if constraints dual variable is included in original S-interior point/ray */
    int*                  psbasis;            /**< mapping for basis used in factorization */
    qsnum_factor_work*    rectfactor;         /**< stores factorized matrix for project-and-shift */
    SCIP_Rational*        commonslack;        /**< slack by which S-interior point/ray satisfies inequalities */
    int                   npsbasis;           /**< length of psbasis */
    int                   nextendedrows;      /**< dimension of S-interior point/ray = 2*(ncols+nrows) */
+   int                   approxdualsize;    /**< size of the approxdual array */
    unsigned int          psdatacon:1;        /**< was project-and-shift data structure constructed? */
    unsigned int          psdatafail:1;       /**< did the construction of the project-and-shift root node data fail? */
    unsigned int          pshaspoint:1;       /**< has an S-interior point successfully been constructed? */

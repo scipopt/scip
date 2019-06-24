@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <time.h>
 
 #include "scip/bounding_exact.h"
 #include "scip/struct_set.h"
@@ -361,7 +362,7 @@ SCIP_RETCODE psChooseS(
    }
    else
    {
-      SCIPerrorMessage("Invald value for parameter psdualcolselection\n");
+      SCIPerrorMessage("Invald value for parameter psdualcolselection \n");
    }
    return SCIP_OKAY;
 }
@@ -1925,6 +1926,14 @@ SCIP_RETCODE psComputeSintPointRay(
          psdata->psintpointselection);
       return SCIP_PARAMETERWRONGVAL;
    }
+   
+   for( i = 0; i < ndvarmap; i++ )
+   {
+      if( psdata->pshaspoint )
+         Rcanonicalize(psdata->interiorpt[i]);
+      if( psdata->pshasray )
+         Rcanonicalize(psdata->interiorray[i]);
+   }
 
    /* free memory */
    if( pslpiex != NULL )
@@ -2053,6 +2062,11 @@ SCIP_RETCODE constructPSData(
       psdata->psdatafail = TRUE;
    }
 
+   SCIP_CALL( RcreateArray(blkmem, &psdata->violation, lpex->ncols) );
+   SCIP_CALL( RcreateArray(blkmem, &psdata->correction, psdata->nextendedrows) );
+   SCIP_CALL( RcreateArray(blkmem, &psdata->approxdual, lpex->ncols + lpex->nrows) );
+   psdata->approxdualsize = lpex->ncols + lpex->nrows;
+
    SCIPclockStop(stat->provedfeaspstime, set);
    SCIPdebugMessage("exiting constructPSdata()\n");
 
@@ -2061,7 +2075,7 @@ SCIP_RETCODE constructPSData(
 
 /** computes safe dual bound by project-and-shift method or corrects dual ray for infeasibility proof */
 static
-SCIP_RETCODE getPSdual(
+SCIP_RETCODE getPSdualTwo(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEX*            lpex,               /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -2093,7 +2107,6 @@ SCIP_RETCODE getPSdual(
    int j;
    int rval;
    int nextendedrows;
-   int approxsize;
    int nrows;
    int nrowsps; /* number of rows used for ps. this can be lower than nrows, if e.g. cuts were added */
    int ncols;
@@ -2165,7 +2178,6 @@ SCIP_RETCODE getPSdual(
    nrows = lpex->nrows;
    ncols = lpex->ncols;
    nrowsps = psdata->nextendedrows/2 - ncols;
-   approxsize = 2 * (nrows + ncols);
 
    /* allocate memory for approximate dual solution, dual cost vector, violation and correction */
    SCIP_CALL( RcreateArrayTemp(set->buffer, &approxdual, nextendedrows) );
@@ -2236,6 +2248,8 @@ SCIP_RETCODE getPSdual(
    {
       printf("   i=%d: ", i);
       Rprint(approxdual[i]);
+      printf(" * ");
+      Rprint(costvect[i]);
       printf("\n");
       if( RisAbsInfinity(costvect[i]) )
        assert(RisZero(approxdual[i]));
@@ -2377,7 +2391,7 @@ SCIP_RETCODE getPSdual(
 
 #ifdef PS_OUT
    printf("updated dual solution:\n");
-   for( i = 0; i < approxsize; i++ )
+   for( i = 0; i < nextendedrows; i++ )
    {
       printf("   i=%d: ", i);
       Rprint(approxdual[i]);
@@ -2628,6 +2642,635 @@ SCIP_RETCODE getPSdual(
    return SCIP_OKAY;
 }
 
+/** computes safe dual bound by project-and-shift method or corrects dual ray for infeasibility proof */
+static
+SCIP_RETCODE getPSdual(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_LPEX*            lpex,               /**< exact LP data */
+   SCIP_SET*             set,                /**< scip settings */
+   SCIP_STAT*            stat,               /**< statistics pointer */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,
+   SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Bool             usefarkas           /**< to we aim to prove infeasibility ? */
+   )
+{
+   SCIP_COL** cols;
+   SCIP_Rational** approxdual;
+   SCIP_Rational** violation;
+   SCIP_Rational** correction;
+   SCIP_Bool useinteriorpoint;
+   SCIP_Rational* tmp;
+   SCIP_Rational* tmp2;
+   SCIP_Rational* lambda1;
+   SCIP_Rational* lambda2;
+   SCIP_Rational* maxv;
+   SCIP_Rational* dualbound;
+   SCIP_PSDATA* psdata;
+   mpq_t* violationgmp = NULL;
+   mpq_t* correctiongmp = NULL;
+   SCIP_Bool* isupper;
+   int i;
+   int j;
+   int rval;
+   int nextendedrows;
+   int nrows;
+   int nrowsps; /* number of rows used for ps. this can be lower than nrows, if e.g. cuts were added */
+   int ncols;
+   int currentrow;
+   int shift;
+   int startt, endt, setupt, violt, rectlut, projt, shiftt, cleanupt;
+   SCIP_Bool isfeas;
+
+   /* project-and-shift method:
+    * 1. projection step (to ensure that equalities are satisfied):
+    *   - compute error in equalities: r=c-Ay^
+    *   - backsolve system of equations to find correction of error: z with Dz=r
+    *   - add corretion to approximate dual solution: bold(y)=y^+[z 0]
+    * 2. shifing step (to ensure that inequalities are satisfied):
+    *   - take convex combination of projected approximate point bold(y) with interior point y*
+    * 3. compute dual objective value of feasible dual solution and set bound
+    */
+
+   /* constructpsdata should always be called first */
+   if( usefarkas )
+   {
+      stat->nprojshift++;
+      SCIPclockStart(stat->provedinfeaspstime, set);
+   }
+   else
+   {
+      stat->nprojshiftinf++;
+      SCIPclockStart(stat->provedfeaspstime, set);
+   }
+
+   startt = clock();
+   psdata = lpex->psdata;
+
+   assert(psdata->psdatacon);
+
+   /* if data has not been constructed, or it failed, then exit */
+   if( (psdata->psdatafail && !usefarkas) || (usefarkas && !psdata->pshasray) )
+   {
+      lp->hasprovedbound = FALSE;
+      return SCIP_OKAY;
+   }
+
+   lp->hasprovedbound = TRUE;
+
+   SCIPdebugMessage("calling getPSdualbound()\n");
+
+   /* decide if we should use ray or point to compute bound */
+   if( !usefarkas && psdata->psuseintpoint && psdata->pshaspoint )
+   {
+      /* if we are supposed to use the interior point, and it exists use it */
+      useinteriorpoint = TRUE;
+   }
+   else
+   {
+      /* in this case, since psdatafail != TRUE, pshasray should be true -- use it */
+      assert( psdata->pshasray );
+      useinteriorpoint = FALSE;
+   }
+
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
+   SCIP_CALL( RcreateTemp(set->buffer, &tmp2) );
+   SCIP_CALL( RcreateTemp(set->buffer, &lambda1) );
+   SCIP_CALL( RcreateTemp(set->buffer, &lambda2) );
+   SCIP_CALL( RcreateTemp(set->buffer, &maxv) );
+   SCIP_CALL( RcreateTemp(set->buffer, &dualbound) );
+
+   /* flush exact lp */
+   /* set up the exact lpi for the current node */
+   SCIP_CALL( SCIPsepastoreexApplyCuts(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
+
+   nextendedrows = psdata->nextendedrows;
+   nrows = lpex->nrows;
+   ncols = lpex->ncols;
+   nrowsps = psdata->nextendedrows/2 - ncols;
+   shift = nrows - nrowsps;
+
+   /* allocate memory for approximate dual solution, dual cost vector, violation and correction */
+   approxdual = psdata->approxdual;
+   violation = psdata->violation;
+   correction = psdata->correction;
+   if( nrows + ncols > psdata->approxdualsize )
+   {
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &approxdual, psdata->approxdualsize, nrows + ncols) );
+      for( i = psdata->approxdualsize; i < nrows + ncols; ++i )
+      {
+         SCIP_CALL( Rcreate(blkmem, &approxdual[i]) );
+      }
+      psdata->approxdualsize = nrows + ncols;
+   }
+
+   /** @todo: exip this could be removed */
+   for( i = 0; i < nrows + ncols; ++i )
+   {
+      RsetInt(approxdual[i], 0, 1);
+      if( i < ncols )
+         RsetInt(violation[i], 0, 1);
+   }
+   for( i = 0; i < nextendedrows; ++i )
+   {
+      RsetInt(correction[i], 0, 1);
+   }
+
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &isupper, nrows + ncols) );
+
+   setupt = clock();
+
+   /* recover the objective coefs and approximate solution value of dual solution;
+    * dual vars of lhs constraints (including -inf) and rhs constraints (including +inf),
+    * dual vars of lb constraint (including -inf) and ub constraints (including +inf)
+    */
+   for( i = 0; i < nrows; i++ )
+   {
+      /* in case we want to prove infeasibility it might be that we were not able to compute a dual solution
+       * with bound exceeding objective value; in this case dual solution is set to SCIP_INVALID
+       */
+      if( (!usefarkas && SCIProwGetDualsol(lp->rows[i]) == SCIP_INVALID) || (usefarkas && SCIProwGetDualfarkas(lp->rows[i]) == SCIP_INVALID) )
+      {
+         SCIPdebugMessage("  no valid unbounded approx dual sol given\n");
+         lp->hasprovedbound = FALSE;
+         if( usefarkas )
+            stat->nfailprojshiftinf++;
+         else
+            stat->nfailprojshift++;
+
+         goto TERMINATE;
+      }
+
+      if( !usefarkas )
+         RsetReal(approxdual[i], SCIProwGetDualsol(lp->rows[i]));
+      else
+         RsetReal(approxdual[i], SCIProwGetDualfarkas(lp->rows[i]));
+
+      if( RisPositive(approxdual[i]) )
+         isupper[i] = FALSE;
+      else
+         isupper[i] = TRUE;
+   }
+
+   cols = SCIPlpGetCols(lp);
+   for( i = 0; i < ncols; i++ )
+   {
+      if( !usefarkas )
+         RsetReal(approxdual[i+nrows], SCIPcolGetRedcost(cols[i], stat, lp));
+      else
+         RsetReal(approxdual[i+nrows], -SCIPcolGetFarkasCoef(cols[i], stat, lp));
+
+      if( RisPositive(approxdual[i+nrows]) )
+         isupper[i+nrows] = FALSE;
+      else
+         isupper[i+nrows] = TRUE;
+   }
+
+   /* first, fix artificial dual variables to zero */
+   for( i = 0; i < nrows + ncols; i++ )
+   {
+      SCIP_Rational* val;
+
+       if( !isupper[i] )
+         val = i < nrows ? lpex->rows[i]->lhs : lpex->cols[i - nrows]->lb;
+      else
+         val = i < nrows ? lpex->rows[i]->rhs : lpex->cols[i - nrows]->ub;
+
+      if( RisAbsInfinity(val) )
+         RsetInt(approxdual[i], 0, 1);
+   }
+
+#ifdef PS_OUT
+   printf("approximate dual solution:\n");
+
+   RsetInt(dualbound, 0, 1);
+   for( i = 0; i < nrows + ncols; i++ )
+   {
+      SCIP_Rational* val;
+
+      if( !isupper[i] )
+         val = i < nrows ? lpex->rows[i]->lhs : lpex->cols[i - nrows]->lb;
+      else
+         val = i < nrows ? lpex->rows[i]->rhs : lpex->cols[i - nrows]->ub;
+
+      printf("   i=%d: ", i);
+      Rprint(approxdual[i]);
+      printf(" * ");
+      Rprint(val);
+      printf("\n");
+      if( RisAbsInfinity(val) )
+         assert(RisZero(approxdual[i]));
+      else
+         RaddProd(dualbound, approxdual[i], val);
+   }
+
+   printf("   objective value=%.20f (", RgetRealApprox(dualbound));
+   Rprint(dualbound);
+   printf(")\n");
+#endif
+
+   /* calculate violation of equality constraints r=c-A^ty */
+   for( i = 0; i < ncols; i++ )
+   {
+      /* instead of setting and then subtracting the A^ty corresponding to bound constraints, we can do this directly */
+      if( !usefarkas )
+      {
+         /* set to obj - bound-redcost */
+         Rdiff(violation[i], lpex->cols[i]->obj, approxdual[i + nrows]);
+      }
+      else
+      {
+         /* set to 0 - bound-redcost */
+         Rneg(violation[i], approxdual[i+nrows]);
+      }
+   }
+
+   /* A^ty for y corresponding to primal constraints */
+   for( i = 0; i < nrows; i++ )
+   {
+      for( j = 0; j < lpex->rows[i]->len; j++)
+      {
+         currentrow = lpex->rows[i]->cols_index[j];
+         RdiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
+      }
+   }
+
+   /* project solution */
+
+#ifdef PS_OUT
+   printf("violation of solution:\n");
+   for( i = 0; i < ncols; i++ )
+   {
+      printf("   i=%d: ", i);
+      Rprint(violation[i]);
+      printf("\n");
+   }
+#endif
+
+   /* if there is no violation of the constraints, then skip the projection */
+   isfeas = TRUE;
+   for( i = 0; i < ncols && isfeas; i++ )
+   {
+      if( !RisZero(violation[i]) )
+         isfeas = FALSE;
+   }
+
+   violt = clock();
+
+   /* isfeas is equal to one only if approximate dual solution is already feasible for the dual */
+   if( !isfeas )
+   {
+      /* compute [z] with Dz=r (D depends on psdata->psdualcolselection) */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &violationgmp, ncols) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &correctiongmp, nextendedrows) );
+      RsetGMPArray(violationgmp, violation, ncols);
+
+      for ( i = 0; i < nextendedrows; i++)
+      {
+         mpq_init(correctiongmp[i]);
+      }
+
+      rval = RECTLUsolveSystem(psdata->rectfactor, ncols, nextendedrows, violationgmp, correctiongmp);
+      if( rval )
+      {
+         lp->hasprovedbound = FALSE;
+         if( usefarkas )
+            stat->nfailprojshiftinf++;
+         else
+            stat->nfailprojshift++;
+
+         goto TERMINATE;
+      }
+      RsetArrayGMP(correction, correctiongmp, nextendedrows);
+
+#ifdef PS_OUT
+      printf("correction of solution:\n");
+      for( i = 0; i < psdata->npsbasis; i++ )
+      {
+         printf("   i=%d: ", i);
+         Rprint(correction[i]);
+         printf(", position=%d\n", psdata->psbasis[i]);
+      }
+#endif
+
+      rectlut = clock();
+
+      /* projection step: compute bold(y)=y^+[z 0];
+       * save the corrected components in the correction vector
+       */
+      for( i = 0; i < psdata->npsbasis; i++ )
+      {
+         // map is the point in the extended space -> transform it back to the original space
+         int map = psdata->psbasis[i];
+         if( map < nrowsps )
+         {
+            if( !isupper[map] )
+            {
+               Radd(correction[i], correction[i], approxdual[map]);
+               RsetInt(approxdual[map], 0, 1);
+            }
+         }
+         else if( map < 2 * nrowsps )
+         {
+            if( isupper[map - nrowsps] )
+            {
+               Rdiff(correction[i], correction[i], approxdual[map - nrowsps]);
+               RsetInt(approxdual[map - nrowsps], 0, 1);
+            }
+         }
+         else if( map < 2 * nrowsps + ncols )
+         {
+            if( !isupper[map - nrowsps + shift] )
+            {
+               Radd(correction[i], correction[i], approxdual[map - nrowsps + shift]);
+               RsetInt(approxdual[map - nrowsps + shift], 0, 1);
+            }
+         }
+         else
+         {
+            if( isupper[map - nrowsps - ncols  + shift] )
+            {
+               Rdiff(correction[i], correction[i], approxdual[map - nrowsps - ncols + shift]);
+               RsetInt(approxdual[map - nrowsps - ncols + shift], 0, 1);
+            }
+         }
+      }
+      projt = clock();
+
+#ifdef PS_OUT
+      printf("updated dual solution:\n");
+      for( i = 0; i < psdata->npsbasis; i++ )
+      {
+         printf("   i=%d: ", i);
+         Rprint(correction[i]);
+         printf(", position=%d\n", psdata->psbasis[i]);
+      }
+#endif
+
+      if( useinteriorpoint )
+      {
+         assert(!usefarkas);
+         /* shifting step (scale solution with interior point to be dual feasible):
+         * y' = lambda1 bold(y) + lambda2 y*, where
+         *   lambda1 = ( slack of int point)/ (slack of int point + max violation) = d/m+d
+         *   lambda2 = 1 - lambda1
+         */
+
+         /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
+         RsetInt(lambda1, 1, 1);
+         for( i = 0; i < psdata->npsbasis; i++ )
+         {
+            if( RisNegative(correction[i]) )
+            {
+               int map = psdata->psbasis[i];
+
+               Rset(tmp2, psdata->interiorpt[map]);
+               Rdiff(tmp, psdata->interiorpt[map], correction[i]);
+               Rdiv(tmp2, tmp2, tmp);
+               Rmin(lambda1, lambda1, tmp2);
+            }
+         }
+         RsetInt(lambda2, 1, 1);
+         Rdiff(lambda2, lambda2, lambda1);
+      }
+      else
+      {
+         /* in this case we are using an interior ray that can be added freely to the solution */
+         /* compute lambda values: compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
+         RsetInt(lambda1, 1, 1);
+         //RsetInt(lambda2, 0, 1);
+         for( i = 0; i < psdata->npsbasis; i++ )
+         {
+            int map = psdata->psbasis[i];
+            if( RisNegative(correction[i]) && psdata->includedrows[map] )
+            {
+               Rdiv(tmp, correction[i], psdata->interiorray[map]);
+               Rneg(tmp, tmp);
+               Rmax(lambda2, lambda2, tmp);
+            }
+         }
+      }
+
+#ifdef PS_OUT
+      printf("transformed projected dual solution:\n");
+
+      RsetInt(dualbound, 0, 1);
+      for( i = 0; i < nrows + ncols; i++ )
+      {
+         SCIP_Rational* val;
+
+         printf("   i=%d: ", i);
+         Rprint(approxdual[i]);
+         printf("\n");
+      }
+
+      printf("   lambda1: ");
+      Rprint(lambda1);
+      printf(")\n");
+#endif
+
+      /* tranfsorm correction back to approxdual */
+      for( i = 0; i < psdata->npsbasis; i++ )
+      {
+         int map = psdata->psbasis[i];
+         if( map < nrowsps )
+            Radd(approxdual[map], approxdual[map], correction[i]);
+         else if( map < 2 * nrowsps )
+            Rdiff(approxdual[map - nrowsps], approxdual[map - nrowsps], correction[i]);
+         else if ( map < 2 * nrowsps + ncols )
+            Radd(approxdual[map - nrowsps + shift], approxdual[map - nrowsps + shift], correction[i]);
+         else
+            Rdiff(approxdual[map - nrowsps - ncols + shift], approxdual[map - nrowsps - ncols + shift], correction[i]);
+      }
+
+#ifdef PS_OUT
+      printf("transformed projected dual solution:\n");
+
+      RsetInt(dualbound, 0, 1);
+      for( i = 0; i < nrows + ncols; i++ )
+      {
+         SCIP_Rational* val;
+
+         printf("   i=%d: ", i);
+         Rprint(approxdual[i]);
+         printf("\n");
+      }
+
+      printf("   lambda1: ");
+      Rprint(lambda1);
+      printf(")\n");
+#endif
+
+      /* perform shift */
+      if( !RisZero(lambda2) )
+      {
+         for( i = 0; i < nrows + ncols; i++ )
+         {
+            if( i < nrows && i >= nrowsps )
+               continue;
+            Rmult(approxdual[i], approxdual[i], lambda1);
+         }
+         for( i = 0; i < nrows + ncols; i++ )
+         {
+            /* todo @exip: refactor this somehow. explanation: when the number of lp-rows increased 
+            * the number of rows in the ps-data does not. so we have [1,...,nrows, ... extrarows ..., 1, ... ncols]
+            * so if we map to the column part in the extended space, we have to subtract the difference */
+            int map;
+            if( i < nrows && i >= nrowsps )
+               continue;
+            map = (i < nrowsps) ? i + nrowsps : i + nrowsps + ncols - shift;
+            RdiffProd(approxdual[i], useinteriorpoint ? psdata->interiorpt[map] : psdata->interiorray[map], lambda2);
+            map = (i < nrowsps) ? i : i + nrowsps - shift;
+            RaddProd(approxdual[i], useinteriorpoint ? psdata->interiorpt[map] : psdata->interiorray[map], lambda2);
+         }
+      }
+      shiftt = clock();
+
+#ifdef PS_OUT
+      printf("projected and shifted dual solution (should be an exact dual feasible solution)\n");
+      for( i = 0; i < nrows+ncols; i++ )
+      {
+         printf("   i=%d: ", i);
+         Rprint(approxdual[i]);
+         printf("\n");
+      }
+#endif
+   }
+
+
+#ifndef NDEBUG
+   SCIPdebugMessage("debug test: verifying feasibility of dual solution:\n");
+
+   /* calculate violation of equality constraints: subtract Ax to get violation b-Ax, subtract A(approxdual) */
+   rval = 0;
+   for( i = 0; i < ncols; i++ )
+   {
+      if( !usefarkas )
+         Rset(violation[i], lpex->cols[i]->obj);
+      else
+         RsetInt(violation[i], 0, 1);
+   }
+   for( i = 0; i < nrows; i++ )
+   {
+      for( j = 0; j < lpex->rows[i]->len; j++ )
+      {
+         currentrow = lpex->rows[i]->cols_index[j];
+         RdiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
+      }
+   }
+   for( i = 0; i < ncols; i++ )
+   {
+         Rdiff(violation[i], violation[i], approxdual[i + nrows]);
+   }
+
+   for( i = 0; i < ncols && rval == 0; i++ )
+   {
+      if( !RisZero(violation[i]) )
+      {
+         SCIPdebugMessage("   dual solution incorrect, violates equalties\n");
+         rval = 1;
+      }
+   }
+   if( !rval )
+      SCIPdebugMessage("   dual solution verified\n");
+   assert(!rval);
+#endif
+
+   RsetInt(dualbound, 0, 1);
+   for( i = 0; i < nrows + ncols; i++ )
+   {
+      SCIP_Rational* val;
+      if( RisPositive(approxdual[i]) )
+         val = i < nrows ? lpex->rows[i]->lhs : lpex->cols[i - nrows]->lb;
+      else
+         val = i < nrows ? lpex->rows[i]->rhs : lpex->cols[i - nrows]->ub;
+
+      RaddProd(dualbound, approxdual[i], val);
+   }
+
+   if( !usefarkas )
+   {
+      Rset(lpex->lpobjval, dualbound);
+      lp->lpobjval = RgetRealRelax(dualbound, SCIP_ROUND_DOWNWARDS);
+      lp->hasprovedbound = TRUE;
+   }
+   else
+   {
+      /* if the objective value of the corrected ray is positive we can prune node, otherwise not */
+      if( RisPositive(dualbound) )
+      {
+         RsetString(lpex->lpobjval, "inf");
+         lp->lpobjval = SCIPsetInfinity(set);
+         lp->hasprovedbound = TRUE;
+      }
+      else
+      {
+         stat->nfailprojshiftinf++;
+         lp->hasprovedbound = FALSE;
+      }
+   }
+
+#ifdef PS_OUT
+   printf("   common slack=%.20f (", RgetRealApprox(psdata->commonslack));
+   Rprint(psdata->commonslack);
+   printf(")\n");
+
+   printf("   max violation=%.20f (", RgetRealApprox(maxv));
+   Rprint(maxv);
+   printf(")\n");
+
+   printf("   lambda (use of interior point)=%.20f (", RgetRealApprox(lambda2));
+   Rprint(lambda2);
+   printf(")\n");
+
+   printf("   dual objective value=%.20f (", RgetRealApprox(dualbound));
+   Rprint(dualbound);
+   printf(")\n");
+#endif
+
+ TERMINATE:
+   /* free memory */
+   if( correctiongmp != NULL )
+   {
+      RclearGMPArray(correctiongmp, nextendedrows);
+      SCIPsetFreeBufferArray(set, &correctiongmp);
+   }
+   if( violationgmp != NULL )
+   {
+      RclearGMPArray(violationgmp, ncols);
+      SCIPsetFreeBufferArray(set, &violationgmp);
+   }
+
+   SCIPsetFreeBufferArray(set, &isupper);
+
+   RdeleteTemp(set->buffer, &dualbound);
+   RdeleteTemp(set->buffer, &maxv);
+   RdeleteTemp(set->buffer, &lambda2);
+   RdeleteTemp(set->buffer, &lambda1);
+   RdeleteTemp(set->buffer, &tmp2);
+   RdeleteTemp(set->buffer, &tmp);
+
+   endt = clock();
+   startt, endt, setupt, violt, rectlut, projt, shiftt;
+   //printf("Time used: %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC);
+   //printf("Setup time    : %e, percentage %e \n", ((double) (setupt - startt)) / CLOCKS_PER_SEC, ((double) (setupt - startt)/(endt - startt)) );
+   //printf("Violation time: %e, percentage %e \n", ((double) (violt - setupt)) / CLOCKS_PER_SEC, ((double) (violt - setupt)/(endt - startt))   );
+   //printf("Rectlu time   : %e, percentage %e \n", ((double) (rectlut - violt)) / CLOCKS_PER_SEC, ((double) (rectlut - violt)/(endt - startt)) );
+   //printf("Proj time     : %e, percentage %e \n", ((double) (projt - rectlut)) / CLOCKS_PER_SEC, ((double) (projt - rectlut)/(endt - startt)) );
+   //printf("Shifting time : %e, percentage %e \n", ((double) (shiftt - projt)) / CLOCKS_PER_SEC, ((double) (shiftt - projt)/(endt - startt))   );
+   //printf("Cleanup time  : %e, percentage %e \n", ((double) (endt - shiftt)) / CLOCKS_PER_SEC, ((double) (endt - shiftt)/(endt - startt))     );
+
+   if( usefarkas )
+      SCIPclockStop(stat->provedinfeaspstime, set);
+   else
+      SCIPclockStop(stat->provedfeaspstime, set);
+
+   return SCIP_OKAY;
+}
+
 static
 char chooseBoundingMethod(
    SCIP_LP*              lp,                 /**< LP data */
@@ -2675,7 +3318,7 @@ char chooseBoundingMethod(
        * or
        * - Neumair Shcherbina bound only nearly able to cutoff node
        */
-      if( (lpex->interleavedbfreq > 0 && !SCIPsetIsInfinity(set, SCIPlpGetCutoffbound(lpex->fplp)) && SCIPgetDepth(set->scip) > 0
+      if( (lpex->interleavedbfreq > 0 && SCIPsetIsInfinity(set, SCIPlpGetCutoffbound(lpex->fplp)) && SCIPgetDepth(set->scip) > 0
             && SCIPgetDepth(set->scip) % (lpex->interleavedbfreq) == 0)
          || (lpex->interleavedbfreq == 0 && SCIPsetIsGE(set, SCIPlpGetObjval(lpex->fplp, set, prob), SCIPlpGetCutoffbound(lpex->fplp))
             && SCIPlpGetObjval(lpex->fplp, set, prob) < SCIPlpGetCutoffbound(lpex->fplp)) )

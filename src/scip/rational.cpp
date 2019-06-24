@@ -468,6 +468,14 @@ void RsetReal(
  * Computing methods
  */
 
+/* transform rational into canonical form */
+void Rcanonicalize(
+   SCIP_Rational*        r                   /**< rational to put in canonical form */
+   )
+{
+   mpq_canonicalize((*r->r).backend().data());
+}
+
 /** add two rationals and save the result in res*/
 void Radd(
    SCIP_Rational*        res,                /**< the result */
@@ -1129,9 +1137,9 @@ void Rprint(
 {
    assert(r != NULL);
    if( r->isinf )
-      std::cout << *(r->r) << "inf" << std::endl;
+      std::cout << *(r->r) << "inf";
    else
-      std::cout << *(r->r) << std::endl;
+      std::cout << *(r->r);
 }
 
 /** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
