@@ -319,6 +319,50 @@ Test(evalexpr, power, .description = "Tests expression evaluation for power expr
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
 }
 
+Test(evalexpr, signpower, .description = "Tests expression evaluation for signpower expressions.")
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* xexpr;
+   SCIP_INTERVAL interval;
+
+   SCIP_CALL( SCIPchgVarLb(scip, x, -10.0) );
+   SCIP_CALL( SCIPchgVarUb(scip, x, 10.0) );
+
+   /* create expressions signpower(x,2.5) */
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+   SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, conshdlr, &expr, xexpr, 2.5) );
+
+   /* evaluate expression at 2.0 */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, 0) );
+   cr_assert(SCIPisEQ(scip, SCIPgetConsExprExprValue(expr), pow(2.0, 2.5)));
+
+   /* evaluate expression at -1.0 */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.0) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, 0) );
+   cr_assert(SCIPisEQ(scip, SCIPgetConsExprExprValue(expr), -1.0));
+
+   /* evaluate expression at interval [-1.0, 3.0] */
+   SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
+   SCIP_CALL( SCIPchgVarUb(scip, x, 3.0) );
+   SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   cr_assert(SCIPisEQ(scip, interval.inf, -1.0));
+   cr_assert(SCIPisEQ(scip, interval.sup, pow(3.0, 2.5)));
+
+   /* evaluate expression at an interval [-2.0, -1.0] */
+   SCIP_CALL( SCIPchgVarLb(scip, x, -2.0) );
+   SCIP_CALL( SCIPchgVarUb(scip, x, -1.0) );
+   SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   cr_assert(SCIPisEQ(scip, interval.inf, -pow(2.0, 2.5)));
+   cr_assert(SCIPisEQ(scip, interval.sup, -1.0));
+
+   /* free expressions */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+}
+
 /* creates expression for f(x,y) = 0.5 * ( (x^2*y^(-1)*5^(-4))^2 * (2*x + 1)^(-1) ) */
 static
 SCIP_RETCODE createExpr(
