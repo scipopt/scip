@@ -236,6 +236,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
       unset $j
     done
     export ${FLAGS}
+    export PERFORMANCE=performance
 
     echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
     make testcluster ${FLAGS} | check/jenkins_check_results_cmake.sh
