@@ -180,9 +180,6 @@ Miscellaneous
 -------------
 - do not scale linear constraints to integral coefficients
 
-Known bugs
-----------
-
 @section RN600 SCIP 6.0.0
 *************************
 
