@@ -3725,6 +3725,9 @@ SCIP_RETCODE replaceBinaryProducts(
 
          /* note that the expression has been captured by getBinaryProductExpr and SCIPreplaceConsExprExprChild */
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newexpr) );
+
+         /* mark the constraint to not be simplied anymore */
+         consdata->issimplified = FALSE;
       }
    }
 
@@ -3789,6 +3792,9 @@ SCIP_RETCODE presolveBinaryProducts(
       {
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
          consdata->expr = newexpr;
+
+         /* mark constraint to be not simplified anymore */
+         consdata->issimplified = FALSE;
       }
 
       /* replace each product of binary variables separately */
@@ -3922,6 +3928,29 @@ SCIP_RETCODE canonicalizeConstraints(
    }
 #endif
 
+   /* reformulate products of binary variables */
+   if( conshdlrdata->reformbinprods && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING
+      && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+   {
+      int tmpnaddconss = 0;
+      int tmpnchgcoefs = 0;
+
+      /* call this function before simplification because expressions might not be simplified after reformulating
+       * binary products; the detection of some nonlinear handlers might assume that expressions are simplified
+       */
+      SCIP_CALL( presolveBinaryProducts(scip, conshdlr, conss, nconss, &tmpnaddconss, &tmpnchgcoefs) );
+
+      /* update counters */
+      if( naddconss != NULL )
+         *naddconss = tmpnaddconss;
+      if( nchgcoefs != NULL )
+         *nchgcoefs = tmpnchgcoefs;
+
+      /* check whether at least one expression has changed */
+      if( tmpnaddconss + tmpnchgcoefs > 0 )
+         havechange = TRUE;
+   }
+
    for( i = 0; i < nconss; ++i )
    {
       consdata = SCIPconsGetData(conss[i]);
@@ -4028,26 +4057,6 @@ SCIP_RETCODE canonicalizeConstraints(
          if( *infeasible )
             break;
       }
-   }
-
-   /* reformulate products of binary variables */
-   if( conshdlrdata->reformbinprods && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING
-      && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
-   {
-      int tmpnaddconss = 0;
-      int tmpnchgcoefs = 0;
-
-      SCIP_CALL( presolveBinaryProducts(scip, conshdlr, conss, nconss, &tmpnaddconss, &tmpnchgcoefs) );
-
-      /* update counters */
-      if( naddconss != NULL )
-         *naddconss = tmpnaddconss;
-      if( nchgcoefs != NULL )
-         *nchgcoefs = tmpnchgcoefs;
-
-      /* check whether at least one expression has changed */
-      if( tmpnaddconss + tmpnchgcoefs > 0 )
-         havechange = TRUE;
    }
 
    /* replace common subexpressions */
