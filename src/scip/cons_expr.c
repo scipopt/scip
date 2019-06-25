@@ -218,6 +218,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                vp_maxperturb;   /**< maximal relative perturbation of reference point */
    SCIP_Real                vp_adjfacetthreshold; /**< adjust computed facet up to a violation of this value times lpfeastol */
    SCIP_Bool                vp_dualsimplex;  /**< whether to use dual simplex instead of primal simplex for facet computing LP */
+   SCIP_Bool                reformbinprods;  /**< whether to reformulate products of binary variables during presolving */
 
    /* statistics */
    SCIP_Longint             ndesperatebranch;/**< number of times we branched on some variable because normal enforcement was not successful */
@@ -4004,7 +4005,8 @@ SCIP_RETCODE canonicalizeConstraints(
    }
 
    /* reformulate products of binary variables */
-   if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+   if( conshdlrdata->reformbinprods && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING
+      && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
       SCIP_CALL( presolveBinaryProducts(scip, conshdlr, conss, nconss, naddconss, nchgcoefs) );
    }
@@ -11884,6 +11886,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/vpdualsimplex",
          "whether to use dual simplex instead of primal simplex for LP that computes facet of vertex-polyhedral function",
          &conshdlrdata->vp_dualsimplex, TRUE, VERTEXPOLY_USEDUALSIMPLEX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/reformbinprods",
+         "whether to reformulate products of binary variables during presolving",
+         &conshdlrdata->reformbinprods, FALSE, TRUE, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
