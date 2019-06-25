@@ -4034,7 +4034,8 @@ SCIP_RETCODE canonicalizeConstraints(
          *nchgcoefs = tmpnchgcoefs;
 
       /* check whether at least one expression has changed */
-      havechange = tmpnaddconss + tmpnchgcoefs > 0;
+      if( tmpnaddconss + tmpnchgcoefs > 0 )
+         havechange = TRUE;
    }
 
    /* replace common subexpressions */
