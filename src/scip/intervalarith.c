@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   intervalarith.c
+ * @ingroup OTHER_CFILES
  * @brief  interval arithmetics for provable bounds
  * @author Tobias Achterberg
  * @author Stefan Vigerske
@@ -32,6 +33,26 @@
 #include "scip/intervalarith.h"
 #include "scip/pub_message.h"
 #include "scip/misc.h"
+
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
+ */
+#ifndef __clang__
+#pragma STD FENV_ACCESS ON
+#endif
+
+/* Unfortunately, the FENV_ACCESS pragma is essentially ignored by GCC at the moment (2019),
+ * see #2650 and https://gcc.gnu.org/bugzilla/show_bug.cgi?id=34678.
+ * There are ways to work around this by declaring variables volatile or inserting more assembler code,
+ * but there is always the danger that something would be overlooked.
+ * A more drastic but safer way seems to be to just disable all compiler optimizations for this file.
+ * The Intel compiler seems to implement FENV_ACCESS correctly, but also defines __GNUC__.
+ */
+#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+#endif
 
 #ifdef SCIP_ROUNDING_FE
 #define ROUNDING
@@ -212,10 +233,11 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 /** gets the negation of a double
  * Do this in a way that the compiler does not "optimize" it away, which usually does not considers rounding modes.
  * However, compiling with -frounding-math would allow to return -x here.
+ * @todo We now set the FENV_ACCESS pragma to on, which is the same as -frounding-math, so we might be able to eliminate this.
  */
 static
 double negate(
-   /* we explicitely use double here, since I'm not sure the assembler code would work as it for other float's */
+   /* we explicitly use double here, since I'm not sure the assembler code would work as it for other float's */
    double                x                   /**< number that should be negated */
    )
 {
@@ -234,7 +256,7 @@ double negate(
  */
 static
 double negate(
-   /* we explicitely use double here, since I'm not sure the assembler code would work as it for other float's */
+   /* we explicitly use double here, since I'm not sure the assembler code would work as it for other float's */
    double                x                   /**< number that should be negated */
    )
 {
@@ -2756,10 +2778,10 @@ void SCIPintervalEntropy(
 {
    SCIP_Real loginf;
    SCIP_Real logsup;
-   SCIP_Real infcand1;
-   SCIP_Real infcand2;
-   SCIP_Real supcand1;
-   SCIP_Real supcand2;
+   SCIP_Real infcand1 = 0.0;
+   SCIP_Real infcand2 = 0.0;
+   SCIP_Real supcand1 = 0.0;
+   SCIP_Real supcand2 = 0.0;
    SCIP_Real extr;
    SCIP_Real inf;
    SCIP_Real sup;
@@ -2785,21 +2807,43 @@ void SCIPintervalEntropy(
 
    /* first, compute the logarithms (roundmode nearest, then nextafter) */
    assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-   loginf = operand.inf > 0.0 ? log(operand.inf) : 0.0;
-   logsup = log(operand.sup);
-   infcand1 = operand.inf > 0.0 ? SCIPnextafter(loginf, SCIP_REAL_MAX) : 0.0;
-   infcand2 = SCIPnextafter(logsup, SCIP_REAL_MAX);
-   supcand1 = operand.inf > 0.0 ? SCIPnextafter(loginf, SCIP_REAL_MIN) : 0.0;
-   supcand2 = SCIPnextafter(logsup, SCIP_REAL_MIN);
+   if( operand.inf > 0.0 )
+   {
+      loginf = log(operand.inf);
+      infcand1 = SCIPnextafter(loginf, SCIP_REAL_MAX);
+      supcand1 = SCIPnextafter(loginf, SCIP_REAL_MIN);
+   }
+   if( operand.sup < infinity )
+   {
+      logsup = log(operand.sup);
+      infcand2 = SCIPnextafter(logsup, SCIP_REAL_MAX);
+      supcand2 = SCIPnextafter(logsup, SCIP_REAL_MIN);
+   }
 
    /* second, multiply with operand.inf/sup using upward rounding
     * thus, for infinum, negate after muliplication; for supremum, negate before multiplication
     */
    SCIPintervalSetRoundingModeUpwards();
-   infcand1 = SCIPnegateReal(operand.inf * infcand1);
-   infcand2 = SCIPnegateReal(operand.sup * infcand2);
-   supcand1 = SCIPnegateReal(operand.inf) * supcand1;
-   supcand2 = SCIPnegateReal(operand.sup) * supcand2;
+   if( operand.inf > 0.0 )
+   {
+      infcand1 = SCIPnegateReal(operand.inf * infcand1);
+      supcand1 = SCIPnegateReal(operand.inf) * supcand1;
+   }
+   else
+   {
+      infcand1 = 0.0;
+      supcand1 = 0.0;
+   }
+   if( operand.sup < infinity )
+   {
+      infcand2 = SCIPnegateReal(operand.sup * infcand2);
+      supcand2 = SCIPnegateReal(operand.sup) * supcand2;
+   }
+   else
+   {
+      infcand2 = -infinity;
+      supcand2 = -infinity;
+   }
 
    /* restore original rounding mode (asserted to be "to-nearest" above) */
    SCIPintervalSetRoundingModeToNearest();
@@ -4437,3 +4481,8 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       SCIPintervalIntersect(resultant, *resultant, xbnds);
    }
 }
+
+/* pop -O0 from beginning, though it probably doesn't matter here at the end of the compilation unit */
+#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
+#pragma GCC pop_options
+#endif

@@ -268,6 +268,7 @@ SCIP_RETCODE initConcsolver(
    {
       SCIP_VAR* var;
       var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      assert(var != NULL);
       varperm[SCIPvarGetIndex(var)] = i;
       data->vars[i] = var;
    }

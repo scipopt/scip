@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   compr_weakcompr.c
+ * @ingroup OTHER_CFILES
  * @brief  weakcompr tree compression
  * @author Jakob Witzig
  */

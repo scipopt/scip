@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_dualfix.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  fixing roundable variables to best bound
  * @author Tobias Achterberg
  * @author Stefan Heinz

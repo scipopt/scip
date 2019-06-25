@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricer_xyz.c
+ * @ingroup OTHER_CFILES
  * @brief  xyz variable pricer
  * @author Tobias Achterberg
  */

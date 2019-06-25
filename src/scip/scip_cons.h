@@ -53,14 +53,7 @@
  */
 #ifdef NDEBUG
 #include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
 #include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
 #endif
 
 #ifdef __cplusplus
@@ -1766,12 +1759,10 @@ SCIP_RETCODE SCIPgetConsNVars(
    SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
    );
 
-#ifdef NDEBUG
-
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
-
+#ifdef NDEBUG
 #define SCIPmarkConsPropagate(scip, cons)         SCIPconsMarkPropagate(cons, (scip)->set)
 #endif
 

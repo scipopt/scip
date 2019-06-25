@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_zpl.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  ZIMPL model file reader
  * @author Tobias Achterberg
  * @author Timo Berthold

@@ -113,7 +113,7 @@ SCIP_RETCODE computeSignpowerRoot(
    else
       *root = signpow_roots[(int)SCIPfloor(scip, exponent)];
 
-   for(iter = 0; iter < 1000; ++iter )
+   for( iter = 0; iter < 1000; ++iter )
    {
       polyval = (exponent - 1.0) * pow(*root, exponent) + exponent * pow(*root, exponent - 1.0) - 1.0;
       if( fabs(polyval) < 1e-12 && SCIPisZero(scip, polyval) )
@@ -793,11 +793,11 @@ void estimateHyperbolaMixed(
          computeSecant(scip, exponent, xlb, xub, constant, slope, success);
          *islocal = TRUE;
       }
-      else
+      else if( !SCIPisZero(scip, xlb/10.0) )
       {
          /* overestimation -> tangent */
 
-         if( SCIPisZero(scip, xref) && !SCIPisZero(scip, xlb/10.0) )
+         if( SCIPisZero(scip, xref) )
          {
             /* if xref is very close to 0.0, then slope would be infinite
              * try to move closer to lower bound (if xlb < -10*eps)
@@ -812,6 +812,7 @@ void estimateHyperbolaMixed(
          /* if x does not have a fixed sign globally, then our tangent is not globally valid (power is not convex on global domain) */
          *islocal = xlbglobal * xubglobal < 0.0;
       }
+      /* else: xlb is very close to zero, xub is <= 0, so slope would be infinite (for any reference point in [xlb, xub]) -> do not estimate */
    }
    /* else: x has mixed sign -> pole is within domain -> cannot estimate */
 }

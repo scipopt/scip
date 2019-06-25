@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dijkstra.c
+ * @ingroup OTHER_CFILES
  * @brief  C implementation of Dijkstra's algorithm
  * @author Thorsten Koch
  * @author Marc Pfetsch

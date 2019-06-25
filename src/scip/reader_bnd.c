@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_bnd.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  file reader for variable bounds
  * @author Ambros Gleixner
  * @author Ingmar Vierhaus

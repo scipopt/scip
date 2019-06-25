@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   compr_largestrepr.c
+ * @ingroup OTHER_CFILES
  * @brief  largestrepr tree compression
  * @author Jakob Witzig
  */

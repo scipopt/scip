@@ -24,15 +24,19 @@
 #ifndef __SCIP_REOPT_H__
 #define __SCIP_REOPT_H__
 
-
+#include "blockmemshell/memory.h"
 #include "scip/def.h"
 #include "scip/pub_reopt.h"
-#include "scip/type_primal.h"
-#include "scip/type_sepastore.h"
+#include "scip/type_branch.h"
 #include "scip/type_cutpool.h"
-#include "scip/type_retcode.h"
 #include "scip/type_misc.h"
+#include "scip/type_primal.h"
+#include "scip/type_prob.h"
+#include "scip/type_retcode.h"
 #include "scip/type_reopt.h"
+#include "scip/type_sepastore.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
 #include "scip/struct_reopt.h"
 #include "scip/struct_var.h"
 #include "scip/struct_history.h"

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_quadratic.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for quadratic constraints \f$\textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_i x_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -35,6 +36,7 @@
 
 #include "blockmemshell/memory.h"
 #include <ctype.h>
+#include <math.h>
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/pub_expr.h"
@@ -83,6 +85,18 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include <string.h>
+
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
+ */
+#ifndef __clang__
+#pragma STD FENV_ACCESS ON
+#endif
+
+#ifndef M_SQRT2
+#define M_SQRT2 sqrt(2.0)
+#endif
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "quadratic"
@@ -2441,7 +2455,7 @@ SCIP_RETCODE replaceQuadVarTermPos(
    if( eventhdlr != NULL )
    {
       assert(SCIPconsIsEnabled(cons));
-      
+
       /* catch bound change events of variable */
       SCIP_CALL( catchQuadVarEvents(scip, eventhdlr, cons, pos) );
    }
@@ -2498,8 +2512,8 @@ SCIP_RETCODE addBilinearTerm(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* check if the bilinear terms are sorted */
-   assert(consdataCheckBilinTermsSort(consdata));
+   /* check if the bilinear terms are sorted (disabled for big constraints as becoming expensive) */
+   assert(consdata->nbilinterms > 10 || consdataCheckBilinTermsSort(consdata));
 
    assert(var1pos >= 0);
    assert(var1pos < consdata->nquadvars);
@@ -2566,8 +2580,8 @@ SCIP_RETCODE addBilinearTerm(
 
    consdata->iscurvchecked = FALSE;
 
-   /* check if the bilinear terms are sorted */
-   assert(consdataCheckBilinTermsSort(consdata));
+   /* check if the bilinear terms are sorted (disabled as expensive if big constraint) */
+   assert(consdata->nbilinterms > 10 || consdataCheckBilinTermsSort(consdata));
 
    return SCIP_OKAY;
 }
@@ -6423,9 +6437,6 @@ SCIP_Bool generateCutLTIfindIntersection(
    SCIP_Real tl;
    SCIP_Real tu;
 
-   assert(wl == SCIP_INVALID || (xl != NULL && yl != NULL));  /*lint !e777 */
-   assert(wu == SCIP_INVALID || (xu != NULL && yu != NULL));  /*lint !e777 */
-
    /* The parametric line is of the form
     *
     *  x = x0 + t (x1-x0)
@@ -6511,10 +6522,13 @@ SCIP_Bool generateCutLTIfindIntersection(
 
    if( wl != SCIP_INVALID )  /*lint !e777 */
    {
+      assert(xl != NULL);
+      assert(yl != NULL);
+
       *xl = (SCIP_Real)(x0  + tl * (x1  - x0 ));
       *yl = (SCIP_Real)(y0_ + tl * (y1_ - y0_));
 
-      if( !SCIPisRelEQ(scip, *xl * *yl, wl) )
+      if( SCIPisInfinity(scip, -*xl) || SCIPisInfinity(scip, -*yl) || !SCIPisRelEQ(scip, *xl * *yl, wl) )
       {
          SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
          return TRUE;
@@ -6523,22 +6537,17 @@ SCIP_Bool generateCutLTIfindIntersection(
 
    if( wu != SCIP_INVALID )  /*lint !e777 */
    {
+      assert(xu != NULL);
+      assert(yu != NULL);
+
       *xu = (SCIP_Real)(x0  + tu * (x1 -  x0));
       *yu = (SCIP_Real)(y0_ + tu * (y1_ - y0_));
 
-      if( !SCIPisRelEQ(scip, *xu * *yu, wu) )
+      if( SCIPisInfinity(scip, *xu) || SCIPisInfinity(scip, *yu) || !SCIPisRelEQ(scip, *xu * *yu, wu) )
       {
          SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
          return TRUE;
       }
-   }
-
-   /* do not use the computed points if one of the components is infinite */
-   if( (xu != NULL && SCIPisInfinity(scip, *xu)) || (xl != NULL && SCIPisInfinity(scip, -*xl)) ||
-      (yu != NULL && SCIPisInfinity(scip, *yu)) || (yl != NULL && SCIPisInfinity(scip, -*yl)) )
-   {
-      SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
-      return TRUE;
    }
 
    return FALSE;
@@ -6631,10 +6640,10 @@ void generateCutLTIcomputeCoefs(
    SCIP_Bool flipy;
    SCIP_Bool flipw;
    SCIP_Real tmp;
-   SCIP_Real xlow;
-   SCIP_Real ylow;
-   SCIP_Real xupp;
-   SCIP_Real yupp;
+   SCIP_Real xlow = 0.0;
+   SCIP_Real ylow = 0.0;
+   SCIP_Real xupp = 0.0;
+   SCIP_Real yupp = 0.0;
    SCIP_Real c0x;
    SCIP_Real c0y;
    SCIP_Real c0w;
@@ -13363,6 +13372,9 @@ SCIP_DECL_CONSENABLE(consEnableQuadratic)
 
    SCIPdebugMsg(scip, "enable cons <%s>\n", SCIPconsGetName(cons));
 
+   /* catch variable events */
+   SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+
    if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE )
    {
       /* merge duplicate bilinear terms, move quad terms that are linear to linear vars */
@@ -13370,9 +13382,6 @@ SCIP_DECL_CONSENABLE(consEnableQuadratic)
       SCIP_CALL( mergeAndCleanQuadVarTerms(scip, cons) );
       SCIP_CALL( mergeAndCleanLinearVars(scip, cons) );
    }
-
-   /* catch variable events */
-   SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
 
    /* initialize solving data */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
@@ -16064,6 +16073,64 @@ void SCIPprintRowprep(
    SCIPinfoMessage(scip, file, rowprep->sidetype == SCIP_SIDETYPE_LEFT ? ">= %.15g\n" : "<= %.15g\n", rowprep->side);
 }
 
+/** prints a rowprep and values in solution */
+void SCIPprintRowprepSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
+   SCIP_SOL*             sol,                /**< solution for activity */
+   FILE*                 file                /**< file to print to, or NULL for stdout */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real coef;
+   SCIP_Real term;
+   SCIP_Real maxterm;
+   SCIP_Real activity;
+   SCIP_Real violation;
+   int maxtermidx;
+   int i;
+
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+
+   if( *rowprep->name != '\0' )
+   {
+      SCIPinfoMessage(scip, file, "[%s](%c) ", rowprep->name, rowprep->local ? 'l' : 'g');
+   }
+
+   activity = 0.0;
+   maxterm = REALABS(rowprep->side);
+   maxtermidx = -1;
+   for( i = 0; i < rowprep->nvars; ++i )
+   {
+      coef = rowprep->coefs[i];
+      var = rowprep->vars[i];
+      SCIPinfoMessage(scip, file, "%+.15g*<%s>(%.15g) ", coef, SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var));
+
+      term = coef * SCIPgetSolVal(scip, sol, var);
+      if( REALABS(term) > maxterm )
+      {
+         maxterm = term;
+         maxtermidx = i;
+      }
+
+      activity += term;
+   }
+
+   SCIPinfoMessage(scip, file, rowprep->sidetype == SCIP_SIDETYPE_LEFT ? ">= %.15g" : "<= %.15g", rowprep->side);
+
+   if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+      /* cut is activity <= side -> violation is activity - side (if positive) */
+      violation = activity - rowprep->side;
+   else
+      /* cut is activity >= side -> violation is side - activity (if positive) */
+      violation = rowprep->side - activity;
+
+   SCIPinfoMessage(scip, file, "; activity %.15g", activity);
+   SCIPinfoMessage(scip, file, "; violation %e", violation);
+   SCIPinfoMessage(scip, file, "; maxterm %e at pos %d\n", maxterm, maxtermidx);
+}
+
 /** adds a term coef*var to a rowprep */
 SCIP_RETCODE SCIPaddRowprepTerm(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -16156,7 +16223,7 @@ void SCIPaddRowprepConstant(
  */
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
    SCIP_Bool*            reliable            /**< buffer to store whether computed violation is reliable (numerically), or NULL if not of interest */
    )
@@ -16165,6 +16232,7 @@ SCIP_Real SCIPgetRowprepViolation(
    SCIP_Real maxterm;
    SCIP_Real term;
    SCIP_Real violation;
+   SCIP_Real val;
    int i;
 
    activity = 0.0;
@@ -16178,7 +16246,33 @@ SCIP_Real SCIPgetRowprepViolation(
        */
       if( sol != NULL || SCIPvarGetStatus(rowprep->vars[i]) != SCIP_VARSTATUS_LOOSE )
       {
-         term = rowprep->coefs[i] * SCIPgetSolVal(scip, sol, rowprep->vars[i]);
+         val = SCIPgetSolVal(scip, sol, rowprep->vars[i]);
+
+         /* If a variable is at infinity, then this should lead to an immediate decision.
+          * Having different contradicting infinities is something I would now know how to handle and am ignoring now.
+          */
+         if( SCIPisInfinity(scip, val * (rowprep->coefs[i] >= 0.0 ? 1.0 : -1.0)) )
+         {
+            /* activity = SCIPinfinity(scip); */
+            if( reliable != NULL )
+               *reliable = TRUE;
+            if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+               return SCIPinfinity(scip);  /* infinity <= side -> always violated */
+            else
+               return 0.0;  /* infinity >= side -> never violated */
+         }
+         if( SCIPisInfinity(scip, val * (rowprep->coefs[i] >= 0.0 ? -1.0 : 1.0)) )
+         {
+            /* activity = -SCIPinfinity(scip); */
+            if( reliable != NULL )
+               *reliable = TRUE;
+            if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+               return 0.0;  /* -infinity <= side -> never violated */
+            else
+               return SCIPinfinity(scip);  /* -infinity >= side -> always violated */
+         }
+
+         term = rowprep->coefs[i] * val;
          activity += term;
 
          if( reliable != NULL && REALABS(term) > maxterm )
@@ -16197,18 +16291,42 @@ SCIP_Real SCIPgetRowprepViolation(
     * Therefore, if the exponent in the violation is 52 (or more) less than the one of maxterm,
     * then it is essentially random.
     * We require here that the exponents differ by at most 50.
+    * To be more robust w.r.t. scaling of the row, we look at the exponent of the quotient maxterm/violation
+    * instead of the difference of the exponents of maxterm and violation.
     */
    if( reliable != NULL )
    {
-      int expviol;
-      int expterm;
-
-      (void) frexp(violation, &expviol);  /* exponent in violation */
-      (void) frexp(maxterm, &expterm);    /* exponent in maxterm */
-      *reliable = expterm - expviol <= 50;
+      if( violation != 0.0 )
+      {
+         int exponent;
+         (void) frexp(maxterm / violation, &exponent);  /* difference in exponents for maxterm and violation */
+         *reliable = exponent <= 50;
+      }
+      else
+         *reliable = TRUE;  /* not clear how to evaluate reliability here, so think positive */
    }
 
    return MAX(violation, 0.0);
+}
+
+/** computes violation of cut in a given solution and reports whether that value seem numerically reliable
+ *
+ * @see SCIPgetRowprepViolation
+ */
+SCIP_Bool SCIPisRowprepViolationReliable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
+)
+{
+   SCIP_Bool reliable;
+
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+
+   (void) SCIPgetRowprepViolation(scip, rowprep, sol, &reliable);
+
+   return reliable;
 }
 
 /** Merge terms that use same variable and eliminate zero coefficients.
@@ -16551,6 +16669,7 @@ void rowprepCleanupScaleup(
    /* if violation is already above minviol, then nothing to do */
    if( *viol >= minviol )
       return;
+   assert(!SCIPisInfinity(scip, *viol));
 
    /* if violation is sufficiently positive (>10*eps), but has not reached minviol,
     * then consider scaling up to reach approx MINVIOLFACTOR*minviol
@@ -16595,7 +16714,7 @@ void rowprepCleanupScaledown(
    scalefactor = 10.0 / REALABS(rowprep->coefs[0]);
 
    /* if minimal violation would be lost by scaling down, then increase scalefactor such that minviol is still reached */
-   if( *viol > minviol && scalefactor * *viol < minviol )
+   if( *viol > minviol && !SCIPisInfinity(scip, *viol) && scalefactor * *viol < minviol )
    {
       assert(minviol > 0.0);  /* since viol >= 0, the if-condition should ensure that minviol > 0 */
       assert(*viol > 0.0);    /* since minviol > 0, the if-condition ensures viol > 0 */
@@ -16613,7 +16732,8 @@ void rowprepCleanupScaledown(
          SCIPprintRowprep(scip, rowprep, NULL); */
 
       scaleexp = SCIPscaleRowprep(rowprep, scalefactor);
-      *viol = ldexp(*viol, scaleexp);
+      if( !SCIPisInfinity(scip, *viol) )
+         *viol = ldexp(*viol, scaleexp);
 
       /* SCIPinfoMessage(scip, NULL, "scaled down by %g, viol=%g: ", ldexp(1.0, scaleexp), myviol);
          SCIPprintRowprep(scip, rowprep, NULL); */
@@ -16924,39 +17044,68 @@ SCIP_Real SCIPscaleupRowprep(
 )
 {
    SCIP_Real minfrac = 0.5;
+   SCIP_Real minfrac0 = 0.5;
    SCIP_Real frac;
    SCIP_Real maxval;
    SCIP_Real factor = 1.0;
+   SCIP_Bool makeintegral = TRUE;
    int i;
 
    /* find the smallest fractionality in rowprep sides and coefficients and the largest absolute coefficient/side */
    frac = REALABS(floor(rowprep->side + 0.5) - rowprep->side);
-   if( frac != 0.0 && frac < minfrac )
-      minfrac = frac;
+   if( frac != 0.0 )
+   {
+      if( REALABS(rowprep->side) > 0.5 )
+      {
+         if( frac < minfrac )
+            minfrac = frac;
+      }
+      else if( frac < minfrac0 )
+         minfrac0 = frac;
+   }
    maxval = REALABS(rowprep->side);
 
    for( i = 0; i < rowprep->nvars; ++i )
    {
       frac = REALABS(floor(rowprep->coefs[i] + 0.5) - rowprep->coefs[i]);
-      if( frac != 0.0 && frac < minfrac )
-         minfrac = frac;
+      if( frac != 0.0 )
+      {
+         if( REALABS(rowprep->coefs[i]) > 0.5 )
+         {
+            if( frac < minfrac )
+               minfrac = frac;
+         }
+         else if( frac < minfrac0 )
+            minfrac0 = frac;
+      }
       if( REALABS(rowprep->coefs[i]) > maxval )
          maxval = REALABS(rowprep->coefs[i]);
    }
 
-   SCIPdebugMsg(scip, "minimal fractional of rowprep coefs and side is %g, max coef/side is %g\n", minfrac, maxval);
+   SCIPdebugMsg(scip, "minimal fractional of rowprep coefs and side is %g, max coef/side is %g\n", MIN(minfrac, minfrac0), maxval);
 
    /* in order for SCIP_ROW to not modify the coefs and side, they need to be more than epsilon way from an integer value
-    * that is, scaling up the rowprep by epsilon/minfrac will increase its minimal fractionality above epsilon (right?)
-    * but if that increases the maximal coef/value beyond SCIPinfinity, then the rowprep would be useless
-    * we even check that we don't increase beyond SCIPhugeValue here
+    *
+    * If the integer value is 0, then scaling up the rowprep by epsilon/minfrac will increase its minimal fractionality
+    * above epsilon.
+    * If the integer value is not zero, then scaling up the rowprep by a well-chosen fractional number alpha will increase
+    * the minimal fractionality by about alpha*integer-value mod 1. To reduce the chance that alpha*integer-value is integral,
+    * we use a "very fractional" value for alpha.
+    *
+    * If the scaling increases the maximal coef/value beyond SCIPinfinity, then the rowprep would be useless.
+    * We even check that we don't increase beyond SCIPhugeValue here
     */
-   if( minfrac <= SCIPepsilon(scip) )
+   if( minfrac0 <= SCIPepsilon(scip) )
    {
-      factor = 1.1 * SCIPepsilon(scip) / minfrac;
+      factor = 1.1 * SCIPepsilon(scip) / minfrac0;
 
       if( factor < minscaleup )
          factor = minscaleup;
+   }
+   else if( minfrac <= SCIPepsilon(scip) )
+   {
+      factor = MAX(M_SQRT2, minscaleup);
+      makeintegral = FALSE;
    }
    else if( minscaleup > 1.0 )
    {
@@ -16973,8 +17122,23 @@ SCIP_Real SCIPscaleupRowprep(
 
    if( !SCIPisHugeValue(scip, factor * maxval) )
    {
-      factor = SCIPscaleRowprep(rowprep, factor);
+      if( makeintegral)
+      {
+         factor = SCIPscaleRowprep(rowprep, factor);
 
+#ifdef SCIP_DEBUG
+         factor = pow(2.0, factor);  /* SCIPscaleRowprep() actually returned log2 of factor */
+#endif
+      }
+      else
+      {
+         /* multiply each coefficient by factor */
+         for( i = 0; i < rowprep->nvars; ++i )
+            rowprep->coefs[i] *= factor;
+
+         /* multiply side by factor */
+         rowprep->side *= factor;
+      }
 #ifdef SCIP_DEBUG
       maxval *= factor;
       SCIPinfoMessage(scip, NULL, "scaled up rowprep by %g (minfrac=%g, minscaleup=%g), maxval is now %g\n", factor, minfrac, minscaleup, maxval);

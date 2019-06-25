@@ -30,33 +30,39 @@ as SCIP. Assuming that the build directory of SCIP was named "build",
 simply execute
 
 ```
-cd build
-make scip_application
+cmake --build build --target <scip_application>
 ```
 
 The SCIPApplication application is part of the SCIP applications. To build all
 applications at once, use
 
 ```
-make applications
+cmake --build build --target applications
 ```
 
-It is also possible to build the SCIPApplication application in a stand-alone
+It is also possible to build `scip_application` in a stand-alone
 build directory. Therefore, it is necessary to create the
-stand-alone build directory first and generate the Makefile using
-CMake. It might be necessary to specify the SCIP build directory
-or installation directory, if SCIP has not yet been installed systemwide.
+stand-alone build directory first and configure the build using
+CMake. This approach requires a systemwide installation of SCIP.
+If SCIP is not installed systemwide, but in a local directory "/path/to/scip/installation",
+this needs to be communicated as follows, by either specifying the `SCIP_DIR` variable or
+adjusting the `CMAKE_PREFIX_PATH` variable.
+The following commands need to be issued from the root directory of the example that should be built.
 
 ```
-mkdir build
-cd build
-cmake .. [-DSCIP_DIR=../../]
-make
+cmake -Bbuild -H. [-DSCIP_DIR=/path/to/scip/installation/lib/cmake/scip] [-DCMAKE_PREFIX_PATH=/path/to/scip/installation]
+cmake --build build
 ```
+
+If you are unsure what an installation directory is, "/path/to/scip/installation" should contain the directories "include" and "lib"
+or the equivalents on your target operating systems.
+If SCIP has been compiled into a build-directory as opposed to an installation directory, it is possible to point either of the two variables
+`SCIP_DIR` or `CMAKE_PREFIX_PATH` to this build directory.
+Finally, this specification should be used to give a local installation precedence over a systemwide installation of SCIP.
 
 Please refer to the [online documentation of SCIP](http://scip.zib.de/doc/html/CMAKE.php)
 for a list of available
-configuration options for this application, and available tests.
+configuration options and available tests.
 
 
 

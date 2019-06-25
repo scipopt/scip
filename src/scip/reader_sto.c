@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_sto.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  STO file reader - the stochastic information of an instance in SMPS format
  * @author Stephen J. Maher
  */
@@ -226,7 +227,7 @@ SCIP_RETCODE freeScenarioTree(
       SCIP_CALL( SCIPfree(&(*scenariotree)->subproblems[i]) );
 
    /* freeing the array that stores the subproblems */
-   if( nchildren > 0 )
+   if( nchildren > 0 && (*scenariotree)->subproblems != NULL )
       SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->subproblems, nchildren);
 
    SCIPfreeBlockMemory(scip, scenariotree);

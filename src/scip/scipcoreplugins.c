@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipcoreplugins.c
+ * @ingroup OTHER_CFILES
  * @brief  register additional core functionality designed as plugins
  * @author Gregor Hendel
  */

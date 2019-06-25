@@ -407,7 +407,8 @@
 =bestdual= elec50                                         359.0296983000
 =opt=      elf                                              0.1916666667
 =opt=      emfl050_3_3                                     10.4017379300
-=opt=      emfl050_5_5                                     18.9134077600
+=best=     emfl050_5_5                                     18.9134077600
+=bestdual= emfl050_5_5                                     18.9091920800
 =opt=      emfl100_3_3                                     18.1326244600
 =opt=      emfl100_5_5                                     32.6381834800
 =opt=      eniplac                                    -132117.0830000000
@@ -1518,7 +1519,8 @@
 =best=     saa_2                                           12.1613089000
 =bestdual= saa_2                                            0.0000000000
 =opt=      sambal                                           3.9682203620
-=opt=      sample                                         726.6793569000
+=best=     sample                                         726.6793569000
+=bestdual= sample                                         726.6704102000
 =opt=      sep1                                          -510.0809844000
 =best=     sepasequ_complex                               368.7616155000
 =bestdual= sepasequ_complex                               293.8823277000
@@ -1898,8 +1900,7 @@
 =opt=      st_testph4                                     -80.5000000000
 =opt=      st_z                                             0.0000000000
 =opt=      steenbrf                                       282.6795568000
-=best=     stockcycle                                  119948.6883000000
-=bestdual= stockcycle                                  119949.0000000000
+=opt=      stockcycle                                  119948.6883000000
 =opt=      super1                                           9.5079339780
 =best=     super2                                           4.9345034990
 =bestdual= super2                                           2.8421000000

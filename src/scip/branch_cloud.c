@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_cloud.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  cloud branching rule
  * @author Timo Berthold
  * @author Domenico Salvagnin

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   compr_xyz.c
+ * @ingroup OTHER_CFILES
  * @brief  xyz tree compression
  * @author Jakob Witzig
  */

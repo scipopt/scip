@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc_linear.c
+ * @ingroup OTHER_CFILES
  * @brief  miscellaneous methods for linear constraints
  * @author Jakob Witzig
  * @author Ambros Gleixner

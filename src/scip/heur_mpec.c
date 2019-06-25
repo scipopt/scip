@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_mpec.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  mpec primal heuristic
  * @author Felipe Serrano
  * @author Benjamin Mueller

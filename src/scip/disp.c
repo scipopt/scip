@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   disp.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for displaying runtime statistics
  * @author Tobias Achterberg
  * @author Timo Berthold

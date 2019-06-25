@@ -27,9 +27,11 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
+#include "scip/type_event.h"
 #include "scip/type_retcode.h"
 #include "scip/type_result.h"
 #include "scip/type_set.h"
+#include "scip/type_sol.h"
 #include "scip/type_stat.h"
 #include "scip/type_lp.h"
 #include "scip/type_sepastore.h"

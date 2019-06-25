@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   conflictstore.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing conflicts
  * @author Jakob Witzig
  */
