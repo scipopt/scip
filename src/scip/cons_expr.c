@@ -3344,9 +3344,9 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
       int ntmpvars = 0;
       int j;
 
-      /* terminate if there are not enough terms available */
+      /* skip candidate if there are not enough terms left */
       if( count[SCIPvarGetProbindex(vars[i])] < minterms )
-         break;
+         continue;
 
       SCIPdebugMsg(scip, "consider facvar = %s with count = %d\n", SCIPvarGetName(facvar), count[SCIPvarGetProbindex(vars[i])]);
 
