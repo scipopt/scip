@@ -219,6 +219,7 @@ struct SCIP_ConshdlrData
    SCIP_Real                vp_adjfacetthreshold; /**< adjust computed facet up to a violation of this value times lpfeastol */
    SCIP_Bool                vp_dualsimplex;  /**< whether to use dual simplex instead of primal simplex for facet computing LP */
    SCIP_Bool                reformbinprods;  /**< whether to reformulate products of binary variables during presolving */
+   int                      reformbinprodsfac; /**< minimum number of terms to reformulate bilinear binary products by factorizing variables (<= 1: disabled) */
 
    /* statistics */
    SCIP_Longint             ndesperatebranch;/**< number of times we branched on some variable because normal enforcement was not successful */
@@ -3673,6 +3674,7 @@ SCIP_RETCODE replaceBinaryProducts(
    int*                  nchgcoefs           /**< pointer to update the total number of changed coefficients (might be NULL) */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSDATA* consdata;
 
@@ -3680,6 +3682,9 @@ SCIP_RETCODE replaceBinaryProducts(
    assert(cons != NULL);
    assert(exprmap != NULL);
    assert(it != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3699,8 +3704,11 @@ SCIP_RETCODE replaceBinaryProducts(
       assert(childexpr != NULL);
 
       /* try to factorize variables in a sum expression that contains several products of binary variables */
-      /* TODO add a parameter for the magic number */
-      SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, childexpr, 10, &newexpr, naddconss) );
+      if( conshdlrdata->reformbinprodsfac > 1 )
+      {
+         SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, childexpr,
+            conshdlrdata->reformbinprodsfac, &newexpr, naddconss) );
+      }
 
       /* try to create an expression that represents a product of binary variables */
       if( newexpr == NULL )
@@ -3770,7 +3778,11 @@ SCIP_RETCODE presolveBinaryProducts(
       assert(consdata != NULL);
 
       /* try to reformulate the root expression */
-      SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, conss[c], consdata->expr, 10, &newexpr, naddconss) );
+      if( conshdlrdata->reformbinprodsfac > 1 )
+      {
+         SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, conss[c], consdata->expr,
+            conshdlrdata->reformbinprodsfac, &newexpr, naddconss) );
+      }
 
       /* release the root node if another expression has been found */
       if( newexpr != NULL )
@@ -11918,6 +11930,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/reformbinprods",
          "whether to reformulate products of binary variables during presolving",
          &conshdlrdata->reformbinprods, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/reformbinprodsfac",
+         "minimum number of terms to reformulate bilinear binary products by factorizing variables (<= 1: disabled)",
+         &conshdlrdata->reformbinprodsfac, FALSE, 10, 1, INT_MAX, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
