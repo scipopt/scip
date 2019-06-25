@@ -3235,8 +3235,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
    SCIP_CONSEXPR_EXPR*   sumexpr,            /**< sum expression */
    int                   minterms,           /**< minimum number of terms in a the sum of x_i sum_j c_j x_j */
    SCIP_CONSEXPR_EXPR**  newexpr,            /**< pointer to store the expression that represents the binary quadratic */
-   int*                  naddconss,          /**< pointer to update the total number of added constraints (might be NULL) */
-   int*                  nchgcoefs           /**< pointer to update the total number of changed coefficients (might be NULL) */
+   int*                  naddconss           /**< pointer to update the total number of added constraints (might be NULL) */
    )
 {
    SCIP_CONSEXPR_EXPR** exprs = NULL;
@@ -3246,7 +3245,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
    SCIP_VAR** ys = NULL;
    SCIP_Real* exprcoefs = NULL;
    SCIP_Real* tmpcoefs = NULL;
-   SCIP_Real* sumcoefs = NULL;
+   SCIP_Real* sumcoefs;
    SCIP_Bool* isused  = NULL;
    int* childidxs = NULL;
    int* count = NULL;
@@ -3287,7 +3286,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
       goto TERMINATE;
 
    /* store how often each variable appears in a biliner binary product */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
    SCIP_CALL( SCIPallocClearBufferArray(scip, &count, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &isused, nchildren) );
 
@@ -3488,7 +3487,7 @@ SCIP_RETCODE getBinaryProductExpr(
             if( SCIPcliqueHasVar(xcliques[c], y, TRUE) ) /* x + y <= 1 => x*y = 0 */
             {
                /* create zero value expression */
-               SCIPcreateConsExprExprValue(scip, conshdlr, newexpr, 0.0);
+               SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, newexpr, 0.0) );
 
                if( nchgcoefs != NULL )
                   *nchgcoefs += 1;
@@ -3686,7 +3685,7 @@ SCIP_RETCODE replaceBinaryProducts(
 
       /* try to factorize variables in a sum expression that contains several products of binary variables */
       /* TODO add a parameter for the magic number */
-      SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, childexpr, 10, &newexpr, naddconss, nchgcoefs) );
+      SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, childexpr, 10, &newexpr, naddconss) );
 
       /* try to create an expression that represents a product of binary variables */
       if( newexpr == NULL )
@@ -3696,7 +3695,7 @@ SCIP_RETCODE replaceBinaryProducts(
 
       if( newexpr != NULL )
       {
-         assert((naddconss == NULL && nchgcoefs == NULL) || (*naddconss > 0 || *nchgcoefs > 0));
+         assert(naddconss == NULL || *naddconss > 0 || nchgcoefs == NULL || *nchgcoefs > 0);
 
          /* replace product expression */
          SCIP_CALL( SCIPreplaceConsExprExprChild(scip, expr, childexpridx, newexpr) );
@@ -3756,7 +3755,7 @@ SCIP_RETCODE presolveBinaryProducts(
       assert(consdata != NULL);
 
       /* try to reformulate the root expression */
-      SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, conss[c], consdata->expr, 10, &newexpr, naddconss, nchgcoefs) );
+      SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, conss[c], consdata->expr, 10, &newexpr, naddconss) );
 
       /* release the root node if another expression has been found */
       if( newexpr != NULL )

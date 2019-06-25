@@ -209,10 +209,10 @@ Test(reformbinprods, factorize1)
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "c1", expr, 0.0, 0.5) );
 
    /* not enough terms -> nothing should happen */
-   SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, expr, 4, &newexpr, NULL, NULL) );
+   SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, expr, 4, &newexpr, NULL) );
    cr_assert(newexpr == NULL);
 
-   SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, expr, 3, &newexpr, &naddconss, NULL) );
+   SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, expr, 3, &newexpr, &naddconss) );
    cr_assert(newexpr != NULL);
    cr_expect(naddconss == 4);
    cr_expect(SCIPgetConsExprExprNChildren(newexpr) == 1);
@@ -245,7 +245,7 @@ Test(reformbinprods, factorize2)
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x0>[B] * <x1>[B] + <x0>[B] * <x7>[B] - <x4>[B] * <x3>[B] + sin(<x0>[B]) - <x0>[B] * <x2>[B] - <x3>[B] * <x5>[B]", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "c1", expr, 0.0, 0.5) );
 
-   SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, expr, 2, &newexpr, &naddconss, NULL) );
+   SCIP_CALL( getFactorizedBinaryQuadraticExpr(scip, conshdlr, cons, expr, 2, &newexpr, &naddconss) );
    cr_assert(newexpr != NULL);
    cr_expect(naddconss == 7);
    cr_expect(SCIPgetConsExprExprNChildren(newexpr) == 3);
