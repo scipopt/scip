@@ -4022,7 +4022,19 @@ SCIP_RETCODE canonicalizeConstraints(
    if( conshdlrdata->reformbinprods && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING
       && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
-      SCIP_CALL( presolveBinaryProducts(scip, conshdlr, conss, nconss, naddconss, nchgcoefs) );
+      int tmpnaddconss = 0;
+      int tmpnchgcoefs = 0;
+
+      SCIP_CALL( presolveBinaryProducts(scip, conshdlr, conss, nconss, &tmpnaddconss, &tmpnchgcoefs) );
+
+      /* update counters */
+      if( naddconss != NULL )
+         *naddconss = tmpnaddconss;
+      if( nchgcoefs != NULL )
+         *nchgcoefs = tmpnchgcoefs;
+
+      /* check whether at least one expression has changed */
+      havechange = tmpnaddconss + tmpnchgcoefs > 0;
    }
 
    /* replace common subexpressions */
