@@ -3198,6 +3198,8 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
 
       if ( ! propdata->triedaddconss )
       {
+         *result = SCIP_DIDNOTFIND;
+
          SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop) );
 
          /* if symmetry handling constraints have been added, presolve each */
@@ -3207,7 +3209,8 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
             assert( propdata->nperms > 0 );
             assert( propdata->triedaddconss );
 
-            *result = SCIP_DIDNOTFIND;
+            /* we have added at least one symmetry handling constraints, i.e., we were successful */
+            *result = SCIP_SUCCESS;
 
             *naddconss += propdata->ngenconss - noldngenconns;
             SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", propdata->ngenconss - noldngenconns);
@@ -3227,8 +3230,6 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
                }
             }
             SCIPdebugMsg(scip, "Presolved %d generated constraints.\n", propdata->ngenconss);
-
-            *result = SCIP_SUCCESS;
          }
       }
    }
@@ -3240,7 +3241,9 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       SCIP_Bool infeasible;
       int nprop;
 
-      *result = SCIP_DIDNOTFIND;
+      /* if we did not tried to add symmetry handling constraints */
+      if ( *result == SCIP_DIDNOTRUN )
+         *result = SCIP_DIDNOTFIND;
 
       SCIPdebugMsg(scip, "Presolving <%s>.\n", PROP_NAME);
 
