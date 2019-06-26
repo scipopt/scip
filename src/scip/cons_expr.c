@@ -3301,7 +3301,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
    if( nterms < minterms )
       goto TERMINATE;
 
-   /* store how often each variable appears in a biliner binary product */
+   /* store how often each variable appears in a bilinear binary product */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
    SCIP_CALL( SCIPallocClearBufferArray(scip, &count, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &isused, nchildren) );
