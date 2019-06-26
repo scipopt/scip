@@ -1918,6 +1918,7 @@ SCIP_RETCODE determineSymmetry(
 #endif
 
       /* reset symmetry information */
+      SCIP_CALL( delSymConss(scip, propdata) );
       SCIP_CALL( freeSymmetryData(scip, propdata) );
    }
 
