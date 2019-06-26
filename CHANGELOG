@@ -63,9 +63,12 @@ Features
   Relaxation-only variables cannot appear in the objective function.
 
 - The OSiL reader now supports nonlinear expressions of type "signpower".
+- Expressions of form abs(x)^p * x in a nonlinear constraint are now sometimes recognized and handled by abspower constraints.
 
 - If polyhedral symmetry handling methods are used (cons_orbisack, cons_orbitope, cons_symresack), it is now possible to
   recompute symmetries if a restart occured.
+
+- handle linear binary variables as if squared in simple upgrade from quadratic to second-order cone constraints
 
 Performance improvements
 ------------------------
@@ -177,6 +180,7 @@ Interface changes
 - new API functions SCIPcomputeOrbitsSym(), SCIPcomputeOrbitsFilterSym(), SCIPgetPropertiesPerm(), SCIPdetermineBinvarAffectedSym(),
   SCIPdetermineNVarsAffectedSym(), SCIPcomputeComponentsSym(), and SCIPextendSubOrbitope(), SCIPgenerateOrbitopeVarsMatrix() for symmetry computations
 - new API functions SCIPvarIsRelaxationOnly() and SCIPvarMarkRelaxationOnly() to query and set, resp., whether a variable is marked as relaxation-only
+- new API functions SCIPconshdlrGetNUpdateConss() and SCIPconshdlrGetUpdateConss(), for expert users only
 
 ### Command line interface
 
@@ -334,32 +338,9 @@ Examples and applications
 Interface changes
 -----------------
 
-### New and changed callbacks
-
-### Deleted and changed API methods
-
-### New API functions
-
-### Command line interface
-
 ### Interfaces to external software
 
 - Updated the Mosek LP solver interface to support Mosek 9.0.
-
-### Changed parameters
-
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
-Unit tests
-----------
-
-Testing
--------
 
 Build system
 ------------
@@ -367,11 +348,15 @@ Build system
 ### Cmake
 
 - new target to 'doc' to build documentation
-
-### Makefile
+- ctests now fail if parameter file not found
+- add flag STATIC_GMP and improve GMP find module
+- remove non-API methods from library (API methods use new macro SCIP_EXPORT)
+- increase minimal required CMake version to 3.3
+- correct paths and dependency information when installing SCIP
 
 Fixed bugs
 ----------
+- fixed SCIP-Jack presolving bug that could lead to wrong results for Steiner arborescence problems
 - fixed wrong unboundedness result in case not all constraints were already in the LP and enforcement was
   skipped because an optimal solution was found
 - fixed wrong enforcement of constraints in the disjunction constraint handler
@@ -393,12 +378,33 @@ Fixed bugs
 - fixed different behavior of SCIPisLbBetter and SCIPisUbBetter between having NDEBUG defined or not
 - correctly handle bound disjunctions in symmetry detection
 - fixed issue in reliability branching related to the LP error flag not being reset
+- fixed treatment of near-infinite bounds in shiftandpropagate's problem transformation
+- fixed handling of infinite values in SCIPcomputeHyperplaneThreePoints()
+- fixed comparisons of infinite values in heur_intshifting.c and heur_shifting.c
+- fixed bug related to updating unprocessed cuts in the cutpool
+- fixed bug related to enabling quadratic constraints during `CONSINITLP`
+- add missing SCIP_EXPORT for functions used by GCG
+- fixed memory leak and wrong initialization for trival cases in cons_symresack.c
+- fixed bug with upgrading to packing/partitioning orbitopes
+- fixed bug with the status while upgrading in presol_symbreak.c
+- fixed wrong stage while clearing the conflict store
+- fixed behavior of SCIPfixVar() by setting infeasible pointer to TRUE if fixval lies outside variable domain
+- allow tightenVar() in SCIP_STAGE_PROBLEM stage
+- fixed bug in cumulative constraint handler when separating the LP solution
+- fixed issues with integer overflow in cumulative constraint handler
+- fixed bug where the convexity of Benders' decomposition subproblems was checked even when users defined subproblem
+  solving methods. Now, as per the documentation, the user must explicitly state whether the subproblem is convex
+- fixed wrong indexing in heur_dualval
+- fixed issue with basis status in SoPlex LPi
 
 Miscellaneous
 -------------
 
-Known bugs
-----------
+- statistics now output primal/dual bounds if objective limit is reached
+- memory check in debug mode is now disabled by default
+- message is now provided to the user to inform that automatic Benders' auxiliary variable lower bound computations are
+  not activated when user defined subproblem solving methods are present
+- corrected documentation of the primalgap in SCIP; describe when it will be infinite
 
 @section RN601 SCIP 6.0.1
 *************************
@@ -491,9 +497,6 @@ Fixed bugs
 Miscellaneous
 -------------
 - do not scale linear constraints to integral coefficients
-
-Known bugs
-----------
 
 @section RN600 SCIP 6.0.0
 *************************

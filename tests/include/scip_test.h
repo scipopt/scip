@@ -22,7 +22,7 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
 #include <criterion/theories.h>
 
 #ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic warning "-Wredundant-decls"
 #endif
 
 #undef SCIP_CALL
