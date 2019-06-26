@@ -247,8 +247,7 @@ SCIP_RETCODE checkSolOrig(
 }
 
 /** calculates number of nonzeros in problem */
-static
-SCIP_RETCODE calcNonZeros(
+SCIP_RETCODE SCIPcalcNonZeros(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Longint*         nchecknonzeros,     /**< pointer to store number of non-zeros in all check constraints */
    SCIP_Longint*         nactivenonzeros,    /**< pointer to store number of non-zeros in all active constraints */
@@ -524,7 +523,7 @@ SCIP_RETCODE SCIPtransformProb(
       /* determine number of non-zeros */
       maxnonzeros = (SCIP_Real)SCIPgetNConss(scip) * SCIPgetNVars(scip);
       maxnonzeros = MAX(maxnonzeros, 1.0);
-      SCIP_CALL( calcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros) );
+      SCIP_CALL( SCIPcalcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros) );
       scip->stat->nnz = nactivenonzeros;
       scip->stat->avgnnz = (SCIPgetNConss(scip) == 0 ? 0.0 : (SCIP_Real) nactivenonzeros / ((SCIP_Real) SCIPgetNConss(scip)));
 
@@ -1454,7 +1453,7 @@ SCIP_RETCODE presolve(
       /* determine number of non-zeros */
       maxnonzeros = (SCIP_Real)SCIPgetNConss(scip) * SCIPgetNVars(scip);
       maxnonzeros = MAX(maxnonzeros, 1.0);
-      SCIP_CALL( calcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros) );
+      SCIP_CALL( SCIPcalcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros) );
       scip->stat->nnz = nactivenonzeros;
 
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");

@@ -48,6 +48,20 @@ extern "C" {
  * @{
  */
 
+/** calculates number of nonzeros in problem */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcalcNonZeros(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint*         nchecknonzeros,     /**< pointer to store number of non-zeros in all check constraints */
+   SCIP_Longint*         nactivenonzeros,    /**< pointer to store number of non-zeros in all active constraints */
+   SCIP_Bool*            approxchecknonzeros,/**< pointer to store if the number of non-zeros in all check constraints
+                                              *   is only a lowerbound
+                                              */
+   SCIP_Bool*            approxactivenonzeros/**< pointer to store if the number of non-zeros in all active constraints
+                                              *   is only a lowerbound
+                                              */
+   );
+
 /** initializes solving data structures and transforms problem
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

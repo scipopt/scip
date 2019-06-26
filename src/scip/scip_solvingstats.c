@@ -43,6 +43,7 @@
 #include "scip/debug.h"
 #include "scip/disp.h"
 #include "scip/history.h"
+#include "scip/implics.h"
 #include "scip/pricestore.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
@@ -75,6 +76,7 @@
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_table.h"
 #include "scip/scip_timing.h"
@@ -2442,6 +2444,11 @@ void SCIPprintTransProblemStatistics(
    FILE*                 file                /**< output file */
    )
 {
+   SCIP_Longint nchecknonzeros;
+   SCIP_Longint nactivenonzeros;
+   SCIP_Bool approxchecknonzeros;
+   SCIP_Bool approxactivenonzeros;
+
    assert(scip != NULL);
    assert(scip->set != NULL);
 
@@ -2449,6 +2456,10 @@ void SCIPprintTransProblemStatistics(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
    SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
+
+   SCIPcalcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Nonzeroes        : %d constraint, %d clique table\n",
+         nchecknonzeros, SCIPcliquetableGetNEntries(scip->cliquetable));
 }
 
 /** outputs presolver statistics
