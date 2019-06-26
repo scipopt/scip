@@ -3137,7 +3137,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
 
-   /* guarantee that symmetries are computed (and handled) if the solving process hat not been interrupted
+   /* guarantee that symmetries are computed (and handled) if the solving process has not been interrupted
     * and even if presolving has been disabled */
    if ( propdata->symconsenabled && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
    {
