@@ -410,7 +410,8 @@
 =bestdual= emfl050_3_3                                     10.4012969900
 =best=     emfl050_5_5                                     18.9134077600
 =bestdual= emfl050_5_5                                     18.9091920800
-=opt=      emfl100_3_3                                     18.1326244600
+=best=     emfl100_3_3                                     18.1326244600
+=bestdual= emfl100_3_3                                     18.1323360100
 =opt=      emfl100_5_5                                     32.6381834800
 =opt=      eniplac                                    -132117.0830000000
 =opt=      enpro48pb                                   187277.2594000000
@@ -546,7 +547,8 @@
 =opt=      ex8_1_6                                        -10.0860015000
 =best=     ex8_1_7                                          0.0293108307
 =bestdual= ex8_1_7                                          0.0293107220
-=opt=      ex8_2_1b                                      -979.1782737000
+=best=     ex8_2_1b                                      -979.1782737000
+=bestdual= ex8_2_1b                                      -979.1913068000
 =best=     ex8_2_2b                                      -552.6662562000
 =bestdual= ex8_2_2b                                      -571.2362293000
 =best=     ex8_2_3b                                     -3731.0792780000
@@ -1717,7 +1719,8 @@
 =best=     squfl015-080persp                              402.4885300000
 =bestdual= squfl015-080persp                              402.4880496000
 =opt=      squfl020-040                                   209.2548902000
-=opt=      squfl020-040persp                              209.2548902000
+=best=     squfl020-040persp                              209.2548902000
+=bestdual= squfl020-040persp                              209.2527848000
 =opt=      squfl020-050                                   230.2021495000
 =best=     squfl020-050persp                              230.2021495000
 =bestdual= squfl020-050persp                              230.1986059000
