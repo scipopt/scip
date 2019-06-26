@@ -50,6 +50,7 @@ if [ "${GITBRANCH}" != "master" ]; then
   fi
 fi
 
+export FULLGITHASH=$(git show -s --pretty=%H)
 export GITBRANCH
 export MODE=performance
 
