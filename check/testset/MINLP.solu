@@ -406,7 +406,8 @@
 =best=     elec50                                        1055.1823150000
 =bestdual= elec50                                         359.0296983000
 =opt=      elf                                              0.1916666667
-=opt=      emfl050_3_3                                     10.4017379300
+=best=     emfl050_3_3                                     10.4017379300
+=bestdual= emfl050_3_3                                     10.4012969900
 =best=     emfl050_5_5                                     18.9134077600
 =bestdual= emfl050_5_5                                     18.9091920800
 =opt=      emfl100_3_3                                     18.1326244600
@@ -535,7 +536,7 @@
 =opt=      ex7_3_3                                          0.8175290489
 =opt=      ex7_3_4                                          6.2746343370
 =best=     ex7_3_5                                          1.2068714300
-=bestdual= ex7_3_5                                          1.2057085900
+=bestdual= ex7_3_5                                          1.2055104970
 =inf=      ex7_3_6
 =best=     ex8_1_1                                         -2.0218067830
 =best=     ex8_1_2                                         -1.0708610190
@@ -1719,7 +1720,7 @@
 =opt=      squfl020-040persp                              209.2548902000
 =opt=      squfl020-050                                   230.2021495000
 =best=     squfl020-050persp                              230.2021495000
-=bestdual= squfl020-050persp                              230.2018279000
+=bestdual= squfl020-050persp                              230.1986059000
 =opt=      squfl020-150                                   557.8486500000
 =best=     squfl020-150persp                              557.8486500000
 =bestdual= squfl020-150persp                              555.6429822000
@@ -1729,7 +1730,7 @@
 =opt=      squfl025-030persp                              205.5016551000
 =opt=      squfl025-040                                   197.3338812000
 =best=     squfl025-040persp                              197.3338812000
-=bestdual= squfl025-040persp                              197.3336792000
+=bestdual= squfl025-040persp                              197.3316600000
 =best=     squfl030-100                                   363.0938483000
 =bestdual= squfl030-100                                   359.9787171000
 =best=     squfl030-100persp                              363.0938483000
