@@ -2500,6 +2500,13 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( propdata != NULL );
    assert( propdata->symconsenabled );
 
+   /* remove symmetry handling conss if we are in a restart */
+   if ( propdata->recomputerestart && propdata->ngenconss > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
+   {
+      SCIP_CALL( delSymConss(scip, propdata) );
+      SCIP_CALL( freeSymmetryData(scip, propdata) );
+   }
+
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
    {
@@ -3107,13 +3114,6 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    {
       SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.");
 
-      /* remove symmetry handling conss if we are in a restart */
-      if ( propdata->recomputerestart && propdata->ngenconss > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
-      {
-         SCIP_CALL( delSymConss(scip, propdata) );
-         SCIP_CALL( freeSymmetryData(scip, propdata) );
-      }
-
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop) );
    }
 
@@ -3137,16 +3137,9 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
 
-   /* remove symmetry handling conss if we are in a restart */
-   if ( propdata->recomputerestart && propdata->ngenconss > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
-   {
-      SCIP_CALL( delSymConss(scip, propdata) );
-      SCIP_CALL( freeSymmetryData(scip, propdata) );
-   }
-
    /* guarantee that symmetries are computed (and handled) if the solving process hat not been interrupted
     * and even if presolving has been disabled */
-   if ( propdata->symconsenabled && ! propdata->triedaddconss && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
+   if ( propdata->symconsenabled && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
    {
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop) );
    }
@@ -3189,14 +3182,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
 
       noldngenconns = propdata->ngenconss;
 
-      /* remove symmetry handling conss if we are in a restart */
-      if ( propdata->recomputerestart && propdata->ngenconss > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
-      {
-         SCIP_CALL( delSymConss(scip, propdata) );
-         SCIP_CALL( freeSymmetryData(scip, propdata) );
-      }
-
-      if ( ! propdata->triedaddconss )
+      if ( ! propdata->triedaddconss || (propdata->recomputerestart && SCIPgetNRuns(scip) > propdata->lastrestart) )
       {
          *result = SCIP_DIDNOTFIND;
 
