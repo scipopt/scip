@@ -52,6 +52,9 @@ struct NlHdlr_Expr
 
    SCIP_EXPRCURV       curv;       /**< required curvature */
    int                 depth;
+
+   SCIP_Real           val;
+   SCIP_Real           deriv;
 };
 
 /** nonlinear handler expression data */
@@ -183,8 +186,7 @@ static
 SCIP_RETCODE evalNlHdlrExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    NLHDLR_EXPR*          nlexpr,             /**< nlhdlr-expression */
-   SCIP_SOL*             sol,                /**< solution to evaluate, or NULL */
-   SCIP_Real*            val                 /**< buffer to store value */
+   SCIP_SOL*             sol                 /**< solution to evaluate, or NULL */
    )
 {
    SCIP_Real* childrenvals;
@@ -192,11 +194,10 @@ SCIP_RETCODE evalNlHdlrExpr(
    int i;
 
    assert(nlexpr != NULL);
-   assert(val != NULL);
 
    if( nlexpr->children == NULL )
    {
-      *val = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlexpr->origexpr));
+      nlexpr->val = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlexpr->origexpr));
       return SCIP_OKAY;
    }
 
@@ -205,10 +206,81 @@ SCIP_RETCODE evalNlHdlrExpr(
 
    for( i = 0; i < nchildren; ++i )
    {
-      SCIP_CALL( evalNlHdlrExpr(scip, nlexpr->children[i], sol, &childrenvals[i]) );
+      SCIP_CALL( evalNlHdlrExpr(scip, nlexpr->children[i], sol) );
+      if( nlexpr->children[i]->val == SCIP_INVALID )
+      {
+         nlexpr->val = SCIP_INVALID;
+         goto TERMINATE;
+      }
+      childrenvals[i] = nlexpr->children[i]->val;
    }
-   SCIP_CALL( SCIPevalConsExprExprHdlr(scip, nlexpr->origexpr, val, childrenvals, sol) );
 
+   SCIP_CALL( SCIPevalConsExprExprHdlr(scip, nlexpr->origexpr, &nlexpr->val, childrenvals, sol) );
+
+TERMINATE:
+   SCIPfreeBufferArray(scip, &childrenvals);
+
+   return SCIP_OKAY;
+}
+
+/* differentiate and assemble rowprep */
+static
+SCIP_RETCODE gradientCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   NLHDLR_EXPR*          nlexpr,             /**< nlhdlr-expression */
+   SCIP_ROWPREP*         rowprep,            /**< row where to add coefficients and constants */
+   SCIP_Bool*            success             /**< set to FALSE if gradient evaluation error */
+   )
+{
+   SCIP_Real* childrenvals;
+   int nchildren;
+   int i;
+
+   assert(nlexpr != NULL);
+
+   nchildren = SCIPgetConsExprExprNChildren(nlexpr->origexpr);
+   if( nchildren == 0 )
+   {
+      SCIP_VAR* var;
+
+      if( SCIPgetConsExprExprHdlr(nlexpr->origexpr) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+         return SCIP_OKAY;
+      assert(SCIPgetConsExprExprHdlr(nlexpr->origexpr) == SCIPgetConsExprExprHdlrVar(conshdlr));
+
+      var = SCIPgetConsExprExprVarVar(nlexpr->origexpr);
+
+      /* add deriv * (var - varval) to rowprep */
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, nlexpr->deriv) );
+      SCIPaddRowprepConstant(rowprep, -nlexpr->deriv * nlexpr->val);
+
+      return SCIP_OKAY;
+   }
+
+   /* assemble children values */
+   SCIP_CALL( SCIPallocBufferArray(scip, &childrenvals, nchildren) );
+   for( i = 0; i < nchildren; ++i )
+      childrenvals[i] = nlexpr->children[i]->val;
+
+   /* differentiate w.r.t. each child */
+   for( i = 0; i < nchildren; ++i )
+   {
+      /* compute partial derivative w.r.t. child i */
+      SCIP_CALL( SCIPbwdiffConsExprExprHdlr(scip, nlexpr->origexpr, i, &nlexpr->children[i]->deriv, childrenvals, nlexpr->val) );
+      if( nlexpr->children[i]->deriv == SCIP_INVALID )
+      {
+         *success = FALSE;
+         goto TERMINATE;
+      }
+      nlexpr->children[i]->deriv *= nlexpr->deriv;
+
+      /* push derivatives further down */
+      SCIP_CALL( gradientCut(scip, conshdlr, nlexpr->children[i], rowprep, success) );
+      if( !*success )
+         goto TERMINATE;
+   }
+
+TERMINATE:
    SCIPfreeBufferArray(scip, &childrenvals);
 
    return SCIP_OKAY;
@@ -263,6 +335,8 @@ SCIP_RETCODE constructExpr(
       /* TODO if sum with > N children, then always turn into variable?
        * especially if we have a big linear term, this would help to consider less vars for vertex-polyhedral funcs
        */
+
+      /* TODO if bwdiff not implemented, then proceed further? */
 
       if( childcurvsize < nchildren )
       {
@@ -605,7 +679,8 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvex)
    assert(nlhdlrexprdata->nlexpr->origexpr == expr);
    assert(auxvalue != NULL);
 
-   SCIP_CALL( evalNlHdlrExpr(scip, nlhdlrexprdata->nlexpr, sol, auxvalue) );
+   SCIP_CALL( evalNlHdlrExpr(scip, nlhdlrexprdata->nlexpr, sol) );
+   *auxvalue = nlhdlrexprdata->nlexpr->val;
 
    return SCIP_OKAY;
 }
@@ -614,15 +689,21 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvex)
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 { /*lint --e{715}*/
-   SCIP_Real constant;
-   int i;
+   NLHDLR_EXPR* nlexpr;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
+
+   nlexpr = nlhdlrexprdata->nlexpr;
+   assert(nlexpr != NULL);
+   assert(nlexpr->origexpr == expr);
+
+#if 0
    assert(nlhdlrexprdata->varexprs != NULL);
    assert(nlhdlrexprdata->nvarexprs > 0);
-   assert(SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE);
+#endif
+   assert(nlexpr->curv == SCIP_EXPRCURV_CONVEX || nlexpr->curv == SCIP_EXPRCURV_CONCAVE);
    assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
    assert(rowprep != NULL);
    assert(success != NULL);
@@ -632,78 +713,36 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    /* if estimating on non-convex side, then do nothing
     * TODO we are vertex-polyhedral and so should compute something
     */
-   if( ( overestimate && SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX) ||
-       (!overestimate && SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE) )
+   if( ( overestimate && nlexpr->curv == SCIP_EXPRCURV_CONVEX) ||
+       (!overestimate && nlexpr->curv == SCIP_EXPRCURV_CONCAVE) )
       return SCIP_OKAY;
 
-   /* compute gradient */
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
-
-   /* gradient evaluation error -> skip */
-   if( SCIPgetConsExprExprDerivative(expr) == SCIP_INVALID ) /*lint !e777*/
-   {
-      SCIPdebugMsg(scip, "gradient evaluation error for %p\n", (void*)expr);
-      return SCIP_OKAY;
-   }
-
-   /* get g(x*) */
-   constant = SCIPgetConsExprExprValue(expr);
-   assert(auxvalue == constant); /* given value (originally from nlhdlrEvalAuxConvex) should coincide with expression value */  /*lint !e777*/
-
+   /* TODO we can probably skip this as nlhdlrEvalAux was called before */
+   SCIP_CALL( evalNlHdlrExpr(scip, nlexpr, sol) );
    /* evaluation error or a too large constant -> skip */
-   if( SCIPisInfinity(scip, REALABS(constant)) )
+   if( SCIPisInfinity(scip, REALABS(nlexpr->val)) )
    {
-      SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", constant, (void*)expr);
+      SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", nlexpr->val, (void*)expr);
       return SCIP_OKAY;
    }
+   assert(auxvalue == nlexpr->val); /* given value (originally from nlhdlrEvalAuxConvex) should coincide with expression value (so we could skip eval) */  /*lint !e777*/
 
-   /* compute gradient cut */
+   /* compute gradient cut, add to rowprep */
+   nlexpr->deriv = 1.0;
+   *success = TRUE;
+   SCIP_CALL( gradientCut(scip, conshdlr, nlexpr, rowprep, success) );
+
+   if( !*success )
+      return SCIP_OKAY;
+
+   SCIPaddRowprepConstant(rowprep, nlexpr->val);
    rowprep->local = FALSE;
-   for( i = 0; i < nlhdlrexprdata->nvarexprs; ++i )
-   {
-      SCIP_VAR* var;
-      SCIP_Real derivative;
-      SCIP_Real val;
-
-      assert(nlhdlrexprdata->varexprs[i] != NULL);
-      assert(SCIPisConsExprExprVar(nlhdlrexprdata->varexprs[i]));
-
-      /* get the variable of the variable expression */
-      var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->varexprs[i]);
-      assert(var != NULL);
-
-      /* get solution value */
-      val = SCIPgetSolVal(scip, sol, var);
-
-      /* avoid overhead of SCIPgetConsExprExprPartialDiff by accessing the derivative directly */
-      derivative = SCIPgetConsExprExprDerivative(nlhdlrexprdata->varexprs[i]);
-      assert(SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, var) == derivative); /*lint !e777*/
-
-      /* evaluation error or too large values -> skip */
-      if( SCIPisInfinity(scip, REALABS(derivative * val)) )
-      {
-         SCIPdebugMsg(scip, "evaluation error / too large values (%g %g) for %s in %p\n", derivative, val,
-            SCIPvarGetName(var), (void*)expr);
-         return SCIP_OKAY;
-      }
-
-      /* - grad(g(x*))_i x*_i */
-      constant -= derivative * val;
-
-      /* grad(g(x*))_i x_i */
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, derivative) );
-   }
-
-   /* add constant */
-   SCIPaddRowprepConstant(rowprep, constant);
 
    (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_convex%p_%s%d",
       overestimate ? "over" : "under",
       (void*)expr,
       sol != NULL ? "sol" : "lp",
       sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
-
-   *success = TRUE;
 
    return SCIP_OKAY;
 }
