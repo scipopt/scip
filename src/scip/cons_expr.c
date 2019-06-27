@@ -3269,6 +3269,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
    int nexprs = 0;
    int nterms;
    int nvars;
+   int ntotalvars;
    int i;
 
    assert(sumexpr != NULL);
@@ -3284,6 +3285,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
    nchildren = SCIPgetConsExprExprNChildren(sumexpr);
    sumcoefs = SCIPgetConsExprExprSumCoefs(sumexpr);
    nvars = SCIPgetNVars(scip);
+   ntotalvars = SCIPgetNTotalVars(scip);
 
    /* check whether there are enough terms available */
    if( nchildren < minterms )
@@ -3303,7 +3305,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
 
    /* store how often each variable appears in a bilinear binary product */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &count, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &count, ntotalvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &isused, nchildren) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nchildren) );
@@ -3319,8 +3321,10 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
       assert(xs[i] != NULL);
       assert(ys[i] != NULL);
 
-      xidx = SCIPvarGetProbindex(xs[i]);
-      yidx = SCIPvarGetProbindex(ys[i]);
+      xidx = SCIPvarGetIndex(xs[i]);
+      assert(xidx < ntotalvars);
+      yidx = SCIPvarGetIndex(ys[i]);
+      assert(yidx < ntotalvars);
 
       ++count[xidx];
       ++count[yidx];
@@ -3345,10 +3349,10 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
       int j;
 
       /* skip candidate if there are not enough terms left */
-      if( count[SCIPvarGetProbindex(vars[i])] < minterms )
+      if( count[SCIPvarGetIndex(vars[i])] < minterms )
          continue;
 
-      SCIPdebugMsg(scip, "consider facvar = %s with count = %d\n", SCIPvarGetName(facvar), count[SCIPvarGetProbindex(vars[i])]);
+      SCIPdebugMsg(scip, "consider facvar = %s with count = %d\n", SCIPvarGetName(facvar), count[SCIPvarGetIndex(vars[i])]);
 
       /* collect variables for x_i * sum_j c_ij x_j */
       for( j = 0; j < nterms; ++j )
@@ -3371,8 +3375,10 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
             ++ntmpvars;
 
             /* update counters */
-            xidx = SCIPvarGetProbindex(xs[j]);
-            yidx = SCIPvarGetProbindex(ys[j]);
+            xidx = SCIPvarGetIndex(xs[j]);
+            assert(xidx < ntotalvars);
+            yidx = SCIPvarGetIndex(ys[j]);
+            assert(yidx < ntotalvars);
             --count[xidx];
             --count[yidx];
             assert(count[xidx] >= 0);
@@ -3383,7 +3389,8 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
          }
       }
       assert(ntmpvars >= minterms);
-      assert(count[SCIPvarGetProbindex(facvar)] == 0); /* facvar should not appear in any other bilinear term */
+      assert(SCIPvarGetIndex(facvar) < ntotalvars);
+      assert(count[SCIPvarGetIndex(facvar)] == 0); /* facvar should not appear in any other bilinear term */
 
       /* create required constraints and store the generated expression */
       SCIP_CALL( reformulateFactorizedBinaryQuadratic(scip, conshdlr, cons, facvar, tmpvars, tmpcoefs, ntmpvars, &exprs[nexprs], naddconss) );
