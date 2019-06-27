@@ -9216,6 +9216,71 @@ SCIP_DECL_CONSEXPR_EXPRCOMPARE(SCIPcompareConsExprExprHdlr)
    }
 }
 
+/** calls the backward-differentiation callback of an expression handler
+ *
+ * further, allows to different w.r.t. given expression and children values
+ */
+SCIP_RETCODE SCIPbwdiffConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   int                        childidx,     /**< index of child w.r.t. which to compute derivative */
+   SCIP_Real*                 derivative,   /**< buffer to store value of derivative */
+   SCIP_Real*                 childrenvals, /**< values for children, or NULL if values stored in children should be used */
+   SCIP_Real                  exprval       /**< value for expression, used only if childrenvals is not NULL */
+)
+{
+   SCIP_Real* origchildrenvals;
+   SCIP_Real origexprval;
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(derivative != NULL);
+
+   if( expr->exprhdlr->bwdiff == NULL )
+   {
+      *derivative = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
+
+   /* temporarily overwrite the evalvalue in all children and expr with values from childrenvals and exprval, resp. */
+   if( childrenvals != NULL )
+   {
+      if( expr->nchildren > 0 )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &origchildrenvals, expr->nchildren) );
+
+         for( c = 0; c < expr->nchildren; ++c )
+         {
+            origchildrenvals[c] = expr->children[c]->evalvalue;
+            expr->children[c]->evalvalue = childrenvals[c];
+         }
+      }
+
+      origexprval = expr->evalvalue;
+      expr->evalvalue = exprval;
+   }
+
+   SCIP_CALL( expr->exprhdlr->bwdiff(scip, expr, childidx, derivative) );
+
+   /* restore original evalvalues in children */
+   if( childrenvals != NULL )
+   {
+      if( expr->nchildren > 0 )
+      {
+         for( c = 0; c < expr->nchildren; ++c )
+            expr->children[c]->evalvalue = origchildrenvals[c];
+
+         SCIPfreeBufferArray(scip, &origchildrenvals);
+      }
+
+      expr->evalvalue = origexprval;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** calls the evaluation callback of an expression handler
  *
  * further, allows to evaluate w.r.t. given children values
@@ -10797,7 +10862,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
       else
       {
          derivative = SCIP_INVALID;
-         SCIP_CALL( (*expr->exprhdlr->bwdiff)(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &derivative) );
+         SCIP_CALL( SCIPbwdiffConsExprExprHdlr(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &derivative, NULL, 0.0) );
 
          if( derivative == SCIP_INVALID ) /*lint !e777*/
          {
