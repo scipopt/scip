@@ -2841,7 +2841,7 @@ SCIP_RETCODE reformulateConsExprExpr(
             {
                if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
                {
-                  SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, expr, &refexpr) );
+                  SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, conshdlr, expr, &refexpr) );
                   if( expr != refexpr )
                   {
                      SCIP_INTERVAL activity;
@@ -8435,7 +8435,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(SCIPsimplifyConsExprExprHdlr)
    if( SCIPhasConsExprExprHdlrSimplify(expr->exprhdlr) )
    {
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->simplifytime) );
-      SCIP_CALL( expr->exprhdlr->simplify(scip, expr, simplifiedexpr) );
+      SCIP_CALL( expr->exprhdlr->simplify(scip, conshdlr, expr, simplifiedexpr) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->simplifytime) );
 
       /* update statistics */
@@ -10547,47 +10547,6 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  *
  * Important: Whatever is returned by a simplify callback **has** to be simplified.
  * Also, all children of the given expression **are** already simplified
- *
- * Here is an outline of the algorithm for simplifying sum expressions:
- * The idea is to create a list of all the children that the simplified expr must containt.
- * We use a linked list to construct it
- *
- * INPUT:  expr  :: sum expression to be simplified
- * OUTPUT: sexpr :: simplified expression
- * NOTE: it *can* modify expr
- *
- * simplified_coefficient <- expr->coefficient
- * expr_list <- empty list (list containing the simplified children of the final simplified expr)
- * For each child in expr->children:
- *    1. if child's coef is 0: continue
- *    2. if child is value: add it to simplified_coefficient and continue
- *    3. if child is not a sum: build list L = [(coef,child)]
- *    4. if child is sum:
- *       4.1. if coef is not 1.0: multiply child by coef (*)
- *       4.2. build list with the children of child, L = [(val, expr) for val in child->coeffs, expr in child->children)]
- *    5. mergeSum(L, expr_list)
- * if expr_list is empty, return value expression with value simplified_coefficient
- * if expr_list has only one child and simplified_coefficient is 1, return child
- * otherwise, build sum expression using the exprs in expr_list as children
- *
- * The method mergeSum simply inserts the elements of L into expr_list. Note that both lists are sorted.
- * While inserting, collisions can happen. A collision means that we have to add the two expressions.
- * However, after adding them, we need to simplify the resulting expression (e.g., the coefficient may become 0.0).
- * Fortunately, the coefficient being 0 is the only case we have to handle.
- * PROOF: all expressions in expr_list are simplified wrt to the sum, meaning that if we would build a sum
- * expression from them, it would yield a simplified sum expression. If there is a collision, then the expression
- * in L has to be in expr_list. The sum yields coef*expr and from the previous one can easily verify that it is
- * a valid child of a simplified sum (it is not a sum, etc), except for the case coef = 0.
- * Note: the context where the proof works is while merging (adding) children. Before this step, the children
- * go through a "local" simplification (i.e., 1-4 above). There, we *do* have to take care of other cases.
- * But, in contrast to products, after this steps, no child in finalchildren is a sum and the proof works.
- *
- * The algorithm for simplifying a product is basically the same. One extra difficulty occurs at (*):
- * The distribution of the exponent over a product children can only happen if the exponent is integral.
- * Also, in that case, the resulting new child could be unsimplified, so it must be re-simplified.
- * While merging, multiplying similar product expressions can render them unsimplified. So to handle it
- * one basically needs to simulate (the new) (*) while merging. Hence, a further merge might be necessary
- * (and then all the book-keeping information to perform the original merge faster is lost)
  *
  * @{
  */

@@ -74,7 +74,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
 
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrVar(conshdlr));
 
    var = SCIPgetConsExprExprVarVar(expr);
    assert(var != NULL);
@@ -125,7 +125,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
    }
 
    /* simplify since it might not really be a sum */
-   SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, sumexpr, simplifiedexpr) );
+   SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, conshdlr, sumexpr, simplifiedexpr) );
 
    /* release no longer used sumexpr */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
