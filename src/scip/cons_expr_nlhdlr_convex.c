@@ -287,6 +287,29 @@ TERMINATE:
 }
 
 static
+void branchscoreNlhdlrExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   NLHDLR_EXPR*          nlexpr,             /**< nlhdlr-expression */
+   unsigned int          brscoretag,         /**< branchscore tag */
+   SCIP_Real             violation           /**< violation */
+   )
+{
+   int nchildren;
+   int c;
+
+   if( nlexpr->children == NULL )
+   {
+      SCIPaddConsExprExprBranchScore(scip, nlexpr->origexpr, brscoretag, violation);
+      return;
+   }
+
+   nchildren = SCIPgetConsExprExprNChildren(nlexpr->origexpr);
+   for( c = 0; c < nchildren; ++c )
+      branchscoreNlhdlrExpr(scip, nlexpr->children[c], brscoretag, violation);
+}
+
+
+static
 SCIP_RETCODE constructExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -751,11 +774,9 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
 { /*lint --e{715}*/
    SCIP_Real violation;
-   int i;
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE);
    assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
    assert(auxvalue == SCIPgetConsExprExprValue(expr)); /* given auxvalue should have been computed by nlhdlrEvalAuxConvex */  /*lint !e777*/
    assert(nlhdlrexprdata != NULL);
@@ -783,13 +804,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
       return SCIP_OKAY;
 
    /* TODO try to figure out which variables appear linear and skip them here */
-   for( i = 0; i < nlhdlrexprdata->nvarexprs; ++i )
-   {
-      assert(nlhdlrexprdata->varexprs[i] != NULL);
-      assert(SCIPisConsExprExprVar(nlhdlrexprdata->varexprs[i]));
-
-      SCIPaddConsExprExprBranchScore(scip, nlhdlrexprdata->varexprs[i], brscoretag, violation);
-   }
+   branchscoreNlhdlrExpr(scip, nlhdlrexprdata->nlexpr, brscoretag, violation);
 
    *success = TRUE;
 
