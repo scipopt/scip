@@ -3734,7 +3734,40 @@ SCIP_RETCODE replaceBinaryProducts(
    return SCIP_OKAY;
 }
 
-/** reformulates products of binary variables during presolving */
+/** reformulates products of binary variables during presolving in the following way:
+ *
+ * Let sum_{i,j} Q_ij x_i x_j be a subexpression that only contains binary variables. Each term x_i x_j is
+ * reformulated with the help of an extra (implicit integer) variable z_ij in {0,1}:
+ *
+ *    z_ij <= x_i, z_ij <= x_j, x_i + x_j - z_ij <= 1
+ *
+ * Before reformulating x_i x_j in this way, it is checked whether there is a clique that contains x_i and x_j. These
+ * cliques allows for a better reformulation. There are four cases:
+ *
+ *    1. x_i + x_j <= 1 implies that x_i x_j = 0
+ *
+ *    2. x_i + (1 - x_j) <= 1 implies x_i x_j = x_i
+ *
+ *    3. (1 - x_i) + x_j <= 1 implies x_i x_j = x_j
+ *
+ *    4. (1 - x_i) + (1 - x_j) <= 1 implies x_i x_j = x_i + x_j - 1
+ *
+ * The reformulation using z_ij or the cliques is implemented in getBinaryProductExpr().
+ *
+ * Introducing too many extra variables and constraints can have a negative impact on the performance (e.g., due to
+ * slow probing). For this reason, it is checked in getFactorizedBinaryQuadraticExpr() whether sum_{i,j} Q_ij x_i x_j
+ * contains large (>= reformbinprodsfac parameter) lower sums of the form x_i sum_{j} Q_ij x_j. Such a lower sum is
+ * reformulated with only one extra variable w_i:
+ *
+ *    maxact := sum_j max{0, Q_ij}, minact := sum_j min{0, Q_ij}
+ *    minact x_i <= w_i, w_i <= maxact x_i
+ *    minact <= sum_j Q_ij x_j - w_i + minact x_i
+ *    maxact >= sum_j Q_ij x_j - w_i + maxact x_i
+ *
+ * We mark w_i to be implicit integer if minact and maxact are integer values. After each replacment of a lower sum, it
+ * is checked whether there are enough terms left to factorize other binary variables. Lower sums with a larger number
+ * of terms are prioritized.
+ */
 static
 SCIP_RETCODE presolveBinaryProducts(
    SCIP*                 scip,               /**< SCIP data structure */
