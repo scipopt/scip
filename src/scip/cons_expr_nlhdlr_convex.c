@@ -41,77 +41,241 @@
  * Data structures
  */
 
+/** expression tree */
+typedef struct NlHdlr_Expr NLHDLR_EXPR;
+struct NlHdlr_Expr
+{
+   SCIP_CONSEXPR_EXPR* origexpr;   /**< the original expression that is represented */
+   NLHDLR_EXPR**       children;   /**< nlhdlr-expressions for children, or NULL if no children or to use auxvar */
+
+   NLHDLR_EXPR*        parent;     /**< parent in expression tree */
+
+   SCIP_EXPRCURV       curv;       /**< required curvature */
+   int                 depth;
+};
+
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
    SCIP_CONSEXPR_EXPR**  varexprs;           /**< all dependent variable expressions */
    int                   nvarexprs;          /**< total number of variable expressions */
    int                   varexprssize;       /**< size of varexprs array */
+
+   NLHDLR_EXPR*          nlexprconvex;       /**< convex subexpression */
+   NLHDLR_EXPR*          nlexprconcave;      /**< concave subexpression */
 };
 
 /*
  * static methods
  */
 
-/** creates nonlinear handler expression data structure */
 static
-SCIP_RETCODE createNlhdlrExprData(
+SCIP_RETCODE createNlHdlrExpr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to store nlhdlr expression data */
-   )
+   NLHDLR_EXPR**         nlhdlrexpr,         /**< buffer to store created nlhdlr-expr */
+   SCIP_CONSEXPR_EXPR*   origexpr,           /**< original expression to be represented */
+   NLHDLR_EXPR*          parent,             /**< parent nlhdlr-expr, or NULL if root */
+   SCIP_EXPRCURV         curv                /**< curvature to achieve */
+)
 {
-   int nvars;
-
    assert(scip != NULL);
-   assert(expr != NULL);
-   assert(nlhdlrexprdata != NULL);
-   assert(*nlhdlrexprdata == NULL);
+   assert(nlhdlrexpr != NULL);
+   assert(origexpr != NULL);
 
-   /* compute the number of unique variable expressions */
-   SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &nvars) );
-   assert(nvars > 0);
+   SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexpr) );
+   (*nlhdlrexpr)->origexpr = origexpr;
+   (*nlhdlrexpr)->children = NULL;
+   (*nlhdlrexpr)->parent = parent;
+   (*nlhdlrexpr)->curv = curv;
+   (*nlhdlrexpr)->depth = parent != NULL ? parent->depth + 1 : 0;
 
-   SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, nvars) );
-   (*nlhdlrexprdata)->varexprssize = nvars;
-
-   /* collect all variable expressions that are contained in expr (the function also captures all variable expressions) */
-   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
-   assert((*nlhdlrexprdata)->nvarexprs > 0);
-   assert((*nlhdlrexprdata)->nvarexprs == nvars);
+   SCIPcaptureConsExprExpr(origexpr);
 
    return SCIP_OKAY;
 }
 
-/** frees nonlinear handler expression data structure */
 static
-SCIP_RETCODE freeNlhdlrExprData(
+SCIP_RETCODE growChildrenNlHdlrExpr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to free nlhdlr expression data */
+   NLHDLR_EXPR*          nlhdlrexpr,         /**< nlhdlr-expr for which to create children */
+   SCIP_EXPRCURV*        childrencurv        /**< curvature required for children, or NULL if to set to UNKNOWN */
    )
 {
+   int nchildren;
    int i;
 
    assert(scip != NULL);
-   assert(nlhdlrexprdata != NULL);
-   assert(*nlhdlrexprdata != NULL);
+   assert(nlhdlrexpr != NULL);
 
-   /* release variable expressions */
-   for( i = 0; i < (*nlhdlrexprdata)->nvarexprs; ++i )
+   nchildren = SCIPgetConsExprExprNChildren(nlhdlrexpr->origexpr);
+   if( nchildren == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexpr->children, nchildren) );
+
+   for( i = 0; i < nchildren; ++i )
    {
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*nlhdlrexprdata)->varexprs[i]) );
+      SCIP_CALL( createNlHdlrExpr(scip, &nlhdlrexpr->children[i], SCIPgetConsExprExprChildren(nlhdlrexpr->origexpr)[i], nlhdlrexpr,
+         childrencurv != NULL ? childrencurv[i] : SCIP_EXPRCURV_UNKNOWN) );
    }
-
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, (*nlhdlrexprdata)->varexprssize);
-   SCIPfreeBlockMemory(scip, nlhdlrexprdata);
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_RETCODE enforceCurvature(
+void freeNlHdlrExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   NLHDLR_EXPR**         nlhdlrexpr          /**< pointer to nlhdlr-expr to be freed */
+)
+{
+   assert(nlhdlrexpr != NULL);
+
+   if( *nlhdlrexpr == NULL )
+      return;
+
+   assert((*nlhdlrexpr)->origexpr != NULL);
+
+   if( (*nlhdlrexpr)->children != NULL )
+   {
+      int nchildren = SCIPgetConsExprExprNChildren((*nlhdlrexpr)->origexpr);
+      int i;
+
+      for( i = 0; i < nchildren; ++i )
+         freeNlHdlrExpr(scip, &(*nlhdlrexpr)->children[i]);
+
+      SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrexpr)->children, nchildren);
+   }
+
+   SCIPreleaseConsExprExpr(scip, &(*nlhdlrexpr)->origexpr);
+
+   SCIPfreeBlockMemory(scip, nlhdlrexpr);
+
+   assert(*nlhdlrexpr == NULL);
+}
+
+static
+SCIP_RETCODE ensureVariables(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   NLHDLR_EXPR*          nlexpr              /**< pointer to nlhdlr-expr to be freed */
+   )
+{
+   int nchildren;
+   int i;
+
+   assert(nlexpr != NULL);
+
+   if( nlexpr->children == NULL )
+   {
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexpr->origexpr, NULL) );
+      return SCIP_OKAY;
+   }
+
+   nchildren = SCIPgetConsExprExprNChildren(nlexpr->origexpr);
+   for( i = 0; i < nchildren; ++i )
+   {
+      SCIP_CALL( ensureVariables(scip, conshdlr, nlexpr->children[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE constructExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   NLHDLR_EXPR**         rootnlexpr,         /**< buffer to store created expression */
+   int*                  maxdepth,           /**< buffer to store created depth of expression */
+   SCIP_CONSEXPR_EXPR*   rootexpr,           /**< expression */
+   SCIP_EXPRCURV         curv                /**< curvature to achieve */
+   )
+{
+   NLHDLR_EXPR* nlexpr;
+   SCIP_EXPRCURV* childcurv;
+   int childcurvsize;
+   int nchildren;
+   SCIP_Bool success;
+   NLHDLR_EXPR** stack;
+   int stacksize;
+   int stackpos;
+
+   assert(scip != NULL);
+   assert(rootnlexpr != NULL);
+   assert(maxdepth != NULL);
+   assert(rootexpr != NULL);
+   assert(curv == SCIP_EXPRCURV_CONVEX || curv == SCIP_EXPRCURV_CONCAVE);
+
+   childcurvsize = SCIPgetConsExprExprNChildren(rootexpr);
+   SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, childcurvsize) );
+
+   SCIP_CALL( createNlHdlrExpr(scip, rootnlexpr, rootexpr, NULL, curv) );
+   *maxdepth = 0;
+
+   stacksize = 20;
+   SCIP_CALL( SCIPallocBufferArray(scip, &stack, stacksize) );
+
+   stack[0] = *rootnlexpr;
+   stackpos = 0;
+   while( stackpos > 0 )
+   {
+      /* take expression from stack */
+      nlexpr = stack[stackpos--];
+      assert(nlexpr != NULL);
+      assert(nlexpr->origexpr != NULL);
+
+      *maxdepth = MAX(*maxdepth, nlexpr->depth);
+      nchildren = SCIPgetConsExprExprNChildren(nlexpr->origexpr);
+
+      /* TODO if sum with > N children, then always turn into variable?
+       * especially if we have a big linear term, this would help to consider less vars for vertex-polyhedral funcs
+       */
+
+      if( childcurvsize < nchildren )
+      {
+         childcurvsize = SCIPcalcMemGrowSize(scip, nchildren);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &childcurv, childcurvsize) );
+      }
+
+      /* check whether and under which conditions expr can have desired curvature */
+      success = TRUE;
+      if( nlexpr->curv != SCIP_EXPRCURV_UNKNOWN )
+      {
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, nlexpr->origexpr, nlexpr->curv, &success, childcurv) );
+         if( success )
+         {
+            SCIP_CALL( growChildrenNlHdlrExpr(scip, nlexpr, childcurv) );
+         }
+      }
+      else if( nchildren > 0 )
+      {
+         /* if we don't care about curvature in this subtree anymore (very unlikely),
+          * then only continue iterating this subtree to assemble leaf expressions
+          */
+         SCIP_CALL( growChildrenNlHdlrExpr(scip, nlexpr, NULL) );
+      }
+
+      if( success && nchildren > 0 )
+      {
+         assert(nlexpr->children != NULL);
+
+         if( stackpos+1 + nchildren > stacksize )
+         {
+            stacksize = SCIPcalcMemGrowSize(scip, stackpos + nchildren);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &stack, stacksize) );
+         }
+         memcpy(stack + (stackpos+1), nlexpr->children, nchildren * sizeof(NLHDLR_EXPR*));
+         stackpos += nchildren;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &stack);
+   SCIPfreeBufferArray(scip, &childcurv);
+
+   return SCIP_OKAY;
+}
+#if 0
+static
+SCIP_RETCODE constructExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSEXPR_EXPR*   rootexpr,           /**< expression */
@@ -234,6 +398,87 @@ SCIP_RETCODE enforceCurvature(
 
    return SCIP_OKAY;
 }
+#endif
+
+/** creates nonlinear handler expression data structure */
+static
+SCIP_RETCODE createNlhdlrExprData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nlhdlr expression data */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   NLHDLR_EXPR*          nlexprconvex,
+   NLHDLR_EXPR*          nlexprconcave
+   )
+{
+//   int nvars;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(*nlhdlrexprdata == NULL);
+
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
+
+#if 0
+   /* compute the number of unique variable expressions */
+   SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &nvars) );
+   assert(nvars > 0);
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, nvars) );
+   (*nlhdlrexprdata)->varexprssize = nvars;
+
+   /* collect all variable expressions that are contained in expr (the function also captures all variable expressions) */
+   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
+   assert((*nlhdlrexprdata)->nvarexprs > 0);
+   assert((*nlhdlrexprdata)->nvarexprs == nvars);
+#endif
+
+   (*nlhdlrexprdata)->nlexprconvex = nlexprconvex;
+   (*nlhdlrexprdata)->nlexprconcave = nlexprconcave;
+
+   if( nlexprconvex != NULL )
+   {
+      SCIP_CALL( ensureVariables(scip, conshdlr, nlexprconvex) );
+   }
+   if( nlexprconcave != NULL )
+   {
+      SCIP_CALL( ensureVariables(scip, conshdlr, nlexprconcave) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees nonlinear handler expression data structure */
+static
+SCIP_RETCODE freeNlhdlrExprData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to free nlhdlr expression data */
+   )
+{
+//   int i;
+
+   assert(scip != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(*nlhdlrexprdata != NULL);
+
+#if 0
+   /* release variable expressions */
+   for( i = 0; i < (*nlhdlrexprdata)->nvarexprs; ++i )
+   {
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*nlhdlrexprdata)->varexprs[i]) );
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, (*nlhdlrexprdata)->varexprssize);
+#endif
+
+   freeNlHdlrExpr(scip, &(*nlhdlrexprdata)->nlexprconvex);
+   freeNlHdlrExpr(scip, &(*nlhdlrexprdata)->nlexprconcave);
+
+   SCIPfreeBlockMemory(scip, nlhdlrexprdata);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of nonlinear handler
@@ -252,7 +497,9 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvex)
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 { /*lint --e{715}*/
-   SCIP_Bool success2;
+   NLHDLR_EXPR* nlexprconvex = NULL;
+   NLHDLR_EXPR* nlexprconcave = NULL;
+   int depth;
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -273,40 +520,45 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    if( !DETECTSUM && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
       return SCIP_OKAY;
 
-   /* TODO we are also interested in handling the concave side */
-
-   if( !*enforcedbelow )
+   SCIP_CALL( constructExpr(scip, conshdlr, &nlexprconvex, &depth, expr, SCIP_EXPRCURV_CONVEX) );
+   if( depth <= 2 )
    {
-      SCIP_CALL( enforceCurvature(scip, conshdlr, expr, SCIP_EXPRCURV_CONVEX, &success2) );
-
-      if( success2 )
-      {
-         *enforcedbelow = TRUE;
-         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-         *success = TRUE;
-
-         SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
-      }
+      freeNlHdlrExpr(scip, &nlexprconvex);
    }
 
-   if( !*enforcedabove )
+   SCIP_CALL( constructExpr(scip, conshdlr, &nlexprconcave, &depth, expr, SCIP_EXPRCURV_CONCAVE) );
+   if( depth <= 2 )
    {
-      SCIP_CALL( enforceCurvature(scip, conshdlr, expr, SCIP_EXPRCURV_CONCAVE, &success2) );
+      freeNlHdlrExpr(scip, &nlexprconcave);
+   }
 
-      if( success2 )
-      {
-         *enforcedabove = TRUE;
-         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-         *success = TRUE;
+   /* TODO we are also interested in handling the concave side */
 
-         SCIPdebugMsg(scip, "detected expr %p to be concave -> can enforce expr >= auxvar\n", (void*)expr);
-      }
+   if( !*enforcedbelow && nlexprconvex != NULL )
+   {
+      *enforcedbelow = TRUE;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+      *success = TRUE;
+
+      SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
+   }
+
+   if( !*enforcedabove && nlexprconcave != NULL )
+   {
+      *enforcedabove = TRUE;
+      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+      *success = TRUE;
    }
 
    /* store variable expressions into the expression data of the nonlinear handler */
    if( *success )
    {
-      SCIP_CALL( createNlhdlrExprData(scip, conshdlr, expr, nlhdlrexprdata) );
+      SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrexprdata, expr, nlexprconvex, nlexprconcave) );
+   }
+   else
+   {
+      freeNlHdlrExpr(scip, &nlexprconvex);
+      freeNlHdlrExpr(scip, &nlexprconcave);
    }
 
    return SCIP_OKAY;
