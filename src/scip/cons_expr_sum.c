@@ -85,7 +85,7 @@ SCIP_RETCODE simplifyTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< consexpr handler */
    SCIP_CONSEXPR_EXPR*   duplicate,          /**< expression to be simplified */
-   int                   idx,                /**< idx of children be simplified */
+   int                   idx,                /**< idx of children to be simplified */
    SCIP_Bool*            changed             /**< pointer to store if some term actually got simplified */
    )
 {
@@ -248,7 +248,6 @@ SCIP_RETCODE simplifyTerm(
       }
    }
 
-
    /* other types of (simplified) expressions can be a child of a simplified sum */
    assert(exprhdlr != SCIPgetConsExprExprHdlrSum(conshdlr));
    assert(exprhdlr != SCIPgetConsExprExprHdlrValue(conshdlr));
@@ -368,7 +367,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
       int* order;
 
       SCIP_CALL( SCIPallocBufferArray(scip, &order, nchildren) );
-      for( i = 0; i < nchildren; i++ ) order[i] = i;
+      for( i = 0; i < nchildren; i++ )
+         order[i] = i;
 
       SCIPsortPtrPtrInt((void**)SCIPgetConsExprExprChildren(duplicate), (void**)SCIPgetConsExprExprSumCoefs(duplicate),
             order, sortExprComp, SCIPgetConsExprExprNChildren(duplicate));
@@ -384,9 +384,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
       SCIPfreeBufferArray(scip, &order);
    }
 
-
    /* post-process */
-   children  = SCIPgetConsExprExprChildren(duplicate);
+   children = SCIPgetConsExprExprChildren(duplicate);
 
    /* treat zero term case */
    if( nchildren == 0 )
