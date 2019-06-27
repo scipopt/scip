@@ -3771,7 +3771,7 @@ SCIP_RETCODE replaceBinaryProducts(
  *    minact <= sum_j Q_ij x_j - w_i + minact x_i
  *    maxact >= sum_j Q_ij x_j - w_i + maxact x_i
  *
- * We mark w_i to be implicit integer if minact and maxact are integer values. After each replacment of a lower sum, it
+ * We mark w_i to be implicit integer if all Q_ij are integer. After each replacment of a lower sum, it
  * is checked whether there are enough terms left to factorize other binary variables. Lower sums with a larger number
  * of terms are prioritized.
  */
