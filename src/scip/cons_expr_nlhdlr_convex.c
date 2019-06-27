@@ -61,8 +61,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
    int                   nvarexprs;          /**< total number of variable expressions */
    int                   varexprssize;       /**< size of varexprs array */
 
-   NLHDLR_EXPR*          nlexprconvex;       /**< convex subexpression */
-   NLHDLR_EXPR*          nlexprconcave;      /**< concave subexpression */
+   NLHDLR_EXPR*          nlexpr;             /**< subexpression */
 };
 
 /*
@@ -176,6 +175,41 @@ SCIP_RETCODE ensureVariables(
    {
       SCIP_CALL( ensureVariables(scip, conshdlr, nlexpr->children[i]) );
    }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE evalNlHdlrExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   NLHDLR_EXPR*          nlexpr,             /**< nlhdlr-expression */
+   SCIP_SOL*             sol,                /**< solution to evaluate, or NULL */
+   SCIP_Real*            val                 /**< buffer to store value */
+   )
+{
+   SCIP_Real* childrenvals;
+   int nchildren;
+   int i;
+
+   assert(nlexpr != NULL);
+   assert(val != NULL);
+
+   if( nlexpr->children == NULL )
+   {
+      *val = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlexpr->origexpr));
+      return SCIP_OKAY;
+   }
+
+   nchildren = SCIPgetConsExprExprNChildren(nlexpr->origexpr);
+   SCIP_CALL( SCIPallocBufferArray(scip, &childrenvals, nchildren) );
+
+   for( i = 0; i < nchildren; ++i )
+   {
+      SCIP_CALL( evalNlHdlrExpr(scip, nlexpr->children[i], sol, &childrenvals[i]) );
+   }
+   SCIP_CALL( SCIPevalConsExprExprHdlr(scip, nlexpr->origexpr, val, childrenvals, sol) );
+
+   SCIPfreeBufferArray(scip, &childrenvals);
 
    return SCIP_OKAY;
 }
@@ -407,8 +441,7 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nlhdlr expression data */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   NLHDLR_EXPR*          nlexprconvex,
-   NLHDLR_EXPR*          nlexprconcave
+   NLHDLR_EXPR*          nlexpr              /**< nlhdlr expression */
    )
 {
 //   int nvars;
@@ -417,6 +450,7 @@ SCIP_RETCODE createNlhdlrExprData(
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata == NULL);
+   assert(nlexpr != NULL);
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
 
@@ -434,16 +468,11 @@ SCIP_RETCODE createNlhdlrExprData(
    assert((*nlhdlrexprdata)->nvarexprs == nvars);
 #endif
 
-   (*nlhdlrexprdata)->nlexprconvex = nlexprconvex;
-   (*nlhdlrexprdata)->nlexprconcave = nlexprconcave;
+   (*nlhdlrexprdata)->nlexpr = nlexpr;
 
-   if( nlexprconvex != NULL )
+   if( nlexpr != NULL )
    {
-      SCIP_CALL( ensureVariables(scip, conshdlr, nlexprconvex) );
-   }
-   if( nlexprconcave != NULL )
-   {
-      SCIP_CALL( ensureVariables(scip, conshdlr, nlexprconcave) );
+      SCIP_CALL( ensureVariables(scip, conshdlr, nlexpr) );
    }
 
    return SCIP_OKAY;
@@ -472,8 +501,7 @@ SCIP_RETCODE freeNlhdlrExprData(
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, (*nlhdlrexprdata)->varexprssize);
 #endif
 
-   freeNlHdlrExpr(scip, &(*nlhdlrexprdata)->nlexprconvex);
-   freeNlHdlrExpr(scip, &(*nlhdlrexprdata)->nlexprconcave);
+   freeNlHdlrExpr(scip, &(*nlhdlrexprdata)->nlexpr);
 
    SCIPfreeBlockMemory(scip, nlhdlrexprdata);
 
@@ -497,8 +525,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvex)
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 { /*lint --e{715}*/
-   NLHDLR_EXPR* nlexprconvex = NULL;
-   NLHDLR_EXPR* nlexprconcave = NULL;
+   NLHDLR_EXPR* nlexpr = NULL;
    int depth;
 
    assert(scip != NULL);
@@ -520,45 +547,50 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    if( !DETECTSUM && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
       return SCIP_OKAY;
 
-   SCIP_CALL( constructExpr(scip, conshdlr, &nlexprconvex, &depth, expr, SCIP_EXPRCURV_CONVEX) );
-   if( depth <= 2 )
-   {
-      freeNlHdlrExpr(scip, &nlexprconvex);
-   }
-
-   SCIP_CALL( constructExpr(scip, conshdlr, &nlexprconcave, &depth, expr, SCIP_EXPRCURV_CONCAVE) );
-   if( depth <= 2 )
-   {
-      freeNlHdlrExpr(scip, &nlexprconcave);
-   }
-
    /* TODO we are also interested in handling the concave side */
 
-   if( !*enforcedbelow && nlexprconvex != NULL )
+   if( !*enforcedbelow )
    {
-      *enforcedbelow = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-      *success = TRUE;
+      SCIP_CALL( constructExpr(scip, conshdlr, &nlexpr, &depth, expr, SCIP_EXPRCURV_CONVEX) );
+      if( depth <= 2 )
+      {
+         freeNlHdlrExpr(scip, &nlexpr);
+      }
+      else
+      {
+         *enforcedbelow = TRUE;
+         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+         *success = TRUE;
 
-      SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
+         SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
+      }
    }
 
-   if( !*enforcedabove && nlexprconcave != NULL )
+   if( !*enforcedabove && nlexpr == NULL )
    {
-      *enforcedabove = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-      *success = TRUE;
+      SCIP_CALL( constructExpr(scip, conshdlr, &nlexpr, &depth, expr, SCIP_EXPRCURV_CONCAVE) );
+      if( depth <= 2 )
+      {
+         freeNlHdlrExpr(scip, &nlexpr);
+      }
+      else
+      {
+         *enforcedabove = TRUE;
+         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+         *success = TRUE;
+
+         SCIPdebugMsg(scip, "detected expr %p to be concave -> can enforce expr >= auxvar\n", (void*)expr);
+      }
    }
 
    /* store variable expressions into the expression data of the nonlinear handler */
    if( *success )
    {
-      SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrexprdata, expr, nlexprconvex, nlexprconcave) );
+      SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrexprdata, expr, nlexpr) );
    }
    else
    {
-      freeNlHdlrExpr(scip, &nlexprconvex);
-      freeNlHdlrExpr(scip, &nlexprconcave);
+      assert(nlexpr == NULL);
    }
 
    return SCIP_OKAY;
@@ -568,13 +600,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 static
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvex)
 { /*lint --e{715}*/
+   assert(nlhdlrexprdata != NULL);
+   assert(nlhdlrexprdata->nlexpr != NULL);
+   assert(nlhdlrexprdata->nlexpr->origexpr == expr);
    assert(auxvalue != NULL);
-   assert(expr != NULL);
 
-   /* currently this nlhdlr does not introduce auxiliary variables,
-    * so we can return the value of the expression in the original variables
-    */
-   *auxvalue = SCIPgetConsExprExprValue(expr);
+   SCIP_CALL( evalNlHdlrExpr(scip, nlhdlrexprdata->nlexpr, sol, auxvalue) );
 
    return SCIP_OKAY;
 }
