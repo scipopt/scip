@@ -200,7 +200,6 @@ Test(reformbinprods, factorize1)
 {
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* newexpr;
-   SCIP_CONSEXPR_EXPR** children;
    SCIP_CONS* cons;
    SCIP_VAR* var;
    int naddconss = 0;
@@ -236,7 +235,6 @@ Test(reformbinprods, factorize2)
 {
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* newexpr;
-   SCIP_CONSEXPR_EXPR** children;
    SCIP_CONS* cons;
    SCIP_VAR* var;
    int naddconss = 0;
