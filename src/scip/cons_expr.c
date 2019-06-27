@@ -7511,10 +7511,9 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
 
          /* check for a linear variable that can be increase or decreased without harming feasibility */
          consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
-#if 0
-         /* call curvature detection of expression handlers */
+
+         /* call curvature detection of expression handlers; TODO do we really need this? */
          SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
-#endif
 
          /* add nlrow representation to NLP, if NLP had been constructed */
          if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
@@ -11690,7 +11689,6 @@ SCIP_EXPRCURV SCIPgetConsExprExprCurvature(
    return expr->curvature;
 }
 
-#if 0
 /** computes the curvature of a given expression and all its subexpressions
  *
  *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
@@ -11704,6 +11702,11 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP_CONSHDLR* conshdlr;
    SCIP_EXPRCURV curv;
    SCIP_INTERVAL activity;
+   SCIP_EXPRCURV* childcurv;
+   int childcurvsize;
+   SCIP_Bool success;
+   SCIP_EXPRCURV trialcurv[3] = { SCIP_EXPRCURV_LINEAR, SCIP_EXPRCURV_CONVEX, SCIP_EXPRCURV_CONCAVE };
+   int i, c;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -11714,6 +11717,9 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    /* ensure activities are uptodate */
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE) );
 
+   childcurvsize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, childcurvsize) );
+
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
@@ -11722,10 +11728,41 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    {
       curv = SCIP_EXPRCURV_UNKNOWN;
 
-      if( expr->exprhdlr->curvature != NULL )
+      if( expr->exprhdlr->curvature == NULL )
       {
-         /* get curvature from expression handler */
-         SCIP_CALL( (*expr->exprhdlr->curvature)(scip, conshdlr, expr, &curv) );
+         /* set curvature in expression */
+         SCIPsetConsExprExprCurvature(expr, curv);
+         continue;
+      }
+
+      if( SCIPgetConsExprExprNChildren(expr) > childcurvsize )
+      {
+         childcurvsize = SCIPcalcMemGrowSize(scip, SCIPgetConsExprExprNChildren(expr));
+         SCIP_CALL( SCIPreallocBufferArray(scip, &childcurv, childcurvsize) );
+      }
+
+      for( i = 0; i < 3; ++i )
+      {
+         /* check if expression can have a curvature trialcurv[i] */
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, trialcurv[i], &success, childcurv) );
+         if( !success )
+            continue;
+
+         /* check if conditions on children are satisfied */
+         for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+         {
+            if( (childcurv[c] & SCIPgetConsExprExprCurvature(SCIPgetConsExprExprChildren(expr)[c])) != childcurv[c] )
+            {
+               success = FALSE;
+               break;
+            }
+         }
+
+         if( success )
+         {
+            curv = trialcurv[i];
+            break;
+         }
       }
 
       /* set curvature in expression */
@@ -11734,9 +11771,10 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
 
    SCIPexpriteratorFree(&it);
 
+   SCIPfreeBufferArray(scip, &childcurv);
+
    return SCIP_OKAY;
 }
-#endif
 
 /** returns the monotonicity of an expression w.r.t. to a given child */
 SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(

@@ -942,7 +942,6 @@ SCIP_EXPRCURV SCIPgetConsExprExprCurvature(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-#if 0
 /** computes the curvature of a given expression and all its subexpressions
  *
  *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
@@ -952,7 +951,6 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
-#endif
 
 /** returns the monotonicity of an expression w.r.t. to a given child */
 SCIP_EXPORT
