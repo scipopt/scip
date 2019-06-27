@@ -45,32 +45,32 @@
 typedef struct NlHdlr_Expr NLHDLR_EXPR;
 struct NlHdlr_Expr
 {
-   SCIP_CONSEXPR_EXPR* origexpr;   /**< the original expression that is represented */
-   NLHDLR_EXPR**       children;   /**< nlhdlr-expressions for children, or NULL if no children or to use auxvar */
+   SCIP_CONSEXPR_EXPR* origexpr;             /**< the original expression that is represented */
+   NLHDLR_EXPR**       children;             /**< nlhdlr-expressions for children, or NULL if no children or to use auxvar */
 
-   NLHDLR_EXPR*        parent;     /**< parent in expression tree */
+   NLHDLR_EXPR*        parent;               /**< parent in expression tree TODO: remove as unused? */
 
-   SCIP_EXPRCURV       curv;       /**< required curvature */
-   int                 depth;
+   SCIP_EXPRCURV       curv;                 /**< required curvature */
+   int                 depth;                /**< distance from root, root as distance 1 */
 
-   SCIP_Real           val;
-   SCIP_Real           deriv;
+   SCIP_Real           val;                  /**< value from last eval */
+   SCIP_Real           deriv;                /**< partial derivative w.r.t. root from last gradient cut computation */
 };
 
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
-   SCIP_CONSEXPR_EXPR**  varexprs;           /**< all dependent variable expressions */
-   int                   nvarexprs;          /**< total number of variable expressions */
-   int                   varexprssize;       /**< size of varexprs array */
-
-   NLHDLR_EXPR*          nlexpr;             /**< subexpression */
+   NLHDLR_EXPR*          nlexpr;             /**< subexpression for which this nlhdlr estimates */
 };
 
 /*
  * static methods
  */
 
+/** create nlhdlr-expression
+ *
+ * does not create children, i.e., assumes that this will be a leaf
+ */
 static
 SCIP_RETCODE createNlHdlrExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -96,6 +96,7 @@ SCIP_RETCODE createNlHdlrExpr(
    return SCIP_OKAY;
 }
 
+/** expand nlhdlr-expression by adding children according to original expression */
 static
 SCIP_RETCODE growChildrenNlHdlrExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -124,6 +125,7 @@ SCIP_RETCODE growChildrenNlHdlrExpr(
    return SCIP_OKAY;
 }
 
+/** free nlhdlr-expression, incl children */
 static
 void freeNlHdlrExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -155,6 +157,7 @@ void freeNlHdlrExpr(
    assert(*nlhdlrexpr == NULL);
 }
 
+/** ensure that for every leaf of a nlhdlr-expression there is an auxiliary variable */
 static
 SCIP_RETCODE ensureVariables(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -182,6 +185,7 @@ SCIP_RETCODE ensureVariables(
    return SCIP_OKAY;
 }
 
+/** evaluate nlhdlr-expression for given solution */
 static
 SCIP_RETCODE evalNlHdlrExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -223,7 +227,7 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/* differentiate and assemble rowprep */
+/* differentiate nlhdlr-expression and store contribution to gradient cut in rowprep */
 static
 SCIP_RETCODE gradientCut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -246,9 +250,8 @@ SCIP_RETCODE gradientCut(
 
       if( SCIPgetConsExprExprHdlr(nlexpr->origexpr) == SCIPgetConsExprExprHdlrValue(conshdlr) )
          return SCIP_OKAY;
-      assert(SCIPgetConsExprExprHdlr(nlexpr->origexpr) == SCIPgetConsExprExprHdlrVar(conshdlr));
 
-      var = SCIPgetConsExprExprVarVar(nlexpr->origexpr);
+      var = SCIPgetConsExprExprAuxVar(nlexpr->origexpr);
 
       /* add deriv * (var - varval) to rowprep */
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, nlexpr->deriv) );
@@ -286,6 +289,7 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** register violation as branchscore in leafs of nlhdlr-expression */
 static
 void branchscoreNlhdlrExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -308,7 +312,11 @@ void branchscoreNlhdlrExpr(
       branchscoreNlhdlrExpr(scip, nlexpr->children[c], brscoretag, violation);
 }
 
-
+/** construct a subexpression (as nlhdlr-expression) of maximal size that has a given curvature
+ *
+ * If the curvature cannot be achieved for an expression in the original expression graph,
+ * then this expression becomes a leaf in the nlhdlr-expression.
+ */
 static
 SCIP_RETCODE constructExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -324,6 +332,8 @@ SCIP_RETCODE constructExpr(
    int childcurvsize;
    int nchildren;
    SCIP_Bool success;
+
+   /* to do list: expressions where to check whether they can have the desired curvature when taking their children into account */
    NLHDLR_EXPR** stack;
    int stacksize;
    int stackpos;
@@ -337,6 +347,7 @@ SCIP_RETCODE constructExpr(
    childcurvsize = SCIPgetConsExprExprNChildren(rootexpr);
    SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, childcurvsize) );
 
+   /* create root nlhdlr-expression */
    SCIP_CALL( createNlHdlrExpr(scip, rootnlexpr, rootexpr, NULL, curv) );
    *maxdepth = 0;
 
@@ -345,7 +356,7 @@ SCIP_RETCODE constructExpr(
 
    stack[0] = *rootnlexpr;
    stackpos = 0;
-   while( stackpos > 0 )
+   while( stackpos >= 0 )
    {
       /* take expression from stack */
       nlexpr = stack[stackpos--];
@@ -367,13 +378,14 @@ SCIP_RETCODE constructExpr(
          SCIP_CALL( SCIPreallocBufferArray(scip, &childcurv, childcurvsize) );
       }
 
-      /* check whether and under which conditions expr can have desired curvature */
       success = TRUE;
       if( nlexpr->curv != SCIP_EXPRCURV_UNKNOWN )
       {
+         /* check whether and under which conditions nlexpr->origexpr can have desired curvature */
          SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, nlexpr->origexpr, nlexpr->curv, &success, childcurv) );
          if( success )
          {
+            /* if origexpr can have curvature curv, then don't treat it as leaf, but include its children */
             SCIP_CALL( growChildrenNlHdlrExpr(scip, nlexpr, childcurv) );
          }
       }
@@ -387,6 +399,7 @@ SCIP_RETCODE constructExpr(
 
       if( success && nchildren > 0 )
       {
+         /* add children expressions to to do list (stack) */
          assert(nlexpr->children != NULL);
 
          if( stackpos+1 + nchildren > stacksize )
@@ -404,6 +417,7 @@ SCIP_RETCODE constructExpr(
 
    return SCIP_OKAY;
 }
+
 #if 0
 static
 SCIP_RETCODE constructExpr(
@@ -541,36 +555,17 @@ SCIP_RETCODE createNlhdlrExprData(
    NLHDLR_EXPR*          nlexpr              /**< nlhdlr expression */
    )
 {
-//   int nvars;
-
    assert(scip != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata == NULL);
    assert(nlexpr != NULL);
 
-   SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
-
-#if 0
-   /* compute the number of unique variable expressions */
-   SCIP_CALL( SCIPgetConsExprExprNVars(scip, conshdlr, expr, &nvars) );
-   assert(nvars > 0);
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, nvars) );
-   (*nlhdlrexprdata)->varexprssize = nvars;
-
-   /* collect all variable expressions that are contained in expr (the function also captures all variable expressions) */
-   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
-   assert((*nlhdlrexprdata)->nvarexprs > 0);
-   assert((*nlhdlrexprdata)->nvarexprs == nvars);
-#endif
-
+   SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
    (*nlhdlrexprdata)->nlexpr = nlexpr;
 
-   if( nlexpr != NULL )
-   {
-      SCIP_CALL( ensureVariables(scip, conshdlr, nlexpr) );
-   }
+   /* make sure there are auxvars */
+   SCIP_CALL( ensureVariables(scip, conshdlr, nlexpr) );
 
    return SCIP_OKAY;
 }
@@ -582,21 +577,9 @@ SCIP_RETCODE freeNlhdlrExprData(
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to free nlhdlr expression data */
    )
 {
-//   int i;
-
    assert(scip != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata != NULL);
-
-#if 0
-   /* release variable expressions */
-   for( i = 0; i < (*nlhdlrexprdata)->nvarexprs; ++i )
-   {
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*nlhdlrexprdata)->varexprs[i]) );
-   }
-
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, (*nlhdlrexprdata)->varexprssize);
-#endif
 
    freeNlHdlrExpr(scip, &(*nlhdlrexprdata)->nlexpr);
 
@@ -721,11 +704,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    nlexpr = nlhdlrexprdata->nlexpr;
    assert(nlexpr != NULL);
    assert(nlexpr->origexpr == expr);
-
-#if 0
-   assert(nlhdlrexprdata->varexprs != NULL);
-   assert(nlhdlrexprdata->nvarexprs > 0);
-#endif
    assert(nlexpr->curv == SCIP_EXPRCURV_CONVEX || nlexpr->curv == SCIP_EXPRCURV_CONCAVE);
    assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
    assert(rowprep != NULL);
@@ -780,8 +758,6 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
    assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
    assert(auxvalue == SCIPgetConsExprExprValue(expr)); /* given auxvalue should have been computed by nlhdlrEvalAuxConvex */  /*lint !e777*/
    assert(nlhdlrexprdata != NULL);
-   assert(nlhdlrexprdata->varexprs != NULL);
-   assert(nlhdlrexprdata->nvarexprs > 0);
    assert(success != NULL);
 
    *success = FALSE;
