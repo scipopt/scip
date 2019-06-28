@@ -1665,10 +1665,17 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureProduct)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(success != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) > 1);
-   assert(SCIPgetConsExprExprProductCoef(expr) == 1.0);
+   assert(SCIPgetConsExprExprNChildren(expr) > 0);
 
-   *success = FALSE;
+   if( SCIPgetConsExprExprNChildren(expr) == 1 )
+   {
+      *childcurv = SCIPexprcurvMultiply(SCIPgetConsExprExprProductCoef(expr), exprcurvature);
+      *success = TRUE;
+   }
+   else
+   {
+      *success = FALSE;
+   }
 
    return SCIP_OKAY;
 }
