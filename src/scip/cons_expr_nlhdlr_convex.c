@@ -172,6 +172,7 @@ SCIP_RETCODE ensureVariables(
 
    if( nlexpr->children == NULL )
    {
+      assert(SCIPgetConsExprExprAuxVar(nlexpr->origexpr) != NULL);  /* TODO remove again when we allow to introduce auxvars */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexpr->origexpr, NULL) );
       return SCIP_OKAY;
    }
@@ -393,6 +394,12 @@ SCIP_RETCODE constructExpr(
          else if( nlexpr == *rootnlexpr )
          {
             /* if there is no way to ensure curv for root expression, then we failed */
+            freeNlHdlrExpr(scip, rootnlexpr);
+            break;
+         }
+         else
+         {
+            /* for now, also require that desired curvature can be achieved w.r.t. original variables, i.e., without introducing auxvars (TODO: remove again) */
             freeNlHdlrExpr(scip, rootnlexpr);
             break;
          }
@@ -640,7 +647,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    if( !*enforcedbelow )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, &nlexpr, &depth, expr, SCIP_EXPRCURV_CONVEX) );
-      if( depth <= 2 )
+      assert(nlexpr == NULL || depth >= 1);
+      if( depth < 1 )  /* TODO change back to <= 1, i.e. free if only immediate children, but no grand-daugthers */
       {
          freeNlHdlrExpr(scip, &nlexpr);
       }
@@ -657,7 +665,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    if( !*enforcedabove && nlexpr == NULL )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, &nlexpr, &depth, expr, SCIP_EXPRCURV_CONCAVE) );
-      if( depth <= 2 )
+      assert(nlexpr == NULL || depth >= 1);
+      if( depth < 1 )  /* TODO change back to <= 1 */
       {
          freeNlHdlrExpr(scip, &nlexpr);
       }
