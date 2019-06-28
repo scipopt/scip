@@ -334,13 +334,12 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
    SCIP_CALL( SCIPduplicateConsExprExpr(scip, conshdlr, expr, &duplicate) );
 
    nchildren = SCIPgetConsExprExprNChildren(duplicate);
-   coefs     = SCIPgetConsExprExprSumCoefs(duplicate);
 
    for( i = 0; i < nchildren; i++ )
    {
-
       /* enforces SS8 TODO: remove child? */
-      if( coefs[i] == 0.0 )
+      /* we have to ask for the coefs everytime, since it might get realloced in simpifyTerm */
+      if( SCIPgetConsExprExprSumCoefs(duplicate)[i] == 0.0 )
       {
          changed = TRUE;
          continue;
@@ -352,7 +351,6 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
 
    /* simplifyTerm can add new children to duplicate and realloc them; so get them again */
    nchildren = SCIPgetConsExprExprNChildren(duplicate);
-   coefs     = SCIPgetConsExprExprSumCoefs(duplicate);
 
    /* enforces SS5: sort children; if nothing has changed so far, we need to find to find out if sorting changes
     * anything
@@ -360,7 +358,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
    if( changed )
    {
       SCIPsortPtrPtr((void**)SCIPgetConsExprExprChildren(duplicate), (void**)SCIPgetConsExprExprSumCoefs(duplicate),
-            sortExprComp, SCIPgetConsExprExprNChildren(duplicate));
+            sortExprComp, nchildren);
    }
    else
    {
@@ -371,7 +369,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
          order[i] = i;
 
       SCIPsortPtrPtrInt((void**)SCIPgetConsExprExprChildren(duplicate), (void**)SCIPgetConsExprExprSumCoefs(duplicate),
-            order, sortExprComp, SCIPgetConsExprExprNChildren(duplicate));
+            order, sortExprComp, nchildren);
 
       for( i = 0; i < nchildren; i++ )
       {
@@ -386,6 +384,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
 
    /* post-process */
    children = SCIPgetConsExprExprChildren(duplicate);
+   coefs    = SCIPgetConsExprExprSumCoefs(duplicate);
 
    /* treat zero term case */
    if( nchildren == 0 )
