@@ -8142,6 +8142,29 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveExpr)
       SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(cons)) );
    }
 
+#ifdef SCIP_DISABLED_CODE   /* we probably don't need this (?) */
+   if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_CONSEXPR_ITERATOR* it;
+
+      consdata = SCIPconsGetData(cons);
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         SCIPdebugMsg(scip, "consdeactivate: free nonlinear handler data for expression %p\n", (void*)expr);
+
+         /* remove nonlinear handlers in expression and their data; keep auxiliary variable */
+         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
+      }
+
+      SCIPexpriteratorFree(&it);
+   }
+#endif
+
    /* remove locks that have been added in consActiveExpr() */
    if( !SCIPconsIsChecked(cons) )
    {
