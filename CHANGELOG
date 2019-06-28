@@ -10,11 +10,9 @@ Features
 - The abspower constraint handler now passes more accurate convexity
   information to the NLP relaxation.
 
-Performance improvements
-------------------------
-
 Examples and applications
 -------------------------
+
 - added parsing functionality for optcumulative constraints in CIP format
 
 Interface changes
