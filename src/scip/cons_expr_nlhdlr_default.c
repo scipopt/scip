@@ -160,6 +160,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *nlhdlrexprdata = (SCIP_CONSEXPR_NLHDLREXPRDATA*)(size_t)mymethods;
       /* augment mymethods in enforcemethods */
       *enforcemethods |= mymethods;
+
+      /* since this is the default handler, it should always enforce, even if none of the stronger enforcement methods (estimate/separate) are available
+       * this allows to handle value-expressions, for example
+       */
+      *enforcedbelow = TRUE;
+      *enforcedabove = TRUE;
    }
 
    return SCIP_OKAY;
