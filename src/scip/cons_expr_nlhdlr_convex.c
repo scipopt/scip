@@ -316,6 +316,8 @@ void branchscoreNlhdlrExpr(
  *
  * If the curvature cannot be achieved for an expression in the original expression graph,
  * then this expression becomes a leaf in the nlhdlr-expression.
+ *
+ * Sets *rootnlexpr to NULL if failed.
  */
 static
 SCIP_RETCODE constructExpr(
@@ -387,6 +389,12 @@ SCIP_RETCODE constructExpr(
          {
             /* if origexpr can have curvature curv, then don't treat it as leaf, but include its children */
             SCIP_CALL( growChildrenNlHdlrExpr(scip, nlexpr, childcurv) );
+         }
+         else if( nlexpr == *rootnlexpr )
+         {
+            /* if there is no way to ensure curv for root expression, then we failed */
+            freeNlHdlrExpr(scip, rootnlexpr);
+            break;
          }
       }
       else if( nchildren > 0 )
@@ -636,7 +644,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
       {
          freeNlHdlrExpr(scip, &nlexpr);
       }
-      else
+      else if( nlexpr != NULL )
       {
          *enforcedbelow = TRUE;
          *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
@@ -653,7 +661,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
       {
          freeNlHdlrExpr(scip, &nlexpr);
       }
-      else
+      else if( nlexpr != NULL )
       {
          *enforcedabove = TRUE;
          *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
