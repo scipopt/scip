@@ -11249,13 +11249,11 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->auxvarid >= 0);
 
-   if( expr->exprhdlr == SCIPgetConsExprExprHdlrValue(conshdlr) )
-   {
-      /* it doesn't harm much to have an auxvar for a constant, but it doesn't seem to make much sense
-       * @todo ensure that this will not happen and change the warning to an assert
-       */
-      SCIPwarningMessage(scip, "Creating auxiliary variable for constant expression.");
-   }
+   /* it doesn't harm much to have an auxvar for a constant, as this can be handled well by the default hdlr,
+    * but it usually indicates a missing simplify
+    * if we find situations where we need to have an auxvar for a constant, then remove this assert
+    */
+   assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(conshdlr));
 
    /* create and capture auxiliary variable */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%s_%d", expr->exprhdlr->name, conshdlrdata->auxvarid);
