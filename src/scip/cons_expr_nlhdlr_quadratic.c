@@ -1089,6 +1089,9 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(infeasible != NULL);
+   assert(nreductions != NULL);
+
+   *nreductions = 0;
 
    /* not possible to conclude finite bounds if the interval of the expression is [-inf,inf] */
    if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, expr)) )
