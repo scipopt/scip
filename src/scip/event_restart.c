@@ -1364,7 +1364,7 @@ char* printReport(
 
    /* print report number */
    if( reportnum > 0 )
-      ptr += sprintf(ptr, "Report %d\n", reportnum);
+      ptr += sprintf(ptr, "Report %d\nTime Elapsed: %.2f\n", reportnum, SCIPgetSolvingTime(scip));
 
    /* print tree data */
    ptr += sprintf(ptr,
@@ -1399,6 +1399,9 @@ char* printReport(
       ptr += sprintf(ptr, "  %-17s: %11.0f %11.5f %11.5f\n",
             timeseriesGetName(ts), timeseriesEstimate(ts, eventhdlrdata->treedata), timeseriesGet(ts), doubleexpsmoothGetTrend(&ts->des));
    }
+
+   if( reportnum > 0 )
+      ptr += sprintf(ptr, "End of Report %d\n", reportnum);
 
    return strbuf;
 }
