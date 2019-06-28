@@ -115,7 +115,7 @@ fi
 
 # get comparison run
 GITHASH_HISTORY=$(grep fullgh=.* -o ${COMPARERBDB} | uniq | cut -d ' ' -f 1 | cut -d '=' -f 2 |sort -r)
-GITLOG=$(git log --pretty=format:'%H' --first-parent)
+GITLOG=$(git log --pretty=format:'%H')
 export COMPAREHASH=$(echo "${GITLOG}" | grep -F "${GITHASH_HISTORY}" | head -n 1)
 if [ "${COMPAREGITHASH}" == "" ]; then
   export SOPLEX_HASH=$(grep ${COMPAREHASH} ${COMPARERBDB} | head -n 1 | grep -o "soplexhash=.*" | cut -d "=" -f 2)
