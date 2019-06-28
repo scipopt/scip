@@ -11741,10 +11741,13 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
          SCIP_CALL( SCIPreallocBufferArray(scip, &childcurv, childcurvsize) );
       }
 
+      /* SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+      SCIPinfoMessage(scip, NULL, " (%p)", expr); */
       for( i = 0; i < 3; ++i )
       {
          /* check if expression can have a curvature trialcurv[i] */
          SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, trialcurv[i], &success, childcurv) );
+         /* SCIPinfoMessage(scip, NULL, " %s? %d", SCIPexprcurvGetName(trialcurv[i]), success); */
          if( !success )
             continue;
 
@@ -11767,6 +11770,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
 
       /* set curvature in expression */
       SCIPsetConsExprExprCurvature(expr, curv);
+      /* SCIPinfoMessage(scip, NULL, " -> curv = %s\n", SCIPexprcurvGetName(curv)); */
    }
 
    SCIPexpriteratorFree(&it);

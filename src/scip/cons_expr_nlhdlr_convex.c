@@ -254,6 +254,8 @@ SCIP_RETCODE gradientCut(
 
       var = SCIPgetConsExprExprAuxVar(nlexpr->origexpr);
 
+      SCIPdebugMsg(scip, "add %g * (<%s> - %g) to rowprep\n", nlexpr->deriv, SCIPvarGetName(var), nlexpr->val);
+
       /* add deriv * (var - varval) to rowprep */
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, nlexpr->deriv) );
       SCIPaddRowprepConstant(rowprep, -nlexpr->deriv * nlexpr->val);
@@ -386,6 +388,8 @@ SCIP_RETCODE constructExpr(
       {
          /* check whether and under which conditions nlexpr->origexpr can have desired curvature */
          SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, nlexpr->origexpr, nlexpr->curv, &success, childcurv) );
+         /* SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL);
+         SCIPinfoMessage(scip, NULL, " is %s? %d\n", SCIPexprcurvGetName(nlexpr->curv), success); */
          if( success )
          {
             /* if origexpr can have curvature curv, then don't treat it as leaf, but include its children */
@@ -578,6 +582,11 @@ SCIP_RETCODE createNlhdlrExprData(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
    (*nlhdlrexprdata)->nlexpr = nlexpr;
+
+#ifdef SCIP_DEBUG
+   SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+   SCIPinfoMessage(scip, NULL, " is handled as %s\n", SCIPexprcurvGetName(nlexpr->curv));
+#endif
 
    /* make sure there are auxvars */
    SCIP_CALL( ensureVariables(scip, conshdlr, nlexpr) );
