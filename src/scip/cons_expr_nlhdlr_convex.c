@@ -642,6 +642,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    if( !DETECTSUM && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
       return SCIP_OKAY;
 
+   /* ignore pure constants and variables */
+   if( SCIPgetConsExprExprNChildren(expr) == 0 )
+      return SCIP_OKAY;
+
    /* TODO we are also interested in handling the concave side */
 
    if( !*enforcedbelow )
