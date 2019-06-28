@@ -84,7 +84,6 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define TABLE_POSITION          22000           /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE    SCIP_STAGE_INIT /**< output of the statistics table is only printed from this stage onwards */
 
-
 /** double exponential smoothing data structure */
 struct DoubleExpSmooth
 {
@@ -1379,25 +1378,30 @@ char* printReport(
          );
 
    /* print estimations */
-   ptr += sprintf(ptr, "Tree Estimation    : %11s %11s %11s",
+   ptr += sprintf(ptr, "Tree Estimation    : %11s %11s %11s %11s",
             "estim",
             "value",
-            "trend");
+            "trend",
+            "resolution");
 
    ptr += sprintf(ptr, "\n");
 
-   ptr += sprintf(ptr, "  wbe              : %11.0f %11s %11s\n",
-            estimateTreesizeBacktrackestim(eventhdlrdata->backtrackestim), "-", "-");
-   ptr += sprintf(ptr, "  tree profile     : %11.0f %11s %11s\n",
+   ptr += sprintf(ptr, "  wbe              : %11.0f %11s %11s %11s\n",
+            estimateTreesizeBacktrackestim(eventhdlrdata->backtrackestim), "-", "-", "-");
+   ptr += sprintf(ptr, "  tree profile     : %11.0f %11s %11s %11s\n",
             SCIPpredictTotalSizeTreeprofile(scip),
-            "-", "-");
+            "-", "-", "-");
 
    /* print time series forecasts */
    for( t = 0; t < NTIMESERIES; ++t )
    {
       TIMESERIES* ts = eventhdlrdata->timeseries[t];
-      ptr += sprintf(ptr, "  %-17s: %11.0f %11.5f %11.5f\n",
-            timeseriesGetName(ts), timeseriesEstimate(ts, eventhdlrdata->treedata), timeseriesGet(ts), doubleexpsmoothGetTrend(&ts->des));
+      ptr += sprintf(ptr, "  %-17s: %11.0f %11.5f %11.5f %11d\n",
+            timeseriesGetName(ts),
+            timeseriesEstimate(ts, eventhdlrdata->treedata),
+            timeseriesGet(ts),
+            doubleexpsmoothGetTrend(&ts->des),
+            timeseriesGetResolution(ts));
    }
 
    if( reportnum > 0 )
