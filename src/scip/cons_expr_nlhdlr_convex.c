@@ -53,6 +53,7 @@ struct NlHdlr_Expr
    SCIP_EXPRCURV       curv;                 /**< required curvature */
    int                 depth;                /**< distance from root, root as distance 1 */
 
+   SCIP_Real*          childrenval;          /**< buffer to store value of children */
    SCIP_Real           val;                  /**< value from last eval */
    SCIP_Real           deriv;                /**< partial derivative w.r.t. root from last gradient cut computation */
 };
@@ -87,6 +88,7 @@ SCIP_RETCODE createNlHdlrExpr(
    SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexpr) );
    (*nlhdlrexpr)->origexpr = origexpr;
    (*nlhdlrexpr)->children = NULL;
+   (*nlhdlrexpr)->childrenval = NULL;
    (*nlhdlrexpr)->parent = parent;
    (*nlhdlrexpr)->curv = curv;
    (*nlhdlrexpr)->depth = parent != NULL ? parent->depth + 1 : 0;
@@ -115,6 +117,7 @@ SCIP_RETCODE growChildrenNlHdlrExpr(
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexpr->children, nchildren) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexpr->childrenval, nchildren) );
 
    for( i = 0; i < nchildren; ++i )
    {
@@ -147,6 +150,7 @@ void freeNlHdlrExpr(
       for( i = 0; i < nchildren; ++i )
          freeNlHdlrExpr(scip, &(*nlhdlrexpr)->children[i]);
 
+      SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrexpr)->childrenval, nchildren);
       SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrexpr)->children, nchildren);
    }
 
@@ -194,7 +198,6 @@ SCIP_RETCODE evalNlHdlrExpr(
    SCIP_SOL*             sol                 /**< solution to evaluate, or NULL */
    )
 {
-   SCIP_Real* childrenvals;
    int nchildren;
    int i;
 
@@ -207,7 +210,6 @@ SCIP_RETCODE evalNlHdlrExpr(
    }
 
    nchildren = SCIPgetConsExprExprNChildren(nlexpr->origexpr);
-   SCIP_CALL( SCIPallocBufferArray(scip, &childrenvals, nchildren) );
 
    for( i = 0; i < nchildren; ++i )
    {
@@ -215,15 +217,12 @@ SCIP_RETCODE evalNlHdlrExpr(
       if( nlexpr->children[i]->val == SCIP_INVALID )
       {
          nlexpr->val = SCIP_INVALID;
-         goto TERMINATE;
+         return SCIP_OKAY;
       }
-      childrenvals[i] = nlexpr->children[i]->val;
+      nlexpr->childrenval[i] = nlexpr->children[i]->val;
    }
 
-   SCIP_CALL( SCIPevalConsExprExprHdlr(scip, nlexpr->origexpr, &nlexpr->val, childrenvals, sol) );
-
-TERMINATE:
-   SCIPfreeBufferArray(scip, &childrenvals);
+   SCIP_CALL( SCIPevalConsExprExprHdlr(scip, nlexpr->origexpr, &nlexpr->val, nlexpr->childrenval, sol) );
 
    return SCIP_OKAY;
 }
@@ -238,11 +237,13 @@ SCIP_RETCODE gradientCut(
    SCIP_Bool*            success             /**< set to FALSE if gradient evaluation error */
    )
 {
-   SCIP_Real* childrenvals;
    int nchildren;
    int i;
 
    assert(nlexpr != NULL);
+   assert(success != NULL);
+
+   *success = TRUE;
 
    nchildren = SCIPgetConsExprExprNChildren(nlexpr->origexpr);
    if( nchildren == 0 )
@@ -263,31 +264,29 @@ SCIP_RETCODE gradientCut(
       return SCIP_OKAY;
    }
 
-   /* assemble children values */
-   SCIP_CALL( SCIPallocBufferArray(scip, &childrenvals, nchildren) );
+   /* assemble children values
+    * should still be uptodate from last eval
    for( i = 0; i < nchildren; ++i )
-      childrenvals[i] = nlexpr->children[i]->val;
+      nlexpr->childrenval[i] = nlexpr->children[i]->val;
+    */
 
    /* differentiate w.r.t. each child */
    for( i = 0; i < nchildren; ++i )
    {
       /* compute partial derivative w.r.t. child i */
-      SCIP_CALL( SCIPbwdiffConsExprExprHdlr(scip, nlexpr->origexpr, i, &nlexpr->children[i]->deriv, childrenvals, nlexpr->val) );
+      SCIP_CALL( SCIPbwdiffConsExprExprHdlr(scip, nlexpr->origexpr, i, &nlexpr->children[i]->deriv, nlexpr->childrenval, nlexpr->val) );
       if( nlexpr->children[i]->deriv == SCIP_INVALID )
       {
          *success = FALSE;
-         goto TERMINATE;
+         break;
       }
       nlexpr->children[i]->deriv *= nlexpr->deriv;
 
       /* push derivatives further down */
       SCIP_CALL( gradientCut(scip, conshdlr, nlexpr->children[i], rowprep, success) );
       if( !*success )
-         goto TERMINATE;
+         break;
    }
-
-TERMINATE:
-   SCIPfreeBufferArray(scip, &childrenvals);
 
    return SCIP_OKAY;
 }
