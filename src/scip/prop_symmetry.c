@@ -1909,13 +1909,8 @@ SCIP_RETCODE determineSymmetry(
    {
       assert( propdata->npermvars > 0 );
       assert( propdata->permvars != NULL );
-#ifndef NDEBUG
-      if ( propdata->ofenabled )
-      {
-         assert( propdata->permvarmap != NULL );
-         assert( propdata->bg0list != NULL );
-      }
-#endif
+      assert( ! propdata->ofenabled || propdata->permvarmap != NULL );
+      assert( ! propdata->ofenabled || propdata->bg0list != NULL );
 
       /* reset symmetry information */
       SCIP_CALL( delSymConss(scip, propdata) );
