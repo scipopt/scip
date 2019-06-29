@@ -87,6 +87,9 @@ struct SCIP_ConsExpr_NlhdlrExprData
 /** nonlinear handler data */
 struct SCIP_ConsExpr_NlhdlrData
 {
+   SCIP_HASHMAP*         scvars;             /***< maps semicontinuous variables to their on/off bounds */
+
+   /* parameters */
    SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a sum */
    SCIP_Bool             perspective;        /**< whether to generate perspective cuts */
 };
@@ -247,6 +250,7 @@ SCIP_RETCODE nlhdlrExprEvalX0(
 
       var = SCIPgetConsExprExprAuxVar(nlexpr->origexpr);
       vardata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(scvars, (void*)var);
+      assert(vardata != NULL);
 
       /* find bvar in vardata->bvars */
       (void) SCIPsortedvecFindPtr((void**)vardata->bvars, SCIPvarComp, (void*)bvar, vardata->nbnds, &pos);
@@ -281,6 +285,8 @@ SCIP_RETCODE nlhdlrExprGradientCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    NLHDLR_EXPR*          nlexpr,             /**< nlhdlr-expression */
+   SCIP_VAR*             perspvar,           /**< binary variable to use for perspective cut, or NULL if ordinary gradient cut */
+   SCIP_HASHMAP*         scvars,             /**< info on semi-continuous variables */
    SCIP_ROWPREP*         rowprep,            /**< row where to add coefficients and constants */
    SCIP_Bool*            success             /**< set to FALSE if gradient evaluation error */
    )
@@ -303,11 +309,37 @@ SCIP_RETCODE nlhdlrExprGradientCut(
 
       var = SCIPgetConsExprExprAuxVar(nlexpr->origexpr);
 
-      SCIPdebugMsg(scip, "add %g * (<%s> - %g) to rowprep\n", nlexpr->deriv, SCIPvarGetName(var), nlexpr->val);
+      if( perspvar == NULL )
+      {
+         SCIPdebugMsg(scip, "add %g * (<%s> - %g) to rowprep\n", nlexpr->deriv, SCIPvarGetName(var), nlexpr->val);
 
-      /* add deriv * (var - varval) to rowprep */
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, nlexpr->deriv) );
-      SCIPaddRowprepConstant(rowprep, -nlexpr->deriv * nlexpr->val);
+         /* add deriv * (var - varval) to rowprep */
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, nlexpr->deriv) );
+         SCIPaddRowprepConstant(rowprep, -nlexpr->deriv * nlexpr->val);
+      }
+      else
+      {
+         /* add deriv (x - x0) - deriv (sol - x0) perspvar to rowprep */
+         SCIP_SCVARDATA* vardata;
+         SCIP_Real varval0;
+         int pos;
+
+         vardata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(scvars, (void*)var);
+         assert(vardata != NULL);
+
+         /* find perspvar in vardata->bvars */
+         (void) SCIPsortedvecFindPtr((void**)vardata->bvars, SCIPvarComp, (void*)perspvar, vardata->nbnds, &pos);
+         assert(pos < vardata->nbnds);
+         assert(vardata->bvars[pos] == perspvar);
+         varval0 = vardata->vals0[pos];
+
+         SCIPdebugMsg(scip, "add %g (<%s> %+g) %+g (%g %+g) <%s> to rowprep\n",
+            nlexpr->deriv, SCIPvarGetName(var), -varval0, -nlexpr->deriv, nlexpr->val, -varval0, SCIPvarGetName(perspvar));
+
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, nlexpr->deriv) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, perspvar, -nlexpr->deriv * (nlexpr->val - varval0)) );
+         SCIPaddRowprepConstant(rowprep, -nlexpr->deriv * varval0);
+      }
 
       return SCIP_OKAY;
    }
@@ -331,7 +363,7 @@ SCIP_RETCODE nlhdlrExprGradientCut(
       nlexpr->children[i]->deriv *= nlexpr->deriv;
 
       /* push derivatives further down */
-      SCIP_CALL( nlhdlrExprGradientCut(scip, conshdlr, nlexpr->children[i], rowprep, success) );
+      SCIP_CALL( nlhdlrExprGradientCut(scip, conshdlr, nlexpr->children[i], perspvar, scvars, rowprep, success) );
       if( !*success )
          break;
    }
@@ -774,10 +806,10 @@ SCIP_RETCODE varIsSemicontinuous(
 static
 SCIP_RETCODE checkSemicontinuous(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata /**< nlhdlr expression data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
+   SCIP_HASHMAP*         scvars              /**< maps semicontinuous variables to their on/off bounds */
    )
 {
-   SCIP_HASHMAP* scvars;  /* maps semicontinuous variables to their on/off bounds */
    SCIP_VAR* var;
    SCIP_SCVARDATA* scvdata;
    SCIP_VAR** expr_bvars = NULL;
@@ -785,16 +817,14 @@ SCIP_RETCODE checkSemicontinuous(
    int nbvars;
    int nbvars0;
    int nvars;
-   int c, v;
+   int v;
 
    assert(scip != NULL);
+   assert(scvars != NULL);
    assert(nlhdlrexprdata != NULL);
 
    nvars = nlhdlrexprdata->nauxvars;
    assert(nvars > 0);
-
-   /* TODO? nlhdlr_perspective keeps this hashmap in the nlhdlr data, i.e., share for all exprs */
-   SCIP_CALL( SCIPhashmapCreate(&scvars, SCIPblkmem(scip), nvars) );
 
    /* check whether all variables are semicontinuous, so nlexpr can be handled as an on/off term */
    for( v = 0; v < nvars; ++v )
@@ -802,7 +832,7 @@ SCIP_RETCODE checkSemicontinuous(
       var = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->auxvarexprs[v]);
       SCIP_CALL( varIsSemicontinuous(scip, var, scvars, &var_is_sc) );
       if( !var_is_sc )
-         goto TERMINATE;
+         return SCIP_OKAY;
    }
 
    /* find common binary variables for all variables */
@@ -821,7 +851,7 @@ SCIP_RETCODE checkSemicontinuous(
       if( nbvars == 0 )
       {
          SCIPfreeBlockMemoryArrayNull(scip, &expr_bvars, nbvars0);
-         goto TERMINATE;
+         return SCIP_OKAY;
       }
    }
    SCIPdebugMsgPrint(scip, " is: ");
@@ -844,20 +874,6 @@ SCIP_RETCODE checkSemicontinuous(
       nlhdlrexprdata->nlexprvalx0[v] = nlhdlrexprdata->nlexpr->val;
    }
 
-TERMINATE:
-   for( c = 0; c < SCIPhashmapGetNEntries(scvars); ++c )
-   {
-      SCIP_HASHMAPENTRY* entry = SCIPhashmapGetEntry(scvars, c);
-      if( entry != NULL )
-      {
-         scvdata = (SCIP_SCVARDATA*) SCIPhashmapEntryGetImage(entry);
-         SCIPfreeBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize);
-         SCIPfreeBlockMemoryArray(scip, &scvdata->bvars, scvdata->bndssize);
-         SCIPfreeBlockMemory(scip, &scvdata);
-      }
-   }
-   SCIPhashmapFree(&scvars);
-
    return SCIP_OKAY;
 }
 
@@ -871,6 +887,25 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrfreeHdlrDataConvex)
    assert(scip != NULL);
    assert(nlhdlrdata != NULL);
    assert(*nlhdlrdata != NULL);
+
+   if( (*nlhdlrdata)->scvars != NULL )
+   {
+      SCIP_SCVARDATA* scvdata;
+      int c;
+
+      for( c = 0; c < SCIPhashmapGetNEntries((*nlhdlrdata)->scvars); ++c )
+      {
+         SCIP_HASHMAPENTRY* entry = SCIPhashmapGetEntry((*nlhdlrdata)->scvars, c);
+         if( entry != NULL )
+         {
+            scvdata = (SCIP_SCVARDATA*) SCIPhashmapEntryGetImage(entry);
+            SCIPfreeBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize);
+            SCIPfreeBlockMemoryArray(scip, &scvdata->bvars, scvdata->bndssize);
+            SCIPfreeBlockMemory(scip, &scvdata);
+         }
+      }
+      SCIPhashmapFree(&(*nlhdlrdata)->scvars);
+   }
 
    SCIPfreeBlockMemory(scip, nlhdlrdata);
 
@@ -977,7 +1012,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 
    if( nlhdlrdata->perspective )
    {
-      SCIP_CALL( checkSemicontinuous(scip, *nlhdlrexprdata) );
+      if( nlhdlrdata->scvars == NULL )
+      {
+         SCIP_CALL( SCIPhashmapCreate(&nlhdlrdata->scvars, SCIPblkmem(scip), (*nlhdlrexprdata)->nauxvars) );
+      }
+
+      SCIP_CALL( checkSemicontinuous(scip, *nlhdlrexprdata, nlhdlrdata->scvars) );
    }
 
    return SCIP_OKAY;
@@ -1002,7 +1042,12 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvex)
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 { /*lint --e{715}*/
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    NLHDLR_EXPR* nlexpr;
+   SCIP_VAR* perspvar;
+   SCIP_Real perspvarval;
+   SCIP_Real nlexprvalx0;
+   int i;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1035,15 +1080,47 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    }
    assert(auxvalue == nlexpr->val); /* given value (originally from nlhdlrEvalAuxConvex) should coincide with expression value (so we could skip eval) */  /*lint !e777*/
 
-   /* compute gradient cut, add to rowprep */
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   /* heuristically choose the most promising binary variable (one closest to 0) for perspective formulation */  /*TODO? nlhdlr_perspective is generating one cut for each binary var by default */
+   perspvar = NULL;
+   perspvarval = 2.0;
+   for( i = 0; i < nlhdlrexprdata->nbinvars; ++i )
+   {
+      SCIP_Real bval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->binvars[i]);
+      if( bval < perspvarval && nlhdlrexprdata->nlexprvalx0[i] != SCIP_INVALID )
+      {
+         perspvarval = bval;
+         perspvar = nlhdlrexprdata->binvars[i];
+         nlexprvalx0 = nlhdlrexprdata->nlexprvalx0[i];
+      }
+   }
+
+   /* compute gradient or perspective cut, add to rowprep
+    *
+    * gradient cut adds (x - sol) \nabla f(sol) + f(sol)
+    * perspective cut adds (x - x0) \nabla f(sol) + (f(sol) - f(x0) - (sol - x0) \nabla f(sol)) perspvar + f(x0)
+    */
    nlexpr->deriv = 1.0;
    *success = TRUE;
-   SCIP_CALL( nlhdlrExprGradientCut(scip, conshdlr, nlexpr, rowprep, success) );
+   SCIP_CALL( nlhdlrExprGradientCut(scip, conshdlr, nlexpr, perspvar, nlhdlrdata->scvars, rowprep, success) );
 
    if( !*success )
       return SCIP_OKAY;
 
-   SCIPaddRowprepConstant(rowprep, nlexpr->val);
+   if( perspvar == NULL )
+   {
+      /* add f(sol) */
+      SCIPaddRowprepConstant(rowprep, nlexpr->val);
+   }
+   else
+   {
+      /* add (f(sol)-f(x0)) perspvar + f(x0) */
+      SCIPdebugMsg(scip, "add (%g %+g) <%s> %+g to rowprep\n", nlexpr->val, -nlexprvalx0, SCIPvarGetName(perspvar), nlexprvalx0);
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, perspvar, nlexpr->val - nlexprvalx0) );
+      SCIPaddRowprepConstant(rowprep, nlexprvalx0);
+   }
    rowprep->local = FALSE;
 
    (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_convex%p_%s%d",
@@ -1120,6 +1197,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    assert(consexprhdlr != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
+   nlhdlrdata->scvars = NULL;
 
    SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvex, nlhdlrdata) );
    assert(nlhdlr != NULL);
