@@ -94,6 +94,19 @@ SCIP_EXPRCURV SCIPexprcurvMonomial(
    SCIP_INTERVAL*        factorbounds        /**< bounds of each factor */
    );
 
+/** for a monomial with given bounds for each factor, gives condition on the curvature of each factor, so that monomial has a requested curvature, if possible
+ *
+ * @return whether monomialcurv can be achieved
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPexprcurvMonomialInv(
+   SCIP_EXPRCURV         monomialcurv,       /**< desired curvature */
+   int                   nfactors,           /**< number of factors in monomial */
+   SCIP_Real*            exponents,          /**< exponents in monomial, or NULL if all 1.0 */
+   SCIP_INTERVAL*        factorbounds,       /**< bounds of each factor */
+   SCIP_EXPRCURV*        factorcurv          /**< buffer to store required curvature of each factor */
+   );
+
 /** gives name as string for a curvature */
 SCIP_EXPORT
 const char* SCIPexprcurvGetName(

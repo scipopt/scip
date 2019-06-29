@@ -573,6 +573,122 @@ SCIP_EXPRCURV SCIPexprcurvMonomial(
    return curv;
 }
 
+/** for a monomial with given bounds for each factor, gives condition on the curvature of each factor, so that monomial has a requested curvature, if possible
+ *
+ * @return whether monomialcurv can be achieved
+ */
+SCIP_Bool SCIPexprcurvMonomialInv(
+   SCIP_EXPRCURV         monomialcurv,       /**< desired curvature */
+   int                   nfactors,           /**< number of factors in monomial */
+   SCIP_Real*            exponents,          /**< exponents in monomial, or NULL if all 1.0 */
+   SCIP_INTERVAL*        factorbounds,       /**< bounds of each factor */
+   SCIP_EXPRCURV*        factorcurv          /**< buffer to store required curvature of each factor */
+   )
+{
+   int nnegative;
+   int npositive;
+   SCIP_Real e;
+   SCIP_Real sum;
+   int j;
+
+   assert(monomialcurv != SCIP_EXPRCURV_UNKNOWN);
+   assert(nfactors >= 1);
+   assert(factorbounds != NULL);
+   assert(factorcurv != NULL);
+
+   if( nfactors == 1 )
+   {
+      factorcurv[0] = SCIPexprcurvPowerInv(factorbounds[0], exponents != NULL ? exponents[0] : 1.0, monomialcurv);
+      return factorcurv[0] != SCIP_EXPRCURV_UNKNOWN;
+   }
+
+   /* any decent monomial with at least 2 factors is not linear */
+   if( monomialcurv == SCIP_EXPRCURV_LINEAR )
+      return FALSE;
+
+   /* count positive and negative exponents, sum of exponents; flip negative factors */
+   nnegative = 0; /* number of negative exponents */
+   npositive = 0; /* number of positive exponents */
+   sum = 0.0;     /* sum of exponents */
+   for( j = 0; j < nfactors; ++j )
+   {
+      /* mixed signs are bad */
+      if( factorbounds[j].inf < 0.0 && factorbounds[j].sup > 0.0 )
+         return FALSE;
+
+      e = exponents != NULL ? exponents[j] : 1.0;
+      assert(e != 0.0);  /* should have been simplified away */
+      if( e < 0.0 )
+         ++nnegative;
+      else
+         ++npositive;
+      sum += e;
+
+      if( factorbounds[j].inf < 0.0 )
+      {
+         /* if argument is negative, then exponent should be integer */
+         assert(EPSISINT(e, 0.0));  /*lint !e835*/
+
+         /* flip j'th argument: (f_j)^(exp_j) = (-1)^(exp_j) (-f_j)^(exp_j)
+          * thus, negate monomial, if exponent is odd, i.e., (-1)^(exp_j) = -1
+          */
+         if( (int)e % 2 != 0 )
+            monomialcurv = SCIPexprcurvNegate(monomialcurv);
+      }
+   }
+
+   /* if all factors are linear, then a product f_j^exp_j with f_j >= 0 is convex if
+    * - all exponents are negative, or
+    * - all except one exponent j* are negative and exp_j* >= 1 - sum_{j!=j*}exp_j, but the latter is equivalent to sum_j exp_j >= 1
+    * further, the product is concave if
+    * - all exponents are positive and the sum of exponents is <= 1.0
+    *
+    * if factors are nonlinear, then we require additionally, that for convexity
+    * - each factor is convex if exp_j >= 0, or concave if exp_j <= 0, i.e., exp_j*f_j'' >= 0
+    * and for concavity, we require that
+    * - all factors are concave, i.e., exp_j*f_j'' <= 0
+    */
+
+   if( monomialcurv == SCIP_EXPRCURV_CONVEX )
+   {
+      if( nnegative < nfactors-1 )  /* at least two positive exponents */
+         return FALSE;
+      if( nnegative < nfactors && !EPSGE(sum, 1.0, 1e-9) )  /* one negative exponent, but sum is not >= 1 */
+         return FALSE;
+
+      /* monomial will be convex, if each factor is convex if exp_j >= 0, or concave if exp_j <= 0, i.e., exp_j*f_j'' >= 0 */
+      for( j = 0; j < nfactors; ++j )
+      {
+         e = exponents != NULL ? exponents[j] : 1.0;
+         if( factorbounds[j].inf < 0.0 )  /* if factor is negative, then factorcurv[j] need to be flipped, which we can also get by flipping e */
+            e = -e;
+         if( e >= 0.0 )
+            factorcurv[j] = SCIP_EXPRCURV_CONVEX;
+         else
+            factorcurv[j] = SCIP_EXPRCURV_CONCAVE;
+      }
+   }
+   else
+   {
+      assert(monomialcurv == SCIP_EXPRCURV_CONCAVE);
+      if( npositive < nfactors )  /* at least one negative exponent */
+         return FALSE;
+      if( !EPSLE(sum, 1.0, 1e-9) )  /* sum is not <= 1 */
+         return FALSE;
+
+      /* monomial will be concave, if each factor is concave */
+      for( j = 0; j < nfactors; ++j )
+      {
+         if( factorbounds[j].inf < 0.0 )  /* if factor is negative, then factorcurv[j] need to be flipped, i.e. convex */
+            factorcurv[j] = SCIP_EXPRCURV_CONVEX;
+         else
+            factorcurv[j] = SCIP_EXPRCURV_CONCAVE;
+      }
+   }
+
+   return TRUE;
+}
+
 /** gives name as string for a curvature */
 const char* SCIPexprcurvGetName(
    SCIP_EXPRCURV         curv                /**< curvature */
