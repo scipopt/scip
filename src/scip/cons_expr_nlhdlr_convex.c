@@ -78,8 +78,10 @@ struct SCIP_ConsExpr_NlhdlrExprData
    int                   nauxvars;           /**< number of distinct (auxiliary) variables handled */
    SCIP_CONSEXPR_EXPR**  auxvarexprs;        /**< original expressions which auxiliary variable we use */
 
+   /* perspective cuts */
    int                   nbinvars;           /**< number of binary variables for which nlexpr is an on/off term */
    SCIP_VAR**            binvars;            /**< binary variables that make every auxvar an on/off term */
+   SCIP_Real*            nlexprvalx0;        /**< value of nlexpr when binvar is 0, for each binvar */
 };
 
 /** nonlinear handler data */
@@ -223,7 +225,57 @@ SCIP_RETCODE nlhdlrExprEval(
    return SCIP_OKAY;
 }
 
-/* differentiate nlhdlr-expression and store contribution to gradient cut in rowprep */
+/** evaluate nlhdlr-expression for X0 in semi-continuous setting */
+static
+SCIP_RETCODE nlhdlrExprEvalX0(
+   SCIP*                 scip,               /**< SCIP data structure */
+   NLHDLR_EXPR*          nlexpr,             /**< nlhdlr-expression */
+   SCIP_HASHMAP*         scvars,             /**< info on semi-continuous variables */
+   SCIP_VAR*             bvar                /**< binary variable to consider 0 */
+   )
+{
+   int nchildren;
+   int i;
+
+   assert(nlexpr != NULL);
+
+   if( nlexpr->children == NULL )
+   {
+      SCIP_VAR* var;
+      SCIP_SCVARDATA* vardata;
+      int pos;
+
+      var = SCIPgetConsExprExprAuxVar(nlexpr->origexpr);
+      vardata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(scvars, (void*)var);
+
+      /* find bvar in vardata->bvars */
+      (void) SCIPsortedvecFindPtr((void**)vardata->bvars, SCIPvarComp, (void*)bvar, vardata->nbnds, &pos);
+      assert(pos < vardata->nbnds);
+      assert(vardata->bvars[pos] == bvar);
+
+      nlexpr->val = vardata->vals0[pos];
+      return SCIP_OKAY;
+   }
+
+   nchildren = SCIPgetConsExprExprNChildren(nlexpr->origexpr);
+
+   for( i = 0; i < nchildren; ++i )
+   {
+      SCIP_CALL( nlhdlrExprEvalX0(scip, nlexpr->children[i], scvars, bvar) );
+      if( nlexpr->children[i]->val == SCIP_INVALID )
+      {
+         nlexpr->val = SCIP_INVALID;
+         return SCIP_OKAY;
+      }
+      nlexpr->childrenval[i] = nlexpr->children[i]->val;
+   }
+
+   SCIP_CALL( SCIPevalConsExprExprHdlr(scip, nlexpr->origexpr, &nlexpr->val, nlexpr->childrenval, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/* differentiate nlhdlr-expression and store contribution to gradient or perspective cut in rowprep */
 static
 SCIP_RETCODE nlhdlrExprGradientCut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -784,6 +836,14 @@ SCIP_RETCODE checkSemicontinuous(
    nlhdlrexprdata->nbinvars = nbvars;
    nlhdlrexprdata->binvars = expr_bvars;
 
+   /* evaluate expression in the point defined by the binary variable being 0, for each binary variable */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->nlexprvalx0, nbvars) );
+   for( v = 0; v < nbvars; ++v )
+   {
+      SCIP_CALL( nlhdlrExprEvalX0(scip, nlhdlrexprdata->nlexpr, scvars, expr_bvars[v]) );
+      nlhdlrexprdata->nlexprvalx0[v] = nlhdlrexprdata->nlexpr->val;
+   }
+
 TERMINATE:
    for( c = 0; c < SCIPhashmapGetNEntries(scvars); ++c )
    {
@@ -825,6 +885,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvex)
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata != NULL);
 
+   SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrexprdata)->nlexprvalx0, (*nlhdlrexprdata)->nbinvars);
    SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrexprdata)->binvars, (*nlhdlrexprdata)->nbinvars);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->auxvarexprs, (*nlhdlrexprdata)->nauxvars);
    nlhdlrExprFree(scip, &(*nlhdlrexprdata)->nlexpr);
