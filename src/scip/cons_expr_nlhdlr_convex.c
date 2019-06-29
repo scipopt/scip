@@ -325,8 +325,7 @@ SCIP_RETCODE nlhdlrExprGradientCut(
 
    *success = TRUE;
 
-   nchildren = SCIPgetConsExprExprNChildren(nlexpr->origexpr);
-   if( nchildren == 0 )
+   if( nlexpr->children == NULL )
    {
       SCIP_VAR* var;
 
@@ -371,6 +370,8 @@ SCIP_RETCODE nlhdlrExprGradientCut(
 
       return SCIP_OKAY;
    }
+
+   nchildren = SCIPgetConsExprExprNChildren(nlexpr->origexpr);
 
    /* assemble children values
     * should still be uptodate from last eval
@@ -1288,14 +1289,19 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 static
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
 { /*lint --e{715}*/
+   NLHDLR_EXPR* nlexpr;
    SCIP_Real violation;
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
-   assert(auxvalue == SCIPgetConsExprExprValue(expr)); /* given auxvalue should have been computed by nlhdlrEvalAuxConvex */  /*lint !e777*/
    assert(nlhdlrexprdata != NULL);
    assert(success != NULL);
+
+   nlexpr = nlhdlrexprdata->nlexpr;
+   assert(nlexpr != NULL);
+
+   assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
+   assert(auxvalue == nlexpr->val); /* given auxvalue should have been computed by nlhdlrEvalAuxConvex */  /*lint !e777*/
 
    *success = FALSE;
 
@@ -1307,7 +1313,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
    /* compute violation */
    if( auxvalue == SCIP_INVALID ) /*lint !e777*/
       violation = SCIPinfinity(scip); /* evaluation error -> we should branch */
-   else if( SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX  )
+   else if( nlexpr->curv == SCIP_EXPRCURV_CONVEX  )
       violation = auxvalue - SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
    else
       violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
