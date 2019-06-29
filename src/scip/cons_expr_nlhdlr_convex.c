@@ -16,11 +16,14 @@
 /**@file   cons_expr_nlhdlr_convex.c
  * @brief  nonlinear handler for convex expressions
  * @author Benjamin Mueller
+ * @author Stefan Vigerske
+ * @author Ksenia Bestuzheva
  *
  * TODO curvature information that have been computed during the detection
  *      of other nonlinear handler can not be used right now
  *
  * TODO perturb reference point if separation fails due to too large numbers
+ * TODO if univariate integer, then do secant on 2 nearest integers instead of tangent
  */
 
 #include <string.h>
@@ -29,6 +32,7 @@
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_iterator.h"
 #include "scip/cons_expr_var.h"
+#include "scip/cons_expr_value.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "convex"
@@ -206,7 +210,14 @@ SCIP_RETCODE nlhdlrExprEval(
 
    if( nlexpr->children == NULL )
    {
-      nlexpr->val = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlexpr->origexpr));
+      SCIP_VAR* var = SCIPgetConsExprExprAuxVar(nlexpr->origexpr);
+
+      /* if do not have an auxvar, then this should be a value expression, which value is already stored in nlexpr */
+      assert(var != NULL || SCIPgetConsExprExprHdlr(nlexpr->origexpr) == SCIPgetConsExprExprHdlrValue(SCIPfindConshdlr(scip, "expr")));
+      assert(var != NULL || nlexpr->val == SCIPgetConsExprExprValueValue(nlexpr->origexpr));
+
+      if( var != NULL )
+         nlexpr->val = SCIPgetSolVal(scip, sol, var);
       return SCIP_OKAY;
    }
 
@@ -249,6 +260,12 @@ SCIP_RETCODE nlhdlrExprEvalX0(
       int pos;
 
       var = SCIPgetConsExprExprAuxVar(nlexpr->origexpr);
+      /* if do not have an auxvar, then this should be a value expression, which value is already stored in nlexpr */
+      assert(var != NULL || SCIPgetConsExprExprHdlr(nlexpr->origexpr) == SCIPgetConsExprExprHdlrValue(SCIPfindConshdlr(scip, "expr")));
+      assert(var != NULL || nlexpr->val == SCIPgetConsExprExprValueValue(nlexpr->origexpr));
+      if( var == NULL )
+         return SCIP_OKAY;
+
       vardata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(scvars, (void*)var);
       assert(vardata != NULL);
 
@@ -258,6 +275,7 @@ SCIP_RETCODE nlhdlrExprEvalX0(
       assert(vardata->bvars[pos] == bvar);
 
       nlexpr->val = vardata->vals0[pos];
+
       return SCIP_OKAY;
    }
 
@@ -304,10 +322,12 @@ SCIP_RETCODE nlhdlrExprGradientCut(
    {
       SCIP_VAR* var;
 
-      if( SCIPgetConsExprExprHdlr(nlexpr->origexpr) == SCIPgetConsExprExprHdlrValue(conshdlr) )
-         return SCIP_OKAY;
-
       var = SCIPgetConsExprExprAuxVar(nlexpr->origexpr);
+      /* if do not have an auxvar, then this should be a value expression, which value is already stored in nlexpr */
+      assert(var != NULL || SCIPgetConsExprExprHdlr(nlexpr->origexpr) == SCIPgetConsExprExprHdlrValue(SCIPfindConshdlr(scip, "expr")));
+      assert(var != NULL || nlexpr->val == SCIPgetConsExprExprValueValue(nlexpr->origexpr));
+      if( var == NULL )
+         return SCIP_OKAY;
 
       if( perspvar == NULL )
       {
@@ -416,7 +436,12 @@ SCIP_RETCODE collectAuxVarExprs(
 
    if( nlexpr->children == NULL )
    {
-      /* TODO skip for value expressions */
+      /* do not add auxvars for value expressions, we can handle them as such */
+      if( SCIPgetConsExprExprHdlr(nlexpr->origexpr) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+      {
+         assert(SCIPgetConsExprExprAuxVar(nlexpr->origexpr) == NULL);  /* we use no-auxvar as an indication for value-expressions in eval, etc */
+         return SCIP_OKAY;
+      }
 
       assert(SCIPgetConsExprExprAuxVar(nlexpr->origexpr) != NULL);  /* TODO remove again when we allow to introduce auxvars */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexpr->origexpr, NULL) );
@@ -970,7 +995,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    {
       SCIP_CALL( constructExpr(scip, conshdlr, &nlexpr, &depth, expr, SCIP_EXPRCURV_CONVEX) );
       assert(nlexpr == NULL || depth >= 1);
-      if( depth < 1 )  /* TODO change back to <= 1, i.e. free if only immediate children, but no grand-daugthers */
+      if( depth < 1 )  /* TODO change back to <= 1, i.e. free if only immediate children, but no grand-daughters; but what if we can do perspective? */
       {
          nlhdlrExprFree(scip, &nlexpr);
       }
@@ -988,7 +1013,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    {
       SCIP_CALL( constructExpr(scip, conshdlr, &nlexpr, &depth, expr, SCIP_EXPRCURV_CONCAVE) );
       assert(nlexpr == NULL || depth >= 1);
-      if( depth < 1 )  /* TODO change back to <= 1 */
+      if( depth < 1 )  /* TODO change back to <= 1, see above */
       {
          nlhdlrExprFree(scip, &nlexpr);
       }
