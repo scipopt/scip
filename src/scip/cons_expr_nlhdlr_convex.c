@@ -33,6 +33,8 @@
 #include "scip/cons_expr_iterator.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
+#include "scip/cons_expr_product.h"
+#include "scip/cons_expr_pow.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "convex"
@@ -468,6 +470,118 @@ SCIP_RETCODE collectAuxVarExprs(
    return SCIP_OKAY;
 }
 
+/** looks whether top of given expression looks like a monomial that can have a given curvature
+ * e.g., sqrt(x)*sqrt(y) is convex if x,y >= 0 and x and y are convex
+ * unfortunately, doesn't work for tls, because i) it's originally sqrt(x*y), and ii) it expanded into some sqrt(z*y+y)
+ * but works for cvxnonsep_nsig
+ */
+static
+SCIP_RETCODE constructExprCheckMonomial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   NLHDLR_EXPR*          nlexpr,             /**< nlhdlr-expr to check */
+   NLHDLR_EXPR***        stack,              /**< pointer to stack where to add generated leafs */
+   int*                  stackpos,           /**< current top position of stack */
+   int*                  stacksize,          /**< length of *stack */
+   SCIP_Bool*            success             /**< whether we found something */
+   )
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_Real* exponents;
+   SCIP_INTERVAL* bounds;
+   SCIP_EXPRCURV* curv;
+   int nfactors;
+   int i;
+
+   assert(nlexpr != NULL);
+   assert(stack != NULL);
+   assert(*stack != NULL);
+   assert(stackpos != NULL);
+   assert(*stackpos >= -1);
+   assert(stacksize != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   expr = nlexpr->origexpr;
+   assert(expr != NULL);
+
+   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrProduct(conshdlr) )
+      return SCIP_OKAY;
+
+   nfactors = SCIPgetConsExprExprNChildren(expr);
+   if( nfactors <= 1 )  /* boooring */
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &exponents, nfactors) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nfactors) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &curv, nfactors) );
+
+   for( i = 0; i < nfactors; ++i )
+   {
+      child = SCIPgetConsExprExprChildren(expr)[i];
+      assert(child != NULL);
+
+      if( SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrPower(conshdlr) )
+      {
+         exponents[i] = 1.0;
+         bounds[i] = SCIPgetConsExprExprActivity(scip, child);
+      }
+      else
+      {
+         exponents[i] = SCIPgetConsExprExprPowExponent(child);
+         bounds[i] = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(child)[0]);
+      }
+   }
+
+   if( !SCIPexprcurvMonomialInv(SCIPexprcurvMultiply(SCIPgetConsExprExprProductCoef(expr), nlexpr->curv), nfactors, exponents, bounds, curv) )
+      goto TERMINATE;
+
+   /* add immediate children to nlexpr
+    * some entries in curv actually apply to arguments of pow's, will correct this next
+    */
+   SCIP_CALL( nlhdlrExprGrowChildren(scip, nlexpr, curv) );
+   assert(nlexpr->children != NULL);
+
+   /* make sure there is enough space on the stack for all children (or their children)  */
+   if( *stackpos+1 + nfactors > *stacksize )
+   {
+      *stacksize = SCIPcalcMemGrowSize(scip, *stackpos+1 + nfactors);
+      SCIP_CALL( SCIPreallocBufferArray(scip, stack, *stacksize) );
+   }
+
+   /* put children that are not power on stack
+    * grow child for children that are power and put this child on stack
+    */
+   for( i = 0; i < nfactors; ++i )
+   {
+      child = SCIPgetConsExprExprChildren(expr)[i];
+      assert(child != NULL);
+      assert(nlexpr->children[i] != NULL);
+
+      if( SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrPower(conshdlr) )
+      {
+         assert(*stackpos+1 < *stacksize);
+         (*stack)[++*stackpos] = nlexpr->children[i];
+      }
+      else
+      {
+         SCIP_CALL( nlhdlrExprGrowChildren(scip, nlexpr->children[i], &curv[i]) );
+         assert(nlexpr->children[i]->children != NULL);
+         (*stack)[++*stackpos] = nlexpr->children[i]->children[0];
+      }
+   }
+
+   *success = TRUE;
+
+TERMINATE:
+   SCIPfreeBufferArray(scip, &curv);
+   SCIPfreeBufferArray(scip, &bounds);
+   SCIPfreeBufferArray(scip, &exponents);
+
+   return SCIP_OKAY;
+}
 
 /** construct a subexpression (as nlhdlr-expression) of maximal size that has a given curvature
  *
@@ -540,6 +654,11 @@ SCIP_RETCODE constructExpr(
       success = TRUE;
       if( nlexpr->curv != SCIP_EXPRCURV_UNKNOWN )
       {
+         /* TODO here should be a nice system where a number of convexity-detection rules can be tried */
+         SCIP_CALL( constructExprCheckMonomial(scip, conshdlr, nlexpr, &stack, &stackpos, &stacksize, &success) );
+         if( success )
+            continue;  /* constructExprCheckMonomial will have updated stack */
+
          /* check whether and under which conditions nlexpr->origexpr can have desired curvature */
          SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, nlexpr->origexpr, nlexpr->curv, &success, childcurv) );
          /* SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL);
@@ -577,7 +696,7 @@ SCIP_RETCODE constructExpr(
 
          if( stackpos+1 + nchildren > stacksize )
          {
-            stacksize = SCIPcalcMemGrowSize(scip, stackpos + nchildren);
+            stacksize = SCIPcalcMemGrowSize(scip, stackpos+1 + nchildren);
             SCIP_CALL( SCIPreallocBufferArray(scip, &stack, stacksize) );
          }
          memcpy(stack + (stackpos+1), nlexpr->children, nchildren * sizeof(NLHDLR_EXPR*));
