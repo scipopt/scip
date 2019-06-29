@@ -43,6 +43,8 @@
 
 #define DEFAULT_DETECTSUM   FALSE
 #define DEFAULT_PERSPECTIVE TRUE
+#define DEFAULT_CVXSIGNOMIAL TRUE
+#define DEFAULT_CREATEAUX   TRUE
 
 /*
  * Data structures
@@ -98,6 +100,10 @@ struct SCIP_ConsExpr_NlhdlrData
    /* parameters */
    SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a sum */
    SCIP_Bool             perspective;        /**< whether to generate perspective cuts */
+
+   /* parameters that problaby should be removed again */
+   SCIP_Bool             cvxsignomial;       /**< whether to use convexity check on signomials */
+   SCIP_Bool             createaux;          /**< whether to allow creating auxvars, i.e., do not require convexity in original variables */
 };
 
 /*
@@ -445,7 +451,6 @@ SCIP_RETCODE collectAuxVarExprs(
          return SCIP_OKAY;
       }
 
-      assert(SCIPgetConsExprExprAuxVar(nlexpr->origexpr) != NULL);  /* TODO remove again when we allow to introduce auxvars */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexpr->origexpr, NULL) );
 
       if( SCIPhashmapExists(origexpr2index, (void*)nlexpr->origexpr) )
@@ -594,6 +599,7 @@ static
 SCIP_RETCODE constructExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
    NLHDLR_EXPR**         rootnlexpr,         /**< buffer to store created expression */
    int*                  maxdepth,           /**< buffer to store created depth of expression */
    SCIP_CONSEXPR_EXPR*   rootexpr,           /**< expression */
@@ -655,9 +661,12 @@ SCIP_RETCODE constructExpr(
       if( nlexpr->curv != SCIP_EXPRCURV_UNKNOWN )
       {
          /* TODO here should be a nice system where a number of convexity-detection rules can be tried */
-         SCIP_CALL( constructExprCheckMonomial(scip, conshdlr, nlexpr, &stack, &stackpos, &stacksize, &success) );
-         if( success )
-            continue;  /* constructExprCheckMonomial will have updated stack */
+         if( nlhdlrdata->cvxsignomial )
+         {
+            SCIP_CALL( constructExprCheckMonomial(scip, conshdlr, nlexpr, &stack, &stackpos, &stacksize, &success) );
+            if( success )
+               continue;  /* constructExprCheckMonomial will have updated stack */
+         }
 
          /* check whether and under which conditions nlexpr->origexpr can have desired curvature */
          SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, nlexpr->origexpr, nlexpr->curv, &success, childcurv) );
@@ -674,9 +683,9 @@ SCIP_RETCODE constructExpr(
             nlhdlrExprFree(scip, rootnlexpr);
             break;
          }
-         else
+         else if( !nlhdlrdata->createaux )
          {
-            /* for now, also require that desired curvature can be achieved w.r.t. original variables, i.e., without introducing auxvars (TODO: remove again) */
+            /* require that desired curvature can be achieved w.r.t. original variables, i.e., without introducing auxvars */
             nlhdlrExprFree(scip, rootnlexpr);
             break;
          }
@@ -1112,7 +1121,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 
    if( !*enforcedbelow )
    {
-      SCIP_CALL( constructExpr(scip, conshdlr, &nlexpr, &depth, expr, SCIP_EXPRCURV_CONVEX) );
+      SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, &depth, expr, SCIP_EXPRCURV_CONVEX) );
       assert(nlexpr == NULL || depth >= 1);
       if( depth < 1 )  /* TODO change back to <= 1, i.e. free if only immediate children, but no grand-daughters; but what if we can do perspective? */
       {
@@ -1130,7 +1139,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 
    if( !*enforcedabove && nlexpr == NULL )
    {
-      SCIP_CALL( constructExpr(scip, conshdlr, &nlexpr, &depth, expr, SCIP_EXPRCURV_CONCAVE) );
+      SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, &depth, expr, SCIP_EXPRCURV_CONCAVE) );
       assert(nlexpr == NULL || depth >= 1);
       if( depth < 1 )  /* TODO change back to <= 1, see above */
       {
@@ -1353,6 +1362,14 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/perspective",
       "whether to check for semicontinuous variables and use perspective cuts",
       &nlhdlrdata->perspective, FALSE, DEFAULT_PERSPECTIVE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/cvxsignomial",
+      "whether to use convexity check on signomials",
+      &nlhdlrdata->cvxsignomial, FALSE, DEFAULT_CVXSIGNOMIAL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/createaux",
+      "whether to allow creating auxvars, i.e., do not require convexity in original variables",
+      &nlhdlrdata->createaux, FALSE, DEFAULT_CREATEAUX, NULL, NULL) );
 
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrfreeHdlrDataConvex);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
