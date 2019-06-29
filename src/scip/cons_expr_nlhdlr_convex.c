@@ -36,6 +36,7 @@
 #define NLHDLR_PRIORITY     50
 
 #define DEFAULT_DETECTSUM   FALSE
+#define DEFAULT_PERSPECTIVE TRUE
 
 /*
  * Data structures
@@ -59,6 +60,16 @@ struct NlHdlr_Expr
    SCIP_Real             deriv;              /**< partial derivative w.r.t. root from last gradient cut computation */
 };
 
+/** data structure to store information of a semicontinuous variable */
+struct SCIP_SCVarData
+{
+   SCIP_Real*            vals0;              /**< values of the variable when the corresponding bvars[i] = 0 */
+   SCIP_VAR**            bvars;              /**< the binary variables on which the variable domain depends */
+   int                   nbnds;              /**< number of suitable on/off bounds the var has */
+   int                   bndssize;           /**< size of the arrays */
+};
+typedef struct SCIP_SCVarData SCIP_SCVARDATA;
+
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
@@ -66,12 +77,16 @@ struct SCIP_ConsExpr_NlhdlrExprData
 
    int                   nauxvars;           /**< number of distinct (auxiliary) variables handled */
    SCIP_CONSEXPR_EXPR**  auxvarexprs;        /**< original expressions which auxiliary variable we use */
+
+   int                   nbinvars;           /**< number of binary variables for which nlexpr is an on/off term */
+   SCIP_VAR**            binvars;            /**< binary variables that make every auxvar an on/off term */
 };
 
 /** nonlinear handler data */
 struct SCIP_ConsExpr_NlhdlrData
 {
    SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a sum */
+   SCIP_Bool             perspective;        /**< whether to generate perspective cuts */
 };
 
 /*
@@ -486,7 +501,7 @@ SCIP_RETCODE createNlhdlrExprData(
    assert(*nlhdlrexprdata == NULL);
    assert(nlexpr != NULL);
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
    (*nlhdlrexprdata)->nlexpr = nlexpr;
 
 #ifdef SCIP_DEBUG
@@ -529,6 +544,263 @@ SCIP_RETCODE createNlhdlrExprData(
    return SCIP_OKAY;
 }
 
+
+/** checks if a variable is semicontinuous and, if needed, updates the hashmap
+ *
+ * A variable is semicontinuous if its bounds depend on the binary variable bvar and bvar == 0 => var = v_off for some
+ * real constant v_off. If the bvar is not specified, find the first binary variable that var depends on.
+ */
+static
+SCIP_RETCODE varIsSemicontinuous(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< the variable to check */
+   SCIP_HASHMAP*         scvars,             /**< semicontinuous variable information */
+   SCIP_Bool*            result              /**< buffer to store whether var is semicontinuous */
+   )
+{
+   SCIP_Real lb0, ub0, lb1, ub1, glb, gub;
+   SCIP_Bool exists;
+   int c, pos, newsize;
+   SCIP_VAR** vlbvars;
+   SCIP_VAR** vubvars;
+   SCIP_Real* vlbcoefs;
+   SCIP_Real* vubcoefs;
+   SCIP_Real* vlbconstants;
+   SCIP_Real* vubconstants;
+   int nvlbs, nvubs;
+   SCIP_SCVARDATA* scvdata;
+   SCIP_VAR* bvar;
+
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(scvars != NULL);
+   assert(result != NULL);
+
+   *result = FALSE;
+
+   scvdata = (SCIP_SCVARDATA*) SCIPhashmapGetImage(scvars, (void*)var);
+   if( scvdata != NULL )
+   {
+      *result = TRUE;
+      return SCIP_OKAY;
+   }
+
+   vlbvars = SCIPvarGetVlbVars(var);
+   vubvars = SCIPvarGetVubVars(var);
+   vlbcoefs = SCIPvarGetVlbCoefs(var);
+   vubcoefs = SCIPvarGetVubCoefs(var);
+   vlbconstants = SCIPvarGetVlbConstants(var);
+   vubconstants = SCIPvarGetVubConstants(var);
+   nvlbs = SCIPvarGetNVlbs(var);
+   nvubs = SCIPvarGetNVubs(var);
+   glb = SCIPvarGetLbGlobal(var);
+   gub = SCIPvarGetUbGlobal(var);
+
+   /* Scan through lower bounds; for each binary vlbvar save the corresponding lb0 and lb1.
+    * Then check if there is an upper bound with this vlbvar and save ub0 and ub1.
+    * If the found bounds imply that the var value is fixed to some val0 when vlbvar = 0,
+    * save vlbvar and val0 to scvdata.
+    */
+   for( c = 0; c < nvlbs; ++c )
+   {
+      if( SCIPvarGetType(vlbvars[c]) != SCIP_VARTYPE_BINARY )
+         continue;
+
+      SCIPdebugMsg(scip, "var <%s>[%f, %f] lower bound: %f <%s> %+f", SCIPvarGetName(var), glb, gub, vlbcoefs[c], SCIPvarGetName(vlbvars[c]), vlbconstants[c]);
+
+      bvar = vlbvars[c];
+
+      lb0 = MAX(vlbconstants[c], glb);
+      lb1 = MAX(vlbconstants[c] + vlbcoefs[c], glb);
+
+      /* look for bvar in vubvars */
+      if( vubvars != NULL )
+         exists = SCIPsortedvecFindPtr((void**)vubvars, SCIPvarComp, bvar, nvubs, &pos);
+      else
+         exists = FALSE;
+      if( exists )
+      {/*lint --e{644}*/
+         SCIPdebugMsgPrint(scip, ", upper bound: %f <%s> %+f", vubcoefs[pos], SCIPvarGetName(vubvars[pos]), vubconstants[pos]);
+
+         /* save the upper bounds */
+         ub0 = MIN(vubconstants[pos], gub);
+         ub1 = MIN(vubconstants[pos] + vubcoefs[pos], gub);
+      }
+      else
+      {
+         /* if there is no upper bound with vubvar = bvar, use global var bounds */
+         ub0 = gub;
+         ub1 = gub;
+      }
+
+      /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
+      SCIPdebugMsgPrint(scip, " -> <%s> in [%f, %f] (off), [%f, %f] (on)\n", SCIPvarGetName(var), lb0, ub0, lb1, ub1);
+      if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) ) /*lint !e777*/
+      {
+         if( scvdata == NULL )
+         {
+            SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
+         }
+
+         if( scvdata->nbnds + 1 > scvdata->bndssize )
+         {
+            newsize = SCIPcalcMemGrowSize(scip, scvdata->nbnds + 1);
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->bvars,  scvdata->bndssize, newsize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize, newsize) );
+            scvdata->bndssize = newsize;
+         }
+         assert(scvdata->nbnds + 1 <= scvdata->bndssize);
+
+         scvdata->bvars[scvdata->nbnds] = bvar;
+         scvdata->vals0[scvdata->nbnds] = lb0;
+         ++scvdata->nbnds;
+      }
+   }
+
+   /* look for vubvars that have not been processed yet */
+   assert(vubvars != NULL || nvubs == 0);
+   for( c = 0; c < nvubs; ++c )
+   {
+      if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY)  /*lint !e613*/
+         continue;
+
+      bvar = vubvars[c];  /*lint !e613*/
+
+      /* skip vars that are in vlbvars */
+      if( vlbvars != NULL && SCIPsortedvecFindPtr((void**)vlbvars, SCIPvarComp, bvar, nvlbs, &pos) )
+         continue;
+
+      SCIPdebugMsg(scip, "var <%s>[%f, %f] upper bound: %f <%s> %+f",
+         SCIPvarGetName(var), glb, gub, vubcoefs[c], SCIPvarGetName(vubvars[c]), vubconstants[c]);  /*lint !e613*/
+
+      lb0 = glb;
+      lb1 = glb;
+      ub0 = MIN(vubconstants[c], gub);
+      ub1 = MIN(vubconstants[c] + vubcoefs[c], gub);
+
+      /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
+      SCIPdebugMsgPrint(scip, " -> <%s> in [%f, %f] (off), [%f, %f] (on)\n", SCIPvarGetName(var), lb0, ub0, lb1, ub1);
+      if( lb0 == ub0 && (lb0 != lb1 || ub0 != ub1) ) /*lint !e777*/
+      {
+         if( scvdata == NULL )
+         {
+            SCIP_CALL( SCIPallocClearBlockMemory(scip, &scvdata) );
+         }
+
+         if( scvdata->nbnds + 1 > scvdata->bndssize )
+         {
+            newsize = SCIPcalcMemGrowSize(scip, scvdata->nbnds + 1);
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->bvars, scvdata->bndssize, newsize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize, newsize) );
+            scvdata->bndssize = newsize;
+         }
+         assert(scvdata->nbnds + 1 <= scvdata->bndssize);
+
+         scvdata->bvars[scvdata->nbnds] = bvar;
+         scvdata->vals0[scvdata->nbnds] = lb0;
+         ++scvdata->nbnds;
+      }
+   }
+
+   if( scvdata != NULL )
+   {
+      /* sort bvars and vals0 */
+      SCIPsortPtrReal((void**)scvdata->bvars, scvdata->vals0, SCIPvarComp, scvdata->nbnds);
+      SCIPdebugMsg(scip, "var <%s> has global bounds [%f, %f] and the following on/off bounds:\n", SCIPvarGetName(var), glb, gub);
+      for( c = 0; c < scvdata->nbnds; ++c )
+      {
+         SCIPdebugMsg(scip, " c = %d, bvar <%s>: val0 = %f\n", c, SCIPvarGetName(scvdata->bvars[c]), scvdata->vals0[c]);
+      }
+      SCIP_CALL( SCIPhashmapInsert(scvars, var, scvdata) );
+      *result = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** check whether (aux)variables are semicontinuous w.r.t. one or several common binary variables */
+static
+SCIP_RETCODE checkSemicontinuous(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata /**< nlhdlr expression data */
+   )
+{
+   SCIP_HASHMAP* scvars;  /* maps semicontinuous variables to their on/off bounds */
+   SCIP_VAR* var;
+   SCIP_SCVARDATA* scvdata;
+   SCIP_VAR** expr_bvars = NULL;
+   SCIP_Bool var_is_sc;
+   int nbvars;
+   int nbvars0;
+   int nvars;
+   int c, v;
+
+   assert(scip != NULL);
+   assert(nlhdlrexprdata != NULL);
+
+   nvars = nlhdlrexprdata->nauxvars;
+   assert(nvars > 0);
+
+   /* TODO? nlhdlr_perspective keeps this hashmap in the nlhdlr data, i.e., share for all exprs */
+   SCIP_CALL( SCIPhashmapCreate(&scvars, SCIPblkmem(scip), nvars) );
+
+   /* check whether all variables are semicontinuous, so nlexpr can be handled as an on/off term */
+   for( v = 0; v < nvars; ++v )
+   {
+      var = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->auxvarexprs[v]);
+      SCIP_CALL( varIsSemicontinuous(scip, var, scvars, &var_is_sc) );
+      if( !var_is_sc )
+         goto TERMINATE;
+   }
+
+   /* find common binary variables for all variables */
+   scvdata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(scvars, (void*)SCIPgetConsExprExprAuxVar(nlhdlrexprdata->auxvarexprs[0]));
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &expr_bvars, scvdata->bvars, scvdata->nbnds) );
+   nbvars0 = nbvars = scvdata->nbnds;
+
+   SCIPdebugMsg(scip, "Array intersection for vars %s", SCIPvarGetName(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->auxvarexprs[0])));
+   for( v = 1; v < nvars; ++v )
+   {
+      SCIPdebugMsgPrint(scip, ", %s", SCIPvarGetName(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->auxvarexprs[v])));
+      scvdata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(scvars, (void*)SCIPgetConsExprExprAuxVar(nlhdlrexprdata->auxvarexprs[v]));
+      SCIPcomputeArraysIntersectionPtr((void**)expr_bvars, nbvars, (void**)scvdata->bvars, scvdata->nbnds, SCIPvarComp, (void**)expr_bvars, &nbvars);
+
+      /* if we have found out that the intersection is empty, we have no on/off term */
+      if( nbvars == 0 )
+      {
+         SCIPfreeBlockMemoryArrayNull(scip, &expr_bvars, nbvars0);
+         goto TERMINATE;
+      }
+   }
+   SCIPdebugMsgPrint(scip, " is: ");
+   for( v = 0; v < nbvars; ++v )
+   {
+      SCIPdebugMsgPrint(scip, "%s; ", SCIPvarGetName(expr_bvars[v]));
+   }
+   SCIPdebugMsgPrint(scip, "\n");
+
+   /* store binary variables in nlhdlr's expr data */
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &expr_bvars, nbvars0, nbvars) );
+   nlhdlrexprdata->nbinvars = nbvars;
+   nlhdlrexprdata->binvars = expr_bvars;
+
+TERMINATE:
+   for( c = 0; c < SCIPhashmapGetNEntries(scvars); ++c )
+   {
+      SCIP_HASHMAPENTRY* entry = SCIPhashmapGetEntry(scvars, c);
+      if( entry != NULL )
+      {
+         scvdata = (SCIP_SCVARDATA*) SCIPhashmapEntryGetImage(entry);
+         SCIPfreeBlockMemoryArray(scip, &scvdata->vals0, scvdata->bndssize);
+         SCIPfreeBlockMemoryArray(scip, &scvdata->bvars, scvdata->bndssize);
+         SCIPfreeBlockMemory(scip, &scvdata);
+      }
+   }
+   SCIPhashmapFree(&scvars);
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of nonlinear handler
  */
@@ -553,6 +825,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvex)
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata != NULL);
 
+   SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrexprdata)->binvars, (*nlhdlrexprdata)->nbinvars);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->auxvarexprs, (*nlhdlrexprdata)->nauxvars);
    nlhdlrExprFree(scip, &(*nlhdlrexprdata)->nlexpr);
 
@@ -633,14 +906,17 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
       }
    }
 
+   assert(*success || nlexpr == NULL);
+   if( !*success )
+      return SCIP_OKAY;
+
+
    /* store variable expressions into the expression data of the nonlinear handler */
-   if( *success )
+   SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrexprdata, expr, nlexpr) );
+
+   if( nlhdlrdata->perspective )
    {
-      SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrexprdata, expr, nlexpr) );
-   }
-   else
-   {
-      assert(nlexpr == NULL);
+      SCIP_CALL( checkSemicontinuous(scip, *nlhdlrexprdata) );
    }
 
    return SCIP_OKAY;
@@ -790,6 +1066,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/detectsum",
       "whether to run convexity detection when the root of an expression is a sum",
       &nlhdlrdata->detectsum, FALSE, DEFAULT_DETECTSUM, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/perspective",
+      "whether to check for semicontinuous variables and use perspective cuts",
+      &nlhdlrdata->perspective, FALSE, DEFAULT_PERSPECTIVE, NULL, NULL) );
 
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrfreeHdlrDataConvex);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
