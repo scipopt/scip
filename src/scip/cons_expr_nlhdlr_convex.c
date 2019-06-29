@@ -47,6 +47,7 @@ struct NlHdlr_Expr
 {
    SCIP_CONSEXPR_EXPR*   origexpr;           /**< the original expression that is represented */
    NLHDLR_EXPR**         children;           /**< nlhdlr-expressions for children, or NULL if no children or to use auxvar */
+   int                   varidx;             /**< if expression without children, then index of auxvar in nlhdlr exprdata (auxvarexprs) */
 
    NLHDLR_EXPR*          parent;             /**< parent in expression tree TODO: remove as unused? */
 
@@ -62,6 +63,9 @@ struct NlHdlr_Expr
 struct SCIP_ConsExpr_NlhdlrExprData
 {
    NLHDLR_EXPR*          nlexpr;             /**< subexpression for which this nlhdlr estimates */
+
+   int                   nauxvars;           /**< number of distinct (auxiliary) variables handled */
+   SCIP_CONSEXPR_EXPR**  auxvarexprs;        /**< original expressions which auxiliary variable we use */
 };
 
 /** nonlinear handler data */
@@ -291,34 +295,55 @@ void nlhdlrExprBranchscore(
       nlhdlrExprBranchscore(scip, nlexpr->children[c], brscoretag, violation);
 }
 
-/** ensure that for every leaf of a nlhdlr-expression there is an auxiliary variable */
+/** collect the original expressions which are leafs in the nlexpr, thus which auxvar we use, and assign an index to them
+ *
+ * Also ensure that for every leaf there is an auxiliary variable.
+ */
 static
-SCIP_RETCODE ensureVariables(
+SCIP_RETCODE collectAuxVarExprs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   NLHDLR_EXPR*          nlexpr              /**< pointer to nlhdlr-expr to be freed */
+   NLHDLR_EXPR*          nlexpr,             /**< nlhdlr-expr */
+   SCIP_HASHMAP*         origexpr2index,     /**< mapping from original expression to index */
+   int*                  nindices            /**< number of indices */
    )
 {
    int nchildren;
    int i;
 
    assert(nlexpr != NULL);
+   assert(origexpr2index != NULL);
+   assert(nindices != NULL);
 
    if( nlexpr->children == NULL )
    {
+      /* TODO skip for value expressions */
+
       assert(SCIPgetConsExprExprAuxVar(nlexpr->origexpr) != NULL);  /* TODO remove again when we allow to introduce auxvars */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, nlexpr->origexpr, NULL) );
+
+      if( SCIPhashmapExists(origexpr2index, (void*)nlexpr->origexpr) )
+      {
+         nlexpr->varidx = SCIPhashmapGetImageInt(origexpr2index, (void*)nlexpr->origexpr);
+      }
+      else
+      {
+         nlexpr->varidx = (*nindices)++;
+         SCIP_CALL( SCIPhashmapInsertInt(origexpr2index, (void*)nlexpr->origexpr, nlexpr->varidx) );
+      }
+
       return SCIP_OKAY;
    }
 
    nchildren = SCIPgetConsExprExprNChildren(nlexpr->origexpr);
    for( i = 0; i < nchildren; ++i )
    {
-      SCIP_CALL( ensureVariables(scip, conshdlr, nlexpr->children[i]) );
+      SCIP_CALL( collectAuxVarExprs(scip, conshdlr, nlexpr->children[i], origexpr2index, nindices) );
    }
 
    return SCIP_OKAY;
 }
+
 
 /** construct a subexpression (as nlhdlr-expression) of maximal size that has a given curvature
  *
@@ -452,6 +477,9 @@ SCIP_RETCODE createNlhdlrExprData(
    NLHDLR_EXPR*          nlexpr              /**< nlhdlr expression */
    )
 {
+   SCIP_HASHMAP* origexpr2index;
+   int i;
+
    assert(scip != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
@@ -466,8 +494,37 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIPinfoMessage(scip, NULL, " is handled as %s\n", SCIPexprcurvGetName(nlexpr->curv));
 #endif
 
-   /* make sure there are auxvars */
-   SCIP_CALL( ensureVariables(scip, conshdlr, nlexpr) );
+   /* make sure there are auxvars and collect them */
+   SCIP_CALL( SCIPhashmapCreate(&origexpr2index, SCIPblkmem(scip), 10) );   /* TODO replace 10 by number of leafs, which we could count in constructExpr */
+   (*nlhdlrexprdata)->nauxvars = 0;
+   SCIP_CALL( collectAuxVarExprs(scip, conshdlr, nlexpr, origexpr2index, &(*nlhdlrexprdata)->nauxvars) );
+
+   /* assemble auxvarexprs array */
+   assert((*nlhdlrexprdata)->nauxvars > 0);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->auxvarexprs, (*nlhdlrexprdata)->nauxvars) );
+   for( i = 0; i < SCIPhashmapGetNEntries(origexpr2index); ++i )
+   {
+      SCIP_HASHMAPENTRY* entry;
+      SCIP_CONSEXPR_EXPR* origexpr;
+      int idx;
+
+      entry = SCIPhashmapGetEntry(origexpr2index, i);
+      if( entry == NULL )
+         continue;
+
+      origexpr = (SCIP_CONSEXPR_EXPR*) SCIPhashmapEntryGetOrigin(entry);
+      assert(expr != NULL);
+
+      idx = SCIPhashmapEntryGetImageInt(entry);
+      assert(idx >= 0);
+      assert(idx < (*nlhdlrexprdata)->nauxvars);
+
+      (*nlhdlrexprdata)->auxvarexprs[idx] = origexpr;
+
+      SCIPdebugMsg(scip, "auxvar %d: <%s>\n", idx, SCIPvarGetName(SCIPgetConsExprExprAuxVar(origexpr)));
+   }
+
+   SCIPhashmapFree(&origexpr2index);
 
    return SCIP_OKAY;
 }
@@ -496,6 +553,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvex)
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata != NULL);
 
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->auxvarexprs, (*nlhdlrexprdata)->nauxvars);
    nlhdlrExprFree(scip, &(*nlhdlrexprdata)->nlexpr);
 
    SCIPfreeBlockMemory(scip, nlhdlrexprdata);
