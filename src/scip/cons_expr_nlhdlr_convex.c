@@ -35,7 +35,7 @@
 #define NLHDLR_DESC         "convex handler for expressions"
 #define NLHDLR_PRIORITY     50
 
-#define DETECTSUM    FALSE
+#define DEFAULT_DETECTSUM   FALSE
 
 /*
  * Data structures
@@ -45,23 +45,29 @@
 typedef struct NlHdlr_Expr NLHDLR_EXPR;
 struct NlHdlr_Expr
 {
-   SCIP_CONSEXPR_EXPR* origexpr;             /**< the original expression that is represented */
-   NLHDLR_EXPR**       children;             /**< nlhdlr-expressions for children, or NULL if no children or to use auxvar */
+   SCIP_CONSEXPR_EXPR*   origexpr;           /**< the original expression that is represented */
+   NLHDLR_EXPR**         children;           /**< nlhdlr-expressions for children, or NULL if no children or to use auxvar */
 
-   NLHDLR_EXPR*        parent;               /**< parent in expression tree TODO: remove as unused? */
+   NLHDLR_EXPR*          parent;             /**< parent in expression tree TODO: remove as unused? */
 
-   SCIP_EXPRCURV       curv;                 /**< required curvature */
-   int                 depth;                /**< distance from root, root as distance 1 */
+   SCIP_EXPRCURV         curv;               /**< required curvature */
+   int                   depth;              /**< distance from root, root as distance 1 */
 
-   SCIP_Real*          childrenval;          /**< buffer to store value of children */
-   SCIP_Real           val;                  /**< value from last eval */
-   SCIP_Real           deriv;                /**< partial derivative w.r.t. root from last gradient cut computation */
+   SCIP_Real*            childrenval;        /**< buffer to store value of children */
+   SCIP_Real             val;                /**< value from last eval */
+   SCIP_Real             deriv;              /**< partial derivative w.r.t. root from last gradient cut computation */
 };
 
 /** nonlinear handler expression data */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
    NLHDLR_EXPR*          nlexpr;             /**< subexpression for which this nlhdlr estimates */
+};
+
+/** nonlinear handler data */
+struct SCIP_ConsExpr_NlhdlrData
+{
+   SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a sum */
 };
 
 /*
@@ -470,6 +476,18 @@ SCIP_RETCODE createNlhdlrExprData(
  * Callback methods of nonlinear handler
  */
 
+static
+SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrfreeHdlrDataConvex)
+{
+   assert(scip != NULL);
+   assert(nlhdlrdata != NULL);
+   assert(*nlhdlrdata != NULL);
+
+   SCIPfreeBlockMemory(scip, nlhdlrdata);
+
+   return SCIP_OKAY;
+}
+
 /** callback to free expression specific data */
 static
 SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvex)
@@ -489,6 +507,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvex)
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 { /*lint --e{715}*/
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    NLHDLR_EXPR* nlexpr = NULL;
    int depth;
 
@@ -507,15 +526,18 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
    /* ignore sums */
-   if( !DETECTSUM && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
+   if( !nlhdlrdata->detectsum && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
       return SCIP_OKAY;
 
    /* ignore pure constants and variables */
    if( SCIPgetConsExprExprNChildren(expr) == 0 )
       return SCIP_OKAY;
 
-   /* TODO we are also interested in handling the concave side */
+   /* TODO we are also interested in handling the concave side? (-> nlhdlr_vertexpolyhedral?) */
 
    if( !*enforcedbelow )
    {
@@ -697,13 +719,21 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    )
 {
    SCIP_CONSEXPR_NLHDLR* nlhdlr;
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvex, NULL) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
+
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvex, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/detectsum",
+      "whether to run convexity detection when the root of an expression is a sum",
+      &nlhdlrdata->detectsum, FALSE, DEFAULT_DETECTSUM, NULL, NULL) );
+
+   SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrfreeHdlrDataConvex);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvex);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateConvex, NULL);
