@@ -1223,15 +1223,15 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
        (!overestimate && nlexpr->curv == SCIP_EXPRCURV_CONCAVE) )
       return SCIP_OKAY;
 
-   /* TODO we can probably skip this as nlhdlrEvalAux was called before */
-   SCIP_CALL( nlhdlrExprEval(scip, nlexpr, sol) );
+   /* we can skip eval as nlhdlrEvalAux should have been called for same solution before */
+   /* SCIP_CALL( nlhdlrExprEval(scip, nlexpr, sol) ); */
+   assert(auxvalue == nlexpr->val); /* given value (originally from nlhdlrEvalAuxConvex) should coincide with the one stored in nlexpr */  /*lint !e777*/
    /* evaluation error or a too large constant -> skip */
    if( SCIPisInfinity(scip, REALABS(nlexpr->val)) )
    {
       SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", nlexpr->val, (void*)expr);
       return SCIP_OKAY;
    }
-   assert(auxvalue == nlexpr->val); /* given value (originally from nlhdlrEvalAuxConvex) should coincide with expression value (so we could skip eval) */  /*lint !e777*/
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
