@@ -1056,8 +1056,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
          bvar = bvars[0];
          for( j = 1; j < nlhdlrexprdata->ntermbvars[i]; ++j)
          {
+            assert(bvars[j] != NULL);
             bval = SCIPgetSolVal(scip, sol, bvars[j]);
-            if( bvars[j] != NULL && bval < minbval )
+            if( bval < minbval )
             {
                minbval = bval;
                bvar = bvars[j];
