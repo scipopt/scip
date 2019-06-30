@@ -254,7 +254,7 @@ void treedataFree(
    *treedata = NULL;
 }
 
-/** todo update tree data structure after a node has been solved/is about to be deleted */
+/** update tree data structure after a node has been solved/is about to be deleted */
 static
 void treedataUpdate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1017,7 +1017,7 @@ SCIP_DECL_EVENTEXIT(eventExitRestart)
 #endif
 
 
-/** todo reset all time series */
+/** reset all time series */
 static
 void resetTimeseries(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
@@ -1090,7 +1090,7 @@ SCIP_DECL_EVENTDELETE(eventDeleteRestart)
 #define eventDeleteRestart NULL
 #endif
 
-/** todo get restartpolicy based on the value of the restart parameter */
+/** get restartpolicy based on the value of the restart parameter */
 static
 RESTARTPOLICY getRestartPolicy(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
@@ -1257,10 +1257,6 @@ SCIP_Bool shouldApplyRestart(
       case RESTARTPOLICY_ESTIMATION:
          return shouldApplyRestartEstimation(scip, eventhdlrdata);
       case RESTARTPOLICY_PROGRESS:
-         /* author bzfhende
-          *
-          * TODO still needs to be implemented
-          */
          return shouldApplyRestartProgress(scip, eventhdlrdata);
          break;
       default:
@@ -1306,10 +1302,6 @@ SCIP_RETCODE updateSearchProgress(
          break;
    }
 
-   /* author bzfhende
-    *
-    * TODO add different resource types than nodes
-    */
    addSampleSearchprogress(searchprogress, currentprogress, SCIPgetNNodes(scip));
 
    updateBacktrackestim(eventhdlrdata->backtrackestim, leafnode);
@@ -1499,11 +1491,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       return SCIP_OKAY;
 
 
-   /* author bzfhende
-    *
-    * test if a restart should be applied
-    */
-
+   /* test if a restart should be applied */
    if( shouldApplyRestart(scip, eventhdlrdata) )
    {
       eventhdlrdata->restarthitcounter++;
