@@ -46,6 +46,11 @@
 #define DEFAULT_PREFEREXTENDED TRUE
 #define DEFAULT_CVXSIGNOMIAL TRUE
 #define DEFAULT_CREATEAUX   TRUE
+/* TODO? setting this to > 1 would prevent to handle simple (depth=1) convex on/off terms via perspective cuts
+ * further, there seems to be no easy way to figure out whether a term would be on/off before adding auxvars
+ * once there is, we should change mindepth to 2 (thus handle simple convex terms by the exprhdlr directly), but apply this only for non-on/off terms
+ */
+#define DEFAULT_MINDEPTH    1
 
 /*
  * Data structures
@@ -103,9 +108,10 @@ struct SCIP_ConsExpr_NlhdlrData
    SCIP_Bool             perspective;        /**< whether to generate perspective cuts */
    SCIP_Bool             preferextended;     /**< whether to prefer extended formulations */
 
-   /* parameters that problaby should be removed again */
+   /* parameters that probalaby should be removed again */
    SCIP_Bool             cvxsignomial;       /**< whether to use convexity check on signomials */
    SCIP_Bool             createaux;          /**< whether to allow creating auxvars, i.e., do not require convexity in original variables */
+   int                   mindepth;           /**< minimum depth of expression to be handled by exprhdlr */
 };
 
 /*
@@ -1139,7 +1145,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, &depth, expr, SCIP_EXPRCURV_CONVEX) );
       assert(nlexpr == NULL || depth >= 1);
-      if( depth < 1 )  /* TODO change back to <= 1, i.e. free if only immediate children, but no grand-daughters; but what if we can do perspective? */
+      if( depth < nlhdlrdata->mindepth )
       {
          nlhdlrExprFree(scip, &nlexpr);
       }
@@ -1157,7 +1163,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, &depth, expr, SCIP_EXPRCURV_CONCAVE) );
       assert(nlexpr == NULL || depth >= 1);
-      if( depth < 1 )  /* TODO change back to <= 1, see above */
+      if( depth < nlhdlrdata->mindepth )
       {
          nlhdlrExprFree(scip, &nlexpr);
       }
@@ -1395,6 +1401,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/createaux",
       "whether to allow creating auxvars, i.e., do not require convexity in original variables",
       &nlhdlrdata->createaux, FALSE, DEFAULT_CREATEAUX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/mindepth",
+      "minimum depth of expressions to be handled; 1 means an expression where every child is handled as var",
+      &nlhdlrdata->mindepth, FALSE, DEFAULT_MINDEPTH, 1, INT_MAX, NULL, NULL) );
 
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrfreeHdlrDataConvex);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
