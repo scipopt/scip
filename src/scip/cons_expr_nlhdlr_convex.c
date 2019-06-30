@@ -43,6 +43,7 @@
 
 #define DEFAULT_DETECTSUM   FALSE
 #define DEFAULT_PERSPECTIVE TRUE
+#define DEFAULT_PREFEREXTENDED TRUE
 #define DEFAULT_CVXSIGNOMIAL TRUE
 #define DEFAULT_CREATEAUX   TRUE
 
@@ -100,6 +101,7 @@ struct SCIP_ConsExpr_NlhdlrData
    /* parameters */
    SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a sum */
    SCIP_Bool             perspective;        /**< whether to generate perspective cuts */
+   SCIP_Bool             preferextended;     /**< whether to prefer extended formulations */
 
    /* parameters that problaby should be removed again */
    SCIP_Bool             cvxsignomial;       /**< whether to use convexity check on signomials */
@@ -646,10 +648,6 @@ SCIP_RETCODE constructExpr(
       *maxdepth = MAX(*maxdepth, nlexpr->depth);
       nchildren = SCIPgetConsExprExprNChildren(nlexpr->origexpr);
 
-      /* TODO if sum with > N children, then always turn into variable?
-       * especially if we have a big linear term, this would help to consider less vars for vertex-polyhedral funcs
-       */
-
       /* TODO if bwdiff not implemented, then proceed further? */
 
       if( childcurvsize < nchildren )
@@ -669,10 +667,27 @@ SCIP_RETCODE constructExpr(
                continue;  /* constructExprCheckMonomial will have updated stack */
          }
 
-         /* check whether and under which conditions nlexpr->origexpr can have desired curvature */
-         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, nlexpr->origexpr, nlexpr->curv, &success, childcurv) );
-         /* SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL);
-         SCIPinfoMessage(scip, NULL, " is %s? %d\n", SCIPexprcurvGetName(nlexpr->curv), success); */
+         /* If more than one child and we prefer extended formulations, then skip exprhdlr-based convexity check, unless this is the root expression.
+          * To make use of the advantages of extended formulation, it can make sense to split up a convex expression, thus to introduce
+          * auxiliary variables for some subexpressions instead of looking for the largest possible one.
+          * I now use having several children as such a criteria. Usually the below expression-handler based curvature check would only be
+          * successful for sum-expressions. Also several children could mean that the expression depends on several variables.
+          * Thus, essentially, if there is a sum with more than one child coming, then introduce an auxvar for this child.
+          * The default-handler might then handle the sum and introduce an auxvar for each child of the sum.
+          * The convex-handler may then again handle all children of the sum that are convex.
+          * I do this check after the above "advanced" convexity check, since the above checks can allow to recognize convexity that is only revealed
+          * when taking larger subexpressions into account (e.g., signomials, x*log(x)) and handle them appropriately.
+          * Typically, we do not want to break up such forms.
+          * REMARK/TODO: semicontinuity is currently only recognized w.r.t. original variables, so this here could be harmful as long as we don't propagate varbounds
+          */
+         if( nchildren <= 1 || !nlhdlrdata->preferextended || nlexpr == *rootnlexpr )
+         {
+            /* check whether and under which conditions nlexpr->origexpr can have desired curvature */
+            SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, nlexpr->origexpr, nlexpr->curv, &success, childcurv) );
+            /* SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL); */
+            /* SCIPinfoMessage(scip, NULL, " is %s? %d\n", SCIPexprcurvGetName(nlexpr->curv), success); */
+         }
+
          if( success )
          {
             /* if origexpr can have curvature curv, then don't treat it as leaf, but include its children */
@@ -1368,6 +1383,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/perspective",
       "whether to check for semicontinuous variables and use perspective cuts",
       &nlhdlrdata->perspective, FALSE, DEFAULT_PERSPECTIVE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/preferextended",
+      "whether to prefer extended formulations",
+      &nlhdlrdata->preferextended, FALSE, DEFAULT_PREFEREXTENDED, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/cvxsignomial",
       "whether to use convexity check on signomials",
