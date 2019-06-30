@@ -32,6 +32,9 @@ if [ "${EXECUTABLE}" == "" ]; then
   EXECUTABLE=bin/scip
   echo "No executable provided, defaulting to '${EXECUTABLE}'."
 fi
+if [ "${SLURMACCOUNT}" == "" ]; then
+  echo "No slurmaccount provided, omitting"
+fi
 echo "Using executable '${EXECUTABLE}'."
 
 # exporting the variables to the environment for check/jenkins_failcheck_cmake.sh to use
@@ -60,7 +63,7 @@ if ! [[ $PERMUTE =~ $re ]] ; then
   PERMUTE="0"
 fi
 export PERMUTE
-export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
+export GITHASH=$(git describe --always --dirty  | sed -re 's/^.+-g//')
 
 # read from stdin
 # OUTPUTDIR identifies a testrun uniquely
@@ -88,4 +91,8 @@ jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
 jobidsstr=${jobidsstr:1}
 
 # execute checker after all jobs completed
-sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=500 --partition=opt --account=scip check/jenkins_failcheck_cmake.sh
+if [ "${SLURMACCOUNT}" == "" ]; then
+  sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=500 --partition=opt check/jenkins_failcheck_cmake.sh
+else
+  sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=500 --partition=opt --account=${SLURMACCOUNT} check/jenkins_failcheck_cmake.sh
+fi

@@ -98,7 +98,10 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
 
-/** checks the solutions from the subscip and adds them to the master SCIP is feasible */
+/** checks the solutions from the subscip and adds them to the master SCIP is feasible
+ *
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtranslateSubSols(
    SCIP*                 scip,               /**< the SCIP data structure */
@@ -126,7 +129,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
-   SCIP_VAR**            subvars,            /**< variables of the subproblem */
+   SCIP_VAR**            subvars,            /**< variables of the subproblem, NULL entries are ignored */
    SCIP_Real             violpenalty         /**< the penalty for violating the trust region */
    );
 

@@ -27,6 +27,7 @@ private:
 
    SCIP*                 scip;               /**< SCIP structure */
    bool                  ipoptlicensed;      /**< whether a commercial Ipopt license is available */
+   bool                  calledxprslicense;  /**< whether we have registered the GAMS/Xpress license (gevxpressliceInitTS) */
 
    SCIP_RETCODE setupSCIP();
    SCIP_RETCODE freeSCIP();
@@ -37,7 +38,8 @@ public:
      gev(NULL),
      pal(NULL),
      scip(NULL),
-     ipoptlicensed(false)
+     ipoptlicensed(false),
+     calledxprslicense(false)
    { }
 
    ~GamsScip();

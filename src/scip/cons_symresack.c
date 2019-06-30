@@ -1128,7 +1128,7 @@ SCIP_RETCODE separateSymresackCovers(
 }
 
 
-/** check function of symresack constraint */
+/** check whether solution is feasible for symresacks */
 static
 SCIP_RETCODE checkSymresackSolution(
    SCIP*                 scip,               /**< SCIP pointer */
