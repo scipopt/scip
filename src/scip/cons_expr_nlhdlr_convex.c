@@ -693,6 +693,20 @@ SCIP_RETCODE constructExpr(
             /* SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL); */
             /* SCIPinfoMessage(scip, NULL, " is %s? %d\n", SCIPexprcurvGetName(nlexpr->curv), success); */
          }
+#if 0
+         else
+         {
+            SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, nlexpr->origexpr, nlexpr->curv, &success, childcurv) );
+            if( success )
+            {
+               SCIPinfoMessage(scip, NULL, " skipped ");
+               SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL);
+               SCIPinfoMessage(scip, NULL, " within ");
+               SCIPprintConsExprExpr(scip, conshdlr, rootexpr, NULL);
+               SCIPinfoMessage(scip, NULL, "\n");
+            }
+         }
+#endif
 
          if( success )
          {
