@@ -1236,10 +1236,6 @@ SCIP_Bool shouldApplyRestartProgress(
    }
 
    return FALSE;
-
-
-
-   return FALSE;
 }
 
 /** check if a restart should be performed based on the given restart policy */
