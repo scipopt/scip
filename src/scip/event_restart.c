@@ -132,7 +132,7 @@ typedef struct TimeSeries TIMESERIES;
 
 /** data structure for convenient access of tree information */
 typedef struct TreeData TREEDATA;
-#define NTIMESERIES 3
+#define NTIMESERIES 4
 
 /** event handler data */
 struct SCIP_EventhdlrData
@@ -1881,6 +1881,18 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateLeaffreq)
    return SCIP_OKAY;
 }
 
+/** query callback for current value */
+static
+DECL_TIMESERIESUPDATE(timeseriesUpdateSsg)
+{
+   if( treedata->nvisited == 0 )
+      *value = 1.0;
+   else
+      *value = treedata->ssg->value;
+
+   return SCIP_OKAY;
+}
+
 /** include time series to forecast into event handler */
 static
 SCIP_RETCODE includeTimeseries(
@@ -1904,11 +1916,9 @@ SCIP_RETCODE includeTimeseries(
    SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[2], "leaf-frequency", 0.5,
          NULL, NULL, timeseriesUpdateLeaffreq) );
 
-   /* author bzfhende
-    *
-    * TODO include SSG time series
-    */
-
+   /* include SSG time series */
+      SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[3], "ssg", 0.0,
+            NULL, NULL, timeseriesUpdateSsg) );
 
 
 
