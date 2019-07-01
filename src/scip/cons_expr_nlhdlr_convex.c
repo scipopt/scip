@@ -497,6 +497,7 @@ SCIP_RETCODE constructExprCheckMonomial(
    NLHDLR_EXPR***        stack,              /**< pointer to stack where to add generated leafs */
    int*                  stackpos,           /**< current top position of stack */
    int*                  stacksize,          /**< length of *stack */
+   SCIP_Bool             preferextended,     /**< whether we prefer extended formulations */
    SCIP_Bool*            success             /**< whether we found something */
    )
 {
@@ -558,7 +559,7 @@ SCIP_RETCODE constructExprCheckMonomial(
    SCIP_CALL( nlhdlrExprGrowChildren(scip, nlexpr, curv) );
    assert(nlexpr->children != NULL);
 
-   /* make sure there is enough space on the stack for all children (or their children)  */
+   /* make sure there is enough space on the stack for all children (or their children) */
    if( *stackpos+1 + nfactors > *stacksize )
    {
       *stacksize = SCIPcalcMemGrowSize(scip, *stackpos+1 + nfactors);
@@ -567,24 +568,38 @@ SCIP_RETCODE constructExprCheckMonomial(
 
    /* put children that are not power on stack
     * grow child for children that are power and put this child on stack
+    * if preferextended, then require children to be linear
+    * unless they are linear, an auxvar will be introduced for them and thus they will be handled as var here
     */
    for( i = 0; i < nfactors; ++i )
    {
+      NLHDLR_EXPR* nlchild;
+
       child = SCIPgetConsExprExprChildren(expr)[i];
       assert(child != NULL);
       assert(nlexpr->children[i] != NULL);
 
-      if( SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrPower(conshdlr) )
-      {
-         assert(*stackpos+1 < *stacksize);
-         (*stack)[++*stackpos] = nlexpr->children[i];
-      }
-      else
+      if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrPower(conshdlr) )
       {
          SCIP_CALL( nlhdlrExprGrowChildren(scip, nlexpr->children[i], &curv[i]) );
          assert(nlexpr->children[i]->children != NULL);
-         (*stack)[++*stackpos] = nlexpr->children[i]->children[0];
+         nlchild = nlexpr->children[i]->children[0];
       }
+      else
+         nlchild = nlexpr->children[i];
+
+      if( preferextended )
+      {
+         nlchild->curv = SCIP_EXPRCURV_LINEAR;
+#ifdef SCIP_DEBUG
+         SCIPinfoMessage(scip, NULL, "Extendedform: Require linearity for ");
+         SCIPprintConsExprExpr(scip, conshdlr, nlchild->origexpr, NULL);
+         SCIPinfoMessage(scip, NULL, "\n");
+#endif
+      }
+
+      assert(*stackpos+1 < *stacksize);
+      (*stack)[++*stackpos] = nlchild;
    }
 
    *success = TRUE;
@@ -668,46 +683,15 @@ SCIP_RETCODE constructExpr(
          /* TODO here should be a nice system where a number of convexity-detection rules can be tried */
          if( nlhdlrdata->cvxsignomial )
          {
-            SCIP_CALL( constructExprCheckMonomial(scip, conshdlr, nlexpr, &stack, &stackpos, &stacksize, &success) );
+            SCIP_CALL( constructExprCheckMonomial(scip, conshdlr, nlexpr, &stack, &stackpos, &stacksize, nlhdlrdata->preferextended, &success) );
             if( success )
                continue;  /* constructExprCheckMonomial will have updated stack */
          }
 
-         /* If more than one child and we prefer extended formulations, then skip exprhdlr-based convexity check, unless this is the root expression.
-          * To make use of the advantages of extended formulation, it can make sense to split up a convex expression, thus to introduce
-          * auxiliary variables for some subexpressions instead of looking for the largest possible one.
-          * I now use having several children as such a criteria. Usually the below expression-handler based curvature check would only be
-          * successful for sum-expressions. Also several children could mean that the expression depends on several variables.
-          * Thus, essentially, if there is a sum with more than one child coming, then introduce an auxvar for this child.
-          * The default-handler might then handle the sum and introduce an auxvar for each child of the sum.
-          * The convex-handler may then again handle all children of the sum that are convex.
-          * I do this check after the above "advanced" convexity check, since the above checks can allow to recognize convexity that is only revealed
-          * when taking larger subexpressions into account (e.g., signomials, x*log(x)) and handle them appropriately.
-          * Typically, we do not want to break up such forms.
-          * REMARK/TODO: semicontinuity is currently only recognized w.r.t. original variables, so this here could be harmful as long as we don't propagate varbounds
-          */
-         if( nchildren <= 1 || !nlhdlrdata->preferextended || nlexpr == *rootnlexpr )
-         {
-            /* check whether and under which conditions nlexpr->origexpr can have desired curvature */
-            SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, nlexpr->origexpr, nlexpr->curv, &success, childcurv) );
-            /* SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL); */
-            /* SCIPinfoMessage(scip, NULL, " is %s? %d\n", SCIPexprcurvGetName(nlexpr->curv), success); */
-         }
-#if 0
-         else
-         {
-            SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, nlexpr->origexpr, nlexpr->curv, &success, childcurv) );
-            if( success )
-            {
-               SCIPinfoMessage(scip, NULL, " skipped ");
-               SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL);
-               SCIPinfoMessage(scip, NULL, " within ");
-               SCIPprintConsExprExpr(scip, conshdlr, rootexpr, NULL);
-               SCIPinfoMessage(scip, NULL, "\n");
-            }
-         }
-#endif
-
+         /* check whether and under which conditions nlexpr->origexpr can have desired curvature */
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, nlexpr->origexpr, nlexpr->curv, &success, childcurv) );
+         /* SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL);
+         SCIPinfoMessage(scip, NULL, " is %s? %d\n", SCIPexprcurvGetName(nlexpr->curv), success); */
          if( success )
          {
             /* if origexpr can have curvature curv, then don't treat it as leaf, but include its children */
@@ -734,9 +718,27 @@ SCIP_RETCODE constructExpr(
          SCIP_CALL( nlhdlrExprGrowChildren(scip, nlexpr, NULL) );
       }
 
+      /* If more than one child and we prefer extended formulations, then require all children to be linear.
+       * Unless they are, auxvars will be introduced and they will be handles as variables, which can be an advantage in the context of extended formulations.
+       * REMARK/TODO: semicontinuity is currently only recognized w.r.t. original variables, so this here could be harmful as long as we don't propagate varbounds
+       */
+      if( success && nchildren > 1 && nlhdlrdata->preferextended )
+      {
+         int i;
+         for( i = 0; i < nchildren; ++i )
+            nlexpr->children[i]->curv = SCIP_EXPRCURV_LINEAR;
+#ifdef SCIP_DEBUG
+         SCIPinfoMessage(scip, NULL, "require linearity for children of ");
+         SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL);
+         SCIPinfoMessage(scip, NULL, " within ");
+         SCIPprintConsExprExpr(scip, conshdlr, rootexpr, NULL);
+         SCIPinfoMessage(scip, NULL, "\n");
+#endif
+      }
+
       if( success && nchildren > 0 )
       {
-         /* add children expressions to to do list (stack) */
+         /* add children expressions to to-do list (stack) */
          assert(nlexpr->children != NULL);
 
          if( stackpos+1 + nchildren > stacksize )
