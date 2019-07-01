@@ -180,18 +180,6 @@ struct SubtreeSumGap
    SCIP_Real             pblastsplit;        /**< primal bound when last split occurred */
 };
 
-/** data initialization callback of time series */
-#define DECL_TIMESERIESINIT(x) SCIP_RETCODE x ( \
-   SCIP* scip,                                  \
-   TIMESERIES* ts                               \
-   )
-
-/** data deinitialization callback of time series */
-#define DECL_TIMESERIESEXIT(x) SCIP_RETCODE x ( \
-   SCIP* scip,                                  \
-   TIMESERIES* ts                               \
-   )
-
 /** update callback of time series */
 #define DECL_TIMESERIESUPDATE(x) SCIP_RETCODE x (\
    SCIP*                 scip,                   \
@@ -212,8 +200,6 @@ struct TimeSeries
    int                   valssize;           /**< size of value array */
    int                   nvals;              /**< number of values */
    int                   resolution;         /**< current (inverse of) resolution */
-   DECL_TIMESERIESINIT((*timeseriesinit));   /**< data initialization callback (at the beginning of search) */
-   DECL_TIMESERIESEXIT((*timeseriesexit));   /**< data deinitialization callback */
    DECL_TIMESERIESUPDATE((*timeseriesupdate));/**< update callback at nodes */
    union {
    }                     data;               /**< time series data pointer */
@@ -698,8 +684,6 @@ SCIP_RETCODE timeseriesCreate(
    TIMESERIES**          timeseries,         /**< pointer to store time series */
    const char*           name,               /**< name of this time series */
    SCIP_Real             targetvalue,        /**< target value of this time series */
-   DECL_TIMESERIESINIT   ((*timeseriesinit)),/**< data initialization callback (at the beginning of search), or NULL */
-   DECL_TIMESERIESEXIT   ((*timeseriesexit)),/**< data deinitialization callback, or NULL */
    DECL_TIMESERIESUPDATE ((*timeseriesupdate)) /**< update callback at nodes, or NULL */
    )
 {
@@ -718,8 +702,6 @@ SCIP_RETCODE timeseriesCreate(
 
    /* copy callbacks */
    assert(timeseriesupdate != NULL);
-   timeseriesptr->timeseriesinit = timeseriesinit;
-   timeseriesptr->timeseriesexit = timeseriesexit;
    timeseriesptr->timeseriesupdate = timeseriesupdate;
 
    timeseriesptr->targetvalue = targetvalue;
@@ -1904,23 +1886,17 @@ SCIP_RETCODE includeTimeseries(
    assert(eventhdlrdata != NULL);
 
    /* include gap time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[0], "gap", 1.0,
-         NULL, NULL, timeseriesUpdateGap) );
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[0], "gap", 1.0, timeseriesUpdateGap) );
 
 
    /* include progress time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[1], "progress", 1.0,
-      NULL, NULL, timeseriesUpdateProgress) );
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[1], "progress", 1.0, timeseriesUpdateProgress) );
 
    /* include leaf time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[2], "leaf-frequency", 0.5,
-         NULL, NULL, timeseriesUpdateLeaffreq) );
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[2], "leaf-frequency", 0.5, timeseriesUpdateLeaffreq) );
 
    /* include SSG time series */
-      SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[3], "ssg", 0.0,
-            NULL, NULL, timeseriesUpdateSsg) );
-
-
+      SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[3], "ssg", 0.0, timeseriesUpdateSsg) );
 
    return SCIP_OKAY;
 }
