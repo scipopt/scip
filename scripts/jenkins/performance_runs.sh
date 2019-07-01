@@ -80,12 +80,12 @@ if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v60-bugfix"
 fi
 if [ "${DAY_OF_WEEK}" == "6" ]; then
-  git checkout ${BRANCHNAME}
+  git checkout -f ${BRANCHNAME}
   git pull
-  git checkout performance-${GITBRANCH}
+  git checkout -f performance-${GITBRANCH}
   git merge ${BRANCHNAME} --ff-only
   git push
-  git checkout ${BRANCHNAME}
+  git checkout -f ${BRANCHNAME}
 fi
 
 ####################################
