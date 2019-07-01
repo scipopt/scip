@@ -11966,7 +11966,7 @@ SCIP_RETCODE includeConshdlrExprBasic(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/reformbinprodsfac",
          "minimum number of terms to reformulate bilinear binary products by factorizing variables (<= 1: disabled)",
-         &conshdlrdata->reformbinprodsfac, FALSE, 10, 1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->reformbinprodsfac, FALSE, 50, 1, INT_MAX, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
