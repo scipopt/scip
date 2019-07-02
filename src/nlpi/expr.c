@@ -393,6 +393,8 @@ SCIP_EXPRCURV SCIPexprcurvPowerInv(
    {
       SCIP_INTERVAL leftbounds;
       SCIP_INTERVAL rightbounds;
+      SCIP_EXPRCURV leftcurv;
+      SCIP_EXPRCURV rightcurv;
 
       /* something like x^(-2) may look convex on each side of zero, but is not convex on the whole interval due to the singularity at 0.0 */
       if( exponent < 0.0 )
@@ -401,11 +403,23 @@ SCIP_EXPRCURV SCIPexprcurvPowerInv(
       SCIPintervalSetBounds(&leftbounds,  basebounds.inf, 0.0);
       SCIPintervalSetBounds(&rightbounds, 0.0, basebounds.sup);
 
-      return (SCIP_EXPRCURV)(SCIPexprcurvPowerInv(leftbounds, exponent, powercurv) & SCIPexprcurvPowerInv(rightbounds, exponent, powercurv));
+      leftcurv = SCIPexprcurvPowerInv(leftbounds, exponent, powercurv);
+      rightcurv = SCIPexprcurvPowerInv(rightbounds, exponent, powercurv);
+
+      /* now need to intersect */
+      if( leftcurv == SCIP_EXPRCURV_LINEAR )
+         return rightcurv;
+      if( rightcurv == SCIP_EXPRCURV_LINEAR )
+         return leftcurv;
+      if( leftcurv == SCIP_EXPRCURV_UNKNOWN || rightcurv == SCIP_EXPRCURV_UNKNOWN )
+         return SCIP_EXPRCURV_UNKNOWN;
+      assert(leftcurv == SCIP_EXPRCURV_CONVEX || leftcurv == SCIP_EXPRCURV_CONCAVE);
+      assert(rightcurv == SCIP_EXPRCURV_CONVEX || rightcurv == SCIP_EXPRCURV_CONCAVE);
+      return SCIP_EXPRCURV_LINEAR;
    }
    assert(basebounds.inf >= 0.0 || basebounds.sup <= 0.0);
 
-   /* inverting the login from SCIPexprcurvPower here */
+   /* inverting the logic from SCIPexprcurvPower here */
    if( powercurv == SCIP_EXPRCURV_CONVEX )
    {
       SCIP_Real sign;
