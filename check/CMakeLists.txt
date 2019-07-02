@@ -200,6 +200,7 @@ set(instances_MIP
 #
 set(instances_compHandlerTest
     "instances/MIP/lseu_dcmulti.cip\;189302"
+    "instances/MIP/lseu_dcmulti_sHB.cip\;189322"
     )
 #
 # Reduced set of MIP instances for more expensive settings
@@ -466,6 +467,7 @@ set(basenames_opb_wrongformat
     rgn.mps
     vpm2.fzn
     lseu_dcmulti.cip
+    lseu_dcmulti_sHB.cip
     )
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 
