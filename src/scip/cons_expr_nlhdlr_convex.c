@@ -1147,7 +1147,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   /* ignore sums */
+   /* ignore sums TODO: only if > 1 children */
    if( !nlhdlrdata->detectsum && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
       return SCIP_OKAY;
 
@@ -1156,6 +1156,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
       return SCIP_OKAY;
 
    /* TODO we are also interested in handling the concave side? (-> nlhdlr_vertexpolyhedral?) */
+   /* TODO if doing perspective, then we are also interested if a side is already enforced, since we may generate better cuts
+    * e.g., nlhdlr_perspective is active on an x^2 in st_e27, but we aren't  */
 
    if( !*enforcedbelow )
    {
