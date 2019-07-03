@@ -634,8 +634,6 @@ SCIP_RETCODE freeSymmetryData(
    /* free data of added constraints */
    if ( propdata->genconss != NULL )
    {
-      assert( propdata->ngenconss > 0 || (ISORBITALFIXINGACTIVE(propdata->usesymmetry) && propdata->norbitopes == 0) );
-
       /* release constraints */
       for (i = 0; i < propdata->ngenconss; ++i)
       {
