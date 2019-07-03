@@ -5210,7 +5210,8 @@ SCIP_RETCODE SCIPtightenVarLb(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the lower bound improved */
+   if( tightened != NULL && lb < SCIPcomputeVarLbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -5326,7 +5327,8 @@ SCIP_RETCODE SCIPtightenVarUb(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the upper bound improved */
+   if( tightened != NULL && ub > SCIPcomputeVarUbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;

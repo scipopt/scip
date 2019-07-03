@@ -1,6 +1,29 @@
 
 @page RN60 Release notes for SCIP 6.0
 
+@section RN603 SCIP 6.0.3
+*************************
+
+Features
+--------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+Build system
+------------
+
+Fixed bugs
+----------
+- fixed issue in SCIPtightenVarLb and SCIPtightenVarUb that occurs for small bound changes
+
+Miscellaneous
+-------------
+
+
 @section RN602 SCIP 6.0.2
 *************************
 
