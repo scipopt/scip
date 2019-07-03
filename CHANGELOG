@@ -76,6 +76,7 @@ Fixed bugs
   solving methods. Now, as per the documentation, the user must explicitly state whether the subproblem is convex
 - fixed wrong indexing in heur_dualval
 - fixed issue with basis status in SoPlex LPi
+- fixed issue in SCIPtightenVarLb and SCIPtightenVarUb that occurs for small bound changes
 
 Miscellaneous
 -------------
