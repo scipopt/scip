@@ -47,7 +47,7 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXUNKNOWNTERMS       0 /**< default value for parameter maxunknownterms */
-#define DEFAULT_MAXUSEDVARS         100 /**< default value for parameter maxusedvars */
+#define DEFAULT_MAXUSEDVARS           0 /**< default value for parameter maxusedvars */
 #define DEFAULT_MAXNONZEROPROP      0.0 /**< default value for parameter maxnonzeroprop */
 #define DEFAULT_MAXNCUTS             -1 /**< default value for parameter maxncuts */
 #define DEFAULT_MAXROUNDS             1 /**< default value for parameter maxrounds */
@@ -240,7 +240,7 @@ SCIP_RETCODE createSepaData(
                /* no linearization variable available */
                if( auxvar == NULL )
                {
-                  SCIPdebugMsg(scip, "auxvar = NULL, ignoring the product ");
+                  SCIPdebugMsg(scip, "auxvar = NULL, ignoring the expression ");
 #ifdef SCIP_DEBUG
                   SCIPprintConsExprExpr(scip, sepadata->conshdlr, expr, NULL);
 #endif
@@ -324,13 +324,15 @@ SCIP_RETCODE createSepaData(
                         ypos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx);
                      }
 
+
+                     if( sepadata->nvarbilinvars[ypos] == 0 )
+                        SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[ypos], nvars);
                      if( xidx != yidx )
                      {
-                        if( sepadata->nvarbilinvars[ypos] == 0 )
-                           SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[ypos], nvars);
                         sepadata->varbilinvars[ypos][sepadata->nvarbilinvars[ypos]] = x;
                         ++sepadata->nvarbilinvars[ypos];
                      }
+
 
                      /* insert linearization variable into auxvar hashmap */
                      SCIP_CALL( SCIPhashmapInsertInt(sepadata->bilinvarsmap, (void*)(size_t) mapidx,
@@ -612,9 +614,9 @@ SCIP_RETCODE addRltTerm(
    /* otherwise, use the McCormick estimator in place of the bilinear term */
    else if( colvar != var )
    {
-      /* TODO this is valid only locally! */
-      SCIP_Real lbcolvar = SCIPvarGetLbLocal(colvar);
-      SCIP_Real ubcolvar = SCIPvarGetUbLocal(colvar);
+      SCIP_Bool found_clique = FALSE;
+      SCIP_Real lbcolvar = local ? SCIPvarGetLbLocal(colvar) : SCIPvarGetLbGlobal(colvar);
+      SCIP_Real ubcolvar = local ? SCIPvarGetUbLocal(colvar) : SCIPvarGetUbGlobal(colvar);
       SCIP_Real refpointcolvar = MAX(lbcolvar, MIN(ubcolvar, SCIPgetSolVal(scip, sol, colvar))); /*lint !e666*/
 
       assert(!computeEqCut);
@@ -627,28 +629,90 @@ SCIP_RETCODE addRltTerm(
 
       SCIPdebugMsg(scip, "auxvar for %s and %s not found, will use McCormick estimators\n", SCIPvarGetName(colvar), SCIPvarGetName(var));
 
-      SCIPaddBilinMcCormick(scip, coefauxvar, lbvar, ubvar, refpointvar, lbcolvar,
-                            ubcolvar, refpointcolvar, uselhs, coefvar, &coefcolvar, finalside, success);
+      /* if both variables are binary. check if they are contained together in some clique */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY &&  SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY )
+      {
+         int c;
+         SCIP_CLIQUE** varcliques;
 
-      if( !*success )
-         return SCIP_OKAY;
+         varcliques = SCIPvarGetCliques(var, TRUE);
+
+         /* look through cliques containing var */
+         for( c = 0; c < SCIPvarGetNCliques(var, TRUE); ++c )
+         {
+            if( SCIPcliqueHasVar(varcliques[c], colvar, TRUE) ) /* var + colvar <= 1 => var*colvar = 0 */
+            {
+               /* product is zero, add nothing */
+               found_clique = TRUE;
+               break;
+            }
+
+            if( SCIPcliqueHasVar(varcliques[c], colvar, FALSE) ) /* var + (1-colvar) <= 1 => var*colvar = var */
+            {
+               *coefvar += coefauxvar;
+               found_clique = TRUE;
+               break;
+            }
+         }
+
+         if(!found_clique)
+         {
+            varcliques = SCIPvarGetCliques(var, FALSE);
+
+            /* look through cliques containing complement of var */
+            for( c = 0; c < SCIPvarGetNCliques(var, FALSE); ++c )
+            {
+               if( SCIPcliqueHasVar(varcliques[c], colvar, TRUE) ) /* (1-var) + colvar <= 1 => var*colvar = colvar */
+               {
+                  coefcolvar += coefauxvar;
+                  found_clique = TRUE;
+                  break;
+               }
+
+               if( SCIPcliqueHasVar(varcliques[c], colvar, FALSE) ) /* (1-var) + (1-colvar) <= 1 => var*colvar = var + colvar - 1 */
+               {
+                  *coefvar += coefauxvar;
+                  coefcolvar += coefauxvar;
+                  *finalside += coefauxvar;
+                  found_clique = TRUE;
+                  break;
+               }
+            }
+         }
+      }
+
+      if( !found_clique )
+      {
+         SCIPaddBilinMcCormick(scip, coefauxvar, lbvar, ubvar, refpointvar, lbcolvar,
+                                ubcolvar, refpointcolvar, uselhs, coefvar, &coefcolvar, finalside, success);
+         if( !*success )
+            return SCIP_OKAY;
+      }
    }
 
-      /* or, if it's a quadratic term, use a secant for overestimation and a gradient for underestimation */
+   /* or, if it's a quadratic term, use a secant for overestimation and a gradient for underestimation */
    else
    {
       SCIPdebugMsg(scip, "auxvar for %s^2 not found, will use gradient and secant estimators\n", SCIPvarGetName(colvar));
 
       assert(!computeEqCut);
 
-      /* depending on over-/underestimation and the sign of the column variable, compute secant or tangent */
-      if( (uselhs && coefauxvar > 0.0) || (!uselhs && coefauxvar < 0.0) )
-         SCIPaddSquareSecant(scip, coefauxvar, lbvar, ubvar, refpointvar, coefvar, finalside, success);
+      /* for a binary var, var^2 = var */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      {
+         *coefvar += coefauxvar;
+      }
       else
-         SCIPaddSquareLinearization(scip, coefauxvar, refpointvar, SCIPvarIsIntegral(var), coefvar, finalside, success);
+      {
+         /* depending on over-/underestimation and the sign of the column variable, compute secant or tangent */
+         if( (uselhs && coefauxvar > 0.0) || (!uselhs && coefauxvar < 0.0) )
+            SCIPaddSquareSecant(scip, coefauxvar, lbvar, ubvar, refpointvar, coefvar, finalside, success);
+         else
+            SCIPaddSquareLinearization(scip, coefauxvar, refpointvar, SCIPvarIsIntegral(var), coefvar, finalside, success);
 
-      if( !*success )
-         return SCIP_OKAY;
+         if( !*success )
+            return SCIP_OKAY;
+      }
    }
 
    /* add the linear term for this column */
@@ -1095,16 +1159,17 @@ SCIP_RETCODE markRowsXj(
    SCIP_SEPADATA* sepadata,   /**< separator data */
    SCIP_CONSHDLR* conshdlr,   /**< constraint handler */
    SCIP_SOL*      sol,        /**< point to be separated (can be NULL) */
-   SCIP_HASHMAP*  row_to_pos, /**< hashmap linking row index to position in row_marks */
    int            j,          /**< index of the multiplier variable in sepadata */
+   SCIP_Bool      local,      /**< are local cuts allowed? */
    int*           row_marks,  /**< sparse array storing the row marks */
    int*           row_idcs,   /**< sparse array storing the marked row positions */
    int*           nmarked     /**< number of marked rows */
 )
 {
-   int i, idx, img, ncolrows, r, ridx, rpos;
+   int i, idx, img, ncolrows, r, ridx;
    SCIP_VAR* xi;
    SCIP_VAR* xj;
+   SCIP_Real vlb, vub, val;
    SCIP_Real prod_viol, a;
    SCIP_COL* coli;
    SCIP_Real* colvals;
@@ -1114,15 +1179,28 @@ SCIP_RETCODE markRowsXj(
 
    xj = sepadata->varssorted[j];
    assert(xj != NULL);
-   /* TODO will checking val and bounds here help? (same for xi) */
+
+   val = SCIPgetSolVal(scip, sol, xj);
+   vlb = local ? SCIPvarGetLbLocal(xj) : SCIPvarGetLbGlobal(xj);
+   vub = local ? SCIPvarGetUbLocal(xj) : SCIPvarGetUbGlobal(xj);
+
+   if( vlb == val || vub == val )
+   {
+      /* we don't want to multiply by variables that are at bound */
+      return SCIP_OKAY;
+   }
 
    /* for each var which appears in a bilinear product together with xj, mark rows */
    for( i = 0; i < sepadata->nvarbilinvars[j]; ++i )
    {
       xi = sepadata->varbilinvars[j][i];
 
-      if( xi == xj ) /* TODO also do squares? */
-         continue;
+      val = SCIPgetSolVal(scip, sol, xi);
+      vlb = local ? SCIPvarGetLbLocal(xi) : SCIPvarGetLbGlobal(xi);
+      vub = local ? SCIPvarGetUbLocal(xi) : SCIPvarGetUbGlobal(xi);
+
+      if( vlb == val || vub == val ) /* we aren't interested in products with variables that are at bound */
+         break;
 
       /* find the bilinear product */
       if( SCIPvarComp(xj, xi) < 0 )
@@ -1146,7 +1224,6 @@ SCIP_RETCODE markRowsXj(
       /* get the column of xi */
       coli = SCIPvarGetCol(xi);
       colvals = SCIPcolGetVals(coli);
-      colrows = SCIPcolGetRows(coli);
       ncolrows = SCIPcolGetNNonz(coli);
 
       SCIPdebugMsg(scip, NULL, "marking rows for xj, xi = %s, %s\n", SCIPvarGetName(xj), SCIPvarGetName(xi));
@@ -1205,9 +1282,8 @@ SCIP_RETCODE separateRltCuts(
       xj = sepadata->varssorted[j];
 
       /* mark all rows for multiplier xj */
-      SCIP_CALL( markRowsXj(scip, sepadata, conshdlr, sol, row_to_pos, j, row_marks, row_idcs, &nmarked) );
+      SCIP_CALL( markRowsXj(scip, sepadata, conshdlr, sol, j, allowlocal, row_marks, row_idcs, &nmarked) );
 
-      /* TODO if there are marked rows and xj is binary mark cliques where xj or its compliment appears */
       /* generate the projected cut and if it is violated, generate the actual cut */
       for( r = 0; r < nmarked; ++r )
       {
@@ -1224,6 +1300,9 @@ SCIP_RETCODE separateRltCuts(
          assert(SCIProwGetIndex(row) == row_idcs[r]);
 
          /* check whether this row and var fulfill the conditions */
+         /* for now this is disabled */
+         /* TODO decide what to do with this */
+#if 0
          SCIP_CALL( isAcceptableRow(scip, sepadata, row, xj, sepadata->varpriorities[j], &accepted) );
 
          if( !accepted )
@@ -1232,6 +1311,7 @@ SCIP_RETCODE separateRltCuts(
             row_marks[r] = 0;
             continue;
          }
+#endif
 
          SCIPdebugMsg(scip, "accepted row %s for variable %s\n", SCIProwGetName(rows[r]), SCIPvarGetName(xj));
 #ifdef SCIP_DEBUG
@@ -1640,7 +1720,7 @@ SCIP_RETCODE SCIPincludeSepaRlt(
          &sepadata->maxusedvars, FALSE, DEFAULT_MAXUSEDVARS, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/maxnonzeroprop",
-         "maximal proportion of known bilinear terms of a variable to non-zeroes of a row that is adccepted",
+         "maximal proportion of known bilinear terms of a variable to non-zeroes of a row that is accepted",
          &sepadata->maxnonzeroprop, FALSE, DEFAULT_MAXNONZEROPROP, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
