@@ -2485,7 +2485,8 @@ SCIP_RETCODE addSymresackConss(
 static
 SCIP_RETCODE tryAddSymmetryHandlingConss(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROP*            prop                /**< symmetry breaking propagator */
+   SCIP_PROP*            prop,               /**< symmetry breaking propagator */
+   SCIP_Bool*            earlyterm           /**< pointer to store whether we terminated early  (or NULL) */
    )
 {
    SCIP_PROPDATA* propdata;
@@ -2508,6 +2509,9 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( propdata->triedaddconss )
    {
       assert( propdata->nperms > 0 );
+
+      if ( earlyterm != NULL )
+         *earlyterm = TRUE;
 
       return SCIP_OKAY;
    }
@@ -3111,7 +3115,7 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    {
       SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.");
 
-      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop) );
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL) );
    }
 
    return SCIP_OKAY;
@@ -3138,7 +3142,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
     * and even if presolving has been disabled */
    if ( propdata->symconsenabled && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
    {
-      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop) );
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL) );
    }
 
    return SCIP_OKAY;
@@ -3167,6 +3171,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    if ( propdata->symconsenabled )
    {
       int noldngenconns;
+      SCIP_Bool earlyterm = FALSE;
 
       /* skip presolving if we are not at the end if addconsstiming == 2 */
       assert( 0 <= propdata->addconsstiming && propdata->addconsstiming <= 2 );
@@ -3179,11 +3184,12 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
 
       noldngenconns = propdata->ngenconss;
 
-      if ( ! propdata->triedaddconss || (propdata->recomputerestart && SCIPgetNRuns(scip) > propdata->lastrestart) )
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, &earlyterm) );
+
+      /* if we actually tried to add symmetry handling constraints */
+      if ( ! earlyterm )
       {
          *result = SCIP_DIDNOTFIND;
-
-         SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop) );
 
          /* if symmetry handling constraints have been added, presolve each */
          if ( propdata->ngenconss > 0 )
