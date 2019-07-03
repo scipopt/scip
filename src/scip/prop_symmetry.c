@@ -719,6 +719,7 @@ SCIP_RETCODE delSymConss(
       if ( propdata->genconss != NULL )
          SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
       propdata->triedaddconss = FALSE;
+
       return SCIP_OKAY;
    }
    assert( propdata->genconss != NULL );
@@ -2499,7 +2500,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( propdata->symconsenabled );
 
    /* remove symmetry handling conss if we are in a restart */
-   if ( propdata->recomputerestart && propdata->ngenconss > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
+   if ( propdata->recomputerestart && SCIPgetNRuns(scip) > propdata->lastrestart )
    {
       SCIP_CALL( delSymConss(scip, propdata) );
       SCIP_CALL( freeSymmetryData(scip, propdata) );
