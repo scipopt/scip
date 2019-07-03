@@ -716,7 +716,9 @@ SCIP_RETCODE delSymConss(
 
    if ( propdata->ngenconss == 0 )
    {
-      assert( propdata->genconss == NULL );
+      if ( propdata->genconss != NULL )
+         SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
+      propdata->triedaddconss = FALSE;
       return SCIP_OKAY;
    }
    assert( propdata->genconss != NULL );
