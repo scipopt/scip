@@ -333,14 +333,29 @@ SCIP_RETCODE reduce_extTest2(
 
    graph_edge_printInfo(graph, edge);
 
+#if 1
+   for( int e = graph->outbeg[10]; e != EAT_LAST; e = graph->oeat[e] )
+   {
+      const int head = graph->head[e];
+      if( head == 11  )
+      {
+         SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(graph->ancestors[e]), graph->ancestors[0], NULL) );
+         SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(graph->ancestors[flipedge(e)]), graph->ancestors[1], NULL) );
+      }
+   }
+
    SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, &deletable));
+   assert(deletable);
+   assert(0);
+#else
 
+   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, &deletable));
    assert(!deletable);
-assert(0);
-
+#endif
 
    graph_knot_del(scip, graph, 12, TRUE);
    graph->mark[12] = FALSE;
+
 
    SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, &deletable));
    assert(deletable);
@@ -348,8 +363,6 @@ assert(0);
 
    assert(0);
 
-
-   int todo; // test with ancestor conflicts!
 
 
    /* clean up */

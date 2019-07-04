@@ -25,7 +25,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
+#define SCIP_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2643,7 +2643,13 @@ SCIP_Bool extTreeEdgeAncestorConflict(
    {
       assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
       if( ancestormark[((unsigned) curr->index) / 2] )
+      {
+#ifdef SCIP_DEBUG
+         printf("conflict found for ");
+         graph_edge_printInfo(graph, edge);
+#endif
          return TRUE;
+      }
    }
    return FALSE;
 }
