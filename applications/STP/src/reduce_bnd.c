@@ -3136,7 +3136,7 @@ void extStackExpand(
       const int edge = extstack_data[i];
       assert(j < STP_EXT_MAXGRAD);
       assert(edge >= 0 && edge < graph->edges);
-      assert(!isterm[graph->head[edge]] && extdata->tree_deg[graph->head[edge]] == 0);
+      assert(extdata->tree_deg[graph->head[edge]] == 0);
 
       // todo find excluding pairs, use ancestormark and bottleneck
       extedges[j] = edge;
