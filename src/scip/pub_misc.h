@@ -408,7 +408,8 @@ SCIP_RETCODE SCIPpqueueCreate(
    SCIP_PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int                   initsize,           /**< initial number of available element slots */
    SCIP_Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   SCIP_DECL_PQUEUEELEMCHGPOS((*elemchgpos)) /**< callback to act on position change of elem in priority queue, or NULL */
    );
 
 /** frees priority queue, but not the data elements themselves */
@@ -428,6 +429,13 @@ EXTERN
 SCIP_RETCODE SCIPpqueueInsert(
    SCIP_PQUEUE*          pqueue,             /**< priority queue */
    void*                 elem                /**< element to be inserted */
+   );
+
+/** delete element at specified position, maintaining the heap property */
+EXTERN
+void SCIPpqueueDelPos(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   int                   pos                 /**< position of element that should be deleted */
    );
 
 /** removes and returns best element from the priority queue */
@@ -452,6 +460,13 @@ int SCIPpqueueNElems(
 EXTERN
 void** SCIPpqueueElems(
    SCIP_PQUEUE*          pqueue              /**< priority queue */
+   );
+
+/** return the position of @p elem in the priority queue, or -1 if element is not found */
+EXTERN
+int SCIPpqueueFind(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   void*                 elem                /**< element to be inserted */
    );
 
 /**@} */

@@ -1136,7 +1136,8 @@ SCIP_RETCODE SCIPpqueueCreate(
    SCIP_PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int                   initsize,           /**< initial number of available element slots */
    SCIP_Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   SCIP_DECL_PQUEUEELEMCHGPOS((*elemchgpos)) /**< callback to act on position change of elem in priority queue, or NULL */
    )
 {
    assert(pqueue != NULL);
@@ -1151,6 +1152,7 @@ SCIP_RETCODE SCIPpqueueCreate(
    (*pqueue)->sizefac = sizefac;
    (*pqueue)->slots = NULL;
    (*pqueue)->ptrcomp = ptrcomp;
+   (*pqueue)->elemchgpos = elemchgpos;
    SCIP_CALL( pqueueResize(*pqueue, initsize) );
 
    return SCIP_OKAY;
@@ -1177,6 +1179,24 @@ void SCIPpqueueClear(
    pqueue->len = 0;
 }
 
+/** assign element to new slot in priority queue */
+static
+void pqueueElemChgPos(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   void*                 elem,               /**< element whose position changes */
+   int                   oldpos,             /**< old position or -1 if elem is newly inserted */
+   int                   newpos              /**< new position */
+   )
+{
+   pqueue->slots[newpos] = elem;
+
+   /* act on position change */
+   if( pqueue->elemchgpos != NULL )
+   {
+      pqueue->elemchgpos(elem, oldpos, newpos);
+   }
+}
+
 /** inserts element into priority queue */
 SCIP_RETCODE SCIPpqueueInsert(
    SCIP_PQUEUE*          pqueue,             /**< priority queue */
@@ -1184,6 +1204,7 @@ SCIP_RETCODE SCIPpqueueInsert(
    )
 {
    int pos;
+   int parentpos;
 
    assert(pqueue != NULL);
    assert(pqueue->len >= 0);
@@ -1194,14 +1215,59 @@ SCIP_RETCODE SCIPpqueueInsert(
    /* insert element as leaf in the tree, move it towards the root as long it is better than its parent */
    pos = pqueue->len;
    pqueue->len++;
-   while( pos > 0 && (*pqueue->ptrcomp)(elem, pqueue->slots[PQ_PARENT(pos)]) < 0 )
+   parentpos = PQ_PARENT(pos);
+   while( pos > 0 && (*pqueue->ptrcomp)(elem, pqueue->slots[parentpos]) < 0 )
    {
-      pqueue->slots[pos] = pqueue->slots[PQ_PARENT(pos)];
-      pos = PQ_PARENT(pos);
+      pqueueElemChgPos(pqueue, pqueue->slots[parentpos], parentpos, pos);
+
+      pos = parentpos;
+      parentpos = PQ_PARENT(pos);
    }
-   pqueue->slots[pos] = elem;
+
+   /* insert element at the found position */
+   pqueueElemChgPos(pqueue, elem, -1, pos);
 
    return SCIP_OKAY;
+}
+
+
+/** delete element at specified position, maintaining the heap property */
+void SCIPpqueueDelPos(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   int                   pos                 /**< position of element that should be deleted */
+   )
+{
+   void* last;
+
+   assert(pqueue != NULL);
+   assert(pos >= 0);
+   assert(pos < SCIPpqueueNElems(pqueue));
+
+   /* remove element at specified position of the tree, move the better child to its parents position until the last element
+    * of the queue could be placed in the empty slot
+    */
+   last = pqueue->slots[pqueue->len-1];
+   pqueue->len--;
+
+   while( pos <= PQ_PARENT(pqueue->len-1) )
+   {
+      int childpos = PQ_LEFTCHILD(pos);
+      int brotherpos = PQ_RIGHTCHILD(pos);
+
+      /* determine better of the two children */
+      if( brotherpos <= pqueue->len && (*pqueue->ptrcomp)(pqueue->slots[brotherpos], pqueue->slots[childpos]) < 0 )
+         childpos = brotherpos;
+      if( (*pqueue->ptrcomp)(last, pqueue->slots[childpos]) <= 0 )
+         break;
+
+      /* move better element from childpos to pos */
+      pqueueElemChgPos(pqueue, pqueue->slots[childpos], childpos, pos);
+
+      pos = childpos;
+   }
+   assert(pos <= pqueue->len);
+
+   pqueueElemChgPos(pqueue, last, pqueue->len, pos);
 }
 
 /** removes and returns best element from the priority queue */
@@ -1210,10 +1276,6 @@ void* SCIPpqueueRemove(
    )
 {
    void* root;
-   void* last;
-   int pos;
-   int childpos;
-   int brotherpos;
 
    assert(pqueue != NULL);
    assert(pqueue->len >= 0);
@@ -1221,26 +1283,9 @@ void* SCIPpqueueRemove(
    if( pqueue->len == 0 )
       return NULL;
 
-   /* remove root element of the tree, move the better child to its parents position until the last element
-    * of the queue could be placed in the empty slot
-    */
    root = pqueue->slots[0];
-   last = pqueue->slots[pqueue->len-1];
-   pqueue->len--;
-   pos = 0;
-   while( pos <= PQ_PARENT(pqueue->len-1) )
-   {
-      childpos = PQ_LEFTCHILD(pos);
-      brotherpos = PQ_RIGHTCHILD(pos);
-      if( brotherpos <= pqueue->len && (*pqueue->ptrcomp)(pqueue->slots[brotherpos], pqueue->slots[childpos]) < 0 )
-         childpos = brotherpos;
-      if( (*pqueue->ptrcomp)(last, pqueue->slots[childpos]) <= 0 )
-         break;
-      pqueue->slots[pos] = pqueue->slots[childpos];
-      pos = childpos;
-   }
-   assert(pos <= pqueue->len);
-   pqueue->slots[pos] = last;
+
+   SCIPpqueueDelPos(pqueue, 0);
 
    return root;
 }
@@ -1279,6 +1324,23 @@ void** SCIPpqueueElems(
    assert(pqueue->len >= 0);
 
    return pqueue->slots;
+}
+
+/** return the position of @p elem in the priority queue, or -1 if element is not found */
+int SCIPpqueueFind(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   void*                 elem                /**< element to be inserted */
+   )
+{
+   int pos = -1;
+
+   while( ++pos < SCIPpqueueNElems(pqueue) )
+   {
+      if( pqueue->slots[pos] == elem )
+         return pos;
+   }
+
+   return -1;
 }
 
 

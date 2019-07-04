@@ -171,6 +171,8 @@ typedef struct SCIP_DisjointSet SCIP_DISJOINTSET;
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) uint64_t x (void* userptr, void* key)
 
+/** callback to act on position change of @p elem in priority queue */
+#define SCIP_DECL_PQUEUEELEMCHGPOS(x) void x (void* elem, int oldpos, int newpos)
 
 #ifdef __cplusplus
 }

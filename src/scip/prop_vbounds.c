@@ -1194,7 +1194,7 @@ SCIP_RETCODE initData(
    propdata->initialized = TRUE;
 
    /* prepare priority queue structure */
-   SCIP_CALL( SCIPpqueueCreate(&propdata->propqueue, nvars, 2.0, compVarboundIndices) );
+   SCIP_CALL( SCIPpqueueCreate(&propdata->propqueue, nvars, 2.0, compVarboundIndices, NULL) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->inqueue, nbounds) );
    BMSclearMemoryArray(propdata->inqueue, nbounds);
 

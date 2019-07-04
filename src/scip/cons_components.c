@@ -1322,7 +1322,7 @@ SCIP_RETCODE initProblem(
    /* create a priority queue for the components: we need exactly ncomponents slots in the queue so it should never be
     * resized
     */
-   SCIP_CALL( SCIPpqueueCreate(&(*problem)->compqueue, ncomponents, 1.2, componentSort) );
+   SCIP_CALL( SCIPpqueueCreate(&(*problem)->compqueue, ncomponents, 1.2, componentSort, NULL) );
 
    (*problem)->scip = scip;
    (*problem)->lowerbound = fixedvarsobjsum;

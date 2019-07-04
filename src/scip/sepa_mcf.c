@@ -5072,7 +5072,7 @@ SCIP_RETCODE nodepairqueueCreate(
 #endif
 
    /* initialize priority queue */
-   SCIP_CALL( SCIPpqueueCreate(&(*nodepairqueue)->pqueue, nnodepairs, 2.0, compNodepairs) );
+   SCIP_CALL( SCIPpqueueCreate(&(*nodepairqueue)->pqueue, nnodepairs, 2.0, compNodepairs, NULL) );
 
    /* fill priority queue using array nodepairs */
    for( n = 0; n < nnodepairs; n++ )
