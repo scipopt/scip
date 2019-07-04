@@ -2928,7 +2928,6 @@ SCIP_Bool extRuleOutSimple(
 
    assert(scip && graph && reddata && extdata);
    assert(edge >= 0 && edge < graph->edges);
-   assert(tree_deg[extvert] >= 0);
 
    if( tree_deg[extvert] != 0 )
       return TRUE;
@@ -2965,8 +2964,6 @@ SCIP_Bool extRuleOutPeriph(
    if( reddata->equality ? (SCIPisGE(scip, tree_redcost, cutoff)) : SCIPisGT(scip, tree_redcost, cutoff) )
    {
       SCIPdebugMessage("Rule-out periph (red. cost) \n");
-      assert(0);
-
       return TRUE;
    }
    else
