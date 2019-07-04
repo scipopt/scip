@@ -3337,11 +3337,7 @@ SCIP_RETCODE reduceExtCheckArc(
    SCIP_Real             cutoff,             /**< reduced cost cutoff value */
    int                   edge,               /**< directed edge to be checked */
    SCIP_Bool             equality,           /**< allow equality? */
-   int*                  extstack_data,      /**< array of size at least nnodes for internal computations */
-   int*                  extstack_start,     /**< array of size at least nnodes for internal computations */
-   int*                  extstack_state,     /**< array of size at least nnodes for internal computations */
-   int*                  tree_edges,         /**< array of size at least nnodes for internal computations */
-   int*                  tree_leaves,        /**< array of size at least nnodes for internal computations */
+   int*                  tree_deg,           /**< -1 for forbidden nodes (e.g. PC terminals), 0 otherwise; in method: position ( > 0) for nodes in tree */
    SCIP_Bool*            deletable           /**< is edge deletable? */
 )
 {
@@ -3350,7 +3346,7 @@ SCIP_RETCODE reduceExtCheckArc(
    SCIP_Real edgebound = redcost[edge] + rootdist[tail] + termpaths[head].dist;
 
 #ifndef NDEBUG
-   assert(scip && graph && redcost && rootdist && termpaths && extstack_data && extstack_start && extstack_state && deletable && tree_leaves);
+   assert(scip && graph && redcost && rootdist && termpaths && deletable && tree_deg);
    assert(edge >= 0 && edge < graph->edges);
    assert(!graph_pc_isPcMw(graph) || !graph->extended);
    assert(graph->mark[tail] && graph->mark[head]);
@@ -3372,14 +3368,21 @@ SCIP_RETCODE reduceExtCheckArc(
    /* can we extend from 'edge'? */
    if( extLeafIsExtendable(graph, isterm, tail) || extLeafIsExtendable(graph, isterm, head) )
    {
-      int* tree_deg; /* -1 for forbidden nodes, position (> 0) for nodes in tree, 0 otherwise */
+      int* extstack_data;
+      int* extstack_start;
+      int* extstack_state;
+      int* tree_edges;
+      int* tree_leaves;
       int* ancestormark;
       const int nnodes = graph->knots;
       const int maxdfsdepth = (graph->edges > STP_EXT_EDGELIMIT) ? STP_EXT_MINDFSDEPTH : STP_EXT_MAXDFSDEPTH;
       const int maxstackedges = MIN(nnodes / 2, STP_EXT_MAXEDGES);
 
-      /* allocate clean arrays todo tree_deg as input parameter...mark terminal nodes for PC as -1 */
-      SCIP_CALL( SCIPallocCleanBufferArray(scip, &tree_deg, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_data, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_start, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &extstack_state, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &tree_edges, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &tree_leaves, nnodes) );
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &ancestormark, (MAX(graph->edges, graph->orgedges) / 2)) );
 
       tree_deg[root] = -1;
@@ -3471,16 +3474,23 @@ SCIP_RETCODE reduceExtCheckArc(
       } /* extend from head */
 
 
+      /* finalize arrays */
+
       tree_deg[root] = 0;
 
-      /* free memory */
-      for( int i = 0; i < nnodes; i++ )
-         assert(tree_deg[i] == 0);
+#ifndef NDEBUG
       for( int i = 0; i < MAX(graph->edges, graph->orgedges) / 2; i++ )
          assert(ancestormark[i] == 0);
 
+      for( int i = 0; i < nnodes; i++ )
+         assert(tree_deg[i] == 0 || tree_deg[i] == -1);
+#endif
       SCIPfreeCleanBufferArray(scip, &ancestormark);
-      SCIPfreeCleanBufferArray(scip, &tree_deg);
+      SCIPfreeBufferArray(scip, &tree_leaves);
+      SCIPfreeBufferArray(scip, &tree_edges);
+      SCIPfreeBufferArray(scip, &extstack_state);
+      SCIPfreeBufferArray(scip, &extstack_start);
+      SCIPfreeBufferArray(scip, &extstack_data);
    }
 
    return SCIP_OKAY;
@@ -4076,7 +4086,127 @@ SCIP_RETCODE reduce_check3Tree(
 }
 
 
-/** reduce SPG graph based on reduced cost information and given upper bound  */
+/** extended reduction test for edges */
+SCIP_RETCODE reduce_extendedEdge2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   const PATH*           termpaths,          /**< paths to nearest terminals */
+   const SCIP_Real*      redcost,            /**< dual ascent costs */
+   const SCIP_Real*      rootdist,           /**< shortest path distance (w.r.t reduced costs) from root to any node */
+   const int*            result,             /**< solution array */
+   SCIP_Real             minpathcost,        /**< the required reduced path cost to be surpassed */
+   int                   root,               /**< the root */
+   SCIP_Bool             markdirected,       /**< try to also mark edge if anti-parallel is not marked */
+   STP_Bool*             edgedeletable,      /**< edge array to mark which (directed) edge can be removed */
+   int*                  nelims              /**< number of eliminations */
+)
+{
+   SCIP_Bool* isterm;
+   int* tree_deg;
+   const int nedges = graph->edges;
+   const int nnodes = graph->knots;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+
+   assert(scip && graph && redcost);
+   assert(!pcmw || !graph->extended);
+   assert(root >= 0 && root < graph->knots);
+
+   *nelims = 0;
+
+   if( SCIPisZero(scip, minpathcost) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &isterm, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tree_deg, nnodes) );
+
+   graph_get_isTerm(graph, isterm);
+
+   if( !pcmw )
+      for( int k = 0; k < nnodes; k++ )
+         graph->mark[k] = (graph->grad[k] > 0);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( graph->mark[k] )
+         tree_deg[k] = 0;
+      else
+         tree_deg[k] = -1;
+   }
+
+   /* main loop */
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      const int tail = graph->tail[e];
+      const int head = graph->head[e];
+
+      if( pcmw && (!graph->mark[tail] || !graph->mark[head]) )
+         continue;
+
+      if( graph->oeat[e] != EAT_FREE )
+      {
+         const int erev = e + 1;
+         SCIP_Bool deletable = TRUE;
+         const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT && result[erev] != CONNECT);
+
+         assert(flipedge(e) == erev);
+         assert(SCIPisEQ(scip, graph->cost[e], graph->cost[erev]));
+
+         if( SCIPisZero(scip, redcost[e]) || SCIPisZero(scip, redcost[erev]) )
+            continue;
+
+         if( !edgedeletable[e] )
+         {
+            SCIP_CALL( reduceExtCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeletable,
+                  isterm, minpathcost, e, allowequality, tree_deg, &deletable) );
+
+            if( deletable )
+               edgedeletable[e] = TRUE;
+         }
+
+         if( !edgedeletable[erev] && (deletable || markdirected) )
+         {
+            SCIP_Bool erevdeletable = TRUE;
+
+            SCIP_CALL( reduceExtCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeletable,
+                  isterm, minpathcost, e, allowequality, tree_deg, &deletable) );
+
+            if( erevdeletable )
+               edgedeletable[erev] = TRUE;
+
+            deletable = (deletable && erevdeletable);
+         }
+
+         if( deletable )
+         {
+            graph_edge_del(scip, graph, e, TRUE);
+
+            // todo also delete CSR
+
+            if( graph->grad[tail] == 0 )
+               graph->mark[tail] = FALSE;
+
+            if( graph->grad[head] == 0 )
+               graph->mark[head] = FALSE;
+
+            (*nelims)++;
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &tree_deg);
+   SCIPfreeBufferArray(scip, &isterm);
+
+#ifndef NDEBUG
+   for( int k = 0; k < nnodes; k++ )
+      if( graph->grad[k] == 0 && k != root )
+         assert(!graph->mark[k]);
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** reduce SPG graph based on reduced cost information and given upper bound todo to be deleted and replaced by reduce_extendedEdge2  */
 int reduce_extendedEdge(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
@@ -4117,7 +4247,7 @@ int reduce_extendedEdge(
    {
       const int erev = e + 1;
 
-      if( pcmw && graph->cost[e] != graph->cost[erev] )
+      if( pcmw && !SCIPisEQ(scip, graph->cost[e], graph->cost[erev]) )
          continue;
 
       if( graph->oeat[e] != EAT_FREE )
@@ -4466,6 +4596,20 @@ SCIP_RETCODE reduce_da(
               marked[e] = FALSE;
 
          initializeDaDistances(scip, graph, daroot, cost, vnoi, pathdist, costrev, vbase, pathedge, state);
+
+
+         {
+                 int nn;
+                 int extfixed;
+                 reduce_extendedEdge2(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, FALSE, marked, &extfixed);
+                 nfixed += extfixed;
+
+                 graph_printInfo(graph);
+                 printf("newly fixed %d \n", extfixed);
+                 assert(0);
+
+              }
+
 
          updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, nedges, (run == 0), TRUE);

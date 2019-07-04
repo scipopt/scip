@@ -483,10 +483,9 @@ extern SCIP_RETCODE    reduce_boundPrune(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_
 extern SCIP_RETCODE    reduce_boundHop(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_boundHopR(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_boundHopRc(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, SCIP_Bool);
-extern int reduce_extendedEdge(SCIP*, GRAPH*, const PATH*, const SCIP_Real*, const SCIP_Real*, const int*, SCIP_Real, int, int*, STP_Bool*, SCIP_Bool);
-extern SCIP_RETCODE    reduceExtCheckArc(SCIP*, const GRAPH*, int, const SCIP_Real*,
-    const SCIP_Real*, const PATH*, const STP_Bool*, const SCIP_Bool*,
-      SCIP_Real, int, SCIP_Bool, int*, int*, int*, int*, int*, SCIP_Bool*);
+extern int             reduce_extendedEdge(SCIP*, GRAPH*, const PATH*, const SCIP_Real*, const SCIP_Real*, const int*, SCIP_Real, int, int*, STP_Bool*, SCIP_Bool);
+extern SCIP_RETCODE    reduceExtCheckArc(SCIP*, const GRAPH*, int, const SCIP_Real*,  const SCIP_Real*, const PATH*, const STP_Bool*, const SCIP_Bool*,  SCIP_Real, int, SCIP_Bool, int*, SCIP_Bool*);
+extern SCIP_RETCODE    reduce_extendedEdge2(SCIP*, GRAPH*, const PATH*, const SCIP_Real*, const SCIP_Real*, const int*, SCIP_Real, int, SCIP_Bool,  STP_Bool*, int*);
 
 
 /* reduce_ext.c
