@@ -349,6 +349,9 @@ assert(0);
    assert(0);
 
 
+   int todo; // test with ancestor conflicts!
+
+
    /* clean up */
 
    SCIPfreeBufferArray(scip, &termpaths);

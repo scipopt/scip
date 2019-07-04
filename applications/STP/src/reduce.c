@@ -2141,7 +2141,7 @@ SCIP_RETCODE reduce(
    /* initialize shortest path algorithms */
    SCIP_CALL( graph_path_init(scip, graph) );
 
-   // SCIP_CALL( reduce_extTest1(scip) );
+    SCIP_CALL( reduce_extTest1(scip) );
    // SCIP_CALL( reduce_sdPcMwTest4(scip) );
    // SCIP_CALL( dheap_Test1(scip) );
    // SCIP_CALL( heur_extendPcMwOuterTest1(scip) );
