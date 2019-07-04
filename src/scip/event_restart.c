@@ -174,7 +174,8 @@ struct TreeData
 struct SubtreeSumGap
 {
    SCIP_Real             value;              /**< the current subtree sum gap */
-   SCIP_HASHMAP*         nodes2subtree;      /**< map between nodes and their subtree indices */
+   SCIP_HASHMAP*         nodes2info;      /**< map between nodes and their subtree indices */
+   SCIP_PQUEUE**         subtreepqueues;     /**< array of priority queues, one for each subtree */
    int                   nsubtrees;          /**< the current number n of subtrees labeled 0 .. n - 1 */
    SCIP_Real             scalingfactor;      /**< the current scaling factor */
    SCIP_Real             pblastsplit;        /**< primal bound when last split occurred */
@@ -205,23 +206,81 @@ struct TimeSeries
    }                     data;               /**< time series data pointer */
 };
 
+/** extended node information for SSG priority queue */
+struct NodeInfo
+{
+   SCIP_NODE*            node;               /**< search tree node */
+   SCIP_Real             lowerbound;         /**< lower bound of the node at insertion into priority queue */
+   int                   pos;                /**< position of this node in priority queue */
+   int                   subtreeidx;         /**< subtree index of this node */
+};
+
+typedef struct NodeInfo NODEINFO;
+
 /*
  * Local methods
  */
 
+/** clean subtrees stored as priority queues */
+static
+void subtreesumgapDelSubtrees(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SUBTREESUMGAP*        ssg                 /**< subtree sum gap data structure */
+   )
+{
+   /* free all previous priority queues */
+
+   assert(ssg->nsubtrees <= 1 || ssg->subtreepqueues != NULL);
+
+   if( ssg->nsubtrees > 1 )
+   {
+      int s;
+
+      for( s = 0; s < ssg->nsubtrees; ++s )
+      {
+         int i;
+         SCIP_PQUEUE* pqueue = ssg->subtreepqueues[s];
+         NODEINFO** nodeinfos;
+
+         assert(pqueue != NULL);
+         nodeinfos = (NODEINFO**)SCIPpqueueElems(pqueue);
+
+         /* free all remaining elements in reverse order */
+         for( i = SCIPpqueueNElems(pqueue); --i >= 0; )
+         {
+            NODEINFO* nodeinfo = nodeinfos[i];
+            assert(nodeinfo != NULL);
+            SCIPfreeBlockMemory(scip, &nodeinfo);
+         }
+
+         SCIPpqueueFree(&pqueue);
+      }
+
+      SCIPfreeBlockMemoryArray(scip, &ssg->subtreepqueues, ssg->nsubtrees);
+
+   }
+
+   ssg->subtreepqueues = NULL;
+}
+
 /** reset subtree sum gap */
 static
 void subtreesumgapReset(
+   SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP*        ssg                 /**< subtree sum gap data structure */
    )
 {
    assert(ssg != NULL);
-   assert(ssg->nodes2subtree != NULL);
+   assert(ssg->nodes2info != NULL);
 
-   SCIPhashmapRemoveAll(ssg->nodes2subtree);
+   SCIPhashmapRemoveAll(ssg->nodes2info);
+
+   subtreesumgapDelSubtrees(scip, ssg);
+
    ssg->value = 1.0;
    ssg->scalingfactor = 1.0;
    ssg->nsubtrees = 1;
+   ssg->subtreepqueues = NULL;
    ssg->pblastsplit = SCIP_INVALID;
 }
 
@@ -237,10 +296,13 @@ SCIP_RETCODE subtreesumgapCreate(
 
    /* allocate storage */
    SCIP_CALL( SCIPallocMemory(scip, ssg) );
-   SCIP_CALL( SCIPhashmapCreate(&(*ssg)->nodes2subtree, SCIPblkmem(scip), INITIALSIZE) );
+   SCIP_CALL( SCIPhashmapCreate(&(*ssg)->nodes2info, SCIPblkmem(scip), INITIALSIZE) );
+
+   /* explicitly set this to skip removal of subtrees during reset */
+   (*ssg)->nsubtrees = 0;
 
    /* reset ssg */
-   subtreesumgapReset(*ssg);
+   subtreesumgapReset(scip, *ssg);
 
    return SCIP_OKAY;
 }
@@ -255,34 +317,131 @@ void subtreesumgapFree(
    assert(scip != NULL);
    assert(ssg != NULL);
 
-   SCIPhashmapFree(&(*ssg)->nodes2subtree);
+   SCIPhashmapFree(&(*ssg)->nodes2info);
+
+   /* delete all subtree data */
+   subtreesumgapDelSubtrees(scip, *ssg);
 
    SCIPfreeMemory(scip, ssg);
+}
+
+/** compare two node infos by comparing their lower bound */
+static
+SCIP_DECL_SORTPTRCOMP(compareNodeinfos)
+{
+   NODEINFO* nodeinfo1 = (NODEINFO*)elem1;
+   NODEINFO* nodeinfo2 = (NODEINFO*)elem2;
+
+   if( nodeinfo1->lowerbound < nodeinfo2->lowerbound )
+      return -1;
+   else if( nodeinfo1->lowerbound > nodeinfo2->lowerbound )
+      return 1;
+
+   return 0;
+}
+
+/** position change callback of element in priority queue */
+static
+SCIP_DECL_PQUEUEELEMCHGPOS(elemChgPosNodeinfo)
+{
+   NODEINFO* nodeinfo = (NODEINFO*)elem;
+
+   assert(oldpos == -1 || oldpos == nodeinfo->pos);
+   nodeinfo->pos = newpos;
+}
+
+/** store node in SSG data structure */
+static
+SCIP_RETCODE subtreesumgapStoreNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SUBTREESUMGAP*        ssg,                /**< subtree sum gap data structure */
+   SCIP_NODE*            node,               /**< node that should be stored */
+   int                   subtreeidx          /**< subtree index of that node */
+   )
+{
+   NODEINFO* nodeinfo;
+
+   assert(scip != NULL);
+   assert(ssg != NULL);
+   assert(node != NULL);
+
+   /* create a new node info */
+   assert(!SCIPhashmapExists(ssg->nodes2info, (void*)node));
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nodeinfo) );
+
+   /* store node information in data structure and insert into priority queue */
+   nodeinfo->node = node;
+   nodeinfo->subtreeidx = subtreeidx;
+   nodeinfo->pos = -1;
+   nodeinfo->lowerbound = SCIPnodeGetLowerbound(node);
+
+   SCIPdebugMsg(scip, "Inserting label %d for node number %lld\n",
+      subtreeidx, SCIPnodeGetNumber(node));
+
+   /* store node information in Hash Map */
+   SCIP_CALL( SCIPhashmapInsert(ssg->nodes2info, (void*)node, (void*)nodeinfo) );
+
+   /* create the corresponding priority queue, if it does not exist yet */
+   assert(subtreeidx >= 0);
+   assert(subtreeidx < ssg->nsubtrees);
+
+   if( ssg->subtreepqueues[subtreeidx] == NULL )
+   {
+      SCIP_CALL( SCIPpqueueCreate(&ssg->subtreepqueues[subtreeidx], 5, 1.2, compareNodeinfos, elemChgPosNodeinfo) );
+   }
+
+   SCIP_CALL( SCIPpqueueInsert(ssg->subtreepqueues[subtreeidx], (void*)nodeinfo) );
+
+//   assert(SCIPpqueueFind(ssg->subtreepqueues[subtreeidx], (void*)nodeinfo) == nodeinfo->pos);
+
+   return SCIP_OKAY;
 }
 
 /** split the open nodes of the current tree */
 static
 SCIP_RETCODE subtreesumgapSplit(
    SCIP*                 scip,               /**< SCIP data structure */
-   SUBTREESUMGAP*        ssg                 /**< subtree sum gap data structure */
+   SUBTREESUMGAP*        ssg,                /**< subtree sum gap data structure */
+   SCIP_Bool             addfocusnode        /**< should the focus node be a subtree, too? */
    )
 {
    SCIP_NODE** opennodes[3];
    int nopennodes[3];
 
    int t;
+   int label;
 
    assert(scip != NULL);
    assert(ssg != NULL);
 
    /* clear hash map from entries */
-   SCIP_CALL( SCIPhashmapRemoveAll(ssg->nodes2subtree) );
+   SCIP_CALL( SCIPhashmapRemoveAll(ssg->nodes2info) );
+
+   /* delete all subtrees */
+   subtreesumgapDelSubtrees(scip, ssg);
 
    /* query the open nodes of SCIP */
    SCIPgetOpenNodesData(scip, &opennodes[0], &opennodes[1], &opennodes[2], &nopennodes[0], &nopennodes[1], &nopennodes[2]);
 
-   ssg->nsubtrees = 0;
+   ssg->nsubtrees = nopennodes[0] + nopennodes[1] + nopennodes[2] + (addfocusnode ? 1 : 0);
+
+   SCIPdebugMsg(scip, "Splitting tree into %d subtrees\n", ssg->nsubtrees);
+
+   /* create priority queue array */
+   if( ssg->nsubtrees > 1 )
+   {
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &ssg->subtreepqueues, ssg->nsubtrees) );
+   }
+   else
+   {
+      ssg->subtreepqueues = NULL;
+
+      return SCIP_OKAY;
+   }
+
+
    /* loop over node types (leaves, siblings, children) */
+   label = 0;
    for( t = 0; t < 3; ++t )
    {
       SCIP_NODE** nodes = opennodes[t];
@@ -293,13 +452,95 @@ SCIP_RETCODE subtreesumgapSplit(
       for( n = 0; n < nnodes; ++n )
       {
          SCIP_NODE* node = nodes[n];
-
-         SCIPdebugMsg(scip, "Inserting label %d for node number %lld\n",
-            ssg->nsubtrees, SCIPnodeGetNumber(node));
-
-         SCIP_CALL( SCIPhashmapInsert(ssg->nodes2subtree, (void*) node, (void*)(size_t)ssg->nsubtrees++) );
+         SCIP_CALL( subtreesumgapStoreNode(scip, ssg, node, label++) );
       }
    }
+
+   if( addfocusnode )
+   {
+      assert(SCIPgetFocusNode(scip) != NULL);
+      subtreesumgapStoreNode(scip, ssg, SCIPgetFocusNode(scip), label++);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** todo compute a gap between a lower bound and the current upper bound */
+static
+SCIP_Real calcGap(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lowerbound          /**< lower bound value */
+   )
+{
+   SCIP_Real db;
+   SCIP_Real pb;
+   SCIP_Real gap;
+
+   if( SCIPisInfinity(scip, lowerbound) )
+      return 0.0;
+
+   if( SCIPisInfinity(scip, SCIPgetUpperbound(scip)) )
+      return 1.0;
+
+   db = SCIPretransformObj(scip, lowerbound);
+   pb = SCIPgetPrimalbound(scip);
+
+   if( SCIPisEQ(scip, db, pb) )
+      return 0.0;
+
+   gap = REALABS(pb - db)/MAX(REALABS(pb),REALABS(db));
+   gap = MIN(gap, 1.0);
+
+   return gap;
+}
+
+/** remove node from the subtree sum gap (because it has been solved by branching or is a leaf) */
+static
+SCIP_RETCODE subtreesumgapRemoveNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SUBTREESUMGAP*        ssg,                /**< subtree sum gap data structure */
+   SCIP_NODE*            node                /**< node that should be removed */
+   )
+{
+   NODEINFO* nodeinfo;
+   int subtreeidx;
+   int pos;
+   SCIP_PQUEUE* pqueue;
+
+   if( ssg->nsubtrees <= 1 )
+      return SCIP_OKAY;
+
+   nodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void*)node);
+   if( nodeinfo == NULL )
+      return SCIP_OKAY;
+
+   subtreeidx = nodeinfo->subtreeidx;
+   pqueue = ssg->subtreepqueues[subtreeidx];
+   assert(pqueue != NULL);
+   assert(SCIPpqueueFind(pqueue, (void *)nodeinfo) == nodeinfo->pos);
+
+   pos = nodeinfo->pos;
+   SCIPpqueueDelPos(pqueue, pos);
+
+   /* update ssg if removed node was the lower bound defining node of its subtree */
+   if( pos == 0 )
+   {
+      NODEINFO* nodeinfofirst;
+      SCIP_Real oldgap;
+      SCIP_Real newgap;
+
+      oldgap = calcGap(scip, nodeinfo->lowerbound);
+      nodeinfofirst = SCIPpqueueFirst(ssg->subtreepqueues[subtreeidx]);
+      assert(nodeinfofirst == NULL || subtreeidx == nodeinfofirst->subtreeidx);
+      newgap = calcGap(scip, nodeinfofirst != NULL ? nodeinfofirst->lowerbound : SCIPinfinity(scip) );
+
+      assert(newgap <= oldgap);
+      ssg->value += ssg->scalingfactor * (newgap - oldgap);
+   }
+
+   SCIP_CALL( SCIPhashmapRemove(ssg->nodes2info, (void*)node) );
+
+   SCIPfreeBlockMemory(scip, &nodeinfo);
 
    return SCIP_OKAY;
 }
@@ -314,6 +555,7 @@ SCIP_RETCODE subtreesumGapInsertChildren(
    int nchildren;
    SCIP_NODE** children;
    SCIP_NODE* focusnode;
+   NODEINFO* focusnodeinfo;
    int focusnodelabel;
    int n;
 
@@ -329,9 +571,9 @@ SCIP_RETCODE subtreesumGapInsertChildren(
       return SCIP_OKAY;
 
    focusnode = SCIPgetFocusNode(scip);
-   assert(SCIPhashmapExists(ssg->nodes2subtree, (void *)focusnode));
-   focusnodelabel = (int)(size_t)SCIPhashmapGetImage(ssg->nodes2subtree, (void *)focusnode);
-
+   assert(SCIPhashmapExists(ssg->nodes2info, (void *)focusnode));
+   focusnodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void *)focusnode);
+   focusnodelabel = focusnodeinfo->subtreeidx;
    /* loop over children and insert the focus node label */
    for( n = 0; n < nchildren; ++n )
    {
@@ -340,16 +582,16 @@ SCIP_RETCODE subtreesumGapInsertChildren(
       SCIPdebugMsg(scip, "Inserting label %d for node number %lld (parent %lld)\n",
          focusnodelabel, SCIPnodeGetNumber(children[n]), SCIPnodeGetNumber(focusnode));
 
-      assert(!SCIPhashmapExists(ssg->nodes2subtree, (void*)children[n]));
-      SCIP_CALL( SCIPhashmapInsert(ssg->nodes2subtree, (void *)children[n], (void*)(size_t)focusnodelabel) );
+      SCIP_CALL( subtreesumgapStoreNode(scip, ssg, children[n], focusnodelabel) );
    }
 
    /* remove focus node from hash map */
-   SCIP_CALL( SCIPhashmapRemove(ssg->nodes2subtree, (void *)focusnode) );
+   subtreesumgapRemoveNode(scip, ssg, focusnode);
 
    return SCIP_OKAY;
 }
 
+#if 0
 /** compute subtree sum gap from scratch (inefficient) */
 static
 SCIP_RETCODE subtreesumgapComputeFromScratch(
@@ -374,13 +616,10 @@ SCIP_RETCODE subtreesumgapComputeFromScratch(
       return SCIP_OKAY;
    }
 
+   /* simply use normal gap in trivial case */
    if( ssg->nsubtrees == 1 )
    {
-      /* author bzfhende
-       *
-       * TODO unify gap computation here and for the time series 'gap'
-       */
-      ssg->value = SCIPgetGap(scip);
+      ssg->value = calcGap(scip, SCIPgetLowerbound(scip));
 
       return SCIP_OKAY;
    }
@@ -403,8 +642,12 @@ SCIP_RETCODE subtreesumgapComputeFromScratch(
       for( n = 0; n < nopennodes[t]; ++n )
       {
          SCIP_NODE* node = opennodes[t][n];
-         SCIP_Real lowerbound = SCIPnodeGetLowerbound(node);
-         int label = (int)(size_t)SCIPhashmapGetImage(ssg->nodes2subtree, (void *)node);
+         NODEINFO* nodeinfo;
+         SCIP_Real lowerbound;
+         int label;
+         nodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void *)node);
+         label = nodeinfo->subtreeidx;
+         lowerbound = nodeinfo->lowerbound;
 
          assert(label >= 0 && label < ssg->nsubtrees);
          lowerbounds[label] = MIN(lowerbounds[label], lowerbound);
@@ -446,6 +689,65 @@ SCIP_RETCODE subtreesumgapComputeFromScratch(
    return SCIP_OKAY;
 }
 
+#endif
+
+/** compute subtree sum gap from scratch efficiently */
+static
+SCIP_RETCODE subtreesumgapComputeFromScratchEfficiently(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SUBTREESUMGAP*        ssg,                /**< subtree sum gap data structure */
+   SCIP_Bool             updatescaling       /**< should the scaling factor be updated? */
+   )
+{
+   SCIP_Real gapsum = 0.0;
+
+   int l;
+   /* treat trivial cases: only 1 subtree, no incumbent solution */
+   if( SCIPisInfinity(scip, SCIPgetUpperbound(scip)) )
+   {
+      ssg->value = 1.0;
+
+      return SCIP_OKAY;
+   }
+
+   if( ssg->nsubtrees == 1 )
+   {
+      ssg->value = calcGap(scip, SCIPgetLowerbound(scip));
+
+      return SCIP_OKAY;
+   }
+
+   /* compute subtree gaps in original space; sum them up */
+   for( l = 0; l < ssg->nsubtrees; ++l )
+   {
+      SCIP_Real subtreegap;
+      NODEINFO* nodeinfo;
+
+      assert(ssg->subtreepqueues[l] != NULL);
+
+      nodeinfo = (NODEINFO*)SCIPpqueueFirst(ssg->subtreepqueues[l]);
+
+      /* skip subtrees with infinite lower bound; they are empty and contribute 0.0 to the gap sum term */
+      if( nodeinfo == NULL || SCIPisInfinity(scip, nodeinfo->lowerbound) )
+         continue;
+
+      subtreegap = calcGap(scip, nodeinfo->lowerbound);
+
+      gapsum += subtreegap;
+   }
+
+   /* update the scaling factor by using the previous SSG value divided by the current gapsum */
+   if( updatescaling )
+   {
+      ssg->scalingfactor = ssg->value / MAX(gapsum, 1e-6);
+   }
+
+   /* update and store SSG value by considering scaling factor */
+   ssg->value = ssg->scalingfactor * gapsum;
+
+   return SCIP_OKAY;
+}
+
 /** update the subtree sum gap after a node event (branching or deletion of a node */
 static
 SCIP_RETCODE subtreesumGapUpdate(
@@ -456,28 +758,36 @@ SCIP_RETCODE subtreesumGapUpdate(
    )
 {
    SCIP_Bool updatescaling = FALSE;
-   /* make a new split tree split if the primal bound has changed. */
+
+   /* if the instance is solved, the ssg is 0 */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED )
+   {
+      ssg->value = 0.0;
+
+      return SCIP_OKAY;
+   }
+
+   /* make a new tree split if the primal bound has changed. */
    if( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && ! SCIPisEQ(scip, SCIPgetPrimalbound(scip), ssg->pblastsplit) )
    {
-      subtreesumgapSplit(scip, ssg);
+      subtreesumgapSplit(scip, ssg, nchildren == 0 && SCIPgetFocusNode(scip) != NULL);
       ssg->pblastsplit = SCIPgetPrimalbound(scip);
 
       updatescaling = TRUE;
-   }
 
+      /* compute the current SSG value */
+      SCIP_CALL( subtreesumgapComputeFromScratchEfficiently(scip, ssg, updatescaling) );
+   }
    /* otherwise, if new children have been created, label them */
    else if( ssg->nsubtrees > 1 && nchildren > 0 )
    {
       SCIP_CALL( subtreesumGapInsertChildren(scip, ssg) );
    }
 
-   /* compute the current SSG value */
-   SCIP_CALL( subtreesumgapComputeFromScratch(scip, ssg, updatescaling) );
-
    /* remove the node from the hash map if it is a leaf */
    if( nchildren == 0 )
    {
-      SCIP_CALL( SCIPhashmapRemove(ssg->nodes2subtree, (void *)node) );
+      SCIP_CALL( subtreesumgapRemoveNode(scip, ssg, node) );
    }
 
    return SCIP_OKAY;
@@ -486,17 +796,19 @@ SCIP_RETCODE subtreesumGapUpdate(
 /** reset tree data */
 static
 void treedataReset(
+   SCIP*                 scip,               /**< SCIP data structure */
    TREEDATA*             treedata            /**< tree data */
    )
 {
    /* simply set everything to 0 */
    treedata->ninner = treedata->nleaves = treedata->nvisited = 0L;
+   treedata->progress = 0.0;
 
    /* set up root node */
    treedata->nnodes = 1;
    treedata->nopen = 1;
 
-   subtreesumgapReset(treedata->ssg);
+   subtreesumgapReset(scip, treedata->ssg);
 }
 
 /** create tree data structure */
@@ -513,7 +825,7 @@ SCIP_RETCODE treedataCreate(
 
    SCIP_CALL( subtreesumgapCreate(scip, &(*treedata)->ssg) );
 
-   treedataReset(*treedata);
+   treedataReset(scip, *treedata);
 
    return SCIP_OKAY;
 }
@@ -563,7 +875,10 @@ SCIP_RETCODE treedataUpdate(
    }
 
    /* update the subtree sum gap */
-   SCIP_CALL( subtreesumGapUpdate(scip, treedata->ssg, node, nchildren) );
+   if( ! SCIPisInRestart(scip) )
+   {
+      SCIP_CALL( subtreesumGapUpdate(scip, treedata->ssg, node, nchildren) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1345,7 +1660,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolRestart)
    eventhdlrdata->nreports = 0;
 
    /* reset tree data */
-   treedataReset(eventhdlrdata->treedata);
+   treedataReset(scip, eventhdlrdata->treedata);
 
    resetTimeseries(eventhdlrdata);
 
