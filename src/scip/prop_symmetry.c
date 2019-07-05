@@ -2498,12 +2498,8 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( propdata != NULL );
    assert( propdata->symconsenabled );
 
-   /* remove symmetry handling conss if we are in a restart */
-   if ( propdata->recomputerestart && SCIPgetNRuns(scip) > propdata->lastrestart )
-   {
-      SCIP_CALL( delSymConss(scip, propdata) );
-      SCIP_CALL( freeSymmetryData(scip, propdata) );
-   }
+   /* possibly compute symmetry */
+   SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
 
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
@@ -2514,12 +2510,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
          *earlyterm = TRUE;
 
       return SCIP_OKAY;
-   }
-
-   /* possibly compute symmetry */
-   if ( ! propdata->computedsymmetry )
-   {
-      SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
    }
 
    if ( propdata->nperms <= 0 || ! propdata->binvaraffected )
