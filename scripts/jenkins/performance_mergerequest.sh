@@ -23,6 +23,8 @@ echo "This is performance_mergerequest.sh running."
 : ${TESTMODE:="all"}
 : ${GITBRANCH:=${gitlabTargetBranch}}
 
+ORIGBRANCH=${GITBRANCH}
+
 if [ "${TESTMODE}" == "short" ]; then
   echo "Testing short"
 elif [ "${TESTMODE}" == "mip" ]; then
@@ -83,10 +85,10 @@ elif [ "${TESTMODE}" == "minlp" ]; then
 #  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=mergerequest SEEDS=2"
 fi
 
-SAPSETTINGS=sap-next-release-pure-diff
-if [ "${GITBRANCH}" != "master" ]; then
-  SAPSETTINGS=sap-600-pure-diff
-fi
+#SAPSETTINGS=sap-next-release-pure-diff
+#if [ "${GITBRANCH}" != "master" ]; then
+#  SAPSETTINGS=sap-600-pure-diff
+#fi
 
 # create required directory
 mkdir -p settings
@@ -113,14 +115,27 @@ elif [ "${TESTMODE}" == "minlp" ]; then
 # elif [ "${testmode}" == "sap" ]; then
 fi
 
-# get comparison run
-GITHASH_HISTORY=$(grep fullgh=.* -o ${COMPARERBDB} | uniq | cut -d ' ' -f 1 | cut -d '=' -f 2 |sort -r)
-GITLOG=$(git log --pretty=format:'%H')
-export COMPAREHASH=$(echo "${GITLOG}" | grep -F "${GITHASH_HISTORY}" | head -n 1)
-if [ "${COMPAREGITHASH}" == "" ]; then
-  export SOPLEX_HASH=$(grep ${COMPAREHASH} ${COMPARERBDB} | head -n 1 | grep -o "soplexhash=.*" | cut -d "=" -f 2)
+# get git hash of comparison run
+export COMPAREHASH=$(git rev-parse origin/performance-${GITBRANCH})
+
+# ensure that the current branch is based on the last performance run
+set +e
+GITLOG="$(git log --pretty=format:'%H' | grep ${COMPAREHASH})"
+if [ "${GITLOG}" == "" ]; then
+  echo "Latest performance run of ${ORIGBRANCH} is not part of your branch. Please merge!"
+  exit 1
 fi
-export COMPARERBIDS=$(grep "${COMPAREHASH}" ${COMPARERBDB} | cut -d ' ' -f 2)
+GITLOG=$(git log origin/${ORIGBRANCH} --pretty=format:'%H' | grep ${COMPAREHASH} -B1 | head -n 1)
+if [ "${GITLOG}" != "${COMPAREHASH}" ]; then
+  GITCHECK=$(git log origin/${ORIGBRANCH} --pretty=format:'%H' | grep ${GITLOG})
+  if [ "${GITCHECK}" != "" ]; then
+     echo "Your branch is ahead of the latest performance run of ${ORIGBRANCH}. Abort!"
+     exit 1
+  fi
+fi
+set -e
+
+#export COMPARERBIDS=$(grep "${COMPAREHASH}" ${COMPARERBDB} | cut -d ' ' -f 2)
 
 export CRITERION_DIR=""
 export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
@@ -140,20 +155,14 @@ cd ${BUILD_DIR}
 
 git clone git@git.zib.de:integer/soplex.git
 cd soplex
-if [ "${SOPLEX_HASH}" != "" ]; then
-  git checkout ${SOPLEX_HASH}
-else
-  if [ "${GITBRANCH}" == "bugfix" ]; then
-    git checkout ${SOPLEX_BUGFIX}
-  fi
-fi
+git checkout performance-${GITBRANCH}
 mkdir build
 cd build
 cmake ..
 make -j4
 cd ../../
 
-cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=soplex/
+cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=$(pwd -P)/soplex/build
 make -j4
 cd ..
 

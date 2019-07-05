@@ -76,8 +76,10 @@ mkdir -p settings
 #######################
 
 BRANCHNAME=${GITBRANCH}
+SOPLEXBRANCHNAME=${GITBRANCH}
 if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v60-bugfix"
+  SOPLEXBRANCHNAME="bugfix-40"
 fi
 if [ "${DAY_OF_WEEK}" == "6" ]; then
   git checkout -f ${BRANCHNAME}
@@ -86,6 +88,16 @@ if [ "${DAY_OF_WEEK}" == "6" ]; then
   git merge ${BRANCHNAME} --ff-only
   git push
   git checkout -f ${BRANCHNAME}
+
+  git clone git@git.zib.de:integer/soplex
+  cd soplex
+  git checkout ${SOPLEXBRANCHNAME}
+  git pull
+  git checkout performance-${GITBRANCH}
+  git merge ${SOPLEXBRANCHNAME} --ff-only
+  git push
+  cd ..
+  rm -rf soplex
 fi
 
 ####################################
