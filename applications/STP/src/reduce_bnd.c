@@ -25,7 +25,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -3004,6 +3004,7 @@ void extBacktrack(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    SCIP_Bool             success,            /**< backtrack from success? */
+   SCIP_Bool             ancestor_conflict,  /**< backtrack triggered by ancestor conflict? */
    REDDATA*              reddata,            /**< reduction data */
    EXTDATA*              extdata             /**< extension data */
 )
@@ -3043,7 +3044,10 @@ void extBacktrack(
          tree_deg[head] = 0;
          tree_deg[tail]--;
 
-         unmarkAncestors(graph, edge, reddata->ancestormark);
+         if( ancestor_conflict )
+            unmarkAncestorsConflict(graph, edge, reddata->ancestormark);
+         else
+            unmarkAncestors(graph, edge, reddata->ancestormark);
       }
 
       (extdata->tree_size) -= compsize;
@@ -3122,7 +3126,7 @@ void extStackExpand(
    if( (datasize + (int) pow(2, setsize)) > extdata->extstack_maxsize )
    {
       *success = FALSE;
-      extBacktrack(scip, graph, *success, reddata, extdata);
+      extBacktrack(scip, graph, *success, FALSE, reddata, extdata);
 
       return;
    }
@@ -3260,7 +3264,7 @@ void extExtend(
       if( datasize + (extedgesstart[nfullextensions] - extedgesstart[0]) > extdata->extstack_maxsize )
       {
          *success = FALSE;
-         extBacktrack(scip, graph, *success, reddata, extdata);
+         extBacktrack(scip, graph, *success, FALSE, reddata, extdata);
 
          return;
       }
@@ -3427,7 +3431,7 @@ SCIP_RETCODE reduceExtCheckArc(
             /* has current component already been extended? */
             if( extstack_state[stackposition] == EXT_STATE_MARKED )
             {
-               extBacktrack(scip, graph, success, &reddata, &extdata);
+               extBacktrack(scip, graph, success, FALSE, &reddata, &extdata);
                continue;
             }
 
@@ -3445,14 +3449,14 @@ SCIP_RETCODE reduceExtCheckArc(
             if( conflict || extRuleOutPeriph(scip, graph, &reddata, &extdata) )
             {
                success = TRUE;
-               extBacktrack(scip, graph, success, &reddata, &extdata);
+               extBacktrack(scip, graph, success, conflict, &reddata, &extdata);
                continue;
             }
 
             if( extTruncate(graph, isterm, &extdata) )
             {
                success = FALSE;
-               extBacktrack(scip, graph, success, &reddata, &extdata);
+               extBacktrack(scip, graph, success, FALSE, &reddata, &extdata);
                continue;
             }
 
