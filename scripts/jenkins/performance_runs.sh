@@ -50,6 +50,7 @@ if [ "${GITBRANCH}" != "master" ]; then
   fi
 fi
 
+export FULLGITHASH=$(git show -s --pretty=%H)
 export GITBRANCH
 export MODE=performance
 
@@ -75,16 +76,28 @@ mkdir -p settings
 #######################
 
 BRANCHNAME=${GITBRANCH}
+SOPLEXBRANCHNAME=${GITBRANCH}
 if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v60-bugfix"
+  SOPLEXBRANCHNAME="bugfix-40"
 fi
 if [ "${DAY_OF_WEEK}" == "6" ]; then
-  git checkout ${BRANCHNAME}
+  git checkout -f ${BRANCHNAME}
   git pull
-  git checkout performance-${GITBRANCH}
+  git checkout -f performance-${GITBRANCH}
   git merge ${BRANCHNAME} --ff-only
   git push
-  git checkout ${BRANCHNAME}
+  git checkout -f ${BRANCHNAME}
+
+  git clone git@git.zib.de:integer/soplex
+  cd soplex
+  git checkout ${SOPLEXBRANCHNAME}
+  git pull
+  git checkout performance-${GITBRANCH}
+  git merge ${SOPLEXBRANCHNAME} --ff-only
+  git push
+  cd ..
+  rm -rf soplex
 fi
 
 ####################################
