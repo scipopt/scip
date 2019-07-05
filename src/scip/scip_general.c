@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_general.c
+ * @ingroup OTHER_CFILES
  * @brief  general public methods
  * @author Tobias Achterberg
  * @author Timo Berthold

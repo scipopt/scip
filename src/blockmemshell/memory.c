@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   memory.c
+ * @ingroup OTHER_CFILES
  * @brief  memory allocation routines
  * @author Tobias Achterberg
  * @author Gerald Gamrath
@@ -323,7 +324,6 @@ void BMScheckEmptyMemory_call(
    void
    )
 {
-   printInfo("Optimized, threadsafe version of memory shell linked - no memory leakage check available.\n");
 }
 
 /** returns total number of allocated bytes */

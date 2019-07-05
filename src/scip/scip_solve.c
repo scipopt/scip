@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_solve.c
+ * @ingroup OTHER_CFILES
  * @brief  public solving methods
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -2022,7 +2023,7 @@ SCIP_RETCODE freeTransform(
     *       we might want to remove locks also in that case
     */
    /* remove var locks set to avoid dual reductions */
-   if( scip->set->reopt_enable || !scip->set->misc_allowdualreds )
+   if( scip->set->reopt_enable || !scip->set->misc_allowstrongdualreds )
    {
       int v;
 
@@ -2600,7 +2601,7 @@ SCIP_RETCODE SCIPsolve(
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
          /* reset relaxation solution, so that the objective value is recomputed from scratch next time, using the new
           * fixings which may be produced during the presolving after the restart */
-         SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+         SCIP_CALL( SCIPclearRelaxSolVals(scip, NULL) );
 
          SCIP_CALL( freeSolve(scip, TRUE) );
          assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);

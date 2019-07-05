@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_shiftandpropagate.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  shiftandpropagate primal heuristic
  * @author Timo Berthold
  * @author Gregor Hendel
@@ -50,7 +51,7 @@
 
 #define HEUR_NAME             "shiftandpropagate"
 #define HEUR_DESC             "Pre-root heuristic to expand an auxiliary branch-and-bound tree and apply propagation techniques"
-#define HEUR_DISPCHAR         'T'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         1000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

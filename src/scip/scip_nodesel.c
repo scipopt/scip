@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_nodesel.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for node selector plugins
  * @author Tobias Achterberg
  * @author Timo Berthold

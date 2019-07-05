@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_gateextraction.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  gateextraction presolver
  * @author Michael Winkler
  */

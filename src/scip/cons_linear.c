@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_linear.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief Constraint handler for linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -153,6 +154,7 @@
 
 #define DEFAULT_MULTAGGRREMOVE      FALSE /**< should multi-aggregations only be performed if the constraint can be
                                            *   removed afterwards? */
+#define DEFAULT_MAXMULTIAGGRQUOT    1e+03 /**< maximum coefficient dynamism (ie. maxabsval / minabsval) for multiaggregation */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF                   0 /**< maximal coefficient value after scaling */
@@ -311,6 +313,7 @@ struct SCIP_ConshdlrData
    int                   rangedrowfreq;      /**< frequency for applying ranged row propagation */
    SCIP_Bool             multaggrremove;     /**< should multi-aggregations only be performed if the constraint can be
                                               *   removed afterwards? */
+   SCIP_Real             maxmultiaggrquot;   /**< maximum coefficient dynamism (ie. maxabsval / minabsval) for multiaggregation */
 };
 
 /** linear constraint update method */
@@ -3689,6 +3692,9 @@ SCIP_RETCODE addCoef(
    assert(cons != NULL);
    assert(var != NULL);
 
+   /* relaxation-only variables must not be used in checked or enforced constraints */
+   assert(!SCIPvarIsRelaxationOnly(var) || (!SCIPconsIsChecked(cons) && !SCIPconsIsEnforced(cons)));
+
    /* ignore coefficient if it is nearly zero */
    if( SCIPisZero(scip, val) )
       return SCIP_OKAY;
@@ -4597,13 +4603,15 @@ SCIP_RETCODE applyFixings(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->row != NULL && !SCIProwIsModifiable(consdata->row) )
-      return SCIP_OKAY;
-
    if( !consdata->removedfixings )
    {
       SCIP_Real lhssubtrahend;
       SCIP_Real rhssubtrahend;
+
+      /* if an unmodifiable row has been added to the LP, then we cannot apply fixing anymore (cannot change a row)
+       * this should not happen, as applyFixings is called in addRelaxation() before creating and adding a row
+       */
+      assert(consdata->row == NULL || !SCIProwIsInLP(consdata->row) || SCIProwIsModifiable(consdata->row));
 
       lhssubtrahend = 0.0;
       rhssubtrahend = 0.0;
@@ -7398,7 +7406,7 @@ SCIP_RETCODE createRow(
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    SCIP_CALL( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->vals) );
@@ -7424,6 +7432,16 @@ SCIP_RETCODE addRelaxation(
 
    if( consdata->row == NULL )
    {
+      if( !SCIPconsIsModifiable(cons) )
+      {
+         /* replace all fixed variables by active counterparts, as we have no chance to do this anymore after the row has been added to the LP
+          * removing this here will make test cons/linear/fixedvar.c fail (as of 2018-12-03)
+          */
+         SCIP_CALL( applyFixings(scip, cons, cutoff) );
+         if( *cutoff )
+            return SCIP_OKAY;
+      }
+
       /* convert consdata object into LP row */
       SCIP_CALL( createRow(scip, cons) );
    }
@@ -9507,8 +9525,6 @@ void getNewSidesAfterAggregation(
    assert(SCIPisLE(scip, *newlhs, *newrhs));
 }
 
-#define MAXMULTIAGGRQUOTIENT 1e+03
-
 /* processes equality with more than two variables by multi-aggregating one of the variables and converting the equality
  * into an inequality; if multi-aggregation is not possible, tries to identify one continuous or integer variable that
  * is implicitly integral by this constraint
@@ -9662,7 +9678,7 @@ SCIP_RETCODE convertLongEquality(
          maxabsval = absval;
 
       /* do not try to multi aggregate, when numerical bad */
-      if( maxabsval / minabsval > MAXMULTIAGGRQUOTIENT )
+      if( maxabsval / minabsval > conshdlrdata->maxmultiaggrquot )
          return SCIP_OKAY;
 
       slacktype = SCIPvarGetType(var);
@@ -15637,6 +15653,17 @@ SCIP_DECL_CONSTRANS(consTransLinear)
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
 
+#ifndef NDEBUG
+   /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
+   if( SCIPconsIsEnforced(sourcecons) || SCIPconsIsChecked(sourcecons) )
+   {
+      int n;
+      for(n = targetdata->nvars - 1; n >= 0; --n )
+         assert(!SCIPvarIsRelaxationOnly(targetdata->vars[n]));
+   }
+#endif
+
+
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
@@ -16285,7 +16312,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          }
 
          /* apply dual presolving for variables that appear in only one constraint */
-         if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+         if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
          {
             SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
          }
@@ -16307,7 +16334,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
       /* singleton column stuffing */
       if( !cutoff && SCIPconsIsActive(cons) && SCIPconsIsChecked(cons) &&
-         (conshdlrdata->singletonstuffing || conshdlrdata->singlevarstuffing) && SCIPallowDualReds(scip) )
+         (conshdlrdata->singletonstuffing || conshdlrdata->singlevarstuffing) && SCIPallowStrongDualReds(scip) )
       {
          SCIP_CALL( presolStuffing(scip, cons, conshdlrdata->singletonstuffing,
                conshdlrdata->singlevarstuffing, &cutoff, nfixedvars, nchgbds) );
@@ -16419,7 +16446,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
       )
    {
-      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && !SCIPisStopped(scip) )
+      if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) && !SCIPisStopped(scip) )
       {
          SCIP_CALL( fullDualPresolve(scip, conss, nconss, &cutoff, nchgbds) );
       }
@@ -17469,6 +17496,10 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/" CONSHDLR_NAME "/multaggrremove",
          "should multi-aggregations only be performed if the constraint can be removed afterwards?",
          &conshdlrdata->multaggrremove, TRUE, DEFAULT_MULTAGGRREMOVE, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/maxmultiaggrquot",
+         "maximum coefficient dynamism (ie. maxabsval / minabsval) for multiaggregation",
+         &conshdlrdata->maxmultiaggrquot, TRUE, DEFAULT_MAXMULTIAGGRQUOT, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -17690,6 +17721,16 @@ SCIP_RETCODE SCIPcreateConsLinear(
       assert(consdata != NULL);
    }
 
+#ifndef NDEBUG
+   /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
+   if( check || enforce )
+   {
+      int n;
+      for(n = consdata->nvars - 1; n >= 0; --n )
+         assert(!SCIPvarIsRelaxationOnly(consdata->vars[n]));
+   }
+#endif
+
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
@@ -17826,6 +17867,9 @@ SCIP_RETCODE SCIPcopyConsLinear(
    {
       SCIP_VAR* var;
       var = vars[v];
+
+      /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
+      assert(!SCIPvarIsRelaxationOnly(var) || (!check && !enforce));
 
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, consmap, global, &success) );
       assert(!(success) || vars[v] != NULL);

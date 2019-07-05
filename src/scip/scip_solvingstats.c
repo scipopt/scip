@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_solvingstats.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for querying solving statistics
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -312,6 +313,59 @@ SCIP_Longint SCIPgetNObjlimLeaves(
    return scip->stat->nobjleaves;
 }
 
+/** gets number of global bound changes
+ *
+ * @return number of global bound changes
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+int SCIPgetNRootboundChgs(
+   SCIP*                 scip                /**< Scip data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNRootboundChgs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->nrootboundchgs;
+}
+
+/** gets number of global bound changes applied in the current run
+ *
+ * @return number of global bound changes
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+int SCIPgetNRootboundChgsRun(
+   SCIP*                 scip                /**< Scip data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNRootboundChgsRun", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->nrootboundchgsrun;
+}
 
 /** gets number of times a selected node was from a cut off subtree
  *
@@ -2982,7 +3036,7 @@ void SCIPprintHeuristicStatistics(
          SCIPheurGetNCalls(scip->set->heurs[i]),
          SCIPheurGetNSolsFound(scip->set->heurs[i]),
          SCIPheurGetNBestSolsFound(scip->set->heurs[i]));
-         
+
       /* count heuristics that use diving; needed to determine output later */
       ndivesets += SCIPheurGetNDivesets(scip->set->heurs[i]);
    }
@@ -2998,33 +3052,44 @@ void SCIPprintHeuristicStatistics(
          int s;
          for( s = 0; s < SCIPheurGetNDivesets(scip->set->heurs[i]); ++s )
          {
+            int c;
+            SCIP_DIVECONTEXT divecontexts[] = {SCIP_DIVECONTEXT_SINGLE, SCIP_DIVECONTEXT_ADAPTIVE};
             SCIP_DIVESET* diveset = SCIPheurGetDivesets(scip->set->heurs[i])[s];
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10d", SCIPdivesetGetName(diveset), SCIPdivesetGetNCalls(diveset));
-            if( SCIPdivesetGetNCalls(diveset) > 0 )
-            {
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f %10" SCIP_LONGINT_FORMAT,
-                  SCIPdivesetGetNProbingNodes(diveset),
-                  SCIPdivesetGetNLPIterations(diveset),
-                  SCIPdivesetGetNBacktracks(diveset),
-                  SCIPdivesetGetNConflicts(diveset),
-                  SCIPdivesetGetMinDepth(diveset),
-                  SCIPdivesetGetMaxDepth(diveset),
-                  SCIPdivesetGetAvgDepth(diveset),
-                  SCIPdivesetGetNSols(diveset) - SCIPdivesetGetNSolutionCalls(diveset));
 
-               if( SCIPdivesetGetNSolutionCalls(diveset) > 0 )
+            /* print statistics for both contexts */
+            for( c = 0; c < 2; ++c )
+            {
+               SCIP_DIVECONTEXT divecontext = divecontexts[c];
+
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %6s %-10.10s: %10d", divecontext == SCIP_DIVECONTEXT_SINGLE ? "single" : "adaptv",
+                     SCIPdivesetGetName(diveset),
+                     SCIPdivesetGetNCalls(diveset, divecontext));
+               if( SCIPdivesetGetNCalls(diveset, divecontext) > 0 )
                {
-                  SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d %10d %10d %10.1f\n",
-                     SCIPdivesetGetNSolutionCalls(diveset),
-                     SCIPdivesetGetMinSolutionDepth(diveset),
-                     SCIPdivesetGetMaxSolutionDepth(diveset),
-                     SCIPdivesetGetAvgSolutionDepth(diveset));
+                  SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f %10" SCIP_LONGINT_FORMAT,
+                        SCIPdivesetGetNProbingNodes(diveset, divecontext),
+                        SCIPdivesetGetNLPIterations(diveset, divecontext),
+                        SCIPdivesetGetNBacktracks(diveset, divecontext),
+                        SCIPdivesetGetNConflicts(diveset, divecontext),
+                        SCIPdivesetGetMinDepth(diveset, divecontext),
+                        SCIPdivesetGetMaxDepth(diveset, divecontext),
+                        SCIPdivesetGetAvgDepth(diveset, divecontext),
+                        SCIPdivesetGetNSols(diveset, divecontext) - SCIPdivesetGetNSolutionCalls(diveset, divecontext));
+
+                  if( SCIPdivesetGetNSolutionCalls(diveset, divecontext) > 0 )
+                  {
+                     SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d %10d %10d %10.1f\n",
+                           SCIPdivesetGetNSolutionCalls(diveset, divecontext),
+                           SCIPdivesetGetMinSolutionDepth(diveset, divecontext),
+                           SCIPdivesetGetMaxSolutionDepth(diveset, divecontext),
+                           SCIPdivesetGetAvgSolutionDepth(diveset, divecontext));
+                  }
+                  else
+                     SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -\n");
                }
                else
-                  SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -\n");
+                  SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -          -          -\n");
             }
-            else
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -          -          -\n");
          }
       }
    }
@@ -3233,17 +3298,24 @@ void SCIPprintRelaxatorStatistics(
    if( scip->set->nrelaxs == 0 )
       return;
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Relaxators         :       Time      Calls\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Relaxators         :       Time      Calls    Cutoffs ImprBounds  ImprTime ReducedDom  Separated AddedConss\n");
 
    /* sort relaxators w.r.t. their name */
    SCIPsetSortRelaxsName(scip->set);
 
    for( i = 0; i < scip->set->nrelaxs; ++i )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
          SCIPrelaxGetName(scip->set->relaxs[i]),
          SCIPrelaxGetTime(scip->set->relaxs[i]),
-         SCIPrelaxGetNCalls(scip->set->relaxs[i]));
+         SCIPrelaxGetNCalls(scip->set->relaxs[i]),
+         SCIPrelaxGetNCutoffs(scip->set->relaxs[i]),
+         SCIPrelaxGetNImprovedLowerbound(scip->set->relaxs[i]),
+         SCIPrelaxGetImprovedLowerboundTime(scip->set->relaxs[i]),
+         SCIPrelaxGetNReducedDomains(scip->set->relaxs[i]),
+         SCIPrelaxGetNSeparatedCuts(scip->set->relaxs[i]),
+         SCIPrelaxGetNAddedConss(scip->set->relaxs[i])
+         );
    }
 }
 
@@ -3542,7 +3614,7 @@ void SCIPprintBendersStatistics(
    nbenders = SCIPgetNBenders(scip);
    benders = SCIPgetBenders(scip);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Benders Decomp     :   ExecTime  SetupTime      Calls      Found   Transfer\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Benders Decomp     :   ExecTime  SetupTime      Calls      Found   Transfer   StrCalls   StrFails    StrCuts\n");
    for( i = 0; i < nbenders; ++i )
    {
       if( SCIPbendersIsActive(benders[i]) )
@@ -3551,13 +3623,16 @@ void SCIPprintBendersStatistics(
          int nbenderscuts;
          int j;
 
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
             SCIPbendersGetName(scip->set->benders[i]),
             SCIPbendersGetTime(scip->set->benders[i]),
             SCIPbendersGetSetupTime(scip->set->benders[i]),
             SCIPbendersGetNCalls(scip->set->benders[i]),
             SCIPbendersGetNCutsFound(scip->set->benders[i]),
-            SCIPbendersGetNTransferredCuts(scip->set->benders[i]));
+            SCIPbendersGetNTransferredCuts(scip->set->benders[i]),
+            SCIPbendersGetNStrengthenCalls(scip->set->benders[i]),
+            SCIPbendersGetNStrengthenFails(scip->set->benders[i]),
+            SCIPbendersGetNStrengthenCutsFound(scip->set->benders[i]));
 
          nbenderscuts = SCIPbendersGetNBenderscuts(scip->set->benders[i]);
          benderscuts = SCIPbendersGetBenderscuts(scip->set->benders[i]);

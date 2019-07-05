@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_undercover.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  Undercover primal heuristic for MINLPs
  * @author Timo Berthold
  * @author Ambros Gleixner
@@ -78,7 +79,7 @@
 
 #define HEUR_NAME               "undercover"
 #define HEUR_DESC               "solves a sub-CIP determined by a set covering approach"
-#define HEUR_DISPCHAR           'U'
+#define HEUR_DISPCHAR           SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY           -1110000
 #define HEUR_FREQ               0
 #define HEUR_FREQOFS            0
@@ -2123,6 +2124,7 @@ SCIP_RETCODE copySol(
    SCIP_VAR** vars;                          /* the original problem's variables */
    SCIP_Real* subsolvals;                    /* solution values of the subproblem */
    int        nvars;
+   int i;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -2134,15 +2136,17 @@ SCIP_RETCODE copySol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
    /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
+   for( i = 0; i < nvars; ++i )
+   {
+      if( subvars[i] == NULL )
+         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+      else
+         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
+   }
+
    SCIP_CALL( SCIPsetSolVals(scip, *newsol, nvars, vars, subsolvals) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
@@ -2226,7 +2230,7 @@ SCIP_RETCODE solveSubproblem(
 
    /* copy original problem to subproblem; do not copy pricers */
    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", fixedvars, fixedvals, nfixedvars,
-         heurdata->globalbounds, FALSE, TRUE, validsolved) );
+         heurdata->globalbounds, FALSE, FALSE, TRUE, validsolved) );
 
    if( heurdata->copycuts )
    {
@@ -2238,10 +2242,7 @@ SCIP_RETCODE solveSubproblem(
 
    /* store subproblem variables */
    for( i = nvars-1; i >= 0; i-- )
-   {
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
-      assert(subvars[i] != NULL);
-   }
 
    /* free variable mapping hash map */
    SCIPhashmapFree(&varmap);

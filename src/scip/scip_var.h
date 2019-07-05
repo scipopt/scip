@@ -39,6 +39,7 @@
 #include "scip/type_lp.h"
 #include "scip/type_misc.h"
 #include "scip/type_prop.h"
+#include "scip/type_relax.h"
 #include "scip/type_result.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
@@ -1001,7 +1002,8 @@ SCIP_RETCODE SCIPgetVarSols(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPclearRelaxSolVals(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax               /**< relaxator data structure */
    );
 
 /** sets the value of the given variable in the global relaxation solution;
@@ -1024,6 +1026,7 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
 SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure */
    SCIP_VAR*             var,                /**< variable to set value for */
    SCIP_Real             val                 /**< solution value of variable */
    );
@@ -1043,6 +1046,7 @@ SCIP_RETCODE SCIPsetRelaxSolVal(
 SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxSolVals(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure */
    int                   nvars,              /**< number of variables to set relaxation solution value for */
    SCIP_VAR**            vars,               /**< array with variables to set value for */
    SCIP_Real*            vals,               /**< array with solution values of variables */
@@ -1063,6 +1067,7 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
 SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxSolValsSol(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure */
    SCIP_SOL*             sol,                /**< primal relaxation solution */
    SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
@@ -1092,6 +1097,7 @@ SCIP_Bool SCIPisRelaxSolValid(
 SCIP_EXPORT
 SCIP_RETCODE SCIPmarkRelaxSolValid(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure that set the current relaxation solution */
    SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
 
@@ -2970,17 +2976,42 @@ SCIP_Bool SCIPdoNotMultaggrVar(
 
 /** returns whether dual reductions are allowed during propagation and presolving
  *
- *  @note A reduction is called dual, if it may discard feasible solutions, but leaves at least one optimal solution
- *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
+ *  @deprecated Please use SCIPallowStrongDualReds()
  */
 SCIP_EXPORT
+SCIP_DEPRECATED
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether propagation w.r.t. current objective is allowed */
+/** returns whether strong dual reductions are allowed during propagation and presolving
+ *
+ *  @note A reduction is called strong dual, if it may discard feasible/optimal solutions, but leaves at least one
+ *        optimal solution intact. Often such reductions are based on analyzing the objective function and variable
+ *        locks.
+ */
 SCIP_EXPORT
+SCIP_Bool SCIPallowStrongDualReds(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether propagation w.r.t. current objective is allowed
+ *
+ *  @deprecated Please use SCIPallowWeakDualReds()
+ */
+SCIP_EXPORT
+SCIP_DEPRECATED
 SCIP_Bool SCIPallowObjProp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether weak dual reductions are allowed during propagation and presolving
+ *
+ *  @note A reduction is called weak dual, if it may discard feasible solutions, but leaves at all optimal solutions
+ *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPallowWeakDualReds(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

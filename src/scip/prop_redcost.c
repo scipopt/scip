@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_redcost.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  propagator using the LP reduced cost and the cutoff bound
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -605,7 +606,7 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
       return SCIP_OKAY;
 
    /* do not run if propagation w.r.t. objective is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* get current cutoff bound */

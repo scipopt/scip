@@ -76,7 +76,7 @@
  *
  * \verbinclude output.log
  *
- * @version  6.0.2
+ * @version  6.0.1.3
  *
  * \image html scippy.png
  */
@@ -843,7 +843,7 @@
  * - <code>links</code> Reconfigures the links in the "lib" directory.
  * - <code>doc</code> Creates documentation in the "doc" directory.
  * - <code>clean</code> Removes all object files.
- * - <code>depend</code> Creates dependencies files. This is only needed if you add files to \SCIP.
+ * - <code>depend</code> Updates dependencies files. This is only needed if you add checks for preprocessor-defines `WITH_*` or NPARASCIP in source files.
  * - <code>check</code> or <code>test</code> Runs the check script, see \ref TEST.
  * - <code>lint</code> Statically checks the code via flexelint. The call produces the file <code>lint.out</code>
  *   which contains all the detected warnings.
@@ -1044,10 +1044,6 @@
  *    .
  * - Once you have edited the makefile, you can use all the flags that can be used in \SCIP to
  *   compile your code, see \ref MAKE.
- *   Note that you need to update the dependency files before compiling your project via <code>make depend</code>.
- *
- *
- *
  *
  */
 
@@ -3883,9 +3879,11 @@
  * In the interactive shell, this character is printed in the first column of a status information row, if the primal
  * heuristic found the feasible solution belonging to the primal bound. Note that a star '*' stands for an integral
  * LP-relaxation.
- * In order to avoid confusion, display characters should be unique: no two primal heuristics should have the same display character.
- * You can get a list of all primal heuristics along with their display characters by entering "display heuristics" in the
- * SCIP interactive shell.
+ * It is recommended to select a lower or upper case letter as display character. The default primal heuristics of
+ * SCIP use characters that describe the class to which the heuristic belongs. As an example all LP rounding heuristics
+ * have an 'r' and all Large Neighborhood Search heuristics use the letter 'L'.
+ * Users find commonly used display characters in type_heur.h.
+ *
  *
  * \par HEUR_PRIORITY: the priority of the primal heuristic.
  * At each of the different entry points of the primal heuristics during the solving process (see HEUR_TIMING), they are
@@ -4223,7 +4221,7 @@
  * bounds and primal solution candidates.
  * \n
  * However, the data to define a single relaxation must either be extracted by the relaxation handler itself (e.g., from
- * the user defined problem data, the LP information, or the integrality conditions), or be provided by the constraint
+ * the user defined problem data, the LP information, or the integrality conditions), or it must be provided by the constraint
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation.
  * \n
  *
@@ -4251,11 +4249,11 @@
  *
  * @section RELAX_PROPERTIES Properties of a Relaxation Handler
  *
- * At the top of the new file "relax_myrelaxator.c" you can find the relaxation handler properties.
- * These are given as compiler defines.
+ * At the top of the new file "relax_myrelaxator.c" you can find the relaxation handler properties,
+ * which are given as compiler defines.
  * In the C++ wrapper class, you have to provide the relaxation handler properties by calling the constructor
  * of the abstract base class scip::ObjRelax from within your constructor.
- * The properties you have to set have the following meaning:
+ * The properties have the following meaning:
  *
  * \par RELAX_NAME: the name of the relaxation handler.
  * This name is used in the interactive shell to address the relaxation handler.
@@ -6525,13 +6523,13 @@
  *
  * Benders' decomposition is a very popular mathematical programming technique that is applied to solve structured
  * problems. Problems that display a block diagonal structure are particularly amenable to the application of Benders'
- * decomposition. Such problems are given by
+ * decomposition. In a purely mixed-integer linear setting, such problems are given by
  *
  * \f[
  *  \begin{array}[t]{rllclcl}
  *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
  *         & \\
- *    subject \ to & \displaystyle & Ax & & & = & b \\
+ *    \text{subject to} & \displaystyle & Ax & & & = & b \\
  *         & \\
  *         & \displaystyle & Tx & + & Hy & = & h \\
  *         & \\
@@ -6551,7 +6549,7 @@
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle & d^{T}y \\
  *         & \\
- *    subject \ to & \displaystyle & Hy  = h - T\bar{x} \\
+ *    \text{subject to} & \displaystyle & Hy  = h - T\bar{x} \\
  *         & \\
  *         & & y \in \mathbb{R}^{m} \\
  *  \end{array}
@@ -6584,7 +6582,7 @@
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle & c^{T}x + \varphi \\
  *         & \\
- *    subject \ to & \displaystyle & Ax = b \\
+ *    \text{subject to} & \displaystyle & Ax = b \\
  *         & \\
  *         & \displaystyle & \varphi \geq \lambda(h - Tx) \quad \forall \lambda \in \Omega^{r}\\
  *         & \\
@@ -6597,7 +6595,23 @@
  *
  * @section BENDERFRAMEWORK Overview
  *
- * In \SCIP 6.0 a Benders' decomposition framework has been implemented. This framework can be used in four different
+ * In \SCIP 6.0 a Benders' decomposition framework has been implemented.
+ *
+ * The current framework can be used to handle a Benders Decomposition of CIPs of the form
+ *
+ * \f[
+ *  \begin{array}[t]{rllclcl}
+ *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
+ *    \text{subject to} & \displaystyle & g(x & , & y) & \in & [\ell,u] \\
+ *         & & x & & & \in & X \\
+ *         & & & & y & \in & Y \\
+ *  \end{array}
+ * \f]
+ * when either
+ * - the subproblem is convex: \f$g_i(x,y)\f$ convex on \f$X\times Y\f$ if \f$u_i<\infty\f$, \f$g_i(x,y)\f$ concave on \f$X\times Y\f$ if \f$\ell_i>-\infty\f$, and \f$Y=\mathbb{R}^m\f$, or
+ * - the first stage variables are of binary type: \f$ X \subseteq \{0,1\}^n \f$.
+ *
+ * This framework can be used in four different
  * ways: inputting an instance in the SMPS file format, using the default Benders' decomposition implementation
  * (see src/scip/benders_default.c), implementing a custom Benders' decomposition plugin (see \ref BENDER), or by using
  * the Benders' decomposition mode of GCG.
@@ -6853,18 +6867,21 @@
  *    @refsnippet{src/scip/cons_linear.c,SnippetDebugAssertions}
  *
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
- *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
- *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
+ *    function <code>consCatchEvent()</code>. This is particularly important for, e.g., array indices like
+ *    the variable <code>pos</code> in this example, where using the <code>consdata->vars[pos]</code>
  *    pointer could result in unexspected behaviour
- *    if the asserted precondition on <code>pos</code> were not matched and \<pos\> were an arbitrary index
+ *    if the asserted precondition on <code>pos</code> were not matched and <code>pos</code> were an arbitrary index
  *    outside the array range.
  *
  *  - In order to activate assertions, use the <b>Debug mode</b> by compiling SCIP via
  *   \code
+ *    cmake -DCMAKE_BUILD_TYPE=Debug
+ *   \endcode
+ *   or the Makefile equivalent
+ *   \code
  *    make OPT=dbg
- *   \endcode and run the code. See \ref MAKE for further information about compiler options for SCIP.
- *
- *  - Spending only little extra time on
+ *   \endcode and run the code. See \ref CMAKE and \ref MAKE for further information about compiler options for SCIP.
+ *     As a rule of thumb, Spending only little extra time on
  *    asserting preconditions saves most of the time spent on debugging!
  *
  *  - Turn on <b>additional debug output</b> by adding the line
@@ -6883,17 +6900,19 @@
  *  - For checking the usage of SCIP memory, you can use
  *    <code>SCIPprintMemoryDiagnostic()</code>. This outputs memory that is currently in use,
  *    which can be useful after a <code>SCIPfree()</code> call.
- *  - If there are memory leaks for which you cannot detect the origin, you can remake your code with the option NOBLKBUFMEM=true
- *    (do not forget to clean your code before with <code>make OPT=... LPS=... clean</code>). After that valgrind (or similar) helps
+ *  - If there are memory leaks for which you cannot detect the origin, you can recompile your code with the option <code>cmake -DNOBLKBUFMEM=on</code>
+ *    (or <code>make NOBLKBUFMEM=true</code> if you are using the Makefile system.
+ *    Also for the Makefile system, do not forget to clean your code before with <code>make OPT=... LPS=... clean</code>)
+ *    Only with that change, valgrind (or similar) reliably helps
  *    to detect leaked memory.
  *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
  *    you can use the debugging mechanism (see \ref EXAMPLE_2). Therefore, a given solution is read and it
  *    is checked for every reduction, whether the solution will be pruned globally.
  *
  * @section EXAMPLE_1 How to activate debug messages
- * For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
- * in DBG mode, and run the SCIP interactive shell to solve p0033.mps from the
- * <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
+ * For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.c, recompile SCIP
+ * in Debug mode, and run the SCIP interactive shell to solve p0033.mps from the
+ * <a href="http://miplib2010.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  *
  * \include debugexamples/example1.txt
  *
@@ -6903,7 +6922,7 @@
  * The optimal solution can now be written to a file:
  * \include debugexamples/example2_1.txt
  *
- * If we afterwards recompile SCIP with the additional compiler flag <code>DEBUGSOL=true</code>,
+ * If we afterwards recompile SCIP with the additional compiler flag <code>cmake -DDEBUGSOL=on</code> (<code>make DEBUGSOL=true</code> in the Makefile system),
  * set the parameter <code>misc/debugsol = check/p0033.sol</code>, and run SCIP again it will output:
  * \include debugexamples/example2_2.txt
  * Further debug output would only appear, if the solution was cut off in the solving process.
@@ -7282,7 +7301,7 @@
  *
  */
 
- /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page COUNTER How to use SCIP to count/enumerate feasible solutions
  *
@@ -8254,4 +8273,25 @@
  * - query the numerical tolerances of \SCIP, as well as special values such as infinity.
  * - change tolerances inside relaxations
  * - epsilon-comparison methods for floating point numbers
+ */
+
+/** @defgroup CFILES Implementation files (.c files)
+ *  @brief implementation files (.c files) of the SCIP core and the default plugins
+ *
+ *  The core provides the functionality for creating problems, variables, and general constraints.
+ *  The default plugins of SCIP provide a mix of public API function and private, static function and callback declarations.
+ */
+
+/** @defgroup DEFPLUGINS SCIP Default Plugins
+ *  @ingroup CFILES
+ *  @brief implementation files (.c files) of the SCIP default plugins
+ *
+ *  The SCIP default plugins provide a mix of public API function and private, static function and callback declarations.
+ */
+
+/** @defgroup OTHER_CFILES Other implementation files of SCIP
+ *  @ingroup CFILES
+ *  @brief other implementation files of SCIP
+ *
+ *  Relevant core and other functionality of SCIP.
  */

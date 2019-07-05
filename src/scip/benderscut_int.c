@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_int.c
+ * @ingroup OTHER_CFILES
  * @brief  Generates a Laporte and Louveaux Benders' decomposition integer cut
  * @author Stephen J. Maher
  */
@@ -152,9 +153,9 @@ SCIP_RETCODE computeStandardIntegerOptCut(
 
    subprobobj = SCIPbendersGetSubproblemObjval(benders, probnumber);
 
-   SCIPdebugMsg(masterprob, "Subproblem %d - Objective Value: Stored - %g Orig Obj - %g\n", probnumber,
-      SCIPbendersGetSubproblemObjval(benders, probnumber),
-      SCIPgetSolOrigObj(subproblem, subprobsol)*(int)SCIPgetObjsense(subproblem));
+   SCIPdebugMsg(masterprob, "Subproblem %d - Objective Value: Stored - %g Orig Obj - %g Cut constant - %g\n",
+      probnumber, SCIPbendersGetSubproblemObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, subprobsol)*(int)SCIPgetObjsense(subproblem),
+      cutconstant);
 
    nvars = SCIPgetNVars(masterprob);
    vars = SCIPgetVars(masterprob);
@@ -359,7 +360,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    /* creating an empty row or constraint for the Benders' cut */
    if( addcut )
    {
-      SCIP_CALL( SCIPcreateEmptyRowCons(masterprob, &row, consbenders, cutname, 0.0, SCIPinfinity(masterprob), FALSE,
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(masterprob, &row, consbenders, cutname, 0.0, SCIPinfinity(masterprob), FALSE,
             FALSE, TRUE) );
    }
    else

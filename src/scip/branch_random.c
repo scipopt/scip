@@ -15,6 +15,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_random.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  random variable branching rule
  * @author Tobias Achterberg
  * @author Stefan Vigerske

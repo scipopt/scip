@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlpi.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for handling nlp interface
  * @author Stefan Vigerske
  * @author Thorsten Gellermann

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_repair.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  repair primal heuristic
  * @author Gregor Hendel
  * @author Thomas Nagel
@@ -60,7 +61,7 @@
 
 #define HEUR_NAME             "repair"
 #define HEUR_DESC             "tries to repair a primal infeasible solution"
-#define HEUR_DISPCHAR         '!'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0

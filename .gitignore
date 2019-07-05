@@ -12,6 +12,7 @@ bin/
 lib/
 obj/
 TAGS
+debug/
 release/
 check/results/
 check/results*/

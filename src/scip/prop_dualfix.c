@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_dualfix.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  fixing roundable variables to best bound
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -242,7 +243,7 @@ SCIP_DECL_PROPPRESOL(propPresolDualfix)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    cutoff = FALSE;
@@ -282,7 +283,7 @@ SCIP_DECL_PROPEXEC(propExecDualfix)
     *
     *  do not run if propagation w.r.t. current objective is not allowed
     */
-   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) || !SCIPallowDualReds(scip) )
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) || !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    cutoff = FALSE;

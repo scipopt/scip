@@ -1071,6 +1071,11 @@ SCIP_RETCODE SCIPlpiCreate(
    (void) (*lpi)->spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_REAL);
    (void) (*lpi)->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_AUTO);
 
+   /* disable time-measurement for statistics */
+#if SOPLEX_APIVERSION >= 10
+   (void) (*lpi)->spx->setIntParam(SoPlex::STATTIMER, 0);
+#endif
+
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
    (*lpi)->cstatsize = 0;
@@ -4185,6 +4190,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       *ival = lpi->spx->intParam(SoPlex::ITERLIMIT);
+      if( *ival == -1 )
+          *ival = INT_MAX;
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = lpi->spx->intParam(SoPlex::SIMPLIFIER) == SoPlex::SIMPLIFIER_AUTO;
@@ -4258,7 +4265,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->spx->setLpInfo(bool(ival));
       break;
    case SCIP_LPPAR_LPITLIM:
-      assert(ival >= -1);
+      assert( ival >= 0 );
+      /* -1 <= ival, -1 meaning no time limit, 0 stopping immediately */
+      if( ival >= INT_MAX )
+         ival = -1;
       (void) lpi->spx->setIntParam(SoPlex::ITERLIMIT, ival);
       break;
    case SCIP_LPPAR_PRESOLVING:
@@ -4375,6 +4385,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_CONDITIONLIMIT:
       *dval = lpi->conditionlimit;
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+#if (SOPLEX_APIVERSION >= 9)
+      *dval = lpi->spx->realParam(SoPlex::MIN_MARKOWITZ);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4397,31 +4412,50 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      /* 0 < dval */
+      assert( dval > 0.0 );
       lpi->spx->setFeastol(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      /* 0 < dval */
+      assert( dval > 0.0 );
       lpi->spx->setOpttol(dval);
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* no restrictions on dval */
       if ( lpi->spx->intParam(SoPlex::OBJSENSE) == SoPlex::OBJSENSE_MINIMIZE )
          (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_UPPER, dval);
       else
          (void) lpi->spx->setRealParam(SoPlex::OBJLIMIT_LOWER, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      assert( dval > 0.0 );
+      /* soplex requires 0 < dval < DEFAULT_INFINITY (= 1e100), -1 means unlimited */
       (void) lpi->spx->setRealParam(SoPlex::TIMELIMIT, dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
-      assert(dval >= -1.5);
-      if( dval < 0.0 )
+      /* 0 <= dval <= inf */
+      assert( dval >= 0.0 || dval == -1.0 );
+      if( dval == -1 )
          (void) lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, SCIPlpiInfinity(lpi));
       else
          (void) lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, dval);
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
       lpi->conditionlimit = dval;
-      lpi->checkcondition = (dval >= 0);
+      lpi->checkcondition = (dval >= 0.0);
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+#if (SOPLEX_APIVERSION >= 9)
+      /* 1e-4 <= dval <= 0.999 */
+      if( dval < 1e-4 )
+         dval = 1e-4;
+      else if( dval > 0.9999 )
+         dval = 0.9999;
+
+      (void) lpi->spx->setRealParam(SoPlex::MIN_MARKOWITZ, dval);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

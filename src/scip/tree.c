@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   tree.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for branch and bound tree
  * @author Tobias Achterberg
  * @author Timo Berthold

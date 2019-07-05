@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_ipopt_dummy.c
+ * @ingroup OTHER_CFILES
  * @brief   dummy Ipopt NLP interface for the case that Ipopt is not available
  * @author  Stefan Vigerske
  * @author  Benjamin Müller
@@ -84,7 +85,8 @@ void* SCIPgetNlpiOracleIpopt(
  */
 void SCIPsetModifiedDefaultSettingsIpopt(
    SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
-   const char*           optionsstring       /**< string with options as in Ipopt options file */
+   const char*           optionsstring,      /**< string with options as in Ipopt options file */
+   SCIP_Bool             append              /**< whether to append to modified default settings or to overwrite */
    )
 {
    SCIPerrorMessage("Ipopt not available!\n");

@@ -120,8 +120,8 @@ then
         if test ""$OBJECTIVEVAL != ""
         then
             echo set limits objective $OBJECTIVEVAL >> $TMPFILE
-            echo set heur emph off                 >> $TMPFILE
         fi
+        echo set heur emph off                 >> $TMPFILE
     fi
 
     echo display parameters                >> $TMPFILE

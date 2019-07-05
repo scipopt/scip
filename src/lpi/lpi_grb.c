@@ -5554,6 +5554,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_OUTPUTFLAG, 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
+      assert( ival >= 0 );
+      /* 0 <= ival, 0 stopping immediately */
       {
          double itlim;
          itlim = (ival >= INT_MAX ? GRB_INFINITY : ival);
@@ -5633,21 +5635,54 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      assert( dval > 0.0 );
+      /* 1e-9 <= dval <= 1e-2 */
+      if( dval < 1e-9 )
+         dval = 1e-9;
+      else if( dval > 1e-2 )
+         dval = 1e-2;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_FEASIBILITYTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      assert( dval > 0.0 );
+      /* 1e-9 <= dval <= 1e-2 */
+      if (dval < 1e-9)
+         dval = 1e-9;
+      else if( dval > 1e-2 )
+         dval = 1e-2;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
+      /* 0 <= dval <= 1 */
+      assert( dval >= 0.0 );
+      if( dval > 1.0 )
+         dval = 1.0;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_BARCONVTOL, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
+      assert( dval > 0.0 );
+      /* gurobi requires 0 <= dval
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_TIMELIMIT, dval) );
       break;
    case SCIP_LPPAR_MARKOWITZ:
+      /* 1e-4 <= dval <= 0.999 */
+      if( dval < 1e-4 )
+         dval = 1e-4;
+      else if( dval > 0.999 )
+         dval = 0.999;
+
       SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_MARKOWITZTOL, dval) );
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:

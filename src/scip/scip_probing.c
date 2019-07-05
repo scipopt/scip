@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_probing.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for the probing mode
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -993,7 +994,7 @@ SCIP_RETCODE SCIPsolveProbingRelax(
       relax = set->relaxs[r];
       assert( relax != NULL );
 
-      SCIP_CALL( SCIPrelaxExec(relax, set, scip->stat, SCIPtreeGetCurrentDepth(scip->tree), &lowerbound, &result) );
+      SCIP_CALL( SCIPrelaxExec(relax, set, scip->tree, scip->stat, SCIPtreeGetCurrentDepth(scip->tree), &lowerbound, &result) );
 
       switch( result )
       {
@@ -1051,13 +1052,14 @@ SCIP_RETCODE SCIPgetDivesetScore(
 void SCIPupdateDivesetLPStats(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
+   SCIP_Longint          niterstoadd,        /**< additional number of LP iterations to be added */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
    assert(scip != NULL);
    assert(diveset != NULL);
 
-   SCIPdivesetUpdateLPStats(diveset, scip->stat, niterstoadd);
+   SCIPdivesetUpdateLPStats(diveset, scip->stat, niterstoadd, divecontext);
 }
 
 /** update diveset statistics and global diveset statistics */
@@ -1069,7 +1071,8 @@ void SCIPupdateDivesetStats(
    SCIP_Longint          nsolsfound,         /**< the number of solutions found */
    SCIP_Longint          nbestsolsfound,     /**< the number of best solutions found */
    SCIP_Longint          nconflictsfound,    /**< number of new conflicts found this time */
-   SCIP_Bool             leavewassol         /**< was a solution found at the leaf? */
+   SCIP_Bool             leavewassol,        /**< was a solution found at the leaf? */
+   SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
    assert(scip != NULL);
@@ -1077,7 +1080,7 @@ void SCIPupdateDivesetStats(
    assert(SCIPinProbing(scip));
 
    SCIPdivesetUpdateStats(diveset, scip->stat, SCIPgetDepth(scip), nprobingnodes, nbacktracks, nsolsfound,
-         nbestsolsfound, nconflictsfound, leavewassol);
+         nbestsolsfound, nconflictsfound, leavewassol, divecontext);
 }
 
 /** enforces a probing/diving solution by suggesting bound changes that maximize the score w.r.t. the current diving settings

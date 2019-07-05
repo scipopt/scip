@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   mem.c
+ * @ingroup OTHER_CFILES
  * @brief  block memory pools and memory buffers
  * @author Tobias Achterberg
  * @author Gerald Gamrath

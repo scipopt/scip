@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   primal.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for collecting primal CIP solutions and primal informations
  * @author Tobias Achterberg
  */
