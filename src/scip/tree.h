@@ -1031,6 +1031,12 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
    SCIP_Real             cutoffbound         /**< global cutoff bound */
    );
 
+/** query if focus node was already branched on */
+extern
+SCIP_Bool SCIPtreeWasFocusNodeBranched(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
 #ifdef __cplusplus
 }
 #endif

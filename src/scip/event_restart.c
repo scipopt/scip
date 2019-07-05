@@ -770,7 +770,7 @@ SCIP_RETCODE subtreesumGapUpdate(
    /* make a new tree split if the primal bound has changed. */
    if( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && ! SCIPisEQ(scip, SCIPgetPrimalbound(scip), ssg->pblastsplit) )
    {
-      SCIP_Bool addfocusnode = SCIPgetFocusNode(scip) != NULL && SCIPgetNChildren(scip) == 0;
+      SCIP_Bool addfocusnode = SCIPgetFocusNode(scip) != NULL && SCIPgetNChildren(scip) == 0 && !SCIPwasFocusNodeBranched(scip);
       SCIP_CALL( subtreesumgapSplit(scip, ssg, addfocusnode) );
 
       ssg->pblastsplit = SCIPgetPrimalbound(scip);

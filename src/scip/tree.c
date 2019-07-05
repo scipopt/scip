@@ -1029,6 +1029,17 @@ SCIP_RETCODE SCIPnodeCreateChild(
    return SCIP_OKAY;
 }
 
+/** query if focus node was already branched on */
+SCIP_Bool SCIPtreeWasFocusNodeBranched(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   )
+{
+   if( tree->focusnode != NULL && tree->focusnode->number == tree->lastbranchparentid)
+      return TRUE;
+
+   return FALSE;
+}
+
 /** frees node */
 SCIP_RETCODE SCIPnodeFree(
    SCIP_NODE**           node,               /**< node data */
