@@ -366,7 +366,6 @@ SCIP_RETCODE subtreesumgapStoreNode(
    assert(node != NULL);
 
    /* create a new node info */
-   assert(!SCIPhashmapExists(ssg->nodes2info, (void*)node));
    SCIP_CALL( SCIPallocBlockMemory(scip, &nodeinfo) );
 
    /* store node information in data structure and insert into priority queue */
@@ -375,9 +374,10 @@ SCIP_RETCODE subtreesumgapStoreNode(
    nodeinfo->pos = -1;
    nodeinfo->lowerbound = SCIPnodeGetLowerbound(node);
 
-   SCIPdebugMsg(scip, "Inserting label %d for node number %lld\n",
-      subtreeidx, SCIPnodeGetNumber(node));
+   SCIPdebugMsg(scip, "Inserting label %d for node number %lld (%p)\n",
+      subtreeidx, SCIPnodeGetNumber(node), (void*)node);
 
+   assert(!SCIPhashmapExists(ssg->nodes2info, (void*)node));
    /* store node information in Hash Map */
    SCIP_CALL( SCIPhashmapInsert(ssg->nodes2info, (void*)node, (void*)nodeinfo) );
 
@@ -465,7 +465,7 @@ SCIP_RETCODE subtreesumgapSplit(
    return SCIP_OKAY;
 }
 
-/** todo compute a gap between a lower bound and the current upper bound */
+/** compute a gap between a lower bound and the current upper bound */
 static
 SCIP_Real calcGap(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -592,7 +592,7 @@ SCIP_RETCODE subtreesumGapInsertChildren(
 }
 
 #if 0
-/** compute subtree sum gap from scratch (inefficient) */
+/** compute subtree sum gap from scratch (inefficiently because loop over all open nodes) */
 static
 SCIP_RETCODE subtreesumgapComputeFromScratch(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -691,7 +691,7 @@ SCIP_RETCODE subtreesumgapComputeFromScratch(
 
 #endif
 
-/** compute subtree sum gap from scratch efficiently */
+/** compute subtree sum gap from scratch efficiently (linear effort in the number of subtrees) */
 static
 SCIP_RETCODE subtreesumgapComputeFromScratchEfficiently(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -770,7 +770,9 @@ SCIP_RETCODE subtreesumGapUpdate(
    /* make a new tree split if the primal bound has changed. */
    if( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && ! SCIPisEQ(scip, SCIPgetPrimalbound(scip), ssg->pblastsplit) )
    {
-      subtreesumgapSplit(scip, ssg, nchildren == 0 && SCIPgetFocusNode(scip) != NULL);
+      SCIP_Bool addfocusnode = SCIPgetFocusNode(scip) != NULL && SCIPgetNChildren(scip) == 0;
+      SCIP_CALL( subtreesumgapSplit(scip, ssg, addfocusnode) );
+
       ssg->pblastsplit = SCIPgetPrimalbound(scip);
 
       updatescaling = TRUE;
