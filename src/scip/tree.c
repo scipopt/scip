@@ -4207,13 +4207,13 @@ SCIP_RETCODE treeNodesToQueue(
    assert(nnodes != NULL);
    assert(*nnodes == 0 || nodes != NULL);
 
-   for( i = 0; i < *nnodes; ++i )
+   for( i = *nnodes; --i >= 0; )
    {
       /* convert node to LEAF and put it into leaves queue, or delete it if it's lower bound exceeds the cutoff bound */
       SCIP_CALL( nodeToLeaf(&nodes[i], blkmem, set, stat, eventqueue, tree, reopt, lp, lpstatefork, cutoffbound) );
       assert(nodes[i] == NULL);
+      --(*nnodes);
    }
-   *nnodes = 0;
 
    return SCIP_OKAY;
 }
