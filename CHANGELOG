@@ -65,6 +65,9 @@ Features
 - The OSiL reader now supports nonlinear expressions of type "signpower".
 - Expressions of form abs(x)^p * x in a nonlinear constraint are now sometimes recognized and handled by abspower constraints.
 
+- If polyhedral symmetry handling methods are used (cons_orbisack, cons_orbitope, cons_symresack), it is now possible to
+  recompute symmetries if a restart occured.
+
 - handle linear binary variables as if squared in simple upgrade from quadratic to second-order cone constraints
 
 Performance improvements

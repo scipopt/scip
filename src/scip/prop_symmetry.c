@@ -634,8 +634,6 @@ SCIP_RETCODE freeSymmetryData(
    /* free data of added constraints */
    if ( propdata->genconss != NULL )
    {
-      assert( propdata->ngenconss > 0 || (ISORBITALFIXINGACTIVE(propdata->usesymmetry) && propdata->norbitopes == 0) );
-
       /* release constraints */
       for (i = 0; i < propdata->ngenconss; ++i)
       {
@@ -697,6 +695,47 @@ SCIP_RETCODE freeSymmetryData(
    assert( checkSymmetryDataFree(scip, propdata) );
 
    propdata->computedsymmetry = FALSE;
+
+   return SCIP_OKAY;
+}
+
+
+/** deletes symmetry handling constraints */
+static
+SCIP_RETCODE delSymConss(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   int i;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+
+   if ( propdata->ngenconss == 0 )
+   {
+      if ( propdata->genconss != NULL )
+         SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
+      propdata->triedaddconss = FALSE;
+
+      return SCIP_OKAY;
+   }
+   assert( propdata->genconss != NULL );
+   assert( propdata->nperms > 0 );
+   assert( propdata->nperms >= propdata->ngenconss );
+
+   for (i = 0; i < propdata->ngenconss; ++i)
+   {
+      assert( propdata->genconss[i] != NULL );
+
+      SCIP_CALL( SCIPdelCons(scip, propdata->genconss[i]) );
+      SCIP_CALL( SCIPreleaseCons(scip, &propdata->genconss[i]) );
+   }
+
+   /* free pointers to symmetry group and binary variables */
+   SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
+   propdata->ngenconss = 0;
+   propdata->triedaddconss = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1866,25 +1905,17 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
-   /* free symmetries after a restart to recompute them later or deactivate OF if used together with orbitopes */
+   /* free symmetries after a restart to recompute them later */
    if ( propdata->recomputerestart && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
    {
       assert( propdata->npermvars > 0 );
       assert( propdata->permvars != NULL );
-#ifndef NDEBUG
-      if ( propdata->ofenabled )
-      {
-         assert( propdata->permvarmap != NULL );
-         assert( propdata->bg0list != NULL );
-      }
-#endif
+      assert( ! propdata->ofenabled || propdata->permvarmap != NULL );
+      assert( ! propdata->ofenabled || propdata->bg0list != NULL );
 
       /* reset symmetry information */
+      SCIP_CALL( delSymConss(scip, propdata) );
       SCIP_CALL( freeSymmetryData(scip, propdata) );
-
-      /* deactivate OF after a restart if symmetry break constraints have been added */
-      if ( propdata->ngenconss >  0 )
-         propdata->ofenabled = FALSE;
    }
 
    /* skip computation if symmetry has already been computed */
@@ -2454,7 +2485,8 @@ SCIP_RETCODE addSymresackConss(
 static
 SCIP_RETCODE tryAddSymmetryHandlingConss(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROP*            prop                /**< symmetry breaking propagator */
+   SCIP_PROP*            prop,               /**< symmetry breaking propagator */
+   SCIP_Bool*            earlyterm           /**< pointer to store whether we terminated early  (or NULL) */
    )
 {
    SCIP_PROPDATA* propdata;
@@ -2466,18 +2498,18 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( propdata != NULL );
    assert( propdata->symconsenabled );
 
+   /* possibly compute symmetry */
+   SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
    {
       assert( propdata->nperms > 0 );
 
-      return SCIP_OKAY;
-   }
+      if ( earlyterm != NULL )
+         *earlyterm = TRUE;
 
-   /* possibly compute symmetry */
-   if ( ! propdata->computedsymmetry )
-   {
-      SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+      return SCIP_OKAY;
    }
 
    if ( propdata->nperms <= 0 || ! propdata->binvaraffected )
@@ -3073,7 +3105,7 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    {
       SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.");
 
-      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop) );
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL) );
    }
 
    return SCIP_OKAY;
@@ -3096,11 +3128,11 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
 
-   /* guarantee that symmetries are computed (and handled) if the solving process hat not been interrupted
+   /* guarantee that symmetries are computed (and handled) if the solving process has not been interrupted
     * and even if presolving has been disabled */
-   if ( propdata->symconsenabled && ! propdata->triedaddconss && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
+   if ( propdata->symconsenabled && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
    {
-      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop) );
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL) );
    }
 
    return SCIP_OKAY;
@@ -3126,9 +3158,10 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    assert( propdata->usesymmetry >= 0 );
 
    /* possibly create symmetry handling constraints */
-   if ( propdata->symconsenabled && ! propdata->triedaddconss )
+   if ( propdata->symconsenabled )
    {
       int noldngenconns;
+      SCIP_Bool earlyterm = FALSE;
 
       /* skip presolving if we are not at the end if addconsstiming == 2 */
       assert( 0 <= propdata->addconsstiming && propdata->addconsstiming <= 2 );
@@ -3141,37 +3174,42 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
 
       noldngenconns = propdata->ngenconss;
 
-      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop) );
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, &earlyterm) );
 
-      /* if symmetry handling constraints have been added, presolve each */
-      if ( propdata->ngenconss > 0 )
+      /* if we actually tried to add symmetry handling constraints */
+      if ( ! earlyterm )
       {
-         /* at this point, the symmetry group should be computed and nontrivial */
-         assert( propdata->nperms > 0 );
-         assert( propdata->triedaddconss );
-
          *result = SCIP_DIDNOTFIND;
 
-         *naddconss += propdata->ngenconss - noldngenconns;
-         SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", propdata->ngenconss - noldngenconns);
-
-         /* if constraints have been added, loop through generated constraints and presolve each */
-         for (i = 0; i < propdata->ngenconss; ++i)
+         /* if symmetry handling constraints have been added, presolve each */
+         if ( propdata->ngenconss > 0 )
          {
-            SCIP_CALL( SCIPpresolCons(scip, propdata->genconss[i], nrounds, SCIP_PROPTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
-                  nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
-                  nchgvartypes, nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
+            /* at this point, the symmetry group should be computed and nontrivial */
+            assert( propdata->nperms > 0 );
+            assert( propdata->triedaddconss );
 
-            /* exit if cutoff or unboundedness has been detected */
-            if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
+            /* we have added at least one symmetry handling constraints, i.e., we were successful */
+            *result = SCIP_SUCCESS;
+
+            *naddconss += propdata->ngenconss - noldngenconns;
+            SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", propdata->ngenconss - noldngenconns);
+
+            /* if constraints have been added, loop through generated constraints and presolve each */
+            for (i = 0; i < propdata->ngenconss; ++i)
             {
-               SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(propdata->genconss[i]));
-               return SCIP_OKAY;
-            }
-         }
-         SCIPdebugMsg(scip, "Presolved %d generated constraints.\n", propdata->ngenconss);
+               SCIP_CALL( SCIPpresolCons(scip, propdata->genconss[i], nrounds, SCIP_PROPTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
+                     nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
+                     nchgvartypes, nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
-         *result = SCIP_SUCCESS;
+               /* exit if cutoff or unboundedness has been detected */
+               if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
+               {
+                  SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(propdata->genconss[i]));
+                  return SCIP_OKAY;
+               }
+            }
+            SCIPdebugMsg(scip, "Presolved %d generated constraints.\n", propdata->ngenconss);
+         }
       }
    }
 
@@ -3182,7 +3220,9 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       SCIP_Bool infeasible;
       int nprop;
 
-      *result = SCIP_DIDNOTFIND;
+      /* if we did not tried to add symmetry handling constraints */
+      if ( *result == SCIP_DIDNOTRUN )
+         *result = SCIP_DIDNOTFIND;
 
       SCIPdebugMsg(scip, "Presolving <%s>.\n", PROP_NAME);
 
