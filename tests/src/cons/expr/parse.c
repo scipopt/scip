@@ -152,13 +152,11 @@ Test(parse, signpower)
    /* create expression */
    cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &crazyexpr), SCIP_OKAY);
 
-   cr_assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(crazyexpr)), "pow") == 0);
-   cr_assert(SCIPisConsExprExprPowSignpower(crazyexpr));
+   cr_assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(crazyexpr)), "signpower") == 0);
    cr_assert_eq(SCIPgetConsExprExprPowExponent(crazyexpr), 2.5);
 
    child = SCIPgetConsExprExprChildren(crazyexpr)[0];
    cr_assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "pow") == 0);
-   cr_assert(!SCIPisConsExprExprPowSignpower(child));
    cr_assert_eq(SCIPgetConsExprExprPowExponent(child), 2.0);
 
    /* release expression */

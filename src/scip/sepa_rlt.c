@@ -216,7 +216,7 @@ SCIP_RETCODE createSepaData(
 
                /* test if expression is quadratic */
                if( SCIPgetConsExprExprHdlr(expr) == SCIPfindConsExprExprHdlr(sepadata->conshdlr, "pow")
-                  && SCIPgetConsExprExprPowExponent(expr) == 2.0 && !SCIPisConsExprExprPowSignpower(expr) )
+                  && SCIPgetConsExprExprPowExponent(expr) == 2.0 )
                {
                   /* if only initial rows are requested, skip products of non-variable expressions */
                   if( sepadata->onlyinitial && !SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(expr)[0]) )

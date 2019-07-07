@@ -4301,10 +4301,6 @@ SCIP_RETCODE parseBase(
       /* search for expression handler */
       exprhdlr = SCIPfindConsExprExprHdlr(conshdlr, operatorname);
 
-      /* pow() writes signpower for signpower contraints */
-      if( exprhdlr == NULL && strcmp(operatorname, "signpower") == 0 )
-         exprhdlr = SCIPgetConsExprExprHdlrPower(conshdlr);
-
       /* check expression handler exists and has a parsing method */
       if( exprhdlr == NULL )
       {
@@ -4735,8 +4731,16 @@ SCIP_RETCODE makeClassicExpr(
    {
       assert(nchildren == 1);
       assert(children != NULL && children[0] != NULL);
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIPisConsExprExprPowSignpower(sourceexpr) ? SCIP_EXPR_SIGNPOWER : SCIP_EXPR_REALPOWER, *children,
-            SCIPgetConsExprExprPowExponent(sourceexpr)) );
+      /* TODO create intpower if exponent integral */
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_REALPOWER, *children,
+         SCIPgetConsExprExprPowExponent(sourceexpr)) );
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "signpower") == 0 )
+   {
+      assert(nchildren == 1);
+      assert(children != NULL && children[0] != NULL);
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_SIGNPOWER, *children,
+         SCIPgetConsExprExprPowExponent(sourceexpr)) );
    }
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "prod") == 0 )
    {
@@ -4855,7 +4859,7 @@ SCIP_RETCODE createNlRow(
             SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(child), coefs[i]) );
          }
          else if( SCIPgetConsExprExprHdlr(child) == conshdlrdata->exprpowhdlr &&
-            SCIPgetConsExprExprPowExponent(child) == 2.0 && !SCIPisConsExprExprPowSignpower(child) &&
+            SCIPgetConsExprExprPowExponent(child) == 2.0 &&
             SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(child)[0]) )
          {
             /* square term  */
@@ -4955,7 +4959,7 @@ SCIP_RETCODE createNlRow(
       }
    }
    else if( SCIPgetConsExprExprHdlr(consdata->expr) == conshdlrdata->exprpowhdlr &&
-      SCIPgetConsExprExprPowExponent(consdata->expr) == 2.0 && !SCIPisConsExprExprPowSignpower(consdata->expr) &&
+      SCIPgetConsExprExprPowExponent(consdata->expr) == 2.0 &&
       SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(consdata->expr)[0]) )
    {
       /* if root is a x^2, then set the quadratic part of the nlrow */
@@ -10580,8 +10584,8 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
                SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprProductCoef(expr));
             else if(strcmp(type, "val") == 0)
                SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprValueValue(expr));
-            else if(strcmp(type, "pow") == 0)
-               SCIPinfoMessage(scip, NULL, "%g %d", SCIPgetConsExprExprPowExponent(expr), SCIPisConsExprExprPowSignpower(expr));
+            else if(strcmp(type, "pow") == 0 || strcmp(type, "signpower") == 0)
+               SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprPowExponent(expr));
             else if(strcmp(type, "exp") == 0)
                SCIPinfoMessage(scip, NULL, "\n");
             else if(strcmp(type, "log") == 0)
@@ -12219,6 +12223,10 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP_CALL( SCIPincludeConsExprExprHdlrPow(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "pow") == 0);
    conshdlrdata->exprpowhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
+
+   /* include handler for signed power expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrSignpower(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "signpower") == 0);
 
    /* include handler for entropy expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrEntropy(scip, conshdlr) );

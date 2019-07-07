@@ -261,7 +261,7 @@ Test(estimation, signpower_root, .description = "test calculation of roots for s
    SCIP_CALL( SCIPfree(&scip) );
 }
 
-/* test estimateSignpower */
+/* test estimateSignedpower */
 Test(estimation, signpower, .description = "test computation of signpower estimators")
 {
    SCIP_Real exponent;
@@ -291,7 +291,7 @@ Test(estimation, signpower, .description = "test computation of signpower estima
          success = FALSE;
          islocal = FALSE;
          slope = constant = -5;
-         estimateSignpower(scip, exponent, root, FALSE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
+         estimateSignedpower(scip, exponent, root, FALSE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
          cr_assert(success);
          cr_assert(islocal);
          cr_assert(SCIPisEQ(scip, -pow(-xlb, exponent), constant + slope * xlb));
@@ -300,7 +300,7 @@ Test(estimation, signpower, .description = "test computation of signpower estima
          success = FALSE;
          islocal = TRUE;
          slope = constant = -5;
-         estimateSignpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
+         estimateSignedpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
          cr_assert(success);
          cr_assert(!islocal);
          cr_assert(SCIPisEQ(scip, slope, exponent * pow(-xref, exponent - 1.0)));
@@ -309,14 +309,14 @@ Test(estimation, signpower, .description = "test computation of signpower estima
          /* if global upper bound is small enough (< -xref/root), then overestimator should still be global */
          success = FALSE;
          islocal = TRUE;
-         estimateSignpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, - xref/root / 2.0 , &constant, &slope, &islocal, &success);
+         estimateSignedpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, - xref/root / 2.0 , &constant, &slope, &islocal, &success);
          cr_assert(success);
          cr_assert(!islocal);
 
          /* if global upper bound is too large (> -xref/root), then overestimator is only locally valid */
          success = FALSE;
          islocal = FALSE;
-         estimateSignpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, - xref/root * 2.0 , &constant, &slope, &islocal, &success);
+         estimateSignedpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, - xref/root * 2.0 , &constant, &slope, &islocal, &success);
          cr_assert(success);
          cr_assert(islocal);
       }
@@ -329,7 +329,7 @@ Test(estimation, signpower, .description = "test computation of signpower estima
          success = FALSE;
          islocal = !(xref < -xlb * root);
          slope = constant = -5;
-         estimateSignpower(scip, exponent, root, FALSE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
+         estimateSignedpower(scip, exponent, root, FALSE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
          cr_assert(success);
          if( xref < -xlb * root )
          {
@@ -350,7 +350,7 @@ Test(estimation, signpower, .description = "test computation of signpower estima
          success = FALSE;
          islocal = !(xref > -xub * root);
          slope = constant = -5;
-         estimateSignpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
+         estimateSignedpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
          cr_assert(success);
          if( xref > -xub * root )
          {
