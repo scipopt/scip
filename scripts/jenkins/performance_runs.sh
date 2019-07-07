@@ -71,6 +71,9 @@ export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 # create required directory
 mkdir -p settings
 
+# generate a randomseed
+RANDOMSEED=$(date +%Y%m%d)
+
 #######################
 ### Update Branches ###
 #######################
@@ -92,6 +95,7 @@ if [ "${DAY_OF_WEEK}" == "6" ]; then
   git push
   git checkout -f ${BRANCHNAME}
 
+  rm -rf soplex
   git clone git@git.zib.de:integer/soplex
   cd soplex
   git checkout ${SOPLEXBRANCHNAME}
@@ -116,8 +120,6 @@ fi
 #  - The check/jenkins_*_cmake.sh evaluation scripts don't work yet if you use a global seed shift.
 # FORMAT:
 #    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx/bin/scip BINID=scipoptspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
-
-RANDOMSEED=$(date +%Y%m%d)
 
 # use associative arrays, this requires bash4
 # declaration
