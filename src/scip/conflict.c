@@ -5876,7 +5876,7 @@ SCIP_RETCODE addCand(
 {
    SCIP_Real oldbound;
    SCIP_Real newbound;
-   SCIP_Real proofactdelta;
+   SCIP_Real QUAD(proofactdelta);
    SCIP_Real score;
    int depth;
    int i;
@@ -5944,11 +5944,12 @@ SCIP_RETCODE addCand(
    }
 
    /* calculate the increase in the proof's activity */
-   proofactdelta = (newbound - oldbound)*proofcoef;
-   assert(proofactdelta > 0.0);
+   SCIPquadprecSumDD(proofactdelta, newbound, -oldbound);
+   SCIPquadprecProdQD(proofactdelta, proofactdelta, proofcoef);
+   assert(QUAD_TO_DBL(proofactdelta) > 0.0);
 
    /* calculate score for undoing the bound change */
-   score = calcBdchgScore(prooflhs, proofact, proofactdelta, proofcoef, depth, currentdepth, var, set);
+   score = calcBdchgScore(prooflhs, proofact, QUAD_TO_DBL(proofactdelta), proofcoef, depth, currentdepth, var, set);
 
    if( !resolvable )
    {
@@ -5967,7 +5968,7 @@ SCIP_RETCODE addCand(
    SCIPsetDebugMsg(set, " -> local <%s> %s %g, relax <%s> %s %g, proofcoef=%g, dpt=%d, resolve=%u, delta=%g, score=%g\n",
       SCIPvarGetName(var), proofcoef > 0.0 ? "<=" : ">=", oldbound,
       SCIPvarGetName(var), proofcoef > 0.0 ? "<=" : ">=", newbound,
-      proofcoef, depth, resolvable, proofactdelta, score);
+      proofcoef, depth, resolvable, QUAD_TO_DBL(proofactdelta), score);
 
    /* insert variable in candidate list without touching the already processed candidates */
    for( i = *ncands; i > firstcand && score > (*candscores)[i-1]; --i )
@@ -5980,7 +5981,7 @@ SCIP_RETCODE addCand(
    (*cands)[i] = var;
    (*candscores)[i] = score;
    (*newbounds)[i] = newbound;
-   (*proofactdeltas)[i] = proofactdelta;
+   (*proofactdeltas)[i] = QUAD_TO_DBL(proofactdelta);
    (*ncands)++;
 
    return SCIP_OKAY;
@@ -6164,13 +6165,26 @@ SCIP_RETCODE undoBdchgsProof(
             proofcoefs[v] > 0.0 ? newbounds[i] : curvarubs[v],
             proofcoefs[v], prooflhs, (*proofact), proofactdeltas[i]);
 
-         assert((SCIPsetIsPositive(set, proofcoefs[v]) && SCIPsetIsGT(set, newbounds[i], curvarubs[v]))
-            || (SCIPsetIsNegative(set, proofcoefs[v]) && SCIPsetIsLT(set, newbounds[i], curvarlbs[v])));
-         assert((SCIPsetIsPositive(set, proofcoefs[v])
-               && SCIPsetIsEQ(set, proofactdeltas[i], (newbounds[i] - curvarubs[v])*proofcoefs[v]))
-            || (SCIPsetIsNegative(set, proofcoefs[v])
-               && SCIPsetIsEQ(set, proofactdeltas[i], (newbounds[i] - curvarlbs[v])*proofcoefs[v])));
-         assert(!SCIPsetIsZero(set, proofcoefs[v]));
+#ifndef NDEBUG
+         {
+            SCIP_Real QUAD(verifylb);
+            SCIP_Real QUAD(verifyub);
+
+            SCIPquadprecSumDD(verifylb, newbounds[i], -curvarlbs[v]);
+            SCIPquadprecProdQD(verifylb, verifylb, proofcoefs[v]);
+
+            SCIPquadprecSumDD(verifyub, newbounds[i], -curvarubs[v]);
+            SCIPquadprecProdQD(verifyub, verifyub, proofcoefs[v]);
+
+            assert((SCIPsetIsPositive(set, proofcoefs[v]) && SCIPsetIsGT(set, newbounds[i], curvarubs[v]))
+               || (SCIPsetIsNegative(set, proofcoefs[v]) && SCIPsetIsLT(set, newbounds[i], curvarlbs[v])));
+            assert((SCIPsetIsPositive(set, proofcoefs[v])
+                  && SCIPsetIsEQ(set, proofactdeltas[i], QUAD_TO_DBL(verifyub)))
+               || (SCIPsetIsNegative(set, proofcoefs[v])
+                  && SCIPsetIsEQ(set, proofactdeltas[i], QUAD_TO_DBL(verifylb))));
+            assert(!SCIPsetIsZero(set, proofcoefs[v]));
+         }
+#endif
 
          if( proofcoefs[v] > 0.0 )
          {
