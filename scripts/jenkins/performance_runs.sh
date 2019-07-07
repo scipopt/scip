@@ -81,6 +81,9 @@ if [ "${GITBRANCH}" == "bugfix" ]; then
   BRANCHNAME="v60-bugfix"
   SOPLEXBRANCHNAME="bugfix-40"
 fi
+if [ "${GITBRANCH}" == "consexpr" ]; then
+  SOPLEXBRANCHNAME="master"
+fi
 if [ "${DAY_OF_WEEK}" == "6" ]; then
   git checkout -f ${BRANCHNAME}
   git pull
