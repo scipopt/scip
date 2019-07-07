@@ -4729,11 +4729,20 @@ SCIP_RETCODE makeClassicExpr(
    }
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "pow") == 0 )
    {
+      SCIP_Real exponent;
+
       assert(nchildren == 1);
       assert(children != NULL && children[0] != NULL);
-      /* TODO create intpower if exponent integral */
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_REALPOWER, *children,
-         SCIPgetConsExprExprPowExponent(sourceexpr)) );
+
+      exponent = SCIPgetConsExprExprPowExponent(sourceexpr);
+      if( EPSISINT(exponent, 0.0) )  /*lint !e835*/
+      {
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_INTPOWER, *children, (int)exponent) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_REALPOWER, *children, exponent) );
+      }
    }
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "signpower") == 0 )
    {
