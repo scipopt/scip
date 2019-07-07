@@ -100,7 +100,7 @@ if [ "${DAY_OF_WEEK}" == "6" ]; then
   cd soplex
   git checkout ${SOPLEXBRANCHNAME}
   git pull
-  git checkout -B performance-${GITBRANCH}
+  git checkout -f performance-${GITBRANCH}
   git merge ${SOPLEXBRANCHNAME} --ff-only
   git push
   cd ..
