@@ -125,9 +125,11 @@ if [ "${GITLOG}" == "" ]; then
   echo "Latest performance run of ${ORIGBRANCH} is not part of your branch. Please merge!"
   exit 1
 fi
+
+# ensure that the current branch is not ahead of the latest performance run
 GITLOG=$(git log origin/${ORIGBRANCH} --pretty=format:'%H' | grep ${COMPAREHASH} -B1 | head -n 1)
 if [ "${GITLOG}" != "${COMPAREHASH}" ]; then
-  GITCHECK=$(git log origin/${ORIGBRANCH} --pretty=format:'%H' | grep ${GITLOG})
+  GITCHECK=$(git log --pretty=format:'%H' | grep ${GITLOG})
   if [ "${GITCHECK}" != "" ]; then
      echo "Your branch is ahead of the latest performance run of ${ORIGBRANCH}. Abort!"
      exit 1
