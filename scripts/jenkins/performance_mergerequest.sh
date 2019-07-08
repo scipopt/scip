@@ -47,7 +47,8 @@ if [ "${GITBRANCH}" != "master" ]; then
     if [[ ${GITBRANCH} =~ "bugfix" ]]; then
       GITBRANCH=bugfix
     else
-      echo "Branch is neither 'master', 'bugfix' nor 'consexpr'. Something is wrong. Exiting."
+      export FAILREASON="Branch is neither 'master', 'bugfix' nor 'consexpr'. Something is wrong. Exiting."
+      echo ${FAILREASON}
       exit 1
     fi
   fi
@@ -122,7 +123,8 @@ export COMPAREHASH=$(git rev-parse origin/performance-${GITBRANCH})
 set +e
 GITLOG="$(git log --pretty=format:'%H' | grep ${COMPAREHASH})"
 if [ "${GITLOG}" == "" ]; then
-  echo "Latest performance run of ${ORIGBRANCH} is not part of your branch. Please merge!"
+  export FAILREASON="Latest performance run of ${ORIGBRANCH} is not part of your branch. Please merge!"
+  echo ${FAILREASON}
   exit 1
 fi
 
@@ -131,8 +133,9 @@ GITLOG=$(git log origin/${ORIGBRANCH} --pretty=format:'%H' | grep ${COMPAREHASH}
 if [ "${GITLOG}" != "${COMPAREHASH}" ]; then
   GITCHECK=$(git log --pretty=format:'%H' | grep ${GITLOG})
   if [ "${GITCHECK}" != "" ]; then
-     echo "Your branch is ahead of the latest performance run of ${ORIGBRANCH}. Abort!"
-     exit 1
+    export FAILREASON="Your branch is ahead of the latest performance run of ${ORIGBRANCH}. Abort!"
+    echo ${FAILREASON}
+    exit 1
   fi
 fi
 set -e
