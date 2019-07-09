@@ -4170,7 +4170,7 @@ SCIP_RETCODE reduce_extendedEdge2(
             SCIP_Bool erevdeletable = TRUE;
 
             SCIP_CALL( reduceExtCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeletable,
-                  isterm, minpathcost, e, allowequality, tree_deg, &deletable) );
+                  isterm, minpathcost, erev, allowequality, tree_deg, &erevdeletable) );
 
             if( erevdeletable )
                edgedeletable[erev] = TRUE;
@@ -4617,7 +4617,7 @@ SCIP_RETCODE reduce_da(
                  nfixed += extfixed;
 
                //  graph_printInfo(graph);
-               //  printf("newly fixed %d \n", extfixed);
+             //    printf("newly fixed %d \n", extfixed);
 //                 assert(0);
 
               }
