@@ -3413,6 +3413,7 @@ SCIP_RETCODE reduceExtCheckArc(
          extdata.tree_nleaves = 1;
 
          extTreeSyncWithStack(scip, graph, &reddata, &extdata, &nupdatestalls, &conflict);
+
          assert(!conflict);
 
          extExtend(scip, graph, isterm, &reddata, &extdata, &success);
@@ -4400,8 +4401,16 @@ SCIP_RETCODE reduce_da(
    else
       pool = NULL;
 
-   if( extended )
+
+   if( extended || 1 )
+   {
+      int todo;
       SCIP_CALL( reduce_deleteConflictEdges(scip, graph) );
+
+
+
+
+   }
 
    /* initialize */
    k = 0;
@@ -4599,15 +4608,17 @@ SCIP_RETCODE reduce_da(
          initializeDaDistances(scip, graph, daroot, cost, vnoi, pathdist, costrev, vbase, pathedge, state);
 
 
+         if( 1 )
          {
+
                  int nn;
                  int extfixed;
                  reduce_extendedEdge2(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, FALSE, marked, &extfixed);
                  nfixed += extfixed;
 
-                 graph_printInfo(graph);
-                 printf("newly fixed %d \n", extfixed);
-                 assert(0);
+               //  graph_printInfo(graph);
+               //  printf("newly fixed %d \n", extfixed);
+//                 assert(0);
 
               }
 
@@ -4647,10 +4658,13 @@ SCIP_RETCODE reduce_da(
 
       if( !directed && !SCIPisZero(scip, minpathcost) && nodereplacing )
       {
-           nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
+         nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
 
-           if( extended )
-              SCIP_CALL( reduce_deleteConflictEdges(scip, graph) );
+         if( extended || 1 )
+         {
+            int todo;
+            SCIP_CALL(reduce_deleteConflictEdges(scip, graph));
+         }
       }
 
       if( nfixed == 0 || !userec )
