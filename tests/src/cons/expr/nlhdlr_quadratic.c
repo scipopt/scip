@@ -168,8 +168,8 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
-/* detects x^2 + 2*x exp(y x^2) + exp(y x^2)^2 <= 1 as convex quadratic expression:
- * simplify yields x^2 + 2 * x exp(x^2 y) + exp(x^2 y)^2 <= 1 --> should detect x^2 + 2 x * w + w^2
+/* detects x^2 + 2*x cos(y x^2) + cos(y x^2)^2 <= 1 as convex quadratic expression:
+ * simplify yields x^2 + 2 * x cos(x^2 y) + cos(x^2 y)^2 <= 1 --> should detect x^2 + 2 x * w + w^2
  */
 Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
 {
@@ -177,7 +177,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* expexpr;
+   SCIP_CONSEXPR_EXPR* cosexpr;
    SCIP_CONS* cons;
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
@@ -190,23 +190,23 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
 
    /* create expression, simplify it and find common subexpressions*/
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <x>^2 + 2 * <x> * exp(<y> * <x>^2) + exp(<y> * <x>^2)^2 <= 1", TRUE, TRUE,
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <x>^2 + 2 * <x> * cos(<y> * <x>^2) + cos(<y> * <x>^2)^2 <= 1", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
    success = FALSE;
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, &infeasible, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_assert(!infeasible);
 
    /* get expr and work with it */
    expr = SCIPgetExprConsExpr(scip, cons);
 
-   /* get exponential expression */
+   /* get cosine expression */
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 3);
-   expexpr = SCIPgetConsExprExprChildren(expr)[1]; /*  x * exp(x^2 y) */
-   expexpr = SCIPgetConsExprExprChildren(expexpr)[1]; /* exp(x^2 y) */
-   cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expexpr)), "exp", "expecting exp got %s\n",
-         SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expexpr)));
+   cosexpr = SCIPgetConsExprExprChildren(expr)[1]; /*  x * cos(x^2 y) */
+   cosexpr = SCIPgetConsExprExprChildren(cosexpr)[1]; /* cos(x^2 y) */
+   cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(cosexpr)), "cos", "expecting cos got %s\n",
+         SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(cosexpr)));
    /* detect */
    provided = SCIP_CONSEXPR_EXPRENFO_NONE;
    enforcebelow = FALSE;
@@ -233,13 +233,13 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
 
-   /* expr exp(x^2 y) is quadratic */
+   /* expr cos(x^2 y) is quadratic */
    quad = nlhdlrexprdata->quadexprterms[1];
    cr_assert_not_null(quad.expr);
-   cr_expect_eq(expexpr, quad.expr);
+   cr_expect_eq(cosexpr, quad.expr);
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 0.0, quad.sqrcoef);
-   cr_expect_not_null(SCIPgetConsExprExprAuxVar(quad.expr), "exp expr should have auxiliary variable!\n");
+   cr_expect_not_null(SCIPgetConsExprExprAuxVar(quad.expr), "cos expr should have auxiliary variable!\n");
 
 
    SCIP_BILINEXPRTERM bilin;
@@ -248,7 +248,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert_not_null(bilin.expr2);
    cr_expect_eq(SCIPgetConsExprExprAuxVar(bilin.expr1), x, "Expecting expr's auxvar %s in bilin term, got %s\n",
          SCIPvarGetName(x), SCIPvarGetName(SCIPgetConsExprExprAuxVar(bilin.expr1)));
-   cr_expect_eq(bilin.expr2, expexpr);
+   cr_expect_eq(bilin.expr2, cosexpr);
    cr_expect_eq(2.0, bilin.coef, "Expecting bilinear coef of %g, got %g\n", 2.0, bilin.coef);
 
    /* free auxvar(s) created by detect from above */
@@ -284,7 +284,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_assert(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* this adds locks which are needed for detectNlhdlrs */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, &infeasible, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_assert_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */

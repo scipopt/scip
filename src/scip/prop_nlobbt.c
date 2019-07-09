@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_nlobbt.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  nlobbt propagator
  * @author Benjamin Mueller
  */

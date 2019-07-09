@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    prop_genvbounds.c
- * @ingroup PROPAGATORS
+ * @ingroup DEFPLUGINS_PROP
  * @brief   generalized variable bounds propagator
  * @author  Stefan Weltge
  * @author  Ambros Gleixner

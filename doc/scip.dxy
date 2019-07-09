@@ -790,7 +790,7 @@ INPUT                  = . \
                          ../src \
                          ../src/scip \
                          ../src/nlpi \
-                         ../src/lpi/lpi.h ../src/lpi/type_lpi.h \
+                         ../src/lpi \
                          ../src/objscip \
                          ../src/tclique \
                          ../src/dijkstra \

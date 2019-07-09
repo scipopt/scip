@@ -36,7 +36,7 @@
 #define MIN_ABSBOUNDSIZE    0.1  /* minimum size of variable bounds for applying separation */
 
 /* properties of the bilinear nlhdlr statistics table */
-#define TABLE_NAME_BILINEAR                 "bilinear nlhdlr"
+#define TABLE_NAME_BILINEAR                 "bilinear_nlhdlr"
 #define TABLE_DESC_BILINEAR                 "bilinear nlhdlr statistics table"
 #define TABLE_POSITION_BILINEAR             12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_BILINEAR       SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
@@ -210,7 +210,7 @@ void updateBilinearRelaxation(
    for( i = 0; i < nineqs; ++i )
    {
       constshift[i] = MAX(0.0, ineqs[3*i] * refx - ineqs[3*i+1] * refy - ineqs[3*i+2]);
-      SCIPdebugMsg(scip, "constant shift of inequality %d = %.16f\n", constshift[i]);
+      SCIPdebugMsg(scip, "constant shift of inequality %d = %.16f\n", i, constshift[i]);
    }
 
    /* try to use both inequalities */
@@ -1470,6 +1470,16 @@ SCIP_RETCODE SCIPaddConsExprNlhdlrBilinearIneq(
          else
             ++(nlhdlrexprdata->noverineqs);
       }
+   }
+
+   if( *success )
+   {
+      /* With the added inequalities, we can potentially compute tighter activities for the expression,
+       * so constraints that contain this expression should be propagated again.
+       * We don't have a direct expression to constraint mapping, though. This call marks all expr-constraints
+       * which include any of the variables that this expression depends on for propagation.
+       */
+      SCIP_CALL( SCIPmarkConsExprExprPropagate(scip, expr) );
    }
 
    return SCIP_OKAY;

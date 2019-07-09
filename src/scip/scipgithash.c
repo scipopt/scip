@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipgithash.c
+ * @ingroup OTHER_CFILES
  * @brief  git hash methods
  * @author Stefan Heinz
  */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_fullstrong.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  full strong LP branching rule
  * @author Tobias Achterberg
  * @author Gerald Gamrath

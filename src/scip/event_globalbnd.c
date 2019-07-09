@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_globalbnd.c
+ * @ingroup DEFPLUGINS_EVENT
  * @brief  eventhandler for storing all global bound changes
  * @author Robert Lion Gottwald
  *

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_redcost.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  propagator using the LP reduced cost and the cutoff bound
  * @author Tobias Achterberg
  * @author Stefan Heinz

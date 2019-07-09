@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_abspower.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for absolute power constraints \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  */
@@ -4241,6 +4242,7 @@ SCIP_RETCODE createNlRow(
 {
    SCIP_CONSDATA* consdata;
    SCIP_EXPRTREE* exprtree;
+   SCIP_EXPRCURV curv;
    SCIP_QUADELEM quadelem;
    SCIP_VAR* linvars[2];
    SCIP_Real lincoefs[2];
@@ -4270,13 +4272,22 @@ SCIP_RETCODE createNlRow(
    exprtree = NULL;
    constant = 0.0;
 
-   /* check if sign of x is fixed */
+   /* check if sign of x is fixed, determine curvature of abspower function */
    if( !SCIPisNegative(scip, SCIPvarGetLbGlobal(consdata->x)+consdata->xoffset) )
+   {
       sign =  1;
+      curv = SCIP_EXPRCURV_CONVEX;
+   }
    else if( !SCIPisPositive(scip, SCIPvarGetUbGlobal(consdata->x)+consdata->xoffset) )
+   {
       sign = -1;
+      curv = SCIP_EXPRCURV_CONCAVE;
+   }
    else
+   {
       sign =  0;
+      curv = SCIP_EXPRCURV_UNKNOWN;
+   }
 
    /* check if exponent is integral */
    expisint = SCIPisIntegral(scip, consdata->exponent);
@@ -4376,7 +4387,7 @@ SCIP_RETCODE createNlRow(
          nlinvars, linvars, lincoefs,
          nquadvars, &quadvar, nquadelems, &quadelem,
          exprtree, consdata->lhs, consdata->rhs,
-         SCIP_EXPRCURV_UNKNOWN
+         curv
          ) );
 
    if( exprtree != NULL )

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_completesol.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  COMPLETESOL - primal heuristic trying to complete given partial solutions
  * @author Jakob Witzig
  */
@@ -220,6 +221,9 @@ SCIP_RETCODE createSubproblem(
 
       assert(SCIPvarIsActive(vars[i]));
 
+      if( subvars[i] == NULL )
+         continue;
+
       /* add objective function as a constraint, if a primal bound exists */
       if( SCIPisInfinity(scip, cutoff) )
       {
@@ -358,18 +362,21 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
 
    for( v = 0; v < nvars; v++ )
    {
-      SCIP_Real solval = SCIPgetSolVal(subscip, subsol, subvars[v]);
+      SCIP_Real solval;
 
+      if( subvars[v] == NULL )
+      {
+         solval = MIN(MAX(0.0, SCIPvarGetUbLocal(vars[v])), SCIPvarGetLbLocal(vars[v]));  /*lint !e666*/
+      }
+      else
+      {
+         solval = SCIPgetSolVal(subscip, subsol, subvars[v]);
+      }
       assert(!SCIPisInfinity(subscip, solval) && !SCIPisInfinity(subscip, -solval));
       assert(solval != SCIP_UNKNOWN); /*lint !e777*/
 
@@ -806,10 +813,7 @@ SCIP_RETCODE setupAndSolve(
 
    /* map all variables */
    for( i = 0; i < nvars; i++ )
-   {
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapf, vars[i]);
-     assert(subvars[i] != NULL);
-   }
 
    /* free hash map */
    SCIPhashmapFree(&varmapf);

@@ -28,13 +28,13 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_primal.h"
-#include "scip/type_retcode.h"
+#include "scip/type_relax.h"
 #include "scip/type_result.h"
+#include "scip/type_retcode.h"
 #include "scip/type_set.h"
 #include "scip/type_sol.h"
 #include "scip/type_stat.h"
 #include "scip/type_tree.h"
-#include "scip/type_relax.h"
 #include "scip/type_var.h"
 #include "scip/pub_relax.h"
 
@@ -158,8 +158,8 @@ SCIP_Bool SCIPrelaxIsSolved(
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
-/* 
- *  methods for the global relaxation data 
+/*
+ *  methods for the global relaxation data
  */
 
 /** enables or disables all clocks of \p relax, depending on the value of the flag */

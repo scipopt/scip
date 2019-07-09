@@ -210,15 +210,20 @@ SCIP_RETCODE checkCurvature(
    nlhdlrexprdata->curvature = SCIP_EXPRCURV_UNKNOWN;
 
    n  = nlhdlrexprdata->nquadexprs;
-   nn = n * n;
 
-   /* do not check curvature if nn is too large */
-   if( nn < 0 || (unsigned) (int) nn > UINT_MAX / sizeof(SCIP_Real) )
+   /* do not check curvature if nn will be too large
+    * we want nn * sizeof(real) to fit into an unsigned int, so n must be <= sqrt(unit_max/sizeof(real))
+    * sqrt(2*214748364/8) = 7327.1475350234
+    */
+   if( n > 7000 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "nlhdlr_quadratic - number of quadratic variables is too large (%d) to check the curvature; will not handle this expression\n", n);
 
       return SCIP_OKAY;
    }
+   nn = n * n;
+   assert(nn > 0);
+   assert((unsigned)nn < UINT_MAX / sizeof(SCIP_Real));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &matrix, nn) );
@@ -1084,6 +1089,9 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(infeasible != NULL);
+   assert(nreductions != NULL);
+
+   *nreductions = 0;
 
    /* not possible to conclude finite bounds if the interval of the expression is [-inf,inf] */
    if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, expr)) )

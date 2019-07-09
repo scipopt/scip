@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_diff.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  DIFF file reader
  * @author Jakob Witzig
  */
@@ -375,6 +376,7 @@ SCIP_Bool getNextToken(
    }
    assert(lpinput->linepos < LP_MAX_LINELEN);
    assert(!isDelimChar(buf[lpinput->linepos]));
+   assert(buf[lpinput->linepos] != '\0'); /* '\0' is a delim-char, so this assert is redundant, but it helps to suppress a scan-build warning */
 
    /* check if the token is a value */
    hasdot = FALSE;

@@ -13,6 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file   conflict.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for conflict analysis
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -2989,7 +2990,7 @@ SCIP_RETCODE createAndAddProofcons(
     * TODO it would be better if the linear constraint would be removed at the restart
     */
    for( i = 0; i < nnz; ++i )
-      if( SCIPvarIsCutInvalidAfterRestart(vars[inds[i]]) )
+      if( SCIPvarIsRelaxationOnly(vars[inds[i]]) )
          return SCIP_OKAY;
 
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
