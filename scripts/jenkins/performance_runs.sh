@@ -65,7 +65,7 @@ fi
 
 export CRITERION_DIR=""
 export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
-export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.11~ub18.04
+export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
 export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 
 # create required directory
