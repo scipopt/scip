@@ -93,6 +93,7 @@ struct DoubleExpSmooth
    SCIP_Real             beta;               /**< trend smoothing constant */
    SCIP_Real             level;              /**< estimation of the current level used for smoothing */
    SCIP_Real             trend;              /**< estimation of the current trend (slope) */
+   SCIP_Real             initialvalue;       /**< the level value at 0 observations */
    SCIP_Bool             usetrendinlevel;    /**< should the trend be used in the level update? */
    int                   n;                  /**< number of observations */
 };
@@ -197,13 +198,12 @@ struct TimeSeries
    SCIP_Real*            vals;               /**< value array of this time series */
    SCIP_Real             targetvalue;        /**< target value of this time series */
    SCIP_Real             currentvalue;       /**< current value of time series */
+   SCIP_Real             initialvalue;       /**< the initial value of time series */
    SCIP_Longint          nobs;               /**< total number of observations */
    int                   valssize;           /**< size of value array */
    int                   nvals;              /**< number of values */
    int                   resolution;         /**< current (inverse of) resolution */
    DECL_TIMESERIESUPDATE((*timeseriesupdate));/**< update callback at nodes */
-   union {
-   }                     data;               /**< time series data pointer */
 };
 
 /** extended node information for SSG priority queue */
@@ -910,12 +910,14 @@ char* treedataPrint(
 /** reset double exponential smoothing */
 static
 void doubleexpsmoothReset(
-   DOUBLEEXPSMOOTH*      des                 /**< double exponential smoothing data structure */
+   DOUBLEEXPSMOOTH*      des,                /**< double exponential smoothing data structure */
+   SCIP_Real             initialvalue        /**< the initial value */
    )
 {
   des->n = 0;
   des->level = SCIP_INVALID;
   des->trend = SCIP_INVALID;
+  des->initialvalue = initialvalue;
 }
 
 /** initialize a double exponential smoothing data structure */
@@ -929,7 +931,7 @@ void doubleexpsmoothInit(
 
    des->n = 1;
    des->level = x1;
-   des->trend = x1;
+   des->trend = x1 - des->initialvalue;
 
    /* author bzfhende
     *
@@ -987,9 +989,9 @@ void timeseriesReset(
    timeseries->resolution = 1;
    timeseries->nvals = 0;
    timeseries->nobs = 0L;
-   timeseries->currentvalue = 0;
+   timeseries->currentvalue = timeseries->initialvalue;
 
-   doubleexpsmoothReset(&timeseries->des);
+   doubleexpsmoothReset(&timeseries->des, timeseries->initialvalue);
 }
 
 
@@ -1001,6 +1003,7 @@ SCIP_RETCODE timeseriesCreate(
    TIMESERIES**          timeseries,         /**< pointer to store time series */
    const char*           name,               /**< name of this time series */
    SCIP_Real             targetvalue,        /**< target value of this time series */
+   SCIP_Real             initialvalue,       /**< the initial value of time series */
    DECL_TIMESERIESUPDATE ((*timeseriesupdate)) /**< update callback at nodes, or NULL */
    )
 {
@@ -1023,6 +1026,7 @@ SCIP_RETCODE timeseriesCreate(
 
    timeseriesptr->targetvalue = targetvalue;
    timeseriesptr->valssize = 1024;
+   timeseriesptr->initialvalue = initialvalue;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &timeseriesptr->vals, timeseriesptr->valssize) );
 
@@ -1063,7 +1067,7 @@ void timeseriesResample(
 
    assert(timeseries->nvals % 2 == 0);
 
-   doubleexpsmoothReset(&timeseries->des);
+   doubleexpsmoothReset(&timeseries->des, timeseries->initialvalue);
 
    /* compress vals array to store only every second entry */
    for( i = 0; i < timeseries->nvals / 2; ++i )
@@ -1206,8 +1210,9 @@ void resetSearchprogress(
 {
    progress->curr = -1;
    progress->nobservations = 0;
-   progress->desprogress.n = 0;
-   progress->desresources.n = 0;
+
+   doubleexpsmoothReset(&progress->desprogress, 0.0);
+   doubleexpsmoothReset(&progress->desresources, 0.0);
 }
 
 /** create a search progress */
@@ -2203,17 +2208,17 @@ SCIP_RETCODE includeTimeseries(
    assert(eventhdlrdata != NULL);
 
    /* include gap time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[0], "gap", 1.0, timeseriesUpdateGap) );
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[0], "gap", 1.0, 0.0, timeseriesUpdateGap) );
 
 
    /* include progress time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[1], "progress", 1.0, timeseriesUpdateProgress) );
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[1], "progress", 1.0, 0.0, timeseriesUpdateProgress) );
 
    /* include leaf time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[2], "leaf-frequency", 0.5, timeseriesUpdateLeaffreq) );
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[2], "leaf-frequency", 0.5, -0.5, timeseriesUpdateLeaffreq) );
 
    /* include SSG time series */
-      SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[3], "ssg", 0.0, timeseriesUpdateSsg) );
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[3], "ssg", 0.0, 1.0, timeseriesUpdateSsg) );
 
    return SCIP_OKAY;
 }
