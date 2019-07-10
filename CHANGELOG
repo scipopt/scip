@@ -7,21 +7,57 @@
 Features
 --------
 
+Performance improvements
+------------------------
+
 Examples and applications
 -------------------------
 
 Interface changes
 -----------------
 
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
 Build system
 ------------
 
+### Cmake
+
+### Makefile
+
 Fixed bugs
 ----------
+
 - fixed issue in SCIPtightenVarLb and SCIPtightenVarUb that occurs for small bound changes
 
 Miscellaneous
 -------------
+
+Known bugs
+----------
 
 
 @section RN602 SCIP 6.0.2
