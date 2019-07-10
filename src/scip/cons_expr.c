@@ -339,6 +339,13 @@ SCIP_RETCODE freeAuxVar(
 
    SCIPdebugMsg(scip, "remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
+   /* check that if not finishing up, noone else is still using the auxvar
+    * once we release it, noone else would take care of unlocking it
+    * note that we do not free auxvars in exitsolve if we are restarting
+    * TODO: this doesn't work when run from unittests, so should find a safer way to define exceptions than checking the stage
+    */
+   /* assert(SCIPvarGetNUses(expr->auxvar) == 2 || SCIPgetStage(scip) >= SCIP_STAGE_EXITSOLVE); */
+
    /* remove variable locks if variable is not used by any other plug-in which can be done by checking whether
     * SCIPvarGetNUses() returns 2 (1 for the core; and one for cons_expr); note that SCIP does not enforce to have 0
     * locks when freeing a variable
