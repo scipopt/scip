@@ -84,7 +84,7 @@
 /** GenVBound data */
 struct GenVBound
 {
-   SCIP_VAR**            vars;               /**< pointers to variables x_j occuring in this generalized variable
+   SCIP_VAR**            vars;               /**< pointers to variables x_j occurring in this generalized variable
                                               *   bound */
    SCIP_VAR*             var;                /**< pointer to variable x_i */
    SCIP_Real*            coefs;              /**< coefficients a_j of the variables listed in vars */
@@ -95,6 +95,7 @@ struct GenVBound
    int                   ncoefs;             /**< number of nonzero coefficients a_j */
    SCIP_BOUNDTYPE        boundtype;          /**< type of bound provided by the genvbound, SCIP_BOUNDTYPE_LOWER/UPPER
                                               *   if +/- x_i on left-hand side */
+   SCIP_Bool             relaxonly;          /**< contains a relaxation-only variable */
 };
 typedef struct GenVBound GENVBOUND;
 
@@ -698,6 +699,55 @@ SCIP_RETCODE freeGenVBounds(
          propdata->cutoffboundvar = NULL;
          SCIPdebugMsg(scip, "release cutoffboundvar!\n");
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** helper function to release relax-only genvbounds */
+static
+SCIP_RETCODE freeGenVBoundsRelaxOnly(
+   SCIP*                 scip,
+   SCIP_PROPDATA*        propdata
+   )
+{
+   SCIP_Bool freedgenvbound;
+   int i;
+
+   assert(scip != NULL);
+   assert(propdata != NULL);
+
+   if( propdata->genvboundstore == NULL )
+      return SCIP_OKAY;
+
+   /* free genvbounds */
+   freedgenvbound = FALSE;
+   for( i = 0 ; i < propdata->ngenvbounds; )
+   {
+      if( propdata->genvboundstore[i]->relaxonly )
+      {
+         SCIP_CALL( SCIPhashmapRemove(propdata->genvboundstore[i]->boundtype == SCIP_BOUNDTYPE_LOWER ? propdata->lbgenvbounds : propdata->ubgenvbounds,
+            propdata->genvboundstore[i]->var) );
+
+         SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
+         propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds-1];
+         propdata->genvboundstore[i]->index = i;
+         --propdata->ngenvbounds;
+
+         propdata->issorted = FALSE;
+         freedgenvbound = TRUE;
+      }
+      else
+         ++i;
+   }
+
+   if( freedgenvbound )
+   {
+      /* free componentsstart array */
+      SCIP_CALL( freeComponentsData(scip, propdata) );
+
+      /* free starting indices data */
+      SCIP_CALL( freeStartingData(scip, propdata) );
    }
 
    return SCIP_OKAY;
@@ -2185,12 +2235,15 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    genvbound->var = var;
    genvbound->ncoefs = ncoefs;
    genvbound->constant = constant;
+   genvbound->relaxonly = SCIPvarIsRelaxationOnly(genvbound->var);
 
-   /* capture variables */
+   /* capture variables and check for relax-only vars */
    for( i = 0; i < genvbound->ncoefs; ++i )
    {
       assert(genvbound->vars[i] != NULL);
       SCIP_CALL( SCIPcaptureVar(scip, genvbound->vars[i]) );
+      if( SCIPvarIsRelaxationOnly(genvbound->vars[i]) )
+         genvbound->relaxonly = TRUE;
    }
    if( newgenvbound )
    {
@@ -2670,10 +2723,15 @@ SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   /* free all genvbounds if we are not in a restart */
    if( !SCIPisInRestart(scip) )
    {
+      /* free all genvbounds if we are not in a restart */
       SCIP_CALL( freeGenVBounds(scip, propdata) );
+   }
+   else
+   {
+      /* free all genvbounds that use relax-only variables if we are in a restart */
+      SCIP_CALL( freeGenVBoundsRelaxOnly(scip, propdata) );
    }
 
    /* drop and free all events */
