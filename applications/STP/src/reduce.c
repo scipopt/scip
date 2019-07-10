@@ -39,7 +39,6 @@
 #define STP_RED_GLBFACTOR  1
 #define STP_RED_EDGELIMIT 200000
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
