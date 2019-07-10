@@ -2045,7 +2045,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       {
          char strbuf[SCIP_MAXSTRLEN];
 
-         SCIPinfoMessage(scip, NULL, "%s\n", printReport(scip, eventhdlrdata, strbuf, ++eventhdlrdata->nreports));
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s\n", printReport(scip, eventhdlrdata, strbuf, ++eventhdlrdata->nreports));
 
          eventhdlrdata->proglastreport = 1 / (SCIP_Real)NREPORTS * (int)(treedata->progress * NREPORTS);
       }
