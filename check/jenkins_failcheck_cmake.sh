@@ -268,7 +268,7 @@ while [ ${SEED} -le ${SEEDS} ]; do
     PERF_MAIL=""
     if [ "${PERFORMANCE}" = "performance" ] || [ "${PERFORMANCE}" = "mergerequest" ]; then
       # add tags to uploaded run
-      export RBCLI_TAG="${GITBRANCH}"
+      export RBCLI_TAG="${GITBRANCH},${PERFORMANCE}"
       ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
       NEWRBID=$(cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||')
       echo "${NEWTIMESTAMP} ${NEWRBID} p=${PERM} s=${SEED} fullgh=${FULLGITHASH} soplexhash=${SOPLEX_HASH}" >> $RBDB
@@ -444,7 +444,8 @@ Compare to the release: https://rubberband.zib.de/result/${URLSTR}"
 elif [ "${PERFORMANCE}" == "mergerequest" ]; then
 
   # collect all ids with timestamps OLDTIMESTAMP NEWTIMESTAMP in RBIDS
-  RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${NEWTIMESTAMP}\)" ${RBDB}|cut -d ' ' -f 2)
+  MAINRBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}_rbdb.txt"
+  RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB}|cut -d ' ' -f 2)
 
   URLSTR=$(geturl "${RBDB_STRS}")
 
