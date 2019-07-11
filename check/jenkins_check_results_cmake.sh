@@ -84,7 +84,7 @@ echo "To cancel the jobs run"
 echo 'for jobid in `cat '$CANCEL_FILE'`; do scancel $jobid; done'
 echo "This is an experimental feature, use with caution. In particular, make sure no two jobs have the same TESTSET, SETTINGS and LPS combination!"
 
-env | sort
+env | sort > ${OUTPUTDIR}_envinfo.txt
 
 # build job ids string for sbatch dependency
 jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
