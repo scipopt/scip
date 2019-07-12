@@ -88,8 +88,16 @@ SCIP_RETCODE performDualfix(
       if( SCIPvarIsDeleted(var) )
          continue;
 
-      /* ignore already fixed variables (use feasibility tolerance since this is used in SCIPfixVar() */
-      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+      /* ignore already eps-fixed variables */
+      if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+         continue;
+
+      /* ignore already feastol-fixed locked variables
+       * this was the original version, which used feasibility tolerance since this is used in SCIPfixVar()
+       * however, for other plugins it would be advantageous to also get feastol-fixed variables properly fixed,
+       * so do this if the var is unlocked (i.e., irrelevant) (should we always fix?)
+       */
+      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) && !SCIPvarMayRoundDown(var) && !SCIPvarMayRoundUp(var) )
          continue;
 
       obj = SCIPvarGetObj(var);
