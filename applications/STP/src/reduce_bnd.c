@@ -32,6 +32,7 @@
 #include <math.h>
 #include <assert.h>
 #include "grph.h"
+#include "reduce.h"
 #include "heur_tm.h"
 #include "heur_ascendprune.h"
 #include "cons_stp.h"

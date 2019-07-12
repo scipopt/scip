@@ -25,14 +25,13 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-
 #include "scip/scip.h"
 #include <stdio.h>
 #include <assert.h>
 #include "grph.h"
+#include "reduce.h"
 #include "heur_local.h"
 #include "heur_tm.h"
-
 
 static
 SCIP_RETCODE reduce_extArc(

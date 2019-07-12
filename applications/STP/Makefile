@@ -80,7 +80,7 @@ CMAINOBJ	=	cmain.o \
 			reader_stp.o \
 			reader_gr.o \
 			pricer_stp.o \
-			reduce.o \
+			reduce_base.o \
 			reduce_alt.o \
 			reduce_bnd.o \
 			reduce_test.o \

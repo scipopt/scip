@@ -38,6 +38,7 @@
 #include "heur_slackprune.h"
 #include "heur_local.h"
 #include "grph.h"
+#include "reduce.h"
 #include "heur_tm.h"
 #include "cons_stp.h"
 #include "scip/pub_misc.h"

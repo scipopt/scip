@@ -30,6 +30,7 @@
 #include <string.h>
 #include <assert.h>
 #include "grph.h"
+#include "reduce.h"
 #include "portab.h"
 #include "scip/scip.h"
 

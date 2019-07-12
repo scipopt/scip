@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "grph.h"
+#include "reduce.h"
 
 #define EXT_ANCESTORS_MAX  16
 #define EXT_STATE_NONE     0

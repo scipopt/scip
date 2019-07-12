@@ -42,6 +42,7 @@
 #include <stdio.h>
 #include "cons_stp.h"
 #include "grph.h"
+#include "reduce.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/misc.h"

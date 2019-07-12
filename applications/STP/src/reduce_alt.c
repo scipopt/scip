@@ -36,6 +36,7 @@
 #include <string.h>
 #include <assert.h>
 #include "grph.h"
+#include "reduce.h"
 #include "misc_stp.h"
 #include "probdata_stp.h"
 #include "scip/scip.h"
