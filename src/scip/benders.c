@@ -68,6 +68,7 @@
 #define SCIP_DEFAULT_EXECFEASPHASE        FALSE  /** should a feasibility phase be executed during the root node processing */
 #define SCIP_DEFAULT_SLACKVARCOEF          1e+6  /** the objective coefficient of the slack variables in the subproblem */
 #define SCIP_DEFAULT_SLACKVARCHECKCOEF     1e+6  /** the objective coefficient of the slack variables in the subproblem */
+#define SCIP_DEFAULT_CHECKCONVEXITY        TRUE  /** should the subproblems be checked for convexity? */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                      merge candidates */
@@ -1097,6 +1098,11 @@ SCIP_RETCODE doBendersCreate(
          "the objective coefficient of the slack variables in the subproblem", &(*benders)->slackvarcoef, FALSE,
          SCIP_DEFAULT_SLACKVARCOEF, 0.0, SCIPsetInfinity(set), NULL, NULL) ); /*lint !e740*/
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/checkconvexity", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
+         "should the subproblems be checked for convexity?", &(*benders)->checkconvexity, FALSE,
+         SCIP_DEFAULT_CHECKCONVEXITY, NULL, NULL) ); /*lint !e740*/
+
    return SCIP_OKAY;
 }
 
@@ -1520,6 +1526,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    int i;
    int j;
    SCIP_Bool isconvex;
+   SCIP_Bool discretevar;
    SCIP_Bool isnonlinear;
 #define NLINEARCONSHDLRS 5
    SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
@@ -1535,6 +1542,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    assert(subproblem != NULL);
 
    isconvex = FALSE;
+   discretevar = FALSE;
    isnonlinear = FALSE;
 
    /* getting the number of integer and binary variables to determine the problem type */
@@ -1542,7 +1550,10 @@ SCIP_RETCODE checkSubproblemConvexity(
 
    /* if there are any binary, integer or implied integer variables, then the subproblems is marked as non-convex */
    if( nbinvars != 0 || nintvars != 0 || nimplintvars != 0 )
+   {
+      discretevar = TRUE;
       goto TERMINATE;
+   }
 
    /* get pointers to linear constraints handlers, so can avoid string comparisons */
    linearconshdlrs[0] = SCIPfindConshdlr(subproblem, "knapsack");
@@ -1667,8 +1678,15 @@ SCIP_RETCODE checkSubproblemConvexity(
    isconvex = TRUE;
 
 TERMINATE:
-   /* setting the flag for the convexity of the subproblem */
-   SCIPbendersSetSubproblemIsConvex(benders, probnumber, isconvex);
+   /* setting the flag for the convexity of the subproblem. If convexity doesn't need to be checked, then it is assumed
+    * that the subproblems are convex. However, if there are discrete variables, then the problem must be set as
+    * non-convex. The discrete master variables will be changed to continuous, but this will happen at the first call to
+    * SCIPbendersSetupSubproblem
+    */
+   if( benders->checkconvexity )
+      SCIPbendersSetSubproblemIsConvex(benders, probnumber, isconvex);
+   else
+      SCIPbendersSetSubproblemIsConvex(benders, probnumber, !discretevar);
 
    /* setting the non-linear subproblem flag */
    benders->subprobisnonlinear[probnumber] = isnonlinear;
