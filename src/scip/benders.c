@@ -4434,7 +4434,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
     * solve the NLP relaxation, then the LP relaxation is used to generate Benders' cuts
     */
    solvenlp = FALSE;
-   if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) > 0 )
+   if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) > 0
+      && SCIPbendersSubproblemIsConvex(benders, probnumber) )
       solvenlp = TRUE;
 
    *objective = SCIPinfinity(subproblem);

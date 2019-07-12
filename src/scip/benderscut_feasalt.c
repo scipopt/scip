@@ -435,14 +435,14 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeasalt)
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
    /* setting a flag to indicate whether the NLP relaxation should be used to generate cuts */
-   nlprelaxation = SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem);
+   nlprelaxation = SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem)
+      && SCIPbendersSubproblemIsConvex(benders, probnumber);
 
    /* only generate feasibility cuts if the subproblem LP or NLP is infeasible,
     * since we use the farkas proof from the LP or the dual solution of the NLP to construct the feasibility cut
     */
    if( SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING &&
-      ((!nlprelaxation && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE) ||
-       (nlprelaxation && (SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_LOCINFEASIBLE || SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_GLOBINFEASIBLE))) )
+       (nlprelaxation && (SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_LOCINFEASIBLE || SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_GLOBINFEASIBLE)) )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut, sol, probnumber, type, result) );
