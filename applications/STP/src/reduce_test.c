@@ -61,7 +61,7 @@ SCIP_RETCODE reduce_extArc(
    graph_get_isTerm(graph, isterm);
 
    /* actual test */
-   SCIP_CALL( reduceExtCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeleted,
+   SCIP_CALL( reduce_extendedCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeleted,
          isterm, cutoff, edge, FALSE, tree_deg,  deletable) );
 
    /* clean up */

@@ -292,7 +292,7 @@ SCIP_RETCODE updateNodeReplaceBounds(
                            tree3outedges[0] = outedge1;
                            tree3outedges[1] = outedge2;
 
-                           SCIP_CALL( reduce_check3Tree(scip, graph, root, cost, pathdist, vnoi, vbase, cutoff, tree3outedges, rootedge, nodearrint,
+                           SCIP_CALL( reduce_extendedCheck3Tree(scip, graph, root, cost, pathdist, vnoi, vbase, cutoff, tree3outedges, rootedge, nodearrint,
                                        &tmpcostY, &ruleout, eqstack, &eqstack_size, eqmark) );
 
                            if( ruleout )

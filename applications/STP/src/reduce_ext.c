@@ -1516,7 +1516,7 @@ void extExtend(
 
 
 /** check (directed) arc */
-SCIP_RETCODE reduceExtCheckArc(
+SCIP_RETCODE reduce_extendedCheckArc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    int                   root,               /**< graph root from dual ascent */
@@ -1969,7 +1969,7 @@ SCIP_RETCODE reduce_deleteConflictEdges(
 }
 
 /** check 3-tree */
-SCIP_RETCODE reduce_check3Tree(
+SCIP_RETCODE reduce_extendedCheck3Tree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    int                   root,               /**< graph root from dual ascent */
@@ -2348,7 +2348,7 @@ SCIP_RETCODE reduce_extendedEdge2(
 
          if( !edgedeletable[e] )
          {
-            SCIP_CALL( reduceExtCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeletable,
+            SCIP_CALL( reduce_extendedCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeletable,
                   isterm, minpathcost, e, allowequality, tree_deg, &deletable) );
 
             if( deletable )
@@ -2359,7 +2359,7 @@ SCIP_RETCODE reduce_extendedEdge2(
          {
             SCIP_Bool erevdeletable = TRUE;
 
-            SCIP_CALL( reduceExtCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeletable,
+            SCIP_CALL( reduce_extendedCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeletable,
                   isterm, minpathcost, erev, allowequality, tree_deg, &erevdeletable) );
 
             if( erevdeletable )
