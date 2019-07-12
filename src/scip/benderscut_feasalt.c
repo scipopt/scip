@@ -375,10 +375,13 @@ SCIP_RETCODE generateAndApplyBendersCuts(
       if( SCIPisInfinity(masterprob, -SCIPgetDualbound(masterprob))
          && SCIPbenderscutGetNFound(benderscut) % SCIP_DEFAULT_DISPLAYFREQ == 0 )
       {
-         SCIP_CALL( SCIPprintDisplayLine(masterprob, NULL, SCIP_VERBLEVEL_NORMAL, TRUE) );
-         SCIPverbMessage(masterprob, SCIP_VERBLEVEL_NORMAL, NULL,
-            "Benders' Decomposition: Master problem LP is infeasible. Added %d feasibility cuts.\n",
-            SCIPbenderscutGetNFound(benderscut));
+         if( SCIPgetStage(masterprob) == SCIP_STAGE_SOLVING )
+         {
+            SCIP_CALL( SCIPprintDisplayLine(masterprob, NULL, SCIP_VERBLEVEL_NORMAL, TRUE) );
+            SCIPverbMessage(masterprob, SCIP_VERBLEVEL_NORMAL, NULL,
+               "Benders' Decomposition: Master problem LP is infeasible. Added %d feasibility cuts.\n",
+               SCIPbenderscutGetNFound(benderscut));
+         }
       }
       SCIPdebugMsg(masterprob, "Constraints %s has been added to the master problem.\n", cutname);
    }
