@@ -93,7 +93,7 @@ struct SCIP_Benders
    SCIP_Bool             execfeasphase;      /**< should a feasibility phase be executed during the root node, i.e.
                                                   adding slack variables to constraints to ensure feasibility */
    SCIP_Real             slackvarcoef;       /**< the objective coefficient of the slack variables in the subproblem */
-   SCIP_Bool             checkconvexity;     /**< should the subproblems be checked for convexity? */
+   SCIP_Bool             checkconsconvexity; /**< should the constraints of the subproblems be checked for convexity? */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */

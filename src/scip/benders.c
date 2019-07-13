@@ -68,7 +68,7 @@
 #define SCIP_DEFAULT_EXECFEASPHASE        FALSE  /** should a feasibility phase be executed during the root node processing */
 #define SCIP_DEFAULT_SLACKVARCOEF          1e+6  /** the objective coefficient of the slack variables in the subproblem */
 #define SCIP_DEFAULT_SLACKVARCHECKCOEF     1e+6  /** the objective coefficient of the slack variables in the subproblem */
-#define SCIP_DEFAULT_CHECKCONVEXITY        TRUE  /** should the subproblems be checked for convexity? */
+#define SCIP_DEFAULT_CHECKCONSCONVEXITY    TRUE  /** should the constraints of the subproblem be checked for convexity? */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                      merge candidates */
@@ -1098,10 +1098,10 @@ SCIP_RETCODE doBendersCreate(
          "the objective coefficient of the slack variables in the subproblem", &(*benders)->slackvarcoef, FALSE,
          SCIP_DEFAULT_SLACKVARCOEF, 0.0, SCIPsetInfinity(set), NULL, NULL) ); /*lint !e740*/
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/checkconvexity", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/checkconsconvexity", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
-         "should the subproblems be checked for convexity?", &(*benders)->checkconvexity, FALSE,
-         SCIP_DEFAULT_CHECKCONVEXITY, NULL, NULL) ); /*lint !e740*/
+         "should the constraints of the subproblems be checked for convexity?", &(*benders)->checkconsconvexity, FALSE,
+         SCIP_DEFAULT_CHECKCONSCONVEXITY, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -1683,7 +1683,7 @@ TERMINATE:
     * non-convex. The discrete master variables will be changed to continuous, but this will happen at the first call to
     * SCIPbendersSetupSubproblem
     */
-   if( benders->checkconvexity )
+   if( benders->checkconsconvexity )
       SCIPbendersSetSubproblemIsConvex(benders, probnumber, isconvex);
    else
       SCIPbendersSetSubproblemIsConvex(benders, probnumber, !discretevar);
