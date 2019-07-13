@@ -219,8 +219,6 @@ typedef struct dijkstra_heap
 #define UNKNOWN    (-1)
 #define FARAWAY      1e15
 #define BLOCKED      1e10
-#define DHEAP_MAX_KEY  (1e20)
-#define DHEAP_MIN_KEY  -(1e20)
 
 #define EDGE_BLOCKED      0
 #define EDGE_MODIFIABLE    1
@@ -243,10 +241,10 @@ typedef struct dijkstra_heap
 
 typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 
-/* grphbase.c
- */
 
-/* Dijkstra heap */
+/* graph_util.c
+ */
+/* Dijkstra heap: */
 extern SCIP_RETCODE graph_heap_create(SCIP*, int capacity, int* position, DENTRY* entries, DHEAP** heap);
 extern void   graph_heap_free(SCIP*, SCIP_Bool, SCIP_Bool, DHEAP**);
 extern void   graph_heap_deleteMin(int*, SCIP_Real*, DHEAP*);
@@ -254,13 +252,11 @@ extern void   graph_heap_deleteMinGetNode(int*, DHEAP*);
 extern int    graph_heap_deleteMinReturnNode(DHEAP*);
 extern void   graph_heap_clean(SCIP_Bool, DHEAP*);
 extern void   graph_heap_correct(int, SCIP_Real, DHEAP*);
-
-/* CSR storage */
+/* CSR storage: */
 extern SCIP_RETCODE   graph_init_csr(SCIP*, GRAPH*);
 extern void   graph_free_csr(SCIP*, GRAPH*);
 extern SCIP_Bool graph_valid_csr(const GRAPH*, SCIP_Bool verbose);
-
-/* Dynamic CSR storage */
+/* Dynamic CSR storage: */
 extern SCIP_RETCODE   graph_init_dcsr(SCIP*, GRAPH*);
 extern void   graph_update_dcsr(SCIP*, GRAPH*);
 extern void   graph_dcsr_deleteEdge(DCSR*, int, int);
@@ -268,6 +264,9 @@ extern void   graph_dcsr_deleteEdgeBi(SCIP*, DCSR*, int);
 extern void   graph_free_dcsr(SCIP*, GRAPH*);
 extern SCIP_Bool graph_valid_dcsr(const GRAPH*, SCIP_Bool verbose);
 
+
+/* graph_base.c
+ */
 extern void   graph_pc_knot2nonTerm(GRAPH*, int);
 extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
 extern void   enforcePterm(GRAPH*, int);
@@ -358,7 +357,7 @@ extern SCIP_Real graph_pc_getPosPrizeSum(SCIP*, const GRAPH*);
 extern SCIP_Real graph_get_avgDeg(const GRAPH*);
 
 
-/* grphpath.c
+/* graph_path.c
  */
 extern void   graph_path_exit(SCIP*, GRAPH*);
 extern void   graph_path_exec(SCIP*, const GRAPH*, const int, int, const SCIP_Real*, PATH*);
@@ -403,7 +402,7 @@ extern SCIP_Bool graph_sdWalksExt(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Re
 extern SCIP_Bool graph_sdWalksExt2(SCIP*, const GRAPH*, const SCIP_Real*, const int*, SCIP_Real, int, int, int, int, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*);
 
 
-/* grphmcut.c
+/* graph_mcut.c
  */
 #if 0
 extern void   graph_mincut_exit(SCIP*, GRAPH*);
@@ -415,11 +414,11 @@ extern void   graph_mincut_exec(const GRAPH*, const int, const int, const int, c
 extern SCIP_RETCODE   graph_mincut_init(SCIP*, GRAPH*);
 #endif
 
-/* grphload.c
+/* graph_load.c
  */
 extern SCIP_RETCODE graph_load(SCIP*, GRAPH**, const char*, PRESOL*);
 
-/* grphsave.c
+/* graph_save.c
  */
 extern void graph_save(const GRAPH*, const char*, FILETYPE);
 extern void SCIPwriteStp(SCIP*, const GRAPH*, FILE*, SCIP_Real);

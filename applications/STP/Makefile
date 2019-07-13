@@ -62,11 +62,12 @@ include $(SCIPDIR)/make/make.project
 MAINNAME	=	stp
 CMAINOBJ	=	cmain.o \
 			cons_stp.o \
-			grphbase.o \
-			grphload.o \
-			grphmcut.o \
-			grphpath.o \
-			grphsave.o \
+			graph_base.o \
+			graph_load.o \
+			graph_mcut.o \
+			graph_path.o \
+			graph_save.o \
+			graph_util.o \
 			heur_ascendprune.o \
 			heur_slackprune.o \
 			heur_tm.o \

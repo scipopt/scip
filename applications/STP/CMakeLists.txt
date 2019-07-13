@@ -12,11 +12,12 @@ add_executable(scipstp
     src/cons_stp.c
     src/dialog_stp.c
     src/event_bestsol.c
-    src/grphbase.c
-    src/grphload.c
-    src/grphmcut.c
-    src/grphpath.c
-    src/grphsave.c
+    src/graph_base.c
+    src/graph_load.c
+    src/graph_mcut.c
+    src/graph_path.c
+    src/graph_save.c
+    src/graph_util.c
     src/heur_ascendprune.c
     src/heur_local.c
     src/heur_prune.c

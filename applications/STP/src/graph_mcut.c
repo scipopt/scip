@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   grphmcut.c
+/**@file   graph_mcut.c
  * @brief  Minimum cut routine for Steiner problems
  * @author Gerald Gamrath
  * @author Thorsten Koch

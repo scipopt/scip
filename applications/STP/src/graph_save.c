@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   grphsave.c
+/**@file   graph_save.c
  * @brief  Saving routines for Steiner problems
  * @author Gerald Gamrath
  * @author Thorsten Koch

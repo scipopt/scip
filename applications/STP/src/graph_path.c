@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   grphpath.c
+/**@file   graph_path.c
  * @brief  Shortest path based graph algorithms for Steiner problems
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
@@ -21,10 +21,6 @@
  * This file encompasses various (heap-based) shortest path based algorithms including
  * Dijkstra's algorithm and Voronoi diagram algorithms
  *
- * The underlying heap routines can be found in Jon Bentley, Programming Pearls, Addison-Wesley 1989
- *
- * The heap array is initialized with n elements (nodes), but only at most n-1 nodes can be included
- * in the array, since element 0 is not used for storing.
  */
 #include <stdlib.h>
 #include <stdio.h>

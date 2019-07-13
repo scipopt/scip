@@ -98,13 +98,35 @@ typedef struct extension_data
    DISTDATA* const distdata;
 } EXTDATA;
 
+/** initializes distance data */
 static
-void initDistanceData(
+SCIP_RETCODE distanceData_initMembers(
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    DISTDATA*             distdata            /**< to be initialized */
 )
 {
+   const int nnodes = graph->knots;
+   int nnodes_real; /* number of not yet deleted nodes */
+   int nedges_real;
 
+   assert(distdata && graph && scip);
+   assert(distdata->nodepaths_dirty == NULL && distdata->closenodes_dist == NULL && distdata->closenodes_range == NULL);
+   assert(distdata->closenodes_index == NULL && distdata->pathroots == NULL && distdata->pathroots_range == NULL);
+
+
+
+   return SCIP_OKAY;
+}
+
+/** frees members of distance data */
+static
+void distanceData_freeMembers(
+   const GRAPH*          graph,              /**< graph data structure */
+   DISTDATA*             distdata            /**< to be freed */
+)
+{
+   return;
 }
 
 /** mark ancestors of given edge */
