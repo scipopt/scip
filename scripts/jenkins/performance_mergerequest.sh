@@ -72,6 +72,7 @@ export MODE=performance
 #    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx/bin/scip BINID=scipoptspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=mergerequest"
 
 RANDOMSEED=$(date +%Y%m%d%H%M)
+export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
 
 # for descriptions on the testsets see scip/check/testsets/README.md
 # jobs running

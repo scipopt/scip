@@ -88,7 +88,8 @@ mkdir -p settings
 #    JOBS[x,y]="EXECUTABLE=scipdbgspx/bin/scip BINID=scipdbgspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default"
 #    JOBS[x,y]="EXECUTABLE=scipdbgcpx/bin/scip BINID=scipdbgcpx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default"
 
-RANDOMSEED=`date +%Y%m%d`
+RANDOMSEED=$(date +%Y%m%d)
+export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
 
 # use associative arrays, this requires bash4
 # declaration
