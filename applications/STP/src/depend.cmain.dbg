@@ -133,7 +133,7 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/sepa_zerohalf.h ../../src/scip/table_default.h \
  ../../src/scip/concsolver_scip.h ../../src/nlpi/nlpi_ipopt.h \
  ../../src/nlpi/nlpi_filtersqp.h ../../src/nlpi/nlpi_worhp.h \
- ../../src/nlpi/nlpi_all.h src/reader_stp.h src/cons_stp.h src/grph.h \
+ ../../src/nlpi/nlpi_all.h src/reader_stp.h src/cons_stp.h src/graph.h \
  src/misc_stp.h src/heur_tm.h src/heur_local.h src/heur_prune.h \
  src/heur_ascendprune.h src/heur_slackprune.h src/heur_rec.h \
  src/pricer_stp.h src/probdata_stp.h src/event_bestsol.h src/dialog_stp.h \
@@ -184,7 +184,7 @@ $(OBJDIR)/cons_stp.o: src/cons_stp.c src/cons_stp.h ../../src/scip/scip.h \
  ../../src/scip/struct_set.h ../../src/scip/message.h \
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
- ../../src/scip/heuristics.h src/grph.h src/misc_stp.h src/probdata_stp.h \
+ ../../src/scip/heuristics.h src/graph.h src/misc_stp.h src/probdata_stp.h \
  src/heur_prune.h src/heur_ascendprune.h src/portab.h \
  ../../src/scip/misc.h ../../src/scip/cons_linear.h
 $(OBJDIR)/grphbase.o: src/grphbase.c ../../src/scip/misc.h ../../src/scip/def.h \
@@ -233,8 +233,8 @@ $(OBJDIR)/grphbase.o: src/grphbase.c ../../src/scip/misc.h ../../src/scip/def.h 
  ../../src/scip/cuts.h ../../src/scip/set.h ../../src/scip/struct_set.h \
  ../../src/scip/message.h ../../src/scip/debug.h \
  ../../src/scip/type_cuts.h ../../src/scip/struct_cuts.h \
- ../../src/scip/dbldblarith.h ../../src/scip/heuristics.h src/grph.h
-$(OBJDIR)/grphload.o: src/grphload.c src/portab.h src/grph.h ../../src/scip/scip.h \
+ ../../src/scip/dbldblarith.h ../../src/scip/heuristics.h src/graph.h
+$(OBJDIR)/grphload.o: src/grphload.c src/portab.h src/graph.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
@@ -281,7 +281,7 @@ $(OBJDIR)/grphload.o: src/grphload.c src/portab.h src/grph.h ../../src/scip/scip
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
  ../../src/scip/heuristics.h src/misc_stp.h
-$(OBJDIR)/grphmcut.o: src/grphmcut.c src/portab.h src/grph.h ../../src/scip/scip.h \
+$(OBJDIR)/grphmcut.o: src/grphmcut.c src/portab.h src/graph.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
@@ -328,7 +328,7 @@ $(OBJDIR)/grphmcut.o: src/grphmcut.c src/portab.h src/grph.h ../../src/scip/scip
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
  ../../src/scip/heuristics.h src/misc_stp.h
-$(OBJDIR)/grphpath.o: src/grphpath.c src/portab.h src/grph.h ../../src/scip/scip.h \
+$(OBJDIR)/grphpath.o: src/grphpath.c src/portab.h src/graph.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
@@ -375,7 +375,7 @@ $(OBJDIR)/grphpath.o: src/grphpath.c src/portab.h src/grph.h ../../src/scip/scip
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
  ../../src/scip/heuristics.h src/misc_stp.h
-$(OBJDIR)/grphsave.o: src/grphsave.c src/portab.h src/grph.h ../../src/scip/scip.h \
+$(OBJDIR)/grphsave.o: src/grphsave.c src/portab.h src/graph.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
@@ -558,7 +558,7 @@ $(OBJDIR)/heur_ascendprune.o: src/heur_ascendprune.c ../../src/scip/scip.h \
  ../../src/scip/table_default.h ../../src/scip/concsolver_scip.h \
  ../../src/nlpi/nlpi_ipopt.h ../../src/nlpi/nlpi_filtersqp.h \
  ../../src/nlpi/nlpi_worhp.h ../../src/nlpi/nlpi_all.h \
- src/heur_ascendprune.h src/grph.h src/misc_stp.h src/heur_local.h \
+ src/heur_ascendprune.h src/graph.h src/misc_stp.h src/heur_local.h \
  src/heur_prune.h src/heur_tm.h src/cons_stp.h src/probdata_stp.h
 $(OBJDIR)/heur_slackprune.o: src/heur_slackprune.c ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
@@ -696,7 +696,7 @@ $(OBJDIR)/heur_slackprune.o: src/heur_slackprune.c ../../src/scip/scip.h \
  ../../src/scip/table_default.h ../../src/scip/concsolver_scip.h \
  ../../src/nlpi/nlpi_ipopt.h ../../src/nlpi/nlpi_filtersqp.h \
  ../../src/nlpi/nlpi_worhp.h ../../src/nlpi/nlpi_all.h \
- src/heur_slackprune.h src/grph.h src/misc_stp.h src/heur_ascendprune.h \
+ src/heur_slackprune.h src/graph.h src/misc_stp.h src/heur_ascendprune.h \
  src/heur_local.h src/heur_prune.h src/heur_tm.h src/cons_stp.h \
  src/probdata_stp.h src/prop_stp.h
 $(OBJDIR)/heur_tm.o: src/heur_tm.c src/heur_tm.h ../../src/scip/scip.h \
@@ -745,7 +745,7 @@ $(OBJDIR)/heur_tm.o: src/heur_tm.c src/heur_tm.h ../../src/scip/scip.h \
  ../../src/scip/struct_set.h ../../src/scip/message.h \
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
- ../../src/scip/heuristics.h src/grph.h src/misc_stp.h src/probdata_stp.h \
+ ../../src/scip/heuristics.h src/graph.h src/misc_stp.h src/probdata_stp.h \
  src/portab.h ../../src/scip/misc.h
 $(OBJDIR)/heur_local.o: src/heur_local.c src/heur_local.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
@@ -793,7 +793,7 @@ $(OBJDIR)/heur_local.o: src/heur_local.c src/heur_local.h ../../src/scip/scip.h 
  ../../src/scip/struct_set.h ../../src/scip/message.h \
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
- ../../src/scip/heuristics.h src/grph.h src/misc_stp.h src/heur_tm.h \
+ ../../src/scip/heuristics.h src/graph.h src/misc_stp.h src/heur_tm.h \
  src/probdata_stp.h
 $(OBJDIR)/heur_prune.o: src/heur_prune.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/type_retcode.h ../../src/scip/pub_message.h \
@@ -930,7 +930,7 @@ $(OBJDIR)/heur_prune.o: src/heur_prune.c ../../src/scip/scip.h ../../src/scip/de
  ../../src/scip/table_default.h ../../src/scip/concsolver_scip.h \
  ../../src/nlpi/nlpi_ipopt.h ../../src/nlpi/nlpi_filtersqp.h \
  ../../src/nlpi/nlpi_worhp.h ../../src/nlpi/nlpi_all.h src/heur_prune.h \
- src/grph.h src/misc_stp.h src/heur_local.h src/heur_tm.h src/cons_stp.h \
+ src/graph.h src/misc_stp.h src/heur_local.h src/heur_tm.h src/cons_stp.h \
  src/probdata_stp.h
 $(OBJDIR)/heur_rec.o: src/heur_rec.c ../../src/scip/scip.h ../../src/scip/def.h \
  ../../src/scip/type_retcode.h ../../src/scip/pub_message.h \
@@ -1067,7 +1067,7 @@ $(OBJDIR)/heur_rec.o: src/heur_rec.c ../../src/scip/scip.h ../../src/scip/def.h 
  ../../src/scip/table_default.h ../../src/scip/concsolver_scip.h \
  ../../src/nlpi/nlpi_ipopt.h ../../src/nlpi/nlpi_filtersqp.h \
  ../../src/nlpi/nlpi_worhp.h ../../src/nlpi/nlpi_all.h src/heur_rec.h \
- src/grph.h src/misc_stp.h src/heur_prune.h src/heur_slackprune.h \
+ src/graph.h src/misc_stp.h src/heur_prune.h src/heur_slackprune.h \
  src/heur_local.h src/heur_tm.h src/cons_stp.h src/probdata_stp.h
 $(OBJDIR)/misc_stp.o: src/misc_stp.c src/heur_tm.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
@@ -1115,7 +1115,7 @@ $(OBJDIR)/misc_stp.o: src/misc_stp.c src/heur_tm.h ../../src/scip/scip.h \
  ../../src/scip/struct_set.h ../../src/scip/message.h \
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
- ../../src/scip/heuristics.h src/grph.h src/misc_stp.h src/probdata_stp.h \
+ ../../src/scip/heuristics.h src/graph.h src/misc_stp.h src/probdata_stp.h \
  src/portab.h ../../src/scip/misc.h
 $(OBJDIR)/probdata_stp.o: src/probdata_stp.c src/probdata_stp.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
@@ -1163,7 +1163,7 @@ $(OBJDIR)/probdata_stp.o: src/probdata_stp.c src/probdata_stp.h \
  ../../src/scip/struct_set.h ../../src/scip/message.h \
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
- ../../src/scip/heuristics.h src/grph.h src/misc_stp.h src/cons_stp.h \
+ ../../src/scip/heuristics.h src/graph.h src/misc_stp.h src/cons_stp.h \
  ../../src/scip/cons_linear.h ../../src/scip/cons_setppc.h \
  ../../src/scip/misc.h ../../src/scip/struct_misc.h
 $(OBJDIR)/event_bestsol.o: src/event_bestsol.c src/event_bestsol.h \
@@ -1212,7 +1212,7 @@ $(OBJDIR)/event_bestsol.o: src/event_bestsol.c src/event_bestsol.h \
  ../../src/scip/struct_set.h ../../src/scip/message.h \
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
- ../../src/scip/heuristics.h src/probdata_stp.h src/grph.h src/misc_stp.h
+ ../../src/scip/heuristics.h src/probdata_stp.h src/graph.h src/misc_stp.h
 $(OBJDIR)/dialog_stp.o: src/dialog_stp.c src/dialog_stp.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
@@ -1259,7 +1259,7 @@ $(OBJDIR)/dialog_stp.o: src/dialog_stp.c src/dialog_stp.h ../../src/scip/scip.h 
  ../../src/scip/struct_set.h ../../src/scip/message.h \
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
- ../../src/scip/heuristics.h src/probdata_stp.h src/grph.h src/misc_stp.h
+ ../../src/scip/heuristics.h src/probdata_stp.h src/graph.h src/misc_stp.h
 $(OBJDIR)/reader_stp.o: src/reader_stp.c src/probdata_stp.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
@@ -1306,7 +1306,7 @@ $(OBJDIR)/reader_stp.o: src/reader_stp.c src/probdata_stp.h ../../src/scip/scip.
  ../../src/scip/struct_set.h ../../src/scip/message.h \
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
- ../../src/scip/heuristics.h src/grph.h src/misc_stp.h src/reader_stp.h
+ ../../src/scip/heuristics.h src/graph.h src/misc_stp.h src/reader_stp.h
 $(OBJDIR)/pricer_stp.o: src/pricer_stp.c ../../src/scip/cons_linear.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
@@ -1354,8 +1354,8 @@ $(OBJDIR)/pricer_stp.o: src/pricer_stp.c ../../src/scip/cons_linear.h \
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
  ../../src/scip/heuristics.h src/pricer_stp.h src/probdata_stp.h \
- src/grph.h src/misc_stp.h
-$(OBJDIR)/reduce.o: src/reduce.c src/grph.h ../../src/scip/scip.h \
+ src/graph.h src/misc_stp.h
+$(OBJDIR)/reduce.o: src/reduce.c src/graph.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
@@ -1403,7 +1403,7 @@ $(OBJDIR)/reduce.o: src/reduce.c src/grph.h ../../src/scip/scip.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
  ../../src/scip/heuristics.h src/misc_stp.h src/heur_tm.h \
  src/probdata_stp.h src/prop_stp.h
-$(OBJDIR)/reduce_alt.o: src/reduce_alt.c src/grph.h ../../src/scip/scip.h \
+$(OBJDIR)/reduce_alt.o: src/reduce_alt.c src/graph.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
@@ -1495,11 +1495,11 @@ $(OBJDIR)/reduce_bnd.o: src/reduce_bnd.c ../../src/scip/scip.h ../../src/scip/de
  ../../src/scip/cuts.h ../../src/scip/set.h ../../src/scip/struct_set.h \
  ../../src/scip/message.h ../../src/scip/debug.h \
  ../../src/scip/type_cuts.h ../../src/scip/struct_cuts.h \
- ../../src/scip/dbldblarith.h ../../src/scip/heuristics.h src/grph.h \
+ ../../src/scip/dbldblarith.h ../../src/scip/heuristics.h src/graph.h \
  src/misc_stp.h src/heur_tm.h src/heur_ascendprune.h src/cons_stp.h \
  src/heur_local.h src/prop_stp.h src/probdata_stp.h src/heur_rec.h \
  src/heur_slackprune.h
-$(OBJDIR)/reduce_simple.o: src/reduce_simple.c src/grph.h ../../src/scip/scip.h \
+$(OBJDIR)/reduce_simple.o: src/reduce_simple.c src/graph.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
@@ -1592,7 +1592,7 @@ $(OBJDIR)/prop_stp.o: src/prop_stp.c src/prop_stp.h ../../src/scip/scip.h \
  ../../src/scip/struct_set.h ../../src/scip/message.h \
  ../../src/scip/debug.h ../../src/scip/type_cuts.h \
  ../../src/scip/struct_cuts.h ../../src/scip/dbldblarith.h \
- ../../src/scip/heuristics.h src/grph.h src/misc_stp.h src/probdata_stp.h
+ ../../src/scip/heuristics.h src/graph.h src/misc_stp.h src/probdata_stp.h
 $(OBJDIR)/branch_stp.o: src/branch_stp.c ../../src/scip/branch_fullstrong.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
@@ -1645,9 +1645,9 @@ $(OBJDIR)/branch_stp.o: src/branch_stp.c ../../src/scip/branch_fullstrong.h \
  ../../src/scip/type_interrupt.h ../../src/scip/type_mem.h \
  ../../src/scip/type_pricestore.h ../../src/scip/type_sepastore.h \
  ../../src/scip/type_conflictstore.h ../../src/scip/type_concurrent.h \
- ../../src/scip/clock.h src/grph.h src/misc_stp.h src/branch_stp.h \
+ ../../src/scip/clock.h src/graph.h src/misc_stp.h src/branch_stp.h \
  src/probdata_stp.h
-$(OBJDIR)/validate.o: src/validate.c src/grph.h ../../src/scip/scip.h \
+$(OBJDIR)/validate.o: src/validate.c src/graph.h ../../src/scip/scip.h \
  ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \

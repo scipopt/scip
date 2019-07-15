@@ -30,7 +30,7 @@
 #define __SCIP_PROBDATA_STP__
 
 #include "scip/scip.h"
-#include "grph.h"
+#include "graph.h"
 
 #ifdef __cplusplus
 extern "C" {

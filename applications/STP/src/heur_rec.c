@@ -37,7 +37,7 @@
 #include "heur_prune.h"
 #include "heur_slackprune.h"
 #include "heur_local.h"
-#include "grph.h"
+#include "graph.h"
 #include "reduce.h"
 #include "heur_tm.h"
 #include "cons_stp.h"

@@ -19,7 +19,7 @@
  *
  * This file implements reduction tests for Steiner problems.
  *
- * A list of all interface methods can be found in grph.h.
+ * A list of all interface methods can be found in graph.h.
  *
  */
 
@@ -28,7 +28,7 @@
 #include "scip/scip.h"
 #include <stdio.h>
 #include <assert.h>
-#include "grph.h"
+#include "graph.h"
 #include "reduce.h"
 #include "heur_local.h"
 #include "heur_tm.h"

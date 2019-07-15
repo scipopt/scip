@@ -27,7 +27,7 @@
 #include <stddef.h>
 #include <assert.h>
 #include "portab.h"
-#include "grph.h"
+#include "graph.h"
 
 
 

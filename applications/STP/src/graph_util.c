@@ -29,7 +29,7 @@
 #define DHEAP_MAX_KEY  (1e20)
 #define DHEAP_MIN_KEY  -(1e20)
 
-#include "grph.h"
+#include "graph.h"
 #include "portab.h"
 
 

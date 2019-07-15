@@ -19,7 +19,7 @@
  *
  * This file implements extended reduction techniques for several Steiner problems.
  *
- * A list of all interface methods can be found in grph.h.
+ * A list of all interface methods can be found in graph.h.
  *
  */
 
@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "grph.h"
+#include "graph.h"
 #include "reduce.h"
 
 #define EXT_ANCESTORS_MAX  16

@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "pricer_stp.h"
-#include "grph.h"
+#include "graph.h"
 
 
 #define PRICER_NAME            "stp"

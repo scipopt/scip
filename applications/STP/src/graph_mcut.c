@@ -25,7 +25,7 @@
  *
  * The implemented algorithm is described in "A Faster Algorithm for Finding the Minimum Cut in a Graph" by Hao and Orlin.
  *
- * A list of all interface methods can be found in grph.h.
+ * A list of all interface methods can be found in graph.h.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -35,7 +35,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "portab.h"
-#include "grph.h"
+#include "graph.h"
 
 #define DEBUG        0        /* 0 = No, 1 = Validation, 2 = Show flow       */
 #define STATIST      0

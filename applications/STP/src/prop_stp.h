@@ -30,7 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "scip/scip.h"
-#include "grph.h"
+#include "graph.h"
 #include "probdata_stp.h"
 
 #ifdef __cplusplus

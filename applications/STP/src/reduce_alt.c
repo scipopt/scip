@@ -26,7 +26,7 @@
  * by Daniel Rehfeldt et al.
  *
  *
- * A list of all interface methods can be found in grph.h.
+ * A list of all interface methods can be found in graph.h.
  *
  */
 
@@ -35,7 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "grph.h"
+#include "graph.h"
 #include "reduce.h"
 #include "misc_stp.h"
 #include "probdata_stp.h"

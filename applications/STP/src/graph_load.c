@@ -20,7 +20,7 @@
  *
  * This file includes methods for reading a Steiner problem in .stp format.
  *
- * A list of all interface methods can be found in grph.h.
+ * A list of all interface methods can be found in graph.h.
  *
  */
 
@@ -50,7 +50,7 @@
 #endif
 
 #include "portab.h"
-#include "grph.h"
+#include "graph.h"
 
 #define MSG_FATAL    0
 #define MSG_ERROR    1

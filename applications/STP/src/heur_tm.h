@@ -32,7 +32,7 @@
 #define __SCIP_HEUR_TM_H__
 
 #include "scip/scip.h"
-#include "grph.h"
+#include "graph.h"
 
 #define DEFAULT_HOPFACTOR 0.33
 

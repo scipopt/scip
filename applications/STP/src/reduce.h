@@ -26,7 +26,7 @@
 
 
 #include "scip/scip.h"
-#include "grph.h"
+#include "graph.h"
 
 
 /* reduce.c

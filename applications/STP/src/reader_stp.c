@@ -30,7 +30,7 @@
 
 #include "probdata_stp.h"
 #include "reader_stp.h"
-#include "grph.h"
+#include "graph.h"
 
 
 /**@name Reader properties

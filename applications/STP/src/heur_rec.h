@@ -28,7 +28,7 @@
 #define __SCIP_HEUR_REC_H__
 
 #include "scip/scip.h"
-#include "grph.h"
+#include "graph.h"
 
 #ifdef __cplusplus
 extern "C" {

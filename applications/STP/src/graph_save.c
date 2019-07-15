@@ -21,7 +21,7 @@
  *
  * This file includes several saving routines for Steiner problems
  *
- * A list of all interface methods can be found in grph.h.
+ * A list of all interface methods can be found in graph.h.
  *
  */
 
@@ -32,7 +32,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "portab.h"
-#include "grph.h"
+#include "graph.h"
 
 
 void SCIPwriteStp(

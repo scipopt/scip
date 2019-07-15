@@ -29,7 +29,7 @@
 
 
 #include "scip/scip.h"
-#include "grph.h"
+#include "graph.h"
 
 #ifdef __cplusplus
 extern "C" {

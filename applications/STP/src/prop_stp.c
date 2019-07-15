@@ -27,7 +27,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "prop_stp.h"
-#include "grph.h"
+#include "graph.h"
 #include "reduce.h"
 #include "cons_stp.h"
 #include "branch_stp.h"

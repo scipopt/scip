@@ -37,7 +37,7 @@
 #include <assert.h>
 #include "portab.h"
 #include "misc_stp.h"
-#include "grph.h"
+#include "graph.h"
 #include "heur_tm.h"
 
 #define STP_DELPSEUDO_MAXGRAD 5

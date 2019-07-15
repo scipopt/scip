@@ -20,7 +20,7 @@
  * This file implements basic reduction techniques for several Steiner problems.
  * All tests are described in "A Generic Approach to Solving the Steiner Tree Problem and Variants" by Daniel Rehfeldt.
  *
- * A list of all interface methods can be found in grph.h.
+ * A list of all interface methods can be found in graph.h.
  *
  */
 
@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "grph.h"
+#include "graph.h"
 #include "reduce.h"
 #include "portab.h"
 #include "scip/scip.h"

@@ -34,7 +34,7 @@
 #include "scip/pub_tree.h"
 #include "scip/struct_scip.h"
 #include "scip/clock.h"
-#include "grph.h"
+#include "graph.h"
 #include "heur_tm.h"
 #include "heur_local.h"
 #include "branch_stp.h"

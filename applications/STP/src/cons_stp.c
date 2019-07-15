@@ -40,7 +40,7 @@
 
 #include "cons_stp.h"
 #include "probdata_stp.h"
-#include "grph.h"
+#include "graph.h"
 #include "heur_prune.h"
 #include "heur_ascendprune.h"
 #include "portab.h"

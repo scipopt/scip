@@ -19,7 +19,7 @@
  *
  * This file includes several packages of reduction techniques for different Steiner problem variants.
  *
- * A list of all interface methods can be found in grph.h.
+ * A list of all interface methods can be found in graph.h.
  *
  */
 
@@ -40,7 +40,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "grph.h"
+#include "graph.h"
 #include "reduce.h"
 #include "heur_tm.h"
 #include "misc_stp.h"

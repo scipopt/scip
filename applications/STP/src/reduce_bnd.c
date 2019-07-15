@@ -20,7 +20,7 @@
  * This file implements bound-based reduction techniques for several Steiner problems.
  * All tests can be found in "A Generic Approach to Solving the Steiner Tree Problem and Variants" by Daniel Rehfeldt.
  *
- * A list of all interface methods can be found in grph.h.
+ * A list of all interface methods can be found in graph.h.
  *
  */
 
@@ -31,7 +31,7 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
-#include "grph.h"
+#include "graph.h"
 #include "reduce.h"
 #include "heur_tm.h"
 #include "heur_ascendprune.h"
