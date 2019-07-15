@@ -88,16 +88,8 @@ SCIP_RETCODE performDualfix(
       if( SCIPvarIsDeleted(var) )
          continue;
 
-      /* ignore already eps-fixed variables */
+      /* ignore already fixed variables */
       if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
-         continue;
-
-      /* ignore already feastol-fixed locked variables
-       * this was the original version, which used feasibility tolerance since this is used in SCIPfixVar()
-       * however, for other plugins it would be advantageous to also get feastol-fixed variables properly fixed,
-       * so do this if the var is unlocked (i.e., irrelevant) (should we always fix?)
-       */
-      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) && !SCIPvarMayRoundDown(var) && !SCIPvarMayRoundUp(var) )
          continue;
 
       obj = SCIPvarGetObj(var);
@@ -208,8 +200,11 @@ SCIP_RETCODE performDualfix(
          return SCIP_OKAY;
       }
 
-      assert(fixed || (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisFeasEQ(scip, bound, SCIPvarGetLbLocal(var))
-            && SCIPisFeasEQ(scip, bound, SCIPvarGetUbLocal(var))));
+      /* SCIPfixVar only changes bounds if not already feaseq.
+       * Only if in presolve and not probing, variables will always be fixed.
+       */
+      assert(fixed || (SCIPisFeasEQ(scip, bound, SCIPvarGetLbLocal(var))
+         && SCIPisFeasEQ(scip, bound, SCIPvarGetUbLocal(var))));
       (*nfixedvars)++;
    }
 
