@@ -73,6 +73,7 @@ mkdir -p settings
 
 # generate a randomseed
 RANDOMSEED=$(date +%Y%m%d)
+export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
 
 #######################
 ### Update Branches ###
