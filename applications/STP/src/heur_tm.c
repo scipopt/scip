@@ -1184,12 +1184,11 @@ static
 SCIP_RETCODE computeSteinerTreeDijk(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   SCIP_Real*            cost,               /**< edge costs */
+   const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real*            dijkdist,           /**< distance array */
    int*                  result,             /**< solution array (on edges) */
    int*                  dijkedge,           /**< predecessor edge array */
    int                   start,              /**< start vertex*/
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    STP_Bool*             connected           /**< array marking all solution vertices*/
    )
 {
@@ -1203,7 +1202,7 @@ SCIP_RETCODE computeSteinerTreeDijk(
    for( k = 0; k < nnodes; k++ )
       g->mark[k] = (g->grad[k] > 0);
 
-   graph_path_st(scip, g, cost, dijkdist, dijkedge, start, randnumgen, connected);
+   graph_path_st(scip, g, cost, dijkdist, dijkedge, start, connected);
 
    SCIP_CALL(prune(scip, g, cost, result, connected));
 
@@ -2611,7 +2610,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
                result[e] = UNKNOWN;
             }
 
-            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, dijkdist, result, dijkedge, root, heurdata->randnumgen, connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, dijkdist, result, dijkedge, root, connected) );
 
             obj = 0.0;
             edgecount = 0;
@@ -2679,7 +2678,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
          if( mode == TM_DIJKSTRA && graph->stp_type != STP_DCSTP )
          {
-            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, dijkdist, result, dijkedge, start[r],  heurdata->randnumgen, connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, dijkdist, result, dijkedge, start[r], connected) );
          }
          else if( graph->stp_type == STP_DCSTP )
          {

@@ -87,6 +87,7 @@ CMAINOBJ	=	cmain.o \
 			reduce_test.o \
 			reduce_ext.o \
 			reduce_simple.o \
+			reduce_util.o \
 			prop_stp.o \
 			branch_stp.o \
 			validate.o

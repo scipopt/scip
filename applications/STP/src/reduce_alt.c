@@ -14,19 +14,17 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reduce_alt.c
- * @brief  Altenative based reduction tests for Steiner problems
- * @author Thorsten Koch
- * @author Stephen Maher
+ * @brief  Altenative-based reduction tests for Steiner problems
  * @author Daniel Rehfeldt
  *
  * This file implements alternative-based reduction techniques for several Steiner problems.
- * All tests can be found in "Combining NP-Hard Reduction Techniques and Strong Heuristics in an Exact Algorithm for the
+ * Most tests can be found in "Combining NP-Hard Reduction Techniques and Strong Heuristics in an Exact Algorithm for the
  * Maximum-Weight Connected Subgraph Problem" by Daniel Rehfeldt and Thorsten Koch,
  * or in "Reduction Techniques for the Prize-Collecting Steiner Tree Problem and the Maximum-Weight Connected Subgraph Problem"
  * by Daniel Rehfeldt et al.
  *
  *
- * A list of all interface methods can be found in graph.h.
+ * A list of all interface methods can be found in reduce.h.
  *
  */
 

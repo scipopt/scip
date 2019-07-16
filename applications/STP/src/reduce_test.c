@@ -14,12 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reduce_test.c
- * @brief  reduction tests for Steiner tree problems
+ * @brief  tests for Steiner tree reductions
  * @author Daniel Rehfeldt
  *
- * This file implements reduction tests for Steiner problems.
+ * This file implements tests for Steiner problem reductions.
  *
- * A list of all interface methods can be found in graph.h.
+ * A list of all interface methods can be found in reduce.h.
  *
  */
 

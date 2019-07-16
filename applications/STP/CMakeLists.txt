@@ -36,6 +36,7 @@ add_executable(scipstp
     src/reduce_ext.c
     src/reduce_base.c
     src/reduce_simple.c
+    src/reduce_util.c
     src/validate.c
 )
 

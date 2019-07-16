@@ -2447,11 +2447,10 @@ void graph_path_st_pcmw_extendOut(
 void graph_path_st(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Real*            cost,               /**< edgecosts */
+   const SCIP_Real*      cost,               /**< edgecosts */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
@@ -2460,7 +2459,6 @@ void graph_path_st(
    int*  heap;
    int*  state;
 
-   assert(randnumgen != NULL);
    assert(pathdist   != NULL);
    assert(pathedge   != NULL);
    assert(g      != NULL);
@@ -2542,6 +2540,8 @@ void graph_path_st(
       }
    }
 }
+
+
 
 /** Find a tree rooted in node 'start' and connecting
  *  positive vertices as long as this is profitable.

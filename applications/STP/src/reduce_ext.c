@@ -19,7 +19,7 @@
  *
  * This file implements extended reduction techniques for several Steiner problems.
  *
- * A list of all interface methods can be found in graph.h.
+ * A list of all interface methods can be found in reduce.h.
  *
  */
 
@@ -64,17 +64,6 @@ typedef struct reduction_data
    const SCIP_Bool equality;
 } REDDATA;
 
-/** distance data */
-typedef struct distance_data
-{
-   SCIP_Bool* const nodepaths_dirty;
-   RANGE* const closenodes_range;
-   int* const closenodes_index;
-   SCIP_Real* const closenodes_dist;
-   RANGE* const pathroots_range;   /* of size nedges / 2*/
-   int* const pathroots;
-} DISTDATA;
-
 /** extension data */
 typedef struct extension_data
 {
@@ -97,37 +86,6 @@ typedef struct extension_data
    REDDATA* const reddata;
    DISTDATA* const distdata;
 } EXTDATA;
-
-/** initializes distance data */
-static
-SCIP_RETCODE distanceData_initMembers(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          graph,              /**< graph data structure */
-   DISTDATA*             distdata            /**< to be initialized */
-)
-{
-   const int nnodes = graph->knots;
-   int nnodes_real; /* number of not yet deleted nodes */
-   int nedges_real;
-
-   assert(distdata && graph && scip);
-   assert(distdata->nodepaths_dirty == NULL && distdata->closenodes_dist == NULL && distdata->closenodes_range == NULL);
-   assert(distdata->closenodes_index == NULL && distdata->pathroots == NULL && distdata->pathroots_range == NULL);
-
-
-
-   return SCIP_OKAY;
-}
-
-/** frees members of distance data */
-static
-void distanceData_freeMembers(
-   const GRAPH*          graph,              /**< graph data structure */
-   DISTDATA*             distdata            /**< to be freed */
-)
-{
-   return;
-}
 
 /** mark ancestors of given edge */
 static

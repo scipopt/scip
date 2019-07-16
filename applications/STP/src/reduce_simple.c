@@ -20,7 +20,7 @@
  * This file implements basic reduction techniques for several Steiner problems.
  * All tests are described in "A Generic Approach to Solving the Steiner Tree Problem and Variants" by Daniel Rehfeldt.
  *
- * A list of all interface methods can be found in graph.h.
+ * A list of all interface methods can be found in reduce.h.
  *
  */
 
@@ -539,6 +539,55 @@ SCIP_RETCODE reduce_contractZeroEdges(
    return SCIP_OKAY;
 }
 
+
+/* removes parallel edges */
+SCIP_RETCODE deleteMultiedges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+)
+{
+   const int nnodes = g->knots;
+   int* count;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &count, nnodes) );
+
+   for( int k = 0; k < nnodes; k++ )
+      count[k] = 0;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      int enext;
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+         count[head]++;
+      }
+
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = enext )
+      {
+         const int head = g->head[e];
+         enext = g->oeat[e];
+
+         if( count[head] > 1 )
+         {
+            graph_edge_del(scip, g, e, TRUE);
+            return SCIP_ERROR;
+         }
+         count[head]--;
+
+      }
+
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         assert(count[g->head[e]] == 0);
+   }
+
+   SCIPfreeBufferArray(scip, &count);
+
+   return SCIP_OKAY;
+}
 
 /** basic reduction tests for the STP */
 SCIP_RETCODE reduce_simple(

@@ -24,14 +24,24 @@
 #ifndef APPLICATIONS_STP_SRC_REDUCE_H_
 #define APPLICATIONS_STP_SRC_REDUCE_H_
 
-
 #include "scip/scip.h"
 #include "graph.h"
+
+/** distance data */
+typedef struct distance_data
+{
+   //    SCIP_Bool* const nodeSDpaths_dirty;
+   SCIP_Bool* nodepaths_dirty;
+   RANGE* closenodes_range;
+   int* closenodes_index;
+   SCIP_Real* closenodes_dist;
+   RANGE* pathroots_range;   /* of size nedges / 2*/
+   int* pathroots;
+} DISTDATA;
 
 
 /* reduce.c
  */
-extern SCIP_RETCODE deleteMultiedges(SCIP*, GRAPH*);
 extern SCIP_RETCODE level0(SCIP*, GRAPH*);
 extern SCIP_RETCODE level0save(SCIP*, GRAPH*);
 extern SCIP_RETCODE level0infeas(SCIP*, GRAPH*, SCIP_Bool*);
@@ -111,6 +121,7 @@ extern SCIP_RETCODE    heur_extendPcMwOuterTest1(SCIP*);
 
 /* reduce_simple.c
  */
+extern SCIP_RETCODE    deleteMultiedges(SCIP*, GRAPH*);
 extern SCIP_RETCODE    reduce_contractZeroEdges(SCIP*, GRAPH*, SCIP_Bool);
 extern SCIP_RETCODE    reduce_simple(SCIP*, GRAPH*, SCIP_Real*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_simple_hc(SCIP*, GRAPH*, SCIP_Real*, int*);
@@ -119,6 +130,12 @@ extern SCIP_RETCODE    reduce_simple_pc(SCIP*, const int*, GRAPH*, SCIP_Real*, i
 extern SCIP_RETCODE    reduce_simple_aritculations(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_simple_sap(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
+
+/* reduce_util.c
+ */
+extern SCIP_RETCODE    reduce_distDataInitMembers(SCIP*, const GRAPH*, DISTDATA*);
+extern SCIP_Real       reduce_distDataGetSD(const DISTDATA*, int, int);
+extern void            reduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */
