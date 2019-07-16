@@ -673,7 +673,7 @@ SCIP_RETCODE addRltTerm(
                {
                   *coefvar += coefauxvar;
                   coefcolvar += coefauxvar;
-                  *finalside += coefauxvar;
+                  *finalside -= coefauxvar;
                   found_clique = TRUE;
                   break;
                }
@@ -1293,7 +1293,10 @@ SCIP_RETCODE separateRltCuts(
          assert(row_marks[r] != 0);
 
          if( !SCIPhashmapExists(row_to_pos, (void*)(size_t)row_idcs[r]) )
+         {
+            row_marks[r] = 0;
             continue; /* if row index is not in row_to_pos, it means that storeSuitableRows decided to ignore this row */
+         }
 
          pos = SCIPhashmapGetImageInt(row_to_pos, (void*)(size_t)row_idcs[r]);
          row = rows[pos];
