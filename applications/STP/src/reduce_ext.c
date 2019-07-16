@@ -1410,7 +1410,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
    int                   root,               /**< graph root from dual ascent */
    const SCIP_Real*      redcost,            /**< reduced costs */
    const SCIP_Real*      rootdist,           /**< shortest path distances  */
-   const PATH*           termpaths,          /**< paths to nearest terminals  */
+   const PATH*           termpaths,          /**< paths to nearest terminals */
    const STP_Bool*       edgedeleted,        /**< edge array to mark which directed edge can be removed or NULL */
    const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
    SCIP_Real             cutoff,             /**< reduced cost cutoff value */
@@ -1473,7 +1473,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
          int nupdatestalls = 0;
          SCIP_Bool success = TRUE;
          SCIP_Bool conflict = FALSE;
-         DISTDATA distdata = {NULL, NULL, NULL, NULL, NULL, NULL};
+         DISTDATA distdata = {NULL, NULL, NULL, NULL, NULL, NULL, -1, -1};
          REDDATA reddata = {redcost, rootdist, termpaths, edgedeleted, ancestormark, cutoff, treeredcostoffset, equality};
          EXTDATA extdata = {extstack_data, extstack_start, extstack_state, tree_leaves, tree_edges,
             tree_deg, 0.0, 0, 0, 0, 0, nnodes - 1, maxstackedges, STP_EXT_MAXNLEAVES, maxdfsdepth,

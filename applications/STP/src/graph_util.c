@@ -673,3 +673,111 @@ SCIP_Bool graph_valid_dcsr(
 
    return TRUE;
 }
+
+
+/** initializes (allocates and fills) limited Dijkstra structure members */
+SCIP_RETCODE graph_dijkLimited_init(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< the graph */
+   DLIMITED*             dijkdata            /**< data for limited Dijkstra */
+)
+{
+   const int nnodes = g->knots;
+   SCIP_Real* distance;
+   STP_Bool* visited;
+
+   assert(scip && g && dijkdata);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->distance), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->visitlist), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dijkdata->visited), nnodes) );
+
+   graph_heap_create(scip, nnodes, NULL, NULL, &(dijkdata->dheap));
+
+   dijkdata->nvisits = -1;
+
+   distance = dijkdata->distance;
+   visited = dijkdata->visited;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      visited[k] = FALSE;
+      distance[k] = FARAWAY;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** cleans limited Dijkstra structure members */
+void graph_dijkLimited_clean(
+   const GRAPH*          g,                  /**< the graph */
+   DLIMITED*             dijkdata            /**< data for limited Dijkstra */
+)
+{
+   const int nnodes = g->knots;
+   STP_Bool* const visited = dijkdata->visited;
+   SCIP_Real* const distance = dijkdata->distance;
+   dijkdata->nvisits = -1;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      visited[k] = FALSE;
+      distance[k] = FARAWAY;
+   }
+
+   graph_heap_clean(TRUE, dijkdata->dheap);
+}
+
+
+/** reset data of limited Dijkstra structure */
+void graph_dijkLimited_reset(
+   const GRAPH*          g,                  /**< the graph */
+   DLIMITED*             dijkdata            /**< data for limited Dijkstra */
+)
+{
+   STP_Bool* const visited = dijkdata->visited;
+   int* const visitlist = dijkdata->visitlist;
+   int* const state = dijkdata->dheap->position;
+   SCIP_Real* const distance = dijkdata->distance;
+   const int nvisits = dijkdata->nvisits;
+
+   assert(dijkdata && g);
+
+   for( int k = 0; k < nvisits; k++ )
+   {
+      const int node = visitlist[k];
+      assert(node >= 0 && node < g->knots);
+
+      visited[node] = FALSE;
+      distance[node] = FARAWAY;
+      state[node] = UNKNOWN;
+   }
+
+   graph_heap_clean(FALSE, dijkdata->dheap);
+
+#ifndef NDEBUG
+   for( int k = 0; k < g->knots; k++ )
+   {
+      assert(visited[k] == FALSE);
+      assert(state[k] == UNKNOWN);
+      assert(distance[k] == FARAWAY);
+   }
+#endif
+}
+
+
+/** frees limited Dijkstra structure member */
+void graph_dijkLimited_free(
+   SCIP*                 scip,               /**< SCIP */
+   DLIMITED*             dijkdata            /**< data for limited Dijkstra */
+)
+{
+   SCIPfreeMemoryArray(scip, &(dijkdata->distance));
+   SCIPfreeMemoryArray(scip, &(dijkdata->visitlist));
+   SCIPfreeMemoryArray(scip, &(dijkdata->visited));
+
+   graph_heap_free(scip, TRUE, TRUE, &(dijkdata->dheap));
+}
+
+
+
