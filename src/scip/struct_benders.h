@@ -108,9 +108,11 @@ struct SCIP_Benders
    SCIP_Real*            subproblowerbound;  /**< a lower bound on the subproblem - used for the integer cuts */
    int                   naddedsubprobs;     /**< subproblems added to the Benders' decomposition data */
    int                   nsubproblems;       /**< number of subproblems */
+   SCIP_BENDERSSUBTYPE*  subprobtype;        /**< the convexity type of the subproblem */
    SCIP_Bool*            subprobisconvex;    /**< is the subproblem convex? This implies that the dual sol can be used for cuts */
    SCIP_Bool*            subprobisnonlinear; /**< does the subproblem contain non-linear constraints */
    int                   nconvexsubprobs;    /**< the number of subproblems that are convex */
+   int                   nnonlinearsubprobs; /**< the number of subproblems that are non-linear */
    SCIP_Bool             subprobscreated;    /**< have the subproblems been created for this Benders' decomposition.
                                                   This flag is used when retransforming the problem.*/
    SCIP_Bool*            mastervarscont;     /**< flag to indicate that the master problem variable have been converted
@@ -122,6 +124,7 @@ struct SCIP_Benders
    int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
    SCIP_Bool             freesubprobs;       /**< do the subproblems need to be freed by the Benders' decomposition core? */
+   SCIP_Bool             masterisnonlinear;  /**< flag to indicate whether the master problem contains non-linear constraints */
 
    /* cut strengthening details */
    SCIP_SOL*             corepoint;          /**< the point that is separated for stabilisation */

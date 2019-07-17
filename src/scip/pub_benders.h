@@ -301,6 +301,31 @@ SCIP_Bool SCIPbendersSolSlackVarsActive(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
+/** sets the subproblem type
+ *
+ * The subproblem types are:
+ *    - Convex constraints with continuous variables
+ *    - Convex constraints with discrete variables
+ *    - Non-convex constraints with continuous variables
+ *    - Non-convex constraints with discrete variables
+ */
+SCIP_EXPORT
+void SCIPbendersSetSubproblemType(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_BENDERSSUBTYPE   subprobtype         /**< the subproblem type */
+   );
+
+/** returns the type of the subproblem
+ *
+ *  This type is used to determine whether the duals of the problem can be used to generate cuts
+ */
+SCIP_EXPORT
+SCIP_BENDERSSUBTYPE SCIPbendersGetSubproblemType(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
 /** sets the flag indicating whether a subproblem is convex
  *
  *  It is possible that this can change during the solving process. One example is when the three-phase method is
@@ -328,6 +353,40 @@ SCIP_Bool SCIPbendersSubproblemIsConvex(
 /** returns the number of subproblems that are convex */
 SCIP_EXPORT
 int SCIPbendersGetNConvexSubproblems(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/** sets the flag indicating whether a subproblem contains non-linear constraints */
+SCIP_EXPORT
+void SCIPbendersSetSubproblemIsNonlinear(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             isnonlinear         /**< flag to indicate whether the subproblem contains non-linear constraints */
+   );
+
+/** returns whether the subproblem contains non-linear constraints. */
+SCIP_EXPORT
+SCIP_Bool SCIPbendersSubproblemIsNonlinear(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
+/** returns the number of subproblems that contain non-linear constraints  */
+SCIP_EXPORT
+int SCIPbendersGetNNonlinearSubproblems(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/** sets the flag indicating whether the master problem contains non-linear constraints */
+SCIP_EXPORT
+void SCIPbendersSetMasterIsNonlinear(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_Bool             isnonlinear         /**< flag to indicate whether the subproblem contains non-linear constraints */
+   );
+
+/** returns whether the master problem contains non-linear constraints. */
+SCIP_EXPORT
+SCIP_Bool SCIPbendersMasterIsNonlinear(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 

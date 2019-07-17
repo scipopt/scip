@@ -439,7 +439,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeasalt)
 
    /* setting a flag to indicate whether the NLP relaxation should be used to generate cuts */
    nlprelaxation = SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem)
-      && SCIPbendersSubproblemIsConvex(benders, probnumber);
+      && SCIPbendersGetSubproblemType(benders, probnumber) <= SCIP_BENDERSSUBTYPE_CONVEXDIS;
 
    /* only generate feasibility cuts if the subproblem LP or NLP is infeasible,
     * since we use the farkas proof from the LP or the dual solution of the NLP to construct the feasibility cut

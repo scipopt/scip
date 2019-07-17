@@ -1480,18 +1480,6 @@ SCIP_RETCODE initialiseLPSubproblem(
    SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersNodefocus) );
    assert(eventhdlr != NULL);
 
-   /* if the problem is convex and nonlinear, then slack variables must be added to each of the constraints */
-   if( benders->execfeasphase || benders->subprobisnonlinear[probnumber] )
-   {
-      SCIP_CALL( addSlackVarsToConstraints(benders, set, probnumber) );
-
-      /* setting the flag to indicate that slack variables have been added to the subproblem constraints. This is only
-       * set if the slack variables have been added at the request of the user.
-       */
-      if( benders->execfeasphase )
-         benders->feasibilityphase = TRUE;
-   }
-
    /* calling an initial solve to put the problem into probing mode */
    SCIP_CALL( initialiseSubproblem(benders, set, probnumber, &success) );
 
@@ -1513,7 +1501,7 @@ static
 SCIP_RETCODE checkSubproblemConvexity(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
-   int                   probnumber          /**< the subproblem number */
+   int                   probnumber          /**< the subproblem number, or -1 for the master problem */
    )
 {
    SCIP* subproblem;
@@ -1525,7 +1513,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    int nimplintvars;
    int i;
    int j;
-   SCIP_Bool isconvex;
+   SCIP_Bool convexcons;
    SCIP_Bool discretevar;
    SCIP_Bool isnonlinear;
 #define NLINEARCONSHDLRS 5
@@ -1536,12 +1524,15 @@ SCIP_RETCODE checkSubproblemConvexity(
 
    assert(benders != NULL);
    assert(set != NULL);
-   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+   assert(probnumber >= -1 && probnumber < SCIPbendersGetNSubproblems(benders));
 
-   subproblem = SCIPbendersSubproblem(benders, probnumber);
+   if( probnumber >= 0 )
+      subproblem = SCIPbendersSubproblem(benders, probnumber);
+   else
+      subproblem = set->scip;
    assert(subproblem != NULL);
 
-   isconvex = FALSE;
+   convexcons = FALSE;
    discretevar = FALSE;
    isnonlinear = FALSE;
 
@@ -1552,7 +1543,6 @@ SCIP_RETCODE checkSubproblemConvexity(
    if( nbinvars != 0 || nintvars != 0 || nimplintvars != 0 )
    {
       discretevar = TRUE;
-      goto TERMINATE;
    }
 
    /* get pointers to linear constraints handlers, so can avoid string comparisons */
@@ -1675,7 +1665,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    }
 
    /* if we made it until here, then all constraints are known and convex */
-   isconvex = TRUE;
+   convexcons = TRUE;
 
 TERMINATE:
    /* setting the flag for the convexity of the subproblem. If convexity doesn't need to be checked, then it is assumed
@@ -1683,15 +1673,33 @@ TERMINATE:
     * non-convex. The discrete master variables will be changed to continuous, but this will happen at the first call to
     * SCIPbendersSetupSubproblem
     */
-   if( benders->checkconsconvexity )
-      SCIPbendersSetSubproblemIsConvex(benders, probnumber, isconvex);
-   else
-      SCIPbendersSetSubproblemIsConvex(benders, probnumber, !discretevar);
+   if( probnumber >= 0 )
+   {
+      convexcons = convexcons || !benders->checkconsconvexity;
+
+      if( convexcons && !discretevar )
+         SCIPbendersSetSubproblemType(benders, probnumber, SCIP_BENDERSSUBTYPE_CONVEXCONT);
+      else if( convexcons && discretevar )
+         SCIPbendersSetSubproblemType(benders, probnumber, SCIP_BENDERSSUBTYPE_CONVEXDIS);
+      else if( !convexcons && !discretevar )
+         SCIPbendersSetSubproblemType(benders, probnumber, SCIP_BENDERSSUBTYPE_NONCONVEXCONT);
+      else if( !convexcons && discretevar )
+         SCIPbendersSetSubproblemType(benders, probnumber, SCIP_BENDERSSUBTYPE_NONCONVEXDIS);
+      else
+         SCIPABORT();
+   }
 
    /* setting the non-linear subproblem flag */
-   benders->subprobisnonlinear[probnumber] = isnonlinear;
+   if( probnumber >= 0 )
+      SCIPbendersSetSubproblemIsNonlinear(benders, probnumber, isnonlinear);
+   else
+      SCIPbendersSetMasterIsNonlinear(benders, isnonlinear);
 
-   SCIPdebugMsg(subproblem, "subproblem <%s> has been found %sconvex\n", SCIPgetProbName(subproblem), isconvex ? "" : "not");
+   if( probnumber >= 0 )
+   {
+      SCIPdebugMsg(subproblem, "subproblem <%s> has been found to be of type %d\n", SCIPgetProbName(subproblem),
+         SCIPbendersGetSubproblemType(benders, probnumber));
+   }
 
    return SCIP_OKAY;
 }
@@ -1791,10 +1799,26 @@ SCIP_RETCODE createSubproblems(
           */
          SCIP_CALL( checkSubproblemConvexity(benders, set, i) );
 
-         /* after checking the subproblem for convexity, if the subproblem is convex, then the problem is entered into
-          * probing mode. Otherwise, it is initialised as a CIP
+      /* if the problem is has convex constraints but is nonlinear, then slack variables must be added to each of the
+       * constraints
           */
-         if( SCIPbendersSubproblemIsConvex(benders, i) )
+      if( benders->execfeasphase ||
+         (SCIPbendersGetSubproblemType(benders, i) <= SCIP_BENDERSSUBTYPE_CONVEXDIS
+          && SCIPbendersSubproblemIsNonlinear(benders, i)) )
+      {
+         SCIP_CALL( addSlackVarsToConstraints(benders, set, i) );
+
+         /* setting the flag to indicate that slack variables have been added to the subproblem constraints. This is only
+          * set if the slack variables have been added at the request of the user.
+          */
+         if( benders->execfeasphase )
+            benders->feasibilityphase = TRUE;
+      }
+
+      /* after checking the subproblem for convexity, if the subproblem has convex constraints and continuous variables,
+       * then the problem is entered into probing mode. Otherwise, it is initialised as a CIP
+       */
+      if( SCIPbendersGetSubproblemType(benders, i) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
          {
             /* if the user has not implemented a solve subproblem callback, then the subproblem solves are performed
              * internally. To be more efficient the subproblem is put into probing mode. */
@@ -1842,6 +1866,11 @@ SCIP_RETCODE createSubproblems(
          }
       }
    }
+
+   /* checking the convexity of the master problem. This information is useful for the cut generation methods, such as
+    * non-good and integer cuts
+    */
+   SCIP_CALL( checkSubproblemConvexity(benders, set, -1) );
 
    benders->subprobscreated = TRUE;
 
@@ -2415,6 +2444,7 @@ SCIP_RETCODE SCIPbendersActivate(
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobobjval, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->bestsubprobobjval, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subproblowerbound, benders->nsubproblems) );
+      SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobtype, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobisconvex, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobisnonlinear, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobsetup, benders->nsubproblems) );
@@ -2429,7 +2459,9 @@ SCIP_RETCODE SCIPbendersActivate(
          benders->subprobobjval[i] = SCIPsetInfinity(set);
          benders->bestsubprobobjval[i] = SCIPsetInfinity(set);
          benders->subproblowerbound[i] = -SCIPsetInfinity(set);
+         benders->subprobtype[i] = SCIP_BENDERSSUBTYPE_UNKNOWN;
          benders->subprobisconvex[i] = FALSE;
+         benders->subprobisnonlinear[i] = FALSE;
          benders->subprobsetup[i] = FALSE;
          benders->indepsubprob[i] = FALSE;
          benders->subprobenabled[i] = TRUE;
@@ -2495,6 +2527,7 @@ SCIP_RETCODE SCIPbendersDeactivate(
       BMSfreeMemoryArray(&benders->subprobsetup);
       BMSfreeMemoryArray(&benders->subprobisnonlinear);
       BMSfreeMemoryArray(&benders->subprobisconvex);
+      BMSfreeMemoryArray(&benders->subprobtype);
       BMSfreeMemoryArray(&benders->subproblowerbound);
       BMSfreeMemoryArray(&benders->bestsubprobobjval);
       BMSfreeMemoryArray(&benders->subprobobjval);
@@ -2923,7 +2956,7 @@ SCIP_RETCODE solveBendersSubproblems(
       while( subproblemcount < nsubproblems && numnotopt < numtocheck && !(*stopped) )
       {
          SCIP_Bool subinfeas = FALSE;
-         SCIP_Bool convexsub = SCIPbendersSubproblemIsConvex(benders, i);
+         SCIP_Bool convexsub = SCIPbendersGetSubproblemType(benders, i) == SCIP_BENDERSSUBTYPE_CONVEXCONT;
          SCIP_Bool solvesub = TRUE;
          SCIP_Bool solved;
 
@@ -3007,7 +3040,8 @@ SCIP_RETCODE solveBendersSubproblems(
 #ifdef SCIP_DEBUG
             if( type == SCIP_BENDERSENFOTYPE_LP )
             {
-               SCIPsetDebugMsg(set, "LP: Subproblem %d (%f < %f)\n", i, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i),
+               SCIPsetDebugMsg(set, "Enfo LP: Subproblem %d Type %d (%f < %f)\n", i,
+                  SCIPbendersGetSubproblemType(benders, i), SCIPbendersGetAuxiliaryVarVal(benders, set, sol, i),
                   SCIPbendersGetSubproblemObjval(benders, i));
             }
 #endif
@@ -3184,7 +3218,7 @@ SCIP_RETCODE generateBendersCuts(
       while( subproblemcount < nchecked )
       {
          SCIP_RESULT subprobresult;
-         SCIP_Bool convexsub = SCIPbendersSubproblemIsConvex(benders, i);
+         SCIP_Bool convexsub = SCIPbendersGetSubproblemType(benders, i) == SCIP_BENDERSSUBTYPE_CONVEXCONT;
 
          /* cuts can only be generated if the subproblem is not independent and if it has been solved. The subproblem
           * solved flag is important for the user-defined subproblem solving methods
@@ -3469,7 +3503,7 @@ SCIP_RETCODE SCIPbendersExec(
     * strengthenround is set to TRUE when the cut strengthening is performed. The cut strengthening is not performed as
     * part of the large neighbourhood Benders' search.
     *
-    * NOTE: cut strengthening is only applied for fraction solutions and integer solutions if there are no CIP
+    * NOTE: cut strengthening is only applied for fractional solutions and integer solutions if there are no CIP
     * subproblems.
     */
    if( benders->strengthenenabled && !benders->strengthenround && !benders->iscopy
@@ -3949,7 +3983,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       /* solving the subproblem
        * the LP of the subproblem is solved in the first solveloop.
        * In the second solve loop, the MIP problem is solved */
-      if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX || SCIPbendersSubproblemIsConvex(benders, probnumber) )
+      if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX
+         || SCIPbendersGetSubproblemType(benders, probnumber) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
       {
          SCIP_CALL( SCIPbendersSolveSubproblemLP(set->scip, benders, probnumber, &solvestatus, &objective) );
 
@@ -4074,11 +4109,13 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    /* changing all of the master problem variable to continuous. */
    SCIP_CALL( SCIPbendersChgMastervarsToCont(benders, set, probnumber) );
 
-   /* if the Benders' decomposition subproblem is an LP, then probing mode must be started.
-    * If the subproblem is a MIP, the problem must be initialised, put into SCIP_STAGE_SOLVING to be able to change the
-    * variable bounds. The probing mode is entered once the variable bounds are set.
-    * In the MIP case, the transformed problem is freed after each subproblem solve round. */
-   if( SCIPbendersSubproblemIsConvex(benders, probnumber) )
+   /* if the Benders' decomposition subproblem is has convex constraints and continuous variables, then probing mode
+    * must be started.
+    * If the subproblem is contains non-convex constraints or discrete variables, then the problem must be initialised,
+    * and then put into SCIP_STAGE_SOLVING to be able to change the variable bounds. The probing mode is entered once
+    * the variable bounds are set.
+    * In the latter case, the transformed problem is freed after each subproblem solve round. */
+   if( SCIPbendersGetSubproblemType(benders, probnumber) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
    {
       SCIP_CALL( SCIPstartProbing(subproblem) );
    }
@@ -4167,8 +4204,10 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
       }
    }
 
-   /* if the subproblem is a MIP, the probing mode is entered after setting up the subproblem */
-   if( !SCIPbendersSubproblemIsConvex(benders, probnumber) )
+   /* if the subproblem contain non-convex constraints or discrete variables, then the probing mode is entered after
+    * setting up the subproblem
+    */
+   if( SCIPbendersGetSubproblemType(benders, probnumber) != SCIP_BENDERSSUBTYPE_CONVEXCONT )
    {
       SCIP_CALL( SCIPstartProbing(subproblem) );
    }
@@ -4230,7 +4269,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
       assert(subproblem != NULL);
 
       /* solving the subproblem */
-      if( solvecip && !SCIPbendersSubproblemIsConvex(benders, probnumber) )
+      if( solvecip && SCIPbendersGetSubproblemType(benders, probnumber) != SCIP_BENDERSSUBTYPE_CONVEXCONT )
       {
          SCIP_STATUS solvestatus;
 
@@ -4245,9 +4284,10 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
       {
          SCIP_Bool success;
 
-         /* if the subproblem is an LP, then it should have been initialised and in SCIP_STAGE_SOLVING.
-          * in this case, the subproblem only needs to be put into probing mode. */
-         if( SCIPbendersSubproblemIsConvex(benders, probnumber) )
+         /* if the subproblem has convex constraints and continuous variables, then it should have been initialised and
+          * in SCIP_STAGE_SOLVING. In this case, the subproblem only needs to be put into probing mode.
+          */
+         if( SCIPbendersGetSubproblemType(benders, probnumber) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
          {
             /* if the subproblem is not in probing mode, then it must be put into that mode for the LP solve. */
             if( !SCIPinProbing(subproblem) )
@@ -4453,7 +4493,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
     */
    solvenlp = FALSE;
    if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) > 0
-      && SCIPbendersSubproblemIsConvex(benders, probnumber) )
+      && SCIPbendersGetSubproblemType(benders, probnumber) <= SCIP_BENDERSSUBTYPE_CONVEXDIS )
       solvenlp = TRUE;
 
    *objective = SCIPinfinity(subproblem);
@@ -4705,7 +4745,7 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
       {
          SCIP* subproblem = SCIPbendersSubproblem(benders, probnumber);
 
-         if( SCIPbendersSubproblemIsConvex(benders, probnumber) )
+         if( SCIPbendersGetSubproblemType(benders, probnumber) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
          {
             /* ending probing mode to reset the current node. The probing mode will be restarted at the next solve */
             if( SCIPinProbing(subproblem) )
@@ -4795,6 +4835,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    )
 {
    SCIP* subproblem;
+   SCIP_Real dualbound;
    SCIP_Real memorylimit;
    SCIP_Real timelimit;
    SCIP_Longint totalnodes;
@@ -4854,15 +4895,58 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    }
 
    /* if the subproblem not independent and is convex, then the probing LP is solved. Otherwise, the MIP is solved */
-   if( SCIPbendersSubproblemIsConvex(benders, probnumber) )
+   dualbound = -SCIPinfinity(subproblem);
+   if( SCIPbendersGetSubproblemType(benders, probnumber) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
    {
-      assert(SCIPisLPConstructed(subproblem));
+      SCIP_Bool solvenlp = FALSE;
+
+      assert(SCIPisLPConstructed(subproblem) || SCIPisNLPConstructed(subproblem));
+
+      if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) > 0
+         && SCIPbendersGetSubproblemType(benders, probnumber) <= SCIP_BENDERSSUBTYPE_CONVEXDIS )
+         solvenlp = TRUE;
 
       SCIP_CALL( SCIPstartProbing(subproblem) );
-      SCIP_CALL( SCIPsolveProbingLP(subproblem, -1, &lperror, &cutoff) );
+      if( solvenlp )
+      {
+         SCIP_NLPSOLSTAT nlpsolstat;
+         SCIP_NLPTERMSTAT nlptermstat;
+#ifdef SCIP_MOREDEBUG
+         SCIP_SOL* nlpsol;
 
-      if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
-         (*infeasible) = TRUE;
+         SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_VERBLEVEL, 1) );
+#endif
+
+         SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_ITLIM, INT_MAX) );
+
+         SCIP_CALL( SCIPwriteTransProblem(subproblem, "subprob.lp", NULL, FALSE) );
+
+         SCIP_CALL( SCIPsolveNLP(subproblem) );
+
+         nlpsolstat = SCIPgetNLPSolstat(subproblem);
+         nlptermstat = SCIPgetNLPTermstat(subproblem);
+         SCIPdebugMsg(set->scip, "NLP solstat %d termstat %d\n", nlpsolstat, nlptermstat);
+
+         if( nlptermstat == SCIP_NLPTERMSTAT_OKAY && (nlpsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE || nlpsolstat == SCIP_NLPSOLSTAT_GLOBINFEASIBLE) )
+         {
+            /* trust infeasible only if terminated "okay" */
+            (*infeasible) = TRUE;
+         }
+         else if( nlpsolstat == SCIP_NLPSOLSTAT_LOCOPT || nlpsolstat == SCIP_NLPSOLSTAT_GLOBOPT
+            || nlpsolstat == SCIP_NLPSOLSTAT_FEASIBLE )
+         {
+            dualbound = SCIPretransformObj(subproblem, SCIPgetNLPObjval(subproblem));
+         }
+      }
+      else
+      {
+         SCIP_CALL( SCIPsolveProbingLP(subproblem, -1, &lperror, &cutoff) );
+
+         if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
+            (*infeasible) = TRUE;
+         else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL )
+            dualbound = SCIPgetSolOrigObj(subproblem, NULL)*(int)SCIPgetObjsense(set->scip);
+      }
    }
    else
    {
@@ -4878,13 +4962,12 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
 
       if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
          (*infeasible) = TRUE;
+      else
+         dualbound = SCIPgetDualbound(subproblem);
    }
 
    /* getting the lower bound value */
-   if( !(*infeasible) )
-      (*lowerbound) = SCIPgetDualbound(subproblem);
-   else
-      (*lowerbound) = -SCIPinfinity(subproblem);
+   (*lowerbound) = dualbound;
 
    if( !SCIPbendersSubproblemIsIndependent(benders, probnumber) )
    {
@@ -5854,7 +5937,7 @@ SCIP_Bool SCIPbendersSolSlackVarsActive(
       /* if the subproblem is convex and an NLP, then we need to create the NLP solution. Otherwise, the solution can be
        * retrieved from the LP or CIP.
        */
-      if( SCIPbendersSubproblemIsConvex(benders, i) )
+      if( SCIPbendersGetSubproblemType(benders, i) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
       {
          if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) > 0 )
          {
@@ -5893,6 +5976,51 @@ SCIP_Bool SCIPbendersSolSlackVarsActive(
    }
 
    return activeslack;
+}
+
+/** sets the subproblem type
+ *
+ * The subproblem types are:
+ *    - Convex constraints with continuous variables
+ *    - Convex constraints with discrete variables
+ *    - Non-convex constraints with continuous variables
+ *    - Non-convex constraints with discrete variables
+ */
+void SCIPbendersSetSubproblemType(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_BENDERSSUBTYPE   subprobtype         /**< the subproblem type */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   if( subprobtype == SCIP_BENDERSSUBTYPE_CONVEXCONT
+      && benders->subprobtype[probnumber] != SCIP_BENDERSSUBTYPE_CONVEXCONT )
+      benders->nconvexsubprobs++;
+   else if( subprobtype != SCIP_BENDERSSUBTYPE_CONVEXCONT
+      && benders->subprobtype[probnumber] == SCIP_BENDERSSUBTYPE_CONVEXCONT )
+      benders->nconvexsubprobs--;
+
+   benders->subprobtype[probnumber] = subprobtype;
+
+   assert(benders->nconvexsubprobs >= 0 && benders->nconvexsubprobs <= benders->nsubproblems);
+}
+
+/** returns the type of the subproblem
+ *
+ *  This type is used to determine whether the duals of the problem can be used to generate cuts
+ */
+SCIP_EXPORT
+SCIP_BENDERSSUBTYPE SCIPbendersGetSubproblemType(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   return benders->subprobtype[probnumber];
 }
 
 /** sets the flag indicating whether a subproblem is convex
@@ -5944,6 +6072,71 @@ int SCIPbendersGetNConvexSubproblems(
    assert(benders != NULL);
 
    return benders->nconvexsubprobs;
+}
+
+/** sets the flag indicating whether a subproblem contains non-linear constraints */
+void SCIPbendersSetSubproblemIsNonlinear(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             isnonlinear         /**< flag to indicate whether the subproblem contains non-linear constraints */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   if( isnonlinear && !benders->subprobisnonlinear[probnumber] )
+      benders->nnonlinearsubprobs++;
+   else if( !isnonlinear && benders->subprobisnonlinear[probnumber] )
+      benders->nnonlinearsubprobs--;
+
+   benders->subprobisnonlinear[probnumber] = isnonlinear;
+
+   assert(benders->nnonlinearsubprobs >= 0 && benders->nnonlinearsubprobs <= benders->nsubproblems);
+}
+
+/** returns whether the subproblem contains non-linear constraints. */
+SCIP_Bool SCIPbendersSubproblemIsNonlinear(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   return benders->subprobisnonlinear[probnumber];
+}
+
+/** returns the number of subproblems that contain non-linear constraints  */
+int SCIPbendersGetNNonlinearSubproblems(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->nnonlinearsubprobs;
+}
+
+/** sets the flag indicating whether the master problem contains non-linear constraints */
+SCIP_EXPORT
+void SCIPbendersSetMasterIsNonlinear(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_Bool             isnonlinear         /**< flag to indicate whether the subproblem contains non-linear constraints */
+   )
+{
+   assert(benders != NULL);
+
+   benders->masterisnonlinear = isnonlinear;
+}
+
+/** returns whether the master problem contains non-linear constraints. */
+SCIP_EXPORT
+SCIP_Bool SCIPbendersMasterIsNonlinear(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->masterisnonlinear;
 }
 
 /** returns the flag indicating that Benders' decomposition is in a cut strengthening round */
@@ -6021,8 +6214,10 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
          /* checking the convexity of the subproblem */
          SCIP_CALL( checkSubproblemConvexity(benders, set, probnumber) );
 
-         /* if the subproblem is convex, then it is initialised and put into probing mode */
-         if( SCIPbendersSubproblemIsConvex(benders, probnumber) )
+         /* if the subproblem has convex constraints and continuous variables, then it is initialised and put into
+          * probing mode
+          */
+         if( SCIPbendersGetSubproblemType(benders, probnumber) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
          {
             SCIP_CALL( initialiseLPSubproblem(benders, set, probnumber) );
          }
@@ -6165,12 +6360,20 @@ SCIP_RETCODE SCIPbendersSetMastervarsCont(
     * changed to non-LP subproblem */
    if( benders->mastervarscont[probnumber] && !arecont )
    {
+      SCIP_BENDERSSUBTYPE subtype;
+
       if( SCIPinProbing(SCIPbendersSubproblem(benders, probnumber)) )
       {
          SCIP_CALL( SCIPendProbing(SCIPbendersSubproblem(benders, probnumber)) );
       }
 
-      SCIPbendersSetSubproblemIsConvex(benders, probnumber, FALSE);
+      subtype = SCIPbendersGetSubproblemType(benders, probnumber);
+      assert(subtype == SCIP_BENDERSSUBTYPE_CONVEXCONT || subtype == SCIP_BENDERSSUBTYPE_NONCONVEXCONT);
+
+      if( subtype == SCIP_BENDERSSUBTYPE_CONVEXCONT )
+         SCIPbendersSetSubproblemType(benders, probnumber, SCIP_BENDERSSUBTYPE_CONVEXDIS);
+      else if( subtype == SCIP_BENDERSSUBTYPE_NONCONVEXCONT )
+         SCIPbendersSetSubproblemType(benders, probnumber, SCIP_BENDERSSUBTYPE_NONCONVEXDIS);
    }
 
    benders->mastervarscont[probnumber] = arecont;
