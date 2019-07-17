@@ -3496,9 +3496,9 @@ SCIP_RETCODE SCIPbendersExec(
    }
 
    /* allocating memory for the infeasible subproblem array */
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(set->scip, &subprobsolved, nsubproblems) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(set->scip, &substatus, nsubproblems) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(set->scip, &mergecands, nsubproblems) );
+   SCIP_CALL( SCIPallocClearBufferArray(set->scip, &subprobsolved, nsubproblems) );
+   SCIP_CALL( SCIPallocClearBufferArray(set->scip, &substatus, nsubproblems) );
+   SCIP_CALL( SCIPallocClearBufferArray(set->scip, &mergecands, nsubproblems) );
    npriomergecands = 0;
    nmergecands = 0;
 
@@ -3730,9 +3730,9 @@ TERMINATE:
    SCIPclockStop(benders->bendersclock, set);
 
    /* freeing memory */
-   SCIPfreeBlockMemoryArray(set->scip, &mergecands, nsubproblems);
-   SCIPfreeBlockMemoryArray(set->scip, &substatus, nsubproblems);
-   SCIPfreeBlockMemoryArray(set->scip, &subprobsolved, nsubproblems);
+   SCIPfreeBufferArray(set->scip, &mergecands);
+   SCIPfreeBufferArray(set->scip, &substatus);
+   SCIPfreeBufferArray(set->scip, &subprobsolved);
 
    /* if there was an error in generating cuts and merging was not performed, then the solution is perturbed in an
     * attempt to generate a cut and correct the infeasibility
