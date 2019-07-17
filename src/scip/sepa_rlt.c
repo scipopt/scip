@@ -24,6 +24,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define SCIP_DEBUG
+
 #include <assert.h>
 #include <string.h>
 
@@ -63,6 +65,17 @@
  * Data structures
  */
 
+/** data object to compare constraint easier */
+struct HashData
+{
+   SCIP_CONS**           conss;              /**< pointer the the corresponding constraints */
+   SCIP_VAR**            vars;               /**< constraint variables used for hash comparison */
+   int                   nvars;              /**< number of variables */
+   int                   nconss;             /**< number of constraints */
+};
+typedef struct HashData HASHDATA;
+
+
 /** separator data */
 struct SCIP_SepaData
 {
@@ -80,6 +93,11 @@ struct SCIP_SepaData
    int                   currentnunknown;    /**< number of unknown terms in current row (not printed) */
    SCIP_Bool             iscreated;          /**< indicates whether the sepadata has been initialized yet */
    SCIP_Bool             isinitialround;     /**< indicates that this is the first round and initial rows are used */
+
+   /* implicit products */ /* TODO do I need separate fields for these? */
+   SCIP_CONSEXPR_EXPR**  implterms;          /**< bilinear terms implicitly contained in the problem */
+   SCIP_VAR**            implauxvars;        /**< auxiliary variables of implicit bilinear terms */
+   int                   implside;           /**< 0 = equality, -1 = leq (xixj <= wij), 1 = geq */
 
    /* parameters */
    SCIP_Real             maxnonzeroprop;     /**< maximum acceptable proportion of known bilinear terms to non-zeroes */
@@ -109,6 +127,61 @@ typedef struct ProjLP PROJLP;
 /*
  * Local methods
  */
+
+/** returns TRUE iff both keys are equal; two constraint arrays are equal if they have the same pointer */
+static
+SCIP_DECL_HASHKEYEQ(hashdataKeyEqConss)
+{
+   HASHDATA* hashdata1;
+   HASHDATA* hashdata2;
+   int v;
+
+   hashdata1 = (HASHDATA*)key1;
+   hashdata2 = (HASHDATA*)key2;
+
+   /* check data structure */
+   assert(hashdata1->nvars == 3);
+   assert(hashdata2->nvars == 3);
+   assert(hashdata1->conss != NULL || hashdata2->conss != NULL);
+
+   for( v = 2; v >= 0; --v )
+   {
+      /* tests if variables are equal */
+      if( hashdata1->vars[v] != hashdata2->vars[v] )
+         return FALSE;
+
+      assert(SCIPvarCompare(hashdata1->vars[v], hashdata2->vars[v]) == 0);
+   }
+
+   /* a hashdata object is only equal if it has the same constraint array pointer */
+   if( hashdata1->conss == NULL || hashdata2->conss == NULL || hashdata1->conss == hashdata2->conss )
+      return TRUE;
+   else
+      return FALSE;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(hashdataKeyValConss)
+{  /*lint --e{715}*/
+   HASHDATA* hashdata;
+   int minidx, mididx, maxidx;
+
+   hashdata = (HASHDATA*)key;
+   assert(hashdata != NULL);
+   assert(hashdata->vars != NULL);
+   assert(hashdata->nvars == 3);
+
+   minidx = SCIPvarGetIndex(hashdata->vars[0]);
+   mididx = SCIPvarGetIndex(hashdata->vars[1]);
+   maxidx = SCIPvarGetIndex(hashdata->vars[2]);
+
+   /* vars should already be sorted by index */
+   assert(minidx < mididx && mididx < maxidx);
+
+   return SCIPhashTwo(SCIPcombineTwoInt(minidx, mididx), maxidx);
+}
+
 
 /* helper method to free the separation data */
 static
@@ -155,6 +228,104 @@ SCIP_RETCODE freeSepaData(
    SCIPhashmapFree(&sepadata->bilinvarsmap);
 
    sepadata->iscreated = FALSE;
+
+   return SCIP_OKAY;
+}
+
+
+/* detect bilinear products encoded in linear constraints */
+static
+SCIP_RETCODE detectHiddenProducts(
+   SCIP*          scip,       /**< SCIP data structure */
+   SCIP_SEPADATA* sepadata    /**< separation data */
+   )
+{
+   int v, c, i;
+   SCIP_VAR** cons_vars;
+   SCIP_CONS** conss_linear;
+   SCIP_CONSHDLR* linear_hdlr;
+   SCIP_HASHTABLE* hashdatatable;
+   HASHDATA hashdata;
+   HASHDATA* foundhashdata;
+
+   linear_hdlr = SCIPfindConshdlr(scip, "linear");
+   assert(linear_hdlr != NULL);
+
+   conss_linear = SCIPconshdlrGetConss(linear_hdlr);
+
+   /* create a table of implied relations */
+   SCIP_CALL( SCIPhashtableCreate(&hashdatatable, SCIPblkmem(scip), SCIPconshdlrGetNConss(linear_hdlr),
+                                  SCIPhashGetKeyStandard, hashdataKeyEqConss, hashdataKeyValConss, (void*) scip) );
+
+   /* look for implied relations */
+   for( c = 0; c < SCIPconshdlrGetNConss(linear_hdlr); ++c ) /* go through linear constraints */
+   {
+      assert(conss_linear[c] != NULL);
+
+      /* look for constraints with 3 variables */
+      if( SCIPgetNVarsLinear(scip, conss_linear[c]) != 3 )
+         continue;
+
+      cons_vars = SCIPgetVarsLinear(scip, conss_linear[c]);
+
+      /* an implied relation contains at least one binary variable */
+      if( SCIPvarGetType(cons_vars[0]) != SCIP_VARTYPE_BINARY && SCIPvarGetType(cons_vars[1]) != SCIP_VARTYPE_BINARY
+               && SCIPvarGetType(cons_vars[2]) != SCIP_VARTYPE_BINARY)
+         continue;
+
+      /* fill in hashdata */
+      hashdata.nvars = 3;
+      hashdata.conss = NULL;
+      SCIP_CALL( SCIPallocBufferArray(scip, &(hashdata.vars), 3) );
+      for( v = 0; v < 3; ++v )
+         hashdata.vars[v] = cons_vars[v];
+
+      /* the vars must be sorted for the search to work */
+      SCIPsortPtr((void**)hashdata.vars, SCIPvarComp, 3);
+
+      /* get the element corresponsing to the three variables */
+      foundhashdata = (HASHDATA*)SCIPhashtableRetrieve(hashdatatable, &hashdata);
+
+      if( foundhashdata != NULL )
+      {
+         /* if element exists, update it */
+         foundhashdata->conss[foundhashdata->nconss] = conss_linear[c];
+         ++foundhashdata->nconss;
+         SCIPfreeBufferArray(scip, &(hashdata.vars));
+      }
+      else
+      {
+         /* create an element for the combination of three variables */
+         SCIP_CALL( SCIPallocBuffer(scip, &foundhashdata) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &(foundhashdata->conss), SCIPconshdlrGetNConss(linear_hdlr)) );
+
+         foundhashdata->conss[0] = conss_linear[c];
+         foundhashdata->nvars = 3;
+         foundhashdata->nconss = 1;
+         foundhashdata->vars = hashdata.vars;
+
+         SCIPhashtableInsert(hashdatatable, (void*)foundhashdata);
+      }
+   }
+
+   SCIPdebugMsg(scip, "Implied relations table:\n");
+   for( i = 0; i < SCIPhashtableGetNEntries(hashdatatable); ++i )
+   {
+      foundhashdata = (HASHDATA*)SCIPhashtableGetEntry(hashdatatable, i);
+      if( foundhashdata == NULL )
+         continue;
+
+      SCIPdebugMsg(scip, "(%s, %s, %s):\n", SCIPvarGetName(foundhashdata->vars[0]),
+         SCIPvarGetName(foundhashdata->vars[1]), SCIPvarGetName(foundhashdata->vars[2]));
+      for( c = 0; c < foundhashdata->nconss; ++c)
+         SCIPdebugMsg(scip, "%s; \n", SCIPconsGetName(foundhashdata->conss[c]));
+
+      SCIPfreeBufferArray(scip, &(foundhashdata->vars));
+      SCIPfreeBufferArray(scip, &(foundhashdata->conss));
+      SCIPfreeBuffer(scip, &foundhashdata);
+   }
+
+   SCIPhashtableFree(&hashdatatable);
 
    return SCIP_OKAY;
 }
@@ -210,7 +381,9 @@ SCIP_RETCODE createSepaData(
    /* find maximum variable index */
    for( i = 0; i < SCIPgetNVars(scip); ++i )
       maxidx = MAX(maxidx, SCIPvarGetIndex(vars[i]));  /*lint !e666*/
-   sepadata->maxvarindex = maxidx;
+   sepadata->maxvarindex = maxidx; /* TODO don't we need +1 here? */
+
+   detectHiddenProducts(scip, sepadata);
 
    for( i = 0; i < nconss; ++i )
    {
@@ -516,6 +689,7 @@ SCIP_RETCODE getInitialRows(
    knpsckhdlr = SCIPfindConshdlr(scip, "knapsack");
    varbndhdlr = SCIPfindConshdlr(scip, "varbound");
    setppchdlr = SCIPfindConshdlr(scip, "setppc");
+   /* TODO any other handlers? */
 
    conss = SCIPgetConss(scip);
    nconss = SCIPgetNConss(scip);
@@ -627,7 +801,7 @@ SCIP_RETCODE addRltTerm(
          return SCIP_OKAY;
       }
 
-      SCIPdebugMsg(scip, "auxvar for %s and %s not found, will use McCormick estimators\n", SCIPvarGetName(colvar), SCIPvarGetName(var));
+      SCIPdebugMsg(scip, "auxvar for %s and %s not found, will linearise the product\n", SCIPvarGetName(colvar), SCIPvarGetName(var));
 
       /* if both variables are binary. check if they are contained together in some clique */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY &&  SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY )
@@ -683,6 +857,7 @@ SCIP_RETCODE addRltTerm(
 
       if( !found_clique )
       {
+         SCIPdebugMsg(scip, "clique for %s and %s not found or at least one of them is not binary, will use McCormick\n", SCIPvarGetName(colvar), SCIPvarGetName(var));
          SCIPaddBilinMcCormick(scip, coefauxvar, lbvar, ubvar, refpointvar, lbcolvar,
                                 ubcolvar, refpointcolvar, uselhs, coefvar, &coefcolvar, finalside, success);
          if( !*success )
@@ -1187,6 +1362,7 @@ SCIP_RETCODE markRowsXj(
    if( vlb == val || vub == val )
    {
       /* we don't want to multiply by variables that are at bound */
+      SCIPdebugMsg(scip, "Rejected multiplier %s in [%f,%f] because it is at bound (current value %f)\n", SCIPvarGetName(xj), vlb, vub, val);
       return SCIP_OKAY;
    }
 
@@ -1211,13 +1387,13 @@ SCIP_RETCODE markRowsXj(
       img = SCIPhashmapGetImageInt(sepadata->bilinvarsmap, (void*)(size_t) idx);
       SCIPevalConsExprExpr(scip, conshdlr, sepadata->bilinterms[img], sol, 0);
       prod_viol = SCIPgetSolVal(scip, sol, sepadata->bilinauxvars[img]) - SCIPgetConsExprExprValue(sepadata->bilinterms[img]);
-      SCIPdebugMsg(scip, "\naux val = %f, prod val = %f, prod viol = %f", SCIPgetSolVal(scip, sol, sepadata->bilinauxvars[img]),
+      SCIPdebugMsg(scip, "aux val = %f, prod val = %f, prod viol = %f\n", SCIPgetSolVal(scip, sol, sepadata->bilinauxvars[img]),
          SCIPgetConsExprExprValue(sepadata->bilinterms[img]), prod_viol);
 
       /* we are interested only in violated product relations */
       if( SCIPisFeasEQ(scip, prod_viol, 0.0) )
       {
-         SCIPdebugMsg(scip, "\nthe product for vars %s, %s is not violated", SCIPvarGetName(xj), SCIPvarGetName(xi));
+         SCIPdebugMsg(scip, "the product for vars %s, %s is not violated\n", SCIPvarGetName(xj), SCIPvarGetName(xi));
          continue;
       }
 
@@ -1235,7 +1411,7 @@ SCIP_RETCODE markRowsXj(
          if( a == 0.0 )
             continue;
 
-         SCIPdebugMsg(scip, NULL, "Marking row %d (name = %s)\n", ridx, SCIProwGetName(colrows[r]));
+         SCIPdebugMsg(scip, "Marking row %d\n", ridx);
          addRowMark(ridx, a*prod_viol, row_idcs, row_marks, nmarked);
       }
    }
