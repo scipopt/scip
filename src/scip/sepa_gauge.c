@@ -669,7 +669,7 @@ SCIP_RETCODE generateCut(
             /* check gradient entries: function might not be differentiable */
             if( !SCIPisFinite(grad[i]) || SCIPisInfinity(scip, grad[i]) || SCIPisInfinity(scip, -grad[i]) )
             {
-               *success = TRUE;
+               *success = FALSE;
                break;
             }
 
