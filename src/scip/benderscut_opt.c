@@ -102,6 +102,65 @@ SCIP_RETCODE polishSolution(
    return SCIP_OKAY;
 }
 
+/** when solving NLP subproblems, numerical issues are addressed by tightening the feasibility tolerance */
+static
+SCIP_RETCODE resolveNLPWithTighterFeastol(
+   SCIP*                 subproblem,         /**< the SCIP data structure */
+   SCIP_Real             multiplier,         /**< the amount by which to decrease the tolerance */
+   SCIP_Bool*            success             /**< TRUE is the resolving of the LP was successful */
+   )
+{
+   SCIP_NLPSOLSTAT nlpsolstat;
+   SCIP_NLPTERMSTAT nlptermstat;
+#ifdef SCIP_MOREDEBUG
+   SCIP_SOL* nlpsol;
+#endif
+   SCIP_Real feastol;
+   SCIP_Real objtol;
+
+   assert(subproblem != NULL);
+   assert(SCIPinProbing(subproblem));
+
+   (*success) = FALSE;
+
+#ifdef SCIP_MOREDEBUG
+   SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_VERBLEVEL, 1) );
+#endif
+
+   SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_ITLIM, INT_MAX) );
+
+   /* getting the feasibility tolerance currently used for the NLP */
+   SCIP_CALL( SCIPgetNLPRealPar(subproblem, SCIP_NLPPAR_FEASTOL, &feastol) );
+   SCIP_CALL( SCIPgetNLPRealPar(subproblem, SCIP_NLPPAR_RELOBJTOL, &objtol) );
+
+   /* setting the feasibility tolerance to 0.01x the current tolerance */
+   SCIP_CALL( SCIPsetNLPRealPar(subproblem, SCIP_NLPPAR_FEASTOL, feastol*multiplier) );
+   SCIP_CALL( SCIPsetNLPRealPar(subproblem, SCIP_NLPPAR_RELOBJTOL, objtol*multiplier) );
+
+   SCIP_CALL( SCIPsolveNLP(subproblem) );
+
+   nlpsolstat = SCIPgetNLPSolstat(subproblem);
+   nlptermstat = SCIPgetNLPTermstat(subproblem);
+   SCIPdebugMsg(subproblem, "NLP solstat %d termstat %d\n", nlpsolstat, nlptermstat);
+
+   if( nlpsolstat == SCIP_NLPSOLSTAT_LOCOPT || nlpsolstat == SCIP_NLPSOLSTAT_GLOBOPT
+      || nlpsolstat == SCIP_NLPSOLSTAT_FEASIBLE )
+   {
+#ifdef SCIP_MOREDEBUG
+      SCIP_CALL( SCIPcreateNLPSol(subproblem, &nlpsol, NULL) );
+      SCIP_CALL( SCIPprintSol(subproblem, nlpsol, NULL, FALSE) );
+      SCIP_CALL( SCIPfreeSol(subproblem, &nlpsol) );
+#endif
+
+      (*success) = TRUE;
+   }
+
+   /* resetting the feasibility tolerance to 0.01x the current tolerance */
+   SCIP_CALL( SCIPsetNLPRealPar(subproblem, SCIP_NLPPAR_FEASTOL, feastol) );
+
+   return SCIP_OKAY;
+}
+
 /** adds a variable and value to the constraint/row arrays */
 static
 SCIP_RETCODE addVariableToArray(
@@ -570,21 +629,46 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
       /* if it was not possible to generate a cut, this could be due to numerical issues. So the solution to the LP is
        * resolved and the generation of the cut is reattempted. For NLPs, we do not have such a polishing yet.
        */
-      if( (*result) == SCIP_DIDNOTFIND && !nlprelaxation )
+      if( (*result) == SCIP_DIDNOTFIND )
       {
          SCIP_Bool success;
 
-         SCIPdebugMsg(scip, "Numerical trouble generating optimality cut for subproblem %d. Attempting to "
-            "polish the LP solution to find an alternative dual extreme point.\n", probnumber);
+         SCIPdebugMsg(scip, "Numerical trouble generating optimality cut for subproblem %d.", probnumber);
 
-         SCIP_CALL( polishSolution(subproblem, &success) );
-
-         /* only attempt to generate a cut if the solution polishing was successful */
-         if( success )
+         if( !nlprelaxation )
          {
-            SCIP_CALL( SCIPgenerateAndApplyBendersOptCut(scip, subproblem, benders, benderscut, sol, probnumber, cutname,
-                  SCIPbendersGetSubproblemObjval(benders, probnumber), NULL, NULL, NULL, NULL, NULL, NULL, type, addcut,
-                  FALSE, result) );
+            SCIPdebugMsg(scip, "Attempting to polish the LP solution to find an alternative dual extreme point.\n");
+
+            SCIP_CALL( polishSolution(subproblem, &success) );
+
+            /* only attempt to generate a cut if the solution polishing was successful */
+            if( success )
+            {
+               SCIP_CALL( SCIPgenerateAndApplyBendersOptCut(scip, subproblem, benders, benderscut, sol, probnumber, cutname,
+                     SCIPbendersGetSubproblemObjval(benders, probnumber), NULL, NULL, NULL, NULL, NULL, NULL, type, addcut,
+                     FALSE, result) );
+            }
+         }
+         else
+         {
+            SCIP_Real multiplier = 0.01;
+
+            SCIPdebugMsg(scip, "Attempting to resolve the NLP with a tighter feasibility tolerance to find an "
+               "alternative dual extreme point.\n");
+
+            while( multiplier > 1e-06 && (*result) == SCIP_DIDNOTFIND )
+            {
+               SCIP_CALL( resolveNLPWithTighterFeastol(subproblem, multiplier, &success) );
+
+               if( success )
+               {
+                  SCIP_CALL( SCIPgenerateAndApplyBendersOptCut(scip, subproblem, benders, benderscut, sol, probnumber, cutname,
+                        SCIPbendersGetSubproblemObjval(benders, probnumber), NULL, NULL, NULL, NULL, NULL, NULL, type, addcut,
+                        FALSE, result) );
+               }
+
+               multiplier *= 0.1;
+            }
          }
       }
    }
@@ -780,7 +864,7 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
           */
          if( !SCIPbendersInStrengthenRound(benders) )
          {
-            SCIPABORT();
+            //SCIPABORT();
          }
 #endif
       }
@@ -834,6 +918,11 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
 
          /* storing the data that is used to create the cut */
          SCIP_CALL( SCIPstoreBendersCut(masterprob, benders, vars, vals, lhs, rhs, nvars) );
+      }
+      else
+      {
+         (*result) = SCIP_DIDNOTFIND;
+         SCIPdebugMsg(masterprob, "Error in generating Benders' optimality cut for problem %d.\n", probnumber);
       }
 
       /* releasing the row or constraint */
