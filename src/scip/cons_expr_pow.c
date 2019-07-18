@@ -966,12 +966,6 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
    assert(base != NULL);
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
-   /* when exponent is integer, round exponent so that is actually an integer
-    * FIXME: why would we change the exponent??
-    * TODO: should this go in the createConsExprExprPow?
-    */
-   if( SCIPisIntegral(scip, exponent) )
-      exponent = SCIPround(scip, exponent);
 
    SCIPdebugPrintf("[simplifyPow] simplifying power with expo %g\n", exponent);
 
@@ -1067,7 +1061,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
       }
    }
 
-   if( SCIPisIntegral(scip, exponent) )
+   if( EPSISINT(exponent, 0.0) )
    {
       SCIP_CONSEXPR_EXPR* aux;
       SCIP_CONSEXPR_EXPR* simplifiedaux;
@@ -1144,7 +1138,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
        * + sum const alpha_i expr_i
        * TODO: put some limits on the number of children of the sum being expanded
        */
-      if( SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrSum(conshdlr) && exponent == 2 )
+      if( SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrSum(conshdlr) && exponent == 2.0 )
       {
          int i;
          int nchildren;
