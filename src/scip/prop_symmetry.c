@@ -2022,14 +2022,17 @@ SCIP_RETCODE determineSymmetry(
    }
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
-   /* output warning if no binary variables are affected by some permutations (and we use polyhedral symmetry techniques) */
-   if ( propdata->usesymmetry == SYM_HANDLETYPE_SYMBREAK && ! propdata->binvaraffected )
+   /* exit if no binary variables are affected by symmetry */
+   if ( ! propdata->binvaraffected )
    {
-      assert( ! propdata->ofenabled );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
 
-      /* free data and avoid computation of components below in this case */
+      /* free data and exit */
       SCIP_CALL( freeSymmetryData(scip, propdata) );
+
+      /* disable OF and symmetry handling constraints */
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
 
       return SCIP_OKAY;
    }
@@ -2500,6 +2503,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    /* possibly compute symmetry */
    SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+   assert( propdata->binvaraffected || ! propdata->symconsenabled );
 
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
@@ -2515,7 +2519,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( propdata->nperms <= 0 || ! propdata->binvaraffected )
    {
       SCIPdebugMsg(scip, "Symmetry propagator: no symmetry on binary variables has been found, turning propagator off.\n");
-      propdata->symconsenabled = FALSE;
       return SCIP_OKAY;
    }
    assert( propdata->nperms > 0 );
@@ -2843,16 +2846,11 @@ SCIP_RETCODE propagateOrbitalFixing(
 
    /* possibly compute symmetry */
    SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
-
-   if ( propdata->nmovedpermvars == 0 )
-   {
-      propdata->ofenabled = FALSE;
-      return SCIP_OKAY;
-   }
+   assert( propdata->binvaraffected || ! propdata->ofenabled );
 
    /* return if there is no symmetry available */
    nperms = propdata->nperms;
-   if ( nperms <= 0 )
+   if ( nperms <= 0 || ! propdata->ofenabled )
       return SCIP_OKAY;
 
    assert( propdata->permvars != NULL );
@@ -3240,9 +3238,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    {
       /* otherwise compute symmetry if timing requests it */
       SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
-
-      if ( propdata->nmovedpermvars == 0 )
-         propdata->ofenabled = FALSE;
+      assert( propdata->binvaraffected || ! propdata->ofenabled );
    }
 
    return SCIP_OKAY;
