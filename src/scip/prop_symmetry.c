@@ -2068,9 +2068,13 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
 #endif
 
-   SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
-         propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
-         &propdata->vartocomponent, &propdata->componentblocked, &propdata->ncomponents) );
+   /* we only need the components for orbital fixing and orbitope detection */
+   if ( propdata->ofenabled || ( propdata->symconsenabled && propdata->detectorbitopes ) )
+   {
+      SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
+            propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
+            &propdata->vartocomponent, &propdata->componentblocked, &propdata->ncomponents) );
+   }
 
 #ifdef SCIP_OUTPUT_COMPONENT
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation finished\n", SCIPgetSolvingTime(scip));
