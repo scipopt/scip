@@ -3397,6 +3397,10 @@ SCIP_RETCODE SCIPbendersExec(
 
    SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving. type %d checkint %d\n", type, checkint);
 
+#ifdef SCIP_MOREDEBUG
+   SCIP_CALL( SCIPprintSol(set->scip, sol, NULL, FALSE) );
+#endif
+
    /* start timing */
    SCIPclockStart(benders->bendersclock, set);
 
