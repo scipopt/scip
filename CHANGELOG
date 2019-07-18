@@ -65,6 +65,9 @@ Features
 - The OSiL reader now supports nonlinear expressions of type "signpower".
 - Expressions of form abs(x)^p * x in a nonlinear constraint are now sometimes recognized and handled by abspower constraints.
 
+- If polyhedral symmetry handling methods are used (cons_orbisack, cons_orbitope, cons_symresack), it is now possible to
+  recompute symmetries if a restart occured.
+
 - handle linear binary variables as if squared in simple upgrade from quadratic to second-order cone constraints
 
 Performance improvements
@@ -325,21 +328,57 @@ Known bugs
 Features
 --------
 
+Performance improvements
+------------------------
+
 Examples and applications
 -------------------------
 
 Interface changes
 -----------------
 
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
 Build system
 ------------
 
+### Cmake
+
+### Makefile
+
 Fixed bugs
 ----------
+
 - fixed issue in SCIPtightenVarLb and SCIPtightenVarUb that occurs for small bound changes
 
 Miscellaneous
 -------------
+
+Known bugs
+----------
 
 
 @section RN602 SCIP 6.0.2

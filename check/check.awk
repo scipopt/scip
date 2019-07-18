@@ -920,6 +920,8 @@ BEGIN {
          gap = -1.0;
       else if( pb*db < 0.0 )
          gap = -1.0;
+      else if( (pb >= +infty && db >= +infty) || (pb <= -infty && db <= -infty) )
+         gap = 0.0;
       else if( abs(db) >= +infty )
          gap = -1.0;
       else if( abs(pb) >= +infty )
