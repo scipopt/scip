@@ -1850,10 +1850,14 @@ SCIP_RETCODE determineSymmetry(
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
+   assert( propdata->ofenabled || propdata->symconsenabled );
 
    /* skip symmetry computation if no graph automorphism code was linked */
    if ( ! SYMcanComputeSymmetry() )
    {
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+
       nconss = SCIPgetNActiveConss(scip);
       nhandleconss = getNSymhandableConss(scip);
 
@@ -1902,6 +1906,9 @@ SCIP_RETCODE determineSymmetry(
          (symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
          (symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
 
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+
       return SCIP_OKAY;
    }
 
@@ -1930,6 +1937,10 @@ SCIP_RETCODE determineSymmetry(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
          "   (%.1fs) symmetry computation skipped: there exist constraints that cannot be handled by symmetry methods.\n",
          SCIPgetSolvingTime(scip));
+
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+
       return SCIP_OKAY;
    }
 
@@ -1977,6 +1988,10 @@ SCIP_RETCODE determineSymmetry(
    {
       assert( checkSymmetryDataFree(scip, propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) could not compute symmetry\n", SCIPgetSolvingTime(scip));
+
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+
       return SCIP_OKAY;
    }
 
@@ -1985,6 +2000,10 @@ SCIP_RETCODE determineSymmetry(
    {
       assert( checkSymmetryDataFree(scip, propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
+
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+
       return SCIP_OKAY;
    }
 
