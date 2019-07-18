@@ -129,12 +129,12 @@ if [ "${GITLOG}" == "" ]; then
   exit 1
 fi
 
-# ensure that the current branch is not ahead of the latest performance run
+# ensure that the current branch has not branched off ahead of the latest performance run
 GITLOG=$(git log origin/${ORIGBRANCH} --pretty=format:'%H' | grep ${COMPAREHASH} -B1 | head -n 1)
 if [ "${GITLOG}" != "${COMPAREHASH}" ]; then
   GITCHECK=$(git log --pretty=format:'%H' | grep ${GITLOG})
   if [ "${GITCHECK}" != "" ]; then
-    export FAILREASON="Your branch is ahead of the latest performance run of ${ORIGBRANCH}. Abort!"
+    export FAILREASON="Your branch has not branched off from the same commit on ${ORIGBRANCH} where the latest performance run started (look for branch with name performance-*). Abort!"
     echo ${FAILREASON}
     exit 1
   fi
