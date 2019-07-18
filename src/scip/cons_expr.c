@@ -174,6 +174,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprsumhdlr;     /**< summation expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprpowhdlr;     /**< power expression handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprsignpowhdlr; /**< signed power expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprexphdlr;     /**< exponential expression handler */
 
    /* nonlinear handler */
@@ -700,6 +701,7 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    conshdlrdata->exprsumhdlr = SCIPfindConsExprExprHdlr(conshdlr, "sum");
    conshdlrdata->exprprodhdlr = SCIPfindConsExprExprHdlr(conshdlr, "prod");
    conshdlrdata->exprpowhdlr = SCIPfindConsExprExprHdlr(conshdlr, "pow");
+   conshdlrdata->exprsignpowhdlr = SCIPfindConsExprExprHdlr(conshdlr, "signpower");
    conshdlrdata->exprexphdlr = SCIPfindConsExprExprHdlr(conshdlr, "exp");
 
    /* copy nonlinear handlers */
@@ -8918,6 +8920,16 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrPower(
    return SCIPconshdlrGetData(conshdlr)->exprpowhdlr;
 }
 
+/** returns expression handler for signed power expressions */
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrSignPower(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPconshdlrGetData(conshdlr)->exprsignpowhdlr;
+}
+
 /** returns expression handler for exponential expressions */
 SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrExponential(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
@@ -11643,7 +11655,6 @@ int SCIPcompareConsExprExprs(
    if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "prod") == 0 )
       return -SCIPcompareConsExprExprs(expr2, expr1);
 
-   /* TODO handle signpower */
    /* enforces OR9 */
    if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "pow") == 0 )
    {

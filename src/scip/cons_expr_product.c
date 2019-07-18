@@ -35,6 +35,7 @@
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_exp.h"
 #include "scip/cons_expr_entropy.h"
+#include "scip/cons_expr_abs.h"
 
 #include "scip/pub_misc.h"
 
@@ -406,6 +407,8 @@ SCIP_RETCODE mergeProductExprlist(
       SCIP_CONSEXPR_EXPR* base2;
       SCIP_Real expo1;
       SCIP_Real expo2;
+      SCIP_Bool issignpower1;
+      SCIP_Bool issignpower2;
 
       /* assert invariants */
       assert(SCIPgetConsExprExprHdlr(tomergenode->expr) != SCIPgetConsExprExprHdlrValue(conshdlr));
@@ -481,31 +484,57 @@ SCIP_RETCODE mergeProductExprlist(
          continue;
       }
 
-      /* TODO handle signpower */
       /* they were not exponentials, so collect bases and exponents */
       if( SCIPgetConsExprExprHdlr(current->expr) == SCIPgetConsExprExprHdlrPower(conshdlr) )
       {
          base1 = SCIPgetConsExprExprChildren(current->expr)[0];
          expo1 = SCIPgetConsExprExprPowExponent(current->expr);
+         issignpower1 = FALSE;
+      }
+      else if( SCIPgetConsExprExprHdlr(current->expr) == SCIPgetConsExprExprHdlrSignPower(conshdlr) )
+      {
+         base1 = SCIPgetConsExprExprChildren(current->expr)[0];
+         expo1 = SCIPgetConsExprExprPowExponent(current->expr);
+         issignpower1 = TRUE;
       }
       else
       {
          base1 = current->expr;
          expo1 = 1.0;
+         issignpower1 = FALSE;
       }
       if( SCIPgetConsExprExprHdlr(tomergenode->expr) == SCIPgetConsExprExprHdlrPower(conshdlr) )
       {
          base2 = SCIPgetConsExprExprChildren(tomergenode->expr)[0];
          expo2 = SCIPgetConsExprExprPowExponent(tomergenode->expr);
+         issignpower2 = FALSE;
+      }
+      else if( SCIPgetConsExprExprHdlr(tomergenode->expr) == SCIPgetConsExprExprHdlrSignPower(conshdlr) )
+      {
+         base2 = SCIPgetConsExprExprChildren(tomergenode->expr)[0];
+         expo2 = SCIPgetConsExprExprPowExponent(tomergenode->expr);
+         issignpower2 = TRUE;
       }
       else
       {
          base2 = tomergenode->expr;
          expo2 = 1.0;
+         issignpower2 = FALSE;
       }
 
-      /* if both bases are the same then add to unsimplifiedchildren the resulting expr of simplifiy(base^(expo1 + expo2));
+      /* if both bases are the same and both are normal power, then add to unsimplifiedchildren the resulting expr of simplifiy(base^(expo1 + expo2));
        * the reason is that simplifiy(base^(expo1 + expo2)) might be a product and so cannot go to finalchildren;
+       * after multiplying, current has to be removed from finalchildren
+       *
+       * if both bases are the same and exactly one of them is signpower, then add to unsimplifiedchildren the resulting expr of simplifiy(signpower(base, expo1 + expo2));
+       * the reason is that simplifiy(signpower(base, expo1 + expo2)) might be a normal power or a product and should be considered for a more simplification
+       * after multiplying, current has to be removed from finalchildren
+       *
+       * if both bases are the same and both are signpower, then we have |base|^(expo1+expo2)
+       * if expo1 or expo2 is fractional, then we will (can?) assume base >= 0, so we have base^(expo1+expo2)
+       * if expo1+expo2 is even integer, then |base|^(expo1+expo2) = base^(expo1+expo2)
+       * otherwise, we create |base|^(expo1+expo2)
+       * add to unsimplifiedchildren the resulting expr, the reason is that it should be considered for more simplification
        * after multiplying, current has to be removed from finalchildren
        */
       if( SCIPcompareConsExprExprs(base1, base2) == 0 )
@@ -515,8 +544,27 @@ SCIP_RETCODE mergeProductExprlist(
 
          *changed = TRUE;
 
-         SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &power, base1, expo1 + expo2) );
-         SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, conshdlr, power, &simplifiedpower) ); /* calls simplifyPow */
+         if( issignpower1 ^ issignpower2 )
+         {
+            /* exactly one is signpower: sign(x) x^expo1 x^expo2 = sign(x) x^(expo1+expo2) */
+            SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, conshdlr, &power, base1, expo1 + expo2) );
+         }
+         else if( issignpower1 && issignpower2 && EPSISINT(expo1, 0.0) && EPSISINT(expo2, 0.0) && (int)(expo1+expo2)%2 == 1 )  /*lint !e835*/
+         {
+            /* both are signpower, abs must stay: sign(x)^2 |x|^expo1 |x|^expo2 = |x|^(expo1+expo2) */
+            SCIP_CONSEXPR_EXPR* absbase;
+
+            SCIP_CALL( SCIPcreateConsExprExprAbs(scip, conshdlr, &absbase, base1) );
+            SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &power, absbase, expo1 + expo2) );
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &absbase) );
+         }
+         else
+         {
+            assert(!issignpower1);
+            assert(!issignpower2);
+            SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &power, base1, expo1 + expo2) );
+         }
+         SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, conshdlr, power, &simplifiedpower) ); /* calls simplifyPow or simplifySignpower */
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &power) );
 
          /* replace tomergenode's expression with simplifiedpower */

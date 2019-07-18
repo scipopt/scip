@@ -239,6 +239,12 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrPower(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
    );
 
+/** returns expression handler for signed power expressions */
+SCIP_EXPORT
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrSignPower(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   );
+
 /** returns expression handler for exponential expressions */
 SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrExponential(
