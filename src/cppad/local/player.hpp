@@ -227,10 +227,12 @@ public:
 	Check that InvOp operators start with second operator and are contiguous,
 	and there are n_ind of them.
 	*/
-# ifdef NDEBUG
+/* SV debug-code generates warning: take it out for now
+ * see #2716 and https://github.com/coin-or/CppAD/issues/45 */
+/* # ifdef NDEBUG */
 	void check_inv_op(size_t n_ind)
 	{	return; }
-# else
+/*# else
 	void check_inv_op(size_t n_ind)
 	{	size_t num_op = op_vec_.size();
 		CPPAD_ASSERT_UNKNOWN( op_vec_[0] = BeginOp );
@@ -243,7 +245,7 @@ public:
 		return;
 	}
 
-# endif
+# endif */
 	// ----------------------------------------------------------------------
 	/*!
 	Check arguments that are variables, to make sure the have value less

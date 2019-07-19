@@ -370,6 +370,7 @@ Fixed bugs
 ----------
 
 - fixed issue in SCIPtightenVarLb and SCIPtightenVarUb that occurs for small bound changes
+- fixed rejecting minimal boundchange that changed sign of variable, even though SCIPisLb/UbBetter approved it
 
 Miscellaneous
 -------------
