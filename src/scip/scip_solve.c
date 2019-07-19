@@ -2100,8 +2100,11 @@ SCIP_RETCODE displayRelevantStats(
    {
       SCIP_Bool objlimitreached = FALSE;
 
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0
-         && !SCIPisInfinity(scip, SCIPgetPrimalbound(scip)) )
+      /* We output that the objective limit has been reached if the problem has been solved, no solution respecting the
+       * objective limit has been found (nlimsolsfound == 0) and the primal bound is finite. Note that it still might be
+       * that the original problem is infeasible, even without the objective limit, i.e., we cannot be sure that we
+       * actually reached the objective limit. */
+      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0 && ! SCIPisInfinity(scip, SCIPgetPrimalbound(scip)) )
          objlimitreached = TRUE;
 
       SCIPmessagePrintInfo(scip->messagehdlr, "\n");
@@ -2130,8 +2133,15 @@ SCIP_RETCODE displayRelevantStats(
       {
          if( objlimitreached )
          {
-            SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (%" SCIP_LONGINT_FORMAT " solutions)\n",
-               SCIPinfinity(scip), scip->primal->nsolsfound);
+            SCIPmessagePrintInfo(scip->messagehdlr, "Primal Bound       : %+.14e (objective limit, %" SCIP_LONGINT_FORMAT " solutions",
+               SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
+            if( scip->primal->nsolsfound > 0 )
+            {
+               SCIPmessagePrintInfo(scip->messagehdlr, ", best solution %+.14e",
+                  SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
+
+            }
+            SCIPmessagePrintInfo(scip->messagehdlr, ")\n");
          }
          else
          {
@@ -2147,14 +2157,8 @@ SCIP_RETCODE displayRelevantStats(
       }
       if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
       {
-         if( objlimitreached )
-         {
-            SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", SCIPinfinity(scip));
-         }
-         else
-         {
-            SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
-         }
+         SCIPmessagePrintInfo(scip->messagehdlr, "Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
+
          SCIPmessagePrintInfo(scip->messagehdlr, "Gap                : ");
          if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
             SCIPmessagePrintInfo(scip->messagehdlr, "infinite\n");
