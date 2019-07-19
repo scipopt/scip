@@ -85,6 +85,7 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define TABLE_EARLIEST_STAGE    SCIP_STAGE_INIT /**< output of the statistics table is only printed from this stage onwards */
 
 #define INITIALSIZE             100
+#define SESCOEFF                0.75            /**< coefficient of single exponential smoothing of estimation */
 
 /** double exponential smoothing data structure */
 struct DoubleExpSmooth
@@ -196,6 +197,8 @@ struct TimeSeries
    DOUBLEEXPSMOOTH       des;                /**< double exponential smoothing data structure */
    char*                 name;               /**< name of this time series */
    SCIP_Real*            vals;               /**< value array of this time series */
+   SCIP_Real*            estimation;         /**< array of estimations of this time series */
+   SCIP_Real             smoothestimation;   /**< smoothened estimation value */
    SCIP_Real             targetvalue;        /**< target value of this time series */
    SCIP_Real             currentvalue;       /**< current value of time series */
    SCIP_Real             initialvalue;       /**< the initial value of time series */
@@ -990,6 +993,7 @@ void timeseriesReset(
    timeseries->nvals = 0;
    timeseries->nobs = 0L;
    timeseries->currentvalue = timeseries->initialvalue;
+   timeseries->smoothestimation = SCIP_INVALID;
 
    doubleexpsmoothReset(&timeseries->des, timeseries->initialvalue);
 }
@@ -1029,6 +1033,7 @@ SCIP_RETCODE timeseriesCreate(
    timeseriesptr->initialvalue = initialvalue;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &timeseriesptr->vals, timeseriesptr->valssize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &timeseriesptr->estimation, timeseriesptr->valssize) );
 
    timeseriesReset(timeseriesptr);
 
@@ -1050,12 +1055,106 @@ void timeseriesFree(
    BMSfreeMemoryArray(&(*timeseries)->name);
 
    SCIPfreeMemoryArray(scip, &(*timeseries)->vals);
+   SCIPfreeMemoryArray(scip, &(*timeseries)->estimation);
 
    SCIPfreeMemory(scip, timeseries);
 
    *timeseries = NULL;
 }
 
+
+/** get current value of time series */
+static
+SCIP_Real timeseriesGet(
+   TIMESERIES*           timeseries          /**< time series */
+   )
+{
+   assert(timeseries != NULL);
+
+   return timeseries->currentvalue;
+}
+
+
+/** get target value (which this time series reaches at the end of the solution process) */
+static
+SCIP_Real timeseriesGetTargetValue(
+   TIMESERIES*           timeseries          /**< time series */
+   )
+{
+   return timeseries->targetvalue;
+}
+
+/** get resolution of time series */
+static
+int timeseriesGetResolution(
+   TIMESERIES*           timeseries          /**< time series */
+   )
+{
+   return timeseries->resolution;
+}
+
+
+/** estimate tree size at which time series reaches target value */
+static
+SCIP_Real timeseriesEstimate(
+   TIMESERIES*           timeseries,         /**< time series */
+   TREEDATA*             treedata            /**< tree data for fallback estimation */
+   )
+{
+   SCIP_Real val;
+   SCIP_Real targetval;
+   SCIP_Real trend;
+
+   /* if no observations have been made yet, return infinity */
+   if( timeseries->nobs == 0L )
+      return -1.0;
+
+   val = timeseriesGet(timeseries);
+   targetval = timeseriesGetTargetValue(timeseries);
+
+   /* if the value has reached the target value already, return the number of observations */
+   if( EPSZ(val - targetval, 1e-6) )
+      return 2.0 * timeseries->nobs - 1;
+
+
+   trend = doubleexpsmoothGetTrend(&timeseries->des);
+   /* get current value and trend. The linear trend estimation may point into the wrong direction
+    * In this case, we use the fallback mechanism that we will need twice as many nodes.
+    */
+   if( (targetval > val && trend < 1e-6) || (targetval < val && trend > -1e-6) )
+   {
+      return 2.0 * treedata->nvisited;
+   }
+
+   /* compute after how many additional steps the current trend reaches the target value; multiply by resolution */
+   return 2.0 * timeseriesGetResolution(timeseries) * (timeseries->nvals + (targetval - val) / (SCIP_Real)trend) - 1.0;
+}
+
+
+/** update time series smoothened estimation */
+static
+void timeseriesUpdateSmoothEstimation(
+   TIMESERIES*           timeseries,         /**< time series */
+   SCIP_Real             estimation          /**< estimation value */
+   )
+{
+   if( timeseries->smoothestimation == SCIP_INVALID )
+      timeseries->smoothestimation = estimation;
+   else
+   {
+      timeseries->smoothestimation *= (1 - SESCOEFF);
+      timeseries->smoothestimation += SESCOEFF * estimation;
+   }
+}
+
+/** get smooth estimation of time series */
+static
+SCIP_Real timeseriesGetSmoothEstimation(
+   TIMESERIES*           timeseries          /**< time series */
+   )
+{
+   return timeseries->smoothestimation;
+}
 
 /** resample to lower resolution */
 static
@@ -1073,7 +1172,9 @@ void timeseriesResample(
    for( i = 0; i < timeseries->nvals / 2; ++i )
    {
       timeseries->vals[i] = timeseries->vals[2 * i];
+      timeseries->estimation[i] = timeseries->estimation[2 * i];
       doubleexpsmoothUpdate(&timeseries->des, timeseries->vals[i]);
+      timeseriesUpdateSmoothEstimation(timeseries, timeseries->estimation[i]);
    }
 
    timeseries->resolution *= 2;
@@ -1111,9 +1212,16 @@ SCIP_RETCODE timeseriesUpdate(
    /* if this is a leaf that matches the time series resolution, store the value */
    if( timeseries->nobs % timeseries->resolution == 0 )
    {
+      int index;
+      SCIP_Real estimate;
+
       assert(timeseries->nvals < timeseries->valssize);
-      timeseries->vals[timeseries->nvals++] = value;
+      index = timeseries->nvals++;
+      timeseries->vals[index] = value;
       doubleexpsmoothUpdate(&timeseries->des, value);
+      estimate = timeseriesEstimate(timeseries, treedata);
+      timeseries->estimation[index] = estimate;
+      timeseriesUpdateSmoothEstimation(timeseries, estimate);
    }
 
    /* if the time series has reached its capacity, resample and increase the resolution */
@@ -1123,17 +1231,6 @@ SCIP_RETCODE timeseriesUpdate(
    return SCIP_OKAY;
 }
 
-/** get current value of time series */
-static
-SCIP_Real timeseriesGet(
-   TIMESERIES*           timeseries          /**< time series */
-   )
-{
-   assert(timeseries != NULL);
-
-   return timeseries->currentvalue;
-}
-
 /** get name of time series */
 static
 char* timeseriesGetName(
@@ -1141,60 +1238,6 @@ char* timeseriesGetName(
    )
 {
    return timeseries->name;
-}
-
-/** get target value (which this time series reaches at the end of the solution process) */
-static
-SCIP_Real timeseriesGetTargetValue(
-   TIMESERIES*           timeseries          /**< time series */
-   )
-{
-   return timeseries->targetvalue;
-}
-
-/** get resolution of time series */
-static
-int timeseriesGetResolution(
-   TIMESERIES*           timeseries          /**< time series */
-   )
-{
-   return timeseries->resolution;
-}
-
-/** estimate tree size at which time series reaches target value */
-static
-SCIP_Real timeseriesEstimate(
-   TIMESERIES*           timeseries,         /**< time series */
-   TREEDATA*             treedata            /**< tree data for fallback estimation */
-   )
-{
-   SCIP_Real val;
-   SCIP_Real targetval;
-   SCIP_Real trend;
-
-   /* if no observations have been made yet, return infinity */
-   if( timeseries->nobs == 0L )
-      return -1.0;
-
-   val = timeseriesGet(timeseries);
-   targetval = timeseriesGetTargetValue(timeseries);
-
-   /* if the value has reached the target value already, return the number of observations */
-   if( EPSZ(val - targetval, 1e-6) )
-      return 2.0 * timeseries->nobs - 1;
-
-
-   trend = doubleexpsmoothGetTrend(&timeseries->des);
-   /* get current value and trend. The linear trend estimation may point into the wrong direction
-    * In this case, we use the fallback mechanism that we will need twice as many nodes.
-    */
-   if( (targetval > val && trend < 1e-6) || (targetval < val && trend > -1e-6) )
-   {
-      return 2.0 * treedata->nvisited;
-   }
-
-   /* compute after how many additional steps the current trend reaches the target value; multiply by resolution */
-   return 2.0 * timeseriesGetResolution(timeseries) * (timeseries->nvals + (targetval - val) / (SCIP_Real)trend) - 1.0;
 }
 
 
@@ -1976,30 +2019,32 @@ char* printReport(
          );
 
    /* print estimations */
-   ptr += sprintf(ptr, "Tree Estimation    : %11s %11s %11s %11s",
+   ptr += sprintf(ptr, "Tree Estimation    : %11s %11s %11s %11s %11s",
             "estim",
             "value",
             "trend",
-            "resolution");
+            "resolution",
+            "smooth");
 
    ptr += sprintf(ptr, "\n");
 
-   ptr += sprintf(ptr, "  wbe              : %11.0f %11s %11s %11s\n",
-            estimateTreesizeBacktrackestim(eventhdlrdata->backtrackestim), "-", "-", "-");
-   ptr += sprintf(ptr, "  tree profile     : %11.0f %11s %11s %11s\n",
+   ptr += sprintf(ptr, "  wbe              : %11.0f %11s %11s %11s %11s\n",
+            estimateTreesizeBacktrackestim(eventhdlrdata->backtrackestim), "-", "-", "-", "-");
+   ptr += sprintf(ptr, "  tree profile     : %11.0f %11s %11s %11s %11s\n",
             SCIPpredictTotalSizeTreeprofile(scip),
-            "-", "-", "-");
+            "-", "-", "-", "-");
 
    /* print time series forecasts */
    for( t = 0; t < NTIMESERIES; ++t )
    {
       TIMESERIES* ts = eventhdlrdata->timeseries[t];
-      ptr += sprintf(ptr, "  %-17s: %11.0f %11.5f %11.5f %11d\n",
+      ptr += sprintf(ptr, "  %-17s: %11.0f %11.5f %11.5f %11d %11.0f\n",
             timeseriesGetName(ts),
             timeseriesEstimate(ts, eventhdlrdata->treedata),
             timeseriesGet(ts),
             doubleexpsmoothGetTrend(&ts->des),
-            timeseriesGetResolution(ts));
+            timeseriesGetResolution(ts),
+            timeseriesGetSmoothEstimation(ts));
    }
 
    if( reportnum > 0 )
@@ -2221,7 +2266,6 @@ SCIP_RETCODE includeTimeseries(
 
    /* include gap time series */
    SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[0], "gap", 1.0, 0.0, timeseriesUpdateGap) );
-
 
    /* include progress time series */
    SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[1], "progress", 1.0, 0.0, timeseriesUpdateProgress) );
