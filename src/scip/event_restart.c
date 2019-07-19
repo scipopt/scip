@@ -133,7 +133,7 @@ typedef struct TimeSeries TIMESERIES;
 
 /** data structure for convenient access of tree information */
 typedef struct TreeData TREEDATA;
-#define NTIMESERIES 4
+#define NTIMESERIES 5
 
 /** event handler data */
 struct SCIP_EventhdlrData
@@ -2130,7 +2130,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRestart)
    return SCIP_OKAY;
 }
 
-/** query callback for current value */
+/** update callback at nodes */
 static
 DECL_TIMESERIESUPDATE(timeseriesUpdateGap)
 {
@@ -2164,7 +2164,7 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateGap)
    return SCIP_OKAY;
 }
 
-/** query callback for current value */
+/** update callback at nodes */
 static
 DECL_TIMESERIESUPDATE(timeseriesUpdateProgress)
 {
@@ -2173,7 +2173,7 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateProgress)
    return SCIP_OKAY;
 }
 
-/** query callback for current value */
+/** update callback at nodes */
 static
 DECL_TIMESERIESUPDATE(timeseriesUpdateLeaffreq)
 {
@@ -2185,7 +2185,7 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateLeaffreq)
    return SCIP_OKAY;
 }
 
-/** query callback for current value */
+/** update callback at nodes */
 static
 DECL_TIMESERIESUPDATE(timeseriesUpdateSsg)
 {
@@ -2193,6 +2193,18 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateSsg)
       *value = 1.0;
    else
       *value = treedata->ssg->value;
+
+   return SCIP_OKAY;
+}
+
+/** update callback at nodes */
+static
+DECL_TIMESERIESUPDATE(timeseriesUpdateOpenNodes)
+{
+   if( treedata->nvisited == 0 )
+      *value = 0.0;
+   else
+      *value = (SCIP_Real)treedata->nopen;
 
    return SCIP_OKAY;
 }
@@ -2219,6 +2231,9 @@ SCIP_RETCODE includeTimeseries(
 
    /* include SSG time series */
    SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[3], "ssg", 0.0, 1.0, timeseriesUpdateSsg) );
+
+   /* include open nodes time series */
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[4], "open-nodes", 0.0, 0.0, timeseriesUpdateOpenNodes) );
 
    return SCIP_OKAY;
 }
