@@ -55,8 +55,8 @@ set(settings_MIP
     "indicatoralterlp"
 
     #presolving and branching
-    #"convertinttobin_mostinf"  <- disabled as sometimes very slow
-    #"setppclifting_leastinf"  <- disabled as sometimes very slow
+    "convertinttobin_mostinf"
+    "setppclifting_leastinf"
     #branching and propagation
 
     "pscost_proporbitope"
