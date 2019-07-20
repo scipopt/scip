@@ -270,20 +270,20 @@ SCIP_RETCODE collectVars(
    return SCIP_OKAY;
 }
 
-#if 0
 /** looks whether top of given expression looks like a monomial that can have a given curvature
  * e.g., sqrt(x)*sqrt(y) is convex if x,y >= 0 and x and y are convex
- * unfortunately, doesn't work for tls, because i) it's originally sqrt(x*y), and ii) it expanded into some sqrt(z*y+y)
+ * unfortunately, doesn't work for tls, because i) it's originally sqrt(x*y), and ii) it is expanded into some sqrt(z*y+y)
  * but works for cvxnonsep_nsig
  */
 static
 SCIP_RETCODE constructExprCheckMonomial(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   NLHDLR_EXPR*          nlexpr,             /**< nlhdlr-expr to check */
-   NLHDLR_EXPR***        stack,              /**< pointer to stack where to add generated leafs */
+   SCIP_CONSEXPR_EXPR*   nlexpr,             /**< nlhdlr-expr to check */
+   SCIP_CONSEXPR_EXPR*** stack,              /**< pointer to stack where to add generated leafs */
    int*                  stackpos,           /**< current top position of stack */
    int*                  stacksize,          /**< length of *stack */
+   SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from our expression copy to original expression */
    SCIP_Bool             preferextended,     /**< whether we prefer extended formulations */
    SCIP_Bool*            success             /**< whether we found something */
    )
@@ -302,15 +302,16 @@ SCIP_RETCODE constructExprCheckMonomial(
    assert(stackpos != NULL);
    assert(*stackpos >= -1);
    assert(stacksize != NULL);
+   assert(nlexpr2origexpr != NULL);
    assert(success != NULL);
 
    *success = FALSE;
 
-   expr = nlexpr->origexpr;
-   assert(expr != NULL);
-
-   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrProduct(conshdlr) )
+   if( SCIPgetConsExprExprHdlr(nlexpr) != SCIPgetConsExprExprHdlrProduct(conshdlr) )
       return SCIP_OKAY;
+
+   expr = SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlexpr);
+   assert(expr != NULL);
 
    nfactors = SCIPgetConsExprExprNChildren(expr);
    if( nfactors <= 1 )  /* boooring */
@@ -337,14 +338,14 @@ SCIP_RETCODE constructExprCheckMonomial(
       }
    }
 
-   if( !SCIPexprcurvMonomialInv(SCIPexprcurvMultiply(SCIPgetConsExprExprProductCoef(expr), nlexpr->curv), nfactors, exponents, bounds, curv) )
+   if( !SCIPexprcurvMonomialInv(SCIPexprcurvMultiply(SCIPgetConsExprExprProductCoef(expr), SCIPgetConsExprExprCurvature(nlexpr)), nfactors, exponents, bounds, curv) )
       goto TERMINATE;
 
    /* add immediate children to nlexpr
     * some entries in curv actually apply to arguments of pow's, will correct this next
     */
-   SCIP_CALL( nlhdlrExprGrowChildren(scip, nlexpr, curv) );
-   assert(nlexpr->children != NULL);
+   SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, nlexpr, curv) );
+   assert(SCIPgetConsExprExprNChildren(nlexpr) == nfactors);
 
    /* make sure there is enough space on the stack for all children (or their children) */
    if( *stackpos+1 + nfactors > *stacksize )
@@ -360,33 +361,29 @@ SCIP_RETCODE constructExprCheckMonomial(
     */
    for( i = 0; i < nfactors; ++i )
    {
-      NLHDLR_EXPR* nlchild;
-
-      child = SCIPgetConsExprExprChildren(expr)[i];
+      child = SCIPgetConsExprExprChildren(nlexpr)[i];
       assert(child != NULL);
-      assert(nlexpr->children[i] != NULL);
 
       if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrPower(conshdlr) )
       {
-         SCIP_CALL( nlhdlrExprGrowChildren(scip, nlexpr->children[i], &curv[i]) );
-         assert(nlexpr->children[i]->children != NULL);
-         nlchild = nlexpr->children[i]->children[0];
+         SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, child, &curv[i]) );
+         assert(SCIPgetConsExprExprNChildren(child) == 1);
+         child = SCIPgetConsExprExprChildren(child)[0];
       }
-      else
-         nlchild = nlexpr->children[i];
+      assert(SCIPgetConsExprExprNChildren(child) == 0);
 
       if( preferextended )
       {
-         nlchild->curv = SCIP_EXPRCURV_LINEAR;
+         SCIPsetConsExprExprCurvature(child, SCIP_EXPRCURV_LINEAR);
 #ifdef SCIP_DEBUG
          SCIPinfoMessage(scip, NULL, "Extendedform: Require linearity for ");
-         SCIPprintConsExprExpr(scip, conshdlr, nlchild->origexpr, NULL);
+         SCIPprintConsExprExpr(scip, conshdlr, child, NULL);
          SCIPinfoMessage(scip, NULL, "\n");
 #endif
       }
 
       assert(*stackpos+1 < *stacksize);
-      (*stack)[++*stackpos] = nlchild;
+      (*stack)[++*stackpos] = child;
    }
 
    *success = TRUE;
@@ -398,7 +395,6 @@ TERMINATE:
 
    return SCIP_OKAY;
 }
-#endif
 
 /** construct a subexpression (as nlhdlr-expression) of maximal size that has a given curvature
  *
@@ -475,8 +471,7 @@ SCIP_RETCODE constructExpr(
          /* TODO here should be a nice system where a number of convexity-detection rules can be tried */
          if( nlhdlrdata->cvxsignomial )
          {
-         //   SCIP_CALL( constructExprCheckMonomial(scip, conshdlr, nlexpr, &stack, &stackpos, &stacksize, nlhdlrdata->preferextended, &success) );
-            success = FALSE;
+            SCIP_CALL( constructExprCheckMonomial(scip, conshdlr, nlexpr, &stack, &stackpos, &stacksize, nlexpr2origexpr, nlhdlrdata->preferextended, &success) );
             if( success )
                continue;  /* constructExprCheckMonomial will have updated stack */
          }
