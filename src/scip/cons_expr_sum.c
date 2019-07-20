@@ -331,7 +331,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
    changed = FALSE;
 
    /* TODO: maybe have a flag to know if it is simplified ? */
-   SCIP_CALL( SCIPduplicateConsExprExpr(scip, conshdlr, expr, &duplicate) );
+   SCIP_CALL( SCIPduplicateConsExprExpr(scip, conshdlr, expr, &duplicate, TRUE) );
 
    nchildren = SCIPgetConsExprExprNChildren(duplicate);
 

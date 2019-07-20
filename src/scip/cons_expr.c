@@ -9996,10 +9996,35 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
-   SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
+   SCIP_CONSEXPR_EXPR**  copyexpr,           /**< buffer to store duplicate of expr */
+   SCIP_Bool             copychildren        /**< whether children (and all successors) should be copied, too */
    )
 {
-   SCIP_CALL( copyExpr(scip, scip, consexprhdlr, expr, copyexpr, NULL, NULL) );
+   if( copychildren )
+   {
+      SCIP_CALL( copyExpr(scip, scip, consexprhdlr, expr, copyexpr, NULL, NULL) );
+   }
+   else
+   {
+      /* copy expression data */
+      SCIP_CONSEXPR_EXPRDATA* exprdatacopy = NULL;
+      if( SCIPgetConsExprExprData(expr) != NULL )
+      {
+         if( expr->exprhdlr->copydata != NULL )
+         {
+            SCIP_CALL( expr->exprhdlr->copydata(scip, expr->exprhdlr, &exprdatacopy, scip, expr, NULL, NULL) );
+         }
+         else
+         {
+            /* currently we treat having data but no copy as a reason for not being able to copy */
+            *copyexpr = NULL;
+            return SCIP_OKAY;
+         }
+      }
+
+      /* create expression with same handler and copied data, but without children */
+      SCIP_CALL( SCIPcreateConsExprExpr(scip, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL) );
+   }
 
    return SCIP_OKAY;
 }
@@ -10903,11 +10928,11 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
    assert(var != NULL);
    assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(consexprhdlr) || expr->derivative == 0.0);
 
-   /* check if an error occurred during the last SCIPcomputeConsExprExprGradient() call */
+   /* return 0.0 for value expression */
    if( strcmp(expr->exprhdlr->name, "val") == 0 )
       return 0.0;
 
-   /* return 0.0 for value expression */
+   /* check if an error occurred during the last SCIPcomputeConsExprExprGradient() call */
    if( expr->derivative == SCIP_INVALID ) /*lint !e777*/
       return SCIP_INVALID;
 
