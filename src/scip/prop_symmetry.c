@@ -896,6 +896,9 @@ SCIP_RETCODE collectCoefficients(
    /* check lhs/rhs */
    if ( SCIPisEQ(scip, lhs, rhs) )
    {
+      SCIP_Bool poscoef = FALSE;
+      SCIP_Bool negcoef = FALSE;
+
       assert( ! SCIPisInfinity(scip, rhs) );
 
       /* equality constraint */
@@ -918,9 +921,31 @@ SCIP_RETCODE collectCoefficients(
          assert( 0 <= SCIPvarGetProbindex(vars[j]) && SCIPvarGetProbindex(vars[j]) < SCIPgetNVars(scip) );
 
          matrixdata->matvaridx[nmatcoef] = SCIPvarGetProbindex(vars[j]);
-         matrixdata->matcoef[nmatcoef++] = vals[j];
+         matrixdata->matcoef[nmatcoef] = vals[j];
+         if ( SCIPisPositive(scip, vals[j]) )
+            poscoef = TRUE;
+         else
+            negcoef = TRUE;
+         ++nmatcoef;
       }
-      nrhscoef++;
+      ++nrhscoef;
+      if ( poscoef && negcoef )
+      {
+         for (j = 0; j < nvars; ++j)
+         {
+            assert( nmatcoef < matrixdata->nmaxmatcoef );
+
+            matrixdata->matidx[nmatcoef] = nmatcoef;
+            matrixdata->matrhsidx[nmatcoef] = nrhscoef;
+
+            assert( 0 <= SCIPvarGetProbindex(vars[j]) && SCIPvarGetProbindex(vars[j]) < SCIPgetNVars(scip) );
+
+            matrixdata->matvaridx[nmatcoef] = SCIPvarGetProbindex(vars[j]);
+            matrixdata->matcoef[nmatcoef++] = -vals[j];
+         }
+         matrixdata->rhscoef[nrhscoef] = -rhs;
+         ++nrhscoef;
+      }
    }
    else
    {
