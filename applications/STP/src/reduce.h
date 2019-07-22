@@ -134,6 +134,7 @@ extern SCIP_RETCODE    reduce_sdPcMwTest2(SCIP*);
 extern SCIP_RETCODE    reduce_sdPcMwTest3(SCIP*);
 extern SCIP_RETCODE    reduce_sdPcMwTest4(SCIP*);
 extern SCIP_RETCODE    heur_extendPcMwOuterTest1(SCIP*);
+extern SCIP_RETCODE    reduce_extDistTest1(SCIP*);
 
 
 /* reduce_simple.c

@@ -679,7 +679,7 @@ SCIP_Bool graph_valid_dcsr(
 SCIP_RETCODE graph_dijkLimited_init(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< the graph */
-   DIJK*             dijkdata            /**< data for limited Dijkstra */
+   DIJK*                 dijkdata            /**< data for limited Dijkstra */
 )
 {
    const int nnodes = g->knots;
@@ -711,7 +711,7 @@ SCIP_RETCODE graph_dijkLimited_init(
 /** cleans limited Dijkstra structure members */
 void graph_dijkLimited_clean(
    const GRAPH*          g,                  /**< the graph */
-   DIJK*             dijkdata            /**< data for limited Dijkstra */
+   DIJK*                 dijkdata            /**< data for limited Dijkstra */
 )
 {
    const int nnodes = g->knots;
@@ -732,7 +732,7 @@ void graph_dijkLimited_clean(
 /** reset data of limited Dijkstra structure */
 void graph_dijkLimited_reset(
    const GRAPH*          g,                  /**< the graph */
-   DIJK*             dijkdata            /**< data for limited Dijkstra */
+   DIJK*                 dijkdata            /**< data for limited Dijkstra */
 )
 {
    STP_Bool* const visited = dijkdata->visited;
@@ -769,7 +769,7 @@ void graph_dijkLimited_reset(
 /** frees limited Dijkstra structure member */
 void graph_dijkLimited_free(
    SCIP*                 scip,               /**< SCIP */
-   DIJK*             dijkdata            /**< data for limited Dijkstra */
+   DIJK*                 dijkdata            /**< data for limited Dijkstra */
 )
 {
    SCIPfreeMemoryArray(scip, &(dijkdata->distance));

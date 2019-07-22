@@ -33,10 +33,11 @@
 #include "heur_local.h"
 #include "heur_tm.h"
 
+
 static
-SCIP_RETCODE reduce_extArc(
-   SCIP* scip,
-   GRAPH* graph,
+SCIP_RETCODE extArc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< the graph */
    SCIP_Real* rootdist,
    SCIP_Real* redcost,
    PATH* termpaths,
@@ -44,7 +45,7 @@ SCIP_RETCODE reduce_extArc(
    SCIP_Real cutoff,
    int edge,
    int root,
-   int nclosenodes,
+   int                   nclosenodes,        /**< max. number of close nodes to each node */
    SCIP_Bool* deletable
 )
 {
@@ -81,8 +82,8 @@ SCIP_RETCODE reduce_extArc(
 
 
 static
-SCIP_RETCODE reduce_checkSdWalk(
-   SCIP* scip,
+SCIP_RETCODE checkSdWalk(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool extended,
    GRAPH** g,
    int* nelims
@@ -236,7 +237,7 @@ SCIP_RETCODE reduce_extTest1(
 
    graph_edge_printInfo(graph, edge);
 
-   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
+   SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
 
    assert(deletable);
 
@@ -344,12 +345,12 @@ SCIP_RETCODE reduce_extTest2(
       }
    }
 
-   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
+   SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
    assert(deletable);
    assert(0);
 #else
 
-   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
+   SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
    assert(!deletable);
 #endif
 
@@ -357,7 +358,7 @@ SCIP_RETCODE reduce_extTest2(
    graph->mark[12] = FALSE;
 
 
-   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
+   SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
    assert(deletable);
 
 
@@ -412,7 +413,7 @@ SCIP_RETCODE reduce_sdPcMwTest1(
 
    nelims = 0;
 
-   SCIP_CALL( reduce_checkSdWalk(scip, FALSE, &graph, &nelims) );
+   SCIP_CALL( checkSdWalk(scip, FALSE, &graph, &nelims) );
 
    assert(nelims == 1);
    assert(graph == NULL);
@@ -459,7 +460,7 @@ SCIP_RETCODE reduce_sdPcMwTest2(
 
    nelims = 0;
 
-   SCIP_CALL( reduce_checkSdWalk(scip, FALSE, &graph, &nelims) );
+   SCIP_CALL( checkSdWalk(scip, FALSE, &graph, &nelims) );
 
    assert(nelims == 1);
 
@@ -505,7 +506,7 @@ SCIP_RETCODE reduce_sdPcMwTest3(
 
    nelims = 0;
 
-   SCIP_CALL( reduce_checkSdWalk(scip, TRUE, &graph, &nelims) );
+   SCIP_CALL( checkSdWalk(scip, TRUE, &graph, &nelims) );
 
    assert(nelims == 1);
 
@@ -563,7 +564,7 @@ SCIP_RETCODE reduce_sdPcMwTest4(
 
    nelims = 0;
 
-   SCIP_CALL( reduce_checkSdWalk(scip, FALSE, &graph, &nelims) );
+   SCIP_CALL( checkSdWalk(scip, FALSE, &graph, &nelims) );
 
    printf("nelims %d \n", nelims);
    assert(nelims == 2);
@@ -574,6 +575,81 @@ assert(0);
 
    return SCIP_OKAY;
 }
+
+SCIP_RETCODE reduce_extDistTest1(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes = 55;
+   const int nedges = 28;
+   const int root = 0;
+   const int nclosenodes = 2;         /**< max. number of close nodes to each node */
+
+   DISTDATA distdata;
+
+   assert(scip);
+
+   /* 1. build a test graph */
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   graph_knot_add(graph, 0);
+
+   /* also add dummy nodes to avoid full stack */
+   for( int i = 1; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph->source = root;
+
+   graph_edge_add(scip, graph, 0, 1, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 2, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 3, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 4, 1.0, 1.0);
+
+   graph_edge_add(scip, graph, 2, 5, 1.0, 1.0);
+   graph_edge_add(scip, graph, 3, 6, 1.0, 1.0);
+   graph_edge_add(scip, graph, 3, 7, 1.0, 1.0);
+   graph_edge_add(scip, graph, 4, 8, 1.0, 1.0);
+   graph_edge_add(scip, graph, 4, 9, 1.0, 1.0);
+
+   graph_edge_add(scip, graph, 5, 10, 1.0, 1.0);
+   graph_edge_add(scip, graph, 10, 11, 1.0, 1.0);
+   graph_edge_add(scip, graph, 11, 12, 1.0, 1.0);
+
+   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_path_init(scip, graph) );
+
+   SCIP_CALL( graph_init_dcsr(scip, graph) );
+   SCIP_CALL( reduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+
+   /* 2. do the actual test */
+
+   {
+      const RANGE* node_range = distdata.closenodes_range;
+      const int* node_idx = distdata.closenodes_indices;
+      const SCIP_Real* node_dist = distdata.closenodes_distances;
+      const int node = 1;
+
+      printf("node %d: \n", node);
+
+      for( int i = node_range[node].start; i < node_range[node].end; i++ )
+      {
+         printf("...closenode=%d  dist=%f\n", node_idx[i], node_dist[i]);
+      }
+   }
+
+
+   reduce_distDataFree(scip, graph, &distdata);
+   graph_free_dcsr(scip, graph);
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+   assert(graph == NULL);
+
+   return SCIP_OKAY;
+}
+
 
 SCIP_RETCODE dheap_Test1(
    SCIP*                 scip                /**< SCIP data structure */
