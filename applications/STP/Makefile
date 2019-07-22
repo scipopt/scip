@@ -86,6 +86,7 @@ CMAINOBJ	=	cmain.o \
 			reduce_bnd.o \
 			reduce_test.o \
 			reduce_ext.o \
+			reduce_ext2.o \
 			reduce_simple.o \
 			reduce_util.o \
 			prop_stp.o \

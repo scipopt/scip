@@ -166,7 +166,7 @@ SCIP_RETCODE distDataComputeCloseNodesSD(
    int                   closenodes_limit,   /**< close nodes limit */
    int*                  closenodes_edges,   /**< edges used to reach close nodes */
    int*                  edgemark,           /**< edge mark array */
-   DLIMITED*             dijkdata,           /**< limited Dijkstra data */
+   DIJK*             dijkdata,           /**< limited Dijkstra data */
    DISTDATA*             distdata            /**< to be initialized */
    )
 {
@@ -204,7 +204,7 @@ SCIP_RETCODE distDataComputeCloseNodes(
    int                   closenodes_limit,   /**< close nodes limit */
    int*                  closenodes_edges,   /**< edges used to reach close nodes */
    int*                  edgemark,           /**< edge mark array */
-   DLIMITED*             dijkdata,           /**< limited Dijkstra data */
+   DIJK*             dijkdata,           /**< limited Dijkstra data */
    DISTDATA*             distdata            /**< to be initialized */
    )
 {
@@ -248,8 +248,10 @@ SCIP_RETCODE distDataComputeCloseNodes(
    nvisits = 0;
    nclosenodes = 0;
    dist[startvertex] = 0.0;
-   state[startvertex] = CONNECT;
    visitlist[nvisits++] = startvertex;
+   graph_heap_correct(startvertex, 0.0, dheap);
+
+   assert(dheap->size == 1);
 
    /* main loop */
    while( dheap->size > 0 )
@@ -264,6 +266,8 @@ SCIP_RETCODE distDataComputeCloseNodes(
       assert(prededge[k] >= 0 && prededge[k] < g->edges);
       assert(edgemark[prededge[k] / 2] < startvertex);  /* make sure that the edge is not marked twice */
       assert(closenodes_pos < distdata->closenodes_totalsize);
+      assert(state[k] == CONNECT);
+
       edgemark[prededge[k] / 2] = startvertex;
 #endif
 
@@ -275,8 +279,6 @@ SCIP_RETCODE distDataComputeCloseNodes(
 
       if( ++nclosenodes >= closenodes_limit )
          break;
-
-      assert(state[k] == CONNECT);
 
       /* correct adjacent nodes */
       for( int e = k_start; e < k_end; e++ )
@@ -311,19 +313,13 @@ SCIP_RETCODE distDataComputeCloseNodes(
    return SCIP_OKAY;
 }
 
-
-
-/** allocates memory for some distance data members */
+/** returns maximum total number of close nodes that should be computed */
 static
-SCIP_RETCODE distDataAllocateClosenodesArrays(
-   SCIP*                 scip,               /**< SCIP */
+int distDataGetCloseNodesTotalSize(
    const GRAPH*          g,                  /**< graph data structure */
-   int                   maxnclosenodes,     /**< maximum number of close nodes to each node */
-   SCIP_Bool             computeSD,          /**< also compute special distances? */
-   DISTDATA*             distdata            /**< to be initialized */
+   int                   maxnclosenodes      /**< maximum number of close nodes to each node */
 )
 {
-   const int nnodes = g->knots;
    int nnodes_undeleted;
    int closenodes_totalsize;
 
@@ -331,7 +327,27 @@ SCIP_RETCODE distDataAllocateClosenodesArrays(
    assert(nnodes_undeleted >= 1 && maxnclosenodes >= 1);
 
    closenodes_totalsize = nnodes_undeleted * maxnclosenodes;
-   distdata->closenodes_totalsize = closenodes_totalsize;
+
+   assert(closenodes_totalsize >= 1);
+
+   return closenodes_totalsize;
+}
+
+
+/** allocates memory for some distance data members */
+static
+SCIP_RETCODE distDataAllocateNodesArrays(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   SCIP_Bool             computeSD,          /**< also compute special distances? */
+   DISTDATA*             distdata            /**< to be initialized */
+)
+{
+   const int nnodes = g->knots;
+   const int closenodes_totalsize = distdata->closenodes_totalsize;
+
+   assert(scip && g && distdata);
+   assert(distdata->closenodes_totalsize > 0);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(distdata->nodepaths_dirty), nnodes) );
    BMSclearMemoryArray(distdata->nodepaths_dirty, nnodes);
@@ -389,7 +405,7 @@ SCIP_RETCODE reduce_distDataInit(
    int* closenodes_edges;
    int* edgemark = NULL;
    RANGE* range_closenodes;
-   DLIMITED dijkdata;
+   DIJK dijkdata;
    DHEAP* dheap;
 
    assert(distdata && g && scip);
@@ -398,9 +414,9 @@ SCIP_RETCODE reduce_distDataInit(
    assert(distdata->closenodes_indices == NULL && distdata->pathroots == NULL && distdata->pathroots_range == NULL);
    assert(graph_valid_dcsr(g, FALSE));
 
-   SCIP_CALL( distDataAllocateClosenodesArrays(scip, g, maxnclosenodes, computeSD, distdata) );
+   distdata->closenodes_totalsize = distDataGetCloseNodesTotalSize(g, maxnclosenodes);
 
-   assert(distdata->closenodes_totalsize > 1);
+   SCIP_CALL( distDataAllocateNodesArrays(scip, g, computeSD, distdata) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &closenodes_edges, distdata->closenodes_totalsize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgemark, halfnedges) );
@@ -409,7 +425,7 @@ SCIP_RETCODE reduce_distDataInit(
       edgemark[e] = -1;
 
    /* build auxiliary data */
-   SCIP_CALL( graph_dijkLimited_init(scip, g, &dijkdata) ); // todo keep the heap for recomputation in distdata?
+   SCIP_CALL( graph_dijkLimited_init(scip, g, &dijkdata) );
 
 
    range_closenodes = distdata->closenodes_range;
