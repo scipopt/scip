@@ -125,7 +125,7 @@ if test "$REOPT" = false
 then
     # read and solve the instance
     echo read $INSTANCE         >> $TMPFILE
-    DECOMP=${INSTANCENAME}.dec
+    DECOMP=${INSTANCENAME}.dec.gz
     echo $DECOMP
     if test -f $DECOMP
     then
