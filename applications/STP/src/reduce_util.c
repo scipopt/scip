@@ -93,7 +93,7 @@ SCIP_RETCODE distDataComputePathRootsList(
    {
       const int edge = closenodes_edges[j];
       assert(edge >= 0 && edge < halfnedges);
-      edgehits[j]++;
+      edgehits[edge]++;
    }
 
    /* compute the edge ranges */
@@ -165,17 +165,17 @@ SCIP_RETCODE distDataComputeCloseNodesSD(
    int                   startvertex,        /**< start vertex */
    int                   closenodes_limit,   /**< close nodes limit */
    int*                  closenodes_edges,   /**< edges used to reach close nodes */
-   int*                  edgemark,           /**< edge mark array */
-   DIJK*             dijkdata,           /**< limited Dijkstra data */
+   DIJK*                 dijkdata,           /**< limited Dijkstra data */
    DISTDATA*             distdata            /**< to be initialized */
    )
 {
+   int* edgemark = NULL;
 
 #ifndef NDEBUG
-   for( int k = 0; k < g->knots; k++ )
-   {
-      assert(edgemark[k] < startvertex);
-   }
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgemark, g->edges / 2) );
+    for( int e = 0; e < g->edges / 2; e++ )
+       edgemark[e] = FALSE;
+
 #endif
 
    assert(0);
@@ -190,6 +190,7 @@ SCIP_RETCODE distDataComputeCloseNodesSD(
 
       }
 #endif
+   SCIPfreeBufferArrayNull(scip, &edgemark);
 
    return SCIP_OKAY;
 }
@@ -203,8 +204,7 @@ SCIP_RETCODE distDataComputeCloseNodes(
    int                   startvertex,        /**< start vertex */
    int                   closenodes_limit,   /**< close nodes limit */
    int*                  closenodes_edges,   /**< edges used to reach close nodes */
-   int*                  edgemark,           /**< edge mark array */
-   DIJK*             dijkdata,           /**< limited Dijkstra data */
+   DIJK*                 dijkdata,           /**< limited Dijkstra data */
    DISTDATA*             distdata            /**< to be initialized */
    )
 {
@@ -223,7 +223,7 @@ SCIP_RETCODE distDataComputeCloseNodes(
    SCIP_Real* const closenodes_distances = distdata->closenodes_distances;
    const int nnodes = g->knots;
    int* prededge;
-
+   SCIP_Bool* edgemark = NULL;
    int nvisits;
    int nclosenodes;
 
@@ -235,14 +235,15 @@ SCIP_RETCODE distDataComputeCloseNodes(
    SCIP_CALL( SCIPallocBufferArray(scip, &prededge, nnodes) );
 
 #ifndef NDEBUG
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgemark, g->edges / 2) );
+   for( int e = 0; e < g->edges / 2; e++ )
+      edgemark[e] = FALSE;
+
    for( int k = 0; k < g->knots; k++ )
    {
       prededge[k] = -1;
       assert(dist[k] == FARAWAY && state[k] == UNKNOWN);
    }
-
-   for( int e = 0; e < g->edges / 2; e++ )
-      assert(edgemark[e] < startvertex);
 #endif
 
    nvisits = 0;
@@ -260,25 +261,28 @@ SCIP_RETCODE distDataComputeCloseNodes(
       const int k = graph_heap_deleteMinReturnNode(dheap);
       const int k_start = range_csr[k].start;
       const int k_end = range_csr[k].end;
-      const int closenodes_pos = range_closenodes[startvertex].end;
+
+      if( k != startvertex )
+      {
+         const int closenodes_pos = range_closenodes[startvertex].end;
 
 #ifndef NDEBUG
-      assert(prededge[k] >= 0 && prededge[k] < g->edges);
-      assert(edgemark[prededge[k] / 2] < startvertex);  /* make sure that the edge is not marked twice */
-      assert(closenodes_pos < distdata->closenodes_totalsize);
-      assert(state[k] == CONNECT);
+         assert((prededge[k] >= 0 && prededge[k] < g->edges));
+         assert(edgemark[prededge[k] / 2] == FALSE);  /* make sure that the edge is not marked twice */
+         assert(closenodes_pos < distdata->closenodes_totalsize && state[k] == CONNECT);
 
-      edgemark[prededge[k] / 2] = startvertex;
+         edgemark[prededge[k] / 2] = TRUE;
 #endif
 
-      closenodes_indices[closenodes_pos] = k;
-      closenodes_edges[closenodes_pos] = prededge[k] / 2;
-      closenodes_distances[closenodes_pos] = dist[k];
+         closenodes_indices[closenodes_pos] = k;
+         closenodes_edges[closenodes_pos] = prededge[k] / 2;
+         closenodes_distances[closenodes_pos] = dist[k];
 
-      range_closenodes[startvertex].end++;
+         range_closenodes[startvertex].end++;
 
-      if( ++nclosenodes >= closenodes_limit )
-         break;
+         if( ++nclosenodes >= closenodes_limit )
+            break;
+      }
 
       /* correct adjacent nodes */
       for( int e = k_start; e < k_end; e++ )
@@ -308,6 +312,7 @@ SCIP_RETCODE distDataComputeCloseNodes(
 
    dijkdata->nvisits = nvisits;
 
+   SCIPfreeBufferArrayNull(scip, &edgemark);
    SCIPfreeBufferArray(scip, &prededge);
 
    return SCIP_OKAY;
@@ -401,15 +406,13 @@ SCIP_RETCODE reduce_distDataInit(
 )
 {
    const int nnodes = g->knots;
-   const int halfnedges = g->edges / 2;
    int* closenodes_edges;
-   int* edgemark = NULL;
    RANGE* range_closenodes;
    DIJK dijkdata;
    DHEAP* dheap;
 
    assert(distdata && g && scip && g->dcsr_storage);
-   assert(halfnedges >= 1 && maxnclosenodes >= 1);
+   assert(maxnclosenodes >= 1);
    assert(graph_valid_dcsr(g, FALSE));
 
    distdata->closenodes_totalsize = distDataGetCloseNodesTotalSize(g, maxnclosenodes);
@@ -417,10 +420,6 @@ SCIP_RETCODE reduce_distDataInit(
    SCIP_CALL( distDataAllocateNodesArrays(scip, g, computeSD, distdata) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &closenodes_edges, distdata->closenodes_totalsize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgemark, halfnedges) );
-
-   for( int e = 0; e < halfnedges; e++ )
-      edgemark[e] = -1;
 
    /* build auxiliary data */
    SCIP_CALL( graph_dijkLimited_init(scip, g, &dijkdata) );
@@ -438,9 +437,9 @@ SCIP_RETCODE reduce_distDataInit(
          continue;
 
       if( computeSD )
-         SCIP_CALL( distDataComputeCloseNodesSD(scip, g, k, EXT_CLOSENODES_MAXN, closenodes_edges, edgemark, &dijkdata, distdata) );
+         SCIP_CALL( distDataComputeCloseNodesSD(scip, g, k, EXT_CLOSENODES_MAXN, closenodes_edges, &dijkdata, distdata) );
       else
-         SCIP_CALL( distDataComputeCloseNodes(scip, g, k, EXT_CLOSENODES_MAXN, closenodes_edges, edgemark, &dijkdata, distdata) );
+         SCIP_CALL( distDataComputeCloseNodes(scip, g, k, EXT_CLOSENODES_MAXN, closenodes_edges, &dijkdata, distdata) );
 
       graph_dijkLimited_reset(g, &dijkdata);
    }
@@ -455,7 +454,7 @@ SCIP_RETCODE reduce_distDataInit(
    distdata->dheap = dheap;
 
    graph_dijkLimited_free(scip, &dijkdata);
-   SCIPfreeBufferArray(scip, &edgemark);
+
    SCIPfreeBufferArray(scip, &closenodes_edges);
 
    return SCIP_OKAY;
