@@ -1446,7 +1446,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
       SCIP_INTERVAL childinterval;
 
       childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[c]);
-      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+      {
+         SCIPintervalSetEmpty(interval);
+         break;
+      }
 
       /* multiply childinterval with the so far computed interval */
       SCIPintervalMul(SCIP_INTERVAL_INFINITY, interval, *interval, childinterval);

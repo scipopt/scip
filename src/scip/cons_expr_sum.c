@@ -749,7 +749,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
       SCIP_INTERVAL childinterval;
 
       childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[c]);
-      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+      {
+         SCIPintervalSetEmpty(interval);
+         break;
+      }
 
       /* compute coefficients[c] * childinterval and add the result to the so far computed interval */
       if( exprdata->coefficients[c] == 1.0 )

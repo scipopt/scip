@@ -1003,7 +1003,6 @@ SCIP_RETCODE forwardPropExpr(
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool aborted;
 
    assert(scip != NULL);
    assert(rootexpr != NULL);
@@ -1031,7 +1030,7 @@ SCIP_RETCODE forwardPropExpr(
    SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
-   for( expr = SCIPexpriteratorGetCurrent(it), aborted = FALSE; !SCIPexpriteratorIsEnd(it) && !aborted;  )
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it);  )
    {
       switch( SCIPexpriteratorGetStageDFS(it) )
       {
@@ -1045,8 +1044,8 @@ SCIP_RETCODE forwardPropExpr(
             {
                if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, child->activity) )
                {
-                  aborted = TRUE;
-                  break;
+                  if( infeasible != NULL )
+                     *infeasible = TRUE;
                }
 
 #ifndef NDEBUG
@@ -1056,7 +1055,7 @@ SCIP_RETCODE forwardPropExpr(
                 * Since SCIP sometimes moves variable bounds slightly and we also use relaxed variable bounds below,
                 * we have to add some epsilons here.
                 */
-               if( child->auxvar != NULL )
+               else if( child->auxvar != NULL )
                {
                   SCIP_INTERVAL auxvarbounds;
                   auxvarbounds = intevalvar(scip, child->auxvar, intevalvardata);
@@ -1199,15 +1198,22 @@ SCIP_RETCODE forwardPropExpr(
                SCIPintervalIntersect(&interval, interval, previnterval);
             }
 
-            /* check whether the resulting interval is empty */
+            /* set activity in expression */
             if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, interval) )
             {
-               aborted = TRUE;
+               expr->activity = interval;
+               if( infeasible != NULL )
+                  *infeasible = TRUE;
             }
             else if( tightenauxvars )
             {
+               SCIP_Bool tighteninfeasible;
+
                /* update expression activity and tighten bounds of auxiliary variable, if any */
-               SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, force, NULL, &aborted, ntightenings) );
+               SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, force, NULL, &tighteninfeasible, ntightenings) );
+
+               if( tighteninfeasible && infeasible != NULL )
+                  *infeasible = TRUE;
             }
             else
             {
@@ -1229,16 +1235,6 @@ SCIP_RETCODE forwardPropExpr(
       }
 
       expr = SCIPexpriteratorGetNext(it);
-   }
-
-   /* evaluation leads to an empty interval -> detected infeasibility */
-   if( aborted )
-   {
-      SCIPintervalSetEmpty(&rootexpr->activity);
-      rootexpr->activitytag = conshdlrdata->curboundstag;
-
-      if( infeasible != NULL)
-         *infeasible = TRUE;
    }
 
    SCIPexpriteratorFree(&it);
