@@ -437,9 +437,9 @@ SCIP_RETCODE reduce_distDataInit(
          continue;
 
       if( computeSD )
-         SCIP_CALL( distDataComputeCloseNodesSD(scip, g, k, EXT_CLOSENODES_MAXN, closenodes_edges, &dijkdata, distdata) );
+         SCIP_CALL( distDataComputeCloseNodesSD(scip, g, k, maxnclosenodes, closenodes_edges, &dijkdata, distdata) );
       else
-         SCIP_CALL( distDataComputeCloseNodes(scip, g, k, EXT_CLOSENODES_MAXN, closenodes_edges, &dijkdata, distdata) );
+         SCIP_CALL( distDataComputeCloseNodes(scip, g, k, maxnclosenodes, closenodes_edges, &dijkdata, distdata) );
 
       graph_dijkLimited_reset(g, &dijkdata);
    }

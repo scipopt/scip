@@ -603,11 +603,11 @@ SCIP_RETCODE reduce_extDistTest1(
    graph->source = root;
 
    graph_edge_add(scip, graph, 0, 1, 1.0, 1.0);
-   graph_edge_add(scip, graph, 1, 2, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 2, 0.4, 0.4);
    graph_edge_add(scip, graph, 1, 3, 1.0, 1.0);
    graph_edge_add(scip, graph, 1, 4, 1.0, 1.0);
 
-   graph_edge_add(scip, graph, 2, 5, 1.0, 1.0);
+   graph_edge_add(scip, graph, 2, 5, 0.5, 0.5);
    graph_edge_add(scip, graph, 3, 6, 1.0, 1.0);
    graph_edge_add(scip, graph, 3, 7, 1.0, 1.0);
    graph_edge_add(scip, graph, 4, 8, 1.0, 1.0);
@@ -646,6 +646,9 @@ SCIP_RETCODE reduce_extDistTest1(
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
    assert(graph == NULL);
+
+   assert(0);
+
 
    return SCIP_OKAY;
 }
