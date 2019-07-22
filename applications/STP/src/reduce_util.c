@@ -408,10 +408,8 @@ SCIP_RETCODE reduce_distDataInit(
    DIJK dijkdata;
    DHEAP* dheap;
 
-   assert(distdata && g && scip);
+   assert(distdata && g && scip && g->dcsr_storage);
    assert(halfnedges >= 1 && maxnclosenodes >= 1);
-   assert(distdata->nodepaths_dirty == NULL && distdata->closenodes_distances == NULL && distdata->closenodes_range == NULL);
-   assert(distdata->closenodes_indices == NULL && distdata->pathroots == NULL && distdata->pathroots_range == NULL);
    assert(graph_valid_dcsr(g, FALSE));
 
    distdata->closenodes_totalsize = distDataGetCloseNodesTotalSize(g, maxnclosenodes);

@@ -54,6 +54,7 @@ SCIP_RETCODE reduce_extArc(
    REDCOST redcostdata = {redcost, rootdist, termpaths, cutoff, root};
    DISTDATA distdata;
 
+   SCIP_CALL( graph_init_dcsr(scip, graph) );
    SCIP_CALL( reduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &isterm, nnodes) );
@@ -73,6 +74,7 @@ SCIP_RETCODE reduce_extArc(
    SCIPfreeBufferArray(scip, &isterm);
 
    reduce_distDataFree(scip, graph, &distdata);
+   graph_free_dcsr(scip, graph);
 
    return SCIP_OKAY;
 }

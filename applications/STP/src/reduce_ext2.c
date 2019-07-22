@@ -1183,8 +1183,8 @@ SCIP_RETCODE reduce_extendedEdge2(
    if( SCIPisZero(scip, minpathcost) )
       return SCIP_OKAY;
 
-   SCIP_CALL( reduce_distDataInit(scip, graph, EXT_CLOSENODES_MAXN, FALSE, &distdata) );
    SCIP_CALL( graph_init_dcsr(scip, graph) );
+   SCIP_CALL( reduce_distDataInit(scip, graph, EXT_CLOSENODES_MAXN, FALSE, &distdata) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &isterm, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_deg, nnodes) );
@@ -1264,8 +1264,8 @@ SCIP_RETCODE reduce_extendedEdge2(
    SCIPfreeBufferArray(scip, &tree_deg);
    SCIPfreeBufferArray(scip, &isterm);
 
-   graph_free_dcsr(scip, graph);
    reduce_distDataFree(scip, graph, &distdata);
+   graph_free_dcsr(scip, graph);
 
 #ifndef NDEBUG
    for( int k = 0; k < nnodes; k++ )
