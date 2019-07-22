@@ -173,9 +173,6 @@ void unmarkAncestors(
    }
 }
 
-
-
-
 /** finalize subtree computations (clean up, update global bound)  */
 static
 void finalizeSubtree(
@@ -1407,25 +1404,27 @@ void extExtend(
 SCIP_RETCODE reduce_extendedCheckArc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   int                   root,               /**< graph root from dual ascent */
-   const SCIP_Real*      redcost,            /**< reduced costs */
-   const SCIP_Real*      rootdist,           /**< shortest path distances  */
-   const PATH*           termpaths,          /**< paths to nearest terminals */
+   const REDCOST*        redcostdata,        /**< reduced cost data structures */
    const STP_Bool*       edgedeleted,        /**< edge array to mark which directed edge can be removed or NULL */
    const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
-   SCIP_Real             cutoff,             /**< reduced cost cutoff value */
    int                   edge,               /**< directed edge to be checked */
-   SCIP_Bool             equality,           /**< allow equality? */
+   SCIP_Bool             equality,           /**< delete edge also in case of reduced cost equality? */
+   DISTDATA*             distdata,           /**< data for distance computations */
    int*                  tree_deg,           /**< -1 for forbidden nodes (e.g. PC terminals), 0 otherwise; in method: position ( > 0) for nodes in tree */
    SCIP_Bool*            deletable           /**< is edge deletable? */
 )
 {
+   const int root = redcostdata->redCostRoot;
+   const SCIP_Real* redcost = redcostdata->redEdgeCost;
+   const SCIP_Real* rootdist = redcostdata->rootToNodeDist;
+   const PATH* node2termpaths = redcostdata->nodeTo3TermsPaths;
+   const SCIP_Real cutoff = redcostdata->cutoff;
    const int head = graph->head[edge];
    const int tail = graph->tail[edge];
-   SCIP_Real edgebound = redcost[edge] + rootdist[tail] + termpaths[head].dist;
+   SCIP_Real edgebound = redcost[edge] + rootdist[tail] + node2termpaths[head].dist;
 
 #ifndef NDEBUG
-   assert(scip && graph && redcost && rootdist && termpaths && deletable && tree_deg);
+   assert(scip && graph && redcost && rootdist && node2termpaths && deletable && distdata && tree_deg);
    assert(edge >= 0 && edge < graph->edges);
    assert(!graph_pc_isPcMw(graph) || !graph->extended);
    assert(graph->mark[tail] && graph->mark[head]);
@@ -1473,11 +1472,10 @@ SCIP_RETCODE reduce_extendedCheckArc(
          int nupdatestalls = 0;
          SCIP_Bool success = TRUE;
          SCIP_Bool conflict = FALSE;
-         DISTDATA distdata = {NULL, NULL, NULL, NULL, NULL, NULL, -1, -1};
-         REDDATA reddata = {redcost, rootdist, termpaths, edgedeleted, ancestormark, cutoff, treeredcostoffset, equality};
+         REDDATA reddata = {redcost, rootdist, node2termpaths, edgedeleted, ancestormark, cutoff, treeredcostoffset, equality};
          EXTDATA extdata = {extstack_data, extstack_start, extstack_state, tree_leaves, tree_edges,
             tree_deg, 0.0, 0, 0, 0, 0, nnodes - 1, maxstackedges, STP_EXT_MAXNLEAVES, maxdfsdepth,
-            STP_EXT_MAXTREESIZE, &reddata, &distdata};
+            STP_EXT_MAXTREESIZE, &reddata, distdata};
 
          extdata.tree_redcost = treeredcostoffset;
          extdata.tree_depth = 0;
@@ -2188,6 +2186,8 @@ SCIP_RETCODE reduce_extendedEdge2(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+   REDCOST redcostdata = {redcost, rootdist, termpaths, minpathcost, root};
+   DISTDATA distdata;
 
    assert(scip && graph && redcost);
    assert(!pcmw || !graph->extended);
@@ -2197,6 +2197,9 @@ SCIP_RETCODE reduce_extendedEdge2(
 
    if( SCIPisZero(scip, minpathcost) )
       return SCIP_OKAY;
+
+   SCIP_CALL( reduce_distDataInit(scip, graph, EXT_CLOSENODES_MAXN, FALSE, &distdata) );
+   SCIP_CALL( graph_init_dcsr(scip, graph) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &isterm, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_deg, nnodes) );
@@ -2238,8 +2241,8 @@ SCIP_RETCODE reduce_extendedEdge2(
 
          if( !edgedeletable[e] )
          {
-            SCIP_CALL( reduce_extendedCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeletable,
-                  isterm, minpathcost, e, allowequality, tree_deg, &deletable) );
+            SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata, edgedeletable,
+                  isterm, e, allowequality, &distdata, tree_deg, &deletable) );
 
             if( deletable )
                edgedeletable[e] = TRUE;
@@ -2249,8 +2252,8 @@ SCIP_RETCODE reduce_extendedEdge2(
          {
             SCIP_Bool erevdeletable = TRUE;
 
-            SCIP_CALL( reduce_extendedCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeletable,
-                  isterm, minpathcost, erev, allowequality, tree_deg, &erevdeletable) );
+            SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata, edgedeletable,
+                  isterm, erev, allowequality, &distdata, tree_deg, &erevdeletable) );
 
             if( erevdeletable )
                edgedeletable[erev] = TRUE;
@@ -2260,9 +2263,7 @@ SCIP_RETCODE reduce_extendedEdge2(
 
          if( deletable )
          {
-            graph_edge_del(scip, graph, e, TRUE);
-
-            // todo also delete CSR
+            graph_edge_delFull(scip, graph, e, TRUE);
 
             if( graph->grad[tail] == 0 )
                graph->mark[tail] = FALSE;
@@ -2277,6 +2278,9 @@ SCIP_RETCODE reduce_extendedEdge2(
 
    SCIPfreeBufferArray(scip, &tree_deg);
    SCIPfreeBufferArray(scip, &isterm);
+
+   graph_free_dcsr(scip, graph);
+   reduce_distDataFree(scip, graph, &distdata);
 
 #ifndef NDEBUG
    for( int k = 0; k < nnodes; k++ )

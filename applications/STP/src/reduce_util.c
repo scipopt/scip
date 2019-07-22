@@ -25,10 +25,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define EXT_CLOSENODES_MAXN 64
 #define EXT_PATHROOTS_BUFFER 20
 
 #include "reduce.h"
+#include "misc_stp.h"
 
 #if 0
 static
@@ -63,22 +63,96 @@ SCIP_RETCODE distDataComputePathRootsList(
    DISTDATA*             distdata            /**< to be initialized */
    )
 {
-   int nedges_undelete;
-   RANGE* const range_closenodes = distdata->closenodes_range;
+   int halfnedges_undeleted;
+   int* edgehits;
+   const int buffer_per_edge = EXT_PATHROOTS_BUFFER;
+   const int nnodes = g->knots;
+   const int halfnedges = g->edges / 2;
+   const RANGE* const range_closenodes = distdata->closenodes_range;
+   int* pathroots;
+   RANGE* range_pathroots;
 
-   assert(0);
    assert(scip && g && closenodes_edges && distdata);
 
-   graph_get_NVET(g, NULL, &nedges_undelete, NULL);
+   graph_get_NVET(g, NULL, &halfnedges_undeleted, NULL);
 
-   nedges_undelete /= 2;
-   distdata->pathroots_totalsize = range_closenodes[g->knots - 1].end + nedges_undelete * EXT_PATHROOTS_BUFFER;
+   halfnedges_undeleted /= 2;
+   distdata->pathroots_totalsize = range_closenodes[g->knots - 1].end + halfnedges_undeleted * buffer_per_edge;
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(distdata->pathroots_range), distdata->pathroots_totalsize) );
+   assert(halfnedges_undeleted >= 1);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(distdata->pathroots_range), halfnedges) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(distdata->pathroots), distdata->pathroots_totalsize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(edgehits), halfnedges) );
 
-   // todo: fill the stuff in
+   for( int k = 0; k < halfnedges; k++ )
+      edgehits[k] = 0;
 
+   /* compute the edge range sizes */
+   for( int j = 0; j < range_closenodes[nnodes - 1].end; j++ )
+   {
+      const int edge = closenodes_edges[j];
+      assert(edge >= 0 && edge < halfnedges);
+      edgehits[j]++;
+   }
+
+   /* compute the edge ranges */
+   range_pathroots = distdata->pathroots_range;
+   range_pathroots[0].start = 0;
+   range_pathroots[0].end = 0;
+
+   for( int e = 1; e < halfnedges; e++ )
+   {
+      const int prevedge = e - 1;
+
+      /* has previous edge been deleted? */
+      if( g->oeat[2 * prevedge] == EAT_FREE )
+      {
+         assert(edgehits[prevedge] == 0);
+         range_pathroots[e].start = range_pathroots[prevedge].start;
+      }
+      else
+      {
+         range_pathroots[e].start = range_pathroots[prevedge].start + edgehits[prevedge] + buffer_per_edge;
+      }
+
+      range_pathroots[e].end = range_pathroots[e].start;
+   }
+
+   assert(range_pathroots[halfnedges - 1].end <= distdata->pathroots_totalsize);
+
+   pathroots = distdata->pathroots;
+
+   /* fill the path roots in */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( g->grad[k] == 0 )
+         continue;
+
+      for( int j = range_closenodes[k].start; j < range_closenodes[k].end; j++ )
+      {
+         const int edge = closenodes_edges[j];
+
+         assert(edge >= 0 && edge < halfnedges);
+         assert(g->oeat[2 * edge] != EAT_FREE);
+
+         pathroots[range_pathroots[edge].end++] = k;
+
+         assert(edge == halfnedges - 1 ||
+               range_pathroots[edge].end + buffer_per_edge <= range_pathroots[edge + 1].start);
+      }
+   }
+
+#ifndef NDEBUG
+   for( int e = 0; e < halfnedges; e++ )
+   {
+      assert(range_pathroots[e].end - range_pathroots[e].start == edgehits[e]);
+      assert(e == halfnedges - 1 || g->oeat[2 * e] == EAT_FREE
+            || range_pathroots[e].end + buffer_per_edge == range_pathroots[e + 1].start );
+   }
+#endif
+
+   SCIPfreeBufferArray(scip, &edgehits);
 
    return SCIP_OKAY;
 }
@@ -244,6 +318,7 @@ static
 SCIP_RETCODE distDataAllocateClosenodesArrays(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
+   int                   maxnclosenodes,     /**< maximum number of close nodes to each node */
    SCIP_Bool             computeSD,          /**< also compute special distances? */
    DISTDATA*             distdata            /**< to be initialized */
 )
@@ -253,9 +328,9 @@ SCIP_RETCODE distDataAllocateClosenodesArrays(
    int closenodes_totalsize;
 
    graph_get_NVET(g, &nnodes_undeleted, NULL, NULL);
-   assert(nnodes_undeleted >= 1);
+   assert(nnodes_undeleted >= 1 && maxnclosenodes >= 1);
 
-   closenodes_totalsize = nnodes_undeleted * EXT_CLOSENODES_MAXN;
+   closenodes_totalsize = nnodes_undeleted * maxnclosenodes;
    distdata->closenodes_totalsize = closenodes_totalsize;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(distdata->nodepaths_dirty), nnodes) );
@@ -268,10 +343,43 @@ SCIP_RETCODE distDataAllocateClosenodesArrays(
    return SCIP_OKAY;
 }
 
+static
+void distDataSortCloseNodes(
+   const GRAPH*          g,                  /**< graph data structure */
+   DISTDATA*             distdata            /**< to be initialized */
+)
+{
+   const int nnodes = g->knots;
+   const RANGE* const range_closenodes = distdata->closenodes_range;
+   int* const closenodes_indices = distdata->closenodes_indices;
+   SCIP_Real* const closenodes_distances = distdata->closenodes_distances;
+
+   assert(g && distdata);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( g->grad[k] != 0 )
+      {
+         const int start = range_closenodes[k].start;
+         const int length = range_closenodes[k].end - start;
+         assert(length > 0);
+
+         SCIPsortIntReal(&closenodes_indices[start], &closenodes_distances[start], length);
+
+#ifndef NDEBUG
+         for( int i = 1; i < length; i++ )
+            assert(closenodes_indices[start] < closenodes_indices[start + i]);
+#endif
+      }
+   }
+}
+
+
 /** initializes distance data */
 SCIP_RETCODE reduce_distDataInit(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
+   int                   maxnclosenodes,     /**< maximum number of close nodes to each node */
    SCIP_Bool             computeSD,          /**< also compute special distances? */
    DISTDATA*             distdata            /**< to be initialized */
 )
@@ -282,13 +390,17 @@ SCIP_RETCODE reduce_distDataInit(
    int* edgemark = NULL;
    RANGE* range_closenodes;
    DLIMITED dijkdata;
+   DHEAP* dheap;
 
    assert(distdata && g && scip);
-   assert(halfnedges >= 1);
+   assert(halfnedges >= 1 && maxnclosenodes >= 1);
    assert(distdata->nodepaths_dirty == NULL && distdata->closenodes_distances == NULL && distdata->closenodes_range == NULL);
    assert(distdata->closenodes_indices == NULL && distdata->pathroots == NULL && distdata->pathroots_range == NULL);
+   assert(graph_valid_dcsr(g, FALSE));
 
-   SCIP_CALL( distDataAllocateClosenodesArrays(scip, g, computeSD, distdata) );
+   SCIP_CALL( distDataAllocateClosenodesArrays(scip, g, maxnclosenodes, computeSD, distdata) );
+
+   assert(distdata->closenodes_totalsize > 1);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &closenodes_edges, distdata->closenodes_totalsize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgemark, halfnedges) );
@@ -296,9 +408,11 @@ SCIP_RETCODE reduce_distDataInit(
    for( int e = 0; e < halfnedges; e++ )
       edgemark[e] = -1;
 
-   range_closenodes = distdata->closenodes_range;
-
+   /* build auxiliary data */
    SCIP_CALL( graph_dijkLimited_init(scip, g, &dijkdata) ); // todo keep the heap for recomputation in distdata?
+
+
+   range_closenodes = distdata->closenodes_range;
 
    /* compute close nodes to each not yet deleted node */
    for( int k = 0; k < nnodes; k++ )
@@ -317,13 +431,16 @@ SCIP_RETCODE reduce_distDataInit(
       graph_dijkLimited_reset(g, &dijkdata);
    }
 
+   /* sort close nodes according to their index */
+   distDataSortCloseNodes(g, distdata);
 
-   /* sort */
-
+   /* store for each edge the roots of all paths it is used for */
    SCIP_CALL( distDataComputePathRootsList(scip, g, closenodes_edges, distdata) );
 
-   graph_dijkLimited_free(scip, &dijkdata);
+   SCIP_CALL( graph_heap_create(scip, nnodes, NULL, NULL, &dheap) );
+   distdata->dheap = dheap;
 
+   graph_dijkLimited_free(scip, &dijkdata);
    SCIPfreeBufferArray(scip, &edgemark);
    SCIPfreeBufferArray(scip, &closenodes_edges);
 
@@ -357,7 +474,7 @@ SCIP_Real reduce_distDataGetSD(
    /* binary search on neighbors of vertex1 */
 
 
-   /* binary search on neighbors of vertex2? todo too expensive? */
+   /* if no success, binary search on neighbors of vertex2? todo too expensive? */
 
    return -1.0;
 }
@@ -369,6 +486,7 @@ void reduce_distDataFree(
    DISTDATA*             distdata            /**< to be freed */
 )
 {
+   graph_heap_free(scip, TRUE, TRUE, &(distdata->dheap));
    SCIPfreeMemoryArray(scip, &(distdata->nodepaths_dirty));
    SCIPfreeMemoryArray(scip, &(distdata->closenodes_range));
    SCIPfreeMemoryArray(scip, &(distdata->closenodes_indices));
@@ -376,4 +494,3 @@ void reduce_distDataFree(
    SCIPfreeMemoryArray(scip, &(distdata->pathroots_range));
    SCIPfreeMemoryArray(scip, &(distdata->pathroots));
 }
-

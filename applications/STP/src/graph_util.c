@@ -778,6 +778,3 @@ void graph_dijkLimited_free(
 
    graph_heap_free(scip, TRUE, TRUE, &(dijkdata->dheap));
 }
-
-
-

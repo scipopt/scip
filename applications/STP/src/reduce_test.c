@@ -44,13 +44,17 @@ SCIP_RETCODE reduce_extArc(
    SCIP_Real cutoff,
    int edge,
    int root,
+   int nclosenodes,
    SCIP_Bool* deletable
 )
 {
    const int nnodes = graph->knots;
    SCIP_Bool* isterm;
    int* tree_deg;
+   REDCOST redcostdata = {redcost, rootdist, termpaths, cutoff, root};
+   DISTDATA distdata;
 
+   SCIP_CALL( reduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &isterm, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_deg, nnodes) );
@@ -61,13 +65,14 @@ SCIP_RETCODE reduce_extArc(
    graph_get_isTerm(graph, isterm);
 
    /* actual test */
-   SCIP_CALL( reduce_extendedCheckArc(scip, graph, root, redcost, rootdist, termpaths, edgedeleted,
-         isterm, cutoff, edge, FALSE, tree_deg,  deletable) );
+   SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata, edgedeleted,
+         isterm, edge, FALSE, &distdata, tree_deg, deletable) );
 
    /* clean up */
    SCIPfreeBufferArray(scip, &tree_deg);
    SCIPfreeBufferArray(scip, &isterm);
 
+   reduce_distDataFree(scip, graph, &distdata);
 
    return SCIP_OKAY;
 }
@@ -229,7 +234,7 @@ SCIP_RETCODE reduce_extTest1(
 
    graph_edge_printInfo(graph, edge);
 
-   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, &deletable));
+   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
 
    assert(deletable);
 
@@ -337,12 +342,12 @@ SCIP_RETCODE reduce_extTest2(
       }
    }
 
-   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, &deletable));
+   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
    assert(deletable);
    assert(0);
 #else
 
-   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, &deletable));
+   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
    assert(!deletable);
 #endif
 
@@ -350,7 +355,7 @@ SCIP_RETCODE reduce_extTest2(
    graph->mark[12] = FALSE;
 
 
-   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, &deletable));
+   SCIP_CALL(reduce_extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
    assert(deletable);
 
 

@@ -3444,8 +3444,7 @@ void graph_edge_add(
    g->edges += 2;
 }
 
-
-/** delete an edge */
+/** delete an edge from standard data structure */
 void graph_edge_del(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
@@ -3453,9 +3452,8 @@ void graph_edge_del(
    SCIP_Bool             freeancestors       /**< free edge ancestors? */
    )
 {
-   assert(g          != NULL);
-   assert(e          >= 0);
-   assert(e          <  g->edges);
+   assert(scip && g);
+   assert(e >= 0 && e < g->edges);
 
    if( freeancestors )
    {
@@ -3495,6 +3493,33 @@ void graph_edge_del(
    g->oeat[e] = EAT_FREE;
 }
 
+/** delete an edge from standard, DCSR (if existent) and CSR (if existent) data structures */
+void graph_edge_delFull(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   int                   e,                  /**< the edge */
+   SCIP_Bool             freeancestors       /**< free edge ancestors? */
+   )
+{
+   assert(scip && g);
+   assert(e >= 0 && e < g->edges);
+
+   if( g->dcsr_storage )
+   {
+      int csredge;
+      assert(graph_valid_dcsr(g, FALSE));
+
+      csredge = g->dcsr_storage->id2csredge[e];
+      graph_dcsr_deleteEdgeBi(scip, g->dcsr_storage, csredge);
+   }
+
+   if( g->csr_storage )
+   {
+      assert(0 && "not yet supported");
+   }
+
+   graph_edge_del(scip, g, e, freeancestors);
+}
 
 /** deletes edges marked by given array */
 void graph_edge_delBlocked(

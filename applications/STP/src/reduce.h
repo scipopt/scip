@@ -24,6 +24,9 @@
 #ifndef APPLICATIONS_STP_SRC_REDUCE_H_
 #define APPLICATIONS_STP_SRC_REDUCE_H_
 
+#define EXT_CLOSENODES_MAXN 64
+
+
 #include "scip/scip.h"
 #include "graph.h"
 
@@ -31,6 +34,7 @@
 typedef struct distance_data
 {
    //    SCIP_Bool* const nodeSDpaths_dirty;
+   DHEAP* dheap;
    SCIP_Bool* nodepaths_dirty;
    RANGE* closenodes_range;
    int* closenodes_indices;
@@ -40,6 +44,17 @@ typedef struct distance_data
    int closenodes_totalsize;
    int pathroots_totalsize;
 } DISTDATA;
+
+
+/** reduced cost result data */
+typedef struct reduce_costs_data
+{
+   const SCIP_Real* const redEdgeCost;           /**< reduced costs */
+   const SCIP_Real* const rootToNodeDist;        /**< shortest path distances from root  */
+   const PATH* const nodeTo3TermsPaths;          /**< paths to three nearest terminals */
+   const SCIP_Real cutoff;                       /**< reduced cost cutoff value or -1.0 if not used */
+   const int redCostRoot;                        /**< graph root for reduced cost calculation */
+} REDCOST;
 
 
 /* reduce.c
@@ -105,8 +120,8 @@ extern SCIP_RETCODE    reduce_boundHopRc(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_
 extern SCIP_RETCODE    reduce_deleteConflictEdges(SCIP*, GRAPH*);
 extern SCIP_RETCODE    reduce_extendedCheck3Tree(SCIP*, const GRAPH*, int, const SCIP_Real*, const SCIP_Real*, const PATH*, const int*, SCIP_Real, const int*, int, int*, SCIP_Real*, SCIP_Bool*, unsigned int*, int*, SCIP_Bool*);
 extern int             reduce_extendedEdge(SCIP*, GRAPH*, const PATH*, const SCIP_Real*, const SCIP_Real*, const int*, SCIP_Real, int, int*, STP_Bool*, SCIP_Bool);
-extern SCIP_RETCODE    reduce_extendedCheckArc(SCIP*, const GRAPH*, int, const SCIP_Real*,  const SCIP_Real*, const PATH*, const STP_Bool*, const SCIP_Bool*,  SCIP_Real, int, SCIP_Bool, int*, SCIP_Bool*);
 extern SCIP_RETCODE    reduce_extendedEdge2(SCIP*, GRAPH*, const PATH*, const SCIP_Real*, const SCIP_Real*, const int*, SCIP_Real, int, SCIP_Bool,  STP_Bool*, int*);
+extern SCIP_RETCODE    reduce_extendedCheckArc(SCIP*, const GRAPH*, const REDCOST*, const STP_Bool*,  const SCIP_Bool*, int, SCIP_Bool, DISTDATA*, int*, SCIP_Bool*);
 
 
 /* reduce_test.c
@@ -135,7 +150,7 @@ extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
 
 /* reduce_util.c
  */
-extern SCIP_RETCODE    reduce_distDataInit(SCIP*, const GRAPH*, SCIP_Bool, DISTDATA*);
+extern SCIP_RETCODE    reduce_distDataInit(SCIP*, const GRAPH*, int, SCIP_Bool, DISTDATA*);
 extern SCIP_Real       reduce_distDataGetSD(const DISTDATA*, int, int);
 extern void            reduce_distDataFree(SCIP*, const GRAPH*, DISTDATA*);
 
