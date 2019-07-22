@@ -1157,6 +1157,7 @@ SCIP_RETCODE forwardPropExpr(
                   interval.inf = ceil(interval.inf);
                if( interval.sup <  SCIP_INTERVAL_INFINITY )
                   interval.sup = floor(interval.sup);
+               /* SCIPdebugMsg(scip, "applying integrality: [%.15g,%.15g]\n", interval.inf, interval.sup); */
             }
 
             /* intersect with previously known interval; if tightening, then add to reversepropqueue */
@@ -1196,6 +1197,7 @@ SCIP_RETCODE forwardPropExpr(
                } */
 
                SCIPintervalIntersect(&interval, interval, previnterval);
+               /* SCIPdebugMsg(scip, "intersected with previnterval [%.15g,%.15g] -> [%.15g,%.15g]\n", previnterval.inf, previnterval.sup, interval.inf, interval.sup); */
             }
 
             /* set activity in expression */
@@ -1463,7 +1465,7 @@ SCIP_RETCODE propConss(
 
          ntightenings = 0;
          SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, force, TRUE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), allexprs ? NULL : queue, &cutoff, &ntightenings) );
-         assert(cutoff == SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
+         assert(cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
 #ifdef SCIP_DEBUG
          if( cutoff )
@@ -1710,7 +1712,7 @@ SCIP_RETCODE checkRedundancyConss(
       SCIPdebugPrintCons(scip, conss[i], NULL);
 
       SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, FALSE, intEvalVarRedundancyCheck, NULL, NULL, cutoff, NULL) );
-      assert(*cutoff == SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
+      assert(*cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
       /* it is unlikely that we detect infeasibility by doing forward propagation */
       if( *cutoff )
