@@ -220,6 +220,7 @@ SCIP_RETCODE SCIPcreateConsExprExprValue(
 
    assert(consexprhdlr != NULL);
    assert(expr != NULL);
+   assert(SCIPisFinite(value));
 
    assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_EXPRDATA*));
    memcpy(&exprdata, &value, sizeof(SCIP_Real));
