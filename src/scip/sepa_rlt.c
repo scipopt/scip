@@ -38,6 +38,7 @@
 #include "cons_expr_iterator.h"
 #include "cons_expr_pow.h"
 #include "cons_expr_product.h"
+#include "cons_expr_var.h"
 
 
 #define SEPA_NAME              "rlt"
@@ -326,6 +327,106 @@ SCIP_RETCODE getInitialRows(
    return SCIP_OKAY;
 }
 
+/** store the bilinear product and all related information in sepadata */
+SCIP_RETCODE addBilinProduct(
+   SCIP*               scip,     /**< SCIP data structure */
+   SCIP_SEPADATA*      sepadata, /**< separator data */
+   SCIP_CONSEXPR_EXPR* expr,     /**< product expression */
+   SCIP_VAR*           x,        /**< a product variable with smaller index */
+   SCIP_VAR*           y,        /**< a product variable with larger index */
+   SCIP_VAR**          linvars,  /**< linearisation variables for the product  */
+   SCIP_Real*          lincoefs, /**< linearisation coefficients of the product */
+   SCIP_Real           lincst,   /**< linearisation constant of the product */
+   int                 nlinvars, /**< number of linearisation variables of the product */
+   SCIP_HASHMAP*       varmap    /**< map containing vars that have already been encountered in products */
+)
+{
+   int mapidx, xidx, yidx;
+   int poslocks;
+   int neglocks;
+   int xpos, ypos;
+
+   /* the variables should be given in the correct order */
+   assert(SCIPvarComp(x, y) <= 0);
+
+   assert(linvars != NULL);
+   assert(lincoefs != NULL);
+
+   assert(nlinvars >= 1 && nlinvars <= 3);
+
+   xidx = SCIPvarGetIndex(x);
+   yidx = SCIPvarGetIndex(y);
+
+   mapidx = xidx * sepadata->maxvarindex + yidx;
+
+   /* store variables if it's the first time they are found in a bilinear term */
+   if( !SCIPhashmapExists(varmap, (void*)(size_t) xidx) )
+   {
+      SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) xidx, sepadata->nbilinvars) ); /*lint !e571*/
+      sepadata->varssorted[sepadata->nbilinvars] = x;
+      SCIP_CALL( SCIPcaptureVar(scip, x) );
+      xpos = sepadata->nbilinvars;
+      ++sepadata->nbilinvars;
+   }
+   else
+   {
+      xpos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx);
+   }
+   if( sepadata->nvarbilinvars[xpos] == 0 )
+      SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[xpos], SCIPgetNVars(scip));
+   sepadata->varbilinvars[xpos][sepadata->nvarbilinvars[xpos]] = y;
+   ++sepadata->nvarbilinvars[xpos];
+
+   if( !SCIPhashmapExists(varmap, (void*)(size_t) yidx) )
+   {
+      SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) yidx, sepadata->nbilinvars) ); /*lint !e571*/
+      sepadata->varssorted[sepadata->nbilinvars] = y;
+      SCIP_CALL( SCIPcaptureVar(scip, y) );
+      ypos = sepadata->nbilinvars;
+      ++sepadata->nbilinvars;
+   }
+   else
+   {
+      ypos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx);
+   }
+
+
+   if( sepadata->nvarbilinvars[ypos] == 0 )
+      SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[ypos], SCIPgetNVars(scip));
+   if( xidx != yidx )
+   {
+      sepadata->varbilinvars[ypos][sepadata->nvarbilinvars[ypos]] = x;
+      ++sepadata->nvarbilinvars[ypos];
+   }
+
+
+   /* insert the position of the linearization expression into auxvar hashmap */
+   SCIP_CALL( SCIPhashmapInsertInt(sepadata->bilinvarsmap, (void*)(size_t) mapidx,
+                                   sepadata->nbilinterms) ); /*lint !e571*/
+
+   /* add variables and exprs to bilin-arrays and capture them */
+   sepadata->bilinterms[sepadata->nbilinterms] = expr;
+   SCIPcaptureConsExprExpr(expr);
+
+   sepadata->bilinauxvars[sepadata->nbilinterms] = linvars;
+   sepadata->bilinauxcoefs[sepadata->nbilinterms] = lincoefs;
+   sepadata->bilinauxcsts[sepadata->nbilinterms] = lincst;
+   sepadata->nbilinauxvars[sepadata->nbilinterms] = nlinvars;
+   for( int i = 0; i < nlinvars; ++i )
+   {
+      SCIP_CALL( SCIPcaptureVar(scip, sepadata->bilinauxvars[sepadata->nbilinterms][i]) );
+   }
+   ++sepadata->nbilinterms;
+
+   /* add locks to priorities of both variables */
+   poslocks = SCIPgetConsExprExprNLocksPos(expr);
+   neglocks = SCIPgetConsExprExprNLocksNeg(expr);
+   sepadata->varpriorities[SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx)] += poslocks + neglocks; /*lint !e571*/
+   sepadata->varpriorities[SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx)] += poslocks + neglocks; /*lint !e571*/
+
+   return SCIP_OKAY;
+}
+
 /** extract all possible bilinear products from two implied relations
  *
  * Given two linear rows having the same three variables, at least one of which is binary
@@ -341,10 +442,11 @@ SCIP_RETCODE getInitialRows(
  */
 static
 SCIP_RETCODE extractImplrelProducts(
-   SCIP*          scip,
-   SCIP_SEPADATA* sepadata,
-   SCIP_ROW*      impl_rel1,
-   SCIP_ROW*      impl_rel2
+   SCIP*          scip,      /**< SCIP data structure */
+   SCIP_SEPADATA* sepadata,  /**< separator data */
+   SCIP_ROW*      impl_rel1, /**< the first implied relation */
+   SCIP_ROW*      impl_rel2, /**< the second implied relation */
+   SCIP_HASHMAP*  varmap     /**< variable map */
    )
 {
    SCIP_Real* coefs1;
@@ -355,6 +457,12 @@ SCIP_RETCODE extractImplrelProducts(
    SCIP_Real sign2, lhs2, rhs2;
    SCIP_Real mult;
    SCIP_CONSEXPR_EXPR* bilinexpr;
+   SCIP_VAR** linvars;
+   SCIP_Real* lincoefs;
+   SCIP_VAR* w;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_CONSEXPR_EXPR* prodexprs[2];
 
    /* get row coefficients and columns */
    coefs1 = SCIProwGetVals(impl_rel1);
@@ -411,50 +519,88 @@ SCIP_RETCODE extractImplrelProducts(
          /* all conditions satisfied, we can extract the product */
          /* TODO equality */
 
+         w = SCIPcolGetVar(cols1[wpos]);
+         x = SCIPcolGetVar(cols1[xpos]);
+         y = SCIPcolGetVar(cols1[ypos]);
+
          /* do lhs */
          if( SCIProwGetLhs(impl_rel1) != -SCIPinfinity(scip) && lhs2 != -SCIPinfinity(scip) )
          {
             /* after dividing by a1: w + b'1x + c'1y <=/>= d'1 */
             SCIPinfoMessage(scip, NULL, "\nFound suitable implied rels (w,x,y): %s + %f%s + %f%s %s %f\n",
-               SCIPvarGetName(SCIPcolGetVar(cols1[wpos])), coefs1[xpos]/coefs1[wpos], SCIPvarGetName(SCIPcolGetVar(cols1[xpos])),
-               coefs1[ypos]/coefs1[wpos], SCIPvarGetName(SCIPcolGetVar(cols1[ypos])), coefs1[wpos] > 0 ? ">=" : "<=", SCIProwGetLhs(impl_rel1)/coefs1[wpos]);
+               SCIPvarGetName(w), coefs1[xpos]/coefs1[wpos], SCIPvarGetName(x),
+               coefs1[ypos]/coefs1[wpos], SCIPvarGetName(y), coefs1[wpos] > 0 ? ">=" : "<=", SCIProwGetLhs(impl_rel1)/coefs1[wpos]);
 
             /* after dividing by a2: w - b'2x + c'2y <=/>= d'2 */
             SCIPinfoMessage(scip, NULL, "\nand %s + %f%s + %f%s %s %f\n",
-                            SCIPvarGetName(SCIPcolGetVar(cols2[wpos])), coefs2[xpos]/coefs2[wpos], SCIPvarGetName(SCIPcolGetVar(cols2[xpos])),
-                            coefs2[ypos]/coefs2[wpos], SCIPvarGetName(SCIPcolGetVar(cols2[ypos])), sign2*coefs2[wpos] > 0 ? ">=" : "<=", lhs2/coefs2[wpos]);
+                            SCIPvarGetName(w), coefs2[xpos]/coefs2[wpos], SCIPvarGetName(x),
+                            coefs2[ypos]/coefs2[wpos], SCIPvarGetName(y), sign2*coefs2[wpos] > 0 ? ">=" : "<=", lhs2/coefs2[wpos]);
 
             /* the product is: w <=/>= (-c'1 + c'2)xy + (d'1 - b'1 - d'2)x - c'2y + d'2 */
             /* move xy to the side: xy <=/>= (-w + (d'1 - b'1 - d'2)x - c'2y + d'2) *(1/(c'1 - c'2)) */
             mult = 1/(coefs1[ypos]/coefs1[wpos] - coefs2[ypos]/coefs2[wpos]);
-            SCIPinfoMessage(scip, NULL, "\nproduct: %s*%s", SCIPvarGetName(SCIPcolGetVar(cols2[xpos])), SCIPvarGetName(SCIPcolGetVar(cols2[ypos])));
-            SCIPinfoMessage(scip, NULL, " <=  %f%s + %f%s + %f%s + %f\n", -mult, SCIPvarGetName(SCIPcolGetVar(cols2[wpos])),
-               (SCIProwGetLhs(impl_rel1)/coefs1[wpos] - coefs1[xpos]/coefs1[wpos] - lhs2/coefs2[wpos])*mult, SCIPvarGetName(SCIPcolGetVar(cols2[xpos])),
-                  -coefs2[ypos]/coefs2[wpos]*mult, SCIPvarGetName(SCIPcolGetVar(cols2[ypos])), lhs2/coefs2[wpos]*mult);
+            SCIPinfoMessage(scip, NULL, "\nproduct: %s*%s", SCIPvarGetName(x), SCIPvarGetName(y));
+            SCIPinfoMessage(scip, NULL, " <=  %f%s + %f%s + %f%s + %f\n", -mult, SCIPvarGetName(w),
+               (SCIProwGetLhs(impl_rel1)/coefs1[wpos] - coefs1[xpos]/coefs1[wpos] - lhs2/coefs2[wpos])*mult, SCIPvarGetName(x),
+                  -coefs2[ypos]/coefs2[wpos]*mult, SCIPvarGetName(y), lhs2/coefs2[wpos]*mult);
 
-            /* TODO actually store the product */
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &linvars, 3) );
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &lincoefs, 3) );
+
+            lincoefs[0] = -mult;
+            linvars[0] = w;
+            lincoefs[1] = (SCIProwGetLhs(impl_rel1)/coefs1[wpos] - coefs1[xpos]/coefs1[wpos] - lhs2/coefs2[wpos])*mult;
+            linvars[1] = x;
+            lincoefs[2] = -coefs2[ypos]/coefs2[wpos]*mult;
+            linvars[2] = y;
+
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &(prodexprs[0]), x) );
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &(prodexprs[1]), y) );
+            SCIP_CALL( SCIPcreateConsExprExprProduct(scip, sepadata->conshdlr, &bilinexpr, 2, prodexprs, 1.0) );
+            SCIPreleaseConsExprExpr(scip, &(prodexprs[1]));
+            SCIPreleaseConsExprExpr(scip, &(prodexprs[0]));
+
+            addBilinProduct(scip, sepadata, bilinexpr, x, y, linvars, lincoefs, lhs2/coefs2[wpos]*mult, 3, varmap);
+            SCIPreleaseConsExprExpr(scip, &bilinexpr);
          }
 
          /* do rhs */
          if( SCIProwGetRhs(impl_rel1) != SCIPinfinity(scip) && rhs2 != SCIPinfinity(scip) )
          {
             SCIPinfoMessage(scip, NULL, "\nFound suitable implied rels (w,x,y): %s + %f%s + %f%s %s %f\n",
-                            SCIPvarGetName(SCIPcolGetVar(cols1[wpos])), coefs1[xpos]/coefs1[wpos], SCIPvarGetName(SCIPcolGetVar(cols1[xpos])),
-                            coefs1[ypos]/coefs1[wpos], SCIPvarGetName(SCIPcolGetVar(cols1[ypos])), coefs1[wpos] > 0 ? "<=" : ">=", SCIProwGetRhs(impl_rel1)/coefs1[wpos]);
+                            SCIPvarGetName(w), coefs1[xpos]/coefs1[wpos], SCIPvarGetName(x),
+                            coefs1[ypos]/coefs1[wpos], SCIPvarGetName(y), coefs1[wpos] > 0 ? "<=" : ">=", SCIProwGetRhs(impl_rel1)/coefs1[wpos]);
 
             SCIPinfoMessage(scip, NULL, "\nand %s + %f%s + %f%s %s %f\n",
-                            SCIPvarGetName(SCIPcolGetVar(cols2[wpos])), coefs2[xpos]/coefs2[wpos], SCIPvarGetName(SCIPcolGetVar(cols2[xpos])),
-                            coefs2[ypos]/coefs2[wpos], SCIPvarGetName(SCIPcolGetVar(cols1[ypos])), sign2*coefs2[wpos] > 0 ? "<=" : ">=", rhs2/coefs1[wpos]);
+                            SCIPvarGetName(w), coefs2[xpos]/coefs2[wpos], SCIPvarGetName(x),
+                            coefs2[ypos]/coefs2[wpos], SCIPvarGetName(y), sign2*coefs2[wpos] > 0 ? "<=" : ">=", rhs2/coefs1[wpos]);
 
             /* the product is: w >=/<= (-c'1 + c'2)xy + (d'1 - b'1 - d'2)x - c'2y + d'2 */
             /* move xy to the side: xy <=/>= (-w + (d'1 - b'1 - d'2)x - c'2y + d'2) *(1/(c'1 - c'2)) */
             mult = 1/(coefs1[ypos]/coefs1[wpos] - coefs2[ypos]/coefs2[wpos]);
-            SCIPinfoMessage(scip, NULL, "\nproduct: %s*%s", SCIPvarGetName(SCIPcolGetVar(cols2[xpos])), SCIPvarGetName(SCIPcolGetVar(cols2[ypos])));
-            SCIPinfoMessage(scip, NULL, " >=  %f%s + %f%s + %f%s + %f\n", -mult, SCIPvarGetName(SCIPcolGetVar(cols2[wpos])),
-                            (SCIProwGetRhs(impl_rel1)/coefs1[wpos] - coefs1[xpos]/coefs1[wpos] - rhs2/coefs2[wpos])*mult, SCIPvarGetName(SCIPcolGetVar(cols2[xpos])),
-                            -coefs2[ypos]/coefs2[wpos]*mult, SCIPvarGetName(SCIPcolGetVar(cols2[ypos])), rhs2/coefs2[wpos]*mult);
+            SCIPinfoMessage(scip, NULL, "\nproduct: %s*%s", SCIPvarGetName(x), SCIPvarGetName(y));
+            SCIPinfoMessage(scip, NULL, " >=  %f%s + %f%s + %f%s + %f\n", -mult, SCIPvarGetName(w),
+                            (SCIProwGetRhs(impl_rel1)/coefs1[wpos] - coefs1[xpos]/coefs1[wpos] - rhs2/coefs2[wpos])*mult, SCIPvarGetName(x),
+                            -coefs2[ypos]/coefs2[wpos]*mult, SCIPvarGetName(y), rhs2/coefs2[wpos]*mult);
 
-            /* TODO actually store the product */
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &linvars, 3) );
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &lincoefs, 3) );
+
+            lincoefs[0] = -mult;
+            linvars[0] = w;
+            lincoefs[1] = (SCIProwGetRhs(impl_rel1)/coefs1[wpos] - coefs1[xpos]/coefs1[wpos] - rhs2/coefs2[wpos])*mult;
+            linvars[1] = x;
+            lincoefs[2] = -coefs2[ypos]/coefs2[wpos]*mult;
+            linvars[2] = y;
+
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &(prodexprs[0]), x) );
+            SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &(prodexprs[1]), y) );
+            SCIP_CALL( SCIPcreateConsExprExprProduct(scip, sepadata->conshdlr, &bilinexpr, 2, prodexprs, 1.0) );
+            SCIPreleaseConsExprExpr(scip, &(prodexprs[1]));
+            SCIPreleaseConsExprExpr(scip, &(prodexprs[0]));
+
+            addBilinProduct(scip, sepadata, bilinexpr, x, y, linvars, lincoefs, rhs2/coefs2[wpos]*mult, 3, varmap);
+            SCIPreleaseConsExprExpr(scip, &bilinexpr);
          }
       }
    }
@@ -467,7 +613,8 @@ SCIP_RETCODE extractImplrelProducts(
 static
 SCIP_RETCODE detectHiddenProducts(
    SCIP*          scip,       /**< SCIP data structure */
-   SCIP_SEPADATA* sepadata    /**< separation data */
+   SCIP_SEPADATA* sepadata,   /**< separation data */
+   SCIP_HASHMAP*  varmap      /**< variable map */
    )
 {
    int v, r, r2, i, nrows;
@@ -569,7 +716,7 @@ SCIP_RETCODE detectHiddenProducts(
          /* go through the remaining rows in this entry */
          for( r2 = r + 1; r2 < foundhashdata->nrows; ++r2 )
          {
-            extractImplrelProducts(scip, sepadata, foundhashdata->rows[r], foundhashdata->rows[r2]);
+            SCIP_CALL( extractImplrelProducts(scip, sepadata, foundhashdata->rows[r], foundhashdata->rows[r2], varmap) );
          }
 
          /* TODO go through the implied bounds of the binary variable */
@@ -590,107 +737,6 @@ SCIP_RETCODE detectHiddenProducts(
    if( sepadata->isinitialround || sepadata->onlyinitial )
       SCIPfreeBufferArray(scip, &prob_rows);
    /* no need to free prob_rows in the other case since SCIPgetLPRowsData does not allocate it */
-
-   return SCIP_OKAY;
-}
-
-
-/** store the bilinear product and all related information in sepadata */
-SCIP_RETCODE addBilinProduct(
-   SCIP*               scip,     /**< SCIP data structure */
-   SCIP_SEPADATA*      sepadata, /**< separator data */
-   SCIP_CONSEXPR_EXPR* expr,     /**< product expression */
-   SCIP_VAR*           x,        /**< a product variable with smaller index */
-   SCIP_VAR*           y,        /**< a product variable with larger index */
-   SCIP_VAR**          linvars,  /**< linearisation variables for the product  */
-   SCIP_Real*          lincoefs, /**< linearisation coefficients of the product */
-   SCIP_Real           lincst,   /**< linearisation constant of the product */
-   int                 nlinvars, /**< number of linearisation variables of the product */
-   SCIP_HASHMAP*       varmap    /**< map containing vars that have already been encountered in products */
-   )
-{
-   int mapidx, xidx, yidx;
-   int poslocks;
-   int neglocks;
-   int xpos, ypos;
-
-   /* the variables should be given in the correct order */
-   assert(SCIPvarComp(x, y) <= 0);
-
-   assert(linvars != NULL);
-   assert(lincoefs != NULL);
-
-   assert(nlinvars >= 1 && nlinvars <= 3);
-
-   xidx = SCIPvarGetIndex(x);
-   yidx = SCIPvarGetIndex(y);
-
-   mapidx = xidx * sepadata->maxvarindex + yidx;
-
-   /* store variables if it's the first time they are found in a bilinear term */
-   if( !SCIPhashmapExists(varmap, (void*)(size_t) xidx) )
-   {
-      SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) xidx, sepadata->nbilinvars) ); /*lint !e571*/
-      sepadata->varssorted[sepadata->nbilinvars] = x;
-      SCIP_CALL( SCIPcaptureVar(scip, x) );
-      xpos = sepadata->nbilinvars;
-      ++sepadata->nbilinvars;
-   }
-   else
-   {
-      xpos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx);
-   }
-   if( sepadata->nvarbilinvars[xpos] == 0 )
-      SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[xpos], SCIPgetNVars(scip));
-   sepadata->varbilinvars[xpos][sepadata->nvarbilinvars[xpos]] = y;
-   ++sepadata->nvarbilinvars[xpos];
-
-   if( !SCIPhashmapExists(varmap, (void*)(size_t) yidx) )
-   {
-      SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) yidx, sepadata->nbilinvars) ); /*lint !e571*/
-      sepadata->varssorted[sepadata->nbilinvars] = y;
-      SCIP_CALL( SCIPcaptureVar(scip, y) );
-      ypos = sepadata->nbilinvars;
-      ++sepadata->nbilinvars;
-   }
-   else
-   {
-      ypos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx);
-   }
-
-
-   if( sepadata->nvarbilinvars[ypos] == 0 )
-      SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[ypos], SCIPgetNVars(scip));
-   if( xidx != yidx )
-   {
-      sepadata->varbilinvars[ypos][sepadata->nvarbilinvars[ypos]] = x;
-      ++sepadata->nvarbilinvars[ypos];
-   }
-
-
-   /* insert the position of the linearization expression into auxvar hashmap */
-   SCIP_CALL( SCIPhashmapInsertInt(sepadata->bilinvarsmap, (void*)(size_t) mapidx,
-                                   sepadata->nbilinterms) ); /*lint !e571*/
-
-   /* add variables and exprs to bilin-arrays and capture them */
-   sepadata->bilinterms[sepadata->nbilinterms] = expr;
-   SCIPcaptureConsExprExpr(expr);
-
-   sepadata->bilinauxvars[sepadata->nbilinterms] = linvars;
-   sepadata->bilinauxcoefs[sepadata->nbilinterms] = lincoefs;
-   sepadata->bilinauxcsts[sepadata->nbilinterms] = lincst;
-   sepadata->nbilinauxvars[sepadata->nbilinterms] = nlinvars;
-   for( int i = 0; i < nlinvars; ++i )
-   {
-      SCIP_CALL( SCIPcaptureVar(scip, sepadata->bilinauxvars[sepadata->nbilinterms][i]) );
-   }
-   ++sepadata->nbilinterms;
-
-   /* add locks to priorities of both variables */
-   poslocks = SCIPgetConsExprExprNLocksPos(expr);
-   neglocks = SCIPgetConsExprExprNLocksNeg(expr);
-   sepadata->varpriorities[SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx)] += poslocks + neglocks; /*lint !e571*/
-   sepadata->varpriorities[SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx)] += poslocks + neglocks; /*lint !e571*/
 
    return SCIP_OKAY;
 }
@@ -754,7 +800,7 @@ SCIP_RETCODE createSepaData(
       maxidx = MAX(maxidx, SCIPvarGetIndex(vars[i]));  /*lint !e666*/
    sepadata->maxvarindex = maxidx; /* TODO don't we need +1 here? */
 
-   SCIP_CALL( detectHiddenProducts(scip, sepadata) );
+   SCIP_CALL( detectHiddenProducts(scip, sepadata, varmap) );
 
    for( i = 0; i < nconss; ++i )
    {
