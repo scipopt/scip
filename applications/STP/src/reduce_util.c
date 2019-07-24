@@ -30,20 +30,28 @@
 #include "reduce.h"
 #include "misc_stp.h"
 
-#if 0
+/** returns entry of element within sorted array of size arraysize, or -1 if element could not be found */
 static
-int findEntry(const int* array, int arraysize, int value)
+int findEntryFromSorted(
+   const int* array,
+   int arraysize,
+   int element)
 {
    int l = 0;
    int u = arraysize - 1;
+
+#ifndef NDEBUG
+   for( int i = 1; i < arraysize; i++ )
+      assert(array[i - 1] < array[i] );
+#endif
 
    while( l <= u )
    {
       const int m = (u - l) / 2 + l;
 
-      if( array[m] < value )
+      if( array[m] < element )
          l = m + 1;
-      else if( array[m] == value )
+      else if( array[m] == element )
          return m;
       else
          u = m - 1;
@@ -52,7 +60,35 @@ int findEntry(const int* array, int arraysize, int value)
 
    return -1;
 }
-#endif
+
+/** returns distance of closenode from node, or -1.0 if this distance is not stored in close nodes list of node */
+static inline
+SCIP_Real getCloseNodeDistance(
+   const DISTDATA*       distdata,           /**< to be initialized */
+   int                   node,               /**< the node */
+   int                   closenode           /**< the close node whose position is to be found */
+)
+{
+   const int* const indices = distdata->closenodes_indices;
+   const RANGE* const range = distdata->closenodes_range;
+   const int start = range[node].start;
+   const int end = range[node].end;
+   const int size = end - start;
+   int position;
+   SCIP_Real dist = -1.0;
+
+   assert(size > 0);
+
+   position = findEntryFromSorted(&indices[start], size, closenode);
+
+   if( position >= 0 )
+   {
+      assert(indices[start + position] == closenode);
+      dist = distdata->closenodes_distances[start + position];
+   }
+
+   return dist;
+}
 
 /** compute paths root list */
 static
@@ -467,6 +503,8 @@ SCIP_Real reduce_distDataGetSD(
    int                   vertex2             /**< second vertex */
 )
 {
+   SCIP_Real dist;
+
    assert(distdata);
    assert(vertex1 >= 0 && vertex2 >= 0);
 
@@ -475,21 +513,26 @@ SCIP_Real reduce_distDataGetSD(
    // if( distdata->nodeSDpaths_dirty[vertex2] )
 
 
-
    /* neighbors list not valid anymore? */
    if( distdata->nodepaths_dirty[vertex1] )
    {
       /* recompute */
+      assert(0);
+
 
       distdata->nodepaths_dirty[vertex1] = FALSE;
    }
 
-   /* binary search on neighbors of vertex1 */
+   /* look in neighbors list of vertex1 */
+   dist = getCloseNodeDistance(distdata, vertex1, vertex2);
 
 
    /* if no success, binary search on neighbors of vertex2? todo too expensive? */
 
-   return -1.0;
+   //   if( distdata->nodepaths_dirty[vertex2] )
+
+
+   return dist;
 }
 
 /** frees members of distance data */

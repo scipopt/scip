@@ -608,10 +608,10 @@ SCIP_RETCODE reduce_extDistTest1(
    graph_edge_add(scip, graph, 1, 4, 1.0, 1.0);
 
    graph_edge_add(scip, graph, 2, 5, 0.5, 0.5);
-   graph_edge_add(scip, graph, 3, 6, 1.0, 1.0);
-   graph_edge_add(scip, graph, 3, 7, 1.0, 1.0);
-   graph_edge_add(scip, graph, 4, 8, 1.0, 1.0);
-   graph_edge_add(scip, graph, 4, 9, 1.0, 1.0);
+   graph_edge_add(scip, graph, 3, 6, 1.6, 1.6);
+   graph_edge_add(scip, graph, 3, 7, 1.6, 1.6);
+   graph_edge_add(scip, graph, 4, 8, 1.5, 1.5);
+   graph_edge_add(scip, graph, 4, 9, 1.5, 1.5);
 
    graph_edge_add(scip, graph, 5, 10, 1.0, 1.0);
    graph_edge_add(scip, graph, 10, 11, 1.0, 1.0);
@@ -625,20 +625,66 @@ SCIP_RETCODE reduce_extDistTest1(
 
    /* 2. do the actual test */
 
+   /* test close nodes */
    {
       const RANGE* node_range = distdata.closenodes_range;
       const int* node_idx = distdata.closenodes_indices;
       const SCIP_Real* node_dist = distdata.closenodes_distances;
-      const int node = 1;
 
-      printf("node %d: \n", node);
-
-      for( int i = node_range[node].start; i < node_range[node].end; i++ )
+      for( int node = 0; node < 6; node++ )
       {
-         printf("...closenode=%d  dist=%f\n", node_idx[i], node_dist[i]);
+         printf("node %d: \n", node);
+
+         for( int i = node_range[node].start; i < node_range[node].end; i++ )
+         {
+            printf("...closenode=%d  dist=%f\n", node_idx[i], node_dist[i]);
+         }
+      }
+
+      assert(node_idx[node_range[1].start] == 2);
+      assert(node_idx[node_range[1].start + 1] == 5);
+      assert(node_idx[node_range[5].start] == 1);
+      assert(node_idx[node_range[5].start + 1] == 2);
+   }
+
+   /* test edge root paths */
+   {
+      const int edge = 2;
+      const RANGE* pathroot_range = distdata.pathroots_range;
+      const int* pathroots = distdata.pathroots;
+
+      assert(graph->head[edge] == 2 && graph->tail[edge] == 1);
+
+      printf("edge ");
+      graph_edge_printInfo(graph, edge);
+
+      assert(pathroot_range[edge / 2].end - pathroot_range[edge / 2].start == 6);
+
+
+      for( int i = pathroot_range[edge / 2].start; i < pathroot_range[edge / 2].end; i++ )
+      {
+         printf("...root=%d  \n", pathroots[i]);
       }
    }
 
+
+   /* test distances */
+   {
+      const SCIP_Real dist1_2 = reduce_distDataGetSD(&distdata, 1, 2);
+      const SCIP_Real dist1_3 = reduce_distDataGetSD(&distdata, 1, 3);
+      const SCIP_Real dist1_5 = reduce_distDataGetSD(&distdata, 1, 5);
+      const SCIP_Real dist2_1 = reduce_distDataGetSD(&distdata, 2, 1);
+      const SCIP_Real dist2_5 = reduce_distDataGetSD(&distdata, 2, 5);
+      const SCIP_Real dist2_6 = reduce_distDataGetSD(&distdata, 2, 6);
+
+      assert(dist1_2 == 0.4);
+      assert(dist1_3 == -1.0);
+      assert(dist1_5 == 0.9);
+
+      assert(dist2_1 == 0.4);
+      assert(dist2_5 == 0.5);
+      assert(dist2_6 == -1.0);
+   }
 
    reduce_distDataFree(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
