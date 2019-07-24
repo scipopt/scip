@@ -32,13 +32,11 @@ extern "C" {
 #endif
 
 /** creates the handler for cumulative constraints with optional activities and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludeConshdlrOptcumulative(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a optcumulative constraint */
-extern
 SCIP_RETCODE SCIPcreateConsOptcumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */

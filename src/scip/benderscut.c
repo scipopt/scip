@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for Benders' decomposition cut
  * @author Stephen J. Maher
  */

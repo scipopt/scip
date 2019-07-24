@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_dualval.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  dualval primal heuristic
  * @author Tobias Buchwald
  *
@@ -65,7 +66,7 @@
 
 #define HEUR_NAME             "dualval"
 #define HEUR_DESC             "primal heuristic using dual values"
-#define HEUR_DISPCHAR         'Y'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
@@ -1287,7 +1288,7 @@ SCIP_RETCODE createSubSCIP(
          /* relax the old indicator variables*/
          for( k = 0; k < nvars; k++ )
          {
-            if( SCIPhashmapGetImage(heurdata->indicators, vars[i]) == NULL )
+            if( SCIPhashmapGetImage(heurdata->indicators, vars[k]) == NULL )
                continue;
 
             tmpvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, vars[k]);

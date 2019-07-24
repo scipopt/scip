@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipdefplugins.c
+ * @ingroup OTHER_CFILES
  * @brief  default SCIP plugins
  * @author Tobias Achterberg
  */
@@ -62,30 +63,33 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
    SCIP_CALL( SCIPincludeConshdlrComponents(scip) );
-   SCIP_CALL( SCIPincludeReaderBnd(scip) );
-   SCIP_CALL( SCIPincludeReaderCcg(scip) );
-   SCIP_CALL( SCIPincludeReaderCip(scip) );
-   SCIP_CALL( SCIPincludeReaderCnf(scip) );
-   SCIP_CALL( SCIPincludeReaderCor(scip) );
-   SCIP_CALL( SCIPincludeReaderDiff(scip) );
-   SCIP_CALL( SCIPincludeReaderFix(scip) );
-   SCIP_CALL( SCIPincludeReaderFzn(scip) );
-   SCIP_CALL( SCIPincludeReaderGms(scip) );
-   SCIP_CALL( SCIPincludeReaderLp(scip) );
+
+   /* include readers in order of chances to be necessary */
    SCIP_CALL( SCIPincludeReaderMps(scip) );
-   SCIP_CALL( SCIPincludeReaderMst(scip) );
-   SCIP_CALL( SCIPincludeReaderOpb(scip) );
-   SCIP_CALL( SCIPincludeReaderOsil(scip) );
-   SCIP_CALL( SCIPincludeReaderPip(scip) );
-   SCIP_CALL( SCIPincludeReaderPpm(scip) );
-   SCIP_CALL( SCIPincludeReaderPbm(scip) );
-   SCIP_CALL( SCIPincludeReaderRlp(scip) );
-   SCIP_CALL( SCIPincludeReaderSmps(scip) );
+   SCIP_CALL( SCIPincludeReaderLp(scip) );
    SCIP_CALL( SCIPincludeReaderSol(scip) );
+   SCIP_CALL( SCIPincludeReaderOsil(scip) );
+   SCIP_CALL( SCIPincludeReaderGms(scip) );
+   SCIP_CALL( SCIPincludeReaderZpl(scip) );
+   SCIP_CALL( SCIPincludeReaderOpb(scip) );
+   SCIP_CALL( SCIPincludeReaderWbo(scip) );
+   SCIP_CALL( SCIPincludeReaderPip(scip) );
+   SCIP_CALL( SCIPincludeReaderFzn(scip) );
+   SCIP_CALL( SCIPincludeReaderCnf(scip) );
+   SCIP_CALL( SCIPincludeReaderCip(scip) );
+   SCIP_CALL( SCIPincludeReaderSmps(scip) );
    SCIP_CALL( SCIPincludeReaderSto(scip) );
    SCIP_CALL( SCIPincludeReaderTim(scip) );
-   SCIP_CALL( SCIPincludeReaderWbo(scip) );
-   SCIP_CALL( SCIPincludeReaderZpl(scip) );
+   SCIP_CALL( SCIPincludeReaderCor(scip) );
+   SCIP_CALL( SCIPincludeReaderRlp(scip) );
+   SCIP_CALL( SCIPincludeReaderBnd(scip) );
+   SCIP_CALL( SCIPincludeReaderDiff(scip) );
+   SCIP_CALL( SCIPincludeReaderFix(scip) );
+   SCIP_CALL( SCIPincludeReaderMst(scip) );
+   SCIP_CALL( SCIPincludeReaderPpm(scip) );
+   SCIP_CALL( SCIPincludeReaderPbm(scip) );
+   SCIP_CALL( SCIPincludeReaderCcg(scip) );
+
    SCIP_CALL( SCIPincludePresolBoundshift(scip) );
    SCIP_CALL( SCIPincludePresolConvertinttobin(scip) );
    SCIP_CALL( SCIPincludePresolDomcol(scip) );
@@ -127,6 +131,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeComprLargestrepr(scip) );
    SCIP_CALL( SCIPincludeComprWeakcompr(scip) );
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurAdaptivediving(scip) );
    SCIP_CALL( SCIPincludeHeurBound(scip) );
    SCIP_CALL( SCIPincludeHeurClique(scip) );
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
@@ -174,6 +179,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurSubNlp(scip) );
    SCIP_CALL( SCIPincludeHeurTrivial(scip) );
    SCIP_CALL( SCIPincludeHeurTrivialnegation(scip) );
+   SCIP_CALL( SCIPincludeHeurTrustregion(scip) );
    SCIP_CALL( SCIPincludeHeurTrySol(scip) );
    SCIP_CALL( SCIPincludeHeurTwoopt(scip) );
    SCIP_CALL( SCIPincludeHeurUndercover(scip) );

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_logicor.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for logic or constraints \f$1^T x \ge 1\f$
  *         (equivalent to set covering, but algorithms are suited for depth first search).
  * @author Tobias Achterberg
@@ -1588,7 +1589,7 @@ SCIP_RETCODE createRow(
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons), 1.0, SCIPinfinity(scip),
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), 1.0, SCIPinfinity(scip),
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );

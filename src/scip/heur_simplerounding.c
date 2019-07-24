@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_simplerounding.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  simple and fast LP rounding heuristic
  * @author Tobias Achterberg
  * @author Marc Pfetsch
@@ -43,7 +44,7 @@
 
 #define HEUR_NAME             "simplerounding"
 #define HEUR_DESC             "simple and fast LP rounding heuristic"
-#define HEUR_DISPCHAR         'r'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0

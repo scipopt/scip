@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_gms.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  GAMS file writer
  * @author Ambros Gleixner
  * @author Stefan Vigerske

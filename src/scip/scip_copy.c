@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_copy.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for problem copies
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -32,81 +33,22 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <ctype.h>
-#include <stdarg.h>
-#include <assert.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/
-#endif
-
-
-#include "lpi/lpi.h"
-#include "nlpi/exprinterpret.h"
-#include "nlpi/nlpi.h"
+#include "blockmemshell/memory.h"
 #include "scip/benders.h"
-#include "scip/benderscut.h"
-#include "scip/branch.h"
-#include "scip/branch_nodereopt.h"
 #include "scip/clock.h"
-#include "scip/compr.h"
-#include "scip/concsolver.h"
-#include "scip/concurrent.h"
-#include "scip/conflict.h"
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
 #include "scip/cons_linear.h"
-#include "scip/cutpool.h"
-#include "scip/cuts.h"
 #include "scip/debug.h"
-#include "scip/def.h"
-#include "scip/dialog.h"
-#include "scip/dialog_default.h"
-#include "scip/disp.h"
-#include "scip/event.h"
-#include "scip/heur.h"
-#include "scip/heur_ofins.h"
-#include "scip/heur_reoptsols.h"
-#include "scip/heur_trivialnegation.h"
-#include "scip/heuristics.h"
-#include "scip/history.h"
-#include "scip/implics.h"
-#include "scip/interrupt.h"
-#include "scip/lp.h"
-#include "scip/mem.h"
-#include "scip/message_default.h"
-#include "scip/misc.h"
-#include "scip/nlp.h"
-#include "scip/nodesel.h"
-#include "scip/paramset.h"
-#include "scip/presol.h"
-#include "scip/presolve.h"
-#include "scip/pricer.h"
-#include "scip/pricestore.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
-#include "scip/prop.h"
-#include "scip/reader.h"
-#include "scip/relax.h"
-#include "scip/reopt.h"
-#include "scip/retcode.h"
-#include "scip/scipbuildflags.h"
-#include "scip/scipcoreplugins.h"
-#include "scip/scipgithash.h"
-#include "scip/sepa.h"
-#include "scip/sepastore.h"
-#include "scip/set.h"
-#include "scip/sol.h"
-#include "scip/solve.h"
-#include "scip/stat.h"
-#include "scip/syncstore.h"
-#include "scip/table.h"
-#include "scip/tree.h"
-#include "scip/var.h"
-#include "scip/visual.h"
-#include "xml/xml.h"
-
+#include "scip/pub_cons.h"
+#include "scip/pub_cutpool.h"
+#include "scip/pub_implics.h"
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_var.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_cut.h"
@@ -121,24 +63,15 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_var.h"
-
-#include "scip/pub_cons.h"
-#include "scip/pub_cutpool.h"
-#include "scip/pub_implics.h"
-#include "scip/pub_lp.h"
-#include "scip/pub_message.h"
-#include "scip/pub_misc.h"
-#include "scip/pub_var.h"
-
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons)
- */
-#ifndef NDEBUG
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
-#endif
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/struct_var.h"
+#include "scip/syncstore.h"
+#include "scip/var.h"
 
 /** returns true if the @p cut matches the selection criterium for copying */
 static
@@ -633,6 +566,9 @@ SCIP_RETCODE SCIPcopyOrigProb(
 
    /* set the correct objective sense; necessary if we maximize in the original problem */
    SCIP_CALL( SCIPsetObjsense(targetscip, SCIPgetObjsense(sourcescip)) );
+
+   /* set the objective offset */
+   SCIP_CALL( SCIPaddOrigObjoffset(targetscip, SCIPgetOrigObjoffset(sourcescip)) );
 
    return SCIP_OKAY;
 }
@@ -3072,3 +3008,99 @@ SCIP_RETCODE SCIPcopyLimits(
 
    return SCIP_OKAY;
 }
+
+/** sets the working limits as well as common search parameters for the auxiliary problem
+ *
+ *  @note memory and time limits are not affected, and must be set using SCIPcopyLimits() instead
+ */
+SCIP_RETCODE SCIPsetCommonSubscipParams(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 subscip,            /**< target SCIP data structure, often a copy of \p sourcescip */
+   SCIP_Longint          nsubnodes,          /**< nodelimit for subscip, or -1 for no limit */
+   SCIP_Longint          nstallnodes,        /**< stall node limit for subscip, or -1 for no limit */
+   int                   bestsollimit        /**< the limit on the number of best solutions found, or -1 for no limit */
+   )
+{
+   SCIP_Bool useuct;
+
+   assert(sourcescip != NULL);
+   assert(subscip != NULL);
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
+
+   /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(sourcescip, subscip) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", bestsollimit) );
+
+   /* forbid recursive call of heuristics and separators solving subMIPs */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
+
+   /* disable cutting plane separation */
+   SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* disable expensive presolving */
+   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+   /* use best estimate node selection */
+   if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
+   }
+
+   /* activate uct node selection at the top of the tree */
+   SCIP_CALL( SCIPgetBoolParam(sourcescip, "heuristics/useuctsubscip", &useuct) );
+   if( useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
+   }
+
+   /* use inference branching */
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+   }
+
+   /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
+   if( !SCIPisParamFixed(subscip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
+   }
+
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
+
+   /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
+    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
+    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
+    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
+    * made for the original SCIP
+    */
+   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
+   }
+
+   return SCIP_OKAY;
+}
+

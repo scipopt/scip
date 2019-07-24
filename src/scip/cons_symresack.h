@@ -41,7 +41,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -79,7 +79,7 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
  * Depending on the given permutation, either an orbisack or symresack constraint
  * is created.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateSymbreakCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -87,6 +87,7 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
    int                   nvars,              /**< number of variables in vars array */
+   SCIP_Bool             ismodelcons,        /**< whether the added constraint is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -117,7 +118,7 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsSymresack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -125,6 +126,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
    int                   nvars,              /**< number of variables in vars array */
+   SCIP_Bool             ismodelcons,        /**< whether the symresack is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -158,14 +160,15 @@ SCIP_RETCODE SCIPcreateConsSymresack(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicSymresack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
-   int                   nvars               /**< number of variables in vars array */
+   int                   nvars,              /**< number of variables in vars array */
+   SCIP_Bool             ismodelcons         /**< whether the symresack is a model constraint */
    );
 
 /* @} */

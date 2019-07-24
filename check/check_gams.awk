@@ -102,6 +102,11 @@ BEGIN {
 #18 NumberOfNodes
 
 $3 == solver || $3 == "EXAMINER2" {
+   # with GAMS >= 26, the full filename is written to the trace file
+   # we remove some extensions for easier matching with solu file entries
+   sub("\\.gms.gz", "", $1);
+   sub("\\.gms", "", $1);
+
    model[nprobs] = $1;
    type[nprobs] = $2;
    maxobj[nprobs] = ( $5 == 1 ? 1 : 0 );
@@ -425,12 +430,30 @@ END {
                pass++;
             }
          }
-         else
+         else if( (!maxobj[m] && pb < infty) || (maxobj[m] && pb > -infty) )
          {
             # feasible for an infeasible problem
             status = "fail (infeas.)";
             failtime += tottime;
             fail++;
+         }
+         else
+         {
+            # no feasible solution
+            if( timeout )
+            {
+               # time or node limit reached
+               status = "timeout";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+              # gap not closed, but no timeout
+              status = "fail (gap)";
+              failtime += tottime;
+              fail++;
+            }
          }
       }
       else

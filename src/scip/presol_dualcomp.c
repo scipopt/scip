@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_dualcomp.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  dual compensation presolver
  * @author Dieter Weninger
  *

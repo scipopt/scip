@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_zirounding.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  zirounding primal heuristic
  * @author Gregor Hendel
  */
@@ -39,7 +40,7 @@
 
 #define HEUR_NAME             "zirounding"
 #define HEUR_DESC             "LP rounding heuristic as suggested by C. Wallace taking row slacks and bounds into account"
-#define HEUR_DISPCHAR         'z'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -500
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
@@ -673,7 +674,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             lbslackvar = SCIPvarGetLbGlobal(slackvars[i]);
 
             coeffslackvar = slackvarcoeffs[i];
-            assert(!SCIPisFeasZero(scip, coeffslackvar));
+            assert(!SCIPisZero(scip, coeffslackvar));
 
             ubgap = MAX(0.0, ubslackvar - solvalslackvar);
             lbgap = MAX(0.0, solvalslackvar - lbslackvar);

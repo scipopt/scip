@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_zeroobj.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  heuristic that tries to solve the problem without objective. In Gurobi, this heuristic is known as "Hail Mary"
  * @author Timo Berthold
  */
@@ -50,7 +51,7 @@
 
 #define HEUR_NAME             "zeroobj"
 #define HEUR_DESC             "heuristic trying to solve the problem without objective"
-#define HEUR_DISPCHAR         'Z'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         100
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0

@@ -60,7 +60,6 @@
 #define TM_DIJKSTRA 3
 
 #ifdef WITH_UG
-extern
 int getUgRank(void);
 #endif
 

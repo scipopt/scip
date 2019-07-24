@@ -32,30 +32,10 @@
 #define __SCIP_SCIP_BANDIT_H__
 
 
-#include "blockmemshell/memory.h"
 #include "scip/def.h"
 #include "scip/type_bandit.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -67,7 +47,7 @@ extern "C" {
  */
 
 /** includes a bandit algorithm virtual function table  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBanditvtable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDITVTABLE**   banditvtable,       /**< bandit algorithm virtual function table */
@@ -79,21 +59,21 @@ SCIP_RETCODE SCIPincludeBanditvtable(
    );
 
 /** returns the bandit virtual function table of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_BANDITVTABLE* SCIPfindBanditvtable(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of bandit algorithm virtual function table */
    );
 
 /** calls destructor and frees memory of bandit algorithm */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeBandit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         bandit              /**< pointer to bandit algorithm data structure */
    );
 
 /** reset the bandit algorithm */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPresetBandit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT*          bandit,             /**< pointer to bandit algorithm data structure */

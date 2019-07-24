@@ -31,7 +31,6 @@
 
 
 /** includes the binpacking file reader into SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderBpa(
    SCIP*                 scip                /**< SCIP data structure */
    );

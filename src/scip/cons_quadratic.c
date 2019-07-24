@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_quadratic.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for quadratic constraints \f$\textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_i x_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -83,6 +84,14 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include <string.h>
+
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
+ */
+#ifndef __clang__
+#pragma STD FENV_ACCESS ON
+#endif
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "quadratic"
@@ -2441,7 +2450,7 @@ SCIP_RETCODE replaceQuadVarTermPos(
    if( eventhdlr != NULL )
    {
       assert(SCIPconsIsEnabled(cons));
-      
+
       /* catch bound change events of variable */
       SCIP_CALL( catchQuadVarEvents(scip, eventhdlr, cons, pos) );
    }
@@ -6423,9 +6432,6 @@ SCIP_Bool generateCutLTIfindIntersection(
    SCIP_Real tl;
    SCIP_Real tu;
 
-   assert(wl == SCIP_INVALID || (xl != NULL && yl != NULL));  /*lint !e777 */
-   assert(wu == SCIP_INVALID || (xu != NULL && yu != NULL));  /*lint !e777 */
-
    /* The parametric line is of the form
     *
     *  x = x0 + t (x1-x0)
@@ -6511,10 +6517,13 @@ SCIP_Bool generateCutLTIfindIntersection(
 
    if( wl != SCIP_INVALID )  /*lint !e777 */
    {
+      assert(xl != NULL);
+      assert(yl != NULL);
+
       *xl = (SCIP_Real)(x0  + tl * (x1  - x0 ));
       *yl = (SCIP_Real)(y0_ + tl * (y1_ - y0_));
 
-      if( !SCIPisRelEQ(scip, *xl * *yl, wl) )
+      if( SCIPisInfinity(scip, -*xl) || SCIPisInfinity(scip, -*yl) || !SCIPisRelEQ(scip, *xl * *yl, wl) )
       {
          SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
          return TRUE;
@@ -6523,22 +6532,17 @@ SCIP_Bool generateCutLTIfindIntersection(
 
    if( wu != SCIP_INVALID )  /*lint !e777 */
    {
+      assert(xu != NULL);
+      assert(yu != NULL);
+
       *xu = (SCIP_Real)(x0  + tu * (x1 -  x0));
       *yu = (SCIP_Real)(y0_ + tu * (y1_ - y0_));
 
-      if( !SCIPisRelEQ(scip, *xu * *yu, wu) )
+      if( SCIPisInfinity(scip, *xu) || SCIPisInfinity(scip, *yu) || !SCIPisRelEQ(scip, *xu * *yu, wu) )
       {
          SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
          return TRUE;
       }
-   }
-
-   /* do not use the computed points if one of the components is infinite */
-   if( (xu != NULL && SCIPisInfinity(scip, *xu)) || (xl != NULL && SCIPisInfinity(scip, -*xl)) ||
-      (yu != NULL && SCIPisInfinity(scip, *yu)) || (yl != NULL && SCIPisInfinity(scip, -*yl)) )
-   {
-      SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
-      return TRUE;
    }
 
    return FALSE;
@@ -6631,10 +6635,10 @@ void generateCutLTIcomputeCoefs(
    SCIP_Bool flipy;
    SCIP_Bool flipw;
    SCIP_Real tmp;
-   SCIP_Real xlow;
-   SCIP_Real ylow;
-   SCIP_Real xupp;
-   SCIP_Real yupp;
+   SCIP_Real xlow = 0.0;
+   SCIP_Real ylow = 0.0;
+   SCIP_Real xupp = 0.0;
+   SCIP_Real yupp = 0.0;
    SCIP_Real c0x;
    SCIP_Real c0y;
    SCIP_Real c0w;
@@ -7758,7 +7762,7 @@ SCIP_RETCODE generateCut(
    /* generate row */
    if( success )
    {
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, cons) );
 
       SCIPdebugMsg(scip, "found cut <%s>, lhs=%g, rhs=%g, mincoef=%g, maxcoef=%g, range=%g, nnz=%d, efficacy=%g\n",
          SCIProwGetName(*row), SCIProwGetLhs(*row), SCIProwGetRhs(*row),
@@ -11279,7 +11283,7 @@ SCIP_RETCODE propagateBoundsCons(
                       */
                      if( SCIPintervalIsEmpty(intervalinfty, rhs2) )
                      {
-                        assert(SCIPisSumRelEQ(scip, rhs2.inf, rhs2.sup));
+                        assert(SCIPrelDiff(rhs2.inf, rhs2.sup) < 1e-6);
                         SCIPswapReals(&rhs2.inf, &rhs2.sup);
                      }
 
@@ -12451,6 +12455,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
    {
       assert(conss[c] != NULL);  /*lint !e613 */
 
+      if( !SCIPconsIsEnabled(conss[c]) )  /*lint !e613 */
+         continue;
+
       SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613 */
@@ -12461,7 +12468,7 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
       if( consdata->nquadvars == 0 )
       {
          /* if we are actually linear, add the constraint as row to the LP */
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613 */
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
          SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
@@ -13376,6 +13383,9 @@ SCIP_DECL_CONSENABLE(consEnableQuadratic)
 
    SCIPdebugMsg(scip, "enable cons <%s>\n", SCIPconsGetName(cons));
 
+   /* catch variable events */
+   SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
+
    if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE )
    {
       /* merge duplicate bilinear terms, move quad terms that are linear to linear vars */
@@ -13383,9 +13393,6 @@ SCIP_DECL_CONSENABLE(consEnableQuadratic)
       SCIP_CALL( mergeAndCleanQuadVarTerms(scip, cons) );
       SCIP_CALL( mergeAndCleanLinearVars(scip, cons) );
    }
-
-   /* catch variable events */
-   SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, cons) );
 
    /* initialize solving data */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
@@ -16802,7 +16809,7 @@ int SCIPscaleRowprep(
 }
 
 /** generates a SCIP_ROW from a rowprep */
-SCIP_RETCODE SCIPgetRowprepRowCons(
+SCIP_RETCODE SCIPgetRowprepRowConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
@@ -16812,8 +16819,32 @@ SCIP_RETCODE SCIPgetRowprepRowCons(
    assert(scip != NULL);
    assert(row != NULL);
    assert(rowprep != NULL);
+   assert(conshdlr != NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, rowprep->name,
+   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, row, conshdlr, rowprep->name,
+      rowprep->sidetype == SCIP_SIDETYPE_LEFT  ? rowprep->side : -SCIPinfinity(scip),
+      rowprep->sidetype == SCIP_SIDETYPE_RIGHT ? rowprep->side :  SCIPinfinity(scip),
+      rowprep->local && (SCIPgetDepth(scip) > 0), FALSE, TRUE) );
+
+   SCIP_CALL( SCIPaddVarsToRow(scip, *row, rowprep->nvars, rowprep->vars, rowprep->coefs) );
+
+   return SCIP_OKAY;
+}
+
+/** generates a SCIP_ROW from a rowprep */
+SCIP_RETCODE SCIPgetRowprepRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< buffer to store pointer to new row */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(scip != NULL);
+   assert(row != NULL);
+   assert(rowprep != NULL);
+   assert(cons != NULL);
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, cons, rowprep->name,
       rowprep->sidetype == SCIP_SIDETYPE_LEFT  ? rowprep->side : -SCIPinfinity(scip),
       rowprep->sidetype == SCIP_SIDETYPE_RIGHT ? rowprep->side :  SCIPinfinity(scip),
       rowprep->local && (SCIPgetDepth(scip) > 0), FALSE, TRUE) );

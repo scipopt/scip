@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for constraints and constraint handlers
  * @author Tobias Achterberg
  * @author Timo Berthold

@@ -35,48 +35,46 @@
 extern "C" {
 #endif
 
-#ifndef NDEBUG
-
 /** gets the conflict score of the history entry */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPhistoryGetVSIDS(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir                 /**< branching direction */
    );
 
 /** get number of cutoffs counter */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPhistoryGetCutoffSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
 /** return the number of (domain) values for which a history exists */
-EXTERN
+SCIP_EXPORT
 int SCIPvaluehistoryGetNValues(
    SCIP_VALUEHISTORY*    valuehistory        /**< value based history */
    );
 
 /** return the array containing the histories for the individual (domain) values */
-EXTERN
+SCIP_EXPORT
 SCIP_HISTORY** SCIPvaluehistoryGetHistories(
    SCIP_VALUEHISTORY*    valuehistory        /**< value based history */
    );
 
 /** return the array containing the (domain) values for which a history exists */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* SCIPvaluehistoryGetValues(
    SCIP_VALUEHISTORY*    valuehistory        /**< value based history */
    );
 
-#else
+#ifdef NDEBUG
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
 #define SCIPhistoryGetVSIDS(history,dir)   ((history)->vsids[dir])
-
+#define SCIPhistoryGetCutoffSum(history,dir)        ((history)->cutoffsum[dir])
 #define SCIPvaluehistoryGetNValues(valuehistory)     (valuehistory)->nvalues
 #define SCIPvaluehistoryGetHistories(valuehistory)      (valuehistory)->histories
 #define SCIPvaluehistoryGetValues(valuehistory)      (valuehistory)->values

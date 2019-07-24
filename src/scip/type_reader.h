@@ -19,15 +19,22 @@
  * @author Tobias Achterberg
  */
 
+/** @defgroup DEFPLUGINS_READER Default Readers
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default readers of SCIP
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_TYPE_READER_H__
 #define __SCIP_TYPE_READER_H__
 
 #include "scip/def.h"
+#include "scip/type_cons.h"
 #include "scip/type_retcode.h"
 #include "scip/type_result.h"
 #include "scip/type_scip.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {

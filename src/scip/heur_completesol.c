@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_completesol.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  COMPLETESOL - primal heuristic trying to complete given partial solutions
  * @author Jakob Witzig
  */
@@ -53,7 +54,7 @@
 
 #define HEUR_NAME             "completesol"
 #define HEUR_DESC             "primal heuristic trying to complete given partial solutions"
-#define HEUR_DISPCHAR         'h'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

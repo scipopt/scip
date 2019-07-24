@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_crossover.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  crossover primal heuristic
  * @author Timo Berthold
  */
@@ -51,7 +52,7 @@
 
 #define HEUR_NAME             "crossover"
 #define HEUR_DESC             "LNS heuristic that fixes all variables that are identic in a couple of solutions"
-#define HEUR_DISPCHAR         'C'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1104000
 #define HEUR_FREQ             30
 #define HEUR_FREQOFS          0

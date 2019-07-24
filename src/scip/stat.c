@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   stat.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for problem statistics
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -760,7 +761,6 @@ void SCIPstatPrintDebugMessage(
 }
 
 /** prints a debug message without precode */
-EXTERN
 void SCIPstatDebugMessagePrint(
    SCIP_STAT*            stat,               /**< SCIP statistics */
    const char*           formatstr,          /**< format string like in printf() function */

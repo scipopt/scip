@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   var.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for problem variables
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -2215,7 +2216,10 @@ SCIP_RETCODE parseValue(
    else
    {
       if( !SCIPstrToRealValue(str, value, endptr) )
+      {
+         SCIPerrorMessage("expected value: %s.\n", str);
          return SCIP_READERROR;
+      }
    }
 
    return SCIP_OKAY;
@@ -2348,6 +2352,11 @@ SCIP_RETCODE varParse(
 
    /* parse global/original bounds */
    SCIP_CALL( parseBounds(set, str, token, lb, ub, endptr) );
+   if ( *endptr == NULL )
+   {
+      SCIPerrorMessage("Expected bound type: %s.\n", token);
+      return SCIP_READERROR;
+   }
    assert(strncmp(token, "global", 6) == 0 || strncmp(token, "original", 8) == 0);
 
    /* initialize the lazy bound */
@@ -5435,12 +5444,12 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* if only one aggregation variable is left, we perform a normal aggregation instead of a multi-aggregation */
       if( ntmpvars == 1 )
       {
-            SCIPsetDebugMsg(set, "Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n",
-                  SCIPvarGetName(var), SCIPvarGetName(tmpvars[0]), 1.0, -tmpscalars[0], tmpconstant);
+         SCIPsetDebugMsg(set, "Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n",
+            SCIPvarGetName(var), SCIPvarGetName(tmpvars[0]), 1.0, -tmpscalars[0], tmpconstant);
 
-            SCIP_CALL( SCIPvarTryAggregateVars(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lp,
-                  cliquetable, branchcand, eventfilter, eventqueue, var, tmpvars[0], 1.0, -tmpscalars[0], tmpconstant,
-                  infeasible, aggregated) );
+         SCIP_CALL( SCIPvarTryAggregateVars(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lp,
+               cliquetable, branchcand, eventfilter, eventqueue, var, tmpvars[0], 1.0, -tmpscalars[0], tmpconstant,
+               infeasible, aggregated) );
 
          goto TERMINATE;
       }

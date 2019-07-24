@@ -40,7 +40,7 @@ extern "C" {
  *
  * @ingroup PropagatorIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropDualfix(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_soc.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for second order cone constraints \f$\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})\f$
  * @author Stefan Vigerske
  * @author Marc Pfetsch
@@ -1242,7 +1243,7 @@ SCIP_RETCODE separatePoint(
          }
 
          /* cut cuts off solution and efficient enough */
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+         SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
          if( SCIPisCutApplicable(scip, row) )
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
@@ -1337,7 +1338,7 @@ SCIP_RETCODE addLinearizationCuts(
          {
             SCIP_ROW* row;
 
-            SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+            SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
             SCIP_CALL( SCIPaddRow(scip, row, TRUE, cutoff) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
@@ -1350,7 +1351,7 @@ SCIP_RETCODE addLinearizationCuts(
       {
          SCIP_ROW* row;
 
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+         SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
          SCIP_CALL( SCIPaddPoolCut(scip, row) );
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }

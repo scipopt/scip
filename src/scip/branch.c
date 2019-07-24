@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for branching rules and branching candidate storage
  * @author Tobias Achterberg
  * @author Timo Berthold

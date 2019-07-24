@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_indicator.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
@@ -423,7 +424,7 @@ while ( FALSE )
 
 /* ---------------- Callback methods of event handlers ---------------- */
 
-/** exec the event handler for getting variable bound changes
+/** execute the event handler for getting variable bound changes
  *
  *  We update the number of variables fixed to be nonzero.
  */
@@ -3014,9 +3015,9 @@ SCIP_RETCODE extendToCover(
             /* create row */
 #ifdef SCIP_DEBUG
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "iis%d", conshdlrdata->niiscutsgen + *nGen);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
 #else
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
 #endif
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -3137,6 +3138,11 @@ SCIP_RETCODE consdataCreate(
             SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(var), SCIPvarGetType(var));
             return SCIP_ERROR;
          }
+
+         /* the indicator variable must not be multi-aggregated because the constraint handler propagation tries
+          * to tighten its bounds, which is not allowed for multi-aggregated variables
+          */
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
 
          /* catch local bound change events on binary variable */
          if ( linconsactive )
@@ -4576,7 +4582,7 @@ SCIP_RETCODE separatePerspective(
 
             SCIPdebugMsg(scip, "Found cut of lhs value %f > %f.\n", cutval, cutrhs);
             (void) SCIPsnprintf(name, 50, "persp%d", conshdlrdata->nperspcutsgen + *nGen);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), name, -SCIPinfinity(scip), cutrhs, islocal, FALSE, conshdlrdata->removable) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), cutrhs, islocal, FALSE, conshdlrdata->removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, row, cnt, cutvars, cutvals) );
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
@@ -4686,9 +4692,9 @@ SCIP_RETCODE separateIndicators(
                char name[50];
 
                (void) SCIPsnprintf(name, 50, "couple%d", c);
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), name, -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
 #else
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), "", -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], "", -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
 #endif
                SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -6008,7 +6014,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
          {
             SCIP_ROW* row;
 
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );

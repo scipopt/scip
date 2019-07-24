@@ -21,6 +21,37 @@ Features
 - additional functionality has been added to enable the transfer of Benders' decomposition cuts between different SCIP
   instances, e.g., when used in UG
 
+- LP rows (SCIP_ROW) can now store pointer to a constraint from which the row originates
+
+- Trust region, a new LNS heuristic, has been added to SCIP as both a standalone primal heuristic heur_trustregion.c
+  and as a neighborhood inside of Adaptive Large Neighborhood Search (heur_alns.c). This heuristic is designed to improve the
+  heuristic performance of the Benders' decomposition algorithm. It builds upon the successful trust region approaches
+  applied to Benders' decomposition.
+
+- Modularity of symmetry handling has been increased. It is now possible to use orbitopes (i.e., polyhedral symmetry
+  handling techniques) and orbital fixing on the same instance.
+
+- cut strengthening enabled within the Benders' decomposition framework. This uses a mix of the Improved Magnanti-Wong
+  method and Kelly's method. The cut strengthening is enabled by setting the paramemter
+  "benders/<bendersname>/cutstrengthenenabled" to TRUE. The parameters "cutstrengthenmult", "noimprovelimit" and
+  "corepointperturb" control the behavior of the cut strengthening method. Additionally, the parameter
+  "cutstrengthenintpoint" allows the user to specify the solution that is used to initialize the core point. The options
+  are the first LP solution, the first integer feasible solution, a relative interior point, a solution vector of all
+  ones and a solution vector of all zeros. Also, the core point can be reinitialized after each update to the incumbent
+  solution.
+
+- added option to adjust weights of different scores in relpscost (hybrid) branching rule based on degeneracy information
+  and skip strong branching for very high degeneracy rates
+
+- new primal heuristic Adaptive Diving, which registers all publicly available dive sets from other diving heuristics.
+  At each call, it selects one of the available dive sets based on the user's score type choice (heuristics/adaptivediving/scoretype).
+  During the solution process, the heuristics learns online which divesets reach the best score, and executes them more frequently.
+  The statistic output for Diving heuristics has been extended to incorporate the statistics of each dive set within Adaptive diving.
+
+- Symmetry handling constraints (cons_orbisack, cons_orbitope, cons_symresack) now have an additional parameter to encode
+  whether they are model constraints, i.e., define the problem, or whether they are only present to handle symmetries.
+
+
 Performance improvements
 ------------------------
 
@@ -42,7 +73,9 @@ Performance improvements
   use event handler to catch global fixings;
   speed up orbit computations;
   change handling of restarts;
+  use only permutations that can contribute to a variable's orbit;
 
+- allow rapid learning at local nodes
 
 Examples and applications
 -------------------------
@@ -51,6 +84,11 @@ Interface changes
 -----------------
 
 ### New and changed callbacks
+
+  - new optional callback `SCIP_DECL_DIVESETAVAILABLE` to check preconditions for this dive set, e.g., if an incumbent solution is available,
+    which is passed as new argument to SCIPcreateDiveset(). SCIPcreateDiveset() has another new parameter "ispublic".
+
+- new callback `SCIP_DECL_CONSHDLRCOPY` and `SCIP_DECL_CONSCOPY` in cons_orbisack and cons_symresack
 
 ### Deleted and changed API methods
 
@@ -61,6 +99,11 @@ Interface changes
 - Symmetry:
   + removed method SCIP_RETCODE SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
+  + extended method SCIP_RETCODE SCIPgetGeneratorsSymmetry(): It is possible to access both the original and
+    transposed permutations matrix as well as the (independent symmetry) components of a permutation group now.
+  + arguments of functions SCIPcreateConsOrbisack(), SCIPcreateConsBasicOrbisack(), SCIPcreateConsOrbitope(),
+    SCIPcreateConsBasicOrbitope(), SCIPcreateConsSymresack(), SCIPcreateConsBasicSymresack(), and SCIPcreateSymbreakCons() extended
+    by "ismodelcons" to encode whether the constraints are model constraints or not
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 - Benders' decomposition
   + changed SCIPstoreBenderscutCut() in scip_benders.c to SCIPstoreBendersCut(). Where this function used to take a
@@ -77,6 +120,17 @@ Interface changes
   parallel. Setting this argument to TRUE has a performance cost.
 
 - new argument "append" in SCIPsetModifiedDefaultSettingsIpopt()
+- functions SCIPclearRelaxSolVals(), SCIPsetRelaxSolVal(), SCIPsetRelaxSolVals(), SCIPsetRelaxSolValsSol(), and SCIPmarkRelaxSolValid()
+  receive an additional argument "relax" to store the relaxation handler as creator of the relaxation solution.
+
+- LP:
+  - SCIProwGetOriginCons() now returns a SCIP_CONS* instead of a SCIP_CONSHDLR*, use SCIProwGetOriginConshdlr() for the previous behavior
+  - SCIPcreateRowCons() and SCIPcreateEmptyRowCons() now expect a SCIP_CONS* instead of a SCIP_CONSHDLR*,
+    use SCIPcreateRowConshdlr() and SCIPcreateEmptyRowConshdlr(), respectively, for the previous behavior
+
+- new parameter "divecontext" for every method that queries statistics for a diveset. The context can be used to distinguish between the dive set
+  as single (standalone) heuristic or within Adaptive Diving.
+- new parameters "divecontext" and "iterlim" to SCIPperformGenericDivingAlgorithm() to control in which context (single,adaptive) statistics are updated.
 
 ### New API functions
 
@@ -85,6 +139,16 @@ Interface changes
   SCIPapplyBendersStoredCuts(), SCIPbendersGetNStoredCuts(), SCIPbendersGetStoredCutData() and
   SCIPbendersGetStoredCutOrigData().
 - added SCIPisConvexAbspower()
+- new functions SCIPsolGetType(), SCIPsolGetRelax(), SCIPsolSetRelax(), SCIPsolSetLPRelaxation(), SCIPsolSetStrongbranch(),
+  SCIPsolSetPseudo to set or query the new type attribute of a primal solution. The type attribute gives information
+  about the origin of the solution, ie, whether it was created by a relaxation handler,
+  by the LP relaxation, by strong branching, by the current pseudo solution, or by a primal heuristic.
+  The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
+- added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
+- new API functions SCIPsetCommonSubscipParams() and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
+- new API function SCIPgetLPDegeneracy() to get two measures for the degeneracy of the current LP
+- new API functions SCIPdivesetIsAvailable() to check preconditions of a dive set and SCIPdivesetIsPublic() to check if the dive set can be used
+  by other primal heuristics.
 
 ### Command line interface
 
@@ -96,6 +160,13 @@ Interface changes
 - Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
 - Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
 - changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: 0, old value: 5) in cons_orbitope.c
+- all primal heuristics that use sub-SCIPs are disabled within the heuristics fast emphasis setting
+- deleted parameter heuristics/localbranching/useuct, use heuristics/useuctsubscip instead
+- changed default value of "presolving/symbreak/detectorbitopes" (new value: TRUE, old value: FALSE)
+- extended range of "misc/usesymmetry" (new range: [0,3], old range: [0,2])
+- deleted parameter "constraints/orbisack/checkalwaysfeas"
+- deleted parameter "constraints/orbitope/checkalwaysfeas"
+- deleted parameter "constraints/symresack/checkalwaysfeas"
 
 ### New parameters
 
@@ -104,7 +175,7 @@ Interface changes
 - added parameter benders/<bendersname>/cutcheck to enable the generation of Benders' decomposition cuts during solution
   checking.
 - constraints/orbitope/usedynamicprop: the possibility to propagate orbitope constraints by reordering the rows based on the
-  branching strategy is provided
+  branching strategy is provided (only possible for non-model constraints)
 
 - Added parameters branching/midpull and branching/midpullreldomtrig to control by how much to move
   the branching point for an external branching candidate closer to the middle of the candidates domain. The
@@ -122,6 +193,29 @@ Interface changes
   decomposition core. These parameters limit the number of Benders' decomposition subproblem checks, for the full
   branch-and-bound tree and root node respective, when solving the auxiliary problem of LNS hueristics. These
   parameters only have effect if the lnscheck parameter is set to TRUE.
+
+- Added parameter cons/linear/maxmultiaggrquot to limit the maximum coefficient dynamism of an equation on which
+  multiaggregation is performed. This replaces a compiler define of the same name.
+  Default value is 1000, smaller values make multiaggregations numerically more stable.
+- new global parameter heuristics/useuctsubscip that affects all LNS heuristics using common sub-SCIP parameters
+
+- new parameter branching/relpscost/degeneracyaware to switch degeneracy-aware hybrid branching
+
+- new parameter separation/rapidlearning/checkexec to check whether rapid learning is allowed to run locally
+- new parameters separation/rapidlearning/check{degeneracy,dualbound,leaves,nsols,obj} to enable checking the respective feature for local rapid learning
+- new parameter separation/rapidlearning/maxcalls to limit the number of rapid learning executions
+- new parameter separation/rapidlearning/nwaitingnodes to set the number of waiting nodes before the dual bound is checked
+- new parameter separation/rapidlearning/mindegeneracy to set the minimal threshold of degenerate basic-variables
+- new parameters separation/rapidlearning/minvarconsratio to set the minimal ratio of unfixed variables in relation to basis size
+
+- new parameters to control the Benders' decomposition two-phase method.
+  - constraints/benderslp/depthfreq: after the maxdepth is reached, then the two-phase method will only be called at
+    nodes at a depth divisible by depthfreq.
+  - constraints/benderslp/stalllimit: after the maxdepth is reached, if there has been no improvement in the dual bound
+    for stalllimit number of nodes, then the two-phase method is executed for the next fractional LP solution that is
+    encountered.
+  - constraints/benderslp/iterlimit: after the root node, only iterlimit fractional LP solutions are used at each node
+    to generate Benders' decomposition cuts.
 
 ### Data structures
 
@@ -160,6 +254,11 @@ Fixed bugs
 Miscellaneous
 -------------
 
+- modified display column for memory usage ("mem"), which reports the memory usage most of the time, but shows the creator name
+  (heuristic, relaxation handler, LP relaxation, strong branching, pseudo solution) of every new incumbent solution. Together with this change,
+  heuristic display characters have been unified to represent the type of the heuristic
+  (diving, Large neighborhood search, propagation, etc.), see also type_heur.h.
+
 Known bugs
 ----------
 
@@ -171,11 +270,15 @@ Known bugs
 Features
 --------
 
+- The abspower constraint handler now passes more accurate convexity
+  information to the NLP relaxation.
+
 Performance improvements
 ------------------------
 
 Examples and applications
 -------------------------
+- added parsing functionality for optcumulative constraints in CIP format
 
 Interface changes
 -----------------
@@ -189,6 +292,8 @@ Interface changes
 ### Command line interface
 
 ### Interfaces to external software
+
+- Updated the Mosek LP solver interface to support Mosek 9.0.
 
 ### Changed parameters
 
@@ -210,12 +315,33 @@ Build system
 
 ### Cmake
 
+- new target to 'doc' to build documentation
+
 ### Makefile
 
 Fixed bugs
 ----------
 - fixed wrong unboundedness result in case not all constraints were already in the LP and enforcement was
   skipped because an optimal solution was found
+- fixed wrong enforcement of constraints in the disjunction constraint handler
+- fixed wrong behavior of concurrent solve ignoring initial solutions
+- fixed bug in concurrent solve when problem was already solved in presolving
+- aggregate non-artificial integer variable for XOR constraints with two binary variables and delete constraint
+- copy the objective offset when copying the original problem
+- fixed bug in SCIPlpiGetBInvARow in lpi_cpx using wrong size of resulting vector
+- fixed quadratic runtime behavior in sepa_aggregation
+- fixed statistics of separators
+- improve numerical stability in varbound constraint handler by using double-double arithmetic
+- fixed bug in propagation of dual proofs
+- fixed bugs that arise for multiaggregated indicator variables by disallowing multiaggregation for them
+- improve numerical stability in SCIPcomputeBilinEnvelope* by using double-double arithmetic
+- fixed bug related to releasing pending bound changes in tree.c
+- set STD FENV_ACCESS pragma to on in code that changes floating-point rounding mode
+- disable GCC optimizations in main interval arithmetic code to prevent wrong optimizations
+- fixed wrong assert in cons_xor concerning the variable type
+- fixed different behavior of SCIPisLbBetter and SCIPisUbBetter between having NDEBUG defined or not
+- correctly handle bound disjunctions in symmetry detection
+- fixed issue in reliability branching related to the LP error flag not being reset
 
 Miscellaneous
 -------------
@@ -309,6 +435,7 @@ Fixed bugs
 - fixed wrong hashmap accesses and added sanity check for the correct hashmap type
 - avoid copying of unbounded solutions from sub-SCIPs as those cannot be checked completely
 - corrected the output of the first LP value in case of branch-and-price
+- fixed possible integer overflow, which led to wrong conclusion of infeasibility, in energetic reasoning of cons_cumulative.c
 
 Miscellaneous
 -------------

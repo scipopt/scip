@@ -38,25 +38,6 @@
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -86,7 +67,7 @@ extern "C" {
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetExprtreeTransformedVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
@@ -113,7 +94,7 @@ SCIP_RETCODE SCIPgetExprtreeTransformedVars(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprtreeSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -142,7 +123,7 @@ SCIP_RETCODE SCIPevalExprtreeSol(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprtreeGlobalBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -171,7 +152,7 @@ SCIP_RETCODE SCIPevalExprtreeGlobalBounds(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprtreeLocalBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */

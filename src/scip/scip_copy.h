@@ -39,25 +39,6 @@
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -106,7 +87,7 @@ extern "C" {
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyPlugins(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -164,7 +145,7 @@ SCIP_RETCODE SCIPcopyPlugins(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyBenders(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -214,7 +195,7 @@ SCIP_RETCODE SCIPcopyBenders(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyProb(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -256,7 +237,7 @@ SCIP_RETCODE SCIPcopyProb(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyOrigProb(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -280,7 +261,7 @@ SCIP_RETCODE SCIPcopyOrigProb(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPenableConsCompression(
    SCIP*                 scip                /**< source SCIP data structure */
    );
@@ -308,7 +289,7 @@ SCIP_RETCODE SCIPenableConsCompression(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisConsCompressionEnabled(
    SCIP*                 scip                /**< source SCIP data structure */
    );
@@ -349,7 +330,7 @@ SCIP_Bool SCIPisConsCompressionEnabled(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarCopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -395,7 +376,7 @@ SCIP_RETCODE SCIPgetVarCopy(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyVars(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -441,7 +422,7 @@ SCIP_RETCODE SCIPcopyVars(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyOrigVars(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -461,7 +442,7 @@ SCIP_RETCODE SCIPcopyOrigVars(
  *        \p targetscip denotes the original instance
  */
 
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPmergeVariableStatistics(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -520,7 +501,7 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsCopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -584,7 +565,7 @@ SCIP_RETCODE SCIPgetConsCopy(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyConss(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -635,7 +616,7 @@ SCIP_RETCODE SCIPcopyConss(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyOrigConss(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -668,7 +649,7 @@ SCIP_RETCODE SCIPcopyOrigConss(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPconvertCutsToConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
@@ -713,7 +694,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyCuts(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -759,7 +740,7 @@ SCIP_RETCODE SCIPcopyCuts(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyConflicts(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -809,7 +790,7 @@ SCIP_RETCODE SCIPcopyConflicts(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyImplicationsCliques(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -853,7 +834,7 @@ SCIP_RETCODE SCIPcopyImplicationsCliques(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyParamSettings(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip          /**< target SCIP data structure */
@@ -881,7 +862,7 @@ SCIP_RETCODE SCIPcopyParamSettings(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetSubscipDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -895,7 +876,7 @@ int SCIPgetSubscipDepth(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPsetSubscipDepth(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   newdepth            /**< new subscip depth */
@@ -944,7 +925,7 @@ void SCIPsetSubscipDepth(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -1018,7 +999,7 @@ SCIP_RETCODE SCIPcopy(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyConsCompression(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -1081,7 +1062,7 @@ SCIP_RETCODE SCIPcopyConsCompression(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyOrig(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -1148,7 +1129,7 @@ SCIP_RETCODE SCIPcopyOrig(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyOrigConsCompression(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -1187,7 +1168,7 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcheckCopyLimits(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP_Bool*            success             /**< pointer to store whether there is time and memory left to copy the
@@ -1199,6 +1180,8 @@ SCIP_RETCODE SCIPcheckCopyLimits(
  *  @note time and memory limit are reduced by the amount already spent in the source SCIP before installing the limit
  *        in the target SCIP
  *  @note all other limits are disabled and need to be enabled afterwards, if needed
+ *
+ *  @see SCIPsetCommonSubscipParams() to set further working limits and other parameters commonly used for auxiliary problems
  *
  *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -1213,10 +1196,24 @@ SCIP_RETCODE SCIPcheckCopyLimits(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyLimits(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip          /**< target SCIP data structure */
+   );
+
+
+/** sets the working limits as well as common search parameters for the auxiliary problem
+ *
+ *  @note memory and time limits are not affected, and must be set using SCIPcopyLimits() instead
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetCommonSubscipParams(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 subscip,            /**< target SCIP data structure, often a copy of \p sourcescip */
+   SCIP_Longint          nsubnodes,          /**< nodelimit for subscip, or -1 for no limit */
+   SCIP_Longint          nstallnodes,        /**< stall node limit for subscip, or -1 for no limit */
+   int                   bestsollimit        /**< the limit on the number of best solutions found, or -1 for no limit */
    );
 
 

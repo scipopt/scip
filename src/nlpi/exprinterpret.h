@@ -47,32 +47,32 @@ extern "C" {
  */
 
 /** gets name and version of expression interpreter */
-EXTERN
+SCIP_EXPORT
 const char* SCIPexprintGetName(void);
 
 /** gets descriptive text of expression interpreter */
-EXTERN
+SCIP_EXPORT
 const char* SCIPexprintGetDesc(void);
 
 /** gets capabilities of expression interpreter (using bitflags) */
-EXTERN
+SCIP_EXPORT
 SCIP_EXPRINTCAPABILITY SCIPexprintGetCapability(void);
 
 /** creates an expression interpreter object */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprintCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPRINT**        exprint             /**< buffer to store pointer to expression interpreter */
    );
 
 /** frees an expression interpreter object */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprintFree(
    SCIP_EXPRINT**        exprint             /**< expression interpreter that should be freed */
    );
 
 /** compiles an expression tree and stores compiled data in expression tree */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprintCompile(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
@@ -85,14 +85,14 @@ SCIP_RETCODE SCIPexprintCompile(
  * Hessian for an expression is not available because it contains a user expression that does not provide
  * Hessians.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
    );
 
 /** frees interpreter data */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprintFreeData(
    SCIP_EXPRINTDATA**    interpreterdata     /**< interpreter data that should freed */
    );
@@ -100,14 +100,14 @@ SCIP_RETCODE SCIPexprintFreeData(
 /** notify expression interpreter that a new parameterization is used
  * this probably causes retaping by AD algorithms
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprintNewParametrization(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree                /**< expression tree */
    );
 
 /** evaluates an expression tree */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprintEval(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -116,7 +116,7 @@ SCIP_RETCODE SCIPexprintEval(
    );
 
 /** evaluates an expression tree on intervals */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprintEvalInt(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -126,7 +126,7 @@ SCIP_RETCODE SCIPexprintEvalInt(
    );
 
 /** computes value and gradient of an expression tree */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprintGrad(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -137,7 +137,7 @@ SCIP_RETCODE SCIPexprintGrad(
    );
 
 /** computes interval value and interval gradient of an expression tree */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprintGradInt(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -153,7 +153,7 @@ SCIP_RETCODE SCIPexprintGradInt(
  * NOTE: this function might be replaced later by something nicer.
  * Since the AD code might need to do a forward sweep, you should pass variable values in here.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprintHessianSparsityDense(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */
@@ -165,7 +165,7 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
  *
  *  The full hessian is computed (lower left and upper right triangle).
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprintHessianDense(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPRTREE*        tree,               /**< expression tree */

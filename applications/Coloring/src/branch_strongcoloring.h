@@ -59,7 +59,6 @@ extern "C" {
 #endif
 
 /** creates the coloring branching rule and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludeBranchruleStrongcoloring(
    SCIP*                 scip                /**< SCIP data structure */
    );

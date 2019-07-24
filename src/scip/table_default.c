@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   table_default.c
+ * @ingroup DEFPLUGINS_TABLE
  * @brief  default statistics tables
  * @author Tristan Gally
  */

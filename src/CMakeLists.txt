@@ -79,6 +79,7 @@ set(scipsources
     scip/event_solvingphase.c
     scip/disp_default.c
     scip/heur_actconsdiving.c
+    scip/heur_adaptivediving.c
     scip/heur_bound.c
     scip/heur_clique.c
     scip/heur_coefdiving.c
@@ -126,6 +127,7 @@ set(scipsources
     scip/heur_sync.c
     scip/heur_trivial.c
     scip/heur_trivialnegation.c
+    scip/heur_trustregion.c
     scip/heur_trysol.c
     scip/heur_twoopt.c
     scip/heur_undercover.c
@@ -508,6 +510,7 @@ set(scipheaders
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/heur_actconsdiving.h
+    scip/heur_adaptivediving.h
     scip/heur_bound.h
     scip/heur_clique.h
     scip/heur_coefdiving.h
@@ -557,6 +560,7 @@ set(scipheaders
     scip/heur_sync.h
     scip/heur_trivial.h
     scip/heur_trivialnegation.h
+    scip/heur_trustregion.h
     scip/heur_trysol.h
     scip/heur_twoopt.h
     scip/heur_undercover.h
@@ -937,20 +941,25 @@ target_link_libraries(libscip PRIVATE
     ${SYM_LIBRARIES})
 
 if(SHARED)
+    set(SOPLEX_NEEDED 0)
+    set(ZIMPL_NEEDED 0)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
     add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
 else()
+    set(SOPLEX_NEEDED ${SOPLEX_FOUND})
+    set(ZIMPL_NEEDED ${ZIMPL_FOUND})
     target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
     add_executable(scip main.c)
     target_link_libraries(scip libscip)
 endif()
 
+include(GenerateExportHeader)
+generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/scip/scip_export.h)
+
 if(CMAKE_BUILD_TYPE EQUAL "Debug")
     find_package(Sanitizers)
     add_sanitizers(scip)
 endif()
-
-target_compile_definitions(scip PRIVATE EXTERN=extern)
 
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
@@ -973,7 +982,7 @@ install(FILES ${lpiheaders} DESTINATION include/lpi)
 install(FILES ${dijkstraheaders} DESTINATION include/dijkstra)
 install(FILES ${nlpiheaders} DESTINATION include/nlpi)
 install(FILES ${objscipheaders} DESTINATION include/objscip)
-install(FILES ${scipheaders} ${CMAKE_BINARY_DIR}/scip/config.h DESTINATION include/scip)
+install(FILES ${scipheaders} ${CMAKE_BINARY_DIR}/scip/config.h ${CMAKE_BINARY_DIR}/scip/scip_export.h DESTINATION include/scip)
 install(FILES ${tcliqueheaders} DESTINATION include/tclique)
 install(FILES ${tinycthreadheader} DESTINATION include/tinycthread)
 install(FILES ${tpiheaders} DESTINATION include/tpi)
@@ -993,11 +1002,11 @@ export(TARGETS scip libscip
   FILE "${CMAKE_BINARY_DIR}/scip-targets.cmake")
 
 #make soplex and zimpl dir absolute for the config file
-if(SOPLEX_FOUND)
+if(SOPLEX_NEEDED)
     get_filename_component(CONF_SOPLEX_DIR ${SOPLEX_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
 
-if(ZIMPL_FOUND)
+if(ZIMPL_NEEDED)
     get_filename_component(CONF_ZIMPL_DIR ${ZIMPL_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
 
@@ -1006,12 +1015,27 @@ set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
   "${CMAKE_BINARY_DIR}/scip-config.cmake" @ONLY)
 
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+${CMAKE_BINARY_DIR}/scip-config-version.cmake
+    VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
+    COMPATIBILITY SameMajorVersion
+    )
+
 #configure the config file for the install
 set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")
+if(SOPLEX_NEEDED)
+    set(CONF_SOPLEX_DIR "\${CMAKE_CURRENT_LIST_DIR}/../soplex")
+endif()
+if(ZIMPL_NEEDED)
+    set(CONF_ZIMPL_DIR "\${CMAKE_CURRENT_LIST_DIR}/../zimpl")
+endif()
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake" @ONLY)
 
 # install the targets of the scip export group and the config file so that other projects
 # can link easily against scip
-install(EXPORT scip-targets FILE scip-targets.cmake DESTINATION lib/cmake/scip)
-install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake" DESTINATION lib/cmake/scip)
+install(EXPORT scip-targets DESTINATION lib/cmake/scip)
+install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake"
+              ${CMAKE_BINARY_DIR}/scip-config-version.cmake
+        DESTINATION lib/cmake/scip)

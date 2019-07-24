@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepastore.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing separated cuts
  * @author Tobias Achterberg
  * @author Marc Pfetsch
@@ -38,6 +39,7 @@
 #include "scip/debug.h"
 #include "scip/scip.h"
 #include "scip/cuts.h"
+#include "scip/struct_event.h"
 #include "scip/struct_sepastore.h"
 #include "scip/misc.h"
 
@@ -831,9 +833,13 @@ SCIP_RETCODE sepastoreApplyCut(
          /* increase count of applied cuts for origins of row */
          switch ( cut->origintype )
          {
-         case SCIP_ROWORIGINTYPE_CONS:
+         case SCIP_ROWORIGINTYPE_CONSHDLR:
             assert( cut->origin != NULL );
             SCIPconshdlrIncNAppliedCuts((SCIP_CONSHDLR*) cut->origin);
+            break;
+         case SCIP_ROWORIGINTYPE_CONS:
+            assert( cut->origin != NULL );
+            SCIPconshdlrIncNAppliedCuts(SCIPconsGetHdlr((SCIP_CONS*)cut->origin));
             break;
          case SCIP_ROWORIGINTYPE_SEPA:
             assert( cut->origin != NULL );

@@ -269,6 +269,9 @@ struct SCIP_Set
    SCIP_Bool             disp_allviols;      /**< display all violations of the best solution after the solving process finished? */
    SCIP_Bool             disp_relevantstats; /**< should the relevant statistics be displayed at the end of solving? */
 
+   /* heuristics settings */
+   SCIP_Bool             heur_useuctsubscip; /**< should setting of common subscip parameters include the activation of the UCT node selector? */
+
    /* history settings */
    SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
    SCIP_Bool             history_allowmerge; /**< should variable histories be merged from sub-SCIPs whenever possible? */
@@ -379,7 +382,8 @@ struct SCIP_Set
    SCIP_Bool             misc_allowstrongdualreds; /**< should strong dual reductions be allowed in propagation and presolving? */
    SCIP_Bool             misc_allowweakdualreds;  /**< should weak dual reductions be allowed in propagation and presolving? */
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
-   int                   misc_usesymmetry;   /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
+   int                   misc_usesymmetry;   /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);
+                                              *   2: orbital fixing; 3: orbitopes and orbital fixing) */
    char*                 misc_debugsol;      /**< path to a debug solution */
    SCIP_Bool             misc_scaleobj;      /**< should the objective function be scaled? */
 

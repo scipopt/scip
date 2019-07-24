@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_distribution.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @ingroup BRANCHINGRULES
  * @brief  probability based branching rule based on an article by J. Pryor and J.W. Chinneck
  * @author Gregor Hendel

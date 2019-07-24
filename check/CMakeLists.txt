@@ -70,7 +70,7 @@ set(settings_MIP
     "lns_epsgreedy"
     "lns_exp3"
 #    "dynamic"
-    "intobj"
+#     "intobj" <- please delete at all or enable if #2637 is closed
 #    "nologicor"
     "xorsepaparity"
     "solvingphases"
@@ -124,6 +124,7 @@ set(settings_Symmetry
     "orbitalfixing-timing2"
     "orbitopes-timing0"
     "orbitopes-timing2"
+    "orbitopes-timing2-static"
     "packingorbitopes-timing0"
     "packingorbitopes-timing2"
     "symresacks-timing0"
@@ -136,6 +137,8 @@ set(settings_sparsify
 
 set(settings_Benders
     "usebenders"
+    "usebenders-tr"
+    "usebenders-cutstrengthen"
    )
 
 #
@@ -391,11 +394,13 @@ macro(add_instancetests instances settings prefix)
             # treat the instance as a tuple (list) of two values
             #
             add_test(NAME ${prefix}-${setting}-${basename}
-                    COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/coverage/settings/${setting}.set -o ${optval} ${optval}
+                    COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
                     )
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
+                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
         endforeach(setting)

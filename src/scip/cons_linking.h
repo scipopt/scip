@@ -41,7 +41,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -71,7 +71,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -113,7 +113,7 @@ SCIP_RETCODE SCIPcreateConsLinking(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -126,28 +126,28 @@ SCIP_RETCODE SCIPcreateConsBasicLinking(
 
 
 /** checks if for the given integer variable a linking constraint exists */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPexistsConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             intvar              /**< integer variable which should be linked */
    );
 
 /** returns the linking constraint belonging the given integer variable or NULL if it does not exist yet */
-EXTERN
+SCIP_EXPORT
 SCIP_CONS* SCIPgetConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             intvar              /**< integer variable which should be linked */
    );
 
 /** returns the integer variable of the linking constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR* SCIPgetIntvarLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linking constraint */
    );
 
 /** returns the binary variables of the linking constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetBinvarsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linking constraint */
@@ -156,14 +156,14 @@ SCIP_RETCODE SCIPgetBinvarsLinking(
    );
 
 /** returns the number of binary variables of the linking constraint */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNBinvarsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linking constraint */
    );
 
 /** returns the coefficients of the binary variables */
-EXTERN
+SCIP_EXPORT
 int* SCIPgetValsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linking constraint */

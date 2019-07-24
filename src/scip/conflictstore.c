@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   conflictstore.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing conflicts
  * @author Jakob Witzig
  */
@@ -975,7 +976,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    conflictstore->dualrayconfs[conflictstore->ndualrayconfs] = dualproof;
    ++conflictstore->ndualrayconfs;
 
-   /* add soft locks */
+   /* add conflict locks */
    SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
    /* increase the number of non-zeros */
@@ -1053,7 +1054,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    conflictstore->updateside[conflictstore->ndualsolconfs] = updateside;
    ++conflictstore->ndualsolconfs;
 
-   /* add soft locks */
+   /* add conflict locks */
    SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
    /* increase the number of non-zeros */
@@ -1149,7 +1150,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    ++conflictstore->nconflicts;
    ++conflictstore->nconflictsfound;
 
-   /* add softlocks */
+   /* add conflict locks */
    SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
 #ifdef SCIP_PRINT_DETAILS

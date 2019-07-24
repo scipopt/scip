@@ -176,12 +176,15 @@ EOF
 # EXECUTABLE has form 'scipoptspx_bugfix_20180401/bin/scip', we only want 'scipoptspx'
 SCIP_BUILDDIR=`echo ${EXECUTABLE}| cut -d '/' -f 1|cut -d '_' -f 1`
 
+NEWTIMESTAMP=`date '+%F-%H-%M'`
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
 if [ "${PERFORMANCE}" == "performance" ]; then
   RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}_rbdb.txt"
   touch $RBDB
   OLDTIMESTAMP=`tail -n 1 ${RBDB}|cut -d ' ' -f 1`
-  NEWTIMESTAMP=`date '+%F-%H-%M'`
+elif [ "${PERFORMANCE}" == "mergerequest" ]; then
+  RBDB="${PWD}/performance_mergerequest_${OUTPUTDIR}"
+  touch $RBDB
 fi
 
 SEED=0
@@ -226,6 +229,11 @@ while [ ${SEED} -le ${SEEDS} ]; do
     EMAILFROM="adm_timo <timo-admin@zib.de>"
     EMAILTO="adm_timo <timo-admin@zib.de>"
 
+    if [ "${gitlabUserEmail}" != "" ]; then
+      EMAILTO="${gitlabUserEmail}"
+    fi
+
+
     #################
     # FIND evalfile #
     #################
@@ -253,7 +261,9 @@ while [ ${SEED} -le ${SEEDS} ]; do
     echo "Evaluating the run and uploading it to rubberband."
     cd check/
     PERF_MAIL=""
-    if [ "${PERFORMANCE}" == "performance" ]; then
+    if [ "${PERFORMANCE}" = "performance" ] || [ "${PERFORMANCE}" = "mergerequest" ]; then
+      # add tags to uploaded run
+      export RBCLI_TAG=${GITBRANCH}
       ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
       NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
       echo "${NEWTIMESTAMP} ${NEWRBID} p=${PERM} s=${SEED}" >> $RBDB
@@ -293,8 +303,10 @@ while [ ${SEED} -le ${SEEDS} ]; do
         SCIP_HEADER=`awk "$awkscript_scipheader" $OUTFILE`
 
         if [ "${PERFORMANCE}" != "performance" ]; then
-          # Get assertions and instance where they were generated
-          ERRORS_INFO=`echo "${ERRORINSTANCES}" | awk "$awkscript_findasserts" - ${ERRFILE}`
+          if [ "${PERFORMANCE}" != "mergerequest" ]; then
+            # Get assertions and instance where they were generated
+            ERRORS_INFO=`echo "${ERRORINSTANCES}" | awk "$awkscript_findasserts" - ${ERRFILE}`
+          fi
         fi
 
         ###############
@@ -363,25 +375,26 @@ ${RESOLVEDINSTANCES}" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
   SEED=$((SEED + 1))
 done
 
+
+function geturl() {
+  RBDB_STRS="$1"
+  i=0
+  while read -r line; do
+    arr=($line)
+    RBIDS[$i]=${arr[-1]}
+    ((i++))
+  done <<< "${RBDB_STRS}"
+
+  IDSTR=$(printf ",%s" "${RBIDS[@]}")
+  IDSTR=${IDSTR:1}
+
+  URLSTR=$(echo ${IDSTR} | sed 's/,/?compare=/')
+
+  echo ${URLSTR}
+}
+
 # construct the rubberband link
 if [ "${PERFORMANCE}" == "performance" ]; then
-
-  function geturl() {
-    RBDB_STRS="$1"
-    i=0
-    while read -r line; do
-      arr=($line)
-      RBIDS[$i]=${arr[-1]}
-      ((i++))
-    done <<< "${RBDB_STRS}"
-
-    IDSTR=$(printf ",%s" "${RBIDS[@]}")
-    IDSTR=${IDSTR:1}
-
-    URLSTR=$(echo ${IDSTR} | sed 's/,/?compare=/')
-
-    echo ${URLSTR}
-  }
 
   # collect all ids with timestamps OLDTIMESTAMP NEWTIMESTAMP in RBIDS
   RBDB_STRS=$(grep -e "\(${OLDTIMESTAMP}\|${NEWTIMESTAMP}\)" ${RBDB}|cut -d ' ' -f 2)
@@ -400,7 +413,7 @@ if [ "${PERFORMANCE}" == "performance" ]; then
     if [ "${LASTWEEK}" != "" ]; then
       if [ "${THISWEEK}" != "" ]; then
         URLSTR=$(geturl "${THISWEEK}
-${THISWEEK}")
+${LASTWEEK}")
 
         PERF_MAIL="${PERF_MAIL}
 Compare permutation ${PERM}: https://rubberband.zib.de/result/${URLSTR}"
@@ -419,4 +432,22 @@ Compare to the release: https://rubberband.zib.de/result/${URLSTR}"
 
   SUBJECT="WEEKLYPERF ${SUBJECTINFO}"
   echo -e "$PERF_MAIL" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+
+elif [ "${PERFORMANCE}" == "mergerequest" ]; then
+
+  # collect all ids with timestamps OLDTIMESTAMP NEWTIMESTAMP in RBIDS
+  RBDB_STRS=$(grep -e "${NEWTIMESTAMP}" ${RBDB}|cut -d ' ' -f 2)
+
+  URLSTR=$(geturl "${RBDB_STRS}")
+
+  PERF_MAIL=$(echo "The results of the mergerequest run are ready. Take a look at https://rubberband.zib.de/result/${URLSTR}
+")
+
+  SUBJECT="MERGEREQUEST PERFORMANCE RUN ${SUBJECTINFO}"
+  echo -e "$PERF_MAIL" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+
+  PERF_MAIL_ESC=${PERF_MAIL//
+/\\n}
+
+  curl -X POST https://git.zib.de/api/v4/projects/${gitlabMergeRequestTargetProjectId}/merge_requests/${gitlabMergeRequestIid}/notes -H "Content-Type: application/json" -d '{"body":"'"${PERF_MAIL_ESC}"'"}'  --header "PRIVATE-TOKEN: ${gitlabPrivateToken}"
 fi

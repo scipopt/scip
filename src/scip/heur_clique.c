@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_clique.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LNS heuristic using a clique partition to restrict the search neighborhood
  * @brief  clique primal heuristic
  * @author Stefan Heinz
@@ -65,7 +66,7 @@
 
 #define HEUR_NAME             "clique"
 #define HEUR_DESC             "LNS heuristic using a clique partition to restrict the search neighborhood"
-#define HEUR_DISPCHAR         'Q'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         5000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

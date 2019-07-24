@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   paramset.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for handling parameter settings
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -2871,6 +2872,33 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "heuristics/crossover/minfixingrate", 0.5, quiet) );
    }
 
+   /* set specific parameters for Adaptive Large Neighborhood Search heuristic, if the heuristic is included */
+#ifndef NDEBUG
+   if( SCIPsetFindHeur(set, "alns") != NULL )
+#endif
+   {
+      /* activate all neighborhoods explicitly (keep list in alphabetic order) */
+      int nneighborhoods = 9;
+      const char* neighborhoodnames[] = {
+               "crossover",
+               "dins",
+               "localbranching",
+               "mutation",
+               "proximity",
+               "rens",
+               "rins",
+               "trustregion",
+               "zeroobjective"
+      };
+      for( i = 0; i < nneighborhoods; ++i )
+      {
+         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/active", neighborhoodnames[i]);
+         SCIP_CALL( paramSetBool(paramset, set, messagehdlr, paramname, TRUE, quiet) );
+      }
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "heuristics/alns/nodesquot", 0.2, quiet) );
+      SCIP_CALL( paramSetLongint(paramset, set, messagehdlr, "heuristics/alns/nodesofs", (SCIP_Longint)2000, quiet) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2885,32 +2913,41 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
 {
    int i;
 
-#define NEXPENSIVEHEURFREQS 19
+   SCIP_HEUR** heurs;
+   int nheurs;
+
+#define NEXPENSIVEHEURFREQS 12
    static const char* const expensiveheurfreqs[NEXPENSIVEHEURFREQS] = {
       "heuristics/coefdiving/freq",
-      "heuristics/crossover/freq",
       "heuristics/distributiondiving/freq",
       "heuristics/feaspump/freq",
       "heuristics/fracdiving/freq",
-      "heuristics/gins/freq",
       "heuristics/guideddiving/freq",
       "heuristics/linesearchdiving/freq",
-      "heuristics/lpface/freq",
-      "heuristics/mpec/freq",
       "heuristics/nlpdiving/freq",
       "heuristics/subnlp/freq",
       "heuristics/objpscostdiving/freq",
       "heuristics/pscostdiving/freq",
-      "heuristics/rens/freq",
-      "heuristics/rins/freq",
       "heuristics/rootsoldiving/freq",
-      "heuristics/undercover/freq",
       "heuristics/veclendiving/freq"
    };
 
    SCIP_CALL( paramsetSetHeuristicsDefault(paramset, set, messagehdlr, quiet) );
 
-   /* explicitly turn off expensive heuristics, if included */
+   /* disable all heuristics that use subSCIPs */
+   heurs = SCIPgetHeurs(set->scip);
+   nheurs = SCIPgetNHeurs(set->scip);
+   for( i = 0; i < nheurs; ++i )
+   {
+      if( SCIPheurUsesSubscip(heurs[i]) )
+      {
+         char paramname[SCIP_MAXSTRLEN];
+         sprintf(paramname, "heuristics/%s/freq", SCIPheurGetName(heurs[i]));
+         SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, -1, quiet) );
+      }
+   }
+
+   /* explicitly turn off further expensive heuristics, if included */
    for( i = 0; i < NEXPENSIVEHEURFREQS; ++i )
       if( SCIPhashtableRetrieve(paramset->hashtable, (void*)expensiveheurfreqs[i]) != NULL )
       {
@@ -3879,6 +3916,8 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
                }
             }
          }
+
+         SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "heuristics/useuctsubscip", TRUE, quiet) );
       }
       break;
    case SCIP_PARAMEMPHASIS_PHASEPROOF:

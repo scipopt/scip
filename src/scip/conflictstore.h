@@ -43,14 +43,12 @@ extern "C" {
 #endif
 
 /** creates separation storage */
-extern
 SCIP_RETCODE SCIPconflictstoreCreate(
    SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict store */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** frees separation storage */
-extern
 SCIP_RETCODE SCIPconflictstoreFree(
    SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -60,7 +58,6 @@ SCIP_RETCODE SCIPconflictstoreFree(
    );
 
 /** clears conflict store */
-extern
 SCIP_RETCODE SCIPconflictstoreClear(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -70,7 +67,6 @@ SCIP_RETCODE SCIPconflictstoreClear(
    );
 
 /** cleans up conflict store */
-extern
 SCIP_RETCODE SCIPconflictstoreClean(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -83,7 +79,6 @@ SCIP_RETCODE SCIPconflictstoreClean(
  *
  *  @note this methods captures the constraint
  */
-extern
 SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_CONS*            dualproof,          /**< constraint based on a dual ray */
@@ -98,7 +93,6 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
  *
  *  @note this methods captures the constraint
  */
-extern
 SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_CONS*            dualproof,          /**< constraint based on a dual solution */
@@ -115,7 +109,6 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
  *
  *  @note this method captures the constraint
  */
-extern
 SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -131,7 +124,6 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    );
 
 /** deletes all conflicts depending on a cutoff bound larger than the given bound */
-extern
 SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -143,13 +135,11 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
    );
 
 /** returns the maximal size of the conflict pool */
-extern
 int SCIPconflictstoreGetMaxPoolSize(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
 
 /** returns the initial size of the conflict pool */
-extern
 int SCIPconflictstoreGetInitPoolSize(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
@@ -158,13 +148,11 @@ int SCIPconflictstoreGetInitPoolSize(
  *
  *  @note the number of active conflicts can be less
  */
-extern
 int SCIPconflictstoreGetNConflictsInStore(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
 
 /** returns all active conflicts stored in the conflict store */
-extern
 SCIP_RETCODE SCIPconflictstoreGetConflicts(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_CONS**           conflicts,          /**< array to store conflicts */
@@ -173,7 +161,6 @@ SCIP_RETCODE SCIPconflictstoreGetConflicts(
    );
 
 /** transforms all original conflicts into transformed conflicts */
-extern
 SCIP_RETCODE SCIPconflictstoreTransform(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -185,25 +172,21 @@ SCIP_RETCODE SCIPconflictstoreTransform(
    );
 
 /** returns the average number of non-zeros over all stored dual ray constraints */
-extern
 SCIP_Real SCIPconflictstoreGetAvgNnzDualInfProofs(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
 
 /** return the number of stored dualray constraints */
-extern
 int SCIPconflictstoreGetNDualInfProofs(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
 
 /** returns the average number of non-zeros over all stored boundexceeding proofs */
-extern
 SCIP_Real SCIPconflictstoreGetAvgNnzDualBndProofs(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
 
 /** returns the number of all stored boundexceeding proofs */
-extern
 int SCIPconflictstoreGetNDualBndProofs(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
