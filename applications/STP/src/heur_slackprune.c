@@ -1042,8 +1042,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
          if( soledge[e] == CONNECT )
             graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
 
-         /* calculate objective value of solution */
-         objorg = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
+      /* calculate objective value of solution */
+      objorg = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
 
       /* compute new solution on heuristically reduced graph */
 
