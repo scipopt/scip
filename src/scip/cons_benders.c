@@ -48,7 +48,7 @@
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "benders"
 #define CONSHDLR_DESC          "constraint handler to execute Benders' Decomposition"
-#define CONSHDLR_ENFOPRIORITY        -1 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_ENFOPRIORITY      -100 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -5000000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
