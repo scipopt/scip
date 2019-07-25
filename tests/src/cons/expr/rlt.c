@@ -190,27 +190,27 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
 Test(rlt, collect)
 {
    /* check original variables */
-   cr_expect_eq(getBilinVar(scip, sepadata, x, x), xx);
-   cr_expect_eq(getBilinVar(scip, sepadata, x, y), xy);
-   cr_expect_eq(getBilinVar(scip, sepadata, x, z), xz);
-   cr_expect_eq(getBilinVar(scip, sepadata, y, x), xy);
-   cr_expect_eq(getBilinVar(scip, sepadata, z, x), xz);
-   cr_expect_eq(getBilinVar(scip, sepadata, y, z), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, z, y), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, y, y), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, z, z), NULL);
+   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, x, x)][0], xx);
+   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, x, y)][0], xy);
+   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, x, z)][0], xz);
+   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, y, x)][0], xy);
+   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, z, x)][0], xz);
+   cr_expect_eq(getBilinPos(scip, sepadata, y, z), -1);
+   cr_expect_eq(getBilinPos(scip, sepadata, z, y), -1);
+   cr_expect_eq(getBilinPos(scip, sepadata, y, y), -1);
+   cr_expect_eq(getBilinPos(scip, sepadata, z, z), -1);
 
    /* check auxiliary variables for second constraint */
-   cr_expect_eq(getBilinVar(scip, sepadata, logvar, logvar), powvar);
-   cr_expect_eq(getBilinVar(scip, sepadata, absvar, powvar), prodvar);
-   cr_expect_eq(getBilinVar(scip, sepadata, prodvar, prodvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, prodvar, absvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, prodvar, powvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, prodvar, logvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, absvar, absvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, absvar, logvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, powvar, powvar), NULL);
-   cr_expect_eq(getBilinVar(scip, sepadata, powvar, logvar), NULL);
+   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, logvar, logvar)][0], powvar);
+   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, absvar, powvar)][0], prodvar);
+   cr_expect_eq(getBilinPos(scip, sepadata, prodvar, prodvar), -1);
+   cr_expect_eq(getBilinPos(scip, sepadata, prodvar, absvar), -1);
+   cr_expect_eq(getBilinPos(scip, sepadata, prodvar, powvar), -1);
+   cr_expect_eq(getBilinPos(scip, sepadata, prodvar, logvar), -1);
+   cr_expect_eq(getBilinPos(scip, sepadata, absvar, absvar), -1);
+   cr_expect_eq(getBilinPos(scip, sepadata, absvar, logvar), -1);
+   cr_expect_eq(getBilinPos(scip, sepadata, powvar, powvar), -1);
+   cr_expect_eq(getBilinPos(scip, sepadata, powvar, logvar), -1);
 }
 
 Test(rlt, separation)
