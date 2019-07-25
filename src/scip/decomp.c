@@ -35,11 +35,7 @@
 #include "scip/scip_general.h"
 #include "scip/scip_var.h"
 
-/* author bzfhende
- *
- * TODO create and free a decomposition
- */
-
+/* create and free a decomposition */
 #define INIT_MAP_SIZE 2000
 
 /** create a decomposition */
@@ -47,7 +43,8 @@ SCIP_RETCODE SCIPdecompCreate(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   nblocks,            /**< the number of blocks (without the linking block) */
-   SCIP_Bool             original            /**< is this a decomposition in the original (TRUE) or transformed space? */
+   SCIP_Bool             original,           /**< is this a decomposition in the original (TRUE) or transformed space? */
+   SCIP_Bool             benderslabels       /**< should the variables be labeled for the application of Benders' decomposition */
    )
 {
    assert(decomp != NULL);
@@ -69,6 +66,7 @@ SCIP_RETCODE SCIPdecompCreate(
    (*decomp)->idxlargestblock = 0;
    (*decomp)->haschanges = FALSE;
    (*decomp)->original = original;
+   (*decomp)->benderslabels = benderslabels;
 
    return SCIP_OKAY;
 }
@@ -96,10 +94,7 @@ void SCIPdecompFree(
    BMSfreeBlockMemory(blkmem, decomp);
 }
 
-/* author bzfhende
- *
- * TODO getter and setter for variable labelling
- */
+/* getter and setter for variable labels */
 
 /** set labels for an array of variables */
 SCIP_RETCODE SCIPdecompSetVarsLabels(
@@ -239,6 +234,29 @@ SCIP_Bool SCIPdecompIsOriginal(
    return decomp->original;
 }
 
+/** sets the parameter that indicates whether the variables must be labeled for the application of Benders'
+ * decomposition
+ */
+void SCIPdecompSetUseBendersLabels(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_Bool             benderslabels       /**< whether Benders' variable labels should be used */
+   )
+{
+   assert(decomp != NULL);
+
+   decomp->benderslabels = benderslabels;
+}
+
+/** returns TRUE if the variables must be labeled for the application of Benders' decomposition */
+SCIP_Bool SCIPdecompUseBendersLabels(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->benderslabels;
+}
+
 /** gets number of blocks of this decomposition */
 int SCIPdecompGetNBlocks(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
@@ -259,7 +277,21 @@ SCIP_RETCODE ensureCondition(
 }
 
 #define LABEL_UNASSIGNED INT_MIN
-/** computes constraint labels from variable labels. Existing labels for the constraints are simply overridden */
+/** computes constraint labels from variable labels.
+ *
+ *  Existing labels for the constraints are simply overridden
+ *
+ *  The computed labels depend on the flag SCIPdecompUseBendersLabels() of the decomposition.
+ *
+ *  If the flag is set to FALSE, the labeling assigns
+ *
+ *  - label i, if only variables labeled i are present in the constraint (and optionally linking variables)
+ *  - SCIP_DECOMP_LINKCONS, if there are either only variables labeled with SCIP_DECOMP_LINKVAR present, or
+ *    if there are variables with more than one block label.
+ *
+ *  If the flag is set to TRUE, the assignment is the same, unless variables from 2 named blocks occur in the same
+ *  constraint, which is an invalid labeling for the Benders case.
+ *   */
 SCIP_RETCODE SCIPdecompComputeConsLabels(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -272,6 +304,8 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
    int twicenvars;
    int* varlabels;
    int* conslabels;
+   SCIP_Bool benderserror;
+   SCIP_Bool benderslabels;
 
    assert(decomp != NULL);
 
@@ -284,9 +318,11 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
    SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, twicenvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
 
+   benderslabels = SCIPdecompUseBendersLabels(decomp);
+   benderserror = FALSE;
 
    /* assign label to each individual constraint */
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && ! benderserror; ++c )
    {
       int nconsvars;
       int v;
@@ -327,12 +363,18 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
          int varlabel = varlabels[v];
 
          /* count the number of linking variables, and keep track if there are two variables with different labels */
-         if( varlabels[v] == SCIP_DECOMP_LINKVAR )
+         if( varlabel == SCIP_DECOMP_LINKVAR )
             ++nlinkingvars;
          else if( conslabel == LABEL_UNASSIGNED )
             conslabel = varlabel;
          else if( conslabel != varlabel )
          {
+            /* there must not be two variables from different named blocks in a single constraint, since the presence
+             * of named block variables forbids this constraint from the master (linking) block
+             */
+            if( benderslabels )
+               benderserror = TRUE;
+
             conslabel = SCIP_DECOMP_LINKCONS;
             break;
          }
@@ -353,10 +395,33 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
    SCIPfreeBufferArray(scip, &varlabels);
    SCIPfreeBufferArray(scip, &varbuffer);
 
+   /* throw an error and inform the user if the variable block decomposition does not allow a benders constraint labeling */
+   if( benderserror )
+   {
+      SCIPerrorMessage("Error in constraint label computation; variables from multiple named blocks in a single constraint\n");
+
+      return SCIP_INVALIDDATA;
+   }
+
+
    return SCIP_OKAY;
 }
 
-/** create a decomposition of the variables from a labeling of the constraints */
+/** create a decomposition of the variables from a labeling of the constraints.
+ *
+ *  NOTE: by default, the variable labeling is based on a Dantzig-Wolfe decomposition. This means that constraints in named
+ *  blocks have have precedence over linking constraints. If a variable exists in constraints from
+ *  two or more named blocks, then this variable is marked as a linking variable.
+ *  If a variable occurs in exactly one named block i>=0, it is assigned label i.
+ *  Variables which are only in linking constraints are unlabeled. However, SCIPdecompGetVarsLabels() will
+ *  label them as linking variables.
+ *
+ *  If the variables should be labeled for the application of Benders' decomposition, the decomposition must be
+ *  flagged explicitly via SCIPdecompSetUseBendersLabels().
+ *  With this setting, the presence in linking constraints takes precedence over the presence in named blocks.
+ *  Now, a variable is considered linking if it is present in at least one linking constraint and an arbitrary
+ *  number of constraints from named blocks.
+ */
 SCIP_RETCODE SCIPdecompComputeVarsLabels(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -368,7 +433,7 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
    int* conslabels;
    SCIP_VAR** varbuffer;
    int twicenvars;
-
+   SCIP_Bool benderslabels;
 
    assert(scip != NULL);
    assert(decomp != NULL);
@@ -384,6 +449,7 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
    /* query constraint labels */
    SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
 
+   benderslabels = SCIPdecompUseBendersLabels(decomp);
    /* iterate over constraints and query the corresponding constraint labels */
    for( c = 0; c < nconss; ++c )
    {
@@ -392,12 +458,20 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
       int nconsvars;
       SCIP_Bool success;
       int requiredsize;
+      int newvarlabel;
 
-      /* skip linking constraints */
       conslabel = conslabels[c];
 
       if( conslabel == SCIP_DECOMP_LINKCONS )
-         continue;
+      {
+         /* skip linking constraints unless Benders labeling is used */
+         if( ! benderslabels )
+            continue;
+         else
+            newvarlabel = SCIP_DECOMP_LINKVAR;
+      }
+      else
+         newvarlabel = conslabel;
 
       SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
       SCIP_CALL( ensureCondition(success) );
@@ -426,12 +500,12 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
             int varlabel = SCIPhashmapGetImageInt(decomp->var2block, (void *)var);
 
             /* store the label linking variable explicitly to distinguish it from the default */
-            if( varlabel != SCIP_DECOMP_LINKVAR && varlabel != conslabel )
+            if( varlabel != SCIP_DECOMP_LINKVAR && varlabel != newvarlabel )
                SCIP_CALL( SCIPhashmapSetImageInt(decomp->var2block, (void *)var, SCIP_DECOMP_LINKVAR) );
          }
          else
          {
-            SCIP_CALL( SCIPhashmapInsertInt(decomp->var2block, (void *)var, conslabel) );
+            SCIP_CALL( SCIPhashmapInsertInt(decomp->var2block, (void *)var, newvarlabel) );
          }
       }
    }
@@ -467,7 +541,7 @@ int countLabelFromPos(
    return endpos - pos;
 }
 
-/** todo compute decomposition modularity */
+/** compute decomposition modularity */
 static
 SCIP_RETCODE computeModularity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -508,10 +582,15 @@ SCIP_RETCODE computeModularity(
    for( c = 0; c < nconss; ++c )
    {
       int nconsvars;
-      int conslabel;
+      int conslabel = conslabels[c];
       int blockpos;
       int varblockstart;
       SCIP_Bool success;
+      SCIP_Bool found;
+
+      /* linking constraints do not contribute to the modularity */
+      if( conslabel == SCIP_DECOMP_LINKCONS )
+         continue;
 
       SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
       SCIP_CALL( ensureCondition(success) );
@@ -528,21 +607,11 @@ SCIP_RETCODE computeModularity(
        */
       SCIPdecompGetVarsLabels(decomp, varbuf, varslabels, nconsvars);
 
-      conslabel = conslabels[c];
       /* find the position of the constraint label. Constraints of the border always belong to the first block at index 0 */
-      if( conslabel == SCIP_DECOMP_LINKCONS )
-         blockpos = 0;
-      else
-      {
-         SCIP_Bool found = SCIPsortedvecFindInt(decomp->labels, conslabel, decomp->nblocks + 1, &blockpos);
-         assert(found);
-      }
+      found = SCIPsortedvecFindInt(decomp->labels, conslabel, decomp->nblocks + 1, &blockpos);
+      assert(found);
 
       SCIPsortInt(varslabels, nconsvars);
-
-      /* increase the total degrees and nonzero (edge) counts */
-      totaldegrees[blockpos] += nconsvars;
-      nnonzeroes += nconsvars;
 
       /* count occurences of labels (blocks) in the sorted labels array */
       varblockstart = 0;
@@ -550,19 +619,39 @@ SCIP_RETCODE computeModularity(
       {
          int varblockpos;
          int nblockvars = countLabelFromPos(varslabels, varblockstart, nconsvars);
-         SCIP_Bool found;
 
          found = SCIPsortedvecFindInt(decomp->labels, varslabels[varblockstart], decomp->nblocks + 1, &varblockpos);
          assert(found);
 
-         /* increase the number of within edges for variable and constraints from the same block */
-         if( varblockpos == blockpos )
-            withinedges[varblockpos] += nblockvars;
+         /* don't consider linking variables for modularity statistics */
+         if( varslabels[varblockstart] != SCIP_DECOMP_LINKVAR )
+         {
+            /* increase the number of within edges for variable and constraints from the same block */
+            if( varblockpos == blockpos )
+               withinedges[varblockpos] += nblockvars;
 
-         totaldegrees[varblockpos] += nblockvars;
+            /* increase the total degrees and nonzero (edge) counts; it is intended that the total degrees sum up
+             * to twice the number of edges
+             */
+            totaldegrees[blockpos] += nblockvars;
+            totaldegrees[varblockpos] += nblockvars;
+            nnonzeroes += nblockvars;
+         }
+
          varblockstart += nblockvars;
       }
    }
+
+/* ensure that total degrees sum up to twice the number of edges */
+#ifndef NDEBUG
+   {
+      int totaldegreesum = 0;
+      for( b = 1; b < decomp->nblocks + 1; ++b )
+         totaldegreesum += totaldegrees[b];
+
+      assert(totaldegreesum == 2 * nnonzeroes);
+   }
+#endif
 
    /* compute modularity */
    *modularity = 0.0;
@@ -630,9 +719,13 @@ SCIP_RETCODE SCIPcomputeDecompStats(
   SCIPsortInt(conslabels, nconss);
 
 
-
+  /* the first label is always LINKVAR, even if Benders' variable labels are used. We can ignore the variables
+   * labelled as LINKCONS since this label is only required when computing the variable labels for Benders'
+   * decomposition.
+   */
   decomp->labels[0] = SCIP_DECOMP_LINKVAR;
-  /* treat border (linking variables) first */
+
+  /* treating the linking variables first */
   if( varslabels[0] == SCIP_DECOMP_LINKVAR )
      decomp->varssize[0] = countLabelFromPos(varslabels, 0, nvars);
   else
@@ -1017,7 +1110,7 @@ SCIP_RETCODE SCIPtransformDecompstore(
       /* 1. query the decomposition labels of the original variables and set them for the transformed variables
        * that have original counterparts
        */
-      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), SCIPdecompGetNBlocks(origdecomp), original) );
+      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), SCIPdecompGetNBlocks(origdecomp), original, SCIPdecompUseBendersLabels(origdecomp)) );
 
       SCIPdecompGetVarsLabels(origdecomp, origvars, varslabels, nvarsoriginal);
 

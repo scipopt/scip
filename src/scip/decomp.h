@@ -40,7 +40,8 @@ SCIP_RETCODE SCIPdecompCreate(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   nblocks,            /**< the number of blocks (without the linking block) */
-   SCIP_Bool             original            /**< is this a decomposition in the original (TRUE) or transformed space? */
+   SCIP_Bool             original,           /**< is this a decomposition in the original (TRUE) or transformed space? */
+   SCIP_Bool             benderslabels       /**< should the variables be labeled for the application of Benders' decomposition */
    );
 
 /** free a decomposition */
@@ -53,6 +54,21 @@ void SCIPdecompFree(
 /** returns TRUE if decomposition is in the original space */
 EXTERN
 SCIP_Bool SCIPdecompIsOriginal(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
+/** sets the parameter that indicates whether the variables must be labeled for the application of Benders'
+ * decomposition
+ */
+EXTERN
+void SCIPdecompSetUseBendersLabels(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_Bool             benderslabels       /**< whether Benders' variable labels should be used */
+   );
+
+/** returns TRUE if the variables must be labeled for the application of Benders' decomposition */
+EXTERN
+SCIP_Bool SCIPdecompUseBendersLabels(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
@@ -114,7 +130,21 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
    int                   nconss              /**< number of constraints */
    );
 
-/** create a decomposition of the variables from a labeling of the constraints */
+/** create a decomposition of the variables from a labeling of the constraints.
+ *
+ *  NOTE: by default, the variable labeling is based on a Dantzig-Wolfe decomposition. This means that constraints in named
+ *  blocks have have precedence over linking constraints. If a variable exists in constraints from
+ *  two or more named blocks, then this variable is marked as a linking variable.
+ *  If a variable occurs in exactly one named block i>=0, it is assigned label i.
+ *  Variables which are only in linking constraints are unlabeled. However, SCIPdecompGetVarsLabels() will
+ *  label them as linking variables.
+ *
+ *  If the variables should be labeled for the application of Benders' decomposition, the decomposition must be
+ *  flagged explicitly via SCIPdecompSetUseBendersLabels().
+ *  With this setting, the presence in linking constraints takes precedence over the presence in named blocks.
+ *  Now, a variable is considered linking if it is present in at least one linking constraint and an arbitrary
+ *  number of constraints from named blocks.
+ */
 EXTERN
 SCIP_RETCODE SCIPdecompComputeVarsLabels(
    SCIP*                 scip,               /**< SCIP data structure */
