@@ -1717,7 +1717,8 @@ SCIP_RETCODE markRowsXj(
          SCIPgetConsExprExprValue(sepadata->bilinterms[img]), prod_viol);
 
       /* we are interested only in violated product relations */
-      if( SCIPisFeasEQ(scip, prod_viol, 0.0) )
+      if( (SCIPgetConsExprExprNLocksNeg(sepadata->bilinterms[img]) == 0 || SCIPisFeasLE(scip, prod_viol, 0.0)) &&
+         (SCIPgetConsExprExprNLocksPos(sepadata->bilinterms[img]) == 0 && SCIPisFeasGE(scip, prod_viol, 0.0)) )
       {
          SCIPdebugMsg(scip, "the product for vars %s, %s is not violated\n", SCIPvarGetName(xj), SCIPvarGetName(xi));
          continue;
