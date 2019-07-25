@@ -52,6 +52,7 @@ SCIP_RETCODE extArc(
    const int nnodes = graph->knots;
    SCIP_Bool* isterm;
    int* tree_deg;
+   SCIP_Real* bottleneckDists;
    REDCOST redcostdata = {redcost, rootdist, termpaths, cutoff, root};
    DISTDATA distdata;
 
@@ -60,17 +61,22 @@ SCIP_RETCODE extArc(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &isterm, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_deg, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bottleneckDists, nnodes) );
 
    for( int i = 0; i < nnodes; i++ )
+   {
+      bottleneckDists[i] = -1.0;
       tree_deg[i] = 0;
+   }
 
    graph_get_isTerm(graph, isterm);
 
    /* actual test */
    SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata, edgedeleted,
-         isterm, edge, FALSE, &distdata, tree_deg, deletable) );
+         isterm, edge, FALSE, &distdata, bottleneckDists, tree_deg, deletable) );
 
    /* clean up */
+   SCIPfreeBufferArray(scip, &bottleneckDists);
    SCIPfreeBufferArray(scip, &tree_deg);
    SCIPfreeBufferArray(scip, &isterm);
 
