@@ -86,15 +86,10 @@ SCIP_RETCODE nlhdlrExprCreate(
    SCIP_EXPRCURV         curv                /**< curvature to achieve */
 )
 {
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
-
    assert(scip != NULL);
    assert(nlexpr2origexpr != NULL);
    assert(nlhdlrexpr != NULL);
    assert(origexpr != NULL);
-
-   exprhdlr = SCIPgetConsExprExprHdlr(origexpr);
-   assert(exprhdlr != NULL);
 
    if( SCIPgetConsExprExprNChildren(origexpr) == 0 )
    {
@@ -750,7 +745,6 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvex)
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 { /*lint --e{715}*/
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_CONSEXPR_EXPR* nlexpr;
    SCIP_EXPRCURV curvature;
    int i;
@@ -785,9 +779,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
       SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", auxvalue, (void*)expr);
       return SCIP_OKAY;
    }
-
-   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
-   assert(nlhdlrdata != NULL);
 
    /* compute gradient (TODO: this also reevaluates (soltag=0), which shouldn't be necessary) */
    SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, nlexpr, sol, 0) );
