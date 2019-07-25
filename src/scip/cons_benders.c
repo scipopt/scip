@@ -206,6 +206,37 @@ SCIP_RETCODE constructValidSolution(
    return SCIP_OKAY;
 }
 
+/** checks the Benders' decomposition auxiliary variables for unboundedness. */
+static
+SCIP_Bool unboundedAuxiliaryVariables(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
+   SCIP_SOL*             sol                 /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
+   )
+{
+   int nsubproblems;
+   SCIP_Bool unbounded = FALSE;
+   int i;
+
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   nsubproblems = SCIPbendersGetNSubproblems(benders);
+
+   /* checking the auxiliary variable values for unboundedness */
+   for( i = 0; i < nsubproblems; i++ )
+   {
+      if( SCIPisInfinity(scip, SCIPgetBendersAuxiliaryVarVal(scip, benders, sol, i))
+         || SCIPisInfinity(scip, -SCIPgetBendersAuxiliaryVarVal(scip, benders, sol, i)) )
+      {
+         unbounded = TRUE;
+         break;
+      }
+   }
+
+   return unbounded;
+}
+
 /** enforces Benders' constraints for given solution
  *
  *  This method is called from cons_benderslp and cons_benders. If the method is called from cons_benderslp, then the
@@ -252,7 +283,27 @@ SCIP_RETCODE SCIPconsBendersEnforceSolution(
          case SCIP_BENDERSENFOTYPE_LP:
             if( SCIPbendersCutLP(benders[i]) )
             {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, &auxviol, type, checkint) );
+               SCIP_Bool unbounded = FALSE;
+
+               /* if the solution is unbounded, then it may not be possible to generate any Benders' decomposition
+                * cuts. If the unboundedness is from the auxiliary variables, then cuts are required. Otherwise, if
+                * the unboundedness comes from original variables, then the unboundedness needs to be handled by other
+                * constraint handlers or the problem is reported as unbounded
+                * */
+               if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+               {
+                  if( !unboundedAuxiliaryVariables(scip, benders[i], NULL) )
+                  {
+                     (*result) = SCIP_FEASIBLE;
+                     auxviol = FALSE;
+                     unbounded = TRUE;
+                  }
+               }
+
+               if( !unbounded )
+               {
+                  SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, &auxviol, type, checkint) );
+               }
             }
             break;
          case SCIP_BENDERSENFOTYPE_RELAX:
