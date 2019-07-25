@@ -1806,7 +1806,14 @@ SCIP_RETCODE createSubproblems(
          (SCIPbendersGetSubproblemType(benders, i) <= SCIP_BENDERSSUBTYPE_CONVEXDIS
           && SCIPbendersSubproblemIsNonlinear(benders, i)) )
       {
-         SCIP_CALL( addSlackVarsToConstraints(benders, set, i) );
+         /* the slack variables are only added to the subproblem once. If the initialisation methods are called from a
+          * copy, then the slack variables are not re-added. Alternatively, if the copy must be threadsafe, then the
+          * subproblems are created from scratch again, so the slack variables need to be added.
+          */
+         if( !benders->iscopy || benders->threadsafe )
+         {
+            SCIP_CALL( addSlackVarsToConstraints(benders, set, i) );
+         }
 
          /* setting the flag to indicate that slack variables have been added to the subproblem constraints. This is only
           * set if the slack variables have been added at the request of the user.
