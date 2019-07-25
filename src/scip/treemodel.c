@@ -31,7 +31,7 @@
 #define LAGUERRE_THRESHOLD    100      /**< Maximum value of r/l at which Laguerre is the prefered FP method */
 
 /* Default parameters for the Treemodel branching rules */
-#define DEFAULT_ENABLE         TRUE    /**< should candidate branching variables be scored using the Treemodel rule? */
+#define DEFAULT_ENABLE         FALSE    /**< should candidate branching variables be scored using the Treemodel rule? */
 #define DEFAULT_HIGHRULE       'r'      /**< scoring function to use at nodes predicted to be high in the tree. ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
 #define DEFAULT_LOWRULE        'r'      /**< scoring function to use at nodes predicted to be low in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
 #define DEFAULT_HEIGHT         10       /**< estimated tree height at which we switch from using the low rule to the high rule */
