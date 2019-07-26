@@ -207,12 +207,11 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
    );
 
 /** compares the subproblem objective value with the auxiliary variable value for optimality */
-SCIP_RETCODE SCIPbendersCheckSubproblemOptimality(
+SCIP_Bool SCIPbendersCheckSubproblemOptimality(
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool*            optimal             /**< flag to indicate whether the current subproblem is optimal for the master */
+   int                   probnumber          /**< the subproblem number */
    );
 
 /** returns the value of the auxiliary variable value in a master problem solution */

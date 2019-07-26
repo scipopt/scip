@@ -35,10 +35,12 @@
 
 #include "scip/benderscut.h"
 #include "scip/benders.h"
+#include "scip/cons_linear.h"
 #include "scip/debug.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_message.h"
 #include "scip/scip_benders.h"
+#include "scip/scip.h"
 #include "scip/set.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
@@ -867,7 +869,7 @@ SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
    SCIP_CALL( SCIPcheckStage(SCIPbendersSubproblem(benders, probnumber), "SCIPcheckBendersSubproblemOptimality",
          FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbendersCheckSubproblemOptimality(benders, scip->set, sol, probnumber, optimal) );
+   (*optimal) = SCIPbendersCheckSubproblemOptimality(benders, scip->set, sol, probnumber);
 
    return SCIP_OKAY;
 }
