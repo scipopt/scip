@@ -24,6 +24,7 @@
 
 #ifndef __SCIP_HEUR_STAIRCASE_H__
 #define __SCIP_HEUR_STAIRCASE_H__
+#define SCIP_DEBUG
 
 
 #include "scip/scip.h"
