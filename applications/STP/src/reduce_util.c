@@ -498,7 +498,7 @@ SCIP_RETCODE reduce_distDataInit(
 
 /** gets bottleneck (or special) distance between v1 and v2; -1.0 if no distance is known */
 SCIP_Real reduce_distDataGetSD(
-   const DISTDATA*       distdata,           /**< to be initialized */
+   DISTDATA*             distdata,           /**< distance data */
    int                   vertex1,            /**< first vertex */
    int                   vertex2             /**< second vertex */
 )

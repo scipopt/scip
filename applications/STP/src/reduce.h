@@ -156,7 +156,7 @@ extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
 /* reduce_util.c
  */
 extern SCIP_RETCODE    reduce_distDataInit(SCIP*, const GRAPH*, int, SCIP_Bool, DISTDATA*);
-extern SCIP_Real       reduce_distDataGetSD(const DISTDATA*, int, int);
+extern SCIP_Real       reduce_distDataGetSD(DISTDATA*, int, int);
 extern void            reduce_distDataFree(SCIP*, const GRAPH*, DISTDATA*);
 
 
