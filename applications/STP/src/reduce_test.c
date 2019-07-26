@@ -340,7 +340,7 @@ SCIP_RETCODE reduce_extTest2(
 
    graph_edge_printInfo(graph, edge);
 
-#if 1
+#if 0
    for( int e = graph->outbeg[10]; e != EAT_LAST; e = graph->oeat[e] )
    {
       const int head = graph->head[e];

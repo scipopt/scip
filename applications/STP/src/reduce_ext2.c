@@ -1136,6 +1136,103 @@ void extExtend(
 }
 
 
+/** check (directed) arc (internal method) */
+static
+void extCheckArc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
+   int                   edge,               /**< directed edge to be checked */
+   SCIP_Bool             equality,           /**< delete edge also in case of reduced cost equality? */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            deletable           /**< is arc deletable? */
+)
+{
+   const int head = graph->head[edge];
+   const int tail = graph->tail[edge];
+   const int nnodes = graph->knots;
+   int* const tree_deg = extdata->tree_deg;
+   int* const extstack_state = extdata->extstack_state;
+   int nupdatestalls = 0;
+   SCIP_Bool success = TRUE;
+   SCIP_Bool conflict = FALSE;
+
+   tree_deg[tail] = nnodes;
+
+   /* put 'edge' on the stack */
+   extdata->extstack_size = 1;
+   extdata->extstack_start[0] = 0;
+   extdata->extstack_start[1] = 1;
+   extdata->extstack_data[0] = edge;
+   extdata->extstack_state[0] = EXT_STATE_EXPANDED;
+   extdata->tree_leaves[0] = tail;
+   extdata->tree_parentNode[tail] = -1;
+   extdata->tree_nleaves = 1;
+
+   extTreeSyncWithStack(scip, graph, extdata, &nupdatestalls, &conflict);
+
+   assert(!conflict);
+   assert(extdata->tree_parentNode[head] == tail && extdata->tree_parentEdgeCost[head] == graph->cost[edge]);
+
+   extExtend(scip, graph, isterm, extdata, &success);
+
+   assert(extstack_state[0] == EXT_STATE_MARKED);
+   assert(success || 1 == extdata->extstack_size);
+
+   /* limited DFS backtracking; stops once back at 'edge' */
+   while( extdata->extstack_size > 1 )
+   {
+      const int stackposition = extdata->extstack_size - 1;
+      conflict = FALSE;
+
+      extTreeSyncWithStack(scip, graph, extdata, &nupdatestalls, &conflict);
+
+      /* has current component already been extended? */
+      if( extstack_state[stackposition] == EXT_STATE_MARKED )
+      {
+         extBacktrack(scip, graph, success, FALSE, extdata);
+         continue;
+      }
+
+      /* component not expanded yet? */
+      if( extstack_state[stackposition] != EXT_STATE_EXPANDED )
+      {
+         assert(extstack_state[stackposition] == EXT_STATE_NONE);
+
+         extStackExpand(scip, graph, isterm, extdata, &success);
+         continue;
+      }
+
+      assert(extstack_state[stackposition] == EXT_STATE_EXPANDED);
+
+      if( conflict || extRuleOutPeriph(scip, graph, extdata) )
+      {
+         success = TRUE;
+         extBacktrack(scip, graph, success, conflict, extdata);
+         continue;
+      }
+
+      if( extTruncate(graph, isterm, extdata) )
+      {
+         success = FALSE;
+         extBacktrack(scip, graph, success, FALSE, extdata);
+         continue;
+      }
+
+      /* neither ruled out nor truncated, so extend */
+      extExtend(scip, graph, isterm, extdata, &success);
+
+   } /* DFS loop */
+
+   *deletable = success;
+   assert(tree_deg[head] == 1 && tree_deg[tail] == nnodes);
+
+   tree_deg[head] = 0;
+   tree_deg[tail] = 0;
+
+   unmarkEdgeAncestors(graph, edge, extdata->reddata->ancestormark);
+}
+
 /** check (directed) arc */
 SCIP_RETCODE reduce_extendedCheckArc(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1211,96 +1308,21 @@ SCIP_RETCODE reduce_extendedCheckArc(
       if( extLeafIsExtendable(graph, isterm, head) )
       {
          const SCIP_Real treeredcostoffset = rootdist[tail];
-         int nupdatestalls = 0;
-         SCIP_Bool success = TRUE;
-         SCIP_Bool conflict = FALSE;
-         REDDATA reddata = {redcost, rootdist, node2termpaths, edgedeleted, ancestormark, cutoff, treeredcostoffset, equality};
-         EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start, .extstack_state = extstack_state,
-            .extstack_size = 0, .tree_leaves = tree_leaves, .tree_edges = tree_edges, .tree_deg = tree_deg, .tree_nleaves = 0,
-            .tree_bottleneckDistNode = bottleneckDistNode, .tree_parentNode = tree_parentNode, .tree_parentEdgeCost = tree_parentEdgeCost,
-            .tree_redcost = 0.0, .tree_root = tail, .tree_size = 0,  .tree_depth = 0,.extstack_maxsize = nnodes - 1,
+
+         REDDATA reddata = { .reducedcosts = redcost, .rootdist = rootdist, .termpaths = node2termpaths,
+            .edgedeleted = edgedeleted, .ancestormark = ancestormark, .cutoff = cutoff,
+            .treeredcostoffset = treeredcostoffset, . equality = equality};
+         EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
+            .extstack_state = extstack_state, .extstack_size = 0, .tree_leaves = tree_leaves,
+            .tree_edges = tree_edges, .tree_deg = tree_deg, .tree_nleaves = 0,
+            .tree_bottleneckDistNode = bottleneckDistNode, .tree_parentNode = tree_parentNode,
+            .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcost = treeredcostoffset,
+            .tree_root = tail, .tree_size = 0,  .tree_depth = 0, .extstack_maxsize = nnodes - 1,
             .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXT_MAXNLEAVES, .tree_maxdepth = maxdfsdepth,
             .tree_maxsize = STP_EXT_MAXTREESIZE, .reddata = &reddata, . distdata = distdata};
 
-         extdata.tree_redcost = treeredcostoffset;
-         extdata.tree_depth = 0;
-         tree_deg[tail] = nnodes;
-
-         /* put 'edge' on the stack */
-         extdata.extstack_size = 1;
-         extstack_start[0] = 0;
-         extstack_start[1] = 1;
-         extstack_data[0] = edge;
-         extstack_state[0] = EXT_STATE_EXPANDED;
-         tree_leaves[0] = tail;
-         tree_parentNode[tail] = -1;
-         extdata.tree_nleaves = 1;
-
-         int todo; // internal method here that takes pointer to REDATA and EXTDATA
-         extTreeSyncWithStack(scip, graph, &extdata, &nupdatestalls, &conflict);
-
-         assert(!conflict);
-         assert(tree_parentNode[head] == tail && tree_parentEdgeCost[head] == graph->cost[edge]);
-
-         extExtend(scip, graph, isterm, &extdata, &success);
-
-         assert(extstack_state[0] == EXT_STATE_MARKED);
-         assert(success || 1 == extdata.extstack_size);
-
-         /* limited DFS backtracking; stops once back at 'edge' */
-         while( extdata.extstack_size > 1 )
-         {
-            const int stackposition = extdata.extstack_size - 1;
-            conflict = FALSE;
-
-            extTreeSyncWithStack(scip, graph, &extdata, &nupdatestalls, &conflict);
-
-            /* has current component already been extended? */
-            if( extstack_state[stackposition] == EXT_STATE_MARKED )
-            {
-               extBacktrack(scip, graph, success, FALSE, &extdata);
-               continue;
-            }
-
-            /* component not expanded yet? */
-            if( extstack_state[stackposition] != EXT_STATE_EXPANDED )
-            {
-               assert(extstack_state[stackposition] == EXT_STATE_NONE);
-
-               extStackExpand(scip, graph, isterm, &extdata, &success);
-               continue;
-            }
-
-            assert(extstack_state[stackposition] == EXT_STATE_EXPANDED);
-
-            if( conflict || extRuleOutPeriph(scip, graph, &extdata) )
-            {
-               success = TRUE;
-               extBacktrack(scip, graph, success, conflict, &extdata);
-               continue;
-            }
-
-            if( extTruncate(graph, isterm, &extdata) )
-            {
-               success = FALSE;
-               extBacktrack(scip, graph, success, FALSE, &extdata);
-               continue;
-            }
-
-            /* neither ruled out nor truncated, so extend */
-            extExtend(scip, graph, isterm, &extdata, &success);
-
-         } /* DFS loop */
-
-         *deletable = success;
-         assert(tree_deg[head] == 1 && tree_deg[tail] == nnodes);
-
-         tree_deg[head] = 0;
-         tree_deg[tail] = 0;
-
-         unmarkEdgeAncestors(graph, edge, ancestormark);
-      } /* extend from head */
-
+         extCheckArc(scip, graph, isterm, edge, equality, &extdata, deletable);
+      }
 
       /* finalize arrays */
 
