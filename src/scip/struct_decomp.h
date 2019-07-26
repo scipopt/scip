@@ -38,6 +38,7 @@ struct SCIP_Decomp
    SCIP_HASHMAP*         cons2block;         /**< hash map from SCIP constraints to block labels */
    SCIP_Real             score;              /**< score of this decomposition */
    SCIP_Real             modularity;         /**< modularity score (comparison of within community edges and random decomposition) */
+   SCIP_Real             areascore;          /**< area score (fraction of matrix area outside block assignments) of this decomposition */
    int                   idxlargestblock;    /**< index of the of the largest block (regarding the number of constraints) */
    int                   idxsmallestblock;   /**< index of the smallest block (regarding the number of constraints) */
    int*                  varssize;           /**< variable size for each block, sorted by increasing block label */
