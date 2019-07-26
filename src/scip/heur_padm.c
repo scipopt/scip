@@ -117,7 +117,7 @@ typedef struct set
    int *indexes; /**< set of indexes */
 } SET;
 
-/** data of one linking varaibles related to one block */
+/** data of one linking variable related to one block */
 typedef struct blockinfo
 {
    int block;                  /**< index of this block */
@@ -724,7 +724,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    /* sort constraints by blocks */
    nblocks = SCIPdecompGetNBlocks(decomp);
    SCIPsortIntPtr(conslabels, (void **)conss, nconss);
-   if (conslabels[0] == -1)
+   if (conslabels[0] == -2)
    {
       SCIPdebugMsg(scip, "No support for linking contraints\n");
       goto TERMINATE;
