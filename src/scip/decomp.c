@@ -67,6 +67,7 @@ SCIP_RETCODE SCIPdecompCreate(
    (*decomp)->haschanges = FALSE;
    (*decomp)->original = original;
    (*decomp)->benderslabels = benderslabels;
+   (*decomp)->areascore = -1.0;
 
    return SCIP_OKAY;
 }
@@ -672,6 +673,37 @@ SCIP_RETCODE computeModularity(
    return SCIP_OKAY;
 }
 
+/** compute the area score */
+static
+void computeAreaScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   SCIP_Real score = 1.0;
+   int nvars = SCIPgetNVars(scip);
+   int nconss = SCIPgetNConss(scip);
+
+   if( nvars > 0 && nconss > 0 )
+   {
+      int nlinkconss = decomp->consssize[0];
+      int nlinkvars = decomp->varssize[0];
+      SCIP_Real factor = 1.0 / ((SCIP_Real)nvars * nconss);
+
+      int i;
+
+      /* compute diagonal contributions to the area score */
+      for( i = 1; i < decomp->nblocks + 1; ++i )
+      {
+         score -= (factor * decomp->consssize[i]) * decomp->varssize[i];
+      }
+
+      score -= ((SCIP_Real)nlinkconss * nvars + (SCIP_Real)nconss * nlinkvars - (SCIP_Real)nlinkconss * nlinkvars) * factor;
+   }
+
+   decomp->areascore = score;
+}
+
 /** compute decomposition statistics and store them in the decomp object */
 SCIP_RETCODE SCIPcomputeDecompStats(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -827,6 +859,8 @@ SCIP_RETCODE SCIPcomputeDecompStats(
 
   SCIP_CALL( computeModularity(scip, decomp, &decomp->modularity) );
 
+  computeAreaScore(scip, decomp);
+
   SCIPfreeBufferArray(scip, &conslabels);
   SCIPfreeBufferArray(scip, &varslabels);
 
@@ -866,8 +900,11 @@ char* SCIPdecompPrintStats(
             );
 
    ptr += snprintf(ptr, SCIP_MAXSTRLEN,
-            "Modularity: %.3f\n",
-            decomp->modularity);
+            "Modularity: %.3f, Area Score: %.3f\n",
+            decomp->modularity, decomp->areascore);
+   ptr += snprintf(ptr, SCIP_MAXSTRLEN,
+            "Constraint Block Graph: %d edges, %d articulation nodes, %d connected components, %d min., %d max. degree\n",
+            -1, -1, -1, -1, -1);
 
    return strbuf;
 }
