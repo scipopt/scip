@@ -361,14 +361,13 @@ SCIP_Real extTreeGetBottleneckDist(
    int                   vertex2             /**< second vertex */
    )
 {
-   SCIP_Real* bottleneckDist_node = extdata->tree_bottleneckDistNode;
-   const SCIP_Real* parentEdgeCost = extdata->tree_parentEdgeCost;
-   const int* parentNode = extdata->tree_parentNode;
+   SCIP_Real* const bottleneckDist_node = extdata->tree_bottleneckDistNode;
+   const SCIP_Real* const parentEdgeCost = extdata->tree_parentEdgeCost;
+   const int* const parentNode = extdata->tree_parentNode;
    int* const tree_deg = extdata->tree_deg;
    SCIP_Real bottleneck;
    const int tree_root = extdata->tree_root;
    int currentNode;
-   int childNode;
 
    assert(bottleneckDist_node && parentEdgeCost && parentNode);
    assert(vertex1 >= 0 && vertex1 < graph->knots && vertex2 >= 0 && vertex2 < graph->knots);
@@ -382,8 +381,11 @@ SCIP_Real extTreeGetBottleneckDist(
    else
    {
       /* go down from vertex1 */
+
+      SCIP_Real bottleneck_local = 0.0;
+      int childNode = vertex1;
+
       bottleneck = 0.0;
-      childNode = vertex1;
       currentNode = parentNode[vertex1];
 
       assert(currentNode != -1);
@@ -395,9 +397,12 @@ SCIP_Real extTreeGetBottleneckDist(
          assert((currentNode != vertex2 || vertex2 == tree_root) && currentNode != vertex1);
 
          if( tree_deg[childNode] == 2 )
-            bottleneck += parentEdgeCost[childNode];
+            bottleneck_local += parentEdgeCost[childNode];
          else
-            bottleneck = parentEdgeCost[childNode];
+            bottleneck_local = parentEdgeCost[childNode];
+
+         if( bottleneck < bottleneck_local )
+            bottleneck = bottleneck_local;
 
          bottleneckDist_node[currentNode] = bottleneck;
          childNode = currentNode;
@@ -416,35 +421,28 @@ SCIP_Real extTreeGetBottleneckDist(
    }
    else
    {
-      childNode = vertex2;
+      SCIP_Real bottleneck_local = 0.0;
+
       currentNode = parentNode[vertex2];
 
       assert(currentNode >= 0);
 
-      while( bottleneckDist_node[currentNode] < -0.5 ) /* == -1.0 */
+      for( currentNode = vertex2; bottleneckDist_node[currentNode] < -0.5; currentNode = parentNode[currentNode] )
       {
-         assert(tree_deg[currentNode] >= 0 && parentEdgeCost[childNode] >= 0.0);
+         assert(tree_deg[currentNode] >= 0 && parentEdgeCost[currentNode] >= 0.0);
          assert(bottleneckDist_node[currentNode] == -1.0);
-         assert((currentNode != vertex1 || vertex1 == tree_root) && currentNode != vertex2);
+         assert(currentNode != vertex1);
 
-         if( tree_deg[childNode] == 2 )
-            bottleneck += parentEdgeCost[childNode];
+         if( tree_deg[currentNode] == 2 )
+            bottleneck_local += parentEdgeCost[currentNode];
          else
-            bottleneck = parentEdgeCost[childNode];
+            bottleneck_local = parentEdgeCost[currentNode];
 
-         childNode = currentNode;
-         currentNode = parentNode[currentNode];
+         if( bottleneck < bottleneck_local )
+            bottleneck = bottleneck_local;
 
-         assert(currentNode >= 0);
+         assert(parentNode[currentNode] >= 0 && parentNode[currentNode] != vertex2);
       }
-
-      assert(bottleneckDist_node[childNode] == -1.0);
-      assert(bottleneckDist_node[currentNode] >= 0.0);
-
-      if( tree_deg[childNode] == 2 )
-         bottleneck += parentEdgeCost[childNode];
-      else
-         bottleneck = parentEdgeCost[childNode];
    }
 
    bottleneck = MAX(bottleneck, bottleneckDist_node[currentNode]);
@@ -458,8 +456,9 @@ SCIP_Real extTreeGetBottleneckDist(
 
       bottleneckDist_node[currentNode] = -1.0;
    }
+   assert(bottleneckDist_node[vertex1] == -1.0);
 
-   printf("%d %d bottleneck=%f \n", vertex1, vertex2, bottleneck);
+   SCIPdebugMessage("%d %d bottleneck=%f \n", vertex1, vertex2, bottleneck);
 
    int todo;
    bottleneck = 0.0;
