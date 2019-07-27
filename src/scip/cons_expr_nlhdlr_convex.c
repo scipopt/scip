@@ -169,11 +169,7 @@ SCIP_RETCODE collectLeafs(
    int*                  nindices            /**< number of indices */
    )
 {
-   SCIP_VAR* var;
-   SCIP_CONSEXPR_EXPR* origexpr;
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_CONSEXPR_EXPR* newchild;
-   int i;
+   SCIP_CONSEXPR_ITERATOR* it;
 
    assert(nlexpr != NULL);
    assert(nlexpr2origexpr != NULL);
@@ -183,18 +179,31 @@ SCIP_RETCODE collectLeafs(
    assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);
    assert(SCIPgetConsExprExprChildren(nlexpr) != NULL);
 
-   /* TODO use iterator */
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, nlexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* allowrevisit is ok, as this nlexpr is mostly a tree (only variables are shared, and for those we do not go into visitingchild stage) */
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD);
 
-   for( i = 0; i < SCIPgetConsExprExprNChildren(nlexpr); ++i )
+   for( nlexpr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); nlexpr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
-      child = SCIPgetConsExprExprChildren(nlexpr)[i];
-      origexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlexpr2origexpr, (void*)child);
-      assert(origexpr != NULL);
+      SCIP_CONSEXPR_EXPR* child;
 
+      assert(nlexpr != NULL);
+
+      /* check whether to-be-visited child needs to be replaced by a new expression (representing the auxvar) */
+      child = SCIPexpriteratorGetChildExprDFS(it);
       if( SCIPgetConsExprExprNChildren(child) == 0 )
       {
+         SCIP_CONSEXPR_EXPR* origexpr;
+
+         origexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlexpr2origexpr, (void*)child);
+         assert(origexpr != NULL);
+
          if( SCIPgetConsExprExprNChildren(origexpr) > 0 )
          {
+            SCIP_CONSEXPR_EXPR* newchild;
+            int childidx;
+            SCIP_VAR* var;
+
             /* having a child that had children in original but not in copy means that we could not achieve the desired curvature
              * thus, replace by a new child that points to the auxvar of the original expression
              */
@@ -202,7 +211,8 @@ SCIP_RETCODE collectLeafs(
             assert(var != NULL);
             SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &newchild, var) );  /* this captures newchild once */
 
-            SCIP_CALL( SCIPreplaceConsExprExprChild(scip, nlexpr, i, newchild) );  /* this captures newchild again */
+            childidx = SCIPexpriteratorGetChildIdxDFS(it);
+            SCIP_CALL( SCIPreplaceConsExprExprChild(scip, nlexpr, childidx, newchild) );  /* this captures newchild again */
 
             SCIP_CALL( SCIPhashmapRemove(nlexpr2origexpr, (void*)child) );
             SCIP_CALL( SCIPhashmapInsert(nlexpr2origexpr, (void*)newchild, (void*)origexpr) );
@@ -225,11 +235,9 @@ SCIP_RETCODE collectLeafs(
          }
          /* else: it's probably a value-expression, nothing to do */
       }
-      else
-      {
-         SCIP_CALL( collectLeafs(scip, conshdlr, child, nlexpr2origexpr, leaf2index, nindices) );
-      }
    }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -745,9 +753,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 
    *success = FALSE;
 
-   /* if estimating on non-convex side, then do nothing
-    * TODO we are vertex-polyhedral and so should compute something
-    */
+   /* if estimating on non-convex side, then do nothing */
    curvature = SCIPgetConsExprExprCurvature(nlexpr);
    assert(curvature == SCIP_EXPRCURV_CONVEX || curvature == SCIP_EXPRCURV_CONCAVE);
    if( ( overestimate && curvature == SCIP_EXPRCURV_CONVEX) ||
