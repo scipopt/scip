@@ -382,6 +382,7 @@ SCIP_RETCODE constructExpr(
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
    SCIP_CONSEXPR_EXPR**  rootnlexpr,         /**< buffer to store created expression */
    SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from our expression copy to original expression */
+   int*                  nleafs,             /**< number of leafs in constructed expression */
    SCIP_CONSEXPR_EXPR*   rootexpr,           /**< expression */
    SCIP_EXPRCURV         curv                /**< curvature to achieve */
    )
@@ -399,7 +400,10 @@ SCIP_RETCODE constructExpr(
    int stackpos;
 
    assert(scip != NULL);
+   assert(nlhdlrdata != NULL);
    assert(rootnlexpr != NULL);
+   assert(nlexpr2origexpr != NULL);
+   assert(nleafs != NULL);
    assert(rootexpr != NULL);
    assert(curv == SCIP_EXPRCURV_CONVEX || curv == SCIP_EXPRCURV_CONCAVE);
 
@@ -408,6 +412,8 @@ SCIP_RETCODE constructExpr(
 
    /* create root expression */
    SCIP_CALL( nlhdlrExprCreate(scip, conshdlr, nlexpr2origexpr, rootnlexpr, rootexpr, curv) );
+
+   *nleafs = 0;
 
    stacksize = 20;
    SCIP_CALL( SCIPallocBufferArray(scip, &stack, stacksize) );
@@ -459,12 +465,8 @@ SCIP_RETCODE constructExpr(
             /* if origexpr can have curvature curv, then don't treat it as leaf, but include its children */
             SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, nlexpr, childcurv) );
          }
-         else if( nlexpr == *rootnlexpr )
-         {
-            /* if there is no way to ensure curvature for root expression, then we failed */
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, rootnlexpr) );
-            break;
-         }
+         else
+            assert(SCIPgetConsExprExprNChildren(origexpr) > 0); /* if originally no children, then should be var or value, which should have every curvature, so should be success=TRUE */
       }
       else if( nchildren > 0 )
       {
@@ -504,6 +506,8 @@ SCIP_RETCODE constructExpr(
          memcpy(stack + (stackpos+1), SCIPgetConsExprExprChildren(nlexpr), nchildren * sizeof(SCIP_CONSEXPR_EXPR*));
          stackpos += nchildren;
       }
+      else
+         ++*nleafs;  /* no success -> will become variable; success && nchildren == 0 -> is already variable or value */
    }
    assert(stackpos == -1);
 
@@ -545,7 +549,8 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nlhdlr expression data */
    SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
    SCIP_CONSEXPR_EXPR*   nlexpr,             /**< our copy of expression */
-   SCIP_HASHMAP*         nlexpr2origexpr     /**< mapping of expression copy to original */
+   SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping of expression copy to original */
+   int                   nleafs              /**< number of leafs as counted by constructExpr */
    )
 {
    SCIP_HASHMAP* leaf2index;
@@ -563,9 +568,10 @@ SCIP_RETCODE createNlhdlrExprData(
    (*nlhdlrexprdata)->nlexpr2origexpr = nlexpr2origexpr;
 
    /* make sure there are auxvars and collect all variables */
-   SCIP_CALL( SCIPhashmapCreate(&leaf2index, SCIPblkmem(scip), 10) );   /* TODO replace 10 by number of leafs, which we could count in constructExpr */
-   (*nlhdlrexprdata)->nleafs = 0;
+   SCIP_CALL( SCIPhashmapCreate(&leaf2index, SCIPblkmem(scip), nleafs) );
+   (*nlhdlrexprdata)->nleafs = 0;  /* we start a new count, this time skipping value-expressions */
    SCIP_CALL( collectLeafs(scip, conshdlr, nlexpr, nlexpr2origexpr, leaf2index, &(*nlhdlrexprdata)->nleafs) );
+   assert((*nlhdlrexprdata)->nleafs <= nleafs);  /* we should not have seen more leafs now than in constructExpr */
 
    /* assemble auxvars array */
    assert((*nlhdlrexprdata)->nleafs > 0);
@@ -643,6 +649,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_CONSEXPR_EXPR* nlexpr = NULL;
    SCIP_HASHMAP* nlexpr2origexpr;
+   int nleafs;
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -672,11 +679,15 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    if( SCIPgetConsExprExprNChildren(expr) == 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPhashmapCreate(&nlexpr2origexpr, SCIPblkmem(scip), 10) );  /* TODO 10? */
+   /* initialize mapping from copied expression to original one
+    * 20 is not a bad estimate for the size of convex subexpressions that we can usually discover
+    * when expressions will be allowed to store "user"data, we could get rid of this hashmap (TODO)
+    */
+   SCIP_CALL( SCIPhashmapCreate(&nlexpr2origexpr, SCIPblkmem(scip), 20) );
 
    if( !*enforcedbelow )
    {
-      SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, expr, SCIP_EXPRCURV_CONVEX) );
+      SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr, SCIP_EXPRCURV_CONVEX) );
       if( nlexpr != NULL )
       {
          assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
@@ -693,7 +704,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 
    if( !*enforcedabove && nlexpr == NULL )
    {
-      SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, expr, SCIP_EXPRCURV_CONCAVE) );
+      SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, &nleafs, expr, SCIP_EXPRCURV_CONCAVE) );
       if( nlexpr != NULL )
       {
          assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
@@ -714,7 +725,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    }
 
    /* store variable expressions into the expression data of the nonlinear handler */
-   SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrexprdata, expr, nlexpr, nlexpr2origexpr) );
+   SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrexprdata, expr, nlexpr, nlexpr2origexpr, nleafs) );
 
    return SCIP_OKAY;
 }
