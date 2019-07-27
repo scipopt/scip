@@ -53,8 +53,8 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_CONSEXPR_EXPR*   nlexpr;             /**< expression (copy) for which this nlhdlr estimates */
    SCIP_HASHMAP*         nlexpr2origexpr;    /**< mapping of our copied expression to original expression */
 
-   int                   nauxvars;           /**< number of distinct (auxiliary) variables handled */
-   SCIP_VAR**            auxvars;            /**< variables we use in expression */
+   int                   nleafs;             /**< number of distinct leafs of nlexpr, i.e., number of distinct (auxiliary) variables handled */
+   SCIP_CONSEXPR_EXPR**  leafexprs;          /**< distinct leaf expressions (excluding value-expressions), thus variables */
 };
 
 /** nonlinear handler data */
@@ -154,48 +154,18 @@ SCIP_RETCODE nlhdlrExprGrowChildren(
    return SCIP_OKAY;
 }
 
-/** register violation as branchscore in leafs of nlhdlr-expression */
-static
-void nlhdlrExprBranchscore(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   nlexpr,             /**< nlhdlr-expression */
-   SCIP_HASHMAP*         nlexpr2origexpr,    /**< map expression copy to original */
-   unsigned int          brscoretag,         /**< branchscore tag */
-   SCIP_Real             violation           /**< violation */
-   )
-{
-   SCIP_CONSEXPR_EXPR* origexpr;
-   int nchildren;
-   int c;
-
-   /* TODO expression iterator */
-
-   nchildren = SCIPgetConsExprExprNChildren(nlexpr);
-   if( nchildren == 0 )
-   {
-      origexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlexpr);
-      assert(origexpr != NULL);
-
-      SCIPaddConsExprExprBranchScore(scip, origexpr, brscoretag, violation);
-      return;
-   }
-
-   for( c = 0; c < nchildren; ++c )
-      nlhdlrExprBranchscore(scip, SCIPgetConsExprExprChildren(nlexpr)[c], nlexpr2origexpr, brscoretag, violation);
-}
-
-/** collect and possibly create variables used by our expression
+/** collect (non-value) leaf expressions and ensure that they correspond to a variable (original or auxiliary)
  *
  * For children where we could not achieve the desired curvature, introduce an auxvar and replace the child by a var-expression that points to this auxvar.
- * Collect all used variables and index them.
+ * Collect all leaf expressions (if not a value-expression) and index them.
  */
 static
-SCIP_RETCODE collectVars(
+SCIP_RETCODE collectLeafs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSEXPR_EXPR*   nlexpr,             /**< nlhdlr-expr */
    SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from our expression copy to original */
-   SCIP_HASHMAP*         var2index,          /**< mapping from variables to index */
+   SCIP_HASHMAP*         leaf2index,         /**< mapping from leaf to index */
    int*                  nindices            /**< number of indices */
    )
 {
@@ -207,7 +177,7 @@ SCIP_RETCODE collectVars(
 
    assert(nlexpr != NULL);
    assert(nlexpr2origexpr != NULL);
-   assert(var2index != NULL);
+   assert(leaf2index != NULL);
    assert(nindices != NULL);
 
    assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);
@@ -237,28 +207,27 @@ SCIP_RETCODE collectVars(
             SCIP_CALL( SCIPhashmapRemove(nlexpr2origexpr, (void*)child) );
             SCIP_CALL( SCIPhashmapInsert(nlexpr2origexpr, (void*)newchild, (void*)origexpr) );
 
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newchild) );  /* because it was captured by both create and replace */
-
-            if( !SCIPhashmapExists(var2index, (void*)var) )
+            if( !SCIPhashmapExists(leaf2index, (void*)newchild) )
             {
-               /* new variable -> new index and remember in hashmap */
-               SCIP_CALL( SCIPhashmapInsertInt(var2index, (void*)var, (*nindices)++) );
+               /* new leaf -> new index and remember in hashmap */
+               SCIP_CALL( SCIPhashmapInsertInt(leaf2index, (void*)newchild, (*nindices)++) );
             }
+
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &newchild) );  /* because it was captured by both create and replace */
          }
          else if( SCIPisConsExprExprVar(child) )
          {
             /* if variable, then add to hashmap, if not already there */
-            var = SCIPgetConsExprExprVarVar(child);
-            if( !SCIPhashmapExists(var2index, (void*)var) )
+            if( !SCIPhashmapExists(leaf2index, (void*)child) )
             {
-               SCIP_CALL( SCIPhashmapInsertInt(var2index, (void*)var, (*nindices)++) );
+               SCIP_CALL( SCIPhashmapInsertInt(leaf2index, (void*)child, (*nindices)++) );
             }
          }
          /* else: it's probably a value-expression, nothing to do */
       }
       else
       {
-         SCIP_CALL( collectVars(scip, conshdlr, child, nlexpr2origexpr, var2index, nindices) );
+         SCIP_CALL( collectLeafs(scip, conshdlr, child, nlexpr2origexpr, leaf2index, nindices) );
       }
    }
 
@@ -571,7 +540,7 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIP_HASHMAP*         nlexpr2origexpr     /**< mapping of expression copy to original */
    )
 {
-   SCIP_HASHMAP* var2index;
+   SCIP_HASHMAP* leaf2index;
    int i;
 
    assert(scip != NULL);
@@ -586,36 +555,37 @@ SCIP_RETCODE createNlhdlrExprData(
    (*nlhdlrexprdata)->nlexpr2origexpr = nlexpr2origexpr;
 
    /* make sure there are auxvars and collect all variables */
-   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), 10) );   /* TODO replace 10 by number of leafs, which we could count in constructExpr */
-   (*nlhdlrexprdata)->nauxvars = 0;
-   SCIP_CALL( collectVars(scip, conshdlr, nlexpr, nlexpr2origexpr, var2index, &(*nlhdlrexprdata)->nauxvars) );
+   SCIP_CALL( SCIPhashmapCreate(&leaf2index, SCIPblkmem(scip), 10) );   /* TODO replace 10 by number of leafs, which we could count in constructExpr */
+   (*nlhdlrexprdata)->nleafs = 0;
+   SCIP_CALL( collectLeafs(scip, conshdlr, nlexpr, nlexpr2origexpr, leaf2index, &(*nlhdlrexprdata)->nleafs) );
 
    /* assemble auxvars array */
-   assert((*nlhdlrexprdata)->nauxvars > 0);
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->auxvars, (*nlhdlrexprdata)->nauxvars) );
-   for( i = 0; i < SCIPhashmapGetNEntries(var2index); ++i )
+   assert((*nlhdlrexprdata)->nleafs > 0);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->leafexprs, (*nlhdlrexprdata)->nleafs) );
+   for( i = 0; i < SCIPhashmapGetNEntries(leaf2index); ++i )
    {
       SCIP_HASHMAPENTRY* entry;
-      SCIP_VAR* auxvar;
+      SCIP_CONSEXPR_EXPR* leaf;
       int idx;
 
-      entry = SCIPhashmapGetEntry(var2index, i);
+      entry = SCIPhashmapGetEntry(leaf2index, i);
       if( entry == NULL )
          continue;
 
-      auxvar = (SCIP_VAR*) SCIPhashmapEntryGetOrigin(entry);
-      assert(auxvar != NULL);
+      leaf = (SCIP_CONSEXPR_EXPR*) SCIPhashmapEntryGetOrigin(entry);
+      assert(leaf != NULL);
+      assert(SCIPgetConsExprExprAuxVar(leaf) != NULL);
 
       idx = SCIPhashmapEntryGetImageInt(entry);
       assert(idx >= 0);
-      assert(idx < (*nlhdlrexprdata)->nauxvars);
+      assert(idx < (*nlhdlrexprdata)->nleafs);
 
-      (*nlhdlrexprdata)->auxvars[idx] = auxvar;
+      (*nlhdlrexprdata)->leafexprs[idx] = leaf;
 
-      SCIPdebugMsg(scip, "auxvar %d: <%s>\n", idx, SCIPvarGetName(auxvar));
+      SCIPdebugMsg(scip, "leaf %d: <%s>\n", idx, SCIPvarGetName(SCIPgetConsExprExprAuxVar(leaf)));
    }
 
-   SCIPhashmapFree(&var2index);
+   SCIPhashmapFree(&leaf2index);
 
 #ifdef SCIP_DEBUG
    SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
@@ -649,7 +619,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvex)
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata != NULL);
 
-   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->auxvars, (*nlhdlrexprdata)->nauxvars);
+   SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->leafexprs, (*nlhdlrexprdata)->nleafs);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*nlhdlrexprdata)->nlexpr) );
    SCIPhashmapFree(&(*nlhdlrexprdata)->nlexpr2origexpr);
 
@@ -806,11 +776,14 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 
    /* add gradient underestimator to rowprep: first contribution of each variable, (x - sol) \nabla f(sol) */
    *success = TRUE;
-   for( i = 0; i < nlhdlrexprdata->nauxvars; ++i )
+   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
    {
-      SCIP_VAR* var = nlhdlrexprdata->auxvars[i];
+      SCIP_VAR* var;
       SCIP_Real deriv;
       SCIP_Real varval;
+
+      var = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->leafexprs[i]);
+      assert(var != NULL);
 
       deriv = SCIPgetConsExprExprPartialDiff(scip, conshdlr, nlexpr, var);
       if( deriv == SCIP_INVALID )
@@ -848,7 +821,9 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
 { /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* nlexpr;
+   SCIP_CONSEXPR_EXPR* origexpr;
    SCIP_Real violation;
+   int i;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -880,8 +855,16 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
    if( violation <= 0.0 )
       return SCIP_OKAY;
 
-   /* TODO try to figure out which variables appear linear and skip them here */
-   nlhdlrExprBranchscore(scip, nlhdlrexprdata->nlexpr, nlhdlrexprdata->nlexpr2origexpr, brscoretag, violation);
+   /* register violation as branchscore in all leafs */
+   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
+   {
+      /* TODO skip over variables that appear linear, which we could probably find out in collectLeafs */
+
+      origexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlexpr);
+      assert(origexpr != NULL);
+
+      SCIPaddConsExprExprBranchScore(scip, origexpr, brscoretag, violation);
+   }
 
    *success = TRUE;
 
