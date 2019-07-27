@@ -78,6 +78,17 @@ typedef struct
    int                   stackpos;           /**< position of top element of stack */
 } EXPRSTACK;
 
+#define DECL_CURVCHECK(x) SCIP_RETCODE x( \
+   SCIP*                 scip,               /**< SCIP data structure */ \
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */ \
+   SCIP_CONSEXPR_EXPR*   nlexpr,             /**< nlhdlr-expr to check */ \
+   EXPRSTACK*            stack,              /**< stack where to add generated leafs */ \
+   SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from our expression copy to original expression */ \
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< data of nlhdlr */ \
+   SCIP_Bool*            success             /**< whether we found something */ \
+   )
+
+
 /*
  * static methods
  */
@@ -204,6 +215,10 @@ SCIP_RETCODE exprstackPush(
 {
    assert(scip != NULL);
    assert(exprstack != NULL);
+
+   if( nexprs == 0 )
+      return SCIP_OKAY;
+
    assert(exprs != NULL);
 
    if( exprstack->stackpos+1 + nexprs > exprstack->stacksize )
@@ -239,21 +254,13 @@ SCIP_Bool exprstackIsEmpty(
    return exprstack->stackpos < 0;
 }
 
-/** looks whether top of given expression looks like a monomial that can have a given curvature
+/** looks whether top of given expression looks like a signomial that can have a given curvature
  * e.g., sqrt(x)*sqrt(y) is convex if x,y >= 0 and x and y are convex
  * unfortunately, doesn't work for tls, because i) it's originally sqrt(x*y), and ii) it is expanded into some sqrt(z*y+y)
  * but works for cvxnonsep_nsig
  */
 static
-SCIP_RETCODE constructExprCheckMonomial(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONSEXPR_EXPR*   nlexpr,             /**< nlhdlr-expr to check */
-   EXPRSTACK*            stack,              /**< stack where to add generated leafs */
-   SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from our expression copy to original expression */
-   SCIP_Bool             preferextended,     /**< whether we prefer extended formulations */
-   SCIP_Bool*            success             /**< whether we found something */
-   )
+DECL_CURVCHECK(curvCheckSignomial)
 {
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* child;
@@ -328,7 +335,7 @@ SCIP_RETCODE constructExprCheckMonomial(
       }
       assert(SCIPgetConsExprExprNChildren(child) == 0);
 
-      if( preferextended )
+      if( nlhdlrdata->preferextended )
       {
          SCIPsetConsExprExprCurvature(child, SCIP_EXPRCURV_LINEAR);
 #ifdef SCIP_DEBUG
@@ -351,6 +358,77 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** use expression handlers curvature callback to check whether given curvature can be achieved */
+static
+DECL_CURVCHECK(curvCheckExprhdlr)
+{
+   SCIP_CONSEXPR_EXPR* origexpr;
+   int nchildren;
+   SCIP_EXPRCURV* childcurv;
+
+   assert(nlexpr != NULL);
+   assert(stack != NULL);
+   assert(nlexpr2origexpr != NULL);
+   assert(success != NULL);
+
+   origexpr = SCIPhashmapGetImage(nlexpr2origexpr, nlexpr);
+   assert(origexpr != NULL);
+   nchildren = SCIPgetConsExprExprNChildren(origexpr);
+
+   if( nchildren == 0 )
+   {
+      /* if originally no children, then should be var or value, which should have every curvature, so should always be success */
+      SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, origexpr, SCIPgetConsExprExprCurvature(nlexpr), success, NULL) );
+      assert(*success);
+
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, nchildren) );
+
+   /* check whether and under which conditions origexpr can have desired curvature */
+   SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, origexpr, SCIPgetConsExprExprCurvature(nlexpr), success, childcurv) );
+   /* SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL);
+   SCIPinfoMessage(scip, NULL, " is %s? %d\n", SCIPexprcurvGetName(nlexpr->curv), success); */
+   if( !*success )
+      goto TERMINATE;
+
+   /* if origexpr can have curvature curv, then don't treat it as leaf, but include its children */
+   SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, nlexpr, childcurv) );
+   assert(SCIPgetConsExprExprChildren(nlexpr) != NULL);
+   assert(SCIPgetConsExprExprNChildren(nlexpr) == nchildren);
+
+   /* If more than one child and we prefer extended formulations, then require all children to be linear.
+    * Unless they are, auxvars will be introduced and they will be handles as variables, which can be an advantage in the context of extended formulations.
+    */
+   if( nchildren > 1 && nlhdlrdata->preferextended )
+   {
+      int i;
+      for( i = 0; i < nchildren; ++i )
+         SCIPsetConsExprExprCurvature(SCIPgetConsExprExprChildren(nlexpr)[i], SCIP_EXPRCURV_LINEAR);
+#ifdef SCIP_DEBUG
+      SCIPinfoMessage(scip, NULL, "require linearity for children of ");
+      SCIPprintConsExprExpr(scip, conshdlr, origexpr, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
+#endif
+   }
+
+   /* add children expressions to to-do list (stack) */
+   SCIP_CALL( exprstackPush(scip, stack, nchildren, SCIPgetConsExprExprChildren(nlexpr)) );
+
+TERMINATE:
+   SCIPfreeBufferArray(scip, &childcurv);
+
+   return SCIP_OKAY;
+}
+
+/** curvature check and expression-growing methods
+ * some day this could be plugins added by users at runtime, but for now we have a fixed list here
+ */
+static DECL_CURVCHECK((*CURVCHECKS[])) = { curvCheckSignomial, curvCheckExprhdlr };
+/** number of curvcheck methods */
+static const int NCURVCHECKS = sizeof(CURVCHECKS) / sizeof(void*);
+
 /** construct a subexpression (as nlhdlr-expression) of maximal size that has a given curvature
  *
  * If the curvature cannot be achieved for an expression in the original expression graph,
@@ -371,12 +449,8 @@ SCIP_RETCODE constructExpr(
    )
 {
    SCIP_CONSEXPR_EXPR* nlexpr;
-   SCIP_CONSEXPR_EXPR* origexpr;
-   SCIP_EXPRCURV* childcurv;
-   int childcurvsize;
-   int nchildren;
-   SCIP_Bool success;
    EXPRSTACK stack; /* to do list: expressions where to check whether they can have the desired curvature when taking their children into account */
+   int oldstackpos;
 
    assert(scip != NULL);
    assert(nlhdlrdata != NULL);
@@ -386,9 +460,6 @@ SCIP_RETCODE constructExpr(
    assert(rootexpr != NULL);
    assert(curv == SCIP_EXPRCURV_CONVEX || curv == SCIP_EXPRCURV_CONCAVE);
 
-   childcurvsize = SCIPgetConsExprExprNChildren(rootexpr);
-   SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, childcurvsize) );
-
    /* create root expression */
    SCIP_CALL( nlhdlrExprCreate(scip, conshdlr, nlexpr2origexpr, rootnlexpr, rootexpr, curv) );
 
@@ -396,7 +467,6 @@ SCIP_RETCODE constructExpr(
 
    SCIP_CALL( exprstackInit(scip, &stack, 20) );
    SCIP_CALL( exprstackPush(scip, &stack, 1, rootnlexpr) );
-
    while( !exprstackIsEmpty(&stack) )
    {
       /* take expression from stack */
@@ -407,81 +477,46 @@ SCIP_RETCODE constructExpr(
       /* SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
       SCIPinfoMessage(scip, NULL, "\n"); */
 
-      origexpr = SCIPhashmapGetImage(nlexpr2origexpr, nlexpr);
-      assert(origexpr != NULL);
-      nchildren = SCIPgetConsExprExprNChildren(origexpr);
-
-      success = TRUE;
+      oldstackpos = stack.stackpos;
       if( !SCIPhasConsExprExprHdlrBwdiff(SCIPgetConsExprExprHdlr(nlexpr)) )
       {
-         /* if bwdiff is not implemented, then we could not generate cuts, so stop */
-         success = FALSE;
+         /* if bwdiff is not implemented, then we could not generate cuts, so "stop" (treat nlexpr as variable) */
       }
       else if( SCIPgetConsExprExprCurvature(nlexpr) != SCIP_EXPRCURV_UNKNOWN )
       {
-         /* TODO here should be a nice system where a number of convexity-detection rules can be tried */
-         if( nlhdlrdata->cvxsignomial )
+         SCIP_Bool success;
+         int method;
+         /* try through curvature check methods until one succeeds */
+         for( method = 0; method < NCURVCHECKS; ++method )
          {
-            SCIP_CALL( constructExprCheckMonomial(scip, conshdlr, nlexpr, &stack, nlexpr2origexpr, nlhdlrdata->preferextended, &success) );
+            if( method == 0 && !nlhdlrdata->cvxsignomial )  /* this check should go away when the cvxsignomial parameter is removed */
+               continue;
+            SCIP_CALL( CURVCHECKS[method](scip, conshdlr, nlexpr, &stack, nlexpr2origexpr, nlhdlrdata, &success) );
             if( success )
-               continue;  /* constructExprCheckMonomial will have updated stack */
+               break;
          }
-
-         if( childcurvsize < nchildren )
-         {
-            childcurvsize = SCIPcalcMemGrowSize(scip, nchildren);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &childcurv, childcurvsize) );
-         }
-
-         /* check whether and under which conditions origexpr can have desired curvature */
-         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, origexpr, SCIPgetConsExprExprCurvature(nlexpr), &success, childcurv) );
-         /* SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL);
-         SCIPinfoMessage(scip, NULL, " is %s? %d\n", SCIPexprcurvGetName(nlexpr->curv), success); */
-         if( success )
-         {
-            /* if origexpr can have curvature curv, then don't treat it as leaf, but include its children */
-            SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, nlexpr, childcurv) );
-         }
-         else
-            assert(SCIPgetConsExprExprNChildren(origexpr) > 0); /* if originally no children, then should be var or value, which should have every curvature, so should be success=TRUE */
       }
-      else if( nchildren > 0 )
+      else
       {
          /* if we don't care about curvature in this subtree anymore (very unlikely),
           * then only continue iterating this subtree to assemble leaf expressions
           */
          SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, nlexpr, NULL) );
-      }
 
-      /* If more than one child and we prefer extended formulations, then require all children to be linear.
-       * Unless they are, auxvars will be introduced and they will be handles as variables, which can be an advantage in the context of extended formulations.
+         /* add children expressions, if any, to to-do list (stack) */
+         SCIP_CALL( exprstackPush(scip, &stack, SCIPgetConsExprExprNChildren(nlexpr), SCIPgetConsExprExprChildren(nlexpr)) );
+      }
+      assert(stack.stackpos >= oldstackpos);  /* none of the methods above should have removed something from the stack */
+
+      /* if nothing was added, then none of the successors of nlexpr were added to the stack
+       * this is either because nlexpr was already a variable or value expressions, thus a leaf,
+       * or because the desired curvature could not be achieved, so it will be handled as variables, thus a leaf
        */
-      if( success && nchildren > 1 && nlhdlrdata->preferextended )
-      {
-         int i;
-         for( i = 0; i < nchildren; ++i )
-            SCIPsetConsExprExprCurvature(SCIPgetConsExprExprChildren(nlexpr)[i], SCIP_EXPRCURV_LINEAR);
-#ifdef SCIP_DEBUG
-         SCIPinfoMessage(scip, NULL, "require linearity for children of ");
-         SCIPprintConsExprExpr(scip, conshdlr, origexpr, NULL);
-         SCIPinfoMessage(scip, NULL, " within ");
-         SCIPprintConsExprExpr(scip, conshdlr, rootexpr, NULL);
-         SCIPinfoMessage(scip, NULL, "\n");
-#endif
-      }
-
-      if( success && nchildren > 0 )
-      {
-         /* add children expressions to to-do list (stack) */
-         assert(SCIPgetConsExprExprChildren(nlexpr) != NULL);
-         SCIP_CALL( exprstackPush(scip, &stack, nchildren, SCIPgetConsExprExprChildren(nlexpr)) );
-      }
-      else
-         ++*nleafs;  /* no success -> will become variable; success && nchildren == 0 -> is already variable or value */
+      if( stack.stackpos == oldstackpos )
+         ++*nleafs;
    }
 
    exprstackFree(scip, &stack);
-   SCIPfreeBufferArray(scip, &childcurv);
 
    if( *rootnlexpr != NULL )
    {
