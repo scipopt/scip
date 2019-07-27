@@ -70,6 +70,14 @@ struct SCIP_ConsExpr_NlhdlrData
    SCIP_Bool             handletrivial;      /**< whether to handle trivial expressions, i.e., those where all children are variables */
 };
 
+/** stack used in constructExpr to store expressions that need to be investigated ("to do list") */
+typedef struct
+{
+   SCIP_CONSEXPR_EXPR**  stack;              /**< stack elements */
+   int                   stacksize;          /**< allocated space (in number of pointers) */
+   int                   stackpos;           /**< position of top element of stack */
+} EXPRSTACK;
+
 /*
  * static methods
  */
@@ -156,6 +164,81 @@ SCIP_RETCODE nlhdlrExprGrowChildren(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE exprstackInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   EXPRSTACK*            exprstack,          /**< stack to initialize */
+   int                   initsize            /**< initial size */
+   )
+{
+   assert(scip != NULL);
+   assert(exprstack != NULL);
+   assert(initsize > 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprstack->stack, initsize) );
+   exprstack->stacksize = initsize;
+   exprstack->stackpos = -1;
+
+   return SCIP_OKAY;
+}
+
+static
+void exprstackFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   EXPRSTACK*            exprstack           /**< free expression stack */
+   )
+{
+   assert(scip != NULL);
+   assert(exprstack != NULL);
+
+   SCIPfreeBufferArray(scip, &exprstack->stack);
+}
+
+static
+SCIP_RETCODE exprstackPush(
+   SCIP*                 scip,               /**< SCIP data structure */
+   EXPRSTACK*            exprstack,          /**< expression stack */
+   int                   nexprs,             /**< number of expressions to push */
+   SCIP_CONSEXPR_EXPR**  exprs               /**< expressions to push */
+   )
+{
+   assert(scip != NULL);
+   assert(exprstack != NULL);
+   assert(exprs != NULL);
+
+   if( exprstack->stackpos+1 + nexprs > exprstack->stacksize )
+   {
+      exprstack->stacksize = SCIPcalcMemGrowSize(scip, exprstack->stackpos+1 + nexprs);
+      SCIP_CALL( SCIPreallocBufferArray(scip, &exprstack->stack, exprstack->stacksize) );
+   }
+
+   memcpy(exprstack->stack + (exprstack->stackpos+1), exprs, nexprs * sizeof(SCIP_CONSEXPR_EXPR*));
+   exprstack->stackpos += nexprs;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_CONSEXPR_EXPR* exprstackPop(
+   EXPRSTACK*            exprstack           /**< expression stack */
+   )
+{
+   assert(exprstack != NULL);
+   assert(exprstack->stackpos >= 0);
+
+   return exprstack->stack[exprstack->stackpos--];
+}
+
+static
+SCIP_Bool exprstackIsEmpty(
+   EXPRSTACK*            exprstack           /**< expression stack */
+   )
+{
+   assert(exprstack != NULL);
+
+   return exprstack->stackpos < 0;
+}
+
 /** looks whether top of given expression looks like a monomial that can have a given curvature
  * e.g., sqrt(x)*sqrt(y) is convex if x,y >= 0 and x and y are convex
  * unfortunately, doesn't work for tls, because i) it's originally sqrt(x*y), and ii) it is expanded into some sqrt(z*y+y)
@@ -166,9 +249,7 @@ SCIP_RETCODE constructExprCheckMonomial(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSEXPR_EXPR*   nlexpr,             /**< nlhdlr-expr to check */
-   SCIP_CONSEXPR_EXPR*** stack,              /**< pointer to stack where to add generated leafs */
-   int*                  stackpos,           /**< current top position of stack */
-   int*                  stacksize,          /**< length of *stack */
+   EXPRSTACK*            stack,              /**< stack where to add generated leafs */
    SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from our expression copy to original expression */
    SCIP_Bool             preferextended,     /**< whether we prefer extended formulations */
    SCIP_Bool*            success             /**< whether we found something */
@@ -184,10 +265,6 @@ SCIP_RETCODE constructExprCheckMonomial(
 
    assert(nlexpr != NULL);
    assert(stack != NULL);
-   assert(*stack != NULL);
-   assert(stackpos != NULL);
-   assert(*stackpos >= -1);
-   assert(stacksize != NULL);
    assert(nlexpr2origexpr != NULL);
    assert(success != NULL);
 
@@ -233,13 +310,6 @@ SCIP_RETCODE constructExprCheckMonomial(
    SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, nlexpr, curv) );
    assert(SCIPgetConsExprExprNChildren(nlexpr) == nfactors);
 
-   /* make sure there is enough space on the stack for all children (or their children) */
-   if( *stackpos+1 + nfactors > *stacksize )
-   {
-      *stacksize = SCIPcalcMemGrowSize(scip, *stackpos+1 + nfactors);
-      SCIP_CALL( SCIPreallocBufferArray(scip, stack, *stacksize) );
-   }
-
    /* put children that are not power on stack
     * grow child for children that are power and put this child on stack
     * if preferextended, then require children to be linear
@@ -268,8 +338,7 @@ SCIP_RETCODE constructExprCheckMonomial(
 #endif
       }
 
-      assert(*stackpos+1 < *stacksize);
-      (*stack)[++*stackpos] = child;
+      SCIP_CALL( exprstackPush(scip, stack, 1, &child) );
    }
 
    *success = TRUE;
@@ -307,11 +376,7 @@ SCIP_RETCODE constructExpr(
    int childcurvsize;
    int nchildren;
    SCIP_Bool success;
-
-   /* to do list: expressions where to check whether they can have the desired curvature when taking their children into account */
-   SCIP_CONSEXPR_EXPR** stack;
-   int stacksize;
-   int stackpos;
+   EXPRSTACK stack; /* to do list: expressions where to check whether they can have the desired curvature when taking their children into account */
 
    assert(scip != NULL);
    assert(nlhdlrdata != NULL);
@@ -329,15 +394,13 @@ SCIP_RETCODE constructExpr(
 
    *nleafs = 0;
 
-   stacksize = 20;
-   SCIP_CALL( SCIPallocBufferArray(scip, &stack, stacksize) );
+   SCIP_CALL( exprstackInit(scip, &stack, 20) );
+   SCIP_CALL( exprstackPush(scip, &stack, 1, rootnlexpr) );
 
-   stack[0] = *rootnlexpr;
-   stackpos = 0;
-   while( stackpos >= 0 )
+   while( !exprstackIsEmpty(&stack) )
    {
       /* take expression from stack */
-      nlexpr = stack[stackpos--];
+      nlexpr = exprstackPop(&stack);
       assert(nlexpr != NULL);
       assert(SCIPgetConsExprExprNChildren(nlexpr) == 0);
 
@@ -359,7 +422,7 @@ SCIP_RETCODE constructExpr(
          /* TODO here should be a nice system where a number of convexity-detection rules can be tried */
          if( nlhdlrdata->cvxsignomial )
          {
-            SCIP_CALL( constructExprCheckMonomial(scip, conshdlr, nlexpr, &stack, &stackpos, &stacksize, nlexpr2origexpr, nlhdlrdata->preferextended, &success) );
+            SCIP_CALL( constructExprCheckMonomial(scip, conshdlr, nlexpr, &stack, nlexpr2origexpr, nlhdlrdata->preferextended, &success) );
             if( success )
                continue;  /* constructExprCheckMonomial will have updated stack */
          }
@@ -411,21 +474,13 @@ SCIP_RETCODE constructExpr(
       {
          /* add children expressions to to-do list (stack) */
          assert(SCIPgetConsExprExprChildren(nlexpr) != NULL);
-
-         if( stackpos+1 + nchildren > stacksize )
-         {
-            stacksize = SCIPcalcMemGrowSize(scip, stackpos+1 + nchildren);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &stack, stacksize) );
-         }
-         memcpy(stack + (stackpos+1), SCIPgetConsExprExprChildren(nlexpr), nchildren * sizeof(SCIP_CONSEXPR_EXPR*));
-         stackpos += nchildren;
+         SCIP_CALL( exprstackPush(scip, &stack, nchildren, SCIPgetConsExprExprChildren(nlexpr)) );
       }
       else
          ++*nleafs;  /* no success -> will become variable; success && nchildren == 0 -> is already variable or value */
    }
-   assert(stackpos == -1);
 
-   SCIPfreeBufferArray(scip, &stack);
+   exprstackFree(scip, &stack);
    SCIPfreeBufferArray(scip, &childcurv);
 
    if( *rootnlexpr != NULL )
