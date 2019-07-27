@@ -531,6 +531,30 @@ SCIP_RETCODE constructExpr(
    SCIPfreeBufferArray(scip, &stack);
    SCIPfreeBufferArray(scip, &childcurv);
 
+   if( *rootnlexpr != NULL )
+   {
+      SCIP_Bool istrivial = TRUE;
+      int i;
+
+      /* if all children do not have children, i.e., are variables, or will be replaced by auxvars, then free
+       * also if rootnlexpr has no children, then free
+       * TODO could also figure this out by looking at number of expressions we looked at above
+       */
+      for( i = 0; i < SCIPgetConsExprExprNChildren(*rootnlexpr); ++i )
+      {
+         if( SCIPgetConsExprExprNChildren(SCIPgetConsExprExprChildren(*rootnlexpr)[i]) > 0 )
+         {
+            istrivial = FALSE;
+            break;
+         }
+      }
+
+      if( istrivial )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, rootnlexpr) );
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -558,11 +582,6 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
    (*nlhdlrexprdata)->nlexpr = nlexpr;
    (*nlhdlrexprdata)->nlexpr2origexpr = nlexpr2origexpr;
-
-#ifdef SCIP_DEBUG
-   SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
-   SCIPinfoMessage(scip, NULL, " is handled as %s\n", SCIPexprcurvGetName(nlexpr->curvature));
-#endif
 
    /* make sure there are auxvars and collect all variables */
    SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), 10) );   /* TODO replace 10 by number of leafs, which we could count in constructExpr */
@@ -595,6 +614,11 @@ SCIP_RETCODE createNlhdlrExprData(
    }
 
    SCIPhashmapFree(&var2index);
+
+#ifdef SCIP_DEBUG
+   SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
+   SCIPinfoMessage(scip, NULL, " is handled as %s\n", SCIPexprcurvGetName(SCIPgetConsExprExprCurvature(nlexpr)));
+#endif
 
    return SCIP_OKAY;
 }
@@ -658,7 +682,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   /* ignore sums if > 1 children */
+   /* ignore sums if > 1 children
+    * NOTE: this means we may treat 1+f(x) with f begin a trivial expression here; probably that's ok, just thought to mention it anyway
+    */
    if( !nlhdlrdata->detectsum && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) && SCIPgetConsExprExprNChildren(expr) > 1 )
       return SCIP_OKAY;
 
@@ -674,20 +700,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, expr, SCIP_EXPRCURV_CONVEX) );
       if( nlexpr != NULL )
       {
-         /* TODO free also if trivial, i.e., all children are variables */
-         if( SCIPgetConsExprExprNChildren(nlexpr) == 0 )
-         {
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &nlexpr) );
-            SCIPhashmapRemoveAll(nlexpr2origexpr);
-         }
-         else
-         {
-            *enforcedbelow = TRUE;
-            *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-            *success = TRUE;
+         assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
 
-            SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
-         }
+         *enforcedbelow = TRUE;
+         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+         *success = TRUE;
+
+         SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
       }
       else
          SCIPhashmapRemoveAll(nlexpr2origexpr);
@@ -698,19 +717,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, expr, SCIP_EXPRCURV_CONCAVE) );
       if( nlexpr != NULL )
       {
-         /* TODO free also if trivial, i.e., all children are variables */
-         if( SCIPgetConsExprExprNChildren(nlexpr) == 0 )
-         {
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &nlexpr) );
-         }
-         else
-         {
-            *enforcedabove = TRUE;
-            *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-            *success = TRUE;
+         assert(SCIPgetConsExprExprNChildren(nlexpr) > 0);  /* should not be trivial */
 
-            SCIPdebugMsg(scip, "detected expr %p to be concave -> can enforce expr >= auxvar\n", (void*)expr);
-         }
+         *enforcedabove = TRUE;
+         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+         *success = TRUE;
+
+         SCIPdebugMsg(scip, "detected expr %p to be concave -> can enforce expr >= auxvar\n", (void*)expr);
       }
    }
 
