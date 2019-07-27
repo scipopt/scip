@@ -416,7 +416,6 @@ SCIP_RETCODE constructExpr(
    int nchildren;
    SCIP_Bool success;
 
-   /* TODO probably could go back to iterator over rootexpr */
    /* to do list: expressions where to check whether they can have the desired curvature when taking their children into account */
    SCIP_CONSEXPR_EXPR** stack;
    int stacksize;
@@ -452,16 +451,13 @@ SCIP_RETCODE constructExpr(
       assert(origexpr != NULL);
       nchildren = SCIPgetConsExprExprNChildren(origexpr);
 
-      /* TODO if bwdiff not implemented, then proceed further? */
-
-      if( childcurvsize < nchildren )
-      {
-         childcurvsize = SCIPcalcMemGrowSize(scip, nchildren);
-         SCIP_CALL( SCIPreallocBufferArray(scip, &childcurv, childcurvsize) );
-      }
-
       success = TRUE;
-      if( SCIPgetConsExprExprCurvature(nlexpr) != SCIP_EXPRCURV_UNKNOWN )
+      if( !SCIPhasConsExprExprHdlrBwdiff(SCIPgetConsExprExprHdlr(nlexpr)) )
+      {
+         /* if bwdiff is not implemented, then we could not generate cuts, so stop */
+         success = FALSE;
+      }
+      else if( SCIPgetConsExprExprCurvature(nlexpr) != SCIP_EXPRCURV_UNKNOWN )
       {
          /* TODO here should be a nice system where a number of convexity-detection rules can be tried */
          if( nlhdlrdata->cvxsignomial )
@@ -469,6 +465,12 @@ SCIP_RETCODE constructExpr(
             SCIP_CALL( constructExprCheckMonomial(scip, conshdlr, nlexpr, &stack, &stackpos, &stacksize, nlexpr2origexpr, nlhdlrdata->preferextended, &success) );
             if( success )
                continue;  /* constructExprCheckMonomial will have updated stack */
+         }
+
+         if( childcurvsize < nchildren )
+         {
+            childcurvsize = SCIPcalcMemGrowSize(scip, nchildren);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &childcurv, childcurvsize) );
          }
 
          /* check whether and under which conditions origexpr can have desired curvature */
@@ -694,7 +696,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
 
    SCIP_CALL( SCIPhashmapCreate(&nlexpr2origexpr, SCIPblkmem(scip), 10) );  /* TODO 10? */
 
-   /* TODO we are also interested in handling the concave side? (-> nlhdlr_vertexpolyhedral?) */
    if( !*enforcedbelow )
    {
       SCIP_CALL( constructExpr(scip, conshdlr, nlhdlrdata, &nlexpr, nlexpr2origexpr, expr, SCIP_EXPRCURV_CONVEX) );

@@ -8976,6 +8976,16 @@ SCIP_Bool SCIPhasConsExprExprHdlrPrint(
    return exprhdlr->print != NULL;
 }
 
+/** returns whether expression handler implements the backward differentiation callback */
+SCIP_Bool SCIPhasConsExprExprHdlrBwdiff(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->bwdiff != NULL;
+}
+
 /** returns whether expression handler implements the interval evaluation callback */
 SCIP_Bool SCIPhasConsExprExprHdlrIntEval(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
