@@ -272,6 +272,8 @@ SCIP_RETCODE createExpr(
    assert(expr != NULL);
    assert(exprhdlr != NULL);
    assert(children != NULL || nchildren == 0);
+   assert(exprdata == NULL || exprhdlr->copydata != NULL); /* copydata must be available if there is expression data */
+   assert(exprdata == NULL || exprhdlr->freedata != NULL); /* freedata must be available if there is expression data */
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, expr) );
 
@@ -475,7 +477,7 @@ SCIP_DECL_CONSEXPR_MAPVAR(copyVar)
 
 /** copies an expression including subexpressions
  *
- * @note If copying fails due to missing copy callbacks, then *targetexpr will be set to NULL.
+ * @note If copying fails due to an expression handler not being available in the targetscip, then *targetexpr will be set to NULL.
  */
 static
 SCIP_RETCODE copyExpr(
@@ -574,21 +576,10 @@ SCIP_RETCODE copyExpr(
                assert(targetexprhdlr != NULL);
 
                /* copy expression data */
-               if( expr->exprhdlr->copydata != NULL )
+               if( expr->exprdata != NULL )
                {
+                  assert(expr->exprhdlr->copydata != NULL);
                   SCIP_CALL( expr->exprhdlr->copydata(targetscip, targetexprhdlr, &targetexprdata, sourcescip, expr, mapvar, mapvardata) );
-               }
-               else if( expr->exprdata != NULL )
-               {
-                  /* no copy callback for expression data implemented -> abort
-                   * (we could also just copy the exprdata pointer, but for now let's say that
-                   *  an expression handler should explicitly implement this behavior, if desired)
-                   */
-                  expriteruserdata.ptrval = NULL;
-                  SCIPexpriteratorSetCurrentUserData(it, expriteruserdata);
-
-                  expr = SCIPexpriteratorSkipDFS(it);
-                  continue;
                }
                else
                {
@@ -7657,12 +7648,7 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 
    /* get a copy of sourceexpr with transformed vars */
    SCIP_CALL( copyExpr(scip, scip, conshdlr, sourcedata->expr, &targetexpr, transformVar, NULL) );
-
-   if( targetexpr == NULL )
-   {
-      SCIPerrorMessage("Copying expression in consTransExpr failed.\n");
-      return SCIP_ERROR;
-   }
+   assert(targetexpr != NULL);  /* copyExpr cannot fail if source and target scip are the same */
 
    /* create transformed cons (captures targetexpr) */
    SCIP_CALL( SCIPcreateConsExpr(scip, targetcons, SCIPconsGetName(sourcecons),
@@ -9998,10 +9984,7 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    return SCIP_OKAY;
 }
 
-/** duplicates the given expression
- *
- * If a copy could not be created (e.g., due to missing copy callbacks in expression handlers), *copyexpr will be set to NULL.
- */
+/** duplicates the given expression */
 SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -10020,21 +10003,15 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
       SCIP_CONSEXPR_EXPRDATA* exprdatacopy = NULL;
       if( SCIPgetConsExprExprData(expr) != NULL )
       {
-         if( expr->exprhdlr->copydata != NULL )
-         {
-            SCIP_CALL( expr->exprhdlr->copydata(scip, expr->exprhdlr, &exprdatacopy, scip, expr, NULL, NULL) );
-         }
-         else
-         {
-            /* currently we treat having data but no copy as a reason for not being able to copy */
-            *copyexpr = NULL;
-            return SCIP_OKAY;
-         }
+         assert(expr->exprhdlr->copydata != NULL);
+         SCIP_CALL( expr->exprhdlr->copydata(scip, expr->exprhdlr, &exprdatacopy, scip, expr, NULL, NULL) );
       }
 
       /* create expression with same handler and copied data, but without children */
       SCIP_CALL( SCIPcreateConsExprExpr(scip, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL) );
    }
+
+   assert(*copyexpr != NULL);
 
    return SCIP_OKAY;
 }
@@ -10083,8 +10060,9 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
    /* handle the root expr separately: free enfodata and expression data here */
    SCIP_CALL( freeEnfoData(scip, NULL, *rootexpr, TRUE) );
 
-   if( (*rootexpr)->exprdata != NULL && (*rootexpr)->exprhdlr->freedata != NULL )
+   if( (*rootexpr)->exprdata != NULL )
    {
+      assert((*rootexpr)->exprhdlr->freedata != NULL);
       SCIP_CALL( (*rootexpr)->exprhdlr->freedata(scip, *rootexpr) );
    }
 
@@ -10124,15 +10102,9 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
 
             if( child->exprdata != NULL )
             {
-               if( child->exprhdlr->freedata != NULL )
-               {
-                  SCIP_CALL( child->exprhdlr->freedata(scip, child) );
-                  assert(child->exprdata == NULL);
-               }
-               else
-               {
-                  child->exprdata = NULL;
-               }
+               assert(child->exprhdlr->freedata != NULL);
+               SCIP_CALL( child->exprhdlr->freedata(scip, child) );
+               assert(child->exprdata == NULL);
             }
 
             break;
@@ -10251,6 +10223,8 @@ void SCIPsetConsExprExprData(
    )
 {
    assert(expr != NULL);
+   assert(exprdata == NULL || expr->exprhdlr->copydata != NULL);  /* copydata must be available if there is expression data */
+   assert(exprdata == NULL || expr->exprhdlr->freedata != NULL);  /* freedata must be available if there is expression data */
 
    expr->exprdata = exprdata;
 }

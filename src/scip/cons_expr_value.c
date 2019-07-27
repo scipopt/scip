@@ -64,6 +64,17 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataValue)
 }
 
 static
+SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataValue)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   /* nothing much to do, as currently the data is the pointer */
+   SCIPsetConsExprExprData(expr, NULL);
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
 {  /*lint --e{715}*/
    assert(expr != NULL);
@@ -195,7 +206,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrValue, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataValue, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataValue, freedataValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalValue) );

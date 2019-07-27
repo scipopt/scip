@@ -478,10 +478,7 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    SCIP_CONSEXPR_EXPR*     newchild          /**< the new child */
    );
 
-/** duplicates the given expression
- *
- * If a copy could not be created (e.g., due to missing copy callbacks in expression handlers), *copyexpr will be set to NULL.
- */
+/** duplicates the given expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */

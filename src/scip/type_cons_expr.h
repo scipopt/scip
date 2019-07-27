@@ -138,6 +138,8 @@ typedef enum
  * that *targetexprdata will be set. This data will then be used
  * to create a new expression.
  *
+ * This callback must be implemented for expressions that have data.
+ *
  *  input:
  *  - targetscip         : target SCIP main data structure
  *  - targetexprhdlr     : expression handler in target SCIP
@@ -160,6 +162,8 @@ typedef enum
  *
  * The method frees the data of an expression.
  * It assumes that expr->exprdata will be set to NULL.
+ *
+ * This callback must be implemented for expressions that have data.
  *
  *  input:
  *  - scip          : SCIP main data structure

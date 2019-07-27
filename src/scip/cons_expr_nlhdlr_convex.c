@@ -102,7 +102,7 @@ SCIP_RETCODE nlhdlrExprCreate(
 
    /* create copy of expression, but without children */
    SCIP_CALL( SCIPduplicateConsExprExpr(scip, conshdlr, origexpr, nlhdlrexpr, FALSE) );
-   assert(*nlhdlrexpr != NULL);  /* TODO handle this */
+   assert(*nlhdlrexpr != NULL);  /* copies within the same SCIP must always work */
 
    /* store the curvature we want to get in the curvature flag of the copied expression
     * it's a bit of a misuse, but once we are done with everything, this is actually correct
