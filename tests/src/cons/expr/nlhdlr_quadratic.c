@@ -62,12 +62,15 @@ void setup(void)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    cr_assert_not_null(conshdlrdata);
 
-   /* get nlhdlr */
+   /* get quadratic nlhdlr, disable all others except for default */
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
       if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "quadratic") == 0 )
       {
          nlhdlr = conshdlrdata->nlhdlrs[h];
-         break;
+      }
+      else if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "default") != 0 )
+      {
+         conshdlrdata->nlhdlrs[h]->enabled = FALSE;
       }
    cr_assert_not_null(nlhdlr);
 
