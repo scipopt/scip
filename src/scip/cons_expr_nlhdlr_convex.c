@@ -42,6 +42,7 @@
 #define DEFAULT_DETECTSUM   FALSE
 #define DEFAULT_PREFEREXTENDED TRUE
 #define DEFAULT_CVXSIGNOMIAL TRUE
+#define DEFAULT_HANDLETRIVIAL FALSE
 
 /*
  * Data structures
@@ -66,6 +67,7 @@ struct SCIP_ConsExpr_NlhdlrData
 
    /* parameters that probably should be removed again */
    SCIP_Bool             cvxsignomial;       /**< whether to use convexity check on signomials */
+   SCIP_Bool             handletrivial;      /**< whether to handle trivial expressions, i.e., those where all children are variables */
 };
 
 /*
@@ -517,20 +519,27 @@ SCIP_RETCODE constructExpr(
    if( *rootnlexpr != NULL )
    {
       SCIP_Bool istrivial = TRUE;
-      int i;
 
-      /* if all children do not have children, i.e., are variables, or will be replaced by auxvars, then free
-       * also if rootnlexpr has no children, then free
-       * TODO could also figure this out by looking at number of expressions we looked at above
+      /* if handletrivial is enabled, then only require that rootnlexpr itself has required curvature (so has children; see below) and
+       * that we are not a trivial sum  (because the previous implementation of this nlhdlr didn't allow this, either)
        */
-      for( i = 0; i < SCIPgetConsExprExprNChildren(*rootnlexpr); ++i )
+      if( !nlhdlrdata->handletrivial || SCIPgetConsExprExprHdlr(*rootnlexpr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
       {
-         if( SCIPgetConsExprExprNChildren(SCIPgetConsExprExprChildren(*rootnlexpr)[i]) > 0 )
+         /* if all children do not have children, i.e., are variables, or will be replaced by auxvars, then free
+          * also if rootnlexpr has no children, then free
+          */
+         int i;
+         for( i = 0; i < SCIPgetConsExprExprNChildren(*rootnlexpr); ++i )
          {
-            istrivial = FALSE;
-            break;
+            if( SCIPgetConsExprExprNChildren(SCIPgetConsExprExprChildren(*rootnlexpr)[i]) > 0 )
+            {
+               istrivial = FALSE;
+               break;
+            }
          }
       }
+      else if( SCIPgetConsExprExprNChildren(*rootnlexpr) > 0 )  /* if handletrivial, then just require children */
+            istrivial = FALSE;
 
       if( istrivial )
       {
@@ -929,6 +938,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/cvxsignomial",
       "whether to use convexity check on signomials",
       &nlhdlrdata->cvxsignomial, FALSE, DEFAULT_CVXSIGNOMIAL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/handletrivial",
+      "whether to also handle trivial convex expressions",
+      &nlhdlrdata->handletrivial, FALSE, DEFAULT_HANDLETRIVIAL, NULL, NULL) );
 
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrfreeHdlrDataConvex);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
