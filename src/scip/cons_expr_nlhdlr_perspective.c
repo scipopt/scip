@@ -156,7 +156,7 @@ SCIP_RETCODE varIsSemicontinuous(
          exists = FALSE;
       if( exists )
       {/*lint --e{644}*/
-         SCIPdebugMsgPrint(scip, ", upper bound: %f <%s> %+f", vubcoefs[pos], SCIPvarGetName(vubvars[pos]), vubconstants[pos]);
+         SCIPdebugMsgPrint(scip, ", upper bound: %f <%s> %+f", vubcoefs[pos], SCIPvarGetName(vubvars[pos]), vubconstants[pos]); /*lint !e613*/
 
          /* save the upper bounds */
          ub0 = MIN(vubconstants[pos], gub);

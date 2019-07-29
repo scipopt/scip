@@ -9265,12 +9265,12 @@ SCIP_RETCODE SCIPbwdiffConsExprExprHdlr(
       if( expr->nchildren > 0 )
       {
          for( c = 0; c < expr->nchildren; ++c )
-            expr->children[c]->evalvalue = origchildrenvals[c];
+            expr->children[c]->evalvalue = origchildrenvals[c];  /*lint !e644*/
 
          SCIPfreeBufferArray(scip, &origchildrenvals);
       }
 
-      expr->evalvalue = origexprval;
+      expr->evalvalue = origexprval;   /*lint !e644*/
    }
 
    return SCIP_OKAY;

@@ -716,7 +716,7 @@ SCIP_RETCODE createNlhdlrExprData(
 
 static
 SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrfreeHdlrDataConvex)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(nlhdlrdata != NULL);
    assert(*nlhdlrdata != NULL);
@@ -750,7 +750,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_CONSEXPR_EXPR* nlexpr = NULL;
    SCIP_HASHMAP* nlexpr2origexpr;
-   int nleafs;
+   int nleafs = 0;
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -800,7 +800,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
          SCIPdebugMsg(scip, "detected expr %p to be convex -> can enforce expr <= auxvar\n", (void*)expr);
       }
       else
-         SCIPhashmapRemoveAll(nlexpr2origexpr);
+      {
+         SCIP_CALL( SCIPhashmapRemoveAll(nlexpr2origexpr) );
+      }
    }
 
    if( !*enforcedabove && nlexpr == NULL )
@@ -904,7 +906,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
       assert(var != NULL);
 
       deriv = SCIPgetConsExprExprPartialDiff(scip, conshdlr, nlexpr, var);
-      if( deriv == SCIP_INVALID )
+      if( deriv == SCIP_INVALID ) /*lint !e777*/
       {
          *success = FALSE;
          break;
