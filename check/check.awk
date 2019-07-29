@@ -584,11 +584,16 @@ BEGIN {
    gsub(/\//, "\\/",fname);
 
    #grep between filename and next @01 for an error
-   command = "test -e "ERRFILE" && sed -n '/"fname"/,/@01/p' "ERRFILE" | grep 'returned with error code'";
-   command | getline grepresult;
+   if( ERRFILE != "" )
+   {
+      command = "test -e "ERRFILE" && sed -n '/"fname"/,/@01/p' "ERRFILE" | grep 'returned with error code'";
+      command | getline grepresult;
 
-   # set aborted flag correctly
-   if( grepresult == "" )
+      # set aborted flag correctly
+      if( grepresult == "" )
+         aborted = 0;
+   }
+   else
       aborted = 0;
 
    close(command)
