@@ -65,7 +65,7 @@ struct SCIP_ConsExpr_NlhdlrData
    SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a sum */
    SCIP_Bool             preferextended;     /**< whether to prefer extended formulations */
 
-   /* parameters that probably should be removed again */
+   /* advanced parameters (maybe remove some day) */
    SCIP_Bool             cvxsignomial;       /**< whether to use convexity check on signomials */
    SCIP_Bool             handletrivial;      /**< whether to handle trivial expressions, i.e., those where all children are variables */
 };
@@ -277,6 +277,9 @@ DECL_CURVCHECK(curvCheckSignomial)
 
    *success = FALSE;
 
+   if( !nlhdlrdata->cvxsignomial )
+      return SCIP_OKAY;
+
    if( SCIPgetConsExprExprHdlr(nlexpr) != SCIPgetConsExprExprHdlrProduct(conshdlr) )
       return SCIP_OKAY;
 
@@ -424,6 +427,7 @@ TERMINATE:
 
 /** curvature check and expression-growing methods
  * some day this could be plugins added by users at runtime, but for now we have a fixed list here
+ * NOTE: curvCheckExprhdlr should be last
  */
 static DECL_CURVCHECK((*CURVCHECKS[])) = { curvCheckSignomial, curvCheckExprhdlr };
 /** number of curvcheck methods */
@@ -489,8 +493,6 @@ SCIP_RETCODE constructExpr(
          /* try through curvature check methods until one succeeds */
          for( method = 0; method < NCURVCHECKS; ++method )
          {
-            if( method == 0 && !nlhdlrdata->cvxsignomial )  /* this check should go away when the cvxsignomial parameter is removed */
-               continue;
             SCIP_CALL( CURVCHECKS[method](scip, conshdlr, nlexpr, &stack, nlexpr2origexpr, nlhdlrdata, &success) );
             if( success )
                break;
@@ -1025,11 +1027,11 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/cvxsignomial",
       "whether to use convexity check on signomials",
-      &nlhdlrdata->cvxsignomial, FALSE, DEFAULT_CVXSIGNOMIAL, NULL, NULL) );
+      &nlhdlrdata->cvxsignomial, TRUE, DEFAULT_CVXSIGNOMIAL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/handletrivial",
       "whether to also handle trivial convex expressions",
-      &nlhdlrdata->handletrivial, FALSE, DEFAULT_HANDLETRIVIAL, NULL, NULL) );
+      &nlhdlrdata->handletrivial, TRUE, DEFAULT_HANDLETRIVIAL, NULL, NULL) );
 
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrfreeHdlrDataConvex);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
