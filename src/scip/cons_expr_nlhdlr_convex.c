@@ -155,7 +155,7 @@ SCIP_RETCODE nlhdlrExprGrowChildren(
    assert(nlhdlrexpr != NULL);
    assert(SCIPgetConsExprExprNChildren(nlhdlrexpr) == 0);
 
-   origexpr = SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlhdlrexpr);
+   origexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlhdlrexpr);
 
    nchildren = SCIPgetConsExprExprNChildren(origexpr);
    if( nchildren == 0 )
@@ -283,7 +283,7 @@ DECL_CURVCHECK(curvCheckSignomial)
    if( SCIPgetConsExprExprHdlr(nlexpr) != SCIPgetConsExprExprHdlrProduct(conshdlr) )
       return SCIP_OKAY;
 
-   expr = SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlexpr);
+   expr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlexpr);
    assert(expr != NULL);
 
    nfactors = SCIPgetConsExprExprNChildren(expr);
@@ -374,7 +374,7 @@ DECL_CURVCHECK(curvCheckExprhdlr)
    assert(nlexpr2origexpr != NULL);
    assert(success != NULL);
 
-   origexpr = SCIPhashmapGetImage(nlexpr2origexpr, nlexpr);
+   origexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlexpr2origexpr, nlexpr);
    assert(origexpr != NULL);
    nchildren = SCIPgetConsExprExprNChildren(origexpr);
 

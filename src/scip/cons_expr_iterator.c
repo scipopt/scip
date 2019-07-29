@@ -759,7 +759,6 @@ void SCIPexpriteratorSetCurrentUserData(
  *
  * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
-SCIP_EXPORT
 void SCIPexpriteratorSetExprUserData(
    SCIP_CONSEXPR_ITERATOR*         iterator, /**< expression iterator */
    SCIP_CONSEXPR_EXPR*             expr,     /**< expression where to set iterator data */
