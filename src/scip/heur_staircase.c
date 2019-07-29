@@ -234,7 +234,6 @@ SCIP_DECL_HEUREXEC(heurExecStaircase)
 
       decomp = decomps[d];
 
-      /* does the decomposition have linking constraints? */
       SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
       SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &linkvaridx, nvars) );
@@ -339,6 +338,8 @@ SCIP_DECL_HEUREXEC(heurExecStaircase)
     	  SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nconsvars, nconsvars, &requiredsize) );
     	  assert(requiredsize <= nconsvars);
     	  SCIPdecompGetVarsLabels(decomp, consvars, varlabels, nconsvars);
+
+
 		  for( j = 0; j < nconsvars; ++j )
 		  {
 			  assert(consvars[j] != NULL);
@@ -429,7 +430,7 @@ SCIP_DECL_HEUREXEC(heurExecStaircase)
       nnodes = 0;
       cycleflag = FALSE;
 
-      while( !SCIPqueueIsEmpty(queue) && nnodes < 20 )
+      while( !SCIPqueueIsEmpty(queue) )
       {
     	  ++nnodes;
     	  n = SCIPqueueRemoveUInt(queue);
@@ -453,6 +454,11 @@ SCIP_DECL_HEUREXEC(heurExecStaircase)
       }
 
       SCIPdebugMsg(scip, "Check #2: The block decomposition graph is%s and contains %s cycle. \n",  nnodes == SCIPdigraphGetNNodes(blockgraph) ? " CONNECTED" : " NOT CONNECTED", cycleflag == TRUE ? "A" : "NO");
+
+      /* get the number of connected components */
+      SCIP_CALL( SCIPdigraphComputeUndirectedComponents(blockgraph, -1, NULL, NULL) );
+      int ncomponents = SCIPdigraphGetNComponents(blockgraph);
+      SCIPdebugMsg(scip, "The number of connected components = %d. \n", ncomponents);
 
 
       SCIPdigraphFree(&blocklinkingvargraph);
