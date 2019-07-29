@@ -253,7 +253,16 @@ BEGIN {
    prob = b[1];
    if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" )
       m--;
-   for( i = 2; i < m; ++i )
+
+   if( $3 == "==MISSING==" )
+   {
+      # if out was missing, then we now have something like bzfviger.MINLP_convex.463_polygon75.scip-6.0.1.3.linux.x86_64.gnu.dbg.spx2.none.opt.minlp
+      # take the 3rd entry, hoping that the instance name didn't have a dot
+      prob = b[3];
+      # now remove the number at the begin
+      sub("^[0-9]*_", "", prob);
+   }
+   else for( i = 2; i < m; ++i )
       prob = prob "." b[i];
 
    if( useshortnames && length(prob) > namelength )
@@ -770,8 +779,7 @@ BEGIN {
 # 8) solver reached any other limit (like time or nodes) => timeout
 # 9) otherwise => unknown
 #
-/^=ready=/ {
-
+/^=ready=/ || /==MISSING==/ {
    #since the header depends on the parameter printsoltimes and settings it is no longer possible to print it in the BEGIN section
    if( !headerprinted )
    {
