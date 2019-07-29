@@ -2508,12 +2508,12 @@ void SCIPbendersDeactivate(
 
    if( benders->active )
    {
-#ifndef NDEBUG
       int nsubproblems;
       int i;
 
       nsubproblems = SCIPbendersGetNSubproblems(benders);
 
+#ifndef NDEBUG
       /* checking whether the auxiliary variables and subproblems are all NULL */
       for( i = 0; i < nsubproblems; i++ )
          assert(benders->auxiliaryvars[i] == NULL);
@@ -2930,6 +2930,8 @@ void createSolveSubproblemIndexList(
    }
 }
 
+/** updates the subproblem solving statistics and inserts the indices into the queue */
+static
 SCIP_RETCODE updateSubproblemStatQueue(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int*                  solveidx,           /**< the list of indices of subproblems that were solved */
@@ -2954,7 +2956,8 @@ SCIP_RETCODE updateSubproblemStatQueue(
       /* updating the solving statistics */
       if( updatestat )
       {
-         solvestat->avgiter = (SCIP_Real)(solvestat->avgiter*solvestat->ncalls + SCIPgetNLPIterations(subproblem))/(SCIP_Real)solvestat->ncalls;
+         solvestat->avgiter = (SCIP_Real)(solvestat->avgiter*solvestat->ncalls + SCIPgetNLPIterations(subproblem))
+            /(SCIP_Real)(solvestat->ncalls + 1);
          solvestat->ncalls++;
       }
 
@@ -2993,7 +2996,6 @@ SCIP_RETCODE solveBendersSubproblems(
    )
 {
    SCIP_Bool onlyconvexcheck;
-   int nsubproblems;
    int numthreads;
    int maxnthreads;
    int i;
@@ -3011,9 +3013,6 @@ SCIP_RETCODE solveBendersSubproblems(
    assert(set != NULL);
 
    locstopped = FALSE;
-
-   /* getting the number of subproblems in the Benders' decompsition */
-   nsubproblems = SCIPbendersGetNSubproblems(benders);
 
    /* getting the number of threads to use when solving the subproblems. This will be either be
     * min(numthreads, maxnthreads).
@@ -3047,12 +3046,13 @@ SCIP_RETCODE solveBendersSubproblems(
       #pragma omp parallel for num_threads(numthreads) private(i) reduction(&&:locoptimal) reduction(||:locinfeasible) reduction(+:locnverified) reduction(||:locstopped) reduction(min:retcode)
       for( j = 0; j < nsolveidx; j++ )
       {
-         i = solveidx[j];
-
          SCIP_Bool subinfeas = FALSE;
-         SCIP_Bool convexsub = SCIPbendersSubproblemIsConvex(benders, i);
+         SCIP_Bool convexsub;
          SCIP_Bool solvesub = TRUE;
          SCIP_Bool solved;
+
+         i = solveidx[j];
+         convexsub = SCIPbendersSubproblemIsConvex(benders, i);
 
          /* the subproblem is initially flagged as not solved for this solving loop */
          (*subprobsolved)[i] = FALSE;
@@ -3260,7 +3260,6 @@ SCIP_RETCODE generateBendersCuts(
    SCIP_BENDERSCUT** benderscuts;
    SCIP_RESULT solveloopresult;
    int nbenderscuts;
-   int nsubproblems;
    SCIP_Longint addedcuts = 0;
    int i;
    int j;
@@ -3275,9 +3274,6 @@ SCIP_RETCODE generateBendersCuts(
    nbenderscuts = SCIPbendersGetNBenderscuts(benders);
 
    solveloopresult = SCIP_DIDNOTRUN;
-
-   /* getting the number of subproblems in the Benders' decomposition */
-   nsubproblems = SCIPbendersGetNSubproblems(benders);
 
    /* in the case of an LNS check, only the convex relaxations of the subproblems will be solved. This is a performance
     * feature, since solving the convex relaxation is typically much faster than solving the corresponding CIP. While
