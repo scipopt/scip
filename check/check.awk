@@ -1056,6 +1056,10 @@ BEGIN {
       {
          setStatusToFail("fail (readerror)");
       }
+      else if( $3 == "==MISSING==" )
+      {
+         setStatusToFail("fail (missing)");
+      }
       else if( aborted )
       {
          setStatusToFail("fail (abort)");
