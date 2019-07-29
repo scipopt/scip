@@ -575,7 +575,7 @@ BEGIN {
    gsub(/\//, "\\/",fname);
 
    #grep between filename and next @01 for an error
-   command = "sed -n '/"fname"/,/@01/p' "ERRFILE" | grep 'returned with error code'";
+   command = "test -e "ERRFILE" && sed -n '/"fname"/,/@01/p' "ERRFILE" | grep 'returned with error code'";
    command | getline grepresult;
 
    # set aborted flag correctly
