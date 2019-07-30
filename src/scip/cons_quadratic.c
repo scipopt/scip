@@ -7565,7 +7565,8 @@ SCIP_RETCODE generateCutNonConvex(
          SCIPdebugMsg(scip, "McCormick = %g (%u)\n", refx * coef + refy * coef2 + constant, *success);
 
          /* tries to compute a tighter relaxation for xy by using valid linear inequalities */
-         if( conshdlrdata->bilinestimators != NULL && ubx - lbx >= 0.1 && uby - lby >= 0.1
+         if( consdata->bilintermsidx != NULL && conshdlrdata->bilinestimators != NULL
+            && ubx - lbx >= 0.1 && uby - lby >= 0.1
             && (SCIPgetNSepaRounds(scip) <= conshdlrdata->bilinineqmaxseparounds || SCIPgetDepth(scip) == 0) )
          {
             BILINESTIMATOR* bilinestimator;
