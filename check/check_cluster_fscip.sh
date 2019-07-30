@@ -29,6 +29,8 @@
 #  - results/check.$TSTNAME.$BINNAME.$SETNAME.out
 #  - results/check.$TSTNAME.$BINNAME.$SETNAME.res
 #  - results/check.$TSTNAME.$BINNAME.$SETNAME.err
+#
+# To get verbose output from Slurm, have SRUN_FLAGS="-v -v" set in your environment.
 
 TSTNAME=$1
 BINNAME=$2
@@ -189,7 +191,7 @@ do
                     export THREADS
 		    export TIMELIMIT
 		    # the space at the end is necessary
-		    export SRUN="srun --cpu_bind=verbose,cores -v -v "
+		    export SRUN="srun --cpu_bind=verbose,cores ${SRUN_FLAGS} "
 		    sbatch --ntasks=1 --cpus-per-task=`expr $THREADS + 1` --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run_fscip.sh
 		else
 		    # -V to copy all environment variables
