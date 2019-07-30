@@ -117,7 +117,10 @@ SCIP_RETCODE nlhdlrExprCreate(
       /* for leaves, do not copy */
       *nlhdlrexpr = origexpr;
       SCIPcaptureConsExprExpr(*nlhdlrexpr);
-      SCIP_CALL( SCIPhashmapInsert(nlexpr2origexpr, (void*)*nlhdlrexpr, (void*)origexpr) );
+      if( !SCIPhashmapExists(nlexpr2origexpr, (void*)*nlhdlrexpr) )
+      {
+         SCIP_CALL( SCIPhashmapInsert(nlexpr2origexpr, (void*)*nlhdlrexpr, (void*)origexpr) );
+      }
       return SCIP_OKAY;
    }
 
