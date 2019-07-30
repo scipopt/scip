@@ -45,6 +45,10 @@ struct SCIP_Decomp
    int*                  consssize;          /**< constraint size for each block, sorted by increasing block label */
    int*                  labels;             /**< integer label for each block */
    int                   nblocks;            /**< the number of variable blocks without the linking block */
+   int                   nedges;             /**< the number of edges in the block decomposition graph */
+   int                   mindegree;          /**< the minimum degree of the block decomposition graph */
+   int                   maxdegree;          /**< the maximum degree of the block decomposition graph */
+   int                   ncomponents;        /**< the number of connected components in the block decomposition graph */
    SCIP_Bool             haschanges;         /**< has this decomposition pending data structure updates? */
    SCIP_Bool             original;           /**< is this a decomposition in the original (TRUE) or transformed space? */
    SCIP_Bool             benderslabels;      /**< should the variables be labeled for the application of Benders' decomposition */
