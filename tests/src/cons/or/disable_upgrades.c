@@ -32,6 +32,7 @@
 /** GLOBAL VARIABLES **/
 static SCIP* scip = NULL;
 
+
 /* TEST SUITE */
 
 /** the setup creates the necessary source and target SCIPs, initializes linear data */
@@ -108,12 +109,8 @@ Test(disable_upgrades, disable_upgrades_or, .description="disable upgrades of or
 Test(disable_upgrades, write_problem, .description="test that CIP write method works for or constraints")
 {
    SCIP_CALL( SCIPreadProb(scip, "../check/instances/Or/or_constraint.cip", "cip") );
-
-   /* author bzfhende
-    *
-    * TODO @Helena
-    */
-
+   
+   SCIP_CALL( SCIPwriteOrigProblem(scip, NULL, "cip", FALSE));
 }
 
 Test(disable_upgrades, copy_problem, .description="test copying of or constraints")
