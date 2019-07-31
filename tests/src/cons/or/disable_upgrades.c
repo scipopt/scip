@@ -26,8 +26,6 @@
 #include "scip/pub_cons.h"
 #include <stdio.h>
 
-#define MEMSIZE 10
-
 /** GLOBAL VARIABLES **/
 static SCIP* scip = NULL;
 
