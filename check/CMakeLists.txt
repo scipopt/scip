@@ -79,6 +79,12 @@ set(settings_MIP
     "conflictdiving"
 )
 #
+# settings for the componentshandler test
+#
+set(settings_compHandlerTest
+    "components_during_solve"
+    )
+#
 # settings to run a reduced MIP test
 #
 set(settings_fastMIP
@@ -192,7 +198,13 @@ set(instances_MIP
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
     )
-
+#
+# Instances for component handler test
+#
+set(instances_compHandlerTest
+    "instances/MIP/lseu_dcmulti.cip\;189302"
+    "instances/MIP/4sHB.cip\;67"
+    )
 #
 # Reduced set of MIP instances for more expensive settings
 #
@@ -410,6 +422,7 @@ endmacro(add_instancetests)
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_default "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
+add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
@@ -457,6 +470,8 @@ set(basenames_opb_wrongformat
     misc03.mps
     rgn.mps
     vpm2.fzn
+    lseu_dcmulti.cip
+    lseu_dcmulti_sHB.cip
     )
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 
