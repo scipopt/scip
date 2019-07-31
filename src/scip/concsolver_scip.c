@@ -205,8 +205,7 @@ SCIP_RETCODE disableConflictingDualReductions(
    if( !commvarbnds )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowdualreds", FALSE) );
-
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowstrongdualreds", FALSE) );
    return SCIP_OKAY;
 }
 
@@ -256,7 +255,8 @@ SCIP_RETCODE initConcsolver(
    /* create the concurrent solver's SCIP instance and set up the problem */
    SCIP_CALL( SCIPcreate(&data->solverscip) );
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(data->solverscip), data->nvars) );
-   SCIP_CALL( SCIPcopy(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver), TRUE, FALSE, FALSE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver), TRUE, FALSE, FALSE,
+         FALSE, &valid) );
    assert(valid);
 
    /* allocate memory for the arrays to store the variable mapping */
@@ -268,6 +268,7 @@ SCIP_RETCODE initConcsolver(
    {
       SCIP_VAR* var;
       var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      assert(var != NULL);
       varperm[SCIPvarGetIndex(var)] = i;
       data->vars[i] = var;
    }

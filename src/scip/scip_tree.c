@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_tree.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for the branch-and-bound tree
  * @author Tobias Achterberg
  * @author Timo Berthold

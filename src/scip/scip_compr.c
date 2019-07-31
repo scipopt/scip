@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_compr.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for compression plugins
  * @author Tobias Achterberg
  * @author Timo Berthold

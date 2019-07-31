@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc.c
+ * @ingroup OTHER_CFILES
  * @brief  miscellaneous methods
  * @author Tobias Achterberg
  * @author Gerald Gamrath

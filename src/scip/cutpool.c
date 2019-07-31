@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cutpool.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing cuts in a cut pool
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -954,11 +955,11 @@ SCIP_RETCODE SCIPcutpoolSeparate(
                      SCIPsepaIncNCutsFound(sepa);
                      SCIPsepaIncNCutsFoundAtNode(sepa);
                   }
-                  else if ( SCIProwGetOriginCons(row) != NULL )
+                  else if ( SCIProwGetOriginConshdlr(row) != NULL )
                   {
                      SCIP_CONSHDLR* conshdlr;
 
-                     conshdlr = SCIProwGetOriginCons(row);
+                     conshdlr = SCIProwGetOriginConshdlr(row);
                      SCIPconshdlrIncNCutsFound(conshdlr);
                   }
                }

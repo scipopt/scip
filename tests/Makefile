@@ -71,7 +71,6 @@ override SHARED		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SHARED=\([^@]*\)
 override USRARFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRARFLAGS=\([^@]*\).*/\1/')
 override USRCFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRCFLAGS=\([^@]*\).*/\1/')
 override USRCXXFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRCXXFLAGS=\([^@]*\).*/\1/')
-override USRDFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRDFLAGS=\([^@]*\).*/\1/')
 override USRFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRFLAGS=\([^@]*\).*/\1/')
 override USRLDFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USRLDFLAGS=\([^@]*\).*/\1/')
 override USROFLAGS	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* USROFLAGS=\([^@]*\).*/\1/')
@@ -125,12 +124,15 @@ UNITTESTS 	= 	$(basename $(UNITTESTSSRC))
 UNITTESTSOBJ 	= 	$(call src2obj, $(UNITTESTSSRC))
 #$(warning unittestobj: $(UNITTESTSOBJ))
 
+# build dependency files from object files: obj/O.linux.../cons/expr/free.d, etc
+UNITTESTSDEP 	= 	$(UNITTESTSOBJ:.o=.d)
+#$(warning unittestdep: $(UNITTESTSDEP))
+
 # substitute src/ for $(OBJDIR) and append $(BASESUFFIX) to UNITTESTS: bin/cons/expr/free.linux..., etc
 UNITTESTSBIN 	= 	$(addsuffix $(BASESUFFIX), $(patsubst $(SRCDIR)%,$(BINDIR)%,$(UNITTESTS)))
 #$(warning unittestsbin: $(UNITTESTSBIN))
 
 UNITTESTSEXECS	=	$(addsuffix $(BASESUFFIX), $(UNITTESTS))
-UNITTESTSDEP	=	$(SRCDIR)/depend.$(OPT)
 
 #-----------------------------------------------------------------------------
 # Flags
@@ -144,8 +146,6 @@ ifeq ($(COMP), clang)
 CFLAGS 		:=	$(filter-out -Wcast-align, $(CFLAGS))
 endif
 CFLAGS 		+=	-std=c99
-# DFLAGS (flags for make depend) uses the -MM option which creates a make target with dependencies. -MT target-name specifies the name of target
-DFLAGS 		+= 	-MT
 # to find include/scip_test.h
 FLAGS 		+= 	-I.
 
@@ -213,7 +213,7 @@ ctestrunner: 	$(UNITTESTSBIN)
 clean:
 		@echo "-> remove main object files"
 		$(foreach dir, $(OBJDIRS) $(OBJDIR), \
-			@-rm -f $(dir)/*.o)
+			@-rm -f $(dir)/*.o $(dir)/*.d)
 		@echo "-> remove binaries"
 		$(foreach bin, $(UNITTESTSBIN), \
 			@-rm -f $(bin))
@@ -221,17 +221,6 @@ clean:
 .PHONY: tags
 tags:
 		rm -f TAGS; ctags -e src/*.c src/*.h $(SCIPDIR)/src/scip/*.c $(SCIPDIR)/src/scip/*.h;
-
-.PHONY: depend
-depend:		$(SCIPDIR)
-		@- rm -f $(UNITTESTSDEP)
-		$(foreach src, $(UNITTESTSSRC), \
-			$(SHELL) -ec '$(DCC) $(FLAGS) $(src) \
-			$(DFLAGS) $(call src2obj, $(src))' >> $(UNITTESTSDEP);)
-
-
-
--include	$(UNITTESTSDEP)
 
 $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(TPILIBFILE)
 		@echo "-> linking $@"
@@ -253,14 +242,15 @@ $(NLPILIBFILE):
 $(TPILIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS) TPI=$(TPI))
 
+-include	$(UNITTESTSDEP)
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.c | $(OBJDIR) $(OBJDIRS) $(BINDIRS)
 		@echo "-> compiling $@"
-		$(CC) $(addprefix -I,$(CR_INC)) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
+		$(CC) $(addprefix -I,$(CR_INC)) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(DFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o:	%.cpp
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(DFLAGS) -c $< $(CXX_o)$@
 
 Criterion:
 	@echo -n "Criterion not found, downloading and building it in"

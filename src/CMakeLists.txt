@@ -79,6 +79,7 @@ set(scipsources
     scip/event_solvingphase.c
     scip/disp_default.c
     scip/heur_actconsdiving.c
+    scip/heur_adaptivediving.c
     scip/heur_bound.c
     scip/heur_clique.c
     scip/heur_coefdiving.c
@@ -126,6 +127,7 @@ set(scipsources
     scip/heur_sync.c
     scip/heur_trivial.c
     scip/heur_trivialnegation.c
+    scip/heur_trustregion.c
     scip/heur_trysol.c
     scip/heur_twoopt.c
     scip/heur_undercover.c
@@ -154,19 +156,17 @@ set(scipsources
     scip/presol_redvub.c
     scip/presol_sparsify.c
     scip/presol_stuffing.c
-    scip/presol_symbreak.c
-    scip/presol_symmetry.c
     scip/presol_trivial.c
     scip/presol_tworowbnd.c
     scip/prop_dualfix.c
     scip/prop_genvbounds.c
     scip/prop_nlobbt.c
     scip/prop_obbt.c
-    scip/prop_orbitalfixing.c
     scip/prop_probing.c
     scip/prop_pseudoobj.c
     scip/prop_redcost.c
     scip/prop_rootredcost.c
+    scip/prop_symmetry.c
     scip/prop_vbounds.c
     scip/prop_sync.c
     scip/reader_bnd.c
@@ -312,6 +312,7 @@ set(scipsources
     scip/sol.c
     scip/solve.c
     scip/stat.c
+    scip/symmetry.c
     scip/syncstore.c
     scip/table.c
     scip/tree.c
@@ -508,6 +509,7 @@ set(scipheaders
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/heur_actconsdiving.h
+    scip/heur_adaptivediving.h
     scip/heur_bound.h
     scip/heur_clique.h
     scip/heur_coefdiving.h
@@ -557,6 +559,7 @@ set(scipheaders
     scip/heur_sync.h
     scip/heur_trivial.h
     scip/heur_trivialnegation.h
+    scip/heur_trustregion.h
     scip/heur_trysol.h
     scip/heur_twoopt.h
     scip/heur_undercover.h
@@ -597,8 +600,6 @@ set(scipheaders
     scip/presol_redvub.h
     scip/presol_sparsify.h
     scip/presol_stuffing.h
-    scip/presol_symbreak.h
-    scip/presol_symmetry.h
     scip/presol_trivial.h
     scip/presol_tworowbnd.h
     scip/presolve.h
@@ -611,11 +612,11 @@ set(scipheaders
     scip/prop.h
     scip/prop_nlobbt.h
     scip/prop_obbt.h
-    scip/prop_orbitalfixing.h
     scip/prop_probing.h
     scip/prop_pseudoobj.h
     scip/prop_redcost.h
     scip/prop_rootredcost.h
+    scip/prop_symmetry.h
     scip/prop_sync.h
     scip/prop_vbounds.h
     scip/pub_branch.h
@@ -804,6 +805,7 @@ set(scipheaders
     scip/struct_tree.h
     scip/struct_var.h
     scip/struct_visual.h
+    scip/symmetry.h
     scip/syncstore.h
     scip/table_default.h
     scip/table.h

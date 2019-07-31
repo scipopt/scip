@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_tworowbnd.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  do bound tightening by using two rows
  * @author Dieter Weninger
  *
@@ -1441,7 +1442,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
 
    if( initialized && complete )
    {

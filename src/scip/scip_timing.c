@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_timing.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for timing
  * @author Tobias Achterberg
  * @author Timo Berthold

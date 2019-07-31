@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_randnumgen.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for random numbers
  * @author Tobias Achterberg
  * @author Timo Berthold

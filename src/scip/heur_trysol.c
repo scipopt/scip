@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trysol.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  primal heuristic that tries a given solution
  * @author Marc Pfetsch
  *
@@ -39,7 +40,7 @@
 
 #define HEUR_NAME             "trysol"
 #define HEUR_DESC             "try solution heuristic"
-#define HEUR_DISPCHAR         'y'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_TRIVIAL
 #define HEUR_PRIORITY         -3000000     /* should process after all other heuristics */
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0

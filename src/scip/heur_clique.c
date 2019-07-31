@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_clique.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LNS heuristic using a clique partition to restrict the search neighborhood
  * @brief  clique primal heuristic
  * @author Stefan Heinz
@@ -65,7 +66,7 @@
 
 #define HEUR_NAME             "clique"
 #define HEUR_DESC             "LNS heuristic using a clique partition to restrict the search neighborhood"
-#define HEUR_DISPCHAR         'Q'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         5000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
@@ -514,6 +515,7 @@ SCIP_RETCODE createNewSol(
    SCIP_VAR** vars;                          /* the original problem's variables */
    int nvars;
    SCIP_Real* subsolvals;                    /* solution values of the subproblem */
+   int i;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -530,15 +532,16 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
    /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
+   for( i = 0; i < nvars; ++i )
+   {
+      if( subvars[i] == NULL )
+         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+      else
+         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
+   }
 
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
@@ -907,7 +910,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
-      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_clique", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_clique", NULL, NULL, 0, FALSE, FALSE, FALSE,
+            TRUE, &valid) );
 
       if( heurdata->copycuts )
       {

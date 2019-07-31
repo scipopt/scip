@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_indicator.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
@@ -3014,9 +3015,9 @@ SCIP_RETCODE extendToCover(
             /* create row */
 #ifdef SCIP_DEBUG
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "iis%d", conshdlrdata->niiscutsgen + *nGen);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
 #else
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
 #endif
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -4067,7 +4068,7 @@ SCIP_RETCODE enforceIndicators(
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
       SCIP_CALL( propIndicator(scip, conss[c], consdata,
-            conshdlrdata->dualreductions && SCIPallowDualReds(scip), conshdlrdata->addopposite,
+            conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip), conshdlrdata->addopposite,
             &cutoff, &cnt) );
       if ( cutoff )
       {
@@ -4581,7 +4582,7 @@ SCIP_RETCODE separatePerspective(
 
             SCIPdebugMsg(scip, "Found cut of lhs value %f > %f.\n", cutval, cutrhs);
             (void) SCIPsnprintf(name, 50, "persp%d", conshdlrdata->nperspcutsgen + *nGen);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), name, -SCIPinfinity(scip), cutrhs, islocal, FALSE, conshdlrdata->removable) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), cutrhs, islocal, FALSE, conshdlrdata->removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, row, cnt, cutvars, cutvals) );
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
@@ -4691,9 +4692,9 @@ SCIP_RETCODE separateIndicators(
                char name[50];
 
                (void) SCIPsnprintf(name, 50, "couple%d", c);
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), name, -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
 #else
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), "", -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], "", -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
 #endif
                SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -5892,7 +5893,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 
          /* perform one presolving round */
          SCIP_CALL( presolRoundIndicator(scip, conshdlrdata, cons, consdata,
-               conshdlrdata->dualreductions && SCIPallowDualReds(scip), &cutoff, &success, ndelconss, nfixedvars) );
+               conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip), &cutoff, &success, ndelconss, nfixedvars) );
 
          if ( cutoff )
          {
@@ -6013,7 +6014,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
          {
             SCIP_ROW* row;
 
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
@@ -6395,7 +6396,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
 
       *result = SCIP_DIDNOTFIND;
 
-      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions && SCIPallowDualReds(scip),
+      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip),
             conshdlrdata->addopposite, &cutoff, &cnt) );
 
       if ( cutoff )
@@ -6460,7 +6461,7 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    {
       assert( inferinfo == 2 );
       assert( SCIPisFeasZero(scip, SCIPgetVarUbAtIndex(scip, consdata->slackvar, bdchgidx, FALSE)) );
-      assert( SCIPconshdlrGetData(conshdlr)->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) );
+      assert( SCIPconshdlrGetData(conshdlr)->dualreductions && SCIPallowStrongDualReds(scip) && SCIPallowWeakDualReds(scip) );
       SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
    }
    *result = SCIP_SUCCESS;

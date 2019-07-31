@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dialog_default.c
+ * @ingroup OTHER_CFILES
  * @brief  default user interface dialog
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -1720,7 +1721,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
 
                /* solving the subproblem using the best solution to the master problem */
                SCIP_CALL( SCIPsolveBendersSubproblem(scip, benders[idx], bestsol, subidx, &infeasible,
-                     SCIP_BENDERSENFOTYPE_CHECK, TRUE, NULL) );
+                     TRUE, NULL) );
 
                if( infeasible )
                   SCIPdialogMessage(scip, NULL, "subproblem %d is infeasible.\n", subidx);

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_xor.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for "xor" constraints,  \f$rhs = x_1 \oplus x_2 \oplus \dots  \oplus x_n\f$
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -1675,7 +1676,7 @@ SCIP_RETCODE createRelaxation(
 
       /* create LP row */
       rhsval = (consdata->rhs ? 1.0 : 0.0);
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[0], SCIPconsGetHdlr(cons), SCIPconsGetName(cons), rhsval, rhsval,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[0], cons, SCIPconsGetName(cons), rhsval, rhsval,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[0], consdata->intvar, -2.0) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[0], consdata->nvars, consdata->vars, 1.0) );
@@ -1691,7 +1692,7 @@ SCIP_RETCODE createRelaxation(
          int v;
 
          (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), r);
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[r], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[r], cons, rowname, -SCIPinfinity(scip), 0.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          for( v = 0; v < 3; ++v )
          {
@@ -1701,14 +1702,14 @@ SCIP_RETCODE createRelaxation(
 
       /* create the <= 2 row with all positive signs */
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_3", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[3], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 2.0,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[3], cons, rowname, -SCIPinfinity(scip), 2.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, 1.0) );
 
       /* create extra LP row if integer variable exists */
       if( consdata->intvar != NULL )
       {
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[4], SCIPconsGetHdlr(cons), SCIPconsGetName(cons), 0.0, 0.0,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[4], cons, SCIPconsGetName(cons), 0.0, 0.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[4], consdata->intvar, -2.0) );
          SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[4], consdata->nvars, consdata->vars, 1.0) );
@@ -1725,7 +1726,7 @@ SCIP_RETCODE createRelaxation(
          int v;
 
          (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), r);
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[r], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 1.0,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[r], cons, rowname, -SCIPinfinity(scip), 1.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          for( v = 0; v < 3; ++v )
          {
@@ -1735,14 +1736,14 @@ SCIP_RETCODE createRelaxation(
 
       /* create the <= -1 row with all negative signs */
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_3", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[3], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), -1.0,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[3], cons, rowname, -SCIPinfinity(scip), -1.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, -1.0) );
 
       /* create extra LP row if integer variable exists */
       if( consdata->intvar != NULL )
       {
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[4], SCIPconsGetHdlr(cons), SCIPconsGetName(cons), 1.0, 1.0,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[4], cons, SCIPconsGetName(cons), 1.0, 1.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[4], consdata->intvar, -2.0) );
          SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[4], consdata->nvars, consdata->vars, 1.0) );
@@ -2020,7 +2021,7 @@ SCIP_RETCODE separateCons(
             SCIPdebugMsg(scip, "found violated parity cut (efficiacy: %f)\n", 1.0 - sum);
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "parity#%s", SCIPconsGetName(cons));
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) (cnt - 1), FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), (SCIP_Real) (cnt - 1), FALSE, FALSE, TRUE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             /* fill in row */
@@ -2056,7 +2057,7 @@ SCIP_RETCODE separateCons(
 
             /* the rhs of the inequality is the corrected set size minus 1 */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "parity#%s", SCIPconsGetName(cons));
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) (cnt - 2), FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), (SCIP_Real) (cnt - 2), FALSE, FALSE, TRUE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             /* fill in row */
@@ -2092,7 +2093,7 @@ SCIP_RETCODE separateCons(
 
             /* the rhs of the inequality is the size of the corrected set */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "parity#%s", SCIPconsGetName(cons));
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) cnt, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), (SCIP_Real) cnt, FALSE, FALSE, TRUE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             /* fill in row */
@@ -5450,9 +5451,12 @@ SCIP_DECL_CONSCOPY(consCopyXor)
          SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &targetintvar, varmap, consmap, global, valid) );
          assert(!(*valid) || targetintvar != NULL);
 
-         SCIPdebugMsg(scip, "Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar),
-            global ? SCIPvarGetLbGlobal(intvar) : SCIPvarGetLbLocal(intvar),
-            global ? SCIPvarGetUbGlobal(intvar) : SCIPvarGetUbLocal(intvar));
+         if( targetintvar != NULL )
+         {
+            SCIPdebugMsg(scip, "Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar),
+               global ? SCIPvarGetLbGlobal(intvar) : SCIPvarGetLbLocal(intvar),
+               global ? SCIPvarGetUbGlobal(intvar) : SCIPvarGetUbLocal(intvar));
+         }
       }
 
       if( *valid )

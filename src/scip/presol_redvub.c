@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_redvub.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  remove redundant variable upper bound constraints
  * @author Dieter Weninger
  *
@@ -34,6 +35,7 @@
 #include "scip/pub_matrix.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/scip_cons.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -567,7 +569,7 @@ SCIP_DECL_PRESOLEXEC(presolExecRedvub)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
 
    if( initialized && complete )
    {

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   var.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for problem variables
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -1975,6 +1976,7 @@ SCIP_RETCODE varCreate(
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
    (*var)->delglobalstructs = FALSE;
+   (*var)->relaxationonly = FALSE;
 
    for( i = 0; i < NLOCKTYPES; i++ )
    {
@@ -16609,6 +16611,8 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarDropEvent
 #undef SCIPvarGetVSIDS
 #undef SCIPvarGetCliqueComponentIdx
+#undef SCIPvarIsRelaxationOnly
+#undef SCIPvarMarkRelaxationOnly
 #undef SCIPbdchgidxGetPos
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
@@ -17008,6 +17012,42 @@ SCIP_Bool SCIPvarIsMarkedDeleteGlobalStructures(
    assert(var != NULL);
 
    return var->delglobalstructs;
+}
+
+/** returns whether a variable has been introduced to define a relaxation
+ *
+ * These variables are only valid for the current SCIP solve round,
+ * they are not contained in any (checked) constraints, but may be used
+ * in cutting planes, for example.
+ * Relaxation-only variables are not copied by SCIPcopyVars and cuts
+ * that contain these variables are not added as linear constraints when
+ * restarting or transferring information from a copied SCIP to a SCIP.
+ * Also conflicts with relaxation-only variables are not generated at
+ * the moment.
+ */
+SCIP_Bool SCIPvarIsRelaxationOnly(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->relaxationonly;
+}
+
+/** marks that this variable has only been introduced to define a relaxation
+ *
+ * The variable must not have a coefficient in the objective.
+ *
+ * @see SCIPvarIsRelaxationOnly
+ */
+void SCIPvarMarkRelaxationOnly(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetObj(var) == 0.0);
+
+   var->relaxationonly = TRUE;
 }
 
 /** returns whether variable is allowed to be deleted completely from the problem */

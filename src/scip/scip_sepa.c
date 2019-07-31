@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_sepa.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for separator plugins
  * @author Tobias Achterberg
  * @author Timo Berthold

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_setppc.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for the set partitioning / packing / covering constraints \f$1^T x\ \{=, \le, \ge\}\ 1\f$.
  * @author Tobias Achterberg
  * @author Michael Winkler
@@ -2423,7 +2424,7 @@ SCIP_RETCODE createRow(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons), lhs, rhs,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), lhs, rhs,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
@@ -8175,7 +8176,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       }
 
       /* perform dual reductions */
-      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+      if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
       {
          SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
 
@@ -8214,11 +8215,11 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
     */
    if( nconss > 1 && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0
       && ((conshdlrdata->nsetpart > 0 && !SCIPdoNotMultaggr(scip) && conshdlrdata->conshdlrlinear != NULL)
-         || (conshdlrdata->dualpresolving && SCIPallowDualReds(scip)
+         || (conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip)
                && conshdlrdata->nsetpart < nconss && !SCIPdoNotAggr(scip))) )
    {
       SCIP_CALL( removeDoubleAndSingletonsAndPerformDualpresolve(scip, conss, nconss, conshdlrdata->dualpresolving
-            && SCIPallowDualReds(scip), conshdlrdata->conshdlrlinear != NULL, nfixedvars,
+            && SCIPallowStrongDualReds(scip), conshdlrdata->conshdlrlinear != NULL, nfixedvars,
             naggrvars, ndelconss, nchgcoefs, nchgsides, &cutoff) );
 
       if( cutoff )

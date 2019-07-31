@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_cumulative.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for cumulative constraints
  * @author Timo Berthold
  * @author Stefan Heinz
@@ -7875,6 +7876,10 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       var = vars[v];
       assert(var != NULL);
 
+      /* ignore variables for which no alternative bounds have been computed */
+      if( alternativelbs[v] == INT_MAX && alternativeubs[v] == INT_MIN )
+         continue;
+
       lb = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
       ub = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
 
@@ -8149,7 +8154,7 @@ SCIP_RETCODE createCoverCutsTimepoint(
 
    /* construct row name */
    (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "capacity_coverbig_%d", time);
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), (SCIP_Real)bigcoversize,
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, rowname, -SCIPinfinity(scip), (SCIP_Real)bigcoversize,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -8237,7 +8242,7 @@ SCIP_RETCODE createCoverCutsTimepoint(
    {
       /* construct row name */
       (void)SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "capacity_coversmall_%d", time);
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), (SCIP_Real)smallcoversize,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, rowname, -SCIPinfinity(scip), (SCIP_Real)smallcoversize,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), TRUE) );
       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -8503,7 +8508,7 @@ SCIP_RETCODE createCapacityRestriction(
    {
       SCIP_ROW* row;
 
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)capacity, FALSE, FALSE, SCIPconsIsRemovable(cons)) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), (SCIP_Real)capacity, FALSE, FALSE, SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
       for( b = 0; b < nbinvars; ++b )
@@ -8978,13 +8983,13 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    {
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "lower(%d)", curtime);
 
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, (SCIP_Real) lhs, SCIPinfinity(scip),
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, (SCIP_Real) lhs, SCIPinfinity(scip),
             TRUE, FALSE, SCIPconsIsRemovable(cons)) );
    }
    else
    {
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "upper(%d)", curtime);
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real) lhs,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), (SCIP_Real) lhs,
             TRUE, FALSE, SCIPconsIsRemovable(cons)) );
    }
 
@@ -11050,7 +11055,7 @@ SCIP_RETCODE presolveCons(
    assert(!SCIPconsIsDeleted(cons));
 
    /* only perform dual reductions on model constraints */
-   if( conshdlrdata->dualpresolve && SCIPallowDualReds(scip) )
+   if( conshdlrdata->dualpresolve && SCIPallowStrongDualReds(scip) )
    {
       /* computes the effective horizon and checks if the constraint can be decomposed */
       SCIP_CALL( computeEffectiveHorizon(scip, cons, ndelconss, naddconss, nchgsides) );
@@ -13101,7 +13106,7 @@ SCIP_DECL_CONSPROP(consPropCumulative)
    }
 
 #if 0
-   if( !cutoff && conshdlrdata->dualpresolve && SCIPallowDualReds(scip) && nconss > 1 )
+   if( !cutoff && conshdlrdata->dualpresolve && SCIPallowStrongDualReds(scip) && nconss > 1 )
    {
       SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, TRUE, &nchgbds, &cutoff, NULL) );
    }
@@ -13206,7 +13211,7 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
       assert(checkDemands(scip, cons) || cutoff);
    }
 
-   if( !cutoff && !unbounded && conshdlrdata->dualpresolve && SCIPallowDualReds(scip) && nconss > 1 && (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
+   if( !cutoff && !unbounded && conshdlrdata->dualpresolve && SCIPallowStrongDualReds(scip) && nconss > 1 && (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
    {
       SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, FALSE,
             nfixedvars, &cutoff, NULL) );

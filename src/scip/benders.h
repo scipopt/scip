@@ -50,6 +50,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_SET*             targetset,          /**< SCIP_SET of SCIP to copy to */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables; must not be NULL */
+   SCIP_Bool             copysubproblems,    /**< must the subproblems be copied with the Benders' decomposition copy */
    SCIP_Bool*            valid               /**< was the copying process valid? */
    );
 
@@ -194,7 +195,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
    SCIP_Bool             solvecip,           /**< directly solve the CIP subproblem */
    SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    );
@@ -400,6 +400,17 @@ SCIP_RETCODE SCIPbendersSetMastervarsCont(
 SCIP_Bool SCIPbendersGetMastervarsCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
+   );
+
+/** adds the data for the generated cuts to the Benders' cut storage */
+SCIP_RETCODE SCIPbendersStoreCut(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition cut */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< the variables that have non-zero coefficients in the cut */
+   SCIP_Real*            vals,               /**< the coefficients of the variables in the cut */
+   SCIP_Real             lhs,                /**< the left hand side of the cut */
+   SCIP_Real             rhs,                /**< the right hand side of the cut */
+   int                   nvars               /**< the number of variables with non-zero coefficients in the cut */
    );
 
 /** inserts a Benders' cut algorithm plugin into the Benders' cuts plugin list */

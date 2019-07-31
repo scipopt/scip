@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prob.c
+ * @ingroup OTHER_CFILES
  * @brief  Methods and datastructures for storing and manipulating the main problem
  * @author Tobias Achterberg
  */
@@ -980,7 +981,7 @@ SCIP_RETCODE SCIPprobAddVar(
       SCIPprobUpdateNObjVars(prob, set, 0.0, SCIPvarGetObj(var));
 
       /* set varlocks to ensure that no dual reduction can be performed */
-      if( set->reopt_enable || !set->misc_allowdualreds )
+      if( set->reopt_enable || !set->misc_allowstrongdualreds )
       {
          SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, SCIP_LOCKTYPE_MODEL, 1, 1) );
       }

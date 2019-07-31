@@ -175,6 +175,7 @@ EOF
 
 # EXECUTABLE has form 'scipoptspx_bugfix_20180401/bin/scip', we only want 'scipoptspx'
 SCIP_BUILDDIR=$(echo ${EXECUTABLE}| cut -d '/' -f 1|cut -d '_' -f 1)
+SOPLEX_HASH=$(${PWD}/${EXECUTABLE} -v | grep "  SoPlex" | grep "GitHash: .*]" -o|cut -d ' ' -f 2|cut -d ']' -f 1)
 
 NEWTIMESTAMP=$(date '+%F-%H-%M')
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
@@ -267,10 +268,10 @@ while [ ${SEED} -le ${SEEDS} ]; do
     PERF_MAIL=""
     if [ "${PERFORMANCE}" = "performance" ] || [ "${PERFORMANCE}" = "mergerequest" ]; then
       # add tags to uploaded run
-      export RBCLI_TAG="${GITBRANCH} ${PERFORMANCE}"
+      export RBCLI_TAG="${GITBRANCH}"
       ./evalcheck_cluster.sh -R ${EVALFILE} > ${OUTPUT}
       NEWRBID=$(cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||')
-      echo "${NEWTIMESTAMP} ${NEWRBID} p=${PERM} s=${SEED}" >> $RBDB
+      echo "${NEWTIMESTAMP} ${NEWRBID} p=${PERM} s=${SEED} fullgh=${FULLGITHASH} soplexhash=${SOPLEX_HASH}" >> $RBDB
     else
       ./evalcheck_cluster.sh -r "-v useshortnames=0" ${EVALFILE} > ${OUTPUT}
     fi
@@ -443,7 +444,7 @@ Compare to the release: https://rubberband.zib.de/result/${URLSTR}"
 elif [ "${PERFORMANCE}" == "mergerequest" ]; then
 
   # collect all ids with timestamps OLDTIMESTAMP NEWTIMESTAMP in RBIDS
-  RBDB_STRS=$(grep -e "${NEWTIMESTAMP}" ${RBDB}|cut -d ' ' -f 2)
+  RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${NEWTIMESTAMP}\)" ${RBDB}|cut -d ' ' -f 2)
 
   URLSTR=$(geturl "${RBDB_STRS}")
 

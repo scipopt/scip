@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_cut.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for cuts and aggregation rows
  * @author Tobias Achterberg
  * @author Timo Berthold

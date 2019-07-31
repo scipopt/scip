@@ -13,6 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file   conflict.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for conflict analysis
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -2984,6 +2985,13 @@ SCIP_RETCODE createAndAddProofcons(
             eventqueue, cliquetable, coefs, inds, nnz, rhs, conflicttype) );
       return SCIP_OKAY;
    }
+
+   /* if conflict contains variables that are invalid after a restart, then don't take conflict
+    * TODO it would be better if the linear constraint would be removed at the restart
+    */
+   for( i = 0; i < nnz; ++i )
+      if( SCIPvarIsRelaxationOnly(vars[inds[i]]) )
+         return SCIP_OKAY;
 
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%d", conflict->ndualrayinfsuccess);

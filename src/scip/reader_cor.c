@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_cor.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  COR file reader (MPS format of the core problem for stochastic programs)
  * @author Stephen J. Maher
  */

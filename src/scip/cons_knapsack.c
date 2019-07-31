@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_knapsack.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for knapsack constraints of the form  \f$a^T x \le b\f$, x binary and \f$a \ge 0\f$.
  * @author Tobias Achterberg
  * @author Xin Liu
@@ -863,7 +864,7 @@ SCIP_RETCODE createRelaxation(
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, SCIPconsGetHdlr(cons), SCIPconsGetName(cons),
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons),
          -SCIPinfinity(scip), (SCIP_Real)consdata->capacity,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
@@ -4921,7 +4922,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       if ( cons != NULL )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_mcseq%" SCIP_LONGINT_FORMAT "", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
             cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
             cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
       }
@@ -5088,7 +5089,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
       if( cons != NULL )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_ewseq%" SCIP_LONGINT_FORMAT "", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+         SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
                cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
                cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
       }
@@ -5215,7 +5216,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
       if ( cons != NULL )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_mcsup%" SCIP_LONGINT_FORMAT "", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
+         SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), (SCIP_Real)liftrhs,
                cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
                cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
       }
@@ -12616,7 +12617,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
          if( SCIPconsIsActive(cons) )
          {
-            if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
+            if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
             {
                /* in case the knapsack constraints is independent of everything else, solve the knapsack and apply the
                 * dual reduction

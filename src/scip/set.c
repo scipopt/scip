@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   set.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for global SCIP settings
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -70,6 +71,8 @@
 #define SCIP_DEFAULT_BRANCH_PREFERBINARY  FALSE /**< should branching on binary variables be preferred? */
 #define SCIP_DEFAULT_BRANCH_CLAMP           0.2 /**< minimal fractional distance of branching point to a continuous variable'
                                                  *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
+#define SCIP_DEFAULT_BRANCH_MIDPULL        0.75 /**< fraction by which to move branching point of a continuous variable towards the middle of the domain */
+#define SCIP_DEFAULT_BRANCH_MIDPULLRELDOMTRIG 0.5 /**< multiply midpull by relative domain width if the latter is below this value */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
 #define SCIP_DEFAULT_BRANCH_DIVINGPSCOST   TRUE /**< should pseudo costs be updated also in diving and probing mode? */
@@ -163,12 +166,16 @@
 /* Display */
 
 #define SCIP_DEFAULT_DISP_VERBLEVEL SCIP_VERBLEVEL_HIGH /**< verbosity level of output */
-#define SCIP_DEFAULT_DISP_WIDTH             139 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISP_WIDTH             143 /**< maximal number of characters in a node information line */
 #define SCIP_DEFAULT_DISP_FREQ              100 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISP_HEADERFREQ         15 /**< frequency for displaying header lines (every n'th node info line) */
 #define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the LP solver display status messages? */
 #define SCIP_DEFAULT_DISP_ALLVIOLS        FALSE /**< display all violations of the best solution after the solving process finished? */
 #define SCIP_DEFAULT_DISP_RELEVANTSTATS    TRUE /**< should the relevant statistics be displayed at the end of solving? */
+
+/* Heuristics */
+
+#define SCIP_DEFAULT_HEUR_USEUCTSUBSCIP  FALSE  /**< should setting of common subscip parameters include the activation of the UCT node selector? */
 
 /* History */
 
@@ -222,6 +229,7 @@
 #define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root LP solving? */
 #define SCIP_DEFAULT_LP_CHECKSTABILITY     TRUE /**< should LP solver's return status be checked for stability? */
 #define SCIP_DEFAULT_LP_CONDITIONLIMIT     -1.0 /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+#define SCIP_DEFAULT_LP_MARKOWITZ          0.01 /**< minimal Markowitz threshold to control sparsity/stability in LU factorization */
 #define SCIP_DEFAULT_LP_CHECKPRIMFEAS      TRUE /**< should LP solutions be checked for primal feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKDUALFEAS      TRUE /**< should LP solutions be checked for dual feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKFARKAS        TRUE /**< should infeasibility proofs from the LP be checked? */
@@ -279,10 +287,11 @@
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
 #define SCIP_DEFAULT_MISC_FINITESOLSTORE  FALSE /**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
 #define SCIP_DEFAULT_MISC_OUTPUTORIGSOL    TRUE /**< should the best solution be transformed to the orignal space and be output in command line run? */
-#define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
-#define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
+#define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
+#define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
-#define SCIP_DEFAULT_MISC_USESYMMETRY         2 /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
+#define SCIP_DEFAULT_MISC_USESYMMETRY         3 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);
+                                                 *   2: orbital fixing; 3: orbitopes and orbital fixing) */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 
 #ifdef WITH_DEBUG_SOLUTION
@@ -1155,6 +1164,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlpissize = 0;
    (*set)->nlpissorted = FALSE;
    (*set)->limitchanged = FALSE;
+   (*set)->subscipsoff = FALSE;
    (*set)->extcodenames = NULL;
    (*set)->extcodedescs = NULL;
    (*set)->nextcodes = 0;
@@ -1189,6 +1199,16 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/clamp",
          "minimal relative distance of branching point to bounds when branching on a continuous variable",
          &(*set)->branch_clamp, FALSE, SCIP_DEFAULT_BRANCH_CLAMP, 0.0, 0.5,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "branching/midpull",
+         "fraction by which to move branching point of a continuous variable towards the middle of the domain; a value of 1.0 leads to branching always in the middle of the domain",
+         &(*set)->branch_midpull, FALSE, SCIP_DEFAULT_BRANCH_MIDPULL, 0.0, 1.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "branching/midpullreldomtrig",
+         "multiply midpull by relative domain width if the latter is below this value",
+         &(*set)->branch_midpullreldomtrig, FALSE, SCIP_DEFAULT_BRANCH_MIDPULLRELDOMTRIG, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "branching/lpgainnormalize",
@@ -1502,6 +1522,12 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->disp_relevantstats, FALSE, SCIP_DEFAULT_DISP_RELEVANTSTATS,
          NULL, NULL) );
 
+   /* heuristic parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "heuristics/useuctsubscip",
+         "should setting of common subscip parameters include the activation of the UCT node selector?",
+         &(*set)->heur_useuctsubscip, TRUE, SCIP_DEFAULT_HEUR_USEUCTSUBSCIP, NULL, NULL) );
+
    /* history parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "history/valuebased",
@@ -1677,6 +1703,11 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/conditionlimit",
          "maximum condition number of LP basis counted as stable (-1.0: no limit)",
          &(*set)->lp_conditionlimit, TRUE, SCIP_DEFAULT_LP_CONDITIONLIMIT, -1.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "lp/minmarkowitz",
+         "minimal Markowitz threshold to control sparsity/stability in LU factorization",
+         &(*set)->lp_markowitz, TRUE, SCIP_DEFAULT_LP_MARKOWITZ, 1e-4, 0.9999,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "lp/checkprimfeas",
@@ -1903,14 +1934,14 @@ SCIP_RETCODE SCIPsetCreate(
             &(*set)->misc_outputorigsol, FALSE, SCIP_DEFAULT_MISC_OUTPUTORIGSOL,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "misc/allowdualreds",
-            "should dual reductions in propagation methods and presolver be allowed?",
-            &(*set)->misc_allowdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWDUALREDS,
+            "misc/allowstrongdualreds",
+            "should strong dual reductions be allowed in propagation and presolving?",
+            &(*set)->misc_allowstrongdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "misc/allowobjprop",
-            "should propagation to the current objective be allowed in propagation methods?",
-            &(*set)->misc_allowobjprop, FALSE, SCIP_DEFAULT_MISC_ALLOWOBJPROP,
+            "misc/allowweakdualsreds",
+            "should weak dual reductions be allowed in propagation and presolving?",
+            &(*set)->misc_allowweakdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
             "misc/scaleobj",
@@ -1934,8 +1965,9 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "misc/usesymmetry",
-         "used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing)",
-         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 2,
+         "bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);" \
+         " 2: orbital fixing; 3: orbitopes and orbital fixing), see type_symmetry.h.",
+         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 3,
          paramChgdUsesymmetry, NULL) );
 
    /* randomization parameters */
@@ -5732,6 +5764,7 @@ SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
 #undef SCIPsetInitializeRandomSeed
 #undef SCIPsetIsHugeValue
 #undef SCIPsetGetHugeValue
+#undef SCIPsetGetSubscipsOff
 
 /** returns value treated as infinity */
 SCIP_Real SCIPsetInfinity(
@@ -6968,6 +7001,16 @@ SCIP_Bool SCIPsetIsSumRelGE(
    diff = SCIPrelDiff(val1, val2);
 
    return !EPSN(diff, set->num_sumepsilon);
+}
+
+/** returns the flag indicating whether sub-SCIPs that could cause recursion have been deactivated */
+SCIP_Bool SCIPsetGetSubscipsOff(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->subscipsoff;
 }
 
 /** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.

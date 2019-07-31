@@ -130,6 +130,7 @@ set(settings_Symmetry
     "orbitalfixing-timing2"
     "orbitopes-timing0"
     "orbitopes-timing2"
+    "orbitopes-timing2-static"
     "packingorbitopes-timing0"
     "packingorbitopes-timing2"
     "symresacks-timing0"
@@ -142,6 +143,8 @@ set(settings_sparsify
 
 set(settings_Benders
     "usebenders"
+    "usebenders-tr"
+    "usebenders-cutstrengthen"
    )
 
 #
@@ -341,6 +344,7 @@ set(instances_Stochastic
 set(instances_Benders
     "instances/Stochastic/4node1.smps\;480.9"
     "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
+    "instances/Stochastic/sslp_5_25_50_LB.smps\;-121.6"
    )
 
 #

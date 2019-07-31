@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   table_xyz.c
+ * @ingroup OTHER_CFILES
  * @brief  xyz statistics table
  * @author Tristan Gally
  */

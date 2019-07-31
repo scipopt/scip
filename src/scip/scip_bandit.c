@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_bandit.c
+ * @ingroup OTHER_CFILES
  * @brief  public functions for bandit algorithms
  * @author Gregor Hendel
  */

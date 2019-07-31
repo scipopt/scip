@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_lookahead.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
  * @author Christoph Schubert

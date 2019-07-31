@@ -34,6 +34,16 @@
 extern "C" {
 #endif
 
+struct SCIP_BenderscutCut
+{
+   SCIP_VAR**            vars;               /**< the variables forming the cut */
+   SCIP_Real*            vals;               /**< the coefficients of the variables in the cut */
+   SCIP_Real             lhs;                /**< the left hand side of the cut */
+   SCIP_Real             rhs;                /**< the right hand side of the cut */
+   int                   nvars;              /**< the number of variables in the cut */
+};
+typedef struct SCIP_BenderscutCut SCIP_BENDERSCUTCUT;
+
 /** Benders' decomposition data */
 struct SCIP_Benders
 {
@@ -72,9 +82,14 @@ struct SCIP_Benders
    SCIP_Bool             transfercuts;       /**< should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
    SCIP_Bool             lnscheck;           /**< should Benders' decomposition be used in LNS heuristics? */
    int                   lnsmaxdepth;        /**< maximum depth at which the LNS check is performed */
+   int                   lnsmaxcalls;        /**< maximum number of Benders' decomposition call in LNS heuristics */
+   int                   lnsmaxcallsroot;    /**< maximum number of root node Benders' decomposition call in LNS heuristics */
    SCIP_Bool             cutsasconss;        /**< should the transferred cuts be added as constraints? */
    SCIP_Real             subprobfrac;        /**< fraction of subproblems that are solved in each iteration */
    SCIP_Bool             updateauxvarbound;  /**< should the auxiliary variable lower bound be updated by solving the subproblem? */
+   SCIP_Bool             auxvarsimplint;     /**< if subproblem objective is integer, then set the auxiliary variables as implint */
+   SCIP_Bool             cutcheck;           /**< should cuts be generated while checking solutions? */
+   SCIP_Bool             threadsafe;         /**< has the copy been created requiring thread safety */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
@@ -102,6 +117,23 @@ struct SCIP_Benders
    int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
    int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
 
+   /* cut strengthening details */
+   SCIP_SOL*             corepoint;          /**< the point that is separated for stabilisation */
+   SCIP_SOL*             initcorepoint;      /**< the point that was used to initialise the core point */
+   SCIP_Real             convexmult;         /**< the multiplier for the convex comb of the LP and sepa point */
+   SCIP_Real             perturbeps;         /**< epsilon value to perturb the LP solution */
+   int                   noimprovecount;     /**< count of the iterations without improvement */
+   int                   noimprovelimit;     /**< limit used to change behaviour of stabilitation */
+   SCIP_NODE*            prevnode;           /**< the previous node where the cut strengthening was performed */
+   SCIP_Longint          prevnlpiter;        /**< number of LP iters at the previous call of the cut strengthening */
+   SCIP_Real             prevlowerbound;     /**< the lowerbound from the previous LP enforcement iteration */
+   SCIP_Bool             strengthenenabled;  /**< is the core point cut strengthening enabled */
+   char                  strengthenintpoint; /**< where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros)  */
+   SCIP_Bool             strengthenround;    /**< flag to indicate whether a cut strengthening round is being performed */
+   int                   nstrengthencuts;    /**< the number of strengthened cuts found */
+   int                   nstrengthencalls;   /**< the number of calls to the strengthening round */
+   int                   nstrengthenfails;   /**< the number of calls to the strengthening round that fail to find cuts */
+
    /* solving process information */
    int                   npseudosols;        /**< the number of pseudo solutions checked since the last generated cut */
 
@@ -111,6 +143,12 @@ struct SCIP_Benders
    int                   benderscutssize;    /**< the size of the Benders' cuts algorithms array */
    SCIP_Bool             benderscutssorted;  /**< are the Benders' cuts algorithms sorted by priority */
    SCIP_Bool             benderscutsnamessorted;/**< are the Benders' cuts algorithms sorted by name */
+
+   /* cut storage information */
+   SCIP_BENDERSCUTCUT**  storedcuts;         /**< array to store the data required to form a cut/constraint */
+   int                   storedcutssize;     /**< the size of the added cuts array */
+   int                   nstoredcuts;        /**< the number of the added cuts */
+
 };
 
 /** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored

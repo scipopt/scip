@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_sol.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for solutions
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -710,7 +711,7 @@ SCIP_RETCODE setupAndSolveFiniteSolSubscip(
 
    /* copy the original problem to the sub-SCIP */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), norigvars) );
-   SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, FALSE, TRUE, &valid) );
 
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
 

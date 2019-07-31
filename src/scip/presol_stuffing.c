@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_stuffing.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  fix singleton continuous variables
  * @author Dieter Weninger
  *
@@ -362,13 +363,13 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
    if( SCIPgetNContVars(scip) == 0 || SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, FALSE, &initialized, &complete) );
 
    if( initialized )
    {

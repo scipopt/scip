@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_diff.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  DIFF file reader
  * @author Jakob Witzig
  */

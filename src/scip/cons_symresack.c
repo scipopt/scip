@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_symresack.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for symresack constraints
  * @author Christopher Hojny
  *
@@ -52,7 +53,9 @@
 #include "scip/cons_symresack.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "scip/pub_var.h"
+#include "scip/scip.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
@@ -87,7 +90,6 @@
 #define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_EXHAUSTIVE
 
 #define DEFAULT_PPSYMRESACK        TRUE /**< whether we allow upgrading to packing/partitioning symresacks */
-#define DEFAULT_CHECKALWAYSFEAS    TRUE /**< whether check routine returns always SCIP_FEASIBLE */
 
 /* macros for getting bounds of pseudo solutions in propagation */
 #define ISFIXED0(x)   (SCIPvarGetUbLocal(x) < 0.5 ? TRUE : FALSE)
@@ -102,7 +104,6 @@
 struct SCIP_ConshdlrData
 {
    SCIP_Bool             checkppsymresack;   /**< whether we allow upgrading to packing/partitioning symresacks */
-   SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
    int                   maxnvars;           /**< maximal number of variables in a symresack constraint */
 };
 
@@ -115,6 +116,7 @@ struct SCIP_ConsData
    int*                  perm;               /**< permutation associated to the symresack */
    int*                  invperm;            /**< inverse permutation */
    SCIP_Bool             ppupgrade;          /**< whether constraint is upgraded to packing/partitioning symresack */
+   SCIP_Bool             ismodelcons;        /**< whether the symresack is a model constraint */
 #ifdef SCIP_DEBUG
    int                   debugcnt;           /**< counter to store number of added cover inequalities */
 #endif
@@ -422,7 +424,8 @@ SCIP_RETCODE consdataCreate(
    SCIP_CONSDATA**       consdata,           /**< pointer to store constraint data */
    SCIP_VAR*const*       inputvars,          /**< input variables of the constraint handler */
    int                   inputnvars,         /**< input number of variables of the constraint handler*/
-   int*                  inputperm           /**< input permutation of the constraint handler */
+   int*                  inputperm,          /**< input permutation of the constraint handler */
+   SCIP_Bool             ismodelcons         /**< whether the symresack is a model constraint */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -508,6 +511,7 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->vars = vars;
    (*consdata)->perm = perm;
+   (*consdata)->ismodelcons = ismodelcons;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &invperm, naffectedvariables) );
    for (i = 0; i < naffectedvariables; ++i)
@@ -594,9 +598,9 @@ SCIP_RETCODE initLP(
    /* add ordering inequality */
 #ifdef SCIP_DEBUG
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_init_%s", SCIPconsGetName(cons));
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #else
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #endif
    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[0], -1.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[consdata->invperm[0]], 1.0) );
@@ -655,9 +659,9 @@ SCIP_RETCODE initLP(
 
 #ifdef SCIP_DEBUG
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ppSymresack_%d_%s", i, SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #else
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #endif
          SCIP_CALL( SCIPaddVarsToRow(scip, row, nvarsincons, varsincons, coeffs) );
 
@@ -842,10 +846,10 @@ SCIP_RETCODE addSymresackInequality(
 #ifdef SCIP_DEBUG
    consdata = SCIPconsGetData(cons);
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_cover_%s_%d", SCIPconsGetName(cons), consdata->debugcnt);
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), name, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
    consdata->debugcnt += 1;
 #else
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
 #endif
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -1124,7 +1128,7 @@ SCIP_RETCODE separateSymresackCovers(
 }
 
 
-/** check function of symresack constraint */
+/** check whether solution is feasible for symresacks */
 static
 SCIP_RETCODE checkSymresackSolution(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1214,6 +1218,7 @@ SCIP_RETCODE orbisackUpgrade(
    SCIP_VAR**            inputvars,          /**< permuted variables array */
    int                   nvars,              /**< size of perm array */
    SCIP_Bool*            upgrade,            /**< whether constraint was upgraded */
+   SCIP_Bool             ismodelcons,        /**< whether the symresack is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -1294,7 +1299,7 @@ SCIP_RETCODE orbisackUpgrade(
       *upgrade = FALSE;
    else if ( *upgrade )
    {
-      SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, FALSE, FALSE,
+      SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, FALSE, FALSE, ismodelcons,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
@@ -1317,6 +1322,7 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
    int                   nvars,              /**< number of variables in vars array */
+   SCIP_Bool             ismodelcons,        /**< whether the added constraint is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -1350,12 +1356,12 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
    assert( vars != NULL );
    assert( nvars > 0 );
 
-   SCIP_CALL( orbisackUpgrade(scip, cons, name, perm, vars, nvars, &upgrade,
+   SCIP_CALL( orbisackUpgrade(scip, cons, name, perm, vars, nvars, &upgrade, ismodelcons,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
    if ( ! upgrade )
    {
-      SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, perm, vars, nvars,
+      SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, perm, vars, nvars, ismodelcons,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
@@ -1366,6 +1372,23 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
 /*--------------------------------------------------------------------------------------------
  *--------------------------------- SCIP functions -------------------------------------------
  *--------------------------------------------------------------------------------------------*/
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopySymresack)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrSymresack(scip) );
+
+   *valid = TRUE;
+
+   return SCIP_OKAY;
+}
+
 
 /** frees specific constraint data */
 static
@@ -1449,6 +1472,7 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    consdata->debugcnt = sourcedata->debugcnt;
 #endif
    consdata->nvars = nvars;
+   consdata->ismodelcons = sourcedata->ismodelcons;
 
    if ( nvars > 0 )
    {
@@ -1754,6 +1778,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
          /* get data of constraint */
          assert( conss[c] != NULL );
          consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         /* do not enforce non-model constraints */
+         if ( !consdata->ismodelcons )
+            continue;
 
          if ( consdata->nvars == 0 )
             continue;
@@ -1787,6 +1816,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
 {  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
    int c;
 
    assert( scip != NULL );
@@ -1804,6 +1834,13 @@ SCIP_DECL_CONSENFOPS(consEnfopsSymresack)
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
    {
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* do not enforce non-model constraints */
+      if ( !consdata->ismodelcons )
+         continue;
+
       SCIP_CALL( checkSymresackSolution(scip, conss[c], NULL, result, FALSE) );
 
       if ( *result == SCIP_INFEASIBLE )
@@ -1862,6 +1899,11 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
          /* get data of constraint */
          assert( conss[c] != NULL );
          consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         /* do not enforce non-model constraints */
+         if ( !consdata->ismodelcons )
+            continue;
 
          if ( consdata->nvars == 0 )
             continue;
@@ -1893,8 +1935,8 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
 static
 SCIP_DECL_CONSCHECK(consCheckSymresack)
 {   /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
    int c;
-   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1903,15 +1945,16 @@ SCIP_DECL_CONSCHECK(consCheckSymresack)
 
    *result = SCIP_FEASIBLE;
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   if ( conshdlrdata->checkalwaysfeas )
-      return SCIP_OKAY;
-
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
    {
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* do not check non-model constraints */
+      if ( !consdata->ismodelcons )
+         continue;
+
       SCIP_CALL( checkSymresackSolution(scip, conss[c], sol, result, printreason) );
 
       if ( *result == SCIP_INFEASIBLE )
@@ -2201,6 +2244,71 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
 }
 
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopySymresack)
+{
+   SCIP_CONSDATA* sourcedata;
+   SCIP_VAR** sourcevars;
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( sourcescip != NULL );
+   assert( sourceconshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
+   assert( sourcecons != NULL );
+   assert( varmap != NULL );
+   assert( valid != NULL );
+
+   *valid = TRUE;
+
+   SCIPdebugMsg(scip, "Copying method for symresack constraint handler.\n");
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert( sourcedata != NULL );
+   assert( sourcedata->vars != NULL );
+   assert( sourcedata->perm != NULL );
+   assert( sourcedata->nvars > 0 );
+
+   /* do not copy non-model constraints */
+   if ( !sourcedata->ismodelcons )
+   {
+      *valid = FALSE;
+
+      return SCIP_OKAY;
+   }
+
+   sourcevars = sourcedata->vars;
+   nvars = sourcedata->nvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+
+   for (i = 0; i < nvars && *valid; ++i)
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i], &(vars[i]), varmap, consmap, global, valid) );
+      assert( !(*valid) || vars[i] != NULL );
+   }
+
+   /* only create the target constraint, if all variables could be copied */
+   if ( *valid )
+   {
+      /* create copied constraint */
+      if ( name == NULL )
+         name = SCIPconsGetName(sourcecons);
+
+      SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, sourcedata->perm, vars, nvars, sourcedata->ismodelcons,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint display method of constraint handler
  *
  *  The constraint handler should output a representation of the constraint into the given text file.
@@ -2341,6 +2449,7 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    assert( conshdlr != NULL );
 
    /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySymresack, consCopySymresack) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSymresack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSymresack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSymresack) );
@@ -2359,10 +2468,6 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/ppsymresack",
          "Upgrade symresack constraints to packing/partioning symresacks?",
          &conshdlrdata->checkppsymresack, TRUE, DEFAULT_PPSYMRESACK, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkalwaysfeas",
-         "Whether check routine returns always SCIP_FEASIBLE.",
-         &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -2386,6 +2491,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
    int                   nvars,              /**< number of variables in vars array */
+   SCIP_Bool             ismodelcons,        /**< whether the symresack is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -2426,7 +2532,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    }
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, conshdlr, &consdata, vars, nvars, perm) );
+   SCIP_CALL( consdataCreate(scip, conshdlr, &consdata, vars, nvars, perm, ismodelcons) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate && (! consdata->ppupgrade), enforce, check, propagate,
@@ -2449,10 +2555,11 @@ SCIP_RETCODE SCIPcreateConsBasicSymresack(
    const char*           name,               /**< name of constraint */
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables */
-   int                   nvars               /**< number of variables in vars array */
+   int                   nvars,              /**< number of variables in vars array */
+   SCIP_Bool             ismodelcons         /**< whether the symresack is a model constraint */
    )
 {
-   SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, perm, vars, nvars,
+   SCIP_CALL( SCIPcreateConsSymresack(scip, cons, name, perm, vars, nvars, ismodelcons,
          TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;

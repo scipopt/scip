@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_mem.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for memory management
  * @author Tobias Achterberg
  * @author Timo Berthold

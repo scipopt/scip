@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_fracdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
  * @author Tobias Achterberg
  */
@@ -35,7 +36,7 @@
 
 #define HEUR_NAME             "fracdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the fractionalities"
-#define HEUR_DISPCHAR         'f'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1003000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          3
@@ -43,6 +44,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 #define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY | SCIP_DIVETYPE_SOS1VARIABLE /**< bit mask that represents all supported dive types */
+#define DIVESET_ISPUBLIC      TRUE   /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
 
 
 /*
@@ -174,7 +176,7 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, SCIP_DIVECONTEXT_SINGLE) );
 
    return SCIP_OKAY;
 }
@@ -261,6 +263,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
    return SCIP_OKAY;
 }
 
+#define divesetAvailableFracdiving NULL
+
 /*
  * heuristic specific interface methods
  */
@@ -293,7 +297,8 @@ SCIP_RETCODE SCIPincludeHeurFracdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
          DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
-         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreFracdiving) );
+         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreFracdiving, divesetAvailableFracdiving) );
 
    return SCIP_OKAY;
 }

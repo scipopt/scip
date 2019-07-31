@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_pseudoobj.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  Pseudo objective propagator
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -3503,7 +3504,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
       return SCIP_OKAY;
 
    /* do nothing if objective propagation is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    pseudoobjval = SCIPgetGlobalPseudoObjval(scip);
@@ -3584,7 +3585,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
       return SCIP_OKAY;
 
    /* do not run if propagation w.r.t. objective is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* check if enough new variable are added (due to column generation to reinitialized the propagator data) */

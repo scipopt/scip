@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_prob.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for global and local (sub)problems
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -3234,7 +3235,6 @@ SCIP_RETCODE SCIPaddConflict(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(scip->conflictstore != NULL);
-   assert(conftype != SCIP_CONFTYPE_UNKNOWN);
    assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || iscutoffinvolved);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflict", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );

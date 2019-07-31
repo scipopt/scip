@@ -19,6 +19,11 @@
  * @author Tobias Achterberg
  */
 
+/** @defgroup DEFPLUGINS_PROP Default Propagators
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default propagators of SCIP
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_TYPE_PROP_H__
@@ -150,8 +155,8 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  @note the counters state the changes since the last call including the changes of this presolving method during its
  *        last call
  *
- *  @note if the propagator uses dual information for presolving it is nesassary to check via calling SCIPallowDualReds
- *        if dual reductions are allowed.
+ *  @note if the propagator uses dual information for presolving it is nesassary to check via calling SCIPallowWeakDualReds
+ *        or SCIPallowStrongDualReds if dual reductions are allowed.
  *
  *  input/output:
  *  - nfixedvars      : pointer to total number of variables fixed of all presolvers
@@ -220,8 +225,8 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *
  *  See the description of the propagation conflict resolving method of constraint handlers for further details.
  *
- *  @note if the propagtor uses dual information it is nesassary to check via calling SCIPallowDualReds and
- *        SCIPallowObjProp if dual reductions and propgation with the current cutoff bound, resp., are allowed.
+ *  @note if the propagtor uses dual information it is nesassary to check via calling SCIPallowWeakDualReds and
+ *        SCIPallowStrongDualReds if dual reductions and propgation with the current cutoff bound, resp., are allowed.
  *
  *  input:
  *  - scip            : SCIP main data structure
