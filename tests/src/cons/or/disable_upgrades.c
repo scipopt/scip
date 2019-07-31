@@ -88,13 +88,19 @@ Test(disable_upgrades, disable_upgrades_or, .description="disable upgrades of or
 
    cr_assert_eq(nconss, 8);
 
-   /* todo set or constraints to be modifiable */
+   /* set or constraints to be modifiable */
    for( i = 0; i < nconss; ++i )
    {
       if( SCIPconsGetHdlr(conss[i]) == conshdlr )
          SCIPsetConsModifiable(scip, conss[i], TRUE);
    }
 
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, SCIPgetVars(scip)[3], 0.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, SCIPgetVars(scip)[4], 0.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, SCIPgetVars(scip)[2], 0.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, SCIPgetVars(scip)[1], 0.0) );
+
+   SCIP_CALL( SCIPsetIntParam(scip, "constraints/or/maxprerounds", 1) );
 
    SCIP_CALL( SCIPsolve(scip) );
 }
