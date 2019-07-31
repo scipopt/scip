@@ -14,8 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   disable_upgrades.c
- * @brief  unit tests for printing and disable_upgrades linear constraints
+ * @brief  tests for or-constraint methods with upgrades to and-constraints disabled
  * @author Gregor Hendel
+ * @author Helena Müller
  */
 
 #include "scip/scip.h"
@@ -26,8 +27,6 @@
 #include <stdio.h>
 
 #define MEMSIZE 10
-#define FNAME ".disable_upgrades-or-%s.cip"
-
 
 /** GLOBAL VARIABLES **/
 static SCIP* scip = NULL;
@@ -35,7 +34,7 @@ static SCIP* scip = NULL;
 
 /* TEST SUITE */
 
-/** the setup creates the necessary source and target SCIPs, initializes linear data */
+/** the setup creates the necessary source SCIP, sets parameter */
 static
 void setup(void)
 {
@@ -55,12 +54,6 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
-
-/*
-    remove the cip-file for this test
-   if( strncmp(filename, FNAME, 5)  == 0 )
-      remove(filename);
-*/
 
 }
 
@@ -89,7 +82,7 @@ Test(disable_upgrades, disable_upgrades_or, .description="disable upgrades of or
 
    cr_assert_eq(nconss, 8);
 
-   /* set or constraints to be modifiable */
+   /* set or-constraints to be modifiable */
    for( i = 0; i < nconss; ++i )
    {
       if( SCIPconsGetHdlr(conss[i]) == conshdlr )
@@ -109,11 +102,11 @@ Test(disable_upgrades, disable_upgrades_or, .description="disable upgrades of or
 Test(disable_upgrades, write_problem, .description="test that CIP write method works for or constraints")
 {
    SCIP_CALL( SCIPreadProb(scip, "../check/instances/Or/or_constraint.cip", "cip") );
-   
-   SCIP_CALL( SCIPwriteOrigProblem(scip, NULL, "cip", FALSE));
+
+   SCIP_CALL( SCIPwriteOrigProblem(scip, NULL, "cip", FALSE) );
 }
 
-Test(disable_upgrades, copy_problem, .description="test copying of or constraints")
+Test(disable_upgrades, copy_problem, .description="test copying of or-constraints")
 {
    SCIP* targetscip;
    SCIP_Bool valid;
