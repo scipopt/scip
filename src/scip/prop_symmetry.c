@@ -921,30 +921,29 @@ SCIP_RETCODE collectCoefficients(
          assert( 0 <= SCIPvarGetProbindex(vars[j]) && SCIPvarGetProbindex(vars[j]) < SCIPgetNVars(scip) );
 
          matrixdata->matvaridx[nmatcoef] = SCIPvarGetProbindex(vars[j]);
-         matrixdata->matcoef[nmatcoef] = vals[j];
+         matrixdata->matcoef[nmatcoef++] = vals[j];
          if ( SCIPisPositive(scip, vals[j]) )
             poscoef = TRUE;
          else
             negcoef = TRUE;
-         ++nmatcoef;
       }
       ++nrhscoef;
+
       if ( poscoef && negcoef )
       {
          for (j = 0; j < nvars; ++j)
          {
             assert( nmatcoef < matrixdata->nmaxmatcoef );
+            assert( 0 <= SCIPvarGetProbindex(vars[j]) && SCIPvarGetProbindex(vars[j]) < SCIPgetNVars(scip) );
 
             matrixdata->matidx[nmatcoef] = nmatcoef;
             matrixdata->matrhsidx[nmatcoef] = nrhscoef;
-
-            assert( 0 <= SCIPvarGetProbindex(vars[j]) && SCIPvarGetProbindex(vars[j]) < SCIPgetNVars(scip) );
-
             matrixdata->matvaridx[nmatcoef] = SCIPvarGetProbindex(vars[j]);
             matrixdata->matcoef[nmatcoef++] = -vals[j];
          }
-         matrixdata->rhscoef[nrhscoef] = -rhs;
-         ++nrhscoef;
+         matrixdata->rhssense[nrhscoef] = SYM_SENSE_EQUATION;
+         matrixdata->rhsidx[nrhscoef] = nrhscoef;
+         matrixdata->rhscoef[nrhscoef++] = -rhs;
       }
    }
    else
