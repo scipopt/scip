@@ -1,0 +1,136 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  this file is part of the program and library             */
+/*         scip --- solving constraint integer programs                      */
+/*                                                                           */
+/*    copyright (c) 2002-2019 konrad-zuse-zentrum                            */
+/*                            fuer informationstechnik berlin                */
+/*                                                                           */
+/*  scip is distributed under the terms of the zib academic license.         */
+/*                                                                           */
+/*  you should have received a copy of the zib academic license              */
+/*  along with scip; see the file copying. if not visit scip.zib.de.         */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   miscellaneous.c
+ * @brief  unittest for miscellaneous datastructures in misc.c
+ * @author Merlin Viernickel
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#include <assert.h>
+
+#include "scip/scip.h"
+#include "scip/misc.h"
+
+#include "include/scip_test.h"
+
+static SCIP* scip;
+static SCIP_QUEUE* queue;
+
+static const int arraylen = 3;
+static SCIP_Real myrealentries[] =
+{
+   5.0,
+   23.3,
+   14.5
+};
+static SCIP_Real* myptrentries[] =
+{
+   &myrealentries[0],
+   &myrealentries[1],
+   &myrealentries[2]
+};
+static SCIP_Bool myuintentries[] =
+{
+   TRUE,
+   FALSE,
+   TRUE
+};
+
+
+/* create scip */
+static
+void setup(void)
+{
+   SCIP_CALL( SCIPcreate(&scip) );
+}
+
+/* free scip */
+static
+void teardown(void)
+{
+   SCIP_CALL( SCIPfree(&scip) );
+}
+
+TestSuite(arrays, .init = setup, .fini = teardown);
+
+Test(arrays, setup_and_teardown, .description = "test that setup and teardown work correctly")
+{
+
+}
+
+Test(arrays, test_queue_insertion, .description = "test that the queue stores entries correctly.")
+{
+   int i;
+
+   /* create queue */
+   SCIP_CALL( SCIPqueueCreate(&queue, arraylen, 2) );
+
+   for (i = 0; i < arraylen; i++)
+   {
+      SCIP_CALL( SCIPqueueInsert(queue, (void*) myptrentries[i]) );
+   }
+   for (i = 0; i < arraylen; i++)
+   {
+      cr_assert_eq(myptrentries[i], (SCIP_Real*) SCIPqueueFirst(queue));
+      cr_assert_eq(myptrentries[i], (SCIP_Real*) SCIPqueueRemove(queue));
+   }
+   cr_assert(SCIPqueueIsEmpty(queue));
+
+   SCIPqueueFree(&queue);
+}
+
+Test(arrays, test_queue_uintinsertion, .description = "test that the queue stores unsigned integer entries correctly.")
+{
+   int i;
+
+   /* create queue */
+   SCIP_CALL( SCIPqueueCreate(&queue, arraylen, 2) );
+
+   for (i = 0; i < arraylen; i++)
+   {
+      SCIP_CALL( SCIPqueueInsertUInt(queue, myuintentries[i]) );
+   }
+   for (i = 0; i < arraylen; i++)
+   {
+      cr_assert_eq(myuintentries[i], SCIPqueueFirstUInt(queue));
+      cr_assert_eq(myuintentries[i], SCIPqueueRemoveUInt(queue));
+   }
+   cr_assert(SCIPqueueIsEmpty(queue));
+
+   SCIPqueueFree(&queue);
+}
+
+Test(arrays, test_queue_clear, .description = "test that the queue clears entries correctly.")
+{
+   int i;
+
+   /* create queue */
+   SCIP_CALL( SCIPqueueCreate(&queue, arraylen, 2) );
+
+   for (i = 0; i < arraylen; i++)
+   {
+      SCIP_CALL( SCIPqueueInsert(queue, (void*) myptrentries[i]) );
+   }
+
+   cr_assert_eq(arraylen, SCIPqueueNElems(queue));
+
+   SCIPqueueClear(queue);
+
+   cr_assert(SCIPqueueIsEmpty(queue));
+
+   SCIPqueueFree(&queue);
+}
