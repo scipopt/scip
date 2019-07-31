@@ -331,6 +331,10 @@ set(instances_Benders
     "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
    )
 
+set(instances_Or
+    "instances/Or/or_constraint.cip\;18"
+    )
+
 #
 # available reader file extensions for SCIP readers
 #
@@ -420,6 +424,7 @@ add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
+add_instancetests(instances_Or settings_default "Or")
 
 #
 # test writing and reading solutions
