@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   miscellaneous.c
- * @brief  unittest for miscellaneous datastructures in misc.c
+/**@file   queue.c
+ * @brief  unittest for the queue datastructure in misc.c
  * @author Merlin Viernickel
  */
 
