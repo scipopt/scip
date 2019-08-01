@@ -628,7 +628,7 @@ Test(evalexprInterval, complicated_interval, .description = "Tests expression in
    SCIP_CALL( SCIPchgVarUb(scip, x, -0.5) );
    SCIP_CALL( SCIPchgVarLb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
-   checkExprIntEval(mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE);
+   checkExprIntEval(mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), TRUE);  /* (2x + 1)^(-1) for x=0 is now empty */
 
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
@@ -636,7 +636,7 @@ Test(evalexprInterval, complicated_interval, .description = "Tests expression in
 
    SCIP_CALL( SCIPchgVarLb(scip, y, 0.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 0.0) );
-   checkExprIntEval(mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE);
+   checkExprIntEval(mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), TRUE);  /* 1/y for y=0 is now empty */
 
    /* (1/y)^2 should lead to [0,inf] */
    SCIP_CALL( SCIPchgVarLb(scip, y, -1.0) );

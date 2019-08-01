@@ -1392,11 +1392,21 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+   {
+      SCIPintervalSetEmpty(interval);
+      return SCIP_OKAY;
+   }
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
 
    SCIPintervalPowerScalar(SCIP_INTERVAL_INFINITY, interval, childinterval, exponent);
+
+   /* make sure 0^negative is an empty interval, as some other codes do not handle intervals like [inf,inf] well
+    * TODO maybe change SCIPintervalPowerScalar?
+    */
+   if( exponent < 0.0 && childinterval.inf == 0.0 && childinterval.sup == 0.0 )
+      SCIPintervalSetEmpty(interval);
 
    return SCIP_OKAY;
 }
