@@ -52,11 +52,11 @@ static SCIP_Bool myboolarray[] =
    FALSE,
    TRUE
 };
-static void* myptrarray[] =
+static SCIP_Real* myptrarray[] =
 {
-   NULL,
-   NULL,
-   NULL
+   &myrealarray[0],
+   &myrealarray[1],
+   &myrealarray[2]
 };
 
 /* creates scip and arrays */
@@ -137,6 +137,20 @@ Test(arrays, test_clear_real, .description = "test that the dynamic real array c
    }
 }
 
+Test(arrays, test_indices_real, .description = "test that the dynamic real array stores max and min indices correctly")
+{
+   int i;
+
+   SCIP_CALL( SCIPextendRealarray(scip, realarray, 0, arraylen - 1) );
+
+   for (i = 0; i < arraylen; i++)
+   {
+      SCIP_CALL( SCIPsetRealarrayVal(scip, realarray, i, myrealarray[i]) );
+   }
+
+   cr_assert_eq(0, SCIPgetRealarrayMinIdx(scip, realarray));
+   cr_assert_eq(arraylen - 1, SCIPgetRealarrayMaxIdx(scip, realarray));
+}
 
 /* dynamic integer array tests */
 
@@ -183,6 +197,21 @@ Test(arrays, test_clear_int, .description = "test that the dynamic integer array
    }
 }
 
+Test(arrays, test_indices_int, .description = "test that the dynamic integer array stores max and min indices correctly")
+{
+   int i;
+
+   SCIP_CALL( SCIPextendIntarray(scip, intarray, 0, arraylen - 1) );
+
+   for (i = 0; i < arraylen; i++)
+   {
+      SCIP_CALL( SCIPsetIntarrayVal(scip, intarray, i, myintarray[i]) );
+   }
+
+   cr_assert_eq(0, SCIPgetIntarrayMinIdx(scip, intarray));
+   cr_assert_eq(arraylen - 1, SCIPgetIntarrayMaxIdx(scip, intarray));
+}
+
 /* dynamic boolean array tests */
 
 Test(arrays, test_insertion_bool, .description = "test that the dynamic boolean array stores entries correctly.")
@@ -214,6 +243,21 @@ Test(arrays, test_clear_bool, .description = "test that the dynamic boolean arra
    }
 }
 
+Test(arrays, test_indices_bool, .description = "test that the dynamic boolean array stores max and min indices correctly")
+{
+   int i;
+
+   SCIP_CALL( SCIPextendBoolarray(scip, boolarray, 0, arraylen - 1) );
+
+   for (i = 0; i < arraylen; i++)
+   {
+      SCIP_CALL( SCIPsetBoolarrayVal(scip, boolarray, i, myboolarray[i]) );
+   }
+
+   cr_assert_eq(0, SCIPgetBoolarrayMinIdx(scip, boolarray));
+   cr_assert_eq(arraylen - 1, SCIPgetBoolarrayMaxIdx(scip, boolarray));
+}
+
 /* dynamic boolean array tests */
 
 Test(arrays, test_insertion_ptr, .description = "test that the dynamic pointer array stores entries correctly.")
@@ -243,4 +287,19 @@ Test(arrays, test_clear_ptr, .description = "test that the dynamic pointer array
    {
       cr_assert_eq(NULL, SCIPgetPtrarrayVal(scip, ptrarray, i));
    }
+}
+
+Test(arrays, test_indices_ptr, .description = "test that the dynamic pointer array stores max and min indices correctly")
+{
+   int i;
+
+   SCIP_CALL( SCIPextendPtrarray(scip, ptrarray, 0, arraylen - 1) );
+
+   for (i = 0; i < arraylen; i++)
+   {
+      SCIP_CALL( SCIPsetPtrarrayVal(scip, ptrarray, i, myptrarray[i]) );
+   }
+
+   cr_assert_eq(0, SCIPgetPtrarrayMinIdx(scip, ptrarray));
+   cr_assert_eq(arraylen - 1, SCIPgetPtrarrayMaxIdx(scip, ptrarray));
 }
