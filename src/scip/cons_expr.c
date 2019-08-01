@@ -5075,7 +5075,7 @@ SCIP_RETCODE computeBranchingScores(
       assert(consdata != NULL);
 
       /* skip satisfied constraints */
-      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
          continue;
 
       consdata->expr->brscore = 0.0;  /* TODO why do we need this? */
@@ -5159,7 +5159,7 @@ SCIP_RETCODE computeBranchingScores(
       assert(consdata != NULL);
 
       /* for satisfied constraints, no branching score has been computed, so no need to propagte from here */
-      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
          continue;
 
       /* we need to allow revisiting here, as we always want to propagate branching scores to the variable expressions */
@@ -5246,7 +5246,7 @@ SCIP_RETCODE registerBranchingCandidates(
       assert(consdata != NULL);
 
       /* consider only violated constraints */
-      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+      if( consdata->lhsviol > SCIPfeastol(scip) || consdata->rhsviol > SCIPfeastol(scip) )
       {
          assert(consdata->varexprs != NULL);
 
@@ -5306,7 +5306,7 @@ SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
       assert(consdata != NULL);
 
       /* consider only violated constraints */
-      if( !SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
          continue;
 
       /* register all variables that have not been fixed yet */
@@ -5746,7 +5746,7 @@ SCIP_RETCODE separatePoint(
       assert(SCIPconsIsActive(conss[c]));
 
       /* skip non-violated constraints */
-      if( SCIPisLE(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
          continue;
 
       #ifdef SEPA_DEBUG
@@ -5843,7 +5843,7 @@ SCIP_RETCODE enforceConstraints(
    }
    SCIPdebugMsg(scip, "enforcing constraints with maxviol=%e node %lld\n", maxviol, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
-   *result = SCIPisGT(scip, maxviol, SCIPfeastol(scip)) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
+   *result = maxviol > SCIPfeastol(scip) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
 
    if( *result == SCIP_FEASIBLE )
       return SCIP_OKAY;
@@ -6058,9 +6058,9 @@ SCIP_RETCODE proposeFeasibleSolution(
       assert(consdata != NULL);
 
       /* get absolute violation and sign */
-      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
+      if( consdata->lhsviol > SCIPfeastol(scip) )
          viol = consdata->lhsviol; /* lhs - activity */
-      else if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+      else if( consdata->rhsviol > SCIPfeastol(scip) )
          viol = -consdata->rhsviol; /* rhs - activity */
       else
          continue; /* constraint is satisfied */
@@ -7803,7 +7803,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
       SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
 
       consdata = SCIPconsGetData(conss[c]);
-      if( SCIPisGT(scip, MAX(consdata->lhsviol, consdata->rhsviol), SCIPfeastol(scip)) )
+      if( consdata->lhsviol > SCIPfeastol(scip) || consdata->rhsviol > SCIPfeastol(scip) )
       {
          *result = SCIP_INFEASIBLE;
          break;
@@ -7877,7 +7877,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+      if( consdata->lhsviol > SCIPfeastol(scip) || consdata->rhsviol > SCIPfeastol(scip) )
       {
          *result = SCIP_INFEASIBLE;
          maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
@@ -7888,11 +7888,11 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
 
-            if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
+            if( consdata->lhsviol > SCIPfeastol(scip) )
             {
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhsviol);
             }
-            if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+            if( consdata->rhsviol > SCIPfeastol(scip) )
             {
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", consdata->rhsviol);
             }
@@ -7913,7 +7913,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
             if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
                consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
 
-            if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
+            if( consdata->lhsviol > SCIPfeastol(scip) )
             {
                /* check if there is a variable which may help to get the left hand side satisfied
                 * if there is no such variable, then we cannot get feasible
@@ -7924,7 +7924,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
             }
             else
             {
-               assert(SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)));
+               assert(consdata->rhsviol > SCIPfeastol(scip));
                /* check if there is a variable which may help to get the right hand side satisfied
                 * if there is no such variable, then we cannot get feasible
                 */
