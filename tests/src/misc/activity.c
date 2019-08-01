@@ -33,21 +33,6 @@ static SCIP_VAR* var;
 static int duration;
 static int demand;
 
-const int arraylen = 6;
-static int myentries[] =
-{
-   14, 5, 92, 31, 12, 91
-};
-static int* myptrs[] =
-{
-   &myentries[0],
-   &myentries[1],
-   &myentries[2],
-   &myentries[3],
-   &myentries[4],
-   &myentries[5]
-};
-
 static
 void setup(void)
 {
