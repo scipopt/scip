@@ -51,33 +51,36 @@ static SCIP_Bool myuintentries[] =
 };
 
 
-/* create scip */
 static
 void setup(void)
 {
+   /* create scip */
    SCIP_CALL( SCIPcreate(&scip) );
-}
-
-/* free scip */
-static
-void teardown(void)
-{
-   SCIP_CALL( SCIPfree(&scip) );
-}
-
-TestSuite(arrays, .init = setup, .fini = teardown);
-
-Test(arrays, setup_and_teardown, .description = "test that setup and teardown work correctly")
-{
-
-}
-
-Test(arrays, test_queue_insertion, .description = "test that the queue stores entries correctly.")
-{
-   int i;
 
    /* create queue */
    SCIP_CALL( SCIPqueueCreate(&queue, arraylen, 2) );
+}
+
+static
+void teardown(void)
+{
+   /* free scip */
+   SCIP_CALL( SCIPfree(&scip) );
+
+   /* free queue */
+   SCIPqueueFree(&queue);
+}
+
+TestSuite(queue, .init = setup, .fini = teardown);
+
+Test(queue, setup_and_teardown, .description = "test that setup and teardown work correctly")
+{
+
+}
+
+Test(queue, test_queue_insertion, .description = "test that the queue stores entries correctly.")
+{
+   int i;
 
    for (i = 0; i < arraylen; i++)
    {
@@ -89,11 +92,9 @@ Test(arrays, test_queue_insertion, .description = "test that the queue stores en
       cr_assert_eq(myptrentries[i], (SCIP_Real*) SCIPqueueRemove(queue));
    }
    cr_assert(SCIPqueueIsEmpty(queue));
-
-   SCIPqueueFree(&queue);
 }
 
-Test(arrays, test_queue_uintinsertion, .description = "test that the queue stores unsigned integer entries correctly.")
+Test(queue, test_queue_uintinsertion, .description = "test that the queue stores unsigned integer entries correctly.")
 {
    int i;
 
@@ -110,11 +111,9 @@ Test(arrays, test_queue_uintinsertion, .description = "test that the queue store
       cr_assert_eq(myuintentries[i], SCIPqueueRemoveUInt(queue));
    }
    cr_assert(SCIPqueueIsEmpty(queue));
-
-   SCIPqueueFree(&queue);
 }
 
-Test(arrays, test_queue_clear, .description = "test that the queue clears entries correctly.")
+Test(queue, test_queue_clear, .description = "test that the queue clears entries correctly.")
 {
    int i;
 
@@ -131,6 +130,4 @@ Test(arrays, test_queue_clear, .description = "test that the queue clears entrie
    SCIPqueueClear(queue);
 
    cr_assert(SCIPqueueIsEmpty(queue));
-
-   SCIPqueueFree(&queue);
 }
