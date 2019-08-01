@@ -1,4 +1,3 @@
-
 @page RN60 Release notes for SCIP 6.0
 
 @section RN603 SCIP 6.0.3
@@ -6,6 +5,8 @@
 
 Features
 --------
+
+- allow disabling of pricers during solving process
 
 Performance improvements
 ------------------------

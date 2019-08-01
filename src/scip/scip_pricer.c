@@ -390,6 +390,7 @@ SCIP_RETCODE SCIPactivatePricer(
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
 SCIP_RETCODE SCIPdeactivatePricer(
@@ -397,7 +398,7 @@ SCIP_RETCODE SCIPdeactivatePricer(
    SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPdeactivatePricer", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPdeactivatePricer", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPpricerDeactivate(pricer, scip->set) );
 
