@@ -10970,7 +10970,6 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 
    oldlb = SCIPintervalGetInf(expr->activity);
    oldub = SCIPintervalGetSup(expr->activity);
-   *cutoff = FALSE;
 
 /* #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "Trying to tighten bounds of expr ");
@@ -10978,25 +10977,32 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIPdebugMsgPrint(scip, " from [%.15g,%.15g] to [%.15g,%.15g] (force=%d)\n", oldlb, oldub, SCIPintervalGetInf(newbounds), SCIPintervalGetSup(newbounds), force);
 #endif */
 
-   /* check if the new bounds lead to an empty interval */
-   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) || SCIPintervalGetInf(newbounds) > oldub
-      || SCIPintervalGetSup(newbounds) < oldlb )
+   if( expr->isintegral )
    {
-      SCIPdebugMsg(scip, "cut off due to empty intersection of new bounds [%g,%g] with old bounds [%g,%g]\n", newbounds.inf, newbounds.sup, oldlb, oldub);
-
-      SCIPintervalSetEmpty(&expr->activity);
-      *cutoff = TRUE;
-
-      return SCIP_OKAY;
+      /* apply integrality to new bounds */
+      if( newbounds.inf > -SCIP_INTERVAL_INFINITY )
+         newbounds.inf = ceil(newbounds.inf);
+      if( newbounds.sup <  SCIP_INTERVAL_INFINITY )
+         newbounds.sup = floor(newbounds.sup);
+      /* SCIPdebugMsg(scip, "applied integrality: [%.15g,%.15g]\n", newbounds.inf, newbounds.sup); */
    }
 
    /* intersect old interval with the new one */
    SCIPintervalIntersect(&expr->activity, expr->activity, newbounds);
+
+   /* check if the new bounds lead to an empty interval */
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
+   {
+      SCIPdebugMsg(scip, "cut off due to empty intersection of new bounds [%g,%g] with old bounds [%g,%g]\n", newbounds.inf, newbounds.sup, oldlb, oldub);
+
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+   *cutoff = FALSE;
+
    /* SCIPdebugMsg(scip, "expr <%p> (%s) activity set to [%.15g, %.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), expr->activity.inf, expr->activity.sup); */
    newlb = SCIPintervalGetInf(expr->activity);
    newub = SCIPintervalGetSup(expr->activity);
-
-   /* TODO if expression is integral, then round newlb, newub */
 
    /* mark the current problem to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity() */
    if( SCIPisInfinity(scip, newlb) || SCIPisInfinity(scip, -newub) )
