@@ -107,7 +107,7 @@ Test(multihash, setup_and_teardown, .description = "test that setup and teardown
 
 }
 
-Test(multihash, test_multihash_insertion, .description = "test that the queue stores entries correctly.")
+Test(multihash, test_multihash_insertion, .description = "test that the multi hash map stores entries correctly.")
 {
    int* ptr;
    int i;
@@ -116,9 +116,62 @@ Test(multihash, test_multihash_insertion, .description = "test that the queue st
    {
       SCIP_CALL( SCIPmultihashInsert(multihash, (void*) myptrs[i]) );
    }
+   cr_assert_eq(arraylen, SCIPmultihashGetNElements(multihash));
    for (i = 0; i < arraylen; i++)
    {
       ptr = SCIPmultihashRetrieve(multihash, (void*) myptrs[i]);
       cr_assert_eq(myentries[i], *ptr);
    }
+}
+
+Test(multihash, test_multihash_remove, .description = "test that the multi hash map removes entries correctly.")
+{
+   int* ptr;
+   int i;
+
+   for (i = 0; i < arraylen; i++)
+   {
+      SCIP_CALL( SCIPmultihashInsert(multihash, (void*) myptrs[i]) );
+   }
+   cr_assert_eq(arraylen, SCIPmultihashGetNElements(multihash));
+   for (i = 0; i < arraylen; i++)
+   {
+      cr_assert(SCIPmultihashExists(multihash, (void*) myptrs[i]));
+      SCIP_CALL( SCIPmultihashRemove(multihash, (void*) myptrs[i]) );
+      cr_assert(! SCIPmultihashExists(multihash, (void*) myptrs[i]));
+   }
+}
+
+Test(multihash, test_multihash_removeall, .description = "test that the multi hash map removes all entries at once correctly.")
+{
+   int* ptr;
+   int i;
+
+   for (i = 0; i < arraylen; i++)
+   {
+      SCIP_CALL( SCIPmultihashInsert(multihash, (void*) myptrs[i]) );
+   }
+   cr_assert_eq(arraylen, SCIPmultihashGetNElements(multihash));
+
+   SCIPmultihashRemoveAll(multihash);
+
+   for (i = 0; i < arraylen; i++)
+   {
+      cr_assert(! SCIPmultihashExists(multihash, (void*) myptrs[i]));
+   }
+}
+
+Test(multihash, test_multihash_statistics, .description = "test that the multi hash map prints statistics correctly")
+{
+   SCIP_MESSAGEHDLR* msghdlr;
+   int i;
+
+   msghdlr = SCIPgetMessagehdlr(scip);
+
+   for (i = 0; i < arraylen; i++)
+   {
+      SCIP_CALL( SCIPmultihashInsert(multihash, (void*) myptrs[i]) );
+   }
+
+   SCIPmultihashPrintStatistics(multihash, msghdlr);
 }
