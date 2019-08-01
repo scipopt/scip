@@ -51,13 +51,17 @@ do
 
     # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
     SOLUFILE=""
-    for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
+    for d in instancedata/testsets testset
     do
-        if test -f testset/${f}.solu
-        then
-            SOLUFILE=testset/${f}.solu
-            break
-        fi
+	for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
+	do
+            if test -f ${d}/${f}.solu
+            then
+		SOLUFILE=${d}/${f}.solu
+		echo $SOLUFILE
+		break
+            fi
+	done
     done
 
     awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" -v "ERRFILE=$ERRFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE

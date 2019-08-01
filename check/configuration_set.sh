@@ -102,7 +102,7 @@ do
 done
 
 SOLUFILE=""
-for SOLU in testset/$TSTNAME.solu testset/all.solu
+for SOLU in instancedata/testsets/$TSTNAME.solu instancedata/testsets/all.solu $TSTNAME.solu testset/all.solu
 do
     if test -e $SOLU
     then
@@ -116,7 +116,7 @@ if test $SETCUTOFF = 1 || test $SETCUTOFF = true
 then
     if test $SOLUFILE = ""
     then
-        echo "Skipping test: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
+        echo "Skipping test: SETCUTOFF=1 set, but no .solu file ($TSTNAME.solu or all.solu in testset/ or instancedata/testsets/) available"
         exit
     fi
 fi
@@ -153,14 +153,32 @@ fi
 POSSIBLEPATHS="${POSSIBLEPATHS} / DONE"
 # echo $POSSIBLEPATHS
 
-#check if we use a ttest or a test file
-if [ -f testset/$TSTNAME.ttest ];
+#search for test file and check if we use a ttest or a test file
+if [ -f instancedata/testsets/$TSTNAME.ttest ];
 then
-    FULLTSTNAME="testset/$TSTNAME.ttest"
+    FULLTSTNAME="instancedata/testsets/$TSTNAME.ttest"
     TIMEFACTOR=$TIMELIMIT
 else
-    FULLTSTNAME="testset/$TSTNAME.test"
-    TIMEFACTOR=1
+    if [ -f instancedata/testsets/$TSTNAME.test ];
+    then
+	FULLTSTNAME="instancedata/testsets/$TSTNAME.test"
+	TIMEFACTOR=1
+    else
+	if [ -f testset/$TSTNAME.ttest ];
+	then
+	    FULLTSTNAME="testset/$TSTNAME.ttest"
+	    TIMEFACTOR=$TIMELIMIT
+	else
+	    if [ -f testset/$TSTNAME.ttest ];
+	    then
+		FULLTSTNAME="testset/$TSTNAME.test"
+		TIMEFACTOR=1
+	    else
+		echo "Skipping test: no $TSTNAME.(t)test file found in testset/ or instancedata/testsets/"
+		exit
+	    fi
+	fi
+    fi
 fi
 
 #write instance names to an array
