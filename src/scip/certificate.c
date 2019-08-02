@@ -836,7 +836,12 @@ void SCIPcertificatePrintProblemRational(
    /* check if certificate output should be created */
    if( certificate->file == NULL )
      return;
-   RtoString(val, formatstr);
+   if( SCIP_MAXSTRLEN == RtoString(val, formatstr, SCIP_MAXSTRLEN) )
+   {
+      SCIPerrorMessage("Rational has too long encoding \n");
+      Rprint(val, NULL);
+      SCIPABORT();
+   }
    SCIPcertificatePrintProblemMessage(certificate, "%s", formatstr);
 }
 
@@ -852,7 +857,12 @@ void SCIPcertificatePrintProofRational(
    /* check if certificate output should be created */
    if( certificate->derivationfile == NULL )
      return;
-   RtoString(val, formatstr);
+   if( SCIP_MAXSTRLEN == RtoString(val, formatstr, SCIP_MAXSTRLEN) )
+   {
+      SCIPerrorMessage("Rational has too long encoding \n");
+      Rprint(val, NULL);
+      SCIPABORT();
+   }
    SCIPcertificatePrintProofMessage(certificate, "%s", formatstr);
 }
 
