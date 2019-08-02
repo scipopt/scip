@@ -1112,7 +1112,7 @@ SCIP_RETCODE consdataPrint(
       && !RisInfinity(consdata->rhs)
       && !RisEqual(consdata->lhs, consdata->rhs) )
    {
-      RtoString(consdata->lhs, rationalbuffer);
+      RtoString(consdata->lhs, rationalbuffer, SCIP_MAXSTRLEN);
       SCIPinfoMessage(scip, file, "%s <= ", rationalbuffer);
    }
 
@@ -1128,17 +1128,17 @@ SCIP_RETCODE consdataPrint(
    /* print right hand side */
    if( RisEqual(consdata->lhs, consdata->rhs) )
    {
-      RtoString(consdata->lhs, rationalbuffer);
+      RtoString(consdata->lhs, rationalbuffer, SCIP_MAXSTRLEN);
       SCIPinfoMessage(scip, file, " == %s", rationalbuffer);
    }
    else if( !RisInfinity(consdata->rhs) )
    {
-      RtoString(consdata->rhs, rationalbuffer);
+      RtoString(consdata->rhs, rationalbuffer, SCIP_MAXSTRLEN);
       SCIPinfoMessage(scip, file, " <= %s", rationalbuffer);
    }
    else if( !RisNegInfinity(consdata->lhs) )
    {
-      RtoString(consdata->lhs, rationalbuffer);
+      RtoString(consdata->lhs, rationalbuffer, SCIP_MAXSTRLEN);
       SCIPinfoMessage(scip, file, " >= %s", rationalbuffer);
    }
    else
@@ -1173,7 +1173,7 @@ SCIP_RETCODE consPrintConsSol(
       && !RisInfinity(consdata->rhs)
       && !RisEqual(consdata->lhs, consdata->rhs) )
    {
-      RtoString(consdata->lhs, rationalbuffer);
+      RtoString(consdata->lhs, rationalbuffer, SCIP_MAXSTRLEN);
       SCIPinfoMessage(scip, file, "%s <= ", rationalbuffer);
    }
 
@@ -1198,7 +1198,7 @@ SCIP_RETCODE consPrintConsSol(
                SCIPinfoMessage(scip, file, " -");
             else
             {
-               RtoString(consdata->vals[v], rationalbuffer);
+               RtoString(consdata->vals[v], rationalbuffer, SCIP_MAXSTRLEN);
                SCIPinfoMessage(scip, file, " %s", rationalbuffer);
             }
          }
@@ -1215,17 +1215,17 @@ SCIP_RETCODE consPrintConsSol(
    /* print right hand side */
    if( RisEqual(consdata->lhs, consdata->rhs) )
    {
-      RtoString(consdata->lhs, rationalbuffer);
+      RtoString(consdata->lhs, rationalbuffer, SCIP_MAXSTRLEN);
       SCIPinfoMessage(scip, file, " == %s", rationalbuffer);
    }
    else if( !RisInfinity(consdata->rhs) )
    {
-      RtoString(consdata->rhs, rationalbuffer);
+      RtoString(consdata->rhs, rationalbuffer, SCIP_MAXSTRLEN);
       SCIPinfoMessage(scip, file, " <= %s", rationalbuffer);
    }
    else if( !RisNegInfinity(consdata->lhs) )
    {
-      RtoString(consdata->lhs, rationalbuffer);
+      RtoString(consdata->lhs, rationalbuffer, SCIP_MAXSTRLEN);
       SCIPinfoMessage(scip, file, " >= %s", rationalbuffer);
    }
    else
@@ -1282,8 +1282,8 @@ void consdataInvalidateActivities(
    consdata->glbmaxactivityposhuge = -1;
 }
 
-/** todo exip: should this return a real-relaxation instead *
-/** compute the pseudo activity of a constraint */
+/** todo exip: should this return a real-relaxation instead
+ *  compute the pseudo activity of a constraint */
 static
 void consdataComputePseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -15847,14 +15847,14 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
             {
                char buf[SCIP_MAXSTRLEN];
                Rdiff(activity, consdata->lhs, activity);
-               RtoString(activity, buf);
+               RtoString(activity, buf, SCIP_MAXSTRLEN);
                SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %s \n", buf);
             }
             else if( RisGT(activity, consdata->rhs) )
             {
                char buf[SCIP_MAXSTRLEN];
                Rdiff(activity, activity, consdata->rhs);
-               RtoString(activity, buf);
+               RtoString(activity, buf, SCIP_MAXSTRLEN);
                SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %s \n", buf);
             }
 
