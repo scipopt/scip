@@ -1,5 +1,3 @@
-
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -126,6 +124,27 @@ SCIP_VARSTATUS SCIPvarGetStatusExact(
 extern
 SCIP_COLEX* SCIPvarGetColExact(
    SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets primal LP solution value of variable */
+SCIP_Rational* SCIPvarGetLPexSolex_rec(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets primal LP solution value of variable */
+SCIP_Rational* SCIPvarGetLPexSolex(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets pseudo solution value of variable */
+SCIP_Rational* SCIPvarGetPseudoSolex(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets current LP or pseudo solution value of variable */
+SCIP_Rational* SCIPvarGetSolEx(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
    );
 
 #ifdef __cplusplus

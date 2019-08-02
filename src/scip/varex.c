@@ -427,7 +427,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
    assert(scalar != NULL);
    assert(constant != NULL);
 
-   while( !SCIPvarIsOriginal(*var) && FALSE )
+   while( !SCIPvarIsOriginal(*var) )
    {
       /* if the variable has no parent variables, it was generated during solving and has no corresponding original
        * var
@@ -513,6 +513,110 @@ SCIP_COLEX* SCIPvarGetColExact(
    assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
 
    return var->exactdata->excol;
+}
+
+/** gets primal LP solution value of variable */
+SCIP_Rational* SCIPvarGetLPexSolex_rec(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   switch( SCIPvarGetStatusExact(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return NULL;
+      return SCIPvarGetLPexSolex(var->data.original.transvar);
+
+   case SCIP_VARSTATUS_LOOSE:
+      return SCIPvarGetBestBoundLocalExact(var);
+
+   case SCIP_VARSTATUS_COLUMN:
+      assert(var->data.col != NULL);
+      return SCIPcolexGetPrimsol(var->exactdata->excol);
+
+   case SCIP_VARSTATUS_FIXED:
+      assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/
+      return var->exactdata->locdom.lb;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return NULL; /*lint !e527*/
+   }
+}
+
+/** gets pseudo solution value of variable at current node */
+static
+SCIP_Rational* SCIPvarGetPseudoSolex_rec(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_Real pseudosol;
+   int i;
+
+   assert(var != NULL);
+
+   switch( SCIPvarGetStatusExact(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return NULL;
+      return SCIPvarGetPseudoSolex(var->data.original.transvar);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPvarGetBestBoundLocalExact(var);
+
+   case SCIP_VARSTATUS_FIXED:
+      assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/
+      return var->exactdata->locdom.lb;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return NULL; /*lint !e527*/
+   }
+}
+
+
+/** gets primal LP solution value of variable */
+SCIP_Rational* SCIPvarGetLPexSolex(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      return SCIPcolexGetPrimsol(var->exactdata->excol);
+   else
+      return SCIPvarGetLPexSolex_rec(var);
+}
+
+/** gets pseudo solution value of variable */
+SCIP_Rational* SCIPvarGetPseudoSolex(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
+      return SCIPvarGetBestBoundLocalExact(var);
+   else
+      return SCIPvarGetPseudoSolex_rec(var);
+}
+
+/** gets current LP or pseudo solution value of variable */
+SCIP_Rational* SCIPvarGetSolEx(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
+   )
+{
+   if( getlpval )
+      return SCIPvarGetLPexSolex(var);
+   else
+      return SCIPvarGetPseudoSolex(var);
 }
 
 /** adds correct bound-data to negated variable */
