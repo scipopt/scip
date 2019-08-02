@@ -145,6 +145,10 @@ SCIP_RETCODE SCIPgetProbvarLinearSumExact(
    SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
 
+SCIP_RETCODE SCIPenfoIntegralityExact(
+   SCIP*                 scip,
+   SCIP_RESULT*          result
+   );
 
 /** returns whether the certificate output is activated? */
 SCIP_Bool SCIPisCertificateActive(
@@ -158,6 +162,16 @@ SCIP_Bool SCIPisCertificateActive(
  */
 SCIP_CERTIFICATE* SCIPgetCertificate(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+SCIP_RETCODE SCIPcomputeSafeBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             proveinfeas,
+   SCIP_Real*            safebound
+   );
+
+SCIP_RETCODE SCIPforceExactSolve(
+   SCIP*                 scip               /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

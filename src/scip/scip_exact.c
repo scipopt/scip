@@ -48,6 +48,7 @@
 #include "scip/benders.h"
 #include "scip/benderscut.h"
 #include "scip/branch.h"
+#include "scip/bounding_exact.h"
 #include "scip/branch_nodereopt.h"
 #include "scip/clock.h"
 #include "scip/compr.h"
@@ -262,4 +263,44 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCertificate", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return scip->stat->certificate;
+}
+
+SCIP_RETCODE SCIPcomputeSafeBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             proveinfeas,
+   SCIP_Real*            safebound
+   )
+{
+   SCIP_Bool lperror = false;
+
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCertificate", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPlpexComputeSafeBound(scip->lp, scip->lpex, scip->set, scip->messagehdlr, SCIPblkmem(scip), scip->stat,         scip->eventqueue, scip->eventfilter, scip->transprob, scip->lpex->lpiitlim, &lperror, proveinfeas, safebound) );
+
+   if( lperror )
+      return SCIP_ERROR;
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPforceExactSolve(
+   SCIP*                 scip               /**< SCIP data structure */
+   )
+{
+   scip->lpex->forceexactsolve = TRUE;
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPenfoIntegralityExact(
+   SCIP*                 scip,
+   SCIP_RESULT*          result
+   )
+{
+   SCIP_CALL( SCIPlpexEnfoIntegralityExact(scip->lp, scip->lpex, scip->set, scip->stat, result) );
+   
+   return SCIP_OKAY;
 }
