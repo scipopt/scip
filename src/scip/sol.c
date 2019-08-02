@@ -298,6 +298,8 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
+   (*sol)->solex = NULL;
+
    SCIPsolResetViolations(*sol);
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
@@ -333,6 +335,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
+   (*sol)->solex = NULL;
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
    SCIPsolResetViolations(*sol);
@@ -379,6 +382,8 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->viol.relviolbounds = sourcesol->viol.relviolbounds;
    (*sol)->viol.relviolcons = sourcesol->viol.relviolcons;
    (*sol)->viol.relviollprows = sourcesol->viol.relviollprows;
+   /** @todo exip: copy solex here */
+   (*sol)->solex = NULL;
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -425,6 +430,9 @@ SCIP_RETCODE SCIPsolTransform(
     */
    sol->solorigin = tsol->solorigin;
    sol->obj = tsol->obj;
+
+   /** @todo exip: copy solex here */
+   sol->solex = NULL;
 
    SCIP_CALL( SCIPsolFree(transsol, blkmem, primal) );
 
@@ -1057,7 +1065,7 @@ SCIP_RETCODE SCIPsolSetVal(
       {
          oldval = solGetArrayVal(sol, var);
 
-         if( !SCIPsetIsEQ(set, val, oldval) )
+         if( !SCIPsetIsEQ(set, val, oldval) || set->misc_exactsolve )
          {
             SCIP_Real obj;
             SCIP_Real objcont;
@@ -1108,7 +1116,7 @@ SCIP_RETCODE SCIPsolSetVal(
       assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
          || sol->lpcount == stat->lpcount);
       oldval = solGetArrayVal(sol, var);
-      if( !SCIPsetIsEQ(set, val, oldval) )
+      if( !SCIPsetIsEQ(set, val, oldval) || set->misc_exactsolve )
       {
          SCIP_Real obj;
          SCIP_Real objcont;
