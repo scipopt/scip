@@ -631,6 +631,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_VAR **linkvars;
    SET *linkvartoblocks;
    SET *blocktolinkvars;
+   SCIP_Bool *varonlyobj;
    int j;
    SCIP_VAR **tmpcouplingvars;
    SCIP_Real *tmpcouplingcoef;
@@ -827,6 +828,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       blocktolinkvars[b].size = 0;
    }
 
+   /* init varonlyobj; true if variable is only part of the objective function */
+   SCIP_CALL(SCIPallocBufferArray(scip, &varonlyobj, numlinkvars));
+   for (int m = 0; m < numlinkvars; ++m)
+      varonlyobj[m] = TRUE;
+
    /* fill block to linking variables set */
    for (b = 0; b < problem->nblocks; b++)
    {
@@ -839,12 +845,28 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          var = SCIPfindVar((problem->blocks[b]).subscip, vname);
          if (var != NULL)
          {
+            varonlyobj[i] = FALSE;
             blocktolinkvars[b].indexes[k] = i;
             blocktolinkvars[b].size = k + 1;
             k++;
          }
       }
    }
+
+#if 0
+   for (int m = 0; m < numlinkvars; m++)
+   {
+      if(varonlyobj[m] == TRUE)
+         SCIPdebugMsg(scip, "variable %s has no constraints\n", SCIPvarGetName(linkvars[m]));
+   }
+#endif
+
+#if 0
+   for (b = 0; b < problem->nblocks; b++)
+   {
+      SCIPdebugMsg(scip, "%d linking variables in block %d\n", blocktolinkvars[b].size, b);
+   }
+#endif
 
    /* init arrays for slack variables and coupling constraints */
    for (b = 0; b < problem->nblocks; b++)
@@ -1332,12 +1354,28 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
 
-      /* treat objective constant with name "OBJECTIVE_CONSTANT" */
-      origobjconstvar = SCIPfindVar(scip, "OBJECTIVE_CONSTANT");
-      if (origobjconstvar != NULL)
+      // treat variables with no constraints
+      // set value of variable to bound
+      for (int m = 0; m < numlinkvars; m++)
       {
-         SCIPdebugMsg(scip, "Fix variable OBJECTIVE_CONSTANT\n");
-         SCIP_CALL(SCIPsetSolVal(scip, newsol, origobjconstvar, 1.0));
+         if (varonlyobj[m] == TRUE)
+         {
+            double fixedvalue;
+            if (SCIPvarGetObj(linkvars[m]) < 0)
+            {
+               fixedvalue = SCIPvarGetUbLocal(linkvars[m]);
+               if (fixedvalue == SCIPinfinity(scip))
+                  break; // todo: maybe we should return the status UNBOUNDED instead
+            }
+            else
+            {
+               fixedvalue = SCIPvarGetLbLocal(linkvars[m]);
+               if (fixedvalue == SCIPinfinity(scip))
+                  break; // todo: maybe we should return the status UNBOUNDED instead
+            }
+            SCIPdebugMsg(scip, "fix %s without any constraint to %.2f\n", SCIPvarGetName(linkvars[m]), fixedvalue);
+            SCIP_CALL(SCIPsetSolVal(scip, newsol, linkvars[m], fixedvalue));
+         }
       }
 
       SCIP_CALL(SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success));
@@ -1390,6 +1428,9 @@ TERMINATE:
 
    if (tmpcouplingvars != NULL)
       SCIPfreeBufferArray(scip, &tmpcouplingvars);
+
+   if (varonlyobj != NULL)
+      SCIPfreeBufferArray(scip, &varonlyobj);
 
    if (blocktolinkvars != NULL)
       SCIPfreeBufferArray(scip, &blocktolinkvars);
