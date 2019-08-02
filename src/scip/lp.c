@@ -12431,7 +12431,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
          if( set->misc_exactsolve && !lp->diving )
          {
-            SCIP_CALL( SCIPcomputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+            SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                      prob, itlim, lperror, FALSE, &(lp->lpobjval) ) );
          }
 
@@ -12511,7 +12511,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
 
                if( set->misc_exactsolve && !lp->diving )
-                  SCIP_CALL( SCIPcomputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+                  SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                      prob, itlim, lperror, TRUE, &(lp->lpobjval) ) );
             }
             /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
@@ -12656,7 +12656,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
          /** @todo: exip. objlimit disabled for now (see setobjlimit)
-         assert(!lpCutoffDisabled(set));
+         assert(!lpCutoffDisabled(set)); */
          /* Some LP solvers, e.g. CPLEX With FASTMIP setting, do not apply the final pivot to reach the dual solution
           * exceeding the objective limit. In some cases like branch-and-price, however, we must make sure that a dual
           * feasible solution exists that exceeds the objective limit. Therefore, we have to continue solving it without
@@ -12834,7 +12834,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                         if( set->misc_exactsolve && !lp->diving )
                         {
-                           SCIP_CALL( SCIPcomputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+                           SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                                  prob, itlim, lperror, TRUE, &(lp->lpobjval)) );
                         }
                      }

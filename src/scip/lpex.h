@@ -644,6 +644,29 @@ SCIP_RETCODE SCIPlpexGetDualfarkas(
    SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid  or NULL */
    );
 
+/** gets objective value of current LP
+ *
+ *  @note This method returns the objective value of the current LP solution, which might be primal or dual infeasible
+ *        if a limit was hit during solving. It must not be used as a dual bound if the LP solution status is
+ *        SCIP_LPSOLSTAT_ITERLIMIT or SCIP_LPSOLSTAT_TIMELIMIT.
+ */
+void SCIPlpexGetObjval(
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Rational*        res                 /**< result pointer to store rational */
+   );
+
+/** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
+ *  objective function) local bound
+ */
+void SCIPlpexGetPseudoObjval(
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Rational*        res                 /**< result pointer to store rational */
+   );
+
 /** removes all columns after the given number of cols from the LP */
 extern
 SCIP_RETCODE SCIPlpexShrinkCols(
@@ -683,6 +706,17 @@ SCIP_RETCODE SCIPlpexClear(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
+   );
+
+/** checks whether primal solution satisfies all integrality restrictions exactly. 
+ * This checks either the fp solution exactly or checks the exact solution, if one exists.
+ */
+SCIP_RETCODE SCIPlpexEnfoIntegralityExact(
+   SCIP_LP* lp,
+   SCIP_LPEX* lpex,
+   SCIP_SET* set,
+   SCIP_STAT* stat,
+   SCIP_RESULT* result
    );
 
 #ifdef __cplusplus
