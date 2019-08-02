@@ -675,19 +675,32 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 #if 0
    SCIP_CALL( SCIPwriteOrigProblem(scip, "debug_padm.lp", "lp", FALSE) );
 #endif
+#if 0
+   SCIP_CALL( SCIPwriteTransProblem(scip, "debug_padm.lp", "lp", FALSE) );
+#endif
 
-   /* currently only support for one original decomp */
    decompstore = SCIPgetDecompstore(scip);
-   if (SCIPdecompstoreGetNOrigDecomps(decompstore) != 1)
+   SCIPdebugMsg(scip, "Decompstore has %d decompositions\n", SCIPdecompstoreGetNDecomps(decompstore));
+   if (SCIPdecompstoreGetNDecomps(decompstore) == 0)
       return SCIP_OKAY;
 
-   decomp = SCIPdecompstoreGetOrigDecomps(decompstore)[0];
+   // currently it takes the first decomposition
+   decomp = SCIPdecompstoreGetDecomps(decompstore)[0];
    assert(decomp != NULL);
 
-   nconss = SCIPgetNOrigConss(scip);
-   conss = SCIPgetOrigConss(scip);
-   nvars = SCIPgetNOrigVars(scip);
-   vars = SCIPgetOrigVars(scip);
+   // get transformed problem
+   nconss = SCIPgetNConss(scip);
+   conss = SCIPgetConss(scip);
+   nvars = SCIPgetNVars(scip);
+   vars = SCIPgetVars(scip);
+
+   // if transformed problem has no constraints or no variables, return
+   if (nconss == 0 || nvars == 0)
+   {
+      SCIPdebugMsg(scip, "problem has no constraints or no variables\n");
+      return SCIP_OKAY;
+   }
+
 #if 0
    for( i = 0; i < nconss; i++ )
       SCIPdebugPrintCons(scip, conss[i], NULL);
@@ -763,7 +776,12 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    for (i = 0; i < nvars; i++)
    {
       if (varslabels[i] == -1)
+      {
          numlinkvars++;
+#if 0
+         SCIPdebugMsg(scip, "%s is linking variable\n", SCIPvarGetName(vars[i]));
+#endif
+      }
    }
    SCIPdebugMsg(scip, "%d linking variables\n", numlinkvars);
    SCIP_CALL(SCIPallocBufferArray(scip, &linkvartoblocks, numlinkvars));
