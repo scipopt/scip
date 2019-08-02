@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -398,45 +397,6 @@ extern
 void SCIPprimalSetUpdateViolations(
    SCIP_PRIMAL*          primal,             /**< problem data */
    SCIP_Bool             updateviolations    /**< TRUE to enable violation updates, FALSE otherwise */
-   );
-
-
-/*
- * exact methods
- */
-
-/** creates exact primal data */
-extern
-SCIP_RETCODE SCIPprimalexCreate(
-   SCIP_PRIMALEX**       primal,             /**< pointer to exact primal data */
-   BMS_BLKMEM*           blkmem              /**< block memory */
-   );
-
-
-/** frees exact primal data */
-extern
-SCIP_RETCODE SCIPprimalexFree(
-   SCIP_PRIMALEX**       primal,             /**< pointer to exact primal data */
-   BMS_BLKMEM*           blkmem              /**< block memory */
-   );
-
-/** adds exact primal solution to solution storage, frees the solution afterwards */
-extern
-SCIP_RETCODE SCIPprimalexAddSolFree(
-   SCIP_PRIMALEX*        primal,             /**< primal data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LPEX*            lp,                 /**< current LP data */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_SOLEX**          sol,                /**< pointer to primal CIP solution; is cleared in function call */
-   SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
 #ifdef __cplusplus
