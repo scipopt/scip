@@ -24,14 +24,21 @@
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/lp.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_lp.h"
+#include "scip/scip_lpex.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include "scip/scip_sol.h"
+#include "scip/scip_solex.h"
+#include "scip/scip_mem.h"
+#include "scip/solex.h"
+#include "scip/rational.h"
 #include <string.h>
 
 
@@ -42,6 +49,153 @@
 #define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
                                               *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
+
+/** checks whether primal solution satisfies all integrality restrictions exactly. 
+ * This checks either the fp solution exactly or checks the exact solution, if one exists.
+ */
+static
+SCIP_RETCODE checkIntegralityFp(
+   SCIP*                 scip,
+   SCIP_SOL*             sol,
+   SCIP_Bool*            feasible              /**< pointer to store the result of the lp enforcement call */
+   )
+{
+   int v;
+   int nbin;
+   int nint;
+   int nimpl;
+   int ninteger;
+   int nallinteger;
+   SCIP_VAR** vars;
+   SCIP_Real solval;
+
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, &nimpl, NULL) );
+
+   *feasible = TRUE;
+
+   ninteger = nbin + nint;
+
+
+   for( v = 0; v < ninteger; ++v )
+   {
+      solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+      if( sol != NULL )
+         SCIPupdateSolIntegralityViolation(scip, sol, EPSFRAC(solval, SCIPfeastol(scip)));
+
+      if( !SCIPisFeasIntegral(scip, solval) )
+      {
+         *feasible = FALSE;
+         break;
+      }
+   }
+
+   nallinteger = ninteger + nimpl;
+   for( v = ninteger; v < nallinteger; ++v )
+   {
+      solval = SCIPgetSolVal(scip, sol, vars[v]);
+      if( !SCIPisFeasIntegral(scip, solval) )
+      {
+         *feasible = FALSE;
+         break;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether primal solution satisfies all integrality restrictions exactly. 
+ * This checks either the fp solution exactly or checks the exact solution, if one exists.
+ */
+static
+SCIP_RETCODE checkIntegralityExact(
+   SCIP*                 scip,
+   SCIP_SOL*             sol,
+   SCIP_Bool             printreason,
+   SCIP_RESULT*          result              /**< pointer to store the result of the lp enforcement call */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_SOLEX* solex;
+   SCIP_Rational* solval;
+   int nvars;
+   int nbin;
+   int nint;
+   int v;
+   int ncols;
+   SCIP_Bool inrange;
+   SCIP_Bool integral;
+   SCIP_Bool fpintegral;
+
+   assert(result != NULL);
+
+   SCIPdebugMessage("checking integrality of exact LP solution:\n");
+
+   /* gets primal solution vector of exact LP */
+   solex = SCIPsolGetSolex(sol);
+   integral = TRUE;
+   inrange = TRUE;
+
+   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &solval) );
+
+   /* get all problem variables and integer region in vars array */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbin, &nint, NULL, NULL) );
+
+   /* check whether primal solution satisfies all integrality restrictions */
+   for( v = 0; v < nbin + nint && integral; ++v )
+   {
+      /* if we have solved an exact lp, use that solution, otherwise check the fp-solution 
+         without tolerances */
+      if( SCIPlpexIsSolved(scip) )
+      {
+         SCIPgetSolExVal(scip, solex, vars[v], solval);
+      }
+      else
+         RsetReal(solval, SCIPgetSolVal(scip, sol, vars[v]));
+
+      if( SCIPisInfinity(scip, REALABS(RgetRealApprox(solval))) )
+         inrange = FALSE;
+
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER );
+
+      if( !RisIntegral(solval) )
+      {
+         *result = SCIP_INFEASIBLE;
+         if( printreason )
+         {
+            SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> =",
+               SCIPvarGetName(vars[v]));
+            Rmessage(SCIPgetMessagehdlr(scip), NULL, solval);
+            SCIPinfoMessage(scip, NULL, "\n");
+         }
+         integral = FALSE;
+      }
+   }
+
+   /* store exact LP solution as feasible MIP solution and cut off current node */
+   if( integral && SCIPlpexIsSolved(scip) )
+      SCIPoverwriteFPsol(scip, sol, solex);
+   /* if infeasible, but lp was not solved exactly, force an exact lp solve */
+   else if( !integral && !SCIPlpexIsSolved(scip) )
+   {
+      checkIntegralityFp(scip, sol, &fpintegral);
+
+      /* if the solution is not integral but very close, we solve the lp exactly and hopefully obtain an exactly ip-feasible lp solution */
+      if( fpintegral )
+         SCIP_CALL( SCIPforceExactSolve(scip) );
+   }
+
+   RdeleteTemp(SCIPbuffer(scip), &solval);
+
+   if( integral && !inrange )
+   {
+      SCIPerrorMessage("storing optimal solutions of subproblems that is out of FP-range is not supported yet\n");
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods
@@ -80,6 +234,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 
    SCIPdebugMsg(scip, "Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
 
+    *result = SCIP_DIDNOTRUN;
+
    /* if the root LP is unbounded, we want to terminate with UNBOUNDED or INFORUNBOUNDED,
     * depending on whether we are able to construct an integral solution; in any case we do not want to branch
     */
@@ -90,6 +246,18 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
       else
          *result = SCIP_INFEASIBLE;
       return SCIP_OKAY;
+   }
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CALL( SCIPenfoIntegralityExact(scip, result ) );
+      if( *result == SCIP_FEASIBLE )
+         return SCIP_OKAY;
+      else if ( *result == SCIP_REDUCEDDOM )
+      {
+         SCIP_Real bound;
+         SCIPcomputeSafeBound(scip, FALSE, &bound);
+      }
    }
 
    /* call branching methods */
@@ -189,22 +357,53 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 
    ninteger = nbin + nint;
 
-   if( checkintegrality )
+   if( !SCIPisExactSolve(scip) )
    {
-      for( v = 0; v < ninteger; ++v )
+      if( checkintegrality )
+      {
+         for( v = 0; v < ninteger; ++v )
+         {
+            solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+            if( sol != NULL )
+               SCIPupdateSolIntegralityViolation(scip, sol, EPSFRAC(solval, SCIPfeastol(scip)));
+
+            if( !SCIPisFeasIntegral(scip, solval) )
+            {
+               *result = SCIP_INFEASIBLE;
+
+               if( printreason )
+               {
+                  SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
+                     SCIPvarGetName(vars[v]), solval);
+               }
+               if( !completely )
+                  break;
+            }
+         }
+      }
+   #ifndef NDEBUG
+      else
+      {
+         for( v = 0; v < ninteger; ++v )
+         {
+            solval = SCIPgetSolVal(scip, sol, vars[v]);
+            assert(SCIPisFeasIntegral(scip, solval));
+         }
+      }
+   #endif
+
+      nallinteger = ninteger + nimpl;
+      for( v = ninteger; v < nallinteger; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
-
-         if( sol != NULL )
-            SCIPupdateSolIntegralityViolation(scip, sol, EPSFRAC(solval, SCIPfeastol(scip)));
-
          if( !SCIPisFeasIntegral(scip, solval) )
          {
             *result = SCIP_INFEASIBLE;
 
             if( printreason )
             {
-               SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
+               SCIPinfoMessage(scip, NULL, "violation: integrality condition of implicit integral variable <%s> = %.15g\n",
                   SCIPvarGetName(vars[v]), solval);
             }
             if( !completely )
@@ -212,33 +411,10 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
          }
       }
    }
-#ifndef NDEBUG
+   /* in exact solving mode, we have to check integrality without tolerances */
    else
    {
-      for( v = 0; v < ninteger; ++v )
-      {
-         solval = SCIPgetSolVal(scip, sol, vars[v]);
-         assert(SCIPisFeasIntegral(scip, solval));
-      }
-   }
-#endif
-
-   nallinteger = ninteger + nimpl;
-   for( v = ninteger; v < nallinteger; ++v )
-   {
-      solval = SCIPgetSolVal(scip, sol, vars[v]);
-      if( !SCIPisFeasIntegral(scip, solval) )
-      {
-         *result = SCIP_INFEASIBLE;
-
-         if( printreason )
-         {
-            SCIPinfoMessage(scip, NULL, "violation: integrality condition of implicit integral variable <%s> = %.15g\n",
-               SCIPvarGetName(vars[v]), solval);
-         }
-         if( !completely )
-            break;
-      }
+      SCIP_CALL( checkIntegralityExact(scip, sol, printreason, result) );  
    }
 
    return SCIP_OKAY;
