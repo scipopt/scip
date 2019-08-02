@@ -446,6 +446,7 @@ SCIP_RETCODE SCIPtransformProb(
    if( SCIPisExactSolve(scip) )
    {
       SCIP_CALL( SCIPlpexCreate(&scip->lpex, SCIPblkmem(scip), scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
+      SCIP_CALL( SCIPprimalexCreate(&scip->primalex, SCIPblkmem(scip)) );
    }
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
    SCIP_CALL( SCIPtreeCreate(&scip->tree, scip->mem->probmem, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
@@ -2131,7 +2132,8 @@ SCIP_RETCODE freeTransform(
 
    if( SCIPisExactSolve(scip) )
    {
-      SCIP_CALL( SCIPlpexFree(&scip->lpex, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
+      SCIP_CALL( SCIPlpexFree(&scip->lpex, SCIPblkmem(scip), scip->set, scip->eventqueue, scip->eventfilter) );
+      SCIP_CALL( SCIPprimalexFree(&scip->primalex, SCIPblkmem(scip)) );
    }
    SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
 
