@@ -190,19 +190,19 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
 Test(rlt, collect)
 {
    /* check original variables */
-   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, x, x)][0], xx);
-   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, x, y)][0], xy);
-   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, x, z)][0], xz);
-   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, y, x)][0], xy);
-   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, z, x)][0], xz);
+   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, x, x)][0]), xx);
+   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, x, y)][0]), xy);
+   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, x, z)][0]), xz);
+   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, y, x)][0]), xy);
+   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, z, x)][0]), xz);
    cr_expect_eq(getBilinPos(scip, sepadata, y, z), -1);
    cr_expect_eq(getBilinPos(scip, sepadata, z, y), -1);
    cr_expect_eq(getBilinPos(scip, sepadata, y, y), -1);
    cr_expect_eq(getBilinPos(scip, sepadata, z, z), -1);
 
    /* check auxiliary variables for second constraint */
-   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, logvar, logvar)][0], powvar);
-   cr_expect_eq(sepadata->bilinauxvars[getBilinPos(scip, sepadata, absvar, powvar)][0], prodvar);
+   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, logvar, logvar)][0]), powvar);
+   cr_expect_eq(SCIPgetConsExprExprVarVar(sepadata->linexprs[getBilinPos(scip, sepadata, absvar, powvar)][0]), prodvar);
    cr_expect_eq(getBilinPos(scip, sepadata, prodvar, prodvar), -1);
    cr_expect_eq(getBilinPos(scip, sepadata, prodvar, absvar), -1);
    cr_expect_eq(getBilinPos(scip, sepadata, prodvar, powvar), -1);
