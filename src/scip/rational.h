@@ -491,15 +491,31 @@ SCIP_Bool RisFpRepresentable(
  * Printing/Conversion methods
  */
 
-/** print a Rational to std out */
-void RtoString(
-    SCIP_Rational*  r,                  /**< the rational to print */
-   char*                 str
+/** convert a Rational to a string for printing, returns the number of copied characters.
+ * If return value is equal to strlen, it means the string was truncated.
+ */
+int RtoString(
+   SCIP_Rational*        r,                  /**< the rational to print */
+   char*                 str,                /**< the string to save the rational in */
+   int                   strlen              /**< maximal length that can be copied to str */
+   );
+
+/** return the strlen of a rational number */
+SCIP_Longint Rstrlen(
+   SCIP_Rational*        r                /** rational to consider */
    );
 
 /** print a rational to command line (for debugging) */
 void Rprint(
-    SCIP_Rational*  r                   /**< the rational to print */
+   SCIP_Rational*        r,                  /**< the rational to print */
+   FILE*                 file                /**< file to print to (or NULL for std output) */
+   );
+
+/** print rational to file using message handler */
+void Rmessage(
+   SCIP_MESSAGEHDLR*     msg,                /**< message handler */
+   FILE*                 file,               /**< file pointer */
+   SCIP_Rational*        r                   /**< the rational to print */
    );
 
 /** return approximation of Rational as SCIP_Real */

@@ -30,7 +30,7 @@
 #include "scip/intervalarith.h"
 #include <iostream>
 #include <time.h>
-#include <cstdlib>
+#include <stdlib.h>
 
 #ifdef WITH_GMP
 #include <gmp.h>
@@ -531,7 +531,7 @@ void Rdiff(
 
    if( op1->isinf || op2->isinf )
    {
-      Rset(res, op1->isinf ? op1 : op2 );
+      op1->isinf ? Rset(res, op1) : Rneg(res, op2);
       if( op1->r->sign() != op2->r->sign() && op1->isinf && op2->isinf )
       {
          SCIPerrorMessage("addition of pos and neg infinity not supported \n");
@@ -541,7 +541,7 @@ void Rdiff(
    else
    {
       res->isinf = FALSE;
-      *(res->r) = *(op1->r) - *(op2->r);
+      *(res->r) = (*(op1->r)) - (*(op2->r));
    }
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
@@ -1108,38 +1108,85 @@ SCIP_Bool RisFpRepresentable(
  * Printing/Conversion methods
  */
 
-/** convert a Rational to a string for printing */
-void RtoString(
+/** convert a Rational to a string for printing, returns the number of copied characters.
+ * If return value is equal to strlen, it means the string was truncated.
+ */
+int RtoString(
    SCIP_Rational*        r,                  /**< the rational to print */
-   char*                 str                 /**< the string to save the rational in */
+   char*                 str,                /**< the string to save the rational in */
+   int                   strlen              /**< maximal length that can be copied to str */
    )
 {
+   int ret = 0;
    assert(r != NULL);
 
    if( r->isinf )
    {
       if( *(r->r) > 0 )
-         (void) SCIPstrncpy(str, "inf", SCIP_MAXSTRLEN);
+         ret = SCIPstrncpy(str, "inf", strlen);
       else
-         (void) SCIPstrncpy(str, "-inf", SCIP_MAXSTRLEN);
+         ret = SCIPstrncpy(str, "-inf", strlen);
    }
    else
    {
       std::string s = r->r->str();
-      (void) SCIPstrncpy(str, s.c_str(), SCIP_MAXSTRLEN);
+      ret = SCIPstrncpy(str, s.c_str(), strlen);
    }
+
+   return ret;
 }
 
-/** print a rational to command line (for debugging) */
-void Rprint(
-   SCIP_Rational*        r                   /**< the rational to print */
+/** return the strlen of a rational number */
+SCIP_Longint Rstrlen(
+   SCIP_Rational*        r                /** rational to consider */
    )
 {
    assert(r != NULL);
    if( r->isinf )
-      std::cout << *(r->r) << "inf";
+   {
+      if( *(r->r) > 0 )
+         return 3;
+      else
+         return 4;
+   }
    else
-      std::cout << *(r->r);
+      return (SCIP_Longint) r->r->str().length();
+}
+
+/** print a rational to command line (for debugging) */
+void Rprint(
+   SCIP_Rational*        r,                  /**< the rational to print */
+   FILE*                 file                /**< file to print to (or NULL for std output) */
+   )
+{
+   assert(r != NULL);
+   if( r->isinf )
+   {
+      if( file == NULL )
+         std::cout << *(r->r) << "inf";
+      else
+         fprintf(file, "%d inf", r->r->sign());
+   }
+   else
+   {
+      if( file == NULL )
+         std::cout << *(r->r);
+      else
+         fprintf(file, "%s", r->r->str().c_str());
+   }
+}
+
+/** print rational to file using message handler */
+void Rmessage(
+   SCIP_MESSAGEHDLR*     msg,                /**< message handler */
+   FILE*                 file,               /**< file pointer */
+   SCIP_Rational*        r                   /**< the rational to print */
+   )
+{
+   char buf[SCIP_MAXSTRLEN];
+   assert(r != NULL);
+
+   SCIPmessageFPrintInfo(msg, file, "%s", r->r->str().c_str());
 }
 
 /** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
@@ -1576,8 +1623,8 @@ SCIP_RETCODE SCIPrationalarrayExtend(
 
          for( i = 0; i < rationalarray->maxusedidx - rationalarray->minusedidx + 1; ++i )
          {
-            newvals[i + rationalarray->minusedidx - newfirstidx] =
-               rationalarray->vals[i + rationalarray->minusedidx - rationalarray->firstidx];
+            Rcopy(rationalarray->blkmem, &newvals[i + rationalarray->minusedidx - newfirstidx],
+               rationalarray->vals[i + rationalarray->minusedidx - rationalarray->firstidx]);
          }
 
          for( i = rationalarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
@@ -1590,7 +1637,7 @@ SCIP_RETCODE SCIPrationalarrayExtend(
       }
 
       /* free old memory storage, and set the new array parameters */
-      BMSfreeBlockMemoryArrayNull(rationalarray->blkmem, &rationalarray->vals, rationalarray->valssize);
+      RdeleteArray(rationalarray->blkmem, &rationalarray->vals, rationalarray->valssize);
       rationalarray->vals = newvals;
       rationalarray->valssize = newvalssize;
       rationalarray->firstidx = newfirstidx;
@@ -1719,7 +1766,6 @@ void SCIPrationalarrayGetVal(
 {
    assert(rationalarray != NULL);
    assert(idx >= 0);
-   assert(idx >= rationalarray->minusedidx && idx <= rationalarray->maxusedidx);
 
    if( idx < rationalarray->minusedidx || idx > rationalarray->maxusedidx )
       RsetReal(result, 0.0);
