@@ -229,7 +229,7 @@ SCIP_RETCODE SCIPwriteVarsExactLinearsum(
          else
          {
             char buf[SCIP_MAXSTRLEN];
-            RtoString(vals[v], buf);
+            RtoString(vals[v], buf, SCIP_MAXSTRLEN);
             SCIPinfoMessage(scip, file, " %s", buf);
          }
       }
