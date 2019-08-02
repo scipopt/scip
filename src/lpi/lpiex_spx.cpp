@@ -303,8 +303,8 @@ public:
       {
          if( lowerRational(i) > upperRational(i) )
          {
-            SCIPerrorMessage("inconsistent bounds on column %d: lower=%.17g, upper=%.17g\n",
-               i, lowerRational(i), lowerRational(i));
+            SCIPerrorMessage("inconsistent bounds on column %d: lower=%s, upper=%s\n",
+               i, rationalToString(lowerRational(i), 32).c_str(), rationalToString(lowerRational(i), 32).c_str());
             return false;
          }
       }
@@ -318,8 +318,8 @@ public:
       {
          if( lhsRational(i) > rhsRational(i) )
          {
-            SCIPerrorMessage("inconsistent sides on row %d: lhs=%.17g, rhs=%.17g\n",
-              i, lhsRational(i), rhsRational(i));
+            SCIPerrorMessage("inconsistent sides on row %d: lhs=%s, rhs=%s\n",
+              i, rationalToString(lhsRational(i)).c_str(), rationalToString(rhsRational(i)).c_str());
             return false;
          }
       }
@@ -3160,6 +3160,7 @@ SCIP_RETCODE SCIPlpiexGetDualfarkas(
 #endif
       return SCIP_LPERROR;
    }
+   delete tmpvec;
 
    return SCIP_OKAY;
 }
