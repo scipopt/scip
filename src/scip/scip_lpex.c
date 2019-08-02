@@ -390,3 +390,14 @@ SCIP_RETCODE SCIPprintRowex(
 
    return SCIP_OKAY;
 }
+
+
+SCIP_Bool SCIPlpexIsSolved(
+   SCIP* scip
+   )
+{
+   assert(scip != NULL);
+   assert(scip->lpex != NULL);
+
+   return scip->lpex->solved && scip->lpex->flushed;
+}

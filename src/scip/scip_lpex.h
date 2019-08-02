@@ -193,6 +193,10 @@ SCIP_RETCODE SCIPprintRowex(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
+SCIP_Bool SCIPlpexIsSolved(
+   SCIP* scip
+   );
+
 #ifdef __cplusplus
 }
 #endif
