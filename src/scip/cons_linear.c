@@ -3368,10 +3368,6 @@ SCIP_RETCODE consdataSort(
             break;
       }
    }
-#ifndef NDEBUG
-   else
-      assert(consdata->sorted);
-#endif
 
    return SCIP_OKAY;
 }
@@ -3754,6 +3750,7 @@ SCIP_RETCODE addCoef(
 
    if( consdata->nvars == 1 )
    {
+      consdata->sorted = TRUE;
       consdata->binvarssorted = TRUE;
       consdata->sorted = TRUE;
       consdata->merged = TRUE;
