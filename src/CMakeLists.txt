@@ -257,6 +257,7 @@ set(scipsources
     scip/pricestore.c
     scip/pricer.c
     scip/primal.c
+    scip/primalex.c
     scip/prob.c
     scip/prop.c
     scip/rational.cpp
@@ -302,6 +303,7 @@ set(scipsources
     scip/scip_reopt.c
     scip/scip_sepa.c
     scip/scip_sol.c
+    scip/scip_solex.c
     scip/scip_solve.c
     scip/scip_solvingstats.c
     scip/scip_table.c
@@ -635,6 +637,7 @@ set(scipheaders
     scip/pricer.h
     scip/pricestore.h
     scip/primal.h
+    scip/primalex.h
     scip/prob.h
     scip/prop_dualfix.h
     scip/prop_genvbounds.h

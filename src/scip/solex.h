@@ -41,8 +41,8 @@
 #include "scip/type_primal.h"
 #include "scip/type_tree.h"
 #include "scip/type_heur.h"
-#include "scip/pub_sol.h"
 #include "scip/rational.h"
+#include "scip/struct_solex.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,8 +55,22 @@ SCIP_RETCODE SCIPsolexCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_PRIMALEX*        primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
+/** creates primal CIP solution, initialized to the current LP solution */
+SCIP_RETCODE SCIPsolexCreateLPexSol(
+   SCIP_SOLEX**          sol,                /**< pointer to primal CIP solution */
+   SCIP_SOL*             fpsol,              /**< corresponding inexact soltution, or NULL */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_PRIMALEX*        primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
@@ -74,7 +88,7 @@ SCIP_RETCODE SCIPsolexCopy(
 SCIP_RETCODE SCIPsolexFree(
    SCIP_SOLEX**          sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_PRIMAL*          primal              /**< primal data */
+   SCIP_PRIMALEX*        primal              /**< primal data */
    );
 
 /** clears primal CIP solution */
@@ -82,6 +96,13 @@ SCIP_RETCODE SCIPsolexClear(
    SCIP_SOLEX*           sol,                /**< primal CIP solution */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
+/** stores solution values of variables in solution's own array */
+SCIP_RETCODE SCIPsolexUnlink(
+   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
    );
 
 /** sets value of variable in primal CIP solution */
@@ -104,8 +125,7 @@ void SCIPsolexGetVal(
    );
 
 /** gets objective value of primal CIP solution in transformed problem */
-void SCIPsolexGetObj(
-   SCIP_Rational*        res,
+SCIP_Rational* SCIPsolexGetObj(
    SCIP_SOLEX*           sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
@@ -134,6 +154,71 @@ SCIP_RETCODE SCIPsolexPrint(
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             mipstart,           /**< should only discrete variables be printed? */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   );
+
+/** copies current exact LP solution into CIP solution by linking */
+SCIP_RETCODE SCIPsolexLinkLPexSol(
+   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LPEX*            lp                  /**< current LP data */
+   );
+
+/** returns sol corresponding to exact sol, or NULL */
+SCIP_SOL* SCIPsolexGetSol(
+   SCIP_SOLEX*           sol                 /**< exact solution */
+   );
+
+/** returns exact sol corresponding to sol, or NULL */
+SCIP_SOLEX* SCIPsolGetSolex(
+   SCIP_SOL*             sol                 /**< fp solution */
+   );
+
+/** hard-set the obj value of a solution  */
+void SCIPsolSetObjVal(
+   SCIP_SOL*             sol,                /**< primal solution */
+   SCIP_Real             val                 /**< objective value */
+   );
+
+/** returns whether the given solution is defined on original variables */
+SCIP_Bool SCIPsolexIsOriginal(
+   SCIP_SOLEX*           sol                 /**< primal CIP solution */
+   );
+
+/** checks primal CIP solution for feasibility
+ *
+ *  @note The difference between SCIPsolCheck() and SCIPcheckSolOrig() is that modifiable constraints are handled
+ *        differently. There might be some variables which do not have an original counter part (e.g. in
+ *        branch-and-price). Therefore, modifiable constraints can not be double-checked in the original space.
+ */
+SCIP_RETCODE SCIPsolexCheck(
+   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool*            feasible            /**< stores whether solution is feasible */
+   );
+
+/** gets current position of solution in array of existing solutions of primal data */
+extern
+int SCIPsolexGetPrimalexIndex(
+   SCIP_SOLEX*             sol                 /**< primal CIP solution */
+   );
+
+/** sets current position of solution in array of existing solutions of primal data */
+extern
+void SCIPsolexSetPrimalexIndex(
+   SCIP_SOLEX*             sol,                /**< primal CIP solution */
+   int                   primalindex         /**< new primal index of solution */
    );
 
 #endif

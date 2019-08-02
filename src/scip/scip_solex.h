@@ -242,7 +242,7 @@ void SCIPgetSolExVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOLEX*           sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    SCIP_VAR*             var,                /**< variable to get value for */
-   SCIP_Rational*        res                 /**< result pointer to store rational */
+   SCIP_Rational*        res                 /**< resulting rational */
    );
 
 /** gets values of multiple variables in primal CIP solution
@@ -874,6 +874,13 @@ EXTERN
 SCIP_RETCODE SCIPupdatePrimalRayEx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOLEX*           primalray           /**< the new primal ray */
+   );
+
+EXTERN
+SCIP_RETCODE SCIPoverwriteFPsol(
+   SCIP*                 scip,
+   SCIP_SOL*             sol,
+   SCIP_SOLEX*           solex
    );
 
 /**@} */

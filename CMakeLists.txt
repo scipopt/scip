@@ -7,8 +7,8 @@ project(SCIP)
 
 # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise -Wno-comment")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise -Wno-comment")
 endif()
 
 set(SCIP_VERSION_MAJOR 6)
