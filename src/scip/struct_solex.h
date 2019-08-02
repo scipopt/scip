@@ -42,6 +42,7 @@ extern "C" {
  */
 struct SCIP_Solex
 {
+   SCIP_SOL*             fpsol;
    SCIP_Rational*        obj;                /**< objective value of solution */
    SCIP_RATIONALARRAY*   vals;               /**< solution values for variables */
    SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from

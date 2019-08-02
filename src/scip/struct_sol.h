@@ -62,6 +62,7 @@ struct SCIP_Viol
  */
 struct SCIP_Sol
 {
+   SCIP_SOLEX*           solex;
    SCIP_Real             obj;                /**< objective value of solution */
    SCIP_Real             time;               /**< clock time, when the solution was discovered */
    SCIP_Longint          nodenum;            /**< last node number of current run, where this solution was modified */

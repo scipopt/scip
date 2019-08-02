@@ -75,7 +75,7 @@ struct SCIP_PrimalEx
    SCIP_Rational*        cutoffbound;        /**< upper bound for better primal solutions (if objective value is always
                                               *   integral, cutoffbound is equal to ceil(upperboound) - 1.0 (+eps) */
    SCIP_SOLEX**          sols;               /**< primal CIP solutions */
-   SCIP_SOL**            existingsols;       /**< all existing primal solutions (feasible, partial, and infeasible) */
+   SCIP_SOLEX**          existingsols;       /**< all existing primal solutions (feasible, partial, and infeasible) */
    SCIP_SOLEX*           currentsol;         /**< internal solution for temporarily storing the current solution */
    SCIP_SOLEX*           primalray;          /**< solution representing the primal ray for (infeasible or) unbounded problems;
                                               *   warning: this does not have to be a feasible solution */
