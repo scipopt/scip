@@ -38,8 +38,12 @@
 #include "scip/lp.h"
 #include "lpi/lpiex.h"
 #include "scip/scip_prob.h"
+#include "scip/prob.h"
 #include "scip/scip.h"
+#include "scip/solex.h"
+#include "scip/sol.h"
 #include "scip/pub_varex.h"
+#include "scip/primal.h"
 #include "scip/sepastoreex.h"
 #include "scip/struct_scip.h"
 #include "rectlu/rectlu.h"
@@ -49,6 +53,83 @@
 #define PSPOSTPROCESSDUALSOL       TRUE
 
 
+
+/** evaluates the result of the exact LP */
+static
+SCIP_RETCODE evaluateLPEX(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_LPEX*            lpex,               /**< Exact LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_RESULT*          result              /**< pointer to store the result of the lp enforcement call */
+   )
+{
+   /** @todo exiptodo:
+    *  - in a similar function for LP in lp.c the case SCIPlpiIsPrimalUnbounded() is not explicitely handled. why? if case
+    *    should be added, include it here as well.
+    */
+   /* evaluate solution status */
+   if( SCIPlpiexIsOptimal(lpex->lpiex) )
+   {
+      SCIPdebugMessage("   exact LP solved to optimality\n");
+
+#ifndef NDEBUG
+      {
+         SCIP_Bool primalfeasible;
+         SCIP_Bool dualfeasible;
+
+         SCIP_CALL( SCIPlpiexGetSolFeasibility(lpex->lpiex, &primalfeasible, &dualfeasible) );
+         assert(primalfeasible);
+         assert(dualfeasible);
+      }
+#endif
+      /* check whether exact LP solution is feasible for the MIP; if it is feasible the solution is stored
+       * and the current node is cut off otherwise a branching is created
+       */
+      assert(*result == SCIP_CUTOFF || *result == SCIP_BRANCHED || *result == SCIP_SOLVELP );
+   }
+   else if( SCIPlpiexIsObjlimExc(lpex->lpiex) )
+   {
+      /* CERT: for now we don't trust the exact LP solver on this, so we do not need to print anything here */
+      SCIPdebugMessage("   exact LP exceeds upper objective limit\n");
+      *result = SCIP_CUTOFF;
+   }
+   else if( SCIPlpiexIsPrimalInfeasible(lpex->lpiex) )
+   {
+      SCIPdebugMessage("   exact LP is primal infeasible\n");
+      *result = SCIP_CUTOFF;
+   }
+   else if( SCIPlpiexExistsPrimalRay(lpex->lpiex) )
+   {
+      /* CERT: for now we don't need to handle the unbounded case */
+      SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
+      return SCIP_ERROR;
+   }
+   else if( SCIPlpiexIsIterlimExc(lpex->lpiex) )
+   {
+      SCIPerrorMessage("exact LP exceeds iteration limit: case not handled yet\n");
+      return SCIP_ERROR;
+   }
+   else if( SCIPlpiexIsTimelimExc(lpex->lpiex) )
+   {
+      /* CERT: for now we should not activate the buggy time limit support of QSopt_ex */
+      SCIPdebugMessage("   exact LP exceeds time limit\n");
+      *result = SCIP_INFEASIBLE;
+   }
+   else
+   {
+      SCIPerrorMessage(" error or unknown return status in current exact LP (internal status: %d)\n",
+         SCIPlpiexGetInternalStatus(lpex->lpiex));
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_RETCODE solveLpExact(
@@ -278,7 +359,7 @@ SCIP_RETCODE psChooseS(
    nextendedrows = psdata->nextendedrows;
 
    /* build includedrows vector based on psdualcolselection, this determines the matrix D */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &psdata->includedrows, nextendedrows) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &psdata->includedrows, nextendedrows) );
    for( i = 0; i < nextendedrows; i++ )
       psdata->includedrows[i] = 0;
    if( psdata->psdualcolselection == PS_DUALCOSTSEL_NO || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
@@ -485,7 +566,7 @@ SCIP_RETCODE psFactorizeD(
    for( i = 0; i < 2*nnonz + 2*ncols; i++ )
    {
       printf("   i=%d:\t projind=<%d>,\t projval=<", i, projind[i]);
-      Rprint(projval[i]);
+      Rprint(projval[i], NULL);
       printf(">\n");
    }
 #endif
@@ -1757,18 +1838,18 @@ SCIP_RETCODE psComputeSintPointRay(
 
 #ifdef PS_OUT
          printf("constraints all satisfied by slack=");
-         Rprint(psdata->commonslack);
+         Rprint(psdata->commonslack, NULL);
          printf("\n");
 
          printf("objective value of aux problem=");
-         Rprint(objval);
+         Rprint(objval, NULL);
          printf("\n");
 
          printf("relative interior solution:\n");
          for( i = 0; i <  psdata->nextendedrows; i++ )
          {
             printf("   i=%d: ", i);
-            Rprint(psdata->interiorpt[i]);
+            Rprint(psdata->interiorpt[i], NULL);
             printf("\n");
          }
 #endif
@@ -1998,8 +2079,6 @@ SCIP_RETCODE constructPSData(
 
    psdata = lpex->psdata;
 
-   SCIPclockStart(stat->provedfeaspstime, set);
-
    /* consider the primal problem as
     * min c'x
     * lhs <= Ax <= rhs
@@ -2019,6 +2098,8 @@ SCIP_RETCODE constructPSData(
    /* if the ps data was already constructed, exit */
    if( psdata->psdatacon )
       return SCIP_OKAY;
+
+   SCIPclockStart(stat->provedfeaspstime, set);
    /* now mark that this function has been called */
    psdata->psdatacon = TRUE;
 
@@ -2064,8 +2145,8 @@ SCIP_RETCODE constructPSData(
 
    SCIP_CALL( RcreateArray(blkmem, &psdata->violation, lpex->ncols) );
    SCIP_CALL( RcreateArray(blkmem, &psdata->correction, psdata->nextendedrows) );
-   SCIP_CALL( RcreateArray(blkmem, &psdata->approxdual, lpex->ncols + lpex->nrows) );
    psdata->approxdualsize = lpex->ncols + lpex->nrows;
+   psdata->violationsize = lpex->ncols;
 
    SCIPclockStop(stat->provedfeaspstime, set);
    SCIPdebugMessage("exiting constructPSdata()\n");
@@ -2247,9 +2328,9 @@ SCIP_RETCODE getPSdualTwo(
    for( i = 0; i < nextendedrows; i++ )
    {
       printf("   i=%d: ", i);
-      Rprint(approxdual[i]);
+      Rprint(approxdual[i], NULL);
       printf(" * ");
-      Rprint(costvect[i]);
+      Rprint(costvect[i], NULL);
       printf("\n");
       if( RisAbsInfinity(costvect[i]) )
        assert(RisZero(approxdual[i]));
@@ -2260,7 +2341,7 @@ SCIP_RETCODE getPSdualTwo(
    }
 
    printf("   objective value=%.20f (", RgetRealApprox(dualbound));
-   Rprint(dualbound);
+   Rprint(dualbound, NULL);
    printf(")\n");
 #endif
 
@@ -2335,7 +2416,7 @@ SCIP_RETCODE getPSdualTwo(
    for( i = 0; i < ncols; i++ )
    {
       printf("   i=%d: ", i);
-      Rprint(violation[i]);
+      Rprint(violation[i], NULL);
       printf("\n");
    }
 #endif
@@ -2375,7 +2456,7 @@ SCIP_RETCODE getPSdualTwo(
       for( i = 0; i < psdata->npsbasis; i++ )
       {
          printf("   i=%d: ", i);
-         Rprint(correction[i]);
+         Rprint(correction[i], NULL);
          printf(", position=%d\n", psdata->psbasis[i]);
       }
 #endif
@@ -2394,7 +2475,7 @@ SCIP_RETCODE getPSdualTwo(
    for( i = 0; i < nextendedrows; i++ )
    {
       printf("   i=%d: ", i);
-      Rprint(approxdual[i]);
+      Rprint(approxdual[i], NULL);
       printf("\n");
    }
 #endif
@@ -2492,7 +2573,7 @@ SCIP_RETCODE getPSdualTwo(
    for( i = 0; i < nextendedrows; i++ )
    {
       printf("   i=%d: ", i);
-      Rprint(approxdual[i]);
+      Rprint(approxdual[i], NULL);
       printf("\n");
    }
 #endif
@@ -2593,19 +2674,19 @@ SCIP_RETCODE getPSdualTwo(
 
 #ifdef PS_OUT
    printf("   common slack=%.20f (", RgetRealApprox(psdata->commonslack));
-   Rprint(psdata->commonslack);
+   Rprint(psdata->commonslack, NULL);
    printf(")\n");
 
    printf("   max violation=%.20f (", RgetRealApprox(maxv));
-   Rprint(maxv);
+   Rprint(maxv, NULL);
    printf(")\n");
 
    printf("   lambda (use of interior point)=%.20f (", RgetRealApprox(lambda2));
-   Rprint(lambda2);
+   Rprint(lambda2, NULL);
    printf(")\n");
 
    printf("   dual objective value=%.20f (", RgetRealApprox(dualbound));
-   Rprint(dualbound);
+   Rprint(dualbound, NULL);
    printf(")\n");
 #endif
 
@@ -2694,6 +2775,16 @@ SCIP_RETCODE getPSdual(
     * 3. compute dual objective value of feasible dual solution and set bound
     */
 
+   /* if data has not been constructed, or it failed, then exit */
+   psdata = lpex->psdata;
+
+   assert(psdata->psdatacon);
+   if( (psdata->psdatafail && !usefarkas) || (usefarkas && !psdata->pshasray) )
+   {
+      lp->hasprovedbound = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* constructpsdata should always be called first */
    if( usefarkas )
    {
@@ -2707,16 +2798,6 @@ SCIP_RETCODE getPSdual(
    }
 
    startt = clock();
-   psdata = lpex->psdata;
-
-   assert(psdata->psdatacon);
-
-   /* if data has not been constructed, or it failed, then exit */
-   if( (psdata->psdatafail && !usefarkas) || (usefarkas && !psdata->pshasray) )
-   {
-      lp->hasprovedbound = FALSE;
-      return SCIP_OKAY;
-   }
 
    lp->hasprovedbound = TRUE;
 
@@ -2753,23 +2834,21 @@ SCIP_RETCODE getPSdual(
    nrowsps = psdata->nextendedrows/2 - ncols;
    shift = nrows - nrowsps;
 
+   assert(ncols == psdata->violationsize);
+
    /* allocate memory for approximate dual solution, dual cost vector, violation and correction */
-   approxdual = psdata->approxdual;
+   SCIPsetAllocBufferArray(set, &approxdual, nrows + ncols);
    violation = psdata->violation;
    correction = psdata->correction;
-   if( nrows + ncols > psdata->approxdualsize )
-   {
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &approxdual, psdata->approxdualsize, nrows + ncols) );
-      for( i = psdata->approxdualsize; i < nrows + ncols; ++i )
-      {
-         SCIP_CALL( Rcreate(blkmem, &approxdual[i]) );
-      }
-      psdata->approxdualsize = nrows + ncols;
-   }
 
    /** @todo: exip this could be removed */
    for( i = 0; i < nrows + ncols; ++i )
    {
+      if( i < nrows )
+         approxdual[i] = usefarkas ? lpex->rows[i]->dualfarkas : lpex->rows[i]->dualsol;
+      else
+         approxdual[i] = usefarkas ? lpex->cols[i - nrows]->redcost : lpex->cols[i - nrows]->farkascoef;
+
       RsetInt(approxdual[i], 0, 1);
       if( i < ncols )
          RsetInt(violation[i], 0, 1);
@@ -2857,9 +2936,9 @@ SCIP_RETCODE getPSdual(
          val = i < nrows ? lpex->rows[i]->rhs : lpex->cols[i - nrows]->ub;
 
       printf("   i=%d: ", i);
-      Rprint(approxdual[i]);
+      Rprint(approxdual[i], NULL);
       printf(" * ");
-      Rprint(val);
+      Rprint(val, NULL);
       printf("\n");
       if( RisAbsInfinity(val) )
          assert(RisZero(approxdual[i]));
@@ -2868,7 +2947,7 @@ SCIP_RETCODE getPSdual(
    }
 
    printf("   objective value=%.20f (", RgetRealApprox(dualbound));
-   Rprint(dualbound);
+   Rprint(dualbound, NULL);
    printf(")\n");
 #endif
 
@@ -2905,7 +2984,7 @@ SCIP_RETCODE getPSdual(
    for( i = 0; i < ncols; i++ )
    {
       printf("   i=%d: ", i);
-      Rprint(violation[i]);
+      Rprint(violation[i], NULL);
       printf("\n");
    }
 #endif
@@ -2951,7 +3030,7 @@ SCIP_RETCODE getPSdual(
       for( i = 0; i < psdata->npsbasis; i++ )
       {
          printf("   i=%d: ", i);
-         Rprint(correction[i]);
+         Rprint(correction[i], NULL);
          printf(", position=%d\n", psdata->psbasis[i]);
       }
 #endif
@@ -3005,7 +3084,7 @@ SCIP_RETCODE getPSdual(
       for( i = 0; i < psdata->npsbasis; i++ )
       {
          printf("   i=%d: ", i);
-         Rprint(correction[i]);
+         Rprint(correction[i], NULL);
          printf(", position=%d\n", psdata->psbasis[i]);
       }
 #endif
@@ -3063,12 +3142,12 @@ SCIP_RETCODE getPSdual(
          SCIP_Rational* val;
 
          printf("   i=%d: ", i);
-         Rprint(approxdual[i]);
+         Rprint(approxdual[i], NULL);
          printf("\n");
       }
 
       printf("   lambda1: ");
-      Rprint(lambda1);
+      Rprint(lambda1, NULL);
       printf(")\n");
 #endif
 
@@ -3095,12 +3174,12 @@ SCIP_RETCODE getPSdual(
          SCIP_Rational* val;
 
          printf("   i=%d: ", i);
-         Rprint(approxdual[i]);
+         Rprint(approxdual[i], NULL);
          printf("\n");
       }
 
       printf("   lambda1: ");
-      Rprint(lambda1);
+      Rprint(lambda1, NULL);
       printf(")\n");
 #endif
 
@@ -3134,7 +3213,7 @@ SCIP_RETCODE getPSdual(
       for( i = 0; i < nrows+ncols; i++ )
       {
          printf("   i=%d: ", i);
-         Rprint(approxdual[i]);
+         Rprint(approxdual[i], NULL);
          printf("\n");
       }
 #endif
@@ -3215,19 +3294,19 @@ SCIP_RETCODE getPSdual(
 
 #ifdef PS_OUT
    printf("   common slack=%.20f (", RgetRealApprox(psdata->commonslack));
-   Rprint(psdata->commonslack);
+   Rprint(psdata->commonslack, NULL);
    printf(")\n");
 
    printf("   max violation=%.20f (", RgetRealApprox(maxv));
-   Rprint(maxv);
+   Rprint(maxv, NULL);
    printf(")\n");
 
    printf("   lambda (use of interior point)=%.20f (", RgetRealApprox(lambda2));
-   Rprint(lambda2);
+   Rprint(lambda2, NULL);
    printf(")\n");
 
    printf("   dual objective value=%.20f (", RgetRealApprox(dualbound));
-   Rprint(dualbound);
+   Rprint(dualbound, NULL);
    printf(")\n");
 #endif
 
@@ -3245,6 +3324,7 @@ SCIP_RETCODE getPSdual(
    }
 
    SCIPsetFreeBufferArray(set, &isupper);
+   SCIPsetFreeBufferArray(set, &approxdual);
 
    RdeleteTemp(set->buffer, &dualbound);
    RdeleteTemp(set->buffer, &maxv);
@@ -3254,7 +3334,7 @@ SCIP_RETCODE getPSdual(
    RdeleteTemp(set->buffer, &tmp);
 
    endt = clock();
-   startt, endt, setupt, violt, rectlut, projt, shiftt;
+   // startt, endt, setupt, violt, rectlut, projt, shiftt;
    //printf("Time used: %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC);
    //printf("Setup time    : %e, percentage %e \n", ((double) (setupt - startt)) / CLOCKS_PER_SEC, ((double) (setupt - startt)/(endt - startt)) );
    //printf("Violation time: %e, percentage %e \n", ((double) (violt - setupt)) / CLOCKS_PER_SEC, ((double) (violt - setupt)/(endt - startt))   );
@@ -3667,7 +3747,7 @@ SCIP_RETCODE basisVerification(
    return SCIP_OKAY;
 }
 
-SCIP_RETCODE SCIPcomputeSafeBound(
+SCIP_RETCODE SCIPlpexComputeSafeBound(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEX*            lpex,               /**< Exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3692,7 +3772,12 @@ SCIP_RETCODE SCIPcomputeSafeBound(
    assert(set->misc_exactsolve);
 
    /* choose which bounding method to use. only needed if automatic is enabled. */
-   if( set->misc_dbmethod == 'a' )
+   if( lpex->forceexactsolve )
+   {
+      dualboundmethod = 'e';
+      lpex->forceexactsolve = FALSE;
+   }
+   else if( set->misc_dbmethod == 'a' )
       dualboundmethod = chooseBoundingMethod(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                               prob, itlim, lperror, dualfarkas, safebound);
    else

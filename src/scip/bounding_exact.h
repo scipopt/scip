@@ -49,7 +49,7 @@ extern "C" {
 #endif
 
 extern
-SCIP_RETCODE SCIPcomputeSafeBound(
+SCIP_RETCODE SCIPlpexComputeSafeBound(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEX*            lpex,               /**< Exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
