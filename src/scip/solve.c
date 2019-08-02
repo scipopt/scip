@@ -42,6 +42,7 @@
 #include "scip/pricer.h"
 #include "scip/pricestore.h"
 #include "scip/primal.h"
+#include "scip/primalex.h"
 #include "scip/prob.h"
 #include "scip/prop.h"
 #include "scip/pub_cons.h"
@@ -67,6 +68,7 @@
 #include "scip/struct_scip.h"
 #include "scip/set.h"
 #include "scip/sol.h"
+#include "scip/solex.h"
 #include "scip/solve.h"
 #include "scip/stat.h"
 #include "scip/struct_cons.h"
@@ -3900,7 +3902,7 @@ SCIP_RETCODE propAndSolve(
          *cutoff ? SCIPsetInfinity(set) : (*lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set, transprob)),
          stat->nlpiterations, stat->lpcount);
 
-      /* check, if the path was cutoff */
+      /* check, if the path was cutoff */ 
       *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
 
       /* if an error occured during LP solving, switch to pseudo solution */
@@ -3938,7 +3940,7 @@ SCIP_RETCODE propAndSolve(
       /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
        * we have to forget about the LP and use the pseudo solution instead
        */
-      if( !(*cutoff) && !(*lperror) && (set->misc_exactsolve_old || *pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
+      if( !(*cutoff) && !(*lperror) && (set->misc_exactsolve || *pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
          && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
       {
          if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && transprob->ncontvars > 0 )
@@ -4696,6 +4698,7 @@ SCIP_RETCODE addCurrentSolution(
 {
    SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
    SCIP_SOL* sol;
+   SCIP_SOLEX* solex;
    SCIP_Bool foundsol;
 
    /* found a feasible solution */
@@ -4744,10 +4747,17 @@ SCIP_RETCODE addCurrentSolution(
 
       /* add solution to storage */
       SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
+      if( set->misc_exactsolve && lp->lpex->solved )
+      {
+         SCIP_CALL( SCIPsolexCreateLPexSol(&solex, sol, blkmem, set, stat, transprob, set->scip->primalex, tree, lp->lpex, NULL) );
+
+         SCIP_CALL( SCIPprimalexAddSolFree(set->scip->primalex, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpex,
+               eventqueue, eventfilter, &solex, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
+      }
 
       SCIPsetDebugMsg(set, "found lp solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
-      if( checksol || set->misc_exactsolve_old )
+      if( checksol || set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
@@ -5130,15 +5140,33 @@ SCIP_RETCODE SCIPsolveCIP(
             SCIP_RESULT result;
 
             assert(set->misc_exactsolve);
+            {
+               /** @todo: exip: is this the way to go? */
+               SCIP_Real bound;
+               SCIP_Bool lperror;
+               /** have to force exact lp solve, since we can't branch anymore and fp-lp is infeasible*/
+               lp->lpex->forceexactsolve = TRUE;
+               lp->hasprovedbound = FALSE;
 
-            do
+               SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, 
+                     transprob, lp->lpiitlim, &lperror, lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL, &bound);
+               SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp);
+               if( SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound )
+               {
+                  result = SCIP_CUTOFF;
+                  cutoff = TRUE;
+               }
+               else
+                  result = SCIP_REDUCEDDOM;
+            }
+
+            while( result == SCIP_REDUCEDDOM )
             {
                result = SCIP_DIDNOTRUN;
                if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 )
                {
                   if( transprob->ncontvars > 0 )
                   {
-                     /**@todo call PerPlex */
                      SCIPerrorMessage("cannot branch on all-fixed LP -- have to call PerPlex instead\n");
                   }
                }
@@ -5149,7 +5177,6 @@ SCIP_RETCODE SCIPsolveCIP(
                   assert(result != SCIP_DIDNOTRUN && result != SCIP_DIDNOTFIND);
                }
             }
-            while( result == SCIP_REDUCEDDOM );
          }
          assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 

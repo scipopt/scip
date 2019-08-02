@@ -31,7 +31,7 @@ extern "C" {
 
 typedef struct SCIP_ColSolValsEx SCIP_COLSOLVALSEX;   /**< collected values of a column which depend on the LP solution */
 typedef struct SCIP_RowSolValsEx SCIP_ROWSOLVALSEX;   /**< collected values of a row which depend on the LP solution */
-typedef struct SCIP_LpSolValsEx SCIP_LPSOLVALSEX;     /**< collected values of the LP data which depend on the LP solution *
+typedef struct SCIP_LpSolValsEx SCIP_LPSOLVALSEX;     /**< collected values of the LP data which depend on the LP solution */
 
 /** column of an LP
  *
