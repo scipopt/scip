@@ -3192,8 +3192,6 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
    SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
-   SCIP_Real abscoef1;
-   SCIP_Real abscoef2;
    SCIP_VARTYPE vartype1;
    SCIP_VARTYPE vartype2;
 
@@ -3204,11 +3202,37 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
    var1 = consdata->vars[ind1];
    var2 = consdata->vars[ind2];
 
-   abscoef1 = REALABS(consdata->vals[ind1]);
-   abscoef2 = REALABS(consdata->vals[ind2]);
-
    vartype1 = SCIPvarGetType(var1);
    vartype2 = SCIPvarGetType(var2);
+
+   /* exactly one variable is binary */
+   if( SCIPvarIsBinary(var1) != SCIPvarIsBinary(var2) )
+      return (SCIPvarIsBinary(var1) ? -1 : +1);
+   /* both variables are binary */
+   else if( SCIPvarIsBinary(var1) + SCIPvarIsBinary(var2) == 2 )
+      return SCIPvarCompare(var1, var2);
+   else if( vartype1 < vartype2 )
+      return -1;
+   else if( vartype1 > vartype2 )
+      return +1;
+   else
+      return SCIPvarCompare(var1, var2);
+}
+
+/** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
+static
+SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+
+   assert(consdata != NULL);
+   assert(0 <= ind1 && ind1 < consdata->nvars);
+   assert(0 <= ind2 && ind2 < consdata->nvars);
+
+   var1 = consdata->vars[ind1];
+   var2 = consdata->vars[ind2];
 
    /* exactly one variable is binary */
    if( SCIPvarIsBinary(var1) != SCIPvarIsBinary(var2) )
@@ -3218,6 +3242,9 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
    /* both variables are binary */
    else if( SCIPvarIsBinary(var1) + SCIPvarIsBinary(var2) == 2 )
    {
+      SCIP_Real abscoef1 = REALABS(consdata->vals[ind1]);
+      SCIP_Real abscoef2 = REALABS(consdata->vals[ind2]);
+
       if( abscoef1 > abscoef2 + 1e-9 )
          return -1;
       else if( abscoef1 < abscoef2 - 1e-9 )
@@ -3225,30 +3252,39 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
       else
          return SCIPvarCompare(var1, var2);
    }
-   else if( vartype1 < vartype2 )
-   {
-      return -1;
-   }
-   else if( vartype1 > vartype2 )
-   {
-      return +1;
-   }
    else
    {
-      /* both variables are continuous */
-      if( !SCIPvarIsIntegral(var1) )
+      SCIP_VARTYPE vartype1 = SCIPvarGetType(var1);
+      SCIP_VARTYPE vartype2 = SCIPvarGetType(var2);
+
+      if( vartype1 < vartype2 )
       {
-         assert(!SCIPvarIsIntegral(var2));
-         return SCIPvarCompare(var1, var2);
+         return -1;
+      }
+      else if( vartype1 > vartype2 )
+      {
+         return +1;
       }
       else
       {
-         if( abscoef1 > abscoef2 + 1e-9 )
-            return -1;
-         else if( abscoef1 < abscoef2 - 1e-9 )
-            return +1;
-         else
+         /* both variables are continuous */
+         if( !SCIPvarIsIntegral(var1) )
+         {
+            assert(!SCIPvarIsIntegral(var2));
             return SCIPvarCompare(var1, var2);
+         }
+         else
+         {
+            SCIP_Real abscont1 = REALABS(consdata->vals[ind1] * (SCIPvarGetUbGlobal(var1) - SCIPvarGetLbGlobal(var1)));
+            SCIP_Real abscont2 = REALABS(consdata->vals[ind2] * (SCIPvarGetUbGlobal(var2) - SCIPvarGetLbGlobal(var2)));
+
+            if( abscont1 > abscont2 + 1e-9 )
+               return -1;
+            else if( abscont1 < abscont2 - 1e-9 )
+               return +1;
+            else
+               return SCIPvarCompare(var1, var2);
+         }
       }
    }
 }
@@ -3318,9 +3354,14 @@ void permSortConsdata(
 #endif
 }
 
-/** sorts linear constraint's variables by binaries, integers, implicit integers,
- *  and continuous variables, and the variables of the same type by non-increasing
- *  absolute coefficient and non-decreasing variable index.
+/** sorts linear constraint's variables depending on the stage of the solving process:
+ * - during PRESOLVING
+ *       sorts variables by binaries, integers, implicit integers, and continuous variables,
+ *       and the variables of the same type by non-decreasing variable index
+ *
+ * - during SOLVING
+ *       sorts binary and integer variables of the remaining problem w.r.t the absolute of their coefficient.
+ *       This fastens the propagation time of the constraint handler.
  */
 static
 SCIP_RETCODE consdataSort(
@@ -3338,8 +3379,25 @@ SCIP_RETCODE consdataSort(
       consdata->binvarssorted = TRUE;
       consdata->nbinvars = 1;
    }
-   else if( (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE && !consdata->sorted)
-      || (SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && !consdata->binvarssorted) )
+   else if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE && !consdata->sorted )
+   {
+      int* perm;
+
+      /* get temporary memory to store the sorted permutation */
+      SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
+
+      /* call sorting method  */
+      SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
+
+      permSortConsdata(consdata, perm, consdata->nvars);
+
+      /* free temporary memory */
+      SCIPfreeBufferArray(scip, &perm);
+
+      consdata->sorted = TRUE;
+      consdata->binvarssorted = FALSE;
+   }
+   else if( SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && (!consdata->binvarssorted || !consdata->sorted) )
    {
       int* perm;
       int v;
@@ -3348,7 +3406,7 @@ SCIP_RETCODE consdataSort(
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
 
       /* call sorting method  */
-      SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
+      SCIPsort(perm, consdataCompVarProp, (void*)consdata, consdata->nvars);
 
       permSortConsdata(consdata, perm, consdata->nvars);
 
@@ -11395,22 +11453,15 @@ SCIP_RETCODE simplifyInequalities(
    /* get temporary memory to store the sorted permutation */
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nvars) );
 
-   /* we only need to sort if
-    *   (a) the variable array is not sorted
-    *   (b) at least one binary variable exists
+   /* call sorting method, order continuous variables to the end and all other variables after non-increasing absolute
+    * value of their coefficients
     */
-   if( (consdata->sorted && consdata->nbinvars > 0) || !consdata->sorted )
-   {
-      /* call sorting method, order continuous variables to the end and all other variables after non-increasing absolute
-      * value of their coefficients
-      */
-      SCIPsort(perm, consdataCompSim, (void*)consdata, nvars);
+   SCIPsort(perm, consdataCompSim, (void*)consdata, nvars);
 
-      /* perform sorting after permutation array */
-      permSortConsdata(consdata, perm, nvars);
-      consdata->sorted = FALSE;
-      consdata->binvarssorted = FALSE;
-   }
+   /* perform sorting after permutation array */
+   permSortConsdata(consdata, perm, nvars);
+   consdata->sorted = FALSE;
+   consdata->binvarssorted = FALSE;
 
    vars = consdata->vars;
    vals = consdata->vals;
