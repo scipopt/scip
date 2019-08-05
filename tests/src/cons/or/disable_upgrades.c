@@ -123,10 +123,9 @@ Test(disable_upgrades, copy_problem, .description="test copying of or-constraint
 
 Test(disable_upgrades, test_basic_creation, .description="test SCIPcreateConsBasicOr")
 {
-   SCIP* targetscip;
    SCIP_CONS* newcons;
    SCIP_VAR** origvars;
-   SCIP_Bool valid;
+
    SCIP_CALL( SCIPreadProb(scip, "../check/instances/Or/or_constraint.cip", "cip") );
 
    cr_assert(SCIPgetNVars(scip) == 24);
