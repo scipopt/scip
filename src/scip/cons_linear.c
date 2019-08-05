@@ -3192,8 +3192,6 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
    SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
-   SCIP_VARTYPE vartype1;
-   SCIP_VARTYPE vartype2;
 
    assert(consdata != NULL);
    assert(0 <= ind1 && ind1 < consdata->nvars);
@@ -3202,21 +3200,28 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
    var1 = consdata->vars[ind1];
    var2 = consdata->vars[ind2];
 
-   vartype1 = SCIPvarGetType(var1);
-   vartype2 = SCIPvarGetType(var2);
-
    /* exactly one variable is binary */
    if( SCIPvarIsBinary(var1) != SCIPvarIsBinary(var2) )
+   {
       return (SCIPvarIsBinary(var1) ? -1 : +1);
+   }
    /* both variables are binary */
    else if( SCIPvarIsBinary(var1) + SCIPvarIsBinary(var2) == 2 )
+   {
       return SCIPvarCompare(var1, var2);
-   else if( vartype1 < vartype2 )
-      return -1;
-   else if( vartype1 > vartype2 )
-      return +1;
+   }
    else
-      return SCIPvarCompare(var1, var2);
+   {
+      SCIP_VARTYPE vartype1 = SCIPvarGetType(var1);
+      SCIP_VARTYPE vartype2 = SCIPvarGetType(var2);
+
+      if( vartype1 < vartype2 )
+         return -1;
+      else if( vartype1 > vartype2 )
+         return +1;
+      else
+         return SCIPvarCompare(var1, var2);
+   }
 }
 
 /** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
