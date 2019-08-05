@@ -666,6 +666,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    blocktolinkvars = NULL;
    tmpcouplingvars = NULL;
    tmpcouplingcoef = NULL;
+   varonlyobj = NULL;
    blockinfolist = NULL;
    htable = NULL;
 
