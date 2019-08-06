@@ -57,6 +57,15 @@ SCIP_Bool SCIPdecompIsOriginal(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
+/** returns TRUE if this constraint contains only linking variables */
+EXTERN
+SCIP_RETCODE SCIPhasConsOnlyLinkVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_CONS*            cons,               /**< the constraint */
+   SCIP_Bool*            hasonlylinkvars     /**< will be set to TRUE if this constraint has only linking variables */
+   );
+
 /** sets the parameter that indicates whether the variables must be labeled for the application of Benders'
  * decomposition
  */
