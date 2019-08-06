@@ -3206,7 +3206,7 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
       return (SCIPvarIsBinary(var1) ? -1 : +1);
    }
    /* both variables are binary */
-   else if( SCIPvarIsBinary(var1) + SCIPvarIsBinary(var2) == 2 )
+   else if( SCIPvarIsBinary(var1) )
    {
       return SCIPvarCompare(var1, var2);
    }
