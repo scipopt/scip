@@ -3382,7 +3382,7 @@ SCIP_RETCODE consdataSort(
    {
       consdata->sorted = TRUE;
       consdata->binvarssorted = TRUE;
-      consdata->nbinvars = (consdata->nvars == 1 : SCIPvarIsBinary(consdata->vars[0]) : 0);
+      consdata->nbinvars = (consdata->nvars == 1 ? SCIPvarIsBinary(consdata->vars[0]) : 0);
    }
    else if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE && !consdata->sorted )
    {
