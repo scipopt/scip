@@ -3245,7 +3245,7 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
       return (SCIPvarIsBinary(var1) ? -1 : +1);
    }
    /* both variables are binary */
-   else if( SCIPvarIsBinary(var1) + SCIPvarIsBinary(var2) == 2 )
+   else if( SCIPvarIsBinary(var1) )
    {
       SCIP_Real abscoef1 = REALABS(consdata->vals[ind1]);
       SCIP_Real abscoef2 = REALABS(consdata->vals[ind2]);
