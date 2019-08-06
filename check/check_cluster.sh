@@ -114,7 +114,6 @@ fi
 #                                              TIMELIMLIST, HARDTIMELIMLIST
 . ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
 
-
 # at the first time, some files need to be initialized. set to "" after the innermost loop
 # finished the first time
 INIT="true"

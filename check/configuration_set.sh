@@ -101,15 +101,9 @@ do
     fi
 done
 
-SOLUFILE=""
-for SOLU in instancedata/testsets/$TSTNAME.solu instancedata/testsets/all.solu $TSTNAME.solu testset/all.solu
-do
-    if test -e $SOLU
-    then
-        SOLUFILE=$SOLU
-        break
-    fi
-done
+# call method to obtain solution file
+# defines the following environment variable: SOLUFILE
+. ./configuration_solufile.sh $TSTNAME
 
 # if cutoff should be passed, solu file must exist
 if test $SETCUTOFF = 1 || test $SETCUTOFF = true

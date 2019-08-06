@@ -14,44 +14,30 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-export LANG=C
+# configures SOLUFILE environment variable for test runs and evaluation runs
 
-AWKARGS=""
-FILES=""
-for i in $@
+# input environment - these environment variables should be set before invoking this script
+TSTNAME=$1       # name of the test set
+
+# new environment variables defined by this script:
+#    SOLUFILE - .solu file for this test set, for parsing optimal solution values
+
+# look for solufiles under the name of the test, the name of the test with everything after the first "_" or "-" stripped, and all;
+# prefer more specific solufile names over general ones and the instance database solufiles over those in testset/
+SOLUFILE=""
+for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
 do
-    if test ! -e $i
+    for d in instancedata/testsets testset
+    do
+        if test -f ${d}/${f}.solu
+        then
+	    SOLUFILE=${d}/${f}.solu
+	    echo $SOLUFILE
+	    break
+        fi
+    done
+    if ! test "$SOLUFILE" = ""
     then
-        AWKARGS="$AWKARGS $i"
-    else
-        FILES="$FILES $i"
+	break
     fi
-done
-
-export LC_NUMERIC=C
-
-for i in $FILES
-do
-    NAME=`basename $i .out`
-    DIR=`dirname $i`
-    OUTFILE=$DIR/$NAME.out
-    ERRFILE=$DIR/$NAME.err
-    RESFILE=$DIR/$NAME.res
-    TEXFILE=$DIR/$NAME.tex
-    PAVFILE=$DIR/$NAME.pav
-
-    TSTNAME=`echo $NAME | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
-
-    if test -f testset/$TSTNAME.test
-    then
-        TESTFILE=testset/$TSTNAME.test
-    else
-        TESTFILE=""
-    fi
-
-    # call method to obtain solution file
-    # defines the following environment variable: SOLUFILE
-    . ./configuration_solufile.sh $TSTNAME
-
-    awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" -v "ERRFILE=$ERRFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 done
