@@ -39,6 +39,7 @@
 #include "scip/pub_misc_select.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
+#include "scip/scipdefplugins.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_event.h"
@@ -65,11 +66,28 @@
 
 #define HEUR_NAME "padm"
 #define HEUR_DESC "penalty alternating direction method primal heuristic"
+
+/* author bzfhende
+ *
+ * TODO change display character (with SCIP 7.0, display characters are unified). Suggestion: 'D'
+ */
+
 #define HEUR_DISPCHAR '>'
 #define HEUR_PRIORITY 70000
-#define HEUR_FREQ 1
+
+/* author bzfhende
+ *
+ * TODO frequency of 1 should only be used if heuristic approach changes with every local node. This is not the case here.
+ */
+#define HEUR_FREQ 0
 #define HEUR_FREQOFS 0
 #define HEUR_MAXDEPTH -1
+
+/* author bzfhende
+ *
+ * TODO debatable: after root node probaby better
+ */
+
 #define HEUR_TIMING SCIP_HEURTIMING_BEFORENODE /*SCIP_HEURTIMING_AFTERNODE*/
 #define HEUR_USESSUBSCIP TRUE                  /**< does the heuristic use a secondary SCIP instance? */
 
@@ -167,6 +185,7 @@ static SCIP_DECL_HASHKEYVAL(indexesHashval)
 /** primal heuristic data */
 struct SCIP_HeurData
 {
+   int                   bla;
 };
 
 /*
@@ -317,29 +336,42 @@ static SCIP_RETCODE createSubscip(
    SCIP_CALL(SCIPincludeDefaultPlugins(*subscip));
 
    /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
-   //SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-   //      TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, &success) );
+   //   SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
+   //         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, &success) );
+
 
    /* the plugins were successfully copied */
    if (TRUE) // if( success )
    {
       /* copy parameter settings */
       //SCIP_CALL( SCIPcopyParamSettings(scip, *subscip) );
-      SCIP_CALL(SCIPsetIntParam(*subscip, "display/verblevel", 4));
 
-      SCIP_Real timelimit;
-      SCIP_CALL(SCIPgetRealParam(scip, "limits/time", &timelimit));
-      SCIP_CALL(SCIPsetRealParam(*subscip, "limits/time", timelimit));
+      SCIP_CALL( SCIPcopyLimits(scip, *subscip) );
 
+      /* disable probing (really?) */
       SCIP_CALL(SCIPsetIntParam(*subscip, "propagating/probing/freq", -1));
-      SCIP_CALL(SCIPsetIntParam(*subscip, "propagating/probing/maxruns", 0));
-
-      /* disable solution limits */
-      SCIP_CALL(SCIPsetIntParam(*subscip, "limits/solutions", -1));
-      SCIP_CALL(SCIPsetIntParam(*subscip, "limits/bestsol", -1));
 
       /* avoid recursive calls */
       SCIP_CALL(SCIPsetSubscipsOff(*subscip, TRUE));
+
+      /* do not abort subproblem on CTRL-C */
+      SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/catchctrlc", FALSE) );
+
+#ifdef SCIP_DEBUG
+      /* for debugging, enable full output */
+      SCIP_CALL( SCIPsetIntParam(*subscip, "display/verblevel", 5) );
+      SCIP_CALL( SCIPsetIntParam(*subscip, "display/freq", 100000000) );
+#else
+      /* disable statistic timing inside sub SCIP and output to console */
+      SCIP_CALL( SCIPsetIntParam(*subscip, "display/verblevel", 0) );
+      SCIP_CALL( SCIPsetBoolParam(*subscip, "timing/statistictiming", FALSE) );
+#endif
+
+      /* author bzfhende
+       *
+       * TODO disable/enable other expensive techniques, e.g. branching
+       */
+
    }
    else
    {
@@ -1315,8 +1347,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    /* copy solution if present */
    if (solved)
    {
-      SCIP_VAR **vars;
-      int nvars;
       SCIP_SOL *newsol;
       SCIP_Bool success;
       SCIP_Real *blocksolvals;
@@ -1324,7 +1354,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
       assert(increasedslacks == 0);
 
-      SCIP_CALL(SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL));
       SCIP_CALL(SCIPallocBufferArray(scip, &blocksolvals, nvars));
       SCIP_CALL(SCIPcreateSol(scip, &newsol, heur));
 
@@ -1508,7 +1537,7 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    SCIP_CALL(SCIPsetHeurExitsol(scip, heur, heurExitsolPADM));
 #endif
 
-   /* add xyz primal heuristic parameters */
+   /* add padm primal heuristic parameters */
    /* TODO: (optional) add primal heuristic specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;
