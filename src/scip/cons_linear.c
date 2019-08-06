@@ -3250,7 +3250,7 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
       SCIP_Real abscoef1 = REALABS(consdata->vals[ind1]);
       SCIP_Real abscoef2 = REALABS(consdata->vals[ind2]);
 
-      if( abscoef1 > abscoef2 + 1e-9 )
+      if( EPSGT(abscoef1, abscoef2, 1e-9) )
          return -1;
       else if( abscoef1 < abscoef2 - 1e-9 )
          return +1;
