@@ -35,6 +35,7 @@
 #include "scip/scip_general.h"
 #include "scip/scip_var.h"
 #include "scip/scip_datastructures.h"
+#include "scip/scip_message.h"
 
 /* create and free a decomposition */
 #define INIT_MAP_SIZE 2000
@@ -238,6 +239,54 @@ SCIP_Bool SCIPdecompIsOriginal(
    assert(decomp != NULL);
 
    return decomp->original;
+}
+
+/** returns TRUE if this constraint contains only linking variables */
+SCIP_RETCODE SCIPhasConsOnlyLinkVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_CONS*            cons,               /**< the constraint */
+   SCIP_Bool*            hasonlylinkvars     /**< will be set to TRUE if this constraint has only linking variables */
+   )
+{
+   SCIP_VAR** consvars;
+   int nvars;
+   int i;
+   SCIP_Bool success;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(decomp != NULL);
+   assert(hasonlylinkvars != NULL);
+
+   SCIP_CALL( SCIPgetConsNVars(scip, cons, &nvars, &success) );
+   assert(success);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
+
+   SCIP_CALL( SCIPgetConsVars(scip, cons, consvars, nvars, &success) );
+
+   if( ! SCIPdecompIsOriginal(decomp) )
+   {
+      int requiredsize;
+      SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nvars, nvars, &requiredsize) );
+      assert(requiredsize <= nvars);
+   }
+
+   *hasonlylinkvars = TRUE;
+   /* check if variables are all linking variables */
+   for( i = 0; i < nvars && *hasonlylinkvars; ++i )
+   {
+      int label;
+
+      SCIPdecompGetVarsLabels(decomp, &consvars[i], &label, 1);
+
+      *hasonlylinkvars = (label == SCIP_DECOMP_LINKVAR);
+   }
+
+   SCIPfreeBufferArray(scip, &consvars);
+
+   return SCIP_OKAY;
 }
 
 /** sets the parameter that indicates whether the variables must be labeled for the application of Benders'
@@ -1319,6 +1368,7 @@ SCIP_RETCODE SCIPtransformDecompstore(
    {
       SCIP_DECOMP* origdecomp = decompstore->origdecomps[d];
       SCIP_DECOMP* decomp;
+      char strbuf[SCIP_MAXSTRLEN];
 
       /* 1. query the decomposition labels of the original variables and set them for the transformed variables
        * that have original counterparts
@@ -1338,7 +1388,11 @@ SCIP_RETCODE SCIPtransformDecompstore(
       /* 4. use the constraint labels for the final variable labeling */
       SCIP_CALL( SCIPdecompComputeVarsLabels(scip, decomp, conss, nconss) );
 
+      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp) );
+
       SCIP_CALL( SCIPdecompstoreAdd(decompstore, decomp) );
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Transformed Decomposition statistics %d\n%s", d, SCIPdecompPrintStats(decomp, strbuf));
    }
 
    SCIPfreeBufferArray(scip, &varslabels);
