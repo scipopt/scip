@@ -162,6 +162,19 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
    int                   nconss              /**< number of constraints */
    );
 
+/** assign linking constraints to blocks
+ *
+ * Each linking constraint is assigned to the most frequent block among its variables.
+ * Variables of other blocks are relabeled as linking variables.
+ */
+EXTERN
+SCIP_RETCODE SCIPdecompAssignLinkConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_CONS**           conss,              /**< array of linking constraints that should be reassigned */
+   int                   nconss              /**< number of constraints */
+   );
+
 /** compute decomposition statistics and store them in the decomp object */
 EXTERN
 SCIP_RETCODE SCIPcomputeDecompStats(

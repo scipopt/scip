@@ -40,6 +40,31 @@
 /* create and free a decomposition */
 #define INIT_MAP_SIZE 2000
 
+/** count occurrences of label in array, starting from pos */
+static
+int countLabelFromPos(
+   int*                  labels,             /**< array of labels */
+   int                   pos,                /**< position to start counting from */
+   int                   nlabels             /**< the number of labels */
+   )
+{
+   int endpos = pos;
+   int currlabel;
+
+   assert(labels != NULL);
+   assert(pos < nlabels);
+
+   currlabel = labels[pos];
+
+   do
+   {
+      endpos++;
+   }
+   while( endpos < nlabels && labels[endpos] == currlabel );
+
+   return endpos - pos;
+}
+
 /** create a decomposition */
 SCIP_RETCODE SCIPdecompCreate(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
@@ -571,30 +596,117 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
    return SCIP_OKAY;
 }
 
-/** count occurrences of label in array, starting from pos */
-static
-int countLabelFromPos(
-   int*                  labels,             /**< array of labels */
-   int                   pos,                /**< position to start counting from */
-   int                   nlabels             /**< the number of labels */
+/** assign linking constraints to blocks
+ *
+ * Each linking constraint is assigned to the most frequent block among its variables.
+ * Variables of other blocks are relabeled as linking variables.
+ */
+SCIP_RETCODE SCIPdecompAssignLinkConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_CONS**           conss,              /**< array of linking constraints that should be reassigned */
+   int                   nconss              /**< number of constraints */
    )
 {
-   int endpos = pos;
-   int currlabel;
+   SCIP_VAR** vars;
+   int* varslabels;
+   int requiredsize;
+   int nconsvars;
+   int nvars;
+   int c;
 
-   assert(labels != NULL);
-   assert(pos < nlabels);
+   assert(scip != NULL);
+   assert(decomp != NULL);
 
-   currlabel = labels[pos];
+   nvars = SCIPgetNVars(scip);
 
-   do
+   SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+
+
+   for( c = 0; c < nconss; c++ )
    {
-      endpos++;
-   }
-   while( endpos < nlabels && labels[endpos] == currlabel );
+      SCIP_Bool success;
+      SCIPgetConsNVars(scip, conss[c], &nconsvars, &success);
+      SCIP_CALL( SCIPgetConsVars(scip, conss[c], vars, nvars, &success) );
 
-   return endpos - pos;
+      if( ! SCIPdecompIsOriginal(decomp) )
+      {
+         SCIP_CALL( SCIPgetActiveVars(scip, vars, &nconsvars, nconsvars, &requiredsize) );
+         assert(requiredsize <= nvars);
+      }
+
+      SCIPdecompGetVarsLabels(decomp, vars, varslabels, nconsvars);
+
+      SCIPsortIntPtr(varslabels, (void **)vars, nconsvars);
+      /* constraint contains only linking variables */
+      if( varslabels[nconsvars - 1] == SCIP_DECOMP_LINKVAR )
+      {
+         /* todo */
+         continue;
+      }
+      else
+      {
+         int startposs[2];
+         int endposs[2];
+         int nlinkvars;
+         int block;
+         int maxnblockvars;
+         int curr;
+         int v;
+         int p;
+
+         if( varslabels[0] == SCIP_DECOMP_LINKVAR )
+         {
+            nlinkvars = countLabelFromPos(varslabels, 0, nconsvars);
+         }
+         else
+         {
+            nlinkvars = 0;
+         }
+
+         assert(nlinkvars < nconsvars);
+
+         curr = nlinkvars;
+         maxnblockvars = 0;
+         do
+         {
+            int nblockvars = countLabelFromPos(varslabels, curr, nconsvars);
+            if (nblockvars > maxnblockvars)
+            {
+               maxnblockvars = nblockvars;
+               block = curr;
+            }
+            curr += nblockvars;
+         }
+         while (curr < nconsvars);
+
+         varslabels[block];
+
+         startposs[0] = nlinkvars;
+         endposs[0] = block;
+         startposs[1] = block + maxnblockvars;
+         endposs[1] = nconsvars;
+
+         p = 0;
+         for( p = 0; p < 2; ++p )
+         {
+            for( v = startposs[p]; v < endposs[p]; ++v)
+               varslabels[v] = SCIP_DECOMP_LINKVAR;
+
+            SCIP_CALL( SCIPdecompSetVarsLabels(decomp, &vars[startposs[p]], &varslabels[startposs[p]], endposs[p] - startposs[p]) );
+         }
+
+         SCIP_CALL( SCIPdecompSetConsLabels(decomp, &conss[c], &varslabels[block], 1) );
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &varslabels);
+
+   return SCIP_OKAY;
 }
+
 
 /** compute decomposition modularity */
 static
