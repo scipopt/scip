@@ -187,16 +187,9 @@ do
       TESTFILE=""
     fi
 
-    # look for solufiles under the name of the test, the name of the test with everything after the first "_" stripped, and all
-    SOLUFILE=""
-    for f in $TSTNAME ${TSTNAME%%_*} ${TSTNAME%%-*} all
-    do
-      if test -f testset/${f}.solu
-      then
-        SOLUFILE=testset/${f}.solu
-        break
-      fi
-    done
+    # call method to obtain solution file
+    # defines the following environment variable: SOLUFILE
+    . ./configuration_solufile.sh $TSTNAME
 
     awk -f check_gams.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $SOLUFILE $TRCFILE | tee $RESFILE
   fi

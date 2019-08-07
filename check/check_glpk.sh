@@ -142,4 +142,4 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-./evalcheck_glpk.sh $OUTFILE
+./evalcheck_solver.sh $OUTFILE

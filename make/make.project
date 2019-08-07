@@ -75,7 +75,7 @@ EXECUTABLE      =       $(MAINFILE)
 BINID           =       $(notdir $(EXECUTABLE))
 OUTPUTDIR       =       results
 CLUSTERNODES    =       all
-SLURMACCOUNT    =       ""
+SLURMACCOUNT    =       default
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
@@ -172,7 +172,7 @@ SPLINTFLAGS	=	-UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE -USCIP_WITH_GMP -
 			-redef +export-header +export-local +decl-undef +relaxtypes
 
 # third party testing parameters
-FSCIP		=	fscip
+FSCIP		=	bin/fscip
 CPLEX		=	cplex
 CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel

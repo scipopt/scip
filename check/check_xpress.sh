@@ -200,4 +200,4 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-./evalcheck_xpress.sh $OUTFILE
+./evalcheck_solver.sh $OUTFILE

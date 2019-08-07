@@ -26,7 +26,7 @@
 #    DEBUGTOOLCMD - a debug tool command to use
 #    INSTANCELIST - list of all instances with complete path
 #    TIMELIMLIST - list of time limits for the individual instances
-#    TIMELIMLIST - list of hard time limits for the individual instances, that are given to slurm
+#    HARDTIMELIMLIST - list of hard time limits for the individual instances, that are given to slurm
 
 # function to capitalize a whole string
 function capitalize {
@@ -80,8 +80,11 @@ then
     mkdir $SCIPPATH/../settings
 fi
 
+# find out the solver that should be used
+SOLVER=`stripversion $BINNAME`
+
 # figure out the correct settings file extension
-if test $BINNAME = cplex
+if test $SOLVER = cplex
 then
     SETEXTEXTENSION="prm"
 else
@@ -93,7 +96,12 @@ fi
 SETTINGSLIST=(${SETNAMES//,/ })
 for SETNAME in ${SETTINGSLIST[@]}
 do
-    SETTINGS="${SCIPPATH}/../settings/${SETNAME}.${SETEXTEXTENSION}"
+    if test $SOLVER = fscip
+    then
+	SETTINGS="${SCIPPATH}/../../ug/settings/${SETNAME}.${SETEXTEXTENSION}"
+    else
+	SETTINGS="${SCIPPATH}/../settings/${SETNAME}.${SETEXTEXTENSION}"
+    fi
     if test $SETNAME != "default" && test ! -e $SETTINGS
     then
         echo Skipping test since the settings file $SETTINGS does not exist.
@@ -145,7 +153,6 @@ then
     POSSIBLEPATHS="${POSSIBLEPATHS} `cat paths.txt`"
 fi
 POSSIBLEPATHS="${POSSIBLEPATHS} / DONE"
-# echo $POSSIBLEPATHS
 
 #search for test file and check if we use a ttest or a test file
 if [ -f instancedata/testsets/$TSTNAME.ttest ];

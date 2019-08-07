@@ -23,7 +23,7 @@
 # that a job is run on a single computer, i.e., in general, $PPN should equal the number of cores
 # of each computer. Of course, the value depends on the specific computer/queue.
 #
-# To get the result files call "./evalcheck_cluster_gurobi.sh
+# To get the result files call "./evalcheck_cluster.sh
 # results/check.$TSTNAME.$BINNAME.$SETNAME.eval in directory check/
 # This leads to result files
 #  - results/check.$TSTNAME.$BINNAME.$SETNAME.out

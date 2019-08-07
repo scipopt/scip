@@ -163,4 +163,4 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-./evalcheck_symphony.sh $OUTFILE
+./evalcheck_solver.sh $OUTFILE

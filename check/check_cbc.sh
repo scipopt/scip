@@ -157,4 +157,4 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-./evalcheck_cbc.sh $OUTFILE
+./evalcheck_solver.sh $OUTFILE

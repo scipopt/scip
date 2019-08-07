@@ -24,11 +24,11 @@
 # of each computer. Of course, the value depends on the specific computer/queue.
 #
 # To get the result files call "./evalcheck_cluster.sh
-# $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.eval in directory check/
+# $OUTPUTDIR/check.$TSTNAME.$BINID.$SETNAME.eval in directory check/
 # This leads to result files
-#  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.out
-#  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.res
-#  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.err
+#  - $OUTPUTDIR/check.$TSTNAME.$BINID.$SETNAME.out
+#  - $OUTPUTDIR/check.$TSTNAME.$BINID.$SETNAME.res
+#  - $OUTPUTDIR/check.$TSTNAME.$BINID.$SETNAME.err
 
 TSTNAME=$1
 BINNAME=$2
@@ -61,7 +61,7 @@ CLUSTERNODES=${28}
 SLURMACCOUNT=${29}
 
 # check if all variables defined (by checking the last one)
-if test -z $CLUSTERNODES
+if test -z $SLURMACCOUNT
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -92,10 +92,12 @@ then
     echo "SETCUTOFF     = $SETCUTOFF"
     echo "VISUALIZE     = $VISUALIZE"
     echo "CLUSTERNODES  = $CLUSTERNODES"
+    echo "SLURMACCOUNT  = $SLURMACCOUNT"
     exit 1;
 fi
 
 # configure cluster-related environment variables
+# defines the following environment variables: NICE, ACCOUNT, CLUSTERQUEUE
 . ./configuration_cluster.sh $QUEUE $PPN $EXCLUSIVE $QUEUETYPE
 
 # the srun queue requires a format duration HH:MM:SS (and optionally days),
@@ -160,7 +162,8 @@ do
 		# infer the names of all involved files from the arguments
 		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
 		#                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
-		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s $THREADS $GLBSEEDSHIFT
+		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE
+		                              $p $s $THREADS $GLBSEEDSHIFT
 
 		# skip instance if log file is present and we want to continue a previously launched test run
 		if test "$SKIPINSTANCE" = "true"
@@ -182,13 +185,13 @@ do
 
                 # check if binary exists. The second condition checks whether there is a binary of that name directly available
                 # independent of whether it is a symlink, file in the working directory, or application in the path
-        if test -e $SCIPPATH/../$BINNAME
-        then
-           export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
-        elif type $BINNAME >/dev/null 2>&1
-        then
-           export EXECNAME=${DEBUGTOOLCMD}$BINNAME
-        fi
+		if test -e $SCIPPATH/../$BINNAME
+		then
+		    export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
+		elif type $BINNAME >/dev/null 2>&1
+		then
+		    export EXECNAME=${DEBUGTOOLCMD}$BINNAME
+		fi
 
                 # check queue type
 		if test  "$QUEUETYPE" = "srun"
@@ -208,9 +211,9 @@ do
 		    # the space at the end is necessary
 		    export SRUN="srun --cpu_bind=cores -v -v "
 
-                    if test "$SLURMACCOUNT" == ""
+                    if test "$SLURMACCOUNT" == "default"
 	            then
-                                  SLURMACCOUNT=$ACCOUNT
+                        SLURMACCOUNT=$ACCOUNT
                     fi
 
                     if test "$CLUSTERNODES" = "all"

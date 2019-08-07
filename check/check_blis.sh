@@ -141,4 +141,4 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-./evalcheck_blis.sh $OUTFILE
+./evalcheck_solver.sh $OUTFILE

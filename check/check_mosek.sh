@@ -143,4 +143,4 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-./evalcheck_mosek.sh $OUTFILE
+./evalcheck_solver.sh $OUTFILE

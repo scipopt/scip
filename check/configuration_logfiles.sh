@@ -45,6 +45,7 @@ QUEUE=${10}  # the queue name
 p=${11}      # the index of the current permutation
 s=${12}      # shift of the global random seed
 THREADS=${13} # the number of threads
+GLBSEEDSHIFT=${14} # the global seed shift
 
 # common naming scheme for eval files
 EVALFILE=$SCIPPATH/$OUTPUTDIR/check.$TSTNAME.$BINID.$QUEUE.$SETNAME

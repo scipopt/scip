@@ -32,7 +32,6 @@ do
         if test -f ${d}/${f}.solu
         then
 	    SOLUFILE=${d}/${f}.solu
-	    echo $SOLUFILE
 	    break
         fi
     done

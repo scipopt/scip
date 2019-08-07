@@ -154,4 +154,4 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-./evalcheck_gurobi.sh $OUTFILE
+./evalcheck_solver.sh $OUTFILE
