@@ -3283,7 +3283,7 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
             SCIP_Real abscont1 = REALABS(consdata->vals[ind1] * (SCIPvarGetUbGlobal(var1) - SCIPvarGetLbGlobal(var1)));
             SCIP_Real abscont2 = REALABS(consdata->vals[ind2] * (SCIPvarGetUbGlobal(var2) - SCIPvarGetLbGlobal(var2)));
 
-            if( abscont1 > abscont2 + 1e-9 )
+            if( EPSGT(abscont1, abscont2, 1e-9) )
                return -1;
             else if( abscont1 < abscont2 - 1e-9 )
                return +1;
