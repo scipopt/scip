@@ -3384,25 +3384,7 @@ SCIP_RETCODE consdataSort(
       consdata->binvarssorted = TRUE;
       consdata->nbinvars = (consdata->nvars == 1 ? (int)SCIPvarIsBinary(consdata->vars[0]) : 0);
    }
-   else if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE && !consdata->sorted )
-   {
-      int* perm;
-
-      /* get temporary memory to store the sorted permutation */
-      SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
-
-      /* call sorting method  */
-      SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
-
-      permSortConsdata(consdata, perm, consdata->nvars);
-
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &perm);
-
-      consdata->sorted = TRUE;
-      consdata->binvarssorted = FALSE;
-   }
-   else if( SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && (!consdata->binvarssorted || !consdata->sorted) )
+   else if( !consdata->sorted || (!consdata->binvarssorted && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE) )
    {
       int* perm;
       int v;
@@ -3411,7 +3393,10 @@ SCIP_RETCODE consdataSort(
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
 
       /* call sorting method  */
-      SCIPsort(perm, consdataCompVarProp, (void*)consdata, consdata->nvars);
+      if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
+         SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
+      else
+         SCIPsort(perm, consdataCompVarProp, (void*)consdata, consdata->nvars);
 
       permSortConsdata(consdata, perm, consdata->nvars);
 
@@ -3419,16 +3404,24 @@ SCIP_RETCODE consdataSort(
       SCIPfreeBufferArray(scip, &perm);
 
       consdata->sorted = TRUE;
-      consdata->binvarssorted = TRUE;
 
-      /* count binary variables in the sorted vars array */
-      consdata->nbinvars = 0;
-      for( v = 0; v < consdata->nvars; ++v )
+      if( SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE )
       {
-         if( SCIPvarIsBinary(consdata->vars[v]) )
-            ++consdata->nbinvars;
-         else
-            break;
+         consdata->binvarssorted = TRUE;
+
+         /* count binary variables in the sorted vars array */
+         consdata->nbinvars = 0;
+         for( v = 0; v < consdata->nvars; ++v )
+         {
+            if( SCIPvarIsBinary(consdata->vars[v]) )
+               ++consdata->nbinvars;
+            else
+               break;
+         }
+      }
+      else
+      {
+         consdata->binvarssorted = TRUE;
       }
    }
 
