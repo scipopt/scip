@@ -993,6 +993,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
          SCIPcaptureConsExprExpr(expr);
          SCIP_CALL( SCIPhashmapInsertInt(nlhdlrdata->exprmap, (void*)expr, nlhdlrdata->nexprs) );
          ++nlhdlrdata->nexprs;
+          * TODO: reactivate this once prop_symmetry is finished
+          */
+#if 0
+#endif
       }
    }
 

@@ -957,10 +957,10 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvars, nallvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvals, nallvars) );
 
-   /* create iterator for expression constraints */
-   exprconshdlr = SCIPfindConshdlr(scip, "expr");
+   /* create hashset for auxvars, array for nonlinear variable and iterator for expression constraints */
    if( nexprconss > 0 )
    {
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, isnlinvar, nvars) );
       SCIP_CALL( SCIPexpriteratorCreate(&it, exprconshdlr, SCIPblkmem(scip)) );
    }
 
