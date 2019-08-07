@@ -3285,7 +3285,7 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
 
             if( EPSGT(abscont1, abscont2, 1e-9) )
                return -1;
-            else if( abscont1 < abscont2 - 1e-9 )
+            else if( EPSGT(abscont2, abscont1, 1e-9) )
                return +1;
             else
                return SCIPvarCompare(var1, var2);
