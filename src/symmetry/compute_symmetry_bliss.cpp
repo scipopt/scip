@@ -490,7 +490,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SYM_RHSTYPE* uniquerhsarray = NULL;
    SCIP_CONSHDLR* consexprhdlr = SCIPfindConshdlr(scip, "expr");
    SCIP_CONS** exprconss = SCIPconshdlrGetConss(consexprhdlr);
-   int nexprconss = SCIPconshdlrGetNConss(consexprhdlr);
+   int nexprconss =SCIPconshdlrGetNConss(consexprhdlr);
    int nuniqueops = 0;
    int nuniqueconsts = 0;
    int nuniquecoefs = 0;
@@ -562,6 +562,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   node = SCIPvarGetProbindex((SCIPgetConsExprExprVarVar(expr)));
                   assert(node < (int) G->get_nof_vertices());
                }
+
                /* for constant expressions, get the color of its type (value) or assign a new one */
                else if( strcmp(opname, "val") == 0 )
                {
