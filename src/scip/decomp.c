@@ -84,6 +84,8 @@ SCIP_RETCODE SCIPdecompCreate(
    SCIP_Bool             benderslabels       /**< should the variables be labeled for the application of Benders' decomposition */
    )
 {
+   int memsize;
+
    assert(decomp != NULL);
    assert(blkmem != NULL);
 
@@ -92,10 +94,12 @@ SCIP_RETCODE SCIPdecompCreate(
    SCIP_CALL( SCIPhashmapCreate(&(*decomp)->cons2block, blkmem, INIT_MAP_SIZE) );
 
    /* we allocate one extra slot for the linking block */
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->varssize, nblocks + 1) );
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->consssize, nblocks + 1) );
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->labels, nblocks + 1) );
+   memsize = nblocks + 1;
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->varssize, memsize) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->consssize, memsize) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->labels, memsize) );
 
+   (*decomp)->memsize = memsize;
    (*decomp)->nblocks = nblocks;
    (*decomp)->score = -1.0;
    (*decomp)->modularity = -1.0;
@@ -129,9 +133,9 @@ void SCIPdecompFree(
    SCIPhashmapFree(&(*decomp)->var2block);
    SCIPhashmapFree(&(*decomp)->cons2block);
 
-   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->varssize, (*decomp)->nblocks + 1);
-   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->consssize, (*decomp)->nblocks + 1);
-   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->labels, (*decomp)->nblocks + 1);
+   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->varssize, (*decomp)->memsize);
+   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->consssize, (*decomp)->memsize);
+   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->labels, (*decomp)->memsize);
 
    BMSfreeBlockMemory(blkmem, decomp);
 }
