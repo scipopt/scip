@@ -1160,75 +1160,34 @@ SCIP_RETCODE SCIPcomputeDecompStats(
       varlabel = varidx < nvars ? varslabels[varidx] : INT_MAX;
       conslabel = considx < nconss ? conslabels[considx] : INT_MAX;
 
-      assert(currlabelidx < decomp->nblocks + 1);
+      assert(currlabelidx < decomp->memsize);
       /* store the smaller of the two current labels */
-      decomp->labels[currlabelidx++] = MIN(varlabel, conslabel);
+      decomp->labels[currlabelidx] = MIN(varlabel, conslabel);
 
-      /* increment the variable or constraint indices or both, depending on one label being strictly smaller */
+      /* a strictly larger variable label means that there are no variables for the current label */
       if( varlabel <= conslabel )
-         varidx += countLabelFromPos(varslabels, varidx, nvars);
+         decomp->varssize[currlabelidx] = countLabelFromPos(varslabels, varidx, nvars);
+      else
+         decomp->varssize[currlabelidx] = 0;
 
+      /* the same for constraint labels */
       if( conslabel <= varlabel )
-         considx += countLabelFromPos(conslabels, considx, nconss);
+         decomp->consssize[currlabelidx] = countLabelFromPos(conslabels, considx, nconss);
+      else
+         decomp->consssize[currlabelidx] = 0;
+
+      /* increase indices appropriately */
+      varidx += decomp->varssize[currlabelidx];
+      considx += decomp->consssize[currlabelidx];
+
+      currlabelidx++;
   }
 
   SCIPdebugMsg(scip, "Counted %d different labels (should be %d)\n", currlabelidx, decomp->nblocks + 1);
 
   /* strip the remaining, unused blocks */
-  if( currlabelidx < decomp->nblocks + 1)
+  if( currlabelidx < decomp->nblocks + 1 )
      decomp->nblocks = currlabelidx - 1;
-
-
-  currlabelidx = 1;
-  varblockstart = decomp->varssize[0];
-  assert(varblockstart == nvars || varslabels[varblockstart] > SCIP_DECOMP_LINKVAR);
-   /* loop over the variables to count the occurrences */
-  while( varblockstart < nvars )
-  {
-     assert(currlabelidx < decomp->nblocks + 1);
-     assert(decomp->labels[currlabelidx] <= varslabels[varblockstart]);
-
-     /* check if the current label is present in the variable labels */
-     if( decomp->labels[currlabelidx] < varslabels[varblockstart] )
-     {
-        decomp->varssize[currlabelidx] = 0;
-     }
-     else
-     {
-        /* increment variable block start */
-        decomp->varssize[currlabelidx] = countLabelFromPos(varslabels, varblockstart, nvars);
-        varblockstart += decomp->varssize[currlabelidx];
-     }
-     currlabelidx++;
-  }
-
-  assert(currlabelidx == decomp->nblocks + 1);
-
-  consblockstart = decomp->consssize[0];
-  assert(consblockstart == nconss || conslabels[consblockstart] >= 0);
-
-  currlabelidx = 1;
-  while( consblockstart < nconss )
-  {
-     assert(currlabelidx < decomp->nblocks + 1);
-     assert(decomp->labels[currlabelidx] <= conslabels[consblockstart]);
-
-     /* the current label may not be present in the conslabels */
-     if( decomp->labels[currlabelidx] < conslabels[consblockstart] )
-     {
-        decomp->consssize[currlabelidx] = 0;
-     }
-     else
-     {
-        /* count the number of occurrences and store it */
-        decomp->consssize[currlabelidx] = countLabelFromPos(conslabels, consblockstart, nconss);
-     }
-
-     consblockstart += decomp->consssize[currlabelidx];
-     currlabelidx++;
-  }
-
-  assert(currlabelidx == decomp->nblocks + 1);
 
   /* delete empty blocks from statistics, relabel the corresponding constraints/variables as linking */
   varblockstart = decomp->varssize[0];
