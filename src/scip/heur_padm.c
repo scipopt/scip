@@ -682,6 +682,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Real slackthreshold;
    SCIP_STATUS status;
    int blockoffset;
+   int linkconsoffset;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -701,16 +702,17 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    varonlyobj = NULL;
    blockinfolist = NULL;
    htable = NULL;
+   linkconsoffset = 0;
 
    doScaling = FALSE;
    // todo: find good value for gap
    gap = 8.0;
    SCIPdebugMsg(scip, "Initialize padm heuristic\n");
 #if 0
-   SCIP_CALL( SCIPwriteOrigProblem(scip, "debug_padm.lp", "lp", FALSE) );
+   SCIP_CALL( SCIPwriteOrigProblem(scip, "debug_padm_orig.lp", "lp", FALSE) );
 #endif
 #if 0
-   SCIP_CALL( SCIPwriteTransProblem(scip, "debug_padm.lp", "lp", FALSE) );
+   SCIP_CALL( SCIPwriteTransProblem(scip, "debug_padm_trans.cip", "cip", FALSE) );
 #endif
 
    decompstore = SCIPgetDecompstore(scip);
@@ -760,8 +762,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    for( i = 0; i < nconss; i++ )
       SCIPdebugMsg(scip,"%s %d\n",SCIPconsGetName(conss[i]), conslabels[i]);
 #endif
-
-   SCIPdecompComputeVarsLabels(scip, decomp, conss, nconss);
    SCIPdecompGetVarsLabels(decomp, vars, varslabels, nvars);
 #if 0
    for( i = 0; i < nvars; i++ )
@@ -771,16 +771,64 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    /* sort constraints by blocks */
    nblocks = SCIPdecompGetNBlocks(decomp);
    SCIPsortIntPtr(conslabels, (void **)conss, nconss);
-   if (conslabels[0] == -2)
+
+   if( conslabels[0] == SCIP_DECOMP_LINKCONS )
    {
-      SCIPdebugMsg(scip, "No support for linking contraints\n");
-      goto TERMINATE;
+      /* copy decomp to newdecomp */
+      SCIP_DECOMP* newdecomp;
+      SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), nblocks, FALSE, SCIPdecompUseBendersLabels(decomp)) );
+
+      SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, vars, varslabels, nvars) );
+      SCIP_CALL( SCIPdecompSetConsLabels(newdecomp, conss, conslabels, nconss) );
+
+      SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp) );
+
+      for (int v = 0; v < nconss; v++)
+      {
+#if 0
+         int newlabel;
+         SCIPdecompGetConsLabels(newdecomp, &conss[v], &newlabel, 1);
+         SCIPdebugMsg(scip, "%s %d %d\n", SCIPconsGetName(conss[v]), conslabels[v], newlabel);
+         assert(conslabels[v] = newlabel);
+         SCIP_Bool hasonlylinkvars = FALSE;
+         SCIPhasConsOnlyLinkVars(scip, decomp, conss[v], &hasonlylinkvars );
+         SCIPdebugMsg(scip, "%s has only link vars %d\n", SCIPconsGetName(conss[v]), hasonlylinkvars);
+#endif
+         if( conslabels[v] == SCIP_DECOMP_LINKCONS )
+            linkconsoffset++;
+         else
+            break;
+      }
+      SCIPdebugMsg(scip, "Ignored %d linking constraints\n", linkconsoffset);
+
+      /* reassign linking constraints */
+      SCIP_CALL( SCIPdecompAssignLinkConss(scip, newdecomp, &conss[0], linkconsoffset) );
+
+      SCIPdecompGetConsLabels(newdecomp, conss, conslabels, nconss);
+      SCIPdecompGetVarsLabels(newdecomp, vars, varslabels, nvars);
+
+      SCIPsortIntPtr(conslabels, (void **)conss, nconss);
+      decomp = newdecomp;
    }
-   blockoffset = conslabels[0];
+
+#if 0
+   for (int v = 0; v < nconss; v++)
+   {
+      if( conslabels[v] != SCIP_DECOMP_LINKCONS )
+         break;
+      SCIPdebugMsg(scip, "%s conslabel %d\n", SCIPconsGetName(conss[v]), conslabels[v]);
+      int hasonlylinkvars;
+      assert(hasonlylinkvars);
+      SCIPhasConsOnlyLinkVars(scip, decomp, conss[v], &hasonlylinkvars);
+      SCIPdebugMsg(scip, "has only linking vars %d\n", hasonlylinkvars);
+   }
+#endif
+
+   blockoffset = conslabels[linkconsoffset];
    SCIPdebugMsg(scip, "Block numbering starts from %d\n", blockoffset);
 
    /* determine start indices of blocks in sorted conss array */
-   i = 0;
+   i = linkconsoffset;
    for (b = 0; b < nblocks + 1; ++b)
    {
       blockstartsconss[b] = i;
@@ -809,7 +857,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    numlinkvars = 0;
    for (i = 0; i < nvars; i++)
    {
-      if (varslabels[i] == -1)
+      if (varslabels[i] == SCIP_DECOMP_LINKVAR)
       {
          numlinkvars++;
 #if 0
@@ -826,7 +874,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    b = 0;
    for (i = 0; i < nvars; i++)
    {
-      if (varslabels[i] == -1)
+      if (varslabels[i] == SCIP_DECOMP_LINKVAR)
       {
          linkvars[b] = vars[i];
          SCIP_CALL(SCIPallocBufferArray(scip, &(linkvartoblocks[b].indexes), problem->nblocks));
@@ -886,6 +934,13 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       }
    }
 
+   if(conslabels[linkconsoffset] == SCIP_DECOMP_LINKCONS)
+   {
+      SCIPdebugMsg(scip, "%s is linking contraint\n", SCIPconsGetName(conss[0]));
+      SCIPprintCons(scip, conss[0], NULL);
+      SCIPdebugMsg(scip, "No support for linking contraints\n");
+      goto TERMINATE;
+   }
 #if 0
    for (int m = 0; m < numlinkvars; m++)
    {
@@ -1018,9 +1073,10 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
 
-      assert((problem->blocks[b]).nslackspos >= blocktolinkvars[b].size);
-      assert((problem->blocks[b]).nslacksneg >= blocktolinkvars[b].size);
-      assert(blocktolinkvars[b].size <= (problem->blocks[b]).ncouplingcons);
+// todo treat linking constraints correctly and add asserts again
+//      assert((problem->blocks[b]).nslackspos >= blocktolinkvars[b].size);
+//      assert((problem->blocks[b]).nslacksneg >= blocktolinkvars[b].size);
+//      assert(blocktolinkvars[b].size <= (problem->blocks[b]).ncouplingcons);
    }
 
    assert(nentries == SCIPhashtableGetNElements(htable));
@@ -1507,18 +1563,8 @@ SCIP_RETCODE SCIPincludeHeurPADM(
 
    heur = NULL;
 
-   /**! [SnippetCodeStyleBlanks] */
-
    /* include primal heuristic */
-#if 0
-   /* use SCIPincludeHeur() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
-    * new callbacks are added in future SCIP versions
-    */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,
-         heurCopyXyz, heurFreeXyz, heurInitXyz, heurExitXyz, heurInitsolXyz, heurExitsolXyz, heurExecXyz,
-         heurdata) );
-#else
+
    /* use SCIPincludeHeurBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
@@ -1535,7 +1581,6 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    SCIP_CALL(SCIPsetHeurExit(scip, heur, heurExitPADM));
    SCIP_CALL(SCIPsetHeurInitsol(scip, heur, heurInitsolPADM));
    SCIP_CALL(SCIPsetHeurExitsol(scip, heur, heurExitsolPADM));
-#endif
 
    /* add padm primal heuristic parameters */
    /* TODO: (optional) add primal heuristic specific parameters with SCIPaddTypeParam() here */
