@@ -949,7 +949,7 @@ SCIP_RETCODE buildBlockGraph(
    assert(decomp != NULL);
 
    /* capture the trivial case that no linking variables are present */
-   if( decomp->varssize[0] == 0 )
+   if( decomp->varssize[0] == 0 || decomp->nblocks == 0 )
    {
       decomp->mindegree = 0;
       decomp->maxdegree = 0;
