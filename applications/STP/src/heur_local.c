@@ -1784,7 +1784,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       }
 
       /* free data structures */
-      SCIPStpunionfindFree(scip, &uf);
+      SCIPStpunionfindFreeMembers(scip, &uf);
       SCIPfreeBufferArray(scip, &nodesmark);
       SCIPfreeBufferArray(scip, &dfstree);
       SCIPfreeBufferArray(scip, &pinned);

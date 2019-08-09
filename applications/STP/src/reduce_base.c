@@ -2088,8 +2088,8 @@ SCIP_RETCODE reduce(
    SCIP_CALL( graph_path_init(scip, graph) );
 
 
-   // SCIP_CALL( reduce_extDistTest1(scip) );
-    SCIP_CALL( reduce_extTest2(scip) );
+    SCIP_CALL( reduce_extDistTest1(scip) );
+   // SCIP_CALL( reduce_extTest2(scip) );
    // SCIP_CALL( reduce_sdPcMwTest4(scip) );
    // SCIP_CALL( dheap_Test1(scip) );
    // SCIP_CALL( heur_extendPcMwOuterTest1(scip) );

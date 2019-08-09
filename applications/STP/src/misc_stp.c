@@ -792,7 +792,7 @@ void SCIPStpunionfindUnion(
 }
 
 /** frees the data fields of the union-find structure */
-void SCIPStpunionfindFree(
+void SCIPStpunionfindFreeMembers(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf                  /**< union find data structure */
    )

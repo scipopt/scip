@@ -80,7 +80,7 @@ SCIP_RETCODE extArc(
    SCIPfreeBufferArray(scip, &tree_deg);
    SCIPfreeBufferArray(scip, &isterm);
 
-   reduce_distDataFree(scip, graph, &distdata);
+   reduce_distDataFreeMembers(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
 
    return SCIP_OKAY;
@@ -656,25 +656,26 @@ SCIP_RETCODE reduce_extDistTest1(
    /* test edge root paths */
    {
       const int edge = 2;
-      const RANGE* pathroot_range = distdata.pathroots_range;
-      const int* pathroots = distdata.pathroots;
+      int** pathroot_blocks = distdata.pathroot_blocks;
+      int* pathroot_blocksizes = distdata.pathroot_blocksizes;
+
 
       assert(graph->head[edge] == 2 && graph->tail[edge] == 1);
 
       printf("edge ");
       graph_edge_printInfo(graph, edge);
 
-      assert(pathroot_range[edge / 2].end - pathroot_range[edge / 2].start == 6);
+      assert(pathroot_blocksizes[edge / 2] == 6);
 
-
-      for( int i = pathroot_range[edge / 2].start; i < pathroot_range[edge / 2].end; i++ )
+      for( int i = 0; i < pathroot_blocksizes[edge / 2]; i++ )
       {
-         printf("...root=%d  \n", pathroots[i]);
+         printf("...root=%d  \n", pathroot_blocks[edge / 2][i]);
       }
    }
 
 
    /* test distances */
+#ifndef NDEBUG
    {
       const SCIP_Real dist1_2 = reduce_distDataGetSD(&distdata, 1, 2);
       const SCIP_Real dist1_3 = reduce_distDataGetSD(&distdata, 1, 3);
@@ -691,8 +692,9 @@ SCIP_RETCODE reduce_extDistTest1(
       assert(dist2_5 == 0.5);
       assert(dist2_6 == -1.0);
    }
+#endif
 
-   reduce_distDataFree(scip, graph, &distdata);
+   reduce_distDataFreeMembers(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
 
    graph_path_exit(scip, graph);

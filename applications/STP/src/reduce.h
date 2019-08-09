@@ -39,10 +39,9 @@ typedef struct distance_data
    RANGE* closenodes_range;
    int* closenodes_indices;
    SCIP_Real* closenodes_distances;
-   RANGE* pathroots_range;   /* of size nedges / 2*/
-   int* pathroots;
+   int* pathroot_blocksizes;
+   int** pathroot_blocks;   /* of size nedges / 2*/
    int closenodes_totalsize;
-   int pathroots_totalsize;
 } DISTDATA;
 
 
@@ -157,7 +156,7 @@ extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
  */
 extern SCIP_RETCODE    reduce_distDataInit(SCIP*, const GRAPH*, int, SCIP_Bool, DISTDATA*);
 extern SCIP_Real       reduce_distDataGetSD(DISTDATA*, int, int);
-extern void            reduce_distDataFree(SCIP*, const GRAPH*, DISTDATA*);
+extern void            reduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

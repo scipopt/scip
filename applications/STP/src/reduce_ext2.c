@@ -633,11 +633,11 @@ SCIP_Bool extTreeSdDominatesBottleneck(
    assert(sd >= 0.0);
    assert(vertex_pathmarked >= 0 && vertex_pathmarked < graph->knots && vertex_unmarked >= 0 && vertex_unmarked < graph->knots);
 
- //  SCIPdebugMessage("%d %d bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, treeBottleneckDist);
-   printf("%d %d bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, treeBottleneckDist);
+   SCIPdebugMessage("%d %d bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, treeBottleneckDist);
 
-
+   {
    int todo;
+   }
    if( SCIPisLT(scip, sd, treeBottleneckDist) && 0 ) /* todo cover equality */
       return TRUE;
 
@@ -1648,7 +1648,7 @@ SCIP_RETCODE reduce_extendedEdge2(
    SCIPfreeBufferArray(scip, &tree_deg);
    SCIPfreeBufferArray(scip, &isterm);
 
-   reduce_distDataFree(scip, graph, &distdata);
+   reduce_distDataFreeMembers(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
 
 #ifndef NDEBUG

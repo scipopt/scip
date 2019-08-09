@@ -25,8 +25,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define EXT_PATHROOTS_BUFFER 20
-
 #include "reduce.h"
 #include "misc_stp.h"
 
@@ -61,6 +59,23 @@ int findEntryFromSorted(
    return -1;
 }
 
+
+#if 0
+static inline
+uint32_t getNextPow2(uint32_t n)
+{
+    n--;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    n++;
+    return n;
+}
+#endif
+
+
 /** returns distance of closenode from node, or -1.0 if this distance is not stored in close nodes list of node */
 static inline
 SCIP_Real getCloseNodeDistance(
@@ -91,46 +106,117 @@ SCIP_Real getCloseNodeDistance(
 }
 
 /** compute paths root list */
+static inline
+SCIP_RETCODE distDataPathRootsInsertEdge(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int*                  edge,               /**< edge to insert */
+   DISTDATA*             distdata            /**< to be initialized */
+)
+{
+   /* enough space left? */
+   /* reallocate */
+   /* or add edge */
+
+   return SCIP_OKAY;
+}
+
+/** compute paths root list */
 static
-SCIP_RETCODE distDataComputePathRootsList(
+SCIP_RETCODE distDataPathRootsInitialize(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    int*                  closenodes_edges,   /**< edges used to reach close nodes */
    DISTDATA*             distdata            /**< to be initialized */
    )
 {
-   int halfnedges_undeleted;
-   int* edgehits;
-   const int buffer_per_edge = EXT_PATHROOTS_BUFFER;
+   int* pathroot_blocksizes;
+   int* pathroot_blockcount;
+   int** pathroot_blocks;
+
    const int nnodes = g->knots;
    const int halfnedges = g->edges / 2;
    const RANGE* const range_closenodes = distdata->closenodes_range;
-   int* pathroots;
-   RANGE* range_pathroots;
 
    assert(scip && g && closenodes_edges && distdata);
 
-   graph_get_NVET(g, NULL, &halfnedges_undeleted, NULL);
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(pathroot_blocks), halfnedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(pathroot_blocksizes), halfnedges) );
 
-   halfnedges_undeleted /= 2;
-   distdata->pathroots_totalsize = range_closenodes[g->knots - 1].end + halfnedges_undeleted * buffer_per_edge;
-
-   assert(halfnedges_undeleted >= 1);
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(distdata->pathroots_range), halfnedges) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(distdata->pathroots), distdata->pathroots_totalsize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(edgehits), halfnedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(pathroot_blockcount), halfnedges) );
 
    for( int k = 0; k < halfnedges; k++ )
-      edgehits[k] = 0;
+      pathroot_blocksizes[k] = 0;
 
    /* compute the edge range sizes */
    for( int j = 0; j < range_closenodes[nnodes - 1].end; j++ )
    {
       const int edge = closenodes_edges[j];
       assert(edge >= 0 && edge < halfnedges);
-      edgehits[edge]++;
+      assert(g->oeat[2 * edge] != EAT_FREE);
+
+      pathroot_blocksizes[edge]++;
    }
+
+#if 1
+
+   // todo need a realloc wrapper
+
+   for( int e = 0; e < halfnedges; e++ )
+   {
+      const int size = pathroot_blocksizes[e];
+
+      /* is edge used? */
+      if( size > 0 )
+      {
+         assert(g->oeat[2 * e] != EAT_FREE);
+
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(pathroot_blocks[e]), size) );
+      }
+      else
+      {
+         pathroot_blocks[e] = NULL;
+      }
+   }
+
+   /* fill the path roots in */
+
+   for( int k = 0; k < halfnedges; k++ )
+      pathroot_blockcount[k] = 0;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( g->grad[k] == 0 )
+         continue;
+
+      for( int j = range_closenodes[k].start; j < range_closenodes[k].end; j++ )
+      {
+         const int edge = closenodes_edges[j];
+
+         assert(edge >= 0 && edge < halfnedges);
+         assert(g->oeat[2 * edge] != EAT_FREE);
+         assert(pathroot_blockcount[edge] < pathroot_blocksizes[edge]);
+
+         pathroot_blocks[edge][pathroot_blockcount[edge]++] = k;
+      }
+   }
+
+#ifndef NDEBUG
+   for( int e = 0; e < halfnedges; e++ )
+      assert(pathroot_blockcount[e] == pathroot_blocksizes[e]);
+#endif
+
+   distdata->pathroot_blocks = pathroot_blocks;
+   distdata->pathroot_blocksizes = pathroot_blocksizes;
+
+   SCIPfreeBufferArray(scip, &pathroot_blockcount);
+
+#else
+   distdata->pathroots_totalsize = range_closenodes[g->knots - 1].end + halfnedges_undeleted * buffer_per_edge;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(distdata->pathroots_range), halfnedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(distdata->pathroots), distdata->pathroots_totalsize) );
+
 
    /* compute the edge ranges */
    range_pathroots = distdata->pathroots_range;
@@ -187,11 +273,50 @@ SCIP_RETCODE distDataComputePathRootsList(
             || range_pathroots[e].end + buffer_per_edge == range_pathroots[e + 1].start );
    }
 #endif
-
-   SCIPfreeBufferArray(scip, &edgehits);
-
+#endif
    return SCIP_OKAY;
 }
+
+
+/** frees paths root list */
+static
+void distDataPathRootsFree(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   DISTDATA*             distdata            /**< to be initialized */
+   )
+{
+   int* pathroot_blocksizes;
+   int** pathroot_blocks;
+   const int halfnedges = g->edges / 2;
+
+   assert(scip && g && distdata);
+
+   pathroot_blocksizes = distdata->pathroot_blocksizes;
+   pathroot_blocks = distdata->pathroot_blocks;
+
+
+   for( int e = halfnedges - 1; e >= 0 ; e-- )
+   {
+      const int size = pathroot_blocksizes[e];
+
+      /* is edge used? */
+      if( size > 0 )
+      {
+         assert(pathroot_blocks[e] != NULL);
+
+         SCIPfreeBlockMemoryArray(scip, &(pathroot_blocks[e]), size);
+      }
+      else
+      {
+         assert(pathroot_blocks[e] == NULL);
+      }
+   }
+
+   SCIPfreeMemoryArray(scip, &pathroot_blocksizes);
+   SCIPfreeMemoryArray(scip, &pathroot_blocks);
+}
+
 
 /** limited Dijkstra to constant number of neighbors, taking SD distances into account */
 static
@@ -484,7 +609,7 @@ SCIP_RETCODE reduce_distDataInit(
    distDataSortCloseNodes(g, distdata);
 
    /* store for each edge the roots of all paths it is used for */
-   SCIP_CALL( distDataComputePathRootsList(scip, g, closenodes_edges, distdata) );
+   SCIP_CALL( distDataPathRootsInitialize(scip, g, closenodes_edges, distdata) );
 
    SCIP_CALL( graph_heap_create(scip, nnodes, NULL, NULL, &dheap) );
    distdata->dheap = dheap;
@@ -536,7 +661,7 @@ SCIP_Real reduce_distDataGetSD(
 }
 
 /** frees members of distance data */
-void reduce_distDataFree(
+void reduce_distDataFreeMembers(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    DISTDATA*             distdata            /**< to be freed */
@@ -547,6 +672,6 @@ void reduce_distDataFree(
    SCIPfreeMemoryArray(scip, &(distdata->closenodes_range));
    SCIPfreeMemoryArray(scip, &(distdata->closenodes_indices));
    SCIPfreeMemoryArray(scip, &(distdata->closenodes_distances));
-   SCIPfreeMemoryArray(scip, &(distdata->pathroots_range));
-   SCIPfreeMemoryArray(scip, &(distdata->pathroots));
+
+   distDataPathRootsFree(scip, graph, distdata);
 }
