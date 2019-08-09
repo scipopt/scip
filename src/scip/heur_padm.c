@@ -185,7 +185,8 @@ static SCIP_DECL_HASHKEYVAL(indexesHashval)
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int                   bla;
+   SCIP_Bool             doscaling;
+   SCIP_Bool             assignlinking;
 };
 
 /*
@@ -570,18 +571,20 @@ SCIP_DECL_HEURCOPY(heurCopyXyz)
 #endif
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-#if 0
 static
-SCIP_DECL_HEURFREE(heurFreeXyz)
+SCIP_DECL_HEURFREE(heurFreePADM)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_HEURDATA* heurdata;
+
+   heurdata = SCIPheurGetData(heur);
+   SCIPheurSetData(heur, NULL);
+
+   assert(heurdata != NULL);
+
+   SCIPfreeBlockMemory(scip, &heurdata);
 
    return SCIP_OKAY;
 }
-#else
-#define heurFreePADM NULL
-#endif
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 #if 0
@@ -657,8 +660,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    int b;
    int k;
    int *blockstartsconss;
-   char name[SCIP_MAXSTRLEN];
-   char info[SCIP_MAXSTRLEN];
    int numlinkvars;
    SCIP_VAR **linkvars;
    SET *linkvartoblocks;
@@ -683,10 +684,17 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_STATUS status;
    int blockoffset;
    int linkconsoffset;
+   SCIP_HEURDATA* heurdata;
+   char name[SCIP_MAXSTRLEN];
+   char info[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(heur != NULL);
    assert(result != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
    *result = SCIP_DIDNOTRUN;
 
    problem = NULL;
@@ -749,7 +757,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIP_Real obj;
       obj = SCIPvarGetObj(vars[i]);
       obj = REALABS(obj);
-      if (SCIPisGT(scip, obj, slackthreshold))
+      if( obj > slackthreshold )
          slackthreshold = obj;
    }
 
@@ -772,7 +780,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    nblocks = SCIPdecompGetNBlocks(decomp);
    SCIPsortIntPtr(conslabels, (void **)conss, nconss);
 
-   if( conslabels[0] == SCIP_DECOMP_LINKCONS )
+   if( heurdata->assignlinking && conslabels[0] == SCIP_DECOMP_LINKCONS )
    {
       /* copy decomp to newdecomp */
       SCIP_DECOMP* newdecomp;
@@ -823,6 +831,14 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIPdebugMsg(scip, "has only linking vars %d\n", hasonlylinkvars);
    }
 #endif
+
+   if(conslabels[linkconsoffset] == SCIP_DECOMP_LINKCONS)
+   {
+      SCIPdebugMsg(scip, "%s is linking contraint\n", SCIPconsGetName(conss[0]));
+      SCIPprintCons(scip, conss[0], NULL);
+      SCIPdebugMsg(scip, "No support for linking contraints\n");
+      goto TERMINATE;
+   }
 
    blockoffset = conslabels[linkconsoffset];
    SCIPdebugMsg(scip, "Block numbering starts from %d\n", blockoffset);
@@ -1559,7 +1575,7 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    SCIP_HEUR *heur;
 
    /* create PADM primal heuristic data */
-   heurdata = NULL;
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    heur = NULL;
 
@@ -1583,7 +1599,11 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    SCIP_CALL(SCIPsetHeurExitsol(scip, heur, heurExitsolPADM));
 
    /* add padm primal heuristic parameters */
-   /* TODO: (optional) add primal heuristic specific parameters with SCIPaddTypeParam() here */
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/doscaling",
+      "should scaling be performed?", &heurdata->doscaling, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/assignlinking",
+      "should linking constraints be assigned?", &heurdata->assignlinking, FALSE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
