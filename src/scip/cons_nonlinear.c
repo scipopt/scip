@@ -179,7 +179,6 @@ struct SCIP_ConshdlrData
 
    SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
-   SCIP_Bool             checkconvexexpensive;/**< whether to apply expensive curvature checking methods */
    SCIP_Bool             assumeconvex;       /**< whether functions in inequalities should be assumed to be convex */
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation */
    SCIP_Bool             reformulate;        /**< whether to reformulate expression graph */
@@ -2161,7 +2160,6 @@ static
 SCIP_RETCODE checkCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< nonlinear constraint */
-   SCIP_Bool             expensivechecks,    /**< whether also expensive checks should be executed */
    SCIP_Bool             assumeconvex        /**< whether to assume convexity in inequalities */
    )
 {
@@ -5389,7 +5387,6 @@ SCIP_RETCODE generateCut(
    SCIP_ROW**            row,                /**< storage for cut */
    SCIP_Real             minviol,            /**< minimal absolute violation we try to achieve */
    SCIP_Real             maxrange,           /**< maximal range allowed */
-   SCIP_Bool             expensivecurvchecks,/**< whether also expensive checks should be executed */
    SCIP_Bool             assumeconvex        /**< whether to assume convexity in inequalities */
    )
 {
@@ -5405,7 +5402,7 @@ SCIP_RETCODE generateCut(
 
    SCIPdebugMsg(scip, "constructing cut for %s hand side of constraint <%s>\n", side == SCIP_SIDETYPE_LEFT ? "left" : "right", SCIPconsGetName(cons));
 
-   SCIP_CALL( checkCurvature(scip, cons, expensivecurvchecks, assumeconvex) );
+   SCIP_CALL( checkCurvature(scip, cons, assumeconvex) );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5594,7 +5591,7 @@ SCIP_RETCODE separatePoint(
       /* generate cut
        * if function is defined at sol (activity<infinity) and constraint is violated, then expression interpreter should have evaluated at sol to get gradient before
        */
-      SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], NULL, sol, newsol || SCIPisInfinity(scip, consdata->activity), violside, &row, minefficacy, conshdlrdata->cutmaxrange, conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+      SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], NULL, sol, newsol || SCIPisInfinity(scip, consdata->activity), violside, &row, minefficacy, conshdlrdata->cutmaxrange, conshdlrdata->assumeconvex) );
 
       if( row == NULL ) /* failed to generate cut */
          continue;
@@ -5687,7 +5684,7 @@ SCIP_RETCODE addLinearizationCuts(
       if( SCIPconsIsLocal(conss[c]) )  /*lint !e613*/
          continue;
 
-      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );  /*lint !e613*/
+      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->assumeconvex) );  /*lint !e613*/
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
@@ -5699,7 +5696,7 @@ SCIP_RETCODE addLinearizationCuts(
 
       SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], NULL, ref, TRUE,
             (consdata->curvature & SCIP_EXPRCURV_CONVEX) ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT,
-            &row, minefficacy, conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
+            &row, minefficacy, conshdlrdata->cutmaxrange, FALSE) );  /*lint !e613*/
 
       if( row == NULL )
          continue;
@@ -7494,7 +7491,7 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
          if( consdata->nlrow == NULL )
          {
             /* compute curvature for the nonlinear constraint if not done yet */
-            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->assumeconvex) );
 
             SCIP_CALL( createNlRow(scip, conss[c]) );
             assert(consdata->nlrow != NULL);
@@ -7664,7 +7661,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
-      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );  /*lint !e613*/
+      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->assumeconvex) );  /*lint !e613*/
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
@@ -7729,7 +7726,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
       if( !SCIPisInfinity(scip,  consdata->rhs) && ((consdata->curvature & SCIP_EXPRCURV_CONVEX)  || !haveunboundedvar) )
       {
          SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], x, NULL, TRUE, SCIP_SIDETYPE_RIGHT, &row,
-               -SCIPinfinity(scip), conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
+               -SCIPinfinity(scip), conshdlrdata->cutmaxrange, FALSE) );  /*lint !e613*/
 
          if( row != NULL )
          {
@@ -7743,7 +7740,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
          ((consdata->curvature & SCIP_EXPRCURV_CONCAVE) || !haveunboundedvar) )
       {
          SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], x, NULL, TRUE, SCIP_SIDETYPE_LEFT, &row,
-            -SCIPinfinity(scip), conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
+            -SCIPinfinity(scip), conshdlrdata->cutmaxrange, FALSE) );  /*lint !e613*/
 
          if( row != NULL )
          {
@@ -7825,7 +7822,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
                continue;
 
             /* make sure curvature has been checked */
-            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );  /*lint !e613*/
+            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->assumeconvex) );  /*lint !e613*/
 
             if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
                ( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) )
@@ -9239,12 +9236,6 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          "whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)",
          &conshdlrdata->linfeasshift, FALSE, TRUE, NULL, NULL) );
 
-#if 0 /* don't have any expensive checks yet, so we disable this parameter for now */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkconvexexpensive",
-         "whether to apply expensive curvature checking methods",
-         &conshdlrdata->checkconvexexpensive, FALSE, TRUE, NULL, NULL) );
-#endif
-
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/assumeconvex",
          "whether to assume that nonlinear functions in inequalities (<=) are convex (disables reformulation)",
          &conshdlrdata->assumeconvex, TRUE, FALSE, NULL, NULL) );
@@ -9838,7 +9829,7 @@ SCIP_RETCODE SCIPcheckCurvatureNonlinear(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+   SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->assumeconvex) );
 
    return SCIP_OKAY;
 }
@@ -9869,7 +9860,7 @@ SCIP_RETCODE SCIPgetCurvatureNonlinear(
 
    if( checkcurv && !consdata->iscurvchecked )
    {
-      SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+      SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->assumeconvex) );
    }
 
    *curvature = consdata->curvature;
@@ -9906,7 +9897,7 @@ SCIP_RETCODE SCIPgetExprtreeCurvaturesNonlinear(
 
    if( checkcurv && !consdata->iscurvchecked )
    {
-      SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+      SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->assumeconvex) );
    }
 
    *curvatures = consdata->curvatures;
