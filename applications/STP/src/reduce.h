@@ -30,17 +30,26 @@
 #include "scip/scip.h"
 #include "graph.h"
 
+/** path root state */
+typedef struct pathroot_state
+{
+   int pathroot_id;
+   int pathroot_nrecomps;
+} PRSTATE;
+
 /** distance data */
 typedef struct distance_data
 {
-   //    SCIP_Bool* const nodeSDpaths_dirty;
+   //    SCIP_Bool*  pathrootsd_isdirty;
    DHEAP* dheap;
-   SCIP_Bool* nodepaths_dirty;
-   RANGE* closenodes_range;
-   int* closenodes_indices;
-   SCIP_Real* closenodes_distances;
-   int* pathroot_blocksizes;
-   int** pathroot_blocks;   /* of size nedges / 2*/
+   RANGE* closenodes_range;          /* of size nnodes */
+   int* closenodes_indices;          /* of size closenodes_totalsize */
+   SCIP_Real* closenodes_distances;  /* of size closenodes_totalsize */
+   int* pathroot_blocksizes;         /* of size nedges / 2 */
+   int* pathroot_blocksizesmax;      /* of size nedges / 2 */
+   PRSTATE** pathroot_blocks;        /* of size nedges / 2 */
+   SCIP_Bool* pathroot_isdirty;      /* of size nnodes */
+   int* pathroot_nrecomps;           /* of size nnodes */
    int closenodes_totalsize;
 } DISTDATA;
 

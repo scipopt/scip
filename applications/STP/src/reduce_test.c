@@ -656,7 +656,7 @@ SCIP_RETCODE reduce_extDistTest1(
    /* test edge root paths */
    {
       const int edge = 2;
-      int** pathroot_blocks = distdata.pathroot_blocks;
+      PRSTATE** pathroot_blocks = distdata.pathroot_blocks;
       int* pathroot_blocksizes = distdata.pathroot_blocksizes;
 
 
@@ -669,7 +669,7 @@ SCIP_RETCODE reduce_extDistTest1(
 
       for( int i = 0; i < pathroot_blocksizes[edge / 2]; i++ )
       {
-         printf("...root=%d  \n", pathroot_blocks[edge / 2][i]);
+         printf("...root=%d  \n", pathroot_blocks[edge / 2][i].pathroot_id);
       }
    }
 
