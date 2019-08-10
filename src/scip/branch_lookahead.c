@@ -117,6 +117,7 @@
 #define DEFAULT_ABBREVPSEUDO                 FALSE /**< If abbreviated: Use pseudo costs to estimate the score of a
                                                     *   candidate. */
 #define DEFAULT_LEVEL2AVGSCORE               FALSE /**< should the average score be used for uninitialized scores in level 2? */
+#define DEFAULT_LEVEL2ZEROSCORE              FALSE /**< should uninitialized scores be set to 0? */
 #define DEFAULT_SCORINGFUNCTION              'd'   /**< scoring function to be used at the base level */
 #define DEFAULT_DEEPERSCORINGFUNCTION        'd'   /**< scoring function to be used at deeper levels */
 #define DEFAULT_SCORINGSCORINGFUNCTION       'd'   /**< scoring function to be used for FSB scoring */
@@ -1055,6 +1056,7 @@ typedef struct
    SCIP_Bool             abbrevpseudo;       /**< If abbreviated == TRUE, should pseudocost values be used, to approximate
                                               *   the scoring? */
    SCIP_Bool             level2avgscore;     /**< should the average score be used for uninitialized scores in level 2? */
+   SCIP_Bool             level2zeroscore;    /**< should uninitialized scores in level 2 be set to zero? */
    SCIP_Bool             addclique;          /**< add binary constraints with two variables found at the root node also as a clique? */
    SCIP_Bool             propagate;          /**< Should the problem be propagated before solving each inner node? */
    SCIP_Bool             uselevel2data;      /**< should branching data generated at depth level 2 be stored for re-using it? */
@@ -2014,12 +2016,12 @@ SCIP_RETCODE scoreContainerSetScore(
    assert(scip != NULL);
    assert(scorecontainer != NULL);
    assert(cand != NULL);
-   assert(SCIPisGE(scip, score, 0.0));
+   assert(SCIPisGE(scip, score, -0.2));
 
    probindex = SCIPvarGetProbindex(cand->branchvar);
    assert(probindex >= 0);
 
-   if( scorecontainer->scores[probindex] < 0.0 )
+   if( scorecontainer->scores[probindex] < -0.5 )
    {
       ++scorecontainer->nsetscores;
       scorecontainer->scoresum += score;
@@ -3604,8 +3606,8 @@ SCIP_Real calculateScoreFromDeeperscore(
    assert(downbranchingresult != NULL);
    assert(upbranchingresult != NULL);
 
-   assert(downbranchingresult->deeperscore >= 0 || downbranchingresult->cutoff || SCIPisStopped(scip));
-   assert(upbranchingresult->deeperscore >= 0 || upbranchingresult->cutoff || SCIPisStopped(scip));
+   assert(downbranchingresult->deeperscore >= -0.2 || downbranchingresult->cutoff || SCIPisStopped(scip));
+   assert(upbranchingresult->deeperscore >= -0.2 || upbranchingresult->cutoff || SCIPisStopped(scip));
 
    downscore = sqrt(downbranchingresult->deeperscore);
    upscore = sqrt(upbranchingresult->deeperscore);
@@ -3647,8 +3649,8 @@ SCIP_Real calculateScoreFromDeeperscoreAndCutoffs(
    assert(downbranchingresult != NULL);
    assert(upbranchingresult != NULL);
 
-   assert(downbranchingresult->deeperscore >= 0 || downbranchingresult->cutoff || SCIPisStopped(scip));
-   assert(upbranchingresult->deeperscore >= 0 || upbranchingresult->cutoff || SCIPisStopped(scip));
+   assert(downbranchingresult->deeperscore >= -0.2 || downbranchingresult->cutoff || SCIPisStopped(scip));
+   assert(upbranchingresult->deeperscore >= -0.2 || upbranchingresult->cutoff || SCIPisStopped(scip));
 
    nlowestlevelcutoffs = (1.0 * downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs)/(MAX(1,downbranchingresult->ndeepestnodes + upbranchingresult->ndeepestnodes));
    totaldowngains = downbranchingresult->totalgains;
@@ -4197,6 +4199,12 @@ SCIP_RETCODE ensureScoresPresent(
                SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand,
                      scorecontainer->scoresum / scorecontainer->nsetscores, 0.0, 0.0) );
             }
+            else if( config->level2zeroscore && SCIPgetProbingDepth(scip) > 0 )
+            {
+               assert(scorecontainer->nsetscores > 0);
+               SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand,
+                     -0.1, 0.0, 0.0) );
+            }
             else
             {
                /* score is unknown and needs to be calculated */
@@ -4367,6 +4375,16 @@ SCIP_RETCODE filterCandidates(
                   }
                }
             }
+         }
+
+         if( SCIPgetProbingDepth(scip) > 0 && scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)] > -0.05)
+         {
+            for( i = 1; i < nusedcands; ++i )
+            {
+               if( scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)] < -0.05 )
+                  break;
+            }
+            nusedcands = i;
          }
 
          SCIP_CALL( candidateListKeep(scip, candidatelist, nusedcands) );
@@ -4706,6 +4724,10 @@ SCIP_RETCODE executeBranchingRecursive(
 #ifdef SCIP_STATISTIC
             localStatisticsFree(scip, &deeperlocalstats);
 #endif
+         }
+         else
+         {
+            branchingresult->deeperscore = (branchingresult->dualbound - baselpobjval) * (branchingresult->dualbound - baselpobjval) * 10;
          }
          SCIP_CALL( candidateListFree(scip, &candidatelist) );
       }
@@ -5928,7 +5950,7 @@ SCIP_DECL_BRANCHCOPY(branchCopyLookahead)
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
 
-   SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
+   //SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
 
    return SCIP_OKAY;
 }
@@ -6396,6 +6418,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/level2avgscore",
          "should the average score be used for uninitialized scores in level 2?",
          &branchruledata->config->level2avgscore, TRUE, DEFAULT_LEVEL2AVGSCORE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/level2zeroscore",
+         "should uninitialized scores in level 2 be set to 0?",
+         &branchruledata->config->level2zeroscore, TRUE, DEFAULT_LEVEL2ZEROSCORE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/addclique",
          "add binary constraints with two variables found at the root node also as a clique",
