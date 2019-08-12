@@ -50,7 +50,9 @@ typedef struct distance_data
    PRSTATE** pathroot_blocks;        /* of size nedges / 2 */
    SCIP_Bool* pathroot_isdirty;      /* of size nnodes */
    int* pathroot_nrecomps;           /* of size nnodes */
+   DIJK* dijkdata;
    int closenodes_totalsize;
+   int closenodes_maxnumber;
 } DISTDATA;
 
 
@@ -164,8 +166,9 @@ extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
 /* reduce_util.c
  */
 extern SCIP_RETCODE    reduce_distDataInit(SCIP*, const GRAPH*, int, SCIP_Bool, DISTDATA*);
-extern SCIP_Real       reduce_distDataGetSD(DISTDATA*, int, int);
+extern SCIP_Real       reduce_distDataGetSD(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern void            reduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
+extern void            reduce_distDataDeleteEdge(SCIP*, int, DISTDATA*);
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

@@ -677,12 +677,12 @@ SCIP_RETCODE reduce_extDistTest1(
    /* test distances */
 #ifndef NDEBUG
    {
-      const SCIP_Real dist1_2 = reduce_distDataGetSD(&distdata, 1, 2);
-      const SCIP_Real dist1_3 = reduce_distDataGetSD(&distdata, 1, 3);
-      const SCIP_Real dist1_5 = reduce_distDataGetSD(&distdata, 1, 5);
-      const SCIP_Real dist2_1 = reduce_distDataGetSD(&distdata, 2, 1);
-      const SCIP_Real dist2_5 = reduce_distDataGetSD(&distdata, 2, 5);
-      const SCIP_Real dist2_6 = reduce_distDataGetSD(&distdata, 2, 6);
+      const SCIP_Real dist1_2 = reduce_distDataGetSD(scip, graph, 1, 2, &distdata);
+      const SCIP_Real dist1_3 = reduce_distDataGetSD(scip, graph, 1, 3, &distdata);
+      const SCIP_Real dist1_5 = reduce_distDataGetSD(scip, graph, 1, 5, &distdata);
+      const SCIP_Real dist2_1 = reduce_distDataGetSD(scip, graph, 2, 1, &distdata);
+      const SCIP_Real dist2_5 = reduce_distDataGetSD(scip, graph, 2, 5, &distdata);
+      const SCIP_Real dist2_6 = reduce_distDataGetSD(scip, graph, 2, 6, &distdata);
 
       assert(dist1_2 == 0.4);
       assert(dist1_3 == -1.0);

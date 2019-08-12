@@ -767,7 +767,7 @@ void graph_dijkLimited_reset(
 
 
 /** frees limited Dijkstra structure member */
-void graph_dijkLimited_free(
+void graph_dijkLimited_freeMembers(
    SCIP*                 scip,               /**< SCIP */
    DIJK*                 dijkdata            /**< data for limited Dijkstra */
 )

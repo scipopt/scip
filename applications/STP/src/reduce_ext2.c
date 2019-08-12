@@ -946,7 +946,7 @@ SCIP_Bool extRuleOutPeriph(
             if( leaf == extleaf )
                continue;
 
-            specialDist = reduce_distDataGetSD(distdata, extleaf, leaf);
+            specialDist = reduce_distDataGetSD(scip,  graph, extleaf, leaf, distdata);
 
             /* could a valid special distance be found?  */
             if( specialDist >= -0.5 )
