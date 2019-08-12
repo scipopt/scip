@@ -175,6 +175,144 @@ SCIP_RETCODE checkSdWalk(
    return SCIP_OKAY;
 }
 
+
+
+static
+SCIP_RETCODE extTest2_variants(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   variant             /**< 1,2,3,4,5 */
+)
+{
+   GRAPH* graph;
+   const int nnodes = 55;
+   const int nedges = 28;
+   const int root = 0;
+
+   SCIP_Real* rootdist;
+   SCIP_Real* redcost;
+   PATH* termpaths;
+   STP_Bool* edgedeleted = NULL;
+   SCIP_Real cutoff;
+   int edge;
+   SCIP_Bool deletable;
+
+   assert(scip);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &rootdist, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redcost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termpaths, 3 * nnodes) );
+
+
+   /* build graph */
+   graph_knot_add(graph, 0);
+
+   /* also add dummy nodes to avoid full stack */
+   for( int i = 1; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph->source = 0;
+
+   graph_edge_add(scip, graph, 0, 1, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 2, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 3, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 4, 1.0, 1.0);
+
+   graph_edge_add(scip, graph, 2, 5, 1.0, 1.0);
+   graph_edge_add(scip, graph, 3, 6, 1.0, 1.0);
+   graph_edge_add(scip, graph, 3, 7, 1.0, 1.0);
+   graph_edge_add(scip, graph, 4, 8, 1.0, 1.0);
+   graph_edge_add(scip, graph, 4, 9, 1.0, 1.0);
+
+   graph_edge_add(scip, graph, 5, 10, 1.0, 1.0);
+   graph_edge_add(scip, graph, 10, 11, 1.0, 1.0);
+   graph_edge_add(scip, graph, 11, 12, 1.0, 1.0);
+
+   for( int i = 1; i < nnodes; i++ )
+      graph->mark[i] = (graph->grad[i] > 0);
+
+   /* necessary data structures */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      rootdist[i] = 0.0;
+      termpaths[i].dist = 0.2;
+   }
+
+   for( int i = 0; i < nedges; i++ )
+      redcost[i] = 1.0 + (double) i / 20;
+
+  // termpaths[11].dist = 99.2;
+
+
+   cutoff = 100.0;
+   edge = 0;
+
+   graph_edge_printInfo(graph, edge);
+
+   if( variant == 1 )
+   {
+      SCIP_CALL( graph_init_history(scip, graph) );
+      SCIP_CALL( graph_path_init(scip, graph) );
+
+      for( int e = graph->outbeg[10]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         const int head = graph->head[e];
+         if( head == 11  )
+         {
+            SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(graph->ancestors[e]), graph->ancestors[0], NULL) );
+            SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(graph->ancestors[flipedge(e)]), graph->ancestors[1], NULL) );
+         }
+      }
+
+      SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
+      assert(deletable);
+   }
+   else if( variant == 2 )
+   {
+      SCIP_CALL( graph_init_history(scip, graph) );
+      SCIP_CALL( graph_path_init(scip, graph) );
+
+      SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
+      assert(!deletable);
+   }
+   else if( variant == 3 )
+   {
+      SCIP_CALL( graph_init_history(scip, graph) );
+      SCIP_CALL( graph_path_init(scip, graph) );
+
+      graph_knot_del(scip, graph, 12, TRUE);
+      graph->mark[12] = FALSE;
+
+      SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
+      assert(deletable);
+   }
+   else
+   {
+      graph_edge_add(scip, graph, 10, 4, 0.5, 0.5);
+
+
+      SCIP_CALL( graph_init_history(scip, graph) );
+      SCIP_CALL( graph_path_init(scip, graph) );
+
+      SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
+      assert(deletable);
+   }
+
+   /* clean up */
+
+   SCIPfreeBufferArray(scip, &termpaths);
+   SCIPfreeBufferArray(scip, &redcost);
+   SCIPfreeBufferArray(scip, &rootdist);
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+   assert(graph == NULL);
+
+   return SCIP_OKAY;
+}
+
+
 SCIP_RETCODE reduce_extTest1(
    SCIP*                 scip                /**< SCIP data structure */
 )
@@ -269,118 +407,14 @@ SCIP_RETCODE reduce_extTest2(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   GRAPH* graph;
-   const int nnodes = 55;
-   const int nedges = 28;
-   const int root = 0;
+   SCIP_CALL( extTest2_variants(scip, 1) );
+   SCIP_CALL( extTest2_variants(scip, 2) );
+   SCIP_CALL( extTest2_variants(scip, 3) );
+   SCIP_CALL( extTest2_variants(scip, 4) );
 
-   SCIP_Real* rootdist;
-   SCIP_Real* redcost;
-   PATH* termpaths;
-   STP_Bool* edgedeleted = NULL;
-   SCIP_Real cutoff;
-   int edge;
-   SCIP_Bool deletable;
-
-   assert(scip);
-
-   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &rootdist, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &redcost, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &termpaths, 3 * nnodes) );
-
-
-   /* build graph */
-   graph_knot_add(graph, 0);
-
-   /* also add dummy nodes to avoid full stack */
-   for( int i = 1; i < nnodes; i++ )
-      graph_knot_add(graph, -1);
-
-   graph->source = 0;
-
-   graph_edge_add(scip, graph, 0, 1, 1.0, 1.0);
-   graph_edge_add(scip, graph, 1, 2, 1.0, 1.0);
-   graph_edge_add(scip, graph, 1, 3, 1.0, 1.0);
-   graph_edge_add(scip, graph, 1, 4, 1.0, 1.0);
-
-   graph_edge_add(scip, graph, 2, 5, 1.0, 1.0);
-   graph_edge_add(scip, graph, 3, 6, 1.0, 1.0);
-   graph_edge_add(scip, graph, 3, 7, 1.0, 1.0);
-   graph_edge_add(scip, graph, 4, 8, 1.0, 1.0);
-   graph_edge_add(scip, graph, 4, 9, 1.0, 1.0);
-
-   graph_edge_add(scip, graph, 5, 10, 1.0, 1.0);
-   graph_edge_add(scip, graph, 10, 11, 1.0, 1.0);
-   graph_edge_add(scip, graph, 11, 12, 1.0, 1.0);
-
-   SCIP_CALL( graph_init_history(scip, graph) );
-   SCIP_CALL( graph_path_init(scip, graph) );
-
-   for( int i = 1; i < nnodes; i++ )
-      graph->mark[i] = (graph->grad[i] > 0);
-
-
-   /* necessary data structures */
-   for( int i = 0; i < nnodes; i++ )
-   {
-      rootdist[i] = 0.0;
-      termpaths[i].dist = 0.2;
-   }
-
-   for( int i = 0; i < nedges; i++ )
-      redcost[i] = 1.0 + (double) i / 20;
-
-  // termpaths[11].dist = 99.2;
-
-
-   cutoff = 100.0;
-   edge = 0;
-
-   graph_edge_printInfo(graph, edge);
-
-#if 0
-   for( int e = graph->outbeg[10]; e != EAT_LAST; e = graph->oeat[e] )
-   {
-      const int head = graph->head[e];
-      if( head == 11  )
-      {
-         SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(graph->ancestors[e]), graph->ancestors[0], NULL) );
-         SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(graph->ancestors[flipedge(e)]), graph->ancestors[1], NULL) );
-      }
-   }
-
-   SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
-   assert(deletable);
-   assert(0);
-#else
-
-   SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
-   assert(!deletable);
-#endif
-
-   graph_knot_del(scip, graph, 12, TRUE);
-   graph->mark[12] = FALSE;
-
-
-   SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, root, nnodes, &deletable));
-   assert(deletable);
-
-
+   printf("reduce_extTest2: all ok \n");
    assert(0);
 
-
-
-   /* clean up */
-
-   SCIPfreeBufferArray(scip, &termpaths);
-   SCIPfreeBufferArray(scip, &redcost);
-   SCIPfreeBufferArray(scip, &rootdist);
-
-   graph_path_exit(scip, graph);
-   graph_free(scip, &graph, TRUE);
-   assert(graph == NULL);
 
    return SCIP_OKAY;
 }
