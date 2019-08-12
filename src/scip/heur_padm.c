@@ -801,10 +801,18 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          else
             break;
       }
-      SCIPdebugMsg(scip, "Ignored %d linking constraints\n", linkconsoffset);
+      SCIPdebugMsg(scip, "try to assign %d linking constraints\n", linkconsoffset);
 
       /* reassign linking constraints */
       SCIP_CALL( SCIPdecompAssignLinkConss(scip, newdecomp, &conss[0], linkconsoffset) );
+
+      SCIP_CALL( SCIPdecompComputeVarsLabels(scip, newdecomp, conss, nconss) );
+
+#if 0
+      SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp) ); // todo: this is not neccessary
+      char strbuf[SCIP_MAXSTRLEN];
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Decomposition statistics:\n%s\n", SCIPdecompPrintStats(newdecomp, strbuf));
+#endif
 
       SCIPdecompGetConsLabels(newdecomp, conss, conslabels, nconss);
       SCIPdecompGetVarsLabels(newdecomp, vars, varslabels, nvars);
@@ -823,10 +831,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       assert(hasonlylinkvars);
       SCIPhasConsOnlyLinkVars(scip, decomp, conss[v], &hasonlylinkvars);
       SCIPdebugMsg(scip, "has only linking vars %d\n", hasonlylinkvars);
+      assert(hasonlylinkvars);
    }
 #endif
 
-   if(conslabels[linkconsoffset] == SCIP_DECOMP_LINKCONS)
+   if(conslabels[0] == SCIP_DECOMP_LINKCONS)
    {
       SCIPdebugMsg(scip, "%s is linking contraint\n", SCIPconsGetName(conss[0]));
       SCIPprintCons(scip, conss[0], NULL);
@@ -834,11 +843,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       goto TERMINATE;
    }
 
-   blockoffset = conslabels[linkconsoffset];
+   blockoffset = conslabels[0];
    SCIPdebugMsg(scip, "Block numbering starts from %d\n", blockoffset);
 
    /* determine start indices of blocks in sorted conss array */
-   i = linkconsoffset;
+   i = 0;
    for (b = 0; b < nblocks + 1; ++b)
    {
       blockstartsconss[b] = i;
@@ -1080,10 +1089,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
 
-// todo treat linking constraints correctly and add asserts again
-//      assert((problem->blocks[b]).nslackspos >= blocktolinkvars[b].size);
-//      assert((problem->blocks[b]).nslacksneg >= blocktolinkvars[b].size);
-//      assert(blocktolinkvars[b].size <= (problem->blocks[b]).ncouplingcons); //ncoupling
+//      assert(blocktolinkvars[b].size <= (problem->blocks[b]).ncoupling); // todo: remove if you are sure
    }
 
    assert(nentries == SCIPhashtableGetNElements(htable));
@@ -1177,6 +1183,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                SCIP_CALL(SCIPsetRealParam((problem->blocks[b]).subscip, "limits/gap", gap));
 
                /* solve block */
+#if 0
+               SCIPdebugMsg(scip, "write subscip block %d\n", b);
+               SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[b]).subscip, "debug_block_orig.lp", "lp", FALSE) );
+#endif
+
                SCIPsolve((problem->blocks[b]).subscip);
                status = SCIPgetStatus((problem->blocks[b]).subscip);
 
