@@ -996,7 +996,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->
           * try all solutions until one was accepted
           */
-         SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success) );
+         SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, NULL) );
          if( success )
             *result = SCIP_FOUNDSOL;
       }

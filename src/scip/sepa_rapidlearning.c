@@ -450,7 +450,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       /* sequentially add solutions to trysol heuristic */
       for( i = 0; i < nsubsols && !soladded; ++i )
       {
-         SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heurtrysol, subvars, &soladded) );
+         SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heurtrysol, subvars, &soladded, NULL) );
       }
       if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
          disabledualreductions = TRUE;

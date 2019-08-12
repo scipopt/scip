@@ -370,71 +370,6 @@ SCIP_RETCODE setupSubproblem(
    return SCIP_OKAY;
 }
 
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_HEUR*            heur,               /**< lpface heuristic structure */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem */
-   int*                  solindex,           /**< pointer to store index of the solution */
-   SCIP_Bool*            success             /**< pointer to store whether new solution was found or not */
-   )
-{
-   SCIP_VAR** vars;                          /* the original problem's variables                */
-   int        nvars;
-   SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-   SCIP_Bool printreason;
-   SCIP_Bool completely;
-   int i;
-
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-   assert(subsol != NULL);
-
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   for( i = 0; i < nvars; ++i )
-   {
-      if( subvars[i] == NULL )
-         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
-      else
-         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
-   }
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-   *solindex = SCIPsolGetIndex(newsol);
-
-#ifdef SCIP_DEBUG
-   printreason = TRUE;
-   completely = TRUE;
-   SCIPdebugMsg(scip, "trying to transfer LP face solution with solution value %16.9g to main problem\n",
-      SCIPretransformObj(scip, SCIPgetSolTransObj(scip, newsol)));
-#else
-   printreason = FALSE;
-   completely = FALSE;
-#endif
-
-   /* try to add new solution to scip and free it immediately */
-   *success = FALSE;
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, printreason, completely, TRUE, TRUE, TRUE, success) );
-
-   SCIPdebugMsg(scip, "Transfer was %s successful\n", *success ? "" : "not");
-
-   SCIPfreeBufferArray(scip, &subsolvals);
-
-   return SCIP_OKAY;
-}
-
 /** updates heurdata after an unsuccessful run of lpface */
 static
 void updateFailureStatistic(
@@ -908,7 +843,6 @@ SCIP_RETCODE solveSubscipLpface(
 {
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_Bool success;
-   int i;
 
    assert( scip != NULL );
    assert( subscip != NULL );
@@ -982,21 +916,13 @@ SCIP_RETCODE solveSubscipLpface(
    }
    else if( SCIPgetNSols(subscip) > 0 )
    {
-      SCIP_SOL** subsols;
-      int nsubsols;
       int solindex;
 
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one is accepted
        */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
-      success = FALSE;
-      solindex = -1;
-      for( i = 0; i < nsubsols && !success; ++i )
-      {
-         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &solindex, &success) );
-      }
+      SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, &solindex) );
+      SCIPdebugMsg(scip, "Transfer was %s successful\n", success ? "" : "not");
 
       /* we found an optimal solution and are done. Thus, we free the subscip immediately */
       if( success )

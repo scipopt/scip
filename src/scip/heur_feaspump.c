@@ -557,7 +557,7 @@ SCIP_RETCODE createNewSols(
    for( i = 0; i < nvars; i++ )
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, success) );
+   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, success, NULL) );
 
    SCIPfreeBufferArray(scip, &subvars);
 

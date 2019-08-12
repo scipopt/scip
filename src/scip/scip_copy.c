@@ -48,6 +48,7 @@
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_sol.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
@@ -1358,7 +1359,8 @@ SCIP_RETCODE SCIPtranslateSubSols(
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
    SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
-   SCIP_Bool*            success             /**< pointer to store, whether new solution was found */
+   SCIP_Bool*            success,            /**< pointer to store, whether new solution was found */
+   int*                  solindex            /**< pointer to store solution index of stored solution, or NULL if not of interest */
    )
 {
    assert(scip != NULL);
@@ -1388,6 +1390,8 @@ SCIP_RETCODE SCIPtranslateSubSols(
             continue;
 
          SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], heur, subvars, &newsol) );
+         if( solindex != NULL )
+            *solindex = SCIPsolGetIndex(newsol);
 
          SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
       }

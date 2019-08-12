@@ -647,7 +647,7 @@ SCIP_RETCODE wrapperDins(
    if( nsubsols > 0 )
    {
       /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted */
-      SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success) );
+      SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, NULL) );
       if( success )
       {
          SCIPdebugMsg(scip, "DINS successfully found new solution\n");
