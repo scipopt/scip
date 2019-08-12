@@ -378,15 +378,10 @@ SCIP_EXPRCURV SCIPexprcurvPowerInv(
 
    expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
 
-   /* if exponent is fractional, then power is not defined for a negative base
-    * thus, consider only positive part of basebounds
+   /* if exponent is fractional, then power is only defined for a non-negative base
+    * someone should have ensured this before calling this function
     */
-   if( !expisint && basebounds.inf < 0.0 )
-   {
-      basebounds.inf = 0.0;
-      if( basebounds.sup < 0.0 )
-         return SCIP_EXPRCURV_CONVEX;  /* just picked one, any is ok when domain is empty */
-   }
+   assert(expisint || basebounds.inf >= 0.0);
 
    /* if basebounds contains 0.0, consider negative and positive interval separately, if possible */
    if( basebounds.inf < 0.0 && basebounds.sup > 0.0 )
