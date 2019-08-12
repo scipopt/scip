@@ -543,13 +543,8 @@ SCIP_RETCODE createNewSols(
 {
    SCIP_VAR** vars;                          /* the original problem's variables                */
    int        nvars;
-   SCIP_SOL** subsols;
-   int nsubsols;
    SCIP_VAR** subvars;
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-   SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
    int i;
-   int j;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -562,33 +557,9 @@ SCIP_RETCODE createNewSols(
    for( i = 0; i < nvars; i++ )
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   nsubsols = SCIPgetNSols(subscip);
-   subsols = SCIPgetSols(subscip);
-   *success = FALSE;
-
-   for( i = 0; i < nsubsols && !(*success); ++i )
-   {
-      /* copy the solution */
-      for( j = 0; j < nvars; ++j )
-      {
-         if( subvars[j] == NULL )
-            subsolvals[j] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[j])), SCIPvarGetUbLocal(vars[j]));  /*lint !e666*/
-         else
-            subsolvals[j] = SCIPgetSolVal(subscip, subsols[i], subvars[j]);
-      }
-
-      /* create new solution for the original problem */
-      SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-      SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
-      /* try to add new solution to scip and free it immediately */
-      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-   }
+   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, success) );
 
    SCIPfreeBufferArray(scip, &subvars);
-   SCIPfreeBufferArray(scip, &subsolvals);
 
    return SCIP_OKAY;
 }
