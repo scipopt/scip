@@ -677,6 +677,7 @@ SCIP_RETCODE reduce_extDistTest1(
    /* test distances */
 #ifndef NDEBUG
    {
+      const int edge = 2;
       const SCIP_Real dist1_2 = reduce_distDataGetSD(scip, graph, 1, 2, &distdata);
       const SCIP_Real dist1_3 = reduce_distDataGetSD(scip, graph, 1, 3, &distdata);
       const SCIP_Real dist1_5 = reduce_distDataGetSD(scip, graph, 1, 5, &distdata);
@@ -687,10 +688,23 @@ SCIP_RETCODE reduce_extDistTest1(
       assert(dist1_2 == 0.4);
       assert(dist1_3 == -1.0);
       assert(dist1_5 == 0.9);
-
       assert(dist2_1 == 0.4);
       assert(dist2_5 == 0.5);
       assert(dist2_6 == -1.0);
+
+      assert(graph->head[edge] == 2 && graph->tail[edge] == 1);
+      graph_edge_delFull(scip, graph, edge, TRUE);
+      reduce_distDataDeleteEdge(scip, graph, edge, &distdata);
+
+      {
+         const SCIP_Real dist1_2_b = reduce_distDataGetSD(scip, graph, 1, 2, &distdata);
+         const SCIP_Real dist2_6_b = reduce_distDataGetSD(scip, graph, 2, 6, &distdata);
+         const SCIP_Real dist2_5_b = reduce_distDataGetSD(scip, graph, 2, 5, &distdata);
+
+         assert(dist1_2_b == -1.0);
+         assert(dist2_6_b == -1.0);
+         assert(dist2_5_b == 0.5);
+      }
    }
 #endif
 

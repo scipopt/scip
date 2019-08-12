@@ -168,7 +168,7 @@ extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_distDataInit(SCIP*, const GRAPH*, int, SCIP_Bool, DISTDATA*);
 extern SCIP_Real       reduce_distDataGetSD(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern void            reduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
-extern void            reduce_distDataDeleteEdge(SCIP*, int, DISTDATA*);
+extern void            reduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DISTDATA*);
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */
