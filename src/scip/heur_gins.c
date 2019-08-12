@@ -900,54 +900,6 @@ SCIP_RETCODE determineVariableFixings(
    return SCIP_OKAY;
 }
 
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_HEUR*            heur,               /**< gins heuristic structure */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem */
-   SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-   )
-{
-   SCIP_VAR** vars;                          /* the original problem's variables */
-   int        nvars;
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem */
-   SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
-   int i;
-
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-   assert(subsol != NULL);
-
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   for( i = 0; i < nvars; ++i )
-   {
-      if( subvars[i] == NULL )
-         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
-      else
-         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
-   }
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
-   /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-
-   SCIPfreeBufferArray(scip, &subsolvals);
-
-   return SCIP_OKAY;
-}
-
 /** set sub-SCIP solving limits */
 static
 SCIP_RETCODE setLimits(
@@ -1391,25 +1343,12 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
       heurdata->usednodes += SCIPgetNNodes(subscip);
 
-      success = FALSE;
-      /* check, whether a solution was found */
-      if( SCIPgetNSols(subscip) > 0 )
-      {
-         SCIP_SOL** subsols;
-         int nsubsols;
-
-         /* check, whether a solution was found;
-          * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-          */
-         nsubsols = SCIPgetNSols(subscip);
-         subsols = SCIPgetSols(subscip);
-         for( i = 0; i < nsubsols && !success; ++i )
-         {
-            SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
-         }
-         if( success )
-            *result = SCIP_FOUNDSOL;
-      }
+      /* check, whether a solution was found;
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+       */
+      SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success) );
+      if( success )
+         *result = SCIP_FOUNDSOL;
 
       /* free subproblem */
       SCIPfreeBufferArray(scip, &subvars);
