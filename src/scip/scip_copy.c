@@ -61,6 +61,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_pricer.h"
 #include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
@@ -1296,6 +1297,100 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
          /* other variable status are currently not supported for the merging */
          break;
       }  /*lint !e788*/
+   }
+
+   return SCIP_OKAY;
+}
+
+/** translates a solution from a subscip to the main scip
+ *
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0.
+ */
+SCIP_RETCODE SCIPtranslateSubSol(
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   SCIP_SOL**            newsol              /**< buffer to store pointer to created solution in main SCIP */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   SCIP_Real* subsolvals;
+   int i;
+
+   assert( scip != NULL );
+   assert( subscip != NULL );
+   assert( subsol != NULL );
+   assert( subvars != NULL );
+   assert( newsol != NULL );
+
+   /* copy the solution */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
+
+   /* copy the solution */
+   for( i = 0; i < nvars; ++i )
+   {
+      if( subvars[i] != NULL )
+         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
+      else
+         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+   }
+
+   /* create new solution for the original problem */
+   SCIP_CALL( SCIPcreateSol(scip, newsol, heur) );
+   SCIP_CALL( SCIPsetSolVals(scip, *newsol, nvars, vars, subsolvals) );
+
+   SCIPfreeBufferArray(scip, &subsolvals);
+
+   return SCIP_OKAY;
+}
+
+/** checks the solutions from the subscip and adds the first one that is found feasible to the master SCIP
+ *
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0.
+ */
+SCIP_RETCODE SCIPtranslateSubSols(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_Bool*            success             /**< pointer to store, whether new solution was found */
+   )
+{
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(heur != NULL);
+   assert(subvars != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+   /* check, whether a solution was found */
+   if( SCIPgetNSols(subscip) > 0 )
+   {
+      SCIP_SOL* newsol;
+      SCIP_SOL** subsols;
+      int nsubsols;
+      int i;
+
+      /* check, whether a solution was found;
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+       */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
+      for( i = 0; i < nsubsols && ! (*success); ++i )
+      {
+         SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], heur, subvars, &newsol) );
+
+         SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
+      }
+      if( *success )
+      {
+         SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
+      }
    }
 
    return SCIP_OKAY;
