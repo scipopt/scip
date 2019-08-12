@@ -394,8 +394,10 @@ DECL_CURVCHECK(curvCheckExprhdlr)
 
    /* check whether and under which conditions origexpr can have desired curvature */
    SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, origexpr, SCIPgetConsExprExprCurvature(nlexpr), success, childcurv) );
-   /* SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL);
-   SCIPinfoMessage(scip, NULL, " is %s? %d\n", SCIPexprcurvGetName(nlexpr->curv), success); */
+#ifdef SCIP_MORE_DEBUG
+   SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL);
+   SCIPinfoMessage(scip, NULL, " is %s? %d\n", SCIPexprcurvGetName(nlexpr->curv), success);
+#endif
    if( !*success )
       goto TERMINATE;
 
@@ -481,8 +483,10 @@ SCIP_RETCODE constructExpr(
       assert(nlexpr != NULL);
       assert(SCIPgetConsExprExprNChildren(nlexpr) == 0);
 
-      /* SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
-      SCIPinfoMessage(scip, NULL, "\n"); */
+#ifdef SCIP_MORE_DEBUG
+      SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
+#endif
 
       oldstackpos = stack.stackpos;
       if( !SCIPhasConsExprExprHdlrBwdiff(SCIPgetConsExprExprHdlr(nlexpr)) )
