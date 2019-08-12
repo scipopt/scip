@@ -1383,6 +1383,10 @@ SCIP_RETCODE SCIPtranslateSubSols(
       subsols = SCIPgetSols(subscip);
       for( i = 0; i < nsubsols && ! (*success); ++i )
       {
+         /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
+         if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsols[i])) )
+            continue;
+
          SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], heur, subvars, &newsol) );
 
          SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
