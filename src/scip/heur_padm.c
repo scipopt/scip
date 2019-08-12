@@ -111,12 +111,10 @@ typedef struct Block
    int number;         /**< component number */
 
    SCIP_VAR **slackspos; /**< positive slack variables */
-   int nslackspos;       /**< number of positive slack variables */
    SCIP_VAR **slacksneg; /**< negative slack variables */
-   int nslacksneg;       /**< number of negative slack variables */
-
    SCIP_CONS **couplingcons; /**< coupling contraints */
-   int ncouplingcons;        /**< number of coupling contraints */
+
+   int ncoupling;    /**< number of coupling contraints or positive/negative slack variables */
 } BLOCK;
 
 /** data related to one problem */
@@ -215,12 +213,10 @@ static SCIP_RETCODE initBlock(
    block->number = problem->nblocks;
 
    block->slackspos = NULL;
-   block->nslackspos = 0;
    block->slacksneg = NULL;
-   block->nslacksneg = 0;
 
    block->couplingcons = NULL;
-   block->ncouplingcons = 0;
+   block->ncoupling = 0;
 
    ++problem->nblocks;
 
@@ -250,9 +246,7 @@ static SCIP_RETCODE freeBlock(
    SCIPfreeBufferArray(scip, &block->slacksneg);
    SCIPfreeBufferArray(scip, &block->couplingcons);
 
-   block->nslackspos = 0;
-   block->nslacksneg = 0;
-   block->ncouplingcons = 0;
+   block->ncoupling = 0;
 
    if (block->subscip != NULL)
       SCIP_CALL(SCIPfree(&block->subscip));
@@ -1039,23 +1033,21 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                binfo->linkVarIdx = linkvaridx;
                binfo->linkVarVal = 0.0;
                binfo->linkVar = SCIPfindVar((problem->blocks[b]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
+               j = (problem->blocks[b]).ncoupling;
 
                /* create positive slack variable */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d", SCIPvarGetName(linkvars[linkvaridx]), b2);
-               j = (problem->blocks[b]).nslackspos;
                (problem->blocks[b]).slackspos[j] = NULL;
-               SCIP_CALL(SCIPcreateVarBasic((problem->blocks[b]).subscip,
+               SCIP_CALL( SCIPcreateVarBasic((problem->blocks[b]).subscip,
                                             &((problem->blocks[b]).slackspos[j]), name,
-                                            0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS));
-               SCIP_CALL(SCIPaddVar((problem->blocks[b]).subscip, (problem->blocks[b]).slackspos[j]));
+                                            0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+               SCIP_CALL( SCIPaddVar((problem->blocks[b]).subscip, (problem->blocks[b]).slackspos[j]) );
                assert((problem->blocks[b]).slackspos[j] != NULL);
                binfo->slackPosObjCoeff = 1.0;
                binfo->slackPosVar = (problem->blocks[b]).slackspos[j];
-               (problem->blocks[b]).nslackspos++;
 
                /* create negative slack variable */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackneg_block_%d", SCIPvarGetName(linkvars[linkvaridx]), b2);
-               j = (problem->blocks[b]).nslacksneg;
                (problem->blocks[b]).slacksneg[j] = NULL;
                SCIP_CALL(SCIPcreateVarBasic((problem->blocks[b]).subscip,
                                             &((problem->blocks[b]).slacksneg[j]), name,
@@ -1064,7 +1056,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                assert((problem->blocks[b]).slacksneg[j] != NULL);
                binfo->slackNegObjCoeff = 1.0;
                binfo->slackNegVar = (problem->blocks[b]).slacksneg[j];
-               (problem->blocks[b]).nslacksneg++;
 
                /* fill variables for linking constraint */
                tmpcouplingvars[0] = binfo->linkVar;
@@ -1074,17 +1065,17 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                /* create linking constraint */
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_coupling_block_%d",
                             SCIPvarGetName(linkvars[linkvaridx]), b2);
-               j = (problem->blocks[b]).ncouplingcons;
                (problem->blocks[b]).couplingcons[j] = NULL;
-               SCIP_CALL(SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
-                                                   name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, 0.0, 0.0));
-               SCIP_CALL(SCIPaddCons((problem->blocks[b]).subscip, (problem->blocks[b]).couplingcons[j]));
+               SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
+                                                   name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, 0.0, 0.0) );
+               SCIP_CALL( SCIPaddCons((problem->blocks[b]).subscip, (problem->blocks[b]).couplingcons[j]) );
                assert((problem->blocks[b]).couplingcons[j] != NULL);
-               (problem->blocks[b]).ncouplingcons++;
                binfo->couplingCons = (problem->blocks[b]).couplingcons[j];
 
+               (problem->blocks[b]).ncoupling++;
+
                /* feed hashtable */
-               SCIP_CALL(SCIPhashtableSafeInsert(htable, (void *)binfo));
+               SCIP_CALL( SCIPhashtableSafeInsert(htable, (void *)binfo) );
             }
          }
       }
@@ -1092,7 +1083,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 // todo treat linking constraints correctly and add asserts again
 //      assert((problem->blocks[b]).nslackspos >= blocktolinkvars[b].size);
 //      assert((problem->blocks[b]).nslacksneg >= blocktolinkvars[b].size);
-//      assert(blocktolinkvars[b].size <= (problem->blocks[b]).ncouplingcons);
+//      assert(blocktolinkvars[b].size <= (problem->blocks[b]).ncouplingcons); //ncoupling
    }
 
    assert(nentries == SCIPhashtableGetNElements(htable));
@@ -1507,11 +1498,12 @@ TERMINATE:
    {
       for (b = 0; b < problem->nblocks; b++)
       {
-         for (i = 0; i < blocktolinkvars[b].size; i++)
+         BLOCK curr_block = problem->blocks[b];
+         for (i = 0; i < (problem->blocks[b]).ncoupling; i++)
          {
-            SCIP_CALL(SCIPreleaseVar((problem->blocks[b]).subscip, &((problem->blocks[b]).slackspos[i])));
-            SCIP_CALL(SCIPreleaseVar((problem->blocks[b]).subscip, &((problem->blocks[b]).slacksneg[i])));
-            SCIP_CALL(SCIPreleaseCons((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[i])));
+            SCIP_CALL( SCIPreleaseCons(curr_block.subscip, &curr_block.couplingcons[i]) );
+            SCIP_CALL( SCIPreleaseVar(curr_block.subscip, &curr_block.slackspos[i]) );
+            SCIP_CALL( SCIPreleaseVar(curr_block.subscip, &curr_block.slacksneg[i]) );
          }
       }
 
@@ -1591,12 +1583,12 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    assert(heur != NULL);
 
    /* set non fundamental callbacks via setter functions */
-   SCIP_CALL(SCIPsetHeurCopy(scip, heur, heurCopyPADM));
-   SCIP_CALL(SCIPsetHeurFree(scip, heur, heurFreePADM));
-   SCIP_CALL(SCIPsetHeurInit(scip, heur, heurInitPADM));
-   SCIP_CALL(SCIPsetHeurExit(scip, heur, heurExitPADM));
-   SCIP_CALL(SCIPsetHeurInitsol(scip, heur, heurInitsolPADM));
-   SCIP_CALL(SCIPsetHeurExitsol(scip, heur, heurExitsolPADM));
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyPADM) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreePADM) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitPADM) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitPADM) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolPADM) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolPADM) );
 
    /* add padm primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/doscaling",
