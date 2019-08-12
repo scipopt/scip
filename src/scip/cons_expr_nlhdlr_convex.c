@@ -778,7 +778,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    assert(nlhdlrdata != NULL);
 
    /* ignore sums if > 1 children
-    * NOTE: this means we may treat 1+f(x) with f begin a trivial expression here; probably that's ok, just thought to mention it anyway
+    * NOTE: this means that for something like 1+f(x), even if f is a trivial convex expression, we would handle 1+f(x)
+    * with this nlhdlr, instead of formulating this as 1+z and handling z=f(x) with the default nlhdlr, i.e., the exprhdlr
+    * today, I prefer handling this here, as it avoid introducing an extra auxiliary variable
     */
    if( !nlhdlrdata->detectsum && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) && SCIPgetConsExprExprNChildren(expr) > 1 )
       return SCIP_OKAY;
