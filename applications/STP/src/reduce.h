@@ -140,15 +140,10 @@ extern SCIP_RETCODE    reduce_extendedCheckArc(SCIP*, const GRAPH*, const REDCOS
 
 /* reduce_test.c
  */
-extern SCIP_RETCODE    reduce_extTest1(SCIP*);
-extern SCIP_RETCODE    reduce_extTest2(SCIP*);
-extern SCIP_RETCODE    dheap_Test1(SCIP*);
-extern SCIP_RETCODE    reduce_sdPcMwTest1(SCIP*);
-extern SCIP_RETCODE    reduce_sdPcMwTest2(SCIP*);
-extern SCIP_RETCODE    reduce_sdPcMwTest3(SCIP*);
-extern SCIP_RETCODE    reduce_sdPcMwTest4(SCIP*);
-extern SCIP_RETCODE    heur_extendPcMwOuterTest1(SCIP*);
-extern SCIP_RETCODE    reduce_extDistTest1(SCIP*);
+extern SCIP_RETCODE    reduce_extTest(SCIP*);
+extern SCIP_RETCODE    dheap_Test(SCIP*);
+extern SCIP_RETCODE    reduce_sdPcMwTest(SCIP*);
+extern SCIP_RETCODE    heur_extendPcMwOuterTest(SCIP*);
 
 
 /* reduce_simple.c
