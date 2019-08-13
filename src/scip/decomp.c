@@ -65,6 +65,16 @@ int countLabelFromPos(
    return endpos - pos;
 }
 
+
+/** raises an error if the condition is not TRUE */
+static
+SCIP_RETCODE ensureCondition(
+   SCIP_Bool             condition           /**< some condition that must hold */
+   )
+{
+   return condition ? SCIP_OKAY : SCIP_ERROR;
+}
+
 /** create a decomposition */
 SCIP_RETCODE SCIPdecompCreate(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
@@ -74,6 +84,8 @@ SCIP_RETCODE SCIPdecompCreate(
    SCIP_Bool             benderslabels       /**< should the variables be labeled for the application of Benders' decomposition */
    )
 {
+   int memsize;
+
    assert(decomp != NULL);
    assert(blkmem != NULL);
 
@@ -82,10 +94,12 @@ SCIP_RETCODE SCIPdecompCreate(
    SCIP_CALL( SCIPhashmapCreate(&(*decomp)->cons2block, blkmem, INIT_MAP_SIZE) );
 
    /* we allocate one extra slot for the linking block */
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->varssize, nblocks + 1) );
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->consssize, nblocks + 1) );
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->labels, nblocks + 1) );
+   memsize = nblocks + 1;
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->varssize, memsize) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->consssize, memsize) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*decomp)->labels, memsize) );
 
+   (*decomp)->memsize = memsize;
    (*decomp)->nblocks = nblocks;
    (*decomp)->score = -1.0;
    (*decomp)->modularity = -1.0;
@@ -119,9 +133,9 @@ void SCIPdecompFree(
    SCIPhashmapFree(&(*decomp)->var2block);
    SCIPhashmapFree(&(*decomp)->cons2block);
 
-   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->varssize, (*decomp)->nblocks + 1);
-   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->consssize, (*decomp)->nblocks + 1);
-   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->labels, (*decomp)->nblocks + 1);
+   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->varssize, (*decomp)->memsize);
+   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->consssize, (*decomp)->memsize);
+   BMSfreeBlockMemoryArray(blkmem, &(*decomp)->labels, (*decomp)->memsize);
 
    BMSfreeBlockMemory(blkmem, decomp);
 }
@@ -266,6 +280,86 @@ SCIP_Bool SCIPdecompIsOriginal(
    return decomp->original;
 }
 
+/** query the constraints active variables and their labels */
+static
+SCIP_RETCODE decompGetConsVarsAndLabels(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_CONS*            cons,               /**< the constraint */
+   SCIP_VAR**            varbuf,             /**< variable buffer array */
+   int*                  labelbuf,           /**< buffer to store labels, or NULL if not needed */
+   int                   bufsize,            /**< size of buffer arrays */
+   int*                  nvars,              /**< pointer to store number of variables */
+   int*                  requiredsize,       /**< pointer to store required size */
+   SCIP_Bool*            success             /**< pointer to store whether variables and labels were successfully inserted */
+   )
+{
+   SCIP_Bool success2;
+
+   assert(scip != NULL);
+   assert(decomp != NULL);
+   assert(cons != NULL);
+   assert(varbuf != NULL);
+   assert(nvars != NULL);
+   assert(requiredsize != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+   *requiredsize = 0;
+   *nvars = 0;
+   SCIP_CALL( SCIPgetConsNVars(scip, cons, nvars, &success2) );
+
+   /* the constraint does not have the corresponding callback */
+   if( ! success2 )
+   {
+      return SCIP_OKAY;
+   }
+
+   if( bufsize < *nvars )
+   {
+      *requiredsize = *nvars;
+
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPgetConsVars(scip, cons, varbuf, bufsize, &success2) );
+   /* the constraint does not have the corresponding callback */
+   if( ! success2 )
+   {
+      return SCIP_OKAY;
+   }
+
+   if( ! SCIPdecompIsOriginal(decomp) )
+   {
+      SCIP_CALL( SCIPgetActiveVars(scip, varbuf, nvars, bufsize, requiredsize) );
+
+      if( *requiredsize > bufsize )
+         return SCIP_OKAY;
+   }
+   else
+   {
+      int v;
+      for( v = 0; v < *nvars; ++v )
+      {
+         assert(SCIPvarIsActive(varbuf[v]) || SCIPvarIsNegated(varbuf[v]));
+
+         /* some constraint handlers such as indicator may already return inactive variables */
+         if( SCIPvarIsNegated(varbuf[v]) )
+            varbuf[v] = SCIPvarGetNegatedVar(varbuf[v]);
+      }
+   }
+
+   /* get variables labels, if requested */
+   if( labelbuf != NULL )
+   {
+      SCIPdecompGetVarsLabels(decomp, varbuf, labelbuf, *nvars);
+   }
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** returns TRUE if this constraint contains only linking variables */
 SCIP_RETCODE SCIPhasConsOnlyLinkVars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -285,11 +379,12 @@ SCIP_RETCODE SCIPhasConsOnlyLinkVars(
    assert(hasonlylinkvars != NULL);
 
    SCIP_CALL( SCIPgetConsNVars(scip, cons, &nvars, &success) );
-   assert(success);
+   SCIP_CALL( ensureCondition(success) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
 
    SCIP_CALL( SCIPgetConsVars(scip, cons, consvars, nvars, &success) );
+   SCIP_CALL( ensureCondition(success) );
 
    if( ! SCIPdecompIsOriginal(decomp) )
    {
@@ -345,15 +440,6 @@ int SCIPdecompGetNBlocks(
    assert(decomp != NULL);
 
    return decomp->nblocks;
-}
-
-/** raises an error if the condition is not TRUE */
-static
-SCIP_RETCODE ensureCondition(
-   SCIP_Bool             condition           /**< some condition that must hold */
-   )
-{
-   return condition ? SCIP_OKAY : SCIP_ERROR;
 }
 
 #define LABEL_UNASSIGNED INT_MIN
@@ -412,29 +498,9 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
 
       SCIP_Bool success;
 
-      SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
+      SCIP_CALL( decompGetConsVarsAndLabels(scip, decomp, conss[c], varbuffer, varlabels,
+            twicenvars, &nconsvars, &requiredsize, &success) );
       SCIP_CALL( ensureCondition(success) );
-      SCIP_CALL( SCIPgetConsVars(scip, conss[c], varbuffer, twicenvars, &success) );
-      SCIP_CALL( ensureCondition(success) );
-
-      if( ! SCIPdecompIsOriginal(decomp) )
-      {
-         SCIP_CALL( SCIPgetActiveVars(scip, varbuffer, &nconsvars, twicenvars, &requiredsize) );
-         assert(nconsvars <= twicenvars);
-      }
-      else
-      {
-         for( v = 0; v < nconsvars; ++v )
-         {
-            assert(SCIPvarIsActive(varbuffer[v]) || SCIPvarIsNegated(varbuffer[v]));
-
-         /* some constraint handlers such as indicator may already return inactive variables */
-         if( SCIPvarIsNegated(varbuffer[v]) )
-            varbuffer[v] = SCIPvarGetNegatedVar(varbuffer[v]);
-         }
-      }
-
-      SCIPdecompGetVarsLabels(decomp, varbuffer, varlabels, nconsvars);
 
       /* loop over variable labels to compute the constraint label */
       conslabel = LABEL_UNASSIGNED;
@@ -553,16 +619,9 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
       else
          newvarlabel = conslabel;
 
-      SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
+      SCIP_CALL( decompGetConsVarsAndLabels(scip, decomp, conss[c], varbuffer, NULL,
+            twicenvars, &nconsvars, &requiredsize, &success) );
       SCIP_CALL( ensureCondition(success) );
-      SCIP_CALL( SCIPgetConsVars(scip, conss[c], varbuffer, twicenvars, &success) );
-      SCIP_CALL( ensureCondition(success) );
-
-      if( ! SCIPdecompIsOriginal(decomp) )
-      {
-         SCIP_CALL( SCIPgetActiveVars(scip, varbuffer, &nconsvars, twicenvars, &requiredsize) );
-         assert(nconsvars <= twicenvars);
-      }
 
       /** each variable in this constraint gets the constraint label unless it already has a different label -> make it a linking variable */
       for( v = 0; v < nconsvars; ++v )
@@ -752,6 +811,7 @@ SCIP_RETCODE computeModularity(
       int conslabel = conslabels[c];
       int blockpos;
       int varblockstart;
+      int requiredsize;
       SCIP_Bool success;
       SCIP_Bool found;
 
@@ -759,24 +819,13 @@ SCIP_RETCODE computeModularity(
       if( conslabel == SCIP_DECOMP_LINKCONS )
          continue;
 
-      SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
-      SCIP_CALL( ensureCondition(success) );
-
-      if( nvars == 0 )
-         continue;
-
-      SCIP_CALL( SCIPgetConsVars(scip, conss[c], varbuf, nvars, &success) );
-      SCIP_CALL( ensureCondition(success) );
-
-      /* author bzfhende
-       *
-       * TODO replace the variables by their active representatives for transformed decompositions
-       */
-      SCIPdecompGetVarsLabels(decomp, varbuf, varslabels, nconsvars);
-
       /* find the position of the constraint label. Constraints of the border always belong to the first block at index 0 */
       found = SCIPsortedvecFindInt(decomp->labels, conslabel, decomp->nblocks + 1, &blockpos);
       assert(found);
+
+      SCIP_CALL( decompGetConsVarsAndLabels(scip, decomp, conss[c], varbuf, varslabels,
+               nvars, &nconsvars, &requiredsize, &success) );
+      SCIP_CALL( ensureCondition(success) );
 
       SCIPsortInt(varslabels, nconsvars);
 
@@ -900,7 +949,7 @@ SCIP_RETCODE buildBlockGraph(
    assert(decomp != NULL);
 
    /* capture the trivial case that no linking variables are present */
-   if( decomp->varssize[0] == 0 )
+   if( decomp->varssize[0] == 0 || decomp->nblocks == 0 )
    {
       decomp->mindegree = 0;
       decomp->maxdegree = 0;
@@ -948,22 +997,9 @@ SCIP_RETCODE buildBlockGraph(
       if( conslabels[i] == SCIP_DECOMP_LINKCONS )
          continue;
 
-      SCIP_CALL( SCIPgetConsNVars(scip, conss[i], &nconsvars, &success) );
-
-      if ( ! success )
-         continue;
-
-      SCIP_CALL( SCIPgetConsVars(scip, conss[i], consvars, nconsvars, &success) );
-      if( ! success )
-         continue;
-
-      /* re-transform given variables to active variables */
-      if( ! SCIPdecompIsOriginal(decomp) )
-      {
-         SCIP_CALL( SCIPgetActiveVars(scip, consvars, &nconsvars, nconsvars, &requiredsize) );
-         assert(requiredsize <= nconsvars);
-      }
-      SCIPdecompGetVarsLabels(decomp, consvars, varlabels, nconsvars);
+      SCIP_CALL( decompGetConsVarsAndLabels(scip, decomp, conss[i], consvars, varlabels,
+            nvars, &nconsvars, &requiredsize, &success) );
+      SCIP_CALL( ensureCondition(success) );
 
       /* adding double-direction arcs between blocks and corresponding linking variables */
       for( j = 0; j < nconsvars; ++j )
@@ -1048,6 +1084,8 @@ SCIP_RETCODE SCIPcomputeDecompStats(
 {
    SCIP_VAR** vars;
    SCIP_CONS** conss;
+   SCIP_CONS** conssarray;
+   SCIP_VAR** varsarray;
    int* varslabels;
    int* conslabels;
    int nvars;
@@ -1057,15 +1095,15 @@ SCIP_RETCODE SCIPcomputeDecompStats(
    int currlabelidx;
    int varidx;
    int considx;
+   int i;
 
    assert(scip != NULL);
    assert(decomp != NULL);
 
    /* store variable and constraint labels in buffer arrays */
-   vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   conss = SCIPgetConss(scip);
    nconss = SCIPgetNConss(scip);
+
 
   /* return if problem is empty
    *
@@ -1075,17 +1113,20 @@ SCIP_RETCODE SCIPcomputeDecompStats(
   {
      return SCIP_OKAY;
   }
+  conss = SCIPgetConss(scip);
+  vars = SCIPgetVars(scip);
 
-  SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, nvars) );
+  SCIP_CALL( SCIPduplicateBufferArray(scip, &conssarray, conss, nconss) );
   SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
+  SCIP_CALL( SCIPduplicateBufferArray(scip, &varsarray, vars, nvars) );
+  SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, nvars) );
 
-  SCIPdecompGetVarsLabels(decomp, vars, varslabels, nvars);
-  SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
+  SCIPdecompGetVarsLabels(decomp, varsarray, varslabels, nvars);
+  SCIPdecompGetConsLabels(decomp, conssarray, conslabels, nconss);
 
   /* sort both buffer arrays for quick counting */
-  SCIPsortInt(varslabels, nvars);
-  SCIPsortInt(conslabels, nconss);
-
+  SCIPsortIntPtr(varslabels, (void**)varsarray, nvars);
+  SCIPsortIntPtr(conslabels, (void**)conssarray, nconss);
 
   /* the first label is always LINKVAR, even if Benders' variable labels are used. We can ignore the variables
    * labelled as LINKCONS since this label is only required when computing the variable labels for Benders'
@@ -1119,78 +1160,105 @@ SCIP_RETCODE SCIPcomputeDecompStats(
       varlabel = varidx < nvars ? varslabels[varidx] : INT_MAX;
       conslabel = considx < nconss ? conslabels[considx] : INT_MAX;
 
+      assert(currlabelidx < decomp->memsize);
       /* store the smaller of the two current labels */
-      decomp->labels[currlabelidx++] = MIN(varlabel, conslabel);
+      decomp->labels[currlabelidx] = MIN(varlabel, conslabel);
 
-      /* increment the variable or constraint indices or both, depending on one label being strictly smaller */
+      /* a strictly larger variable label means that there are no variables for the current label */
       if( varlabel <= conslabel )
-         varidx += countLabelFromPos(varslabels, varidx, nvars);
+         decomp->varssize[currlabelidx] = countLabelFromPos(varslabels, varidx, nvars);
+      else
+         decomp->varssize[currlabelidx] = 0;
 
+      /* the same for constraint labels */
       if( conslabel <= varlabel )
-         considx += countLabelFromPos(conslabels, considx, nconss);
+         decomp->consssize[currlabelidx] = countLabelFromPos(conslabels, considx, nconss);
+      else
+         decomp->consssize[currlabelidx] = 0;
+
+      /* increase indices appropriately */
+      varidx += decomp->varssize[currlabelidx];
+      considx += decomp->consssize[currlabelidx];
+
+      currlabelidx++;
   }
 
+  SCIPdebugMsg(scip, "Counted %d different labels (should be %d)\n", currlabelidx, decomp->nblocks + 1);
 
-  currlabelidx = 1;
+  /* strip the remaining, unused blocks */
+  if( currlabelidx < decomp->nblocks + 1 )
+     decomp->nblocks = currlabelidx - 1;
+
+  /* delete empty blocks from statistics, relabel the corresponding constraints/variables as linking */
   varblockstart = decomp->varssize[0];
-  assert(varblockstart == nvars || varslabels[varblockstart] > SCIP_DECOMP_LINKVAR);
-   /* loop over the variables count the occurrences, storing also the integer labels */
-  while( varblockstart < nvars )
-  {
-     assert(currlabelidx < decomp->nblocks + 1);
-     assert(decomp->labels[currlabelidx] <= varslabels[varblockstart]);
+  consblockstart = decomp->consssize[0];
 
-     /* check if the current label is present in the variable labels */
-     if( decomp->labels[currlabelidx] < varslabels[varblockstart] )
+  for( i = 1; i < decomp->nblocks + 1; ++i )
+  {
+     assert(MAX(decomp->varssize[i], decomp->consssize[i]) > 0);
+     /* relabel constraint blocks as linking, if there are no corresponding variables */
+     if( decomp->varssize[i] == 0 )
      {
-        decomp->varssize[currlabelidx] = 0;
+        int nblockconss = decomp->consssize[i];
+        int c;
+        /* relabel these constraints as linking */
+        for( c = consblockstart; c < consblockstart + nblockconss; ++c )
+           conslabels[c] = SCIP_DECOMP_LINKCONS;
+
+        SCIP_CALL( SCIPdecompSetConsLabels(decomp, &conssarray[consblockstart], &conslabels[consblockstart], nblockconss) );
+
+        /* increase number of linking constraints */
+        decomp->consssize[0] += nblockconss;
      }
-     else
+
+     /* same for constraints */
+     if( decomp->consssize[i] == 0 )
      {
-        /* increment variable block start */
-        decomp->varssize[currlabelidx] = countLabelFromPos(varslabels, varblockstart, nvars);
-        varblockstart += decomp->varssize[currlabelidx];
+        int nblockvars = decomp->varssize[i];
+        int v;
+
+        /* relabel the variables as linking variables */
+        for( v = varblockstart; v < varblockstart + nblockvars; ++v )
+           varslabels[v] = SCIP_DECOMP_LINKVAR;
+
+        SCIP_CALL( SCIPdecompSetVarsLabels(decomp, &varsarray[varblockstart], &varslabels[varblockstart], nblockvars) );
+
+        /* increase number of linking variables */
+        decomp->varssize[0] += nblockvars;
      }
-     currlabelidx++;
+
+     varblockstart += decomp->varssize[i];
+     consblockstart += decomp->consssize[i];
   }
 
-
-
-
-  consblockstart = decomp->consssize[0];
-  assert(consblockstart == nconss || conslabels[consblockstart] >= 0);
-
-  /* loop over remaining, non-border constraints */
-  decomp->idxsmallestblock = decomp->idxlargestblock = -1;
   currlabelidx = 1;
-  while( consblockstart < nconss )
+
+  /* delete empty blocks; they are no longer present */
+  for( i = 1; i < decomp->nblocks + 1; ++i )
   {
-     assert(currlabelidx < decomp->nblocks + 1);
-     assert(decomp->labels[currlabelidx] <= conslabels[consblockstart]);
-
-     /* the current label may not be present in the conslabels */
-     if( decomp->labels[currlabelidx] < conslabels[consblockstart] )
+     /* keep only nonempty blocks */
+     if( decomp->varssize[i] > 0 && decomp->consssize[i] > 0 )
      {
-        decomp->consssize[currlabelidx] = 0;
-     }
-     else
-     {
-        /* count the number of occurrences and store it */
-        decomp->consssize[currlabelidx] = countLabelFromPos(conslabels, consblockstart, nconss);
-     }
+        decomp->labels[currlabelidx] = decomp->labels[i];
+        decomp->varssize[currlabelidx] = decomp->varssize[i];
+        decomp->consssize[currlabelidx] = decomp->consssize[i];
 
-     /* update index to largest and smallest constraint blocks (don't consider border for this statistic) */
-     if( decomp->idxlargestblock == -1 )
-     {
-        decomp->idxlargestblock = decomp->idxsmallestblock = currlabelidx;
+        currlabelidx++;
      }
-     else if( decomp->consssize[currlabelidx] > decomp->consssize[decomp->idxlargestblock] )
-        decomp->idxlargestblock = currlabelidx;
-     else if( decomp->consssize[currlabelidx] < decomp->consssize[decomp->idxsmallestblock] )
-        decomp->idxsmallestblock = currlabelidx;
+  }
 
-     consblockstart += decomp->consssize[currlabelidx];
-     currlabelidx++;
+  decomp->nblocks = currlabelidx - 1;
+
+  decomp->idxsmallestblock = decomp->idxlargestblock = -1;
+  /* now that indices are fixed, store indices with largest and smallest number of constraints */
+  for( i = 1; i < decomp->nblocks + 1; ++i )
+  {
+     if( decomp->idxsmallestblock == -1 )
+        decomp->idxsmallestblock = decomp->idxlargestblock = i;
+     else if( decomp->consssize[decomp->idxsmallestblock] > decomp->consssize[i] )
+        decomp->idxsmallestblock = i;
+     else if( decomp->consssize[decomp->idxlargestblock] < decomp->consssize[i] )
+        decomp->idxlargestblock = i;
   }
 
   SCIP_CALL( computeModularity(scip, decomp, &decomp->modularity) );
@@ -1198,8 +1266,10 @@ SCIP_RETCODE SCIPcomputeDecompStats(
   computeAreaScore(scip, decomp);
   buildBlockGraph(scip, decomp);
 
-  SCIPfreeBufferArray(scip, &conslabels);
   SCIPfreeBufferArray(scip, &varslabels);
+  SCIPfreeBufferArray(scip, &varsarray);
+  SCIPfreeBufferArray(scip, &conslabels);
+  SCIPfreeBufferArray(scip, &conssarray);
 
    return SCIP_OKAY;
 }
