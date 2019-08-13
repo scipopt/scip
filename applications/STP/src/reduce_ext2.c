@@ -25,7 +25,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-//#define SCIP_DEBUG
+#define SCIP_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -635,10 +635,10 @@ SCIP_Bool extTreeSdDominatesBottleneck(
 
    SCIPdebugMessage("%d %d bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, treeBottleneckDist);
 
-   {
-   int todo;
-   }
-   if( SCIPisLT(scip, sd, treeBottleneckDist) && 0 ) /* todo cover equality */
+   if( SCIPisLT(scip, sd, treeBottleneckDist) )
+      return TRUE;
+
+   if( SCIPisLE(scip, sd, treeBottleneckDist) && 0 ) /* todo cover equality */
       return TRUE;
 
    return FALSE;
@@ -948,11 +948,14 @@ SCIP_Bool extRuleOutPeriph(
 
             specialDist = reduce_distDataGetSD(scip,  graph, extleaf, leaf, distdata);
 
+            SCIPdebugMessage("sd %d->%d: %f \n", extleaf, leaf, specialDist);
+
             /* could a valid special distance be found?  */
             if( specialDist >= -0.5 )
             {
                if( extTreeSdDominatesBottleneck(scip, graph, specialDist, extleaf, leaf, extdata) )
                {
+                  SCIPdebugMessage("bottleneck rule-out \n");
                   extTreeBottleneckUnmarkRootPath(extleaf, extdata);
                   return TRUE;
                }
