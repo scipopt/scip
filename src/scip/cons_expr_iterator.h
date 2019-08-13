@@ -257,9 +257,21 @@ SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetExprUserData(
  */
 SCIP_EXPORT
 void SCIPexpriteratorSetCurrentUserData(
-   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPRITERATOR_USERDATA    userdata     /**< data to be stored */
+   SCIP_CONSEXPR_ITERATOR*         iterator, /**< expression iterator */
+   SCIP_CONSEXPRITERATOR_USERDATA  userdata  /**< data to be stored */
    );
+
+/** sets the iterator specific user data of a given expression
+ *
+ * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ */
+SCIP_EXPORT
+void SCIPexpriteratorSetExprUserData(
+   SCIP_CONSEXPR_ITERATOR*         iterator, /**< expression iterator */
+   SCIP_CONSEXPR_EXPR*             expr,     /**< expression where to set iterator data */
+   SCIP_CONSEXPRITERATOR_USERDATA  userdata  /**< data to be stored in current child */
+   );
+
 
 /** sets the iterator specific user data of the current expressions current child
  *
@@ -267,8 +279,8 @@ void SCIPexpriteratorSetCurrentUserData(
  */
 SCIP_EXPORT
 void SCIPexpriteratorSetChildUserData(
-   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPRITERATOR_USERDATA    userdata     /**< data to be stored in current child */
+   SCIP_CONSEXPR_ITERATOR*         iterator, /**< expression iterator */
+   SCIP_CONSEXPRITERATOR_USERDATA  userdata  /**< data to be stored in current child */
    );
 
 /** moves the iterator to the next expression according to the mode of the expression iterator

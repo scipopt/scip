@@ -156,7 +156,7 @@ SCIP_RETCODE varIsSemicontinuous(
          exists = FALSE;
       if( exists )
       {/*lint --e{644}*/
-         SCIPdebugMsgPrint(scip, ", upper bound: %f <%s> %+f", vubcoefs[pos], SCIPvarGetName(vubvars[pos]), vubconstants[pos]);
+         SCIPdebugMsgPrint(scip, ", upper bound: %f <%s> %+f", vubcoefs[pos], SCIPvarGetName(vubvars[pos]), vubconstants[pos]); /*lint !e613*/
 
          /* save the upper bounds */
          ub0 = MIN(vubconstants[pos], gub);
@@ -1056,8 +1056,9 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
          bvar = bvars[0];
          for( j = 1; j < nlhdlrexprdata->ntermbvars[i]; ++j)
          {
+            assert(bvars[j] != NULL);
             bval = SCIPgetSolVal(scip, sol, bvars[j]);
-            if( bvars[j] != NULL && bval < minbval )
+            if( bval < minbval )
             {
                minbval = bval;
                bvar = bvars[j];

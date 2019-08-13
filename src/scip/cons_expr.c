@@ -272,6 +272,8 @@ SCIP_RETCODE createExpr(
    assert(expr != NULL);
    assert(exprhdlr != NULL);
    assert(children != NULL || nchildren == 0);
+   assert(exprdata == NULL || exprhdlr->copydata != NULL); /* copydata must be available if there is expression data */
+   assert(exprdata == NULL || exprhdlr->freedata != NULL); /* freedata must be available if there is expression data */
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, expr) );
 
@@ -475,7 +477,7 @@ SCIP_DECL_CONSEXPR_MAPVAR(copyVar)
 
 /** copies an expression including subexpressions
  *
- * @note If copying fails due to missing copy callbacks, then *targetexpr will be set to NULL.
+ * @note If copying fails due to an expression handler not being available in the targetscip, then *targetexpr will be set to NULL.
  */
 static
 SCIP_RETCODE copyExpr(
@@ -574,21 +576,10 @@ SCIP_RETCODE copyExpr(
                assert(targetexprhdlr != NULL);
 
                /* copy expression data */
-               if( expr->exprhdlr->copydata != NULL )
+               if( expr->exprdata != NULL )
                {
+                  assert(expr->exprhdlr->copydata != NULL);
                   SCIP_CALL( expr->exprhdlr->copydata(targetscip, targetexprhdlr, &targetexprdata, sourcescip, expr, mapvar, mapvardata) );
-               }
-               else if( expr->exprdata != NULL )
-               {
-                  /* no copy callback for expression data implemented -> abort
-                   * (we could also just copy the exprdata pointer, but for now let's say that
-                   *  an expression handler should explicitly implement this behavior, if desired)
-                   */
-                  expriteruserdata.ptrval = NULL;
-                  SCIPexpriteratorSetCurrentUserData(it, expriteruserdata);
-
-                  expr = SCIPexpriteratorSkipDFS(it);
-                  continue;
                }
                else
                {
@@ -7510,7 +7501,7 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
          /* check for a linear variable that can be increase or decreased without harming feasibility */
          consdataFindUnlockedLinearVar(scip, conshdlr, consdata);
 
-         /* call curvature detection of expression handlers */
+         /* call curvature detection of expression handlers; TODO do we really need this? */
          SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
 
          /* add nlrow representation to NLP, if NLP had been constructed */
@@ -7655,12 +7646,7 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 
    /* get a copy of sourceexpr with transformed vars */
    SCIP_CALL( copyExpr(scip, scip, conshdlr, sourcedata->expr, &targetexpr, transformVar, NULL) );
-
-   if( targetexpr == NULL )
-   {
-      SCIPerrorMessage("Copying expression in consTransExpr failed.\n");
-      return SCIP_ERROR;
-   }
+   assert(targetexpr != NULL);  /* copyExpr cannot fail if source and target scip are the same */
 
    /* create transformed cons (captures targetexpr) */
    SCIP_CALL( SCIPcreateConsExpr(scip, targetcons, SCIPconsGetName(sourcecons),
@@ -8974,6 +8960,16 @@ SCIP_Bool SCIPhasConsExprExprHdlrPrint(
    return exprhdlr->print != NULL;
 }
 
+/** returns whether expression handler implements the backward differentiation callback */
+SCIP_Bool SCIPhasConsExprExprHdlrBwdiff(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->bwdiff != NULL;
+}
+
 /** returns whether expression handler implements the interval evaluation callback */
 SCIP_Bool SCIPhasConsExprExprHdlrIntEval(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
@@ -9002,6 +8998,16 @@ SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
    assert(exprhdlr != NULL);
 
    return exprhdlr->simplify != NULL;
+}
+
+/** returns whether expression handler implements the curvature callback */
+SCIP_Bool SCIPhasConsExprExprHdlrCurvature(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->curvature != NULL;
 }
 
 /** returns whether expression handler implements the reverse propagation callback */
@@ -9203,6 +9209,71 @@ SCIP_DECL_CONSEXPR_EXPRCOMPARE(SCIPcompareConsExprExprHdlr)
    }
 }
 
+/** calls the backward-differentiation callback of an expression handler
+ *
+ * further, allows to different w.r.t. given expression and children values
+ */
+SCIP_RETCODE SCIPbwdiffConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   int                        childidx,     /**< index of child w.r.t. which to compute derivative */
+   SCIP_Real*                 derivative,   /**< buffer to store value of derivative */
+   SCIP_Real*                 childrenvals, /**< values for children, or NULL if values stored in children should be used */
+   SCIP_Real                  exprval       /**< value for expression, used only if childrenvals is not NULL */
+)
+{
+   SCIP_Real* origchildrenvals;
+   SCIP_Real origexprval;
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(derivative != NULL);
+
+   if( expr->exprhdlr->bwdiff == NULL )
+   {
+      *derivative = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
+
+   /* temporarily overwrite the evalvalue in all children and expr with values from childrenvals and exprval, resp. */
+   if( childrenvals != NULL )
+   {
+      if( expr->nchildren > 0 )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &origchildrenvals, expr->nchildren) );
+
+         for( c = 0; c < expr->nchildren; ++c )
+         {
+            origchildrenvals[c] = expr->children[c]->evalvalue;
+            expr->children[c]->evalvalue = childrenvals[c];
+         }
+      }
+
+      origexprval = expr->evalvalue;
+      expr->evalvalue = exprval;
+   }
+
+   SCIP_CALL( expr->exprhdlr->bwdiff(scip, expr, childidx, derivative) );
+
+   /* restore original evalvalues in children */
+   if( childrenvals != NULL )
+   {
+      if( expr->nchildren > 0 )
+      {
+         for( c = 0; c < expr->nchildren; ++c )
+            expr->children[c]->evalvalue = origchildrenvals[c];  /*lint !e644*/
+
+         SCIPfreeBufferArray(scip, &origchildrenvals);
+      }
+
+      expr->evalvalue = origexprval;   /*lint !e644*/
+   }
+
+   return SCIP_OKAY;
+}
+
 /** calls the evaluation callback of an expression handler
  *
  * further, allows to evaluate w.r.t. given children values
@@ -9316,6 +9387,24 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(SCIPsimplifyConsExprExprHdlr)
 
    return SCIP_OKAY;
 }
+
+/** calls the curvature check method of an expression handler */
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(SCIPcurvatureConsExprExprHdlr)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   if( SCIPhasConsExprExprHdlrCurvature(expr->exprhdlr) )
+   {
+      SCIP_CALL( expr->exprhdlr->curvature(scip, conshdlr, expr, exprcurvature, success, childcurv) );
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** calls the expression callback for reverse propagation */
 SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(SCIPreversepropConsExprExprHdlr)
@@ -9893,18 +9982,34 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    return SCIP_OKAY;
 }
 
-/** duplicates the given expression
- *
- * If a copy could not be created (e.g., due to missing copy callbacks in expression handlers), *copyexpr will be set to NULL.
- */
+/** duplicates the given expression */
 SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
-   SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
+   SCIP_CONSEXPR_EXPR**  copyexpr,           /**< buffer to store duplicate of expr */
+   SCIP_Bool             copychildren        /**< whether children (and all successors) should be copied, too */
    )
 {
-   SCIP_CALL( copyExpr(scip, scip, consexprhdlr, expr, copyexpr, NULL, NULL) );
+   if( copychildren )
+   {
+      SCIP_CALL( copyExpr(scip, scip, consexprhdlr, expr, copyexpr, NULL, NULL) );
+   }
+   else
+   {
+      /* copy expression data */
+      SCIP_CONSEXPR_EXPRDATA* exprdatacopy = NULL;
+      if( SCIPgetConsExprExprData(expr) != NULL )
+      {
+         assert(expr->exprhdlr->copydata != NULL);
+         SCIP_CALL( expr->exprhdlr->copydata(scip, expr->exprhdlr, &exprdatacopy, scip, expr, NULL, NULL) );
+      }
+
+      /* create expression with same handler and copied data, but without children */
+      SCIP_CALL( SCIPcreateConsExprExpr(scip, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL) );
+   }
+
+   assert(*copyexpr != NULL);
 
    return SCIP_OKAY;
 }
@@ -9953,8 +10058,9 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
    /* handle the root expr separately: free enfodata and expression data here */
    SCIP_CALL( freeEnfoData(scip, NULL, *rootexpr, TRUE) );
 
-   if( (*rootexpr)->exprdata != NULL && (*rootexpr)->exprhdlr->freedata != NULL )
+   if( (*rootexpr)->exprdata != NULL )
    {
+      assert((*rootexpr)->exprhdlr->freedata != NULL);
       SCIP_CALL( (*rootexpr)->exprhdlr->freedata(scip, *rootexpr) );
    }
 
@@ -9994,15 +10100,9 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
 
             if( child->exprdata != NULL )
             {
-               if( child->exprhdlr->freedata != NULL )
-               {
-                  SCIP_CALL( child->exprhdlr->freedata(scip, child) );
-                  assert(child->exprdata == NULL);
-               }
-               else
-               {
-                  child->exprdata = NULL;
-               }
+               assert(child->exprhdlr->freedata != NULL);
+               SCIP_CALL( child->exprhdlr->freedata(scip, child) );
+               assert(child->exprdata == NULL);
             }
 
             break;
@@ -10121,6 +10221,8 @@ void SCIPsetConsExprExprData(
    )
 {
    assert(expr != NULL);
+   assert(exprdata == NULL || expr->exprhdlr->copydata != NULL);  /* copydata must be available if there is expression data */
+   assert(exprdata == NULL || expr->exprhdlr->freedata != NULL);  /* freedata must be available if there is expression data */
 
    expr->exprdata = exprdata;
 }
@@ -10766,7 +10868,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
       else
       {
          derivative = SCIP_INVALID;
-         SCIP_CALL( (*expr->exprhdlr->bwdiff)(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &derivative) );
+         SCIP_CALL( SCIPbwdiffConsExprExprHdlr(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &derivative, NULL, 0.0) );
 
          if( derivative == SCIP_INVALID ) /*lint !e777*/
          {
@@ -10808,11 +10910,11 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
    assert(var != NULL);
    assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(consexprhdlr) || expr->derivative == 0.0);
 
-   /* check if an error occurred during the last SCIPcomputeConsExprExprGradient() call */
+   /* return 0.0 for value expression */
    if( strcmp(expr->exprhdlr->name, "val") == 0 )
       return 0.0;
 
-   /* return 0.0 for value expression */
+   /* check if an error occurred during the last SCIPcomputeConsExprExprGradient() call */
    if( expr->derivative == SCIP_INVALID ) /*lint !e777*/
       return SCIP_INVALID;
 
@@ -11613,6 +11715,11 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP_CONSHDLR* conshdlr;
    SCIP_EXPRCURV curv;
    SCIP_INTERVAL activity;
+   SCIP_EXPRCURV* childcurv;
+   int childcurvsize;
+   SCIP_Bool success;
+   SCIP_EXPRCURV trialcurv[3] = { SCIP_EXPRCURV_LINEAR, SCIP_EXPRCURV_CONVEX, SCIP_EXPRCURV_CONCAVE };
+   int i, c;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -11623,6 +11730,9 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    /* ensure activities are uptodate */
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE) );
 
+   childcurvsize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, childcurvsize) );
+
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
@@ -11631,17 +11741,54 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    {
       curv = SCIP_EXPRCURV_UNKNOWN;
 
-      if( expr->exprhdlr->curvature != NULL )
+      if( expr->exprhdlr->curvature == NULL )
       {
-         /* get curvature from expression handler */
-         SCIP_CALL( (*expr->exprhdlr->curvature)(scip, conshdlr, expr, &curv) );
+         /* set curvature in expression */
+         SCIPsetConsExprExprCurvature(expr, curv);
+         continue;
+      }
+
+      if( SCIPgetConsExprExprNChildren(expr) > childcurvsize )
+      {
+         childcurvsize = SCIPcalcMemGrowSize(scip, SCIPgetConsExprExprNChildren(expr));
+         SCIP_CALL( SCIPreallocBufferArray(scip, &childcurv, childcurvsize) );
+      }
+
+      /* SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+      SCIPinfoMessage(scip, NULL, " (%p)", expr); */
+      for( i = 0; i < 3; ++i )
+      {
+         /* check if expression can have a curvature trialcurv[i] */
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, expr, trialcurv[i], &success, childcurv) );
+         /* SCIPinfoMessage(scip, NULL, " %s? %d", SCIPexprcurvGetName(trialcurv[i]), success); */
+         if( !success )
+            continue;
+
+         /* check if conditions on children are satisfied */
+         for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+         {
+            if( (childcurv[c] & SCIPgetConsExprExprCurvature(SCIPgetConsExprExprChildren(expr)[c])) != childcurv[c] )
+            {
+               success = FALSE;
+               break;
+            }
+         }
+
+         if( success )
+         {
+            curv = trialcurv[i];
+            break;
+         }
       }
 
       /* set curvature in expression */
       SCIPsetConsExprExprCurvature(expr, curv);
+      /* SCIPinfoMessage(scip, NULL, " -> curv = %s\n", SCIPexprcurvGetName(curv)); */
    }
 
    SCIPexpriteratorFree(&it);
+
+   SCIPfreeBufferArray(scip, &childcurv);
 
    return SCIP_OKAY;
 }

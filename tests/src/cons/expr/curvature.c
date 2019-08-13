@@ -108,7 +108,7 @@ SCIP_RETCODE checkCurvature(
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
 
    /* check curvature */
-   cr_expect(SCIPgetConsExprExprCurvature(expr) == expectedcur, "expect %d, got %d", SCIPgetConsExprExprCurvature(expr), expectedcur);
+   cr_expect(SCIPgetConsExprExprCurvature(expr) == expectedcur, "got %d, expect %d", SCIPgetConsExprExprCurvature(expr), expectedcur);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -193,7 +193,7 @@ Test(curvature, sum)
    SCIP_CALL( checkCurvature("<x>[C] + <y>[C]^(0.5) + <z>[C]^(-1)", "sum", SCIP_EXPRCURV_CONCAVE) );
 
    /* sum of concave and convex expressions -> unknown */
-   SCIP_CALL( checkCurvature("<x>[C]^2.5 + <y>[C]^(0.5) + <z>[C]^(-1)", "sum", SCIP_EXPRCURV_UNKNOWN) );
+   SCIP_CALL( checkCurvature("<x>[C]^2 + <y>[C]^(0.5) + <z>[C]^(-1)", "sum", SCIP_EXPRCURV_UNKNOWN) );
 
    /* -1 * convex = concave */
    SCIP_CALL( checkCurvature("-1 * <x>[C]^2", "sum", SCIP_EXPRCURV_CONCAVE) );

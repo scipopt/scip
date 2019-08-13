@@ -301,21 +301,19 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashLog)
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureLog)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
-
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(childcurv != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-
-   /* expression is convex if child is concave */
-   if( (int)(SCIPgetConsExprExprCurvature(child) & SCIP_EXPRCURV_CONCAVE) != 0 )
-      *curvature = SCIP_EXPRCURV_CONCAVE;
+   /* expression is concave if child is concave, expression cannot be linear or convex */
+   if( exprcurvature == SCIP_EXPRCURV_CONCAVE )
+   {
+      *childcurv = SCIP_EXPRCURV_CONCAVE;
+      *success = TRUE;
+   }
    else
-      *curvature = SCIP_EXPRCURV_UNKNOWN;
+      *success = FALSE;
 
    return SCIP_OKAY;
 }

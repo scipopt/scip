@@ -354,6 +354,117 @@ SCIP_EXPRCURV SCIPexprcurvPower(
    return SCIP_EXPRCURV_UNKNOWN;
 }
 
+/** gives required curvature for base so that base^exponent has given curvature under given bounds on base and constant exponent
+ * returns curvature unknown if expected curvature cannot be obtained
+ */
+SCIP_EXPRCURV SCIPexprcurvPowerInv(
+   SCIP_INTERVAL         basebounds,         /**< bounds on base function */
+   SCIP_Real             exponent,           /**< exponent, must not be 0 */
+   SCIP_EXPRCURV         powercurv           /**< expected curvature for power */
+   )
+{
+   SCIP_Bool expisint;
+
+   assert(basebounds.inf <= basebounds.sup);
+   assert(exponent != 0.0);
+   assert(powercurv != SCIP_EXPRCURV_UNKNOWN);
+
+   if( exponent == 1.0 )
+      return powercurv;
+
+   /* power is usually never linear, now that exponent != 1 */
+   if( powercurv == SCIP_EXPRCURV_LINEAR )
+      return SCIP_EXPRCURV_UNKNOWN;
+
+   expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
+
+   /* if exponent is fractional, then power is only defined for a non-negative base
+    * someone should have ensured this before calling this function
+    */
+   assert(expisint || basebounds.inf >= 0.0);
+
+   /* if basebounds contains 0.0, consider negative and positive interval separately, if possible */
+   if( basebounds.inf < 0.0 && basebounds.sup > 0.0 )
+   {
+      SCIP_INTERVAL leftbounds;
+      SCIP_INTERVAL rightbounds;
+      SCIP_EXPRCURV leftcurv;
+      SCIP_EXPRCURV rightcurv;
+
+      /* something like x^(-2) may look convex on each side of zero, but is not convex on the whole interval due to the singularity at 0.0 */
+      if( exponent < 0.0 )
+         return SCIP_EXPRCURV_UNKNOWN;
+
+      SCIPintervalSetBounds(&leftbounds,  basebounds.inf, 0.0);
+      SCIPintervalSetBounds(&rightbounds, 0.0, basebounds.sup);
+
+      leftcurv = SCIPexprcurvPowerInv(leftbounds, exponent, powercurv);
+      rightcurv = SCIPexprcurvPowerInv(rightbounds, exponent, powercurv);
+
+      /* now need to intersect */
+      if( leftcurv == SCIP_EXPRCURV_LINEAR )
+         return rightcurv;
+      if( rightcurv == SCIP_EXPRCURV_LINEAR )
+         return leftcurv;
+      if( leftcurv == SCIP_EXPRCURV_UNKNOWN || rightcurv == SCIP_EXPRCURV_UNKNOWN )
+         return SCIP_EXPRCURV_UNKNOWN;
+      assert(leftcurv == SCIP_EXPRCURV_CONVEX || leftcurv == SCIP_EXPRCURV_CONCAVE);
+      assert(rightcurv == SCIP_EXPRCURV_CONVEX || rightcurv == SCIP_EXPRCURV_CONCAVE);
+      return SCIP_EXPRCURV_LINEAR;
+   }
+   assert(basebounds.inf >= 0.0 || basebounds.sup <= 0.0);
+
+   /* inverting the logic from SCIPexprcurvPower here */
+   if( powercurv == SCIP_EXPRCURV_CONVEX )
+   {
+      SCIP_Real sign;
+
+      if( basebounds.sup <= 0.0 && exponent < 0.0 && expisint && ((int)exponent)%2 == 0 )
+         return SCIP_EXPRCURV_CONVEX;
+      if( basebounds.inf >= 0.0 && exponent > 1.0 )
+         return SCIP_EXPRCURV_CONVEX;
+      if( basebounds.sup <= 0.0 && exponent > 1.0 && expisint && ((int)exponent)%2 == 0 )
+         return SCIP_EXPRCURV_CONCAVE;
+      if( basebounds.inf >= 0.0 && exponent < 0.0 )
+         return SCIP_EXPRCURV_CONCAVE;
+
+      /* base^(exponent-2) is negative, if base < 0.0 and exponent is odd */
+      sign = exponent * (exponent - 1.0);
+      assert(basebounds.inf >= 0.0 || expisint);
+      if( basebounds.inf < 0.0 && ((int)exponent)%2 != 0 )
+         sign *= -1.0;
+      assert(sign != 0.0);
+
+      if( sign > 0.0 )
+         return SCIP_EXPRCURV_LINEAR;
+   }
+   else
+   {
+      SCIP_Real sign;
+
+      assert(powercurv == SCIP_EXPRCURV_CONCAVE);  /* linear handled at top, unknown should not be the case */
+
+      if( basebounds.sup <= 0.0 && exponent < 0.0 && expisint && ((int)exponent)%2 != 0 )
+         return SCIP_EXPRCURV_CONVEX;
+      if( basebounds.sup <= 0.0 && exponent > 1.0 && expisint && ((int)exponent)%2 != 0 )
+         return SCIP_EXPRCURV_CONCAVE;
+      if( basebounds.inf >= 0.0 && exponent < 1.0 && exponent >= 0.0 )
+         return SCIP_EXPRCURV_CONCAVE;
+
+      /* base^(exponent-2) is negative, if base < 0.0 and exponent is odd */
+      sign = exponent * (exponent - 1.0);
+      assert(basebounds.inf >= 0.0 || expisint);
+      if( basebounds.inf < 0.0 && ((int)exponent)%2 != 0 )
+         sign *= -1.0;
+      assert(sign != 0.0);
+
+      if( sign < 0.0 )
+         return SCIP_EXPRCURV_LINEAR;
+   }
+
+   return SCIP_EXPRCURV_UNKNOWN;
+}
+
 /** gives curvature for a monomial with given curvatures and bounds for each factor
  *
  *  See Maranas and Floudas, Finding All Solutions of Nonlinearly Constrained Systems of Equations, JOGO 7, 1995
@@ -469,6 +580,122 @@ SCIP_EXPRCURV SCIPexprcurvMonomial(
    curv = SCIPexprcurvMultiply(mult, curv);
 
    return curv;
+}
+
+/** for a monomial with given bounds for each factor, gives condition on the curvature of each factor, so that monomial has a requested curvature, if possible
+ *
+ * @return whether monomialcurv can be achieved
+ */
+SCIP_Bool SCIPexprcurvMonomialInv(
+   SCIP_EXPRCURV         monomialcurv,       /**< desired curvature */
+   int                   nfactors,           /**< number of factors in monomial */
+   SCIP_Real*            exponents,          /**< exponents in monomial, or NULL if all 1.0 */
+   SCIP_INTERVAL*        factorbounds,       /**< bounds of each factor */
+   SCIP_EXPRCURV*        factorcurv          /**< buffer to store required curvature of each factor */
+   )
+{
+   int nnegative;
+   int npositive;
+   SCIP_Real e;
+   SCIP_Real sum;
+   int j;
+
+   assert(monomialcurv != SCIP_EXPRCURV_UNKNOWN);
+   assert(nfactors >= 1);
+   assert(factorbounds != NULL);
+   assert(factorcurv != NULL);
+
+   if( nfactors == 1 )
+   {
+      factorcurv[0] = SCIPexprcurvPowerInv(factorbounds[0], exponents != NULL ? exponents[0] : 1.0, monomialcurv);
+      return factorcurv[0] != SCIP_EXPRCURV_UNKNOWN;
+   }
+
+   /* any decent monomial with at least 2 factors is not linear */
+   if( monomialcurv == SCIP_EXPRCURV_LINEAR )
+      return FALSE;
+
+   /* count positive and negative exponents, sum of exponents; flip negative factors */
+   nnegative = 0; /* number of negative exponents */
+   npositive = 0; /* number of positive exponents */
+   sum = 0.0;     /* sum of exponents */
+   for( j = 0; j < nfactors; ++j )
+   {
+      /* mixed signs are bad */
+      if( factorbounds[j].inf < 0.0 && factorbounds[j].sup > 0.0 )
+         return FALSE;
+
+      e = exponents != NULL ? exponents[j] : 1.0;
+      assert(e != 0.0);  /* should have been simplified away */
+      if( e < 0.0 )
+         ++nnegative;
+      else
+         ++npositive;
+      sum += e;
+
+      if( factorbounds[j].inf < 0.0 )
+      {
+         /* if argument is negative, then exponent should be integer */
+         assert(EPSISINT(e, 0.0));  /*lint !e835*/
+
+         /* flip j'th argument: (f_j)^(exp_j) = (-1)^(exp_j) (-f_j)^(exp_j)
+          * thus, negate monomial, if exponent is odd, i.e., (-1)^(exp_j) = -1
+          */
+         if( (int)e % 2 != 0 )
+            monomialcurv = SCIPexprcurvNegate(monomialcurv);
+      }
+   }
+
+   /* if all factors are linear, then a product f_j^exp_j with f_j >= 0 is convex if
+    * - all exponents are negative, or
+    * - all except one exponent j* are negative and exp_j* >= 1 - sum_{j!=j*}exp_j, but the latter is equivalent to sum_j exp_j >= 1
+    * further, the product is concave if
+    * - all exponents are positive and the sum of exponents is <= 1.0
+    *
+    * if factors are nonlinear, then we require additionally, that for convexity
+    * - each factor is convex if exp_j >= 0, or concave if exp_j <= 0, i.e., exp_j*f_j'' >= 0
+    * and for concavity, we require that
+    * - all factors are concave, i.e., exp_j*f_j'' <= 0
+    */
+
+   if( monomialcurv == SCIP_EXPRCURV_CONVEX )
+   {
+      if( nnegative < nfactors-1 )  /* at least two positive exponents */
+         return FALSE;
+      if( nnegative < nfactors && !EPSGE(sum, 1.0, 1e-9) )  /* one negative exponent, but sum is not >= 1 */
+         return FALSE;
+
+      /* monomial will be convex, if each factor is convex if exp_j >= 0, or concave if exp_j <= 0, i.e., exp_j*f_j'' >= 0 */
+      for( j = 0; j < nfactors; ++j )
+      {
+         e = exponents != NULL ? exponents[j] : 1.0;
+         if( factorbounds[j].inf < 0.0 )  /* if factor is negative, then factorcurv[j] need to be flipped, which we can also get by flipping e */
+            e = -e;
+         if( e >= 0.0 )
+            factorcurv[j] = SCIP_EXPRCURV_CONVEX;
+         else
+            factorcurv[j] = SCIP_EXPRCURV_CONCAVE;
+      }
+   }
+   else
+   {
+      assert(monomialcurv == SCIP_EXPRCURV_CONCAVE);
+      if( npositive < nfactors )  /* at least one negative exponent */
+         return FALSE;
+      if( !EPSLE(sum, 1.0, 1e-9) )  /* sum is not <= 1 */
+         return FALSE;
+
+      /* monomial will be concave, if each factor is concave */
+      for( j = 0; j < nfactors; ++j )
+      {
+         if( factorbounds[j].inf < 0.0 )  /* if factor is negative, then factorcurv[j] need to be flipped, i.e. convex */
+            factorcurv[j] = SCIP_EXPRCURV_CONVEX;
+         else
+            factorcurv[j] = SCIP_EXPRCURV_CONCAVE;
+      }
+   }
+
+   return TRUE;
 }
 
 /** gives name as string for a curvature */

@@ -74,6 +74,16 @@ SCIP_EXPRCURV SCIPexprcurvPower(
    SCIP_Real             exponent            /**< exponent */
    );
 
+/** gives required curvature for base so that base^exponent has given curvature under given bounds on base and constant exponent
+ * returns curvature unknown if expected curvature cannot be obtained
+ */
+SCIP_EXPORT
+SCIP_EXPRCURV SCIPexprcurvPowerInv(
+   SCIP_INTERVAL         basebounds,         /**< bounds on base function */
+   SCIP_Real             exponent,           /**< exponent, must not be 0 */
+   SCIP_EXPRCURV         powercurv           /**< expected curvature for power */
+   );
+
 /** gives curvature for a monomial with given curvatures and bounds for each factor */
 SCIP_EXPORT
 SCIP_EXPRCURV SCIPexprcurvMonomial(
@@ -82,6 +92,19 @@ SCIP_EXPRCURV SCIPexprcurvMonomial(
    int*                  factoridxs,         /**< indices of factors, or NULL if identity mapping */
    SCIP_EXPRCURV*        factorcurv,         /**< curvature of each factor */
    SCIP_INTERVAL*        factorbounds        /**< bounds of each factor */
+   );
+
+/** for a monomial with given bounds for each factor, gives condition on the curvature of each factor, so that monomial has a requested curvature, if possible
+ *
+ * @return whether monomialcurv can be achieved
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPexprcurvMonomialInv(
+   SCIP_EXPRCURV         monomialcurv,       /**< desired curvature */
+   int                   nfactors,           /**< number of factors in monomial */
+   SCIP_Real*            exponents,          /**< exponents in monomial, or NULL if all 1.0 */
+   SCIP_INTERVAL*        factorbounds,       /**< bounds of each factor */
+   SCIP_EXPRCURV*        factorcurv          /**< buffer to store required curvature of each factor */
    );
 
 /** gives name as string for a curvature */

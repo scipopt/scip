@@ -1156,14 +1156,24 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSin)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(childcurv != NULL);
+   assert(success != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    childinterval = SCIPgetConsExprExprActivity(scip, child);
 
-   *curvature = SCIPcomputeCurvatureSin(SCIPgetConsExprExprCurvature(child), childinterval.inf, childinterval.sup);
+   /* TODO rewrite SCIPcomputeCurvatureSin so it provides the reverse operation */
+   *success = TRUE;
+   if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_CONVEX, childinterval.inf, childinterval.sup) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_CONVEX;
+   else if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_CONCAVE, childinterval.inf, childinterval.sup) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_CONCAVE;
+   if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_LINEAR, childinterval.inf, childinterval.sup) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_LINEAR;
+   else
+      *success = FALSE;
 
    return SCIP_OKAY;
 }
