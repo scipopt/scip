@@ -67,12 +67,7 @@
 #define HEUR_NAME "padm"
 #define HEUR_DESC "penalty alternating direction method primal heuristic"
 
-/* author bzfhende
- *
- * TODO change display character (with SCIP 7.0, display characters are unified). Suggestion: 'D'
- */
-
-#define HEUR_DISPCHAR '>'
+#define HEUR_DISPCHAR 'D'
 #define HEUR_PRIORITY 70000
 
 /* author bzfhende
