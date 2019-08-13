@@ -671,7 +671,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Real maxslack;
    SCIP_Real slackthreshold;
    SCIP_STATUS status;
-   int blockoffset;
    int linkconsoffset;
    SCIP_HEURDATA* heurdata;
    char name[SCIP_MAXSTRLEN];
@@ -838,8 +837,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       goto TERMINATE;
    }
 
-   blockoffset = conslabels[0];
-   SCIPdebugMsg(scip, "Block numbering starts from %d\n", blockoffset);
+   SCIPdebugMsg(scip, "Block numbering starts from %d\n", conslabels[0]);
 
    /* determine start indices of blocks in sorted conss array */
    i = 0;
@@ -849,11 +847,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       if (i == nconss)
          break;
 
-      /* request block numbering without holes */
-      assert((conslabels[i] - blockoffset - b) == 0 || (conslabels[i] - blockoffset - b) == 1);
-
-      while (i < nconss && (conslabels[i] - blockoffset) == b)
+      do
+      {
          ++i;
+      }
+      while (i < nconss && conslabels[i] == conslabels[i-1]);
    }
 
    SCIP_CALL(createAndSplitProblem(scip, conss, blockstartsconss, nblocks, &problem));
