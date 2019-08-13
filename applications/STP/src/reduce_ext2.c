@@ -886,17 +886,26 @@ SCIP_Bool extRuleOutSimple(
       return TRUE;
 
    if( reddata->edgedeleted && reddata->edgedeleted[edge] )
+   {
+      SCIPdebugMessage("arc deleted rule-out  ");
       return TRUE;
+   }
    else
    {
       const SCIP_Real tree_redcost = extTreeGetRedcosts(graph, extdata, edge);
       const SCIP_Real cutoff = reddata->cutoff;
 
       if( reddata->equality ? (SCIPisGE(scip, tree_redcost, cutoff)) : SCIPisGT(scip, tree_redcost, cutoff) )
+      {
+         SCIPdebugMessage("redcost simple rule-out (%f >= %f)  ", tree_redcost, cutoff);
          return TRUE;
+      }
 
       if( extTreeEdgeAncestorConflict(reddata, graph, edge) )
+      {
+         SCIPdebugMessage("ancestor simple rule-out  ");
          return TRUE;
+      }
    }
 
    return FALSE;
@@ -1183,6 +1192,7 @@ void extExtend(
    int stackpos = extdata->extstack_size - 1;
    int nfullextensions;
    int nsingleextensions;
+   SCIP_Bool with_ruledout_leaf;
 
 #ifndef NDEBUG
    assert(stackpos >= 0);
@@ -1202,9 +1212,12 @@ void extExtend(
    nsingleextensions = 0;
    extedgesstart[0] = 0;
 
+   with_ruledout_leaf = FALSE;
+
    /* loop over all leaves of extension */
    for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
    {
+      int nleafextensions = 0;
       const int leaf = graph->head[extstack_data[i]];
 
       assert(extstack_data[i] >= 0 && extstack_data[i] < graph->edges);
@@ -1220,6 +1233,7 @@ void extExtend(
          {
             assert(nsingleextensions < STP_EXT_MAXGRAD * STP_EXT_MAXGRAD);
             extedges[nsingleextensions++] = e;
+            nleafextensions++;
          }
 #ifdef SCIP_DEBUG
          else
@@ -1230,28 +1244,35 @@ void extExtend(
 #endif
       }
 
+      if( nleafextensions == 0 )
+      {
+         with_ruledout_leaf = TRUE;
+         break;
+      }
+
       extedgesstart[++nfullextensions] = nsingleextensions;
    }
 
    assert(nfullextensions <= STP_EXT_MAXGRAD);
 
-   /* found no valid extensions? */
-   if( nfullextensions == 0 )
+   if( with_ruledout_leaf )
    {
-      *success = FALSE;
-   }
-   /* found valid extensions, but all ruled out already? */
-   else if( nsingleextensions == 0 )
-   {
+      SCIPdebugMessage("ruled-out one leaf \n");
       *success = TRUE;
    }
-   /* found non-empty valid extensions */
-   else
+   else if( nfullextensions == 0 )  /* found no valid extensions? */
+   {
+      assert(nsingleextensions == 0);
+      SCIPdebugMessage("no valid extensions found \n");
+      *success = FALSE;
+   }
+   else  /* found non-empty valid extensions */
    {
       int datasize = extstack_start[stackpos + 1];
       int extsize[STP_EXT_MAXGRAD];
       int extindex[STP_EXT_MAXGRAD];
 
+      assert(nsingleextensions > 0);
       assert(extedgesstart[nfullextensions] - extedgesstart[0] > 0);
 
       /* stack too small? */
