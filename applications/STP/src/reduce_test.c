@@ -852,7 +852,6 @@ SCIP_RETCODE reduce_extTest(
 
 
    printf("reduce_extTest: all ok \n");
-   assert(0);
 
    return SCIP_OKAY;
 }

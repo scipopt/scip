@@ -3452,7 +3452,7 @@ void graph_edge_del(
    SCIP_Bool             freeancestors       /**< free edge ancestors? */
    )
 {
-   assert(scip && g);
+   assert(g);
    assert(e >= 0 && e < g->edges);
 
    if( freeancestors )
