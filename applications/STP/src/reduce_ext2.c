@@ -1127,7 +1127,7 @@ void extStackExpand(
    assert(extstack_state[stackpos] == EXT_STATE_NONE);
 
    /* stack too full? */
-   if( (datasize + (int) pow(2, setsize)) > extdata->extstack_maxsize )
+   if( (datasize + (int) powsize * (setsize + 1) / 2) > extdata->extstack_maxsize )
    {
       *success = FALSE;
       extBacktrack(scip, graph, *success, FALSE, extdata);
@@ -1144,6 +1144,7 @@ void extStackExpand(
       assert(extdata->tree_deg[graph->head[edge]] == 0);
 
       // todo find excluding pairs, use ancestormark and bottleneck
+
       extedges[j] = edge;
    }
 
@@ -1155,6 +1156,7 @@ void extStackExpand(
          /* Check if jth bit in counter is set */
          if( counter & (1 << j) )
          {
+            assert(datasize < extdata->extstack_maxsize);
             extstack_data[datasize++] = extedges[j];
             SCIPdebugMessage("  %d \n", graph->head[extedges[j]]);
          }
