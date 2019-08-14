@@ -2147,8 +2147,8 @@ SCIP_RETCODE reduce_da(
                  reduce_extendedEdge2(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, FALSE, marked, &extfixed);
                  nfixed += extfixed;
 
-               //  graph_printInfo(graph);
-             //    printf("newly fixed %d \n", extfixed);
+           //      graph_printInfo(graph);
+            //     printf("newly fixed %d \n", extfixed);
 //                 assert(0);
 
               }
@@ -2194,7 +2194,13 @@ SCIP_RETCODE reduce_da(
          if( extended || 1 )
          {
             int todo;
+            if( rpc )
+               graph_pc_2org(graph);
+
             SCIP_CALL(reduce_deleteConflictEdges(scip, graph));
+
+            if( rpc )
+               graph_pc_2trans(graph);
          }
       }
 
