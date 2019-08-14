@@ -379,9 +379,15 @@ SCIP_EXPRCURV SCIPexprcurvPowerInv(
    expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
 
    /* if exponent is fractional, then power is only defined for a non-negative base
-    * someone should have ensured this before calling this function
+    * boundtightening should have ensured this before calling this function,
+    * but sometimes this does not work and so we correct this here for us
     */
-   assert(expisint || basebounds.inf >= 0.0);
+   if( !expisint && basebounds.inf < 0.0 )
+   {
+      basebounds.inf = 0.0;
+      if( basebounds.sup < 0.0 )
+         return SCIP_EXPRCURV_UNKNOWN;
+   }
 
    /* if basebounds contains 0.0, consider negative and positive interval separately, if possible */
    if( basebounds.inf < 0.0 && basebounds.sup > 0.0 )
@@ -480,6 +486,7 @@ SCIP_EXPRCURV SCIPexprcurvMonomial(
 {
    SCIP_Real mult;
    SCIP_Real e;
+   SCIP_INTERVAL bounds;
    SCIP_EXPRCURV curv;
    SCIP_EXPRCURV fcurv;
    int nnegative;
@@ -520,21 +527,29 @@ SCIP_EXPRCURV SCIPexprcurvMonomial(
       f = factoridxs != NULL ? factoridxs[j] : j;
       if( factorcurv[f] == SCIP_EXPRCURV_UNKNOWN ) /*lint !e613*/
          return SCIP_EXPRCURV_UNKNOWN;
-      if( factorbounds[f].inf < 0.0 && factorbounds[f].sup > 0.0 )  /*lint !e613*/
-         return SCIP_EXPRCURV_UNKNOWN;
 
       e = exponents != NULL ? exponents[j] : 1.0;
+      bounds = factorbounds[f];  /*lint !e613*/
+
+      /* if argument is negative, then exponent should be integer; correct bounds if that doesn't hold */
+      if( !EPSISINT(e, 0.0) && bounds.inf < 0.0 )  /*lint !e835*/
+      {
+         bounds.inf = 0.0;
+         if( bounds.sup < 0.0 )
+            return SCIP_EXPRCURV_UNKNOWN;
+      }
+
+      if( bounds.inf < 0.0 && bounds.sup > 0.0 )
+         return SCIP_EXPRCURV_UNKNOWN;
+
       if( e < 0.0 )
          ++nnegative;
       else
          ++npositive;
       sum += e;
 
-      if( factorbounds[f].inf < 0.0 )  /*lint !e613*/
+      if( bounds.inf < 0.0 )
       {
-         /* if argument is negative, then exponent should be integer */
-         assert(EPSISINT(e, 0.0));  /*lint !e835*/
-
          /* flip j'th argument: (f_j)^(exp_j) = (-1)^(exp_j) (-f_j)^(exp_j) */
 
          /* -f_j has negated curvature of f_j */
@@ -596,6 +611,7 @@ SCIP_Bool SCIPexprcurvMonomialInv(
 {
    int nnegative;
    int npositive;
+   SCIP_INTERVAL bounds;
    SCIP_Real e;
    SCIP_Real sum;
    int j;
@@ -621,23 +637,33 @@ SCIP_Bool SCIPexprcurvMonomialInv(
    sum = 0.0;     /* sum of exponents */
    for( j = 0; j < nfactors; ++j )
    {
-      /* mixed signs are bad */
-      if( factorbounds[j].inf < 0.0 && factorbounds[j].sup > 0.0 )
-         return FALSE;
-
       e = exponents != NULL ? exponents[j] : 1.0;
       assert(e != 0.0);  /* should have been simplified away */
+
+      bounds = factorbounds[j];
+
+      /* if argument is negative, then exponent should be integer
+       * if that didn't happen, consider argument as if non-negative
+       */
+      if( !EPSISINT(e, 0.0) && bounds.inf < 0.0 )  /*lint !e835*/
+      {
+         bounds.inf = 0.0;
+         if( bounds.sup < 0.0 )
+            return FALSE;
+      }
+
+      /* mixed signs are bad */
+      if( bounds.inf < 0.0 && bounds.sup > 0.0 )
+         return FALSE;
+
       if( e < 0.0 )
          ++nnegative;
       else
          ++npositive;
       sum += e;
 
-      if( factorbounds[j].inf < 0.0 )
+      if( bounds.inf < 0.0 )
       {
-         /* if argument is negative, then exponent should be integer */
-         assert(EPSISINT(e, 0.0));  /*lint !e835*/
-
          /* flip j'th argument: (f_j)^(exp_j) = (-1)^(exp_j) (-f_j)^(exp_j)
           * thus, negate monomial, if exponent is odd, i.e., (-1)^(exp_j) = -1
           */
@@ -669,7 +695,7 @@ SCIP_Bool SCIPexprcurvMonomialInv(
       for( j = 0; j < nfactors; ++j )
       {
          e = exponents != NULL ? exponents[j] : 1.0;
-         if( factorbounds[j].inf < 0.0 )  /* if factor is negative, then factorcurv[j] need to be flipped, which we can also get by flipping e */
+         if( factorbounds[j].inf < 0.0 && EPSISINT(e, 0.0) )  /* if factor is negative, then factorcurv[j] need to be flipped, which we can also get by flipping e */  /*lint !e835*/
             e = -e;
          if( e >= 0.0 )
             factorcurv[j] = SCIP_EXPRCURV_CONVEX;
@@ -688,7 +714,8 @@ SCIP_Bool SCIPexprcurvMonomialInv(
       /* monomial will be concave, if each factor is concave */
       for( j = 0; j < nfactors; ++j )
       {
-         if( factorbounds[j].inf < 0.0 )  /* if factor is negative, then factorcurv[j] need to be flipped, i.e. convex */
+         e = exponents != NULL ? exponents[j] : 1.0;
+         if( factorbounds[j].inf < 0.0 && EPSISINT(e, 0.0) )  /* if factor is negative, then factorcurv[j] need to be flipped, i.e. convex */  /*lint !e835*/
             factorcurv[j] = SCIP_EXPRCURV_CONVEX;
          else
             factorcurv[j] = SCIP_EXPRCURV_CONCAVE;
