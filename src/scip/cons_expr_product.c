@@ -529,11 +529,17 @@ SCIP_RETCODE mergeProductExprlist(
 
          if( !issignpower1 && !issignpower2 )
          {
-            /* and both are normal power, then add to unsimplifiedchildren the resulting expr of simplify(base^(expo1 + expo2));
-             * the reason is that simplify(base^(expo1 + expo2)) might be a product and so cannot go to finalchildren;
-             * after multiplying, current has to be removed from finalchildren
+            /* and both are normal power, then add to unsimplifiedchildren the resulting expr of simplify(base^(expo1 + expo2)) */
+#if 0  /* TODO we should not loose the implicit base >= 0 constraint, if there is one, but then we should look at bounds on base; simplify currently doesn't */
+            /*
+             * unless expo1 or expo2 are fractional but expo1+expo2 is not fractional, then we better keep the original
+             * the reason for that is that x^fractional implies a constraint x >= 0
              */
-            SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &power, base1, expo1 + expo2) );
+            if( (EPSISINT(expo1, 0.0) && EPSISINT(expo2, 0.0)) || !EPSISINT(expo1+expo2, 0.0) )  /*lint !e835*/
+#endif
+            {
+               SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &power, base1, expo1 + expo2) );
+            }
          }
          else if( issignpower1 ^ issignpower2 )
          {
@@ -585,7 +591,7 @@ SCIP_RETCODE mergeProductExprlist(
 
          if( power != NULL )
          {
-            /* we have created a new power: simplify and use */
+            /* we have created a new power: simplify again and continue */
             SCIP_CONSEXPR_EXPR* simplifiedpower;
 
             /* call simplifyPow or simplifySignpower */

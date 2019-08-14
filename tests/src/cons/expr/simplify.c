@@ -160,7 +160,10 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type, SCIP_CO
 
 #if 0
    SCIP_CALL( SCIPshowConsExprExpr(scip, expr) );
-   fprintf(stderr,"simplifying!\n");
+   fprintf(stderr, " simplifying!\n");
+#else
+   SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+   SCIPinfoMessage(scip, NULL, "simplifying!\n");
 #endif
    /* simplify */
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
