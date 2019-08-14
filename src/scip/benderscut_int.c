@@ -533,10 +533,23 @@ SCIP_DECL_BENDERSCUTEXIT(benderscutExitInt)
 static
 SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
 {  /*lint --e{715}*/
+   SCIP* subproblem;
+
    assert(scip != NULL);
    assert(benders != NULL);
    assert(benderscut != NULL);
    assert(result != NULL);
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   if( subproblem == NULL )
+   {
+      SCIPdebugMsg(scip, "The subproblem %d is set to NULL. The <%s> Benders' decomposition cut can not be executed.\n",
+         probnumber, BENDERSCUT_NAME);
+
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /* it is only possible to generate the Laporte and Louveaux cuts for pure binary master problems */
    if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders)) )
@@ -551,7 +564,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
 
    /* the integer subproblem could terminate early if the auxiliary variable value is much greater than the optimal
     * solution. As such, it is only necessary to generate a cut if the subproblem is OPTIMAL */
-   if( SCIPgetStatus(SCIPbendersSubproblem(benders, probnumber)) == SCIP_STATUS_OPTIMAL )
+   if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersIntegerCuts(scip, benders, benderscut, sol, probnumber, type, result, FALSE) );
