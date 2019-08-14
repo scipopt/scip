@@ -285,19 +285,6 @@ const char* mpsinputField5(
    return mpsi->f5;
 }
 
-#if 0
-/** returns the problem name */
-static
-const char* mpsinputProbname(
-   const MPSINPUT*       mpsi                /**< mps input structure */
-   )
-{
-   assert(mpsi != NULL);
-
-   return mpsi->probname;
-}
-#endif
-
 /** returns the objective name */
 static
 const char* mpsinputObjname(
