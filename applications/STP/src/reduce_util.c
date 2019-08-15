@@ -96,7 +96,7 @@ void distDataSortCloseNodes(
    assert(g && distdata);
    assert(node >= 0 && node < g->knots);
    assert(g->grad[node] > 0);
-   assert(length > 0);
+   assert(length >= 0);
 
    SCIPsortIntReal(&closenodes_indices[start], &closenodes_distances[start], length);
 
@@ -675,6 +675,7 @@ SCIP_RETCODE reduce_distDataInit(
 
    assert(distdata && g && scip && g->dcsr_storage);
    assert(graph_valid_dcsr(g, FALSE));
+   assert(!graph_pc_isPcMw(g) || !g->extended);
 
    distDataInitSizes(g, maxnclosenodes, distdata);
    SCIP_CALL( distDataAllocateNodesArrays(scip, g, computeSD, distdata) );
@@ -693,8 +694,15 @@ SCIP_RETCODE reduce_distDataInit(
       range_closenodes[k].start = (k == 0) ? 0 : range_closenodes[k - 1].end;
       range_closenodes[k].end = range_closenodes[k].start;
 
-      if( g->grad[k] == 0 )
+      if( !g->mark[k] )
+      {
+         assert(g->grad[k] == 0 || graph_pc_isPcMw(g));
+         assert(g->dcsr_storage->range[k].end == g->dcsr_storage->range[k].start);
+
          continue;
+      }
+
+      assert(g->grad[k] > 0);
 
       if( computeSD )
          SCIP_CALL( distDataComputeCloseNodesSD(scip, g, k, TRUE, closenodes_edges, dijkdata, distdata) );

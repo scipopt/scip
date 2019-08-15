@@ -1590,6 +1590,10 @@ SCIP_RETCODE reduce_extendedEdge2(
    if( SCIPisZero(scip, minpathcost) )
       return SCIP_OKAY;
 
+   if( !pcmw )
+      for( int k = 0; k < nnodes; k++ )
+         graph->mark[k] = (graph->grad[k] > 0);
+
    SCIP_CALL( graph_init_dcsr(scip, graph) );
    SCIP_CALL( reduce_distDataInit(scip, graph, EXT_CLOSENODES_MAXN, FALSE, &distdata) );
 
@@ -1598,10 +1602,6 @@ SCIP_RETCODE reduce_extendedEdge2(
    SCIP_CALL( SCIPallocBufferArray(scip, &bottleneckDist, nnodes) );
 
    graph_get_isTerm(graph, isterm);
-
-   if( !pcmw )
-      for( int k = 0; k < nnodes; k++ )
-         graph->mark[k] = (graph->grad[k] > 0);
 
    for( int k = 0; k < nnodes; k++ )
    {
