@@ -19,6 +19,11 @@ add_executable(sciptsp
 
 target_link_libraries(sciptsp ${SCIP_LIBRARIES})
 
+find_package(ZLIB)
+if(ZLIB_FOUND)
+   target_link_libraries(sciptsp ${ZLIB_LIBRARIES})
+endif()
+
 if( TARGET examples )
     add_dependencies( examples sciptsp )
 endif()

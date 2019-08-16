@@ -28,6 +28,7 @@
 #include <string>
 #include "GomoryHuTree.h"
 #include "objscip/objscip.h"
+#include "scip/config.h"
 
 #ifdef SCIP_WITH_ZLIB
 #include "gzstream.h"
