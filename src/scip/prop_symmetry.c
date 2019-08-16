@@ -1871,12 +1871,18 @@ SCIP_RETCODE determineSymmetry(
 
    /* do not compute symmetry if there are active pricers */
    if ( SCIPgetNActivePricers(scip) > 0 )
+   {
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
       return SCIP_OKAY;
+   }
 
    /* avoid trivial cases */
    nvars = SCIPgetNVars(scip);
    if ( nvars <= 0 )
    {
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
       propdata->nperms = 0;
       return SCIP_OKAY;
    }
