@@ -30,20 +30,20 @@
 #include <assert.h>
 #include <string.h>
 
+#include "scip/set.h"
 #include "scip/sepa_rlt.h"
 #include "scip/cons_expr.h"
-#include "cons_linear.h"
-#include "cons_knapsack.h"
-#include "cons_varbound.h"
-#include "cons_setppc.h"
-#include "cons_expr_iterator.h"
-#include "cons_expr_pow.h"
-#include "cons_expr_product.h"
-#include "cons_expr_sum.h"
-#include "cons_expr_var.h"
-#include "struct_cons_expr.h"
+#include "scip/cons_linear.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_varbound.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_expr_iterator.h"
+#include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_product.h"
+#include "scip/cons_expr_sum.h"
+#include "scip/cons_expr_var.h"
+#include "scip/struct_cons_expr.h"
 #include "scip/struct_scip.h"
-#include "set.h"
 
 
 #define SEPA_NAME              "rlt"
@@ -488,7 +488,7 @@ SCIP_RETCODE addBilinProduct(
       {
          int newsize;
 
-         newsize = SCIPsetCalcMemGrowSize(scip->set, sepadata->nlinexprs[termpos] + 1);
+         newsize = SCIPcalcMemGrowSize(scip, sepadata->nlinexprs[termpos] + 1);
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(sepadata->linexprs[termpos]), sepadata->slinexprs[termpos], newsize) );
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(sepadata->linunderestimate[termpos]), sepadata->slinexprs[termpos], newsize) );
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(sepadata->linoverestimate[termpos]), sepadata->slinexprs[termpos], newsize) );
@@ -603,7 +603,6 @@ SCIP_RETCODE extractImplrelProducts(
    SCIP_Real sign1, sign2;
    SCIP_Real lhs1, rhs1, lhs2, rhs2;
    SCIP_Real mult;
-   SCIP_CONSEXPR_EXPR* bilinexpr;
    SCIP_CONSEXPR_EXPR* linexpr;
    SCIP_Real lincoefs[3];
    SCIP_VAR* w;
@@ -681,13 +680,18 @@ SCIP_RETCODE extractImplrelProducts(
       {
          wpos = (xpos + i) % 3;
 
-         /* coefficients of w should have the same sign in the two imol_rels */
+         /* coefficients of w should have the same sign in the two impl_rels */
          if( coefs1[wpos]*sign1*coefs2[wpos]*sign2 < 0 )
             continue;
 
          ypos = (xpos - i + 3) % 3;
 
          /* all conditions satisfied, we can extract the product */
+         /* given two rows of the form:
+          * a1w + b1x + c1y <= d1, a2w + b2x + c2y <= d2,
+          * where b1 > 0, b2 < 0 (i.e. the first inequality is tighter when x = 1 and the second when x = 0)
+          * and a1a2 > 0, the product relation can be written as:
+          * xy >= (1/(a1c2 - c1a2))*(a1a2w + (a2(b1 - d1) + a1d2)x + a1c2y - a1d2) */
 
          w = SCIPcolGetVar(cols1[wpos]);
          x = SCIPcolGetVar(cols1[xpos]);
@@ -741,7 +745,7 @@ SCIP_RETCODE extractImplrelProducts(
                SCIPvarGetName(y), -coefs1[wpos]*rhs2*mult);
 
             SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign1*coefs1[wpos]*rhs2*mult, &linexpr) );
-            SCIP_CALL( addBilinProduct(scip, sepadata, bilinexpr, x, y, linexpr, TRUE, sign1*coefs1[wpos]*mult < 0, sign1*coefs1[wpos]*mult > 0, varmap) );
+            SCIP_CALL( addBilinProduct(scip, sepadata, NULL, x, y, linexpr, TRUE, sign1*coefs1[wpos]*mult < 0, sign1*coefs1[wpos]*mult > 0, varmap) );
          }
       }
    }
@@ -794,6 +798,7 @@ SCIP_RETCODE detectHiddenProducts(
          continue;
 
       cols = SCIProwGetCols(prob_rows[r]);
+      assert(cols != NULL);
 
       /* an implied relation contains at least one binary variable */
       if( SCIPvarGetType(SCIPcolGetVar(cols[0])) != SCIP_VARTYPE_BINARY

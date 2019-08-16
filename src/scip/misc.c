@@ -6268,6 +6268,7 @@ void SCIPsortDown(
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_FIELD2TYPE  void*
 #define SORTTPL_FIELD3TYPE  void*
+#define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
