@@ -48,10 +48,7 @@
  * - The code automatically detects whether symmetry substructures like symresacks or orbitopes are present and possibly
  *   adds the corresponding constraints.
  * - If orbital fixing is active, only orbitopes are added (if present) and no symresacks.
- * - It is important to control the order of presolvers within SCIP in order to avoid contradictions. First, one needs
- *   to take care of presolvers that have an effect on symmetry, e.g., presol_domcol. If symmetry is computed on the
- *   original formulation, we perform this propagator at the very beginning. Otherwise, we try to compute symmetry as
- *   late as possible and then add constraints based on this information.
+ * - We try to compute symmetry as late as possible and then add constraints based on this information.
  * - Currently, we only allocate memory for pointers to symresack constraints for group generators. If further
  *   constraints are considered, we have to reallocate memory.
  *
