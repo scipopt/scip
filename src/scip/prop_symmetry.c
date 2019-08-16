@@ -2536,11 +2536,9 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
    }
 
-   if ( propdata->nperms <= 0 || ! propdata->binvaraffected )
-   {
-      SCIPdebugMsg(scip, "Symmetry propagator: no symmetry on binary variables has been found, turning propagator off.\n");
+   if ( propdata->nperms <= 0 || ! propdata->symconsenabled )
       return SCIP_OKAY;
-   }
+
    assert( propdata->nperms > 0 );
    assert( propdata->binvaraffected );
    propdata->triedaddconss = TRUE;
@@ -2560,7 +2558,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( ! propdata->ofenabled )
    {
       /* exit if no or only trivial symmetry group is available */
-      if ( propdata->nperms < 1 || ! propdata->binvaraffected )
+      if ( propdata->nperms <= 0 || ! propdata->binvaraffected )
          return SCIP_OKAY;
 
       if ( propdata->addsymresacks )
@@ -3310,7 +3308,7 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
          propdata->ofenabled = FALSE;
    }
 
-   /* do not run if not enabled */
+   /* do not propagate if orbital fixing is not enabled */
    if ( ! propdata->ofenabled )
       return SCIP_OKAY;
 
