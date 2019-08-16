@@ -7104,6 +7104,16 @@ SCIP_RETCODE tightenBounds(
 
    for( nrounds = 0; (force || consdata->boundstightened < tightenmode) && nrounds < MAXTIGHTENROUNDS; ++nrounds ) /*lint !e574*/
    {
+      /* ensure that the variables are properly sorted
+       *
+       * note: it might happen that integer variables become binary during bound tightening at the root node
+       */
+      if( sortvars && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && !consdata->coefsorted )
+      {
+         SCIP_CALL( consdataSort(scip, consdata) );
+         assert(consdata->coefsorted);
+      }
+
       /* mark the constraint to have the variables' bounds tightened */
       consdata->boundstightened = (unsigned int)tightenmode;
 
@@ -7114,8 +7124,6 @@ SCIP_RETCODE tightenBounds(
       while( v < nvars && v != lastchange && !(*cutoff) )
       {
          oldnchgbds = *nchgbds;
-
-         assert(!sortvars || SCIPgetStage(scip) < SCIP_STAGE_SOLVING || consdata->coefsorted);
 
          if( easycase )
          {
@@ -17121,6 +17129,15 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       {
          assert((eventtype & SCIP_EVENTTYPE_GUBCHANGED) != 0);
          consdataUpdateActivitiesGlbUb(scip, consdata, oldbound, newbound, val, TRUE);
+      }
+
+      /* if the variable is binary but not fixed it had to become binary due to this global change */
+      if( SCIPvarIsBinary(var) && SCIPisGT(scip, SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var)) )
+      {
+         if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
+            consdata->indexsorted = FALSE;
+         else
+            consdata->coefsorted = FALSE;
       }
    }
    else
