@@ -144,7 +144,7 @@ public:
    SCIP_RETCODE getRetcode(void) const {return _retcode;}
 
    /** destructor */
-   ~SCIPException(void) noexcept(true){}
+   ~SCIPException(void) {}
 }; /*lint !e1712*/
 
 
