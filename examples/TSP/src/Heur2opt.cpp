@@ -186,8 +186,7 @@ SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
    GRAPHEDGE** edges2test = NULL;
    SCIP_CALL( SCIPallocBufferArray(scip, &edges2test, 4) );
 
-   /* test current edge with all 'longer' edges for improvement if swapping with crossing edges (though do 2Opt for one
-    * edge) */
+   /* test current edge with all 'longer' edges for improvement if swapping with crossing edges (though do 2Opt for one edge) */
    for( int i = 0; i < ncalls_ && *result != SCIP_FOUNDSOL; i++ )
    {
       edges2test[0] = tour_[ncalls_]; /*lint !e613*/
@@ -199,10 +198,10 @@ SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
 
       // if the new solution is better and variables are not fixed, update and end
       if( edges2test[0]->length + edges2test[1]->length > edges2test[2]->length + edges2test[3]->length
-         &&  SCIPvarGetLbGlobal(edges2test[0]->var) == 0.0
-         &&  SCIPvarGetLbGlobal(edges2test[1]->var) == 0.0
-         &&  SCIPvarGetUbGlobal(edges2test[2]->var) == 1.0
-         &&  SCIPvarGetUbGlobal(edges2test[3]->var) == 1.0 )
+         && SCIPvarGetLbGlobal(edges2test[0]->var) < 0.5
+         && SCIPvarGetLbGlobal(edges2test[1]->var) < 0.5
+         && SCIPvarGetUbGlobal(edges2test[2]->var) > 0.5
+         && SCIPvarGetUbGlobal(edges2test[3]->var) > 0.5 )
       {
          SCIP_Bool success;
          SCIP_SOL* swapsol; // copy of sol with 4 edges swapped
