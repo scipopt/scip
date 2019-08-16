@@ -466,6 +466,7 @@ SCIP_Real extTreeGetBottleneckDist(
 /** marks bottleneck array on path to tree root */
 static
 void extTreeBottleneckMarkRootPath(
+   const GRAPH*          graph,              /**< graph data structure */
    int                   vertex,             /**< vertex to start from */
    EXTDATA*              extdata             /**< extension data */
    )
@@ -492,8 +493,10 @@ void extTreeBottleneckMarkRootPath(
       SCIP_Real bottleneck_local = 0.0;
       int childNode = vertex;
       int currentNode = parentNode[vertex];
+      const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
       assert(currentNode != -1);
+      assert(tree_deg[childNode] == 1);
 
       while( currentNode != - 1 )
       {
@@ -502,7 +505,14 @@ void extTreeBottleneckMarkRootPath(
          assert(currentNode != vertex);
 
          if( tree_deg[childNode] == 2 )
+         {
             bottleneck_local += parentEdgeCost[childNode];
+            if( pcmw && Is_term(graph->term[childNode]) )
+            {
+               assert(graph_pc_termIsNonLeaf(graph, childNode) && graph->prize[childNode] > 0.0);
+               bottleneck_local += graph->prize[childNode];
+            }
+         }
          else
             bottleneck_local = parentEdgeCost[childNode];
 
@@ -561,6 +571,7 @@ void extTreeBottleneckUnmarkRootPath(
  * for which vertex_pathmarked root path has been marked already */
 static
 SCIP_Real extTreeGetBottleneckDist_marked(
+   const GRAPH*          graph,              /**< graph data structure */
    const EXTDATA*        extdata,            /**< extension data */
    int                   vertex_pathmarked,  /**< vertex with marked rootpath */
    int                   vertex_unmarked     /**< second vertex */
@@ -589,6 +600,7 @@ SCIP_Real extTreeGetBottleneckDist_marked(
    else
    {
       SCIP_Real bottleneck_local = 0.0;
+      const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
       currentNode = parentNode[vertex_unmarked];
 
@@ -601,7 +613,14 @@ SCIP_Real extTreeGetBottleneckDist_marked(
          assert(currentNode != vertex_pathmarked);
 
          if( tree_deg[currentNode] == 2 )
+         {
             bottleneck_local += parentEdgeCost[currentNode];
+            if( pcmw && Is_term(graph->term[currentNode]) )
+            {
+               assert(graph_pc_termIsNonLeaf(graph, currentNode) && graph->prize[currentNode] > 0.0);
+               bottleneck_local += graph->prize[currentNode];
+            }
+         }
          else
             bottleneck_local = parentEdgeCost[currentNode];
 
@@ -628,7 +647,7 @@ SCIP_Bool extTreeSdDominatesBottleneck(
    EXTDATA*              extdata             /**< extension data */
    )
 {
-   const SCIP_Real treeBottleneckDist = extTreeGetBottleneckDist_marked(extdata, vertex_pathmarked, vertex_unmarked);
+   const SCIP_Real treeBottleneckDist = extTreeGetBottleneckDist_marked(graph, extdata, vertex_pathmarked, vertex_unmarked);
 
    assert(sd >= 0.0);
    assert(vertex_pathmarked >= 0 && vertex_pathmarked < graph->knots && vertex_unmarked >= 0 && vertex_unmarked < graph->knots);
@@ -945,7 +964,7 @@ SCIP_Bool extRuleOutPeriph(
 
          assert(extleaf >= 0 && extleaf < graph->knots);
 
-         extTreeBottleneckMarkRootPath(extleaf, extdata);
+         extTreeBottleneckMarkRootPath(graph, extleaf, extdata);
 
          for( int j = 0; j < nleaves; j++ )
          {
