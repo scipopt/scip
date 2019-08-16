@@ -48,10 +48,7 @@
  * - The code automatically detects whether symmetry substructures like symresacks or orbitopes are present and possibly
  *   adds the corresponding constraints.
  * - If orbital fixing is active, only orbitopes are added (if present) and no symresacks.
- * - It is important to control the order of presolvers within SCIP in order to avoid contradictions. First, one needs
- *   to take care of presolvers that have an effect on symmetry, e.g., presol_domcol. If symmetry is computed on the
- *   original formulation, we perform this propagator at the very beginning. Otherwise, we try to compute symmetry as
- *   late as possible and then add constraints based on this information.
+ * - We try to compute symmetry as late as possible and then add constraints based on this information.
  * - Currently, we only allocate memory for pointers to symresack constraints for group generators. If further
  *   constraints are considered, we have to reallocate memory.
  *
@@ -1883,10 +1880,14 @@ SCIP_RETCODE determineSymmetry(
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
+   assert( propdata->ofenabled || propdata->symconsenabled );
 
    /* skip symmetry computation if no graph automorphism code was linked */
    if ( ! SYMcanComputeSymmetry() )
    {
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+
       nconss = SCIPgetNActiveConss(scip);
       nhandleconss = getNSymhandableConss(scip);
 
@@ -1903,12 +1904,18 @@ SCIP_RETCODE determineSymmetry(
 
    /* do not compute symmetry if there are active pricers */
    if ( SCIPgetNActivePricers(scip) > 0 )
+   {
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
       return SCIP_OKAY;
+   }
 
    /* avoid trivial cases */
    nvars = SCIPgetNVars(scip);
    if ( nvars <= 0 )
    {
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
       propdata->nperms = 0;
       return SCIP_OKAY;
    }
@@ -1934,6 +1941,9 @@ SCIP_RETCODE determineSymmetry(
          (symspecrequire & (int) SYM_SPEC_BINARY) != 0 ? '+' : '-',
          (symspecrequire & (int) SYM_SPEC_INTEGER) != 0 ? '+' : '-',
          (symspecrequire & (int) SYM_SPEC_REAL) != 0 ? '+' : '-');
+
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
 
       return SCIP_OKAY;
    }
@@ -1963,6 +1973,10 @@ SCIP_RETCODE determineSymmetry(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
          "   (%.1fs) symmetry computation skipped: there exist constraints that cannot be handled by symmetry methods.\n",
          SCIPgetSolvingTime(scip));
+
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+
       return SCIP_OKAY;
    }
 
@@ -2010,6 +2024,10 @@ SCIP_RETCODE determineSymmetry(
    {
       assert( checkSymmetryDataFree(scip, propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) could not compute symmetry\n", SCIPgetSolvingTime(scip));
+
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+
       return SCIP_OKAY;
    }
 
@@ -2018,6 +2036,10 @@ SCIP_RETCODE determineSymmetry(
    {
       assert( checkSymmetryDataFree(scip, propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
+
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+
       return SCIP_OKAY;
    }
 
@@ -2055,14 +2077,17 @@ SCIP_RETCODE determineSymmetry(
    }
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
-   /* output warning if no binary variables are affected by some permutations (and we use polyhedral symmetry techniques) */
-   if ( propdata->usesymmetry == SYM_HANDLETYPE_SYMBREAK && ! propdata->binvaraffected )
+   /* exit if no binary variables are affected by symmetry */
+   if ( ! propdata->binvaraffected )
    {
-      assert( ! propdata->ofenabled );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
 
-      /* free data and avoid computation of components below in this case */
+      /* free data and exit */
       SCIP_CALL( freeSymmetryData(scip, propdata) );
+
+      /* disable OF and symmetry handling constraints */
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
 
       return SCIP_OKAY;
    }
@@ -2079,9 +2104,13 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
 #endif
 
-   SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
-         propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
-         &propdata->vartocomponent, &propdata->componentblocked, &propdata->ncomponents) );
+   /* we only need the components for orbital fixing and orbitope detection */
+   if ( propdata->ofenabled || ( propdata->symconsenabled && propdata->detectorbitopes ) )
+   {
+      SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
+            propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
+            &propdata->vartocomponent, &propdata->componentblocked, &propdata->ncomponents) );
+   }
 
 #ifdef SCIP_OUTPUT_COMPONENT
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation finished\n", SCIPgetSolvingTime(scip));
@@ -2533,6 +2562,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    /* possibly compute symmetry */
    SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+   assert( propdata->binvaraffected || ! propdata->symconsenabled );
 
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
@@ -2545,12 +2575,9 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
    }
 
-   if ( propdata->nperms <= 0 || ! propdata->binvaraffected )
-   {
-      SCIPdebugMsg(scip, "Symmetry propagator: no symmetry on binary variables has been found, turning propagator off.\n");
-      propdata->symconsenabled = FALSE;
+   if ( propdata->nperms <= 0 || ! propdata->symconsenabled )
       return SCIP_OKAY;
-   }
+
    assert( propdata->nperms > 0 );
    assert( propdata->binvaraffected );
    propdata->triedaddconss = TRUE;
@@ -2570,7 +2597,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( ! propdata->ofenabled )
    {
       /* exit if no or only trivial symmetry group is available */
-      if ( propdata->nperms < 1 || ! propdata->binvaraffected )
+      if ( propdata->nperms <= 0 || ! propdata->binvaraffected )
          return SCIP_OKAY;
 
       if ( propdata->addsymresacks )
@@ -2876,16 +2903,11 @@ SCIP_RETCODE propagateOrbitalFixing(
 
    /* possibly compute symmetry */
    SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
-
-   if ( propdata->nmovedpermvars == 0 )
-   {
-      propdata->ofenabled = FALSE;
-      return SCIP_OKAY;
-   }
+   assert( propdata->binvaraffected || ! propdata->ofenabled );
 
    /* return if there is no symmetry available */
    nperms = propdata->nperms;
-   if ( nperms <= 0 )
+   if ( nperms <= 0 || ! propdata->ofenabled )
       return SCIP_OKAY;
 
    assert( propdata->permvars != NULL );
@@ -3273,9 +3295,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    {
       /* otherwise compute symmetry if timing requests it */
       SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
-
-      if ( propdata->nmovedpermvars == 0 )
-         propdata->ofenabled = FALSE;
+      assert( propdata->binvaraffected || ! propdata->ofenabled );
    }
 
    return SCIP_OKAY;
@@ -3312,7 +3332,7 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
 
-   /* if no presolving has been performed, we need to get usesymmetry */
+   /* if usesymmetry has not been read so far */
    if ( propdata->usesymmetry < 0 )
    {
       SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
@@ -3327,7 +3347,7 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
          propdata->ofenabled = FALSE;
    }
 
-   /* do not run if not enabled */
+   /* do not propagate if orbital fixing is not enabled */
    if ( ! propdata->ofenabled )
       return SCIP_OKAY;
 
