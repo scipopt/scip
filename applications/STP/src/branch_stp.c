@@ -226,7 +226,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
          if( pcmw && Is_pterm(graph->term[k]) )
          {
-            enforcePterm(graph, k);
+            graph_pc_enforcePterm(graph, k);
          }
          else
          {
@@ -739,7 +739,7 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
          {
             if( Is_pterm(graph->term[term]) )
             {
-               enforcePterm(graph, term);
+               graph_pc_enforcePterm(graph, term);
             }
             else if( graph_pc_isRootedPcMw(graph) )
             {

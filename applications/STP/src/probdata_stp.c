@@ -3923,7 +3923,7 @@ void initReceivedSubproblem(
          {
             if( Is_pterm(graph->term[k]) )
             {
-               enforcePterm(graph, k);
+               graph_pc_enforcePterm(graph, k);
             }
             else if( graph_pc_isRootedPcMw(graph) )
             {

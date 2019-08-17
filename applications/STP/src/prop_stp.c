@@ -651,10 +651,10 @@ SCIP_RETCODE redbasedVarfixing(
          if( pcmw )
          {
             if( Is_pterm(propgraph->term[tail]) )
-               enforcePterm(propgraph, tail);
+               graph_pc_enforcePterm(propgraph, tail);
 
             if( Is_pterm(propgraph->term[head]) )
-               enforcePterm(propgraph, head);
+               graph_pc_enforcePterm(propgraph, head);
 
             if( propgraph->stp_type == STP_PCSPG )
                continue;
@@ -711,7 +711,7 @@ SCIP_RETCODE redbasedVarfixing(
             /* fixed to 0? Then take terminal */
             if( SCIPvarGetUbLocal(vars[rootedge]) < 0.5 )
             {
-               enforcePterm(propgraph, graph_pc_getTwinTerm(propgraph, k));
+               graph_pc_enforcePterm(propgraph, graph_pc_getTwinTerm(propgraph, k));
             }
             /* fixed to 1? Then delete terminal */
             else if( SCIPvarGetLbLocal(vars[rootedge]) > 0.5 )
@@ -794,7 +794,7 @@ SCIP_RETCODE redbasedVarfixing(
 
                      assert(Is_pterm(propgraph->term[vert]) || graph_pc_knotIsFixedTerm(propgraph, vert));
 
-                     enforcePterm(propgraph, i);
+                     graph_pc_enforcePterm(propgraph, i);
                      break;
                   }
                }

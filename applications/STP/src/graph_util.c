@@ -32,6 +32,131 @@
 #include "graph.h"
 #include "portab.h"
 
+/** initializes pseudo ancestors */
+SCIP_RETCODE graph_init_pseudoAncestors(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   assert(scip && g);
+   assert(g->pseudoancestors == NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** frees pseudo ancestors */
+void graph_free_pseudoAncestors(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   assert(scip && g);
+   assert(g->pseudoancestors != NULL && g->pseudoancestors->nnodes >= 1);
+
+
+   SCIPfreeMemoryArray(scip, &(g->pseudoancestors));
+   assert(g->pseudoancestors == NULL);
+}
+
+
+/** returns number of pseudo ancestors for given edge */
+int graph_get_nPseudoAncestors(
+   const GRAPH*          g,            /**< the graph */
+   int                   edge          /**< edge for which to return number of pseudo ancestors */
+   )
+{
+   const int halfedge = edge / 2;
+
+   assert(g && g->pseudoancestors);
+   assert(halfedge >= 0 && halfedge < g->pseudoancestors->halfnedges);
+
+   return g->pseudoancestors->sizes[halfedge];
+}
+
+/** returns array of pseudo ancestors for given edge */
+const int* graph_get_pseudoAncestors(
+   const GRAPH*          g,            /**< the graph */
+   int                   edge          /**< edge for which to return array of pseudo ancestors */
+   )
+{
+   const int halfedge = edge / 2;
+
+   assert(g && g->pseudoancestors);
+   assert(halfedge >= 0 && halfedge < g->pseudoancestors->halfnedges);
+
+   return g->pseudoancestors->blocks[halfedge];
+}
+
+/** appends copy of pseudo ancestors of edge_source to edge_target */
+SCIP_RETCODE graph_appendCopy_pseudoAncestors(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edge_target,        /**< edge for which to return array of pseudo ancestors */
+   int                   edge_source,        /**< edge for which to return array of pseudo ancestors */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   const int target = edge_target / 2;
+   const int source = edge_source / 2;
+
+   assert(scip && g && g->pseudoancestors);
+   assert(target >= 0 && target < g->pseudoancestors->halfnedges);
+   assert(source >= 0 && source < g->pseudoancestors->halfnedges);
+
+   return SCIP_OKAY;
+}
+
+/** appends pseudo ancestors of edge_source to edge_target, ancestors for edge_source are deleteds */
+SCIP_RETCODE graph_appendMove_pseudoAncestors(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edge_target,        /**< edge for which to return array of pseudo ancestors */
+   int                   edge_source,        /**< edge for which to return array of pseudo ancestors */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   const int target = edge_target / 2;
+   const int source = edge_source / 2;
+
+   assert(scip && g && g->pseudoancestors);
+   assert(target >= 0 && target < g->pseudoancestors->halfnedges);
+   assert(source >= 0 && source < g->pseudoancestors->halfnedges);
+
+   return SCIP_OKAY;
+}
+
+
+/** adds pseudo ancestor to ancestor list of given edge */
+SCIP_RETCODE graph_add_pseudoAncestor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edge_target,        /**< edge for which to add pseudo ancestor */
+   int                   ancestor,           /**< (index of) pseudo ancestors */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   const int target = edge_target / 2;
+
+   assert(scip && g && g->pseudoancestors);
+   assert(target >= 0 && target < g->pseudoancestors->halfnedges);
+   assert(ancestor >= 0 && ancestor < g->pseudoancestors->nnodes);
+
+   return SCIP_OKAY;
+}
+
+/** frees pseudo ancestor block for given edge */
+SCIP_RETCODE graph_free_pseudoAncestorsBlock(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edge_free,          /**< edge for which to free pseudo ancestors */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   const int block_id = edge_free / 2;
+
+   assert(scip && g && g->pseudoancestors);
+   assert(block_id >= 0 && block_id < g->pseudoancestors->halfnedges);
+
+   return SCIP_OKAY;
+}
+
 
 /** clean the heap */
 void

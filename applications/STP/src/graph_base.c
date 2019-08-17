@@ -1051,7 +1051,7 @@ SCIP_Bool graph_pc_termIsNonLeaf(
 
 
 /** set high costs for not including given pseudo-terminal */
-void enforcePterm(
+void graph_pc_enforcePterm(
    GRAPH*          graph,              /**< graph */
    int             pterm               /**< the pseudo-terminal */
 )
@@ -4360,6 +4360,7 @@ SCIP_RETCODE graph_init(
    p->hoplimit = UNKNOWN;
    p->extended = FALSE;
    p->source = -1;
+   p->is_packed = FALSE;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->term), ksize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mark), ksize) );
@@ -4685,6 +4686,7 @@ SCIP_RETCODE graph_copy_data(
    g->hoplimit = p->hoplimit;
    g->extended = p->extended;
    g->budget = p->budget;
+   g->is_packed = p->is_packed;
 
    BMScopyMemoryArray(g->term, p->term, ksize);
    BMScopyMemoryArray(g->mark, p->mark, ksize);
@@ -4874,6 +4876,7 @@ SCIP_RETCODE graph_pack(
    assert(scip      != NULL);
    assert(graph     != NULL);
    assert(graph_valid(graph));
+   assert(!graph->is_packed);
 
    g = graph;
    nnodes = 0;
@@ -4936,6 +4939,7 @@ SCIP_RETCODE graph_pack(
    q->extended = g->extended;
    q->pcancestors = g->pcancestors;
    q->budget = g->budget;
+   q->is_packed = TRUE;
 
    if( new == NULL )
    {
