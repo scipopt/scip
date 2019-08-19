@@ -1303,6 +1303,46 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    return SCIP_OKAY;
 }
 
+/** provides values of a solution from a subscip according to the variable in the main scip
+ *
+ * Given a subscip solution, fills an array with solution values, matching the variables given by SCIPgetVars().
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
+ * are represented as NULL entry in the \p subvars array.
+ */
+static
+SCIP_RETCODE translateSubSol(
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_Real*            solvals             /**< array where to set values taken from subsol, must have length at least SCIPgetNVars(scip) */
+)
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(subsol != NULL);
+   assert(subvars != NULL);
+   assert(solvals != NULL);
+
+   /* copy the solution */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   /* copy the solution */
+   for( i = 0; i < nvars; ++i )
+   {
+      if( subvars[i] != NULL )
+         solvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
+      else
+         solvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+   }
+
+   return SCIP_OKAY;
+}
+
 /** translates a solution from a subscip to the main scip
  *
  * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
@@ -1322,7 +1362,6 @@ SCIP_RETCODE SCIPtranslateSubSol(
    SCIP_VAR** vars;
    int nvars;
    SCIP_Real* subsolvals;
-   int i;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -1330,19 +1369,12 @@ SCIP_RETCODE SCIPtranslateSubSol(
    assert(subvars != NULL);
    assert(newsol != NULL);
 
-   /* copy the solution */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
-   /* copy the solution */
-   for( i = 0; i < nvars; ++i )
-   {
-      if( subvars[i] != NULL )
-         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
-      else
-         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
-   }
+   /* get the solution values */
+   SCIP_CALL( translateSubSol(scip, subscip, subsol, subvars, subsolvals) );
 
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(scip, newsol, heur) );
@@ -1367,6 +1399,14 @@ SCIP_RETCODE SCIPtranslateSubSols(
    int*                  solindex            /**< pointer to store solution index of stored solution, or NULL if not of interest */
    )
 {
+   SCIP_SOL* newsol;
+   SCIP_SOL** subsols;
+   int nsubsols;
+   int i;
+   SCIP_VAR** vars;
+   int nvars;
+   SCIP_Real* solvals;
+
    assert(scip != NULL);
    assert(subscip != NULL);
    assert(heur != NULL);
@@ -1374,36 +1414,43 @@ SCIP_RETCODE SCIPtranslateSubSols(
    assert(success != NULL);
 
    *success = FALSE;
+
    /* check, whether a solution was found */
-   if( SCIPgetNSols(subscip) > 0 )
+   if( SCIPgetNSols(subscip) == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
+
+   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
+   if( solindex != NULL )
+      *solindex = SCIPsolGetIndex(newsol);
+
+   /* check, whether a solution was found;
+    * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+    */
+   nsubsols = SCIPgetNSols(subscip);
+   subsols = SCIPgetSols(subscip);
+   for( i = 0; i < nsubsols && ! (*success); ++i )
    {
-      SCIP_SOL* newsol;
-      SCIP_SOL** subsols;
-      int nsubsols;
-      int i;
+      /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
+      if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsols[i])) )
+         continue;
 
-      /* check, whether a solution was found;
-       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-       */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
-      for( i = 0; i < nsubsols && ! (*success); ++i )
-      {
-         /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
-         if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsols[i])) )
-            continue;
+      SCIP_CALL( translateSubSol(scip, subscip, subsols[i], subvars, solvals) );
 
-         SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], heur, subvars, &newsol) );
-         if( solindex != NULL )
-            *solindex = SCIPsolGetIndex(newsol);
-
-         SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-      }
-      if( *success )
-      {
-         SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
-      }
+      SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, solvals) );
+      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
    }
+   if( *success )
+   {
+      SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
+   }
+
+   SCIPfreeBufferArray(scip, &solvals);
+
+   SCIP_CALL( SCIPfreeSol(scip, &newsol) );
 
    return SCIP_OKAY;
 }
