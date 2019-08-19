@@ -5157,7 +5157,7 @@ SCIP_RETCODE SCIPbendersAddSubproblem(
    /* if the subproblem pointer is NULL, then the subproblem solving callback functions must be set. */
    if( subproblem == NULL && (!benders->benderssolvesubconvex || !benders->benderssolvesub) )
    {
-      SCIPerrorMessage("The subproblem can only be set to NULL if both bendersSolvesubconvex%d and bendersSolvesub%d "
+      SCIPerrorMessage("The subproblem can only be set to NULL if both bendersSolvesubconvex%s and bendersSolvesub%s "
          "are defined.\n", benders->name, benders->name);
       return SCIP_ERROR;
    }
