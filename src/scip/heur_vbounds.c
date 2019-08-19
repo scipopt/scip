@@ -740,6 +740,7 @@ SCIP_RETCODE createNewSol(
    assert( scip != NULL );
    assert( subscip != NULL );
    assert( subvars != NULL );
+   assert( newsol != NULL );
    assert( subsol != NULL );
 
    *success = FALSE;
@@ -764,7 +765,7 @@ SCIP_RETCODE createNewSol(
 
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
-   /* try to add new solution to scip and free it immediately */
+   /* try to add new solution to scip */
    SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    SCIPfreeBufferArray(scip, &subsolvals);
