@@ -92,6 +92,7 @@
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
 #define DEFAULT_DELAYEDCUTS       FALSE /**< should cuts be added to the delayed cut pool? */
 #define DEFAULT_SIDETYPEBASIS      TRUE /**< choose side types of row (lhs/rhs) based on basis information? */
+#define DEFAULT_TRYSTRONGCG        TRUE /**< try to generate strengthened Chvatal-Gomory cuts? */
 #define DEFAULT_RANDSEED             53 /**< initial random seed */
 
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
@@ -121,6 +122,7 @@ struct SCIP_SepaData
    SCIP_Bool             separaterows;       /**< separate rows with integral slack */
    SCIP_Bool             delayedcuts;        /**< should cuts be added to the delayed cut pool? */
    SCIP_Bool             sidetypebasis;      /**< choose side types of row (lhs/rhs) based on basis information? */
+   SCIP_Bool             trystrongcg;        /**< try to generate strengthened Chvatal-Gomory cuts? */
 };
 
 
@@ -440,7 +442,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       SCIP_Real cutefficacy;
       SCIP_Bool success;
       SCIP_Bool cutislocal;
-      SCIP_Bool scg;
+      SCIP_Bool strongcgsuccess;
       int cutnnz;
       int cutrank;
       int j;
@@ -462,16 +464,21 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          continue;
 
       /* create a strong CG cut out of the aggregation row */
-      SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, minfrac, maxfrac,
-         1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &scg) );
+      if( sepadata->trystrongcg )
+      {
+         SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, minfrac, maxfrac,
+            1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &strongcgsuccess) );
+      }
+      else
+         strongcgsuccess = FALSE;
 
-      if( !scg )
+      if( !strongcgsuccess )
       {
          SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
             minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
       }
       else
-         success = scg;
+         success = strongcgsuccess;
 
       assert(allowlocal || !cutislocal);
 
@@ -500,7 +507,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             char cutname[SCIP_MAXSTRLEN];
 
             /* construct cut name */
-            if( scg )
+            if( strongcgsuccess )
             {
                if( c >= 0 )
                   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_x%d", SCIPgetNLPs(scip), c);
@@ -706,6 +713,10 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          "separating/gomory/sidetypebasis",
          "choose side types of row (lhs/rhs) based on basis information?",
          &sepadata->sidetypebasis, TRUE, DEFAULT_SIDETYPEBASIS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/gomory/trystrongcg",
+         "try to generate strengthened Chvatal-Gomory cuts?",
+         &sepadata->trystrongcg, TRUE, DEFAULT_TRYSTRONGCG, NULL, NULL) );
 
    return SCIP_OKAY;
 }
