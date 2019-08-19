@@ -3618,6 +3618,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       SCIPerrorMessage("The subproblem %d is set to NULL, but both bendersSolvesubconvex%s and bendersSolvesub%s "
          "are not defined.\n", probnumber, benders->name, benders->name);
       SCIPABORT();
+      return SCIP_ERROR;
    }
 
    /* initially setting the solved flag to FALSE */
