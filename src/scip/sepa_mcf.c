@@ -6547,7 +6547,7 @@ SCIP_RETCODE generateClusterCuts(
                if( totalviolationdelta > 0.0 )
                {
                   SCIP_Real cutrhs;
-                  SCIP_Real cutefficacy;
+                  SCIP_Real cutefficacy = 0.0;
                   SCIP_Bool cutislocal;
                   int cutnnz;
                   int cutrank;

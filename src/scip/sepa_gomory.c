@@ -71,8 +71,8 @@
 #include "scip/sepa_gomory.h"
 #include <string.h>
 
-#define SEPA_NAME              "lptableau"
-#define SEPA_DESC              "separator for gomory MIR and strong CG cuts from lp tableau rows"
+#define SEPA_NAME              "gomory"
+#define SEPA_DESC              "separator for Gomory mixed-integer and strong CG cuts from lp tableau rows"
 #define SEPA_PRIORITY             -1000
 #define SEPA_FREQ                    10
 #define SEPA_MAXBOUNDDIST           1.0
@@ -263,8 +263,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_Real maxfrac;
    SCIP_Longint maxdnom;
    SCIP_Bool cutoff;
-   SCIP_Bool sepscg;
-   SCIP_Bool sepgom;
+   SCIP_Bool separatescg;
+   SCIP_Bool separategmi;
    int ninds;
    int naddedcuts;
    int nvars;
@@ -315,14 +315,24 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       return SCIP_OKAY;
 
    {
-      int scgfreq = SCIPsepaGetFreq(sepadata->strongcg);
-      int gomfreq = SCIPsepaGetFreq(sepadata->gomory);
+      int freq;
 
-      sepscg = scgfreq > 0 ? (depth % scgfreq) == 0 : scgfreq == depth;
-      sepgom = gomfreq > 0 ? (depth % gomfreq) == 0 : gomfreq == depth;
+      /* check if strong CG cuts should be separated */
+      freq = SCIPsepaGetFreq(sepadata->strongcg);
+      if( freq > 0 )
+         separatescg = depth % freq == 0;
+      else
+         separatescg = freq == depth;
+
+      /* check if Gomory MI cuts should be separated */
+      freq = SCIPsepaGetFreq(sepadata->gomory);
+      if( freq > 0 )
+         separategmi = depth % freq == 0;
+      else
+         separategmi = freq == depth;
    }
 
-   if( !sepscg && !sepgom )
+   if( !separatescg && !separategmi )
       return SCIP_OKAY;
 
    /* get variables data */
@@ -333,24 +343,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    if( ncols == 0 || nrows == 0 )
       return SCIP_OKAY;
-
-#if 0 /* if too many columns, separator is usually very slow: delay it until no other cuts have been found */
-   if( ncols >= 50*nrows )
-      return SCIP_OKAY;
-
-   if( ncols >= 5*nrows )
-   {
-      int ncutsfound;
-
-      ncutsfound = SCIPgetNCutsFound(scip);
-      if( ncutsfound > sepadata->lastncutsfound || !SCIPsepaWasLPDelayed(sepa) )
-      {
-         sepadata->lastncutsfound = ncutsfound;
-         *result = SCIP_DELAYED;
-         return SCIP_OKAY;
-      }
-   }
-#endif
 
    /* set the maximal denominator in rational representation of gomory cut and the maximal scale factor to
     * scale resulting cut to integral values to avoid numerical instabilities
@@ -478,10 +470,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       if( !success )
          continue;
 
-      cutefficacy = -SCIPinfinity(scip);
+      cutefficacy = 0.0;
 
       /* create a strong CG cut out of the aggregation row */
-      if( sepscg )
+      if( separatescg )
       {
          SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, minfrac, maxfrac,
             1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &strongcgsuccess) );
@@ -489,8 +481,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       else
          strongcgsuccess = FALSE;
 
-      if( sepgom )
+      if( separategmi )
       {
+         /* SCIPcalcMIR will only override the cut if it is larger than the efficacy of the strongcg cut */
          SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
             minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
       }
@@ -498,8 +491,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          success = FALSE;
 
       if( success )
+         /* if SCIPcalcMIR was successful set strongcgsuccess to FALSE since the MIR cut has overriden the strongcg cut */
          strongcgsuccess = FALSE;
       else
+         /* if SCIPcalcMIR was not successful so we use the strong CG cut if SCIPcalcStrongCG was successful */
          success = strongcgsuccess;
 
       /* @todo Currently we are using the SCIPcalcMIR() function to compute the coefficients of the Gomory
@@ -551,7 +546,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
             /* create empty cut */
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, cutsepa, cutname, -SCIPinfinity(scip), cutrhs,
-                                                cutislocal, FALSE, sepadata->dynamiccuts) );
+               cutislocal, FALSE, sepadata->dynamiccuts) );
 
             /* set cut rank */
             SCIProwChgRank(cut, cutrank); /*lint !e644*/
@@ -706,7 +701,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
       SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
    assert(sepadata->strongcg != NULL);
 
-   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->gomory, "gomory", "separator for Gomory MIR cuts", -100000, SEPA_FREQ, 0.0,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->gomory, "gomorymi", "separator for Gomory mixed-integer cuts", -100000, SEPA_FREQ, 0.0,
       SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
    assert(sepadata->gomory != NULL);
 
