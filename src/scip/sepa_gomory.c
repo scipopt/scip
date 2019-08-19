@@ -71,8 +71,8 @@
 #include "scip/sepa_gomory.h"
 #include <string.h>
 
-#define SEPA_NAME              "gomory"
-#define SEPA_DESC              "Gomory MIR cuts separator"
+#define SEPA_NAME              "lptableau"
+#define SEPA_DESC              "separator for gomory MIR and strong CG cuts from lp tableau rows"
 #define SEPA_PRIORITY             -1000
 #define SEPA_FREQ                    10
 #define SEPA_MAXBOUNDDIST           1.0
@@ -108,6 +108,8 @@
 struct SCIP_SepaData
 {
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
+   SCIP_SEPA*            strongcg;           /**< strong CG cut separator */
+   SCIP_SEPA*            gomory;             /**< gomory cut separator */
    SCIP_Real             away;               /**< minimal integrality violation of a basis variable in order to try Gomory cut */
    int                   maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
@@ -261,6 +263,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_Real maxfrac;
    SCIP_Longint maxdnom;
    SCIP_Bool cutoff;
+   SCIP_Bool sepscg;
+   SCIP_Bool sepgom;
    int ninds;
    int naddedcuts;
    int nvars;
@@ -308,6 +312,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
    /* only call separator, if there are fractional variables */
    if( SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
+   {
+      int scgfreq = SCIPsepaGetFreq(sepadata->strongcg);
+      int gomfreq = SCIPsepaGetFreq(sepadata->gomory);
+
+      sepscg = scgfreq > 0 ? (depth % scgfreq) == 0 : scgfreq == depth;
+      sepgom = gomfreq > 0 ? (depth % gomfreq) == 0 : gomfreq == depth;
+   }
+
+   if( !sepscg && !sepgom )
       return SCIP_OKAY;
 
    /* get variables data */
@@ -466,7 +481,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       cutefficacy = -SCIPinfinity(scip);
 
       /* create a strong CG cut out of the aggregation row */
-      if( sepadata->trystrongcg )
+      if( sepscg )
       {
          SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, minfrac, maxfrac,
             1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &strongcgsuccess) );
@@ -474,8 +489,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       else
          strongcgsuccess = FALSE;
 
-      SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
-         minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+      if( sepgom )
+      {
+         SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
+            minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+      }
+      else
+         success = FALSE;
 
       if( success )
          strongcgsuccess = FALSE;
@@ -505,12 +525,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
              * changes); the latter cuts will be handled internally in sepastore.
              */
             SCIP_ROW* cut;
+            SCIP_SEPA* cutsepa;
             int v;
             char cutname[SCIP_MAXSTRLEN];
 
             /* construct cut name */
             if( strongcgsuccess )
             {
+               cutsepa = sepadata->strongcg;
+
                if( c >= 0 )
                   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_x%d", SCIPgetNLPs(scip), c);
                else
@@ -518,6 +541,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             }
             else
             {
+               cutsepa = sepadata->gomory;
+
                if( c >= 0 )
                   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_x%d", SCIPgetNLPs(scip), c);
                else
@@ -525,7 +550,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             }
 
             /* create empty cut */
-            SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
+            SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, cutsepa, cutname, -SCIPinfinity(scip), cutrhs,
                                                 cutislocal, FALSE, sepadata->dynamiccuts) );
 
             /* set cut rank */
@@ -636,6 +661,28 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
  * separator specific interface methods
  */
 
+/** LP solution separation method of dummy separator */
+static
+SCIP_DECL_SEPAEXECLP(sepaExeclpDummy)
+{  /*lint --e{715}*/
+   assert( result != NULL );
+
+   *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
+
+/** arbitrary primal solution separation method of dummy separator */
+static
+SCIP_DECL_SEPAEXECSOL(sepaExecsolDummy)
+{  /*lint --e{715}*/
+   assert( result != NULL );
+
+   *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
+
 /** creates the Gomory MIR cut separator and includes it in SCIP */
 SCIP_RETCODE SCIPincludeSepaGomory(
    SCIP*                 scip                /**< SCIP data structure */
@@ -653,8 +700,15 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          SEPA_USESSUBSCIP, SEPA_DELAY,
          sepaExeclpGomory, NULL,
          sepadata) );
-
    assert(sepa != NULL);
+
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->strongcg, "strongcg", "separator for strong CG cuts", -100000, SEPA_FREQ, 0.0,
+      SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
+   assert(sepadata->strongcg != NULL);
+
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->gomory, "gomory", "separator for Gomory MIR cuts", -100000, SEPA_FREQ, 0.0,
+      SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
+   assert(sepadata->gomory != NULL);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyGomory) );
