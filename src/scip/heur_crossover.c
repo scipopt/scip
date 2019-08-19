@@ -756,25 +756,13 @@ SCIP_RETCODE setupAndSolveSubscipCrossover(
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )
    {
-      SCIP_SOL* newsol;
-      SCIP_SOL** subsols;
-      int nsubsols;
       int solindex;                             /* index of the solution created by crossover          */
 
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
       success = FALSE;
       solindex = -1;
-      for( i = 0; i < nsubsols && !success; ++i )
-      {
-         SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], heur, subvars, &newsol) );
-         solindex = SCIPsolGetIndex(newsol);
-
-         /* try to add new solution to scip and free it immediately */
-         SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
-      }
+      SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, &solindex) );
 
       if( success )
       {
