@@ -2899,7 +2899,7 @@ SCIP_RETCODE getLiftingSequenceGUB(
    int*                  maxgubvarssize      /**< pointer to store the maximal size of GUB constraints */
    )
 {
-  SORTKEYPAIR** sortkeypairsGFC1;
+   SORTKEYPAIR** sortkeypairsGFC1;
    SORTKEYPAIR* sortkeypairsGFC1store;
    SCIP_Real* sortkeysC1;
    SCIP_Real* sortkeysC2;
