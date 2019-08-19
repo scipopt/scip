@@ -205,7 +205,6 @@
 #include "scip/sepa_mcf.h"
 #include "scip/sepa_oddcycle.h"
 #include "scip/sepa_rapidlearning.h"
-#include "scip/sepa_strongcg.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
 #include "scip/table_default.h"

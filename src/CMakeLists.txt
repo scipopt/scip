@@ -207,7 +207,6 @@ set(scipsources
     scip/sepa_mcf.c
     scip/sepa_oddcycle.c
     scip/sepa_rapidlearning.c
-    scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
     scip/benders_default.c
     scip/benderscut_feas.c
@@ -752,7 +751,6 @@ set(scipheaders
     scip/sepa_oddcycle.h
     scip/sepa_rapidlearning.h
     scip/sepastore.h
-    scip/sepa_strongcg.h
     scip/sepa_zerohalf.h
     scip/set.h
     scip/sol.h

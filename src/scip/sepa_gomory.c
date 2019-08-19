@@ -80,9 +80,9 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of gomory separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        20 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of gomory cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of gomory cuts separated per separation round in root node */
+#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of gomory cuts separated per separation round in root node */
 #define DEFAULT_MAXRANK              -1 /**< maximal rank of a gomory cut that could not be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_MAXRANKINTEGRAL      -1 /**< maximal rank of a gomory cut that could be scaled to integral coefficients (-1: unlimited) */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
@@ -440,6 +440,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       SCIP_Real cutefficacy;
       SCIP_Bool success;
       SCIP_Bool cutislocal;
+      SCIP_Bool scg;
       int cutnnz;
       int cutrank;
       int j;
@@ -460,8 +461,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       if( !success )
          continue;
 
-      SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL, minfrac, maxfrac,
-         1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+      /* create a strong CG cut out of the aggregation row */
+      SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, minfrac, maxfrac,
+         1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &scg) );
+
+      if( !scg )
+      {
+         SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
+            minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+      }
+      else
+         success = scg;
 
       assert(allowlocal || !cutislocal);
 
@@ -486,14 +496,24 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
              * changes); the latter cuts will be handled internally in sepastore.
              */
             SCIP_ROW* cut;
-            char cutname[SCIP_MAXSTRLEN];
             int v;
+            char cutname[SCIP_MAXSTRLEN];
 
             /* construct cut name */
-            if( c >= 0 )
-               (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_x%d", SCIPgetNLPs(scip), c);
+            if( scg )
+            {
+               if( c >= 0 )
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_x%d", SCIPgetNLPs(scip), c);
+               else
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_s%d", SCIPgetNLPs(scip), -c-1);
+            }
             else
-               (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
+            {
+               if( c >= 0 )
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_x%d", SCIPgetNLPs(scip), c);
+               else
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
+            }
 
             /* create empty cut */
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
