@@ -433,9 +433,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    disabledualreductions = FALSE;
 
    /* check, whether a solution was found */
-   if( sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPfindHeur(scip, "trysol") != NULL )
+   if( sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 )
    {
-      SCIP_HEUR* heurtrysol;
       SCIP_SOL** subsols;
       int nsubsols;
 
@@ -445,12 +444,14 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       nsubsols = SCIPgetNSols(subscip);
       subsols = SCIPgetSols(subscip);
       soladded = FALSE;
-      heurtrysol = SCIPfindHeur(scip, "trysol");
 
-      /* sequentially add solutions to trysol heuristic */
+      /* try adding solution from subSCIP to SCIP, until finding one that is accepted */
       for( i = 0; i < nsubsols && !soladded; ++i )
       {
-         SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heurtrysol, subvars, &soladded, NULL) );
+         SCIP_SOL* newsol;
+
+         SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], NULL, subvars, &newsol) );
+         SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &soladded) );
       }
       if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
          disabledualreductions = TRUE;
