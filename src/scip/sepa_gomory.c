@@ -468,8 +468,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       {
          SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, minfrac, maxfrac,
             1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &strongcgsuccess) );
-
-         assert(allowlocal || !cutislocal);
       }
       else
          strongcgsuccess = FALSE;
@@ -478,8 +476,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       {
          SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
             minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
-
-         assert(allowlocal || !cutislocal);
       }
       else
          success = strongcgsuccess;
@@ -495,7 +491,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       /* if successful, convert dense cut into sparse row, and add the row as a cut */
       if( success )
       {
-         if( cutnnz == 0 && SCIPisFeasNegative(scip, cutrhs) )
+         assert(allowlocal || !cutislocal); /*lint !e644*/
+
+         if( cutnnz == 0 && SCIPisFeasNegative(scip, cutrhs) ) /*lint !e644*/
          {
             SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
             cutoff = TRUE;
@@ -530,7 +528,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                                                 cutislocal, FALSE, sepadata->dynamiccuts) );
 
             /* set cut rank */
-            SCIProwChgRank(cut, cutrank);
+            SCIProwChgRank(cut, cutrank); /*lint !e644*/
 
             /* cache the row extension and only flush them if the cut gets added */
             SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
