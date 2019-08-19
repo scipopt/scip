@@ -389,7 +389,7 @@ SCIP_DECL_HASHGETKEY(SYMhashGetKeyVartype)
 
 /** returns TRUE iff both keys are equal
  *
- *  Compare the types of two variables according to objective, lower and upper bound, and variable type.
+ *  Compare the types of two variables according to objective, lower and upper bound, variable type, and column sparsity.
  */
 static
 SCIP_DECL_HASHKEYEQ(SYMhashKeyEQVartype)
@@ -785,7 +785,7 @@ SCIP_RETCODE collectCoefficients(
    SCIP_Bool             istransformed,      /**< whether the constraint is transformed */
    SYM_RHSSENSE          rhssense,           /**< identifier of constraint type */
    SYM_MATRIXDATA*       matrixdata,         /**< matrix data to be filled in */
-   int*                  nconssforvar        /**< pointer to array store for each var the number of conss
+   int*                  nconssforvar        /**< pointer to array to store for each var the number of conss
                                               *   in which var has a non-zero coefficient */
    )
 {
