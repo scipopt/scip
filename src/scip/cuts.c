@@ -8320,6 +8320,15 @@ SCIP_RETCODE SCIPcalcStrongCG(
 
    *success = FALSE;
 
+   /* check if a negative continuous slack variable is present in the aggregation
+    * since then no strongcg cut can be generated
+    */
+   for( i = 0; i != aggrrow->nrows; ++i )
+   {
+      if( aggrrow->rowweights[i] * aggrrow->slacksign[i] < 0.0 && !scip->lp->rows[aggrrow->rowsinds[i]]->integral )
+         return SCIP_OKAY;
+   }
+
    /* allocate temporary memory */
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
