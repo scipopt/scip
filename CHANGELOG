@@ -95,6 +95,8 @@ Performance improvements
 
 - allow rapid learning at local nodes
 
+- Merge strongcg into the gomory separator to avoid computing the same base equality twice
+
 Examples and applications
 -------------------------
 
