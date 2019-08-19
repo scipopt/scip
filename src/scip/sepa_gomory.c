@@ -463,6 +463,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       if( !success )
          continue;
 
+      cutefficacy = -SCIPinfinity(scip);
+
       /* create a strong CG cut out of the aggregation row */
       if( sepadata->trystrongcg )
       {
@@ -472,14 +474,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       else
          strongcgsuccess = FALSE;
 
-      if( !strongcgsuccess )
-      {
-         SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
-            minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
-      }
+      SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
+         minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+
+      if( success )
+         strongcgsuccess = FALSE;
       else
          success = strongcgsuccess;
-
 
       /* @todo Currently we are using the SCIPcalcMIR() function to compute the coefficients of the Gomory
        *       cut. Alternatively, we could use the direct version (see thesis of Achterberg formula (8.4)) which

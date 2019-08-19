@@ -3984,8 +3984,10 @@ SCIP_RETCODE SCIPcalcMIR(
 {
    int i;
    int nvars;
+   int tmpnnz;
    int* varsign;
    int* boundtype;
+   int* tmpinds;
    SCIP_Real* tmpcoefs;
 
    SCIP_Real QUAD(rhs);
@@ -3993,6 +3995,7 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real QUAD(f0);
    SCIP_Bool freevariable;
    SCIP_Bool localbdsused;
+   SCIP_Bool tmpislocal;
 
    assert(aggrrow != NULL);
    assert(SCIPisPositive(scip, scale));
@@ -4006,19 +4009,20 @@ SCIP_RETCODE SCIPcalcMIR(
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpinds, nvars) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &tmpcoefs, QUAD_ARRAY_SIZE(nvars)) );
 
    /* initialize cut with aggregation */
-   *cutnnz = aggrrow->nnz;
-   *cutislocal = aggrrow->local;
+   tmpnnz = aggrrow->nnz;
+   tmpislocal = aggrrow->local;
 
    SCIPquadprecProdQD(rhs, aggrrow->rhs, scale);
 
-   if( *cutnnz > 0 )
+   if( tmpnnz > 0 )
    {
-      BMScopyMemoryArray(cutinds, aggrrow->inds, *cutnnz);
+      BMScopyMemoryArray(tmpinds, aggrrow->inds, tmpnnz);
 
-      for( i = 0; i < *cutnnz; ++i )
+      for( i = 0; i < tmpnnz; ++i )
       {
          SCIP_Real QUAD(coef);
 
@@ -4048,13 +4052,13 @@ SCIP_RETCODE SCIPcalcMIR(
        *   a_{zu_j} := a_{zu_j} + a_j * bu_j
        */
       SCIP_CALL( cutsTransformMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, FALSE,
-            boundsfortrans, boundtypesfortrans, minfrac, maxfrac, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, &freevariable, &localbdsused) );
+            boundsfortrans, boundtypesfortrans, minfrac, maxfrac, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, &freevariable, &localbdsused) );
       assert(allowlocal || !localbdsused);
-      *cutislocal = *cutislocal || localbdsused;
+      tmpislocal = tmpislocal || localbdsused;
 
       if( freevariable )
          goto TERMINATE;
-      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE));
    }
 
    /* Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
@@ -4102,10 +4106,10 @@ SCIP_RETCODE SCIPcalcMIR(
 
    QUAD_ASSIGN_Q(rhs, downrhs);
 
-   if( *cutnnz > 0 )
+   if( tmpnnz > 0 )
    {
-      SCIP_CALL( cutsRoundMIR(scip, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, QUAD(f0)) );
-      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+      SCIP_CALL( cutsRoundMIR(scip, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, QUAD(f0)) );
+      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE));
    }
 
    /* substitute aggregated slack variables:
@@ -4123,45 +4127,57 @@ SCIP_RETCODE SCIPcalcMIR(
     * Substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
     */
    SCIP_CALL( cutsSubstituteMIR(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
-                                aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, QUAD(f0)) );
-   SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE) );
+                                aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, QUAD(f0)) );
+   SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE) );
 
    if( postprocess )
    {
       /* remove all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
        * prevent numerical rounding errors
        */
-      SCIP_CALL( postprocessCutQuad(scip, *cutislocal, cutinds, tmpcoefs, cutnnz, QUAD(&rhs), success) );
+      SCIP_CALL( postprocessCutQuad(scip, tmpislocal, tmpinds, tmpcoefs, &tmpnnz, QUAD(&rhs), success) );
    }
    else
    {
-      *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), *cutislocal, tmpcoefs, QUAD(&rhs), cutnnz, cutinds);
+      *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), tmpislocal, tmpcoefs, QUAD(&rhs), &tmpnnz, tmpinds);
    }
 
-   SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+   SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE));
 
    if( *success )
    {
-      *cutrhs = QUAD_TO_DBL(rhs);
+      SCIP_Real mirefficacy = calcEfficacyDenseStorageQuad(scip, sol, tmpcoefs, QUAD_TO_DBL(rhs), tmpinds, tmpnnz);
 
-      /* clean tmpcoefs and go back to double precision */
-      for( i = 0; i < *cutnnz; ++i )
+      if( SCIPisEfficacious(scip, mirefficacy) && (cutefficacy == NULL || mirefficacy > *cutefficacy) )
       {
-         SCIP_Real QUAD(coef);
-         int j = cutinds[i];
+         BMScopyMemoryArray(cutinds, tmpinds, tmpnnz);
+         *cutnnz = tmpnnz;
+         *cutrhs = QUAD_TO_DBL(rhs);
+         *cutislocal = tmpislocal;
 
-         QUAD_ARRAY_LOAD(coef, tmpcoefs, j);
+         /* clean tmpcoefs and go back to double precision */
+         for( i = 0; i < *cutnnz; ++i )
+         {
+            SCIP_Real QUAD(coef);
+            int j = cutinds[i];
 
-         cutcoefs[i] = QUAD_TO_DBL(coef);
-         QUAD_ASSIGN(coef, 0.0);
-         QUAD_ARRAY_STORE(tmpcoefs, j, coef);
+            QUAD_ARRAY_LOAD(coef, tmpcoefs, j);
+
+            cutcoefs[i] = QUAD_TO_DBL(coef);
+            QUAD_ASSIGN(coef, 0.0);
+            QUAD_ARRAY_STORE(tmpcoefs, j, coef);
+         }
+
+         if( cutefficacy != NULL )
+            *cutefficacy = mirefficacy;
+
+         if( cutrank != NULL )
+            *cutrank = aggrrow->rank + 1;
       }
-
-      if( cutefficacy != NULL )
-         *cutefficacy = calcEfficacy(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz);
-
-      if( cutrank != NULL )
-         *cutrank = aggrrow->rank + 1;
+      else
+      {
+         *success = FALSE;
+      }
    }
 
   TERMINATE:
@@ -4170,14 +4186,15 @@ SCIP_RETCODE SCIPcalcMIR(
       SCIP_Real QUAD(tmp);
 
       QUAD_ASSIGN(tmp, 0.0);
-      for( i = 0; i < *cutnnz; ++i )
+      for( i = 0; i < tmpnnz; ++i )
       {
-         QUAD_ARRAY_STORE(tmpcoefs, cutinds[i], tmp);
+         QUAD_ARRAY_STORE(tmpcoefs, tmpinds[i], tmp);
       }
    }
 
    /* free temporary memory */
    SCIPfreeCleanBufferArray(scip, &tmpcoefs);
+   SCIPfreeBufferArray(scip, &tmpinds);
    SCIPfreeBufferArray(scip, &boundtype);
    SCIPfreeBufferArray(scip, &varsign);
 
