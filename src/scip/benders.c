@@ -3777,6 +3777,7 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    {
       SCIPerrorMessage("The subproblem %d is NULL. Thus, the subproblem setup must be performed manually in either "
          "bendersSolvesubconvex%s or bendersSolvesub%s.\n", probnumber, benders->name, benders->name);
+      return SCIP_ERROR;
    }
    assert(subproblem != NULL);
 
