@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_intshifting.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities, shifts integer variables, and
  *         solves a final LP to calculate feasible values for continuous variables
  * @author Tobias Achterberg
@@ -95,8 +96,31 @@ void updateViolations(
 
    lhs = SCIProwGetLhs(row);
    rhs = SCIProwGetRhs(row);
-   oldviol = (SCIPisFeasLT(scip, oldmaxactivity, lhs) || SCIPisFeasGT(scip, oldminactivity, rhs));
-   newviol = (SCIPisFeasLT(scip, newmaxactivity, lhs) || SCIPisFeasGT(scip, newminactivity, rhs));
+
+   /* SCIPisFeasLT cannot handle comparing different infinities. To prevent this, we make a case distinction. */
+   if( ! (SCIPisInfinity(scip, oldmaxactivity) || SCIPisInfinity(scip, -oldmaxactivity)
+       || SCIPisInfinity(scip, oldminactivity) || SCIPisInfinity(scip, -oldminactivity)) )
+   {
+      oldviol = (SCIPisFeasLT(scip, oldmaxactivity, lhs) || SCIPisFeasGT(scip, oldminactivity, rhs));
+   }
+   else
+   {
+      oldviol = (SCIPisInfinity(scip, -oldmaxactivity) && !SCIPisInfinity(scip, -lhs)) ||
+         (SCIPisInfinity(scip, oldminactivity) && !SCIPisInfinity(scip, rhs));
+   }
+
+   /* SCIPisFeasLT cannot handle comparing different infinities. To prevent this, we make a case distinction. */
+   if( ! (SCIPisInfinity(scip, newmaxactivity) || SCIPisInfinity(scip, -newmaxactivity)
+       || SCIPisInfinity(scip, newminactivity) || SCIPisInfinity(scip, -newminactivity)) )
+   {
+      newviol = (SCIPisFeasLT(scip, newmaxactivity, lhs) || SCIPisFeasGT(scip, newminactivity, rhs));
+   }
+   else
+   {
+      newviol = (SCIPisInfinity(scip, -newmaxactivity) && !SCIPisInfinity(scip, -lhs)) ||
+         (SCIPisInfinity(scip, newminactivity) && !SCIPisInfinity(scip, rhs));
+   }
+
    if( oldviol != newviol )
    {
       int rowpos;

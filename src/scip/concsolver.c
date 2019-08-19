@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   concsolver.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for concurrent solvers
  * @author Robert Lion Gottwald
  */

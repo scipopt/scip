@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_alns.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  Adaptive large neighborhood search heuristic that orchestrates popular LNS heuristics
  * @author Gregor Hendel
  */
@@ -72,7 +73,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define NNEIGHBORHOODS 8
+#define NNEIGHBORHOODS 9
 
 /*
  * limit parameters for sub-SCIPs
@@ -180,8 +181,15 @@
 #define DEFAULT_ACTIVE_DINS TRUE
 #define DEFAULT_PRIORITY_DINS 1.0
 
+#define DEFAULT_MINFIXINGRATE_TRUSTREGION 0.3
+#define DEFAULT_MAXFIXINGRATE_TRUSTREGION 0.9
+#define DEFAULT_ACTIVE_TRUSTREGION FALSE
+#define DEFAULT_PRIORITY_TRUSTREGION 1.0
+
+
 #define DEFAULT_NSOLS_CROSSOVER 2 /**< parameter for the number of solutions that crossover should combine */
 #define DEFAULT_NPOOLSOLS_DINS  5 /**< number of pool solutions where binary solution values must agree */
+#define DEFAULT_VIOLPENALTY_TRUSTREGION 100.0  /**< the penalty for violating the trust region */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Alns"
@@ -208,6 +216,8 @@ typedef struct data_crossover DATA_CROSSOVER; /**< crossover neighborhood data s
 typedef struct data_mutation DATA_MUTATION; /**< mutation neighborhood data structure */
 
 typedef struct data_dins DATA_DINS; /**< dins neighborhood data structure */
+
+typedef struct data_trustregion DATA_TRUSTREGION; /**< trustregion neighborhood data structure */
 
 typedef struct NH_FixingRate NH_FIXINGRATE; /** fixing rate data structure */
 
@@ -242,6 +252,7 @@ typedef struct VarPrio VARPRIO;
 #define DECL_CHANGESUBSCIP(x) SCIP_RETCODE x (  \
    SCIP*                 sourcescip,         /**< source SCIP data structure */\
    SCIP*                 targetscip,         /**< target SCIP data structure */\
+   NH*                   neighborhood,       /**< ALNS neighborhood data structure */\
    SCIP_VAR**            subvars,            /**< array of targetscip variables in the same order as the source SCIP variables */\
    int*                  ndomchgs,           /**< pointer to store the number of performed domain changes */\
    int*                  nchgobjs,           /**< pointer to store the number of changed objective coefficients */ \
@@ -349,6 +360,7 @@ struct Nh
       DATA_MUTATION*     mutation;           /**< mutation data */
       DATA_CROSSOVER*    crossover;          /**< crossover data */
       DATA_DINS*         dins;               /**< dins data */
+      DATA_TRUSTREGION*  trustregion;        /**< trustregion data */
    }                     data;               /**< data object for neighborhood specific data */
 };
 
@@ -370,6 +382,11 @@ struct data_crossover
 struct data_dins
 {
    int                   npoolsols;          /**< number of pool solutions where binary solution values must agree */
+};
+
+struct data_trustregion
+{
+   SCIP_Real             violpenalty;        /**< the penalty for violating the trust region */
 };
 
 /** primal heuristic data */
@@ -893,6 +910,7 @@ SCIP_RETCODE transferSolution(
    SCIP_Bool  success;
    NH_STATS*  runstats;
    SCIP_SOL*  oldbestsol;
+   int i;
 
    assert(subscip != NULL);
 
@@ -912,14 +930,17 @@ SCIP_RETCODE transferSolution(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(sourcescip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &subsolvals, nvars) );
 
    /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
+   for( i = 0; i < nvars; ++i )
+   {
+      /* skip variables not present in sub-SCIP */
+      if( subvars[i] == NULL )
+         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+      else
+         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
+   }
 
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(sourcescip, &newsol, heur) );
@@ -1886,7 +1907,7 @@ SCIP_RETCODE neighborhoodChangeSubscip(
    /* call the change sub-SCIP callback of the neighborhood */
    if( neighborhood->changesubscip != NULL )
    {
-      SCIP_CALL( neighborhood->changesubscip(sourcescip, targetscip, targetvars, ndomchgs, nchgobjs, naddedconss, success) );
+      SCIP_CALL( neighborhood->changesubscip(sourcescip, targetscip, neighborhood, targetvars, ndomchgs, nchgobjs, naddedconss, success) );
    }
    else
    {
@@ -2243,6 +2264,7 @@ SCIP_RETCODE setupSubScip(
          {
             if( ! SCIPisFeasZero(subscip, SCIPvarGetObj(vars[i])) )
             {
+               assert(subvars[i] != NULL);
                SCIP_CALL( SCIPaddCoefLinear(subscip, objcons, subvars[i], SCIPvarGetObj(vars[i])) );
             }
          }
@@ -2488,7 +2510,6 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       for( v = 0; v < nvars; ++v )
       {
          subvars[v] = (SCIP_VAR*)SCIPhashmapGetImage(varmapf, (void *)vars[v]);
-         assert(subvars[v] != NULL);
       }
 
       SCIPhashmapFree(&varmapf);
@@ -2697,6 +2718,9 @@ DECL_CHANGESUBSCIP(changeSubscipRens)
    {
       SCIP_VAR* var = vars[i];
       SCIP_Real lpsolval = SCIPgetSolVal(sourcescip, NULL, var);
+
+      if( subvars[i] == NULL )
+         continue;
 
       if( ! SCIPisFeasIntegral(sourcescip, lpsolval) )
       {
@@ -3133,6 +3157,10 @@ SCIP_RETCODE addLocalBranchingConstraint(
    /* loop over binary variables and fill the local branching constraint */
    for( i = 0; i < nbinvars; ++i )
    {
+      /* skip variables that are not present in sub-SCIP */
+      if( subvars[i] == NULL )
+         continue;
+
       if( SCIPisEQ(sourcescip, SCIPgetSolVal(sourcescip, referencesol, vars[i]), 0.0) )
          consvals[i] = 1.0;
       else
@@ -3189,6 +3217,11 @@ DECL_CHANGESUBSCIP(changeSubscipProximity)
    for( i = 0; i < nbinvars; ++i )
    {
       SCIP_Real newobj;
+
+      /* skip variables not present in sub-SCIP */
+      if( subvars[i] == NULL )
+         continue;
+
       if( SCIPgetSolVal(sourcescip, referencesol, vars[i]) < 0.5 )
          newobj = -1.0;
       else
@@ -3199,6 +3232,10 @@ DECL_CHANGESUBSCIP(changeSubscipProximity)
    /* loop over the remaining variables and change their objective coefficients to 0 */
    for( ; i < nvars; ++i )
    {
+      /* skip variables not present in sub-SCIP */
+      if( subvars[i] == NULL )
+         continue;
+
       SCIP_CALL( SCIPchgVarObj(targetscip, subvars[i], 0.0) );
    }
 
@@ -3227,6 +3264,10 @@ DECL_CHANGESUBSCIP(changeSubscipZeroobjective)
    /* loop over the variables and change their objective coefficients to 0 */
    for( i = 0; i < nvars; ++i )
    {
+      /* skip variables not present in sub-SCIP */
+      if( subvars[i] == NULL )
+         continue;
+
       SCIP_CALL( SCIPchgVarObj(targetscip, subvars[i], 0.0) );
    }
 
@@ -3408,6 +3449,10 @@ DECL_CHANGESUBSCIP(changeSubscipDins)
       SCIP_Real lb;
       SCIP_Real ub;
 
+      /* skip variables not present in sub-SCIP */
+      if( subvars[v] == NULL )
+         continue;
+
       computeIntegerVariableBoundsDins(sourcescip, vars[v], &lb, &ub);
 
       SCIP_CALL( SCIPchgVarLbGlobal(targetscip, subvars[v], lb) );
@@ -3430,6 +3475,36 @@ DECL_NHFREE(nhFreeDins)
    assert(neighborhood->data.dins != NULL);
 
    SCIPfreeBlockMemory(scip, &neighborhood->data.dins);
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization callback for trustregion before SCIP is freed */
+static
+DECL_NHFREE(nhFreeTrustregion)
+{
+   assert(neighborhood->data.trustregion != NULL);
+
+   SCIPfreeBlockMemory(scip, &neighborhood->data.trustregion);
+
+   return SCIP_OKAY;
+}
+
+/** add trust region neighborhood constraint and auxiliary objective variable */
+static
+DECL_CHANGESUBSCIP(changeSubscipTrustregion)
+{  /*lint --e{715}*/
+   DATA_TRUSTREGION* data;
+
+   data = neighborhood->data.trustregion;
+
+   /* adding the neighborhood constraint for the trust region heuristic */
+   SCIP_CALL( SCIPaddTrustregionNeighborhoodConstraint(sourcescip, targetscip, subvars, data->violpenalty) );
+
+   /* incrementing the change in objective since an additional variable is added to the objective to penalize the
+    * violation of the trust region.
+    */
+   ++(*nchgobjs);
 
    return SCIP_OKAY;
 }
@@ -3509,6 +3584,7 @@ SCIP_RETCODE includeNeighborhoods(
    NH* proximity;
    NH* zeroobjective;
    NH* dins;
+   NH* trustregion;
 
    heurdata->nneighborhoods = 0;
 
@@ -3561,6 +3637,7 @@ SCIP_RETCODE includeNeighborhoods(
          DEFAULT_MINFIXINGRATE_DINS, DEFAULT_MAXFIXINGRATE_DINS, DEFAULT_ACTIVE_DINS, DEFAULT_PRIORITY_DINS,
          varFixingsDins, changeSubscipDins, NULL, NULL, nhFreeDins, nhRefsolIncumbent, nhDeactivateBinVars) );
 
+
    /* allocate data for DINS to include the parameter */
    SCIP_CALL( SCIPallocBlockMemory(scip, &dins->data.dins) );
 
@@ -3568,6 +3645,18 @@ SCIP_RETCODE includeNeighborhoods(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/alns/dins/npoolsols",
          "number of pool solutions where binary solution values must agree",
          &dins->data.dins->npoolsols, TRUE, DEFAULT_NPOOLSOLS_DINS, 1, 100, NULL, NULL) );
+
+   /* include the trustregion neighborhood */
+   SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &trustregion, "trustregion",
+         DEFAULT_MINFIXINGRATE_TRUSTREGION, DEFAULT_MAXFIXINGRATE_TRUSTREGION, DEFAULT_ACTIVE_TRUSTREGION, DEFAULT_PRIORITY_TRUSTREGION,
+         NULL, changeSubscipTrustregion, NULL, NULL, nhFreeTrustregion, nhRefsolIncumbent, nhDeactivateBinVars) );
+
+   /* allocate data for trustregion to include the parameter */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &trustregion->data.trustregion) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/trustregion/violpenalty",
+         "the penalty for each change in the binary variables from the candidate solution",
+         &trustregion->data.trustregion->violpenalty, FALSE, DEFAULT_VIOLPENALTY_TRUSTREGION, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -3588,7 +3677,7 @@ SCIP_DECL_HEURINIT(heurInitAlns)
    /* reactivate all neighborhoods if a new problem is read in */
    heurdata->nactiveneighborhoods = heurdata->nneighborhoods;
 
-   /* todo initialize neighborhoods for new problem */
+   /* initialize neighborhoods for new problem */
    for( i = 0; i < heurdata->nneighborhoods; ++i )
    {
       NH* neighborhood = heurdata->neighborhoods[i];

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   tree.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for branch and bound tree
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -2240,7 +2241,7 @@ SCIP_RETCODE treeApplyPendingBdchgs(
          SCIP_CALL( SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
          if( ((int) tree->pendingbdchgs[i].node->depth) <= tree->effectiverootdepth )
-            return SCIP_OKAY;
+            break; /* break here to clear all pending bound changes */
          else
             continue;
       }
@@ -2261,11 +2262,7 @@ SCIP_RETCODE treeApplyPendingBdchgs(
 
          lb = SCIPvarGetLbLocal(var);
          if( !SCIPsetIsGT(set, tree->pendingbdchgs[i].newbound, lb) )
-         {
-            /* release the variable */
-            SCIP_CALL( SCIPvarRelease(&var, blkmem, set, eventqueue, lp) );
             continue;
-         }
       }
       else
       {
@@ -2274,11 +2271,7 @@ SCIP_RETCODE treeApplyPendingBdchgs(
          assert(tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_UPPER);
          ub = SCIPvarGetUbLocal(var);
          if( !SCIPsetIsLT(set, tree->pendingbdchgs[i].newbound, ub) )
-         {
-            /* release the variable */
-            SCIP_CALL( SCIPvarRelease(&var, blkmem, set, eventqueue, lp) );
             continue;
-         }
       }
 
       SCIP_CALL( SCIPnodeAddBoundinfer(tree->pendingbdchgs[i].node, blkmem, set, stat, transprob, origprob, tree, reopt,
@@ -2286,10 +2279,18 @@ SCIP_RETCODE treeApplyPendingBdchgs(
             tree->pendingbdchgs[i].infercons, tree->pendingbdchgs[i].inferprop, tree->pendingbdchgs[i].inferinfo,
             tree->pendingbdchgs[i].probingchange) );
       assert(tree->npendingbdchgs == npendingbdchgs); /* this time, the bound change can be applied! */
+   }
+
+   /* clear pending bound changes */
+   for( i = 0; i < tree->npendingbdchgs; ++i )
+   {
+      var = tree->pendingbdchgs[i].var;
+      assert(var != NULL);
 
       /* release the variable */
       SCIP_CALL( SCIPvarRelease(&var, blkmem, set, eventqueue, lp) );
    }
+
    tree->npendingbdchgs = 0;
 
    return SCIP_OKAY;

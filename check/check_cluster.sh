@@ -29,6 +29,8 @@
 #  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.out
 #  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.res
 #  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.err
+#
+# To get verbose output from Slurm, have SRUN_FLAGS="-v -v" set in your environment.
 
 TSTNAME=$1
 BINNAME=$2
@@ -207,7 +209,7 @@ do
 		    export SETFILE
 		    export TIMELIMIT
 		    # the space at the end is necessary
-		    export SRUN="srun --cpu_bind=cores -v -v "
+		    export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
 
                     if test "$SLURMACCOUNT" == ""
 	            then

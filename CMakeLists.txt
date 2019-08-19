@@ -13,9 +13,9 @@ endif()
 
 set(SCIP_VERSION_MAJOR 6)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 1)
-set(SCIP_VERSION_SUB 3)
-set(SCIP_VERSION_API 45)
+set(SCIP_VERSION_PATCH 2)
+set(SCIP_VERSION_SUB 4)
+set(SCIP_VERSION_API 52)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
@@ -467,6 +467,7 @@ add_subdirectory(check)
 #
 add_custom_target(unittests)
 add_subdirectory(tests EXCLUDE_FROM_ALL)
+add_subdirectory(doc EXCLUDE_FROM_ALL)
 add_custom_target(all_executables DEPENDS scip unittests examples applications)
 #
 # add examples

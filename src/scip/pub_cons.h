@@ -134,6 +134,15 @@ SCIP_CONS** SCIPconshdlrGetCheckConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets array with delayed update constraints
+ *
+ * @attention Usually, there should be no need to access this array. Use this only if you are absolutely sure what you are doing.
+ */
+SCIP_EXPORT
+SCIP_CONS** SCIPconshdlrGetUpdateConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets total number of existing transformed constraints of constraint handler */
 SCIP_EXPORT
 int SCIPconshdlrGetNConss(
@@ -165,6 +174,12 @@ int SCIPconshdlrGetNActiveConss(
 /** gets number of enabled constraints of constraint handler */
 SCIP_EXPORT
 int SCIPconshdlrGetNEnabledConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of constraints that have delayed updates */
+SCIP_EXPORT
+int SCIPconshdlrGetNUpdateConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

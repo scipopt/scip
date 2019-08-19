@@ -1,0 +1,964 @@
+STATISTICS
+  Problem name     : LSEU_DCMULTI
+  Variables        : 637 (164 binary, 0 integer, 0 implicit integer, 473 continuous)
+  Constraints      : 0 initial, 318 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <C188>: obj=159, original bounds=[0,1]
+  [binary] <C101>: obj=7, original bounds=[0,1]
+  [binary] <C102>: obj=10, original bounds=[0,1]
+  [binary] <C103>: obj=179, original bounds=[0,1]
+  [binary] <C104>: obj=186, original bounds=[0,1]
+  [binary] <C105>: obj=179, original bounds=[0,1]
+  [binary] <C106>: obj=0, original bounds=[0,1]
+  [binary] <C107>: obj=0, original bounds=[0,1]
+  [binary] <C108>: obj=6, original bounds=[0,1]
+  [binary] <C109>: obj=0, original bounds=[0,1]
+  [binary] <C110>: obj=0, original bounds=[0,1]
+  [binary] <C111>: obj=164, original bounds=[0,1]
+  [binary] <C112>: obj=164, original bounds=[0,1]
+  [binary] <C113>: obj=170, original bounds=[0,1]
+  [binary] <C114>: obj=164, original bounds=[0,1]
+  [binary] <C115>: obj=346, original bounds=[0,1]
+  [binary] <C116>: obj=346, original bounds=[0,1]
+  [binary] <C117>: obj=248, original bounds=[0,1]
+  [binary] <C118>: obj=253, original bounds=[0,1]
+  [binary] <C119>: obj=248, original bounds=[0,1]
+  [binary] <C120>: obj=346, original bounds=[0,1]
+  [binary] <C121>: obj=346, original bounds=[0,1]
+  [binary] <C122>: obj=346, original bounds=[0,1]
+  [binary] <C123>: obj=346, original bounds=[0,1]
+  [binary] <C124>: obj=160, original bounds=[0,1]
+  [binary] <C125>: obj=161, original bounds=[0,1]
+  [binary] <C126>: obj=160, original bounds=[0,1]
+  [binary] <C127>: obj=160, original bounds=[0,1]
+  [binary] <C128>: obj=161, original bounds=[0,1]
+  [binary] <C129>: obj=160, original bounds=[0,1]
+  [binary] <C130>: obj=160, original bounds=[0,1]
+  [binary] <C131>: obj=278, original bounds=[0,1]
+  [binary] <C132>: obj=278, original bounds=[0,1]
+  [binary] <C133>: obj=278, original bounds=[0,1]
+  [binary] <C134>: obj=86, original bounds=[0,1]
+  [binary] <C135>: obj=86, original bounds=[0,1]
+  [binary] <C136>: obj=86, original bounds=[0,1]
+  [binary] <C137>: obj=86, original bounds=[0,1]
+  [binary] <C138>: obj=86, original bounds=[0,1]
+  [binary] <C139>: obj=86, original bounds=[0,1]
+  [binary] <C140>: obj=188, original bounds=[0,1]
+  [binary] <C141>: obj=188, original bounds=[0,1]
+  [binary] <C142>: obj=188, original bounds=[0,1]
+  [binary] <C143>: obj=85, original bounds=[0,1]
+  [binary] <C144>: obj=85, original bounds=[0,1]
+  [binary] <C145>: obj=85, original bounds=[0,1]
+  [binary] <C146>: obj=85, original bounds=[0,1]
+  [binary] <C147>: obj=85, original bounds=[0,1]
+  [binary] <C148>: obj=78, original bounds=[0,1]
+  [binary] <C149>: obj=78, original bounds=[0,1]
+  [binary] <C150>: obj=78, original bounds=[0,1]
+  [binary] <C151>: obj=78, original bounds=[0,1]
+  [binary] <C152>: obj=78, original bounds=[0,1]
+  [binary] <C153>: obj=78, original bounds=[0,1]
+  [binary] <C154>: obj=78, original bounds=[0,1]
+  [binary] <C155>: obj=78, original bounds=[0,1]
+  [binary] <C156>: obj=78, original bounds=[0,1]
+  [binary] <C157>: obj=171, original bounds=[0,1]
+  [binary] <C158>: obj=171, original bounds=[0,1]
+  [binary] <C159>: obj=171, original bounds=[0,1]
+  [binary] <C160>: obj=171, original bounds=[0,1]
+  [binary] <C161>: obj=163, original bounds=[0,1]
+  [binary] <C162>: obj=163, original bounds=[0,1]
+  [binary] <C163>: obj=163, original bounds=[0,1]
+  [binary] <C164>: obj=69, original bounds=[0,1]
+  [binary] <C165>: obj=69, original bounds=[0,1]
+  [binary] <C166>: obj=183, original bounds=[0,1]
+  [binary] <C167>: obj=183, original bounds=[0,1]
+  [binary] <C168>: obj=183, original bounds=[0,1]
+  [binary] <C169>: obj=183, original bounds=[0,1]
+  [binary] <C170>: obj=49, original bounds=[0,1]
+  [binary] <C171>: obj=183, original bounds=[0,1]
+  [binary] <C172>: obj=258, original bounds=[0,1]
+  [binary] <C173>: obj=517, original bounds=[0,1]
+  [binary] <C174>: obj=250, original bounds=[0,1]
+  [binary] <C175>: obj=500, original bounds=[0,1]
+  [binary] <C176>: obj=250, original bounds=[0,1]
+  [binary] <C177>: obj=500, original bounds=[0,1]
+  [binary] <C178>: obj=159, original bounds=[0,1]
+  [binary] <C179>: obj=318, original bounds=[0,1]
+  [binary] <C180>: obj=159, original bounds=[0,1]
+  [binary] <C181>: obj=318, original bounds=[0,1]
+  [binary] <C182>: obj=159, original bounds=[0,1]
+  [binary] <C183>: obj=318, original bounds=[0,1]
+  [binary] <C184>: obj=159, original bounds=[0,1]
+  [binary] <C185>: obj=318, original bounds=[0,1]
+  [binary] <C186>: obj=114, original bounds=[0,1]
+  [binary] <C187>: obj=228, original bounds=[0,1]
+  [binary] <C189>: obj=318, original bounds=[0,1]
+  [binary] <B43>: obj=600, original bounds=[0,1]
+  [binary] <D111>: obj=0, original bounds=[0,1]
+  [binary] <D121>: obj=0, original bounds=[0,1]
+  [binary] <D211>: obj=0, original bounds=[0,1]
+  [binary] <D221>: obj=0, original bounds=[0,1]
+  [binary] <D311>: obj=0, original bounds=[0,1]
+  [binary] <D321>: obj=0, original bounds=[0,1]
+  [binary] <D411>: obj=0, original bounds=[0,1]
+  [binary] <D421>: obj=0, original bounds=[0,1]
+  [binary] <D511>: obj=0, original bounds=[0,1]
+  [binary] <D521>: obj=0, original bounds=[0,1]
+  [binary] <G11>: obj=300, original bounds=[0,1]
+  [binary] <G21>: obj=350, original bounds=[0,1]
+  [binary] <G31>: obj=250, original bounds=[0,1]
+  [binary] <G41>: obj=375, original bounds=[0,1]
+  [binary] <G51>: obj=200, original bounds=[0,1]
+  [binary] <H11>: obj=1000, original bounds=[0,1]
+  [binary] <H21>: obj=410, original bounds=[0,1]
+  [binary] <H31>: obj=320, original bounds=[0,1]
+  [binary] <H41>: obj=270, original bounds=[0,1]
+  [binary] <H51>: obj=240, original bounds=[0,1]
+  [binary] <B11>: obj=1500, original bounds=[0,1]
+  [binary] <B21>: obj=1200, original bounds=[0,1]
+  [binary] <B31>: obj=1125, original bounds=[0,1]
+  [binary] <B41>: obj=1800, original bounds=[0,1]
+  [binary] <B51>: obj=1050, original bounds=[0,1]
+  [binary] <D112>: obj=0, original bounds=[0,1]
+  [binary] <D122>: obj=0, original bounds=[0,1]
+  [binary] <D212>: obj=0, original bounds=[0,1]
+  [binary] <D222>: obj=0, original bounds=[0,1]
+  [binary] <D312>: obj=0, original bounds=[0,1]
+  [binary] <D322>: obj=0, original bounds=[0,1]
+  [binary] <D412>: obj=0, original bounds=[0,1]
+  [binary] <D422>: obj=0, original bounds=[0,1]
+  [binary] <D512>: obj=0, original bounds=[0,1]
+  [binary] <D522>: obj=0, original bounds=[0,1]
+  [binary] <G12>: obj=300, original bounds=[0,1]
+  [binary] <G22>: obj=350, original bounds=[0,1]
+  [binary] <G32>: obj=250, original bounds=[0,1]
+  [binary] <G42>: obj=375, original bounds=[0,1]
+  [binary] <G52>: obj=200, original bounds=[0,1]
+  [binary] <H12>: obj=1000, original bounds=[0,1]
+  [binary] <H22>: obj=410, original bounds=[0,1]
+  [binary] <H32>: obj=320, original bounds=[0,1]
+  [binary] <H42>: obj=270, original bounds=[0,1]
+  [binary] <H52>: obj=240, original bounds=[0,1]
+  [binary] <B12>: obj=1000, original bounds=[0,1]
+  [binary] <B22>: obj=800, original bounds=[0,1]
+  [binary] <B32>: obj=750, original bounds=[0,1]
+  [binary] <B42>: obj=1200, original bounds=[0,1]
+  [binary] <B52>: obj=700, original bounds=[0,1]
+  [binary] <D113>: obj=0, original bounds=[0,1]
+  [binary] <D123>: obj=0, original bounds=[0,1]
+  [binary] <D213>: obj=0, original bounds=[0,1]
+  [binary] <D223>: obj=0, original bounds=[0,1]
+  [binary] <D313>: obj=0, original bounds=[0,1]
+  [binary] <D323>: obj=0, original bounds=[0,1]
+  [binary] <D413>: obj=0, original bounds=[0,1]
+  [binary] <D423>: obj=0, original bounds=[0,1]
+  [binary] <D513>: obj=0, original bounds=[0,1]
+  [binary] <D523>: obj=0, original bounds=[0,1]
+  [binary] <G13>: obj=300, original bounds=[0,1]
+  [binary] <G23>: obj=350, original bounds=[0,1]
+  [binary] <G33>: obj=250, original bounds=[0,1]
+  [binary] <G43>: obj=375, original bounds=[0,1]
+  [binary] <G53>: obj=200, original bounds=[0,1]
+  [binary] <H13>: obj=1000, original bounds=[0,1]
+  [binary] <H23>: obj=410, original bounds=[0,1]
+  [binary] <H33>: obj=320, original bounds=[0,1]
+  [binary] <H43>: obj=270, original bounds=[0,1]
+  [binary] <H53>: obj=40, original bounds=[0,1]
+  [binary] <B13>: obj=500, original bounds=[0,1]
+  [binary] <B23>: obj=400, original bounds=[0,1]
+  [binary] <B33>: obj=375, original bounds=[0,1]
+  [binary] <B53>: obj=350, original bounds=[0,1]
+  [continuous] <X1111>: obj=6, original bounds=[0,+inf]
+  [continuous] <X1211>: obj=8, original bounds=[0,+inf]
+  [continuous] <X1311>: obj=10.1, original bounds=[0,+inf]
+  [continuous] <X1411>: obj=13, original bounds=[0,+inf]
+  [continuous] <X1511>: obj=15.5, original bounds=[0,+inf]
+  [continuous] <X2111>: obj=12.9, original bounds=[0,+inf]
+  [continuous] <X2211>: obj=6.2, original bounds=[0,+inf]
+  [continuous] <X2311>: obj=5, original bounds=[0,+inf]
+  [continuous] <X2411>: obj=9.6, original bounds=[0,+inf]
+  [continuous] <X2511>: obj=4.9, original bounds=[0,+inf]
+  [continuous] <X3111>: obj=12.2, original bounds=[0,+inf]
+  [continuous] <X3211>: obj=12.3, original bounds=[0,+inf]
+  [continuous] <X3311>: obj=8.3, original bounds=[0,+inf]
+  [continuous] <X3411>: obj=4.2, original bounds=[0,+inf]
+  [continuous] <X3511>: obj=5.2, original bounds=[0,+inf]
+  [continuous] <Y1111>: obj=2.3, original bounds=[0,+inf]
+  [continuous] <Y1211>: obj=6.7, original bounds=[0,+inf]
+  [continuous] <Y1311>: obj=12, original bounds=[0,+inf]
+  [continuous] <Y1411>: obj=4.5, original bounds=[0,+inf]
+  [continuous] <Y1511>: obj=8, original bounds=[0,+inf]
+  [continuous] <Y1611>: obj=12.5, original bounds=[0,+inf]
+  [continuous] <Y1711>: obj=9.8, original bounds=[0,+inf]
+  [continuous] <Y1811>: obj=12, original bounds=[0,+inf]
+  [continuous] <Y1911>: obj=15.5, original bounds=[0,+inf]
+  [continuous] <Y2111>: obj=7.3, original bounds=[0,+inf]
+  [continuous] <Y2211>: obj=4.2, original bounds=[0,+inf]
+  [continuous] <Y2311>: obj=5.7, original bounds=[0,+inf]
+  [continuous] <Y2411>: obj=6, original bounds=[0,+inf]
+  [continuous] <Y2511>: obj=1.5, original bounds=[0,+inf]
+  [continuous] <Y2611>: obj=4.3, original bounds=[0,+inf]
+  [continuous] <Y2711>: obj=8.9, original bounds=[0,+inf]
+  [continuous] <Y2811>: obj=6.7, original bounds=[0,+inf]
+  [continuous] <Y2911>: obj=7.6, original bounds=[0,+inf]
+  [continuous] <Y3111>: obj=8, original bounds=[0,+inf]
+  [continuous] <Y3211>: obj=7.3, original bounds=[0,+inf]
+  [continuous] <Y3311>: obj=9.6, original bounds=[0,+inf]
+  [continuous] <Y3411>: obj=3.5, original bounds=[0,+inf]
+  [continuous] <Y3511>: obj=2.4, original bounds=[0,+inf]
+  [continuous] <Y3611>: obj=7, original bounds=[0,+inf]
+  [continuous] <Y3711>: obj=5, original bounds=[0,+inf]
+  [continuous] <Y3811>: obj=4.1, original bounds=[0,+inf]
+  [continuous] <Y3911>: obj=7.9, original bounds=[0,+inf]
+  [continuous] <Y4111>: obj=9.5, original bounds=[0,+inf]
+  [continuous] <Y4211>: obj=12, original bounds=[0,+inf]
+  [continuous] <Y4311>: obj=15, original bounds=[0,+inf]
+  [continuous] <Y4411>: obj=4.4, original bounds=[0,+inf]
+  [continuous] <Y4511>: obj=8.2, original bounds=[0,+inf]
+  [continuous] <Y4611>: obj=12.8, original bounds=[0,+inf]
+  [continuous] <Y4711>: obj=2.7, original bounds=[0,+inf]
+  [continuous] <Y4811>: obj=7.5, original bounds=[0,+inf]
+  [continuous] <Y4911>: obj=12.5, original bounds=[0,+inf]
+  [continuous] <Y5111>: obj=17.8, original bounds=[0,+inf]
+  [continuous] <Y5211>: obj=12.8, original bounds=[0,+inf]
+  [continuous] <Y5311>: obj=14.3, original bounds=[0,+inf]
+  [continuous] <Y5411>: obj=7.9, original bounds=[0,+inf]
+  [continuous] <Y5511>: obj=7.4, original bounds=[0,+inf]
+  [continuous] <Y5611>: obj=10, original bounds=[0,+inf]
+  [continuous] <Y5711>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Y5811>: obj=2.5, original bounds=[0,+inf]
+  [continuous] <Y5911>: obj=7.2, original bounds=[0,+inf]
+  [continuous] <X1121>: obj=12, original bounds=[0,+inf]
+  [continuous] <X1221>: obj=16, original bounds=[0,+inf]
+  [continuous] <X1321>: obj=20.2, original bounds=[0,+inf]
+  [continuous] <X1421>: obj=26, original bounds=[0,+inf]
+  [continuous] <X1521>: obj=31, original bounds=[0,+inf]
+  [continuous] <X2121>: obj=25.8, original bounds=[0,+inf]
+  [continuous] <X2221>: obj=12.4, original bounds=[0,+inf]
+  [continuous] <X2321>: obj=10, original bounds=[0,+inf]
+  [continuous] <X2421>: obj=19.2, original bounds=[0,+inf]
+  [continuous] <X2521>: obj=9.8, original bounds=[0,+inf]
+  [continuous] <X3121>: obj=24.4, original bounds=[0,+inf]
+  [continuous] <X3221>: obj=24.6, original bounds=[0,+inf]
+  [continuous] <X3321>: obj=16.6, original bounds=[0,+inf]
+  [continuous] <X3421>: obj=8.4, original bounds=[0,+inf]
+  [continuous] <X3521>: obj=10.4, original bounds=[0,+inf]
+  [continuous] <Y1121>: obj=4.6, original bounds=[0,+inf]
+  [continuous] <Y1221>: obj=13.4, original bounds=[0,+inf]
+  [continuous] <Y1321>: obj=24, original bounds=[0,+inf]
+  [continuous] <Y1421>: obj=9, original bounds=[0,+inf]
+  [continuous] <Y1521>: obj=16, original bounds=[0,+inf]
+  [continuous] <Y1621>: obj=25, original bounds=[0,+inf]
+  [continuous] <Y1721>: obj=19.6, original bounds=[0,+inf]
+  [continuous] <Y1821>: obj=24, original bounds=[0,+inf]
+  [continuous] <Y1921>: obj=31, original bounds=[0,+inf]
+  [continuous] <Y2121>: obj=14.6, original bounds=[0,+inf]
+  [continuous] <Y2221>: obj=8.4, original bounds=[0,+inf]
+  [continuous] <Y2321>: obj=11.4, original bounds=[0,+inf]
+  [continuous] <Y2421>: obj=12, original bounds=[0,+inf]
+  [continuous] <Y2521>: obj=3, original bounds=[0,+inf]
+  [continuous] <Y2621>: obj=8.6, original bounds=[0,+inf]
+  [continuous] <Y2721>: obj=17.8, original bounds=[0,+inf]
+  [continuous] <Y2821>: obj=13.4, original bounds=[0,+inf]
+  [continuous] <Y2921>: obj=15.2, original bounds=[0,+inf]
+  [continuous] <Y3121>: obj=16, original bounds=[0,+inf]
+  [continuous] <Y3221>: obj=14.6, original bounds=[0,+inf]
+  [continuous] <Y3321>: obj=19.2, original bounds=[0,+inf]
+  [continuous] <Y3421>: obj=7, original bounds=[0,+inf]
+  [continuous] <Y3521>: obj=4.8, original bounds=[0,+inf]
+  [continuous] <Y3621>: obj=14, original bounds=[0,+inf]
+  [continuous] <Y3721>: obj=10, original bounds=[0,+inf]
+  [continuous] <Y3821>: obj=8.2, original bounds=[0,+inf]
+  [continuous] <Y3921>: obj=15.8, original bounds=[0,+inf]
+  [continuous] <Y4121>: obj=19, original bounds=[0,+inf]
+  [continuous] <Y4221>: obj=24, original bounds=[0,+inf]
+  [continuous] <Y4321>: obj=30, original bounds=[0,+inf]
+  [continuous] <Y4421>: obj=8.8, original bounds=[0,+inf]
+  [continuous] <Y4521>: obj=16.4, original bounds=[0,+inf]
+  [continuous] <Y4621>: obj=25.6, original bounds=[0,+inf]
+  [continuous] <Y4721>: obj=5.4, original bounds=[0,+inf]
+  [continuous] <Y4821>: obj=15, original bounds=[0,+inf]
+  [continuous] <Y4921>: obj=25, original bounds=[0,+inf]
+  [continuous] <Y5121>: obj=35.6, original bounds=[0,+inf]
+  [continuous] <Y5221>: obj=25.6, original bounds=[0,+inf]
+  [continuous] <Y5321>: obj=28.6, original bounds=[0,+inf]
+  [continuous] <Y5421>: obj=15.8, original bounds=[0,+inf]
+  [continuous] <Y5521>: obj=14.8, original bounds=[0,+inf]
+  [continuous] <Y5621>: obj=20, original bounds=[0,+inf]
+  [continuous] <Y5721>: obj=6.8, original bounds=[0,+inf]
+  [continuous] <Y5821>: obj=5, original bounds=[0,+inf]
+  [continuous] <Y5921>: obj=14.4, original bounds=[0,+inf]
+  [continuous] <S111>: obj=50, original bounds=[0,+inf]
+  [continuous] <S211>: obj=60, original bounds=[0,+inf]
+  [continuous] <S311>: obj=70, original bounds=[0,+inf]
+  [continuous] <S121>: obj=105, original bounds=[0,+inf]
+  [continuous] <S221>: obj=95, original bounds=[0,+inf]
+  [continuous] <S321>: obj=133, original bounds=[0,+inf]
+  [continuous] <Z1111>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z1121>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z1211>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z1221>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Z2111>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z2121>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z2211>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z2221>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Z3111>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z3121>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z3211>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z3221>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Z4111>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z4121>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z4211>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z4221>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Z5111>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z5121>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z5211>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z5221>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <W11>: obj=1.5, original bounds=[0,+inf]
+  [continuous] <W21>: obj=1.6, original bounds=[0,+inf]
+  [continuous] <W31>: obj=1.4, original bounds=[0,+inf]
+  [continuous] <W41>: obj=1.2, original bounds=[0,+inf]
+  [continuous] <W51>: obj=2.3, original bounds=[0,+inf]
+  [continuous] <Q111>: obj=9, original bounds=[0,+inf]
+  [continuous] <Q211>: obj=9, original bounds=[0,+inf]
+  [continuous] <Q311>: obj=9, original bounds=[0,+inf]
+  [continuous] <Q411>: obj=9, original bounds=[0,+inf]
+  [continuous] <Q511>: obj=9, original bounds=[0,+inf]
+  [continuous] <Q121>: obj=15, original bounds=[0,+inf]
+  [continuous] <Q221>: obj=15, original bounds=[0,+inf]
+  [continuous] <Q321>: obj=15, original bounds=[0,+inf]
+  [continuous] <Q421>: obj=15, original bounds=[0,+inf]
+  [continuous] <Q521>: obj=15, original bounds=[0,+inf]
+  [continuous] <X1112>: obj=6, original bounds=[0,+inf]
+  [continuous] <X1212>: obj=8, original bounds=[0,+inf]
+  [continuous] <X1312>: obj=10.1, original bounds=[0,+inf]
+  [continuous] <X1412>: obj=13, original bounds=[0,+inf]
+  [continuous] <X1512>: obj=15.5, original bounds=[0,+inf]
+  [continuous] <X2112>: obj=12.9, original bounds=[0,+inf]
+  [continuous] <X2212>: obj=6.2, original bounds=[0,+inf]
+  [continuous] <X2312>: obj=5, original bounds=[0,+inf]
+  [continuous] <X2412>: obj=9.6, original bounds=[0,+inf]
+  [continuous] <X2512>: obj=4.9, original bounds=[0,+inf]
+  [continuous] <X3112>: obj=12.2, original bounds=[0,+inf]
+  [continuous] <X3212>: obj=2.3, original bounds=[0,+inf]
+  [continuous] <X3312>: obj=8.3, original bounds=[0,+inf]
+  [continuous] <X3412>: obj=4.2, original bounds=[0,+inf]
+  [continuous] <X3512>: obj=5.2, original bounds=[0,+inf]
+  [continuous] <Y1112>: obj=2.3, original bounds=[0,+inf]
+  [continuous] <Y1212>: obj=6.7, original bounds=[0,+inf]
+  [continuous] <Y1312>: obj=12, original bounds=[0,+inf]
+  [continuous] <Y1412>: obj=4.5, original bounds=[0,+inf]
+  [continuous] <Y1512>: obj=8, original bounds=[0,+inf]
+  [continuous] <Y1612>: obj=12.5, original bounds=[0,+inf]
+  [continuous] <Y1712>: obj=9.8, original bounds=[0,+inf]
+  [continuous] <Y1812>: obj=12, original bounds=[0,+inf]
+  [continuous] <Y1912>: obj=15.5, original bounds=[0,+inf]
+  [continuous] <Y2112>: obj=7.3, original bounds=[0,+inf]
+  [continuous] <Y2212>: obj=4.2, original bounds=[0,+inf]
+  [continuous] <Y2312>: obj=5.7, original bounds=[0,+inf]
+  [continuous] <Y2412>: obj=6, original bounds=[0,+inf]
+  [continuous] <Y2512>: obj=1.5, original bounds=[0,+inf]
+  [continuous] <Y2612>: obj=4.3, original bounds=[0,+inf]
+  [continuous] <Y2712>: obj=8.9, original bounds=[0,+inf]
+  [continuous] <Y2812>: obj=6.7, original bounds=[0,+inf]
+  [continuous] <Y2912>: obj=7.6, original bounds=[0,+inf]
+  [continuous] <Y3112>: obj=8, original bounds=[0,+inf]
+  [continuous] <Y3212>: obj=7.3, original bounds=[0,+inf]
+  [continuous] <Y3312>: obj=9.6, original bounds=[0,+inf]
+  [continuous] <Y3412>: obj=3.5, original bounds=[0,+inf]
+  [continuous] <Y3512>: obj=2.4, original bounds=[0,+inf]
+  [continuous] <Y3612>: obj=7, original bounds=[0,+inf]
+  [continuous] <Y3712>: obj=5, original bounds=[0,+inf]
+  [continuous] <Y3812>: obj=4.1, original bounds=[0,+inf]
+  [continuous] <Y3912>: obj=7.9, original bounds=[0,+inf]
+  [continuous] <Y4112>: obj=9.5, original bounds=[0,+inf]
+  [continuous] <Y4212>: obj=12, original bounds=[0,+inf]
+  [continuous] <Y4312>: obj=15, original bounds=[0,+inf]
+  [continuous] <Y4412>: obj=4.4, original bounds=[0,+inf]
+  [continuous] <Y4512>: obj=8.2, original bounds=[0,+inf]
+  [continuous] <Y4612>: obj=12.8, original bounds=[0,+inf]
+  [continuous] <Y4712>: obj=2.7, original bounds=[0,+inf]
+  [continuous] <Y4812>: obj=7.5, original bounds=[0,+inf]
+  [continuous] <Y4912>: obj=12.5, original bounds=[0,+inf]
+  [continuous] <Y5112>: obj=17.8, original bounds=[0,+inf]
+  [continuous] <Y5212>: obj=12.8, original bounds=[0,+inf]
+  [continuous] <Y5312>: obj=14.3, original bounds=[0,+inf]
+  [continuous] <Y5412>: obj=7.9, original bounds=[0,+inf]
+  [continuous] <Y5512>: obj=7.4, original bounds=[0,+inf]
+  [continuous] <Y5612>: obj=10, original bounds=[0,+inf]
+  [continuous] <Y5712>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Y5812>: obj=2.5, original bounds=[0,+inf]
+  [continuous] <Y5912>: obj=7.2, original bounds=[0,+inf]
+  [continuous] <X1122>: obj=12, original bounds=[0,+inf]
+  [continuous] <X1222>: obj=16, original bounds=[0,+inf]
+  [continuous] <X1322>: obj=20.2, original bounds=[0,+inf]
+  [continuous] <X1422>: obj=26, original bounds=[0,+inf]
+  [continuous] <X1522>: obj=31, original bounds=[0,+inf]
+  [continuous] <X2122>: obj=25.8, original bounds=[0,+inf]
+  [continuous] <X2222>: obj=12.4, original bounds=[0,+inf]
+  [continuous] <X2322>: obj=10, original bounds=[0,+inf]
+  [continuous] <X2422>: obj=19.2, original bounds=[0,+inf]
+  [continuous] <X2522>: obj=9.8, original bounds=[0,+inf]
+  [continuous] <X3122>: obj=24.4, original bounds=[0,+inf]
+  [continuous] <X3222>: obj=24.6, original bounds=[0,+inf]
+  [continuous] <X3322>: obj=16.6, original bounds=[0,+inf]
+  [continuous] <X3422>: obj=8.4, original bounds=[0,+inf]
+  [continuous] <X3522>: obj=0.4, original bounds=[0,+inf]
+  [continuous] <Y1122>: obj=4.6, original bounds=[0,+inf]
+  [continuous] <Y1222>: obj=13.4, original bounds=[0,+inf]
+  [continuous] <Y1322>: obj=24, original bounds=[0,+inf]
+  [continuous] <Y1422>: obj=9, original bounds=[0,+inf]
+  [continuous] <Y1522>: obj=16, original bounds=[0,+inf]
+  [continuous] <Y1622>: obj=25, original bounds=[0,+inf]
+  [continuous] <Y1722>: obj=19.6, original bounds=[0,+inf]
+  [continuous] <Y1822>: obj=24, original bounds=[0,+inf]
+  [continuous] <Y1922>: obj=31, original bounds=[0,+inf]
+  [continuous] <Y2122>: obj=14.6, original bounds=[0,+inf]
+  [continuous] <Y2222>: obj=8.4, original bounds=[0,+inf]
+  [continuous] <Y2322>: obj=11.4, original bounds=[0,+inf]
+  [continuous] <Y2422>: obj=12, original bounds=[0,+inf]
+  [continuous] <Y2522>: obj=3, original bounds=[0,+inf]
+  [continuous] <Y2622>: obj=8.6, original bounds=[0,+inf]
+  [continuous] <Y2722>: obj=17.8, original bounds=[0,+inf]
+  [continuous] <Y2822>: obj=13.4, original bounds=[0,+inf]
+  [continuous] <Y2922>: obj=15.2, original bounds=[0,+inf]
+  [continuous] <Y3122>: obj=16, original bounds=[0,+inf]
+  [continuous] <Y3222>: obj=14.6, original bounds=[0,+inf]
+  [continuous] <Y3322>: obj=19.2, original bounds=[0,+inf]
+  [continuous] <Y3422>: obj=7, original bounds=[0,+inf]
+  [continuous] <Y3522>: obj=4.8, original bounds=[0,+inf]
+  [continuous] <Y3622>: obj=14, original bounds=[0,+inf]
+  [continuous] <Y3722>: obj=10, original bounds=[0,+inf]
+  [continuous] <Y3822>: obj=8.2, original bounds=[0,+inf]
+  [continuous] <Y3922>: obj=15.8, original bounds=[0,+inf]
+  [continuous] <Y4122>: obj=19, original bounds=[0,+inf]
+  [continuous] <Y4222>: obj=24, original bounds=[0,+inf]
+  [continuous] <Y4322>: obj=30, original bounds=[0,+inf]
+  [continuous] <Y4422>: obj=8.8, original bounds=[0,+inf]
+  [continuous] <Y4522>: obj=16.4, original bounds=[0,+inf]
+  [continuous] <Y4622>: obj=25.6, original bounds=[0,+inf]
+  [continuous] <Y4722>: obj=5.4, original bounds=[0,+inf]
+  [continuous] <Y4822>: obj=15, original bounds=[0,+inf]
+  [continuous] <Y4922>: obj=25, original bounds=[0,+inf]
+  [continuous] <Y5122>: obj=35.6, original bounds=[0,+inf]
+  [continuous] <Y5222>: obj=25.6, original bounds=[0,+inf]
+  [continuous] <Y5322>: obj=28.6, original bounds=[0,+inf]
+  [continuous] <Y5422>: obj=15.8, original bounds=[0,+inf]
+  [continuous] <Y5522>: obj=14.8, original bounds=[0,+inf]
+  [continuous] <Y5622>: obj=20, original bounds=[0,+inf]
+  [continuous] <Y5722>: obj=6.8, original bounds=[0,+inf]
+  [continuous] <Y5822>: obj=5, original bounds=[0,+inf]
+  [continuous] <Y5922>: obj=14.4, original bounds=[0,+inf]
+  [continuous] <S112>: obj=50, original bounds=[0,+inf]
+  [continuous] <S212>: obj=60, original bounds=[0,+inf]
+  [continuous] <S312>: obj=70, original bounds=[0,+inf]
+  [continuous] <S122>: obj=105, original bounds=[0,+inf]
+  [continuous] <S222>: obj=95, original bounds=[0,+inf]
+  [continuous] <S322>: obj=133, original bounds=[0,+inf]
+  [continuous] <Z1112>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z1122>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z1212>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z1222>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Z2112>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z2122>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z2212>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z2222>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Z3112>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z3122>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z3212>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z3222>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Z4112>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z4122>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z4212>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z4222>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Z5112>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z5122>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z5212>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z5222>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <W12>: obj=1.5, original bounds=[0,+inf]
+  [continuous] <W22>: obj=1.6, original bounds=[0,+inf]
+  [continuous] <W32>: obj=1.4, original bounds=[0,+inf]
+  [continuous] <W42>: obj=1.2, original bounds=[0,+inf]
+  [continuous] <W52>: obj=2.3, original bounds=[0,+inf]
+  [continuous] <Q112>: obj=9, original bounds=[0,+inf]
+  [continuous] <Q212>: obj=9, original bounds=[0,+inf]
+  [continuous] <Q312>: obj=9, original bounds=[0,+inf]
+  [continuous] <Q412>: obj=9, original bounds=[0,+inf]
+  [continuous] <Q512>: obj=9, original bounds=[0,+inf]
+  [continuous] <Q122>: obj=15, original bounds=[0,+inf]
+  [continuous] <Q222>: obj=15, original bounds=[0,+inf]
+  [continuous] <Q322>: obj=15, original bounds=[0,+inf]
+  [continuous] <Q422>: obj=15, original bounds=[0,+inf]
+  [continuous] <Q522>: obj=15, original bounds=[0,+inf]
+  [continuous] <X1113>: obj=6, original bounds=[0,+inf]
+  [continuous] <X1213>: obj=8, original bounds=[0,+inf]
+  [continuous] <X1313>: obj=10.1, original bounds=[0,+inf]
+  [continuous] <X1413>: obj=13, original bounds=[0,+inf]
+  [continuous] <X1513>: obj=15.5, original bounds=[0,+inf]
+  [continuous] <X2113>: obj=12.9, original bounds=[0,+inf]
+  [continuous] <X2213>: obj=6.2, original bounds=[0,+inf]
+  [continuous] <X2313>: obj=5, original bounds=[0,+inf]
+  [continuous] <X2413>: obj=9.6, original bounds=[0,+inf]
+  [continuous] <X2513>: obj=4.9, original bounds=[0,+inf]
+  [continuous] <X3113>: obj=12.2, original bounds=[0,+inf]
+  [continuous] <X3213>: obj=2.3, original bounds=[0,+inf]
+  [continuous] <X3313>: obj=8.3, original bounds=[0,+inf]
+  [continuous] <X3413>: obj=4.2, original bounds=[0,+inf]
+  [continuous] <X3513>: obj=5.2, original bounds=[0,+inf]
+  [continuous] <Y1113>: obj=2.3, original bounds=[0,+inf]
+  [continuous] <Y1213>: obj=6.7, original bounds=[0,+inf]
+  [continuous] <Y1313>: obj=12, original bounds=[0,+inf]
+  [continuous] <Y1413>: obj=4.5, original bounds=[0,+inf]
+  [continuous] <Y1513>: obj=8, original bounds=[0,+inf]
+  [continuous] <Y1613>: obj=12.5, original bounds=[0,+inf]
+  [continuous] <Y1713>: obj=9.8, original bounds=[0,+inf]
+  [continuous] <Y1813>: obj=12, original bounds=[0,+inf]
+  [continuous] <Y1913>: obj=15.5, original bounds=[0,+inf]
+  [continuous] <Y2113>: obj=7.3, original bounds=[0,+inf]
+  [continuous] <Y2213>: obj=4.2, original bounds=[0,+inf]
+  [continuous] <Y2313>: obj=5.7, original bounds=[0,+inf]
+  [continuous] <Y2413>: obj=6, original bounds=[0,+inf]
+  [continuous] <Y2513>: obj=1.5, original bounds=[0,+inf]
+  [continuous] <Y2613>: obj=4.3, original bounds=[0,+inf]
+  [continuous] <Y2713>: obj=8.9, original bounds=[0,+inf]
+  [continuous] <Y2813>: obj=6.7, original bounds=[0,+inf]
+  [continuous] <Y2913>: obj=7.6, original bounds=[0,+inf]
+  [continuous] <Y3113>: obj=8, original bounds=[0,+inf]
+  [continuous] <Y3213>: obj=7.3, original bounds=[0,+inf]
+  [continuous] <Y3313>: obj=9.6, original bounds=[0,+inf]
+  [continuous] <Y3413>: obj=3.5, original bounds=[0,+inf]
+  [continuous] <Y3513>: obj=2.4, original bounds=[0,+inf]
+  [continuous] <Y3613>: obj=7, original bounds=[0,+inf]
+  [continuous] <Y3713>: obj=5, original bounds=[0,+inf]
+  [continuous] <Y3813>: obj=4.1, original bounds=[0,+inf]
+  [continuous] <Y3913>: obj=7.9, original bounds=[0,+inf]
+  [continuous] <Y4113>: obj=9.5, original bounds=[0,+inf]
+  [continuous] <Y4213>: obj=12, original bounds=[0,+inf]
+  [continuous] <Y4313>: obj=15, original bounds=[0,+inf]
+  [continuous] <Y4413>: obj=4.4, original bounds=[0,+inf]
+  [continuous] <Y4513>: obj=8.2, original bounds=[0,+inf]
+  [continuous] <Y4613>: obj=12.8, original bounds=[0,+inf]
+  [continuous] <Y4713>: obj=2.7, original bounds=[0,+inf]
+  [continuous] <Y4813>: obj=7.5, original bounds=[0,+inf]
+  [continuous] <Y4913>: obj=12.5, original bounds=[0,+inf]
+  [continuous] <Y5113>: obj=17.8, original bounds=[0,+inf]
+  [continuous] <Y5213>: obj=12.8, original bounds=[0,+inf]
+  [continuous] <Y5313>: obj=14.3, original bounds=[0,+inf]
+  [continuous] <Y5413>: obj=7.9, original bounds=[0,+inf]
+  [continuous] <Y5513>: obj=7.4, original bounds=[0,+inf]
+  [continuous] <Y5613>: obj=10, original bounds=[0,+inf]
+  [continuous] <Y5713>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Y5813>: obj=2.5, original bounds=[0,+inf]
+  [continuous] <Y5913>: obj=7.2, original bounds=[0,+inf]
+  [continuous] <X1123>: obj=12, original bounds=[0,+inf]
+  [continuous] <X1223>: obj=16, original bounds=[0,+inf]
+  [continuous] <X1323>: obj=20.2, original bounds=[0,+inf]
+  [continuous] <X1423>: obj=26, original bounds=[0,+inf]
+  [continuous] <X1523>: obj=31, original bounds=[0,+inf]
+  [continuous] <X2123>: obj=25.8, original bounds=[0,+inf]
+  [continuous] <X2223>: obj=12.4, original bounds=[0,+inf]
+  [continuous] <X2323>: obj=10, original bounds=[0,+inf]
+  [continuous] <X2423>: obj=19.2, original bounds=[0,+inf]
+  [continuous] <X2523>: obj=9.8, original bounds=[0,+inf]
+  [continuous] <X3123>: obj=24.4, original bounds=[0,+inf]
+  [continuous] <X3223>: obj=24.6, original bounds=[0,+inf]
+  [continuous] <X3323>: obj=16.6, original bounds=[0,+inf]
+  [continuous] <X3423>: obj=8.4, original bounds=[0,+inf]
+  [continuous] <X3523>: obj=0.4, original bounds=[0,+inf]
+  [continuous] <Y1123>: obj=4.6, original bounds=[0,+inf]
+  [continuous] <Y1223>: obj=13.4, original bounds=[0,+inf]
+  [continuous] <Y1323>: obj=24, original bounds=[0,+inf]
+  [continuous] <Y1423>: obj=9, original bounds=[0,+inf]
+  [continuous] <Y1523>: obj=16, original bounds=[0,+inf]
+  [continuous] <Y1623>: obj=25, original bounds=[0,+inf]
+  [continuous] <Y1723>: obj=19.6, original bounds=[0,+inf]
+  [continuous] <Y1823>: obj=24, original bounds=[0,+inf]
+  [continuous] <Y1923>: obj=31, original bounds=[0,+inf]
+  [continuous] <Y2123>: obj=14.6, original bounds=[0,+inf]
+  [continuous] <Y2223>: obj=8.4, original bounds=[0,+inf]
+  [continuous] <Y2323>: obj=11.4, original bounds=[0,+inf]
+  [continuous] <Y2423>: obj=12, original bounds=[0,+inf]
+  [continuous] <Y2523>: obj=3, original bounds=[0,+inf]
+  [continuous] <Y2623>: obj=8.6, original bounds=[0,+inf]
+  [continuous] <Y2723>: obj=17.8, original bounds=[0,+inf]
+  [continuous] <Y2823>: obj=13.4, original bounds=[0,+inf]
+  [continuous] <Y2923>: obj=15.2, original bounds=[0,+inf]
+  [continuous] <Y3123>: obj=16, original bounds=[0,+inf]
+  [continuous] <Y3223>: obj=14.6, original bounds=[0,+inf]
+  [continuous] <Y3323>: obj=19.2, original bounds=[0,+inf]
+  [continuous] <Y3423>: obj=7, original bounds=[0,+inf]
+  [continuous] <Y3523>: obj=4.8, original bounds=[0,+inf]
+  [continuous] <Y3623>: obj=14, original bounds=[0,+inf]
+  [continuous] <Y3723>: obj=10, original bounds=[0,+inf]
+  [continuous] <Y3823>: obj=8.2, original bounds=[0,+inf]
+  [continuous] <Y3923>: obj=15.8, original bounds=[0,+inf]
+  [continuous] <Y4123>: obj=19, original bounds=[0,+inf]
+  [continuous] <Y4223>: obj=24, original bounds=[0,+inf]
+  [continuous] <Y4323>: obj=30, original bounds=[0,+inf]
+  [continuous] <Y4423>: obj=8.8, original bounds=[0,+inf]
+  [continuous] <Y4523>: obj=16.4, original bounds=[0,+inf]
+  [continuous] <Y4623>: obj=25.6, original bounds=[0,+inf]
+  [continuous] <Y4723>: obj=5.4, original bounds=[0,+inf]
+  [continuous] <Y4823>: obj=15, original bounds=[0,+inf]
+  [continuous] <Y4923>: obj=25, original bounds=[0,+inf]
+  [continuous] <Y5123>: obj=35.6, original bounds=[0,+inf]
+  [continuous] <Y5223>: obj=25.6, original bounds=[0,+inf]
+  [continuous] <Y5323>: obj=28.6, original bounds=[0,+inf]
+  [continuous] <Y5423>: obj=15.8, original bounds=[0,+inf]
+  [continuous] <Y5523>: obj=14.8, original bounds=[0,+inf]
+  [continuous] <Y5623>: obj=20, original bounds=[0,+inf]
+  [continuous] <Y5723>: obj=6.8, original bounds=[0,+inf]
+  [continuous] <Y5823>: obj=5, original bounds=[0,+inf]
+  [continuous] <Y5923>: obj=14.4, original bounds=[0,+inf]
+  [continuous] <S113>: obj=50, original bounds=[0,+inf]
+  [continuous] <S213>: obj=60, original bounds=[0,+inf]
+  [continuous] <S313>: obj=70, original bounds=[0,+inf]
+  [continuous] <S123>: obj=105, original bounds=[0,+inf]
+  [continuous] <S223>: obj=95, original bounds=[0,+inf]
+  [continuous] <S323>: obj=133, original bounds=[0,+inf]
+  [continuous] <Z1113>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z1123>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z1213>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z1223>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Z2113>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z2123>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z2213>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z2223>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Z3113>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z3123>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z3213>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z3223>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Z4113>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z4123>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z4213>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z4223>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <Z5113>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z5123>: obj=1.7, original bounds=[0,+inf]
+  [continuous] <Z5213>: obj=4, original bounds=[0,+inf]
+  [continuous] <Z5223>: obj=3.4, original bounds=[0,+inf]
+  [continuous] <W13>: obj=1.5, original bounds=[0,+inf]
+  [continuous] <W23>: obj=1.6, original bounds=[0,+inf]
+  [continuous] <W33>: obj=1.4, original bounds=[0,+inf]
+  [continuous] <W43>: obj=1.2, original bounds=[0,+inf]
+  [continuous] <W53>: obj=2.3, original bounds=[0,+inf]
+CONSTRAINTS
+  [linear] <R101>: <C103>[B] +<C104>[B] +<C105>[B] <= 1;
+  [linear] <R102>: <C106>[B] +<C107>[B] +<C108>[B] +<C109>[B] +<C110>[B] <= 1;
+  [linear] <R103>: <C111>[B] +<C112>[B] +<C113>[B] +<C114>[B] <= 1;
+  [linear] <R104>: <C115>[B] +<C116>[B] <= 1;
+  [linear] <R105>: <C117>[B] +<C118>[B] +<C119>[B] <= 1;
+  [linear] <R106>: <C120>[B] +<C121>[B] +<C122>[B] +<C123>[B] <= 1;
+  [linear] <R107>: <C124>[B] +<C125>[B] +<C126>[B] +<C127>[B] +<C128>[B] +<C129>[B] +<C130>[B] <= 1;
+  [linear] <R108>: <C131>[B] +<C132>[B] +<C133>[B] <= 1;
+  [linear] <R109>: <C134>[B] +<C135>[B] +<C136>[B] +<C137>[B] +<C138>[B] <= 1;
+  [linear] <R110>: <C140>[B] +<C141>[B] +<C142>[B] <= 1;
+  [linear] <R111>: <C143>[B] +<C144>[B] +<C145>[B] +<C146>[B] +<C147>[B] <= 1;
+  [linear] <R112>: <C148>[B] +<C149>[B] +<C150>[B] +<C151>[B] <= 1;
+  [linear] <R113>: <C152>[B] +<C153>[B] +<C154>[B] +<C155>[B] +<C156>[B] <= 1;
+  [linear] <R114>: <C157>[B] +<C158>[B] +<C159>[B] +<C160>[B] <= 1;
+  [linear] <R115>: <C161>[B] +<C162>[B] +<C163>[B] <= 1;
+  [linear] <R116>: <C164>[B] +<C165>[B] <= 1;
+  [linear] <R117>: <C166>[B] +<C167>[B] +<C168>[B] +<C169>[B] +<C171>[B] <= 1;
+  [linear] <R118>:  -450<C106>[B] -435<C111>[B] -435<C120>[B] -350<C131>[B] -230<C166>[B] -200<C172>[B] -400<C173>[B] <= -190;
+  [linear] <R119>:  +525<C101>[B] +500<C102>[B] +475<C103>[B] +475<C104>[B] +475<C105>[B] +435<C113>[B] +435<C114>[B] +435<C116>[B] +435<C117>[B] +435<C118>[B] +435<C119>[B] +425<C127>[B] +425<C128>[B] +425<C129>[B] +330<C136>[B] +330<C137>[B] +330<C138>[B] +330<C139>[B] +330<C141>[B] +330<C142>[B] +325<C145>[B] +325<C146>[B] +325<C147>[B] +300<C149>[B] +300<C150>[B] +300<C154>[B] +300<C155>[B] +300<C156>[B] +300<C159>[B] +300<C160>[B] +285<C161>[B] +285<C162>[B] +265<C164>[B] +265<C165>[B] +230<C168>[B] +230<C169>[B] +190<C170>[B] +200<C178>[B] +400<C179>[B] +200<C180>[B] +400<C181>[B] +200<C182>[B] +400<C183>[B] +200<C184>[B] +400<C185>[B] +200<C186>[B] +400<C187>[B] <= 2700;
+  [linear] <R120>:  -525<C101>[B] -500<C102>[B] -475<C103>[B] -475<C104>[B] -475<C105>[B] -435<C113>[B] -435<C114>[B] -435<C116>[B] -435<C117>[B] -435<C118>[B] -435<C119>[B] -425<C127>[B] -425<C128>[B] -425<C129>[B] -330<C136>[B] -330<C137>[B] -330<C138>[B] -330<C139>[B] -330<C141>[B] -330<C142>[B] -325<C145>[B] -325<C146>[B] -325<C147>[B] -300<C149>[B] -300<C150>[B] -300<C154>[B] -300<C155>[B] -300<C156>[B] -300<C159>[B] -300<C160>[B] -285<C161>[B] -285<C162>[B] -265<C164>[B] -265<C165>[B] -230<C168>[B] -230<C169>[B] -190<C170>[B] -200<C178>[B] -400<C179>[B] -200<C180>[B] -400<C181>[B] -200<C182>[B] -400<C183>[B] -200<C184>[B] -400<C185>[B] -200<C186>[B] -400<C187>[B] <= -2600;
+  [linear] <R121>:  -435<C114>[B] -400<C122>[B] -350<C133>[B] -330<C138>[B] -330<C142>[B] -325<C147>[B] -300<C150>[B] -300<C156>[B] -300<C160>[B] -200<C186>[B] -400<C187>[B] <= -630;
+  [linear] <R122>:  -525<C101>[B] -500<C102>[B] -475<C104>[B] -190<C105>[B] -450<C108>[B] -165<C109>[B] -435<C118>[B] -300<C119>[B] -400<C125>[B] -115<C126>[B] -330<C134>[B] -330<C139>[B] -330<C140>[B] -325<C143>[B] -300<C148>[B] -300<C152>[B] -300<C157>[B] -285<C162>[B] -265<C165>[B] -190<C170>[B] -200<C182>[B] -400<C183>[B] <= -900;
+  [linear] <R123>:  -525<C101>[B] -500<C102>[B] -475<C104>[B] -190<C105>[B] -450<C108>[B] -165<C109>[B] -435<C113>[B] -435<C118>[B] -300<C119>[B] -400<C121>[B] -400<C125>[B] -115<C126>[B] -425<C128>[B] -140<C129>[B] -330<C134>[B] -330<C137>[B] -330<C139>[B] -330<C140>[B] -325<C143>[B] -325<C146>[B] -300<C148>[B] -300<C152>[B] -300<C155>[B] -300<C157>[B] -300<C159>[B] -285<C162>[B] -265<C165>[B] -230<C169>[B] -190<C170>[B] -200<C182>[B] -400<C183>[B] -200<C184>[B] -400<C185>[B] <= -1656;
+  [linear] <R124>:  -475<C103>[B] -285<C105>[B] -450<C107>[B] -285<C109>[B] -150<C110>[B] -435<C112>[B] -435<C115>[B] -435<C117>[B] -135<C119>[B] -100<C123>[B] -400<C124>[B] -285<C126>[B] -100<C130>[B] -350<C132>[B] -330<C136>[B] -330<C141>[B] -325<C145>[B] -300<C149>[B] -300<C154>[B] -285<C161>[B] -265<C164>[B] -230<C167>[B] -200<C178>[B] -400<C179>[B] <= -335;
+  [linear] <R125>:  -475<C103>[B] -285<C105>[B] -450<C107>[B] -285<C109>[B] -150<C110>[B] -435<C112>[B] -435<C115>[B] -435<C116>[B] -435<C117>[B] -135<C119>[B] -100<C123>[B] -400<C124>[B] -285<C126>[B] -425<C127>[B] -285<C129>[B] -100<C130>[B] -350<C132>[B] -330<C136>[B] -330<C141>[B] -325<C145>[B] -300<C149>[B] -300<C154>[B] -285<C161>[B] -265<C164>[B] -230<C167>[B] -230<C168>[B] -200<C178>[B] -400<C179>[B] -200<C180>[B] -400<C181>[B] <= -1026;
+  [linear] <R126>:  -300<C130>[B] -330<C135>[B] -325<C144>[B] -300<C153>[B] -300<C158>[B] -200<C174>[B] -400<C175>[B] <= -150;
+  [linear] <R127>:  -300<C123>[B] -300<C130>[B] -330<C135>[B] -325<C144>[B] -300<C153>[B] -300<C158>[B] -200<C174>[B] -400<C175>[B] -200<C176>[B] -400<C177>[B] <= -500;
+  [linear] <R128>:  -300<C151>[B] -285<C163>[B] -200<C188>[B] -400<C189>[B] <= -270;
+  [linear] <2>: <X1111>[C] +<X1211>[C] +<X1311>[C] +<X1411>[C] +<X1511>[C] -<S111>[C] <= 0;
+  [linear] <3>: <X1121>[C] +<X1221>[C] +<X1321>[C] +<X1421>[C] +<X1521>[C] -<S121>[C] <= 0;
+  [linear] <4>: <X2111>[C] +<X2211>[C] +<X2311>[C] +<X2411>[C] +<X2511>[C] -<S211>[C] <= 0;
+  [linear] <5>: <X2121>[C] +<X2221>[C] +<X2321>[C] +<X2421>[C] +<X2521>[C] -<S221>[C] <= 0;
+  [linear] <6>: <X3111>[C] +<X3211>[C] +<X3311>[C] +<X3411>[C] +<X3511>[C] -<S311>[C] <= 0;
+  [linear] <7>: <X3121>[C] +<X3221>[C] +<X3321>[C] +<X3421>[C] +<X3521>[C] -<S321>[C] <= 0;
+  [linear] <8>: <S111>[C] <= 230;
+  [linear] <9>: <S211>[C] <= 265;
+  [linear] <10>: <S311>[C] <= 207;
+  [linear] <11>: <S121>[C] <= 140;
+  [linear] <12>: <S221>[C] <= 110;
+  [linear] <13>: <S321>[C] <= 135;
+  [linear] <14>: <X1111>[C] +<X2111>[C] +<X3111>[C] -<Y1111>[C] -<Y1211>[C] -<Y1311>[C] -<Y1411>[C] -<Y1511>[C] -<Y1611>[C] -<Y1711>[C] -<Y1811>[C] -<Y1911>[C] -<Q111>[C] == 0;
+  [linear] <15>: <X1121>[C] +<X2121>[C] +<X3121>[C] -<Y1121>[C] -<Y1221>[C] -<Y1321>[C] -<Y1421>[C] -<Y1521>[C] -<Y1621>[C] -<Y1721>[C] -<Y1821>[C] -<Y1921>[C] -<Q121>[C] == 0;
+  [linear] <16>: <X1211>[C] +<X2211>[C] +<X3211>[C] -<Y2111>[C] -<Y2211>[C] -<Y2311>[C] -<Y2411>[C] -<Y2511>[C] -<Y2611>[C] -<Y2711>[C] -<Y2811>[C] -<Y2911>[C] -<Q211>[C] == 0;
+  [linear] <17>: <X1221>[C] +<X2221>[C] +<X3221>[C] -<Y2121>[C] -<Y2221>[C] -<Y2321>[C] -<Y2421>[C] -<Y2521>[C] -<Y2621>[C] -<Y2721>[C] -<Y2821>[C] -<Y2921>[C] -<Q221>[C] == 0;
+  [linear] <18>: <X1311>[C] +<X2311>[C] +<X3311>[C] -<Y3111>[C] -<Y3211>[C] -<Y3311>[C] -<Y3411>[C] -<Y3511>[C] -<Y3611>[C] -<Y3711>[C] -<Y3811>[C] -<Y3911>[C] -<Q311>[C] == 0;
+  [linear] <19>: <X1321>[C] +<X2321>[C] +<X3321>[C] -<Y3121>[C] -<Y3221>[C] -<Y3321>[C] -<Y3421>[C] -<Y3521>[C] -<Y3621>[C] -<Y3721>[C] -<Y3821>[C] -<Y3921>[C] -<Q321>[C] == 0;
+  [linear] <20>: <X1411>[C] +<X2411>[C] +<X3411>[C] -<Y4111>[C] -<Y4211>[C] -<Y4311>[C] -<Y4411>[C] -<Y4511>[C] -<Y4611>[C] -<Y4711>[C] -<Y4811>[C] -<Y4911>[C] -<Q411>[C] == 0;
+  [linear] <21>: <X1421>[C] +<X2421>[C] +<X3421>[C] -<Y4121>[C] -<Y4221>[C] -<Y4321>[C] -<Y4421>[C] -<Y4521>[C] -<Y4621>[C] -<Y4721>[C] -<Y4821>[C] -<Y4921>[C] -<Q421>[C] == 0;
+  [linear] <22>: <X1511>[C] +<X2511>[C] +<X3511>[C] -<Y5111>[C] -<Y5211>[C] -<Y5311>[C] -<Y5411>[C] -<Y5511>[C] -<Y5611>[C] -<Y5711>[C] -<Y5811>[C] -<Y5911>[C] -<Q511>[C] == 0;
+  [linear] <23>: <X1521>[C] +<X2521>[C] +<X3521>[C] -<Y5121>[C] -<Y5221>[C] -<Y5321>[C] -<Y5421>[C] -<Y5521>[C] -<Y5621>[C] -<Y5721>[C] -<Y5821>[C] -<Y5921>[C] -<Q521>[C] == 0;
+  [linear] <24>:  -<X1111>[C] -<X2111>[C] -<X3111>[C] +<Z1111>[C] +<Z1121>[C] == 0;
+  [linear] <25>:  -<X1121>[C] -<X2121>[C] -<X3121>[C] +<Z1211>[C] +<Z1221>[C] == 0;
+  [linear] <26>:  -600<D111>[B] +<Z1121>[C] <= 0;
+  [linear] <27>:  +180<D111>[B] -<Z1111>[C] <= 0;
+  [linear] <28>:  -300<D121>[B] +<Z1221>[C] <= 0;
+  [linear] <29>:  +80<D121>[B] -<Z1211>[C] <= 0;
+  [linear] <30>:  -<Z1111>[C] -<Z1121>[C] -2<Z1211>[C] -2<Z1221>[C] +<W11>[C] == 0;
+  [linear] <31>:  -350<G11>[B] +<W11>[C] <= 0;
+  [linear] <32>:  -200<G11>[B] +<W11>[C] >= 0;
+  [linear] <33>: <G11>[B] -<B11>[B] <= 0;
+  [linear] <34>:  -<X1211>[C] -<X2211>[C] -<X3211>[C] +<Z2111>[C] +<Z2121>[C] == 0;
+  [linear] <35>:  -<X1221>[C] -<X2221>[C] -<X3221>[C] +<Z2211>[C] +<Z2221>[C] == 0;
+  [linear] <36>:  -600<D211>[B] +<Z2121>[C] <= 0;
+  [linear] <37>:  +180<D211>[B] -<Z2111>[C] <= 0;
+  [linear] <38>:  -300<D221>[B] +<Z2221>[C] <= 0;
+  [linear] <39>:  +80<D221>[B] -<Z2211>[C] <= 0;
+  [linear] <40>:  -<Z2111>[C] -<Z2121>[C] -2<Z2211>[C] -2<Z2221>[C] +<W21>[C] == 0;
+  [linear] <41>:  -500<G21>[B] +<W21>[C] <= 0;
+  [linear] <42>:  -350<G21>[B] +<W21>[C] >= 0;
+  [linear] <43>: <G21>[B] -<B21>[B] <= 0;
+  [linear] <44>:  -<X1311>[C] -<X2311>[C] -<X3311>[C] +<Z3111>[C] +<Z3121>[C] == 0;
+  [linear] <45>:  -<X1321>[C] -<X2321>[C] -<X3321>[C] +<Z3211>[C] +<Z3221>[C] == 0;
+  [linear] <46>:  -600<D311>[B] +<Z3121>[C] <= 0;
+  [linear] <47>:  +180<D311>[B] -<Z3111>[C] <= 0;
+  [linear] <48>:  -300<D321>[B] +<Z3221>[C] <= 0;
+  [linear] <49>:  +80<D321>[B] -<Z3211>[C] <= 0;
+  [linear] <50>:  -<Z3111>[C] -<Z3121>[C] -2<Z3211>[C] -2<Z3221>[C] +<W31>[C] == 0;
+  [linear] <51>:  -225<G31>[B] +<W31>[C] <= 0;
+  [linear] <52>:  -100<G31>[B] +<W31>[C] >= 0;
+  [linear] <53>: <G31>[B] -<B31>[B] <= 0;
+  [linear] <54>:  -<X1411>[C] -<X2411>[C] -<X3411>[C] +<Z4111>[C] +<Z4121>[C] == 0;
+  [linear] <55>:  -<X1421>[C] -<X2421>[C] -<X3421>[C] +<Z4211>[C] +<Z4221>[C] == 0;
+  [linear] <56>:  -600<D411>[B] +<Z4121>[C] <= 0;
+  [linear] <57>:  +180<D411>[B] -<Z4111>[C] <= 0;
+  [linear] <58>:  -300<D421>[B] +<Z4221>[C] <= 0;
+  [linear] <59>:  +80<D421>[B] -<Z4211>[C] <= 0;
+  [linear] <60>:  -<Z4111>[C] -<Z4121>[C] -2<Z4211>[C] -2<Z4221>[C] +<W41>[C] == 0;
+  [linear] <61>:  -410<G41>[B] +<W41>[C] <= 0;
+  [linear] <62>:  -200<G41>[B] +<W41>[C] >= 0;
+  [linear] <63>: <G41>[B] -<B41>[B] <= 0;
+  [linear] <64>:  -<X1511>[C] -<X2511>[C] -<X3511>[C] +<Z5111>[C] +<Z5121>[C] == 0;
+  [linear] <65>:  -<X1521>[C] -<X2521>[C] -<X3521>[C] +<Z5211>[C] +<Z5221>[C] == 0;
+  [linear] <66>:  -600<D511>[B] +<Z5121>[C] <= 0;
+  [linear] <67>:  +180<D511>[B] -<Z5111>[C] <= 0;
+  [linear] <68>:  -300<D521>[B] +<Z5221>[C] <= 0;
+  [linear] <69>:  +80<D521>[B] -<Z5211>[C] <= 0;
+  [linear] <70>:  -<Z5111>[C] -<Z5121>[C] -2<Z5211>[C] -2<Z5221>[C] +<W51>[C] == 0;
+  [linear] <71>:  -320<G51>[B] +<W51>[C] <= 0;
+  [linear] <72>:  -100<G51>[B] +<W51>[C] >= 0;
+  [linear] <73>: <G51>[B] -<B51>[B] <= 0;
+  [linear] <74>:  -<G11>[B] -<G21>[B] -<G31>[B] -<G41>[B] -<G51>[B] +<H11>[B] +<H21>[B] +<H31>[B] +<H41>[B] +<H51>[B] == 0;
+  [linear] <75>:  -<H11>[B] +<H21>[B] <= 0;
+  [linear] <76>:  -<H21>[B] +<H31>[B] <= 0;
+  [linear] <77>:  -<H31>[B] +<H41>[B] <= 0;
+  [linear] <78>:  -<H41>[B] +<H51>[B] <= 0;
+  [linear] <79>: <Y1111>[C] +<Y2111>[C] +<Y3111>[C] +<Y4111>[C] +<Y5111>[C] >= 28;
+  [linear] <80>: <Y1121>[C] +<Y2121>[C] +<Y3121>[C] +<Y4121>[C] +<Y5121>[C] >= 16;
+  [linear] <81>: <Y1211>[C] +<Y2211>[C] +<Y3211>[C] +<Y4211>[C] +<Y5211>[C] >= 42;
+  [linear] <82>: <Y1221>[C] +<Y2221>[C] +<Y3221>[C] +<Y4221>[C] +<Y5221>[C] >= 25;
+  [linear] <83>: <Y1311>[C] +<Y2311>[C] +<Y3311>[C] +<Y4311>[C] +<Y5311>[C] >= 63;
+  [linear] <84>: <Y1321>[C] +<Y2321>[C] +<Y3321>[C] +<Y4321>[C] +<Y5321>[C] >= 36;
+  [linear] <85>: <Y1411>[C] +<Y2411>[C] +<Y3411>[C] +<Y4411>[C] +<Y5411>[C] >= 24;
+  [linear] <86>: <Y1421>[C] +<Y2421>[C] +<Y3421>[C] +<Y4421>[C] +<Y5421>[C] >= 15;
+  [linear] <87>: <Y1511>[C] +<Y2511>[C] +<Y3511>[C] +<Y4511>[C] +<Y5511>[C] >= 36;
+  [linear] <88>: <Y1521>[C] +<Y2521>[C] +<Y3521>[C] +<Y4521>[C] +<Y5521>[C] >= 10;
+  [linear] <89>: <Y1611>[C] +<Y2611>[C] +<Y3611>[C] +<Y4611>[C] +<Y5611>[C] >= 71;
+  [linear] <90>: <Y1621>[C] +<Y2621>[C] +<Y3621>[C] +<Y4621>[C] +<Y5621>[C] >= 26;
+  [linear] <91>: <Y1711>[C] +<Y2711>[C] +<Y3711>[C] +<Y4711>[C] +<Y5711>[C] >= 34;
+  [linear] <92>: <Y1721>[C] +<Y2721>[C] +<Y3721>[C] +<Y4721>[C] +<Y5721>[C] >= 16;
+  [linear] <93>: <Y1811>[C] +<Y2811>[C] +<Y3811>[C] +<Y4811>[C] +<Y5811>[C] >= 27;
+  [linear] <94>: <Y1821>[C] +<Y2821>[C] +<Y3821>[C] +<Y4821>[C] +<Y5821>[C] >= 9;
+  [linear] <95>: <Y1911>[C] +<Y2911>[C] +<Y3911>[C] +<Y4911>[C] +<Y5911>[C] >= 66;
+  [linear] <96>: <Y1921>[C] +<Y2921>[C] +<Y3921>[C] +<Y4921>[C] +<Y5921>[C] >= 28;
+  [linear] <97>: <X1112>[C] +<X1212>[C] +<X1312>[C] +<X1412>[C] +<X1512>[C] -<S112>[C] <= 0;
+  [linear] <98>: <X1122>[C] +<X1222>[C] +<X1322>[C] +<X1422>[C] +<X1522>[C] -<S122>[C] <= 0;
+  [linear] <99>: <X2112>[C] +<X2212>[C] +<X2312>[C] +<X2412>[C] +<X2512>[C] -<S212>[C] <= 0;
+  [linear] <100>: <X2122>[C] +<X2222>[C] +<X2322>[C] +<X2422>[C] +<X2522>[C] -<S222>[C] <= 0;
+  [linear] <101>: <X3112>[C] +<X3212>[C] +<X3312>[C] +<X3412>[C] +<X3512>[C] -<S312>[C] <= 0;
+  [linear] <102>: <X3122>[C] +<X3222>[C] +<X3322>[C] +<X3422>[C] +<X3522>[C] -<S322>[C] <= 0;
+  [linear] <103>: <S112>[C] <= 230;
+  [linear] <104>: <S212>[C] <= 265;
+  [linear] <105>: <S312>[C] <= 207;
+  [linear] <106>: <S122>[C] <= 140;
+  [linear] <107>: <S222>[C] <= 110;
+  [linear] <108>: <S322>[C] <= 135;
+  [linear] <109>: <Q111>[C] +<X1112>[C] +<X2112>[C] +<X3112>[C] -<Y1112>[C] -<Y1212>[C] -<Y1312>[C] -<Y1412>[C] -<Y1512>[C] -<Y1612>[C] -<Y1712>[C] -<Y1812>[C] -<Y1912>[C] -<Q112>[C] == 0;
+  [linear] <110>: <Q121>[C] +<X1122>[C] +<X2122>[C] +<X3122>[C] -<Y1122>[C] -<Y1222>[C] -<Y1322>[C] -<Y1422>[C] -<Y1522>[C] -<Y1622>[C] -<Y1722>[C] -<Y1822>[C] -<Y1922>[C] -<Q122>[C] == 0;
+  [linear] <111>: <Q211>[C] +<X1212>[C] +<X2212>[C] +<X3212>[C] -<Y2112>[C] -<Y2212>[C] -<Y2312>[C] -<Y2412>[C] -<Y2512>[C] -<Y2612>[C] -<Y2712>[C] -<Y2812>[C] -<Y2912>[C] -<Q212>[C] == 0;
+  [linear] <112>: <Q221>[C] +<X1222>[C] +<X2222>[C] +<X3222>[C] -<Y2122>[C] -<Y2222>[C] -<Y2322>[C] -<Y2422>[C] -<Y2522>[C] -<Y2622>[C] -<Y2722>[C] -<Y2822>[C] -<Y2922>[C] -<Q222>[C] == 0;
+  [linear] <113>: <Q311>[C] +<X1312>[C] +<X2312>[C] +<X3312>[C] -<Y3112>[C] -<Y3212>[C] -<Y3312>[C] -<Y3412>[C] -<Y3512>[C] -<Y3612>[C] -<Y3712>[C] -<Y3812>[C] -<Y3912>[C] -<Q312>[C] == 0;
+  [linear] <114>: <Q321>[C] +<X1322>[C] +<X2322>[C] +<X3322>[C] -<Y3122>[C] -<Y3222>[C] -<Y3322>[C] -<Y3422>[C] -<Y3522>[C] -<Y3622>[C] -<Y3722>[C] -<Y3822>[C] -<Y3922>[C] -<Q322>[C] == 0;
+  [linear] <115>: <Q411>[C] +<X1412>[C] +<X2412>[C] +<X3412>[C] -<Y4112>[C] -<Y4212>[C] -<Y4312>[C] -<Y4412>[C] -<Y4512>[C] -<Y4612>[C] -<Y4712>[C] -<Y4812>[C] -<Y4912>[C] -<Q412>[C] == 0;
+  [linear] <116>: <Q421>[C] +<X1422>[C] +<X2422>[C] +<X3422>[C] -<Y4122>[C] -<Y4222>[C] -<Y4322>[C] -<Y4422>[C] -<Y4522>[C] -<Y4622>[C] -<Y4722>[C] -<Y4822>[C] -<Y4922>[C] -<Q422>[C] == 0;
+  [linear] <117>: <Q511>[C] +<X1512>[C] +<X2512>[C] +<X3512>[C] -<Y5112>[C] -<Y5212>[C] -<Y5312>[C] -<Y5412>[C] -<Y5512>[C] -<Y5612>[C] -<Y5712>[C] -<Y5812>[C] -<Y5912>[C] -<Q512>[C] == 0;
+  [linear] <118>: <Q521>[C] +<X1522>[C] +<X2522>[C] +<X3522>[C] -<Y5122>[C] -<Y5222>[C] -<Y5322>[C] -<Y5422>[C] -<Y5522>[C] -<Y5622>[C] -<Y5722>[C] -<Y5822>[C] -<Y5922>[C] -<Q522>[C] == 0;
+  [linear] <119>:  -<X1112>[C] -<X2112>[C] -<X3112>[C] +<Z1112>[C] +<Z1122>[C] == 0;
+  [linear] <120>:  -<X1122>[C] -<X2122>[C] -<X3122>[C] +<Z1212>[C] +<Z1222>[C] == 0;
+  [linear] <121>:  -600<D112>[B] +<Z1122>[C] <= 0;
+  [linear] <122>:  +180<D112>[B] -<Z1112>[C] <= 0;
+  [linear] <123>:  -300<D122>[B] +<Z1222>[C] <= 0;
+  [linear] <124>:  +80<D122>[B] -<Z1212>[C] <= 0;
+  [linear] <125>:  -<Z1112>[C] -<Z1122>[C] -2<Z1212>[C] -2<Z1222>[C] +<W12>[C] == 0;
+  [linear] <126>:  -350<G12>[B] +<W12>[C] <= 0;
+  [linear] <127>:  -200<G12>[B] +<W12>[C] >= 0;
+  [linear] <128>:  -<B11>[B] +<G12>[B] -<B12>[B] <= 0;
+  [linear] <129>:  -<X1212>[C] -<X2212>[C] -<X3212>[C] +<Z2112>[C] +<Z2122>[C] == 0;
+  [linear] <130>:  -<X1222>[C] -<X2222>[C] -<X3222>[C] +<Z2212>[C] +<Z2222>[C] == 0;
+  [linear] <131>:  -600<D212>[B] +<Z2122>[C] <= 0;
+  [linear] <132>:  +180<D212>[B] -<Z2112>[C] <= 0;
+  [linear] <133>:  -300<D222>[B] +<Z2222>[C] <= 0;
+  [linear] <134>:  +80<D222>[B] -<Z2212>[C] <= 0;
+  [linear] <135>:  -<Z2112>[C] -<Z2122>[C] -2<Z2212>[C] -2<Z2222>[C] +<W22>[C] == 0;
+  [linear] <136>:  -500<G22>[B] +<W22>[C] <= 0;
+  [linear] <137>:  -350<G22>[B] +<W22>[C] >= 0;
+  [linear] <138>:  -<B21>[B] +<G22>[B] -<B22>[B] <= 0;
+  [linear] <139>:  -<X1312>[C] -<X2312>[C] -<X3312>[C] +<Z3112>[C] +<Z3122>[C] == 0;
+  [linear] <140>:  -<X1322>[C] -<X2322>[C] -<X3322>[C] +<Z3212>[C] +<Z3222>[C] == 0;
+  [linear] <141>:  -600<D312>[B] +<Z3122>[C] <= 0;
+  [linear] <142>:  +180<D312>[B] -<Z3112>[C] <= 0;
+  [linear] <143>:  -300<D322>[B] +<Z3222>[C] <= 0;
+  [linear] <144>:  +80<D322>[B] -<Z3212>[C] <= 0;
+  [linear] <145>:  -<Z3112>[C] -<Z3122>[C] -2<Z3212>[C] -2<Z3222>[C] +<W32>[C] == 0;
+  [linear] <146>:  -225<G32>[B] +<W32>[C] <= 0;
+  [linear] <147>:  -100<G32>[B] +<W32>[C] >= 0;
+  [linear] <148>:  -<B31>[B] +<G32>[B] -<B32>[B] <= 0;
+  [linear] <149>:  -<X1412>[C] -<X2412>[C] -<X3412>[C] +<Z4112>[C] +<Z4122>[C] == 0;
+  [linear] <150>:  -<X1422>[C] -<X2422>[C] -<X3422>[C] +<Z4212>[C] +<Z4222>[C] == 0;
+  [linear] <151>:  -600<D412>[B] +<Z4122>[C] <= 0;
+  [linear] <152>:  +180<D412>[B] -<Z4112>[C] <= 0;
+  [linear] <153>:  -300<D422>[B] +<Z4222>[C] <= 0;
+  [linear] <154>:  +80<D422>[B] -<Z4212>[C] <= 0;
+  [linear] <155>:  -<Z4112>[C] -<Z4122>[C] -2<Z4212>[C] -2<Z4222>[C] +<W42>[C] == 0;
+  [linear] <156>:  -410<G42>[B] +<W42>[C] <= 0;
+  [linear] <157>:  -200<G42>[B] +<W42>[C] >= 0;
+  [linear] <158>:  -<B41>[B] +<G42>[B] -<B42>[B] <= 0;
+  [linear] <159>:  -<X1512>[C] -<X2512>[C] -<X3512>[C] +<Z5112>[C] +<Z5122>[C] == 0;
+  [linear] <160>:  -<X1522>[C] -<X2522>[C] -<X3522>[C] +<Z5212>[C] +<Z5222>[C] == 0;
+  [linear] <161>:  -600<D512>[B] +<Z5122>[C] <= 0;
+  [linear] <162>:  +180<D512>[B] -<Z5112>[C] <= 0;
+  [linear] <163>:  -300<D522>[B] +<Z5222>[C] <= 0;
+  [linear] <164>:  +80<D522>[B] -<Z5212>[C] <= 0;
+  [linear] <165>:  -<Z5112>[C] -<Z5122>[C] -2<Z5212>[C] -2<Z5222>[C] +<W52>[C] == 0;
+  [linear] <166>:  -320<G52>[B] +<W52>[C] <= 0;
+  [linear] <167>:  -100<G52>[B] +<W52>[C] >= 0;
+  [linear] <168>:  -<B51>[B] +<G52>[B] -<B52>[B] <= 0;
+  [linear] <169>:  -<G12>[B] -<G22>[B] -<G32>[B] -<G42>[B] -<G52>[B] +<H12>[B] +<H22>[B] +<H32>[B] +<H42>[B] +<H52>[B] == 0;
+  [linear] <170>:  -<H12>[B] +<H22>[B] <= 0;
+  [linear] <171>:  -<H22>[B] +<H32>[B] <= 0;
+  [linear] <172>:  -<H32>[B] +<H42>[B] <= 0;
+  [linear] <173>:  -<H42>[B] +<H52>[B] <= 0;
+  [linear] <174>: <Y1112>[C] +<Y2112>[C] +<Y3112>[C] +<Y4112>[C] +<Y5112>[C] >= 33;
+  [linear] <175>: <Y1122>[C] +<Y2122>[C] +<Y3122>[C] +<Y4122>[C] +<Y5122>[C] >= 21;
+  [linear] <176>: <Y1212>[C] +<Y2212>[C] +<Y3212>[C] +<Y4212>[C] +<Y5212>[C] >= 47;
+  [linear] <177>: <Y1222>[C] +<Y2222>[C] +<Y3222>[C] +<Y4222>[C] +<Y5222>[C] >= 30;
+  [linear] <178>: <Y1312>[C] +<Y2312>[C] +<Y3312>[C] +<Y4312>[C] +<Y5312>[C] >= 68;
+  [linear] <179>: <Y1322>[C] +<Y2322>[C] +<Y3322>[C] +<Y4322>[C] +<Y5322>[C] >= 41;
+  [linear] <180>: <Y1412>[C] +<Y2412>[C] +<Y3412>[C] +<Y4412>[C] +<Y5412>[C] >= 29;
+  [linear] <181>: <Y1422>[C] +<Y2422>[C] +<Y3422>[C] +<Y4422>[C] +<Y5422>[C] >= 20;
+  [linear] <182>: <Y1512>[C] +<Y2512>[C] +<Y3512>[C] +<Y4512>[C] +<Y5512>[C] >= 31;
+  [linear] <183>: <Y1522>[C] +<Y2522>[C] +<Y3522>[C] +<Y4522>[C] +<Y5522>[C] >= 15;
+  [linear] <184>: <Y1612>[C] +<Y2612>[C] +<Y3612>[C] +<Y4612>[C] +<Y5612>[C] >= 76;
+  [linear] <185>: <Y1622>[C] +<Y2622>[C] +<Y3622>[C] +<Y4622>[C] +<Y5622>[C] >= 31;
+  [linear] <186>: <Y1712>[C] +<Y2712>[C] +<Y3712>[C] +<Y4712>[C] +<Y5712>[C] >= 39;
+  [linear] <187>: <Y1722>[C] +<Y2722>[C] +<Y3722>[C] +<Y4722>[C] +<Y5722>[C] >= 21;
+  [linear] <188>: <Y1812>[C] +<Y2812>[C] +<Y3812>[C] +<Y4812>[C] +<Y5812>[C] >= 32;
+  [linear] <189>: <Y1822>[C] +<Y2822>[C] +<Y3822>[C] +<Y4822>[C] +<Y5822>[C] >= 14;
+  [linear] <190>: <Y1912>[C] +<Y2912>[C] +<Y3912>[C] +<Y4912>[C] +<Y5912>[C] >= 71;
+  [linear] <191>: <Y1922>[C] +<Y2922>[C] +<Y3922>[C] +<Y4922>[C] +<Y5922>[C] >= 33;
+  [linear] <192>: <X1113>[C] +<X1213>[C] +<X1313>[C] +<X1413>[C] +<X1513>[C] -<S113>[C] <= 0;
+  [linear] <193>: <X1123>[C] +<X1223>[C] +<X1323>[C] +<X1423>[C] +<X1523>[C] -<S123>[C] <= 0;
+  [linear] <194>: <X2113>[C] +<X2213>[C] +<X2313>[C] +<X2413>[C] +<X2513>[C] -<S213>[C] <= 0;
+  [linear] <195>: <X2123>[C] +<X2223>[C] +<X2323>[C] +<X2423>[C] +<X2523>[C] -<S223>[C] <= 0;
+  [linear] <196>: <X3113>[C] +<X3213>[C] +<X3313>[C] +<X3413>[C] +<X3513>[C] -<S313>[C] <= 0;
+  [linear] <197>: <X3123>[C] +<X3223>[C] +<X3323>[C] +<X3423>[C] +<X3523>[C] -<S323>[C] <= 0;
+  [linear] <198>: <S113>[C] <= 230;
+  [linear] <199>: <S213>[C] <= 265;
+  [linear] <200>: <S313>[C] <= 207;
+  [linear] <201>: <S123>[C] <= 140;
+  [linear] <202>: <S223>[C] <= 110;
+  [linear] <203>: <S323>[C] <= 135;
+  [linear] <204>: <Q112>[C] +<X1113>[C] +<X2113>[C] +<X3113>[C] -<Y1113>[C] -<Y1213>[C] -<Y1313>[C] -<Y1413>[C] -<Y1513>[C] -<Y1613>[C] -<Y1713>[C] -<Y1813>[C] -<Y1913>[C] == 0;
+  [linear] <205>: <Q122>[C] +<X1123>[C] +<X2123>[C] +<X3123>[C] -<Y1123>[C] -<Y1223>[C] -<Y1323>[C] -<Y1423>[C] -<Y1523>[C] -<Y1623>[C] -<Y1723>[C] -<Y1823>[C] -<Y1923>[C] == 0;
+  [linear] <206>: <Q212>[C] +<X1213>[C] +<X2213>[C] +<X3213>[C] -<Y2113>[C] -<Y2213>[C] -<Y2313>[C] -<Y2413>[C] -<Y2513>[C] -<Y2613>[C] -<Y2713>[C] -<Y2813>[C] -<Y2913>[C] == 0;
+  [linear] <207>: <Q222>[C] +<X1223>[C] +<X2223>[C] +<X3223>[C] -<Y2123>[C] -<Y2223>[C] -<Y2323>[C] -<Y2423>[C] -<Y2523>[C] -<Y2623>[C] -<Y2723>[C] -<Y2823>[C] -<Y2923>[C] == 0;
+  [linear] <208>: <Q312>[C] +<X1313>[C] +<X2313>[C] +<X3313>[C] -<Y3113>[C] -<Y3213>[C] -<Y3313>[C] -<Y3413>[C] -<Y3513>[C] -<Y3613>[C] -<Y3713>[C] -<Y3813>[C] -<Y3913>[C] == 0;
+  [linear] <209>: <Q322>[C] +<X1323>[C] +<X2323>[C] +<X3323>[C] -<Y3123>[C] -<Y3223>[C] -<Y3323>[C] -<Y3423>[C] -<Y3523>[C] -<Y3623>[C] -<Y3723>[C] -<Y3823>[C] -<Y3923>[C] == 0;
+  [linear] <210>: <Q412>[C] +<X1413>[C] +<X2413>[C] +<X3413>[C] -<Y4113>[C] -<Y4213>[C] -<Y4313>[C] -<Y4413>[C] -<Y4513>[C] -<Y4613>[C] -<Y4713>[C] -<Y4813>[C] -<Y4913>[C] == 0;
+  [linear] <211>: <Q422>[C] +<X1423>[C] +<X2423>[C] +<X3423>[C] -<Y4123>[C] -<Y4223>[C] -<Y4323>[C] -<Y4423>[C] -<Y4523>[C] -<Y4623>[C] -<Y4723>[C] -<Y4823>[C] -<Y4923>[C] == 0;
+  [linear] <212>: <Q512>[C] +<X1513>[C] +<X2513>[C] +<X3513>[C] -<Y5113>[C] -<Y5213>[C] -<Y5313>[C] -<Y5413>[C] -<Y5513>[C] -<Y5613>[C] -<Y5713>[C] -<Y5813>[C] -<Y5913>[C] == 0;
+  [linear] <213>: <Q522>[C] +<X1523>[C] +<X2523>[C] +<X3523>[C] -<Y5123>[C] -<Y5223>[C] -<Y5323>[C] -<Y5423>[C] -<Y5523>[C] -<Y5623>[C] -<Y5723>[C] -<Y5823>[C] -<Y5923>[C] == 0;
+  [linear] <214>:  -<X1113>[C] -<X2113>[C] -<X3113>[C] +<Z1113>[C] +<Z1123>[C] == 0;
+  [linear] <215>:  -<X1123>[C] -<X2123>[C] -<X3123>[C] +<Z1213>[C] +<Z1223>[C] == 0;
+  [linear] <216>:  -600<D113>[B] +<Z1123>[C] <= 0;
+  [linear] <217>:  +180<D113>[B] -<Z1113>[C] <= 0;
+  [linear] <218>:  -300<D123>[B] +<Z1223>[C] <= 0;
+  [linear] <219>:  +80<D123>[B] -<Z1213>[C] <= 0;
+  [linear] <220>:  -<Z1113>[C] -<Z1123>[C] -2<Z1213>[C] -2<Z1223>[C] +<W13>[C] == 0;
+  [linear] <221>:  -350<G13>[B] +<W13>[C] <= 0;
+  [linear] <222>:  -200<G13>[B] +<W13>[C] >= 0;
+  [linear] <223>:  -<B11>[B] -<B12>[B] +<G13>[B] -<B13>[B] <= 0;
+  [linear] <224>:  -<X1213>[C] -<X2213>[C] -<X3213>[C] +<Z2113>[C] +<Z2123>[C] == 0;
+  [linear] <225>:  -<X1223>[C] -<X2223>[C] -<X3223>[C] +<Z2213>[C] +<Z2223>[C] == 0;
+  [linear] <226>:  -600<D213>[B] +<Z2123>[C] <= 0;
+  [linear] <227>:  +180<D213>[B] -<Z2113>[C] <= 0;
+  [linear] <228>:  -300<D223>[B] +<Z2223>[C] <= 0;
+  [linear] <229>:  +80<D223>[B] -<Z2213>[C] <= 0;
+  [linear] <230>:  -<Z2113>[C] -<Z2123>[C] -2<Z2213>[C] -2<Z2223>[C] +<W23>[C] == 0;
+  [linear] <231>:  -500<G23>[B] +<W23>[C] <= 0;
+  [linear] <232>:  -350<G23>[B] +<W23>[C] >= 0;
+  [linear] <233>:  -<B21>[B] -<B22>[B] +<G23>[B] -<B23>[B] <= 0;
+  [linear] <234>:  -<X1313>[C] -<X2313>[C] -<X3313>[C] +<Z3113>[C] +<Z3123>[C] == 0;
+  [linear] <235>:  -<X1323>[C] -<X2323>[C] -<X3323>[C] +<Z3213>[C] +<Z3223>[C] == 0;
+  [linear] <236>:  -600<D313>[B] +<Z3123>[C] <= 0;
+  [linear] <237>:  +180<D313>[B] -<Z3113>[C] <= 0;
+  [linear] <238>:  -300<D323>[B] +<Z3223>[C] <= 0;
+  [linear] <239>:  +80<D323>[B] -<Z3213>[C] <= 0;
+  [linear] <240>:  -<Z3113>[C] -<Z3123>[C] -2<Z3213>[C] -2<Z3223>[C] +<W33>[C] == 0;
+  [linear] <241>:  -225<G33>[B] +<W33>[C] <= 0;
+  [linear] <242>:  -100<G33>[B] +<W33>[C] >= 0;
+  [linear] <243>:  -<B31>[B] -<B32>[B] +<G33>[B] -<B33>[B] <= 0;
+  [linear] <244>:  -<X1413>[C] -<X2413>[C] -<X3413>[C] +<Z4113>[C] +<Z4123>[C] == 0;
+  [linear] <245>:  -<X1423>[C] -<X2423>[C] -<X3423>[C] +<Z4213>[C] +<Z4223>[C] == 0;
+  [linear] <246>:  -600<D413>[B] +<Z4123>[C] <= 0;
+  [linear] <247>:  +180<D413>[B] -<Z4113>[C] <= 0;
+  [linear] <248>:  -300<D423>[B] +<Z4223>[C] <= 0;
+  [linear] <249>:  +80<D423>[B] -<Z4213>[C] <= 0;
+  [linear] <250>:  -<Z4113>[C] -<Z4123>[C] -2<Z4213>[C] -2<Z4223>[C] +<W43>[C] == 0;
+  [linear] <251>:  -410<G43>[B] +<W43>[C] <= 0;
+  [linear] <252>:  -200<G43>[B] +<W43>[C] >= 0;
+  [linear] <253>:  -<B41>[B] -<B42>[B] +<G43>[B] -<B43>[B] <= 0;
+  [linear] <254>:  -<X1513>[C] -<X2513>[C] -<X3513>[C] +<Z5113>[C] +<Z5123>[C] == 0;
+  [linear] <255>:  -<X1523>[C] -<X2523>[C] -<X3523>[C] +<Z5213>[C] +<Z5223>[C] == 0;
+  [linear] <256>:  -600<D513>[B] +<Z5123>[C] <= 0;
+  [linear] <257>:  +180<D513>[B] -<Z5113>[C] <= 0;
+  [linear] <258>:  -300<D523>[B] +<Z5223>[C] <= 0;
+  [linear] <259>:  +80<D523>[B] -<Z5213>[C] <= 0;
+  [linear] <260>:  -<Z5113>[C] -<Z5123>[C] -2<Z5213>[C] -2<Z5223>[C] +<W53>[C] == 0;
+  [linear] <261>:  -320<G53>[B] +<W53>[C] <= 0;
+  [linear] <262>:  -100<G53>[B] +<W53>[C] >= 0;
+  [linear] <263>:  -<B51>[B] -<B52>[B] +<G53>[B] -<B53>[B] <= 0;
+  [linear] <264>:  -<G13>[B] -<G23>[B] -<G33>[B] -<G43>[B] -<G53>[B] +<H13>[B] +<H23>[B] +<H33>[B] +<H43>[B] +<H53>[B] == 0;
+  [linear] <265>:  -<H13>[B] +<H23>[B] <= 0;
+  [linear] <266>:  -<H23>[B] +<H33>[B] <= 0;
+  [linear] <267>:  -<H33>[B] +<H43>[B] <= 0;
+  [linear] <268>:  -<H43>[B] +<H53>[B] <= 0;
+  [linear] <269>: <Y1113>[C] +<Y2113>[C] +<Y3113>[C] +<Y4113>[C] +<Y5113>[C] >= 38;
+  [linear] <270>: <Y1123>[C] +<Y2123>[C] +<Y3123>[C] +<Y4123>[C] +<Y5123>[C] >= 26;
+  [linear] <271>: <Y1213>[C] +<Y2213>[C] +<Y3213>[C] +<Y4213>[C] +<Y5213>[C] >= 52;
+  [linear] <272>: <Y1223>[C] +<Y2223>[C] +<Y3223>[C] +<Y4223>[C] +<Y5223>[C] >= 35;
+  [linear] <273>: <Y1313>[C] +<Y2313>[C] +<Y3313>[C] +<Y4313>[C] +<Y5313>[C] >= 73;
+  [linear] <274>: <Y1323>[C] +<Y2323>[C] +<Y3323>[C] +<Y4323>[C] +<Y5323>[C] >= 46;
+  [linear] <275>: <Y1413>[C] +<Y2413>[C] +<Y3413>[C] +<Y4413>[C] +<Y5413>[C] >= 34;
+  [linear] <276>: <Y1423>[C] +<Y2423>[C] +<Y3423>[C] +<Y4423>[C] +<Y5423>[C] >= 25;
+  [linear] <277>: <Y1513>[C] +<Y2513>[C] +<Y3513>[C] +<Y4513>[C] +<Y5513>[C] >= 36;
+  [linear] <278>: <Y1523>[C] +<Y2523>[C] +<Y3523>[C] +<Y4523>[C] +<Y5523>[C] >= 20;
+  [linear] <279>: <Y1613>[C] +<Y2613>[C] +<Y3613>[C] +<Y4613>[C] +<Y5613>[C] >= 81;
+  [linear] <280>: <Y1623>[C] +<Y2623>[C] +<Y3623>[C] +<Y4623>[C] +<Y5623>[C] >= 36;
+  [linear] <281>: <Y1713>[C] +<Y2713>[C] +<Y3713>[C] +<Y4713>[C] +<Y5713>[C] >= 44;
+  [linear] <282>: <Y1723>[C] +<Y2723>[C] +<Y3723>[C] +<Y4723>[C] +<Y5723>[C] >= 26;
+  [linear] <283>: <Y1813>[C] +<Y2813>[C] +<Y3813>[C] +<Y4813>[C] +<Y5813>[C] >= 37;
+  [linear] <284>: <Y1823>[C] +<Y2823>[C] +<Y3823>[C] +<Y4823>[C] +<Y5823>[C] >= 19;
+  [linear] <285>: <Y1913>[C] +<Y2913>[C] +<Y3913>[C] +<Y4913>[C] +<Y5913>[C] >= 76;
+  [linear] <286>: <Y1923>[C] +<Y2923>[C] +<Y3923>[C] +<Y4923>[C] +<Y5923>[C] >= 38;
+  [linear] <287>: <B11>[B] +<B12>[B] +<B13>[B] <= 1;
+  [linear] <288>: <B21>[B] +<B22>[B] +<B23>[B] <= 1;
+  [linear] <289>: <B31>[B] +<B32>[B] +<B33>[B] <= 1;
+  [linear] <290>: <B41>[B] +<B42>[B] +<B43>[B] <= 1;
+  [linear] <291>: <B51>[B] +<B52>[B] +<B53>[B] <= 1;
+END

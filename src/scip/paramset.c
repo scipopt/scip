@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   paramset.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for handling parameter settings
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -2869,6 +2870,33 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "heuristics/crossover/dontwaitatroot", TRUE, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "heuristics/crossover/nodesquot", 0.15, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "heuristics/crossover/minfixingrate", 0.5, quiet) );
+   }
+
+   /* set specific parameters for Adaptive Large Neighborhood Search heuristic, if the heuristic is included */
+#ifndef NDEBUG
+   if( SCIPsetFindHeur(set, "alns") != NULL )
+#endif
+   {
+      /* activate all neighborhoods explicitly (keep list in alphabetic order) */
+      int nneighborhoods = 9;
+      const char* neighborhoodnames[] = {
+               "crossover",
+               "dins",
+               "localbranching",
+               "mutation",
+               "proximity",
+               "rens",
+               "rins",
+               "trustregion",
+               "zeroobjective"
+      };
+      for( i = 0; i < nneighborhoods; ++i )
+      {
+         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/active", neighborhoodnames[i]);
+         SCIP_CALL( paramSetBool(paramset, set, messagehdlr, paramname, TRUE, quiet) );
+      }
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "heuristics/alns/nodesquot", 0.2, quiet) );
+      SCIP_CALL( paramSetLongint(paramset, set, messagehdlr, "heuristics/alns/nodesofs", (SCIP_Longint)2000, quiet) );
    }
 
    return SCIP_OKAY;

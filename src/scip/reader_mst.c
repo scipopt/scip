@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_mst.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  file reader for partial primal solutions (like MIP-start of Cplex)
  * @author Jakob Witzig
  *

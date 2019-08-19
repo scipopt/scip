@@ -30,6 +30,7 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
+#include "scip/type_event.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_misc.h"

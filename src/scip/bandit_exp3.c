@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   bandit_exp3.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for Exp.3 bandit selection
  * @author Gregor Hendel
  */

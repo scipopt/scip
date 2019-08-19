@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_orbitope.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for (partitioning/packing/full) orbitope constraints w.r.t. the full symmetric group
  * @author Timo Berthold
  * @author Marc Pfetsch
@@ -62,9 +63,20 @@
  * Optimization Online: http://www.optimization-online.org/DB_HTML/2017/10/6301.html
  *
  * Two linear time propagation algorithms for full orbitopes are described in this paper, a static
- * version and a dynamic one. We implemented the static version as well as a modified version of
- * the dynamic one. The reason for the latter is to simplify the compatibility with full orbitope
- * cutting planes.
+ * version and a dynamic one. While the static version uses a fixed variable order, the dynamic
+ * version determines the variable order during the solving process via branching descisions.
+ * We implemented the static version as well as a modified version of the dynamic one. The reason
+ * for the latter is to simplify the compatibility with full orbitope cutting planes.
+ *
+ * Note, however, that the dynamic version may lead to conflicts if orbitopes are copied to subSCIPs.
+ * Since the dynamic version is based on branching decisions, which may be different in main SCIP
+ * and subSCIPs, orbitopes using the dynamic algorithm are not allowed to be copied. However, as a
+ * user might use orbitopes to enforce a certain variable ordering in a solution, we distinguish
+ * whether an orbitope is a model constraint or not. If it is a model constraint, we assume that
+ * a variable order has already been fixed and disable the dynamic algorithm. In this case, orbitope
+ * constraints are copied to subSCIPs. If it is not a model constraint, the orbitope was added to
+ * handle symmetries but not to enforce a solution to have a certain structure. In this case, the
+ * dynamic algorithm can be used and we do not copy orbitope constraints to subSCIPs.
  *
  * Polytopes associated with symmetry handling@n
  * Christopher Hojny and Marc E. Pfetsch,@n
@@ -110,7 +122,7 @@
 #define CONSHDLR_SEPAPRIORITY    +40100 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY  -1005200 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -1005200 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
@@ -124,7 +136,6 @@
 
 #define DEFAULT_PPORBITOPE         TRUE /**< whether we check if full orbitopes can be strengthened to packing/partitioning orbitopes */
 #define DEFAULT_SEPAFULLORBITOPE  FALSE /**< whether we separate inequalities for full orbitopes */
-#define DEFAULT_CHECKALWAYSFEAS    TRUE /**< whether check routine returns always SCIP_FEASIBLE */
 #define DEFAULT_USEDYNAMICPROP     TRUE /**< whether we use a dynamic version of the propagation routine */
 
 /*
@@ -136,7 +147,6 @@ struct SCIP_ConshdlrData
 {
    SCIP_Bool             checkpporbitope;    /**< whether we allow upgrading to packing/partitioning orbitopes */
    SCIP_Bool             sepafullorbitope;   /**< whether we separate inequalities for full orbitopes orbitopes */
-   SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
    SCIP_Bool             usedynamicprop;     /**< whether we use a dynamic version of the propagation routine */
 };
 
@@ -159,6 +169,7 @@ struct SCIP_ConsData
                                               *   is used. */
    SCIP_Bool*            rowused;            /**< whether a row has been considered in roworder */
    int                   nrowsused;          /**< number of rows that have already been considered in roworder */
+   SCIP_Bool             ismodelcons;        /**< whether the orbitope is a model constraint */
 };
 
 
@@ -225,8 +236,9 @@ SCIP_RETCODE consdataCreate(
    int                   nblocks,            /**< number of symmetric variable blocks               <=> q */
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint                             */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved?                         */
-   SCIP_Bool             usedynamicprop      /**< whether we use a dynamic version of the propagation routine */
-   )
+   SCIP_Bool             usedynamicprop,     /**< whether we use a dynamic version of the propagation routine */
+   SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
+)
 {
    int i;
    int j;
@@ -269,6 +281,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->orbitopetype = orbitopetype;
    (*consdata)->resolveprop = resolveprop;
    (*consdata)->istrianglefixed = FALSE;
+   (*consdata)->ismodelcons = ismodelcons;
 
    /* get transformed variables, if we are in the transformed problem */
    if ( SCIPisTransformed(scip) )
@@ -390,7 +403,7 @@ SCIP_RETCODE strenghtenOrbitopeConstraint(
 
          /* get set packing/partitioning variables */
          nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
-         assert( nsetppcvars > 0 );
+         assert( nsetppcvars > 0 || ! SCIPconsIsActive(setppcconss[c]) );
 
          /* partitioning constraint contains wrong number of variables */
          if ( nsetppcvars != ncols )
@@ -456,7 +469,7 @@ SCIP_RETCODE strenghtenOrbitopeConstraint(
 
          /* get set packing/partitioning variables */
          nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
-         assert( nsetppcvars > 0 );
+         assert( nsetppcvars > 0 || ! SCIPconsIsActive(setppcconss[c]) );
 
          /* packing/partitioning constraint contains too few variables */
          if ( nsetppcvars < ncols )
@@ -1921,7 +1934,7 @@ SCIP_RETCODE propagateCons(
 
    if ( orbitopetype == SCIP_ORBITOPETYPE_FULL )
    {
-      SCIP_CALL( propagateFullOrbitopeCons(scip, cons, infeasible, nfixedvars, usedynamicprop) );
+      SCIP_CALL( propagateFullOrbitopeCons(scip, cons, infeasible, nfixedvars, usedynamicprop && !consdata->ismodelcons) );
    }
    else
    {
@@ -1986,7 +1999,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    assert( consdata->orbitopetype == SCIP_ORBITOPETYPE_FULL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   dynamic = conshdlrdata->usedynamicprop;
+   dynamic = conshdlrdata->usedynamicprop && !consdata->ismodelcons;
    m = consdata->nspcons;
    n = consdata->nblocks;
    vars = consdata->vars;
@@ -2681,6 +2694,7 @@ SCIP_RETCODE checkFullOrbitopeSolution(
    assert( consdata->vars != NULL );
    assert( consdata->nspcons > 0 );
    assert( consdata->nblocks > 0 );
+   assert( ! consdata->ismodelcons ); /* non-model constraints are never checked */
 
    vars = consdata->vars;
    nrows = consdata->nspcons;
@@ -2864,7 +2878,8 @@ SCIP_RETCODE separateConstraints(
    int                   nconss,             /**< number of constraints */
    int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
    SCIP_SOL*             sol,                /**< solution to separate (NULL for the LP solution) */
-   SCIP_RESULT*          result              /**< pointer to store the result (should be initialized) */
+   SCIP_RESULT*          result,             /**< pointer to store the result (should be initialized) */
+   SCIP_Bool             enforce             /**< whether we enforce orbitope constraints */
    )
 {
    SCIP_Bool infeasible = FALSE;
@@ -2892,6 +2907,10 @@ SCIP_RETCODE separateConstraints(
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
 
+      /* do not enforce non-model constraints */
+      if ( enforce && !consdata->ismodelcons )
+         continue;
+
       /* get solution */
       copyValues(scip, consdata, sol);
 
@@ -2906,7 +2925,7 @@ SCIP_RETCODE separateConstraints(
       }
       else if ( conshdlrdata->sepafullorbitope )
       {
-         SCIP_CALL( separateCoversOrbisack(scip, conss[c], sol, conshdlrdata->usedynamicprop, &nconscuts, &infeasible) );
+         SCIP_CALL( separateCoversOrbisack(scip, conss[c], sol, conshdlrdata->usedynamicprop && !consdata->ismodelcons, &nconscuts, &infeasible) );
       }
       ncuts += nconscuts;
 
@@ -3015,7 +3034,7 @@ SCIP_DECL_CONSTRANS(consTransOrbitope)
 
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->vars, sourcedata->nspcons, sourcedata->nblocks,
-         sourcedata->orbitopetype, sourcedata->resolveprop, conshdlrdata->usedynamicprop) );
+         sourcedata->orbitopetype, sourcedata->resolveprop, conshdlrdata->usedynamicprop, sourcedata->ismodelcons) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -3045,7 +3064,7 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
    *result = SCIP_DIDNOTFIND;
 
    /* separate constraints */
-   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -3062,7 +3081,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
    *result = SCIP_DIDNOTFIND;
 
    /* separate constraints */
-   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, sol, result, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -3083,7 +3102,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbitope)
    *result = SCIP_FEASIBLE;
 
    /* separate constraints */
-   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -3101,7 +3120,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbitope)
    *result = SCIP_FEASIBLE;
 
    /* separate constraints */
-   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, sol, result, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -3137,6 +3156,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitope)
 
       assert( consdata != NULL );
 
+      /* do not enforce non-model constraints */
+      if ( !consdata->ismodelcons )
+         continue;
+
       orbitopetype = consdata->orbitopetype;
 
       if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
@@ -3164,7 +3187,6 @@ static
 SCIP_DECL_CONSCHECK(consCheckOrbitope)
 {  /*lint --e{715}*/
    int c;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_ORBITOPETYPE orbitopetype;
    SCIP_Bool feasible;
@@ -3176,12 +3198,6 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
 
    *result = SCIP_FEASIBLE;
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   if ( conshdlrdata->checkalwaysfeas )
-      return SCIP_OKAY;
-
    /* loop through constraints */
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
@@ -3189,6 +3205,10 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
       consdata = SCIPconsGetData(conss[c]);
 
       assert( consdata != NULL );
+
+      /* do not check non-model constraints */
+      if ( !consdata->ismodelcons )
+         continue;
 
       orbitopetype = consdata->orbitopetype;
 
@@ -3478,6 +3498,14 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    assert( sourcedata->nblocks > 0 );
    assert( sourcedata->vars != NULL );
 
+   /* do not copy non-model constraints */
+   if ( !sourcedata->ismodelcons )
+   {
+      *valid = FALSE;
+      
+      return SCIP_OKAY;
+   }
+
    nspcons = sourcedata->nspcons;
    nblocks = sourcedata->nblocks;
    sourcevars = sourcedata->vars;
@@ -3502,7 +3530,7 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
          name = SCIPconsGetName(sourcecons);
 
       SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name,
-            vars, sourcedata->orbitopetype, nspcons, nblocks, sourcedata->resolveprop,
+            vars, sourcedata->orbitopetype, nspcons, nblocks, sourcedata->resolveprop, sourcedata->ismodelcons,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
@@ -3633,7 +3661,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    while ( *s != ')' );
    ++nspcons;
 
-   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, TRUE,
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, TRUE, TRUE,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
    for (k = nspcons - 1; k >= 0; --k)
@@ -3743,10 +3771,6 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
          "Whether we separate inequalities for full orbitopes?",
          &conshdlrdata->sepafullorbitope, TRUE, DEFAULT_SEPAFULLORBITOPE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkalwaysfeas",
-         "Whether check routine returns always SCIP_FEASIBLE.",
-         &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
-
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/usedynamicprop",
          "Whether we use a dynamic version of the propagation routine.",
          &conshdlrdata->usedynamicprop, TRUE, DEFAULT_USEDYNAMICPROP, NULL, NULL) );
@@ -3773,6 +3797,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
+   SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -3801,7 +3826,6 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
-   SCIP_ORBITOPETYPE type;
 
    /* find the orbitope constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -3863,13 +3887,12 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    if ( conshdlrdata->checkpporbitope && orbitopetype != SCIP_ORBITOPETYPE_PARTITIONING
       && orbitopetype != SCIP_ORBITOPETYPE_PACKING )
    {
-      type = SCIP_ORBITOPETYPE_FULL;
-      SCIP_CALL( strenghtenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &type) );
+      SCIP_CALL( strenghtenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &orbitopetype) );
    }
 
    /* create constraint data */
    SCIP_CALL( consdataCreate(scip, &consdata, vars, nspcons, nblocks, orbitopetype,
-         resolveprop, conshdlrdata->usedynamicprop) );
+         resolveprop, conshdlrdata->usedynamicprop, ismodelcons) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -3891,10 +3914,11 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
    int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
-   SCIP_Bool             resolveprop         /**< should propagation be resolved? */
+   SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
+   SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
    )
 {
-   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, resolveprop,
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, resolveprop, ismodelcons,
          TRUE, TRUE, TRUE, TRUE, TRUE,
          FALSE, FALSE, FALSE, FALSE, FALSE) );
 

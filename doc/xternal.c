@@ -76,7 +76,7 @@
  *
  * \verbinclude output.log
  *
- * @version  6.0.1.3
+ * @version  6.0.2.4
  *
  * \image html scippy.png
  */
@@ -225,7 +225,10 @@
  */
 
 /**@page AUTHORS SCIP Authors
- * <a class="el" href="/index.php#developers">Developers</a>
+ *
+ * A list of all current and former developers as well as contributors can
+ * be found on the
+ * <a class="el" href="http://scip.zib.de/#developers">Main Web Page</a>.
  *
  */
 
@@ -568,21 +571,24 @@
  * It's recommended to use the latest stable CMake version available. `cmake --help` is also a good first step to see
  * available options and usage information.
  *
+ * Platform independent build instructions:
+ *
  * ```
- * cd scip
+ * cmake -Bbuild -H. [-DSOPLEX_DIR=/path/to/soplex]
+ * cmake --build build
+ * ```
+ *
+ * Linux/macOS Makefile-based build instructions:
+ *
+ * ```
  * mkdir build
  * cd build
  * cmake .. [-DSOPLEX_DIR=/path/to/soplex]
  * make
- *
  * # optional: run a quick check on some instances
- *
  * make check
- *
  * # optional: install scip executable, library, and headers
- *
  * make install
- *
  * ```
  *
  * CMake uses an out-of-source build, i.e., compiled binaries and object files are separated from the source tree and
@@ -623,7 +629,7 @@
  * GMP                  | on, off                        | GMP=[true, false]      | specify GMP_DIR if not found automatically |
  * IPOPT                | on, off                        | IPOPT=[true,false]     | requires IPOPT version >= 3.12.0; specify IPOPT_DIR if not found automatically |
  * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...                | See \ref LPI for a complete list; specify SOPLEX_DIR, CPLEX_DIR, MOSEK_DIR, ... if LP solver is not found automatically |
- * SYM                  | bliss, none                    | --                     | for bliss, specify BLISS_INCLUDE_DIR and BLISS_LIBRARY |
+ * SYM                  | bliss, none                    | --                     | for bliss, specify BLISS_DIR |
  * WORHP                | on, off                        | WORHP=[true,false]     | should worhp be linked; specify WORHP_DIR if not found automatically |
  * ZIMPL                | on, off                        | ZIMPL=[true, false]    | specify ZIMPL_DIR if not found automatically |
  * READLINE             | on, off                        | READLINE=[true, false] |                                            |
@@ -1256,16 +1262,16 @@
  * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="/index.php#download">SCIP download section</a>, download the latest release (version 4.0.0 as
+ * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
  *
- * If you want to download a precompiled binary, go to the <a href="/index.php#download">SCIP download
+ * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
  * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
- * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
- * the <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
+ * <a href="http://miplib2010.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
+ * the <a href="http://miplib2010.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
  *
  * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
  *
@@ -1308,7 +1314,7 @@
  * Passing starting solutions can increase the solving performance so that \SCIP does not need to construct an initial feasible solution
  * by itself. After reading the problem instance, use the "read" command again, this time with a file containing solution information.
  * Solutions can be specified in a raw or xml-format and must have the file extension ".sol", see the documentation of the
- * <a href="/doc/html/reader__sol_8h.php">solution reader of \SCIP</a> for further information.
+ * \ref reader_sol.h "solution reader of SCIP" for further information.
  *
  * Customized settings are not written or read with the "write" and "read" commands, but with the three commands
  *
@@ -1386,7 +1392,7 @@
  *
  *
  * We hope this tutorial gave you an overview of what is possible using the \SCIP interactive shell. Please also read our
- * \ref FAQ, in particular the section <a href="FAQ.php#faq_usingscipasastandalonesolver">Using \SCIP as a standalone MIP/MINLP-Solver</a>.
+ * \ref FAQ, in particular the section "Using SCIP as a standalone MIP/MINLP-Solver".
  *
  */
 
@@ -1394,25 +1400,44 @@
 
 /**@page DOC How to search the documentation for interface methods
  *
- * If you are looking for a method in order to perform a specific task, there are usually two places to look at:
- * - The file "scip.h" in the file list.
- *   In this main header file, you find all methods that perform "complex" operations that affect or need data from
- *   different components of \SCIP.
- *   For these methods, you always have to provide the \SCIP pointer that is created by SCIPcreate().
- *   The documentation of "scip.h" is grouped into several blocks, each dealing with methods for a specific kind of
- *   object.
- *   For example, all methods operating on variables are grouped together.
-
- * - The files \ref PUBLICCOREAPI "pub_<...>.h" contain methods that perform "easy" operations that only
- *   affect the corresponding objects.
- *   Usually, with these methods you can access the data of the object.
- *   For example, in "pub_var.h" you find methods to get information about a variable.
+ * If you are looking for a method in order to perform a specific task, the public \ref PUBLICAPI "SCIP C-API" is the place to look.
+ * - It contains interface methods for all SCIP structs, both in the solver core or in one of the plugins.
+ * - Plugins are mostly independent from each other, so to use them it is usually enough to browse the \ref PUBLICCOREAPI "Core API".
+ * - If you want to add your own plugins, see the \ref HOWTOADD pages for exhaustive information for each plugin type.
+ * - If you are learning SCIP with a concrete project in mind, looking at the available \ref EXAMPLES page may help you
+ *   getting started.
+ * - See also \ref START "How to start a new project"
  *
- * The file "pub_misc.h" contains methods for data structures like priority queues, hash tables, and hash maps,
- * as well as methods for sorting, numerics, random numbers, string operations, and file operations.
+ * Header file names of SCIP obey a consistent naming scheme: Type definitions and related objects such as enums are found in headers starting with "type_",
+ * such as \ref type_var.h , which contains enums and type definitions related to \ref PublicVariableMethods "SCIP problem variables".
+ * Definitions of the actual structs can be found in separate header files starting with "struct_".
+ * All method definitions of the public SCIP API are split across header files starting with "pub_" such as \ref pub_cons.h
+ * or headers starting with "scip_" such as \ref scip_cons.h .
+ * The latter headers starting with "scip_" contain more complex methods, which always receive a scip pointer as first argument.
+ * Those methods may affect several individual components controlled by SCIP. Such a method is SCIPbranchVar(), which
+ * affects the search tree, which is controlled by SCIP itself and not meant to be accessed by user plugins.
  *
- * If you are looking for a description of a callback method of a plugin that you want to implement, you have to
- * look at the corresponding \ref TYPEDEFINITIONS "type_<...>.h".
+ * It should be sufficient to include scip/scip.h and scip/scipdefplugins.h for having all
+ * needed functionality available in a project.
+ *
+ * If, for example, you are looking for information on how to create a problem instance, here are some steps you can take:
+ *
+ * 1. Browse the SCIP Core API and follow the path \ref PUBLICAPI > \ref PUBLICCOREAPI > \ref PublicProblemMethods > \ref GlobalProblemMethods > SCIPcreateProb()
+ * 2. Here you can find information on the function's return value, preconditions, postconditions, parameters, as well as related functions.
+ * 3. If you are unsure of how to use some of the parameters, it is worth looking for a basic version of the function.
+ *   This and other related functions may be found by either browsing neighboring functions and groups in the navigation tree to the left, or in the
+ *   'References' and 'Referenced by' section of the function documentation. In this case, you can find `SCIPcreateProbBasic()`.
+ *
+ * The opposite case is that you already know the name of a function as, e.g., SCIPbranchVar().
+ *
+ * 1. Type the name of the function into the search bar to find the function documentation.
+ * 2. In addition, you can find related methods by browsing the neighboring functions of the same group.
+ * 3. In this example, you may now learn about SCIPgetNLPBranchCands() to query all integer
+ *    variables with fractional LP solution value, which are good candidates for classical branching on variables.
+ *
+ * Note that the \ref INTERNALAPI "private SCIP API" contains more complex functions and data structures that fill specialized roles and
+ * is only for developers.
+ * Those functions are **not** exported to the library and are therefore **not available in user projects** using the \ref PUBLICAPI "public SCIP API".
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -6842,18 +6867,21 @@
  *    @refsnippet{src/scip/cons_linear.c,SnippetDebugAssertions}
  *
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
- *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
- *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
+ *    function <code>consCatchEvent()</code>. This is particularly important for, e.g., array indices like
+ *    the variable <code>pos</code> in this example, where using the <code>consdata->vars[pos]</code>
  *    pointer could result in unexspected behaviour
- *    if the asserted precondition on <code>pos</code> were not matched and \<pos\> were an arbitrary index
+ *    if the asserted precondition on <code>pos</code> were not matched and <code>pos</code> were an arbitrary index
  *    outside the array range.
  *
  *  - In order to activate assertions, use the <b>Debug mode</b> by compiling SCIP via
  *   \code
+ *    cmake -DCMAKE_BUILD_TYPE=Debug
+ *   \endcode
+ *   or the Makefile equivalent
+ *   \code
  *    make OPT=dbg
- *   \endcode and run the code. See \ref MAKE for further information about compiler options for SCIP.
- *
- *  - Spending only little extra time on
+ *   \endcode and run the code. See \ref CMAKE and \ref MAKE for further information about compiler options for SCIP.
+ *     As a rule of thumb, Spending only little extra time on
  *    asserting preconditions saves most of the time spent on debugging!
  *
  *  - Turn on <b>additional debug output</b> by adding the line
@@ -6872,17 +6900,19 @@
  *  - For checking the usage of SCIP memory, you can use
  *    <code>SCIPprintMemoryDiagnostic()</code>. This outputs memory that is currently in use,
  *    which can be useful after a <code>SCIPfree()</code> call.
- *  - If there are memory leaks for which you cannot detect the origin, you can remake your code with the option NOBLKBUFMEM=true
- *    (do not forget to clean your code before with <code>make OPT=... LPS=... clean</code>). After that valgrind (or similar) helps
+ *  - If there are memory leaks for which you cannot detect the origin, you can recompile your code with the option <code>cmake -DNOBLKBUFMEM=on</code>
+ *    (or <code>make NOBLKBUFMEM=true</code> if you are using the Makefile system.
+ *    Also for the Makefile system, do not forget to clean your code before with <code>make OPT=... LPS=... clean</code>)
+ *    Only with that change, valgrind (or similar) reliably helps
  *    to detect leaked memory.
  *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
  *    you can use the debugging mechanism (see \ref EXAMPLE_2). Therefore, a given solution is read and it
  *    is checked for every reduction, whether the solution will be pruned globally.
  *
  * @section EXAMPLE_1 How to activate debug messages
- * For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
- * in DBG mode, and run the SCIP interactive shell to solve p0033.mps from the
- * <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
+ * For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.c, recompile SCIP
+ * in Debug mode, and run the SCIP interactive shell to solve p0033.mps from the
+ * <a href="http://miplib2010.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  *
  * \include debugexamples/example1.txt
  *
@@ -6892,7 +6922,7 @@
  * The optimal solution can now be written to a file:
  * \include debugexamples/example2_1.txt
  *
- * If we afterwards recompile SCIP with the additional compiler flag <code>DEBUGSOL=true</code>,
+ * If we afterwards recompile SCIP with the additional compiler flag <code>cmake -DDEBUGSOL=on</code> (<code>make DEBUGSOL=true</code> in the Makefile system),
  * set the parameter <code>misc/debugsol = check/p0033.sol</code>, and run SCIP again it will output:
  * \include debugexamples/example2_2.txt
  * Further debug output would only appear, if the solution was cut off in the solving process.
@@ -7428,9 +7458,8 @@
   * The AMPL, GAMS, and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface originated <a
   * href="https://projects.coin-or.org/GAMSlinks">here</a>.
   *
-  * With \SCIP 3.0, a first beta version of a functional MATLAB interface has been released.  It supports solving MIPs
-  * and LPs defined by Matlab's matrix and vector types. The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI
-  * project</a> by Jonathan Currie provides an external MATLAB interface for the \SCIP Optimization Suite. On top of this,
+  * The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI project</a> by Jonathan Currie provides an external
+  * MATLAB interface for the \SCIP Optimization Suite. Furthermore,
   * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
   * free modeling language.
   *
@@ -7462,7 +7491,7 @@
   */
 
  /**@defgroup PUBLICAPI Public API of SCIP
-  * @brief methods and headers of the public C-API of \SCIP
+  * @brief methods and headers of the public C-API of \SCIP.  Please refer to \ref DOC "" for information how to use the reference manual.
   *
   * \PUBLICAPIDESCRIPTION
   *
@@ -8244,4 +8273,25 @@
  * - query the numerical tolerances of \SCIP, as well as special values such as infinity.
  * - change tolerances inside relaxations
  * - epsilon-comparison methods for floating point numbers
+ */
+
+/** @defgroup CFILES Implementation files (.c files)
+ *  @brief implementation files (.c files) of the SCIP core and the default plugins
+ *
+ *  The core provides the functionality for creating problems, variables, and general constraints.
+ *  The default plugins of SCIP provide a mix of public API function and private, static function and callback declarations.
+ */
+
+/** @defgroup DEFPLUGINS SCIP Default Plugins
+ *  @ingroup CFILES
+ *  @brief implementation files (.c files) of the SCIP default plugins
+ *
+ *  The SCIP default plugins provide a mix of public API function and private, static function and callback declarations.
+ */
+
+/** @defgroup OTHER_CFILES Other implementation files of SCIP
+ *  @ingroup CFILES
+ *  @brief other implementation files of SCIP
+ *
+ *  Relevant core and other functionality of SCIP.
  */

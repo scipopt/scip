@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rens.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LNS heuristic that finds the optimal rounding to a given point
  * @author Timo Berthold
  */
@@ -274,6 +275,9 @@ SCIP_RETCODE restrictToBinaryBounds(
       SCIP_Real lb;
       SCIP_Real ub;
 
+      if( subvars[i] == NULL )
+         continue;
+
       /* get the current LP/NLP solution for each variable */
       if( startsol == 'l')
          solval = SCIPvarGetLPSol(vars[i]);
@@ -283,8 +287,8 @@ SCIP_RETCODE restrictToBinaryBounds(
       /* restrict bounds to nearest integers if the solution value is not already integer */
       if( !SCIPisFeasIntegral(scip, solval) )
       {
-         lb = SCIPfeasFloor(scip,solval);
-         ub = SCIPfeasCeil(scip,solval);
+         lb = SCIPfeasFloor(scip, solval);
+         ub = SCIPfeasCeil(scip, solval);
 
          /* perform the bound change */
          SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], lb) );
@@ -317,6 +321,7 @@ SCIP_RETCODE createNewSol(
    int        nvars;                         /* the original problem's number of variables      */
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
+   int i;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -326,18 +331,20 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
+
+   /* copy the solution values */
+   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
+
+   for( i = 0; i < nvars; ++i )
+   {
+      if( subvars[i] == NULL )
+         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+      else
+         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
+   }
+
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
 
    /* try to add new solution to scip and free it immediately */
@@ -566,11 +573,7 @@ SCIP_RETCODE setupAndSolveSubscip(
    {
       SCIPwarningMessage(scip, "Error while presolving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
       SCIPABORT();  /*lint --e{527}*/
-
-      /* free sub problem data */
-      SCIPfreeBufferArray(scip, &subvars);
-
-      return retcode;
+      goto TERMINATE;
    }
 
    SCIPdebugMsg(scip, "RENS presolved subproblem: %d vars, %d cons, success=%u\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
@@ -607,11 +610,7 @@ SCIP_RETCODE setupAndSolveSubscip(
       {
          SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
          SCIPABORT();
-
-         /* free sub problem data */
-         SCIPfreeBufferArray(scip, &subvars);
-
-         return retcode;
+         goto TERMINATE;
       }
       else
       {
@@ -644,6 +643,7 @@ SCIP_RETCODE setupAndSolveSubscip(
       SCIPstatisticPrintf("RENS statistic: fixed only %6.3f integer variables, %6.3f all variables --> abort \n", intfixingrate, allfixingrate);
    }
 
+TERMINATE:
    /* free sub problem data */
    SCIPfreeBufferArray(scip, &subvars);
 

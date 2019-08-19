@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_repair.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  repair primal heuristic
  * @author Gregor Hendel
  * @author Thomas Nagel

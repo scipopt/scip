@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_gateextraction.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  gateextraction presolver
  * @author Michael Winkler
  */
@@ -1743,11 +1744,11 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
           *
           * find set-packing constraints:  (~x + ~y >= 1 and ~x + ~z >= 1)  <=>  (x + y <= 1 and x + z <= 1)
           *
-          * - these three constraints are aquivalent to: x = ~y * ~z (x = AND(~y,~z))
+          * - these three constraints are equivalent to: x = ~y * ~z (x = AND(~y,~z))
           *
           * if an additional set-packing constraint exists: y + z <= 1
           *
-          * - these four constraints are aquivalent to: x + y + z = 1
+          * - these four constraints are equivalent to: x + y + z = 1
           */
          SCIP_CALL( extractGates(scip, presoldata, c, varmap, gateconss, activevars, posresultants, &hashdata, ndelconss, naddconss) );
       }

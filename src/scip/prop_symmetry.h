@@ -13,17 +13,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_symmetry.h
- * @ingroup PRESOLVERS
- * @brief  presolver for storing symmetry information about current problem
+/**@file   prop_symmetry.h
+ * @ingroup PROPAGATORS
+ * @brief  propagator for symmetry handling
  * @author Marc Pfetsch
  * @author Thomas Rehn
+ * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PRESOL_SYMMETRY_H_
-#define __SCIP_PRESOL_SYMMETRY_H_
+#ifndef __SCIP_PROP_SYMMETRY_H_
+#define __SCIP_PROP_SYMMETRY_H_
 
 #include <scip/scip.h>
 
@@ -33,33 +34,28 @@ extern "C" {
 
 #include <symmetry/type_symmetry.h>
 
-/** include symmetry presolver */
+/** include symmetry propagator */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludePresolSymmetry(
+SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** return symmetry group generators */
+/** return currently available symmetry group information */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetGeneratorsSymmetry(
+SCIP_RETCODE SCIPgetSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
-   SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
-   SYM_SPEC              symspecrequirefixed,/**< symmetry specification of variables which must be fixed by symmetries */
-   SCIP_Bool             recompute,          /**< Have symmetries already been computed? */
-   SCIP_Bool             transposedperms,    /**< whether permutations should be computed/stored in transposed form (i.e., npermvars x nperms) */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
+   SCIP_HASHMAP**        permvarmap,         /**< pointer to store hash map of permvars (or NULL) */
    int*                  nperms,             /**< pointer to store number of permutations */
-   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars or transposed) matrix */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix (or NULL)*/
+   int***                permstrans,         /**< pointer to store permutation generators as (npermvars x nperms) matrix (or NULL)*/
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of group size (or NULL) */
-   SCIP_Bool*            binvaraffected      /**< pointer to store whether binary variables are affected */
-   );
-
-/** return objective coefficients of permuted variables at time of symmetry computation */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real**           permvarsobj         /**< pointer to store objective coefficients of permuted variables (NULL if not available) */
+   SCIP_Bool*            binvaraffected,     /**< pointer to store whether binary variables are affected */
+   int**                 components,         /**< pointer to store components of symmetry group (or NULL) */
+   int**                 componentbegins,    /**< pointer to store begin positions of components in components array (or NULL) */
+   int**                 vartocomponent,     /**< pointer to store assignment from variable to its component (or NULL) */
+   int*                  ncomponents         /**< pointer to store number of components (or NULL) */
    );
 
 #ifdef __cplusplus

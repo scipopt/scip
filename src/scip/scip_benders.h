@@ -44,25 +44,6 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -350,6 +331,7 @@ int SCIPgetNBenders(
    );
 
 /** returns the number of currently active Benders' decomposition */
+SCIP_EXPORT
 int SCIPgetNActiveBenders(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -367,6 +349,7 @@ int SCIPgetNActiveBenders(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPactivateBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
@@ -382,6 +365,7 @@ SCIP_RETCODE SCIPactivateBenders(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPdeactivateBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_opt.c
+ * @ingroup OTHER_CFILES
  * @brief  Generates a standard Benders' decomposition optimality cut
  * @author Stephen J. Maher
  */
@@ -105,8 +106,8 @@ SCIP_RETCODE polishSolution(
 static
 SCIP_RETCODE addVariableToArray(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
-   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
-   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_VAR***           vars,               /**< pointer to the array of variables in the generated cut with non-zero coefficient */
+   SCIP_Real**           vals,               /**< pointer to the array of coefficients of the variables in the generated cut */
    SCIP_VAR*             addvar,             /**< the variable that will be added to the array */
    SCIP_Real             addval,             /**< the value that will be added to the array */
    int*                  nvars,              /**< the number of variables in the variable array */
@@ -115,7 +116,9 @@ SCIP_RETCODE addVariableToArray(
 {
    assert(masterprob != NULL);
    assert(vars != NULL);
+   assert(*vars != NULL);
    assert(vals != NULL);
+   assert(*vals != NULL);
    assert(addvar != NULL);
    assert(nvars != NULL);
    assert(varssize != NULL);
@@ -123,13 +126,13 @@ SCIP_RETCODE addVariableToArray(
    if( *nvars >= *varssize )
    {
       *varssize = SCIPcalcMemGrowSize(masterprob, *varssize + 1);
-      SCIP_CALL( SCIPreallocBufferArray(masterprob, &vars, *varssize) );
-      SCIP_CALL( SCIPreallocBufferArray(masterprob, &vals, *varssize) );
+      SCIP_CALL( SCIPreallocBufferArray(masterprob, vars, *varssize) );
+      SCIP_CALL( SCIPreallocBufferArray(masterprob, vals, *varssize) );
    }
    assert(*nvars < *varssize);
 
-   vars[*nvars] = addvar;
-   vals[*nvars] = addval;
+   (*vars)[*nvars] = addvar;
+   (*vals)[*nvars] = addval;
    (*nvars)++;
 
    return SCIP_OKAY;
@@ -141,8 +144,8 @@ SCIP_RETCODE computeStandardLPOptimalityCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
-   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_VAR***           vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
+   SCIP_Real**           vals,               /**< pointer to array of coefficients of the variables in the generated cut */
    SCIP_Real*            lhs,                /**< the left hand side of the cut */
    SCIP_Real*            rhs,                /**< the right hand side of the cut */
    int*                  nvars,              /**< the number of variables in the cut */
@@ -166,7 +169,9 @@ SCIP_RETCODE computeStandardLPOptimalityCut(
    assert(subproblem != NULL);
    assert(benders != NULL);
    assert(vars != NULL);
+   assert(*vars != NULL);
    assert(vals != NULL);
+   assert(*vals != NULL);
 
    (*success) = FALSE;
 
@@ -284,8 +289,8 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
-   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_VAR***           vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
+   SCIP_Real**           vals,               /**< pointer to array of coefficients of the variables in the generated cut */
    SCIP_Real*            lhs,                /**< the left hand side of the cut */
    SCIP_Real*            rhs,                /**< the right hand side of the cut */
    int*                  nvars,              /**< the number of variables in the cut */
@@ -519,13 +524,13 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) )
    {
       /* computing the coefficients of the optimality cut */
-      SCIP_CALL( computeStandardNLPOptimalityCut(masterprob, subproblem, benders, vars, vals, &lhs, &rhs, &nvars,
+      SCIP_CALL( computeStandardNLPOptimalityCut(masterprob, subproblem, benders, &vars, &vals, &lhs, &rhs, &nvars,
             &varssize, &checkobj, &success) );
    }
    else
    {
       /* computing the coefficients of the optimality cut */
-      SCIP_CALL( computeStandardLPOptimalityCut(masterprob, subproblem, benders, vars, vals, &lhs, &rhs, &nvars,
+      SCIP_CALL( computeStandardLPOptimalityCut(masterprob, subproblem, benders, &vars, &vals, &lhs, &rhs, &nvars,
             &varssize, &checkobj, &success) );
    }
 
@@ -770,8 +775,8 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_Real             mult,               /**< multiplier */
    SCIP_Real*            dirderiv,           /**< storage to add directional derivative */
-   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
-   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_VAR***           vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
+   SCIP_Real**           vals,               /**< pointer to array of coefficients of the variables in the generated cut */
    int*                  nvars,              /**< the number of variables in the cut */
    int*                  varssize            /**< the number of variables in the array */
    )
@@ -789,6 +794,8 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    assert(exprint != NULL);
    assert(mult != 0.0);
    assert(dirderiv != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
 
    /* linear part */
    for( i = 0; i < SCIPnlrowGetNLinearVars(nlrow); i++ )

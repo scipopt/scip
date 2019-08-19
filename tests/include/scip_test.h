@@ -12,10 +12,21 @@
 SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP);
 #include "scip_test.c"
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wstrict-prototypes"
+#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
+#endif
+
 #include <criterion/criterion.h>
 #include <criterion/redirect.h>
 #include <criterion/parameterized.h>
 #include <criterion/theories.h>
+
+#ifdef __GNUC__
+#pragma GCC diagnostic warning "-Wredundant-decls"
+#pragma GCC diagnostic warning "-Wstrict-prototypes"
+#endif
 
 #undef SCIP_CALL
 #define SCIP_CALL(x)   do                                                                                     \

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricer.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for variable pricers
  * @author Tobias Achterberg
  * @author Timo Berthold

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trustregion.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  Large neighborhood search heuristic for Benders' decomposition based on trust region methods
  * @author Stephen J. Maher
  *
@@ -151,7 +152,6 @@ SCIP_RETCODE addTrustRegionConstraints(
    SCIP_HEURDATA*        heurdata            /**< heuristic's data structure */
    )
 {
-   SCIP_VAR* violvar;
    SCIP_CONS* cons;                        /* trust region constraint to create */
    SCIP_VAR** consvars;
    SCIP_VAR** vars;
@@ -159,11 +159,15 @@ SCIP_RETCODE addTrustRegionConstraints(
 
    int nvars;
    int nbinvars;
+   int nconsvars;
    int i;
    SCIP_Real lhs;
    SCIP_Real rhs;
    SCIP_Real* consvals;
    char name[SCIP_MAXSTRLEN];
+
+   /* adding the neighborhood constraint for the trust region heuristic */
+   SCIP_CALL( SCIPaddTrustregionNeighborhoodConstraint(scip, subscip, subvars, heurdata->violpenalty) );
 
    /* get the data of the variables and the best solution */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
@@ -173,46 +177,7 @@ SCIP_RETCODE addTrustRegionConstraints(
    /* memory allocation */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nvars + 1) );
-
-   /* set initial left and right hand sides of trust region constraint */
-   lhs = 0.0;
-   rhs = 0.0;
-
-   /* create the distance (to incumbent) function of the binary variables */
-   for( i = 0; i < nbinvars; i++ )
-   {
-      SCIP_Real solval;
-
-      solval = SCIPgetSolVal(scip, bestsol, vars[i]);
-      assert( SCIPisFeasIntegral(scip,solval) );
-
-      /* is variable i  part of the binary support of bestsol? */
-      if( SCIPisFeasEQ(scip,solval,1.0) )
-      {
-         consvals[i] = -1.0;
-         rhs -= 1.0;
-         lhs -= 1.0;
-      }
-      else
-         consvals[i] = 1.0;
-      consvars[i] = subvars[i];
-      assert( SCIPvarGetType(consvars[i]) == SCIP_VARTYPE_BINARY );
-   }
-
-   /* adding the violation variable */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "violationvar", i);
-   SCIP_CALL( SCIPcreateVarBasic(subscip, &violvar, name, 0.0, SCIPinfinity(subscip), heurdata->violpenalty, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(subscip, violvar) );
-   consvars[nbinvars] = violvar;
-   consvals[nbinvars] = -1.0;
-
-   /* creates trustregion constraint and adds it to subscip */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_trustregioncons", SCIPgetProbName(scip));
-
-   SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, name, nbinvars + 1, consvars, consvals,
-         lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-   SCIP_CALL( SCIPaddCons(subscip, cons) );
-   SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+   nconsvars = 0;
 
    /* create the upper bounding constraint. An absolute minimum improvement is used for this heuristic. This is
     * different to other LNS heuristics, where a relative improvement is used. The absolute improvement tries to take
@@ -229,20 +194,20 @@ SCIP_RETCODE addTrustRegionConstraints(
    /* adding the coefficients to the upper bounding constraint */
    for( i = 0; i < nvars; i++ )
    {
-      consvals[i] = SCIPvarGetObj(subvars[i]);
-      consvars[i] = subvars[i];
+      if( subvars[i] == NULL )
+         continue;
+      consvals[nconsvars] = SCIPvarGetObj(subvars[i]);
+      consvars[nconsvars] = subvars[i];
+      ++nconsvars;
    }
 
    /* creates trustregion constraint and adds it to subscip */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upperboundcons", SCIPgetProbName(scip));
 
-   SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, name, nvars, consvars, consvals,
+   SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, name, nconsvars, consvars, consvals,
          lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
    SCIP_CALL( SCIPaddCons(subscip, cons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-   /* releasing the violation variable */
-   SCIP_CALL( SCIPreleaseVar(subscip, &violvar) );
 
    /* free local memory */
    SCIPfreeBufferArray(scip, &consvals);

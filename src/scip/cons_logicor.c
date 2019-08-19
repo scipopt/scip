@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_logicor.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for logic or constraints \f$1^T x \ge 1\f$
  *         (equivalent to set covering, but algorithms are suited for depth first search).
  * @author Tobias Achterberg
@@ -965,13 +966,7 @@ SCIP_RETCODE applyFixings(
             for( v2 = nconsvars - 1; v2 >= 0; --v2 )
             {
                if( !SCIPvarIsBinary(consvars[v2]) )
-               {
                   break;
-#if 0
-                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-binary variable <%s>\n", consvars[v2]);
-                  return SCIP_ERROR;
-#endif
-               }
 
                if( !SCIPisEQ(scip, consvals[v2], 1.0) )
                   break;

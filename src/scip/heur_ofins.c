@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_ofins.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  OFINS - Objective Function Induced Neighborhood Search - a primal heuristic for reoptimization
  * @author Jakob Witzig
  */
@@ -135,6 +136,7 @@ SCIP_RETCODE createNewSol(
    int        nvars;                         /* the original problem's number of variables      */
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
+   int i;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -144,15 +146,16 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
    /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
+   for( i = 0; i < nvars; ++i )
+   {
+      if( subvars[i] == NULL )
+         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+      else
+         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
+   }
 
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
@@ -258,10 +261,7 @@ SCIP_RETCODE setupAndSolve(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
    for( i = 0; i < nvars; i++ )
-   {
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-     assert(subvars[i] != NULL);
-   }
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
@@ -366,10 +366,6 @@ SCIP_RETCODE setupAndSolve(
    case SCIP_STATUS_INFORUNBD:
    case SCIP_STATUS_UNBOUNDED:
    {
-      int nsubvars;
-
-      nsubvars = SCIPgetNOrigVars(subscip);
-
       /* transfer the primal ray from the sub-SCIP to the main SCIP */
       if( SCIPhasPrimalRay(subscip) )
       {
@@ -378,10 +374,10 @@ SCIP_RETCODE setupAndSolve(
          SCIP_CALL( SCIPcreateSol(scip, &primalray, heur) );
 
          /* transform the ray into the space of the source scip */
-         for( i = 0; i < nsubvars; i++ )
+         for( i = 0; i < nvars; i++ )
          {
-            SCIP_CALL( SCIPsetSolVal(scip, primalray, vars[SCIPvarGetProbindex(subvars[i])],
-                  SCIPgetPrimalRayVal(subscip, subvars[i])) );
+            SCIP_CALL( SCIPsetSolVal(scip, primalray, vars[i],
+                  subvars[i] != NULL ? SCIPgetPrimalRayVal(subscip, subvars[i]) : 0.0) );
          }
 
          SCIPdebug( SCIP_CALL( SCIPprintRay(scip, primalray, 0, FALSE) ); );

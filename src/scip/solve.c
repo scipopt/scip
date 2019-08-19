@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   solve.c
+ * @ingroup OTHER_CFILES
  * @brief  main solving loop and node processing
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -66,6 +67,7 @@
 #include "scip/solve.h"
 #include "scip/stat.h"
 #include "scip/struct_cons.h"
+#include "scip/struct_event.h"
 #include "scip/struct_lp.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_primal.h"

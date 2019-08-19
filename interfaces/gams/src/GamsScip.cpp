@@ -153,7 +153,8 @@ int GamsScip::readyAPI(
       XPlicenseInit_t initType;
       int initRC;
       gevxpressliceInitTS(gev, pal, gmoM(gmo), gmoN(gmo), gmoNZ(gmo), gmoNLNZ(gmo), gmoNDisc(gmo), 0, &initType, &initRC, buffer, sizeof(buffer));
-      calledxprslicense = true;
+      if( initRC >= 0 )  /* if initRC < 0, then gevxpressliceInitTS decided to do nothing because no GAMS/Xpress or XpressLink license available */
+         calledxprslicense = true;
    }
 #endif
 #endif
@@ -378,7 +379,7 @@ SCIP_RETCODE GamsScip::setupSCIP()
          nlpiipopt = SCIPfindNlpi(scip, "ipopt");
          if( nlpiipopt != NULL )
          {
-            SCIPsetModifiedDefaultSettingsIpopt(nlpiipopt, "linear_solver ma27\nlinear_system_scaling mc19\n");
+            SCIPsetModifiedDefaultSettingsIpopt(nlpiipopt, "linear_solver ma27\nlinear_system_scaling mc19\n", TRUE);
             SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "HSL MA27 and MC19", "Harwell Subroutine Libraries (www.hsl.rl.ac.uk) from commercially supported Ipopt") );
          }
       }

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_indicator.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
@@ -423,7 +424,7 @@ while ( FALSE )
 
 /* ---------------- Callback methods of event handlers ---------------- */
 
-/** exec the event handler for getting variable bound changes
+/** execute the event handler for getting variable bound changes
  *
  *  We update the number of variables fixed to be nonzero.
  */
@@ -3137,6 +3138,11 @@ SCIP_RETCODE consdataCreate(
             SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(var), SCIPvarGetType(var));
             return SCIP_ERROR;
          }
+
+         /* the indicator variable must not be multi-aggregated because the constraint handler propagation tries
+          * to tighten its bounds, which is not allowed for multi-aggregated variables
+          */
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
 
          /* catch local bound change events on binary variable */
          if ( linconsactive )
