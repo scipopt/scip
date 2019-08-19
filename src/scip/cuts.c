@@ -2596,7 +2596,6 @@ SCIP_RETCODE SCIPselectCuts(
    }
    else
    {
-      efficacyfac += objparalweight;
       for( i = 0; i < ncuts; ++i )
       {
          SCIP_Real objparallelism;
