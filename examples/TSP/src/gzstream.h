@@ -1,4 +1,4 @@
-#include "scip/config.h"
+#include "scip/def.h"
 
 #ifdef SCIP_WITH_ZLIB
 
