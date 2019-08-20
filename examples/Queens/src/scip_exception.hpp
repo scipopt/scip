@@ -18,8 +18,8 @@
 #ifndef SCIP_EXCEPTION
 #define SCIP_EXCEPTION
 
-#include<exception>
-#include<string>
+#include <exception>
+#include <string>
 
 #include <scip/scip.h>
 #include <scip/misc.h>
@@ -124,7 +124,7 @@ public:
    SCIPException(SCIP_RETCODE retcode) : _retcode(retcode)
    {
       if( SCIPgetErrorString(retcode, _msg, SCIP_MSG_MAX) == NULL )
-         (void) SCIPsnprintf(_msg, SCIP_MSG_MAX, "unknown SCIP retcode %d",retcode);
+         (void) SCIPsnprintf(_msg, SCIP_MSG_MAX, "unknown SCIP retcode %d", retcode);
    }
 
 
@@ -134,17 +134,17 @@ public:
     *
     * this overrides the corresponding method of std::exception in order to allow you to catch all of your exceptions as std::exception
     */
-   const char * what(void)const throw() {return _msg;}
+   const char* what(void) const throw() {return _msg;}
 
 
    /** @brief get method for @p _retcode
     *
     * @return stored SCIP_RETCODE
     */
-   SCIP_RETCODE getRetcode(void)const{return _retcode;}
+   SCIP_RETCODE getRetcode(void) const {return _retcode;}
 
    /** destructor */
-   ~SCIPException(void) throw(){}
+   ~SCIPException(void) {}
 }; /*lint !e1712*/
 
 

@@ -1335,7 +1335,8 @@ SCIP_RETCODE checkMemGlbCons(
 static
 SCIP_RETCODE cleanActiveConss(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    int nentries;
@@ -1349,6 +1350,8 @@ SCIP_RETCODE cleanActiveConss(
 
    nentries = SCIPhashmapGetNEntries(reopt->activeconss);
 
+   SCIPsetDebugMsg(set, "clean %d active conss\n", nentries);
+
    /* loop over all entries of the hashmap and reactivate deactivated constraints */
    for( i = 0; i < nentries; i++ )
    {
@@ -1361,8 +1364,10 @@ SCIP_RETCODE cleanActiveConss(
       cons = (SCIP_CONS*)SCIPhashmapEntryGetImage(entry);
       assert(cons != NULL);
 
-      SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+      SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
    }
+
+   SCIP_CALL( SCIPhashmapRemoveAll(reopt->activeconss) );
 
    return SCIP_OKAY;
 }
@@ -5129,9 +5134,10 @@ SCIP_RETCODE SCIPreoptReleaseData(
       }
 
       BMSfreeBlockMemoryArray(blkmem, &reopt->addedconss, reopt->addedconsssize);
+      reopt->naddedconss = 0;
    }
 
-   SCIP_CALL( cleanActiveConss(reopt, set) );
+   SCIP_CALL( cleanActiveConss(reopt, set, blkmem) );
 
    return SCIP_OKAY;
 }
@@ -5726,6 +5732,10 @@ SCIP_RETCODE SCIPreoptReset(
 
       cons = reopt->addedconss[c];
       assert(cons != NULL);
+
+#ifdef SCIP_MORE_DEBUG
+      SCIPsetDebugMsg(set, "release cons <%s> from reoptimization data\n", SCIPconsGetName(cons));
+#endif
 
       SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
       reopt->addedconss[c] = NULL;
@@ -8106,6 +8116,10 @@ SCIP_RETCODE SCIPreoptAddCons(
    assert(blkmem != NULL);
    assert(cons != NULL);
 
+#ifdef SCIP_MORE_DEBUG
+   SCIPsetDebugMsg(set, "add cons <%s> to reoptimization data\n", SCIPconsGetName(cons));
+#endif
+
    /* check memory */
    if( reopt->addedconsssize == 0 )
    {
@@ -8181,6 +8195,7 @@ SCIP_RETCODE SCIPreoptSaveGlobalBounds(
  */
 SCIP_RETCODE SCIPreoptSaveActiveConss(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem data */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
@@ -8195,6 +8210,8 @@ SCIP_RETCODE SCIPreoptSaveActiveConss(
 
    conss = transprob->conss;
    nconss = transprob->nconss;
+
+   SCIPsetDebugMsg(set, "save %d active conss\n", nconss);
 
    /* create hashmap */
    SCIP_CALL( SCIPhashmapCreate(&reopt->activeconss, blkmem, nconss) );
@@ -8275,6 +8292,8 @@ SCIP_RETCODE SCIPreoptResetActiveConss(
    assert(reopt->activeconss != NULL);
 
    nentries = SCIPhashmapGetNEntries(reopt->activeconss);
+
+   SCIPsetDebugMsg(set, "reset %d active conss\n", nentries);
 
    /* loop over all entries of the hashmap and reactivate deactivated constraints */
    for( i = 0; i < nentries; i++ )

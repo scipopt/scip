@@ -41,22 +41,23 @@ using namespace std;
 
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 SCIP_DECL_EVENTFREE(EventhdlrNewSol::scip_free)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 
 /** initialization method of event handler (called after problem was transformed) */
 SCIP_DECL_EVENTINIT(EventhdlrNewSol::scip_init)
-{
-
+{  /*lint --e{715}*/
    int lockwaits = 0;
+
    while( SCIPfileExists("temp.tour.lock") && lockwaits < 10 )
    {
       /* wait one second and try again */
       (void) sleep(1);
       lockwaits++;
    }
+
    if( SCIPfileExists("temp.tour.lock") )
    {
       SCIPwarningMessage(scip, "cannot reset, because lockfile <temp.tour.lock> is still existing\n");
@@ -78,14 +79,14 @@ SCIP_DECL_EVENTINIT(EventhdlrNewSol::scip_init)
    (void) sleep(1); /* wait for the Java TSPViewer */
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 
 /** deinitialization method of event handler (called before transformed problem is freed) */
 SCIP_DECL_EVENTEXIT(EventhdlrNewSol::scip_exit)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 
 /** solving process initialization method of event handler (called when branch and bound process is about to begin)
@@ -97,6 +98,7 @@ SCIP_DECL_EVENTEXIT(EventhdlrNewSol::scip_exit)
 SCIP_DECL_EVENTINITSOL(EventhdlrNewSol::scip_initsol)
 {
    SCIP_CALL( SCIPcatchEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
@@ -109,15 +111,16 @@ SCIP_DECL_EVENTINITSOL(EventhdlrNewSol::scip_initsol)
 SCIP_DECL_EVENTEXITSOL(EventhdlrNewSol::scip_exitsol)
 {
    SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
+
    return SCIP_OKAY;
 }
 
 
 /** frees specific constraint data */
 SCIP_DECL_EVENTDELETE(EventhdlrNewSol::scip_delete)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 
 /** execution method of event handler
@@ -128,9 +131,8 @@ SCIP_DECL_EVENTDELETE(EventhdlrNewSol::scip_delete)
  *  given event handler and event data.
  */
 SCIP_DECL_EVENTEXEC(EventhdlrNewSol::scip_exec)
-{
-   SCIP_SOL* sol;
-   sol = SCIPgetBestSol(scip);
+{  /*lint --e{715}*/
+   SCIP_SOL* sol = SCIPgetBestSol(scip);
    ProbDataTSP* probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
    GRAPH* graph = probdata->getGraph(); /*lint !e613*/
    GRAPHNODE* node = &graph->nodes[0];
@@ -195,4 +197,4 @@ SCIP_DECL_EVENTEXEC(EventhdlrNewSol::scip_exec)
    (void) sleep(1); /* wait for the Java TSPViewer */
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}

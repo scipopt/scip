@@ -23,11 +23,11 @@
 #ifndef __EVENTHDLRNEWSOL_H__
 #define __EVENTHDLRNEWSOL_H__
 
-
 #include "objscip/objscip.h"
 
 namespace tsp
 {
+
 /** C++ wrapper object for event handlers */
 class EventhdlrNewSol : public scip::ObjEventhdlr
 {
@@ -83,6 +83,5 @@ public:
 }; /*lint !e1712*/
 
 } /* namespace tsp */
-
 
 #endif

@@ -123,7 +123,8 @@ if [ "${GITBRANCH}" != "consexpr" ]; then
   JOBS[1,3]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=miplib2017_benchmark_hard TIME=7200 SETTINGS=default"
 
   # jobs running on tuesday
-  JOBS[2,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default_${RANDOMSEED}"
+  JOBS[2,2]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=miplib2017_benchmark TIME=7200 SETTINGS=default_${RANDOMSEED}"
+  JOBS[2,3]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default_${RANDOMSEED}"
 
   # jobs running on wednesday
   JOBS[3,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=presolaggr_sepaaggr_heuroff_${RANDOMSEED}"

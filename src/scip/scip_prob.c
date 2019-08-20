@@ -698,12 +698,6 @@ SCIP_RETCODE SCIPfreeProb(
    transsolorig = scip->set->misc_transsolsorig;
    scip->set->misc_transsolsorig = FALSE;
 
-   /* release variables and constraints captured by reoptimization */
-   if( scip->set->reopt_enable || scip->reopt != NULL)
-   {
-      SCIP_CALL( SCIPreoptReleaseData(scip->reopt, scip->set, scip->mem->probmem) );
-   }
-
    SCIP_CALL( SCIPfreeTransform(scip) );
    /* for some reason the free transform can generate events caught in the globalbnd eventhander
     * which requires the concurrent so it must be freed afterwards this happened o instance fiber
@@ -744,7 +738,7 @@ SCIP_RETCODE SCIPfreeProb(
       SCIP_CALL( SCIPdebugFreeDebugData(scip->set) );
 
       /* free original primal solution candidate pool, original problem and problem statistics data structures */
-      if( scip->set->reopt_enable || scip->reopt != NULL)
+      if( scip->reopt != NULL )
       {
          SCIP_CALL( SCIPreoptFree(&scip->reopt, scip->set, scip->origprimal, scip->mem->probmem) );
       }
