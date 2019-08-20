@@ -63,22 +63,6 @@ int findEntryFromSorted(
 }
 
 
-#if 0
-static inline
-uint32_t getNextPow2(uint32_t n)
-{
-    n--;
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-    n++;
-    return n;
-}
-#endif
-
-
 /** sort close nodes list of node */
 static
 void distDataSortCloseNodes(
