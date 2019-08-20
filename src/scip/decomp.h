@@ -57,6 +57,15 @@ SCIP_Bool SCIPdecompIsOriginal(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
+/** returns TRUE if this constraint contains only linking variables */
+EXTERN
+SCIP_RETCODE SCIPhasConsOnlyLinkVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_CONS*            cons,               /**< the constraint */
+   SCIP_Bool*            hasonlylinkvars     /**< will be set to TRUE if this constraint has only linking variables */
+   );
+
 /** sets the parameter that indicates whether the variables must be labeled for the application of Benders'
  * decomposition
  */
@@ -150,6 +159,19 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_CONS**           conss,              /**< array of constraints */
+   int                   nconss              /**< number of constraints */
+   );
+
+/** assign linking constraints to blocks
+ *
+ * Each linking constraint is assigned to the most frequent block among its variables.
+ * Variables of other blocks are relabeled as linking variables.
+ */
+EXTERN
+SCIP_RETCODE SCIPdecompAssignLinkConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_CONS**           conss,              /**< array of linking constraints that should be reassigned */
    int                   nconss              /**< number of constraints */
    );
 
