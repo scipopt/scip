@@ -1399,7 +1399,7 @@ SCIP_RETCODE SCIPtranslateSubSols(
    int*                  solindex            /**< pointer to store solution index of stored solution, or NULL if not of interest */
    )
 {
-   SCIP_SOL* newsol;
+   SCIP_SOL* newsol = NULL;
    SCIP_SOL** subsols;
    int nsubsols;
    int i;
@@ -1423,34 +1423,57 @@ SCIP_RETCODE SCIPtranslateSubSols(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
 
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   if( solindex != NULL )
-      *solindex = SCIPsolGetIndex(newsol);
-
    /* check, whether a solution was found;
     * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
     */
    nsubsols = SCIPgetNSols(subscip);
    subsols = SCIPgetSols(subscip);
-   for( i = 0; i < nsubsols && ! (*success); ++i )
+   for( i = 0; i < nsubsols; ++i )
    {
       /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
       if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsols[i])) )
          continue;
 
-      SCIP_CALL( translateSubSol(scip, subscip, subsols[i], subvars, solvals) );
+      if( newsol == NULL )
+      {
+         SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
+         if( solindex != NULL )
+            *solindex = SCIPsolGetIndex(newsol);
+      }
 
+      /* put values from subsol into newsol */
+      SCIP_CALL( translateSubSol(scip, subscip, subsols[i], subvars, solvals) );
       SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, solvals) );
-      SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-   }
-   if( *success )
-   {
-      SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
+
+      /* check whether feasible */
+      SCIP_CALL( SCIPcheckSol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
+      if( *success )
+      {
+         /* if feasible, then there is a good chance that we can add it
+          * we use SCIPaddSolFree to make sure that newsol is indeed added and not some copy, so *solindex stays valid
+          */
+         SCIP_CALL( SCIPaddSolFree(scip, &newsol, success) );
+         if( *success )
+         {
+            SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
+            break;
+         }
+         else
+         {
+            /* continue with next subsol
+             * as we have used addSolFree, newsol should be NULL now
+             */
+            assert(newsol == NULL);
+         }
+      }
    }
 
    SCIPfreeBufferArray(scip, &solvals);
 
-   SCIP_CALL( SCIPfreeSol(scip, &newsol) );
+   if( newsol != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &newsol) );
+   }
 
    return SCIP_OKAY;
 }
