@@ -4257,7 +4257,7 @@ void graph_get_isTerm(
    }
 }
 
-/* gets edge conflicts */
+/** gets edge conflicts */
 SCIP_RETCODE graph_get_edgeConflicts(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g                   /**< the graph */
@@ -4395,6 +4395,7 @@ SCIP_RETCODE graph_init(
    p->costbudget = NULL;
    p->csr_storage = NULL;
    p->dcsr_storage = NULL;
+   p->pseudoancestors = NULL;
 
    SCIPdebugMessage("Initialized new graph \n");
 
@@ -4413,7 +4414,7 @@ SCIP_RETCODE graph_init_history(
    int* head;                /* head of all edges  */
    int* orgtail;             /* (original) tail of all original edges  */
    int* orghead;             /* (original) head of all original edges  */
-   int nedges;
+   const int nedges = graph->edges;
    SCIP_Bool pcmw;
 
    assert(scip != NULL);
@@ -4421,7 +4422,7 @@ SCIP_RETCODE graph_init_history(
 
    pcmw = graph_pc_isPcMw(graph);
 
-   nedges = graph->edges;
+   SCIP_CALL( graph_init_pseudoAncestors(scip, graph) );
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->orgtail), nedges) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->orghead), nedges) );
@@ -4591,6 +4592,9 @@ void graph_free_history(
    GRAPH*                p                   /**< graph data */
    )
 {
+   if( p->pseudoancestors != NULL )
+      graph_free_pseudoAncestors(scip, p);
+
    if( p->ancestors != NULL )
    {
       const int nedges = p->edges;
@@ -4671,6 +4675,7 @@ SCIP_RETCODE graph_copy_data(
    assert(copygraph != NULL);
    assert(ksize == g->ksize && ksize > 0);
    assert(esize == g->esize && esize >= 0);
+   assert(p->dcsr_storage == NULL && p->csr_storage == NULL);
 
    g->norgmodeledges = p->norgmodeledges;
    g->norgmodelknots = p->norgmodelknots;
