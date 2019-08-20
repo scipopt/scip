@@ -1281,8 +1281,13 @@ void SCIPpqueueDelPos(
    /* remove element at specified position of the tree, move the better child to its parents position until the last element
     * of the queue could be placed in the empty slot
     */
-   last = pqueue->slots[pqueue->len-1];
    pqueue->len--;
+
+   /* everything in place */
+   if( pos == pqueue->len )
+      return;
+
+   last = pqueue->slots[pqueue->len];
 
    /* last element is brought to pos. it may now violate the heap property compared to its parent, or to its children.
     * In the first case, move it up, otherwise, move it down.
@@ -1310,7 +1315,9 @@ void SCIPpqueueDelPos(
 
       pos = childpos;
    }
-   assert(pos <= pqueue->len);
+
+   /* pos must point into a valid position */
+   assert(pos <= pqueue->len - 1);
 
    pqueueElemChgPos(pqueue, last, pqueue->len, pos);
 
