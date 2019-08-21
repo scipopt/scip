@@ -418,8 +418,18 @@ const int* graph_get_pseudoAncestors(
    return g->pseudoancestors->edgeblocks[halfedge];
 }
 
+/** returns array number of nodes */
+int graph_pseudoAncestors_getNnodes(
+   const GRAPH*          g            /**< the graph */
+   )
+{
+   assert(g && g->pseudoancestors);
+
+   return g->pseudoancestors->nnodes;
+}
+
 /** appends copy of pseudo ancestors of edge_source to edge_target */
-SCIP_RETCODE graph_appendCopy_pseudoAncestors(
+SCIP_RETCODE graph_pseudoAncestors_appendCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   edge_target,        /**< edge target */
    int                   edge_source,        /**< edge source */
@@ -499,7 +509,7 @@ SCIP_RETCODE graph_appendCopy_pseudoAncestors(
 }
 
 /** appends pseudo ancestors of edge_source to edge_target, ancestors for edge_source are deleted */
-SCIP_RETCODE graph_appendMove_pseudoAncestors(
+SCIP_RETCODE graph_pseudoAncestors_appendMove(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   edge_target,        /**< edge target */
    int                   edge_source,        /**< edge source */
@@ -508,7 +518,7 @@ SCIP_RETCODE graph_appendMove_pseudoAncestors(
    SCIP_Bool*            conflict            /**< conflict? */
 )
 {
-   SCIP_CALL( graph_appendCopy_pseudoAncestors(scip, edge_target, edge_source, breakOnConflict, g, conflict) );
+   SCIP_CALL( graph_pseudoAncestors_appendCopy(scip, edge_target, edge_source, breakOnConflict, g, conflict) );
    SCIP_CALL( graph_free_pseudoAncestorsBlock(scip, edge_source, g) );
 
    return SCIP_OKAY;
@@ -780,4 +790,18 @@ const int* graph_get_fixpseudonodes(
       return NULL;
 
    return g->fixedcomponents->fixpseudonodes;
+}
+
+/** gets number of fixed pseudo eliminated nodes */
+int graph_get_nFixpseudonodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g                   /**< the graph */
+)
+{
+   assert(g && scip);
+
+   if( !g->fixedcomponents )
+      return 0;
+
+   return g->fixedcomponents->nfixnodes;
 }

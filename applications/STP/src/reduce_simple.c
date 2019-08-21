@@ -1771,6 +1771,76 @@ SCIP_RETCODE reduce_simple_fixedConflict(
    int*                  countnew            /**< pointer to number of new reductions (will be initially set to 0) */
    )
 {
-   // todo check for conflict between all edges and fix
+   int* hasharr;
+
+   const int nedges = g->edges;
+   const int nnodes = g->knots;
+   const int nfixednodes = graph_get_nFixpseudonodes(scip, g);
+   const int* fixednodes = graph_get_fixpseudonodes(scip, g);
+
+   *countnew = 0;
+
+   assert(scip && g && g->pseudoancestors);
+   assert(!g->is_packed);
+
+   if( nfixednodes == 0 )
+      return SCIP_OKAY;
+
+   assert(fixednodes);
+
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, nnodes) );
+
+   /* hash fixed nodes */
+   for( int k = 0; k < nfixednodes; k++  )
+   {
+      const int node = fixednodes[k];
+      assert(node >= 0 && node < nnodes);
+      assert(hasharr[node] == 0 );
+
+      hasharr[node] = 1;
+   }
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      if( edgestate && edgestate[e] == EDGE_BLOCKED )
+         continue;
+
+      if( g->oeat[e] != EAT_FREE )
+      {
+         const int* pseudoancestors = graph_get_pseudoAncestors(g, e);
+         const int nPseudoancestors = graph_get_nPseudoAncestors(g, e);
+
+         assert(g->oeat[e + 1] != EAT_FREE);
+         assert(nPseudoancestors == 0 || pseudoancestors != NULL);
+
+         for( int k = 0; k < nPseudoancestors; k++  )
+         {
+            const int ancestor = pseudoancestors[k];
+            assert(ancestor >= 0 && ancestor < nnodes);
+
+            if( hasharr[ancestor] != 0 )
+               graph_edge_del(scip, g, e, TRUE);
+
+            (*countnew)++;
+
+            printf("conflict deleted edge %d \n", e);
+
+            break;
+         }
+      }
+   }
+
+   /* unhash fixed nodes */
+   for( int k = 0; k < nfixednodes; k++  )
+   {
+      const int node = fixednodes[k];
+      assert(hasharr[node] == 1 );
+
+      hasharr[node] = 0;
+   }
+
+   SCIPfreeCleanBufferArray(scip, &hasharr);
+
+
    return SCIP_OKAY;
 }
