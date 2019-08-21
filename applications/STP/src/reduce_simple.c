@@ -790,7 +790,6 @@ SCIP_RETCODE reduce_simple(
 }
 
 
-
 /** basic reduction tests for the SAP */
 SCIP_RETCODE reduce_simple_sap(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -847,15 +846,13 @@ SCIP_RETCODE reduce_simple_sap(
 
                   *fixed += g->cost[e2];
 
-                  SCIP_CALL( graph_fixed_addEdge(scip, e2, g) );
-                  SCIP_CALL( graph_knot_contract(scip, g, NULL, i1, i) );
+                  SCIP_CALL( graph_knot_contractFixed(scip, g, NULL, e2, i1, i) );
                }
                else
                {
                   *fixed += g->cost[e1];
 
-                  SCIP_CALL( graph_fixed_addEdge(scip, e1, g) );
-                  SCIP_CALL( graph_knot_contract(scip, g, NULL, i1, i) );
+                  SCIP_CALL( graph_knot_contractFixed(scip, g, NULL, e1, i1, i) );
                }
             }
             else
@@ -1047,8 +1044,7 @@ SCIP_RETCODE reduce_rpt(
 
             *fixed += g->cost[e1];
 
-            SCIP_CALL( graph_fixed_addEdge(scip, e1, g) );
-            SCIP_CALL( graph_knot_contract(scip, g, NULL, i1, i) );
+            SCIP_CALL( graph_knot_contractFixed(scip, g, NULL, e1, i1, i) );
 
             assert(old - g->grad[i1] > 0);
             *count += old - g->grad[i1];

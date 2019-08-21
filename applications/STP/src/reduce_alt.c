@@ -4918,8 +4918,7 @@ SCIP_RETCODE reduce_sl(
             }
             else
             {
-               SCIP_CALL( graph_fixed_addEdge(scip, minedge, g) );
-               SCIP_CALL( graph_knot_contract(scip, g, solnode, j, k) );
+               SCIP_CALL( graph_knot_contractFixed(scip, g, solnode, minedge, j, k) );
 
                assert(g->grad[k] == 0 && g->grad[j] >= 0);
 
@@ -5137,8 +5136,7 @@ SCIP_RETCODE reduce_nv(
          }
          else
          {
-            SCIP_CALL( graph_fixed_addEdge(scip, edge1, g) );
-            SCIP_CALL( graph_knot_contract(scip, g, solnode, i, k) );
+            SCIP_CALL( graph_knot_contractFixed(scip, g, solnode, edge1, i, k) );
          }
          assert(old - g->grad[i] - g->grad[k] > 0);
          (*nelims) += old - g->grad[i] - g->grad[k];
@@ -5386,8 +5384,7 @@ SCIP_RETCODE reduce_nvAdv(
          }
          else
          {
-            SCIP_CALL( graph_fixed_addEdge(scip, edge1, g) );
-            SCIP_CALL( graph_knot_contract(scip, g, solnode, i, k) );
+            SCIP_CALL( graph_knot_contractFixed(scip, g, solnode, edge1, i, k) );
          }
       }
    }

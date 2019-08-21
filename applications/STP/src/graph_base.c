@@ -3244,6 +3244,25 @@ SCIP_RETCODE graph_knot_contract(
    return SCIP_OKAY;
 }
 
+
+/** contract an edge, given index and by its endpoints, which is to be fixed */
+SCIP_RETCODE graph_knot_contractFixed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT),
+                                                or NULL */
+   int                   edge,               /**< the edge */
+   int                   t,                  /**< tail node to be contracted */
+   int                   s                   /**< head node to be contracted */
+   )
+{
+   SCIP_CALL( graph_fixed_addEdge(scip, edge, g) );
+   SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
+
+   return SCIP_OKAY;
+}
+
+
 /** contract endpoint of lower degree into endpoint of higher degree */
 SCIP_RETCODE graph_knot_contractLowdeg2High(
    SCIP*                 scip,               /**< SCIP data structure */
