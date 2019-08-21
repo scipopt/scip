@@ -43,6 +43,8 @@
 /** presolver data */
 struct SCIP_PresolData
 {
+   int lastncols;
+   int lastnrows;
 };
 
 
@@ -70,23 +72,31 @@ SCIP_DECL_PRESOLCOPY(presolCopyMILP)
 }
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
-#if 0
+#if 1
 static
 SCIP_DECL_PRESOLFREE(presolFreeMILP)
 {  /*lint --e{715}*/
-    return SCIP_OKAY;
+   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
+   assert(data != NULL);
+
+   SCIPpresolSetData(presol, NULL);
+   SCIPfreeBlockMemory(scip, &data);
+   return SCIP_OKAY;
 }
 #else
 #define presolFreeMILP NULL
 #endif
 
 /** initialization method of presolver (called after problem was transformed) */
-#if 0
+#if 1
 static
 SCIP_DECL_PRESOLINIT(presolInitMILP)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
+   assert(data != NULL);
+
+   data->lastncols = -1;
+   data->lastnrows = -1;
 
    return SCIP_OKAY;
 }
@@ -193,177 +203,203 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    SCIP_Bool initialized;
    SCIP_Bool complete;
    SCIP_MATRIX* matrix;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
 
+   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
    *result = SCIP_DIDNOTRUN;
 
-   /* we only work on pure MIPs */
-   if( initialized && complete )
+   int nvars = SCIPgetNVars(scip);
+   int nconss = SCIPgetNConss(scip);
+
+   if( data->lastncols != -1 && data->lastnrows != -1 &&
+       nvars > data->lastncols * 0.85 &&
+       nconss > data->lastnrows * 0.85 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
+
+   if( !initialized || !complete )
    {
-      Problem<SCIP_Real> problem = buildProblem(scip, matrix);
-      Presolve<SCIP_Real> presolve;
+      data->lastncols = 0;
+      data->lastnrows = 0;
 
-      using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
 
-      presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new CoefficientStrengthening<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new SimpleProbing<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new ConstraintPropagation<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
-      // todo: parallel cols cannot be handled by SCIP currently
-      // addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real> ) );
-      presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
+      return SCIP_OKAY;
+   }
 
-      presolve.setEpsilon(SCIPepsilon(scip));
-      presolve.setFeasTol(SCIPfeastol(scip));
-      presolve.setVerbosityLevel(VerbosityLevel::QUIET);
-      
-      PresolveResult<SCIP_Real> res = presolve.apply(problem);
+   /* we only work on pure MIPs */
+   Problem<SCIP_Real> problem = buildProblem(scip, matrix);
+   Presolve<SCIP_Real> presolve;
 
-      switch(res.status)
+   using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
+
+   presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new CoefficientStrengthening<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new SimpleProbing<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new ConstraintPropagation<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
+   // todo: parallel cols cannot be handled by SCIP currently
+   // addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real> ) );
+   presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
+
+   presolve.setEpsilon(SCIPepsilon(scip));
+   presolve.setFeasTol(SCIPfeastol(scip));
+   presolve.setVerbosityLevel(VerbosityLevel::QUIET);
+
+   PresolveResult<SCIP_Real> res = presolve.apply(problem);
+   data->lastncols = problem.getNCols();
+   data->lastnrows = problem.getNRows();
+
+   switch(res.status)
+   {
+      case PresolveStatus::INFEASIBLE:
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      case PresolveStatus::UNBOUNDED:
+         *result = SCIP_UNBOUNDED;
+         return SCIP_OKAY;
+      case PresolveStatus::UNBND_OR_INFEAS:
+         //todo
+      case PresolveStatus::UNCHANGED:
+         *result = SCIP_DIDNOTFIND;
+         data->lastncols = 0;
+         data->lastnrows = 0;
+         puts("didnotfind");
+         return SCIP_OKAY;
+      case PresolveStatus::REDUCED:
+         data->lastncols = problem.getNCols();
+         data->lastnrows = problem.getNRows();
+         puts("success");
+         *result = SCIP_SUCCESS;
+   }
+
+   std::vector<SCIP_VAR*> aggrvars;
+   std::vector<SCIP_Real> aggrvals;
+
+   // tighten bounds of variables that are still present
+   VariableDomains<SCIP_Real>& varDomains = problem.getVariableDomains();
+   for( int i = 0; i != problem.getNCols(); ++i )
+   {
+      SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
+      if( !varDomains.flags[i].test(ColFlag::LB_INF) )
       {
-         case PresolveStatus::INFEASIBLE:
+         SCIP_Bool infeas;
+         SCIP_Bool tightened;
+         SCIP_CALL( SCIPtightenVarLb(scip, var, varDomains.lower_bounds[i], TRUE, &infeas, &tightened) );
+
+         if( tightened )
+            *nchgbds += 1;
+
+         if( infeas )
+         {
             *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         case PresolveStatus::UNBOUNDED:
-            *result = SCIP_UNBOUNDED;
-            return SCIP_OKAY;
-         case PresolveStatus::UNBND_OR_INFEAS:
-            //todo
-         case PresolveStatus::UNCHANGED:
-            *result = SCIP_DIDNOTFIND;
-            puts("didnotfind");
-            return SCIP_OKAY;
-         case PresolveStatus::REDUCED:
-            puts("success");
-            *result = SCIP_SUCCESS;
-      }
-
-      std::vector<SCIP_VAR*> aggrvars;
-      std::vector<SCIP_Real> aggrvals;
-
-      // tighten bounds of variables that are still present
-      VariableDomains<SCIP_Real>& varDomains = problem.getVariableDomains();
-      for( int i = 0; i != problem.getNCols(); ++i )
-      {
-         SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
-         if( !varDomains.flags[i].test(ColFlag::LB_INF) )
-         {
-            SCIP_Bool infeas;
-            SCIP_Bool tightened;
-            SCIP_CALL( SCIPtightenVarLb(scip, var, varDomains.lower_bounds[i], TRUE, &infeas, &tightened) );
-
-            if( tightened )
-               *nchgbds += 1;
-
-            if( infeas )
-            {
-               *result = SCIP_CUTOFF;
-               break;
-            }
-         }
-
-         if( !varDomains.flags[i].test(ColFlag::UB_INF) )
-         {
-            SCIP_Bool infeas;
-            SCIP_Bool tightened;
-            SCIP_CALL( SCIPtightenVarUb(scip, var, varDomains.upper_bounds[i], TRUE, &infeas, &tightened) );
-
-            if( tightened )
-               *nchgbds += 1;
-
-            if( infeas )
-            {
-               *result = SCIP_CUTOFF;
-               break;
-            }
+            break;
          }
       }
 
-      // loop over res.postsolve and add all fixed variables and aggregations to scip
-      for( std::size_t i = 0; i != res.postsolve.types.size(); ++i )
+      if( !varDomains.flags[i].test(ColFlag::UB_INF) )
       {
-         ReductionType type = res.postsolve.types[i];
-         int first = res.postsolve.start[i];
-         int last = res.postsolve.start[i + 1];
+         SCIP_Bool infeas;
+         SCIP_Bool tightened;
+         SCIP_CALL( SCIPtightenVarUb(scip, var, varDomains.upper_bounds[i], TRUE, &infeas, &tightened) );
 
-         switch( type )
-         {
-         case ReductionType::FIXED_COL:
-         {
-            SCIP_Bool infeas;
-            SCIP_Bool fixed;
-            int col = res.postsolve.indices[first];
-            
-            SCIP_VAR* colvar = SCIPmatrixGetVar(matrix, col);
+         if( tightened )
+            *nchgbds += 1;
 
-            SCIP_Real value = res.postsolve.values[first];
-            
-            SCIP_CALL( SCIPfixVar(scip, colvar, value, &infeas, &fixed) );
-            *nfixedvars += 1;
-            
-            assert(!infeas);
-            assert(fixed);
+         if( infeas )
+         {
+            *result = SCIP_CUTOFF;
             break;
          }
-         case ReductionType::SUBSTITUTED_COL:
+      }
+   }
+
+   // loop over res.postsolve and add all fixed variables and aggregations to scip
+   for( std::size_t i = 0; i != res.postsolve.types.size(); ++i )
+   {
+      ReductionType type = res.postsolve.types[i];
+      int first = res.postsolve.start[i];
+      int last = res.postsolve.start[i + 1];
+
+      switch( type )
+      {
+      case ReductionType::FIXED_COL:
+      {
+         SCIP_Bool infeas;
+         SCIP_Bool fixed;
+         int col = res.postsolve.indices[first];
+
+         SCIP_VAR* colvar = SCIPmatrixGetVar(matrix, col);
+
+         SCIP_Real value = res.postsolve.values[first];
+
+         SCIP_CALL( SCIPfixVar(scip, colvar, value, &infeas, &fixed) );
+         *nfixedvars += 1;
+
+         assert(!infeas);
+         assert(fixed);
+         break;
+      }
+      case ReductionType::SUBSTITUTED_COL:
+      {
+         int col = res.postsolve.indices[first];
+         SCIP_Real side = res.postsolve.values[first];
+         SCIP_Real colCoef = 0.0;
+         aggrvars.clear();
+         aggrvals.clear();
+         aggrvars.reserve(last - first - 1);
+         aggrvals.reserve(last - first - 1);
+         for( int j = first + 1; j < last; ++j )
          {
-            int col = res.postsolve.indices[first];
-            SCIP_Real side = res.postsolve.values[first];
-            SCIP_Real colCoef = 0.0;
-            aggrvars.clear();
-            aggrvals.clear();
-            aggrvars.reserve(last - first - 1);
-            aggrvals.reserve(last - first - 1);
-            for( int j = first + 1; j < last; ++j )
+            if( res.postsolve.indices[j] == col )
             {
-               if( res.postsolve.indices[j] == col )
-               {
-                  colCoef = res.postsolve.values[j];
-                  break;
-               }
-            }
-
-            assert(colCoef != 0.0);
-
-            for( int j = first + 1; j < last; ++j )
-            {
-               if( res.postsolve.indices[j] == col )
-                  continue;
-
-               aggrvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
-               aggrvals.push_back(- res.postsolve.values[j] / colCoef);
-            }
-
-            SCIP_Bool infeas;
-            SCIP_Bool aggregated;
-            SCIP_CALL( SCIPmultiaggregateVar(scip, SCIPmatrixGetVar(matrix, col), aggrvars.size(),
-               aggrvars.data(), aggrvals.data(),side / colCoef, &infeas, &aggregated) );
-
-            if( aggregated )
-               *naggrvars += 1;
-
-            if( infeas )
-            {
-               *result = SCIP_CUTOFF;
+               colCoef = res.postsolve.values[j];
                break;
             }
+         }
 
+         assert(colCoef != 0.0);
+
+         for( int j = first + 1; j < last; ++j )
+         {
+            if( res.postsolve.indices[j] == col )
+               continue;
+
+            aggrvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
+            aggrvals.push_back(- res.postsolve.values[j] / colCoef);
+         }
+
+         SCIP_Bool infeas;
+         SCIP_Bool aggregated;
+         SCIP_CALL( SCIPmultiaggregateVar(scip, SCIPmatrixGetVar(matrix, col), aggrvars.size(),
+            aggrvars.data(), aggrvals.data(),side / colCoef, &infeas, &aggregated) );
+
+         if( aggregated )
+         {
+            *naggrvars += 1;
+         }
+
+         if( infeas )
+         {
+            *result = SCIP_CUTOFF;
             break;
          }
-         case ReductionType::PARALLEL_COL:
-            assert(false);
-         }
+
+         break;
+      }
+      case ReductionType::PARALLEL_COL:
+         assert(false);
       }
    }
 
@@ -389,6 +425,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    /* create xyz presolver data */
    presoldata = NULL;
    /* TODO: (optional) create presolver specific data here */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
 
    presol = NULL;
 
