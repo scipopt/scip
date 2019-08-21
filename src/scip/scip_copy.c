@@ -48,6 +48,7 @@
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_sol.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
@@ -61,6 +62,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_pricer.h"
 #include "scip/scip_prob.h"
+#include "scip/scip_sol.h"
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
@@ -1296,6 +1298,181 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
          /* other variable status are currently not supported for the merging */
          break;
       }  /*lint !e788*/
+   }
+
+   return SCIP_OKAY;
+}
+
+/** provides values of a solution from a subscip according to the variable in the main scip
+ *
+ * Given a subscip solution, fills an array with solution values, matching the variables given by SCIPgetVars().
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
+ * are represented as NULL entry in the \p subvars array.
+ */
+static
+SCIP_RETCODE translateSubSol(
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_Real*            solvals             /**< array where to set values taken from subsol, must have length at least SCIPgetNVars(scip) */
+)
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(subsol != NULL);
+   assert(subvars != NULL);
+   assert(solvals != NULL);
+
+   /* copy the solution */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   /* copy the solution */
+   for( i = 0; i < nvars; ++i )
+   {
+      if( subvars[i] != NULL )
+         solvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
+      else
+         solvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+   }
+
+   return SCIP_OKAY;
+}
+
+/** translates a solution from a subscip to the main scip
+ *
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
+ * are represented as NULL entry in the \p subvars array.
+ *
+ * @note This method allocates a new solution of the main \p scip that needs to be freed by the user.
+ */
+SCIP_RETCODE SCIPtranslateSubSol(
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_SOL**            newsol              /**< buffer to store pointer to created solution in main SCIP */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   SCIP_Real* subsolvals;
+
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(subsol != NULL);
+   assert(subvars != NULL);
+   assert(newsol != NULL);
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
+
+   /* get the solution values */
+   SCIP_CALL( translateSubSol(scip, subscip, subsol, subvars, subsolvals) );
+
+   /* create new solution for the original problem */
+   SCIP_CALL( SCIPcreateSol(scip, newsol, heur) );
+   SCIP_CALL( SCIPsetSolVals(scip, *newsol, nvars, vars, subsolvals) );
+
+   SCIPfreeBufferArray(scip, &subsolvals);
+
+   return SCIP_OKAY;
+}
+
+/** checks the solutions from the subscip and adds the first one that is found feasible to the master SCIP
+ *
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
+ * are represented as NULL entry in the \p subvars array.
+ */
+SCIP_RETCODE SCIPtranslateSubSols(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_Bool*            success,            /**< pointer to store, whether new solution was found */
+   int*                  solindex            /**< pointer to store solution index of stored solution, or NULL if not of interest */
+   )
+{
+   SCIP_SOL* newsol = NULL;
+   SCIP_SOL** subsols;
+   int nsubsols;
+   int i;
+   SCIP_VAR** vars;
+   int nvars;
+   SCIP_Real* solvals;
+
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(heur != NULL);
+   assert(subvars != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* check, whether a solution was found */
+   if( SCIPgetNSols(subscip) == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
+
+   /* check, whether a solution was found;
+    * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+    */
+   nsubsols = SCIPgetNSols(subscip);
+   subsols = SCIPgetSols(subscip);
+   for( i = 0; i < nsubsols; ++i )
+   {
+      /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
+      if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsols[i])) )
+         continue;
+
+      if( newsol == NULL )
+      {
+         SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
+         if( solindex != NULL )
+            *solindex = SCIPsolGetIndex(newsol);
+      }
+
+      /* put values from subsol into newsol */
+      SCIP_CALL( translateSubSol(scip, subscip, subsols[i], subvars, solvals) );
+      SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, solvals) );
+
+      /* check whether feasible */
+      SCIP_CALL( SCIPcheckSol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
+      if( *success )
+      {
+         /* if feasible, then there is a good chance that we can add it
+          * we use SCIPaddSolFree to make sure that newsol is indeed added and not some copy, so *solindex stays valid
+          */
+         SCIP_CALL( SCIPaddSolFree(scip, &newsol, success) );
+         if( *success )
+         {
+            SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
+            break;
+         }
+         else
+         {
+            /* continue with next subsol
+             * as we have used addSolFree, newsol should be NULL now
+             */
+            assert(newsol == NULL);
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &solvals);
+
+   if( newsol != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &newsol) );
    }
 
    return SCIP_OKAY;

@@ -423,7 +423,7 @@ SCIP_RETCODE setupAndSolveSubscipLocalbranching(
       SCIPgetNNodes(subscip), nsubnodes);
 
    /* checks the solutions of the sub SCIP and adds them to the main SCIP if feasible */
-   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success) );
+   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, NULL) );
 
    if( success )
       *result = SCIP_FOUNDSOL;
