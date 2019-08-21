@@ -29,7 +29,7 @@
 
 #define PRESOL_NAME            "milp"
 #define PRESOL_DESC            "MILP specific presolving routine"
-#define PRESOL_PRIORITY         9999999 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
+#define PRESOL_PRIORITY        -9999999 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
@@ -64,22 +64,21 @@ struct SCIP_PresolData
 static
 SCIP_DECL_PRESOLCOPY(presolCopyMILP)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CALL( SCIPincludePresolMILP(scip) );
 
    return SCIP_OKAY;
 }
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
+#if 0
 static
 SCIP_DECL_PRESOLFREE(presolFreeMILP)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
+    return SCIP_OKAY;
 }
-
+#else
+#define presolFreeMILP NULL
+#endif
 
 /** initialization method of presolver (called after problem was transformed) */
 #if 0
@@ -149,21 +148,21 @@ buildProblem(SCIP* scip, SCIP_MATRIX* matrix)
    // build problem from matrix
    int nnz = SCIPmatrixGetNNonzs(matrix);
    int ncols = SCIPmatrixGetNColumns(matrix);
-   int nrows = SCIPmatrixGetNColumns(matrix);
+   int nrows = SCIPmatrixGetNRows(matrix);
    builder.reserve(nnz, nrows, ncols);
    builder.setNumCols(ncols);
 
    for(int i = 0; i != ncols; ++i)
    {
       SCIP_VAR* var = SCIPmatrixGetVar(matrix, i);
-      SCIP_Real lb = SCIpvarGetLbGlobal(var);
+      SCIP_Real lb = SCIPvarGetLbGlobal(var);
       SCIP_Real ub = SCIPvarGetUbGlobal(var);
       builder.setColLb(i, lb);
       builder.setColUb(i, ub);
       builder.setColLbInf(i, SCIPisInfinity(scip, -lb));
       builder.setColUbInf(i, SCIPisInfinity(scip, ub));
 
-      builder.setColIntegral(i, SCIPisIntegral(scip, var));
+      builder.setColIntegral(i, SCIPvarIsIntegral(var));
       builder.setObj(i, SCIPvarGetObj(var));
    }
 
@@ -206,27 +205,28 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
       using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
 
-      addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new CoefficientStrengthening<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new SimpleProbing<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new ConstraintPropagation<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new CoefficientStrengthening<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new SimpleProbing<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new ConstraintPropagation<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
       // todo: parallel cols cannot be handled by SCIP currently
       // addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new DualInfer<SCIP_Real> ) );
-      addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
-      addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real> ) );
+      presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
 
       presolve.setEpsilon(SCIPepsilon(scip));
       presolve.setFeasTol(SCIPfeastol(scip));
+      presolve.setVerbosityLevel(VerbosityLevel::QUIET);
       
       PresolveResult<SCIP_Real> res = presolve.apply(problem);
 
@@ -242,15 +242,55 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             //todo
          case PresolveStatus::UNCHANGED:
             *result = SCIP_DIDNOTFIND;
+            puts("didnotfind");
             return SCIP_OKAY;
          case PresolveStatus::REDUCED:
+            puts("success");
             *result = SCIP_SUCCESS;
       }
 
       std::vector<SCIP_VAR*> aggrvars;
       std::vector<SCIP_Real> aggrvals;
-      
-      // loop over res.postsolve and add all bound changes and aggregations to scip
+
+      // tighten bounds of variables that are still present
+      VariableDomains<SCIP_Real>& varDomains = problem.getVariableDomains();
+      for( int i = 0; i != problem.getNCols(); ++i )
+      {
+         SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
+         if( !varDomains.flags[i].test(ColFlag::LB_INF) )
+         {
+            SCIP_Bool infeas;
+            SCIP_Bool tightened;
+            SCIP_CALL( SCIPtightenVarLb(scip, var, varDomains.lower_bounds[i], TRUE, &infeas, &tightened) );
+
+            if( tightened )
+               *nchgbds += 1;
+
+            if( infeas )
+            {
+               *result = SCIP_CUTOFF;
+               break;
+            }
+         }
+
+         if( !varDomains.flags[i].test(ColFlag::UB_INF) )
+         {
+            SCIP_Bool infeas;
+            SCIP_Bool tightened;
+            SCIP_CALL( SCIPtightenVarUb(scip, var, varDomains.upper_bounds[i], TRUE, &infeas, &tightened) );
+
+            if( tightened )
+               *nchgbds += 1;
+
+            if( infeas )
+            {
+               *result = SCIP_CUTOFF;
+               break;
+            }
+         }
+      }
+
+      // loop over res.postsolve and add all fixed variables and aggregations to scip
       for( std::size_t i = 0; i != res.postsolve.types.size(); ++i )
       {
          ReductionType type = res.postsolve.types[i];
@@ -267,9 +307,10 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             
             SCIP_VAR* colvar = SCIPmatrixGetVar(matrix, col);
 
-            SCIP_Real value = values[first];
+            SCIP_Real value = res.postsolve.values[first];
             
             SCIP_CALL( SCIPfixVar(scip, colvar, value, &infeas, &fixed) );
+            *nfixedvars += 1;
             
             assert(!infeas);
             assert(fixed);
@@ -288,18 +329,18 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             {
                if( res.postsolve.indices[j] == col )
                {
-                  colCoef = values[j];
+                  colCoef = res.postsolve.values[j];
                   break;
                }
             }
-            
+
             assert(colCoef != 0.0);
 
             for( int j = first + 1; j < last; ++j )
             {
                if( res.postsolve.indices[j] == col )
                   continue;
-               
+
                aggrvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
                aggrvals.push_back(- res.postsolve.values[j] / colCoef);
             }
@@ -309,8 +350,14 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             SCIP_CALL( SCIPmultiaggregateVar(scip, SCIPmatrixGetVar(matrix, col), aggrvars.size(),
                aggrvars.data(), aggrvals.data(),side / colCoef, &infeas, &aggregated) );
 
-            assert(!infeas);
-            assert(aggregated);
+            if( aggregated )
+               *naggrvars += 1;
+
+            if( infeas )
+            {
+               *result = SCIP_CUTOFF;
+               break;
+            }
 
             break;
          }
@@ -358,7 +405,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
     * compile independent of new callbacks being added in future SCIP versions
     */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
-         presolExecXyz,
+         presolExecMILP,
          presoldata) );
 
    assert(presol != NULL);
