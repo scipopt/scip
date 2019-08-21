@@ -87,6 +87,22 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define INITIALSIZE             100
 #define SESCOEFF                0.75            /**< coefficient of single exponential smoothing of estimation */
 
+/** double exponential smoothing parameters for different time series */
+#define DES_ALPHA_PROGRESS 0.65
+#define DES_BETA_PROGRESS 0.15
+
+#define DES_ALPHA_GAP 0.6
+#define DES_BETA_GAP 0.15
+
+#define DES_ALPHA_LEAFFREQUENCY 0.3
+#define DES_BETA_LEAFFREQUENCY 0.33
+
+#define DES_ALPHA_SSG 0.6
+#define DES_BETA_SSG 0.15
+
+#define DES_ALPHA_OPENNODES 0.6
+#define DES_BETA_OPENNODES 0.15
+
 /** double exponential smoothing data structure */
 struct DoubleExpSmooth
 {
@@ -936,12 +952,6 @@ void doubleexpsmoothInit(
    des->level = x1;
    des->trend = x1 - des->initialvalue;
 
-   /* author bzfhende
-    *
-    * TODO make these user parameters
-    */
-   des->alpha = DEFAULT_DES_ALPHA;
-   des->beta = DEFAULT_DES_BETA;
    des->usetrendinlevel = DEFAULT_DES_USETRENDINLEVEL;
 
    return;
@@ -1008,6 +1018,8 @@ SCIP_RETCODE timeseriesCreate(
    const char*           name,               /**< name of this time series */
    SCIP_Real             targetvalue,        /**< target value of this time series */
    SCIP_Real             initialvalue,       /**< the initial value of time series */
+   SCIP_Real             alpha,              /**< alpha parameter (level weight) for double exponential smoothing */
+   SCIP_Real             beta,               /**< beta parameter (level weight) for double exponential smoothing */
    DECL_TIMESERIESUPDATE ((*timeseriesupdate)) /**< update callback at nodes, or NULL */
    )
 {
@@ -1015,6 +1027,8 @@ SCIP_RETCODE timeseriesCreate(
    assert(scip != NULL);
    assert(timeseries != NULL);
    assert(name != NULL);
+   assert(alpha >= 0.0 && alpha <= 1);
+   assert(beta >= 0.0 && beta <= 1);
 
    SCIP_CALL( SCIPallocMemory(scip, timeseries) );
 
@@ -1036,6 +1050,9 @@ SCIP_RETCODE timeseriesCreate(
    SCIP_CALL( SCIPallocMemoryArray(scip, &timeseriesptr->estimation, timeseriesptr->valssize) );
 
    timeseriesReset(timeseriesptr);
+
+   timeseriesptr->des.alpha = alpha;
+   timeseriesptr->des.beta = beta;
 
    SCIPdebugMsg(scip, "Finished creation of time series '%s'\n", timeseriesptr->name);
 
@@ -1269,6 +1286,12 @@ SCIP_RETCODE createSearchprogress(
    SCIP_ALLOC( BMSallocMemory(progress) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*progress)->progressarray, MAX_WINDOWSIZE) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*progress)->resourcearray, MAX_WINDOWSIZE) );
+
+   (*progress)->desprogress.alpha = DEFAULT_DES_ALPHA;
+   (*progress)->desprogress.beta = DEFAULT_DES_BETA;
+
+   (*progress)->desresources.alpha = DEFAULT_DES_ALPHA;
+   (*progress)->desresources.beta = DEFAULT_DES_BETA;
 
    resetSearchprogress(*progress);
 
@@ -2265,19 +2288,24 @@ SCIP_RETCODE includeTimeseries(
    assert(eventhdlrdata != NULL);
 
    /* include gap time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[0], "gap", 1.0, 0.0, timeseriesUpdateGap) );
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[0], "gap", 1.0, 0.0,
+            DES_ALPHA_GAP, DES_BETA_GAP, timeseriesUpdateGap) );
 
    /* include progress time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[1], "progress", 1.0, 0.0, timeseriesUpdateProgress) );
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[1], "progress", 1.0, 0.0,
+            DES_ALPHA_PROGRESS, DES_BETA_PROGRESS, timeseriesUpdateProgress) );
 
    /* include leaf time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[2], "leaf-frequency", 0.5, -0.5, timeseriesUpdateLeaffreq) );
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[2], "leaf-frequency", 0.5, -0.5,
+            DES_ALPHA_LEAFFREQUENCY, DES_BETA_LEAFFREQUENCY, timeseriesUpdateLeaffreq) );
 
    /* include SSG time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[3], "ssg", 0.0, 1.0, timeseriesUpdateSsg) );
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[3], "ssg", 0.0, 1.0,
+            DES_ALPHA_SSG, DES_BETA_SSG, timeseriesUpdateSsg) );
 
    /* include open nodes time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[4], "open-nodes", 0.0, 0.0, timeseriesUpdateOpenNodes) );
+   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[4], "open-nodes", 0.0, 0.0,
+            DES_ALPHA_OPENNODES, DES_BETA_OPENNODES, timeseriesUpdateOpenNodes) );
 
    return SCIP_OKAY;
 }
