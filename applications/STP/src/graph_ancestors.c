@@ -29,6 +29,27 @@
 #include "graph.h"
 #include "portab.h"
 
+
+/** fixed graph components, typedef FIXED */
+struct fixed_graph_components
+{
+   IDX*                  fixedges;           /**< fixed edges */
+   int*                  fixpseudonodes;     /**< fixed psuedo eliminated nodes  */
+   int                   nfixnodes;          /**< number of fixed nodes  */
+};
+
+/** node ancestors resulting from pseudo-elimination, typedef FIXED */
+struct pseudo_ancestors
+{
+   int**                 edgeblocks;         /**< blocks of ancestors for each halfedge */
+   int**                 pcnodeblocks;       /**< blocks of ancestors for each node (only used for PC/MW) */
+   int*                  sizes;              /**< number of ancestors for each halfedge */
+   int*                  maxsizes;           /**< current maximum number of ancestors for each halfedge */
+   int                   halfnedges;         /**< half number of edges */
+   int                   nnodes;             /**< number of nodes */
+};
+
+
 /** get next power of 2 number */
 static inline
 uint32_t getNextPow2(uint32_t n)
@@ -53,7 +74,7 @@ void pseudoAncestors_hashCleanLimited(
    int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
 )
 {
-   const int* ancestors = pseudoancestors->blocks[halfedge];
+   const int* ancestors = pseudoancestors->edgeblocks[halfedge];
 
    assert(pseudoancestors && hasharr);
    assert(halfedge >= 0 && halfedge < pseudoancestors->halfnedges);
@@ -106,17 +127,17 @@ SCIP_RETCODE pseudoAncestors_realloc(
 
    if( maxsize == 0 )
    {
-      assert(pseudoancestors->blocks[halfedge] == NULL);
+      assert(pseudoancestors->edgeblocks[halfedge] == NULL);
       assert(pseudoancestors->sizes[halfedge] == 0);
 
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(pseudoancestors->blocks[halfedge]), maxsize_up) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(pseudoancestors->edgeblocks[halfedge]), maxsize_up) );
    }
    else
    {
-      assert(pseudoancestors->blocks[halfedge] != NULL);
+      assert(pseudoancestors->edgeblocks[halfedge] != NULL);
       assert(maxsize >= 2);
 
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(pseudoancestors->blocks[halfedge]), maxsize, maxsize_up) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(pseudoancestors->edgeblocks[halfedge]), maxsize, maxsize_up) );
    }
 
    printf("new sizes: %d %d \n", min_maxsize_new, maxsize_up);
@@ -155,7 +176,7 @@ void graph_pseudoAncestors_hash(
 )
 {
    const int halfedge = edge / 2;
-   const int* ancestors = pseudoancestors->blocks[halfedge];
+   const int* ancestors = pseudoancestors->edgeblocks[halfedge];
    const int nancestors = pseudoancestors->sizes[halfedge];
 
    assert(pseudoancestors && hasharr);
@@ -182,7 +203,7 @@ void graph_pseudoAncestors_hashConflicting(
 )
 {
    const int halfedge = edge / 2;
-   const int* ancestors = pseudoancestors->blocks[halfedge];
+   const int* ancestors = pseudoancestors->edgeblocks[halfedge];
    const int nancestors = pseudoancestors->sizes[halfedge];
 
    assert(pseudoancestors && hasharr);
@@ -217,7 +238,7 @@ void graph_pseudoAncestors_hashClean(
 )
 {
    const int halfedge = edge / 2;
-   const int* ancestors = pseudoancestors->blocks[halfedge];
+   const int* ancestors = pseudoancestors->edgeblocks[halfedge];
    const int nancestors = pseudoancestors->sizes[halfedge];
 
    assert(pseudoancestors && hasharr);
@@ -243,7 +264,7 @@ void graph_pseudoAncestors_hashCleanConflicting(
 )
 {
    const int halfedge = edge / 2;
-   const int* ancestors = pseudoancestors->blocks[halfedge];
+   const int* ancestors = pseudoancestors->edgeblocks[halfedge];
    const int nancestors = pseudoancestors->sizes[halfedge];
 
    assert(pseudoancestors && hasharr);
@@ -296,7 +317,7 @@ SCIP_RETCODE graph_init_pseudoAncestors(
       maxsizes[e] = 0;
    }
 
-   pseudoancestors->blocks = blocks;
+   pseudoancestors->edgeblocks = blocks;
    pseudoancestors->sizes = sizes;
    pseudoancestors->maxsizes = maxsizes;
 
@@ -325,14 +346,14 @@ void graph_free_pseudoAncestors(
 
       if( size > 0 )
       {
-         assert(pseudoancestors->blocks[e]);
-         SCIPfreeBlockMemoryArray(scip, &(pseudoancestors->blocks[e]), size);
+         assert(pseudoancestors->edgeblocks[e]);
+         SCIPfreeBlockMemoryArray(scip, &(pseudoancestors->edgeblocks[e]), size);
       }
    }
 
    SCIPfreeMemoryArray(scip, &(pseudoancestors->maxsizes));
    SCIPfreeMemoryArray(scip, &(pseudoancestors->sizes));
-   SCIPfreeMemoryArray(scip, &(pseudoancestors->blocks));
+   SCIPfreeMemoryArray(scip, &(pseudoancestors->edgeblocks));
 
    SCIPfreeMemoryArray(scip, &(g->pseudoancestors));
    assert(g->pseudoancestors == NULL);
@@ -356,14 +377,14 @@ SCIP_RETCODE graph_free_pseudoAncestorsBlock(
 
    if( size > 0 )
    {
-      assert(pseudoancestors->blocks[block_id]);
-      SCIPfreeBlockMemoryArray(scip, &(pseudoancestors->blocks[block_id]), size);
+      assert(pseudoancestors->edgeblocks[block_id]);
+      SCIPfreeBlockMemoryArray(scip, &(pseudoancestors->edgeblocks[block_id]), size);
    }
 
    pseudoancestors->sizes[block_id] = 0;
    pseudoancestors->maxsizes[block_id] = 0;
 
-   assert(pseudoancestors->blocks[block_id] == NULL);
+   assert(pseudoancestors->edgeblocks[block_id] == NULL);
 
    return SCIP_OKAY;
 }
@@ -394,7 +415,7 @@ const int* graph_get_pseudoAncestors(
    assert(g && g->pseudoancestors);
    assert(halfedge >= 0 && halfedge < g->pseudoancestors->halfnedges);
 
-   return g->pseudoancestors->blocks[halfedge];
+   return g->pseudoancestors->edgeblocks[halfedge];
 }
 
 /** appends copy of pseudo ancestors of edge_source to edge_target */
@@ -421,7 +442,7 @@ SCIP_RETCODE graph_appendCopy_pseudoAncestors(
    /* anything to append? */
    if( size_source > 0 )
    {
-      const int* const ancestors_source = pseudoancestors->blocks[source];
+      const int* const ancestors_source = pseudoancestors->edgeblocks[source];
       int* ancestors_target;
       int* hasharr;
       const int target = edge_target / 2;
@@ -438,7 +459,7 @@ SCIP_RETCODE graph_appendCopy_pseudoAncestors(
          SCIP_CALL( pseudoAncestors_realloc(scip, target, size_targetPlusSource, pseudoancestors) );
       }
 
-      ancestors_target = pseudoancestors->blocks[target];
+      ancestors_target = pseudoancestors->edgeblocks[target];
 
       /* mark ancestors of target */
       graph_pseudoAncestors_hash(pseudoancestors, edge_target, hasharr);
@@ -520,7 +541,7 @@ SCIP_RETCODE graph_add_pseudoAncestor(
 
    assert(sizes[target] < maxsizes[target]);
 
-   pseudoancestors->blocks[edge_target][sizes[target]++] = ancestor;
+   pseudoancestors->edgeblocks[edge_target][sizes[target]++] = ancestor;
 
 #ifndef NDEBUG
    {
@@ -543,7 +564,7 @@ SCIP_Bool graph_valid_pseudoAncestors(
    const PSEUDOANS* const pseudoancestors = g->pseudoancestors;
    const int halfnedges = pseudoancestors->halfnedges;
    int* hasharr;
-   int** blocks = pseudoancestors->blocks;
+   int** blocks = pseudoancestors->edgeblocks;
    SCIP_Bool isValid = TRUE;
 
    assert(scip && g && pseudoancestors);
@@ -602,7 +623,6 @@ SCIP_RETCODE graph_init_fixed(
 
    fixedcomponents->fixedges = NULL;
    fixedcomponents->fixpseudonodes = NULL;
-   fixedcomponents->nfixedges = 0;
    fixedcomponents->nfixnodes = 0;
 
    return SCIP_OKAY;
@@ -670,7 +690,6 @@ SCIP_RETCODE graph_fixed_add(
       int fixnnodes = fixedcomponents->nfixnodes;
       const int fixnnodes_new = fixnnodes + npseudonodes;
 
-
       assert(pseudonodes);
 
       if( fixnnodes == 0 )
@@ -694,6 +713,43 @@ SCIP_RETCODE graph_fixed_add(
 
       fixedcomponents->nfixnodes = fixnnodes_new;
    }
+
+   return SCIP_OKAY;
+}
+
+/** adds ancestors from given edges */
+SCIP_RETCODE graph_fixed_addEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edge,               /**< edge */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   assert(scip && g);
+   assert(edge >= 0 && edge < g->edges);
+   assert(g->ancestors);
+
+   SCIP_CALL( graph_fixed_add(scip, g->ancestors[edge], NULL, 0, g) );
+
+#if 0
+   SCIP_CALL( graph_fixed_add(scip, g->ancestors[edge], graph_get_pseudoAncestors(g, edge),
+         graph_get_nPseudoAncestors(g, edge), g) );
+#endif
+   return SCIP_OKAY;
+}
+
+/** adds ancestors from given edges */
+SCIP_RETCODE graph_fixed_addNodePc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   node,               /**< node */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   assert(scip && g);
+   assert(node >= 0 && node < g->knots);
+   assert(graph_pc_isPcMw(g));
+   assert(g->ancestors && g->pcancestors);
+
+   SCIP_CALL( graph_fixed_add(scip, g->pcancestors[node], NULL, 0, g) );
 
    return SCIP_OKAY;
 }

@@ -912,7 +912,7 @@ SCIP_RETCODE reduce_nv_optimal(
             else
             {
                *fixed += min1;
-               SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[shortarc], NULL) ); /* I think that this should be
+               SCIP_CALL(  SCIPintListNodeAppendCopy(scip, graph_get_fixedges(scip, g), g->ancestors[shortarc], NULL) ); /* I think that this should be
                                                                                                          shortarc instead of shortarctail */
                SCIP_CALL( graph_knot_contract(scip, g, i, shortarctail) );
 
@@ -969,7 +969,7 @@ SCIP_RETCODE reduce_nv_optimal(
 
          if( Is_term(g->term[i]) )
          {
-            SCIPintListNodeAppendCopy(&(g->fixedges), g->ancestors[e], NULL);
+            SCIPintListNodeAppendCopy(graph_get_fixedges(scip, g), g->ancestors[e], NULL);
             *fixed += g->cost[e];
          }
          graph_knot_contract(g, j, i);
@@ -4918,7 +4918,7 @@ SCIP_RETCODE reduce_sl(
             }
             else
             {
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[minedge], NULL) );
+               SCIP_CALL( graph_fixed_addEdge(scip, minedge, g) );
                SCIP_CALL( graph_knot_contract(scip, g, solnode, j, k) );
 
                assert(g->grad[k] == 0 && g->grad[j] >= 0);
@@ -5137,7 +5137,7 @@ SCIP_RETCODE reduce_nv(
          }
          else
          {
-            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[edge1], NULL) );
+            SCIP_CALL( graph_fixed_addEdge(scip, edge1, g) );
             SCIP_CALL( graph_knot_contract(scip, g, solnode, i, k) );
          }
          assert(old - g->grad[i] - g->grad[k] > 0);
@@ -5386,7 +5386,7 @@ SCIP_RETCODE reduce_nvAdv(
          }
          else
          {
-            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[edge1], NULL) );
+            SCIP_CALL( graph_fixed_addEdge(scip, edge1, g) );
             SCIP_CALL( graph_knot_contract(scip, g, solnode, i, k) );
          }
       }

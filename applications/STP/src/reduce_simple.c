@@ -526,7 +526,9 @@ SCIP_RETCODE reduce_contractZeroEdges(
 
                }
                else
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e], NULL) );
+               {
+                  SCIP_CALL( graph_fixed_addEdge(scip, e, g) );
+               }
 
             }
       // todo contract...
@@ -650,7 +652,7 @@ SCIP_RETCODE reduce_simple(
                if( Is_term(g->term[i]) )
                {
                   *fixed += g->cost[e1];
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1], NULL) );
+                  SCIP_CALL( graph_fixed_addEdge(scip, e1, g) );
                }
 
                SCIP_CALL( graph_knot_contract(scip, g, solnode, i1, i) );
@@ -707,13 +709,15 @@ SCIP_RETCODE reduce_simple(
                   if( SCIPisLT(scip, g->cost[e1], g->cost[e2]) )
                   {
                      *fixed += g->cost[e1];
-                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1], NULL) );
+
+                     SCIP_CALL( graph_fixed_addEdge(scip, e1, g) );
                      SCIP_CALL( graph_knot_contract(scip, g, solnode, i1, i) );
                   }
                   else
                   {
                      *fixed += g->cost[e2];
-                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e2], NULL) );
+
+                     SCIP_CALL( graph_fixed_addEdge(scip, e2, g) );
                      SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
                   }
                   count++;
@@ -723,15 +727,17 @@ SCIP_RETCODE reduce_simple(
                if( Is_term(g->term[i1]) && !Is_term(g->term[i2]) && SCIPisLE(scip, g->cost[e1], g->cost[e2]) )
                {
                   *fixed += g->cost[e1];
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1], NULL) );
+
+                  SCIP_CALL( graph_fixed_addEdge(scip, e1, g) );
                   SCIP_CALL( graph_knot_contract(scip, g, solnode, i1, i) );
                   count++;
                   break;
                }
                if( Is_term(g->term[i2]) && !Is_term(g->term[i1]) && SCIPisLE(scip, g->cost[e2], g->cost[e1]) )
                {
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e2], NULL) );
                   *fixed += g->cost[e2];
+
+                  SCIP_CALL( graph_fixed_addEdge(scip, e2, g) );
                   SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
                   count++;
                   break;
@@ -767,7 +773,8 @@ SCIP_RETCODE reduce_simple(
             if( ett != UNKNOWN && SCIPisLE(scip, g->cost[ett], mincost) )
             {
                *fixed += g->cost[ett];
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[ett], NULL) );
+
+               SCIP_CALL( graph_fixed_addEdge(scip, ett, g) );
                SCIP_CALL( graph_knot_contractLowdeg2High(scip, g, solnode, i, g->head[ett]) );
 
                rerun = TRUE;
@@ -837,15 +844,18 @@ SCIP_RETCODE reduce_simple_sap(
                if( i == g->source )
                {
                   e2 = flipedge(e1);
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e2], NULL) );
+
                   *fixed += g->cost[e2];
+
+                  SCIP_CALL( graph_fixed_addEdge(scip, e2, g) );
                   SCIP_CALL( graph_knot_contract(scip, g, NULL, i1, i) );
                }
                else
                {
-                  SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1], NULL));
                   *fixed += g->cost[e1];
-                  SCIP_CALL(graph_knot_contract(scip, g, NULL, i1, i));
+
+                  SCIP_CALL( graph_fixed_addEdge(scip, e1, g) );
+                  SCIP_CALL( graph_knot_contract(scip, g, NULL, i1, i) );
                }
             }
             else
@@ -1035,9 +1045,10 @@ SCIP_RETCODE reduce_rpt(
             i1 = g->tail[e1];
             old = g->grad[i] + g->grad[i1] - 1;
 
-            SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1], NULL));
             *fixed += g->cost[e1];
-            SCIP_CALL(graph_knot_contract(scip, g, NULL, i1, i));
+
+            SCIP_CALL( graph_fixed_addEdge(scip, e1, g) );
+            SCIP_CALL( graph_knot_contract(scip, g, NULL, i1, i) );
 
             assert(old - g->grad[i1] > 0);
             *count += old - g->grad[i1];

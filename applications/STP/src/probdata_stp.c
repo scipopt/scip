@@ -3071,7 +3071,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       int head;
 
       /* iterate through the list of fixed edges */
-      updateorgsol(graph, graph->fixedges, orgnodes, orgedges, &nsolnodes, &nsoledges);
+      updateorgsol(graph, graph_get_fixedges(scip, graph), orgnodes, orgedges, &nsolnodes, &nsoledges);
 
       for( e = 0; e < graph->edges; e++ )
          if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
@@ -3301,7 +3301,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
             if( e < graph->edges )
                curr = ancestors[e];
             else
-               curr = graph->fixedges;
+               curr = graph_get_fixedges(scip, graph);
+
             while (curr != NULL)
             {
                const int ancestoredge = curr->index;
@@ -3884,7 +3885,7 @@ void initReceivedSubproblem(
 
    graph_mincut_exit(scip, graph);
    graph_path_exit(scip, graph);
-   assert(graph->ancestors == NULL && graph->fixedges == NULL);
+   assert(graph->ancestors == NULL);
 
    graph_free(scip, &graph, TRUE);
    graph_copy(scip, probdata->orggraph, &graph);

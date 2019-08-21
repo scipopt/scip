@@ -859,7 +859,7 @@ SCIP_RETCODE redbasedVarfixing(
       }
    }
 
-   curr = propgraph->fixedges;
+   curr = graph_get_fixedges(scip, propgraph);
 
    while( curr != NULL )
    {

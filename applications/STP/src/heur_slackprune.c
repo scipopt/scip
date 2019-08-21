@@ -640,7 +640,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    /* variables given? */
    if( vars != NULL )
    {
-      int nfixedges = 0;
+      int nfixededges = 0;
 
       /* delete fixed edges from the new graph */
       for( e = 0; e < nedges; e += 2 )
@@ -650,12 +650,12 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
             && soledge[e] != CONNECT && soledge[e + 1] != CONNECT )
          {
             graph_edge_del(scip, prunegraph, e, TRUE);
-            nfixedges++;
+            nfixededges++;
          }
       }
-      SCIPdebugMessage("fixed edges in slack and prune: %d \n", nfixedges);
+      SCIPdebugMessage("fixed edges in slack and prune: %d \n", nfixededges);
 
-      if( nfixedges > reductbound && reducegraph )
+      if( nfixededges > reductbound && reducegraph )
       {
          graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
          reductbound = getRedBound(0, anedges);
@@ -1087,7 +1087,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    }
 
    /* retransform edges fixed during graph reduction */
-   graph_sol_setNodeList(g, nodearrchar, prunegraph->fixedges);
+   graph_sol_setNodeList(g, nodearrchar, graph_get_fixedges(scip, prunegraph));
 
    SCIP_CALL( graph_sol_markPcancestors(scip, prunegraph->pcancestors, prunegraph->orgtail, prunegraph->orghead, nnodes,
          nodearrchar, NULL, NULL, NULL, NULL) );

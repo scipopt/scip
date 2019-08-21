@@ -698,7 +698,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    /* problem variables given? */
    if( vars != NULL )
    {
-      int nfixedges = 0;
+      int nfixededges = 0;
 
       /* delete fixed edges from the new graph */
       for( int e = 0; e < nedges; e += 2 )
@@ -712,7 +712,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                      && !Is_term(prunegraph->head[e]) && !Is_term(prunegraph->tail[e]) )
                {
                   graph_edge_del(scip, prunegraph, e, TRUE);
-                  nfixedges++;
+                  nfixededges++;
                }
             }
             else
@@ -720,14 +720,14 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                if( !solgiven || (soledge[e] != CONNECT && soledge[e + 1] != CONNECT) )
                {
                   graph_edge_del(scip, prunegraph, e, TRUE);
-                  nfixedges++;
+                  nfixededges++;
                }
             }
          }
       }
-      SCIPdebugMessage("fixed edges in prune: %d \n", nfixedges);
+      SCIPdebugMessage("fixed edges in prune: %d \n", nfixededges);
 
-      if( nfixedges >= reductbound )
+      if( nfixededges >= reductbound )
       {
          graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
          reductbound = getRedBound(0, anedges);

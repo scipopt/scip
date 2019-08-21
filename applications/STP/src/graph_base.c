@@ -2590,11 +2590,11 @@ SCIP_RETCODE graph_pc_contractEdge(
 
       if( g->pcancestors[s] != NULL )
       {
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->pcancestors[s], NULL) );
+         SCIP_CALL( graph_fixed_addNodePc(scip, s, g) );
          SCIPintListNodeFree(scip, &(g->pcancestors[s]));
       }
 
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[ets], NULL) );
+      SCIP_CALL( graph_fixed_addEdge(scip, ets, g) );
 
       if( !graph_pc_knotIsFixedTerm(g, s) )
       {
@@ -4010,7 +4010,7 @@ SCIP_RETCODE graph_sol_getOrg(
          graph_sol_setNodeList(orggraph, orgnodearr, ancestors[e]);
 
    /* retransform edges fixed during graph reduction */
-   graph_sol_setNodeList(orggraph, orgnodearr, transgraph->fixedges);
+   graph_sol_setNodeList(orggraph, orgnodearr, graph_get_fixedges(scip, transgraph));
 
    if( pcmw )
    {
@@ -4341,7 +4341,6 @@ SCIP_RETCODE graph_init(
    assert(p != NULL);
 
    /* ancestor data for retransformation after reductions */
-   p->fixedges = NULL;
    p->ancestors = NULL;
    p->pcancestors = NULL;
    p->fixedcomponents = NULL;
@@ -4652,15 +4651,6 @@ void graph_free_historyDeep(
 
    if( p->fixedcomponents )
       graph_free_fixed(scip, p);
-
-   curr = p->fixedges;
-   while( curr != NULL )
-   {
-      p->fixedges = curr->parent;
-      SCIPfreeBlockMemory(scip, &(curr));
-
-      curr = p->fixedges;
-   }
 }
 
 /** copy the data of the graph */
@@ -4944,7 +4934,6 @@ SCIP_RETCODE graph_pack(
    q->grid_dim = g->grid_dim;
    q->grid_ncoords = g->grid_ncoords;
    q->grid_coordinates = g->grid_coordinates;
-   q->fixedges = g->fixedges;
    q->pcancestors = g->pcancestors;
    q->fixedcomponents = g->fixedcomponents;
    q->hoplimit = g->hoplimit;
