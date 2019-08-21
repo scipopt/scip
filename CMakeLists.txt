@@ -196,7 +196,7 @@ add_custom_target(scip_update_githash
 set(WITH_SCIPDEF on)
 
 # use C++11 standard
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 # set function visibility default to hidden
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
