@@ -539,6 +539,60 @@ static SCIP_RETCODE createAndSplitProblem(
    return SCIP_OKAY;
 }
 
+/** try to assign linking constraints */
+static SCIP_RETCODE assignLinking(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition */
+   int                   nblocks,            /**< number of blocks */
+   SCIP_VAR**            vars,
+   SCIP_CONS**           sortedconss,              /**< sorted array */
+   int*                  varslabels,
+   int*                  conslabels,         /**< sorted array */
+   int                   nvars,
+   int                   nconss
+   )
+{
+   int nlinkconss;                           /* number of linking constraints */
+   int c;
+
+   assert(scip != NULL);
+   assert(decomp != NULL);
+   assert(vars != NULL);
+   assert(sortedconss != NULL);
+
+   /* create new decomposition; don't change the decompositions in the decompstore */
+   SCIP_DECOMP* newdecomp;
+   SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), nblocks, FALSE, SCIPdecompUseBendersLabels(decomp)) );
+
+   /* copy the labels */
+   SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, vars, varslabels, nvars) );
+   SCIP_CALL( SCIPdecompSetConsLabels(newdecomp, sortedconss, conslabels, nconss) );
+
+   nlinkconss = 0;
+   for( c = 0; c < nconss; c++ )
+   {
+      if( conslabels[c] == SCIP_DECOMP_LINKCONS )
+         nlinkconss++;
+      else
+         break;
+   }
+
+   SCIPdebugMsg(scip, "try to assign %d linking constraints\n", nlinkconss);
+
+   /* reassign linking constraints */
+   SCIP_CALL( SCIPdecompAssignLinkConss(scip, newdecomp, &sortedconss[0], nlinkconss) );
+
+   SCIP_CALL( SCIPdecompComputeVarsLabels(scip, newdecomp, sortedconss, nconss) );
+
+   //SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp) );
+
+   SCIPdecompGetConsLabels(newdecomp, sortedconss, conslabels, nconss);
+   SCIPdecompGetVarsLabels(newdecomp, vars, varslabels, nvars);
+
+   SCIPsortIntPtr(conslabels, (void **)sortedconss, nconss);
+   decomp = newdecomp;
+}
+
 /*
  * Callback methods of primal heuristic
  */
@@ -671,7 +725,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Real maxslack;
    SCIP_Real slackthreshold;
    SCIP_STATUS status;
-   int linkconsoffset;
    SCIP_HEURDATA* heurdata;
    char name[SCIP_MAXSTRLEN];
    char info[SCIP_MAXSTRLEN];
@@ -698,7 +751,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    varonlyobj = NULL;
    blockinfolist = NULL;
    htable = NULL;
-   linkconsoffset = 0;
 
    doScaling = FALSE;
    // todo: find good value for gap
@@ -725,6 +777,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    conss = SCIPgetConss(scip);
    nvars = SCIPgetNVars(scip);
    vars = SCIPgetVars(scip);
+   nblocks = SCIPdecompGetNBlocks(decomp);
 
    // if transformed problem has no constraints or no variables, return
    if (nconss == 0 || nvars == 0)
@@ -737,17 +790,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    for( i = 0; i < nconss; i++ )
       SCIPdebugPrintCons(scip, conss[i], NULL);
 #endif
-
-   /* determine threshold for penalty coefficients via maximum norm */
-   slackthreshold = SCIP_REAL_MIN;
-   for (i = 0; i < nvars; i++)
-   {
-      SCIP_Real obj;
-      obj = SCIPvarGetObj(vars[i]);
-      obj = REALABS(obj);
-      if( obj > slackthreshold )
-         slackthreshold = obj;
-   }
 
    SCIP_CALL(SCIPallocBufferArray(scip, &varslabels, nvars));
    SCIP_CALL(SCIPallocBufferArray(scip, &conslabels, nconss));
@@ -765,69 +807,12 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 #endif
 
    /* sort constraints by blocks */
-   nblocks = SCIPdecompGetNBlocks(decomp);
    SCIPsortIntPtr(conslabels, (void **)conss, nconss);
 
    if( heurdata->assignlinking && conslabels[0] == SCIP_DECOMP_LINKCONS )
    {
-      /* copy decomp to newdecomp */
-      SCIP_DECOMP* newdecomp;
-      SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), nblocks, FALSE, SCIPdecompUseBendersLabels(decomp)) );
-
-      SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, vars, varslabels, nvars) );
-      SCIP_CALL( SCIPdecompSetConsLabels(newdecomp, conss, conslabels, nconss) );
-
-      SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp) );
-
-      for (int v = 0; v < nconss; v++)
-      {
-#if 0
-         int newlabel;
-         SCIPdecompGetConsLabels(newdecomp, &conss[v], &newlabel, 1);
-         SCIPdebugMsg(scip, "%s %d %d\n", SCIPconsGetName(conss[v]), conslabels[v], newlabel);
-         assert(conslabels[v] = newlabel);
-         SCIP_Bool hasonlylinkvars = FALSE;
-         SCIPhasConsOnlyLinkVars(scip, decomp, conss[v], &hasonlylinkvars );
-         SCIPdebugMsg(scip, "%s has only link vars %d\n", SCIPconsGetName(conss[v]), hasonlylinkvars);
-#endif
-         if( conslabels[v] == SCIP_DECOMP_LINKCONS )
-            linkconsoffset++;
-         else
-            break;
-      }
-      SCIPdebugMsg(scip, "try to assign %d linking constraints\n", linkconsoffset);
-
-      /* reassign linking constraints */
-      SCIP_CALL( SCIPdecompAssignLinkConss(scip, newdecomp, &conss[0], linkconsoffset) );
-
-      SCIP_CALL( SCIPdecompComputeVarsLabels(scip, newdecomp, conss, nconss) );
-
-#if 0
-      SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp) ); // todo: this is not neccessary
-      char strbuf[SCIP_MAXSTRLEN];
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Decomposition statistics:\n%s\n", SCIPdecompPrintStats(newdecomp, strbuf));
-#endif
-
-      SCIPdecompGetConsLabels(newdecomp, conss, conslabels, nconss);
-      SCIPdecompGetVarsLabels(newdecomp, vars, varslabels, nvars);
-
-      SCIPsortIntPtr(conslabels, (void **)conss, nconss);
-      decomp = newdecomp;
+      assignLinking(scip, decomp, nblocks, vars, conss, varslabels, conslabels, nvars, nconss);
    }
-
-#if 0
-   for (int v = 0; v < nconss; v++)
-   {
-      if( conslabels[v] != SCIP_DECOMP_LINKCONS )
-         break;
-      SCIPdebugMsg(scip, "%s conslabel %d\n", SCIPconsGetName(conss[v]), conslabels[v]);
-      int hasonlylinkvars;
-      assert(hasonlylinkvars);
-      SCIPhasConsOnlyLinkVars(scip, decomp, conss[v], &hasonlylinkvars);
-      SCIPdebugMsg(scip, "has only linking vars %d\n", hasonlylinkvars);
-      assert(hasonlylinkvars);
-   }
-#endif
 
    if(conslabels[0] == SCIP_DECOMP_LINKCONS)
    {
@@ -946,13 +931,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       }
    }
 
-   if(conslabels[linkconsoffset] == SCIP_DECOMP_LINKCONS)
-   {
-      SCIPdebugMsg(scip, "%s is linking contraint\n", SCIPconsGetName(conss[0]));
-      SCIPprintCons(scip, conss[0], NULL);
-      SCIPdebugMsg(scip, "No support for linking contraints\n");
-      goto TERMINATE;
-   }
 #if 0
    for (int m = 0; m < numlinkvars; m++)
    {
@@ -1096,6 +1074,17 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[b]).subscip, name, "lp", FALSE) );
    }
 #endif
+
+   /* determine threshold for penalty coefficients via maximum norm */
+   slackthreshold = SCIP_REAL_MIN;
+   for (i = 0; i < nvars; i++)
+   {
+      SCIP_Real obj;
+      obj = SCIPvarGetObj(vars[i]);
+      obj = REALABS(obj);
+      if( obj > slackthreshold )
+         slackthreshold = obj;
+   }
 
    SCIPdebugMsg(scip, "Starting iterations\n");
    SCIPdebugMsg(scip, "PIt\tADMIt\tSlacks\tInfo\n");
