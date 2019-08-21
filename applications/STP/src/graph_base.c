@@ -4344,6 +4344,7 @@ SCIP_RETCODE graph_init(
    p->fixedges = NULL;
    p->ancestors = NULL;
    p->pcancestors = NULL;
+   p->fixedcomponents = NULL;
    p->orgtail = NULL;
    p->orghead = NULL;
    p->rootedgeprevs = NULL;
@@ -4648,6 +4649,10 @@ void graph_free_historyDeep(
       SCIPfreeMemoryArray(scip, &(p->orghead));
       SCIPfreeMemoryArray(scip, &(p->orgtail));
    }
+
+   if( p->fixedcomponents )
+      graph_free_fixed(scip, p);
+
    curr = p->fixedges;
    while( curr != NULL )
    {
@@ -4940,9 +4945,10 @@ SCIP_RETCODE graph_pack(
    q->grid_ncoords = g->grid_ncoords;
    q->grid_coordinates = g->grid_coordinates;
    q->fixedges = g->fixedges;
+   q->pcancestors = g->pcancestors;
+   q->fixedcomponents = g->fixedcomponents;
    q->hoplimit = g->hoplimit;
    q->extended = g->extended;
-   q->pcancestors = g->pcancestors;
    q->budget = g->budget;
    q->is_packed = TRUE;
 

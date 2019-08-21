@@ -1754,3 +1754,16 @@ SCIP_RETCODE reduce_simple_aritculations(
 
    return SCIP_OKAY;
 }
+
+
+/** basic reductions */
+SCIP_RETCODE reduce_simple_fixedConflict(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int*            edgestate,          /**< for propagation or NULL */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  countnew            /**< pointer to number of new reductions (will be initially set to 0) */
+   )
+{
+   // todo check for conflict between all edges and fix
+   return SCIP_OKAY;
+}

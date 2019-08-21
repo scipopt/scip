@@ -12,6 +12,7 @@ add_executable(scipstp
     src/cons_stp.c
     src/dialog_stp.c
     src/event_bestsol.c
+    src/graph_ancestors.c
     src/graph_base.c
     src/graph_load.c
     src/graph_mcut.c
