@@ -369,6 +369,7 @@ SCIP_RETCODE addBilinProduct(
    SCIP_Bool found;
 
    assert(underestimate || overestimate);
+   SCIPinfoMessage(scip, NULL, "\nadding %s; %s", underestimate ? "an underestimation" : "", overestimate ? "an overestimation" : "");
 
    /* the variables should be given in the correct order */
    if( SCIPvarComp(x, y) > 0 )
@@ -400,7 +401,7 @@ SCIP_RETCODE addBilinProduct(
    }
 
    if( termpos == INT_MAX )
-   {
+   { /* this is the first time we come across this product */
       /* store variables if it's the first time they are found in a bilinear term */
       if( !SCIPhashmapExists(varmap, (void*)(size_t) xidx) )
       {
@@ -499,10 +500,14 @@ SCIP_RETCODE addBilinProduct(
       for( int i = sepadata->nlinexprs[termpos]; i > linpos; --i )
       {
          sepadata->linexprs[termpos][i] = sepadata->linexprs[termpos][i-1];
+         sepadata->linunderestimate[termpos][i] = sepadata->linunderestimate[termpos][i-1];
+         sepadata->linoverestimate[termpos][i] = sepadata->linoverestimate[termpos][i-1];
       }
       assert(linexpr != NULL);
       SCIPinfoMessage(scip, NULL, "\nadding in position %d", sepadata->nlinexprs[termpos]);
       sepadata->linexprs[termpos][sepadata->nlinexprs[termpos]] = linexpr;
+      sepadata->linunderestimate[termpos][sepadata->nlinexprs[termpos]] = FALSE;
+      sepadata->linoverestimate[termpos][sepadata->nlinexprs[termpos]] = FALSE;
       ++sepadata->nlinexprs[termpos];
    }
 

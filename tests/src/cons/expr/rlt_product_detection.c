@@ -113,7 +113,7 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "test creation and freeing of separator data")
+Test(rlt_selection, implrels, .init = setup, .fini = teardown, .description = "test extracting products from two implied relations")
 {
    SCIP_ROW* row1;
    SCIP_ROW* row2;
@@ -149,32 +149,30 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
    /* create linear constraints */
 
    /* 0 <= 2x1 + 1.5x2 + 3b1 <= 1 */
-   SCIPcreateConsBasicLinear(scip, &cons1, "c1", 3, vars, coefs1, 0.0, 1.0);
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons1, "c1", 3, vars, coefs1, 0.0, 1.0) );
 
    /* 4x1 + 2x2 - b1 <= 1 */
-   SCIPcreateConsBasicLinear(scip, &cons2, "c2", 3, vars, coefs2, -SCIPinfinity(scip), 1.0);
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons2, "c2", 3, vars, coefs2, -SCIPinfinity(scip), 1.0) );
 
-   SCIPaddCons(scip, cons1);
-   SCIPaddCons(scip, cons2);
+   SCIP_CALL( SCIPaddCons(scip, cons1) );
+   SCIP_CALL( SCIPaddCons(scip, cons2) );
 
-   SCIPconstructLP(scip, &cutoff);
+   /* construct the LP */
+   SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
+   /* create separator data - this will also detect the products */
    SCIP_CALL( createSepaData(scip, sepadata) );
 
    /* the product should be: xy >= (1/(a1c2 - c1a2))*(a1a2w + (a2(b1 - d1) + a1d2)x + a1c2y - a1d2)
-    * or, substituting the given values: xy >= (1/(2*2 - 1.5*4))*(2*4w + (4(3 - 1) + 2*1)x + 2*2y - 2*1)
-    * xy >= (1/(4 - 6))*(8w + (8 + 2)x + 4y - 2)
-    * xy >= (-1/2)*(8w + 10x + 4y - 2)
-    * xy >= -4w - 5x - 2y + 1
-    * for the second product:
+    * or, substituting the given values: xy <= (1/(2*2 - 1.5*4))*(2*4w + (4(3 - 1) + 2*1)x + 2*2y - 2*1)
+    * xy <= -4w - 5x - 2y + 1
+    * the second product:
     * xy >= (1/(1.5*4 - 2*2))*(1.5*2w + (2(3 - 1) + 1.5*1)x + 1.5*4y - 1.5*1)
-    * xy >= (1/(6 - 4))*(3w + (2*2 + 1.5)x + 6y - 1.5)
-    * xy >= 1/2*(3w + 5.5x + 6y - 1.5)
     * xy >= 1.5w + 2.75x + 3y - 0.75 */
 
    /* check the numbers */
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(sepadata->nbilinterms, 2, "\nExpected 3 bilinear terms, got %d", sepadata->nbilinterms);
+   cr_expect_eq(sepadata->nbilinterms, 2, "\nExpected 2 bilinear terms, got %d", sepadata->nbilinterms);
    cr_expect_eq(sepadata->nlinexprs[0], 1, "\nExpected 1 linear expression for product 0, got %d", sepadata->nlinexprs[0]);
    cr_expect_eq(sepadata->nlinexprs[1], 1, "\nExpected 1 linear expression for product 1, got %d", sepadata->nlinexprs[1]);
 
@@ -242,9 +240,140 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
    cr_expect_eq(SCIPgetConsExprExprSumConstant(sepadata->linexprs[1][0]), -0.75, "Linexpr 1 should have constant -0.75, got %f",
       SCIPgetConsExprExprSumConstant(sepadata->linexprs[1][0]));
 
+   cr_assert(sepadata->linoverestimate[0][0]);
+   cr_assert(sepadata->linunderestimate[1][0]);
+   cr_assert(!sepadata->linunderestimate[0][0]);
+   cr_assert(!sepadata->linoverestimate[1][0]);
+
    SCIP_CALL( freeSepaData(scip, sepadata) );
 
-   SCIPreleaseCons(scip, &cons2);
-   SCIPreleaseCons(scip, &cons1);
+   SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
+   SCIPfreeBuffer(scip, &sepadata);
+}
+
+Test(rlt_selection, implrelbnd, .init = setup, .fini = teardown, .description = "test extracting products from an implied relation and an implied bound")
+{
+   SCIP_ROW* row1;
+   SCIP_ROW* row2;
+   SCIP_CONS* cons1;
+   SCIP_CONS* cons2;
+   SCIP_SEPADATA* sepadata;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_VAR* vars[3];
+   SCIP_Real coefs1[3];
+   int c, nbdchgs;
+   SCIP_Bool cutoff, infeasible;
+   SCIP_VAR* var;
+   SCIP_Real coef;
+
+   vars[0] = x1; /* w or y */
+   vars[1] = x2; /* y or w */
+   vars[2] = b1; /* x */
+
+   coefs1[0] = 2.0; /* a1 or c1 */
+   coefs1[1] = 2.0; /* c1 or a1 */
+   coefs1[2] = 3.0; /* b1 */
+
+   /* d1 = 1, d2 = 3 */
+   /* a1 = 2, c1 = 2, b1 = 3, */
+   /* a2 = 1, c2 = 0, b2 = -M or */
+
+   /* a1 = 2, c1 = 2, b1 = 3, */
+   /* a2 = 0, c2 = 1, b2 = -M */
+
+   SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
+   sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
+   sepadata->isinitialround = TRUE;
+   cr_assert(sepadata->conshdlr != NULL);
+
+   /* create linear relations */
+
+   /* 0 <= 2x1 + 2x2 + 3b1 <= 1 */
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons1, "c1", 3, vars, coefs1, 0.0, 1.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons1) );
+
+   /* b1 == 0  =>  x1 <= 3 */
+   /* x1 - Mb1 <= 3 */
+   SCIP_CALL( SCIPaddVarImplication(scip, b1, FALSE, x1, SCIP_BOUNDTYPE_UPPER, 3.0, &infeasible, &nbdchgs) );
+
+   /* construct the LP */
+   SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+   /* create separator data - this will also detect the products */
+   SCIP_CALL( createSepaData(scip, sepadata) ); /*a1 = 2; den = a1c2 - c1a2 = 2*0 - 2.0 < 0*/
+
+   /* the product should be: xy >= (1/(a1c2 - c1a2))*(a1a2w + (a2(b1 - d1) + a1d2)x + a1c2y - a1d2)
+    * or, substituting the given values: xy <= (-1/2)*(2w + (3 - 1 + 2*3)x - 2*3)
+    * xy <= -w - 4x + 3
+    * the second product: xy >= 3x + 1y - 3
+    * /
+
+   /* check the numbers */
+   cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
+   cr_expect_eq(sepadata->nbilinterms, 2, "\nExpected 2 bilinear terms, got %d", sepadata->nbilinterms);
+   cr_expect_eq(sepadata->nlinexprs[0], 1, "\nExpected 1 linear expression for product 0, got %d", sepadata->nlinexprs[0]);
+   cr_expect_eq(sepadata->nlinexprs[1], 1, "\nExpected 1 linear expression for product 1, got %d", sepadata->nlinexprs[1]);
+
+   /* check the product expressions */
+   cr_assert(sepadata->bilinterms[0] != NULL);
+   cr_assert(sepadata->bilinterms[1] != NULL);
+   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[0]) == 2);
+   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[1]) == 2);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[0]);
+   cr_expect_eq(var, b1, "Var 0 of product 0 should be b1, got %s", SCIPvarGetName(var));
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[1]);
+   cr_expect_eq(var, x2, "Var 1 of product 0 should be x2, got %s", SCIPvarGetName(var));
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[0]);
+   cr_expect_eq(var, b1, "Var 0 of product 1 should be b1, got %s", SCIPvarGetName(var));
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[1]);
+   cr_expect_eq(var, x1, "Var 1 of product 1 should be x1, got %s", SCIPvarGetName(var));
+
+   /* check the linear expressions and sides */
+   cr_assert(sepadata->linexprs[0][0] != NULL);
+   cr_assert(sepadata->linexprs[1][0] != NULL);
+
+   /* first linear expression */
+   cr_expect_eq(SCIPgetConsExprExprNChildren(sepadata->linexprs[0][0]), 2, "Linexpr 0 should have 2 children, got %d",
+      SCIPgetConsExprExprNChildren(sepadata->linexprs[0][0]));
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[0][0])[0]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[0][0])[0];
+   cr_expect_eq(var, b1, "Var 0 of linexpr 0 should be b1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, -4, "Coefficient of x = b1 should be -4, got %f", coef);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[0][0])[1]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[0][0])[1];
+   cr_expect_eq(var, x1, "Var 1 of linexpr 0 should be x1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, -1.0, "Coefficient of w = x1 should be -1.0, got %f", coef);
+
+   cr_expect_eq(SCIPgetConsExprExprSumConstant(sepadata->linexprs[0][0]), 3.0, "Linexpr 0 should have constant 3.0, got %f",
+      SCIPgetConsExprExprSumConstant(sepadata->linexprs[0][0]));
+
+   /* second linear expression */
+   cr_expect_eq(SCIPgetConsExprExprNChildren(sepadata->linexprs[1][0]), 2, "Linexpr 1 should have 2 children, got %d",
+      SCIPgetConsExprExprNChildren(sepadata->linexprs[1][0]));
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[1][0])[0]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[1][0])[0];
+   cr_expect_eq(var, b1, "Var 0 of linexpr 1 should be b1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, 3.0, "Coefficient of x = b1 should be 3.0, got %f", coef);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[1][0])[1]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[1][0])[1];
+   cr_expect_eq(var, x1, "Var 1 of linexpr 1 should be x1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, 1.0, "Coefficient of y = x1 should be 1.0, got %f", coef);
+
+   cr_expect_eq(SCIPgetConsExprExprSumConstant(sepadata->linexprs[1][0]), -3.0, "Linexpr 1 should have constant -3.0, got %f",
+      SCIPgetConsExprExprSumConstant(sepadata->linexprs[1][0]));
+
+   cr_assert(sepadata->linoverestimate[0][0]);
+   cr_assert(sepadata->linunderestimate[1][0]);
+
+   SCIP_CALL( freeSepaData(scip, sepadata) );
+
+   SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
    SCIPfreeBuffer(scip, &sepadata);
 }
