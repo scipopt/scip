@@ -112,7 +112,7 @@ Test(disable_upgrades, copy_problem, .description="test copying of or-constraint
 
    SCIP_CALL( SCIPcreate(&targetscip) );
 
-   SCIP_CALL( SCIPcopy(scip, targetscip, NULL, NULL,  "copy_of_prob", TRUE, TRUE, FALSE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, targetscip, NULL, NULL, "copy_of_prob", TRUE, TRUE, FALSE, FALSE, &valid) );
 
    cr_assert(valid);
 
