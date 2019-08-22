@@ -74,35 +74,36 @@ extern "C" {
 #define SCIP_EVENTTYPE_LHOLEADDED       UINT64_C(0x00002000)  /**< a local hole has been added to the hole list of a variable's domain */
 #define SCIP_EVENTTYPE_LHOLEREMOVED     UINT64_C(0x00004000)  /**< a local hole has been removed from the hole list of a variable's domain */
 #define SCIP_EVENTTYPE_IMPLADDED        UINT64_C(0x00008000)  /**< the variable's implication list, variable bound or clique information was extended */
+#define SCIP_EVENTTYPE_TYPECHANGED      UINT64_C(0x00010000)  /**< the type of a variable has changed */
 
 /* presolving events */
-#define SCIP_EVENTTYPE_PRESOLVEROUND    UINT64_C(0x00010000)  /**< a presolving round has been finished */
+#define SCIP_EVENTTYPE_PRESOLVEROUND    UINT64_C(0x00020000)  /**< a presolving round has been finished */
 
 /* node events */
-#define SCIP_EVENTTYPE_NODEFOCUSED      UINT64_C(0x00020000)  /**< a node has been focused and is now the focus node */
-#define SCIP_EVENTTYPE_NODEFEASIBLE     UINT64_C(0x00040000)  /**< the LP/pseudo solution of the node was feasible */
-#define SCIP_EVENTTYPE_NODEINFEASIBLE   UINT64_C(0x00080000)  /**< the focus node has been proven to be infeasible or was bounded */
-#define SCIP_EVENTTYPE_NODEBRANCHED     UINT64_C(0x00100000)  /**< the focus node has been solved by branching */
+#define SCIP_EVENTTYPE_NODEFOCUSED      UINT64_C(0x00040000)  /**< a node has been focused and is now the focus node */
+#define SCIP_EVENTTYPE_NODEFEASIBLE     UINT64_C(0x00080000)  /**< the LP/pseudo solution of the node was feasible */
+#define SCIP_EVENTTYPE_NODEINFEASIBLE   UINT64_C(0x00100000)  /**< the focus node has been proven to be infeasible or was bounded */
+#define SCIP_EVENTTYPE_NODEBRANCHED     UINT64_C(0x00200000)  /**< the focus node has been solved by branching */
 
 /* LP events */
-#define SCIP_EVENTTYPE_FIRSTLPSOLVED    UINT64_C(0x00200000)  /**< the node's initial LP was solved */
-#define SCIP_EVENTTYPE_LPSOLVED         UINT64_C(0x00400000)  /**< the node's LP was completely solved with cut & price */
+#define SCIP_EVENTTYPE_FIRSTLPSOLVED    UINT64_C(0x00400000)  /**< the node's initial LP was solved */
+#define SCIP_EVENTTYPE_LPSOLVED         UINT64_C(0x00800000)  /**< the node's LP was completely solved with cut & price */
 
 /* primal solution events */
-#define SCIP_EVENTTYPE_POORSOLFOUND     UINT64_C(0x00800000)  /**< a good enough primal feasible (but not new best) solution was found */
-#define SCIP_EVENTTYPE_BESTSOLFOUND     UINT64_C(0x01000000)  /**< a new best primal feasible solution was found */
+#define SCIP_EVENTTYPE_POORSOLFOUND     UINT64_C(0x01000000)  /**< a good enough primal feasible (but not new best) solution was found */
+#define SCIP_EVENTTYPE_BESTSOLFOUND     UINT64_C(0x02000000)  /**< a new best primal feasible solution was found */
 
 /* linear row events */
-#define SCIP_EVENTTYPE_ROWADDEDSEPA     UINT64_C(0x02000000)  /**< a row has been added to SCIP's separation storage */
-#define SCIP_EVENTTYPE_ROWDELETEDSEPA   UINT64_C(0x04000000)  /**< a row has been removed from SCIP's separation storage */
-#define SCIP_EVENTTYPE_ROWADDEDLP       UINT64_C(0x08000000)  /**< a row has been added to the LP */
-#define SCIP_EVENTTYPE_ROWDELETEDLP     UINT64_C(0x10000000)  /**< a row has been removed from the LP */
-#define SCIP_EVENTTYPE_ROWCOEFCHANGED   UINT64_C(0x20000000)  /**< a coefficient of a row has been changed (row specific event) */
-#define SCIP_EVENTTYPE_ROWCONSTCHANGED  UINT64_C(0x40000000)  /**< the constant of a row has been changed (row specific event) */
-#define SCIP_EVENTTYPE_ROWSIDECHANGED   UINT64_C(0x80000000)  /**< a side of a row has been changed (row specific event) */
+#define SCIP_EVENTTYPE_ROWADDEDSEPA     UINT64_C(0x04000000)  /**< a row has been added to SCIP's separation storage */
+#define SCIP_EVENTTYPE_ROWDELETEDSEPA   UINT64_C(0x08000000)  /**< a row has been removed from SCIP's separation storage */
+#define SCIP_EVENTTYPE_ROWADDEDLP       UINT64_C(0x10000000)  /**< a row has been added to the LP */
+#define SCIP_EVENTTYPE_ROWDELETEDLP     UINT64_C(0x20000000)  /**< a row has been removed from the LP */
+#define SCIP_EVENTTYPE_ROWCOEFCHANGED   UINT64_C(0x40000000)  /**< a coefficient of a row has been changed (row specific event) */
+#define SCIP_EVENTTYPE_ROWCONSTCHANGED  UINT64_C(0x80000000)  /**< the constant of a row has been changed (row specific event) */
+#define SCIP_EVENTTYPE_ROWSIDECHANGED   UINT64_C(0x100000000)  /**< a side of a row has been changed (row specific event) */
 
 /* sync event */
-#define SCIP_EVENTTYPE_SYNC             UINT64_C(0x100000000) /**< synchronization event */
+#define SCIP_EVENTTYPE_SYNC             UINT64_C(0x200000000) /**< synchronization event */
 
 /* event masks for variable events */
 #define SCIP_EVENTTYPE_GBDCHANGED     (SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED)
