@@ -17169,8 +17169,12 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    else if( (eventtype & SCIP_EVENTTYPE_TYPECHANGED) != 0 )
    {
       assert(SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED);
-      consdata->presolved = FALSE;
-      consdata->indexsorted = FALSE;
+
+      /* for presolving it only matters if a variable type changed from continuous to some kind of integer */
+      consdata->presolved = (consdata->presolved && SCIPeventGetOldtype(event) < SCIP_VARTYPE_CONTINUOUS);
+
+      /* the ordering is preserved if the type changes from something different to binary to binary but SCIPvarIsBinary() is true */
+      consdata->indexsorted = (consdata->indexsorted && SCIPeventGetNewtype(event) == SCIP_VARTYPE_BINARY && SCIPvarIsBinary(var));
    }
    else
    {
