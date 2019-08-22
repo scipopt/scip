@@ -688,38 +688,39 @@ SCIP_DECL_HEUREXITSOL(heurExitsolXyz)
 /** execution method of primal heuristic */
 static SCIP_DECL_HEUREXEC(heurExecPADM)
 { /*lint --e{715}*/
-   PROBLEM *problem;
-   SCIP_DECOMPSTORE *decompstore;
-   SCIP_DECOMP *decomp;
+   PROBLEM* problem;
+   SCIP_DECOMPSTORE* decompstore;
+   SCIP_DECOMP* decomp;
    int nconss;
    int nvars;
-   SCIP_VAR **vars;
-   SCIP_CONS **conss;
-   int *varslabels;
-   int *conslabels;
+   SCIP_VAR** vars;
+   SCIP_CONS** conss;
+   SCIP_CONS** sortedconss;
+   int* varslabels;
+   int* conslabels;
    int i;
    int nblocks;
    int block;
    int b;
    int k;
-   int *blockstartsconss;
+   int* blockstartsconss;
    int numlinkvars;
-   SCIP_VAR **linkvars;
-   SET *linkvartoblocks;
-   SET *blocktolinkvars;
-   SCIP_Bool *varonlyobj;
+   SCIP_VAR** linkvars;
+   SET* linkvartoblocks;
+   SET* blocktolinkvars;
+   SCIP_Bool* varonlyobj;
    int j;
-   SCIP_VAR **tmpcouplingvars;
-   SCIP_Real *tmpcouplingcoef;
+   SCIP_VAR** tmpcouplingvars;
+   SCIP_Real* tmpcouplingcoef;
    int aIter;
    int pIter;
    SCIP_Bool solutionsdiffer;
    int increasedslacks;
    SCIP_Bool solved;
    int nentries;
-   BLOCKINFO *blockinfolist;
+   BLOCKINFO* blockinfolist;
    int blockinfolistfill;
-   SCIP_HASHTABLE *htable;
+   SCIP_HASHTABLE* htable;
    SCIP_Real gap;
    SCIP_Bool doScaling;
    SCIP_Real maxslack;
@@ -791,6 +792,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIPdebugPrintCons(scip, conss[i], NULL);
 #endif
 
+   /* don't change problem by sorting constraints */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sortedconss, conss, nconss) );
+
    SCIP_CALL(SCIPallocBufferArray(scip, &varslabels, nvars));
    SCIP_CALL(SCIPallocBufferArray(scip, &conslabels, nconss));
    SCIP_CALL(SCIPallocBufferArray(scip, &blockstartsconss, nconss + 1));
@@ -807,17 +811,17 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 #endif
 
    /* sort constraints by blocks */
-   SCIPsortIntPtr(conslabels, (void **)conss, nconss);
+   SCIPsortIntPtr(conslabels, (void **)sortedconss, nconss);
 
    if( heurdata->assignlinking && conslabels[0] == SCIP_DECOMP_LINKCONS )
    {
-      assignLinking(scip, decomp, nblocks, vars, conss, varslabels, conslabels, nvars, nconss);
+      assignLinking(scip, decomp, nblocks, vars, sortedconss, varslabels, conslabels, nvars, nconss);
    }
 
    if(conslabels[0] == SCIP_DECOMP_LINKCONS)
    {
-      SCIPdebugMsg(scip, "%s is linking contraint\n", SCIPconsGetName(conss[0]));
-      SCIPprintCons(scip, conss[0], NULL);
+      SCIPdebugMsg(scip, "%s is linking contraint\n", SCIPconsGetName(sortedconss[0]));
+      SCIPprintCons(scip, sortedconss[0], NULL);
       SCIPdebugMsg(scip, "No support for linking contraints\n");
       goto TERMINATE;
    }
@@ -839,7 +843,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       while (i < nconss && conslabels[i] == conslabels[i-1]);
    }
 
-   SCIP_CALL(createAndSplitProblem(scip, conss, blockstartsconss, nblocks, &problem));
+   SCIP_CALL(createAndSplitProblem(scip, sortedconss, blockstartsconss, nblocks, &problem));
    assert(nblocks == problem->nblocks);
 
 #if 0
@@ -1487,12 +1491,15 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
 TERMINATE:
    /* release variables, constraints and free memory */
-   if (problem != NULL)
+   if( sortedconss != NULL )
+      SCIPfreeBufferArray(scip, &sortedconss);
+
+   if( problem != NULL )
    {
-      for (b = 0; b < problem->nblocks; b++)
+      for( b = 0; b < problem->nblocks; b++ )
       {
          BLOCK curr_block = problem->blocks[b];
-         for (i = 0; i < (problem->blocks[b]).ncoupling; i++)
+         for( i = 0; i < (problem->blocks[b]).ncoupling; i++ )
          {
             SCIP_CALL( SCIPreleaseCons(curr_block.subscip, &curr_block.couplingcons[i]) );
             SCIP_CALL( SCIPreleaseVar(curr_block.subscip, &curr_block.slackspos[i]) );
@@ -1500,48 +1507,48 @@ TERMINATE:
          }
       }
 
-      for (b = 0; b < problem->nblocks; b++)
+      for( b = 0; b < problem->nblocks; b++ )
          SCIPfreeBufferArray(scip, &(blocktolinkvars[b].indexes));
    }
 
-   if (htable != NULL)
+   if( htable != NULL )
       SCIPhashtableFree(&htable);
 
-   if (blockinfolist != NULL)
+   if( blockinfolist != NULL )
       SCIPfreeBufferArray(scip, &blockinfolist);
 
-   if (tmpcouplingcoef != NULL)
+   if( tmpcouplingcoef != NULL )
       SCIPfreeBufferArray(scip, &tmpcouplingcoef);
 
-   if (tmpcouplingvars != NULL)
+   if( tmpcouplingvars != NULL )
       SCIPfreeBufferArray(scip, &tmpcouplingvars);
 
-   if (varonlyobj != NULL)
+   if( varonlyobj != NULL )
       SCIPfreeBufferArray(scip, &varonlyobj);
 
-   if (blocktolinkvars != NULL)
+   if( blocktolinkvars != NULL )
       SCIPfreeBufferArray(scip, &blocktolinkvars);
 
-   for (i = 0; i < numlinkvars; i++)
-      if (linkvartoblocks[i].indexes != NULL)
+   for( i = 0; i < numlinkvars; i++ )
+      if( linkvartoblocks[i].indexes != NULL )
          SCIPfreeBufferArray(scip, &(linkvartoblocks[i].indexes));
 
-   if (linkvartoblocks != NULL)
+   if( linkvartoblocks != NULL )
       SCIPfreeBufferArray(scip, &linkvartoblocks);
 
-   if (linkvars != NULL)
+   if( linkvars != NULL )
       SCIPfreeBufferArray(scip, &linkvars);
 
-   if (blockstartsconss != NULL)
+   if( blockstartsconss != NULL )
       SCIPfreeBufferArray(scip, &blockstartsconss);
 
-   if (conslabels != NULL)
+   if( conslabels != NULL )
       SCIPfreeBufferArray(scip, &conslabels);
 
-   if (varslabels != NULL)
+   if( varslabels != NULL )
       SCIPfreeBufferArray(scip, &varslabels);
 
-   if (problem != NULL)
+   if( problem != NULL )
       freeProblem(&problem);
 
    return SCIP_OKAY;
