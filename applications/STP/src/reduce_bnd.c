@@ -2139,7 +2139,7 @@ SCIP_RETCODE reduce_da(
          initializeDaDistances(scip, graph, daroot, cost, vnoi, pathdist, costrev, vbase, pathedge, state);
 
 
-         if( 1 )
+         if( 0 )
          {
 
                  int nn;
