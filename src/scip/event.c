@@ -1264,7 +1264,7 @@ SCIP_VARTYPE SCIPeventGetOldtype(
    {
       SCIPerrorMessage("event is not an variable type change event\n");
       SCIPABORT();
-      return SCIP_INVALID;  /*lint !e527*/
+      return SCIP_VARTYPE_CONTINUOUS;  /*lint !e527*/
    }
 
    return event->data.eventtypechg.oldtype;
@@ -1281,7 +1281,7 @@ SCIP_VARTYPE SCIPeventGetNewtype(
    {
       SCIPerrorMessage("event is not an variable type change event\n");
       SCIPABORT();
-      return SCIP_INVALID;  /*lint !e527*/
+      return SCIP_VARTYPE_CONTINUOUS;  /*lint !e527*/
    }
 
    return event->data.eventtypechg.newtype;

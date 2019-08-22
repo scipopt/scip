@@ -93,8 +93,8 @@ struct SCIP_EventImplAdd
 /** data for variable type change events */
 struct SCIP_EventTypeChg
 {
-   SCIP_Real             oldtype;            /**< old variable type */
-   SCIP_Real             newtype;            /**< new variable type */
+   SCIP_VARTYPE          oldtype;            /**< old variable type */
+   SCIP_VARTYPE          newtype;            /**< new variable type */
    SCIP_VAR*             var;                /**< variable whose type changed */
 };
 
