@@ -442,7 +442,7 @@ Compare to the release: https://rubberband.zib.de/result/${URLSTR}"
 elif [ "${PERFORMANCE}" == "mergerequest" ]; then
 
   # collect all ids with timestamps OLDTIMESTAMP NEWTIMESTAMP in RBIDS
-  MAINRBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}_rbdb.txt"
+  MAINRBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_*_${SCIP_BUILDDIR}_rbdb.txt"
   RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB}|cut -d ' ' -f 2)
 
   URLSTR=$(geturl "${RBDB_STRS}")
