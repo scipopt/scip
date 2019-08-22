@@ -52,15 +52,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    SCIP_Bool             fullreduce          /**< use full reduction techniques? */
    );
 
-/** execute MWCSP slack-and-prune heuristic on given graph */
-SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< problem variables or NULL */
-   GRAPH*                g,                  /**< the graph */
-   int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
-   SCIP_Bool*            success             /**< feasible solution found? */
-   );
-
 
 #ifdef __cplusplus
 }

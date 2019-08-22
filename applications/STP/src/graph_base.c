@@ -2918,7 +2918,7 @@ SCIP_RETCODE graph_knot_delPseudo(
       {
          int e;
          const SCIP_Bool cutoff = cutoffEdge(scip, cutoffs, cutoffsrev, ecost, ecostrev, vertexprize, i, j, edgecount);
-
+         int todo; // check whether conflict with pseudo ancestors! already in bd34 test!
          assert(edgecount < STP_DELPSEUDO_MAXNEDGES);
 
          edgecount++;
