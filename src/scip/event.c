@@ -1416,7 +1416,7 @@ SCIP_ROW* SCIPeventGetRow(
          return event->data.eventrowcoefchanged.row;
       case SCIP_EVENTTYPE_ROWCONSTCHANGED:
          return event->data.eventrowconstchanged.row;
-      case SCIP_EVENTTYPE_ROWSIDECHANGED:
+      case SCIP_EVENTTYPE_ROWSIDECHANGED: /*lint !e30 !e142*/
          return event->data.eventrowsidechanged.row;
       default:
          SCIPerrorMessage("event does not belong to a row\n");
@@ -1517,7 +1517,7 @@ SCIP_SIDETYPE SCIPeventGetRowSide(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & SCIP_EVENTTYPE_ROWSIDECHANGED) == 0 )
+   if( !(event->eventtype & SCIP_EVENTTYPE_ROWSIDECHANGED) )
    {
       SCIPerrorMessage("event is not a row side changed event\n");
       SCIPABORT();
@@ -1534,7 +1534,7 @@ SCIP_Real SCIPeventGetRowOldSideVal(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & SCIP_EVENTTYPE_ROWSIDECHANGED) == 0 )
+   if( !(event->eventtype & SCIP_EVENTTYPE_ROWSIDECHANGED) )
    {
       SCIPerrorMessage("event is not a row side changed event\n");
       SCIPABORT();
@@ -1551,7 +1551,7 @@ SCIP_Real SCIPeventGetRowNewSideVal(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & SCIP_EVENTTYPE_ROWSIDECHANGED) == 0 )
+   if( !(event->eventtype & SCIP_EVENTTYPE_ROWSIDECHANGED) )
    {
       SCIPerrorMessage("event is not a row side changed event\n");
       SCIPABORT();
@@ -1585,7 +1585,6 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_DISABLED:
       break;
 
-   case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_VARADDED:
    case SCIP_EVENTTYPE_PRESOLVEROUND:
    case SCIP_EVENTTYPE_NODEFOCUSED:
@@ -1602,7 +1601,8 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_ROWDELETEDLP:
    case SCIP_EVENTTYPE_ROWCOEFCHANGED:
    case SCIP_EVENTTYPE_ROWCONSTCHANGED:
-   case SCIP_EVENTTYPE_ROWSIDECHANGED:
+   case SCIP_EVENTTYPE_ROWSIDECHANGED: /*lint !e30 !e142*/
+   case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/
       SCIP_CALL( SCIPeventfilterProcess(eventfilter, set, event) );
       break;
 
@@ -2266,7 +2266,6 @@ SCIP_RETCODE SCIPeventqueueAdd(
          SCIPerrorMessage("cannot add a disabled event to the event queue\n");
          return SCIP_INVALIDDATA;
 
-      case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_VARADDED:
       case SCIP_EVENTTYPE_VARDELETED:
       case SCIP_EVENTTYPE_VARFIXED:
@@ -2292,7 +2291,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_ROWDELETEDLP: /* @todo remove previous ADDEDLP event */
       case SCIP_EVENTTYPE_ROWCOEFCHANGED: /* @todo merge? */
       case SCIP_EVENTTYPE_ROWCONSTCHANGED: /* @todo merge with previous constchanged event */
-      case SCIP_EVENTTYPE_ROWSIDECHANGED: /* @todo merge with previous sidechanged event */
+      case SCIP_EVENTTYPE_ROWSIDECHANGED: /* @todo merge with previous sidechanged event */ /*lint !e30 !e142*/
+      case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/
          /* these events cannot (or need not) be merged; just add them to the queue */
          SCIP_CALL( eventqueueAppend(eventqueue, set, event) );
          break;
