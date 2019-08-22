@@ -498,6 +498,8 @@ SCIP_RETCODE SCIPeventCreateSync(
 #undef SCIPeventGetType
 #undef SCIPeventGetOldobj
 #undef SCIPeventGetNewobj
+#undef SCIPeventGetOldtype
+#undef SCIPeventGetNewtype
 #undef SCIPeventGetOldbound
 #undef SCIPeventGetNewbound
 #undef SCIPeventGetNode
@@ -818,6 +820,29 @@ SCIP_RETCODE SCIPeventCreateImplAdded(
    return SCIP_OKAY;
 }
 
+/** creates an event for a changeing the type of a variable */
+SCIP_RETCODE SCIPeventCreateTypeChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose objective value changed */
+   SCIP_VARTYPE          oldtype,            /**< old variable type */
+   SCIP_VARTYPE          newtype             /**< new variable type */
+   )
+{
+   assert(event != NULL);
+   assert(blkmem != NULL);
+   assert(oldtype != newtype);
+
+   /* create event data */
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_TYPECHANGED;
+   (*event)->data.eventtypechg.var = var;
+   (*event)->data.eventtypechg.oldtype = oldtype;
+   (*event)->data.eventtypechg.newtype = newtype;
+
+   return SCIP_OKAY;
+}
+
 /** creates an event for the addition of a linear row to the separation storage */
 SCIP_RETCODE SCIPeventCreateRowAddedSepa(
    SCIP_EVENT**          event,              /**< pointer to store the event */
@@ -1064,6 +1089,10 @@ SCIP_VAR* SCIPeventGetVar(
       assert(event->data.eventimpladd.var != NULL);
       return event->data.eventimpladd.var;
 
+   case SCIP_EVENTTYPE_TYPECHANGED:
+      assert(event->data.eventtypechg.var != NULL);
+      return event->data.eventtypechg.var;
+
    default:
       SCIPerrorMessage("event does not belong to a variable\n");
       SCIPABORT();
@@ -1127,6 +1156,11 @@ SCIP_RETCODE SCIPeventChgVar(
    case SCIP_EVENTTYPE_IMPLADDED:
       assert(event->data.eventimpladd.var != NULL);
       event->data.eventimpladd.var = var;
+      break;
+
+   case SCIP_EVENTTYPE_TYPECHANGED:
+      assert(event->data.eventtypechg.var != NULL);
+      event->data.eventtypechg.var = var;
       break;
 
    default:
@@ -1217,6 +1251,40 @@ SCIP_Real SCIPeventGetNewbound(
       SCIPABORT();
       return 0.0; /*lint !e527*/
    }  /*lint !e788*/
+}
+
+/** gets old variable type for a variable type change event */
+SCIP_VARTYPE SCIPeventGetOldtype(
+   SCIP_EVENT*           event               /**< event */
+   )
+{
+   assert(event != NULL);
+
+   if( event->eventtype != SCIP_EVENTTYPE_TYPECHANGED )
+   {
+      SCIPerrorMessage("event is not an variable type change event\n");
+      SCIPABORT();
+      return SCIP_INVALID;  /*lint !e527*/
+   }
+
+   return event->data.eventtypechg.oldtype;
+}
+
+/** gets new variable type for a variable type change event */
+SCIP_VARTYPE SCIPeventGetNewtype(
+   SCIP_EVENT*           event               /**< event */
+   )
+{
+   assert(event != NULL);
+
+   if( event->eventtype != SCIP_EVENTTYPE_TYPECHANGED )
+   {
+      SCIPerrorMessage("event is not an variable type change event\n");
+      SCIPABORT();
+      return SCIP_INVALID;  /*lint !e527*/
+   }
+
+   return event->data.eventtypechg.newtype;
 }
 
 /** gets node for a node or LP event */
@@ -1683,6 +1751,14 @@ SCIP_RETCODE SCIPeventProcess(
       var = event->data.eventimpladd.var;
       assert(var != NULL);
       assert(!var->eventqueueimpl);
+
+      /* process variable's event filter */
+      SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
+      break;
+
+   case SCIP_EVENTTYPE_TYPECHANGED:
+      var = event->data.eventtypechg.var;
+      assert(var != NULL);
 
       /* process variable's event filter */
       SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
