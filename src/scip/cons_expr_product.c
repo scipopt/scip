@@ -548,7 +548,11 @@ SCIP_RETCODE mergeProductExprlist(
             {
                if( (int)expo2 % 2 == 0 )
                {
-                  /* if expo2 is even, then sign(x)^(1+expo2) = sign(x), so we have signpower: sign(x) |x|^(expo1+expo2) */
+                  /* if expo2 is even, then sign(x)^(1+expo2) = sign(x), so we have signpower: sign(x) |x|^(expo1+expo2)
+                   * TODO: we can remove this case distinction once the simplification of power expressions tranform
+                   * |expr|^even -> expr^even, since the call to SCIPsimplifyConsExprExprHdlr(scip, conshdlr, power,
+                   * &simplifiedpower) below will take care of this.
+                   */
                   SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, conshdlr, &power, base1, expo1 + expo2) );
                }
                else
