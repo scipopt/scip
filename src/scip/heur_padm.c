@@ -958,9 +958,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    /* init arrays for slack variables and coupling constraints */
    for (b = 0; b < problem->nblocks; b++)
    {
-      SCIP_CALL(SCIPallocBufferArray(scip, &((problem->blocks[b]).slackspos), blocktolinkvars[b].size));
-      SCIP_CALL(SCIPallocBufferArray(scip, &((problem->blocks[b]).slacksneg), blocktolinkvars[b].size));
-      SCIP_CALL(SCIPallocBufferArray(scip, &((problem->blocks[b]).couplingcons), blocktolinkvars[b].size));
+      SCIP_CALL(SCIPallocBufferArray(scip, &((problem->blocks[b]).slackspos), blocktolinkvars[b].size * nblocks));
+      SCIP_CALL(SCIPallocBufferArray(scip, &((problem->blocks[b]).slacksneg), blocktolinkvars[b].size * nblocks));
+      SCIP_CALL(SCIPallocBufferArray(scip, &((problem->blocks[b]).couplingcons), blocktolinkvars[b].size * nblocks));
    }
 
    SCIP_CALL(SCIPallocBufferArray(scip, &tmpcouplingvars, COUPLINGSIZE));
