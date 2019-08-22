@@ -25,7 +25,7 @@ echo "This is performance_mergerequest.sh running."
 : ${GITBRANCH:=${gitlabTargetBranch}}
 : ${QUICKMODE:=""}
 
-if [ "${gitlabTriggerPhrase}" != "" ] then
+if [ "${gitlabTriggerPhrase}" != "" ]; then
   QUICKMODE=$(echo "${gitlabTriggerPhrase}" | cut -f4 -d " ")
 fi
 
