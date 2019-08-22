@@ -236,10 +236,10 @@ static SCIP_RETCODE freeBlock(
 
    SCIPdebugMsg(scip, "freeing block %d of problem <%s>\n", block->number, block->problem->name);
 
-   SCIPfreeBufferArray(scip, &block->subvars);
-   SCIPfreeBufferArray(scip, &block->slackspos);
-   SCIPfreeBufferArray(scip, &block->slacksneg);
    SCIPfreeBufferArray(scip, &block->couplingcons);
+   SCIPfreeBufferArray(scip, &block->slacksneg);
+   SCIPfreeBufferArray(scip, &block->slackspos);
+   SCIPfreeBufferArray(scip, &block->subvars);
 
    block->ncoupling = 0;
 
@@ -542,14 +542,15 @@ static SCIP_RETCODE createAndSplitProblem(
 /** try to assign linking constraints */
 static SCIP_RETCODE assignLinking(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DECOMP*          decomp,             /**< decomposition */
-   int                   nblocks,            /**< number of blocks */
+   const SCIP_DECOMP*          decomp,             /**< decomposition */
+   SCIP_DECOMP*          newdecomp,
    SCIP_VAR**            vars,
-   SCIP_CONS**           sortedconss,              /**< sorted array */
-   int*                  varslabels,
+   SCIP_CONS**           sortedconss,        /**< sorted array */
+   int*                  varlabels,
    int*                  conslabels,         /**< sorted array */
    int                   nvars,
-   int                   nconss
+   int                   nconss,
+   int                   nblocks             /**< number of blocks */
    )
 {
    int nlinkconss;                           /* number of linking constraints */
@@ -559,13 +560,11 @@ static SCIP_RETCODE assignLinking(
    assert(decomp != NULL);
    assert(vars != NULL);
    assert(sortedconss != NULL);
-
-   /* create new decomposition; don't change the decompositions in the decompstore */
-   SCIP_DECOMP* newdecomp;
-   SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), nblocks, FALSE, SCIPdecompUseBendersLabels(decomp)) );
+   assert(varlabels != NULL);
+   assert(conslabels != NULL);
 
    /* copy the labels */
-   SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, vars, varslabels, nvars) );
+   SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, vars, varlabels, nvars) );
    SCIP_CALL( SCIPdecompSetConsLabels(newdecomp, sortedconss, conslabels, nconss) );
 
    nlinkconss = 0;
@@ -587,10 +586,9 @@ static SCIP_RETCODE assignLinking(
    //SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp) );
 
    SCIPdecompGetConsLabels(newdecomp, sortedconss, conslabels, nconss);
-   SCIPdecompGetVarsLabels(newdecomp, vars, varslabels, nvars);
+   SCIPdecompGetVarsLabels(newdecomp, vars, varlabels, nvars);
 
    SCIPsortIntPtr(conslabels, (void **)sortedconss, nconss);
-   decomp = newdecomp;
 }
 
 /*
@@ -696,7 +694,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_VAR** vars;
    SCIP_CONS** conss;
    SCIP_CONS** sortedconss;
-   int* varslabels;
+   int* varlabels;
    int* conslabels;
    int i;
    int nblocks;
@@ -740,7 +738,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    *result = SCIP_DIDNOTRUN;
 
    problem = NULL;
-   varslabels = NULL;
+   varlabels = NULL;
    conslabels = NULL;
    blockstartsconss = NULL;
    linkvars = NULL;
@@ -795,7 +793,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    /* don't change problem by sorting constraints */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &sortedconss, conss, nconss) );
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &varslabels, nvars));
+   SCIP_CALL(SCIPallocBufferArray(scip, &varlabels, nvars));
    SCIP_CALL(SCIPallocBufferArray(scip, &conslabels, nconss));
    SCIP_CALL(SCIPallocBufferArray(scip, &blockstartsconss, nconss + 1));
 
@@ -804,10 +802,10 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    for( i = 0; i < nconss; i++ )
       SCIPdebugMsg(scip,"%s %d\n",SCIPconsGetName(conss[i]), conslabels[i]);
 #endif
-   SCIPdecompGetVarsLabels(decomp, vars, varslabels, nvars);
+   SCIPdecompGetVarsLabels(decomp, vars, varlabels, nvars);
 #if 0
    for( i = 0; i < nvars; i++ )
-      SCIPdebugMsg(scip,"%s %d\n",SCIPvarGetName(vars[i]), varslabels[i]);
+      SCIPdebugMsg(scip,"%s %d\n",SCIPvarGetName(vars[i]), varlabels[i]);
 #endif
 
    /* sort constraints by blocks */
@@ -815,7 +813,14 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    if( heurdata->assignlinking && conslabels[0] == SCIP_DECOMP_LINKCONS )
    {
-      assignLinking(scip, decomp, nblocks, vars, sortedconss, varslabels, conslabels, nvars, nconss);
+      /* create new decomposition; don't change the decompositions in the decompstore */
+      SCIP_DECOMP* newdecomp = NULL;
+      SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), nblocks, FALSE, SCIPdecompUseBendersLabels(decomp)) );
+
+      assignLinking(scip, decomp, newdecomp, vars, sortedconss, varlabels, conslabels, nvars, nconss, nblocks);
+      decomp = newdecomp;
+
+      SCIPdecompFree(&newdecomp, SCIPblkmem(scip));
    }
 
    if(conslabels[0] == SCIP_DECOMP_LINKCONS)
@@ -858,7 +863,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    numlinkvars = 0;
    for (i = 0; i < nvars; i++)
    {
-      if (varslabels[i] == SCIP_DECOMP_LINKVAR)
+      if (varlabels[i] == SCIP_DECOMP_LINKVAR)
       {
          numlinkvars++;
 #if 0
@@ -875,7 +880,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    b = 0;
    for (i = 0; i < nvars; i++)
    {
-      if (varslabels[i] == SCIP_DECOMP_LINKVAR)
+      if (varlabels[i] == SCIP_DECOMP_LINKVAR)
       {
          linkvars[b] = vars[i];
          SCIP_CALL(SCIPallocBufferArray(scip, &(linkvartoblocks[b].indexes), problem->nblocks));
@@ -1529,7 +1534,7 @@ TERMINATE:
    if( blocktolinkvars != NULL )
       SCIPfreeBufferArray(scip, &blocktolinkvars);
 
-   for( i = 0; i < numlinkvars; i++ )
+   for( i = numlinkvars - 1; i >= 0; i-- )
       if( linkvartoblocks[i].indexes != NULL )
          SCIPfreeBufferArray(scip, &(linkvartoblocks[i].indexes));
 
@@ -1545,8 +1550,8 @@ TERMINATE:
    if( conslabels != NULL )
       SCIPfreeBufferArray(scip, &conslabels);
 
-   if( varslabels != NULL )
-      SCIPfreeBufferArray(scip, &varslabels);
+   if( varlabels != NULL )
+      SCIPfreeBufferArray(scip, &varlabels);
 
    if( problem != NULL )
       freeProblem(&problem);
