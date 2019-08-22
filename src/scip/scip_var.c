@@ -3020,10 +3020,12 @@ SCIP_RETCODE performStrongbranchWithPropagation(
    assert(value != NULL);
    assert(foundsol != NULL);
    assert(cutoff != NULL);
+   assert(lperror != NULL);
    assert(valid != NULL ? !(*valid) : TRUE);
 
    *foundsol = FALSE;
    *cutoff = FALSE;
+   *lperror = FALSE;
 
    /* check whether the strong branching child is already infeasible due to the bound change */
    if( down )
@@ -5208,7 +5210,8 @@ SCIP_RETCODE SCIPtightenVarLb(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the lower bound improved */
+   if( tightened != NULL && lb < SCIPcomputeVarLbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -5324,7 +5327,8 @@ SCIP_RETCODE SCIPtightenVarUb(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the upper bound improved */
+   if( tightened != NULL && ub > SCIPcomputeVarUbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;

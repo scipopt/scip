@@ -566,11 +566,7 @@ SCIP_RETCODE setupAndSolveSubscip(
    {
       SCIPwarningMessage(scip, "Error while presolving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
       SCIPABORT();  /*lint --e{527}*/
-
-      /* free sub problem data */
-      SCIPfreeBufferArray(scip, &subvars);
-
-      return retcode;
+      goto TERMINATE;
    }
 
    SCIPdebugMsg(scip, "RENS presolved subproblem: %d vars, %d cons, success=%u\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
@@ -607,11 +603,7 @@ SCIP_RETCODE setupAndSolveSubscip(
       {
          SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
          SCIPABORT();
-
-         /* free sub problem data */
-         SCIPfreeBufferArray(scip, &subvars);
-
-         return retcode;
+         goto TERMINATE;
       }
       else
       {
@@ -644,6 +636,7 @@ SCIP_RETCODE setupAndSolveSubscip(
       SCIPstatisticPrintf("RENS statistic: fixed only %6.3f integer variables, %6.3f all variables --> abort \n", intfixingrate, allfixingrate);
    }
 
+TERMINATE:
    /* free sub problem data */
    SCIPfreeBufferArray(scip, &subvars);
 

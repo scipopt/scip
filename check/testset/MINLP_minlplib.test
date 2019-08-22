@@ -125,6 +125,7 @@ MINLP/instances/minlplib/osil/catmix400.osil.gz
 MINLP/instances/minlplib/osil/catmix800.osil.gz
 MINLP/instances/minlplib/osil/cecil_13.osil.gz
 MINLP/instances/minlplib/osil/celar6-sub0.osil.gz
+MINLP/instances/minlplib/osil/cesam2cent.osil.gz
 MINLP/instances/minlplib/osil/cesam2log.osil.gz
 MINLP/instances/minlplib/osil/chain100.osil.gz
 MINLP/instances/minlplib/osil/chain200.osil.gz
@@ -541,6 +542,7 @@ MINLP/instances/minlplib/osil/gastrans582_warm15_95.osil.gz
 MINLP/instances/minlplib/osil/gastrans582_warm15.osil.gz
 MINLP/instances/minlplib/osil/gastrans582_warm31_95.osil.gz
 MINLP/instances/minlplib/osil/gastrans582_warm31.osil.gz
+#MINLP/instances/minlplib/osil/gastransnlp.osil.gz
 MINLP/instances/minlplib/osil/gastrans.osil.gz
 MINLP/instances/minlplib/osil/gbd.osil.gz
 MINLP/instances/minlplib/osil/gear2.osil.gz
@@ -1020,6 +1022,7 @@ MINLP/instances/minlplib/osil/qspp_0_12_0_1_10_1.osil.gz
 MINLP/instances/minlplib/osil/qspp_0_13_0_1_10_1.osil.gz
 MINLP/instances/minlplib/osil/qspp_0_14_0_1_10_1.osil.gz
 MINLP/instances/minlplib/osil/qspp_0_15_0_1_10_1.osil.gz
+#MINLP/instances/minlplib/osil/quantum.osil.gz
 MINLP/instances/minlplib/osil/radar-2000-10-a-6_lat_7.osil.gz
 MINLP/instances/minlplib/osil/radar-3000-10-a-8_lat_7.osil.gz
 MINLP/instances/minlplib/osil/ramsey.osil.gz
@@ -1570,6 +1573,23 @@ MINLP/instances/minlplib/osil/watercontamination0303r.osil.gz
 MINLP/instances/minlplib/osil/waterful2.osil.gz
 MINLP/instances/minlplib/osil/waternd1.osil.gz
 MINLP/instances/minlplib/osil/waternd2.osil.gz
+#MINLP/instances/minlplib/osil/waternd_blacksburg.osil.gz
+#MINLP/instances/minlplib/osil/waternd_fossiron.osil.gz
+#MINLP/instances/minlplib/osil/waternd_fosspoly0.osil.gz
+#MINLP/instances/minlplib/osil/waternd_fosspoly1.osil.gz
+#MINLP/instances/minlplib/osil/waternd_hanoi.osil.gz
+#MINLP/instances/minlplib/osil/waternd_modena.osil.gz
+#MINLP/instances/minlplib/osil/waternd_pescara.osil.gz
+#MINLP/instances/minlplib/osil/waternd_shamir.osil.gz
+#MINLP/instances/minlplib/osil/waterno1_01.osil.gz
+#MINLP/instances/minlplib/osil/waterno1_02.osil.gz
+#MINLP/instances/minlplib/osil/waterno1_03.osil.gz
+#MINLP/instances/minlplib/osil/waterno1_04.osil.gz
+#MINLP/instances/minlplib/osil/waterno1_06.osil.gz
+#MINLP/instances/minlplib/osil/waterno1_09.osil.gz
+#MINLP/instances/minlplib/osil/waterno1_12.osil.gz
+#MINLP/instances/minlplib/osil/waterno1_18.osil.gz
+#MINLP/instances/minlplib/osil/waterno1_24.osil.gz
 MINLP/instances/minlplib/osil/waterno2_01.osil.gz
 MINLP/instances/minlplib/osil/waterno2_02.osil.gz
 MINLP/instances/minlplib/osil/waterno2_03.osil.gz

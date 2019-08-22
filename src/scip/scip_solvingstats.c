@@ -32,92 +32,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <ctype.h>
-#include <stdarg.h>
-#include <assert.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/
-#endif
-
-
-#include "lpi/lpi.h"
-#include "nlpi/exprinterpret.h"
-#include "nlpi/nlpi.h"
-#include "scip/benders.h"
-#include "scip/benderscut.h"
+#include "blockmemshell/memory.h"
 #include "scip/branch.h"
-#include "scip/branch_nodereopt.h"
 #include "scip/clock.h"
-#include "scip/compr.h"
 #include "scip/concsolver.h"
 #include "scip/concurrent.h"
 #include "scip/conflict.h"
 #include "scip/conflictstore.h"
-#include "scip/cons.h"
-#include "scip/cons_linear.h"
-#include "scip/cutpool.h"
-#include "scip/cuts.h"
 #include "scip/debug.h"
-#include "scip/def.h"
-#include "scip/dialog.h"
-#include "scip/dialog_default.h"
 #include "scip/disp.h"
-#include "scip/event.h"
-#include "scip/heur.h"
-#include "scip/heur_ofins.h"
-#include "scip/heur_reoptsols.h"
-#include "scip/heur_trivialnegation.h"
-#include "scip/heuristics.h"
 #include "scip/history.h"
-#include "scip/implics.h"
-#include "scip/interrupt.h"
-#include "scip/lp.h"
-#include "scip/mem.h"
-#include "scip/message_default.h"
-#include "scip/misc.h"
-#include "scip/nlp.h"
-#include "scip/nodesel.h"
-#include "scip/paramset.h"
-#include "scip/presol.h"
-#include "scip/presolve.h"
-#include "scip/pricer.h"
 #include "scip/pricestore.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
-#include "scip/prop.h"
-#include "scip/reader.h"
-#include "scip/relax.h"
-#include "scip/reopt.h"
-#include "scip/retcode.h"
-#include "scip/scipbuildflags.h"
-#include "scip/scipcoreplugins.h"
-#include "scip/scipgithash.h"
-#include "scip/sepa.h"
-#include "scip/sepastore.h"
-#include "scip/set.h"
-#include "scip/sol.h"
-#include "scip/solve.h"
-#include "scip/stat.h"
-#include "scip/syncstore.h"
-#include "scip/table.h"
-#include "scip/tree.h"
-#include "scip/var.h"
-#include "scip/visual.h"
-#include "xml/xml.h"
-
-#include "scip/scip_benders.h"
-#include "scip/scip_general.h"
-#include "scip/scip_mem.h"
-#include "scip/scip_message.h"
-#include "scip/scip_numerics.h"
-#include "scip/scip_sol.h"
-#include "scip/scip_solvingstats.h"
-#include "scip/scip_table.h"
-#include "scip/scip_timing.h"
-#include "scip/scip_var.h"
-
 #include "scip/pub_benderscut.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_branch.h"
@@ -139,16 +66,33 @@
 #include "scip/pub_sol.h"
 #include "scip/pub_table.h"
 #include "scip/pub_var.h"
-
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons)
- */
-#ifndef NDEBUG
+#include "scip/reader.h"
+#include "scip/reopt.h"
+#include "scip/scip_benders.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_table.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_var.h"
+#include "scip/sepastore.h"
+#include "scip/set.h"
+#include "scip/sol.h"
+#include "scip/stat.h"
+#include "scip/struct_mem.h"
+#include "scip/struct_primal.h"
+#include "scip/struct_prob.h"
 #include "scip/struct_scip.h"
-#endif
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/syncstore.h"
+#include "scip/table.h"
+#include "scip/tree.h"
+#include "scip/var.h"
+#include <string.h>
 
 /** gets number of branch and bound runs performed, including the current run
  *
@@ -3366,7 +3310,6 @@ void SCIPprintSolutionStatistics(
 {
    SCIP_Real primalbound;
    SCIP_Real dualbound;
-   SCIP_Real bestsol;
    SCIP_Real gap;
    SCIP_Real firstprimalbound;
    SCIP_Bool objlimitreached;
@@ -3382,9 +3325,12 @@ void SCIPprintSolutionStatistics(
    dualbound = SCIPgetDualbound(scip);
    gap = SCIPgetGap(scip);
 
+   /* We output that the objective limit has been reached if the problem has been solved, no solution respecting the
+    * objective limit has been found (nlimsolsfound == 0) and the primal bound is finite. Note that it still might be
+    * that the original problem is infeasible, even without the objective limit, i.e., we cannot be sure that we
+    * actually reached the objective limit. */
    objlimitreached = FALSE;
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0
-      && !SCIPisInfinity(scip, primalbound)  )
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, primalbound) )
       objlimitreached = TRUE;
 
    if( scip->primal->nsolsfound != scip->primal->nlimsolsfound )
@@ -3396,7 +3342,7 @@ void SCIPprintSolutionStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Solutions found  : %10" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT " improvements%s)\n",
       scip->primal->nsolsfound, scip->primal->nbestsolsfound, limsolstring);
 
-   if( objlimitreached || SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
+   if( SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
    {
       if( scip->set->stage == SCIP_STAGE_SOLVED )
       {
@@ -3430,8 +3376,17 @@ void SCIPprintSolutionStatistics(
    {
       if( scip->primal->nlimsolsfound == 0 )
       {
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e", primalbound);
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (user objective limit)\n");
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e   (objective limit)\n", primalbound);
+
+         /* display (best) primal bound */
+         if( scip->primal->nsolsfound > 0 )
+         {
+            SCIP_Real bestsol;
+            bestsol = SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob);
+            bestsol = SCIPretransformObj(scip, bestsol);
+
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Best Solution    : %+21.14e\n", bestsol);
+         }
       }
       else
       {
@@ -3460,14 +3415,6 @@ void SCIPprintSolutionStatistics(
 
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e", primalbound);
 
-         /* display (best) primal bound */
-         bestsol = SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob);
-         bestsol = SCIPretransformObj(scip, bestsol);
-         if( SCIPsetIsGT(scip->set, bestsol, primalbound) )
-         {
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (user objective limit)\n");
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Best Solution    : %+21.14e", bestsol);
-         }
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (in run %d, after %" SCIP_LONGINT_FORMAT " nodes, %.2f seconds, depth %d, found by <%s>)\n",
             SCIPsolGetRunnum(scip->primal->sols[0]),
             SCIPsolGetNodenum(scip->primal->sols[0]),
@@ -3478,10 +3425,12 @@ void SCIPprintSolutionStatistics(
             : (SCIPsolGetRunnum(scip->primal->sols[0]) == 0 ? "initial" : "relaxation"));
       }
    }
-   if( objlimitreached || SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
+
+   if( SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Dual Bound       :          -\n");
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Dual Bound       : %+21.14e\n", dualbound);
+
    if( SCIPsetIsInfinity(scip->set, gap) )
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              :   infinite\n");
    else
@@ -3489,7 +3438,7 @@ void SCIPprintSolutionStatistics(
 
    if( scip->set->misc_calcintegral )
    {
-      if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE )
+      if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE && ! objlimitreached )
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (problem infeasible)\n");
       else
       {

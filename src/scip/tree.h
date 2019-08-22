@@ -26,8 +26,9 @@
 #define __SCIP_TREE_H__
 
 
-#include "scip/def.h"
 #include "blockmemshell/memory.h"
+#include "scip/def.h"
+#include "scip/nodesel.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_cons.h"

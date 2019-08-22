@@ -367,7 +367,6 @@ SCIP_RETCODE SCIPpricerDeactivate(
 {
    assert(pricer != NULL);
    assert(set != NULL);
-   assert(set->stage == SCIP_STAGE_PROBLEM);
 
    if( pricer->active )
    {

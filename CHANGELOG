@@ -1,21 +1,18 @@
-
 @page RN60 Release notes for SCIP 6.0
 
-@section RN602 SCIP 6.0.2
+@section RN603 SCIP 6.0.3
 *************************
 
 Features
 --------
 
-- The abspower constraint handler now passes more accurate convexity
-  information to the NLP relaxation.
+- allow disabling of pricers during solving process
 
 Performance improvements
 ------------------------
 
 Examples and applications
 -------------------------
-- added parsing functionality for optcumulative constraints in CIP format
 
 Interface changes
 -----------------
@@ -29,8 +26,6 @@ Interface changes
 ### Command line interface
 
 ### Interfaces to external software
-
-- Updated the Mosek LP solver interface to support Mosek 9.0.
 
 ### Changed parameters
 
@@ -52,12 +47,61 @@ Build system
 
 ### Cmake
 
-- new target to 'doc' to build documentation
-
 ### Makefile
 
 Fixed bugs
 ----------
+
+- fixed issue in SCIPtightenVarLb and SCIPtightenVarUb that occurs for small bound changes
+- fixed rejecting minimal boundchange that changed sign of variable, even though SCIPisLb/UbBetter approved it
+- fixed issue in generateCutNonConvex() which is triggered when adding quadratic constraints during the solving process
+- fixed bug in freeing the reoptimization data if no problem exists
+- fixed bug in SCIPreoptReleaseData() when freeing all stored constraints
+- fixed bug when freeing the transformed problem via interactive shell if reoptimization is enabled
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
+
+@section RN602 SCIP 6.0.2
+*************************
+
+Features
+--------
+
+- The abspower constraint handler now passes more accurate convexity
+  information to the NLP relaxation.
+
+Examples and applications
+-------------------------
+
+- added parsing functionality for optcumulative constraints in CIP format
+
+Interface changes
+-----------------
+
+### Interfaces to external software
+
+- Updated the Mosek LP solver interface to support Mosek 9.0.
+
+Build system
+------------
+
+### Cmake
+
+- new target to 'doc' to build documentation
+- ctests now fail if parameter file not found
+- add flag STATIC_GMP and improve GMP find module
+- remove non-API methods from library (API methods use new macro SCIP_EXPORT)
+- increase minimal required CMake version to 3.3
+- correct paths and dependency information when installing SCIP
+
+Fixed bugs
+----------
+- fixed SCIP-Jack presolving bug that could lead to wrong results for Steiner arborescence problems
 - fixed wrong unboundedness result in case not all constraints were already in the LP and enforcement was
   skipped because an optimal solution was found
 - fixed wrong enforcement of constraints in the disjunction constraint handler
@@ -70,14 +114,42 @@ Fixed bugs
 - fixed statistics of separators
 - improve numerical stability in varbound constraint handler by using double-double arithmetic
 - fixed bug in propagation of dual proofs
+- fixed bugs that arise for multiaggregated indicator variables by disallowing multiaggregation for them
 - improve numerical stability in SCIPcomputeBilinEnvelope* by using double-double arithmetic
 - fixed bug related to releasing pending bound changes in tree.c
+- set STD FENV_ACCESS pragma to on in code that changes floating-point rounding mode
+- disable GCC optimizations in main interval arithmetic code to prevent wrong optimizations
+- fixed wrong assert in cons_xor concerning the variable type
+- fixed different behavior of SCIPisLbBetter and SCIPisUbBetter between having NDEBUG defined or not
+- correctly handle bound disjunctions in symmetry detection
+- fixed issue in reliability branching related to the LP error flag not being reset
+- fixed treatment of near-infinite bounds in shiftandpropagate's problem transformation
+- fixed handling of infinite values in SCIPcomputeHyperplaneThreePoints()
+- fixed comparisons of infinite values in heur_intshifting.c and heur_shifting.c
+- fixed bug related to updating unprocessed cuts in the cutpool
+- fixed bug related to enabling quadratic constraints during `CONSINITLP`
+- add missing SCIP_EXPORT for functions used by GCG
+- fixed memory leak and wrong initialization for trival cases in cons_symresack.c
+- fixed bug with upgrading to packing/partitioning orbitopes
+- fixed bug with the status while upgrading in presol_symbreak.c
+- fixed wrong stage while clearing the conflict store
+- fixed behavior of SCIPfixVar() by setting infeasible pointer to TRUE if fixval lies outside variable domain
+- allow tightenVar() in SCIP_STAGE_PROBLEM stage
+- fixed bug in cumulative constraint handler when separating the LP solution
+- fixed issues with integer overflow in cumulative constraint handler
+- fixed bug where the convexity of Benders' decomposition subproblems was checked even when users defined subproblem
+  solving methods. Now, as per the documentation, the user must explicitly state whether the subproblem is convex
+- fixed wrong indexing in heur_dualval
+- fixed issue with basis status in SoPlex LPi
 
 Miscellaneous
 -------------
 
-Known bugs
-----------
+- statistics now output primal/dual bounds if objective limit is reached
+- memory check in debug mode is now disabled by default
+- message is now provided to the user to inform that automatic Benders' auxiliary variable lower bound computations are
+  not activated when user defined subproblem solving methods are present
+- corrected documentation of the primalgap in SCIP; describe when it will be infinite
 
 @section RN601 SCIP 6.0.1
 *************************
@@ -165,13 +237,11 @@ Fixed bugs
 - fixed wrong hashmap accesses and added sanity check for the correct hashmap type
 - avoid copying of unbounded solutions from sub-SCIPs as those cannot be checked completely
 - corrected the output of the first LP value in case of branch-and-price
+- fixed possible integer overflow, which led to wrong conclusion of infeasibility, in energetic reasoning of cons_cumulative.c
 
 Miscellaneous
 -------------
 - do not scale linear constraints to integral coefficients
-
-Known bugs
-----------
 
 @section RN600 SCIP 6.0.0
 *************************

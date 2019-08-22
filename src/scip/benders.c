@@ -1258,53 +1258,57 @@ SCIP_RETCODE createSubproblems(
       }
 
       /* if there are no binary and integer variables, then the subproblem is an LP.
-       * In this case, the SCIP instance is put into probing mode via the use of an event handler. */
-      if( nbinvars == 0 && nintvars == 0 && nimplintvars == 0 )
+       * In this case, the SCIP instance is put into probing mode via the use of an event handler.
+       * The check for convexity is only performed if the user has not implemented subproblem solving functions.
+       */
+      if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL )
       {
-         SCIPbendersSetSubproblemIsConvex(benders, i, TRUE);
-
-         /* if the user has not implemented a solve subproblem callback, then the subproblem solves are performed
-          * internally. To be more efficient the subproblem is put into probing mode. */
-         if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL
-            && SCIPgetStage(subproblem) <= SCIP_STAGE_PROBLEM )
+         if( nbinvars == 0 && nintvars == 0 && nimplintvars == 0 )
          {
-            SCIP_CALL( initialiseLPSubproblem(benders, set, i) );
+            SCIPbendersSetSubproblemIsConvex(benders, i, TRUE);
+
+            /* if the user has not implemented a solve subproblem callback, then the subproblem solves are performed
+             * internally. To be more efficient the subproblem is put into probing mode. */
+            if( SCIPgetStage(subproblem) <= SCIP_STAGE_PROBLEM )
+            {
+               SCIP_CALL( initialiseLPSubproblem(benders, set, i) );
+            }
          }
-      }
-      else
-      {
-         SCIP_EVENTHDLRDATA* eventhdlrdata_mipnodefocus;
-         SCIP_EVENTHDLRDATA* eventhdlrdata_upperbound;
-
-         SCIPbendersSetSubproblemIsConvex(benders, i, FALSE);
-
-         /* because the subproblems could be reused in the copy, the event handler is not created again.
-          * NOTE: This currently works with the benders_default implementation. It may not be very general. */
-         if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL && !benders->iscopy )
+         else
          {
-            SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_mipnodefocus) );
-            SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_upperbound) );
+            SCIP_EVENTHDLRDATA* eventhdlrdata_mipnodefocus;
+            SCIP_EVENTHDLRDATA* eventhdlrdata_upperbound;
 
-            SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata_mipnodefocus) );
-            SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata_upperbound) );
+            SCIPbendersSetSubproblemIsConvex(benders, i, FALSE);
 
-            /* include the first LP solved event handler into the subproblem */
-            SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, MIPNODEFOCUS_EVENTHDLR_NAME,
-                  MIPNODEFOCUS_EVENTHDLR_DESC, eventExecBendersMipnodefocus, eventhdlrdata_mipnodefocus) );
-            SCIP_CALL( SCIPsetEventhdlrInitsol(subproblem, eventhdlr, eventInitsolBendersMipnodefocus) );
-            SCIP_CALL( SCIPsetEventhdlrExitsol(subproblem, eventhdlr, eventExitsolBendersMipnodefocus) );
-            SCIP_CALL( SCIPsetEventhdlrExit(subproblem, eventhdlr, eventExitBendersMipnodefocus) );
-            SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersMipnodefocus) );
-            assert(eventhdlr != NULL);
+            /* because the subproblems could be reused in the copy, the event handler is not created again.
+             * NOTE: This currently works with the benders_default implementation. It may not be very general. */
+            if( !benders->iscopy )
+            {
+               SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_mipnodefocus) );
+               SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_upperbound) );
 
-            /* include the upper bound interrupt event handler into the subproblem */
-            SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, UPPERBOUND_EVENTHDLR_NAME,
-                  UPPERBOUND_EVENTHDLR_DESC, eventExecBendersUpperbound, eventhdlrdata_upperbound) );
-            SCIP_CALL( SCIPsetEventhdlrInitsol(subproblem, eventhdlr, eventInitsolBendersUpperbound) );
-            SCIP_CALL( SCIPsetEventhdlrExitsol(subproblem, eventhdlr, eventExitsolBendersUpperbound) );
-            SCIP_CALL( SCIPsetEventhdlrExit(subproblem, eventhdlr, eventExitBendersUpperbound) );
-            SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersUpperbound) );
-            assert(eventhdlr != NULL);
+               SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata_mipnodefocus) );
+               SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata_upperbound) );
+
+               /* include the first LP solved event handler into the subproblem */
+               SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, MIPNODEFOCUS_EVENTHDLR_NAME,
+                     MIPNODEFOCUS_EVENTHDLR_DESC, eventExecBendersMipnodefocus, eventhdlrdata_mipnodefocus) );
+               SCIP_CALL( SCIPsetEventhdlrInitsol(subproblem, eventhdlr, eventInitsolBendersMipnodefocus) );
+               SCIP_CALL( SCIPsetEventhdlrExitsol(subproblem, eventhdlr, eventExitsolBendersMipnodefocus) );
+               SCIP_CALL( SCIPsetEventhdlrExit(subproblem, eventhdlr, eventExitBendersMipnodefocus) );
+               SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersMipnodefocus) );
+               assert(eventhdlr != NULL);
+
+               /* include the upper bound interrupt event handler into the subproblem */
+               SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, UPPERBOUND_EVENTHDLR_NAME,
+                     UPPERBOUND_EVENTHDLR_DESC, eventExecBendersUpperbound, eventhdlrdata_upperbound) );
+               SCIP_CALL( SCIPsetEventhdlrInitsol(subproblem, eventhdlr, eventInitsolBendersUpperbound) );
+               SCIP_CALL( SCIPsetEventhdlrExitsol(subproblem, eventhdlr, eventExitsolBendersUpperbound) );
+               SCIP_CALL( SCIPsetEventhdlrExit(subproblem, eventhdlr, eventExitBendersUpperbound) );
+               SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersUpperbound) );
+               assert(eventhdlr != NULL);
+            }
          }
       }
    }
@@ -3722,14 +3726,30 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    assert(benders != NULL);
    assert(set != NULL);
 
+   if( benders->benderssolvesub != NULL || benders->benderssolvesubconvex != NULL )
+   {
+      (*lowerbound) = SCIPvarGetLbGlobal(SCIPbendersGetAuxiliaryVar(benders, probnumber));
+      (*infeasible) = FALSE;
+
+      SCIPinfoMessage(set->scip, NULL, "Benders' decomposition: a bendersSolvesub or bendersSolvesubconvex has been "
+         "implemented. SCIPbendersComputeSubproblemLowerbound can not be executed.\n");
+      SCIPinfoMessage(set->scip, NULL, "Set the auxiliary variable lower bound by calling "
+         "SCIPbendersUpdateSubproblemLowerbound in bendersCreatesub. The auxiliary variable %d will remain as %g\n",
+         probnumber, (*lowerbound));
+
+      return SCIP_OKAY;
+   }
+   else
+   {
+      SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "Benders' decomposition: Computing a lower bound for"
+         " subproblem %d\n", probnumber);
+   }
+
    /* getting the subproblem to evaluate */
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
    (*lowerbound) = -SCIPinfinity(subproblem);
    (*infeasible) = FALSE;
-
-   SCIPverbMessage(set->scip, SCIP_VERBLEVEL_FULL, NULL, "Benders' decomposition: Computing a lower bound for"
-      " subproblem %d\n", probnumber);
 
    SCIP_CALL( SCIPgetIntParam(subproblem, "display/verblevel", &verblevel) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );

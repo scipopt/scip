@@ -151,6 +151,12 @@ set(settings_Cardinality
 #    "upgdcardinality"
 )
 
+set(settings_Or
+    "default"
+    "presolving_separating_heuristics_off_randombranching"
+)
+
+
 set(instances_Readertest
     "instances/MIP/bell5.mps\;8966406.49"
     "instances/MIP/egout.mps\;568.1007"
@@ -331,6 +337,10 @@ set(instances_Benders
     "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
    )
 
+set(instances_Or
+    "instances/Or/or_constraint.cip\;18"
+    )
+
 #
 # available reader file extensions for SCIP readers
 #
@@ -395,6 +405,8 @@ macro(add_instancetests instances settings prefix)
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
+                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
         endforeach(setting)
@@ -418,6 +430,7 @@ add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
+add_instancetests(instances_Or settings_Or "Or")
 
 #
 # test writing and reading solutions

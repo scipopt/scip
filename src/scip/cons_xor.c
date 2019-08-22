@@ -2373,7 +2373,7 @@ SCIP_RETCODE checkSystemGF2(
 
          var = consdata->vars[j];
          assert( var != NULL );
-         assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
+         assert( SCIPvarIsBinary(var) );
 
          /* replace negated variables */
          if ( SCIPvarIsNegated(var) )

@@ -72,7 +72,8 @@ MAINOBJ		=	cppmain.o \
 			EventhdlrNewSol.o \
 			HeurFarthestInsert.o \
 			HeurFrats.o \
-			Heur2opt.o
+			Heur2opt.o \
+			gzstream.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
 MAINDEP		=	$(SRCDIR)/depend.cppmain.$(OPT)
 
