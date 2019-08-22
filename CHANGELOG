@@ -70,6 +70,8 @@ Features
 
 - handle linear binary variables as if squared in simple upgrade from quadratic to second-order cone constraints
 
+- new variable event when changing the variable type
+
 Performance improvements
 ------------------------
 
@@ -181,6 +183,7 @@ Interface changes
   SCIPdetermineNVarsAffectedSym(), SCIPcomputeComponentsSym(), and SCIPextendSubOrbitope(), SCIPgenerateOrbitopeVarsMatrix() for symmetry computations
 - new API functions SCIPvarIsRelaxationOnly() and SCIPvarMarkRelaxationOnly() to query and set, resp., whether a variable is marked as relaxation-only
 - new API functions SCIPconshdlrGetNUpdateConss() and SCIPconshdlrGetUpdateConss(), for expert users only
+- new API functions SCIPeventGetOldtype() and SCIPeventGetNewtype() for the new event when changing the variable type
 
 ### Command line interface
 

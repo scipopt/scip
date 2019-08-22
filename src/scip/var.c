@@ -5954,7 +5954,7 @@ SCIP_RETCODE SCIPvarChgType(
       return SCIP_INVALIDDATA;
    }
 
-   oldtype = var->vartype;
+   oldtype = (SCIP_VARTYPE)var->vartype;
    var->vartype = vartype; /*lint !e641*/
 
    if( SCIPsetGetStage(set) > SCIP_STAGE_TRANSFORMING )
@@ -5965,7 +5965,7 @@ SCIP_RETCODE SCIPvarChgType(
 
    if( var->negatedvar != NULL )
    {
-      assert(oldtype == var->negatedvar->vartype);
+      assert(oldtype == (SCIP_VARTYPE)var->negatedvar->vartype);
 
       var->negatedvar->vartype = vartype; /*lint !e641*/
 
