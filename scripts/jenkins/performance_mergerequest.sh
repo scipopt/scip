@@ -25,7 +25,7 @@ echo "This is performance_mergerequest.sh running."
 : ${GITBRANCH:=${gitlabTargetBranch}}
 : ${QUICKMODE:=""}
 
-if [ "${gitlabTriggerPhrase}" != "" ] then
+if [ "${gitlabTriggerPhrase}" != "" ]; then
   QUICKMODE=$(echo "${gitlabTriggerPhrase}" | cut -f4 -d " ")
 fi
 
@@ -68,7 +68,7 @@ fi
 
 export FULLGITHASH=$(git show -s --pretty=%H)
 export MODE=performance
-export MRSETTINGS="MR-${gitlabMergeRequestIid}.set"
+export MRSETTINGS="MR-${gitlabMergeRequestIid}"
 
 ####################################
 ### jobs configuration variables ###
