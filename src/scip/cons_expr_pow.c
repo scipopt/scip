@@ -2145,7 +2145,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSignpower)
 
    *success = FALSE;
 
-   /* get aux variables: we over- or underestimate childvar^exponent  */
+   /* get aux variables: we over- or underestimate signpower(childvar,exponent)  */
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    childvar = SCIPgetConsExprExprAuxVar(child);
@@ -2228,7 +2228,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSignpower)
    exponent = SCIPgetConsExprExprPowExponent(expr);
    interval = SCIPgetConsExprExprActivity(scip, expr);
 
-   SCIPdebugMsg(scip, "reverseprop x^%g in [%.15g,%.15g]", exponent, interval.inf, interval.sup);
+   SCIPdebugMsg(scip, "reverseprop signpow(x,%g) in [%.15g,%.15g]", exponent, interval.inf, interval.sup);
 
    if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, interval) )
    {
