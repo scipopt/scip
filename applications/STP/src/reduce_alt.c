@@ -930,55 +930,7 @@ SCIP_RETCODE reduce_nv_optimal(
          }
       }
       /* The knot is not a terminal so we can perform the short link test */
-#if 0
-      else
-      {
-         for(e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
-         {
-            j = g->tail[e];
-            if( vregion[i] != vregion[j] )
-            {
-               if( minArc1[vregion[i]] < 0 )
-                  minArc1[vregion[i]] = e;
-               else if( g->cost[e] < g->cost[minArc1[vregion[i]]] )
-               {
-                  minArc2[vregion[i]] = minArc1[vregion[i]];
-                  minArc1[vregion[i]] = e;
-               }
-            }
-         }
-      }
-#endif
    }
-
-#if 0
-   for( k = 0; k < termcount; k++ )
-   {
-      assert(terms[k] >= 0 && terms[k] < g->knots);
-
-      if( minArc1[terms[k]] >= 0 && minArc2[terms[k]] >= 0 && pathfromsource[g->tail[minArc1[terms[k]]]].dist
-         + g->cost[minArc1[terms[k]]] + pathfromterm[g->head[minArc1[terms[k]]]].dist < g->cost[minArc2[terms[k]]] )
-      {
-         e = minArc1[terms[k]];
-         i = g->head[e];
-         j = g->tail[e];
-
-         if ((g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP) && (i == g->source || j == g->source) )
-            continue;
-
-
-         if( Is_term(g->term[i]) )
-         {
-            SCIPintListNodeAppendCopy(graph_get_fixedges(scip, g), g->ancestors[e], NULL);
-            *fixed += g->cost[e];
-         }
-         graph_knot_contract(g, j, i);
-
-
-         elimins++;
-      }
-   }
-#endif
 
    free(terms);
    free(minArc2);
@@ -1137,16 +1089,6 @@ int reduce_sduction(
          }
       }
    }
-#if 0
-   free(heap);
-   free(state);
-
-   heap  = NULL;
-   state = NULL;
-
-   free(sd);
-   free(cost);
-#endif
    assert(graph_valid(g));
 
    SCIPdebugMessage("%d Edges deleted\n", elimins * 2);

@@ -38,7 +38,7 @@ struct fixed_graph_components
    int                   nfixnodes;          /**< number of fixed nodes  */
 };
 
-/** node ancestors resulting from pseudo-elimination, typedef FIXED */
+/** node ancestors resulting from pseudo-elimination, typedef PSEUDOANS */
 struct pseudo_ancestors
 {
    int**                 edgeblocks;         /**< blocks of ancestors for each halfedge */
