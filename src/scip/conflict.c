@@ -6940,6 +6940,8 @@ SCIP_RETCODE getFarkasProof(
 
    /* calculate the Farkas row */
    (*valid) = TRUE;
+   (*validdepth) = 0;
+
    for( r = 0; r < nrows; ++r )
    {
       row = rows[r];
