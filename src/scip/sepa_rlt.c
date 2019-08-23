@@ -369,7 +369,6 @@ SCIP_RETCODE addBilinProduct(
    SCIP_Bool found;
 
    assert(underestimate || overestimate);
-   SCIPinfoMessage(scip, NULL, "\nadding %s; %s", underestimate ? "an underestimation" : "", overestimate ? "an overestimation" : "");
 
    /* the variables should be given in the correct order */
    if( SCIPvarComp(x, y) > 0 )
@@ -379,6 +378,9 @@ SCIP_RETCODE addBilinProduct(
    yidx = SCIPvarGetIndex(y);
 
    mapidx = xidx * sepadata->maxvarindex + yidx;
+
+   SCIPinfoMessage(scip, NULL, "\nadding %s %s  for product %s%s with mapidx = %d", underestimate ? "an underestimation;" : "", overestimate ? "an overestimation" : "",
+      SCIPvarGetName(x), SCIPvarGetName(y), mapidx);
 
    termpos = SCIPhashmapGetImageInt(sepadata->bilinvarsmap, (void*)(size_t) mapidx);
 
@@ -483,7 +485,7 @@ SCIP_RETCODE addBilinProduct(
    {  /* linexpr has not been added yet, add it here */
       SCIPinfoMessage(scip, NULL, "\nnew linearisation for termpos %d", termpos);
 
-      SCIPprintConsExprExpr(scip, sepadata->conshdlr, sepadata->bilinterms[sepadata->nbilinterms-1], NULL);
+      SCIPprintConsExprExpr(scip, sepadata->conshdlr, sepadata->bilinterms[termpos], NULL);
 
       if( sepadata->nlinexprs[termpos] + 1 > sepadata->slinexprs[termpos] )
       {
@@ -504,10 +506,10 @@ SCIP_RETCODE addBilinProduct(
          sepadata->linoverestimate[termpos][i] = sepadata->linoverestimate[termpos][i-1];
       }
       assert(linexpr != NULL);
-      SCIPinfoMessage(scip, NULL, "\nadding in position %d", sepadata->nlinexprs[termpos]);
-      sepadata->linexprs[termpos][sepadata->nlinexprs[termpos]] = linexpr;
-      sepadata->linunderestimate[termpos][sepadata->nlinexprs[termpos]] = FALSE;
-      sepadata->linoverestimate[termpos][sepadata->nlinexprs[termpos]] = FALSE;
+      SCIPinfoMessage(scip, NULL, "\nadding in position %d", linpos);
+      sepadata->linexprs[termpos][linpos] = linexpr;
+      sepadata->linunderestimate[termpos][linpos] = FALSE;
+      sepadata->linoverestimate[termpos][linpos] = FALSE;
       ++sepadata->nlinexprs[termpos];
    }
 
@@ -533,6 +535,13 @@ SCIP_RETCODE addBilinProduct(
    /* if expr was created here, it was captured then */
    if( new )
       SCIPreleaseConsExprExpr(scip, &expr);
+
+   SCIPinfoMessage(scip, NULL, "\n\nUpdated linearisations are:");
+   for( int i = 0; i < sepadata->nlinexprs[termpos]; ++i )
+   {
+      SCIPinfoMessage(scip, NULL, "\n");
+      SCIPprintConsExprExpr(scip, sepadata->conshdlr, sepadata->linexprs[termpos][i], NULL);
+   }
 
    return SCIP_OKAY;
 }
@@ -632,6 +641,11 @@ SCIP_RETCODE extractProducts(
       if( SCIPvarGetType(vars[xpos]) != SCIP_VARTYPE_BINARY )
          continue;
 
+      /* cannot use a global bound on x to detect a product */
+      if( (coefs1[(xpos + 1) % 3] == 0 && coefs1[(xpos + 2) % 3] == 0) ||
+         (coefs2[(xpos + 1) % 3] == 0 && coefs2[(xpos + 2) % 3] == 0) )
+         continue;
+
       SCIPdebugMsg(scip, "binary var = %s\n", SCIPvarGetName(vars[xpos]));
 
       /* we flip the 1st row so that coef of x is positive */
@@ -682,6 +696,10 @@ SCIP_RETCODE extractProducts(
 
          ypos = (xpos - i + 3) % 3;
 
+         /* cannot use a global bound on y to detect a product */
+         if( (coefs1[xpos] == 0 && coefs1[wpos] == 0) || (coefs2[xpos] == 0 && coefs2[wpos] == 0) )
+            continue;
+
          /* when a1c2 = a2c1, the linear relations do not imply a product relation */
          if( SCIPisZero(scip, coefs2[wpos]*sign2*coefs1[ypos]*sign1 - coefs2[ypos]*sign2*coefs1[wpos]*sign1) )
          {
@@ -715,13 +733,13 @@ SCIP_RETCODE extractProducts(
 
             SCIPdebugMsg(scip, "w coef is %s\n", negwcoef ? "negative" : "positive");
 
-            SCIPinfoMessage(scip, NULL, "\nLhs, found suitable implied rels (w,x,y): %f%s + %f%s + %f%s %s %f\n",
+            SCIPinfoMessage(scip, NULL, "\nLhs, found suitable implied rels (w,x,y): %f%s + %f%s + %f%s >= %f\n",
                             sign1*coefs1[wpos], SCIPvarGetName(w), sign1*coefs1[xpos], SCIPvarGetName(x),
-                            sign1*coefs1[ypos], SCIPvarGetName(y), sign1 > 0 ? ">=" : "<=", lhs1);
+                            sign1*coefs1[ypos], SCIPvarGetName(y), lhs1);
 
-            SCIPinfoMessage(scip, NULL, "\nand %f%s + %f%s + %f%s %s %f\n",
+            SCIPinfoMessage(scip, NULL, "\nand %f%s + %f%s + %f%s >= %f\n",
                             sign2*coefs2[wpos], SCIPvarGetName(w), sign2*coefs2[xpos], SCIPvarGetName(x),
-                            sign2*coefs2[ypos], SCIPvarGetName(y), sign2 > 0 ? ">=" : "<=", lhs2);
+                            sign2*coefs2[ypos], SCIPvarGetName(y), lhs2);
 
             lincoefs[0] = sign2*coefs2[wpos]*sign1*coefs1[wpos]*mult;
             lincoefs[1] = (sign2*coefs2[xpos]*sign1*coefs1[wpos] - lhs2*sign1*coefs1[wpos] + lhs1*sign2*coefs2[wpos] )*mult;
@@ -749,13 +767,12 @@ SCIP_RETCODE extractProducts(
 
             SCIPdebugMsg(scip, "w coef is %s\n", negwcoef ? "negative" : "positive");
 
-            SCIPinfoMessage(scip, NULL, "\nRhs, found suitable implied rels (w,x,y): %f%s + %f%s + %f%s %s %f\n",
+            SCIPinfoMessage(scip, NULL, "\nRhs, found suitable implied rels (w,x,y): %f%s + %f%s + %f%s <= %f\n",
                             sign1*coefs1[wpos], SCIPvarGetName(w), sign1*coefs1[xpos], SCIPvarGetName(x),
-                            sign1*coefs1[ypos], SCIPvarGetName(y), sign1 > 0 ? "<=" : ">=", rhs1);
+                            sign1*coefs1[ypos], SCIPvarGetName(y), rhs1);
 
-            SCIPinfoMessage(scip, NULL, "\nand %f%s + %f%s + %f%s %s %f\n",
-                            sign2*coefs2[wpos], SCIPvarGetName(w), sign2*coefs2[xpos], SCIPvarGetName(x),
-                            sign2*coefs2[ypos], SCIPvarGetName(y), sign2 > 0 ? "<=" : ">=", rhs2);
+            SCIPinfoMessage(scip, NULL, "\nand %f%s + %f%s + %f%s <= %f\n", sign2*coefs2[wpos], SCIPvarGetName(w),
+                            sign2*coefs2[xpos], SCIPvarGetName(x), sign2*coefs2[ypos], SCIPvarGetName(y), rhs2);
 
             lincoefs[0] = sign1*coefs1[wpos]*sign2*coefs2[wpos]*mult;
             lincoefs[1] = (sign1*coefs1[xpos]*sign2*coefs2[wpos] - rhs1*sign2*coefs2[wpos] + rhs2*sign1*coefs1[wpos] )*mult;
@@ -949,7 +966,12 @@ SCIP_RETCODE detectHiddenProducts(
             int lowerpos, upperpos;
             SCIP_Real impllb, implub;
 
-            /* TODO do global bound */
+            /* do global bound */
+            coefs2[v1] = 1.0;
+            coefs2[(v1 + 1) % 3] = 0.0;
+            coefs2[(v1 + 2) % 3] = 0.0;
+            extractProducts(scip, sepadata, vars, SCIProwGetVals(row1), coefs2, SCIProwGetLhs(row1),
+               SCIPvarGetLbGlobal(vars[v1]), SCIProwGetRhs(row1), SCIPvarGetUbGlobal(vars[v1]), varmap);
 
             if( SCIPvarGetType(vars[v1]) != SCIP_VARTYPE_BINARY )
                continue;
