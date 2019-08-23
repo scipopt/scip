@@ -6638,8 +6638,10 @@ SCIP_RETCODE addRowToAggrRow(
       assert(!SCIPsetIsInfinity(set, row->rhs));
       SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight, +1) );
    }
-   SCIPsetDebugMsg(set, " -> add row <%s>[%g,%g]: dual=%g -> dualrhs=%g\n",
-      SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, weight, SCIPaggrRowGetRhs(aggrrow));
+   SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",
+      row->local ? "local" : "global",
+      SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant,
+      row->lpdepth, weight, SCIPaggrRowGetRhs(aggrrow));
 
    return SCIP_OKAY;
 }
@@ -6788,6 +6790,8 @@ SCIP_RETCODE addLocalRows(
    assert(set != NULL);
    assert(lp != NULL);
 
+   *validdepth = 0;
+
    if( !set->conf_uselocalrows )
       return SCIP_OKAY;
 
@@ -6801,10 +6805,7 @@ SCIP_RETCODE addLocalRows(
     *       here, we don't break immediately because we might can fix it by adding local rows
     */
    if( !infdelta && !SCIPsetIsInfinity(set, REALABS(*proofact)) && SCIPsetIsGT(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
-   {
-      *validdepth = 0;
       return SCIP_OKAY;
-   }
 
    /* we stop if the minimal activity is infinite but all variables have a finite activity delta (bad numerics) */
    if( !infdelta && SCIPsetIsInfinity(set, REALABS(*proofact)) )
@@ -6830,6 +6831,7 @@ SCIP_RETCODE addLocalRows(
       assert(row->len == 0 || row->vals != NULL);
       assert(row == lp->lpirows[r]);
       assert(row->local);
+      assert(row->lpdepth == localrowdepth[i]);
 
       /* ignore dual solution values of 0.0 (in this case: y_i == 0) */
       if( REALABS(dualsols[r]) > 0.0 )
@@ -7027,14 +7029,6 @@ SCIP_RETCODE getFarkasProof(
             goto TERMINATE;
          }
       }
-#ifdef SCIP_DEBUG
-      else if( !SCIPsetIsZero(set, dualfarkas[r]) )
-      {
-         SCIPsetDebugMsg(set, " -> ignoring %s row <%s> with dual Farkas value %.10f (lhs=%g, rhs=%g)\n",
-            row->local ? "local" : "global", SCIProwGetName(row), dualfarkas[r],
-            row->lhs - row->constant, row->rhs - row->constant);
-      }
-#endif
    }
 
    /* remove all coefficients that are too close to zero */
@@ -7521,6 +7515,7 @@ SCIP_RETCODE tightenDualproof(
    SCIP_AGGRROW*         proofrow,           /**< aggregated row representing the proof */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
+   int                   validdepth,         /**< depth where the proof is valid */
    SCIP_Bool             initialproof        /**< do we analyze the initial reason of infeasibility? */
    )
 {
@@ -7582,6 +7577,7 @@ SCIP_RETCODE tightenDualproof(
    /* start with a proofset containing all variables with a non-zero coefficient in the dual proof */
    SCIP_CALL( proofsetAddAggrrow(proofset, set, blkmem, proofrow) );
    proofset->conflicttype = conflict->conflictset->conflicttype;
+   proofset->validdepth = validdepth;
 
    /* get proof data */
    vals = proofsetGetVals(proofset);
@@ -7762,7 +7758,8 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    }
 
    /* try to enforce the constraint based on a dual ray */
-   SCIP_CALL( tightenDualproof(conflict, set, stat, blkmem, transprob, tree, proofrow, curvarlbs, curvarubs, initialproof) );
+   SCIP_CALL( tightenDualproof(conflict, set, stat, blkmem, transprob, tree, proofrow, curvarlbs, curvarubs,
+      validdepth, initialproof) );
 
    if( *globalinfeasible )
    {
