@@ -6750,8 +6750,8 @@ SCIP_RETCODE sortLocalRows(
       SCIPsortIntIntInt(&rownnz[i], &rowdepth[i], &rowinds[i], j-i+1);
       assert(rownnz[i] <= rownnz[j]);
 
-      i = j;
-   } /*lint -e{850} i is modified in the body of the for loop */
+      i = j; /*lint -e{850} i is modified in the body of the for loop */
+   }
 
 #ifndef NDEBUG
    for( i = 0; i < nrows-1; i++ )
