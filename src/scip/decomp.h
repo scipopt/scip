@@ -87,6 +87,36 @@ int SCIPdecompGetNBlocks(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
+/** gets number of edges in the block-decomposition graph of this decomposition */
+EXTERN
+int SCIPdecompGetNBlockGraphEdges(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
+/** gets number of connected components in the block-decomposition graph of this decomposition */
+EXTERN
+int SCIPdecompGetNBlockGraphComponents(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
+/** gets number of articulation points in the block-decomposition graph of this decomposition */
+EXTERN
+int SCIPdecompGetNBlockGraphArticulations(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
+/** gets the maximum degree of the block-decomposition graph of this decomposition */
+EXTERN
+int SCIPdecompGetBlockGraphMaxDegree(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
+/** gets the minimum degree of the block-decomposition graph of this decomposition */
+EXTERN
+int SCIPdecompGetBlockGraphMinDegree(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
 /** set labels for an array of variables */
 EXTERN
 SCIP_RETCODE SCIPdecompSetVarsLabels(

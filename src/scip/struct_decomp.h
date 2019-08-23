@@ -50,6 +50,7 @@ struct SCIP_Decomp
    int                   mindegree;          /**< the minimum degree of the block decomposition graph */
    int                   maxdegree;          /**< the maximum degree of the block decomposition graph */
    int                   ncomponents;        /**< the number of connected components in the block decomposition graph */
+   int                   narticulations;     /**< the number of articulation nodes in the block decomposition graph */
    SCIP_Bool             haschanges;         /**< has this decomposition pending data structure updates? */
    SCIP_Bool             original;           /**< is this a decomposition in the original (TRUE) or transformed space? */
    SCIP_Bool             benderslabels;      /**< should the variables be labeled for the application of Benders' decomposition */
