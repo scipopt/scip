@@ -2310,26 +2310,25 @@ SCIP_RETCODE solveSubproblem(
       subsols = SCIPgetSols(subscip);
       assert(subsols != NULL);
 
-      success = FALSE;
-      for( i = 0; i < nsubsols && !success; i++ )
+      for( i = 0; i < nsubsols; i++ )
       {
          /* transform solution to original problem */
          SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], heur, subvars, sol) );
 
          /* try to add new solution to scip */
          SCIP_CALL( SCIPtrySol(scip, *sol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
-      }
 
-      if( success )
-      {
-         assert(i >= 1);
-         SCIPdebugMsg(scip, "heuristic found %d solutions in subproblem; solution %d feasible in original problem\n", nsubsols, i);
-      }
-      else
-      {
-         /* free solution structure, since we found no feasible solution */
-         SCIP_CALL( SCIPfreeSol(scip, sol) );
-         *sol = NULL;
+         if( success )
+         {
+            SCIPdebugMsg(scip, "heuristic found %d solutions in subproblem; solution %d feasible in original problem\n", nsubsols, i);
+            break;
+         }
+         else
+         {
+            /* free solution structure, since SCIPtranslateSubSol would recreate in the next roun d*/
+            SCIP_CALL( SCIPfreeSol(scip, sol) );
+            assert(*sol == NULL);
+         }
       }
 
       /* if the best subproblem solution was not accepted in the original problem, we do not trust the solving status */
