@@ -6580,10 +6580,7 @@ SCIP_Bool checkDualFeasibility(
       {
          int i;
 
-         /* ignore slight numerical violations if the contribution of every component of the row
-          * would be less than QUAD_EPSILON
-          */
-
+         /* ignore slight numerical violations if the contribution of every component of the row is close to zero */
          if( weight > 0.0 )
             *zerocontribution = SCIPsetIsDualfeasZero(set, row->rhs * weight);
          else
@@ -6597,7 +6594,7 @@ SCIP_Bool checkDualFeasibility(
 
          if( !(*zerocontribution) )
          {
-            SCIPsetDebugMsg(set, " -> infeasible dual solution %g in row <%s>: lhs=%g, rhs=%g\n",
+            SCIPsetDebugMsg(set, " -> invalid dual solution value %g for row <%s>: lhs=%g, rhs=%g\n",
                weight, SCIProwGetName(row), row->lhs, row->rhs);
 
             valid = FALSE;
