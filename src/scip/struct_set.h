@@ -252,6 +252,7 @@ struct SCIP_Set
    SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
                                               *   a previous incumbent.
                                               */
+   SCIP_Bool             conf_uselocalrows;  /**< use local rows to construct infeasibility proofs */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted

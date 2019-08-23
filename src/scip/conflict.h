@@ -529,6 +529,11 @@ SCIP_Longint SCIPconflictGetNDualrayInfGlobal(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets number of locally valid dualray constraints */
+SCIP_Longint SCIPconflictGetNDualrayInfLocal(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets average length of infeasible dualrays */
 SCIP_Longint SCIPconflictGetNDualrayInfNonzeros(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -541,6 +546,11 @@ SCIP_Longint SCIPconflictGetNDualrayBndSuccess(
 
 /** gets number of globally applied dual proofs of boundexceeding LPs */
 SCIP_Longint SCIPconflictGetNDualrayBndGlobal(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of locally applied dual proofs of boundexceeding LPs */
+SCIP_Longint SCIPconflictGetNDualrayBndLocal(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

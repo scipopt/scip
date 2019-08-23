@@ -2862,8 +2862,7 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNAppliedLocalConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0,
-      SCIPconflictGetNDualrayInfSuccess(scip->conflict) + SCIPconflictGetNDualrayBndSuccess(scip->conflict)
-      - SCIPconflictGetNDualrayInfGlobal(scip->conflict) - SCIPconflictGetNDualrayBndGlobal(scip->conflict));
+      SCIPconflictGetNDualrayInfLocal(scip->conflict) + SCIPconflictGetNDualrayBndLocal(scip->conflict));
 }
 
 /** outputs separator statistics
