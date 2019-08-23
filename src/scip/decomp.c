@@ -113,6 +113,7 @@ SCIP_RETCODE SCIPdecompCreate(
    (*decomp)->mindegree = 0;
    (*decomp)->maxdegree = 0;
    (*decomp)->ncomponents = 0;
+   (*decomp)->narticulations = 0;
 
    return SCIP_OKAY;
 }
@@ -440,6 +441,56 @@ int SCIPdecompGetNBlocks(
    assert(decomp != NULL);
 
    return decomp->nblocks;
+}
+
+/** gets number of edges in the block-decomposition graph of this decomposition */
+int SCIPdecompGetNBlockGraphEdges(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->nedges;
+}
+
+/** gets number of connected components in the block-decomposition graph of this decomposition */
+int SCIPdecompGetNBlockGraphComponents(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->ncomponents;
+}
+
+/** gets number of articulation points in the block-decomposition graph of this decomposition */
+int SCIPdecompGetNBlockGraphArticulations(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->narticulations;
+}
+
+/** gets the maximum degree of the block-decomposition graph of this decomposition */
+int SCIPdecompGetBlockGraphMaxDegree(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->maxdegree;
+}
+
+/** gets the minimum degree of the block-decomposition graph of this decomposition */
+int SCIPdecompGetBlockGraphMinDegree(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->mindegree;
 }
 
 #define LABEL_UNASSIGNED INT_MIN
@@ -955,6 +1006,7 @@ SCIP_RETCODE buildBlockGraph(
       decomp->maxdegree = 0;
       decomp->nedges = 0;
       decomp->ncomponents = SCIPdecompGetNBlocks(decomp);
+      decomp->narticulations = 0;
 
       return SCIP_OKAY;
    }
@@ -1011,8 +1063,8 @@ SCIP_RETCODE buildBlockGraph(
             int blocknodeidx;
 
             assert(linkingvarnodeidx >= 0);
-            /* find the position of the constraint label. Subtract by 1 to get the node index as the 1st block is reserved for linking constraints */
-            found = SCIPsortedvecFindInt(decomp->labels, conslabels[i], decomp->nblocks + 1, &blocknodeidx); /* assuming labels is sorted */
+            /* find the position of the constraint label. Subtract later by 1 to get the node index as the 1st block is reserved for linking constraints */
+            found = SCIPsortedvecFindInt(decomp->labels, conslabels[i], decomp->nblocks + 1, &blocknodeidx); /* assuming labels are sorted */
             assert(found);
 
             SCIP_CALL( SCIPdigraphAddArcSafe(blocklinkingvargraph, nblocks + linkingvarnodeidx, blocknodeidx - 1, NULL) );
@@ -1041,7 +1093,7 @@ SCIP_RETCODE buildBlockGraph(
 
    assert(SCIPdigraphGetNNodes(blockgraph) > 0);
 
-   /* Get the number of edges in the block-decomposition graph */
+   /* Get the number of edges in the block-decomposition graph.*/
    decomp->nedges = SCIPdigraphGetNArcs(blockgraph) / 2;
 
    /* Get the minimum and maximum degree of the block-decomposition graph */
@@ -1060,11 +1112,13 @@ SCIP_RETCODE buildBlockGraph(
    decomp->mindegree = tempmin;
    decomp->maxdegree = tempmax;
 
-   /* Calculate the number of connected components in the block-decomposition graph */
+   /* Get the number of connected components in the block-decomposition graph.*/
    SCIP_CALL( SCIPdigraphComputeUndirectedComponents(blockgraph, -1, NULL, NULL) );
    decomp->ncomponents = SCIPdigraphGetNComponents(blockgraph);
 
-   /* TODO: Calculate the number of articulation nodes in the block-decomposition graph using DFS*/
+   /* Get the number of articulation nodes in the block-decomposition graph using DFS.*/
+   SCIP_CALL( SCIPdigraphGetArticulationPoints(blockgraph, NULL) );
+   decomp->narticulations = SCIPdigraphGetNArticulationPoints(blockgraph);
 
    SCIPfreeBufferArray(scip, &consvars);
    SCIPfreeBufferArray(scip, &linkvaridx);
@@ -1311,7 +1365,7 @@ char* SCIPdecompPrintStats(
             decomp->modularity, decomp->areascore);
    ptr += snprintf(ptr, SCIP_MAXSTRLEN,
             "Constraint Block Graph: %d edges, %d articulation nodes, %d connected components, %d min., %d max. degree\n",
-            decomp->nedges, -1, decomp->ncomponents, decomp->mindegree, decomp->maxdegree);
+            decomp->nedges, decomp->narticulations, decomp->ncomponents, decomp->mindegree, decomp->maxdegree);
 
    return strbuf;
 }
