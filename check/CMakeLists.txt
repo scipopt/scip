@@ -137,6 +137,17 @@ set(settings_sparsify
 set(settings_Benders
     "usebenders"
    )
+   
+set(settings_Indicator
+    "default"
+    "indicatorrestart"
+    "indicatorperspective"
+    "indicatorlogicorsepa"
+    "indicatorcoupling"
+    "indicatorconflict"
+    "indicatoralterlp"
+    "indicatorupgrade"
+   )
 
 #
 # Indicator instances
@@ -144,6 +155,7 @@ set(settings_Benders
 set(instances_Indicator
     "instances/Indicator/mcf128-4-1.lp\;14"
     "instances/Indicator/mcf64-4-1.lp\;10"
+    "instances/Indicator/mcf64-4-1.cip\;10"
 )
 
 set(settings_Cardinality
@@ -414,7 +426,7 @@ macro(add_instancetests instances settings prefix)
 endmacro(add_instancetests)
 
 add_instancetests(instances_CP settings_default "CP")
-add_instancetests(instances_Indicator settings_default "Indicator")
+add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
