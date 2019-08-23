@@ -6700,7 +6700,6 @@ static
 SCIP_RETCODE sortLocalRows(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
-   SCIP_Real*            dualsol,            /**< dual weight vector */
    SCIP_ROW**            rows,               /**< array of local rows */
    int*                  rowinds,            /**< array of row indices */
    int*                  rowdepth,           /**< array of LP depths */
@@ -6815,7 +6814,7 @@ SCIP_RETCODE addLocalRows(
    }
 
    /* sort local rows by depth */
-   SCIP_CALL( sortLocalRows(set, proofrow, dualsols, rows, localrowinds, localrowdepth, nlocalrows) );
+   SCIP_CALL( sortLocalRows(set, proofrow, rows, localrowinds, localrowdepth, nlocalrows) );
 
    /* add successively local rows */
    for( i = 0; i < nlocalrows; ++i )
@@ -6964,8 +6963,10 @@ SCIP_RETCODE getFarkasProof(
             SCIP_CALL( SCIPsetAllocBufferArray(set, &localrowdepth, nrows-r) );
          }
 
-         if( lpdepth < SCIPtreeGetFocusDepth(tree) )
+         if( localrowinds != NULL && lpdepth < SCIPtreeGetFocusDepth(tree) )
          {
+            assert(localrowdepth != NULL);
+
             localrowinds[nlocalrows] = r;
             localrowdepth[nlocalrows++] = lpdepth;
          }
@@ -7249,8 +7250,10 @@ SCIP_RETCODE getDualProof(
                SCIP_CALL( SCIPsetAllocBufferArray(set, &localrowdepth, nrows-r) );
             }
 
-            if( lpdepth < SCIPtreeGetFocusDepth(tree) )
+            if( localrowinds != NULL && lpdepth < SCIPtreeGetFocusDepth(tree) )
             {
+               assert(localrowdepth != NULL);
+
                localrowinds[nlocalrows] = r;
                localrowdepth[nlocalrows++] = lpdepth;
             }
