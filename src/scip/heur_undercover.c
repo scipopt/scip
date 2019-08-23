@@ -2301,7 +2301,7 @@ SCIP_RETCODE solveSubproblem(
    if( SCIPgetNSols(subscip) > 0 && (SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE || heurdata->minimprove > 0.0) )
    {
       SCIP_SOL** subsols;
-      SCIP_Bool success;
+      SCIP_Bool success = FALSE;
       int nsubsols;
 
       /* check, whether a solution was found;
@@ -2331,8 +2331,9 @@ SCIP_RETCODE solveSubproblem(
          }
       }
 
-      /* if the best subproblem solution was not accepted in the original problem, we do not trust the solving status */
-      *validsolved = *validsolved && i == 1;
+      /* if the best subproblem solution was not accepted in the original problem, then we do not trust the solving status */
+      if( !success || i > 0 )
+         *validsolved = FALSE;
    }
 
    if( *validsolved )
