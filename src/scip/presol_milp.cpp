@@ -250,7 +250,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
+   // presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
 
    presolve.setEpsilon(SCIPepsilon(scip));
