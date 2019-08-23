@@ -1,8 +1,7 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(PRESOLVELIB REQUIRED)
-find_package(Quadmath)
-find_package(TBB REQUIRED tbb)
+
 #
 # interface function for setting common library properties
 #
