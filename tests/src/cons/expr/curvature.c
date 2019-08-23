@@ -108,7 +108,7 @@ SCIP_RETCODE checkCurvature(
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
 
    /* check curvature */
-   cr_expect(SCIPgetConsExprExprCurvature(expr) == expectedcur, "got %d, expect %d", SCIPgetConsExprExprCurvature(expr), expectedcur);
+   cr_expect(SCIPgetConsExprExprCurvature(expr) == expectedcur, "expect %d, got %d", expectedcur, SCIPgetConsExprExprCurvature(expr));
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -157,10 +157,25 @@ Test(curvature, power)
    SCIP_CALL( checkCurvature("(<y>[C])^(-2.5)", "pow", SCIP_EXPRCURV_CONVEX) );
    SCIP_CALL( checkCurvature("(<y>[C])^(0.5)", "pow", SCIP_EXPRCURV_CONCAVE) );
 
-   /* check cases for z > 0 */
+   /* check cases for z < 0 */
    SCIP_CALL( checkCurvature("(<z>[C])^(-1)", "pow", SCIP_EXPRCURV_CONCAVE) );
    SCIP_CALL( checkCurvature("(<z>[C])^(-2)", "pow", SCIP_EXPRCURV_CONVEX) );
    SCIP_CALL( checkCurvature("(<z>[C])^(-3)", "pow", SCIP_EXPRCURV_CONCAVE) );
+}
+
+/* check for signpower expression */
+Test(curvature, signpower)
+{
+   /* 0 is contained in the interior of x -> neither convex nor concave */
+   SCIP_CALL( checkCurvature("signpower(<x>[C],2)", "signpower", SCIP_EXPRCURV_UNKNOWN) );
+
+   /* check cases for y > 0 */
+   SCIP_CALL( checkCurvature("signpower(<y>[C],2)", "signpower", SCIP_EXPRCURV_CONVEX) );
+   SCIP_CALL( checkCurvature("signpower(<y>[C],2.5)", "signpower", SCIP_EXPRCURV_CONVEX) );
+
+   /* check cases for z < 0 */
+   SCIP_CALL( checkCurvature("signpower(<z>[C],2)", "signpower", SCIP_EXPRCURV_CONCAVE) );
+   SCIP_CALL( checkCurvature("signpower(<z>[C],2.5)", "signpower", SCIP_EXPRCURV_CONCAVE) );
 }
 
 /* check for product expression */

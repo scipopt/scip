@@ -23,6 +23,7 @@
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_product.h"
+#include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_iterator.h"
 #include "scip/struct_cons_expr.h"
@@ -137,6 +138,26 @@ Test(parse, simple2)
    SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, crazyexpr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
+
+   /* release expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &crazyexpr) );
+}
+
+Test(parse, signpower)
+{
+   SCIP_CONSEXPR_EXPR* crazyexpr;
+   SCIP_CONSEXPR_EXPR* child;
+   const char* input = "signpower(<x>^2   , 2.5)";
+
+   /* create expression */
+   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &crazyexpr), SCIP_OKAY);
+
+   cr_assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(crazyexpr)), "signpower") == 0);
+   cr_assert_eq(SCIPgetConsExprExprPowExponent(crazyexpr), 2.5);
+
+   child = SCIPgetConsExprExprChildren(crazyexpr)[0];
+   cr_assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "pow") == 0);
+   cr_assert_eq(SCIPgetConsExprExprPowExponent(child), 2.0);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &crazyexpr) );

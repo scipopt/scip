@@ -174,6 +174,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprsumhdlr;     /**< summation expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprpowhdlr;     /**< power expression handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprsignpowhdlr; /**< signed power expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprexphdlr;     /**< exponential expression handler */
 
    /* nonlinear handler */
@@ -700,6 +701,7 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    conshdlrdata->exprsumhdlr = SCIPfindConsExprExprHdlr(conshdlr, "sum");
    conshdlrdata->exprprodhdlr = SCIPfindConsExprExprHdlr(conshdlr, "prod");
    conshdlrdata->exprpowhdlr = SCIPfindConsExprExprHdlr(conshdlr, "pow");
+   conshdlrdata->exprsignpowhdlr = SCIPfindConsExprExprHdlr(conshdlr, "signpower");
    conshdlrdata->exprexphdlr = SCIPfindConsExprExprHdlr(conshdlr, "exp");
 
    /* copy nonlinear handlers */
@@ -4729,10 +4731,27 @@ SCIP_RETCODE makeClassicExpr(
    }
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "pow") == 0 )
    {
+      SCIP_Real exponent;
+
       assert(nchildren == 1);
       assert(children != NULL && children[0] != NULL);
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_REALPOWER, *children,
-            SCIPgetConsExprExprPowExponent(sourceexpr)) );
+
+      exponent = SCIPgetConsExprExprPowExponent(sourceexpr);
+      if( EPSISINT(exponent, 0.0) )  /*lint !e835*/
+      {
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_INTPOWER, *children, (int)exponent) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_REALPOWER, *children, exponent) );
+      }
+   }
+   else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "signpower") == 0 )
+   {
+      assert(nchildren == 1);
+      assert(children != NULL && children[0] != NULL);
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_SIGNPOWER, *children,
+         SCIPgetConsExprExprPowExponent(sourceexpr)) );
    }
    else if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr), "prod") == 0 )
    {
@@ -8901,6 +8920,16 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrPower(
    return SCIPconshdlrGetData(conshdlr)->exprpowhdlr;
 }
 
+/** returns expression handler for signed power expressions */
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrSignPower(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPconshdlrGetData(conshdlr)->exprsignpowhdlr;
+}
+
 /** returns expression handler for exponential expressions */
 SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrExponential(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
@@ -9727,6 +9756,20 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          break;
       }
 
+      case SCIP_EXPR_SIGNPOWER:
+      {
+         SCIP_Real exponent;
+
+         exponent = (SCIP_Real)SCIPexprgraphGetNodeSignPowerExponent(node);
+
+         assert(nchildren == 1);
+         assert(children != NULL && children[0] != NULL);
+
+         SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, consexprhdlr, expr, *children, exponent) );
+
+         break;
+      }
+
       case SCIP_EXPR_SUM:
       {
          SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, nchildren, children, NULL, 0.0) );
@@ -9899,7 +9942,6 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
 
          break;
       }
-      case SCIP_EXPR_SIGNPOWER:
       case SCIP_EXPR_TAN:
       case SCIP_EXPR_MIN:
       case SCIP_EXPR_MAX:
@@ -10563,8 +10605,16 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
                SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprProductCoef(expr));
             else if(strcmp(type, "val") == 0)
                SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprValueValue(expr));
-            else if(strcmp(type, "pow") == 0)
+            else if(strcmp(type, "pow") == 0 || strcmp(type, "signpower") == 0)
                SCIPinfoMessage(scip, NULL, "%g", SCIPgetConsExprExprPowExponent(expr));
+            else if(strcmp(type, "exp") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else if(strcmp(type, "log") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else if(strcmp(type, "abs") == 0)
+               SCIPinfoMessage(scip, NULL, "\n");
+            else
+               SCIPinfoMessage(scip, NULL, "NOT IMPLEMENTED YET\n");
 
             if(expr->nenfos > 0 )
             {
@@ -11455,7 +11505,9 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  *    SP12: if it has two children, then neither of them is a sum (expand sums)
  *    SP13: no child is a sum with a single term
  *    SP14: at most one child is an exp
- * - is a power expression such that
+ * - is a (signed)power expression such that
+ *   TODO: Some of these criteria are too restrictive for signed powers; for example, the exponent does not need to be
+ *   an integer for signedpower to distribute over a product (POW5, POW6, POW8). Others can also be improved
  *    POW1: exponent is not 0
  *    POW2: exponent is not 1
  *    POW3: its child is not a value
@@ -11467,6 +11519,21 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  *    POW9: its child is not a sum with a single term with a positive coefficient: (25*x)^0.5 -> 5 x^0.5
  *    POW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
  *    POW11: its child is not an exponential: exp(expr)^e --> exp(e * expr)
+ * - is a signedpower expression such that
+ *   TODO: Some of these criteria are too restrictive for signed powers; for example, the exponent does not need to be
+ *   an integer for signedpower to distribute over a product (SPOW5, SPOW6, SPOW8). Others can also be improved
+ *    SPOW1: exponent is not 0
+ *    SPOW2: exponent is not 1
+ *    SPOW3: its child is not a value
+ *    SPOW4: its child is simplified
+ *    SPOW5: (TODO) do we want to distribute signpowers over products like we do powers?
+ *    SPOW6: exponent is not an odd integer: (signpow odd expr) -> (pow odd expr)
+ *    SPOW8: if exponent is integer, its child is not a power
+ *    SPOW9: its child is not a sum with a single term: (25*x)^0.5 -> 5 x^0.5
+ *    SPOW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
+ *    SPOW11: its child is not an exponential: exp(expr)^e --> exp(e * expr)
+ *    SPOW?: TODO: what happens when child is another signed power?
+ *    SPOW?: if child >= 0 -> transform to normal power; if child < 0 -> transform to - normal power
  * - is a sum expression such that
  *    SS1: every child is simplified
  *    SS2: no child is a sum
@@ -12193,6 +12260,10 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP_CALL( SCIPincludeConsExprExprHdlrPow(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "pow") == 0);
    conshdlrdata->exprpowhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
+
+   /* include handler for signed power expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrSignpower(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "signpower") == 0);
 
    /* include handler for entropy expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrEntropy(scip, conshdlr) );

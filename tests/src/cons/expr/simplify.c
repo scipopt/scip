@@ -103,9 +103,11 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"exp(<x>)^2", "exp"},
       {"2+2*<x>*exp(<x>*<y>)-2", "prod"},
       {"2+2*<x>*cos(<x>*<y>)-2", "sum"},
-      {"2+(1+1)*<x>*exp(<x>*<y>)*2-2", "prod"}
-      //{"<fixvar>", "val"}
-      //{"<fixvar>^2", "val"}
+      {"2+(1+1)*<x>*exp(<x>*<y>)*2-2", "prod"} /*TODO,
+      {"<x>*abs(<x>)", "pow"}
+      {"<x>*abs(<x>)^0.875", "pow"}*/
+      /*{"<fixvar>", "val"}*/
+      /*{"<fixvar>^2", "val"}*/
    };
 
    /* alloc memory */
@@ -158,7 +160,10 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type, SCIP_CO
 
 #if 0
    SCIP_CALL( SCIPshowConsExprExpr(scip, expr) );
-   fprintf(stderr,"simplifying!\n");
+   fprintf(stderr, " simplifying!\n");
+#else
+   SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+   SCIPinfoMessage(scip, NULL, "simplifying!\n");
 #endif
    /* simplify */
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
