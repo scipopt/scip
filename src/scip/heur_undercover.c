@@ -2325,7 +2325,7 @@ SCIP_RETCODE solveSubproblem(
          }
          else
          {
-            /* free solution structure, since SCIPtranslateSubSol would recreate in the next roun d*/
+            /* free solution structure, since SCIPtranslateSubSol would recreate in the next round */
             SCIP_CALL( SCIPfreeSol(scip, sol) );
             assert(*sol == NULL);
          }
