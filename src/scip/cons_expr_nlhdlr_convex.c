@@ -33,6 +33,7 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_sum.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "convex"
@@ -366,23 +367,24 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** looks for f(h(x))*h(x)
+/** looks for f(c*h(x))*h(x) * constant-factor
  *
  * Assume h is univariate:
- * - First derivative is f'(h) h' h + f(h) h'.
- * - Second derivative is f''(h) h' h' h + f'(h) (h'' h + h' h') + f'(h) h' h' + f(h) h''
- *   = f''(h) h'^2 h + f'(h) h'' h + 2 f'(h) h'^2 + f(h) h''
- * - Thus, f(h(x))h(x) is convex if f is monotonically increasing (f' >= 0) and either
+ * - First derivative is f'(c h) c h' h + f(c h) h'.
+ * - Second derivative is f''(c h) c h' c h' h + f'(c h) (c h'' h + c h' h') + f'(c h) c h' h' + f(c h) h''
+ *   = f''(c h) c^2 h'^2 h + f'(c h) c h'' h + 2 f'(c h) c h'^2 + f(c h) h''
+ *   Remove always positive factors: f''(c h) h, f'(c h) c h'' h, f'(c h) c, f(c h) h''
+ *   For convexity we want all these terms to be nonnegative. For concavity we want all of them to be nonpositive.
+ *   Note, that in each term either f'(c h) and c occur, or none of them.
+ * - Thus, f(c h(x))h(x) is convex if c*f is monotonically increasing (c f' >= 0) and either
  *   - f is convex (f'' >= 0) and h is nonnegative (h >= 0) and h is convex (h'' >= 0) and [f is nonnegative (f >= 0) or h is linear (h''=0)], or
  *   - f is concave (f'' <= 0) and h is nonpositive (h <= 0) and h is concave (h'' <= 0) and [f is nonpositive (f <= 0) or h is linear (h''=0)]
- *   and f(h(x))h(x) is concave if f is monotonically decreasing (f' <= 0) and either
+ *   and f(c h(x))h(x) is concave if c*f is monotonically decreasing (c f' <= 0) and either
  *   - f is convex (f'' >= 0) and h is nonpositive (h <= 0) and h is concave (h'' <= 0) and [f is nonnegative (f >= 0) or h is linear (h''=0)], or
  *   - f is concave (f'' <= 0) and h is nonnegative (h >= 0) and h is convex (h'' >= 0) and [f is nonpositive (f <= 0) or h is linear (h''=0)]
  *
  * This should hold also for multivariate and linear h, as things are invariant under linear transformations.
  * Similar to signomial, I'll assume that this will also hold for other multivariate h (someone has a formal proof?).
- *
- * TODO we are missing cases like 2*f(2*x)*x
  */
 static
 DECL_CURVCHECK(curvCheckProductComposite)
@@ -390,6 +392,8 @@ DECL_CURVCHECK(curvCheckProductComposite)
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* f;
    SCIP_CONSEXPR_EXPR* h;
+   SCIP_Real c;
+   SCIP_CONSEXPR_EXPR* ch; /* c * h */
    SCIP_INTERVAL fbounds;
    SCIP_INTERVAL hbounds;
    SCIP_MONOTONE fmonotonicity;
@@ -416,23 +420,45 @@ DECL_CURVCHECK(curvCheckProductComposite)
    if( SCIPgetConsExprExprNChildren(expr) != 2 )
       return SCIP_OKAY;
 
-   /* check whether we have f(h(x)) * h(x) or h(x) * f(h(x)) */
+   /* check whether we have f(c * h(x)) * h(x) or h(x) * f(c * h(x)) */
    for( fidx = 0; fidx <= 1; ++fidx )
    {
       f = SCIPgetConsExprExprChildren(expr)[fidx];
-      h = SCIPgetConsExprExprChildren(expr)[1-fidx];
+
+      if( SCIPgetConsExprExprNChildren(f) != 1 )
+         continue;
+
+      ch = SCIPgetConsExprExprChildren(f)[0];
+      c = 1.0;
+      h = ch;
+
+      /* check whether ch is of the form c*h(x), then switch h to child ch */
+      if( SCIPgetConsExprExprHdlr(ch) == SCIPgetConsExprExprHdlrSum(conshdlr) && SCIPgetConsExprExprNChildren(ch) == 1 && SCIPgetConsExprExprSumConstant(ch) == 0.0 )
+      {
+         c = SCIPgetConsExprExprSumCoefs(ch)[0];
+         h = SCIPgetConsExprExprChildren(ch)[0];
+         assert(c != 1.0);  /* we could handle this, but it should have been simplified away */
+      }
+
 #ifndef NLHDLR_CONVEX_UNITTEST
       /* can assume that duplicate subexpressions have been identified and comparing pointer is sufficient */
-      if( SCIPgetConsExprExprNChildren(f) == 1 && SCIPgetConsExprExprChildren(f)[0] == h )
-         break;
+      if( SCIPgetConsExprExprChildren(expr)[1-fidx] == h )
 #else
       /* called from unittest -> duplicate subexpressions were not identified -> compare more expensively */
-      if( SCIPgetConsExprExprNChildren(f) == 1 && SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(f)[0], h) == 0 )
-         break;
+      if( SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(expr)[1-fidx], h) == 0 )
 #endif
+         break;
    }
    if( fidx == 2 )
       return SCIP_OKAY;
+
+#ifdef SCIP_MORE_DEBUG
+   SCIPinfoMessage(scip, NULL, "f(c*h)*h with f = %s, c = %g, h = ", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(f)), c);
+   SCIPprintConsExprExpr(scip, conshdlr, h, NULL);
+   SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+   assert(c != 0.0);
 
    fbounds = SCIPgetConsExprExprActivity(scip, f);
    hbounds = SCIPgetConsExprExprActivity(scip, h);
@@ -453,11 +479,11 @@ DECL_CURVCHECK(curvCheckProductComposite)
    /* now check the conditions as stated above */
    if( desiredcurv == SCIP_EXPRCURV_CONVEX )
    {
-      /* f(h(x))h(x) is convex if f is monotonically increasing (f' >= 0) and either
+      /* f(c h(x))h(x) is convex if c*f is monotonically increasing (c f' >= 0) and either
       *   - f is convex (f'' >= 0) and h is nonnegative (h >= 0) and h is convex (h'' >= 0) and [f is nonnegative (f >= 0) or h is linear (h''=0)], or
       *   - f is concave (f'' <= 0) and h is nonpositive (h <= 0) and h is concave (h'' <= 0) and [f is nonpositive (f <= 0) or h is linear (h''=0)]
       */
-      if( fmonotonicity != SCIP_MONOTONE_INC )
+      if( (c > 0.0 && fmonotonicity != SCIP_MONOTONE_INC) || (c < 0.0 && fmonotonicity != SCIP_MONOTONE_DEC) )
          return SCIP_OKAY;
 
       /* check whether f can be convex (h>=0) or concave (h<=0), resp., and derive requirements for h
@@ -486,11 +512,11 @@ DECL_CURVCHECK(curvCheckProductComposite)
    }
    else
    {
-      /* f(h(x))h(x) is concave if f is monotonically decreasing (f' <= 0) and either
+      /* f(c h(x))h(x) is concave if c*f is monotonically decreasing (c f' <= 0) and either
       *   - f is convex (f'' >= 0) and h is nonpositive (h <= 0) and h is concave (h'' <= 0) and [f is nonnegative (f >= 0) or h is linear (h''=0)], or
       *   - f is concave (f'' <= 0) and h is nonnegative (h >= 0) and h is convex (h'' >= 0) and [f is nonpositive (f <= 0) or h is linear (h''=0)]
       */
-      if( fmonotonicity != SCIP_MONOTONE_DEC )
+      if( (c > 0.0 && fmonotonicity != SCIP_MONOTONE_DEC) || (c < 0.0 && fmonotonicity != SCIP_MONOTONE_INC) )
          return SCIP_OKAY;
 
       /* check whether f can be convex (h<=0) or concave (h>=0), resp., and derive requirements for h */
@@ -519,30 +545,41 @@ DECL_CURVCHECK(curvCheckProductComposite)
    if( !*success )
       return SCIP_OKAY;
 
-   /* add immediate children (f and h) to nlexpr; we set childrencurv for h further below */
+   /* add immediate children (f and ch) to nlexpr; we set required curvature for h further below */
    SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, nlexpr, NULL) );
    assert(SCIPgetConsExprExprNChildren(nlexpr) == 2);
 
    /* copy of f (and h) should have same child position in nlexpr as f (and h) has on expr (resp) */
    assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)SCIPgetConsExprExprChildren(nlexpr)[fidx]) == (void*)f);
+#ifndef NLHDLR_CONVEX_UNITTEST
    assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)SCIPgetConsExprExprChildren(nlexpr)[1-fidx]) == (void*)h);
+#endif
+   /* push this h onto stack for further checking */
+   SCIP_CALL( exprstackPush(scip, stack, 1, &(SCIPgetConsExprExprChildren(nlexpr)[1-fidx])) );
 
    /* h-child of product should have curvature hcurv */
    SCIPsetConsExprExprCurvature(SCIPgetConsExprExprChildren(nlexpr)[1-fidx], hcurv);
 
-   /* add child h to f and require h to have curvature hcurv */
-   SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, SCIPgetConsExprExprChildren(nlexpr)[fidx], &hcurv) );
+   /* add child ch to f; if h = ch, then require it to have curvature hcurv */
+   SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, SCIPgetConsExprExprChildren(nlexpr)[fidx], h == ch ? &hcurv : NULL) );
    assert(SCIPgetConsExprExprNChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx]) == 1);
-#ifndef NLHDLR_CONVEX_UNITTEST
-   assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0]) == (void*)h);
-#endif
+   assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0]) == (void*)ch);
 
-   /* we now have two copies of h in the copy
-    * TODO maybe we can avoid this, though other code may assume that this doesn't happen?
-    * for now, push both h's onto the stack
+   /* if h is not ch, then we need to add a copy of h as child in the copy of ch
+    * in any case, we need to push the copy of h to the stack for further checking
+    * TODO we now have two copies of h in the copy; maybe we can avoid this, though other code may assume that this doesn't happen?
     */
-   SCIP_CALL( exprstackPush(scip, stack, 1, &(SCIPgetConsExprExprChildren(nlexpr)[1-fidx])) );
-   SCIP_CALL( exprstackPush(scip, stack, 1, SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])) );
+   if( h != ch )
+   {
+      /* add child h of ch to copy of h and require hcurv */
+      SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0], &hcurv) );
+      assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0])[0]) == (void*)h);
+      SCIP_CALL( exprstackPush(scip, stack, 1, SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0])) );
+   }
+   else
+   {
+      SCIP_CALL( exprstackPush(scip, stack, 1, SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])) );
+   }
 
    return SCIP_OKAY;
 }
@@ -665,11 +702,6 @@ SCIP_RETCODE constructExpr(
       nlexpr = exprstackPop(&stack);
       assert(nlexpr != NULL);
       assert(SCIPgetConsExprExprNChildren(nlexpr) == 0);
-
-#ifdef SCIP_MORE_DEBUG
-      SCIPprintConsExprExpr(scip, conshdlr, nlexpr, NULL);
-      SCIPinfoMessage(scip, NULL, "\n");
-#endif
 
       oldstackpos = stack.stackpos;
       if( !SCIPhasConsExprExprHdlrBwdiff(SCIPgetConsExprExprHdlr(nlexpr)) )

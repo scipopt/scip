@@ -107,8 +107,11 @@ SCIP_RETCODE detect(
 )
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* oexpr;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_INTERVAL activity;
+   SCIP_Bool changed;
+   SCIP_Bool infeas;
    SCIP_CONSEXPR_EXPRENFO_METHOD provided;
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
@@ -116,7 +119,10 @@ SCIP_RETCODE detect(
    SCIP_CONS* cons;
 
    /* create expression and constraint */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)exprstr, NULL, &expr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)exprstr, NULL, &oexpr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, oexpr, &expr, &changed, &infeas) );
+   cr_expect(!infeas);
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &oexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
 
    SCIPprintCons(scip, cons, NULL);
@@ -173,7 +179,10 @@ Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
 
    /* product-composition */
    detect("<x1>*exp(<x1>)", SCIP_EXPRCURV_CONVEX);
-   detect("(<x1>+<x2>)*exp(<x1>+<x2>)", SCIP_EXPRCURV_CONVEX);
+   detect("<x1>*exp(2*<x1>)", SCIP_EXPRCURV_CONVEX);
+   /* detect("(<x1>+<x2>)*exp(<x1>+<x2>)", SCIP_EXPRCURV_CONVEX); simplified to x1*exp(x1+x2) + x2*exp(x1+x2) */
    detect("exp(<x1>)*<x1>", SCIP_EXPRCURV_CONVEX);
-   detect("exp(exp(<x1>))*exp(<x1>)", SCIP_EXPRCURV_CONVEX);
+   detect("exp(<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX);
+   detect("exp(2*<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX);
+   /* detect("-2*log(2*<x3>)*<x3>", SCIP_EXPRCURV_CONCAVE); simplify leaves a sum-expression at the root here */
 }
