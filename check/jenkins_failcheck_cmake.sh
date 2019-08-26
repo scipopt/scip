@@ -443,8 +443,24 @@ elif [ "${PERFORMANCE}" == "mergerequest" ]; then
 
   # collect all ids with timestamps OLDTIMESTAMP NEWTIMESTAMP in RBIDS
   MAINRBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_*_${SCIP_BUILDDIR}_rbdb.txt"
-  RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB}|cut -d ' ' -f 2)
 
+  COMPAREIDS=""
+  COUNT_S=0
+  while [ $COUNT_S -le $SEEDS ]; do
+    COUNT_P=0
+    while [ $COUNT_P -le $PERMUTE ]; do
+      RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB} | grep -P "p=${COUNT_S} s=${COUNT_P}")
+      if [ "${RBDB_STRS}" != "" ]; then
+        COMPAREIDS="$COMPAREIDS
+$FOO"
+      fi
+
+      COUNT_P=$((COUNT_P + 1))
+    done
+    COUNT_S=$((COUNT_S + 1))
+  done
+
+  RBDB_STRS=$(echo "${COMPAREIDS}" |cut -d ' ' -f 2)
   URLSTR=$(geturl "${RBDB_STRS}")
 
   PERF_MAIL=$(echo "The results of the mergerequest run are ready. Take a look at https://rubberband.zib.de/result/${URLSTR}
