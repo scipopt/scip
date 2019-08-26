@@ -418,8 +418,15 @@ DECL_CURVCHECK(curvCheckProductComposite)
    {
       f = SCIPgetConsExprExprChildren(expr)[fidx];
       h = SCIPgetConsExprExprChildren(expr)[1-fidx];
+#ifndef NLHDLR_CONVEX_UNITTEST
+      /* can assume that duplicate subexpressions have been identified and comparing pointer is sufficient */
       if( SCIPgetConsExprExprNChildren(f) == 1 && SCIPgetConsExprExprChildren(f)[0] == h )
          break;
+#else
+      /* called from unittest -> duplicate subexpressions were not identified -> compare more expensively */
+      if( SCIPgetConsExprExprNChildren(f) == 1 && SCIPcompareConsExprExprs(SCIPgetConsExprExprChildren(f)[0], h) == 0 )
+         break;
+#endif
    }
    if( fidx == 2 )
       return SCIP_OKAY;
@@ -501,7 +508,9 @@ DECL_CURVCHECK(curvCheckProductComposite)
    /* add child h to f */
    SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, SCIPgetConsExprExprChildren(nlexpr)[fidx], NULL) );
    assert(SCIPgetConsExprExprNChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx]) == 1);
+#ifndef NLHDLR_CONVEX_UNITTEST
    assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0]) == (void*)h);
+#endif
 
    /* we now have two copies of h in the copy
     * TODO maybe we can avoid this, though other code may assume that this doesn't happen?
