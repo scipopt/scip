@@ -75,22 +75,21 @@ TestSuite(queue, .init = setup, .fini = teardown);
 
 Test(queue, setup_and_teardown, .description = "test that setup and teardown work correctly")
 {
-
 }
 
 Test(queue, test_queue_insertion, .description = "test that the queue stores entries correctly.")
 {
    int i;
 
-   for (i = 0; i < arraylen; i++)
-   {
+   for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPqueueInsert(queue, (void*) myptrentries[i]) );
-   }
-   for (i = 0; i < arraylen; i++)
+
+   for( i = 0; i < arraylen; i++ )
    {
       cr_assert_eq(myptrentries[i], (SCIP_Real*) SCIPqueueFirst(queue));
       cr_assert_eq(myptrentries[i], (SCIP_Real*) SCIPqueueRemove(queue));
    }
+
    cr_assert(SCIPqueueIsEmpty(queue));
 }
 
@@ -101,15 +100,15 @@ Test(queue, test_queue_uintinsertion, .description = "test that the queue stores
    /* create queue */
    SCIP_CALL( SCIPqueueCreate(&queue, arraylen, 2) );
 
-   for (i = 0; i < arraylen; i++)
-   {
+   for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPqueueInsertUInt(queue, myuintentries[i]) );
-   }
-   for (i = 0; i < arraylen; i++)
+
+   for( i = 0; i < arraylen; i++ )
    {
       cr_assert_eq(myuintentries[i], SCIPqueueFirstUInt(queue));
       cr_assert_eq(myuintentries[i], SCIPqueueRemoveUInt(queue));
    }
+
    cr_assert(SCIPqueueIsEmpty(queue));
 }
 
@@ -120,10 +119,8 @@ Test(queue, test_queue_clear, .description = "test that the queue clears entries
    /* create queue */
    SCIP_CALL( SCIPqueueCreate(&queue, arraylen, 2) );
 
-   for (i = 0; i < arraylen; i++)
-   {
+   for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPqueueInsert(queue, (void*) myptrentries[i]) );
-   }
 
    cr_assert_eq(arraylen, SCIPqueueNElems(queue));
 

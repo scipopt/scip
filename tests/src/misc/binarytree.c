@@ -57,7 +57,6 @@ TestSuite(binarytree, .init = setup, .fini = teardown);
 
 Test(binarytree, setup_and_teardown, .description = "test that setup and teardown work correctly")
 {
-
 }
 
 Test(binarytree, test_binarytree_empty, .description = "test that the binary tree checks emptiness correctly.")

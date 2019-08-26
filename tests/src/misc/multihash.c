@@ -104,7 +104,6 @@ TestSuite(multihash, .init = setup, .fini = teardown);
 
 Test(multihash, setup_and_teardown, .description = "test that setup and teardown work correctly")
 {
-
 }
 
 Test(multihash, test_multihash_insertion, .description = "test that the multi hash map stores entries correctly.")
@@ -112,12 +111,11 @@ Test(multihash, test_multihash_insertion, .description = "test that the multi ha
    int* ptr;
    int i;
 
-   for (i = 0; i < arraylen; i++)
-   {
+   for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPmultihashInsert(multihash, (void*) myptrs[i]) );
-   }
+
    cr_assert_eq(arraylen, SCIPmultihashGetNElements(multihash));
-   for (i = 0; i < arraylen; i++)
+   for( i = 0; i < arraylen; i++ )
    {
       ptr = SCIPmultihashRetrieve(multihash, (void*) myptrs[i]);
       cr_assert_eq(myentries[i], *ptr);
@@ -129,12 +127,11 @@ Test(multihash, test_multihash_remove, .description = "test that the multi hash 
    int* ptr;
    int i;
 
-   for (i = 0; i < arraylen; i++)
-   {
+   for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPmultihashInsert(multihash, (void*) myptrs[i]) );
-   }
+
    cr_assert_eq(arraylen, SCIPmultihashGetNElements(multihash));
-   for (i = 0; i < arraylen; i++)
+   for( i = 0; i < arraylen; i++ )
    {
       cr_assert(SCIPmultihashExists(multihash, (void*) myptrs[i]));
       SCIP_CALL( SCIPmultihashRemove(multihash, (void*) myptrs[i]) );
@@ -147,18 +144,15 @@ Test(multihash, test_multihash_removeall, .description = "test that the multi ha
    int* ptr;
    int i;
 
-   for (i = 0; i < arraylen; i++)
-   {
+   for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPmultihashInsert(multihash, (void*) myptrs[i]) );
-   }
+
    cr_assert_eq(arraylen, SCIPmultihashGetNElements(multihash));
 
    SCIPmultihashRemoveAll(multihash);
 
-   for (i = 0; i < arraylen; i++)
-   {
+   for( i = 0; i < arraylen; i++ )
       cr_assert(! SCIPmultihashExists(multihash, (void*) myptrs[i]));
-   }
 }
 
 Test(multihash, test_multihash_statistics, .description = "test that the multi hash map prints statistics correctly")
@@ -168,10 +162,8 @@ Test(multihash, test_multihash_statistics, .description = "test that the multi h
 
    msghdlr = SCIPgetMessagehdlr(scip);
 
-   for (i = 0; i < arraylen; i++)
-   {
+   for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPmultihashInsert(multihash, (void*) myptrs[i]) );
-   }
 
    SCIPmultihashPrintStatistics(multihash, msghdlr);
 }

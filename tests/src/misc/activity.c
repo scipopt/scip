@@ -71,7 +71,6 @@ TestSuite(activity, .init = setup, .fini = teardown);
 
 Test(activity, setup_and_teardown, .description = "test that setup and teardown work correctly")
 {
-
 }
 
 Test(activity, test_activity_getters, .description = "test that the resource activity returns entries correctly.")
