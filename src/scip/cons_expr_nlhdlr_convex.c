@@ -42,6 +42,7 @@
 #define DEFAULT_DETECTSUM   FALSE
 #define DEFAULT_PREFEREXTENDED TRUE
 #define DEFAULT_CVXSIGNOMIAL TRUE
+#define DEFAULT_CVXPRODCOMP TRUE
 #define DEFAULT_HANDLETRIVIAL FALSE
 
 /*
@@ -67,6 +68,7 @@ struct SCIP_ConsExpr_NlhdlrData
 
    /* advanced parameters (maybe remove some day) */
    SCIP_Bool             cvxsignomial;       /**< whether to use convexity check on signomials */
+   SCIP_Bool             cvxprodcomp;        /**< whether to use convexity check on product composition f(h)*h */
    SCIP_Bool             handletrivial;      /**< whether to handle trivial expressions, i.e., those where all children are variables */
 };
 
@@ -364,6 +366,156 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** looks for f(h(x))*h(x)
+ *
+ * Assume h is univariate and linear:
+ * - First derivative is f'(h) h' h + f(h) h'.
+ * - Second derivative is f''(h) h' h' h + f'(h) (h'' h + h' h') + f'(h) h' h' + f(h) h''
+ *   With h''=0, this gives f''(h) h'^2 h + 2 f'(h) h'^2.
+ * - Thus, f(h(x))h(x) is convex if f is monotonically increasing (f' >= 0) and either
+ *   - f is convex (f'' >= 0) and h is nonnegative (h >= 0), or
+ *   - f is concave (f'' <= 0) and h is nonpositive (h <= 0)
+ *   and f(h(x))h(x) is concave if f is monotonically decreasing (f' <= 0) and either
+ *   - f is convex (f'' >= 0) and h is nonpositive (h <= 0), or
+ *   - f is concave (f'' <= 0) and h is nonnegative (h >= 0)
+ *
+ * This should hold also for multivariate and linear h, as things are invariant under linear transformations.
+ *
+ * TODO we are missing cases like 2*f(2*x)*x
+ */
+static
+DECL_CURVCHECK(curvCheckProductComposite)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* f;
+   SCIP_CONSEXPR_EXPR* h;
+   SCIP_INTERVAL hbounds;
+   SCIP_MONOTONE fmonotonicity;
+   SCIP_EXPRCURV desiredcurv;
+   int fidx;
+
+   assert(nlexpr != NULL);
+   assert(stack != NULL);
+   assert(nlexpr2origexpr != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   if( !nlhdlrdata->cvxprodcomp )
+      return SCIP_OKAY;
+
+   if( SCIPgetConsExprExprHdlr(nlexpr) != SCIPgetConsExprExprHdlrProduct(conshdlr) )
+      return SCIP_OKAY;
+
+   expr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlexpr2origexpr, (void*)nlexpr);
+   assert(expr != NULL);
+
+   if( SCIPgetConsExprExprNChildren(expr) != 2 )
+      return SCIP_OKAY;
+
+   /* check whether we have f(h(x)) * h(x) or h(x) * f(h(x)) */
+   for( fidx = 0; fidx <= 1; ++fidx )
+   {
+      f = SCIPgetConsExprExprChildren(expr)[fidx];
+      h = SCIPgetConsExprExprChildren(expr)[1-fidx];
+      if( SCIPgetConsExprExprNChildren(f) == 1 && SCIPgetConsExprExprChildren(f)[0] == h )
+         break;
+   }
+   if( fidx == 2 )
+      return SCIP_OKAY;
+
+   hbounds = SCIPgetConsExprExprActivity(scip, h);
+
+   /* if h has mixed sign, then cannot conclude anything */
+   if( hbounds.inf < 0.0 && hbounds.sup > 0.0 )
+      return SCIP_OKAY;
+
+   fmonotonicity = SCIPgetConsExprExprMonotonicity(scip, f, 0);
+
+   /* if f is not monotone, then cannot conclude anything */
+   if( fmonotonicity == SCIP_MONOTONE_UNKNOWN )
+      return SCIP_OKAY;
+
+   /* curvature we want to achieve (negate if product has negative coef) */
+   desiredcurv = SCIPexprcurvMultiply(SCIPgetConsExprExprProductCoef(nlexpr), SCIPgetConsExprExprCurvature(nlexpr));
+
+   /* now check the conditions as stated above */
+   if( desiredcurv == SCIP_EXPRCURV_CONVEX )
+   {
+      SCIP_EXPRCURV childcurv;
+
+      /* f(h(x))h(x) is convex if f is monotonically increasing (f' >= 0) and either
+      *   - f is convex (f'' >= 0) and h is nonnegative (h >= 0), or
+      *   - f is concave (f'' <= 0) and h is nonpositive (h <= 0)
+      */
+      if( fmonotonicity != SCIP_MONOTONE_INC )
+         return SCIP_OKAY;
+
+      /* check whether f can be convex (h>=0) or concave (h<=0), resp.
+       * we don't really care for the requirement for the child of f (that is, h), as we already require linearity for it
+       */
+      if( hbounds.inf >= 0 )
+      {
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, f, SCIP_EXPRCURV_CONVEX, success, &childcurv) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, f, SCIP_EXPRCURV_CONCAVE, success, &childcurv) );
+      }
+   }
+   else
+   {
+      SCIP_EXPRCURV childcurv;
+
+      /* f(h(x))h(x) is concave if f is monotonically decreasing (f' <= 0) and either
+      *   - f is convex (f'' >= 0) and h is nonpositive (h <= 0), or
+      *   - f is concave (f'' <= 0) and h is nonnegative (h >= 0)
+      */
+      if( fmonotonicity != SCIP_MONOTONE_DEC )
+         return SCIP_OKAY;
+
+      /* check whether f can be convex (h<=0) or concave (h>=0), resp.
+       * we don't really care for the requirement for the child of f (that is, h), as we already require linearity for it
+       */
+      if( hbounds.sup <= 0 )
+      {
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, f, SCIP_EXPRCURV_CONVEX, success, &childcurv) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, f, SCIP_EXPRCURV_CONCAVE, success, &childcurv) );
+      }
+   }
+
+   if( !*success )
+      return SCIP_OKAY;
+
+   /* add immediate children (f and h) to nlexpr */
+   SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, nlexpr, NULL) );
+   assert(SCIPgetConsExprExprNChildren(nlexpr) == 2);
+
+   /* copy of f (and h) should have same child position in nlexpr as f (and h) has on expr (resp) */
+   assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)SCIPgetConsExprExprChildren(nlexpr)[fidx]) == (void*)f);
+   assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)SCIPgetConsExprExprChildren(nlexpr)[1-fidx]) == (void*)h);
+
+   /* add child h to f */
+   SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, SCIPgetConsExprExprChildren(nlexpr)[fidx], NULL) );
+   assert(SCIPgetConsExprExprNChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx]) == 1);
+   assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0]) == (void*)h);
+
+   /* we now have two copies of h in the copy
+    * TODO maybe we can avoid this, though other code may assume that this doesn't happen?
+    * for now, push both h's onto the stack and require them to be linear
+    */
+   SCIPsetConsExprExprCurvature(SCIPgetConsExprExprChildren(nlexpr)[1-fidx], SCIP_EXPRCURV_LINEAR);
+   SCIP_CALL( exprstackPush(scip, stack, 1, &(SCIPgetConsExprExprChildren(nlexpr)[1-fidx])) );
+
+   SCIPsetConsExprExprCurvature(SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0], SCIP_EXPRCURV_LINEAR);
+   SCIP_CALL( exprstackPush(scip, stack, 1, SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])) );
+
+   return SCIP_OKAY;
+}
+
 /** use expression handlers curvature callback to check whether given curvature can be achieved */
 static
 DECL_CURVCHECK(curvCheckExprhdlr)
@@ -434,7 +586,7 @@ TERMINATE:
  * some day this could be plugins added by users at runtime, but for now we have a fixed list here
  * NOTE: curvCheckExprhdlr should be last
  */
-static DECL_CURVCHECK((*CURVCHECKS[])) = { curvCheckSignomial, curvCheckExprhdlr };
+static DECL_CURVCHECK((*CURVCHECKS[])) = { curvCheckProductComposite, curvCheckSignomial, curvCheckExprhdlr };
 /** number of curvcheck methods */
 static const int NCURVCHECKS = sizeof(CURVCHECKS) / sizeof(void*);
 
@@ -1040,6 +1192,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/cvxsignomial",
       "whether to use convexity check on signomials",
       &nlhdlrdata->cvxsignomial, TRUE, DEFAULT_CVXSIGNOMIAL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/cvxprodcomp",
+      "whether to use convexity check on product composition f(h)*h",
+      &nlhdlrdata->cvxprodcomp, TRUE, DEFAULT_CVXPRODCOMP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/handletrivial",
       "whether to also handle trivial convex expressions",
