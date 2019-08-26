@@ -395,8 +395,8 @@ DECL_CURVCHECK(curvCheckExprhdlr)
    /* check whether and under which conditions origexpr can have desired curvature */
    SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, origexpr, SCIPgetConsExprExprCurvature(nlexpr), success, childcurv) );
 #ifdef SCIP_MORE_DEBUG
-   SCIPprintConsExprExpr(scip, conshdlr, nlexpr->origexpr, NULL);
-   SCIPinfoMessage(scip, NULL, " is %s? %d\n", SCIPexprcurvGetName(nlexpr->curv), success);
+   SCIPprintConsExprExpr(scip, conshdlr, origexpr, NULL);
+   SCIPinfoMessage(scip, NULL, " is %s? %d\n", SCIPexprcurvGetName(SCIPgetConsExprExprCurvature(nlexpr)), *success);
 #endif
    if( !*success )
       goto TERMINATE;
