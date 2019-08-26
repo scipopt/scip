@@ -68,6 +68,9 @@
 /*#define CHECKCHKFREE*/
 #endif
 
+/* Uncomment the following for checks that clean buffer is really clean when being freed. */
+/* #define CHECKCLEANBUFFER */
+
 /* Uncomment the following for a warnings if buffers are not freed in the reverse order of allocation. */
 /* #define CHECKBUFFERORDER */
 
@@ -2712,7 +2715,7 @@ void* BMSallocBufferMemory_work(
    }
    assert( buffer->size[bufnum] >= size );
 
-#ifdef CHECKMEM
+#ifdef CHECKCLEANBUFFER
    /* check that the memory is cleared */
    if( buffer->clean )
    {
@@ -3019,7 +3022,7 @@ void BMSfreeBufferMemory_work(
    }
 #endif
 
-#ifndef NDEBUG
+#ifdef CHECKCLEANBUFFER
    /* check that the memory is cleared */
    if( buffer->clean )
    {
