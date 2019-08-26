@@ -199,7 +199,7 @@ SCIP_BINARY=${BUILD_DIR}/bin/scip
 #  - When building a default setting with random seed, use a capital D. No setting name should be a prefix of another!
 
 # MIP settings
-touch "settings/${MRSETTINGS}"
+touch "settings/${MRSETTINGS}.set"
 
 # MINLP settings
 ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set limits gap 1e-4 set diffsave settings/minlp_${MRSETTINGS}.set q"
