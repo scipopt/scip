@@ -1,15 +1,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*                  this file is part of the program and library             */
-/*         scip --- solving constraint integer programs                      */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    copyright (c) 2002-2019 konrad-zuse-zentrum                            */
-/*                            fuer informationstechnik berlin                */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  scip is distributed under the terms of the zib academic license.         */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  you should have received a copy of the zib academic license              */
-/*  along with scip; see the file copying. if not visit scip.zib.de.         */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,7 +23,7 @@
 #include <assert.h>
 
 #include "scip/scip.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 #include "include/scip_test.h"
 
@@ -71,9 +71,9 @@ Test(binarytree, test_binarytree_full, .description = "test that the binary tree
    SCIP_BTNODE* rchild;
 
    /* create nodes */
-   SCIPbtnodeCreate(binarytree, &root, NULL);
-   SCIPbtnodeCreate(binarytree, &lchild, NULL);
-   SCIPbtnodeCreate(binarytree, &rchild, NULL);
+   SCIP_CALL( SCIPbtnodeCreate(binarytree, &root, NULL) );
+   SCIP_CALL( SCIPbtnodeCreate(binarytree, &lchild, NULL) );
+   SCIP_CALL( SCIPbtnodeCreate(binarytree, &rchild, NULL) );
 
    /* set root */
    SCIPbtSetRoot(binarytree, root);
@@ -105,7 +105,7 @@ Test(binarytree, test_binarytree_data, .description = "test that the binary tree
    int* ptr;
 
    /* create node */
-   SCIPbtnodeCreate(binarytree, &root, NULL);
+   SCIP_CALL( SCIPbtnodeCreate(binarytree, &root, NULL) );
 
    SCIPbtnodeSetData(root, (void*) &mydata);
 
