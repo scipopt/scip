@@ -349,16 +349,16 @@ SCIP_RETCODE getInitialRows(
 /** store the bilinear product and all related information in sepadata */
 static
 SCIP_RETCODE addBilinProduct(
-   SCIP*               scip,          /**< SCIP data structure */
-   SCIP_SEPADATA*      sepadata,      /**< separator data */
-   SCIP_CONSEXPR_EXPR* expr,          /**< product expression */
-   SCIP_VAR*           x,             /**< a product variable with smaller index */
-   SCIP_VAR*           y,             /**< a product variable with larger index */
-   SCIP_CONSEXPR_EXPR* linexpr,       /**< linearisation expression */
-   SCIP_Bool           isimplicit,    /**< whether the product is implicit */
-   SCIP_Bool           underestimate, /**< does linexpr underestimate the product? */
-   SCIP_Bool           overestimate,  /**< does linexpr overestimate the product? */
-   SCIP_HASHMAP*       varmap         /**< map containing vars that have already been encountered in products */
+   SCIP*                scip,          /**< SCIP data structure */
+   SCIP_SEPADATA*       sepadata,      /**< separator data */
+   SCIP_CONSEXPR_EXPR*  expr,          /**< product expression */
+   SCIP_VAR*            x,             /**< a product variable with smaller index */
+   SCIP_VAR*            y,             /**< a product variable with larger index */
+   SCIP_CONSEXPR_EXPR** linexpr,       /**< linearisation expression */
+   SCIP_Bool            isimplicit,    /**< whether the product is implicit */
+   SCIP_Bool            underestimate, /**< does linexpr underestimate the product? */
+   SCIP_Bool            overestimate,  /**< does linexpr overestimate the product? */
+   SCIP_HASHMAP*        varmap         /**< map containing vars that have already been encountered in products */
 )
 {
    int mapidx, xidx, yidx;
@@ -474,12 +474,13 @@ SCIP_RETCODE addBilinProduct(
       linpos = 0;
    }
    else
-      found = SCIPsortedvecFindPtr((void**)sepadata->linexprs[termpos], SCIPexprsComp, linexpr, sepadata->nlinexprs[termpos], &linpos);
+      found = SCIPsortedvecFindPtr((void**)sepadata->linexprs[termpos], SCIPexprsComp, *linexpr, sepadata->nlinexprs[termpos], &linpos);
 
    if( found )
    {
       SCIPinfoMessage(scip, NULL, "\nthis linearisation has already been added");
-      assert(SCIPcompareConsExprExprs(sepadata->linexprs[termpos][linpos], linexpr) == 0);
+      assert(SCIPcompareConsExprExprs(sepadata->linexprs[termpos][linpos], *linexpr) == 0);
+      SCIPreleaseConsExprExpr(scip, linexpr);
    }
    else
    {  /* linexpr has not been added yet, add it here */
@@ -505,9 +506,9 @@ SCIP_RETCODE addBilinProduct(
          sepadata->linunderestimate[termpos][i] = sepadata->linunderestimate[termpos][i-1];
          sepadata->linoverestimate[termpos][i] = sepadata->linoverestimate[termpos][i-1];
       }
-      assert(linexpr != NULL);
+      assert(*linexpr != NULL);
       SCIPinfoMessage(scip, NULL, "\nadding in position %d", linpos);
-      sepadata->linexprs[termpos][linpos] = linexpr;
+      sepadata->linexprs[termpos][linpos] = *linexpr;
       sepadata->linunderestimate[termpos][linpos] = FALSE;
       sepadata->linoverestimate[termpos][linpos] = FALSE;
       ++sepadata->nlinexprs[termpos];
@@ -611,9 +612,9 @@ SCIP_RETCODE extractProducts(
    SCIP_Real      rhs1,      /**< right hand side of the first inequality */
    SCIP_Real      rhs2,      /**< right hand side of the second inequality */
    SCIP_HASHMAP*  varmap     /**< variable map */
-   )
+)
 {
-   int xpos, wpos, ypos, i;
+   int xpos, wpos, ypos;
    SCIP_Real sign1, sign2;
    SCIP_Real mult;
    SCIP_CONSEXPR_EXPR* linexpr;
@@ -624,171 +625,281 @@ SCIP_RETCODE extractProducts(
    SCIP_Real tmpside;
    SCIP_Bool negwcoef;
 
-   /* at least one variable must be binary */
-   assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY ||
-          SCIPvarGetType(vars[1]) == SCIP_VARTYPE_BINARY ||
-          SCIPvarGetType(vars[2]) == SCIP_VARTYPE_BINARY);
+   /* x must be binary */
+   assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY);
 
    SCIPdebugMsg(scip, "Extracting product from two relations:\n");
    SCIPdebugMsg(scip, "Relation 1: %f <= %f%s + %f%s + %f%s <= %f\n", lhs1, coefs1[0], SCIPvarGetName(vars[0]),
-                coefs1[1], SCIPvarGetName(vars[1]), coefs1[2], SCIPvarGetName(vars[2]), rhs1);
+      coefs1[1], SCIPvarGetName(vars[1]), coefs1[2], SCIPvarGetName(vars[2]), rhs1);
    SCIPdebugMsg(scip, "Relation 2: %f <= %f%s + %f%s + %f%s <= %f\n", lhs2, coefs2[0], SCIPvarGetName(vars[0]),
-                coefs2[1], SCIPvarGetName(vars[1]), coefs2[2], SCIPvarGetName(vars[2]), rhs2);
+      coefs2[1], SCIPvarGetName(vars[1]), coefs2[2], SCIPvarGetName(vars[2]), rhs2);
 
    /* look for suitable binary variables */
-   for( xpos = 0; xpos < 3; ++xpos )
+   xpos = 0;
+   wpos = 1;
+   ypos = 2;
+
+   w = vars[wpos];
+   x = vars[xpos];
+   y = vars[ypos];
+
+   /* cannot use a global bound on x to detect a product */
+   if( (coefs1[(xpos + 1) % 3] == 0 && coefs1[(xpos + 2) % 3] == 0) ||
+      (coefs2[(xpos + 1) % 3] == 0 && coefs2[(xpos + 2) % 3] == 0) )
+      return SCIP_OKAY;
+
+   SCIPdebugMsg(scip, "binary var = %s\n", SCIPvarGetName(vars[xpos]));
+
+   /* we flip the 1st row so that coef of x is positive */
+   sign1 = coefs1[xpos] > 0 ? 1.0 : -1.0;
+
+   /* the indicator var's coefficients in the two rows should have different signs */
+   if( coefs1[xpos]*coefs2[xpos] > 0 )
+   { /* take 2 combinations of lhs and rhs */
+      sign2 = -sign1;
+   }
+   else
+   { /* take 2 lhs and 2 rhs, keep the second row as it is */
+      sign2 = sign1;
+   }
+
+   /* get lhs and rhs depending on whether we flip the rows */
+   if( sign1 < 0 )
    {
-      if( SCIPvarGetType(vars[xpos]) != SCIP_VARTYPE_BINARY )
-         continue;
+      tmpside = lhs1;
+      lhs1 = -rhs1;
+      rhs1 = -tmpside;
+   }
 
-      /* cannot use a global bound on x to detect a product */
-      if( (coefs1[(xpos + 1) % 3] == 0 && coefs1[(xpos + 2) % 3] == 0) ||
-         (coefs2[(xpos + 1) % 3] == 0 && coefs2[(xpos + 2) % 3] == 0) )
-         continue;
+   if( sign2 < 0 )
+   {
+      tmpside = lhs2;
+      lhs2 = -rhs2;
+      rhs2 = -tmpside;
+   }
+   SCIPdebugMsg(scip, "\nsigns: %f, %f", sign1, sign2);
+   /* from here on, we consider only the flipped (by multiplying by signi) rows */
+   /* lhsi and rhsi are the sides of the flipped rows */
 
-      SCIPdebugMsg(scip, "binary var = %s\n", SCIPvarGetName(vars[xpos]));
+   /* try two different combinations of w and y */
 
-      /* we flip the 1st row so that coef of x is positive */
-      sign1 = coefs1[xpos] > 0 ? 1.0 : -1.0;
+   /* at least one w coefficient must be nonzero */
+   assert( coefs1[wpos] != 0 || coefs2[wpos] != 0 );
 
-      /* the indicator var's coefficients in the two rows should have different signs */
-      if( coefs1[xpos]*coefs2[xpos] > 0 )
-      { /* take 2 combinations of lhs and rhs */
-         sign2 = -sign1;
-      }
+   /* coefficients of w should have the same sign in the two impl_rels */
+   if( coefs1[wpos]*sign1*coefs2[wpos]*sign2 < 0 )
+   {
+      SCIPdebugMsg(scip, "Ignoring a pair of linear relations because coefficient of w = %s is zero in both\n", SCIPvarGetName(vars[wpos]));
+      return SCIP_OKAY;
+   }
+
+   /* cannot use a global bound on y to detect a non-redundant product relation */
+   if( (coefs1[xpos] == 0 && coefs1[wpos] == 0) || (coefs2[xpos] == 0 && coefs2[wpos] == 0) )
+      return SCIP_OKAY;
+
+   /* when a1c2 = a2c1, the linear relations do not imply a product relation */
+   if( SCIPisZero(scip, coefs2[wpos]*sign2*coefs1[ypos]*sign1 - coefs2[ypos]*sign2*coefs1[wpos]*sign1) )
+   {
+      SCIPdebugMsg(scip, "Ignoring a pair of linear relations because a1c2 = a2c1\n");
+      return SCIP_OKAY;
+   }
+
+   /* all conditions satisfied, we can extract the product */
+   /* given two rows of the form:
+    * a1w + b1x + c1y <= d1, a2w + b2x + c2y <= d2,
+    * where b1 > 0, b2 < 0 (i.e. the first inequality is tighter when x = 1 and the second when x = 0)
+    * and a1a2 > 0, the product relation can be written as:
+    * xy >=/<= (1/(a1c2 - c1a2))*(a1a2w + (a2(b1 - d1) + a1d2)x + a1c2y - a1d2)
+    * (the inequality sign depends on the sign of sign2*coefs2[wpos]*mult and sign1*coefs1[wpos]*mult) */
+
+   /* do lhs */
+   if( lhs1 != -SCIPinfinity(scip) && lhs2 != -SCIPinfinity(scip) )
+   { /* since sign1*coefs1[xpos] > 0, for lhs inequality 1 is stronger when x = 0, inequality 2 is stronger when x = 1 */
+
+      mult = 1/(coefs2[wpos]*sign2*coefs1[ypos]*sign1 - coefs2[ypos]*sign2*coefs1[wpos]*sign1);
+
+      /* we make sure above that these have the same sign, but one of them might be zero, so we check both here */
+      if( sign2*coefs2[wpos]*mult > 0 || sign1*coefs1[wpos]*mult > 0 )
+         negwcoef = FALSE;
       else
-      { /* take 2 lhs and 2 rhs, keep the second row as it is */
-         sign2 = sign1;
-      }
+         negwcoef = TRUE;
 
-      /* get lhs and rhs depending on whether we flip the rows */
-      if( sign1 < 0 )
-      {
-         tmpside = lhs1;
-         lhs1 = -rhs1;
-         rhs1 = -tmpside;
-      }
+      SCIPdebugMsg(scip, "w coef is %s\n", negwcoef ? "negative" : "positive");
 
-      if( sign2 < 0 )
-      {
-         tmpside = lhs2;
-         lhs2 = -rhs2;
-         rhs2 = -tmpside;
-      }
-      SCIPdebugMsg(scip, "\nsigns: %f, %f", sign1, sign2);
-      /* from here on, we consider only the flipped (by multiplying by signi) rows */
-      /* lhsi and rhsi are the sides of the flipped rows */
+      SCIPinfoMessage(scip, NULL, "\nLhs, found suitable implied rels (w,x,y): %f%s + %f%s + %f%s >= %f\n",
+         sign1*coefs1[wpos], SCIPvarGetName(w), sign1*coefs1[xpos], SCIPvarGetName(x), sign1*coefs1[ypos], SCIPvarGetName(y), lhs1);
 
-      /* try two different combinations of w and y */
-      for( i = 1; i <= 2; ++i )
-      {
-         wpos = (xpos + i) % 3;
+      SCIPinfoMessage(scip, NULL, "\nand %f%s + %f%s + %f%s >= %f\n",
+         sign2*coefs2[wpos], SCIPvarGetName(w), sign2*coefs2[xpos], SCIPvarGetName(x), sign2*coefs2[ypos], SCIPvarGetName(y), lhs2);
 
-         /* at least one w coefficient must be nonzero */
-         assert( coefs1[wpos] != 0 || coefs2[wpos] != 0 );
+      lincoefs[0] = sign2*coefs2[wpos]*sign1*coefs1[wpos]*mult;
+      lincoefs[1] = (sign2*coefs2[xpos]*sign1*coefs1[wpos] - lhs2*sign1*coefs1[wpos] + lhs1*sign2*coefs2[wpos] )*mult;
+      lincoefs[2] = sign2*coefs2[wpos]*sign1*coefs1[ypos]*mult;
 
-         /* coefficients of w should have the same sign in the two impl_rels */
-         if( coefs1[wpos]*sign1*coefs2[wpos]*sign2 < 0 )
-         {
-            SCIPdebugMsg(scip, "Ignoring a pair of linear relations because coefficient of w = %s is zero in both\n", SCIPvarGetName(vars[wpos]));
-            continue;
-         }
+      SCIPinfoMessage(scip, NULL, "\nproduct: %s%s %s %f%s + %f%s + %f%s + %f", SCIPvarGetName(x), SCIPvarGetName(y),
+         negwcoef ? ">=" : "<=", lincoefs[0], SCIPvarGetName(w), lincoefs[1], SCIPvarGetName(x), lincoefs[2], SCIPvarGetName(y), -coefs2[wpos]*lhs1*mult);
 
-         ypos = (xpos - i + 3) % 3;
+      SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign2*coefs2[wpos]*lhs1*mult, &linexpr) );
+      SCIP_CALL( addBilinProduct(scip, sepadata, NULL, x, y, &linexpr, TRUE, negwcoef, !negwcoef, varmap) );
+   }
 
-         /* cannot use a global bound on y to detect a product */
-         if( (coefs1[xpos] == 0 && coefs1[wpos] == 0) || (coefs2[xpos] == 0 && coefs2[wpos] == 0) )
-            continue;
+   /* do rhs */
+   if( rhs1 != SCIPinfinity(scip) && rhs2 != SCIPinfinity(scip) )
+   { /* since sign1*coefs1[xpos] > 0, for rhs inequality 1 is stronger when x = 1, inequality 2 is stronger when x = 0 */
 
-         /* when a1c2 = a2c1, the linear relations do not imply a product relation */
-         if( SCIPisZero(scip, coefs2[wpos]*sign2*coefs1[ypos]*sign1 - coefs2[ypos]*sign2*coefs1[wpos]*sign1) )
-         {
-            SCIPdebugMsg(scip, "Ignoring a pair of linear relations because a1c2 = a2c1\n");
-            continue;
-         }
+      mult = 1/(coefs1[wpos]*sign1*coefs2[ypos]*sign2 - coefs1[ypos]*sign1*coefs2[wpos]*sign2);
 
-         /* all conditions satisfied, we can extract the product */
-         /* given two rows of the form:
-          * a1w + b1x + c1y <= d1, a2w + b2x + c2y <= d2,
-          * where b1 > 0, b2 < 0 (i.e. the first inequality is tighter when x = 1 and the second when x = 0)
-          * and a1a2 > 0, the product relation can be written as:
-          * xy >=/<= (1/(a1c2 - c1a2))*(a1a2w + (a2(b1 - d1) + a1d2)x + a1c2y - a1d2)
-          * (the inequality sign depends on the sign of sign2*coefs2[wpos]*mult and sign1*coefs1[wpos]*mult) */
+      /* we make sure above that these have the same sign, but one of them might be zero, so we check both here */
+      if( sign2*coefs2[wpos]*mult > 0 || sign1*coefs1[wpos]*mult > 0 )
+         negwcoef = FALSE;
+      else
+         negwcoef = TRUE;
 
-         w = vars[wpos];
-         x = vars[xpos];
-         y = vars[ypos];
+      SCIPdebugMsg(scip, "w coef is %s\n", negwcoef ? "negative" : "positive");
 
-         /* do lhs */
-         if( lhs1 != -SCIPinfinity(scip) && lhs2 != -SCIPinfinity(scip) )
-         { /* since sign1*coefs1[xpos] > 0, for lhs inequality 1 is stronger when x = 0, inequality 2 is stronger when x = 1 */
+      SCIPinfoMessage(scip, NULL, "\nRhs, found suitable implied rels (w,x,y): %f%s + %f%s + %f%s <= %f\n",
+         sign1*coefs1[wpos], SCIPvarGetName(w), sign1*coefs1[xpos], SCIPvarGetName(x), sign1*coefs1[ypos], SCIPvarGetName(y), rhs1);
 
-            mult = 1/(coefs2[wpos]*sign2*coefs1[ypos]*sign1 - coefs2[ypos]*sign2*coefs1[wpos]*sign1);
+      SCIPinfoMessage(scip, NULL, "\nand %f%s + %f%s + %f%s <= %f\n", sign2*coefs2[wpos], SCIPvarGetName(w),
+         sign2*coefs2[xpos], SCIPvarGetName(x), sign2*coefs2[ypos], SCIPvarGetName(y), rhs2);
 
-            /* we make sure above that these have the same sign, but one of them might be zero, so we check both here */
-            if( sign2*coefs2[wpos]*mult > 0 || sign1*coefs1[wpos]*mult > 0 )
-               negwcoef = FALSE;
-            else
-               negwcoef = TRUE;
+      lincoefs[0] = sign1*coefs1[wpos]*sign2*coefs2[wpos]*mult;
+      lincoefs[1] = (sign1*coefs1[xpos]*sign2*coefs2[wpos] - rhs1*sign2*coefs2[wpos] + rhs2*sign1*coefs1[wpos] )*mult;
+      lincoefs[2] = sign1*coefs1[wpos]*sign2*coefs2[ypos]*mult;
 
-            SCIPdebugMsg(scip, "w coef is %s\n", negwcoef ? "negative" : "positive");
+      SCIPinfoMessage(scip, NULL, "\nproduct: %s%s %s %f%s + %f%s + %f%s + %f", SCIPvarGetName(x), SCIPvarGetName(y),
+         negwcoef ? "<=" : ">=", lincoefs[0], SCIPvarGetName(w), lincoefs[1], SCIPvarGetName(x), lincoefs[2], SCIPvarGetName(y), -coefs1[wpos]*rhs2*mult);
 
-            SCIPinfoMessage(scip, NULL, "\nLhs, found suitable implied rels (w,x,y): %f%s + %f%s + %f%s >= %f\n",
-                            sign1*coefs1[wpos], SCIPvarGetName(w), sign1*coefs1[xpos], SCIPvarGetName(x),
-                            sign1*coefs1[ypos], SCIPvarGetName(y), lhs1);
-
-            SCIPinfoMessage(scip, NULL, "\nand %f%s + %f%s + %f%s >= %f\n",
-                            sign2*coefs2[wpos], SCIPvarGetName(w), sign2*coefs2[xpos], SCIPvarGetName(x),
-                            sign2*coefs2[ypos], SCIPvarGetName(y), lhs2);
-
-            lincoefs[0] = sign2*coefs2[wpos]*sign1*coefs1[wpos]*mult;
-            lincoefs[1] = (sign2*coefs2[xpos]*sign1*coefs1[wpos] - lhs2*sign1*coefs1[wpos] + lhs1*sign2*coefs2[wpos] )*mult;
-            lincoefs[2] = sign2*coefs2[wpos]*sign1*coefs1[ypos]*mult;
-
-            SCIPinfoMessage(scip, NULL, "\nproduct: %s%s %s %f%s + %f%s + %f%s + %f", SCIPvarGetName(x), SCIPvarGetName(y),
-                            negwcoef ? ">=" : "<=", lincoefs[0], SCIPvarGetName(w), lincoefs[1], SCIPvarGetName(x), lincoefs[2],
-                            SCIPvarGetName(y), -coefs2[wpos]*lhs1*mult);
-
-            SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign2*coefs2[wpos]*lhs1*mult, &linexpr) );
-            SCIP_CALL( addBilinProduct(scip, sepadata, NULL, x, y, linexpr, TRUE, negwcoef, !negwcoef, varmap) );
-         }
-
-         /* do rhs */
-         if( rhs1 != SCIPinfinity(scip) && rhs2 != SCIPinfinity(scip) )
-         { /* since sign1*coefs1[xpos] > 0, for rhs inequality 1 is stronger when x = 1, inequality 2 is stronger when x = 0 */
-
-            mult = 1/(coefs1[wpos]*sign1*coefs2[ypos]*sign2 - coefs1[ypos]*sign1*coefs2[wpos]*sign2);
-
-            /* we make sure above that these have the same sign, but one of them might be zero, so we check both here */
-            if( sign2*coefs2[wpos]*mult > 0 || sign1*coefs1[wpos]*mult > 0 )
-               negwcoef = FALSE;
-            else
-               negwcoef = TRUE;
-
-            SCIPdebugMsg(scip, "w coef is %s\n", negwcoef ? "negative" : "positive");
-
-            SCIPinfoMessage(scip, NULL, "\nRhs, found suitable implied rels (w,x,y): %f%s + %f%s + %f%s <= %f\n",
-                            sign1*coefs1[wpos], SCIPvarGetName(w), sign1*coefs1[xpos], SCIPvarGetName(x),
-                            sign1*coefs1[ypos], SCIPvarGetName(y), rhs1);
-
-            SCIPinfoMessage(scip, NULL, "\nand %f%s + %f%s + %f%s <= %f\n", sign2*coefs2[wpos], SCIPvarGetName(w),
-                            sign2*coefs2[xpos], SCIPvarGetName(x), sign2*coefs2[ypos], SCIPvarGetName(y), rhs2);
-
-            lincoefs[0] = sign1*coefs1[wpos]*sign2*coefs2[wpos]*mult;
-            lincoefs[1] = (sign1*coefs1[xpos]*sign2*coefs2[wpos] - rhs1*sign2*coefs2[wpos] + rhs2*sign1*coefs1[wpos] )*mult;
-            lincoefs[2] = sign1*coefs1[wpos]*sign2*coefs2[ypos]*mult;
-
-            SCIPinfoMessage(scip, NULL, "\nproduct: %s%s %s %f%s + %f%s + %f%s + %f", SCIPvarGetName(x), SCIPvarGetName(y),
-                            negwcoef ? "<=" : ">=", lincoefs[0], SCIPvarGetName(w), lincoefs[1], SCIPvarGetName(x), lincoefs[2],
-                            SCIPvarGetName(y), -coefs1[wpos]*rhs2*mult);
-
-            SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign1*coefs1[wpos]*rhs2*mult, &linexpr) );
-            SCIP_CALL( addBilinProduct(scip, sepadata, NULL, x, y, linexpr, TRUE, !negwcoef, negwcoef, varmap) );
-         }
-      }
+      SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign1*coefs1[wpos]*rhs2*mult, &linexpr) );
+      SCIP_CALL( addBilinProduct(scip, sepadata, NULL, x, y, &linexpr, TRUE, !negwcoef, negwcoef, varmap) );
    }
 
    return SCIP_OKAY;
+}
+
+/** extract products from a relation given by coefs1, vars, lhs1 and rhs1 and
+ *  implied bounds of the form vars[0] == x => vars[varpos] >=/<= bound
+ */
+static
+void detectProductsImplbnd(
+   SCIP*          scip,
+   SCIP_SEPADATA* sepadata,
+   SCIP_Real*     coefs1,
+   SCIP_VAR**     vars,
+   SCIP_Real      lhs1,
+   SCIP_Real      rhs1,
+   int            varpos1,
+   int            varpos2,
+   SCIP_HASHMAP*  varmap
+   )
+{
+   SCIP_Real coefs2[3];
+   SCIP_Bool foundlb, foundub;
+   SCIP_Real impllb, implub;
+   SCIP_VAR* var1 = vars[varpos1];
+   SCIP_VAR* var2 = vars[varpos2];
+
+   assert( varpos1 != varpos2 );
+
+   if( varpos1 != 2 && varpos2 != 2 )
+      coefs2[2] = 0.0;
+   else if( varpos1 != 1 && varpos2 != 1 )
+      coefs2[1] = 0.0;
+   else
+      coefs2[0] = 0.0;
+
+   coefs2[varpos2] = 1.0;
+
+   /* get implications for x = TRUE */
+   SCIPvarGetImplicVarBounds(var1, TRUE, var2, &impllb, &implub, &foundlb, &foundub);
+   if( foundlb || foundub )
+   { /* found an implied relation x == 1  =>  y <= foundub (or y >= foundub) */
+      if( foundlb )
+      {
+         coefs2[varpos1] = SCIPvarGetLbGlobal(var2) - impllb;
+         extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1, impllb, rhs1, SCIPinfinity(scip), varmap);
+      }/* TODO what if there is no reasonable bound on y? */
+
+      if( foundub )
+      {
+         coefs2[varpos1] = SCIPvarGetUbGlobal(var2) - implub;
+         extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1, -SCIPinfinity(scip), rhs1, implub, varmap);
+      }
+   }
+
+   /* get implications for x = FALSE */
+   SCIPvarGetImplicVarBounds(var1, FALSE, var2, &impllb, &implub, &foundlb, &foundub);
+   if( foundlb || foundub )
+   { /* found an implied relation x == 0  =>  y <= foundub (or >= foundub) */
+      if( foundlb )
+      {
+         coefs2[varpos1] = impllb - SCIPvarGetLbGlobal(var2);
+         extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1, impllb, rhs1, SCIPinfinity(scip), varmap);
+      }
+
+      if( foundub )
+      {
+         coefs2[varpos1] = implub - SCIPvarGetUbGlobal(var2);
+         extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1, -SCIPinfinity(scip), rhs1, implub, varmap);
+      }
+   }
+}
+
+/** extract products from a relation given by coefs1, vars, lhs1 and rhs1 and
+ *  cliques containing vars[0] and vars[varpos]
+ */
+static
+void detectProductsClique(
+   SCIP*          scip,
+   SCIP_SEPADATA* sepadata,
+   SCIP_Real*     coefs1,
+   SCIP_VAR**     vars,
+   SCIP_Real      lhs1,
+   SCIP_Real      rhs1,
+   int            varpos1,
+   int            varpos2,
+   SCIP_HASHMAP*  varmap
+)
+{
+   SCIP_Real coefs2[3];
+   SCIP_VAR* var1 = vars[varpos1];
+   SCIP_VAR* var2 = vars[varpos2];
+
+   if( varpos1 != 2 && varpos2 != 2 )
+      coefs2[2] = 0.0;
+   else if( varpos1 != 1 && varpos2 != 1 )
+      coefs2[1] = 0.0;
+   else
+      coefs2[0] = 0.0;
+
+   if( SCIPvarsHaveCommonClique(var1, TRUE, var2, TRUE, TRUE) )
+   { /* var1 + var2 <= 1 */
+      SCIPinfoMessage(scip, NULL, "\nvars %s and %s are in a clique", SCIPvarGetName(var1), SCIPvarGetName(var2));
+      coefs2[0] = 1.0;
+      coefs2[varpos2] = 1.0;
+      extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1, -SCIPinfinity(scip), rhs1, 1.0, varmap);
+   }
+   if( SCIPvarsHaveCommonClique(var1, TRUE, var2, FALSE, TRUE) )
+   { /* var1 - var <= 0 */
+      coefs2[0] = 1.0;
+      coefs2[varpos2] = -1.0;
+      extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1, -SCIPinfinity(scip), rhs1, 0.0, varmap);
+      SCIPinfoMessage(scip, NULL, "\nvars %s and (1-%s) are in a clique", SCIPvarGetName(var1), SCIPvarGetName(var2));
+   }
+   if( SCIPvarsHaveCommonClique(var1, FALSE, var2, TRUE, TRUE) )
+   { /* var - var1 <= 0 */
+      coefs2[0] = -1.0;
+      coefs2[varpos2] = 1.0;
+      extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1, -SCIPinfinity(scip), rhs1, 0.0, varmap);
+      SCIPinfoMessage(scip, NULL, "\nvars (1-%s) and %s are in a clique", SCIPvarGetName(var1), SCIPvarGetName(var2));
+   }
+   if( SCIPvarsHaveCommonClique(var1, FALSE, var2, FALSE, TRUE) )
+   { /* var1 + var >= 1 */
+      coefs2[0] = 1.0;
+      coefs2[varpos2] = 1.0;
+      extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1, 1.0, rhs1, SCIPinfinity(scip), varmap);
+      SCIPinfoMessage(scip, NULL, "\nvars (1-%s) and (1-%s) are in a clique", SCIPvarGetName(var1), SCIPvarGetName(var2));
+   }
 }
 
 /* detect bilinear products encoded in linear constraints */
@@ -799,17 +910,21 @@ SCIP_RETCODE detectHiddenProducts(
    SCIP_HASHMAP*  varmap      /**< variable map */
    )
 {
-   int v1, v2, r, r2, i, j, nrows;
+   int v1, r, r2, i, j, nrows;
    SCIP_ROW** prob_rows;
    SCIP_HASHTABLE* hashdatatable3;
    SCIP_HASHTABLE* hashdatatable2;
    HASHDATA hashdata;
    HASHDATA* foundhashdata;
    SCIP_COL** cols;
-   SCIP_VAR* vars[3];
+   SCIP_VAR* vars_xwy[3];
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* w;
    SCIP_Real coefs1[3], coefs2[3];
    SCIP_ROW* row1;
    SCIP_ROW* row2;
+   int xpos, ypos, wpos;
 
    /* get the rows, depending on settings */
    if( sepadata->isinitialround || sepadata->onlyinitial )
@@ -926,6 +1041,7 @@ SCIP_RETCODE detectHiddenProducts(
    SCIPinfoMessage(scip, NULL, "\n");
    SCIPdebugMsg(scip, "Implied relations table:\n");
 
+
    /* start actually looking for products */
    /* go through all sets of three variables */
    for( i = 0; i < SCIPhashtableGetNEntries(hashdatatable3); ++i )
@@ -937,102 +1053,98 @@ SCIP_RETCODE detectHiddenProducts(
       SCIPdebugMsg(scip, "(%s, %s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
          SCIPvarGetName(foundhashdata->vars[1]), SCIPvarGetName(foundhashdata->vars[2]));
 
-      /* go through implied relations for the corresponsing three variables */
-      for( r = 0; r < foundhashdata->nrows; ++r )
+      for( xpos = 0; xpos < 3; ++xpos )
       {
-         row1 = foundhashdata->rows[r];
-         assert(SCIProwGetNNonz(row1) == 3);
-         SCIPinfoMessage(scip, NULL, "%s; ", SCIProwGetName(row1));
+         x = foundhashdata->vars[xpos];
 
-         for( v1 = 0; v1 < 3; ++v1 )
+         /* x must be binary */
+         if( SCIPvarGetType(x) != SCIP_VARTYPE_BINARY )
+            continue;
+
+         vars_xwy[0] = x;
+
+         /* go through implied relations for the corresponsing three variables */
+         for( r = 0; r < foundhashdata->nrows; ++r )
          {
-            vars[v1] = foundhashdata->vars[v1];
-            assert(SCIPcolGetVar(SCIProwGetCols(row1)[v1]) == vars[v1]);
-         }
+            row1 = foundhashdata->rows[r];
+            assert(SCIProwGetNNonz(row1) == 3);
+            SCIPinfoMessage(scip, NULL, "%s; ", SCIProwGetName(row1));
 
-         /* go through the remaining rows for these three variables */
-         for( r2 = r + 1; r2 < foundhashdata->nrows; ++r2 )
-         {
-            row2 = foundhashdata->rows[r2];
-            assert(SCIProwGetNNonz(row2) == 3);
+            /* TODO don't need the assign but keep the check */
+/*            for( v1 = 0; v1 < 3; ++v1 )
+            assert(SCIPcolGetVar(SCIProwGetCols(row1)[v1]) == vars[v1]);*/
 
-            SCIP_CALL( extractProducts(scip, sepadata, vars, SCIProwGetVals(row1), SCIProwGetVals(row2),
-               SCIProwGetLhs(row1), SCIProwGetLhs(row2), SCIProwGetRhs(row1), SCIProwGetRhs(row2), varmap) );
-         }
+            coefs1[0] = SCIProwGetVals(row1)[xpos];
 
-         /* try to use information from each variable */
-         for( v1 = 0; v1 < 3; ++v1 )
-         {
-            int lowerpos, upperpos;
-            SCIP_Real impllb, implub;
-
-            /* do global bound */
-            coefs2[v1] = 1.0;
-            coefs2[(v1 + 1) % 3] = 0.0;
-            coefs2[(v1 + 2) % 3] = 0.0;
-            extractProducts(scip, sepadata, vars, SCIProwGetVals(row1), coefs2, SCIProwGetLhs(row1),
-               SCIPvarGetLbGlobal(vars[v1]), SCIProwGetRhs(row1), SCIPvarGetUbGlobal(vars[v1]), varmap);
-
-            if( SCIPvarGetType(vars[v1]) != SCIP_VARTYPE_BINARY )
-               continue;
-
-            /* if the variable is binary, look at implied bounds and cliques for the remaining two variables */
+            /* permute w and y */
             for( j = 1; j <= 2; ++j )
             {
+               SCIP_Real impllb, implub;
                SCIP_Bool foundlb, foundub;
-               v2 = (v1 + j) % 3;
 
-               if( SCIPvarGetType(vars[v2]) != SCIP_VARTYPE_BINARY )
-               { /* vars[v2] is non-binary - look for implied bounds on vars[v2] */
-                  coefs2[v2] = 1.0;
-                  coefs2[(v1 - j + 3) % 3] = 0.0;
+               wpos = (xpos+j) % 3;
+               ypos = (xpos-j+3) % 3;
+               w = foundhashdata->vars[wpos];
+               y = foundhashdata->vars[ypos];
+               vars_xwy[1] = w;
+               vars_xwy[2] = y;
+               coefs1[1] = SCIProwGetVals(row1)[wpos];
+               coefs1[2] = SCIProwGetVals(row1)[ypos];
 
-                  /* get implications for vars[v1] = TRUE */
-                  SCIPvarGetImplicVarBounds(vars[v1], TRUE, vars[v2], &impllb, &implub, &foundlb, &foundub);
-                  if( foundlb || foundub )
-                  { /* found an implied relation vars[v1] == 1  =>  vars[v2] <= foundub (or >= foundub) */
-                     if( foundlb )
-                     {
-                        coefs2[v1] = SCIPvarGetLbGlobal(vars[v2]) - impllb;
-                        extractProducts(scip, sepadata, vars, SCIProwGetVals(row1), coefs2, SCIProwGetLhs(row1),
-                                        SCIPvarGetLbGlobal(vars[v2]), SCIProwGetRhs(row1), SCIPinfinity(scip), varmap);
-                     }/* TODO what if there is no reasonable bound on vars[v2]? */
-
-                     if( foundub )
-                     {
-                        coefs2[v1] = SCIPvarGetUbGlobal(vars[v2]) - implub;
-                        extractProducts(scip, sepadata, vars, SCIProwGetVals(row1), coefs2, SCIProwGetLhs(row1),
-                                        -SCIPinfinity(scip), SCIProwGetRhs(row1), SCIPvarGetUbGlobal(vars[v2]), varmap);
-                     }
-                  }
-
-                  /* get implications for vars[v1] = FALSE */
-                  SCIPvarGetImplicVarBounds(vars[v1], FALSE, vars[v2], &impllb, &implub, &foundlb, &foundub);
-                  if( foundlb || foundub )
-                  { /* found an implied relation vars[v1] == 0  =>  vars[v2] <= foundub (or >= foundub) */
-                     if( foundlb )
-                     {
-                        coefs2[v1] = impllb - SCIPvarGetLbGlobal(vars[v2]);
-                        extractProducts(scip, sepadata, vars, SCIProwGetVals(row1), coefs2, SCIProwGetLhs(row1),
-                                        impllb, SCIProwGetRhs(row1), SCIPinfinity(scip), varmap);
-                     }
-
-                     if( foundub )
-                     {
-                        coefs2[v1] = implub - SCIPvarGetUbGlobal(vars[v2]);
-                        extractProducts(scip, sepadata, vars, SCIProwGetVals(row1), coefs2, SCIProwGetLhs(row1),
-                                        -SCIPinfinity(scip), SCIProwGetRhs(row1), implub, varmap);
-                     }
-                  }
-               }
-               else /* vars[v2] is binary - look for cliques involving vars[v1] and vars[v2] */
+               /* go through the remaining rows for these three variables */
+               for( r2 = r + 1; r2 < foundhashdata->nrows; ++r2 )
                {
-                  /* TODO do cliques */
+                  row2 = foundhashdata->rows[r2];
+                  assert(SCIProwGetNNonz(row2) == 3);
 
+                  coefs2[0] = SCIProwGetVals(row2)[xpos];
+                  coefs2[1] = SCIProwGetVals(row2)[wpos];
+                  coefs2[2] = SCIProwGetVals(row2)[ypos];
+
+                  SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, SCIProwGetLhs(row1),
+                     SCIProwGetLhs(row2), SCIProwGetRhs(row1), SCIProwGetRhs(row2), varmap) );
                }
-            }
-         }
 
+               /* use global bounds on w */
+               coefs2[0] = 0.0;
+               coefs2[1] = 1.0;
+               coefs2[2] = 0.0;
+               extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, SCIProwGetLhs(row1),
+                  SCIPvarGetLbGlobal(w), SCIProwGetRhs(row1), SCIPvarGetUbGlobal(w), varmap);
+
+               /* do implied bounds and cliques */
+               if( SCIPvarGetType(w) != SCIP_VARTYPE_BINARY )
+               { /* w is non-binary - look for implied bounds on w */
+                  detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, SCIProwGetLhs(row1), SCIProwGetRhs(row1), 0, 1, varmap);
+               }
+               else
+               {
+                  detectProductsClique(scip, sepadata, coefs1, vars_xwy, SCIProwGetLhs(row1), SCIProwGetRhs(row1), 0, 1, varmap);
+               }
+
+               /* implied bounds on y (TODO do we need this?) */
+               if( SCIPvarGetType(y) != SCIP_VARTYPE_BINARY )
+               { /* y is non-binary - look for implied bounds on y */
+                  detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, SCIProwGetLhs(row1), SCIProwGetRhs(row1), 0, 2, varmap);
+               }
+               else
+               {
+                  detectProductsClique(scip, sepadata, coefs1, vars_xwy, SCIProwGetLhs(row1), SCIProwGetRhs(row1), 0, 2, varmap);
+               }
+
+               /* use unconditional relations */
+
+               /* implied bound w == f => y >=/<= bound */
+
+               /* implied bound y == f => w >=/<= bound */
+
+               /* cliques containing w and y */
+
+               /* inequalities containing w and y */
+
+            }
+
+         }
       }
 
       SCIPfreeBufferArray(scip, &(foundhashdata->vars));
@@ -1220,7 +1332,7 @@ SCIP_RETCODE createSepaData(
                   if( !SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t) mapidx) )
                   {
                      SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &linexpr, auxvar) );
-                     SCIP_CALL( addBilinProduct(scip, sepadata, expr, x, y, linexpr, FALSE, SCIPgetConsExprExprNLocksNeg(expr) > 0,
+                     SCIP_CALL( addBilinProduct(scip, sepadata, expr, x, y, &linexpr, FALSE, SCIPgetConsExprExprNLocksNeg(expr) > 0,
                         SCIPgetConsExprExprNLocksPos(expr) > 0, varmap) );
                   }
                   else
