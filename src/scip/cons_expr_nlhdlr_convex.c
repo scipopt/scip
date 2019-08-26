@@ -327,7 +327,7 @@ DECL_CURVCHECK(curvCheckSignomial)
 
    /* put children that are not power on stack
     * grow child for children that are power and put this child on stack
-    * if preferextended, then require children to be linear
+    * if preferextended, then require children with more than one child to be linear
     * unless they are linear, an auxvar will be introduced for them and thus they will be handled as var here
     */
    for( i = 0; i < nfactors; ++i )
@@ -343,7 +343,7 @@ DECL_CURVCHECK(curvCheckSignomial)
       }
       assert(SCIPgetConsExprExprNChildren(child) == 0);
 
-      if( nlhdlrdata->preferextended )
+      if( nlhdlrdata->preferextended && SCIPgetConsExprExprNChildren(child) > 1 )
       {
          SCIPsetConsExprExprCurvature(child, SCIP_EXPRCURV_LINEAR);
 #ifdef SCIP_DEBUG
