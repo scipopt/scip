@@ -175,4 +175,5 @@ Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
    detect("<x1>*exp(<x1>)", SCIP_EXPRCURV_CONVEX);
    detect("(<x1>+<x2>)*exp(<x1>+<x2>)", SCIP_EXPRCURV_CONVEX);
    detect("exp(<x1>)*<x1>", SCIP_EXPRCURV_CONVEX);
+   detect("exp(exp(<x1>))*exp(<x1>)", SCIP_EXPRCURV_CONVEX);
 }
