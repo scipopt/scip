@@ -287,40 +287,38 @@ while [ ${SEED} -le ${SEEDS} ]; do
       mv $TMPDATABASE $DATABASE
     fi
 
-    ###################
-    # Check for fails #
-    ###################
-
-    # if there are fails; process them and send email when there are new ones
-    NFAILS=$(grep -c fail $RESFILE)
-    if [ $NFAILS -gt 0 ]; then
-      echo "Detected ${NFAILS} fails."
-      ## read all known bugs
-      ERRORINSTANCES=$(awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE)
-      STILLFAILINGDB=$(cat ${STILLFAILING})
-
-      # check if there are new fails!
-      if [ -n "$ERRORINSTANCES" ]; then
+    if [ "${PERFORMANCE}" != "mergerequest" ]; then
+      if [ "${PERFORMANCE}" != "performance" ]; then
         ###################
-        ## Process fails ##
+        # Check for fails #
         ###################
 
-        # get SCIP's header
-        SCIP_HEADER=$(awk "$awkscript_scipheader" $OUTFILE)
+        # if there are fails; process them and send email when there are new ones
+        NFAILS=$(grep -c fail $RESFILE)
+        if [ $NFAILS -gt 0 ]; then
+          echo "Detected ${NFAILS} fails."
+          ## read all known bugs
+          ERRORINSTANCES=$(awk $AWKARGS "$awkscript_readknownbugs" $DATABASE $RESFILE)
+          STILLFAILINGDB=$(cat ${STILLFAILING})
 
-        if [ "${PERFORMANCE}" != "performance" ]; then
-          if [ "${PERFORMANCE}" != "mergerequest" ]; then
+          # check if there are new fails!
+          if [ -n "$ERRORINSTANCES" ]; then
+            ###################
+            ## Process fails ##
+            ###################
+
+            # get SCIP's header
+            SCIP_HEADER=$(awk "$awkscript_scipheader" $OUTFILE)
+
             # Get assertions and instance where they were generated
             ERRORS_INFO=$(echo "${ERRORINSTANCES}" | awk "$awkscript_findasserts" - ${ERRFILE})
-          fi
-        fi
 
-        ###############
-        # ERROR EMAIL #
-        ###############
-        echo "Found new errors, sending emails."
-        SUBJECT="FAIL ${SUBJECTINFO}"
-        echo -e "There are newly failed instances.
+            ###############
+            # ERROR EMAIL #
+            ###############
+            echo "Found new errors, sending emails."
+            SUBJECT="FAIL ${SUBJECTINFO}"
+            echo -e "There are newly failed instances.
 The instances run with the following SCIP version and setting file:
 
 \`\`\`
@@ -348,14 +346,14 @@ $OUTFILE
 $RESFILE
 
 Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
-      else
-        echo "No new errors, sending no emails."
+          else
+            echo "No new errors, sending no emails."
+          fi
+        else
+          echo "No fails detected."
+        fi
       fi
-    else
-      echo "No fails detected."
-    fi
 
-    if [ "${PERFORMANCE}" != "mergerequest" ]; then
       # send email if there are fixed instances
       if [ -n "$RESOLVEDINSTANCES" ]; then
         #########################
@@ -444,7 +442,7 @@ Compare to the release: https://rubberband.zib.de/result/${URLSTR}"
 elif [ "${PERFORMANCE}" == "mergerequest" ]; then
 
   # collect all ids with timestamps OLDTIMESTAMP NEWTIMESTAMP in RBIDS
-  MAINRBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_${SETTINGS}_${SCIP_BUILDDIR}_rbdb.txt"
+  MAINRBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_*_${SCIP_BUILDDIR}_rbdb.txt"
   RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB}|cut -d ' ' -f 2)
 
   URLSTR=$(geturl "${RBDB_STRS}")
