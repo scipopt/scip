@@ -143,6 +143,7 @@
 #define DEFAULT_MAXGENERATORS        1500    /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
 #define DEFAULT_CHECKSYMMETRIES     FALSE    /**< Should all symmetries be checked after computation? */
 #define DEFAULT_DISPLAYNORBITVARS   FALSE    /**< Should the number of variables affected by some symmetry be displayed? */
+#define DEFAULT_USECOLUMNSPARSITY   FALSE    /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
 
 /* default parameters for symmetry constraints */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
@@ -214,6 +215,7 @@ struct SCIP_PropData
    SCIP_Bool             displaynorbitvars;  /**< Whether the number of variables in non-trivial orbits shall be computed */
    SCIP_Bool             computedsymmetry;   /**< Have we already tried to compute symmetries? */
    int                   usesymmetry;        /**< encoding of active symmetry handling methods (for debugging) */
+   SCIP_Bool             usecolumnsparsity;  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
 
    /* for symmetry constraints */
    SCIP_Bool             symconsenabled;     /**< Should symmetry constraints be added? */
@@ -786,7 +788,7 @@ SCIP_RETCODE collectCoefficients(
    SYM_RHSSENSE          rhssense,           /**< identifier of constraint type */
    SYM_MATRIXDATA*       matrixdata,         /**< matrix data to be filled in */
    int*                  nconssforvar        /**< pointer to array to store for each var the number of conss
-                                              *   in which var has a non-zero coefficient */
+                                              *   in which var has a non-zero coefficient (or NULL if not used) */
    )
 {
    SCIP_VAR** vars;
@@ -884,7 +886,8 @@ SCIP_RETCODE collectCoefficients(
 
          assert( 0 <= SCIPvarGetProbindex(vars[j]) && SCIPvarGetProbindex(vars[j]) < SCIPgetNVars(scip) );
 
-         nconssforvar[SCIPvarGetProbindex(vars[j])] += 1;
+         if ( nconssforvar != NULL )
+            nconssforvar[SCIPvarGetProbindex(vars[j])] += 1;
          matrixdata->matvaridx[nmatcoef] = SCIPvarGetProbindex(vars[j]);
          matrixdata->matcoef[nmatcoef++] = vals[j];
       }
@@ -922,7 +925,8 @@ SCIP_RETCODE collectCoefficients(
 
             assert( 0 <= SCIPvarGetProbindex(vars[j]) && SCIPvarGetProbindex(vars[j]) < SCIPgetNVars(scip) );
 
-            nconssforvar[SCIPvarGetProbindex(vars[j])] += 1;
+            if ( nconssforvar != NULL )
+               nconssforvar[SCIPvarGetProbindex(vars[j])] += 1;
             matrixdata->matcoef[nmatcoef++] = -vals[j];
          }
          nrhscoef++;
@@ -949,7 +953,8 @@ SCIP_RETCODE collectCoefficients(
 
             assert( 0 <= SCIPvarGetProbindex(vars[j]) && SCIPvarGetProbindex(vars[j]) < SCIPgetNVars(scip) );
 
-            nconssforvar[SCIPvarGetProbindex(vars[j])] += 1;
+            if ( nconssforvar != NULL )
+               nconssforvar[SCIPvarGetProbindex(vars[j])] += 1;
             matrixdata->matvaridx[nmatcoef] = SCIPvarGetProbindex(vars[j]);
             matrixdata->matcoef[nmatcoef++] = vals[j];
          }
@@ -1159,6 +1164,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
    SCIP_Bool             local,              /**< Use local variable bounds? */
    SCIP_Bool             checksymmetries,    /**< Should all symmetries be checked after computation? */
+   SCIP_Bool             usecolumnsparsity,  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
@@ -1180,7 +1186,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SYM_SORTRHSTYPE sortrhstype;
    SCIP_Real oldcoef = SCIP_INVALID;
    SCIP_Real val;
-   int* nconssforvar;
+   int* nconssforvar = NULL;
    int nuniquevararray = 0;
    int nhandleconss;
    int nactiveconss;
@@ -1278,7 +1284,10 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvals, nallvars) );
 
    /* allocate memory for getting the number of constraints that contain a variable */
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &nconssforvar, nvars) );
+   if ( usecolumnsparsity )
+   {
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &nconssforvar, nvars) );
+   }
 
    /* loop through all constraints */
    for (c = 0; c < nconss; ++c)
@@ -1543,7 +1552,8 @@ SCIP_RETCODE computeSymmetryGroup(
                SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                   "   Deactivated symmetry handling methods, there exist constraints that cannot be handled by symmetry methods.\n");
 
-               SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
+               if ( usecolumnsparsity )
+                  SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
                SCIPfreeBlockMemoryArrayNull(scip, &consvals, nallvars);
                SCIPfreeBlockMemoryArrayNull(scip, &consvars, nallvars);
                SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
@@ -1600,7 +1610,8 @@ SCIP_RETCODE computeSymmetryGroup(
    {
       *success = TRUE;
 
-      SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
+      if ( usecolumnsparsity )
+         SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
 
       /* free matrix data */
       SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
@@ -1672,7 +1683,7 @@ SCIP_RETCODE computeSymmetryGroup(
             vt->ub = SCIPvarGetUbGlobal(var);
          }
          vt->type = SCIPvarGetType(var);
-         vt->nconss = nconssforvar[j];
+         vt->nconss = usecolumnsparsity ? nconssforvar[j] : 0;
 
          if ( ! SCIPhashtableExists(vartypemap, (void*) vt) )
          {
@@ -1708,7 +1719,8 @@ SCIP_RETCODE computeSymmetryGroup(
       SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
       SCIPhashtableFree(&vartypemap);
 
-      SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
+      if ( usecolumnsparsity )
+         SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
 
       SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
       SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
@@ -1824,7 +1836,8 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
    SCIPhashtableFree(&vartypemap);
 
-   SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
+   if ( usecolumnsparsity )
+      SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
 
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
@@ -1978,7 +1991,7 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
    /* actually compute (global) symmetry */
-   SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries,
+   SCIP_CALL( computeSymmetryGroup(scip, maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries, propdata->usecolumnsparsity,
          &propdata->npermvars, &propdata->permvars, &propdata->nperms, &propdata->nmaxperms, &propdata->perms,
          &propdata->log10groupsize, &successful) );
 
@@ -3542,6 +3555,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/recomputerestart",
          "recompute symmetries after a restart has occured?",
          &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/usecolumnsparsity",
+         "Should the number of conss a variable is contained in be exploited in symmetry detection?",
+         &propdata->usecolumnsparsity, TRUE, DEFAULT_USECOLUMNSPARSITY, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
