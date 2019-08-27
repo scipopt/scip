@@ -103,7 +103,8 @@ void teardown(void)
 static
 SCIP_RETCODE detect(
    const char*           exprstr,
-   SCIP_EXPRCURV         exprrootcurv
+   SCIP_EXPRCURV         exprrootcurv,
+   SCIP_Bool             simplify
 )
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -120,9 +121,14 @@ SCIP_RETCODE detect(
 
    /* create expression and constraint */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)exprstr, NULL, &oexpr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, oexpr, &expr, &changed, &infeas) );
-   cr_expect(!infeas);
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &oexpr) );
+   if( simplify )
+   {
+      SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, oexpr, &expr, &changed, &infeas) );
+      cr_expect(!infeas);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &oexpr) );
+   }
+   else
+      expr = oexpr;
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
 
    SCIPprintCons(scip, cons, NULL);
@@ -166,23 +172,22 @@ SCIP_RETCODE detect(
 /* detects exp(exp(x1)) as an convex expression */
 Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
 {
-   detect("exp(exp(<x1>))", SCIP_EXPRCURV_CONVEX);
-   detect("exp(exp(log(<x1>)))", SCIP_EXPRCURV_CONVEX);
+   detect("exp(exp(<x1>))", SCIP_EXPRCURV_CONVEX, FALSE);
+   detect("exp(exp(log(<x1>)))", SCIP_EXPRCURV_CONVEX, FALSE);
 
    /* use signomial rule */
-   detect("<x1>^0.5*<x2>^0.5)", SCIP_EXPRCURV_CONCAVE);
-   detect("<x1>^0.5*(exp(<x2>))^0.5", SCIP_EXPRCURV_CONCAVE);  /* here an auxvar will be introduced for exp() */
-   detect("<x1>^0.5*(log(<x2>))^0.5", SCIP_EXPRCURV_CONCAVE);  /* here no auxvar will be introduced for exp() */
-   detect("<x1>^(-0.5)*<x2>^(-0.5))", SCIP_EXPRCURV_CONVEX);
-   detect("<x1>^3*<x2>^(-1)*<x3>^(-1)", SCIP_EXPRCURV_CONVEX);
-   detect("<x1>^3*<x2>^(-1)*log(<x3>)^(-1)", SCIP_EXPRCURV_CONVEX);
+   detect("<x1>^0.5*<x2>^0.5)", SCIP_EXPRCURV_CONCAVE, FALSE);
+   detect("<x1>^0.5*(exp(<x2>))^0.5", SCIP_EXPRCURV_CONCAVE, FALSE);  /* here an auxvar will be introduced for exp() */
+   detect("<x1>^0.5*(log(<x2>))^0.5", SCIP_EXPRCURV_CONCAVE, FALSE);  /* here no auxvar will be introduced for exp() */
+   detect("<x1>^(-0.5)*<x2>^(-0.5))", SCIP_EXPRCURV_CONVEX, FALSE);
+   detect("<x1>^3*<x2>^(-1)*<x3>^(-1)", SCIP_EXPRCURV_CONVEX, FALSE);
+   detect("<x1>^3*<x2>^(-1)*log(<x3>)^(-1)", SCIP_EXPRCURV_CONVEX, FALSE);
 
    /* product-composition */
-   detect("<x1>*exp(<x1>)", SCIP_EXPRCURV_CONVEX);
-   detect("<x1>*exp(2*<x1>)", SCIP_EXPRCURV_CONVEX);
-   /* detect("(<x1>+<x2>)*exp(<x1>+<x2>)", SCIP_EXPRCURV_CONVEX); simplified to x1*exp(x1+x2) + x2*exp(x1+x2) */
-   detect("exp(<x1>)*<x1>", SCIP_EXPRCURV_CONVEX);
-   detect("exp(<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX);
-   detect("exp(2*<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX);
-   /* detect("-2*log(2*<x3>)*<x3>", SCIP_EXPRCURV_CONCAVE); simplify leaves a sum-expression at the root here */
+   detect("<x1>*exp(<x1>)", SCIP_EXPRCURV_CONVEX, FALSE);
+   detect("<x1>*exp(2*<x1>)", SCIP_EXPRCURV_CONVEX, TRUE);
+   detect("(<x1>+<x2>)*exp(<x1>+<x2>)", SCIP_EXPRCURV_CONVEX, FALSE);
+   detect("exp(<x1>)*<x1>", SCIP_EXPRCURV_CONVEX, FALSE);
+   detect("exp(<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX, FALSE);
+   detect("exp(2*<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX, TRUE);
 }
