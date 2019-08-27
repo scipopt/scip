@@ -2888,6 +2888,7 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
    int* occurlistsizes;
    SCIP_Bool redundant;
    SCIP_Bool conschanged;
+   int lastnfixedvars;
    int nbinvars;
    int occurlistlength;
    int occurlistsize;
@@ -2916,43 +2917,51 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
    SCIP_CALL( SCIPduplicateBufferArray(scip, &myconss, conss, nconss) );
 
    nmyconss = nconss;
-   for( c = nconss - 1; c >= 0; --c )
+   lastnfixedvars = -1;
+   while( *nfixedvars != lastnfixedvars )
    {
-      cons = myconss[c];
-      assert(cons != NULL);
-
-      if( SCIPconsIsDeleted(cons) || SCIPconsIsModifiable(cons) )
+      lastnfixedvars = *nfixedvars;
+      for( c = nconss - 1; c >= 0; --c )
       {
-         myconss[c] = myconss[nmyconss - 1];
-         --nmyconss;
+         cons = myconss[c];
+         assert(cons != NULL);
 
-         continue;
+         if( SCIPconsIsDeleted(cons) || SCIPconsIsModifiable(cons) )
+         {
+            myconss[c] = myconss[nmyconss - 1];
+            --nmyconss;
+
+            continue;
+         }
+
+         /* prepare constraint by removing fixings and merge it */
+         SCIP_CALL( prepareCons(scip, cons, eventhdlr, entries, nentries, &redundant, nfixedvars, nchgcoefs, ndelconss, cutoff) );
+
+         if( redundant )
+         {
+            assert(SCIPconsIsDeleted(cons));
+            assert(!(*cutoff));
+
+            myconss[c] = myconss[nmyconss - 1];
+            --nmyconss;
+
+            continue;
+         }
+
+         if( *cutoff )
+         {
+            SCIPfreeBufferArray(scip, &myconss);
+
+            return SCIP_OKAY;
+         }
+
+         consdata = SCIPconsGetData(cons);
+
+         /* sort the constraint */
+         consdataSort(consdata);
+
+         assert(consdata->nvars >= 2);
       }
-
-      /* prepare constraint by removing fixings and merge it */
-      SCIP_CALL( prepareCons(scip, cons, eventhdlr, entries, nentries, &redundant, nfixedvars, nchgcoefs, ndelconss, cutoff) );
-
-      if( redundant )
-      {
-         assert(SCIPconsIsDeleted(cons));
-
-         myconss[c] = myconss[nmyconss - 1];
-         --nmyconss;
-      }
-
-      if( *cutoff )
-      {
-         SCIPfreeBufferArray(scip, &myconss);
-
-         return SCIP_OKAY;
-      }
-
-      consdata = SCIPconsGetData(cons);
-
-      /* sort the constraint */
-      consdataSort(consdata);
-
-      assert(consdata->nvars >= 2);
    }
 
    SCIPsortPtr((void**)myconss, conssLogicorComp, nmyconss);

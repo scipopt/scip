@@ -7935,9 +7935,11 @@ SCIP_RETCODE extractCliques(
       /* fast abort if no binaries exist */
       if( !SCIPvarIsBinary(consdata->vars[0]) )
       {
+#ifdef SCIP_DISABLED_CODE /* we have no event yet that signals type changes of variables; thus, we cannot ensure that the sorting is always up-to-date */
 #ifndef NDEBUG
          for( i = 1; i < consdata->nvars; i++ )
             assert(!SCIPvarIsBinary(consdata->vars[i]));
+#endif
 #endif
          return SCIP_OKAY;
       }
