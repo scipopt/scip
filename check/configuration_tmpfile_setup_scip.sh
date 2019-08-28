@@ -68,9 +68,7 @@ then
 fi
 
 # if permutation counter is positive add permutation seed (0 = default)
-# NOTE: we use the global seed shift to shift the permutations, too.
-#       if permutations and seeds should be completely independent, a new variable needs to be introduced to the test system.
-PERM=$(($p + $GLBSEEDSHIFT))
+PERM=$(($p + $STARTPERM))
 if test $PERM -gt 0
 then
     echo set randomization permutationseed $PERM   >> $TMPFILE
