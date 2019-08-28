@@ -560,25 +560,24 @@ DECL_CURVCHECK(curvCheckProductComposite)
    /* h-child of product should have curvature hcurv */
    SCIPsetConsExprExprCurvature(SCIPgetConsExprExprChildren(nlexpr)[1-fidx], hcurv);
 
-   /* add child ch to f; if h = ch, then require it to have curvature hcurv */
-   SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, SCIPgetConsExprExprChildren(nlexpr)[fidx], h == ch ? &hcurv : NULL) );
-   assert(SCIPgetConsExprExprNChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx]) == 1);
-   assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0]) == (void*)ch);
-
-   /* if h is not ch, then we need to add a copy of h as child in the copy of ch
-    * in any case, we need to push the copy of h to the stack for further checking
-    * TODO we now have two copies of h in the copy; maybe we can avoid this, though other code may assume that this doesn't happen?
-    */
    if( h != ch )
    {
-      /* add child h of ch to copy of h and require hcurv */
-      SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0], &hcurv) );
-      assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0])[0]) == (void*)h);
-      SCIP_CALL( exprstackPush(scip, stack, 1, SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0])) );
+      /* add copy of ch as child to copy of f */
+      SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, SCIPgetConsExprExprChildren(nlexpr)[fidx], NULL) );
+      assert(SCIPgetConsExprExprNChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx]) == 1);
+      assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0]) == (void*)ch);
+
+      /* add copy of h (created above as child of product) as child in copy of ch */
+      SCIP_CALL( SCIPappendConsExprExpr(scip,
+         SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])[0] /* copy of ch */,
+         SCIPgetConsExprExprChildren(nlexpr)[1-fidx] /* copy of h */) );
    }
    else
    {
-      SCIP_CALL( exprstackPush(scip, stack, 1, SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(nlexpr)[fidx])) );
+      /* add copy of h (created above as child of product) as child in copy of f */
+      SCIP_CALL( SCIPappendConsExprExpr(scip,
+         SCIPgetConsExprExprChildren(nlexpr)[fidx] /* copy of f */,
+         SCIPgetConsExprExprChildren(nlexpr)[1-fidx] /* copy of h */) );
    }
 
    return SCIP_OKAY;
@@ -802,7 +801,7 @@ SCIP_RETCODE collectLeafs(
    assert(SCIPgetConsExprExprChildren(nlexpr) != NULL);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, nlexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );  /* allowrevisit is ok, as this nlexpr is mostly a tree (only variables are shared, and for those we do not go into visitingchild stage) */
+   SCIP_CALL( SCIPexpriteratorInit(it, nlexpr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD);
 
    for( nlexpr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); nlexpr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
