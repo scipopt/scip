@@ -58,6 +58,7 @@ THREADS         =       1
 PERMUTE         =       0
 SEEDS           =       0
 GLBSEEDSHIFT    =       0
+STARTPERM       =       0
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	short
