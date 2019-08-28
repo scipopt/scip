@@ -155,7 +155,6 @@ set(settings_Indicator
 set(instances_Indicator
     "instances/Indicator/mcf128-4-1.lp\;14"
     "instances/Indicator/mcf64-4-1.lp\;10"
-    "instances/Indicator/mcf64-4-1.cip\;10"
 )
 
 set(settings_Cardinality
@@ -462,6 +461,22 @@ foreach(instance ${instances_MINLP})
                                 DEPENDS scip-build
                             )
 endforeach(instance)
+
+#
+# test reading .cip files for indicator instances
+#
+foreach(instance ${instances_Indicator})
+    split_instance(instance)
+    #
+    # configure the batch file for this test by substituting placeholders in the in.file
+    #
+    configure_file(interactiveshell/solvecip.bat.in interactiveshell/solvecip-${basename}.bat)
+    add_test(NAME Indicator-solvecip-${basename}
+            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solvecip-${basename}.bat
+            )
+    set_tests_properties(Indicator-solvecip-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+endforeach(instance)
+
 
 #
 # the following instances are not pure binary and hence cannot be written out in opb format
