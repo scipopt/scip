@@ -63,9 +63,7 @@ then
 fi
 
 # if permutation is positive, add postfix
-# NOTE: we use the global seed shift to shift the permutations, too.
-#       if permutations and seeds should be completely independent, a new variable needs to be introduced to the test system.
-PERM=`expr $p + $GLBSEEDSHIFT`
+PERM=`expr $p + $STARTPERM`
 if test $PERM -gt 0
 then
     EVALFILE=$EVALFILE"-p"$PERM
@@ -178,9 +176,9 @@ then
 fi
 
 # if permutation is positive, add postfix
-if test $p -gt 0
+if test $PERM -gt 0
 then
-    FILENAME=$FILENAME"-p"$p
+    FILENAME=$FILENAME"-p"$PERM
 fi
 
 SKIPINSTANCE="false"
