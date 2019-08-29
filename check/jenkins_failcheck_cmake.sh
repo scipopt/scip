@@ -184,7 +184,7 @@ if [ "${PERFORMANCE}" == "performance" ]; then
   touch $RBDB
   OLDTIMESTAMP=$(tail -n 1 ${RBDB}|cut -d ' ' -f 1)
 elif [ "${PERFORMANCE}" == "mergerequest" ]; then
-  RBDB="${PWD}/performance_mergerequest_${OUTPUTDIR}"
+  RBDB="${PWD}/performance_mergerequest_${TESTSET}_${gitlabMergeRequestIid}_rbdb.txt"
   touch $RBDB
 fi
 
@@ -440,11 +440,28 @@ Compare to the release: https://rubberband.zib.de/result/${URLSTR}"
   echo -e "$PERF_MAIL" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
 
 elif [ "${PERFORMANCE}" == "mergerequest" ]; then
-
   # collect all ids with timestamps OLDTIMESTAMP NEWTIMESTAMP in RBIDS
   MAINRBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_*_${SCIP_BUILDDIR}_rbdb.txt"
-  RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB}|cut -d ' ' -f 2)
 
+  COMPAREIDS=""
+  COUNT_S=0
+  while [ $COUNT_S -le $SEEDS ]; do
+    COUNT_P=0
+    while [ $COUNT_P -le $PERMUTE ]; do
+      RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${FULLGITHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB} | grep -P "p=${COUNT_S} s=${COUNT_P}")
+      if [ "${RBDB_STRS}" != "" ]; then
+        if [ "${RBDB_STRS}" == "2" ]; then
+          COMPAREIDS="${COMPAREIDS}
+${RBDB_STRS}"
+        fi
+      fi
+
+      COUNT_P=$((COUNT_P + 1))
+    done
+    COUNT_S=$((COUNT_S + 1))
+  done
+
+  RBDB_STRS=$(echo "${COMPAREIDS}" |cut -d ' ' -f 2)
   URLSTR=$(geturl "${RBDB_STRS}")
 
   PERF_MAIL=$(echo "The results of the mergerequest run are ready. Take a look at https://rubberband.zib.de/result/${URLSTR}

@@ -146,6 +146,17 @@ set(settings_Benders
     "usebenders-tr"
     "usebenders-cutstrengthen"
    )
+   
+set(settings_Indicator
+    "default"
+    "indicatorrestart"
+    "indicatorperspective"
+    "indicatorlogicorsepa"
+    "indicatorcoupling"
+    "indicatorconflict"
+    "indicatoralterlp"
+    "indicatorupgrade"
+   )
 
 #
 # Indicator instances
@@ -430,7 +441,7 @@ macro(add_instancetests instances settings prefix)
 endmacro(add_instancetests)
 
 add_instancetests(instances_CP settings_default "CP")
-add_instancetests(instances_Indicator settings_default "Indicator")
+add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
@@ -467,6 +478,22 @@ foreach(instance ${instances_MINLP})
                                 DEPENDS scip-build
                             )
 endforeach(instance)
+
+#
+# test reading .cip files for indicator instances
+#
+foreach(instance ${instances_Indicator})
+    split_instance(instance)
+    #
+    # configure the batch file for this test by substituting placeholders in the in.file
+    #
+    configure_file(interactiveshell/solvecip.bat.in interactiveshell/solvecip-${basename}.bat)
+    add_test(NAME Indicator-solvecip-${basename}
+            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solvecip-${basename}.bat
+            )
+    set_tests_properties(Indicator-solvecip-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+endforeach(instance)
+
 
 #
 # the following instances are not pure binary and hence cannot be written out in opb format
