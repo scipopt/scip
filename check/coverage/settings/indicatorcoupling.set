@@ -1,0 +1,5 @@
+# SCIP version 6.0.2
+
+# Add initial variable upper bound constraints, if 'addcoupling' is true?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/addcouplingcons = TRUE
