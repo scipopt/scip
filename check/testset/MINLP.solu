@@ -537,7 +537,7 @@
 =opt=      ex7_3_3                                          0.8175290489
 =opt=      ex7_3_4                                          6.2746343370
 =best=     ex7_3_5                                          1.2068714300
-=bestdual= ex7_3_5                                          1.2055104970
+=bestdual= ex7_3_5                                          1.2054531570
 =inf=      ex7_3_6
 =best=     ex8_1_1                                         -2.0218067830
 =best=     ex8_1_2                                         -1.0708610190
@@ -2083,6 +2083,7 @@
 =best=     var_con5                                       278.1448937000
 =opt=      wager                                        20339.4318400000
 =opt=      wall                                            -1.0000046620
+=best=     wallfix                                          1.0000046580
 =opt=      waste                                          598.9191764000
 =best=     wastepaper3                                      0.0189183680
 =bestdual= wastepaper3                                      0.0189179908
