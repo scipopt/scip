@@ -1742,6 +1742,10 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropProduct)
       /* solve x*otherfactor = f for x in c_i */
       SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &childbounds, zero, otherfactor,
          SCIPgetConsExprExprActivity(scip, expr), SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[i]));
+      SCIPdebugMsg(scip, "child %d: solved [%g,%g]*x = [%g,%g] with x in [%g,%g] -> x = [%g,%g]\n", i, otherfactor.inf, otherfactor.sup,
+         SCIPgetConsExprExprActivity(scip, expr).inf, SCIPgetConsExprExprActivity(scip, expr).sup,
+         SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[i]).inf, SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[i]).sup,
+         childbounds.inf, childbounds.sup);
 
       /* try to tighten the bounds of the expression */
       SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, force, reversepropqueue,
