@@ -124,7 +124,6 @@ Test(multihash, test_multihash_insertion, .description = "test that the multi ha
 
 Test(multihash, test_multihash_remove, .description = "test that the multi hash map removes entries correctly.")
 {
-   int* ptr;
    int i;
 
    for( i = 0; i < arraylen; i++ )
@@ -141,7 +140,6 @@ Test(multihash, test_multihash_remove, .description = "test that the multi hash 
 
 Test(multihash, test_multihash_removeall, .description = "test that the multi hash map removes all entries at once correctly.")
 {
-   int* ptr;
    int i;
 
    for( i = 0; i < arraylen; i++ )
