@@ -1549,6 +1549,7 @@ SCIP_RETCODE storeCuts(
          SCIP_Real rhs;
          int ncutvars;
          int c;
+         SCIP_Bool storecut;
 
          ncutvars = SCIProwGetNLPNonz(lprows[r]);
          lhs = SCIProwGetLhs(lprows[r]);
@@ -1562,6 +1563,7 @@ SCIP_RETCODE storeCuts(
 
          cutvals = SCIProwGetVals(lprows[r]);
          cols = SCIProwGetCols(lprows[r]);
+         storecut = TRUE;
 
          SCIP_CALL( SCIPsetAllocBufferArray(set, &cutvars, ncutvars) );
 
@@ -1577,6 +1579,14 @@ SCIP_RETCODE storeCuts(
             scalar = 1.0;
 
             SCIP_CALL( SCIPvarGetOrigvarSum(&cutvars[c], &scalar, &constant) );
+
+            /* the cut contains an artificial variable that might not be present after modifying the problem */
+            if( cutvars[c] != NULL )
+            {
+               storecut = FALSE;
+               break;
+            }
+
             assert(cutvars[c] != NULL);
             assert(!SCIPsetIsZero(set, scalar));
 
@@ -1589,9 +1599,12 @@ SCIP_RETCODE storeCuts(
             cutvals[c] = cutvals[c]/scalar;
          }
 
-         /* add cut as a linear constraint */
-         SCIP_CALL( SCIPreoptnodeAddCons(reopt->reopttree->reoptnodes[id], set, blkmem, cutvars, cutvals, NULL,
-               lhs, rhs, ncutvars, REOPT_CONSTYPE_CUT, TRUE) );
+         if( storecut )
+         {
+            /* add cut as a linear constraint */
+            SCIP_CALL( SCIPreoptnodeAddCons(reopt->reopttree->reoptnodes[id], set, blkmem, cutvars, cutvals, NULL,
+                  lhs, rhs, ncutvars, REOPT_CONSTYPE_CUT, TRUE) );
+         }
 
          SCIPsetFreeBufferArray(set, &cutvars);
       }
