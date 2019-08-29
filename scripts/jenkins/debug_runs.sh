@@ -136,7 +136,7 @@ if [ "${GITBRANCH}" != "consexpr" ]; then
   JOBS[5,2]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default"
 
   # jobs running on saturday
-  JOBS[6,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdev12merged-solvable TIME=7200 SETTINGS=default"
+  JOBS[6,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdev2-solvable TIME=7200 SETTINGS=default"
 fi
 
 #########################
