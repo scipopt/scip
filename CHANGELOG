@@ -70,6 +70,10 @@ Features
 
 - handle linear binary variables as if squared in simple upgrade from quadratic to second-order cone constraints
 
+- It is no longer necessary to provide a SCIP pointer for the subproblem in SCIPaddBendersSubproblem if custom solving
+  methods are defined. A NULL pointer can be supplied to SCIPaddBendersSubproblem. In this case, no internal Benders'
+  cut generation methods can be used.
+
 Performance improvements
 ------------------------
 

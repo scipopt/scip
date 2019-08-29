@@ -697,7 +697,10 @@ int SCIPgetBendersNSubproblems(
    return SCIPbendersGetNSubproblems(benders);
 }
 
-/** registers the Benders' decomposition subproblem with the Benders' decomposition struct
+/** registers the Benders' decomposition subproblem with the Benders' decomposition struct.
+ *
+ *  If a custom subproblem solving method is used and no internal cut generation methods will be employed, then the
+ *  subproblem parameter can be set to NULL.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -708,12 +711,11 @@ int SCIPgetBendersNSubproblems(
 SCIP_RETCODE SCIPaddBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP*                 subproblem          /**< Benders' decomposition subproblem */
+   SCIP*                 subproblem          /**< Benders' decomposition subproblem, can be NULL */
    )
 {
    assert(scip != NULL);
    assert(benders != NULL);
-   assert(subproblem != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddBendersSubproblem", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -868,8 +870,12 @@ SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
 
    /* check stages for both, SCIP and the requested subproblem data structure */
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcheckBendersSubproblemOptimality", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPcheckStage(SCIPbendersSubproblem(benders, probnumber), "SCIPcheckBendersSubproblemOptimality",
-         FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( SCIPbendersSubproblem(benders, probnumber) != NULL )
+   {
+      SCIP_CALL( SCIPcheckStage(SCIPbendersSubproblem(benders, probnumber), "SCIPcheckBendersSubproblemOptimality",
+            FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   }
 
    (*optimal) = SCIPbendersCheckSubproblemOptimality(benders, scip->set, sol, probnumber);
 
