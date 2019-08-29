@@ -450,7 +450,7 @@ elif [ "${PERFORMANCE}" == "mergerequest" ]; then
     while [ $COUNT_P -le $PERMUTE ]; do
       RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${FULLGITHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB} | grep -P "p=${COUNT_S} s=${COUNT_P}")
       if [ "${RBDB_STRS}" != "" ]; then
-        if [ "${RBDB_STRS}" == "2" ]; then
+        if [ $(echo "${RBDB_STRS}" |wc -l) == "2" ]; then
           COMPAREIDS="${COMPAREIDS}
 ${RBDB_STRS}"
         fi
@@ -461,7 +461,7 @@ ${RBDB_STRS}"
     COUNT_S=$((COUNT_S + 1))
   done
 
-  RBDB_STRS=$(echo "${COMPAREIDS}" |cut -d ' ' -f 2)
+  RBDB_STRS=$(echo "${COMPAREIDS}" |cut -d ' ' -f 2|tac|head -n -1|tac)
   URLSTR=$(geturl "${RBDB_STRS}")
 
   PERF_MAIL=$(echo "The results of the mergerequest run are ready. Take a look at https://rubberband.zib.de/result/${URLSTR}
