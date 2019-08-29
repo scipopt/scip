@@ -16,6 +16,17 @@
 /**@file   reader_diff.c
  * @brief  DIFF file reader
  * @author Jakob Witzig
+ *
+ * This reader allows to parse a new objective function in the style of CPLEX .lp files.
+ *
+ * The lp format is defined within the CPLEX documentation.
+ *
+ * An example of a *.diff file looks like this:
+ *
+ *  Minimize
+ *    obj: - STM6 + STM7
+ *
+ * Here is the objective sense set to minimize the function -STM6 + STM7.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
