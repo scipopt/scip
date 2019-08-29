@@ -1976,6 +1976,7 @@ SCIP_RETCODE varCreate(
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
    (*var)->delglobalstructs = FALSE;
+   (*var)->relaxationonly = FALSE;
 
    for( i = 0; i < NLOCKTYPES; i++ )
    {
@@ -6415,7 +6416,7 @@ SCIP_RETCODE varEventGlbChanged(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(!SCIPsetIsEQ(set, oldbound, newbound) || (newbound != oldbound && newbound * oldbound <= 0.0)); /*lint !e777*/
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -6453,7 +6454,7 @@ SCIP_RETCODE varEventGubChanged(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPsetIsEQ(set, oldbound, newbound));
+   assert(!SCIPsetIsEQ(set, oldbound, newbound) || (newbound != oldbound && newbound * oldbound <= 0.0)); /*lint !e777*/
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -6591,7 +6592,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
    SCIPsetDebugMsg(set, "process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
 
-   if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) )
+   if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) && !(newbound != var->glbdom.lb && newbound * var->glbdom.lb <= 0.0) )  /*lint !e777*/
       return SCIP_OKAY;
 
    /* check bound on debugging solution */
@@ -6767,7 +6768,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
    SCIPsetDebugMsg(set, "process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) )
+   if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) && !(newbound != var->glbdom.ub && newbound * var->glbdom.ub <= 0.0) )  /*lint !e777*/
       return SCIP_OKAY;
 
    /* check bound on debugging solution */
@@ -6945,7 +6946,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
 
    SCIPsetDebugMsg(set, "changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
-   if( SCIPsetIsEQ(set, var->glbdom.lb, newbound) )
+   if( SCIPsetIsEQ(set, var->glbdom.lb, newbound) && !(newbound != var->glbdom.lb && newbound * var->glbdom.lb <= 0.0) )  /*lint !e777*/
       return SCIP_OKAY;
 
    /* change bounds of attached variables */
@@ -7088,7 +7089,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
 
    SCIPsetDebugMsg(set, "changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, var->glbdom.ub, newbound) )
+   if( SCIPsetIsEQ(set, var->glbdom.ub, newbound) && !(newbound != var->glbdom.ub && newbound * var->glbdom.ub <= 0.0) )  /*lint !e777*/
       return SCIP_OKAY;
 
    /* change bounds of attached variables */
@@ -7275,7 +7276,7 @@ SCIP_RETCODE varEventLbChanged(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPsetIsEQ(set, oldbound, newbound) || newbound == var->glbdom.lb); /*lint !e777*/
+   assert(!SCIPsetIsEQ(set, oldbound, newbound) || newbound == var->glbdom.lb || (newbound != oldbound && newbound * oldbound <= 0.0)); /*lint !e777*/
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -7313,7 +7314,7 @@ SCIP_RETCODE varEventUbChanged(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPsetIsEQ(set, oldbound, newbound) || newbound == var->glbdom.ub); /*lint !e777*/
+   assert(!SCIPsetIsEQ(set, oldbound, newbound) || newbound == var->glbdom.ub || (newbound != oldbound && newbound * oldbound <= 0.0)); /*lint !e777*/
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -7395,7 +7396,7 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) && var->glbdom.lb != var->locdom.lb ) /*lint !e777*/
       newbound = var->glbdom.lb;
-   else if( SCIPsetIsEQ(set, newbound, var->locdom.lb) )
+   else if( SCIPsetIsEQ(set, newbound, var->locdom.lb) && !(newbound != var->locdom.lb && newbound * var->locdom.lb <= 0.0) )  /*lint !e777*/
       return SCIP_OKAY;
 
    /* change the bound */
@@ -7562,7 +7563,7 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) && var->glbdom.ub != var->locdom.ub  ) /*lint !e777*/
       newbound = var->glbdom.ub;
-   else if( SCIPsetIsEQ(set, newbound, var->locdom.ub) )
+   else if( SCIPsetIsEQ(set, newbound, var->locdom.ub) && !(newbound != var->locdom.ub && newbound * var->locdom.ub <= 0.0) )  /*lint !e777*/
       return SCIP_OKAY;
 
    /* change the bound */
@@ -7721,7 +7722,8 @@ SCIP_RETCODE SCIPvarChgLbLocal(
 
    SCIPsetDebugMsg(set, "changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, var->locdom.lb, newbound) && (!SCIPsetIsEQ(set, var->glbdom.lb, newbound) || var->locdom.lb == newbound) ) /*lint !e777*/
+   if( SCIPsetIsEQ(set, var->locdom.lb, newbound) && (!SCIPsetIsEQ(set, var->glbdom.lb, newbound) || var->locdom.lb == newbound) /*lint !e777*/
+         && !(newbound != var->locdom.lb && newbound * var->locdom.lb <= 0.0) ) /*lint !e777*/
       return SCIP_OKAY;
 
    /* change bounds of attached variables */
@@ -7847,7 +7849,8 @@ SCIP_RETCODE SCIPvarChgUbLocal(
 
    SCIPsetDebugMsg(set, "changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
-   if( SCIPsetIsEQ(set, var->locdom.ub, newbound) && (!SCIPsetIsEQ(set, var->glbdom.ub, newbound) || var->locdom.ub == newbound) ) /*lint !e777*/
+   if( SCIPsetIsEQ(set, var->locdom.ub, newbound) && (!SCIPsetIsEQ(set, var->glbdom.ub, newbound) || var->locdom.ub == newbound) /*lint !e777*/
+      && !(newbound != var->locdom.ub && newbound * var->locdom.ub <= 0.0) ) /*lint !e777*/
       return SCIP_OKAY;
 
    /* change bounds of attached variables */
@@ -16610,6 +16613,8 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarDropEvent
 #undef SCIPvarGetVSIDS
 #undef SCIPvarGetCliqueComponentIdx
+#undef SCIPvarIsRelaxationOnly
+#undef SCIPvarMarkRelaxationOnly
 #undef SCIPbdchgidxGetPos
 #undef SCIPbdchgidxIsEarlierNonNull
 #undef SCIPbdchgidxIsEarlier
@@ -17009,6 +17014,42 @@ SCIP_Bool SCIPvarIsMarkedDeleteGlobalStructures(
    assert(var != NULL);
 
    return var->delglobalstructs;
+}
+
+/** returns whether a variable has been introduced to define a relaxation
+ *
+ * These variables are only valid for the current SCIP solve round,
+ * they are not contained in any (checked) constraints, but may be used
+ * in cutting planes, for example.
+ * Relaxation-only variables are not copied by SCIPcopyVars and cuts
+ * that contain these variables are not added as linear constraints when
+ * restarting or transferring information from a copied SCIP to a SCIP.
+ * Also conflicts with relaxation-only variables are not generated at
+ * the moment.
+ */
+SCIP_Bool SCIPvarIsRelaxationOnly(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->relaxationonly;
+}
+
+/** marks that this variable has only been introduced to define a relaxation
+ *
+ * The variable must not have a coefficient in the objective.
+ *
+ * @see SCIPvarIsRelaxationOnly
+ */
+void SCIPvarMarkRelaxationOnly(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetObj(var) == 0.0);
+
+   var->relaxationonly = TRUE;
 }
 
 /** returns whether variable is allowed to be deleted completely from the problem */

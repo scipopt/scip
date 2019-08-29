@@ -2622,20 +2622,6 @@ SCIP_RETCODE SCIPconshdlrInitpre(
       }
    }
 
-#if 0
-   /* check if all initial constraints are included in the initconss array */
-   {
-      int c;
-
-      for( c = 0; c < conshdlr->nconss; ++c )
-      {
-         assert(conshdlr->conss[c]->deleted || conshdlr->conss[c]->initial == (conshdlr->conss[c]->initconsspos >= 0));
-         assert(conshdlr->conss[c]->deleted || !conshdlr->conss[c]->initial
-            || conshdlr->initconss[conshdlr->conss[c]->initconsspos] == conshdlr->conss[c]);
-      }
-   }
-#endif
-
    return SCIP_OKAY;
 }
 
@@ -4588,6 +4574,19 @@ SCIP_CONS** SCIPconshdlrGetCheckConss(
    return conshdlr->checkconss;
 }
 
+/** gets array with delayed update constraints
+ *
+ * @attention Usually, there should be no need to access this array. Use this only if you are absolutely sure what you are doing.
+ */
+SCIP_CONS** SCIPconshdlrGetUpdateConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->updateconss;
+}
+
 /** gets total number of existing transformed constraints of constraint handler */
 int SCIPconshdlrGetNConss(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -4640,6 +4639,16 @@ int SCIPconshdlrGetNEnabledConss(
    assert(conshdlr != NULL);
 
    return conshdlr->nenabledconss;
+}
+
+/** gets number of constraints that have delayed updates */
+int SCIPconshdlrGetNUpdateConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nupdateconss;
 }
 
 /** enables or disables all clocks of \p conshdlr, depending on the value of the flag */

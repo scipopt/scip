@@ -221,6 +221,9 @@ SCIP_RETCODE createSubproblem(
 
       assert(SCIPvarIsActive(vars[i]));
 
+      if( subvars[i] == NULL )
+         continue;
+
       /* add objective function as a constraint, if a primal bound exists */
       if( SCIPisInfinity(scip, cutoff) )
       {
@@ -331,54 +334,6 @@ SCIP_RETCODE createSubproblem(
       SCIP_CALL( SCIPaddCons(subscip, objcons) );
       SCIP_CALL( SCIPreleaseCons(subscip, &objcons) );
    }
-
-   return SCIP_OKAY;
-}
-
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_HEUR*            heur,               /**< Completesol heuristic structure */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem or the partial */
-   SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-   )
-{
-   SCIP_VAR** vars;                          /* the original problem's variables */
-   int nvars;                                /* the original problem's number of variables */
-   SCIP_SOL* newsol;                         /* solution to be created for the original problem */
-   int v;
-
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-   assert(subsol != NULL);
-
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-
-   for( v = 0; v < nvars; v++ )
-   {
-      SCIP_Real solval = SCIPgetSolVal(subscip, subsol, subvars[v]);
-
-      assert(!SCIPisInfinity(subscip, solval) && !SCIPisInfinity(subscip, -solval));
-      assert(solval != SCIP_UNKNOWN); /*lint !e777*/
-
-      SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], solval) );
-   }
-
-   /* try to add new solution to SCIP and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    return SCIP_OKAY;
 }
@@ -807,10 +762,7 @@ SCIP_RETCODE setupAndSolve(
 
    /* map all variables */
    for( i = 0; i < nvars; i++ )
-   {
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapf, vars[i]);
-     assert(subvars[i] != NULL);
-   }
 
    /* free hash map */
    SCIPhashmapFree(&varmapf);
@@ -950,7 +902,12 @@ SCIP_RETCODE setupAndSolve(
    success = FALSE;
    for( i = 0; i < nsubsols && (!success || heurdata->addallsols); i++ )
    {
-      SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
+      SCIP_SOL* newsol;
+
+      /* create new solution, try to add to SCIP, and free it immediately */
+      SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], heur, subvars, &newsol) );
+      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+
       if( success )
          *result = SCIP_FOUNDSOL;
    }

@@ -5451,9 +5451,12 @@ SCIP_DECL_CONSCOPY(consCopyXor)
          SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &targetintvar, varmap, consmap, global, valid) );
          assert(!(*valid) || targetintvar != NULL);
 
-         SCIPdebugMsg(scip, "Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar),
-            global ? SCIPvarGetLbGlobal(intvar) : SCIPvarGetLbLocal(intvar),
-            global ? SCIPvarGetUbGlobal(intvar) : SCIPvarGetUbLocal(intvar));
+         if( targetintvar != NULL )
+         {
+            SCIPdebugMsg(scip, "Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar),
+               global ? SCIPvarGetLbGlobal(intvar) : SCIPvarGetLbLocal(intvar),
+               global ? SCIPvarGetUbGlobal(intvar) : SCIPvarGetUbLocal(intvar));
+         }
       }
 
       if( *valid )

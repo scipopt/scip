@@ -50,6 +50,7 @@ if [ "${GITBRANCH}" != "master" ]; then
   fi
 fi
 
+export FULLGITHASH=$(git show -s --pretty=%H)
 export GITBRANCH
 export MODE=debug
 
@@ -65,7 +66,7 @@ fi
 export CRITERION_DIR=/nfs/optimi/usr/sw/criterion
 export CPLEX_DIR=/nfs/optimi/usr/sw/cplex
 export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
-export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.11~ub18.04
+export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
 export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 
 # create all required directories
@@ -84,10 +85,11 @@ mkdir -p settings
 #  - Only 10 runs per day will be executed. If you need more you should overthink you overall concept.
 #  - The check/jenkins_*_cmake.sh evaluation scripts don't work yet if you use a global seed shift.
 # FORMAT:
-#    JOBS[x,y]="EXECUTABLE=scipdbgspx/bin/scip BINID=scipdbgspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
-#    JOBS[x,y]="EXECUTABLE=scipdbgcpx/bin/scip BINID=scipdbgcpx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=performance"
+#    JOBS[x,y]="EXECUTABLE=scipdbgspx/bin/scip BINID=scipdbgspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default"
+#    JOBS[x,y]="EXECUTABLE=scipdbgcpx/bin/scip BINID=scipdbgcpx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default"
 
-RANDOMSEED=`date +%Y%m%d`
+RANDOMSEED=$(date +%Y%m%d)
+export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
 
 # use associative arrays, this requires bash4
 # declaration
@@ -118,9 +120,11 @@ JOBS[7,1]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipd
 if [ "${GITBRANCH}" != "consexpr" ]; then
   # jobs running on monday
   JOBS[1,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default"
+  JOBS[1,3]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=miplib2017_benchmark_hard TIME=7200 SETTINGS=default"
 
   # jobs running on tuesday
-  JOBS[2,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default_${RANDOMSEED}"
+  JOBS[2,2]="EXECUTABLE=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgcpx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=miplib2017_benchmark TIME=7200 SETTINGS=default_${RANDOMSEED}"
+  JOBS[2,3]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=default_${RANDOMSEED}"
 
   # jobs running on wednesday
   JOBS[3,2]="EXECUTABLE=scipdbgspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipdbgspx-${GITBRANCH}_${RANDOMSEED} MEM=6000 QUEUE=opt TEST=mipdebug TIME=60 SETTINGS=presolaggr_sepaaggr_heuroff_${RANDOMSEED}"
@@ -223,6 +227,9 @@ ${SCIP_BINARY} -c "set sepa emph aggr set presol emph aggr set heur emph off set
 ln -fs /nfs/optimi/kombadon/IP check/
 ln -fs /nfs/optimi/kombadon/MINLP check/
 
+# get testset files to the correct place
+cp check/IP/instancedata/testsets/*.test check/testset/
+
 #######################
 ### Submit Testruns ###
 #######################
@@ -233,8 +240,6 @@ for i in `seq 1 ${TODAYS_N_JOBS}`; do
     unset $j
   done
   export ${FLAGS}
-
-  cp check/IP/instancedata/testsets/*.test check/testset/
 
   echo "Submitting job with configuration:\n- compilation: ${SCIPFLAGS}'\n- make testcluster: ${FLAGS}"
   make testcluster DEBGUTOOL=gdb ${FLAGS} | check/jenkins_check_results_cmake.sh

@@ -70,7 +70,7 @@ set(settings_MIP
     "lns_epsgreedy"
     "lns_exp3"
 #    "dynamic"
-#     "intobj" <- please delete at all or enable if #2637 is closed
+    "intobj"
 #    "nologicor"
     "xorsepaparity"
     "solvingphases"
@@ -78,6 +78,12 @@ set(settings_MIP
     "uct_breadth_dualval"
     "conflictdiving"
 )
+#
+# settings for the componentshandler test
+#
+set(settings_compHandlerTest
+    "components_during_solve"
+    )
 #
 # settings to run a reduced MIP test
 #
@@ -140,6 +146,17 @@ set(settings_Benders
     "usebenders-tr"
     "usebenders-cutstrengthen"
    )
+   
+set(settings_Indicator
+    "default"
+    "indicatorrestart"
+    "indicatorperspective"
+    "indicatorlogicorsepa"
+    "indicatorcoupling"
+    "indicatorconflict"
+    "indicatoralterlp"
+    "indicatorupgrade"
+   )
 
 #
 # Indicator instances
@@ -153,6 +170,12 @@ set(settings_Cardinality
     "default"
 #    "upgdcardinality"
 )
+
+set(settings_Or
+    "default"
+    "presolving_separating_heuristics_off_randombranching"
+)
+
 
 set(instances_Readertest
     "instances/MIP/bell5.mps\;8966406.49"
@@ -192,7 +215,13 @@ set(instances_MIP
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
     )
-
+#
+# Instances for component handler test
+#
+set(instances_compHandlerTest
+    "instances/MIP/lseu_dcmulti.cip\;189302"
+    "instances/MIP/4sHB.cip\;67"
+    )
 #
 # Reduced set of MIP instances for more expensive settings
 #
@@ -335,6 +364,10 @@ set(instances_Benders
     "instances/Stochastic/sslp_5_25_50_LB.smps\;-121.6"
    )
 
+set(instances_Or
+    "instances/Or/or_constraint.cip\;18"
+    )
+
 #
 # available reader file extensions for SCIP readers
 #
@@ -408,8 +441,9 @@ macro(add_instancetests instances settings prefix)
 endmacro(add_instancetests)
 
 add_instancetests(instances_CP settings_default "CP")
-add_instancetests(instances_Indicator settings_default "Indicator")
+add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
+add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
@@ -424,6 +458,7 @@ add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
+add_instancetests(instances_Or settings_Or "Or")
 
 #
 # test writing and reading solutions
@@ -445,6 +480,22 @@ foreach(instance ${instances_MINLP})
 endforeach(instance)
 
 #
+# test reading .cip files for indicator instances
+#
+foreach(instance ${instances_Indicator})
+    split_instance(instance)
+    #
+    # configure the batch file for this test by substituting placeholders in the in.file
+    #
+    configure_file(interactiveshell/solvecip.bat.in interactiveshell/solvecip-${basename}.bat)
+    add_test(NAME Indicator-solvecip-${basename}
+            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solvecip-${basename}.bat
+            )
+    set_tests_properties(Indicator-solvecip-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+endforeach(instance)
+
+
+#
 # the following instances are not pure binary and hence cannot be written out in opb format
 #
 set(basenames_opb_wrongformat
@@ -457,6 +508,8 @@ set(basenames_opb_wrongformat
     misc03.mps
     rgn.mps
     vpm2.fzn
+    lseu_dcmulti.cip
+    lseu_dcmulti_sHB.cip
     )
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 

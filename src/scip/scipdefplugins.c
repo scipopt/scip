@@ -105,8 +105,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolTworowbnd(scip) );
    SCIP_CALL( SCIPincludePresolSparsify(scip) );
    SCIP_CALL( SCIPincludePresolStuffing(scip) );
-   SCIP_CALL( SCIPincludePresolSymmetry(scip) );
-   SCIP_CALL( SCIPincludePresolSymbreak(scip) );   /* needs to be included after presol_symmetry */
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
    SCIP_CALL( SCIPincludeNodeselBreadthfirst(scip) );
    SCIP_CALL( SCIPincludeNodeselDfs(scip) );
@@ -189,12 +187,12 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropDualfix(scip) );
    SCIP_CALL( SCIPincludePropGenvbounds(scip) );
    SCIP_CALL( SCIPincludePropObbt(scip) );
-   SCIP_CALL( SCIPincludePropOrbitalfixing(scip) );
    SCIP_CALL( SCIPincludePropNlobbt(scip) );
    SCIP_CALL( SCIPincludePropProbing(scip) );
    SCIP_CALL( SCIPincludePropPseudoobj(scip) );
    SCIP_CALL( SCIPincludePropRedcost(scip) );
    SCIP_CALL( SCIPincludePropRootredcost(scip) );
+   SCIP_CALL( SCIPincludePropSymmetry(scip) );
    SCIP_CALL( SCIPincludePropVbounds(scip) );
    SCIP_CALL( SCIPincludeSepaCGMIP(scip) );
    SCIP_CALL( SCIPincludeSepaClique(scip) );

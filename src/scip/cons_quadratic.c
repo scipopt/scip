@@ -2507,8 +2507,8 @@ SCIP_RETCODE addBilinearTerm(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* check if the bilinear terms are sorted */
-   assert(consdataCheckBilinTermsSort(consdata));
+   /* check if the bilinear terms are sorted (disabled for big constraints as becoming expensive) */
+   assert(consdata->nbilinterms > 10 || consdataCheckBilinTermsSort(consdata));
 
    assert(var1pos >= 0);
    assert(var1pos < consdata->nquadvars);
@@ -2575,8 +2575,8 @@ SCIP_RETCODE addBilinearTerm(
 
    consdata->iscurvchecked = FALSE;
 
-   /* check if the bilinear terms are sorted */
-   assert(consdataCheckBilinTermsSort(consdata));
+   /* check if the bilinear terms are sorted (disabled as expensive if big constraint) */
+   assert(consdata->nbilinterms > 10 || consdataCheckBilinTermsSort(consdata));
 
    return SCIP_OKAY;
 }
@@ -6868,7 +6868,7 @@ void generateCutLTIcomputeCoefs(
    else if( (xlow < xl && xupp > xu) || (ylow < yl && yupp > yu) )
    {
       /* Case 5: both outside of bounding box, N and S or W and E. */
-#if 0
+#ifdef SCIP_DISABLED_CODE
       SCIP_Real xlow2;
       SCIP_Real ylow2;
       SCIP_Real xupp2;
@@ -6900,7 +6900,7 @@ void generateCutLTIcomputeCoefs(
       SCIPdebugMsg(scip, "lower: %9g\t%9g\tprod %9g\n", xlow, ylow, xlow*ylow);
       SCIPdebugMsg(scip, "upper: %9g\t%9g\tprod %9g\n", xupp, yupp, xupp*yupp);
 
-#if 1
+#ifndef SCIP_DISABLED_CODE
       /* Nothing to find. Just separate two inequalities at the same point, just using different support */
       if( generateCutLTIgenMulCoeff(scip, xlow, ylow, xupp, yupp, FALSE, cx, cy, cw) )
       {
@@ -7565,7 +7565,8 @@ SCIP_RETCODE generateCutNonConvex(
          SCIPdebugMsg(scip, "McCormick = %g (%u)\n", refx * coef + refy * coef2 + constant, *success);
 
          /* tries to compute a tighter relaxation for xy by using valid linear inequalities */
-         if( conshdlrdata->bilinestimators != NULL && ubx - lbx >= 0.1 && uby - lby >= 0.1
+         if( consdata->bilintermsidx != NULL && conshdlrdata->bilinestimators != NULL
+            && ubx - lbx >= 0.1 && uby - lby >= 0.1
             && (SCIPgetNSepaRounds(scip) <= conshdlrdata->bilinineqmaxseparounds || SCIPgetDepth(scip) == 0) )
          {
             BILINESTIMATOR* bilinestimator;
@@ -12080,26 +12081,6 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
 
    return SCIP_OKAY;
 }
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 0
-static
-SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
-   int c;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(conss != NULL || nconss == 0);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   return SCIP_OKAY;
-}
-#endif
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static

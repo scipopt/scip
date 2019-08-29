@@ -406,10 +406,12 @@
 =best=     elec50                                        1055.1823150000
 =bestdual= elec50                                         359.0296983000
 =opt=      elf                                              0.1916666667
-=opt=      emfl050_3_3                                     10.4017379300
+=best=     emfl050_3_3                                     10.4017379300
+=bestdual= emfl050_3_3                                     10.4012969900
 =best=     emfl050_5_5                                     18.9134077600
 =bestdual= emfl050_5_5                                     18.9091920800
-=opt=      emfl100_3_3                                     18.1326244600
+=best=     emfl100_3_3                                     18.1326244600
+=bestdual= emfl100_3_3                                     18.1319824400
 =opt=      emfl100_5_5                                     32.6381834800
 =opt=      eniplac                                    -132117.0830000000
 =opt=      enpro48pb                                   187277.2594000000
@@ -535,7 +537,7 @@
 =opt=      ex7_3_3                                          0.8175290489
 =opt=      ex7_3_4                                          6.2746343370
 =best=     ex7_3_5                                          1.2068714300
-=bestdual= ex7_3_5                                          1.2057085900
+=bestdual= ex7_3_5                                          1.2054531570
 =inf=      ex7_3_6
 =best=     ex8_1_1                                         -2.0218067830
 =best=     ex8_1_2                                         -1.0708610190
@@ -545,7 +547,8 @@
 =opt=      ex8_1_6                                        -10.0860015000
 =best=     ex8_1_7                                          0.0293108307
 =bestdual= ex8_1_7                                          0.0293107220
-=opt=      ex8_2_1b                                      -979.1782737000
+=best=     ex8_2_1b                                      -979.1782737000
+=bestdual= ex8_2_1b                                      -979.1913068000
 =best=     ex8_2_2b                                      -552.6662562000
 =bestdual= ex8_2_2b                                      -571.2362293000
 =best=     ex8_2_3b                                     -3731.0792780000
@@ -1707,19 +1710,21 @@
 =opt=      squfl010-025                                   214.1109952000
 =opt=      squfl010-025persp                              214.1109525000
 =opt=      squfl010-040                                   240.5985262000
-=opt=      squfl010-040persp                              240.5985262000
+=best=     squfl010-040persp                              240.5985262000
+=bestdual= squfl010-040persp                              240.5967209000
 =opt=      squfl010-080                                   509.7060216000
 =opt=      squfl010-080persp                              509.7060216000
 =opt=      squfl015-060                                   366.6218167000
 =opt=      squfl015-060persp                              366.6218167000
 =opt=      squfl015-080                                   402.4885300000
 =best=     squfl015-080persp                              402.4885300000
-=bestdual= squfl015-080persp                              402.4880496000
+=bestdual= squfl015-080persp                              402.4844708000
 =opt=      squfl020-040                                   209.2548902000
-=opt=      squfl020-040persp                              209.2548902000
+=best=     squfl020-040persp                              209.2548902000
+=bestdual= squfl020-040persp                              209.2527848000
 =opt=      squfl020-050                                   230.2021495000
 =best=     squfl020-050persp                              230.2021495000
-=bestdual= squfl020-050persp                              230.2018279000
+=bestdual= squfl020-050persp                              230.1986059000
 =opt=      squfl020-150                                   557.8486500000
 =best=     squfl020-150persp                              557.8486500000
 =bestdual= squfl020-150persp                              555.6429822000
@@ -1729,7 +1734,7 @@
 =opt=      squfl025-030persp                              205.5016551000
 =opt=      squfl025-040                                   197.3338812000
 =best=     squfl025-040persp                              197.3338812000
-=bestdual= squfl025-040persp                              197.3336792000
+=bestdual= squfl025-040persp                              197.3316600000
 =best=     squfl030-100                                   363.0938483000
 =bestdual= squfl030-100                                   359.9787171000
 =best=     squfl030-100persp                              363.0938483000
@@ -2078,6 +2083,7 @@
 =best=     var_con5                                       278.1448937000
 =opt=      wager                                        20339.4318400000
 =opt=      wall                                            -1.0000046620
+=best=     wallfix                                          1.0000046580
 =opt=      waste                                          598.9191764000
 =best=     wastepaper3                                      0.0189183680
 =bestdual= wastepaper3                                      0.0189179908

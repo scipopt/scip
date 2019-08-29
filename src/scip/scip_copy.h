@@ -295,8 +295,9 @@ SCIP_Bool SCIPisConsCompressionEnabled(
    );
 
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
- *  it is just returned as target variable; elsewise a new variable will be created and added to the target SCIP; this
- *  created variable is added to the variable hash map and returned as target variable
+ *  it is just returned as target variable; otherwise, if the variables it not marked as relaxation-only, a new variable
+ *  will be created and added to the target SCIP; this created variable is added to the variable hash map and returned as target variable;
+ *  relaxation-only variables are not copied and FALSE is returned in *success
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -344,9 +345,12 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    );
 
-/** copies all active variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
- *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed and aggregated
- *  variables do not get copied
+/** Copies all active (thus unfixed) variables from source-SCIP, except those that are marked as relaxation only,
+ *  and adds these variable to the target-SCIP.
+ *
+ *  The mapping between these variables are stored in the variable hashmap.
+ *
+ *  The target-SCIP has to be in problem creation stage.
  *
  *  @note the variables are added to the target-SCIP but not captured
  *
@@ -446,9 +450,41 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPmergeVariableStatistics(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_VAR**            sourcevars,         /**< source variables for history merge */
-   SCIP_VAR**            targetvars,         /**< target variables for history merge */
+   SCIP_VAR**            sourcevars,         /**< source variables for history merge, NULL entries are ignored */
+   SCIP_VAR**            targetvars,         /**< target variables for history merge, NULL entries are ignored */
    int                   nvars               /**< number of variables in both variable arrays */
+   );
+
+/** translates a solution from a subscip to the main scip
+ *
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
+ * are represented as NULL entry in the \p subvars array.
+ *
+ * @note This method allocates a new solution of the main \p scip that needs to be freed by the user.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPtranslateSubSol(
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_SOL**            newsol              /**< buffer to store pointer to created solution in main SCIP */
+   );
+
+/** checks the solutions from the subscip and adds the first one that is found feasible to the master SCIP
+ *
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
+ * are represented as NULL entry in the \p subvars array.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPtranslateSubSols(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_Bool*            success,            /**< pointer to store, whether new solution was found */
+   int*                  solindex            /**< pointer to store solution index of stored solution, or NULL if not of interest */
    );
 
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
@@ -535,6 +571,9 @@ SCIP_RETCODE SCIPgetConsCopy(
  *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
  *  between the constraints of the source and target-SCIP is stored
  *
+ *  *valid is set to TRUE iff all constraints that are marked as checked or enforced were copied successfully.
+ *  If other constraints could not be copied, *valid can still be set to TRUE.
+ *
  *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP. (If you mix
  *        SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add explicitly and what is already
  *        added.) You can check whether a constraint is added by calling SCIPconsIsAdded().
@@ -576,7 +615,7 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance?
                                               *   If TRUE, the modifiable flag of constraints will be copied. */
-   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
+   SCIP_Bool*            valid               /**< pointer to store whether all checked or enforced constraints were validly copied */
    );
 
 /** copies all original constraints from the source-SCIP and adds these to the target-SCIP; for mapping the
@@ -661,6 +700,8 @@ SCIP_RETCODE SCIPconvertCutsToConss(
    );
 
 /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip
+ *
+ *  Cuts that contain variables that are marked as relaxation-only are skipped.
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -886,7 +927,7 @@ void SCIPsetSubscipDepth(
  *  1) copy the plugins
  *  2) copy the settings
  *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
- *  4) copy all active variables
+ *  4) copy all active variables except those are marked as relaxation-only
  *  5) copy all constraints
  *
  *  The source problem depends on the stage of the \p sourcescip - In SCIP_STAGE_PROBLEM, the original problem is copied,
@@ -955,7 +996,7 @@ SCIP_RETCODE SCIPcopy(
  *  1) copy the plugins
  *  2) copy the settings
  *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
- *  4) copy all active variables
+ *  4) copy all active variables except those are marked as relaxation-only
  *     a) fix all variable copies specified by \p fixedvars, \p fixedvals, and \p nfixedvars
  *     b) enable constraint compression
  *  5) copy all constraints

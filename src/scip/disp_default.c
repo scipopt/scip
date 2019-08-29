@@ -949,11 +949,14 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputCutPoolSize)
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNConflicts)
 {  /*lint --e{715}*/
+   SCIP_Longint applied;
+
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONFLICTS) == 0);
    assert(scip != NULL);
 
-   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNConflictConssApplied(scip), DISP_WIDT_CONFLICTS);
+   applied = SCIPgetNConflictConssApplied(scip) + SCIPgetNConflictDualproofsApplied(scip);
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, applied, DISP_WIDT_CONFLICTS);
 
    return SCIP_OKAY;
 }

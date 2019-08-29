@@ -34,9 +34,9 @@ using namespace std;
 
 /** method finding the edge going from the node with id index1 to the node with id index2 */
 GRAPHEDGE* findEdge(
-   GRAPHNODE*         nodes,              /**< all nodes of the graph */
-   int                index1,             /**< id of the node where the searched edge starts */
-   int                index2              /**< id of the node where the searched edge ends */
+   GRAPHNODE*            nodes,              /**< all nodes of the graph */
+   int                   index1,             /**< id of the node where the searched edge starts */
+   int                   index2              /**< id of the node where the searched edge ends */
    )
 {
    GRAPHEDGE* edge = nodes[index1].first_edge;
@@ -45,25 +45,25 @@ GRAPHEDGE* findEdge(
    while( edge != NULL )
    {
       if( edge->adjac->id == index2 )
-         break; 
+         break;
       edge = edge->next;
    }
-   
+
    return edge;
 }
 
+
 /** method updating the distances of the nodes to the tour after having inserted one node with id index */
 void updateDistances(
-   GRAPHNODE*         nodes,              /**< all nodes of the graph */
-   double*            dist,               /**< array with current distances of all nodes to the subtour */
-   int                idx                 /**< id of the inserted node */
+   GRAPHNODE*            nodes,              /**< all nodes of the graph */
+   double*               dist,               /**< array with current distances of all nodes to the subtour */
+   int                   idx                 /**< id of the inserted node */
    )
-{ 
+{
    GRAPHEDGE* edge = nodes[idx].first_edge;
-   
-   // regard all outgoing edges of the node and update, 
-   // if the length and therefore the distance of the adjacent is smaller
-   // and the edge is not fixed to 0.
+
+   /* Regard all outgoing edges of the node and update, if the length and therefore the distance of the adjacent is
+    * smaller and the edge is not fixed to 0. */
    while( edge != NULL )
    {
       if( dist[edge->adjac->id] > edge->length && SCIPvarGetUbGlobal(edge->var) != 0.0 )
@@ -75,27 +75,27 @@ void updateDistances(
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 SCIP_DECL_HEURFREE(HeurFarthestInsert::scip_free)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
-} /*lint !e715*/
-   
+}
+
 /** initialization method of primal heuristic (called after problem was transformed) */
 SCIP_DECL_HEURINIT(HeurFarthestInsert::scip_init)
-{
+{  /*lint --e{715}*/
    ProbDataTSP* probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
    graph_ = probdata->getGraph(); /*lint !e613*/
    capture_graph(graph_);
    return SCIP_OKAY;
-} /*lint !e715*/
-   
+}
+
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 SCIP_DECL_HEUREXIT(HeurFarthestInsert::scip_exit)
-{
+{  /*lint --e{715}*/
    release_graph(&graph_);
 
    return SCIP_OKAY;
-} /*lint !e715*/
-   
+}
+
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin)
  *
  *  This method is called when the presolving was finished and the branch and bound process is about to begin.
@@ -103,20 +103,20 @@ SCIP_DECL_HEUREXIT(HeurFarthestInsert::scip_exit)
  *
  */
 SCIP_DECL_HEURINITSOL(HeurFarthestInsert::scip_initsol)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
-} /*lint !e715*/
-   
+}
+
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed)
  *
  *  This method is called before the branch and bound process is freed.
  *  The primal heuristic should use this call to clean up its branch and bound data.
  */
 SCIP_DECL_HEUREXITSOL(HeurFarthestInsert::scip_exitsol)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
-} /*lint !e715*/
-   
+}
+
 /** execution method of primal heuristic
  *
  *  Searches for feasible primal solutions. The method is called in the node processing loop.
@@ -129,7 +129,7 @@ SCIP_DECL_HEUREXITSOL(HeurFarthestInsert::scip_exitsol)
  *                      its frequency
  */
 SCIP_DECL_HEUREXEC(HeurFarthestInsert::scip_exec)
-{   
+{  /*lint --e{715}*/
    int nnodes = graph_->nnodes; /*lint !e613*/
    int nedges = graph_->nedges; /*lint !e613*/
 
@@ -139,29 +139,29 @@ SCIP_DECL_HEUREXEC(HeurFarthestInsert::scip_exec)
       GRAPHEDGE* edge = &(graph_->edges[e]); /*lint !e613*/
       if( SCIPvarGetLbGlobal(edge->var) == 1.0 )
       {
-	 hasFixedEdges = true;
-	 break;
-      } 
+         hasFixedEdges = true;
+         break;
+      }
    }
-   
+
    // no longer need "SCIPgetNRuns(scip) > 1" since we now respect fixed variables after restart
    if( nnodes < 3 || hasFixedEdges )
       *result = SCIP_DIDNOTRUN;
    else
-   {   
+   {
       bool* subtour;
       int i;
       double*       dist;
 
-      GRAPHNODE* startnode;   
+      GRAPHNODE* startnode;
       GRAPHNODE* node;
-      GRAPHEDGE* edge; 
+      GRAPHEDGE* edge;
 
       GRAPHEDGE** bestedges;         // will contain the best insertion of a given node into a subtour
       GRAPHEDGE** edges;             // will contain some insertion of a given node into a subtour
-      GRAPHEDGE** successor;         // stores the successor of a node in the current subtour    
+      GRAPHEDGE** successor;         // stores the successor of a node in the current subtour
       GRAPHNODE* nodes = graph_->nodes; /*lint !e613*/
-    
+
       for( i = 0; i < nnodes; i++ )
          assert( i == nodes[i].id );
 
@@ -175,7 +175,7 @@ SCIP_DECL_HEUREXEC(HeurFarthestInsert::scip_exec)
       BMSclearMemoryArray(subtour, nnodes);
       for( i = 0; i < nnodes; i++ )
          dist[i] = DBL_MAX;
-      
+
       // building up a 3-circle, only using edges not fixed to 0
       SCIP_Bool foundThreeCircle = FALSE;
       for(int u = 0; u < nnodes - 2 && !foundThreeCircle; ++u)
@@ -186,15 +186,18 @@ SCIP_DECL_HEUREXEC(HeurFarthestInsert::scip_exec)
             assert(uv != NULL);
             if( SCIPvarGetUbGlobal(uv->var) == 0.0 )
                continue;
+
             for(int w = v + 1; (w < nnodes) && !foundThreeCircle; ++w) /*lint !e845*/
             {
                GRAPHEDGE * vw = findEdge(nodes, v, w);
                assert(vw != NULL);
                GRAPHEDGE * wu = findEdge(nodes, w, u);
                assert(wu != NULL);
+
                if( SCIPvarGetUbGlobal(vw->var) == 0.0 || SCIPvarGetUbGlobal(wu->var) == 0.0 )
                   continue;
-               else {
+               else
+               {
                   foundThreeCircle = true;
 
                   subtour[u] = true;
@@ -262,8 +265,8 @@ SCIP_DECL_HEUREXEC(HeurFarthestInsert::scip_exec)
             assert(edge != NULL);
             assert(subtour[edge->adjac->id]);
 
-            // find best insertion of the new node by trying to replace any edge connecting  by the two edges connecting
-            // its end node with the new node
+            /* find best insertion of the new node by trying to replace any edge connecting by the two edges connecting
+             * its end node with the new node */
             minval = DBL_MAX;
             edges[0] = edge;
             startnode = edge->adjac;
@@ -330,11 +333,14 @@ SCIP_DECL_HEUREXEC(HeurFarthestInsert::scip_exec)
             {
                SCIP_CALL( SCIPsetSolVal(scip, sol, successor[i]->var, 1.0) );
             }
+
             SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+
             if( success )
                *result = SCIP_FOUNDSOL;
             else
                *result = SCIP_DIDNOTFIND;
+
             SCIP_CALL( SCIPfreeSol(scip, &sol) );
          } // couldNotInsert == FALSE
       } // foundThreeCircle == TRUE
@@ -348,7 +354,7 @@ SCIP_DECL_HEUREXEC(HeurFarthestInsert::scip_exec)
    }
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** clone method which will be used to copy a objective plugin */
 SCIP_DECL_HEURCLONE(scip::ObjCloneable* HeurFarthestInsert::clone) /*lint !e665*/
