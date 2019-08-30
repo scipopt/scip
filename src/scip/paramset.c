@@ -3053,16 +3053,19 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
    )
 {
    SCIP_PARAM* param;
+   SCIP_PRESOL** presols;
    char paramname[SCIP_MAXSTRLEN];
+   int npresols;
+   int p;
 
    /* reset previous changes on presolving parameters */
    SCIP_CALL( paramsetSetPresolvingDefault(paramset, set, messagehdlr, quiet) );
 
    /* explicitly change restart parameters */
-   SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/restartfac", 0.03, quiet) );
+   SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/restartfac", 0.0125, quiet) );
    SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/restartminred", 0.06, quiet) );
 
-   /* explicitly change parameters of setppc constraint handler, if included */
+   /* explicitly enable clique lifting of setppc constraint handler, if included */
 #ifndef NDEBUG
    if( SCIPsetFindConshdlr(set, "setppc") != NULL )
 #endif
@@ -3070,44 +3073,23 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/setppc/cliquelifting", TRUE, quiet) );
    }
 
-   /* explicitly change parameters of presolver boundshift, if included */
-#ifndef NDEBUG
-   if( SCIPsetFindPresol(set, "boundshift") != NULL )
-#endif
-   {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/boundshift/maxrounds", -1, quiet) );
-   }
+   presols = set->presols;
+   npresols = set->npresols;
 
-   /* explicitly change parameters of presolver convertinttobin, if included */
-#ifndef NDEBUG
-   if( SCIPsetFindPresol(set, "convertinttobin") != NULL )
-#endif
+   /* enable all presolvers except for convertinttobin */
+   for( p = 0; p < npresols; ++p )
    {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/convertinttobin/maxrounds", 0, quiet) );
-   }
+      const char* presolname;
+      presolname = SCIPpresolGetName(presols[p]);
 
-   /* explicitly change parameters of presolver dualagg, if included */
-#ifndef NDEBUG
-   if( SCIPsetFindPresol(set, "dualagg") != NULL )
-#endif
-   {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/dualagg/maxrounds", -1, quiet) );
-   }
+      /* convertinttobin alters the problem formulation, which needs to be actively enabled by the user */
+      if( strcmp(presolname, "convertinttobin") == 0 )
+         continue;
 
-   /* explicitly change parameters of presolver tworowbnd, if included */
-#ifndef NDEBUG
-   if( SCIPsetFindPresol(set, "tworowbnd") != NULL )
-#endif
-   {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/tworowbnd/maxrounds", -1, quiet) );
-   }
+      /* get maxrounds parameter of presolvers */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/maxrounds", presolname);
 
-   /* explicitly change parameters of presolver redvub, if included */
-#ifndef NDEBUG
-   if( SCIPsetFindPresol(set, "redvub") != NULL )
-#endif
-   {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/redvub/maxrounds", -1, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, -1, quiet) );
    }
 
    /* explicitly change parameters of probing */
