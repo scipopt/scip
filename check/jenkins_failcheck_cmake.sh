@@ -450,7 +450,7 @@ elif [ "${PERFORMANCE}" == "mergerequest" ]; then
     while [ $COUNT_P -le $PERMUTE ]; do
       RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${FULLGITHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB} | grep -P "p=${COUNT_P} s=${COUNT_S}")
       if [ "${RBDB_STRS}" != "" ]; then
-        if [ $(echo "${RBDB_STRS}" |wc -l) == "2" ]; then
+        if [ 2 -le $(echo "${RBDB_STRS}" |wc -l) ]; then
           COMPAREIDS="${COMPAREIDS}
 ${RBDB_STRS}"
         fi
