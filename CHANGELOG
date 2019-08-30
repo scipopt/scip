@@ -353,6 +353,9 @@ Interface changes
 
 ### Changed parameters
 
+- enabling aggressive presolving now activates all available presolving plugins,
+  and decreases the presolving/restartfac parameter correctly with respect to default.
+
 ### New parameters
 
 ### Data structures
@@ -383,6 +386,7 @@ Fixed bugs
 - fixed bug in SCIPreoptReleaseData() when freeing all stored constraints
 - fixed bug when freeing the transformed problem via interactive shell if reoptimization is enabled
 - fixed two issues related to (near-)redundant logicor constraints in presolving
+- fixed counting of aggregations in XOR constraint handler
 
 Miscellaneous
 -------------

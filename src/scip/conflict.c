@@ -6535,6 +6535,84 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
    return SCIP_OKAY;
 }
 
+/** adds an weigthed LP row to an aggregation row */
+static
+SCIP_RETCODE addRowToAggrRow(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_Real             weight,             /**< weight for scaling */
+   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
+   )
+{
+   assert(set != NULL);
+   assert(row != NULL);
+   assert(weight != 0.0);
+
+   /* add minimal value to dual row's left hand side: y_i < 0 -> lhs, y_i > 0 -> rhs */
+   if( weight < 0.0 )
+   {
+      assert(!SCIPsetIsInfinity(set, -row->lhs));
+      SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight, -1) );
+   }
+   else
+   {
+      assert(!SCIPsetIsInfinity(set, row->rhs));
+      SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight, +1) );
+   }
+   SCIPsetDebugMsg(set, " -> add row <%s>[%g,%g]: dual=%g -> dualrhs=%g\n",
+      SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, weight, SCIPaggrRowGetRhs(aggrrow));
+
+   return SCIP_OKAY;
+}
+
+/** check validity of LP row and a corresponding weight */
+static
+SCIP_Bool checkDualFeasibility(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_Real             weight,             /**< weight for scaling */
+   SCIP_Bool*            zerocontribution    /**< pointer to store whether every row entry is zero within tolerances */
+   )
+{
+   SCIP_Bool valid = TRUE;
+
+   *zerocontribution = TRUE;
+
+   /* dual solution values of 0.0 are always valid */
+   if( REALABS(weight) > QUAD_EPSILON )
+   {
+      *zerocontribution = FALSE;
+
+      /* check dual feasibility */
+      if( (SCIPsetIsInfinity(set, -row->lhs) && weight > 0.0) || (SCIPsetIsInfinity(set, row->rhs) && weight < 0.0) )
+      {
+         int i;
+
+         /* ignore slight numerical violations if the contribution of every component of the row is close to zero */
+         if( weight > 0.0 )
+            *zerocontribution = SCIPsetIsDualfeasZero(set, row->rhs * weight);
+         else
+            *zerocontribution = SCIPsetIsDualfeasZero(set, row->lhs * weight);
+
+         for( i = 0; i < row->len && *zerocontribution; i++ )
+         {
+            if( !SCIPsetIsDualfeasZero(set, weight * row->vals[i]) )
+               *zerocontribution = FALSE;
+         }
+
+         if( !(*zerocontribution) )
+         {
+            SCIPsetDebugMsg(set, " -> invalid dual solution value %g for row <%s>: lhs=%g, rhs=%g\n",
+               weight, SCIProwGetName(row), row->lhs, row->rhs);
+
+            valid = FALSE;
+         }
+      }
+   }
+
+   return valid;
+}
+
 /** calculates a Farkas proof from the current dual LP solution */
 static
 SCIP_RETCODE getFarkasProof(
@@ -6593,71 +6671,54 @@ SCIP_RETCODE getFarkasProof(
       assert(row->len == 0 || row->vals != NULL);
       assert(row == lp->lpirows[r]);
 
-      /* ignore local rows and rows with Farkas value 0.0 */
-      if( !row->local && !SCIPsetIsDualfeasZero(set, dualfarkas[r]) )
+      /* ignore dual ray values of 0.0 (in this case: y_i == z_i == 0) */
+      if( REALABS(dualfarkas[r]) > 0.0 )
       {
+         SCIP_Bool zerocontribution;
+
+         /* check dual feasibility */
+         *valid = checkDualFeasibility(set, row, dualfarkas[r], &zerocontribution);
+
+         if( !(*valid) )
+            goto TERMINATE;
+
+         if( zerocontribution )
+            continue;
+
+         if( SCIPsetIsDualfeasZero(set, dualfarkas[r]) )
+            continue;
+
+         if( !row->local )
+         {
 #ifndef NDEBUG
-         {
-            SCIP_Real lpilhs;
-            SCIP_Real lpirhs;
+            {
+               SCIP_Real lpilhs;
+               SCIP_Real lpirhs;
 
-            SCIP_CALL( SCIPlpiGetSides(lpi, r, r, &lpilhs, &lpirhs) );
-            assert((SCIPsetIsInfinity(set, -lpilhs) && SCIPsetIsInfinity(set, -row->lhs))
-               || SCIPsetIsRelEQ(set, lpilhs, row->lhs - row->constant));
-            assert((SCIPsetIsInfinity(set, lpirhs) && SCIPsetIsInfinity(set, row->rhs))
-               || SCIPsetIsRelEQ(set, lpirhs, row->rhs - row->constant));
-         }
+               SCIP_CALL( SCIPlpiGetSides(lpi, r, r, &lpilhs, &lpirhs) );
+               assert((SCIPsetIsInfinity(set, -lpilhs) && SCIPsetIsInfinity(set, -row->lhs))
+                  || SCIPsetIsRelEQ(set, lpilhs, row->lhs - row->constant));
+               assert((SCIPsetIsInfinity(set, lpirhs) && SCIPsetIsInfinity(set, row->rhs))
+                  || SCIPsetIsRelEQ(set, lpirhs, row->rhs - row->constant));
+            }
 #endif
-
-         /* add row side to Farkas row lhs: dualfarkas > 0 -> lhs, dualfarkas < 0 -> rhs */
-         if( dualfarkas[r] > 0.0 )
-         {
-            /* check if sign of dual Farkas value is valid */
-            if( SCIPsetIsInfinity(set, -row->lhs) )
-               continue;
+            SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow) );
 
             /* due to numerical reasons we want to stop */
-            if( REALABS(dualfarkas[r] * (row->lhs - row->constant)) > NUMSTOP )
+            if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
             {
                (*valid) = FALSE;
                goto TERMINATE;
             }
-
-            SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualfarkas[r], -1) );
          }
+#ifdef SCIP_DEBUG
          else
          {
-            /* check if sign of dual Farkas value is valid */
-            if( SCIPsetIsInfinity(set, row->rhs) )
-               continue;
-
-            /* due to numerical reasons we want to stop */
-            if( REALABS(dualfarkas[r] * (row->rhs - row->constant)) > NUMSTOP )
-            {
-               (*valid) = FALSE;
-               goto TERMINATE;
-            }
-
-            SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualfarkas[r], +1) );
+            SCIPsetDebugMsg(set, " -> ignoring local row <%s> with dual Farkas value %.10f (lhs=%g, rhs=%g)\n",
+               SCIProwGetName(row), dualfarkas[r], row->lhs - row->constant, row->rhs - row->constant);
          }
-         SCIPsetDebugMsg(set, " -> farkasrhs: %g<%s>[%g,%g] -> %g\n", dualfarkas[r], SCIProwGetName(row),
-            row->lhs - row->constant, row->rhs - row->constant, SCIPaggrRowGetRhs(farkasrow));
-
-         /* due to numerical reasons we want to stop */
-         if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
-         {
-            (*valid) = FALSE;
-            goto TERMINATE;
-         }
-      }
-#ifdef SCIP_DEBUG
-      else if( !SCIPsetIsZero(set, dualfarkas[r]) )
-      {
-         SCIPsetDebugMsg(set, " -> ignoring %s row <%s> with dual Farkas value %.10f (lhs=%g, rhs=%g)\n",
-            row->local ? "local" : "global", SCIProwGetName(row), dualfarkas[r],
-            row->lhs - row->constant, row->rhs - row->constant);
-      }
 #endif
+      }
    }
 
    /* remove all coefficients that are too close to zero */
@@ -6821,49 +6882,53 @@ SCIP_RETCODE getDualProof(
       assert(row == lp->lpirows[r]);
 
       /* ignore dual solution values of 0.0 (in this case: y_i == z_i == 0) */
-      if( SCIPsetIsDualfeasZero(set, dualsols[r]) )
-         continue;
-
-      /* check dual feasibility */
-      if( (SCIPsetIsInfinity(set, -row->lhs) && dualsols[r] > 0.0) || (SCIPsetIsInfinity(set, row->rhs) && dualsols[r] < 0.0) )
+      if( REALABS(dualsols[r]) > 0.0 )
       {
-         SCIPsetDebugMsg(set, " -> infeasible dual solution %g in row <%s>: lhs=%g, rhs=%g\n",
-            dualsols[r], SCIProwGetName(row), row->lhs, row->rhs);
-         (*valid) = FALSE;
-         goto TERMINATE;
-      }
+         SCIP_Bool zerocontribution;
 
-      /* local rows add up to the dual row's coefficients (because z_i == 0 => -(y_i - z_i) == -y_i),
-       * global rows add up to the dual row's left hand side (because z_i == y_i != 0)
-       */
-      if( row->local )
-      {
-#if 0
-         /* add -y_i A_i to coefficients of dual row */
-         for( i = 0; i < row->len; ++i )
+         /* check dual feasibility */
+         *valid = checkDualFeasibility(set, row, dualsols[r], &zerocontribution);
+
+         if( !(*valid) )
+            goto TERMINATE;
+
+         if( zerocontribution )
+            continue;
+
+         if( SCIPsetIsDualfeasZero(set, dualsols[r]) )
+            continue;
+
+         /* skip local row */
+         if( !row->local )
          {
-            v = SCIPvarGetProbindex(SCIPcolGetVar(row->cols[i]));
-            assert(0 <= v && v < prob->nvars);
-            dualcoefs[v] -= dualsols[r] * row->vals[i]; // TODO use row
-         }
+#ifndef NDEBUG
+            {
+               SCIP_Real lpilhs;
+               SCIP_Real lpirhs;
+
+               SCIP_CALL( SCIPlpiGetSides(lpi, r, r, &lpilhs, &lpirhs) );
+               assert((SCIPsetIsInfinity(set, -lpilhs) && SCIPsetIsInfinity(set, -row->lhs))
+                  || SCIPsetIsRelEQ(set, lpilhs, row->lhs - row->constant));
+               assert((SCIPsetIsInfinity(set, lpirhs) && SCIPsetIsInfinity(set, row->rhs))
+                  || SCIPsetIsRelEQ(set, lpirhs, row->rhs - row->constant));
+            }
 #endif
-         SCIPsetDebugMsg(set, " -> local row <%s>: dual=%g\n", SCIProwGetName(row), dualsols[r]);
-      }
-      else
-      {
-         /* add minimal value to dual row's left hand side: z_i == y_i > 0 -> lhs, z_i == y_i < 0 -> rhs */
-         if( dualsols[r] > 0.0 )
-         {
-            assert(!SCIPsetIsInfinity(set, -row->lhs));
-            SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualsols[r], -1) );
+            SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], farkasrow) );
+
+            /* due to numerical reasons we want to stop */
+            if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
+            {
+               (*valid) = FALSE;
+               goto TERMINATE;
+            }
          }
+#ifdef SCIP_DEBUG
          else
          {
-            assert(!SCIPsetIsInfinity(set, row->rhs));
-            SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualsols[r], +1) );
+            SCIPsetDebugMsg(set, " -> ignoring local row <%s> with dual solution value %.10f (lhs=%g, rhs=%g)\n",
+               SCIProwGetName(row), dualfarkas[r], row->lhs - row->constant, row->rhs - row->constant);
          }
-         SCIPsetDebugMsg(set, " -> global row <%s>[%g,%g]: dual=%g -> dualrhs=%g\n",
-            SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, -dualsols[r], SCIPaggrRowGetRhs(farkasrow));
+#endif
       }
    }
 
