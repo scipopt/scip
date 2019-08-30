@@ -6669,10 +6669,7 @@ SCIP_Bool checkDualFeasibility(
       {
          int i;
 
-         /* ignore slight numerical violations if the contribution of every component of the row
-          * would be close to zero in tolerances
-          */
-
+         /* ignore slight numerical violations if the contribution of every component of the row is close to zero */
          if( weight > 0.0 )
             *zerocontribution = SCIPsetIsDualfeasZero(set, row->rhs * weight);
          else
@@ -6686,7 +6683,7 @@ SCIP_Bool checkDualFeasibility(
 
          if( !(*zerocontribution) )
          {
-            SCIPsetDebugMsg(set, " -> infeasible dual solution %g in row <%s>: lhs=%g, rhs=%g\n",
+            SCIPsetDebugMsg(set, " -> invalid dual solution value %g for row <%s>: lhs=%g, rhs=%g\n",
                weight, SCIProwGetName(row), row->lhs, row->rhs);
 
             valid = FALSE;
@@ -6951,82 +6948,51 @@ SCIP_RETCODE getFarkasProof(
       assert(row->len == 0 || row->vals != NULL);
       assert(row == lp->lpirows[r]);
 
-      /* ignore rows with Farkas value 0.0 */
-      if( SCIPsetIsDualfeasZero(set, dualfarkas[r]) )
-         continue;
-
-      if( row->local )
+      /* ignore dual ray values of 0.0 (in this case: y_i == z_i == 0) */
+      if( REALABS(dualfarkas[r]) > 0.0 )
       {
-         int lpdepth = SCIProwGetLPDepth(row);
+         SCIP_Bool zerocontribution;
 
-         if( nlocalrows == 0 && lpdepth < SCIPtreeGetFocusDepth(tree) )
+         /* check dual feasibility */
+         *valid = checkDualFeasibility(set, row, dualfarkas[r], &zerocontribution);
+
+         if( !(*valid) )
+            goto TERMINATE;
+
+         if( zerocontribution )
+            continue;
+
+         if( SCIPsetIsDualfeasZero(set, dualfarkas[r]) )
+            continue;
+
+         if( !row->local )
          {
-            SCIP_CALL( SCIPsetAllocBufferArray(set, &localrowinds, nrows-r) );
-            SCIP_CALL( SCIPsetAllocBufferArray(set, &localrowdepth, nrows-r) );
-         }
-
-         if( localrowinds != NULL && lpdepth < SCIPtreeGetFocusDepth(tree) )
-         {
-            assert(localrowdepth != NULL);
-
-            localrowinds[nlocalrows] = r;
-            localrowdepth[nlocalrows++] = lpdepth;
-         }
-      }
-      else
-      {
-#ifndef NDEBUG
-         {
-            SCIP_Real lpilhs;
-            SCIP_Real lpirhs;
-
-            SCIP_CALL( SCIPlpiGetSides(lpi, r, r, &lpilhs, &lpirhs) );
-            assert((SCIPsetIsInfinity(set, -lpilhs) && SCIPsetIsInfinity(set, -row->lhs))
-               || SCIPsetIsRelEQ(set, lpilhs, row->lhs - row->constant));
-            assert((SCIPsetIsInfinity(set, lpirhs) && SCIPsetIsInfinity(set, row->rhs))
-               || SCIPsetIsRelEQ(set, lpirhs, row->rhs - row->constant));
-         }
-#endif
-
-         /* add row side to Farkas row lhs: dualfarkas > 0 -> lhs, dualfarkas < 0 -> rhs */
-         if( dualfarkas[r] > 0.0 )
-         {
-            /* check if sign of dual Farkas value is valid */
-            if( SCIPsetIsInfinity(set, -row->lhs) )
-               continue;
+            SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow) );
 
             /* due to numerical reasons we want to stop */
-            if( REALABS(dualfarkas[r] * (row->lhs - row->constant)) > NUMSTOP )
+            if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
             {
                (*valid) = FALSE;
                goto TERMINATE;
             }
-
-            SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualfarkas[r], -1) );
          }
          else
          {
-            /* check if sign of dual Farkas value is valid */
-            if( SCIPsetIsInfinity(set, row->rhs) )
-               continue;
+            int lpdepth = SCIProwGetLPDepth(row);
 
-            /* due to numerical reasons we want to stop */
-            if( REALABS(dualfarkas[r] * (row->rhs - row->constant)) > NUMSTOP )
+            if( nlocalrows == 0 && lpdepth < SCIPtreeGetFocusDepth(tree) )
             {
-               (*valid) = FALSE;
-               goto TERMINATE;
+               SCIP_CALL( SCIPsetAllocBufferArray(set, &localrowinds, nrows-r) );
+               SCIP_CALL( SCIPsetAllocBufferArray(set, &localrowdepth, nrows-r) );
             }
 
-            SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualfarkas[r], +1) );
-         }
-         SCIPsetDebugMsg(set, " -> farkasrhs: %g<%s>[%g,%g] -> %g\n", dualfarkas[r], SCIProwGetName(row),
-            row->lhs - row->constant, row->rhs - row->constant, SCIPaggrRowGetRhs(farkasrow));
+            if( localrowinds != NULL && lpdepth < SCIPtreeGetFocusDepth(tree) )
+            {
+               assert(localrowdepth != NULL);
 
-         /* due to numerical reasons we want to stop */
-         if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
-         {
-            (*valid) = FALSE;
-            goto TERMINATE;
+               localrowinds[nlocalrows] = r;
+               localrowdepth[nlocalrows++] = lpdepth;
+            }
          }
       }
    }
@@ -7233,8 +7199,19 @@ SCIP_RETCODE getDualProof(
          if( SCIPsetIsDualfeasZero(set, dualsols[r]) )
             continue;
 
-         /* skip local row, but remember the position and LP depth */
-         if( row->local )
+         /* skip local row */
+         if( !row->local )
+         {
+            SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], farkasrow) );
+
+            /* due to numerical reasons we want to stop */
+            if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
+            {
+               (*valid) = FALSE;
+               goto TERMINATE;
+            }
+         }
+         else
          {
             int lpdepth = SCIProwGetLPDepth(row);
 
@@ -7251,10 +7228,6 @@ SCIP_RETCODE getDualProof(
                localrowinds[nlocalrows] = r;
                localrowdepth[nlocalrows++] = lpdepth;
             }
-         }
-         else
-         {
-            SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], farkasrow) );
          }
       }
    }
