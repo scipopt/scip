@@ -2270,6 +2270,9 @@ SCIP_RETCODE applyObbtBilinear(
    /* we need to solve the probing LP before creating new probing nodes in solveBilinearLP() */
    SCIP_CALL( SCIPsolveProbingLP(scip, (int)nleftiterations, &lperror, NULL) );
 
+   if( lperror )
+      goto TERMINATE;
+
    /* 4. tighten LP feasibility tolerance to be at most feastol/10.0 */
    oldfeastol = SCIPchgRelaxfeastol(scip, SCIPfeastol(scip) / 10.0);
 
@@ -2364,8 +2367,8 @@ SCIP_RETCODE applyObbtBilinear(
    /* remember last unprocessed bilinear term */
    propdata->lastbilinidx = i;
 
+  TERMINATE:
    /* end probing */
-   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) ); /* TODO necessary to solve LP here again? */
    SCIP_CALL( SCIPendProbing(scip) );
 
    /* release cutoff row if there is one */
