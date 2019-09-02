@@ -1120,7 +1120,7 @@ SCIP_RETCODE forwardPropExpr(
 #endif
 
                   /* intersect with interval */
-                  SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
+                  SCIPintervalIntersectEps(&interval, SCIPepsilon(scip), interval, nlhdlrinterval);
                }
             }
             else
@@ -1138,7 +1138,7 @@ SCIP_RETCODE forwardPropExpr(
 #endif
 
                /* intersect with interval */
-               SCIPintervalIntersect(&interval, interval, exprhdlrinterval);
+               SCIPintervalIntersectEps(&interval, SCIPepsilon(scip), interval, exprhdlrinterval);
             }
 
             /* if expression is integral, then we try to tighten the interval bounds a bit
@@ -1171,7 +1171,7 @@ SCIP_RETCODE forwardPropExpr(
                   /* it would be odd if the domain of an auxiliary variable were empty */
                   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, auxvarbounds));
 
-                  SCIPintervalIntersect(&previnterval, previnterval, auxvarbounds);
+                  SCIPintervalIntersectEps(&previnterval, SCIPepsilon(scip), previnterval, auxvarbounds);
                }
 
                /* if previnterval allow a further tightening, then reversepropagation
@@ -1189,7 +1189,7 @@ SCIP_RETCODE forwardPropExpr(
                   SCIPdebugMsg(scip, "do not insert expr <%p> (%s) into reversepropqueue, interval = [%.15g,%.15g] is subset of previnterval=[%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), interval.inf, interval.sup, previnterval.inf, previnterval.sup);
                } */
 
-               SCIPintervalIntersect(&interval, interval, previnterval);
+               SCIPintervalIntersectEps(&interval, SCIPepsilon(scip), interval, previnterval);
                /* SCIPdebugMsg(scip, "intersected with previnterval [%.15g,%.15g] -> [%.15g,%.15g]\n", previnterval.inf, previnterval.sup, interval.inf, interval.sup); */
             }
 
@@ -11139,8 +11139,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       /* SCIPdebugMsg(scip, "applied integrality: [%.15g,%.15g]\n", newbounds.inf, newbounds.sup); */
    }
 
-   /* intersect old interval with the new one */
-   SCIPintervalIntersect(&expr->activity, expr->activity, newbounds);
+   SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, newbounds);
 
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
