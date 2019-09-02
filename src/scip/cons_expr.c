@@ -1143,13 +1143,14 @@ SCIP_RETCODE forwardPropExpr(
 
             /* if expression is integral, then we try to tighten the interval bounds a bit
              * this should undo the addition of some unnecessary safety added by use of nextafter() in interval arithmetics, e.g., when doing pow()
+             * it would be ok to use ceil() and floor(), but for safety we use SCIPceil and SCIPfloor for now
              */
             if( expr->isintegral )
             {
                if( interval.inf > -SCIP_INTERVAL_INFINITY )
-                  interval.inf = ceil(interval.inf);
+                  interval.inf = SCIPceil(scip, interval.inf);
                if( interval.sup <  SCIP_INTERVAL_INFINITY )
-                  interval.sup = floor(interval.sup);
+                  interval.sup = SCIPfloor(scip, interval.sup);
                /* SCIPdebugMsg(scip, "applying integrality: [%.15g,%.15g]\n", interval.inf, interval.sup); */
             }
 
@@ -11131,11 +11132,13 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 
    if( expr->isintegral )
    {
-      /* apply integrality to new bounds */
+      /* apply integrality to new bounds
+       * it should be ok to use normal ceil() and floor(), but for safety, we use SCIPceil and SCIPfloor for now
+       */
       if( newbounds.inf > -SCIP_INTERVAL_INFINITY )
-         newbounds.inf = ceil(newbounds.inf);
+         newbounds.inf = SCIPceil(scip, newbounds.inf);
       if( newbounds.sup <  SCIP_INTERVAL_INFINITY )
-         newbounds.sup = floor(newbounds.sup);
+         newbounds.sup = SCIPfloor(scip, newbounds.sup);
       /* SCIPdebugMsg(scip, "applied integrality: [%.15g,%.15g]\n", newbounds.inf, newbounds.sup); */
    }
 
