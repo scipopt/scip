@@ -2267,14 +2267,14 @@ SCIP_RETCODE applyObbtBilinear(
       SCIP_CALL( SCIPchgVarObjProbing(scip, vars[i], 0.0) );
    }
 
+   /* 4. tighten LP feasibility tolerance to be at most feastol/10.0 */
+   oldfeastol = SCIPchgRelaxfeastol(scip, SCIPfeastol(scip) / 10.0);
+
    /* we need to solve the probing LP before creating new probing nodes in solveBilinearLP() */
    SCIP_CALL( SCIPsolveProbingLP(scip, (int)nleftiterations, &lperror, NULL) );
 
    if( lperror )
       goto TERMINATE;
-
-   /* 4. tighten LP feasibility tolerance to be at most feastol/10.0 */
-   oldfeastol = SCIPchgRelaxfeastol(scip, SCIPfeastol(scip) / 10.0);
 
    /* 5. main loop */
    for( i = propdata->lastbilinidx; i < propdata->nbilinbounds
