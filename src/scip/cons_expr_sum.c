@@ -1412,6 +1412,11 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
       SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bounds[c], SCIPgetConsExprExprActivity(scip, exprs[c]),
          weights[c]);  /*lint !e613 */
 
+#ifdef SCIP_MORE_DEBUG
+      SCIPdebugMsg(scip, "child %d: [%.16g,%.16g] * %.16g = [%.16g,%.16g]\n", c, SCIPgetConsExprExprActivity(scip, exprs[c]).inf, SCIPgetConsExprExprActivity(scip, exprs[c]).sup,
+         weights[c], bounds[c].inf, bounds[c].sup);
+#endif
+
       if( SCIPisInfinity(scip, SCIPintervalGetSup(bounds[c])) )
          ++maxlinactivityinf;
       else
@@ -1429,6 +1434,11 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
       }
    }
    maxlinactivity = -maxlinactivity; /* correct sign */
+
+   SCIPdebugMsg(scip, "reverse prop with %d children: lhs = [%.16g,%.16g] in rhs = [%.16g,%.16g]\n", nexprs,
+      minlinactivityinf ? -SCIP_INTERVAL_INFINITY : minlinactivity,
+      maxlinactivityinf ?  SCIP_INTERVAL_INFINITY : maxlinactivity,
+      interval.inf, interval.sup);
 
    /* if there are too many unbounded bounds, then could only compute infinite bounds for children, so give up */
    if( (minlinactivityinf >= 2 || SCIPisInfinity(scip, SCIPintervalGetSup(interval))) &&
