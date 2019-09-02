@@ -11145,7 +11145,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
    {
-      SCIPdebugMsg(scip, "cut off due to empty intersection of new bounds [%g,%g] with old bounds [%g,%g]\n", newbounds.inf, newbounds.sup, oldlb, oldub);
+      SCIPdebugMsg(scip, "cut off due to empty intersection of new bounds [%.15g,%.15g] with old bounds [%.15g,%.15g]\n", newbounds.inf, newbounds.sup, oldlb, oldub);
 
       *cutoff = TRUE;
       return SCIP_OKAY;
@@ -11202,7 +11202,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
             {
                if( ntightenings != NULL )
                   ++*ntightenings;
-               SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %g\n", SCIPvarGetName(var), newlb);
+               SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %.15g\n", SCIPvarGetName(var), newlb);
             }
 
             if( *cutoff )
@@ -11220,7 +11220,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
             {
                if( ntightenings != NULL )
                   ++*ntightenings;
-               SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %g\n", SCIPvarGetName(var), newub);
+               SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %.15g\n", SCIPvarGetName(var), newub);
             }
 
             if( *cutoff )
