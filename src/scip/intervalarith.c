@@ -494,6 +494,46 @@ void SCIPintervalIntersect(
    resultant->sup = MIN(operand1.sup, operand2.sup);
 }
 
+/** intersection of two intervals with epsilon tolerance
+ *
+ * If intersection of operand1 and operand2 is empty, but minimal (relative) distance of intervals
+ * is at most epsilon, then set resultant to singleton containing the point in operand1
+ * that is closest to operand2, i.e.,
+ * - resultant = { operand1.sup }, if operand1.sup < operand2.inf and reldiff(operand2.inf,operand1.sup) <= eps
+ * - resultant = { operand1.inf }, if operand1.inf > operand2.sup and reldiff(operand1.inf,operand2.sup) <= eps
+ * - resultant = intersection of operand1 and operand2, otherwise
+ */
+SCIP_EXPORT
+void SCIPintervalIntersectEps(
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_Real             eps,                /**< epsilon */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   )
+{
+   assert(resultant != NULL);
+   assert(eps >= 0.0);
+
+   if( operand1.sup < operand2.inf )
+   {
+      if( SCIPrelDiff(operand2.inf, operand1.sup) <= eps )
+      {
+         SCIPintervalSet(resultant, operand1.sup);
+         return;
+      }
+   }
+   else if( operand1.inf > operand2.sup )
+   {
+      if( SCIPrelDiff(operand1.inf, operand2.sup) <= eps )
+      {
+         SCIPintervalSet(resultant, operand1.inf);
+         return;
+      }
+   }
+
+   SCIPintervalIntersect(resultant, operand1, operand2);
+}
+
 /** interval enclosure of the union of two intervals */
 void SCIPintervalUnify(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
