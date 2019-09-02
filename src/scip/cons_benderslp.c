@@ -169,6 +169,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
          && (conshdlrdata->stalllimit == 0 || conshdlrdata->stallcount < conshdlrdata->stalllimit) )
       return SCIP_OKAY;
 
+   if( conshdlrdata->stallcount >= 100 )
+   {
+      return SCIP_OKAY;
+   }
+
    /* if an iteration limit is specified, then this is imposed at nodes after the root node */
    if( SCIPgetDepth(scip) > 0 && conshdlrdata->ncallsnode >= conshdlrdata->iterlimit )
       return SCIP_OKAY;

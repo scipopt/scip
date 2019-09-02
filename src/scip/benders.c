@@ -2975,8 +2975,11 @@ SCIP_RETCODE updateSubproblemStatQueue(
       /* updating the solving statistics */
       if( updatestat )
       {
-         solvestat->avgiter = (SCIP_Real)(solvestat->avgiter*solvestat->ncalls + SCIPgetNLPIterations(subproblem))
-            /(SCIP_Real)(solvestat->ncalls + 1);
+         if( subproblem == NULL )
+            solvestat->avgiter = 1;
+         else
+            solvestat->avgiter = (SCIP_Real)(solvestat->avgiter*solvestat->ncalls + SCIPgetNLPIterations(subproblem))
+               /(SCIP_Real)(solvestat->ncalls + 1);
          solvestat->ncalls++;
       }
 
