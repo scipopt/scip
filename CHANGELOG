@@ -63,6 +63,7 @@ Fixed bugs
 - fixed bug when freeing the transformed problem via interactive shell if reoptimization is enabled
 - fixed two issues related to (near-)redundant logicor constraints in presolving
 - fixed counting of aggregations in XOR constraint handler
+- fixed handling of unbounded solutions
 
 Miscellaneous
 -------------
