@@ -185,9 +185,11 @@ Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
 
    /* product-composition */
    detect("<x1>*exp(<x1>)", SCIP_EXPRCURV_CONVEX, FALSE);
+   detect("<x1>*exp(<x1>+1.0)", SCIP_EXPRCURV_CONVEX, TRUE);
    detect("<x1>*exp(2*<x1>)", SCIP_EXPRCURV_CONVEX, TRUE);
    detect("(<x1>+<x2>)*exp(<x1>+<x2>)", SCIP_EXPRCURV_CONVEX, FALSE);
    detect("exp(<x1>)*<x1>", SCIP_EXPRCURV_CONVEX, FALSE);
    detect("exp(<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX, FALSE);
    detect("exp(2*<x1>^2)*<x1>^2", SCIP_EXPRCURV_CONVEX, TRUE);
+   detect("log(4-<x1>)*<x1>", SCIP_EXPRCURV_CONCAVE, TRUE);   /* similar to arki0017 */
 }

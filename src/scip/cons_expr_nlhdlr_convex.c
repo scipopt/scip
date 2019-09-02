@@ -367,19 +367,19 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** looks for f(c*h(x))*h(x) * constant-factor
+/** looks for f(c*h(x)+d)*h(x) * constant-factor
  *
  * Assume h is univariate:
- * - First derivative is f'(c h) c h' h + f(c h) h'.
- * - Second derivative is f''(c h) c h' c h' h + f'(c h) (c h'' h + c h' h') + f'(c h) c h' h' + f(c h) h''
- *   = f''(c h) c^2 h'^2 h + f'(c h) c h'' h + 2 f'(c h) c h'^2 + f(c h) h''
- *   Remove always positive factors: f''(c h) h, f'(c h) c h'' h, f'(c h) c, f(c h) h''
+ * - First derivative is f'(c h + d) c h' h + f(c h + d) h'.
+ * - Second derivative is f''(c h + d) c h' c h' h + f'(c h + d) (c h'' h + c h' h') + f'(c h + d) c h' h' + f(c h + d) h''
+ *   = f''(c h + d) c^2 h'^2 h + f'(c h + d) c h'' h + 2 f'(c h + d) c h'^2 + f(c h + d) h''
+ *   Remove always positive factors: f''(c h + d) h, f'(c h + d) c h'' h, f'(c h + d) c, f(c h + d) h''
  *   For convexity we want all these terms to be nonnegative. For concavity we want all of them to be nonpositive.
- *   Note, that in each term either f'(c h) and c occur, or none of them.
- * - Thus, f(c h(x))h(x) is convex if c*f is monotonically increasing (c f' >= 0) and either
+ *   Note, that in each term either f'(c h + d) and c occur, or none of them.
+ * - Thus, f(c h(x) + d)h(x) is convex if c*f is monotonically increasing (c f' >= 0) and either
  *   - f is convex (f'' >= 0) and h is nonnegative (h >= 0) and h is convex (h'' >= 0) and [f is nonnegative (f >= 0) or h is linear (h''=0)], or
  *   - f is concave (f'' <= 0) and h is nonpositive (h <= 0) and h is concave (h'' <= 0) and [f is nonpositive (f <= 0) or h is linear (h''=0)]
- *   and f(c h(x))h(x) is concave if c*f is monotonically decreasing (c f' <= 0) and either
+ *   and f(c h(x) + d)h(x) is concave if c*f is monotonically decreasing (c f' <= 0) and either
  *   - f is convex (f'' >= 0) and h is nonpositive (h <= 0) and h is concave (h'' <= 0) and [f is nonnegative (f >= 0) or h is linear (h''=0)], or
  *   - f is concave (f'' <= 0) and h is nonnegative (h >= 0) and h is convex (h'' >= 0) and [f is nonpositive (f <= 0) or h is linear (h''=0)]
  *
@@ -433,11 +433,11 @@ DECL_CURVCHECK(curvCheckProductComposite)
       h = ch;
 
       /* check whether ch is of the form c*h(x), then switch h to child ch */
-      if( SCIPgetConsExprExprHdlr(ch) == SCIPgetConsExprExprHdlrSum(conshdlr) && SCIPgetConsExprExprNChildren(ch) == 1 && SCIPgetConsExprExprSumConstant(ch) == 0.0 )
+      if( SCIPgetConsExprExprHdlr(ch) == SCIPgetConsExprExprHdlrSum(conshdlr) && SCIPgetConsExprExprNChildren(ch) == 1 )
       {
          c = SCIPgetConsExprExprSumCoefs(ch)[0];
          h = SCIPgetConsExprExprChildren(ch)[0];
-         assert(c != 1.0);  /* we could handle this, but it should have been simplified away */
+         assert(c != 1.0 || SCIPgetConsExprExprSumConstant(ch) != 0.0);  /* we could handle this, but it should have been simplified away */
       }
 
 #ifndef NLHDLR_CONVEX_UNITTEST
@@ -453,7 +453,7 @@ DECL_CURVCHECK(curvCheckProductComposite)
       return SCIP_OKAY;
 
 #ifdef SCIP_MORE_DEBUG
-   SCIPinfoMessage(scip, NULL, "f(c*h)*h with f = %s, c = %g, h = ", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(f)), c);
+   SCIPinfoMessage(scip, NULL, "f(c*h+d)*h with f = %s, c = %g, d = %g, h = ", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(f)), c, h != ch ? SCIPgetConsExprExprSumConstant(ch) : 0.0);
    SCIPprintConsExprExpr(scip, conshdlr, h, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
 #endif
@@ -479,7 +479,7 @@ DECL_CURVCHECK(curvCheckProductComposite)
    /* now check the conditions as stated above */
    if( desiredcurv == SCIP_EXPRCURV_CONVEX )
    {
-      /* f(c h(x))h(x) is convex if c*f is monotonically increasing (c f' >= 0) and either
+      /* f(c h(x)+d)h(x) is convex if c*f is monotonically increasing (c f' >= 0) and either
       *   - f is convex (f'' >= 0) and h is nonnegative (h >= 0) and h is convex (h'' >= 0) and [f is nonnegative (f >= 0) or h is linear (h''=0)], or
       *   - f is concave (f'' <= 0) and h is nonpositive (h <= 0) and h is concave (h'' <= 0) and [f is nonpositive (f <= 0) or h is linear (h''=0)]
       */
@@ -512,7 +512,7 @@ DECL_CURVCHECK(curvCheckProductComposite)
    }
    else
    {
-      /* f(c h(x))h(x) is concave if c*f is monotonically decreasing (c f' <= 0) and either
+      /* f(c h(x)+d)*h(x) is concave if c*f is monotonically decreasing (c f' <= 0) and either
       *   - f is convex (f'' >= 0) and h is nonpositive (h <= 0) and h is concave (h'' <= 0) and [f is nonnegative (f >= 0) or h is linear (h''=0)], or
       *   - f is concave (f'' <= 0) and h is nonnegative (h >= 0) and h is convex (h'' >= 0) and [f is nonpositive (f <= 0) or h is linear (h''=0)]
       */
