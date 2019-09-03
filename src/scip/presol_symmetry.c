@@ -1402,6 +1402,10 @@ SCIP_RETCODE determineSymmetry(
    if ( SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
+   /* do not compute symmetry if reoptimization is enabled */
+   if( SCIPisReoptEnabled(scip) )
+      return SCIP_OKAY;
+
    /* avoid trivial cases */
    nvars = SCIPgetNVars(scip);
    if ( nvars <= 0 )
