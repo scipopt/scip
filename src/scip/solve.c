@@ -5284,7 +5284,7 @@ SCIP_RETCODE SCIPsolveCIP(
       *restart = FALSE;
 
       /* set the solution status */
-      if( unbounded )
+      if( unbounded || SCIPsetIsInfinity(set, -SCIPgetUpperbound(set->scip)) )
       {
          if( primal->nsols > 0 )
          {
