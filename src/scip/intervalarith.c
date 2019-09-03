@@ -503,7 +503,6 @@ void SCIPintervalIntersect(
  * - resultant = { operand1.inf }, if operand1.inf > operand2.sup and reldiff(operand1.inf,operand2.sup) <= eps
  * - resultant = intersection of operand1 and operand2, otherwise
  */
-SCIP_EXPORT
 void SCIPintervalIntersectEps(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_Real             eps,                /**< epsilon */
