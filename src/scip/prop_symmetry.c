@@ -1910,6 +1910,14 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
+   /* do not compute symmetry if reoptimization is enabled */
+   if ( SCIPisReoptEnabled(scip) )
+   {
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* avoid trivial cases */
    nvars = SCIPgetNVars(scip);
    if ( nvars <= 0 )
