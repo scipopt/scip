@@ -183,7 +183,9 @@ Interface changes
   SCIPdetermineNVarsAffectedSym(), SCIPcomputeComponentsSym(), and SCIPextendSubOrbitope(), SCIPgenerateOrbitopeVarsMatrix() for symmetry computations
 - new API functions SCIPvarIsRelaxationOnly() and SCIPvarMarkRelaxationOnly() to query and set, resp., whether a variable is marked as relaxation-only
 - new API functions SCIPconshdlrGetNUpdateConss() and SCIPconshdlrGetUpdateConss(), for expert users only
+- new API function SCIPgetNConflictDualproofsApplied()
 - new API functions SCIPeventGetOldtype() and SCIPeventGetNewtype() for the new event when changing the variable type
+
 
 ### Command line interface
 
@@ -311,6 +313,7 @@ Fixed bugs
 ----------
 
 - fix and improve memory handling in symmetry computation
+- fix shown number of applied conflicts in solving statistics
 
 Miscellaneous
 -------------
@@ -354,6 +357,9 @@ Interface changes
 
 ### Changed parameters
 
+- enabling aggressive presolving now activates all available presolving plugins,
+  and decreases the presolving/restartfac parameter correctly with respect to default.
+
 ### New parameters
 
 ### Data structures
@@ -383,9 +389,12 @@ Fixed bugs
 - fixed bug in freeing the reoptimization data if no problem exists
 - fixed bug in SCIPreoptReleaseData() when freeing all stored constraints
 - fixed bug when freeing the transformed problem via interactive shell if reoptimization is enabled
+- fixed two issues related to (near-)redundant logicor constraints in presolving
+- fixed counting of aggregations in XOR constraint handler
 
 Miscellaneous
 -------------
+- checks in debug mode that clean buffer memory is really clean when being freed are now disabled by default
 
 Known bugs
 ----------

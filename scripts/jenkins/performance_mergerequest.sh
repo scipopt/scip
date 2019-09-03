@@ -18,7 +18,7 @@
 # ----------|------------------------------------------|--------------
 # GITBRANCH | master                                   | master, v60-bugfix, consexpr
 # TESTMODE  | ""                                       | mip, minlp, short
-# QUICKMODE | ""                                       | quick, ""
+# QUICKMODE | ""                                       | quick, continue, ""
 
 echo "This is performance_mergerequest.sh running."
 : ${TESTMODE:="all"}
@@ -38,12 +38,18 @@ elif [ "${TESTMODE}" == "mip" ]; then
   if [ "${QUICKMODE}" == "quick" ]; then
     echo "Testing mip quick"
     TESTMODE=quick_mip
+  elif [ "${QUICKMODE}" == "continue" ]; then
+    echo "Testing mip continue"
+    TESTMODE=continue_mip
   fi
 elif [ "${TESTMODE}" == "minlp" ]; then
   echo "Testing minlp"
   if [ "${QUICKMODE}" == "quick" ]; then
     echo "Testing minlp quick"
     TESTMODE=quick_minlp
+  elif [ "${QUICKMODE}" == "continue" ]; then
+    echo "Testing minlp continue"
+    TESTMODE=continue_minlp
   fi
 else
   echo "Nothing to do, exiting."
@@ -93,13 +99,17 @@ export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
 if [ "${TESTMODE}" == "short" ]; then
   JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=false MEM=5000 QUEUE=opt TEST=short TIME=60 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=0"
 elif [ "${TESTMODE}" == "mip" ]; then
-  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev12merged-solvable TIME=7200 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=4"
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=4"
 elif [ "${TESTMODE}" == "minlp" ]; then
   JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_${MRSETTINGS} PERFORMANCE=mergerequest PERMUTE=4"
 elif [ "${TESTMODE}" == "quick_mip" ]; then
-  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev12merged-solvable TIME=7200 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=1"
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=1"
 elif [ "${TESTMODE}" == "quick_minlp" ]; then
   JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_${MRSETTINGS} PERFORMANCE=mergerequest PERMUTE=1"
+elif [ "${TESTMODE}" == "continue_mip" ]; then
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=2 GLBSEEDSHIFT=2"
+elif [ "${TESTMODE}" == "continue_minlp" ]; then
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_${MRSETTINGS} PERFORMANCE=mergerequest PERMUTE=2 STARTPERM=2"
 #elif [ "${TESTMODE}" == "sap" ]; then
 #  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=mergerequest SEEDS=2"
 fi
@@ -199,7 +209,7 @@ SCIP_BINARY=${BUILD_DIR}/bin/scip
 #  - When building a default setting with random seed, use a capital D. No setting name should be a prefix of another!
 
 # MIP settings
-touch "settings/${MRSETTINGS}"
+touch "settings/${MRSETTINGS}.set"
 
 # MINLP settings
 ${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set limits gap 1e-4 set diffsave settings/minlp_${MRSETTINGS}.set q"

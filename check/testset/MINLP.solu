@@ -2,7 +2,8 @@
 =bestdual= 4stufen                                     106133.8170000000
 =opt=      abel                                           225.1945832000
 =opt=      alan                                             2.9250000000
-=opt=      alkyl                                           -1.7649996460
+=best=     alkyl                                           -1.7649996460
+=bestdual= alkyl                                           -1.7650249830
 =opt=      alkylation                                    1768.8069640000
 =opt=      arki0001                                        40.7128646900
 =best=     arki0002                                         0.9768443817
@@ -153,7 +154,7 @@
 =bestdual= bchoco07                                         0.9962795327
 =bestdual= bchoco08                                         0.9848069100
 =best=     bearing                                          1.9516839600
-=bestdual= bearing                                          1.9473326320
+=bestdual= bearing                                          1.9361806000
 =best=     beuster                                     116329.6706000000
 =bestdual= beuster                                     103117.3125000000
 =opt=      blend029                                        13.3594000000
