@@ -68,9 +68,10 @@ then
 fi
 
 # if permutation counter is positive add permutation seed (0 = default)
-if test $p -gt 0
+PERM=$(($p + $STARTPERM))
+if test $PERM -gt 0
 then
-    echo set randomization permutationseed $p   >> $TMPFILE
+    echo set randomization permutationseed $PERM   >> $TMPFILE
 fi
 
 # set random seed shift

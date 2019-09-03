@@ -39,9 +39,10 @@ VISUALIZE=${22}
 PERMUTE=${23}
 SEEDS=${24}
 GLBSEEDSHIFT=${25}
+STARTPERM=${26}
 
 # check if all variables defined (by checking the last one)
-if test -z $GLBSEEDSHIFT
+if test -z $STARTPERM
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -70,6 +71,7 @@ then
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
     echo "GLBSEEDSHIFT  = $GLBSEEDSHIFT"
+    echo "STARTPERM     = $STARTPERM"
     exit 1;
 fi
 
@@ -143,7 +145,7 @@ do
 		#                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
 
 		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s \
-		  $THREADS $GLBSEEDSHIFT
+		  $THREADS $GLBSEEDSHIFT $STARTPERM
 
 		if test "$INSTANCE" = "DONE"
 		then

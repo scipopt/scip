@@ -2301,7 +2301,7 @@ SCIP_RETCODE prepareReoptimization(
 
       SCIP_CALL( SCIPreoptSaveGlobalBounds(scip->reopt, scip->transprob, scip->mem->probmem) );
 
-      SCIP_CALL( SCIPreoptSaveActiveConss(scip->reopt, scip->transprob, scip->mem->probmem) );
+      SCIP_CALL( SCIPreoptSaveActiveConss(scip->reopt, scip->set, scip->transprob, scip->mem->probmem) );
    }
    /* we are at least in the second run */
    else
@@ -3329,6 +3329,12 @@ SCIP_RETCODE SCIPfreeTransform(
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPfreeTransform", TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* release variables and constraints captured by reoptimization */
+   if( scip->reopt != NULL )
+   {
+      SCIP_CALL( SCIPreoptReleaseData(scip->reopt, scip->set, scip->mem->probmem) );
+   }
 
    switch( scip->set->stage )
    {

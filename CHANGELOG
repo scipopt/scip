@@ -29,6 +29,9 @@ Interface changes
 
 ### Changed parameters
 
+- enabling aggressive presolving now activates all available presolving plugins,
+  and decreases the presolving/restartfac parameter correctly with respect to default.
+
 ### New parameters
 
 ### Data structures
@@ -55,9 +58,18 @@ Fixed bugs
 - fixed issue in SCIPtightenVarLb and SCIPtightenVarUb that occurs for small bound changes
 - fixed rejecting minimal boundchange that changed sign of variable, even though SCIPisLb/UbBetter approved it
 - fixed issue in generateCutNonConvex() which is triggered when adding quadratic constraints during the solving process
+- fixed bug in freeing the reoptimization data if no problem exists
+- fixed bug in SCIPreoptReleaseData() when freeing all stored constraints
+- fixed bug when freeing the transformed problem via interactive shell if reoptimization is enabled
+- fixed two issues related to (near-)redundant logicor constraints in presolving
+- fixed counting of aggregations in XOR constraint handler
+- fixed handling of unbounded solutions
+- fixed update of LP size information when an LP error occured during probing
 
 Miscellaneous
 -------------
+- checks in debug mode that clean buffer memory is really clean when being freed are now disabled by default
+- don't compute symmetries if reoptimization is enabled
 
 Known bugs
 ----------
@@ -235,6 +247,7 @@ Fixed bugs
 - avoid copying of unbounded solutions from sub-SCIPs as those cannot be checked completely
 - corrected the output of the first LP value in case of branch-and-price
 - fixed possible integer overflow, which led to wrong conclusion of infeasibility, in energetic reasoning of cons_cumulative.c
+- handle special case of variable bound constraints during aggregating variables
 
 Miscellaneous
 -------------
