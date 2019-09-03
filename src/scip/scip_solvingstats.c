@@ -3426,7 +3426,8 @@ void SCIPprintSolutionStatistics(
     * that the original problem is infeasible, even without the objective limit, i.e., we cannot be sure that we
     * actually reached the objective limit. */
    objlimitreached = FALSE;
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, primalbound) )
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0
+      && !SCIPisInfinity(scip, primalbound) && SCIPgetStatus(scip) != SCIP_STATUS_INFORUNBD )
       objlimitreached = TRUE;
 
    if( scip->primal->nsolsfound != scip->primal->nlimsolsfound )

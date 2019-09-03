@@ -188,7 +188,7 @@ if [[ ${LPSVERSIONS} =~ "scipdbgspx" ]] ; then
   BUILD_DIR=scipdbgspx_${GITBRANCH}_${RANDOMSEED}
   mkdir -p ${BUILD_DIR}
   cd ${BUILD_DIR}
-  cmake .. -DCMAKE_BUILD_TYPE=Debug -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
+  cmake .. -DCMAKE_C_FLAGS="-DCHECKCLEANBUFFER" -DCMAKE_BUILD_TYPE=Debug -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR}
   make -j4
   cd ..
 fi
@@ -198,7 +198,7 @@ if [[ ${LPSVERSIONS} =~ "scipdbgcpx" ]] ; then
   BUILD_DIR=scipdbgcpx_${GITBRANCH}_${RANDOMSEED}
   mkdir -p ${BUILD_DIR}
   cd ${BUILD_DIR}
-  cmake .. -DCMAKE_BUILD_TYPE=Debug -DLPS=cpx
+  cmake .. -DCMAKE_C_FLAGS="-DCHECKCLEANBUFFER" -DCMAKE_BUILD_TYPE=Debug -DLPS=cpx
   make -j4
   cd ..
 fi
