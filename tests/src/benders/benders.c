@@ -21,6 +21,9 @@
 
 
 #include "scip/benders.h"
+#include "scip/set.c"
+#include "scip/clock.c"
+#include "scip/paramset.c"
 #include "scip/benders.c"
 #include "scip/scip_benders.h"
 #include "scip/struct_benders.h"
