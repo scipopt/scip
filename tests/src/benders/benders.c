@@ -21,14 +21,9 @@
 
 
 #include "scip/benders.h"
-#include "scip/set.c"
-#include "scip/clock.c"
-#include "scip/paramset.c"
-#include "scip/benders.c"
-#include "scip/scip_benders.h"
-#include "scip/struct_benders.h"
-#include "scip/type_benders.h"
-#include "scip/struct_scip.h"
+#include "scip/pub_benders.h"
+#include "scip/scip.h"
+
 
 #define SUBPROBOBJ   404040.40
 
@@ -374,7 +369,6 @@ SCIP_RETCODE SCIPincludeBendersTest(
 #include "include/scip_test.h"
 
 static SCIP* scip;
-static SCIP_SET* set;
 static SCIP_BENDERS* benders;
 static int nsubproblems = 2;
 
@@ -385,7 +379,6 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
-   set = scip->set;
 
    /* including the test Benders' decomposition */
    SCIP_CALL( SCIPincludeBendersTest(scip) );
@@ -406,108 +399,21 @@ void teardown(void)
 }
 
 
-Test(bd, resetSubproblemObjectiveValue, .init = setup, .fini = teardown,
-   .description = "check resetSubproblemObjectiveValue() subroutine of the Benders' decomposition core"
+Test(bd, SCIPbendersSetSubproblemObjval, .init = setup, .fini = teardown,
+   .description = "check SCIPbendersSetSubproblemObjval() subroutine of the Benders' decomposition core"
    )
 {
    int i;
 
-   resetSubproblemObjectiveValue(benders, set);
-
    for( i = 0; i < nsubproblems; i++ )
    {
-      cr_assert( SCIPisGE(scip, SCIPbendersGetSubproblemObjval(benders, i), SCIPsetInfinity(set)) );
+      SCIPbendersSetSubproblemObjval(benders, i, SCIPinfinity(scip));
+      cr_assert( SCIPisGE(scip, SCIPbendersGetSubproblemObjval(benders, i), SUBPROBOBJ) );
    }
 }
 
-Test(bd, createSubproblems, .init = setup, .fini = teardown,
-   .description = "check createSubproblems() subroutine of the Benders' decomposition core"
-   )
-{
-   int i;
-
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_TRANSFORMED, FALSE) );
-
-   createSubproblems(benders, set);
-   cr_assert( benders->subprobscreated );
-
-   /* the subproblems have been provided as NULL pointers. They should still be NULL after the creation of the
-    * subproblems
-    */
-   for( i = 0; i < nsubproblems; i++ )
-   {
-      cr_assert( SCIPbendersSubproblem(benders, i) == NULL );
-   }
-}
-
-Test(bd, executeUserDefinedSolvesub, .init = setup, .fini = teardown,
-   .description = "check executeUserDefinedSolvesub() subroutine of the Benders' decomposition core"
-   )
-{
-   int i;
-   int j;
-
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-
-   /* calling the solve method for each subproblem */
-   for( i = 0; i < nsubproblems; i++ )
-   {
-      SCIP_Bool infeasible;
-      SCIP_Real objective;
-      SCIP_RESULT result;
-
-      for( j = 0; j < 2; j++ )
-      {
-         SCIP_BENDERSSOLVELOOP solveloop = SCIP_BENDERSSOLVELOOP_USERCONVEX;
-         if( j == 1 )
-            solveloop = SCIP_BENDERSSOLVELOOP_USERCIP;
-
-         infeasible = FALSE;
-
-         SCIP_CALL( executeUserDefinedSolvesub(benders, set, NULL, i, solveloop, &infeasible, &objective, &result) );
-
-         cr_assert( !infeasible );
-         cr_assert( SCIPisEQ(scip, objective, SUBPROBOBJ));
-         cr_assert( result == SCIP_FEASIBLE );
-      }
-   }
-}
-
-Test(bd, SCIPbendersExecSubproblemSolve, .init = setup, .fini = teardown,
-   .description = "check SCIPbendersExecSubproblemSolve() subroutine of the Benders' decomposition core"
-   )
-{
-   int i;
-   int j;
-
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-
-   /* calling the solve method for each subproblem */
-   for( i = 0; i < nsubproblems; i++ )
-   {
-      SCIP_Bool solved;
-      SCIP_Bool infeasible;
-
-      for( j = 0; j < 2; j++ )
-      {
-         SCIP_BENDERSSOLVELOOP solveloop = SCIP_BENDERSSOLVELOOP_USERCONVEX;
-         if( j == 1 )
-            solveloop = SCIP_BENDERSSOLVELOOP_USERCIP;
-
-         infeasible = FALSE;
-
-         SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, NULL, i, solveloop, FALSE, &solved, &infeasible,
-               SCIP_BENDERSENFOTYPE_LP) );
-
-         cr_assert( solved );
-         cr_assert( !infeasible );
-         cr_assert( SCIPisEQ(scip, SCIPbendersGetSubproblemObjval(benders, i), SUBPROBOBJ) );
-      }
-   }
-}
-
-Test(bd, SCIPbendersSolveSubproblem, .init = setup, .fini = teardown,
-   .description = "check SCIPbendersSolveSubproblem() subroutine of the Benders' decomposition core"
+Test(bd, SCIPsolveBendersSubproblem, .init = setup, .fini = teardown,
+   .description = "check SCIPsolveBendersSubproblem() subroutine of the Benders' decomposition core"
    )
 {
    int i;
@@ -523,15 +429,18 @@ Test(bd, SCIPbendersSolveSubproblem, .init = setup, .fini = teardown,
       infeasible = FALSE;
       objective = SCIPinfinity(scip);
 
-      SCIP_CALL( SCIPbendersSolveSubproblem(benders, set, NULL, i, &infeasible, FALSE, &objective) );
+      /* informing the Benders' decomposition core that the subproblem is setup */
+      SCIPbendersSubproblemIsSetup(benders, i);
+
+      SCIP_CALL( SCIPsolveBendersSubproblem(scip, benders, NULL, i, &infeasible, FALSE, &objective) );
 
       cr_assert( !infeasible );
       cr_assert( SCIPisEQ(scip, objective, SUBPROBOBJ) );
    }
 }
 
-Test(bd, SCIPbendersComputeSubproblemLowerbound, .init = setup, .fini = teardown,
-   .description = "check SCIPbendersComputeSubproblemLowerbound() subroutine of the Benders' decomposition core"
+Test(bd, SCIPcomputeBendersSubproblemLowerbound, .init = setup, .fini = teardown,
+   .description = "check SCIPcomputeBendersSubproblemLowerbound() subroutine of the Benders' decomposition core"
    )
 {
    int i;
@@ -547,7 +456,7 @@ Test(bd, SCIPbendersComputeSubproblemLowerbound, .init = setup, .fini = teardown
       infeasible = FALSE;
       lowerbound = SCIPinfinity(scip);
 
-      SCIP_CALL( SCIPbendersComputeSubproblemLowerbound(benders, set, i, &lowerbound, &infeasible) );
+      SCIP_CALL( SCIPcomputeBendersSubproblemLowerbound(scip, benders, i, &lowerbound, &infeasible) );
 
       cr_assert( !infeasible );
       cr_assert( SCIPisLE(scip, lowerbound, -SCIPinfinity(scip)) );
