@@ -77,7 +77,7 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
-)
+    )
 #
 # settings for the componentshandler test
 #
@@ -88,19 +88,19 @@ set(settings_compHandlerTest
 # settings to run a reduced MIP test
 #
 set(settings_fastMIP
-    "vbcvisualization"
-    "bakvisualization"
-    "alldisp"
-    "fullstrongbfs"
-    "allfull"
     "all_aggressive"
+    "alldisp"
+    "allfull"
+    "bakvisualization"
+    "fullstrongbfs"
     "cgmip"
     "cgmipstrong"
     "cgmipviol"
-    "presolving_off"
-    "separating_off"
     "lookahead-abbrev-bincons"
     "lookahead-addclique-scaledcutoffscore"
+    "presolving_off"
+    "separating_off"
+    "vbcvisualization"
   )
 set(settings_MINLP
     "minlp"
@@ -146,7 +146,26 @@ set(settings_Benders
     "usebenders-tr"
     "usebenders-cutstrengthen"
    )
+   
+set(settings_Indicator
+    "default"
+    "indicatorrestart"
+    "indicatorperspective"
+    "indicatorlogicorsepa"
+    "indicatorcoupling"
+    "indicatorconflict"
+    "indicatoralterlp"
+    "indicatorupgrade"
+   )
 
+set(settings_reopt
+    "reopt-test-settings-usesplitcons-TRUE"
+    "reopt-test-settings-varorderinterdiction-d"
+    "reopt-test-settings-varorderinterdiction-i"
+    "reopt-test-settings-varorderinterdiction-r"
+    )
+
+   
 #
 # Indicator instances
 #
@@ -159,6 +178,12 @@ set(settings_Cardinality
     "default"
 #    "upgdcardinality"
 )
+
+set(settings_Or
+    "default"
+    "presolving_separating_heuristics_off_randombranching"
+)
+
 
 set(instances_Readertest
     "instances/MIP/bell5.mps\;8966406.49"
@@ -347,6 +372,10 @@ set(instances_Benders
     "instances/Stochastic/sslp_5_25_50_LB.smps\;-121.6"
    )
 
+set(instances_Or
+    "instances/Or/or_constraint.cip\;18"
+    )
+
 #
 # available reader file extensions for SCIP readers
 #
@@ -420,7 +449,7 @@ macro(add_instancetests instances settings prefix)
 endmacro(add_instancetests)
 
 add_instancetests(instances_CP settings_default "CP")
-add_instancetests(instances_Indicator settings_default "Indicator")
+add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
@@ -437,6 +466,7 @@ add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
+add_instancetests(instances_Or settings_Or "Or")
 
 #
 # test writing and reading solutions
@@ -456,6 +486,22 @@ foreach(instance ${instances_MINLP})
                                 DEPENDS scip-build
                             )
 endforeach(instance)
+
+#
+# test reading .cip files for indicator instances
+#
+foreach(instance ${instances_Indicator})
+    split_instance(instance)
+    #
+    # configure the batch file for this test by substituting placeholders in the in.file
+    #
+    configure_file(interactiveshell/solvecip.bat.in interactiveshell/solvecip-${basename}.bat)
+    add_test(NAME Indicator-solvecip-${basename}
+            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solvecip-${basename}.bat
+            )
+    set_tests_properties(Indicator-solvecip-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+endforeach(instance)
+
 
 #
 # the following instances are not pure binary and hence cannot be written out in opb format
@@ -591,6 +637,29 @@ set_tests_properties(write_and_read_settings
                         FAIL_REGULAR_EXPRESSION "ERROR"
                         DEPENDS scip-build
                     )
+
+#
+# reopt test.
+# We substitute first path placeholders in the .in file, which creates a new file under the binary directory
+# Then run SCIP to execute the list of commands defined there.
+#
+
+set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
+file(MAKE_DIRECTORY ${shell_tmp_dir})
+
+foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
+    foreach(setting ${settings_reopt})
+        configure_file(interactiveshell/${testname}.bat.in interactiveshell/${testname}-${setting}.bat)
+        add_test(NAME ${testname}-${setting}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/${testname}-${setting}.bat
+                )
+        set_tests_properties(${testname}-${setting} PROPERTIES
+                                            PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                            FAIL_REGULAR_EXPRESSION "Validation         : Fail")
+        endforeach()
+
+endforeach()
+
 
 #
 # define sets of linear classification results

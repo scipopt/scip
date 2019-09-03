@@ -2622,20 +2622,6 @@ SCIP_RETCODE SCIPconshdlrInitpre(
       }
    }
 
-#if 0
-   /* check if all initial constraints are included in the initconss array */
-   {
-      int c;
-
-      for( c = 0; c < conshdlr->nconss; ++c )
-      {
-         assert(conshdlr->conss[c]->deleted || conshdlr->conss[c]->initial == (conshdlr->conss[c]->initconsspos >= 0));
-         assert(conshdlr->conss[c]->deleted || !conshdlr->conss[c]->initial
-            || conshdlr->initconss[conshdlr->conss[c]->initconsspos] == conshdlr->conss[c]);
-      }
-   }
-#endif
-
    return SCIP_OKAY;
 }
 

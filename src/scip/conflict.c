@@ -2610,11 +2610,12 @@ SCIP_Real aggrRowGetMinActivity(
    SCIP_PROB*            transprob,          /**< transformed problem data */
    SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables (or NULL for global bounds) */
-   SCIP_Real*            curvarubs           /**< current upper bounds of active problem variables (or NULL for global bounds) */
+   SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables (or NULL for global bounds) */
+   SCIP_Bool*            infdelta            /**< pointer to store whether at least one variable contributes with an infinite value */
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real minact = 0.0;
+   SCIP_Real QUAD(minact);
    int* inds;
    int nnz;
    int i;
@@ -2625,10 +2626,15 @@ SCIP_Real aggrRowGetMinActivity(
    nnz = SCIPaggrRowGetNNz(aggrrow);
    inds = SCIPaggrRowGetInds(aggrrow);
 
+   QUAD_ASSIGN(minact, 0.0);
+
+   if( infdelta != NULL )
+      *infdelta = FALSE;
+
    for( i = 0; i < nnz; i++ )
    {
       SCIP_Real val;
-      SCIP_Real delta;
+      SCIP_Real QUAD(delta);
       int v = inds[i];
 
       assert(SCIPvarGetProbindex(vars[v]) == v);
@@ -2636,27 +2642,35 @@ SCIP_Real aggrRowGetMinActivity(
       val = SCIPaggrRowGetProbvarValue(aggrrow, v);
 
       if( val > 0.0 )
-         delta = val * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+      {
+         SCIP_Real bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+         SCIPquadprecProdDD(delta, val, bnd);
+      }
       else
-         delta = val * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
-
-      /* check whether the variable contributes with an infinite value */
-      if( SCIPsetIsInfinity(set, delta) )
-         return SCIPsetInfinity(set);
-      if( SCIPsetIsInfinity(set, -delta) )
-         return -SCIPsetInfinity(set);
+      {
+         SCIP_Real bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         SCIPquadprecProdDD(delta, val, bnd);
+      }
 
       /* update minimal activity */
-      minact += delta;
+      SCIPquadprecSumQQ(minact, minact, delta);
 
-      /* check whether the minmal activity got infinite */
-      if( SCIPsetIsInfinity(set, minact) )
-         return SCIPsetInfinity(set);
-      if( SCIPsetIsInfinity(set, -minact) )
-         return -SCIPsetInfinity(set);
+      if( infdelta != NULL && SCIPsetIsInfinity(set, REALABS(QUAD_TO_DBL(delta))) )
+      {
+         *infdelta = TRUE;
+         goto TERMINATE;
+      }
+
    }
 
-   return minact;
+  TERMINATE:
+   /* check whether the minmal activity is infinite */
+   if( SCIPsetIsInfinity(set, QUAD_TO_DBL(minact)) )
+      return SCIPsetInfinity(set);
+   if( SCIPsetIsInfinity(set, -QUAD_TO_DBL(minact)) )
+      return -SCIPsetInfinity(set);
+
+   return QUAD_TO_DBL(minact);
 }
 
 /** calculates the minimal activity of a given set of bounds and coefficients */
@@ -2672,7 +2686,7 @@ SCIP_Real getMinActivity(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real minact = 0.0;
+   SCIP_Real QUAD(minact);
    int i;
 
    assert(coefs != NULL);
@@ -2681,10 +2695,12 @@ SCIP_Real getMinActivity(
    vars = SCIPprobGetVars(transprob);
    assert(vars != NULL);
 
+   QUAD_ASSIGN(minact, 0.0);
+
    for( i = 0; i < nnz; i++ )
    {
       SCIP_Real val;
-      SCIP_Real delta;
+      SCIP_Real QUAD(delta);
       int v = inds[i];
 
       assert(SCIPvarGetProbindex(vars[v]) == v);
@@ -2692,27 +2708,35 @@ SCIP_Real getMinActivity(
       val = coefs[i];
 
       if( val > 0.0 )
-         delta = val * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
-      else
-         delta = val * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+      {
+         SCIP_Real bnd;
 
-      /* check whether the variable contributes with an infinite value */
-      if( SCIPsetIsInfinity(set, delta) )
-         return SCIPsetInfinity(set);
-      if( SCIPsetIsInfinity(set, -delta) )
-         return -SCIPsetInfinity(set);
+         assert(curvarlbs == NULL || !SCIPsetIsInfinity(set, -curvarlbs[v]));
+
+         bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+         SCIPquadprecProdDD(delta, val, bnd);
+      }
+      else
+      {
+         SCIP_Real bnd;
+
+         assert(curvarubs == NULL || !SCIPsetIsInfinity(set, curvarubs[v]));
+
+         bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         SCIPquadprecProdDD(delta, val, bnd);
+      }
 
       /* update minimal activity */
-      minact += delta;
-
-      /* check whether the minmal activity got infinite */
-      if( SCIPsetIsInfinity(set, minact) )
-         return SCIPsetInfinity(set);
-      if( SCIPsetIsInfinity(set, -minact) )
-         return -SCIPsetInfinity(set);
+      SCIPquadprecSumQQ(minact, minact, delta);
    }
 
-   return minact;
+   /* check whether the minmal activity is infinite */
+   if( SCIPsetIsInfinity(set, QUAD_TO_DBL(minact)) )
+      return SCIPsetInfinity(set);
+   if( SCIPsetIsInfinity(set, -QUAD_TO_DBL(minact)) )
+      return -SCIPsetInfinity(set);
+
+   return QUAD_TO_DBL(minact);
 }
 
 /** calculates the minimal activity of a given set of bounds and coefficients */
@@ -2728,7 +2752,7 @@ SCIP_Real getMaxActivity(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real maxact = 0.0;
+   SCIP_Real QUAD(maxact);
    int i;
 
    assert(coefs != NULL);
@@ -2737,10 +2761,12 @@ SCIP_Real getMaxActivity(
    vars = SCIPprobGetVars(transprob);
    assert(vars != NULL);
 
+   QUAD_ASSIGN(maxact, 0.0);
+
    for( i = 0; i < nnz; i++ )
    {
       SCIP_Real val;
-      SCIP_Real delta;
+      SCIP_Real QUAD(delta);
       int v = inds[i];
 
       assert(SCIPvarGetProbindex(vars[v]) == v);
@@ -2748,27 +2774,35 @@ SCIP_Real getMaxActivity(
       val = coefs[i];
 
       if( val < 0.0 )
-         delta = val * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
-      else
-         delta = val * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+      {
+         SCIP_Real bnd;
 
-      /* check whether the variable contributes with an infinite value */
-      if( SCIPsetIsInfinity(set, delta) )
-         return SCIPsetInfinity(set);
-      if( SCIPsetIsInfinity(set, -delta) )
-         return -SCIPsetInfinity(set);
+         assert(curvarlbs == NULL || !SCIPsetIsInfinity(set, -curvarlbs[v]));
+
+         bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+         SCIPquadprecProdDD(delta, val, bnd);
+      }
+      else
+      {
+         SCIP_Real bnd;
+
+         assert(curvarubs == NULL || !SCIPsetIsInfinity(set, curvarubs[v]));
+
+         bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         SCIPquadprecProdDD(delta, val, bnd);
+      }
 
       /* update maximal activity */
-      maxact += delta;
-
-      /* check whether the maximal activity got infinite */
-      if( SCIPsetIsInfinity(set, maxact) )
-         return SCIPsetInfinity(set);
-      if( SCIPsetIsInfinity(set, -maxact) )
-         return -SCIPsetInfinity(set);
+      SCIPquadprecSumQQ(maxact, maxact, delta);
    }
 
-   return maxact;
+   /* check whether the maximal activity got infinite */
+   if( SCIPsetIsInfinity(set, QUAD_TO_DBL(maxact)) )
+      return SCIPsetInfinity(set);
+   if( SCIPsetIsInfinity(set, -QUAD_TO_DBL(maxact)) )
+      return -SCIPsetInfinity(set);
+
+   return QUAD_TO_DBL(maxact);
 }
 
 static
@@ -6501,6 +6535,84 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
    return SCIP_OKAY;
 }
 
+/** adds an weigthed LP row to an aggregation row */
+static
+SCIP_RETCODE addRowToAggrRow(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_Real             weight,             /**< weight for scaling */
+   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
+   )
+{
+   assert(set != NULL);
+   assert(row != NULL);
+   assert(weight != 0.0);
+
+   /* add minimal value to dual row's left hand side: y_i < 0 -> lhs, y_i > 0 -> rhs */
+   if( weight < 0.0 )
+   {
+      assert(!SCIPsetIsInfinity(set, -row->lhs));
+      SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight, -1) );
+   }
+   else
+   {
+      assert(!SCIPsetIsInfinity(set, row->rhs));
+      SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight, +1) );
+   }
+   SCIPsetDebugMsg(set, " -> add row <%s>[%g,%g]: dual=%g -> dualrhs=%g\n",
+      SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, weight, SCIPaggrRowGetRhs(aggrrow));
+
+   return SCIP_OKAY;
+}
+
+/** check validity of LP row and a corresponding weight */
+static
+SCIP_Bool checkDualFeasibility(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_Real             weight,             /**< weight for scaling */
+   SCIP_Bool*            zerocontribution    /**< pointer to store whether every row entry is zero within tolerances */
+   )
+{
+   SCIP_Bool valid = TRUE;
+
+   *zerocontribution = TRUE;
+
+   /* dual solution values of 0.0 are always valid */
+   if( REALABS(weight) > QUAD_EPSILON )
+   {
+      *zerocontribution = FALSE;
+
+      /* check dual feasibility */
+      if( (SCIPsetIsInfinity(set, -row->lhs) && weight > 0.0) || (SCIPsetIsInfinity(set, row->rhs) && weight < 0.0) )
+      {
+         int i;
+
+         /* ignore slight numerical violations if the contribution of every component of the row is close to zero */
+         if( weight > 0.0 )
+            *zerocontribution = SCIPsetIsDualfeasZero(set, row->rhs * weight);
+         else
+            *zerocontribution = SCIPsetIsDualfeasZero(set, row->lhs * weight);
+
+         for( i = 0; i < row->len && *zerocontribution; i++ )
+         {
+            if( !SCIPsetIsDualfeasZero(set, weight * row->vals[i]) )
+               *zerocontribution = FALSE;
+         }
+
+         if( !(*zerocontribution) )
+         {
+            SCIPsetDebugMsg(set, " -> invalid dual solution value %g for row <%s>: lhs=%g, rhs=%g\n",
+               weight, SCIProwGetName(row), row->lhs, row->rhs);
+
+            valid = FALSE;
+         }
+      }
+   }
+
+   return valid;
+}
+
 /** calculates a Farkas proof from the current dual LP solution */
 static
 SCIP_RETCODE getFarkasProof(
@@ -6518,6 +6630,7 @@ SCIP_RETCODE getFarkasProof(
    SCIP_ROW** rows;
    SCIP_Real* dualfarkas;
    SCIP_ROW* row;
+   SCIP_Bool infdelta;
    int nrows;
    int r;
 
@@ -6558,71 +6671,54 @@ SCIP_RETCODE getFarkasProof(
       assert(row->len == 0 || row->vals != NULL);
       assert(row == lp->lpirows[r]);
 
-      /* ignore local rows and rows with Farkas value 0.0 */
-      if( !row->local && !SCIPsetIsDualfeasZero(set, dualfarkas[r]) )
+      /* ignore dual ray values of 0.0 (in this case: y_i == z_i == 0) */
+      if( REALABS(dualfarkas[r]) > 0.0 )
       {
+         SCIP_Bool zerocontribution;
+
+         /* check dual feasibility */
+         *valid = checkDualFeasibility(set, row, dualfarkas[r], &zerocontribution);
+
+         if( !(*valid) )
+            goto TERMINATE;
+
+         if( zerocontribution )
+            continue;
+
+         if( SCIPsetIsDualfeasZero(set, dualfarkas[r]) )
+            continue;
+
+         if( !row->local )
+         {
 #ifndef NDEBUG
-         {
-            SCIP_Real lpilhs;
-            SCIP_Real lpirhs;
+            {
+               SCIP_Real lpilhs;
+               SCIP_Real lpirhs;
 
-            SCIP_CALL( SCIPlpiGetSides(lpi, r, r, &lpilhs, &lpirhs) );
-            assert((SCIPsetIsInfinity(set, -lpilhs) && SCIPsetIsInfinity(set, -row->lhs))
-               || SCIPsetIsRelEQ(set, lpilhs, row->lhs - row->constant));
-            assert((SCIPsetIsInfinity(set, lpirhs) && SCIPsetIsInfinity(set, row->rhs))
-               || SCIPsetIsRelEQ(set, lpirhs, row->rhs - row->constant));
-         }
+               SCIP_CALL( SCIPlpiGetSides(lpi, r, r, &lpilhs, &lpirhs) );
+               assert((SCIPsetIsInfinity(set, -lpilhs) && SCIPsetIsInfinity(set, -row->lhs))
+                  || SCIPsetIsRelEQ(set, lpilhs, row->lhs - row->constant));
+               assert((SCIPsetIsInfinity(set, lpirhs) && SCIPsetIsInfinity(set, row->rhs))
+                  || SCIPsetIsRelEQ(set, lpirhs, row->rhs - row->constant));
+            }
 #endif
-
-         /* add row side to Farkas row lhs: dualfarkas > 0 -> lhs, dualfarkas < 0 -> rhs */
-         if( dualfarkas[r] > 0.0 )
-         {
-            /* check if sign of dual Farkas value is valid */
-            if( SCIPsetIsInfinity(set, -row->lhs) )
-               continue;
+            SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow) );
 
             /* due to numerical reasons we want to stop */
-            if( REALABS(dualfarkas[r] * (row->lhs - row->constant)) > NUMSTOP )
+            if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
             {
                (*valid) = FALSE;
                goto TERMINATE;
             }
-
-            SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualfarkas[r], -1) );
          }
+#ifdef SCIP_DEBUG
          else
          {
-            /* check if sign of dual Farkas value is valid */
-            if( SCIPsetIsInfinity(set, row->rhs) )
-               continue;
-
-            /* due to numerical reasons we want to stop */
-            if( REALABS(dualfarkas[r] * (row->rhs - row->constant)) > NUMSTOP )
-            {
-               (*valid) = FALSE;
-               goto TERMINATE;
-            }
-
-            SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualfarkas[r], +1) );
+            SCIPsetDebugMsg(set, " -> ignoring local row <%s> with dual Farkas value %.10f (lhs=%g, rhs=%g)\n",
+               SCIProwGetName(row), dualfarkas[r], row->lhs - row->constant, row->rhs - row->constant);
          }
-         SCIPsetDebugMsg(set, " -> farkasrhs: %g<%s>[%g,%g] -> %g\n", dualfarkas[r], SCIProwGetName(row),
-            row->lhs - row->constant, row->rhs - row->constant, SCIPaggrRowGetRhs(farkasrow));
-
-         /* due to numerical reasons we want to stop */
-         if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
-         {
-            (*valid) = FALSE;
-            goto TERMINATE;
-         }
-      }
-#ifdef SCIP_DEBUG
-      else if( !SCIPsetIsZero(set, dualfarkas[r]) )
-      {
-         SCIPsetDebugMsg(set, " -> ignoring %s row <%s> with dual Farkas value %.10f (lhs=%g, rhs=%g)\n",
-            row->local ? "local" : "global", SCIProwGetName(row), dualfarkas[r],
-            row->lhs - row->constant, row->rhs - row->constant);
-      }
 #endif
+      }
    }
 
    /* remove all coefficients that are too close to zero */
@@ -6631,10 +6727,25 @@ SCIP_RETCODE getFarkasProof(
    if( !(*valid) )
       goto TERMINATE;
 
-   /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
-   *farkasact = aggrRowGetMinActivity(set, prob, farkasrow, curvarlbs, curvarubs);
+   infdelta = FALSE;
 
-   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g, \n", (*farkasact), SCIPaggrRowGetRhs(farkasrow));
+   /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
+   *farkasact = aggrRowGetMinActivity(set, prob, farkasrow, curvarlbs, curvarubs, &infdelta);
+
+   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %d], \n",
+      (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
+
+   /* at least one variable contributes with an infinite value to the activity,
+    * this might be caused by igoring locally valid rows
+    *
+    * see: https://git.zib.de/integer/scip/issues/2743
+    */
+   if( infdelta )
+   {
+      (*valid) = FALSE;
+      SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
+         *farkasact, SCIPaggrRowGetRhs(farkasrow));
+   }
 
    /* the constructed proof is not valid, this can happen due to numerical reasons,
     * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r])
@@ -6672,6 +6783,7 @@ SCIP_RETCODE getDualProof(
    SCIP_Real* dualsols;
    SCIP_Real* redcosts;
    SCIP_Real maxabsdualsol;
+   SCIP_Bool infdelta;
    int nrows;
    int ncols;
    int r;
@@ -6770,49 +6882,53 @@ SCIP_RETCODE getDualProof(
       assert(row == lp->lpirows[r]);
 
       /* ignore dual solution values of 0.0 (in this case: y_i == z_i == 0) */
-      if( SCIPsetIsDualfeasZero(set, dualsols[r]) )
-         continue;
-
-      /* check dual feasibility */
-      if( (SCIPsetIsInfinity(set, -row->lhs) && dualsols[r] > 0.0) || (SCIPsetIsInfinity(set, row->rhs) && dualsols[r] < 0.0) )
+      if( REALABS(dualsols[r]) > 0.0 )
       {
-         SCIPsetDebugMsg(set, " -> infeasible dual solution %g in row <%s>: lhs=%g, rhs=%g\n",
-            dualsols[r], SCIProwGetName(row), row->lhs, row->rhs);
-         (*valid) = FALSE;
-         goto TERMINATE;
-      }
+         SCIP_Bool zerocontribution;
 
-      /* local rows add up to the dual row's coefficients (because z_i == 0 => -(y_i - z_i) == -y_i),
-       * global rows add up to the dual row's left hand side (because z_i == y_i != 0)
-       */
-      if( row->local )
-      {
-#if 0
-         /* add -y_i A_i to coefficients of dual row */
-         for( i = 0; i < row->len; ++i )
+         /* check dual feasibility */
+         *valid = checkDualFeasibility(set, row, dualsols[r], &zerocontribution);
+
+         if( !(*valid) )
+            goto TERMINATE;
+
+         if( zerocontribution )
+            continue;
+
+         if( SCIPsetIsDualfeasZero(set, dualsols[r]) )
+            continue;
+
+         /* skip local row */
+         if( !row->local )
          {
-            v = SCIPvarGetProbindex(SCIPcolGetVar(row->cols[i]));
-            assert(0 <= v && v < prob->nvars);
-            dualcoefs[v] -= dualsols[r] * row->vals[i]; // TODO use row
-         }
+#ifndef NDEBUG
+            {
+               SCIP_Real lpilhs;
+               SCIP_Real lpirhs;
+
+               SCIP_CALL( SCIPlpiGetSides(lpi, r, r, &lpilhs, &lpirhs) );
+               assert((SCIPsetIsInfinity(set, -lpilhs) && SCIPsetIsInfinity(set, -row->lhs))
+                  || SCIPsetIsRelEQ(set, lpilhs, row->lhs - row->constant));
+               assert((SCIPsetIsInfinity(set, lpirhs) && SCIPsetIsInfinity(set, row->rhs))
+                  || SCIPsetIsRelEQ(set, lpirhs, row->rhs - row->constant));
+            }
 #endif
-         SCIPsetDebugMsg(set, " -> local row <%s>: dual=%g\n", SCIProwGetName(row), dualsols[r]);
-      }
-      else
-      {
-         /* add minimal value to dual row's left hand side: z_i == y_i > 0 -> lhs, z_i == y_i < 0 -> rhs */
-         if( dualsols[r] > 0.0 )
-         {
-            assert(!SCIPsetIsInfinity(set, -row->lhs));
-            SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualsols[r], -1) );
+            SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], farkasrow) );
+
+            /* due to numerical reasons we want to stop */
+            if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
+            {
+               (*valid) = FALSE;
+               goto TERMINATE;
+            }
          }
+#ifdef SCIP_DEBUG
          else
          {
-            assert(!SCIPsetIsInfinity(set, row->rhs));
-            SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualsols[r], +1) );
+            SCIPsetDebugMsg(set, " -> ignoring local row <%s> with dual solution value %.10f (lhs=%g, rhs=%g)\n",
+               SCIProwGetName(row), dualfarkas[r], row->lhs - row->constant, row->rhs - row->constant);
          }
-         SCIPsetDebugMsg(set, " -> global row <%s>[%g,%g]: dual=%g -> dualrhs=%g\n",
-            SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, -dualsols[r], SCIPaggrRowGetRhs(farkasrow));
+#endif
       }
    }
 
@@ -6822,9 +6938,26 @@ SCIP_RETCODE getDualProof(
    if( !(*valid) )
       goto TERMINATE;
 
-   /* check validity of the proof */
-   *farkasact = aggrRowGetMinActivity(set, prob, farkasrow, curvarlbs, curvarubs);
+   infdelta = FALSE;
 
+   /* check validity of the proof */
+   *farkasact = aggrRowGetMinActivity(set, prob, farkasrow, curvarlbs, curvarubs, &infdelta);
+
+   /* at least one variable contributes with an infinite value to the activity,
+    * this might be caused by igoring locally valid rows
+    *
+    * see: https://git.zib.de/integer/scip/issues/2743
+    */
+   if( infdelta )
+   {
+      (*valid) = FALSE;
+      SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
+         *farkasact, SCIPaggrRowGetRhs(farkasrow));
+   }
+
+   /* the constructed proof is not valid, this can happen due to numerical reasons,
+    * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r])
+    */
    if( SCIPsetIsLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)) )
    {
       *valid = FALSE;
@@ -6921,6 +7054,7 @@ SCIP_RETCODE separateAlternativeProofs(
    SCIP_Bool islocal;
    SCIP_Bool cutsuccess;
    SCIP_Bool success;
+   SCIP_Bool infdelta;
    int* cutinds;
    int* inds;
    int cutnnz;
@@ -6934,7 +7068,12 @@ SCIP_RETCODE separateAlternativeProofs(
    inds = SCIPaggrRowGetInds(proofrow);
    nnz = SCIPaggrRowGetNNz(proofrow);
 
-   proofefficiacy = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs) - SCIPaggrRowGetRhs(proofrow);
+   proofefficiacy = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
+
+   if( infdelta )
+      return SCIP_OKAY;
+
+   proofefficiacy -= SCIPaggrRowGetRhs(proofrow);
 
    efficiacynorm = SCIPaggrRowCalcEfficacyNorm(set->scip, proofrow);
    proofefficiacy /= MAX(1e-6, efficiacynorm);
@@ -7075,7 +7214,7 @@ SCIP_RETCODE tightenDualproof(
    SCIPsetDebugMsg(set, "start dualray tightening:\n");
    SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)\n",
          nnz, nbinvars, nintvars, ncontvars);
-   debugPrintViolationInfo(set, aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs), SCIPaggrRowGetRhs(proofrow), NULL);
+   debugPrintViolationInfo(set, aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
 
    /* try to find an alternative proof of local infeasibility that is stronger */
    if( set->conf_sepaaltproofs )
@@ -7099,6 +7238,17 @@ SCIP_RETCODE tightenDualproof(
    vals = proofsetGetVals(proofset);
    inds = proofsetGetInds(proofset);
    nnz = proofsetGetNVars(proofset);
+
+#ifndef NDEBUG
+   for( i = 0; i < nnz; i++ )
+   {
+      int idx = inds[i];
+      if( vals[i] > 0.0 )
+         assert(!SCIPsetIsInfinity(set, curvarlbs != NULL ? -curvarlbs[idx] : -SCIPvarGetLbLocal(vars[idx])));
+      if( vals[i] < 0.0 )
+         assert(!SCIPsetIsInfinity(set, curvarubs != NULL ? curvarubs[idx] : SCIPvarGetUbLocal(vars[idx])));
+   }
+#endif
 
    /* remove continuous variable contributing with their global bound
     *
@@ -7134,7 +7284,8 @@ SCIP_RETCODE tightenDualproof(
 
             /* get appropriate global and local bounds */
             glbbd = (val < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
-            locbd = (val < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
+            locbd = (val < 0.0 ? (curvarubs != NULL ? curvarubs[idx] : SCIPvarGetUbLocal(vars[idx]))
+               : (curvarlbs != NULL ? curvarlbs[idx] : SCIPvarGetLbLocal(vars[idx])));
 
             if( !SCIPsetIsEQ(set, glbbd, locbd) )
             {
@@ -7220,6 +7371,7 @@ SCIP_RETCODE conflictAnalyzeDualProof(
 {
    SCIP_Real rhs;
    SCIP_Real minact;
+   SCIP_Bool infdelta;
    int nnz;
 
    assert(set != NULL);
@@ -7233,7 +7385,10 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    *success = FALSE;
 
    /* get minimal activity w.r.t. local bounds */
-   minact = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs);
+   minact = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
+
+   if( infdelta )
+      return SCIP_OKAY;
 
    /* only run is the proof proves local infeasibility */
    if( SCIPsetIsFeasLE(set, minact, rhs) )

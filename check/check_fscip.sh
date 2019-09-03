@@ -39,11 +39,12 @@ VISUALIZE=${22}
 PERMUTE=${23}
 SEEDS=${24}
 GLBSEEDSHIFT=${25}
+STARTPERM=${26}
 
 SOLVER=fscip
 
 # check if all variables defined (by checking the last one)
-if test -z $SEEDS
+if test -z $STARTPERM
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -61,7 +62,7 @@ then
     echo "LOCK          = $LOCK"
     echo "VERSION       = $VERSION"
     echo "LPS           = $LPS"
-    echo "DEBUGTOOL      = $DEBUGTOOL"
+    echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
     echo "REOPT         = $REOPT"
     echo "PERMUTE       = $PERMUTE"
@@ -72,6 +73,7 @@ then
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
     echo "GLBSEEDSHIFT  = $GLBSEEDSHIFT"
+    echo "STARTPERM     = $STARTPERM"
     exit 1;
 fi
 
@@ -135,7 +137,7 @@ do
 
 		# infer the names of all involved files from the arguments
 		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s \
-		  $THREADS $GLBSEEDSHIFT
+		  $THREADS $GLBSEEDSHIFT $STARTPERM
 
 		if test "$INSTANCE" = "DONE"
 		then

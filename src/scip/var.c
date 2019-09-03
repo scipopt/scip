@@ -5933,9 +5933,17 @@ SCIP_RETCODE SCIPvarMarkDoNotMultaggr(
 /** changes type of variable; cannot be called, if var belongs to a problem */
 SCIP_RETCODE SCIPvarChgType(
    SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VARTYPE          vartype             /**< new type of variable */
    )
 {
+   SCIP_EVENT* event;
+   SCIP_VARTYPE oldtype;
+
    assert(var != NULL);
 
    SCIPdebugMessage("change type of <%s> from %d to %d\n", var->name, SCIPvarGetType(var), vartype);
@@ -5946,9 +5954,27 @@ SCIP_RETCODE SCIPvarChgType(
       return SCIP_INVALIDDATA;
    }
 
+   oldtype = (SCIP_VARTYPE)var->vartype;
    var->vartype = vartype; /*lint !e641*/
+
+   if( SCIPsetGetStage(set) > SCIP_STAGE_TRANSFORMING )
+   {
+      SCIP_CALL( SCIPeventCreateTypeChanged(&event, blkmem, var, oldtype, vartype) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
+   }
+
    if( var->negatedvar != NULL )
+   {
+      assert(oldtype == (SCIP_VARTYPE)var->negatedvar->vartype);
+
       var->negatedvar->vartype = vartype; /*lint !e641*/
+
+      if( SCIPsetGetStage(set) > SCIP_STAGE_TRANSFORMING )
+      {
+         SCIP_CALL( SCIPeventCreateTypeChanged(&event, blkmem, var->negatedvar, oldtype, vartype) );
+         SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
+      }
+   }
 
    return SCIP_OKAY;
 }
