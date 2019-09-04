@@ -18499,7 +18499,10 @@ SCIP_RETCODE SCIPlpGetDegeneracy(
          else
             lp->degeneracy = 0.0;
 
-         lp->varconsratio = 1.0 * (ncols + nineq + nbasicequalities - nfixedcols - nfixedrows - nalreadyfixedcols) / nrows;
+         if( nrows > 0 )
+            lp->varconsratio = 1.0 * (ncols + nineq + nbasicequalities - nfixedcols - nfixedrows - nalreadyfixedcols) / nrows;
+         else
+            lp->varconsratio = 1.0; /* @todo should this rather be set to a large value? */
          assert(lp->degeneracy >= 0);
          assert(SCIPsetIsLE(set, lp->degeneracy, 1.0));
          assert(SCIPsetIsGE(set, lp->varconsratio, 1.0));
