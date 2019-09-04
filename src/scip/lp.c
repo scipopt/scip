@@ -18494,8 +18494,15 @@ SCIP_RETCODE SCIPlpGetDegeneracy(
          }
          assert(nfixedcols + nfixedrows <= ncols + nineq + nbasicequalities - nrows - nalreadyfixedcols - nimplicitfixedrows);
 
-         lp->degeneracy = 1.0 - 1.0 * (nfixedcols + nfixedrows) / (ncols + nineq - nrows + nbasicequalities - nalreadyfixedcols);
+         if( ncols + nineq - nrows + nbasicequalities - nalreadyfixedcols > 0 )
+            lp->degeneracy = 1.0 - 1.0 * (nfixedcols + nfixedrows) / (ncols + nineq - nrows + nbasicequalities - nalreadyfixedcols);
+         else
+            lp->degeneracy = 0.0;
+
          lp->varconsratio = 1.0 * (ncols + nineq + nbasicequalities - nfixedcols - nfixedrows - nalreadyfixedcols) / nrows;
+         assert(lp->degeneracy >= 0);
+         assert(SCIPsetIsLE(set, lp->degeneracy, 1.0));
+         assert(SCIPsetIsGE(set, lp->varconsratio, 1.0));
       }
       else
       {
