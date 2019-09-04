@@ -83,6 +83,7 @@
 #define DEFAULT_ADDBINCONSROW                0     /**< should binary constraints be added as rows to the base LP?
                                                     *   (0: no, 1: separate, 2: as initial rows) */
 #define DEFAULT_USEDOMAINREDUCTION           TRUE  /**< Should domain reductions be collected and applied? */
+#define DEFAULT_MERGEDOMAINREDUCTIONS        TRUE  /**< should domain reductions of feasible siblings should be merged? */
 #define DEFAULT_ONLYVIOLDOMREDS              FALSE /**< Should only domain reductions that violate the LP solution be applied? */
 #define DEFAULT_MAXNVIOLATEDCONS             1     /**< How many constraints that are violated by the base lp solution
                                                     *   should be gathered until the rule is stopped and they are added? */
@@ -1040,6 +1041,7 @@ typedef struct
    int                   maxndeepercands;    /**< If abbreviated == TRUE, at most how many candidates should be handled in deeper nodes? */
    SCIP_Bool             usedomainreduction; /**< indicates whether the data for domain reductions should be gathered and
                                               *   used. */
+   SCIP_Bool             mergedomainreductions; /**< should domain reductions of feasible siblings should be merged? */
    SCIP_Bool             onlyvioldomreds;    /**< Should only domain reductions that violate the LP solution be applied? */
    SCIP_Bool             usebincons;         /**< indicates whether the data for the implied binary constraints should
                                               *   be gathered and used */
@@ -3421,12 +3423,12 @@ SCIP_RETCODE getFSBResult(
 
 #ifdef SCIP_STATISTIC
    SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions,
-         binconsdata, candidatelist, decision, scorecontainer, level2data, recursiondepth - 1,
+         binconsdata, candidatelist, decision, scorecontainer, level2data, 1 /*recursiondepth - 1*/,
          lpobjval, lpobjval, NULL, NULL, NULL, NULL, NULL, NULL,
          statistics, localstats, NULL, NULL) );
 #else
    SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions,
-         binconsdata, candidatelist, decision, scorecontainer, level2data, recursiondepth - 1,
+         binconsdata, candidatelist, decision, scorecontainer, level2data, 1 /*recursiondepth - 1*/,
          lpobjval, lpobjval, NULL, NULL, NULL, NULL, NULL, NULL) );
 #endif
 
@@ -4169,48 +4171,36 @@ SCIP_RETCODE ensureScoresPresent(
    {
       CANDIDATE* lpcand = allcandidates->candidates[i];
       SCIP_VAR* branchvar = lpcand->branchvar;
+      int probindex = SCIPvarGetProbindex(branchvar);
+      SCIP_Real knownscore = scorecontainer->scores[probindex];
 
       assert(lpcand != NULL);
       assert(branchvar != NULL);
 
-      if( config->abbrevpseudo )
+      if( SCIPisLT(scip, knownscore, 0.0) )
       {
-         if( !isCandidateReliable(scip, branchvar) )
-         {
-            candidateunscored[nunscoredcandidates] = i;
-            nunscoredcandidates++;
-         }
-         else
+         if( config->abbrevpseudo && isCandidateReliable(scip, branchvar) )
          {
             SCIP_Real score = calculateScoreFromPseudocosts(scip, lpcand);
             SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand, score, 0.0, 0.0) );
          }
-      }
-      else
-      {
-         int probindex = SCIPvarGetProbindex(branchvar);
-         SCIP_Real knownscore = scorecontainer->scores[probindex];
-
-         if( SCIPisLT(scip, knownscore, 0.0) )
+         else if( config->level2avgscore && SCIPgetProbingDepth(scip) > 0 )
          {
-            if( config->level2avgscore && SCIPgetProbingDepth(scip) > 0 )
-            {
-               assert(scorecontainer->nsetscores > 0);
-               SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand,
-                     scorecontainer->scoresum / scorecontainer->nsetscores, 0.0, 0.0) );
-            }
-            else if( config->level2zeroscore && SCIPgetProbingDepth(scip) > 0 )
-            {
-               assert(scorecontainer->nsetscores > 0);
-               SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand,
-                     -0.1, 0.0, 0.0) );
-            }
-            else
-            {
-               /* score is unknown and needs to be calculated */
-               candidateunscored[nunscoredcandidates] = i;
-               nunscoredcandidates++;
-            }
+            assert(scorecontainer->nsetscores > 0);
+            SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand,
+                  scorecontainer->scoresum / scorecontainer->nsetscores, 0.0, 0.0) );
+         }
+         else if( config->level2zeroscore && SCIPgetProbingDepth(scip) > 0 )
+         {
+            assert(scorecontainer->nsetscores > 0);
+            SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, lpcand,
+                  -0.1, 0.0, 0.0) );
+         }
+         else
+         {
+            /* score is unknown and needs to be calculated */
+            candidateunscored[nunscoredcandidates] = i;
+            nunscoredcandidates++;
          }
       }
    }
@@ -5155,7 +5145,7 @@ SCIP_RETCODE selectVarRecursive(
             if( config->enforcemaxdomreds && config->maxnviolateddomreds > 0)
                maxstoredomreds = config->maxnviolateddomreds;
 
-            if( !upbranchingresult->cutoff && !downbranchingresult->cutoff )
+            if( !upbranchingresult->cutoff && !downbranchingresult->cutoff && config->mergedomainreductions )
                applyDeeperDomainReductions(scip, baselpsol, maxstoredomreds, domainreductions, downdomainreductions,
                   updomainreductions);
             else if( upbranchingresult->cutoff && !downbranchingresult->cutoff )
@@ -6384,6 +6374,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/usedomainreduction",
          "should domain reductions be collected and applied?",
          &branchruledata->config->usedomainreduction, TRUE, DEFAULT_USEDOMAINREDUCTION, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/mergedomainreductions",
+         "should domain reductions of feasible siblings should be merged?",
+         &branchruledata->config->mergedomainreductions, TRUE, DEFAULT_MERGEDOMAINREDUCTIONS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/onlyvioldomreds",
          "should only domain reductions that violate the LP solution be applied?",
