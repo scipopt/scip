@@ -1414,7 +1414,7 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
       SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bounds[c], SCIPgetConsExprExprActivity(scip, exprs[c]),
          weights[c]);  /*lint !e613 */
 
-      SCIPdebugMsgPrint(scip, " %+.20g*[%.20g,%.20g]", weights[c], SCIPgetConsExprExprActivity(scip, exprs[c]).inf, SCIPgetConsExprExprActivity(scip, exprs[c]).sup);
+      SCIPdebugMsgPrint(scip, " %+.20g*[%.20g,%.20g]", weights[c], SCIPgetConsExprExprActivity(scip, exprs[c]).inf, SCIPgetConsExprExprActivity(scip, exprs[c]).sup); /*lint !e613 */
 
       if( SCIPisInfinity(scip, SCIPintervalGetSup(bounds[c])) )
          ++maxlinactivityinf;
