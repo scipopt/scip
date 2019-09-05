@@ -5418,10 +5418,10 @@ SCIP_RETCODE enforceConstraint(
     */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
 
-   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPlpfeastol(scip) )
+   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPgetLPFeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPlpfeastol(scip), TRUE, FALSE,
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPgetLPFeastol(scip), TRUE, FALSE,
             &success, &cutoff, &sepaefficacy) );
       if( cutoff )
       {
