@@ -13631,6 +13631,9 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_Real midval;
+      SCIP_Real feastol;
+
+      feastol = SCIPgetStage(scip) == SCIP_STAGE_SOLVING ? SCIPgetLPFeastol(scip) : SCIPfeastol(scip);
 
       /* evaluate function in middle point to get some idea for a scaling */
       for( j = 0; j < nvars; ++j )
@@ -13643,7 +13646,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
       assert(conshdlrdata != NULL);
 
       /* there seem to be numerical problems if the error is too large; in this case we reject the facet */
-      if( maxfaceterror > conshdlrdata->vp_adjfacetthreshold * SCIPlpfeastol(scip) * fabs(midval) )
+      if( maxfaceterror > conshdlrdata->vp_adjfacetthreshold * feastol * fabs(midval) )
       {
          SCIPdebugMsg(scip, "ignoring facet due to instability, it cuts off a vertex by %g (midval=%g).\n", maxfaceterror, midval);
          *success = FALSE;
