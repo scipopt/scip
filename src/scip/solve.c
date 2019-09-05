@@ -3467,7 +3467,8 @@ SCIP_RETCODE enforceConstraints(
          break;
 
       case SCIP_SOLVELP:
-         assert(!SCIPtreeHasFocusNodeLP(tree));
+         /* either LP was not solved, or it is not solved anymore (e.g., because feastol has been tightened by some constraint handler) */
+         assert(!SCIPtreeHasFocusNodeLP(tree) || !lp->solved);
          assert(tree->nchildren == 0);
          assert(SCIPsepastoreGetNCuts(sepastore) == 0);
          *infeasible = TRUE;
