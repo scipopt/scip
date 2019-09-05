@@ -244,6 +244,8 @@ Interface changes
 - changed default value of "heur/coefdiving/freq" (old: 10, new: -1)
 - changed default value of "heur/conflictdiving/freq" (old: -1, new: 10)
 - changed default value of "heur/conflictdiving/lockweight" (old: 1.0, new: 0.75)
+- replaced parameter "numerics/lpfeastol" by "numerics/lpfeastolfactor" to specify which factor should be applied to the SCIP feasibility
+  tolerance to initialize the primal feasibility tolerance of the LP solver
 
 ### New parameters
 
