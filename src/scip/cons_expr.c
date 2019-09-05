@@ -1120,7 +1120,7 @@ SCIP_RETCODE forwardPropExpr(
 #endif
 
                   /* intersect with interval */
-                  SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
+                  SCIPintervalIntersectEps(&interval, SCIPepsilon(scip), interval, nlhdlrinterval);
                }
             }
             else
@@ -1138,18 +1138,19 @@ SCIP_RETCODE forwardPropExpr(
 #endif
 
                /* intersect with interval */
-               SCIPintervalIntersect(&interval, interval, exprhdlrinterval);
+               SCIPintervalIntersectEps(&interval, SCIPepsilon(scip), interval, exprhdlrinterval);
             }
 
             /* if expression is integral, then we try to tighten the interval bounds a bit
              * this should undo the addition of some unnecessary safety added by use of nextafter() in interval arithmetics, e.g., when doing pow()
+             * it would be ok to use ceil() and floor(), but for safety we use SCIPceil and SCIPfloor for now
              */
             if( expr->isintegral )
             {
                if( interval.inf > -SCIP_INTERVAL_INFINITY )
-                  interval.inf = ceil(interval.inf);
+                  interval.inf = SCIPceil(scip, interval.inf);
                if( interval.sup <  SCIP_INTERVAL_INFINITY )
-                  interval.sup = floor(interval.sup);
+                  interval.sup = SCIPfloor(scip, interval.sup);
                /* SCIPdebugMsg(scip, "applying integrality: [%.15g,%.15g]\n", interval.inf, interval.sup); */
             }
 
@@ -1171,7 +1172,7 @@ SCIP_RETCODE forwardPropExpr(
                   /* it would be odd if the domain of an auxiliary variable were empty */
                   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, auxvarbounds));
 
-                  SCIPintervalIntersect(&previnterval, previnterval, auxvarbounds);
+                  SCIPintervalIntersectEps(&previnterval, SCIPepsilon(scip), previnterval, auxvarbounds);
                }
 
                /* if previnterval allow a further tightening, then reversepropagation
@@ -1189,7 +1190,7 @@ SCIP_RETCODE forwardPropExpr(
                   SCIPdebugMsg(scip, "do not insert expr <%p> (%s) into reversepropqueue, interval = [%.15g,%.15g] is subset of previnterval=[%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), interval.inf, interval.sup, previnterval.inf, previnterval.sup);
                } */
 
-               SCIPintervalIntersect(&interval, interval, previnterval);
+               SCIPintervalIntersectEps(&interval, SCIPepsilon(scip), interval, previnterval);
                /* SCIPdebugMsg(scip, "intersected with previnterval [%.15g,%.15g] -> [%.15g,%.15g]\n", previnterval.inf, previnterval.sup, interval.inf, interval.sup); */
             }
 
@@ -11131,16 +11132,17 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 
    if( expr->isintegral )
    {
-      /* apply integrality to new bounds */
+      /* apply integrality to new bounds
+       * it should be ok to use normal ceil() and floor(), but for safety, we use SCIPceil and SCIPfloor for now
+       */
       if( newbounds.inf > -SCIP_INTERVAL_INFINITY )
-         newbounds.inf = ceil(newbounds.inf);
+         newbounds.inf = SCIPceil(scip, newbounds.inf);
       if( newbounds.sup <  SCIP_INTERVAL_INFINITY )
-         newbounds.sup = floor(newbounds.sup);
+         newbounds.sup = SCIPfloor(scip, newbounds.sup);
       /* SCIPdebugMsg(scip, "applied integrality: [%.15g,%.15g]\n", newbounds.inf, newbounds.sup); */
    }
 
-   /* intersect old interval with the new one */
-   SCIPintervalIntersect(&expr->activity, expr->activity, newbounds);
+   SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, newbounds);
 
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )

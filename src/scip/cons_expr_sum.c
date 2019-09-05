@@ -430,7 +430,16 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
       if( SCIPcompareConsExprExprs(children[i], children[i + 1]) == 0 )
       {
          changed = TRUE;
-         coefs[i+1] += coefs[i];
+         /* if we substract two almost equal not-so-small numbers, then set new coefficient to 0.0
+          * instead of some tiny value that is likely the result of some random round-off error
+          * E.g., on instance ex1221, we have x1^2 + b3 = 1.25.
+          *   Probing finds an aggregation x1 = 1.11803 - 0.618034 b3.
+          *   Simplify would then produce 1.25 + 1e-16 x1 = 1.25.
+          */
+         if( SCIPisEQ(scip, coefs[i], -coefs[i+1]) && REALABS(coefs[i]) >= 1.0 )
+            coefs[i+1] = 0.0;
+         else
+            coefs[i+1] += coefs[i];
          continue;
       }
 
