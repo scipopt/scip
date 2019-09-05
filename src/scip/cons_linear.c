@@ -8864,7 +8864,7 @@ SCIP_RETCODE tightenSides(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(nchgsides != NULL);
-   assert(infeasible != NULL)
+   assert(infeasible != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
