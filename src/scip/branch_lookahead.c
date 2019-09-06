@@ -84,6 +84,7 @@
                                                     *   (0: no, 1: separate, 2: as initial rows) */
 #define DEFAULT_USEDOMAINREDUCTION           TRUE  /**< Should domain reductions be collected and applied? */
 #define DEFAULT_MERGEDOMAINREDUCTIONS        TRUE  /**< should domain reductions of feasible siblings should be merged? */
+#define DEFAULT_PREFERSIMPLEBOUNDS           FALSE /**< should domain reductions only be applied if there are simple bound changes? */
 #define DEFAULT_ONLYVIOLDOMREDS              FALSE /**< Should only domain reductions that violate the LP solution be applied? */
 #define DEFAULT_MAXNVIOLATEDCONS             1     /**< How many constraints that are violated by the base lp solution
                                                     *   should be gathered until the rule is stopped and they are added? */
@@ -1042,6 +1043,7 @@ typedef struct
    SCIP_Bool             usedomainreduction; /**< indicates whether the data for domain reductions should be gathered and
                                               *   used. */
    SCIP_Bool             mergedomainreductions; /**< should domain reductions of feasible siblings should be merged? */
+   SCIP_Bool             prefersimplebounds; /**<    should domain reductions only be applied if there are simple bound changes? */
    SCIP_Bool             onlyvioldomreds;    /**< Should only domain reductions that violate the LP solution be applied? */
    SCIP_Bool             usebincons;         /**< indicates whether the data for the implied binary constraints should
                                               *   be gathered and used */
@@ -1743,6 +1745,7 @@ typedef struct
                                               *   or upper bound. */
    int                   nchangedvars;       /**< Tracks the number of vars, that have a changed domain. (a change on both,
                                               *   upper and lower bound, counts as one.) */
+   int                   nsimplebounds;      /**< number of changed bounds resulting from infeasible child nodes */
 #ifdef SCIP_STATISTIC
    int*                  lowerboundnproofs;  /**< The number of nodes needed to prove the lower bound for each variable. */
    int*                  upperboundnproofs;  /**< The number of nodes needed to prove the upper bound for each variable. */
@@ -1786,6 +1789,7 @@ SCIP_RETCODE domainReductionsCreate(
    /* At the start we have no domain reductions for any variable. */
    (*domreds)->nviolatedvars = 0;
    (*domreds)->nchangedvars = 0;
+   (*domreds)->nsimplebounds = 0;
 
    return SCIP_OKAY;
 }
@@ -2120,6 +2124,7 @@ void addLowerBound(
    SCIP_Real             lowerbound,         /**< The new lower bound for the variable. */
    SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
                                               *   reduction is violated by it. */
+   SCIP_Bool             simplechange,       /**< does the change result from an infeasible child node? */
    DOMAINREDUCTIONS*     domainreductions    /**< The struct the domain reduction should be added to. */
 #ifdef SCIP_STATISTIC
    ,int                  nproofnodes         /**< The number of nodes needed to prove the new lower bound. */
@@ -2154,6 +2159,8 @@ void addLowerBound(
        * so we update the bound and number of proof nodes */
       domainreductions->lowerbounds[varindex] = lowerbound;
       domainreductions->nchangedvars++;
+      if( simplechange )
+         domainreductions->nsimplebounds++;
 #ifdef SCIP_STATISTIC
       domainreductions->lowerboundnproofs[varindex] = nproofnodes;
    }
@@ -2187,6 +2194,7 @@ void addUpperBound(
    SCIP_Real             upperbound,         /**< The new upper bound for the variable. */
    SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
                                               *   reduction is violated by it. */
+   SCIP_Bool             simplechange,       /**< does the change result from an infeasible child node? */
    DOMAINREDUCTIONS*     domainreductions    /**< The struct the domain reduction should be added to. */
 #ifdef SCIP_STATISTIC
    ,int                  nproofnodes         /**< The number of nodes needed to prove the new lower bound. */
@@ -2230,6 +2238,8 @@ void addUpperBound(
        * so we update the bound and number of proof nodes */
       domainreductions->upperbounds[varindex] = upperbound;
       domainreductions->nchangedvars++;
+      if( simplechange )
+         domainreductions->nsimplebounds++;
 #ifdef SCIP_STATISTIC
       domainreductions->upperboundnproofs[varindex] = nproofnodes;
 #endif
@@ -2284,20 +2294,20 @@ void applySingleDeeperDomainReductions(
 
 #ifdef SCIP_STATISTIC
       /* adjust the proof nodes */
-      addLowerBound(scip, vars[i], domreds->lowerbounds[i], baselpsol, targetdomreds,
+      addLowerBound(scip, vars[i], domreds->lowerbounds[i], baselpsol, TRUE, targetdomreds,
          domreds->lowerboundnproofs[i], FALSE);
 #else
-      addLowerBound(scip, vars[i], domreds->lowerbounds[i], baselpsol, targetdomreds);
+      addLowerBound(scip, vars[i], domreds->lowerbounds[i], baselpsol, TRUE, targetdomreds);
 #endif
 
       if( targetdomreds->nviolatedvars >= maxstoredomreds )
          return;
 
 #ifdef SCIP_STATISTIC
-      addUpperBound(scip, vars[i], domreds->upperbounds[i], baselpsol, targetdomreds,
+      addUpperBound(scip, vars[i], domreds->upperbounds[i], baselpsol, TRUE, targetdomreds,
          domreds->upperboundnproofs[i], FALSE);
 #else
-      addUpperBound(scip, vars[i], domreds->upperbounds[i], baselpsol, targetdomreds);
+      addUpperBound(scip, vars[i], domreds->upperbounds[i], baselpsol, TRUE, targetdomreds);
 #endif
    }
 }
@@ -2357,10 +2367,10 @@ void applyDeeperDomainReductions(
 
       /* This MIN can now be added via the default add method */
 #ifdef SCIP_STATISTIC
-      addLowerBound(scip, vars[i], newlowerbound, baselpsol, targetdomreds,
+      addLowerBound(scip, vars[i], newlowerbound, baselpsol, FALSE, targetdomreds,
          MIN(4, downdomreds->lowerboundnproofs[i] + updomreds->lowerboundnproofs[i] + 2), FALSE);
 #else
-      addLowerBound(scip, vars[i], newlowerbound, baselpsol, targetdomreds);
+      addLowerBound(scip, vars[i], newlowerbound, baselpsol, FALSE, targetdomreds);
 #endif
 
       if( targetdomreds->nviolatedvars >= maxstoredomreds )
@@ -2371,10 +2381,10 @@ void applyDeeperDomainReductions(
 
       /* This MAX can now be added via the default add method */
 #ifdef SCIP_STATISTIC
-      addUpperBound(scip, vars[i], newupperbound, baselpsol, targetdomreds,
+      addUpperBound(scip, vars[i], newupperbound, baselpsol, FALSE, targetdomreds,
          MIN(4, downdomreds->upperboundnproofs[i] + updomreds->upperboundnproofs[i] + 2), FALSE);
 #else
-      addUpperBound(scip, vars[i], newupperbound, baselpsol, targetdomreds);
+      addUpperBound(scip, vars[i], newupperbound, baselpsol, FALSE, targetdomreds);
 #endif
    }
 
@@ -2416,6 +2426,7 @@ SCIP_RETCODE applyDomainReductions(
 
    /* initially we have no cutoff */
    *domredcutoff = FALSE;
+   *domred = FALSE;
 
    /* as the bounds are tracked for all vars we have to iterate over all vars */
    probvars = SCIPgetVars(scip);
@@ -2423,6 +2434,9 @@ SCIP_RETCODE applyDomainReductions(
 
    assert(probvars != NULL);
    assert(nprobvars > 0);
+
+   if( config->prefersimplebounds && domreds->nsimplebounds == 0 )
+      return SCIP_OKAY;
 
    for( i = 0; i < nprobvars && !(*domredcutoff); i++ )
    {
@@ -2871,11 +2885,11 @@ SCIP_RETCODE executeBranching(
                lowerbound = SCIPvarGetLbLocal(var);
                upperbound = SCIPvarGetUbLocal(var);
 #ifdef SCIP_STATISTIC
-               addLowerBound(scip, var, lowerbound, baselpsol, domreds, 0, FALSE);
-               addUpperBound(scip, var, upperbound, baselpsol, domreds, 0, FALSE);
+               addLowerBound(scip, var, lowerbound, baselpsol, FALSE, domreds, 0, FALSE);
+               addUpperBound(scip, var, upperbound, baselpsol, FALSE, domreds, 0, FALSE);
 #else
-               addLowerBound(scip, var, lowerbound, baselpsol, domreds);
-               addUpperBound(scip, var, upperbound, baselpsol, domreds);
+               addLowerBound(scip, var, lowerbound, baselpsol, FALSE, domreds);
+               addUpperBound(scip, var, upperbound, baselpsol, FALSE, domreds);
 #endif
             }
          }
@@ -3414,12 +3428,6 @@ SCIP_RETCODE getFSBResult(
 
    /* inform configuration that we are in scoring mode now */
    config->inscoring = TRUE;
-
-   // /* use the default scoring function */
-   // if( config->scoringfunction == 's' || config->scoringfunction == 'w' )
-   //    config->scoringfunction = 'f';
-   // else if( config->scoringfunction == 'p' )
-   //    config->scoringfunction = 'd';
 
 #ifdef SCIP_STATISTIC
    SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions,
@@ -5075,10 +5083,10 @@ SCIP_RETCODE selectVarRecursive(
             {
 #ifdef SCIP_STATISTIC
                assert(localstats->ncutoffproofnodes == 0 || localstats->ncutoffproofnodes == 2);
-               addUpperBound(scip, branchvar, branchval, baselpsol, domainreductions,
+               addUpperBound(scip, branchvar, branchval, baselpsol, TRUE, domainreductions,
                2 + localstats->ncutoffproofnodes, TRUE);
 #else
-               addUpperBound(scip, branchvar, branchval, baselpsol, domainreductions);
+               addUpperBound(scip, branchvar, branchval, baselpsol, TRUE, domainreductions);
 #endif
             }
 
@@ -5105,10 +5113,10 @@ SCIP_RETCODE selectVarRecursive(
             {
 #ifdef SCIP_STATISTIC
                assert(localstats->ncutoffproofnodes == 0 || localstats->ncutoffproofnodes == 2);
-               addLowerBound(scip, branchvar, branchval, baselpsol, domainreductions,
+               addLowerBound(scip, branchvar, branchval, baselpsol, TRUE, domainreductions,
                   2 + localstats->ncutoffproofnodes, TRUE);
 #else
-               addLowerBound(scip, branchvar, branchval, baselpsol, domainreductions);
+               addLowerBound(scip, branchvar, branchval, baselpsol, TRUE, domainreductions);
 #endif
             }
 
@@ -5279,6 +5287,8 @@ SCIP_RETCODE selectVarRecursive(
             if( domainreductions != NULL )
             {
                ndomreds = domainreductions->nviolatedvars;
+               if( config->prefersimplebounds && ndomreds > domainreductions->nsimplebounds )
+                  ndomreds = domainreductions->nsimplebounds;
 
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found %d bound changes (%d violated by the LP solution)\n",
                   domainreductions->nchangedvars, ndomreds);
@@ -6378,6 +6388,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/mergedomainreductions",
          "should domain reductions of feasible siblings should be merged?",
          &branchruledata->config->mergedomainreductions, TRUE, DEFAULT_MERGEDOMAINREDUCTIONS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/prefersimplebounds",
+         "should domain reductions only be applied if there are simple bound changes?",
+         &branchruledata->config->prefersimplebounds, TRUE, DEFAULT_PREFERSIMPLEBOUNDS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/onlyvioldomreds",
          "should only domain reductions that violate the LP solution be applied?",
