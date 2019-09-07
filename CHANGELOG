@@ -65,6 +65,7 @@ Fixed bugs
 - fixed counting of aggregations in XOR constraint handler
 - fixed handling of unbounded solutions
 - fixed update of LP size information when an LP error occured during probing
+- handle special case of variable bound constraints during aggregating variables
 
 Miscellaneous
 -------------
@@ -248,7 +249,6 @@ Fixed bugs
 - avoid copying of unbounded solutions from sub-SCIPs as those cannot be checked completely
 - corrected the output of the first LP value in case of branch-and-price
 - fixed possible integer overflow, which led to wrong conclusion of infeasibility, in energetic reasoning of cons_cumulative.c
-- handle special case of variable bound constraints during aggregating variables
 
 Miscellaneous
 -------------
