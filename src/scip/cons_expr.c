@@ -22,6 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/*lint -e528*/
+
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
@@ -5822,6 +5824,160 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** prints violation information
+ *
+ *  assumes that constraint violations have been computed
+ */
+#ifdef __GNUC__
+__attribute__((unused))
+#endif
+static
+SCIP_RETCODE analyzeViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
+   unsigned int          soltag              /**< tag of solution */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   int c;
+
+   assert(conss != NULL || nconss == 0);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss != NULL && conss[c] != NULL);
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* skip constraints that are not enabled, deleted, or have separation disabled */
+      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) || !SCIPconsIsSeparationEnabled(conss[c]) )
+         continue;
+      assert(SCIPconsIsActive(conss[c]));
+
+      /* skip non-violated constraints */
+      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
+         continue;
+
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         SCIP_Real auxvarvalue;
+         SCIP_Real auxvarlb;
+         SCIP_Real auxvarub;
+         SCIP_Bool violunder;
+         SCIP_Bool violover;
+         SCIP_Real origviol;
+         SCIP_Real auxviol;
+         int e;
+
+         /* it only makes sense to call the separation callback if there is a variable attached to the expression */
+         if( expr->auxvar == NULL )
+         {
+            if( SCIPisConsExprExprVar(expr) )
+            {
+               SCIP_VAR* var;
+               var = SCIPgetConsExprExprVarVar(expr);
+               auxvarvalue = SCIPgetSolVal(scip, sol, var);
+               auxvarlb = SCIPvarGetLbLocal(var);
+               auxvarub = SCIPvarGetUbLocal(var);
+
+               origviol = MAX(auxvarlb - auxvarvalue, auxvarvalue - auxvarub);
+               if( origviol <= 0.0 )
+                  continue;
+
+               SCIPinfoMessage(scip, NULL, "var <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(var), auxvarlb, auxvarub, auxvarvalue);
+               if( auxvarlb > auxvarvalue )
+                  SCIPinfoMessage(scip, NULL, " var >= lb violated by %g", auxvarlb - auxvarvalue);
+               if( auxvarub < auxvarvalue )
+                  SCIPinfoMessage(scip, NULL, " var <= ub violated by %g", auxvarvalue - auxvarub);
+               SCIPinfoMessage(scip, NULL, "\n");
+            }
+
+            continue;
+         }
+
+         auxvarvalue = SCIPgetSolVal(scip, sol, expr->auxvar);
+         auxvarlb = SCIPvarGetLbLocal(expr->auxvar);
+         auxvarub = SCIPvarGetUbLocal(expr->auxvar);
+
+         /* make sure that this expression has been evaluated - so far we assume that this happened */
+         /* SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, soltag) ); */
+
+         /* compute violation and decide whether under- or overestimate is required */
+         if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
+         {
+            /* the expression could be evaluated, then look how much and on which side it is violated */
+            origviol = auxvarvalue - expr->evalvalue;
+
+            /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
+            violover = SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > 0.0;
+
+            /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
+            violunder = SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > 0.0;
+         }
+         else
+         {
+            /* if expression could not be evaluated, then both under- and overestimate should be considered */
+            origviol = SCIP_INVALID;
+            violover = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+            violunder = SCIPgetConsExprExprNLocksPos(expr) > 0;
+         }
+
+         /* no violation w.r.t. the original variables -> skip expression */
+         if( !violover && !violunder )
+            continue;
+
+         SCIPinfoMessage(scip, NULL, "expr ");
+         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+         SCIPinfoMessage(scip, NULL, " (%p)[%.15g,%.15g] = %.15g\n", (void*)expr, expr->activity.inf, expr->activity.sup, expr->evalvalue);
+
+         SCIPinfoMessage(scip, NULL, "  auxvar <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(expr->auxvar), auxvarlb, auxvarub, auxvarvalue);
+         if( violover )
+            SCIPinfoMessage(scip, NULL, " auxvar <= expr violated by %g", origviol);
+         if( violunder )
+            SCIPinfoMessage(scip, NULL, " auxvar >= expr violated by %g", -origviol);
+         if( auxvarlb > auxvarvalue )
+            SCIPinfoMessage(scip, NULL, " auxvar >= auxvar's lb violated by %g", auxvarlb - auxvarvalue);
+         if( auxvarub < auxvarvalue )
+            SCIPinfoMessage(scip, NULL, " auxvar <= auxvar's ub violated by %g", auxvarvalue - auxvarub);
+
+         SCIPinfoMessage(scip, NULL, "\n");
+
+         /* compute aux-violation (nonlinear handlers) */
+         for( e = 0; e < expr->nenfos; ++e )
+         {
+            SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+            nlhdlr = expr->enfos[e]->nlhdlr;
+            assert(nlhdlr != NULL);
+
+            /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
+            SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
+
+            SCIPinfoMessage(scip, NULL, "  nlhdlr <%s> = %.15g", nlhdlr->name, expr->enfos[e]->auxvalue);
+
+            auxviol = expr->enfos[e]->auxvalue == SCIP_INVALID ? SCIP_INVALID : auxvarvalue - expr->enfos[e]->auxvalue;  /*lint !e777*/
+            if( violover && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > 0.0) )  /*lint !e777*/
+               SCIPinfoMessage(scip, NULL, " auxvar <= nlhdlr-expr violated by %g", auxviol);
+            if( violunder && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > 0.0) )  /*lint !e777*/
+               SCIPinfoMessage(scip, NULL, " auxvar >= nlhdlr-expr violated by %g", -auxviol);
+            SCIPinfoMessage(scip, NULL, "\n");
+         }
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
 
 /** helper function to enforce constraints */
 static
@@ -5872,6 +6028,8 @@ SCIP_RETCODE enforceConstraints(
 
    if( *result == SCIP_FEASIBLE )
       return SCIP_OKAY;
+
+   /* SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag) ); */
 
    /* try to propagate */
    nchgbds = 0;
