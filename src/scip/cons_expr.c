@@ -5266,7 +5266,8 @@ SCIP_RETCODE registerBranchingCandidates(
    unsigned int          soltag,             /**< solution tag */
    SCIP_Real             minviolation,       /**< minimal violation in expression to register a branching score */
    SCIP_Bool             evalauxvalues,      /**< whether auxiliary values of expressions need to be evaluated */
-   int*                  nnotify             /**< counter for number of notifications performed */
+   int*                  nnotify,            /**< counter for number of notifications performed */
+   SCIP_Real*            maxvarboundviol     /**< maximal violation of variable bounds (for fixed variables so far) */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -5283,6 +5284,7 @@ SCIP_RETCODE registerBranchingCandidates(
    assert(conshdlrdata != NULL);
 
    *nnotify = 0;
+   *maxvarboundviol = 0.0;
 
    /* compute branching scores by considering violation of all expressions */
    SCIP_CALL( computeBranchingScores(scip, conshdlr, conss, nconss, minviolation, evalauxvalues, sol, soltag) );
@@ -5302,6 +5304,8 @@ SCIP_RETCODE registerBranchingCandidates(
          for( i = 0; i < consdata->nvarexprs; ++i )
          {
             SCIP_Real brscore;
+            SCIP_Real lb;
+            SCIP_Real ub;
 
             /* skip variable expressions that do not have a valid branching score (contained in no currently violated constraint) */
             if( conshdlrdata->lastbrscoretag != consdata->varexprs[i]->brscoretag )
@@ -5311,13 +5315,23 @@ SCIP_RETCODE registerBranchingCandidates(
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
             assert(var != NULL);
 
+            lb = SCIPcomputeVarLbLocal(scip, var);
+            ub = SCIPcomputeVarUbLocal(scip, var);
+
             /* introduce variable if it has not been fixed yet and has a branching score > 0 */
-            if( !SCIPisEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
+            if( !SCIPisEQ(scip, lb, ub) )
             {
-               SCIPdebugMsg(scip, "add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var), brscore);
+               SCIPdebugMsg(scip, "add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, brscore);
 
                SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
                ++(*nnotify);
+            }
+            else
+            {
+               SCIP_Real solval = SCIPgetSolVal(scip, sol, var);
+
+               SCIPdebugMsg(scip, "skip fixed variable <%s>[%.15g,%.15g] = %.15g (out-of-bounds by %g)\n", SCIPvarGetName(var), lb, ub, solval, MAX(lb - solval, solval - ub));
+               *maxvarboundviol = MAX3(*maxvarboundviol, lb - solval, solval - ub);
             }
          }
       }
@@ -6112,7 +6126,7 @@ SCIP_RETCODE enforceConstraints(
          return SCIP_OKAY;
 
       /* find branching candidates */
-      SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, soltag, minviolation, FALSE, &nnotify) );
+      SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, soltag, minviolation, FALSE, &nnotify, &maxvarboundviol) );
       SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
       /* if no cut or branching candidate, then try less violated expressions */
@@ -6128,7 +6142,29 @@ SCIP_RETCODE enforceConstraints(
    if( nnotify > 0 )
       return SCIP_OKAY;
 
+   if( conshdlrdata->tightenlpfeastol && maxvarboundviol > 0.0 )
+   {
+      SCIPsetLPFeastol(scip, maxvarboundviol / 2.0);
+      SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, branching candidates are fixed but out of bounds, so reduced LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip));
+
+      *result = SCIP_SOLVELP;
+      return SCIP_OKAY;
+   }
+
    SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, becoming desperate now...\n", maxviol);
+#if 0
+   if( conshdlrdata->tightenlpfeastol && maxviol < 10.0*SCIPfeastol(scip) && SCIPgetLPFeastol(scip) > SCIPepsilon(scip) )
+   {
+      /* if only small violation, try whether tighten the LP feasibility tolerance could help
+       * maybe it is just some variable bound that is violated too much and we cannot separate this
+       */
+      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), 0.1 * SCIPgetLPFeastol(scip)));  /* TODO take actual LP primal violation into account */
+      SCIPdebugMsg(scip, "reduced LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip));
+
+      *result = SCIP_SOLVELP;
+      return SCIP_OKAY;
+   }
+#endif
 
    /* could not find branching candidates even when looking at minimal violated (>eps) expressions
     * now look if we find any unfixed variable that we could still branch on
@@ -8018,6 +8054,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    SCIP_CONSDATA* consdata;
    SCIP_RESULT propresult;
    SCIP_Bool force;
+   SCIP_Real maxvarboundviol;
    unsigned int soltag;
    int nchgbds;
    int ndelconss;
@@ -8057,7 +8094,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    }
 
    /* find branching candidates */
-   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, soltag, SCIPfeastol(scip), TRUE, &nnotify) );
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, NULL, soltag, SCIPfeastol(scip), TRUE, &nnotify, &maxvarboundviol) );
    if( nnotify > 0 )
    {
       SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
