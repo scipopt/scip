@@ -1072,9 +1072,21 @@ SCIP_RETCODE forwardPropExpr(
             /* we should not have entered this expression if its activity was already uptodate */
             assert(expr->activitytag < conshdlrdata->curboundstag);
 
-            /* reset activity to infinity if invalid, because SCIPtightenConsExprExprInterval seems to assume valid activity in expr */
             if( expr->activitytag < conshdlrdata->lastboundrelax )
+            {
+               /* reset activity to infinity if invalid, because SCIPtightenConsExprExprInterval seems to assume valid activity in expr */
                SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->activity);
+            }
+            else if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
+            {
+               /* if already empty, then don't try to compute even better activitiy
+                * we should have noted that we are infeasible, though (if not remove the assert and enable below code)
+                */
+               assert(infeasible == NULL || *infeasible);
+               /* if( infeasible != NULL )
+                  *infeasible = TRUE; */
+               break;
+            }
 
             /* start with existing activity of expression if we are not collecting expressions for reverse propagation
              * the reason for the latter is that expr->activity might currently store bounds from the previous
