@@ -1476,7 +1476,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
 
    refpoint = SCIPgetSolVal(scip, sol, childvar);
 
-   SCIPdebugMsg(scip, "%sestimation of x^%g at x=%g\n", overestimate ? "over" : "under", SCIPgetConsExprExprPowExponent(expr), refpoint);
+   SCIPdebugMsg(scip, "%sestimation of x^%g at x=%.15g\n", overestimate ? "over" : "under", SCIPgetConsExprExprPowExponent(expr), refpoint);
 
    /* we can not generate a cut at +/- infinity */
    if( SCIPisInfinity(scip, REALABS(refpoint)) )
@@ -1487,7 +1487,10 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
 
    /* if child is essentially constant, then there should be no point in separation */
    if( SCIPisEQ(scip, childlb, childub) ) /* @todo maybe return a constant estimator? */
+   {
+      SCIPdebugMsg(scip, "skip estimate as child <%s> seems essentially fixed [%.15g,%.15g]\n", SCIPvarGetName(childvar), childlb, childub);
       return SCIP_OKAY;
+   }
 
    exprdata = SCIPgetConsExprExprData(expr);
    exponent = exprdata->exponent;
