@@ -908,18 +908,20 @@ SCIP_DECL_CONSEXPR_INTEVALVAR(intEvalVarBoundTightening)
          if( SCIPvarIsIntegral(var) )
             break;
 
+         /* relax bounds by epsilon*max(1,|bnd|), instead of just epsilon as in case 'a', thus we trust the first log(epsilon) digits
+          * however, when domains get small, relaxing can excessively weaken bound tightening, thus do only fraction of |ub-lb| if that is smaller
+          * further, do not relax beyond next integer value
+          */
          if( !SCIPisInfinity(scip, -lb) )
          {
-            /* reduce lb by epsilon*|lb|, or to the next integer value, which ever is larger */
             SCIP_Real bnd = floor(lb);
-            lb = MAX(bnd, lb - REALABS(lb) * conshdlrdata->varboundrelaxamount);  /*lint !e666*/
+            lb = MAX(bnd, lb - MIN(conshdlrdata->varboundrelaxamount * MAX(1.0, REALABS(lb)), 0.001 * REALABS(ub-lb)));  /*lint !e666*/
          }
 
          if( !SCIPisInfinity(scip, ub) )
          {
-            /* increase ub by epsilon*|ub|, or to the next integer value, which ever is smaller */
             SCIP_Real bnd = ceil(ub);
-            ub = MIN(bnd, ub + REALABS(ub) * conshdlrdata->varboundrelaxamount);  /*lint !e666*/
+            ub = MIN(bnd, ub + MIN(conshdlrdata->varboundrelaxamount * MAX(1.0, REALABS(ub)), 0.001 * REALABS(ub-lb)));  /*lint !e666*/
          }
 
          break;
