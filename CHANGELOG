@@ -70,6 +70,12 @@ Features
 
 - handle linear binary variables as if squared in simple upgrade from quadratic to second-order cone constraints
 
+- new variable event when changing the variable type
+
+- It is no longer necessary to provide a SCIP pointer for the subproblem in SCIPaddBendersSubproblem if custom solving
+  methods are defined. A NULL pointer can be supplied to SCIPaddBendersSubproblem. In this case, no internal Benders'
+  cut generation methods can be used.
+
 Performance improvements
 ------------------------
 
@@ -182,6 +188,8 @@ Interface changes
 - new API functions SCIPvarIsRelaxationOnly() and SCIPvarMarkRelaxationOnly() to query and set, resp., whether a variable is marked as relaxation-only
 - new API functions SCIPconshdlrGetNUpdateConss() and SCIPconshdlrGetUpdateConss(), for expert users only
 - new API function SCIPgetNConflictDualproofsApplied()
+- new API functions SCIPeventGetOldtype() and SCIPeventGetNewtype() for the new event when changing the variable type
+
 
 ### Command line interface
 
@@ -387,10 +395,13 @@ Fixed bugs
 - fixed bug when freeing the transformed problem via interactive shell if reoptimization is enabled
 - fixed two issues related to (near-)redundant logicor constraints in presolving
 - fixed counting of aggregations in XOR constraint handler
+- fixed handling of unbounded solutions
+- fixed update of LP size information when an LP error occured during probing
 
 Miscellaneous
 -------------
 - checks in debug mode that clean buffer memory is really clean when being freed are now disabled by default
+- don't compute symmetries if reoptimization is enabled
 
 Known bugs
 ----------
@@ -568,6 +579,7 @@ Fixed bugs
 - avoid copying of unbounded solutions from sub-SCIPs as those cannot be checked completely
 - corrected the output of the first LP value in case of branch-and-price
 - fixed possible integer overflow, which led to wrong conclusion of infeasibility, in energetic reasoning of cons_cumulative.c
+- handle special case of variable bound constraints during aggregating variables
 
 Miscellaneous
 -------------

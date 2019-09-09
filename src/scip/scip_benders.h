@@ -612,6 +612,7 @@ SCIP_Real SCIPgetBendersAuxiliaryVarVal(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeBendersSubproblemLowerbound(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
