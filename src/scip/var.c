@@ -9791,6 +9791,98 @@ SCIP_RETCODE SCIPvarAddVlb(
                (*nbdchgs)++;
          }
       }
+      else if( var == vlbvar )
+      {
+         /* the variables cancels out, the variable bound constraint is either redundant or proves global infeasibility */
+         if( SCIPsetIsEQ(set, vlbcoef, 1.0) )
+         {
+            if( SCIPsetIsPositive(set, vlbconstant) )
+               *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            SCIP_Real lb = SCIPvarGetLbGlobal(var);
+            SCIP_Real ub = SCIPvarGetUbGlobal(var);
+
+            /* the variable bound constraint defines a new upper bound */
+            if( SCIPsetIsGT(set, vlbcoef, 1.0) )
+            {
+               SCIP_Real newub = vlbconstant / (1.0 - vlbcoef);
+
+               if( SCIPsetIsFeasLT(set, newub, lb) )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
+               else if( SCIPsetIsFeasLT(set, newub, ub) )
+               {
+                  /* bound might be adjusted due to integrality condition */
+                  newub = adjustedUb(set, SCIPvarGetType(var), newub);
+
+                  /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+                   * with the local bound, in this case we need to store the bound change as pending bound change
+                   */
+                  if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+                  {
+                     assert(tree != NULL);
+                     assert(transprob != NULL);
+                     assert(SCIPprobIsTransformed(transprob));
+
+                     SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
+                           tree, reopt, lp, branchcand, eventqueue, cliquetable, var, newub, SCIP_BOUNDTYPE_UPPER, FALSE) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, newub) );
+                  }
+
+                  if( nbdchgs != NULL )
+                     (*nbdchgs)++;
+               }
+            }
+            /* the variable bound constraint defines a new lower bound */
+            else
+            {
+               SCIP_Real newlb;
+
+               assert(SCIPsetIsLT(set, vlbcoef, 1.0));
+
+               newlb = vlbconstant / (1.0 - vlbcoef);
+
+               if( SCIPsetIsFeasGT(set, newlb, ub) )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
+               else if( SCIPsetIsFeasGT(set, newlb, lb) )
+               {
+                  /* bound might be adjusted due to integrality condition */
+                  newlb = adjustedLb(set, SCIPvarGetType(var), newlb);
+
+                  /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+                   * with the local bound, in this case we need to store the bound change as pending bound change
+                   */
+                  if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+                  {
+                     assert(tree != NULL);
+                     assert(transprob != NULL);
+                     assert(SCIPprobIsTransformed(transprob));
+
+                     SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
+                           tree, reopt, lp, branchcand, eventqueue, cliquetable, var, newlb, SCIP_BOUNDTYPE_LOWER, FALSE) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, newlb) );
+                  }
+
+                  if( nbdchgs != NULL )
+                     (*nbdchgs)++;
+               }
+            }
+         }
+      }
       else if( SCIPvarIsActive(vlbvar) )
       {
          SCIP_Real xlb;
@@ -10162,6 +10254,98 @@ SCIP_RETCODE SCIPvarAddVub(
 
             if( nbdchgs != NULL )
                (*nbdchgs)++;
+         }
+      }
+      else if( var == vubvar )
+      {
+         /* the variables cancels out, the variable bound constraint is either redundant or proves global infeasibility */
+         if( SCIPsetIsEQ(set, vubcoef, 1.0) )
+         {
+            if( SCIPsetIsNegative(set, vubconstant) )
+               *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            SCIP_Real lb = SCIPvarGetLbGlobal(var);
+            SCIP_Real ub = SCIPvarGetUbGlobal(var);
+
+            /* the variable bound constraint defines a new lower bound */
+            if( SCIPsetIsGT(set, vubcoef, 1.0) )
+            {
+               SCIP_Real newlb = vubconstant / (1.0 - vubcoef);
+
+               if( SCIPsetIsFeasGT(set, newlb, ub) )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
+               else if( SCIPsetIsFeasGT(set, newlb, lb) )
+               {
+                  /* bound might be adjusted due to integrality condition */
+                  newlb = adjustedLb(set, SCIPvarGetType(var), newlb);
+
+                  /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+                   * with the local bound, in this case we need to store the bound change as pending bound change
+                   */
+                  if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+                  {
+                     assert(tree != NULL);
+                     assert(transprob != NULL);
+                     assert(SCIPprobIsTransformed(transprob));
+
+                     SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
+                           tree, reopt, lp, branchcand, eventqueue, cliquetable, var, newlb, SCIP_BOUNDTYPE_LOWER, FALSE) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, newlb) );
+                  }
+
+                  if( nbdchgs != NULL )
+                     (*nbdchgs)++;
+               }
+            }
+            /* the variable bound constraint defines a new upper bound */
+            else
+            {
+               SCIP_Real newub;
+
+               assert(SCIPsetIsLT(set, vubcoef, 1.0));
+
+               newub = vubconstant / (1.0 - vubcoef);
+
+               if( SCIPsetIsFeasLT(set, newub, lb) )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
+               else if( SCIPsetIsFeasLT(set, newub, ub) )
+               {
+                  /* bound might be adjusted due to integrality condition */
+                  newub = adjustedUb(set, SCIPvarGetType(var), newub);
+
+                  /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+                   * with the local bound, in this case we need to store the bound change as pending bound change
+                   */
+                  if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+                  {
+                     assert(tree != NULL);
+                     assert(transprob != NULL);
+                     assert(SCIPprobIsTransformed(transprob));
+
+                     SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
+                           tree, reopt, lp, branchcand, eventqueue, cliquetable, var, newub, SCIP_BOUNDTYPE_UPPER, FALSE) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, newub) );
+                  }
+
+                  if( nbdchgs != NULL )
+                     (*nbdchgs)++;
+               }
+            }
          }
       }
       else if( SCIPvarIsActive(vubvar) )
