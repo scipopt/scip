@@ -6861,7 +6861,7 @@ SCIP_RETCODE addLocalRows(
 
   TERMINATE:
    /* remove all nearly zero coefficients */
-   SCIPaggrRowRemoveZeros(set->scip, proofrow, valid);
+   SCIPaggrRowRemoveZeros(set->scip, proofrow, TRUE, valid);
 
    if( !(*valid) )
    {
@@ -6901,6 +6901,7 @@ SCIP_RETCODE getFarkasProof(
    SCIP_ROW* row;
    int* localrowinds;
    int* localrowdepth;
+   SCIP_Bool infdelta;
    int nlocalrows;
    int nrows;
    int r;
@@ -6998,46 +6999,38 @@ SCIP_RETCODE getFarkasProof(
    }
 
    /* remove all coefficients that are too close to zero */
-   SCIPaggrRowRemoveZeros(set->scip, farkasrow, valid);
+   SCIPaggrRowRemoveZeros(set->scip, farkasrow, TRUE, valid);
 
    if( !(*valid) )
       goto TERMINATE;
 
-   /* add contribution of local rows */
-   if( nlocalrows > 0 && set->conf_uselocalrows > 0 )
+   infdelta = FALSE;
+
+   /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
+   *farkasact = aggrRowGetMinActivity(set, transprob, farkasrow, curvarlbs, curvarubs, &infdelta);
+
+   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %d], \n",
+      (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
+
+   /* The constructed proof is not valid, this can happen due to numerical reasons,
+    * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r]),
+    * or because of local rows were ignored so far.
+    * Due to the latter case, it might happen at least one variable contributes
+    * with an infinite value to the activity (see: https://git.zib.de/integer/scip/issues/2743)
+    */
+   if( infdelta || SCIPsetIsFeasLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)))
    {
-      SCIP_CALL( addLocalRows(set, transprob, lp, farkasrow, rows, curvarlbs, curvarubs, dualfarkas, localrowinds, localrowdepth,
-            nlocalrows, farkasact, validdepth, valid) );
-   }
-   else
-   {
-      SCIP_Bool infdelta = FALSE;
-
-      /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
-      *farkasact = aggrRowGetMinActivity(set, transprob, farkasrow, curvarlbs, curvarubs, &infdelta);
-
-      SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %d], \n",
-         (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
-
-      /* at least one variable contributes with an infinite value to the activity,
-      * this might be caused by ignoring locally valid rows
-      *
-      * see: https://git.zib.de/integer/scip/issues/2743
-      */
-      if( infdelta )
+      /* add contribution of local rows */
+      if( nlocalrows > 0 && set->conf_uselocalrows > 0 )
+      {
+         SCIP_CALL( addLocalRows(set, transprob, lp, farkasrow, rows, curvarlbs, curvarubs, dualfarkas, localrowinds, localrowdepth,
+               nlocalrows, farkasact, validdepth, valid) );
+      }
+      else
       {
          (*valid) = FALSE;
          SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
             *farkasact, SCIPaggrRowGetRhs(farkasrow));
-      }
-
-      /* the constructed proof is not valid, this can happen due to numerical reasons,
-      * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r])
-      */
-      if( SCIPsetIsFeasLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)) )
-      {
-         (*valid) = FALSE;
-         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g\n", *farkasact, SCIPaggrRowGetRhs(farkasrow));
       }
    }
 
@@ -7233,44 +7226,38 @@ SCIP_RETCODE getDualProof(
    }
 
    /* remove all nearly zero coefficients */
-   SCIPaggrRowRemoveZeros(set->scip, farkasrow, valid);
+   SCIPaggrRowRemoveZeros(set->scip, farkasrow, TRUE, valid);
 
    if( !(*valid) )
       goto TERMINATE;
 
+   infdelta = FALSE;
 
-   /* add contribution of local rows */
-   if( nlocalrows > 0 && set->conf_uselocalrows > 0 )
+   /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
+   *farkasact = aggrRowGetMinActivity(set, transprob, farkasrow, curvarlbs, curvarubs, &infdelta);
+
+   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %d], \n",
+      (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
+
+   /* The constructed proof is not valid, this can happen due to numerical reasons,
+    * e.g., we only consider rows r with !SCIPsetIsZero(set, dualsol[r]),
+    * or because of local rows were ignored so far.
+    * Due to the latter case, it might happen at least one variable contributes
+    * with an infinite value to the activity (see: https://git.zib.de/integer/scip/issues/2743)
+    */
+   if( infdelta || SCIPsetIsFeasLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)))
    {
-      SCIP_CALL( addLocalRows(set, transprob, lp, farkasrow, rows, curvarlbs, curvarubs, dualsols, localrowinds, localrowdepth,
-            nlocalrows, farkasact, validdepth, valid) );
-   }
-   else
-   {
-      infdelta = FALSE;
-
-      /* check validity of the proof */
-      *farkasact = aggrRowGetMinActivity(set, transprob, farkasrow, curvarlbs, curvarubs, &infdelta);
-
-      /* at least one variable contributes with an infinite value to the activity,
-      * this might be caused by ignoring locally valid rows
-      *
-      * see: https://git.zib.de/integer/scip/issues/2743
-      */
-      if( infdelta )
+      /* add contribution of local rows */
+      if( nlocalrows > 0 && set->conf_uselocalrows > 0 )
+      {
+         SCIP_CALL( addLocalRows(set, transprob, lp, farkasrow, rows, curvarlbs, curvarubs, dualsols, localrowinds, localrowdepth,
+               nlocalrows, farkasact, validdepth, valid) );
+      }
+      else
       {
          (*valid) = FALSE;
          SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
             *farkasact, SCIPaggrRowGetRhs(farkasrow));
-      }
-
-      /* the constructed proof is not valid, this can happen due to numerical reasons,
-      * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r])
-      */
-      if( SCIPsetIsLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)) )
-      {
-         *valid = FALSE;
-         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g\n", *farkasact, SCIPaggrRowGetRhs(farkasrow));
       }
    }
 
