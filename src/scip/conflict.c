@@ -2564,7 +2564,6 @@ SCIP_RETCODE tightenSingleVar(
    }
    else
    {
-
       if( lp->strongbranching || !applyglobal )
       {
          SCIP_CONS* cons;
@@ -2607,14 +2606,15 @@ SCIP_RETCODE tightenSingleVar(
       }
       else
       {
-         SCIPsetDebugMsg(set, "change %s %s bound of <%s>[%s]: %g -> %g\n",
-               applyglobal ? "global" : "local",
+         assert(applyglobal);
+
+         SCIPsetDebugMsg(set, "change global %s bound of <%s>[%s]: %g -> %g\n",
                (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"),
                SCIPvarGetName(var), varGetChar(var),
                (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var)),
                newbound);
 
-         SCIP_CALL( SCIPnodeAddBoundchg(tree->path[validdepth], blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
+         SCIP_CALL( SCIPnodeAddBoundchg(tree->path[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
                eventqueue, cliquetable, var, newbound, boundtype, FALSE) );
 
          /* mark the node in the validdepth to be propagated again */
