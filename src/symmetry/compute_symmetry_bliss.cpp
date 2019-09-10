@@ -568,8 +568,8 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   }
                   else
                   {
-                     SCIP_VAR** vars;
-                     SCIP_Real* vals;
+                     SCIP_VAR** vars = NULL;
+                     SCIP_Real* vals = NULL;
                      SCIP_Real constant = 0;
                      int varsize = 1;
                      int requiredsize;
@@ -610,14 +610,14 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                         if( !SCIPhashtableExists(sumcoefmap, (void *) ct))
                         {
-                           SCIP_CALL(SCIPhashtableInsert(sumcoefmap, (void *) ct));
+                           SCIP_CALL( SCIPhashtableInsert(sumcoefmap, (void *) ct) );
                            ct->color = nusedcolors++;
                            color = ct->color;
                            nuniquecoefs++;
                         }
                         else
                         {
-                           color = ((SYM_CONSTTYPE *) SCIPhashtableRetrieve(sumcoefmap, (void *) ct))->color;
+                           color = ((SYM_CONSTTYPE*) SCIPhashtableRetrieve(sumcoefmap, (void *) ct))->color;
                         }
 
                         /* add the intermediate node with the corresponding color */
@@ -658,14 +658,14 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                         if( !SCIPhashtableExists(consttypemap, (void *) ct))
                         {
-                           SCIP_CALL(SCIPhashtableInsert(consttypemap, (void *) ct));
+                           SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                            ct->color = nusedcolors++;
                            color = ct->color;
                            nuniqueconsts++;
                         }
                         else
                         {
-                           color = ((SYM_CONSTTYPE *) SCIPhashtableRetrieve(consttypemap, (void *) ct))->color;
+                           color = ((SYM_CONSTTYPE*) SCIPhashtableRetrieve(consttypemap, (void *) ct))->color;
                         }
 
                         /* add the node with a new color */
@@ -681,7 +681,11 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      SCIPfreeBufferArray(scip, &vals);
                      SCIPfreeBufferArray(scip, &vars);
 
+                     /* add a filler node since it will be removed in the next iteration anyway */
+                     visitednodes.push_back(nnodes);
+                     ischildofsum.push_back(FALSE);
                      ++currentlevel;
+
                      break;
                   }
                }
@@ -697,14 +701,14 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                   if( !SCIPhashtableExists(consttypemap, (void *) ct))
                   {
-                     SCIP_CALL(SCIPhashtableInsert(consttypemap, (void *) ct));
+                     SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                      ct->color = nusedcolors++;
                      color = ct->color;
                      nuniqueconsts++;
                   }
                   else
                   {
-                     color = ((SYM_CONSTTYPE *) SCIPhashtableRetrieve(consttypemap, (void *) ct))->color;
+                     color = ((SYM_CONSTTYPE*) SCIPhashtableRetrieve(consttypemap, (void *) ct))->color;
                   }
                }
                /* for all other expressions, get the color of its operator type or assign a new one */
@@ -728,7 +732,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   }
                   else
                   {
-                     color = ((SYM_OPTYPE *) SCIPhashtableRetrieve(optypemap, (void *) ot))->color;
+                     color = ((SYM_OPTYPE*) SCIPhashtableRetrieve(optypemap, (void *) ot))->color;
                   }
                }
 
@@ -747,14 +751,14 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                   if( !SCIPhashtableExists(rhstypemap, (void *) rt))
                   {
-                     SCIP_CALL(SCIPhashtableInsert(rhstypemap, (void *) rt));
+                     SCIP_CALL( SCIPhashtableInsert(rhstypemap, (void *) rt) );
                      rt->color = nusedcolors++;
                      parentcolor = rt->color;
                      nuniquerhs++;
                   }
                   else
                   {
-                     parentcolor = ((SYM_RHSTYPE *) SCIPhashtableRetrieve(rhstypemap, (void *) rt))->color;
+                     parentcolor = ((SYM_RHSTYPE*) SCIPhashtableRetrieve(rhstypemap, (void *) rt))->color;
                   }
 
                   /* add the constraint side node with the corresponding color */
@@ -792,7 +796,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                /* for sum expression, also add intermediate nodes for the coefficients */
                if( strcmp(opname, "sum") == 0 )
                {
-                  SCIP_Real *coefs = SCIPgetConsExprExprSumCoefs(expr);
+                  SCIP_Real* coefs = SCIPgetConsExprExprSumCoefs(expr);
                   int internode;
 
                   /* iterate over children from last to first, such that visitednodes array is in correct order */
@@ -807,14 +811,14 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                      if( !SCIPhashtableExists(sumcoefmap, (void *) ct))
                      {
-                        SCIP_CALL(SCIPhashtableInsert(sumcoefmap, (void *) ct));
+                        SCIP_CALL( SCIPhashtableInsert(sumcoefmap, (void *) ct) );
                         ct->color = nusedcolors++;
                         color = ct->color;
                         nuniquecoefs++;
                      }
                      else
                      {
-                        color = ((SYM_CONSTTYPE *) SCIPhashtableRetrieve(sumcoefmap, (void *) ct))->color;
+                        color = ((SYM_CONSTTYPE*) SCIPhashtableRetrieve(sumcoefmap, (void *) ct))->color;
                      }
 
                      /* add the intermediate node with the corresponding color */
@@ -851,14 +855,14 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                      if( !SCIPhashtableExists(consttypemap, (void *) ct))
                      {
-                        SCIP_CALL(SCIPhashtableInsert(consttypemap, (void *) ct));
+                        SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                         ct->color = nusedcolors++;
                         color = ct->color;
                         nuniqueconsts++;
                      }
                      else
                      {
-                        color = ((SYM_CONSTTYPE *) SCIPhashtableRetrieve(consttypemap, (void *) ct))->color;
+                        color = ((SYM_CONSTTYPE*) SCIPhashtableRetrieve(consttypemap, (void *) ct))->color;
                      }
 
                      /* add the node with a new color */
