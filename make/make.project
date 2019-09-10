@@ -166,6 +166,8 @@ LIBBUILDFLAGS	=       $(ARFLAGS)
 
 # code check and doxygen
 LINT		=	flexelint
+PCLINT		=	pclint
+PCLINTCONFIG	=	pclp_config.py
 DOXY		=	doxygen
 SPLINT		=       splint
 #SPLINTFLAGS	=	-UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE -USCIP_WITH_GMP -USCIP_WITH_ZLIB -preproc -formatcode +skip-sys-headers -weak +relaxtypes

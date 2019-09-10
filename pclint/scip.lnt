@@ -1,0 +1,85 @@
+//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+//*                                                                           */
+//*                  This file is part of the program and library             */
+//*         SCIP --- Solving Constraint Integer Programs                      */
+//*                                                                           */
+//*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+//*                            fuer Informationstechnik Berlin                */
+//*                                                                           */
+//*  SCIP is distributed under the terms of the ZIB Academic License.         */
+//*                                                                           */
+//*  You should have received a copy of the ZIB Academic License              */
+//*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+//*                                                                           */
+//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+// use one pass of value tracking
+-vt_passes(1)
+
+// use the integer model for enums
++fie
+
+// turn off general warnings:
+-e717   // monocarpic do-while used to group statements
+-e730   // boolean used as argument to function
+-e731   // boolean arguments to ==
+-e773   // expression-like macro not parenthesized
+-e788   // enum constant not used within default switch (possibly too strong)
+-e801   // goto statement used
+-e818   // parameter of function could be pointer to const
+-e834   // operator '-' followed by operator '+' could be confusing without parentheses
+-e1731  // public virtual function
+-e1784  // symbol previously declared as "C"
+-e2666  // expression with side effects passed to unexpanded parameter: parameter is not referenced in the expansion
+
+// last value assigned to '_restat_' not used
+-emacro(438,SCIP_CALL)
+
+// ignoring return value of function
+-esym(534,printf,fprintf,fclose,fputs,strcat,strcpy,SCIPfclose)
+
+// expression with side effects passed to repeated parameter of macro
+-emacro(666,MAX)
+-emacro(666,MIN)
+
+// loop is likely not entered
+-emacro(681,SCIPdebugMsg)
+-emacro(681,SCIPdebugMessage)
+-emacro(681,SCIPdebugPrintf)
+-emacro(681,SCIPdebugMsgPrint)
+-emacro(681,debugMessage)
+-emacro(681,SCIPsetDebugMsg)
+-emacro(681,SCIPstatDebugMsg)
+
+// generally turn off warnings about unused parameters (possibly too strong)
+-emacro(715,SCIP_DECL_*)
+
+// loss of sign in promotion from 'int' to 'unsigned long'
+-emacro(737,SCIPfreeBlockMemoryArray)
+-emacro(737,SCIPfreeBlockMemoryArrayNull)
+-emacro(737,BMSfreeBlockMemoryArray)
+-emacro(737,BMSfreeBlockMemoryArrayNull)
+
+// boolean condition for 'while' always evaluates to 'false'
+-emacro(774,SCIPdebugMsg)
+-emacro(774,SCIPdebugMessage)
+-emacro(774,SCIPdebugPrintf)
+-emacro(774,SCIPsetDebugMsg)
+-emacro(774,SCIPstatisticPrintf)
+-emacro(774,SCIPdebugMsgPrint)
+-emacro(774,debugMessage)
+
+// generally allow comparisons to SCIP_INVALID, testing floating point values
+-esym(777,SCIP_INVALID)
+-esym(777,SCIP_UNKNOWN)
+
+// possible truncation of addition
+-emacro(776,SCIPreallocBufferArray)
+-emacro(776,SCIPallocBufferArray)
+-emacro(776,SCIPduplicateBufferArray)
+-emacro(776,BMScopyMemoryArray)
+-emacro(776,BMSallocMemoryArray)
+-emacro(776,BMSclearMemoryArray)
+-emacro(776,BMSreallocBlockMemoryArray)
+-emacro(776,BMSfreeBlockMemoryArray)
+-emacro(776,SCIPsetAllocBufferArray)
