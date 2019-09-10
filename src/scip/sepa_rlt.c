@@ -629,9 +629,9 @@ SCIP_RETCODE extractProducts(
    assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY);
 
    SCIPdebugMsg(scip, "Extracting product from two relations:\n");
-   SCIPdebugMsg(scip, "Relation 1: %f <= %f%s + %f%s + %f%s <= %f\n", lhs1, coefs1[0], SCIPvarGetName(vars[0]),
+   SCIPdebugMsg(scip, "Relation 1: %g <= %g%s + %g%s + %g%s <= %g\n", lhs1, coefs1[0], SCIPvarGetName(vars[0]),
       coefs1[1], SCIPvarGetName(vars[1]), coefs1[2], SCIPvarGetName(vars[2]), rhs1);
-   SCIPdebugMsg(scip, "Relation 2: %f <= %f%s + %f%s + %f%s <= %f\n", lhs2, coefs2[0], SCIPvarGetName(vars[0]),
+   SCIPdebugMsg(scip, "Relation 2: %g <= %g%s + %g%s + %g%s <= %g\n", lhs2, coefs2[0], SCIPvarGetName(vars[0]),
       coefs2[1], SCIPvarGetName(vars[1]), coefs2[2], SCIPvarGetName(vars[2]), rhs2);
 
    /* look for suitable binary variables */
@@ -648,7 +648,9 @@ SCIP_RETCODE extractProducts(
       (coefs2[(xpos + 1) % 3] == 0 && coefs2[(xpos + 2) % 3] == 0) )
       return SCIP_OKAY;
 
-   SCIPdebugMsg(scip, "binary var = %s\n", SCIPvarGetName(vars[xpos]));
+   assert(coefs1[xpos] != 0);
+
+   SCIPdebugMsg(scip, "binary var = %s, its coefs: %g\n", SCIPvarGetName(vars[xpos]), coefs1[xpos]*coefs2[xpos]);
 
    /* we flip the 1st row so that coef of x is positive */
    sign1 = coefs1[xpos] > 0 ? 1.0 : -1.0;
@@ -658,9 +660,13 @@ SCIP_RETCODE extractProducts(
    { /* take 2 combinations of lhs and rhs */
       sign2 = -sign1;
    }
-   else
+   else if( coefs1[xpos]*coefs2[xpos] < 0 )
    { /* take 2 lhs and 2 rhs, keep the second row as it is */
       sign2 = sign1;
+   }
+   else
+   { /* second relation is unconditional (x has coef 0), make sure coefs of w have similar signs */
+      sign2 = coefs1[wpos]*sign1*coefs2[wpos] < 0 ? -1.0 : 1.0;
    }
 
    /* get lhs and rhs depending on whether we flip the rows */
@@ -677,7 +683,7 @@ SCIP_RETCODE extractProducts(
       lhs2 = -rhs2;
       rhs2 = -tmpside;
    }
-   SCIPdebugMsg(scip, "\nsigns: %f, %f", sign1, sign2);
+   SCIPdebugMsg(scip, "\nsigns: %g, %g", sign1, sign2);
    /* from here on, we consider only the flipped (by multiplying by signi) rows */
    /* lhsi and rhsi are the sides of the flipped rows */
 
@@ -689,13 +695,16 @@ SCIP_RETCODE extractProducts(
    /* coefficients of w should have the same sign in the two impl_rels */
    if( coefs1[wpos]*sign1*coefs2[wpos]*sign2 < 0 )
    {
-      SCIPdebugMsg(scip, "Ignoring a pair of linear relations because coefficient of w = %s is zero in both\n", SCIPvarGetName(vars[wpos]));
+      SCIPdebugMsg(scip, "Ignoring a pair of linear relations because coefficients of w = %s have different signs\n", SCIPvarGetName(vars[wpos]));
       return SCIP_OKAY;
    }
 
    /* cannot use a global bound on y to detect a non-redundant product relation */
    if( (coefs1[xpos] == 0 && coefs1[wpos] == 0) || (coefs2[xpos] == 0 && coefs2[wpos] == 0) )
+   {
+      SCIPdebugMsg(scip, "Ignoring a global bound on y\n");
       return SCIP_OKAY;
+   }
 
    /* when a1c2 = a2c1, the linear relations do not imply a product relation */
    if( SCIPisZero(scip, coefs2[wpos]*sign2*coefs1[ypos]*sign1 - coefs2[ypos]*sign2*coefs1[wpos]*sign1) )
@@ -715,7 +724,6 @@ SCIP_RETCODE extractProducts(
    /* do lhs */
    if( lhs1 != -SCIPinfinity(scip) && lhs2 != -SCIPinfinity(scip) )
    { /* since sign1*coefs1[xpos] > 0, for lhs inequality 1 is stronger when x = 0, inequality 2 is stronger when x = 1 */
-
       mult = 1/(coefs2[wpos]*sign2*coefs1[ypos]*sign1 - coefs2[ypos]*sign2*coefs1[wpos]*sign1);
 
       /* we make sure above that these have the same sign, but one of them might be zero, so we check both here */
@@ -726,17 +734,17 @@ SCIP_RETCODE extractProducts(
 
       SCIPdebugMsg(scip, "w coef is %s\n", negwcoef ? "negative" : "positive");
 
-      SCIPinfoMessage(scip, NULL, "\nLhs, found suitable implied rels (w,x,y): %f%s + %f%s + %f%s >= %f\n",
+      SCIPinfoMessage(scip, NULL, "\nLhs, found suitable implied rels (w,x,y): %g%s + %g%s + %g%s >= %g\n",
          sign1*coefs1[wpos], SCIPvarGetName(w), sign1*coefs1[xpos], SCIPvarGetName(x), sign1*coefs1[ypos], SCIPvarGetName(y), lhs1);
 
-      SCIPinfoMessage(scip, NULL, "\nand %f%s + %f%s + %f%s >= %f\n",
+      SCIPinfoMessage(scip, NULL, "\nand %g%s + %g%s + %g%s >= %g\n",
          sign2*coefs2[wpos], SCIPvarGetName(w), sign2*coefs2[xpos], SCIPvarGetName(x), sign2*coefs2[ypos], SCIPvarGetName(y), lhs2);
 
       lincoefs[0] = sign2*coefs2[wpos]*sign1*coefs1[wpos]*mult;
       lincoefs[1] = (sign2*coefs2[xpos]*sign1*coefs1[wpos] - lhs2*sign1*coefs1[wpos] + lhs1*sign2*coefs2[wpos] )*mult;
       lincoefs[2] = sign2*coefs2[wpos]*sign1*coefs1[ypos]*mult;
 
-      SCIPinfoMessage(scip, NULL, "\nproduct: %s%s %s %f%s + %f%s + %f%s + %f", SCIPvarGetName(x), SCIPvarGetName(y),
+      SCIPinfoMessage(scip, NULL, "\nproduct: %s%s %s %g%s + %g%s + %g%s + %g", SCIPvarGetName(x), SCIPvarGetName(y),
          negwcoef ? ">=" : "<=", lincoefs[0], SCIPvarGetName(w), lincoefs[1], SCIPvarGetName(x), lincoefs[2], SCIPvarGetName(y), -coefs2[wpos]*lhs1*mult);
 
       SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign2*coefs2[wpos]*lhs1*mult, &linexpr) );
@@ -746,7 +754,6 @@ SCIP_RETCODE extractProducts(
    /* do rhs */
    if( rhs1 != SCIPinfinity(scip) && rhs2 != SCIPinfinity(scip) )
    { /* since sign1*coefs1[xpos] > 0, for rhs inequality 1 is stronger when x = 1, inequality 2 is stronger when x = 0 */
-
       mult = 1/(coefs1[wpos]*sign1*coefs2[ypos]*sign2 - coefs1[ypos]*sign1*coefs2[wpos]*sign2);
 
       /* we make sure above that these have the same sign, but one of them might be zero, so we check both here */
@@ -757,17 +764,17 @@ SCIP_RETCODE extractProducts(
 
       SCIPdebugMsg(scip, "w coef is %s\n", negwcoef ? "negative" : "positive");
 
-      SCIPinfoMessage(scip, NULL, "\nRhs, found suitable implied rels (w,x,y): %f%s + %f%s + %f%s <= %f\n",
+      SCIPinfoMessage(scip, NULL, "\nRhs, found suitable implied rels (w,x,y): %g%s + %g%s + %g%s <= %g\n",
          sign1*coefs1[wpos], SCIPvarGetName(w), sign1*coefs1[xpos], SCIPvarGetName(x), sign1*coefs1[ypos], SCIPvarGetName(y), rhs1);
 
-      SCIPinfoMessage(scip, NULL, "\nand %f%s + %f%s + %f%s <= %f\n", sign2*coefs2[wpos], SCIPvarGetName(w),
+      SCIPinfoMessage(scip, NULL, "\nand %g%s + %g%s + %g%s <= %g\n", sign2*coefs2[wpos], SCIPvarGetName(w),
          sign2*coefs2[xpos], SCIPvarGetName(x), sign2*coefs2[ypos], SCIPvarGetName(y), rhs2);
 
       lincoefs[0] = sign1*coefs1[wpos]*sign2*coefs2[wpos]*mult;
       lincoefs[1] = (sign1*coefs1[xpos]*sign2*coefs2[wpos] - rhs1*sign2*coefs2[wpos] + rhs2*sign1*coefs1[wpos] )*mult;
       lincoefs[2] = sign1*coefs1[wpos]*sign2*coefs2[ypos]*mult;
 
-      SCIPinfoMessage(scip, NULL, "\nproduct: %s%s %s %f%s + %f%s + %f%s + %f", SCIPvarGetName(x), SCIPvarGetName(y),
+      SCIPinfoMessage(scip, NULL, "\nproduct: %s%s %s %g%s + %g%s + %g%s + %g", SCIPvarGetName(x), SCIPvarGetName(y),
          negwcoef ? "<=" : ">=", lincoefs[0], SCIPvarGetName(w), lincoefs[1], SCIPvarGetName(x), lincoefs[2], SCIPvarGetName(y), -coefs1[wpos]*rhs2*mult);
 
       SCIP_CALL( createLinearisation(scip, sepadata, w, x, y, lincoefs, -sign1*coefs1[wpos]*rhs2*mult, &linexpr) );
@@ -778,7 +785,7 @@ SCIP_RETCODE extractProducts(
 }
 
 /** extract products from a relation given by coefs1, vars, lhs1 and rhs1 and
- *  implied bounds of the form vars[0] == x => vars[varpos] >=/<= bound
+ *  implied bounds of the form vars[varpos1] == x => vars[varpos2] >=/<= bound
  */
 static
 void detectProductsImplbnd(
@@ -796,10 +803,15 @@ void detectProductsImplbnd(
    SCIP_Real coefs2[3];
    SCIP_Bool foundlb, foundub;
    SCIP_Real impllb, implub;
-   SCIP_VAR* var1 = vars[varpos1];
-   SCIP_VAR* var2 = vars[varpos2];
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
 
    assert( varpos1 != varpos2 );
+
+   var1 = vars[varpos1];
+   var2 = vars[varpos2];
+
+   assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY && SCIPvarGetType(var2) != SCIP_VARTYPE_BINARY);
 
    if( varpos1 != 2 && varpos2 != 2 )
       coefs2[2] = 0.0;
@@ -862,8 +874,13 @@ void detectProductsClique(
 )
 {
    SCIP_Real coefs2[3];
-   SCIP_VAR* var1 = vars[varpos1];
-   SCIP_VAR* var2 = vars[varpos2];
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+
+   var1 = vars[varpos1];
+   var2 = vars[varpos2];
+
+   assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY && SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
 
    if( varpos1 != 2 && varpos2 != 2 )
       coefs2[2] = 0.0;
@@ -875,31 +892,106 @@ void detectProductsClique(
    if( SCIPvarsHaveCommonClique(var1, TRUE, var2, TRUE, TRUE) )
    { /* var1 + var2 <= 1 */
       SCIPinfoMessage(scip, NULL, "\nvars %s and %s are in a clique", SCIPvarGetName(var1), SCIPvarGetName(var2));
-      coefs2[0] = 1.0;
+      coefs2[varpos1] = 1.0;
       coefs2[varpos2] = 1.0;
       extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1, -SCIPinfinity(scip), rhs1, 1.0, varmap);
    }
    if( SCIPvarsHaveCommonClique(var1, TRUE, var2, FALSE, TRUE) )
    { /* var1 - var <= 0 */
-      coefs2[0] = 1.0;
+      SCIPinfoMessage(scip, NULL, "\nvars %s and (1-%s) are in a clique", SCIPvarGetName(var1), SCIPvarGetName(var2));
+      coefs2[varpos1] = 1.0;
       coefs2[varpos2] = -1.0;
       extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1, -SCIPinfinity(scip), rhs1, 0.0, varmap);
-      SCIPinfoMessage(scip, NULL, "\nvars %s and (1-%s) are in a clique", SCIPvarGetName(var1), SCIPvarGetName(var2));
    }
    if( SCIPvarsHaveCommonClique(var1, FALSE, var2, TRUE, TRUE) )
    { /* var - var1 <= 0 */
-      coefs2[0] = -1.0;
+      SCIPinfoMessage(scip, NULL, "\nvars (1-%s) and %s are in a clique", SCIPvarGetName(var1), SCIPvarGetName(var2));
+      coefs2[varpos1] = -1.0;
       coefs2[varpos2] = 1.0;
       extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1, -SCIPinfinity(scip), rhs1, 0.0, varmap);
-      SCIPinfoMessage(scip, NULL, "\nvars (1-%s) and %s are in a clique", SCIPvarGetName(var1), SCIPvarGetName(var2));
    }
    if( SCIPvarsHaveCommonClique(var1, FALSE, var2, FALSE, TRUE) )
    { /* var1 + var >= 1 */
-      coefs2[0] = 1.0;
+      SCIPinfoMessage(scip, NULL, "\nvars (1-%s) and (1-%s) are in a clique", SCIPvarGetName(var1), SCIPvarGetName(var2));
+      coefs2[varpos1] = 1.0;
       coefs2[varpos2] = 1.0;
       extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1, 1.0, rhs1, SCIPinfinity(scip), varmap);
-      SCIPinfoMessage(scip, NULL, "\nvars (1-%s) and (1-%s) are in a clique", SCIPvarGetName(var1), SCIPvarGetName(var2));
    }
+}
+
+static
+SCIP_RETCODE detectProductsUnconditional(
+   SCIP*           scip,
+   SCIP_SEPADATA*  sepadata,
+   SCIP_HASHTABLE* hashdatatable,
+   SCIP_Real*      coefs1,
+   SCIP_VAR**      vars,
+   SCIP_Real       lhs1,
+   SCIP_Real       rhs1,
+   int             varpos1,
+   int             varpos2,
+   SCIP_HASHMAP*   varmap
+   )
+{
+   HASHDATA hashdata;
+   HASHDATA* foundhashdata;
+   SCIP_ROW* row2;
+   int r2;
+   SCIP_Real coefs2[3];
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   int pos1, pos2;
+
+   if( varpos1 != 2 && varpos2 != 2 )
+      coefs2[2] = 0.0;
+   else if( varpos1 != 1 && varpos2 != 1 )
+      coefs2[1] = 0.0;
+   else
+      coefs2[0] = 0.0;
+
+   var1 = vars[varpos1];
+   var2 = vars[varpos2];
+
+   hashdata.nvars = 2;
+   hashdata.rows = NULL;
+   SCIP_CALL( SCIPallocBufferArray(scip, &(hashdata.vars), 2) );
+   if( SCIPvarGetIndex(var1) < SCIPvarGetIndex(var2) )
+   {
+      pos1 = 0;
+      pos2 = 1;
+   }
+   else
+   {
+      pos1 = 1;
+      pos2 = 0;
+   }
+
+   hashdata.vars[pos1] = var1;
+   hashdata.vars[pos2] = var2;
+
+   foundhashdata = (HASHDATA*)SCIPhashtableRetrieve(hashdatatable, &hashdata);
+
+   if( foundhashdata != NULL )
+   {
+      /* if the var pair exists, use all corresponding rows */
+      for( r2 = 0; r2 < foundhashdata->nrows; ++r2 )
+      {
+         row2 = foundhashdata->rows[r2];
+         assert(SCIProwGetNNonz(row2) == 2);
+         assert(var1 == SCIPcolGetVar(SCIProwGetCols(row2)[pos1]));
+         assert(var2 == SCIPcolGetVar(SCIProwGetCols(row2)[pos2]));
+
+         coefs2[varpos1] = SCIProwGetVals(row2)[pos1];
+         coefs2[varpos2] = SCIProwGetVals(row2)[pos2];
+
+         SCIPinfoMessage(scip, NULL, "\nUnconditional:");
+         SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, lhs1,
+                                    SCIProwGetLhs(row2), rhs1, SCIProwGetRhs(row2), varmap) );
+      }
+   }
+   SCIPfreeBufferArray(scip, &(hashdata.vars));
+
+   return SCIP_OKAY;
 }
 
 /* detect bilinear products encoded in linear constraints */
@@ -910,12 +1002,13 @@ SCIP_RETCODE detectHiddenProducts(
    SCIP_HASHMAP*  varmap      /**< variable map */
    )
 {
-   int v1, r, r2, i, j, nrows;
+   int v1, v2, r, r2, i, j, nrows;
    SCIP_ROW** prob_rows;
    SCIP_HASHTABLE* hashdatatable3;
    SCIP_HASHTABLE* hashdatatable2;
    HASHDATA hashdata;
-   HASHDATA* foundhashdata;
+   HASHDATA* foundhashdata1;
+   HASHDATA* foundhashdata2;
    SCIP_COL** cols;
    SCIP_VAR* vars_xwy[3];
    SCIP_VAR* x;
@@ -925,6 +1018,11 @@ SCIP_RETCODE detectHiddenProducts(
    SCIP_ROW* row1;
    SCIP_ROW* row2;
    int xpos, ypos, wpos;
+   int nvars_in_2rels, varpos, varpos2;
+   SCIP_VAR** vars_in_2rels;
+   SCIP_VAR*** related_vars;
+   int* nrelated_vars;
+   SCIP_Bool found;
 
    /* get the rows, depending on settings */
    if( sepadata->isinitialround || sepadata->onlyinitial )
@@ -941,6 +1039,14 @@ SCIP_RETCODE detectHiddenProducts(
       hashdataKeyEqConss, hashdataKeyValConss, (void*) scip) );
    SCIP_CALL( SCIPhashtableCreate(&hashdatatable2, SCIPblkmem(scip), nrows, SCIPhashGetKeyStandard,
       hashdataKeyEqConss, hashdataKeyValConss, (void*) scip) );
+
+   /* allocate the array of variables that appear in 2-var relations */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars_in_2rels, SCIPgetNVars(scip)) );
+   /* allocate the array of arrays of variables that appear in 2-var relations with each variable */
+   SCIP_CALL( SCIPallocBufferArray(scip, &related_vars, SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nrelated_vars, SCIPgetNVars(scip)) );
+
+   nvars_in_2rels = 0;
 
    /* look for implied relations and unconditional relations with 2 variables */
    for( r = 0; r < nrows; ++r ) /* go through rows */
@@ -971,27 +1077,27 @@ SCIP_RETCODE detectHiddenProducts(
             hashdata.vars[v1] = SCIPcolGetVar(cols[v1]);
 
          /* get the element corresponsing to the three variables */
-         foundhashdata = (HASHDATA*)SCIPhashtableRetrieve(hashdatatable3, &hashdata);
+         foundhashdata1 = (HASHDATA*)SCIPhashtableRetrieve(hashdatatable3, &hashdata);
 
-         if( foundhashdata != NULL )
+         if( foundhashdata1 != NULL )
          {
             /* if element exists, update it */
-            foundhashdata->rows[foundhashdata->nrows] = prob_rows[r];
-            ++foundhashdata->nrows;
+            foundhashdata1->rows[foundhashdata1->nrows] = prob_rows[r];
+            ++foundhashdata1->nrows;
             SCIPfreeBufferArray(scip, &(hashdata.vars));
          }
          else
          {
             /* create an element for the combination of three variables */
-            SCIP_CALL( SCIPallocBuffer(scip, &foundhashdata) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &(foundhashdata->rows), nrows) );
+            SCIP_CALL( SCIPallocBuffer(scip, &foundhashdata1) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &(foundhashdata1->rows), nrows) );
 
-            foundhashdata->rows[0] = prob_rows[r];
-            foundhashdata->nvars = 3;
-            foundhashdata->nrows = 1;
-            foundhashdata->vars = hashdata.vars;
+            foundhashdata1->rows[0] = prob_rows[r];
+            foundhashdata1->nvars = 3;
+            foundhashdata1->nrows = 1;
+            foundhashdata1->vars = hashdata.vars;
 
-            SCIPhashtableInsert(hashdatatable3, (void*)foundhashdata);
+            SCIPhashtableInsert(hashdatatable3, (void*)foundhashdata1);
          }
       }
 
@@ -1013,29 +1119,78 @@ SCIP_RETCODE detectHiddenProducts(
             hashdata.vars[v1] = SCIPcolGetVar(cols[v1]);
 
          /* get the element corresponsing to the two variables */
-         foundhashdata = (HASHDATA*)SCIPhashtableRetrieve(hashdatatable2, &hashdata);
+         foundhashdata1 = (HASHDATA*)SCIPhashtableRetrieve(hashdatatable2, &hashdata);
 
-         if( foundhashdata != NULL )
+         if( foundhashdata1 != NULL )
          {
             /* if element exists, update it */
-            foundhashdata->rows[foundhashdata->nrows] = prob_rows[r];
-            ++foundhashdata->nrows;
+            foundhashdata1->rows[foundhashdata1->nrows] = prob_rows[r];
+            ++foundhashdata1->nrows;
             SCIPfreeBufferArray(scip, &(hashdata.vars));
          }
          else
          {
-            /* create an element for the combination of three variables */
-            SCIP_CALL( SCIPallocBuffer(scip, &foundhashdata) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &(foundhashdata->rows), nrows) );
+            /* create an element for the combination of two variables */
+            SCIP_CALL( SCIPallocBuffer(scip, &foundhashdata1) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &(foundhashdata1->rows), nrows) );
 
-            foundhashdata->rows[0] = prob_rows[r];
-            foundhashdata->nvars = 2;
-            foundhashdata->nrows = 1;
-            foundhashdata->vars = hashdata.vars;
+            foundhashdata1->rows[0] = prob_rows[r];
+            foundhashdata1->nvars = 2;
+            foundhashdata1->nrows = 1;
+            foundhashdata1->vars = hashdata.vars;
 
-            SCIPhashtableInsert(hashdatatable2, (void*)foundhashdata);
+            SCIPhashtableInsert(hashdatatable2, (void*)foundhashdata1);
+
+            /* update the variable arrays */
+            for( v1 = 0; v1 < 2; ++v1 )
+            {
+               v2 = 1 - v1;
+
+               found = SCIPsortedvecFindPtr((void**)vars_in_2rels, SCIPvarComp, hashdata.vars[v1], nvars_in_2rels, &varpos);
+
+               if( found )
+               {
+                  assert(vars_in_2rels[varpos] == hashdata.vars[v1]);
+
+                  /* add second var to corresponding array */
+                  found = SCIPsortedvecFindPtr((void**)related_vars[varpos], SCIPvarComp, hashdata.vars[v2], nrelated_vars[varpos], &varpos2);
+                  if( !found )
+                  {
+                     /* insert var at the correct position */
+                     for( int i = nrelated_vars[varpos]; i > varpos2; --i )
+                        related_vars[varpos][i] = related_vars[varpos][i-1];
+                     related_vars[varpos][varpos2] = hashdata.vars[v2];
+                     nrelated_vars[varpos]++;
+                  }
+               }
+               else
+               {  /* var has not been added yet, add it here */
+
+                  /* insert expression at the correct position */
+                  for( int i = nvars_in_2rels; i > varpos; --i )
+                  {
+                     vars_in_2rels[i] = vars_in_2rels[i-1];
+                     related_vars[i] = related_vars[i-1];
+                     nrelated_vars[i] = nrelated_vars[i-1];
+                  }
+                  vars_in_2rels[varpos] = hashdata.vars[v1];
+
+                  SCIP_CALL( SCIPallocBufferArray(scip, &related_vars[varpos], SCIPgetNVars(scip)) );
+                  related_vars[varpos][0] = hashdata.vars[v2];
+                  nrelated_vars[varpos] = 1;
+                  ++nvars_in_2rels;
+               }
+            }
          }
       }
+   }
+
+   SCIPinfoMessage(scip, NULL, "\nrelated vars:");
+   for( i = 0; i < nvars_in_2rels; ++i )
+   {
+      SCIPinfoMessage(scip, NULL, "\nfor var %s: ", SCIPvarGetName(vars_in_2rels[i]));
+      for( j = 0; j < nrelated_vars[i]; ++j )
+         SCIPinfoMessage(scip, NULL, "%s; ", SCIPvarGetName(related_vars[i][j]));
    }
 
    SCIPinfoMessage(scip, NULL, "\n");
@@ -1046,16 +1201,16 @@ SCIP_RETCODE detectHiddenProducts(
    /* go through all sets of three variables */
    for( i = 0; i < SCIPhashtableGetNEntries(hashdatatable3); ++i )
    {
-      foundhashdata = (HASHDATA*)SCIPhashtableGetEntry(hashdatatable3, i);
-      if( foundhashdata == NULL )
+      foundhashdata1 = (HASHDATA*)SCIPhashtableGetEntry(hashdatatable3, i);
+      if( foundhashdata1 == NULL )
          continue;
 
-      SCIPdebugMsg(scip, "(%s, %s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
-         SCIPvarGetName(foundhashdata->vars[1]), SCIPvarGetName(foundhashdata->vars[2]));
+      SCIPdebugMsg(scip, "(%s, %s, %s): ", SCIPvarGetName(foundhashdata1->vars[0]),
+         SCIPvarGetName(foundhashdata1->vars[1]), SCIPvarGetName(foundhashdata1->vars[2]));
 
       for( xpos = 0; xpos < 3; ++xpos )
       {
-         x = foundhashdata->vars[xpos];
+         x = foundhashdata1->vars[xpos];
 
          /* x must be binary */
          if( SCIPvarGetType(x) != SCIP_VARTYPE_BINARY )
@@ -1064,43 +1219,46 @@ SCIP_RETCODE detectHiddenProducts(
          vars_xwy[0] = x;
 
          /* go through implied relations for the corresponsing three variables */
-         for( r = 0; r < foundhashdata->nrows; ++r )
+         for( r = 0; r < foundhashdata1->nrows; ++r )
          {
-            row1 = foundhashdata->rows[r];
+            row1 = foundhashdata1->rows[r];
             assert(SCIProwGetNNonz(row1) == 3);
             SCIPinfoMessage(scip, NULL, "%s; ", SCIProwGetName(row1));
 
-            /* TODO don't need the assign but keep the check */
-/*            for( v1 = 0; v1 < 3; ++v1 )
-            assert(SCIPcolGetVar(SCIProwGetCols(row1)[v1]) == vars[v1]);*/
+            assert(x == SCIPcolGetVar(SCIProwGetCols(row1)[xpos]));
 
             coefs1[0] = SCIProwGetVals(row1)[xpos];
 
             /* permute w and y */
             for( j = 1; j <= 2; ++j )
             {
-               SCIP_Real impllb, implub;
-               SCIP_Bool foundlb, foundub;
-
                wpos = (xpos+j) % 3;
                ypos = (xpos-j+3) % 3;
-               w = foundhashdata->vars[wpos];
-               y = foundhashdata->vars[ypos];
+               w = foundhashdata1->vars[wpos];
+               y = foundhashdata1->vars[ypos];
                vars_xwy[1] = w;
                vars_xwy[2] = y;
+
+               assert(w == SCIPcolGetVar(SCIProwGetCols(row1)[wpos]));
+               assert(y == SCIPcolGetVar(SCIProwGetCols(row1)[ypos]));
+
                coefs1[1] = SCIProwGetVals(row1)[wpos];
                coefs1[2] = SCIProwGetVals(row1)[ypos];
 
                /* go through the remaining rows for these three variables */
-               for( r2 = r + 1; r2 < foundhashdata->nrows; ++r2 )
+               for( r2 = r + 1; r2 < foundhashdata1->nrows; ++r2 )
                {
-                  row2 = foundhashdata->rows[r2];
+                  row2 = foundhashdata1->rows[r2];
                   assert(SCIProwGetNNonz(row2) == 3);
+                  assert(x == SCIPcolGetVar(SCIProwGetCols(row2)[xpos]));
+                  assert(w == SCIPcolGetVar(SCIProwGetCols(row2)[wpos]));
+                  assert(y == SCIPcolGetVar(SCIProwGetCols(row2)[ypos]));
 
                   coefs2[0] = SCIProwGetVals(row2)[xpos];
                   coefs2[1] = SCIProwGetVals(row2)[wpos];
                   coefs2[2] = SCIProwGetVals(row2)[ypos];
 
+                  SCIPdebugMsg(scip, "Two implied relations:\n");
                   SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, SCIProwGetLhs(row1),
                      SCIProwGetLhs(row2), SCIProwGetRhs(row1), SCIProwGetRhs(row2), varmap) );
                }
@@ -1109,70 +1267,220 @@ SCIP_RETCODE detectHiddenProducts(
                coefs2[0] = 0.0;
                coefs2[1] = 1.0;
                coefs2[2] = 0.0;
+               SCIPdebugMsg(scip, "w global bounds:\n");
                extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, SCIProwGetLhs(row1),
                   SCIPvarGetLbGlobal(w), SCIProwGetRhs(row1), SCIPvarGetUbGlobal(w), varmap);
 
-               /* do implied bounds and cliques */
+               /* do implied bounds and cliques with w */
                if( SCIPvarGetType(w) != SCIP_VARTYPE_BINARY )
-               { /* w is non-binary - look for implied bounds on w */
+               { /* w is non-binary - look for implied bounds x = f => w >=/<= bound */
+                  SCIPdebugMsg(scip, "Implied relation + implied bounds on w:\n");
                   detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, SCIProwGetLhs(row1), SCIProwGetRhs(row1), 0, 1, varmap);
                }
                else
-               {
+               { /* w is binary - look for cliques containing x and w */
+                  SCIPdebugMsg(scip, "Implied relation + cliques with x and w:\n");
                   detectProductsClique(scip, sepadata, coefs1, vars_xwy, SCIProwGetLhs(row1), SCIProwGetRhs(row1), 0, 1, varmap);
                }
 
-               /* implied bounds on y (TODO do we need this?) */
+               /* implied bounds and cliques with y (TODO do we need this?) */
                if( SCIPvarGetType(y) != SCIP_VARTYPE_BINARY )
-               { /* y is non-binary - look for implied bounds on y */
+               { /* y is non-binary - look for implied bounds x = f => y >=/<= bound */
+                  SCIPdebugMsg(scip, "Implied relation + implied bounds on y:\n");
                   detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, SCIProwGetLhs(row1), SCIProwGetRhs(row1), 0, 2, varmap);
                }
                else
-               {
+               { /* y is binary - look for cliques containing x and y */
+                  SCIPdebugMsg(scip, "Implied relation + cliques with x and y:\n");
                   detectProductsClique(scip, sepadata, coefs1, vars_xwy, SCIProwGetLhs(row1), SCIProwGetRhs(row1), 0, 2, varmap);
                }
 
-               /* use unconditional relations */
+               /* use unconditional relations (i.e. relations of w and y) */
 
                /* implied bound w == f => y >=/<= bound */
+               if( SCIPvarGetType(w) == SCIP_VARTYPE_BINARY && SCIPvarGetType(y) != SCIP_VARTYPE_BINARY )
+               {
+                  SCIPdebugMsg(scip, "Implied relation + implied bounds with w and y:\n");
+                  detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, SCIProwGetLhs(row1), SCIProwGetRhs(row1), 1, 2, varmap);
+               }
 
                /* implied bound y == f => w >=/<= bound */
+               if( SCIPvarGetType(y) == SCIP_VARTYPE_BINARY && SCIPvarGetType(w) != SCIP_VARTYPE_BINARY )
+               {
+                  SCIPdebugMsg(scip, "Implied relation + implied bounds with y and w:\n");
+                  detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, SCIProwGetLhs(row1), SCIProwGetRhs(row1), 2, 1, varmap);
+               }
 
                /* cliques containing w and y */
+               if( SCIPvarGetType(w) == SCIP_VARTYPE_BINARY && SCIPvarGetType(y) == SCIP_VARTYPE_BINARY )
+               {
+                  SCIPdebugMsg(scip, "Implied relation + cliques with w and y:\n");
+                  detectProductsClique(scip, sepadata, coefs1, vars_xwy, SCIProwGetLhs(row1), SCIProwGetRhs(row1), 1, 2, varmap);
+               }
 
                /* inequalities containing w and y */
+               if( SCIPvarGetType(w) != SCIP_VARTYPE_BINARY && SCIPvarGetType(y) != SCIP_VARTYPE_BINARY )
+               {
+                  SCIPdebugMsg(scip, "Implied relation + unconditional with w and y:\n");
+                  detectProductsUnconditional(scip, sepadata, hashdatatable2, coefs1, vars_xwy, SCIProwGetLhs(row1), SCIProwGetRhs(row1), 1, 2, varmap);
+               }
+            }
+         }
+      }
+      SCIPfreeBufferArray(scip, &(foundhashdata1->vars));
+      SCIPfreeBufferArray(scip, &(foundhashdata1->rows));
+      SCIPfreeBuffer(scip, &foundhashdata1);
+   }
+
+
+   /* also loop through implied bounds to look for products */
+   for( i = 0; i < SCIPgetNVars(scip); ++i )
+   {
+      int xfixing_i;
+      SCIP_Bool xfixing;
+
+      x = SCIPgetVars(scip)[i];
+
+      if( SCIPvarGetType(x) != SCIP_VARTYPE_BINARY )
+         continue;
+
+      SCIPinfoMessage(scip, NULL, "\nDoing implics for x = %s", SCIPvarGetName(x));
+
+      vars_xwy[0] = x;
+      coefs1[1] = 1.0;
+      coefs1[2] = 0.0;
+
+      for( xfixing_i = 0; xfixing_i <= 1; ++xfixing_i )
+      {
+         xfixing = xfixing_i == 1;
+
+         /* go through implications of x */
+         for( j = 0; j < SCIPvarGetNImpls(x, xfixing); ++j )
+         {
+            SCIP_Real lhs1, rhs1;
+
+            /* w is the implic var */
+            /* y could be anything, but must be in relation with w */
+            w = SCIPvarGetImplVars(x, xfixing)[j];
+
+            found = SCIPsortedvecFindPtr((void**)vars_in_2rels, SCIPvarComp, w, nvars_in_2rels, &varpos);
+            if( !found )
+               continue;
+
+            vars_xwy[1] = w;
+
+            if( SCIPvarGetImplTypes(x, xfixing)[j] == SCIP_BOUNDTYPE_LOWER )
+            {
+               coefs1[0] = SCIPvarGetLbGlobal(w) - SCIPvarGetImplBounds(x, xfixing)[j];
+               lhs1 = xfixing ? SCIPvarGetLbGlobal(w) : SCIPvarGetImplBounds(x, xfixing)[j];
+               rhs1 = SCIPinfinity(scip);
+            }
+            else
+            {
+               coefs1[0] = SCIPvarGetUbGlobal(w) - SCIPvarGetImplBounds(x, xfixing)[j];
+               rhs1 = xfixing ? SCIPvarGetUbGlobal(w) : SCIPvarGetImplBounds(x, xfixing)[j];
+               lhs1 = -SCIPinfinity(scip);
+            }
+            if( !xfixing )
+               coefs1[0] = -coefs1[0];
+
+            SCIPdebugMsg(scip, "Implic of x = %s + implied lb on w = %s:\n", SCIPvarGetName(x), SCIPvarGetName(w));
+            /* use implied lower bounds on w: w >= b*y + d */
+            for( v1 = 0; v1 < SCIPvarGetNVlbs(w); ++v1 )
+            {
+               y = SCIPvarGetVlbVars(w)[v1];
+               if( y == x )
+                  continue;
+
+               coefs2[0] = 0.0;
+               coefs2[1] = 1.0;
+               coefs2[2] = -SCIPvarGetVlbCoefs(w)[v1];
+
+               vars_xwy[2] = y;
+               extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, lhs1, SCIPvarGetVlbConstants(w)[v1], rhs1, SCIPinfinity(scip), varmap);
+            }
+
+            SCIPdebugMsg(scip, "Implic of x = %s + implied ub on w = %s:\n", SCIPvarGetName(x), SCIPvarGetName(w));
+            /* use implied upper bounds on w: w <= b*y + d */
+            for( v1 = 0; v1 < SCIPvarGetNVubs(w); ++v1 )
+            {
+               y = SCIPvarGetVubVars(w)[v1];
+               SCIPdebugMsg(scip, "y = %s\n", SCIPvarGetName(y));
+               if( y == x )
+                  continue;
+
+               coefs2[0] = 0.0;
+               coefs2[1] = 1.0;
+               coefs2[2] = -SCIPvarGetVubCoefs(w)[v1];
+
+               vars_xwy[2] = y;
+               extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, lhs1, -SCIPinfinity(scip), rhs1, SCIPvarGetVubConstants(w)[v1], varmap);
+            }
+
+            /* TODO use cliques and implics of w */
+            if( SCIPvarGetType(w) == SCIP_VARTYPE_BINARY )
+            {
+               SCIP_Bool wfixing;
+               int wfixing_i;
+
+               for( wfixing_i = 0; wfixing_i <= 1; ++wfixing_i )
+               {
+                  wfixing = wfixing_i == 1;
+
+                  /* TODO use cliques with w */
+                  for( v1 = 0; v1 < SCIPvarGetNImpls(w, wfixing); ++v1 )
+                  {
+                     /* TODO loop over all vars in the clique... */
+                  }
+
+                  /* TODO use implics of w */
+               }
+
 
             }
 
+            /* use unconditional relations containing w */
+            for( v1 = 0; v1 < nrelated_vars[varpos]; ++v1 )
+            {
+               y = related_vars[varpos][v1];
+               vars_xwy[2] = y;
+               SCIPdebugMsg(scip, "Implied bound + unconditional with w and y:\n");
+               detectProductsUnconditional(scip, sepadata, hashdatatable2, coefs1, vars_xwy, lhs1, rhs1, 1, 2, varmap);
+            }
          }
       }
-
-      SCIPfreeBufferArray(scip, &(foundhashdata->vars));
-      SCIPfreeBufferArray(scip, &(foundhashdata->rows));
-      SCIPfreeBuffer(scip, &foundhashdata);
    }
 
    SCIPinfoMessage(scip, NULL, "\n");
    SCIPdebugMsg(scip, "Unconditional relations table:\n");
    for( i = 0; i < SCIPhashtableGetNEntries(hashdatatable2); ++i )
    {
-      foundhashdata = (HASHDATA*)SCIPhashtableGetEntry(hashdatatable2, i);
-      if( foundhashdata == NULL )
+      foundhashdata1 = (HASHDATA*)SCIPhashtableGetEntry(hashdatatable2, i);
+      if( foundhashdata1 == NULL )
          continue;
 
-      SCIPdebugMsg(scip, "(%s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
-                   SCIPvarGetName(foundhashdata->vars[1]));
+      SCIPdebugMsg(scip, "(%s, %s): ", SCIPvarGetName(foundhashdata1->vars[0]),
+                   SCIPvarGetName(foundhashdata1->vars[1]));
 
       /* go through implied relations for the corresponsing two variables */
-      for( r = 0; r < foundhashdata->nrows; ++r )
+      for( r = 0; r < foundhashdata1->nrows; ++r )
       {
-         SCIPinfoMessage(scip, NULL, "%s; ", SCIProwGetName(foundhashdata->rows[r]));
+         SCIPinfoMessage(scip, NULL, "%s; ", SCIProwGetName(foundhashdata1->rows[r]));
       }
 
-      SCIPfreeBufferArray(scip, &(foundhashdata->vars));
-      SCIPfreeBufferArray(scip, &(foundhashdata->rows));
-      SCIPfreeBuffer(scip, &foundhashdata);
+      SCIPfreeBufferArray(scip, &(foundhashdata1->vars));
+      SCIPfreeBufferArray(scip, &(foundhashdata1->rows));
+      SCIPfreeBuffer(scip, &foundhashdata1);
    }
+
+   for( i = 0; i < nvars_in_2rels; ++i )
+   {
+      SCIPfreeBufferArray(scip, &related_vars[i]);
+   }
+
+   SCIPfreeBufferArray(scip, &nrelated_vars);
+   SCIPfreeBufferArray(scip, &related_vars);
+   SCIPfreeBufferArray(scip, &vars_in_2rels);
 
    SCIPhashtableFree(&hashdatatable2);
    SCIPhashtableFree(&hashdatatable3);
@@ -1810,7 +2118,7 @@ SCIP_RETCODE computeRltCuts(
    /* if the bounds are too large or the respective side is infinity, skip this cut */
    if( REALABS(lbvar) > MAXVARBOUND || REALABS(ubvar) > MAXVARBOUND || SCIPisInfinity(scip, REALABS(constside)) )
    {
-      SCIPdebugMsg(scip, "cut generation for row %s, %s and variable %s with its %s %f not possible\n",
+      SCIPdebugMsg(scip, "cut generation for row %s, %s and variable %s with its %s %g not possible\n",
          SCIProwGetName(row), uselhs ? "lhs" : "rhs", SCIPvarGetName(var),
          uselb ? "lower bound" : "upper bound", uselb ? lbvar : ubvar);
 
@@ -1819,7 +2127,7 @@ SCIP_RETCODE computeRltCuts(
       if( REALABS(ubvar) > MAXVARBOUND )
          SCIPdebugMsg(scip, " because of upper bound\n");
       if( SCIPisInfinity(scip, REALABS(constside)) )
-         SCIPdebugMsg(scip, " because of side %f\n", constside);
+         SCIPdebugMsg(scip, " because of side %g\n", constside);
 
       *success = FALSE;
       return SCIP_OKAY;
@@ -1929,7 +2237,7 @@ SCIP_RETCODE computeProjRltCut(
    /* if the bounds are too large or the respective side is infinity, skip this cut */
    if( REALABS(lbvar) > MAXVARBOUND || REALABS(ubvar) > MAXVARBOUND || SCIPisInfinity(scip, REALABS(constside)) )
    {
-      SCIPdebugMsg(scip, "cut generation for projected row %d, %s and variable %s with its %s %f not possible\n",
+      SCIPdebugMsg(scip, "cut generation for projected row %d, %s and variable %s with its %s %g not possible\n",
                    idx, uselhs ? "lhs" : "rhs", SCIPvarGetName(var),
                    uselb ? "lower bound" : "upper bound", uselb ? lbvar : ubvar);
 
@@ -2224,7 +2532,7 @@ SCIP_RETCODE markRowsXj(
    if( sepadata->useprojection && (vlb == val || vub == val) )
    {
       /* we don't want to multiply by variables that are at bound */
-      SCIPdebugMsg(scip, "Rejected multiplier %s in [%f,%f] because it is at bound (current value %f)\n", SCIPvarGetName(xj), vlb, vub, val);
+      SCIPdebugMsg(scip, "Rejected multiplier %s in [%g,%g] because it is at bound (current value %g)\n", SCIPvarGetName(xj), vlb, vub, val);
       return SCIP_OKAY;
    }
 
@@ -2274,11 +2582,11 @@ SCIP_RETCODE markRowsXj(
          prod_viol_above = prodval - SCIPgetConsExprExprValue(sepadata->linexprs[img][posover]);
       }
 
-      SCIPdebugMsg(scip, "most violated underestimator: pos = %d, value = %f\n", posunder,
+      SCIPdebugMsg(scip, "most violated underestimator: pos = %d, value = %g\n", posunder,
                    posunder < sepadata->nlinexprs[img] ? SCIPgetConsExprExprValue(sepadata->linexprs[img][posunder]) : 0.0);
-      SCIPdebugMsg(scip, "most violated overestimator: pos = %d, value = %f\n", posover,
+      SCIPdebugMsg(scip, "most violated overestimator: pos = %d, value = %g\n", posover,
                    posover < sepadata->nlinexprs[img] ? SCIPgetConsExprExprValue(sepadata->linexprs[img][posover]) : 0.0);
-      SCIPdebugMsg(scip, "prodval = %f, prod viol below = %f, above = %f\n", prodval, prod_viol_below, prod_viol_above);
+      SCIPdebugMsg(scip, "prodval = %g, prod viol below = %g, above = %g\n", prodval, prod_viol_below, prod_viol_above);
 
       /* we are interested only in violated product relations */
       if( SCIPisFeasLE(scip, prod_viol_below, 0.0) && SCIPisFeasLE(scip, prod_viol_above, 0.0) )
@@ -2427,10 +2735,10 @@ SCIP_RETCODE separateRltCuts(
 
                /* if the projected cut is not violated, set success to FALSE */
                if( cut != NULL )
-                  SCIPdebugMsg(scip, "proj cut viol = %f\n", SCIPgetRowFeasibility(scip, cut));
+                  SCIPdebugMsg(scip, "proj cut viol = %g\n", SCIPgetRowFeasibility(scip, cut));
                if( cut != NULL && !SCIPisFeasLT(scip, SCIPgetRowFeasibility(scip, cut), 0.0) )
                {
-                  SCIPdebugMsg(scip, "projected cut is not violated, feasibility = %f\n", SCIPgetRowFeasibility(scip, cut));
+                  SCIPdebugMsg(scip, "projected cut is not violated, feasibility = %g\n", SCIPgetRowFeasibility(scip, cut));
                   success = FALSE;
                }
 
