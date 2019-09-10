@@ -480,7 +480,7 @@ Test(rlt_selection, implrelclique, .init = setup, .fini = teardown, .description
    SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons1, "c1", 3, vars, coefs1, 0.0, 1.0) );
    SCIP_CALL( SCIPaddCons(scip, cons1) );
 
-   /* add a clique b1 + b2 <= 1 */
+   /* add a clique b1 + (1-b2) <= 1 */
    clique_vars[0] = b1;
    clique_vars[1] = b2;
    clique_vals[0] = 1;
@@ -500,27 +500,253 @@ Test(rlt_selection, implrelclique, .init = setup, .fini = teardown, .description
     * /
 
    /* check the numbers */
-//   cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-//   cr_expect_eq(sepadata->nbilinterms, 2, "\nExpected 2 bilinear terms, got %d", sepadata->nbilinterms);
-//   cr_expect_eq(sepadata->nlinexprs[0], 3, "\nExpected 3 linear expression for product 0, got %d", sepadata->nlinexprs[0]);
-//   cr_expect_eq(sepadata->nlinexprs[1], 3, "\nExpected 3 linear expression for product 1, got %d", sepadata->nlinexprs[1]);
+   cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
+   cr_expect_eq(sepadata->nbilinterms, 3, "\nExpected 3 bilinear terms, got %d", sepadata->nbilinterms);
+   cr_expect_eq(sepadata->nlinexprs[0], 3, "\nExpected 3 linear expressions for product 0, got %d", sepadata->nlinexprs[0]);
+   cr_expect_eq(sepadata->nlinexprs[1], 5, "\nExpected 5 linear expressions for product 1, got %d", sepadata->nlinexprs[1]);
+   cr_expect_eq(sepadata->nlinexprs[2], 3, "\nExpected 3 linear expressions for product 2, got %d", sepadata->nlinexprs[2]);
 
-//   /* check the product expressions */
-//   cr_assert(sepadata->bilinterms[0] != NULL);
-//   cr_assert(sepadata->bilinterms[1] != NULL);
-//   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[0]) == 2);
-//   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[1]) == 2);
+   /* check the product expressions */
+   cr_assert(sepadata->bilinterms[0] != NULL);
+   cr_assert(sepadata->bilinterms[1] != NULL);
+   cr_assert(sepadata->bilinterms[2] != NULL);
+   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[0]) == 2);
+   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[1]) == 2);
+   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[2]) == 2);
 
-//   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[0]);
-//   cr_expect_eq(var, b1, "Var 0 of product 0 should be b1, got %s", SCIPvarGetName(var));
-//   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[1]);
-//   cr_expect_eq(var, x2, "Var 1 of product 0 should be x2, got %s", SCIPvarGetName(var));
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[0]);
+   cr_expect_eq(var, b1, "Var 0 of product 0 should be b1, got %s", SCIPvarGetName(var));
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[1]);
+   cr_expect_eq(var, x1, "Var 1 of product 0 should be x1, got %s", SCIPvarGetName(var));
 
-//   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[0]);
-//   cr_expect_eq(var, b1, "Var 0 of product 1 should be b1, got %s", SCIPvarGetName(var));
-//   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[1]);
-//   cr_expect_eq(var, x1, "Var 1 of product 1 should be x1, got %s", SCIPvarGetName(var));
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[0]);
+   cr_expect_eq(var, b1, "Var 0 of product 1 should be b1, got %s", SCIPvarGetName(var));
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[1]);
+   cr_expect_eq(var, b2, "Var 1 of product 1 should be b2, got %s", SCIPvarGetName(var));
 
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[2])[0]);
+   cr_expect_eq(var, b2, "Var 0 of product 2 should be b2, got %s", SCIPvarGetName(var));
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[2])[1]);
+   cr_expect_eq(var, x1, "Var 1 of product 2 should be x1, got %s", SCIPvarGetName(var));
+
+   /* t_b1t_x1 <= 1.5t_b2 - 1.5t_b1 + t_x1 (from constraint and clique, (x,w,y) = (b1,b2,x1)) */
+   cr_expect_eq(SCIPgetConsExprExprNChildren(sepadata->linexprs[0][2]), 3, "Linexpr for product b1x1 should have 3 children, got %d",
+      SCIPgetConsExprExprNChildren(sepadata->linexprs[0][2]));
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[0][2])[0]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[0][2])[0];
+   cr_expect_eq(var, b1, "Var 0 of linexpr for product b1x1 should be b1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, -1.5, "Coefficient of x = b1 should be -1.5, got %f", coef);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[0][2])[1]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[0][2])[1];
+   cr_expect_eq(var, b2, "Var 1 of linexpr for product b1x1 should be b2, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, 1.5, "Coefficient of w = b2 should be 1.5, got %f", coef);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[0][2])[2]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[0][2])[2];
+   cr_expect_eq(var, x1, "Var 2 of linexpr for product b1x1 should be x1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, 1.0, "Coefficient of y = x1 should be 1.0, got %f", coef);
+
+   cr_expect_eq(SCIPgetConsExprExprSumConstant(sepadata->linexprs[0][2]), 0.0, "Linexpr for product b1x2 should have constant 0.0, got %f",
+      SCIPgetConsExprExprSumConstant(sepadata->linexprs[0][2]));
+
+   /* t_b2t_x1 <= -t_b1 - t_b2 (from constraint and clique, (x,w,y) = (b2,b1,x1)) */
+   cr_expect_eq(SCIPgetConsExprExprNChildren(sepadata->linexprs[2][1]), 2, "Linexpr for product b2x1 should have 2 children, got %d",
+   SCIPgetConsExprExprNChildren(sepadata->linexprs[2][1]));
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[2][1])[0]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[2][1])[0];
+   cr_expect_eq(var, b1, "Var 0 of linexpr for product b1x1 should be b1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, -1.0, "Coefficient of w = b1 should be -1.0, got %f", coef);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[2][1])[1]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[2][1])[1];
+   cr_expect_eq(var, b2, "Var 1 of linexpr for product b1x1 should be b2, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, -1.0, "Coefficient of x = b2 should be -1.0, got %f", coef);
+
+   cr_expect_eq(SCIPgetConsExprExprSumConstant(sepadata->linexprs[2][1]), 0.0, "Linexpr for product b2x1 should have constant 0.0, got %f",
+      SCIPgetConsExprExprSumConstant(sepadata->linexprs[2][1]));
+
+   SCIP_CALL( freeSepaData(scip, sepadata) );
+
+   SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
+   SCIPfreeBuffer(scip, &sepadata);
+}
+
+
+Test(rlt_selection, implbnd, .init = setup, .fini = teardown, .description = "test extracting products from an implied bound and an unconditional relation")
+{
+   SCIP_ROW* row1;
+   SCIP_ROW* row2;
+   SCIP_CONS* cons1;
+   SCIP_CONS* cons2;
+   SCIP_SEPADATA* sepadata;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_VAR* vars[2];
+   SCIP_Real coefs1[2];
+   int c, nbdchgs;
+   SCIP_Bool cutoff, infeasible;
+   SCIP_VAR* var;
+   SCIP_Real coef;
+   SCIP_VAR* clique_vars[2];
+   SCIP_Bool clique_vals[2];
+
+   vars[0] = x1;
+   vars[1] = x2;
+
+   coefs1[0] = 2.0;
+   coefs1[1] = 2.0;
+
+   SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
+   sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
+   sepadata->isinitialround = TRUE;
+   cr_assert(sepadata->conshdlr != NULL);
+
+   /* create linear relations */
+
+   /* 0 <= 2x1 + 2x2 <= 1 */
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons1, "c1", 2, vars, coefs1, 0.0, 1.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons1) );
+
+   /* b1 == 0  =>  x1 <= 1 */
+   /* x1 <= -2b1 + 1 */
+   SCIPaddVarVub(scip, x1, b1, -2.0, 1.0, &infeasible, &nbdchgs);
+
+   /* x1 <= b2 + 0.0 */
+   SCIPaddVarVub(scip, x1, b2, 1.0, 0.0, &infeasible, &nbdchgs);
+
+   SCIPinfoMessage(scip, NULL, "\nvar x1 has %d vubs:", SCIPvarGetNVubs(x1));
+   for( int i = 0; i < SCIPvarGetNVubs(x1); ++i )
+   {
+      SCIPinfoMessage(scip, NULL, "\nx1 <= %f%s + %f", SCIPvarGetVubCoefs(x1)[i], SCIPvarGetName(SCIPvarGetVubVars(x1)[i]), SCIPvarGetVubConstants(x1)[i]);
+   }
+
+   /* construct the LP */
+   SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+   /* create separator data - this will also detect the products */
+   SCIP_CALL( createSepaData(scip, sepadata) );
+
+   /* check the numbers */
+   cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
+   cr_expect_eq(sepadata->nbilinterms, 3, "\nExpected 3 bilinear terms, got %d", sepadata->nbilinterms);
+   cr_expect_eq(sepadata->nlinexprs[0], 2, "\nExpected 3 linear expressions for product 0, got %d", sepadata->nlinexprs[0]);
+   cr_expect_eq(sepadata->nlinexprs[1], 1, "\nExpected 3 linear expressions for product 1, got %d", sepadata->nlinexprs[1]);
+   cr_expect_eq(sepadata->nlinexprs[2], 1, "\nExpected 3 linear expressions for product 2, got %d", sepadata->nlinexprs[2]);
+
+   /* check the product expressions */
+   cr_assert(sepadata->bilinterms[0] != NULL);
+   cr_assert(sepadata->bilinterms[1] != NULL);
+   cr_assert(sepadata->bilinterms[2] != NULL);
+   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[0]) == 2);
+   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[1]) == 2);
+   cr_assert(SCIPgetConsExprExprNChildren(sepadata->bilinterms[2]) == 2);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[0]);
+   cr_expect_eq(var, b1, "Var 0 of product 0 should be b1, got %s", SCIPvarGetName(var));
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[0])[1]);
+   cr_expect_eq(var, b2, "Var 1 of product 0 should be b2, got %s", SCIPvarGetName(var));
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[0]);
+   cr_expect_eq(var, b1, "Var 0 of product 1 should be b1, got %s", SCIPvarGetName(var));
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[1])[1]);
+   cr_expect_eq(var, x2, "Var 1 of product 1 should be x2, got %s", SCIPvarGetName(var));
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[2])[0]);
+   cr_expect_eq(var, b2, "Var 0 of product 1 should be b2, got %s", SCIPvarGetName(var));
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->bilinterms[2])[1]);
+   cr_expect_eq(var, x2, "Var 1 of product 1 should be x2, got %s", SCIPvarGetName(var));
+
+   /* check the linear expressions obtained from the implied relation and the implied bound */
+   cr_assert(sepadata->linexprs[0][1] != NULL);
+   cr_assert(sepadata->linexprs[1][0] != NULL);
+   cr_assert(sepadata->linexprs[2][0] != NULL);
+
+   /* first linear expression (from two implied bounds on x1) */
+   /* should be t_b1t_b2 <= -1t_x1 + -1t_b1 + 1t_b2 + 0 */
+   cr_expect_eq(SCIPgetConsExprExprNChildren(sepadata->linexprs[0][0]), 3, "Linexpr 0 for product b1b2 should have 3 children, got %d",
+   SCIPgetConsExprExprNChildren(sepadata->linexprs[0][0]));
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[0][0])[0]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[0][0])[0];
+   cr_expect_eq(var, b1, "Var 0 of linexpr 0 for product b1b2 should be b1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, -1.0, "Coefficient of x = b1 should be -1.0, got %f", coef);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[0][0])[1]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[0][0])[1];
+   cr_expect_eq(var, b2, "Var 1 of linexpr 0 for product b1b2 should be b2, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, 1.0, "Coefficient of w = b2 should be 1.0, got %f", coef);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[0][0])[2]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[0][0])[2];
+   cr_expect_eq(var, x1, "Var 2 of linexpr 0 for product b1b2 should be x1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, -1.0, "Coefficient of w = x1 should be -1.0, got %f", coef);
+
+   cr_expect_eq(SCIPgetConsExprExprSumConstant(sepadata->linexprs[0][0]), 0.0, "Linexpr 0 for product b1b2 should have constant 0.0, got %f",
+   SCIPgetConsExprExprSumConstant(sepadata->linexprs[0][0]));
+
+
+   /* second linear expression (from two implied bounds on x1) */
+   /* should be t_b2t_b1 <= -0.5t_x1 + 0.5t_b2 */
+   cr_expect_eq(SCIPgetConsExprExprNChildren(sepadata->linexprs[0][1]), 2, "Linexpr 1 for product b1b2 should have 2 children, got %d",
+      SCIPgetConsExprExprNChildren(sepadata->linexprs[0][1]));
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[0][1])[0]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[0][1])[0];
+   cr_expect_eq(var, b2, "Var 0 of linexpr 1 for product b1b2 should be b2, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, 0.5, "Coefficient of y = b2 should be 0.5, got %f", coef);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[0][1])[1]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[0][1])[1];
+   cr_expect_eq(var, x1, "Var 1 of linexpr 1 for product b1b2 should be x1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, -0.5, "Coefficient of w = x1 should be -0.5, got %f", coef);
+
+   cr_expect_eq(SCIPgetConsExprExprSumConstant(sepadata->linexprs[0][1]), 0.0, "Linexpr 1 for product b1b2 should have constant 0.0, got %f",
+      SCIPgetConsExprExprSumConstant(sepadata->linexprs[0][1]));
+
+
+   /* third linear expression (from implied bound on x1 (with b1) and unconditional) */
+   /* should be t_b1t_x2 >= 1t_x1 + 1.5t_b1 + 1t_x2 + -0.5 */
+   cr_expect_eq(SCIPgetConsExprExprNChildren(sepadata->linexprs[1][0]), 3, "Linexpr 0 for product b1x2 should have 3 children, got %d",
+      SCIPgetConsExprExprNChildren(sepadata->linexprs[1][0]));
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[1][0])[0]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[1][0])[0];
+   cr_expect_eq(var, b1, "Var 0 of linexpr 0 for product b1x2 should be b1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, 1.5, "Coefficient of x = b1 should be 1.5, got %f", coef);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[1][0])[1]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[1][0])[1];
+   cr_expect_eq(var, x1, "Var 1 of linexpr 0 for product b1x2 should be x1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, 1.0, "Coefficient of w = x1 should be 1.0, got %f", coef);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[1][0])[2]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[1][0])[2];
+   cr_expect_eq(var, x2, "Var 2 of linexpr 0 for product b1x2 should be x2, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, 1.0, "Coefficient of w = x2 should be 1.0, got %f", coef);
+
+   cr_expect_eq(SCIPgetConsExprExprSumConstant(sepadata->linexprs[1][0]), -0.5, "Linexpr 0 for product b1b2 should have constant -0.5, got %f",
+      SCIPgetConsExprExprSumConstant(sepadata->linexprs[1][0]));
+
+
+   /* fourth linear expression (from implied bound on x1 (with b2) and unconditional) */
+   /* should be t_b2t_x2 <= -1t_x1 + 0.5t_b2 */
+   cr_expect_eq(SCIPgetConsExprExprNChildren(sepadata->linexprs[2][0]), 2, "Linexpr 0 for product b2x2 should have 2 children, got %d",
+      SCIPgetConsExprExprNChildren(sepadata->linexprs[2][0]));
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[2][0])[0]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[2][0])[0];
+   cr_expect_eq(var, b2, "Var 0 of linexpr 0 for product b2x2 should be b2, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, 0.5, "Coefficient of x = b2 should be 0.5, got %f", coef);
+
+   var = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(sepadata->linexprs[2][0])[1]);
+   coef = SCIPgetConsExprExprSumCoefs(sepadata->linexprs[2][0])[1];
+   cr_expect_eq(var, x1, "Var 1 of linexpr 0 for product b2x2 should be x1, got %s", SCIPvarGetName(var));
+   cr_expect_eq(coef, -1.0, "Coefficient of w = x1 should be -1.0, got %f", coef);
+
+   cr_expect_eq(SCIPgetConsExprExprSumConstant(sepadata->linexprs[2][0]), 0.0, "Linexpr 0 for product b2x2 should have constant 0.0, got %f",
+      SCIPgetConsExprExprSumConstant(sepadata->linexprs[2][0]));
 
    SCIP_CALL( freeSepaData(scip, sepadata) );
 
