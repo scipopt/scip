@@ -406,7 +406,7 @@ SCIP_RETCODE SCIPprobFree(
    SCIP_LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    )
 {
-   SCIP_Bool warnreleasevar = TRUE;
+   SCIP_Bool unreleasedvar = FALSE;
    int v;
 
    assert(prob != NULL);
@@ -459,11 +459,11 @@ SCIP_RETCODE SCIPprobFree(
    {
       assert(SCIPvarGetProbindex((*prob)->vars[v]) >= 0);
 
-      if ( warnreleasevar && SCIPvarGetNUses((*prob)->vars[v]) > 1 )
+      if( SCIPvarGetNUses((*prob)->vars[v]) > 1 )
       {
          SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP. Consider releasing variable first.\n",
             (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->vars[v]));
-         warnreleasevar = FALSE;
+         unreleasedvar = TRUE;
       }
 
       SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, NULL, set, TRUE) );
@@ -476,16 +476,18 @@ SCIP_RETCODE SCIPprobFree(
    {
       assert(SCIPvarGetProbindex((*prob)->fixedvars[v]) == -1);
 
-      if ( warnreleasevar && SCIPvarGetNUses((*prob)->fixedvars[v]) > 1 )
+      if( SCIPvarGetNUses((*prob)->fixedvars[v]) > 1 )
       {
          SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP. Consider releasing variable first.\n",
             (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->fixedvars[v]));
-         warnreleasevar = FALSE;
+         unreleasedvar = TRUE;
       }
 
       SCIP_CALL( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, eventqueue, lp) );
    }
    BMSfreeMemoryArrayNull(&(*prob)->fixedvars);
+
+   assert(! unreleasedvar);
 
    /* free deleted problem variables array */
    BMSfreeMemoryArrayNull(&(*prob)->deletedvars);
