@@ -383,3 +383,64 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
+
+
+/* tests for interval [-pi,pi] */
+Test(separation, sinus_v, .init = setup, .fini = teardown,
+   .description = "test separation for a sinus expression in large range"
+   )
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_ROWPREP* secant;
+   SCIP_ROWPREP* ltangent;
+   SCIP_ROWPREP* rtangent;
+   SCIP_ROWPREP* lmidtangent;
+   SCIP_ROWPREP* rmidtangent;
+   SCIP_Real newtonpoint;
+   SCIP_Real childlb;
+   SCIP_Real childub;
+   SCIP_Real lincoef;
+   SCIP_Real linconst;
+   SCIP_Bool success;
+
+   secant = NULL;
+   ltangent = NULL;
+   rtangent = NULL;
+   lmidtangent = NULL;
+   rmidtangent = NULL;
+
+   SCIP_CALL( SCIPcreateConsExprExprSin(scip, conshdlr, &expr, vexpr) );
+
+   /* add the auxiliary variable to the expression; variable will be released in CONSEXITSOL */
+   SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
+   SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
+   expr->auxvar = auxvar;
+
+   childlb = SCIPvarGetLbLocal(v);
+   childub = SCIPvarGetUbLocal(v);
+
+   /*
+    * test initial overestimation
+    */
+
+   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent,
+      childlb, childub, FALSE) );
+
+   /* check cuts which could not be computed */
+   cr_expect(secant == NULL);
+   cr_expect(ltangent == NULL);
+   cr_expect(rmidtangent == NULL);
+
+   /* check rtangent */
+   checkCut(rtanget, v, 0.0 , SCIPinfinity(scip), -1);
+
+   /* check lmidtangent */
+   checkCut(lmidtangent, v, -0.682459570501030, SCIPinfinity(scip), 0.217233628211222);
+
+   /* release cuts */
+   SCIPfreeRowprep(scip, &rtangent);
+   SCIPfreeRowprep(scip, &lmidtangent);
+
+   /* release expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
