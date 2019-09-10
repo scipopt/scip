@@ -350,7 +350,7 @@ SCIP_Bool computeLeftMidTangentSin(
       *issecant = TRUE;
    }
 
-   if( tangentpoint == lb )  /*lint !e777 */
+   if( SCIPisEQ(scip, tangentpoint, lb) )  /*lint !e777 */
       return FALSE;
 
    /* compute secant between lower bound and connection point */
@@ -401,7 +401,7 @@ SCIP_Bool computeRightMidTangentSin(
    /* choose starting point for Newton procedure */
    if( COS(ub) > 0.0 )
    {
-      /* in [pi/2,pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
+      /* in [3*pi/2,2*pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
       if( SIN(ub) <= 0.0 )
          return FALSE;
       else
@@ -409,7 +409,7 @@ SCIP_Bool computeRightMidTangentSin(
    }
    else
    {
-      /* in ascending area, take the midpoint of the possible area in descending part */
+      /* in descending area, take the midpoint of the possible area in ascending part */
       if( SIN(ub) < 0.0 )
          startingpoint = ub - 1.25*M_PI - ubmodpi;
       else
@@ -436,7 +436,7 @@ SCIP_Bool computeRightMidTangentSin(
       *issecant = TRUE;
    }
 
-   if( tangentpoint == ub )  /*lint !e777 */
+   if( SCIPisEQ(scip, tangentpoint, ub) )  /*lint !e777 */
       return FALSE;
 
    /* compute secant between lower bound and connection point */
