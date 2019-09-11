@@ -333,7 +333,6 @@ INFERINFO getInferInfo(
    INFERINFO inferinfo;
 
    /* check that the data menber are in the range of the available bits */
-   assert((int)proprule <= (1<<2)-1); /*lint !e685*/
    assert(data1 >= 0 && data1 < (1<<15));
    assert(data2 >= 0 && data2 < (1<<15));
 
@@ -376,7 +375,7 @@ SCIP_Longint computeCoreWithInterval(
 #define computeCoreWithInterval(begin, end, ect, lst) (MAX(0, MIN((end), (ect)) - MAX((lst), (begin))))
 #endif
 
-/** returns the implied earliest start time */
+/** returns the implied earliest start time */   /*lint -e{715}*/
 static
 SCIP_RETCODE computeImpliedEst(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -384,7 +383,7 @@ SCIP_RETCODE computeImpliedEst(
    SCIP_HASHMAP*         addedvars,          /**< hash map containig the variable which are already added */
    int*                  est                 /**< pointer to store the implied earliest start time */
    )
-{  /*lint --e{715}*/
+{
 #if 0
    SCIP_VAR** vbdvars;
    SCIP_VAR* vbdvar;
@@ -444,7 +443,7 @@ SCIP_RETCODE computeImpliedEst(
    return SCIP_OKAY;
 }
 
-/** returns the implied latest completion time */
+/** returns the implied latest completion time */    /*lint -e{715}*/
 static
 SCIP_RETCODE computeImpliedLct(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -453,7 +452,7 @@ SCIP_RETCODE computeImpliedLct(
    SCIP_HASHMAP*         addedvars,          /**< hash map containig the variable which are already added */
    int*                  lct                 /**< pointer to store the implied latest completion time */
    )
-{  /*lint --e{715}*/
+{
 #if 0
    SCIP_VAR** vbdvars;
    SCIP_VAR* vbdvar;
@@ -3672,7 +3671,6 @@ SCIP_RETCODE enforceSolution(
 /** check if cumulative constraint is independently of all other constraints */
 static
 SCIP_Bool isConsIndependently(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< cumulative constraint */
    )
 {
@@ -3811,7 +3809,7 @@ SCIP_RETCODE solveIndependentCons(
       return SCIP_OKAY;
 
    /* check if constraint is independently */
-   if( !isConsIndependently(scip, cons) )
+   if( !isConsIndependently(cons) )
       return SCIP_OKAY;
 
    /* mark the constraint to be tried of solving it as independent sub problem; in case that is successful the
@@ -4270,7 +4268,6 @@ SCIP_RETCODE coretimesUpdateUb(
  */
 static
 SCIP_RETCODE computeCoreEngeryAfter(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROFILE*         profile,            /**< core profile */
    int                   nvars,              /**< number of start time variables (activities) */
    int*                  ests,               /**< array of sorted earliest start times */
@@ -5405,7 +5402,7 @@ SCIP_RETCODE propagateTTEF(
    /* compute for the different earliest start and latest completion time the core energy of the corresponding time
     * points
     */
-   SCIP_CALL( computeCoreEngeryAfter(scip, profile, nvars, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct) );
+   SCIP_CALL( computeCoreEngeryAfter(profile, nvars, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct) );
 
    /* propagate the upper bounds and "opportunistically" the lower bounds */
    SCIP_CALL( propagateUbTTEF(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
@@ -7625,7 +7622,7 @@ SCIP_RETCODE varMayRoundDown(
       assert(scalar != 0);
 
       objval = scalar * SCIPvarGetObj(actvar);
-   }
+   } /*lint !e438*/
    else
    {
       scalar = 1;
@@ -7674,7 +7671,7 @@ SCIP_RETCODE varMayRoundUp(
       assert(scalar != 0);
 
       objval = scalar * SCIPvarGetObj(actvar);
-   }
+   } /*lint !e438*/
    else
    {
       scalar = 1;
@@ -7990,7 +7987,6 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
 static
 SCIP_RETCODE propagateAllConss(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_CONS**           conss,              /**< all cumulative constraint */
    int                   nconss,             /**< number of cumulative constraints */
    SCIP_Bool             local,              /**< use local bounds effective horizon? */
@@ -9519,8 +9515,6 @@ static
 SCIP_RETCODE normalizeCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of start time variables (activities) */
-   SCIP_VAR**            vars,               /**< array of start time variables */
-   int*                  durations,          /**< array of durations */
    int*                  demands,            /**< array of demands */
    int*                  capacity,           /**< pointer to store the changed cumulative capacity */
    int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
@@ -9575,9 +9569,9 @@ SCIP_RETCODE normalizeCumulativeCondition(
       SCIPdebugMsg(scip, "cumulative condition: dividing demands by %" SCIP_LONGINT_FORMAT "\n", gcd);
 
       for( v = 0; v < nvars; ++v )
-         demands[v] /= gcd;
+         demands[v] /= (int) gcd;
 
-      (*capacity) /= gcd;
+      (*capacity) /= (int) gcd;
 
       (*nchgcoefs) += nvars;
       (*nchgsides)++;
@@ -9615,8 +9609,7 @@ SCIP_RETCODE normalizeDemands(
 
    /**@todo sort items w.r.t. the demands, because we can stop earlier if the smaller weights are evaluated first */
 
-   SCIP_CALL( normalizeCumulativeCondition(scip, consdata->nvars, consdata->vars, consdata->durations,
-         consdata->demands, &consdata->capacity, nchgcoefs, nchgsides) );
+   SCIP_CALL( normalizeCumulativeCondition(scip, consdata->nvars, consdata->demands, &consdata->capacity, nchgcoefs, nchgsides) );
 
    consdata->normalized = TRUE;
 
@@ -13108,7 +13101,7 @@ SCIP_DECL_CONSPROP(consPropCumulative)
 #if 0
    if( !cutoff && conshdlrdata->dualpresolve && SCIPallowStrongDualReds(scip) && nconss > 1 )
    {
-      SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, TRUE, &nchgbds, &cutoff, NULL) );
+      SCIP_CALL( propagateAllConss(scip, conss, nconss, TRUE, &nchgbds, &cutoff, NULL) );
    }
 #endif
 
@@ -13213,8 +13206,7 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
 
    if( !cutoff && !unbounded && conshdlrdata->dualpresolve && SCIPallowStrongDualReds(scip) && nconss > 1 && (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
    {
-      SCIP_CALL( propagateAllConss(scip, conshdlrdata, conss, nconss, FALSE,
-            nfixedvars, &cutoff, NULL) );
+      SCIP_CALL( propagateAllConss(scip, conss, nconss, FALSE, nfixedvars, &cutoff, NULL) );
    }
 
    /* only perform the detection of variable bounds and disjunctive constraint once */
@@ -13808,7 +13800,7 @@ SCIP_RETCODE SCIPcreateConsBasicCumulative(
    return SCIP_OKAY;
 }
 
-/** set the left bound of the time axis to be considered (including hmin) */
+/** set the left bound of the time axis to be considered (including hmin) */   /*lint -e{715}*/
 SCIP_RETCODE SCIPsetHminCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -13832,7 +13824,7 @@ SCIP_RETCODE SCIPsetHminCumulative(
    return SCIP_OKAY;
 }
 
-/** returns the left bound of the time axis to be considered */
+/** returns the left bound of the time axis to be considered */  /*lint -e{715}*/
 int SCIPgetHminCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -13852,7 +13844,7 @@ int SCIPgetHminCumulative(
    return consdata->hmin;
 }
 
-/** set the right bound of the time axis to be considered (not including hmax) */
+/** set the right bound of the time axis to be considered (not including hmax) */  /*lint -e{715}*/
 SCIP_RETCODE SCIPsetHmaxCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -13876,7 +13868,7 @@ SCIP_RETCODE SCIPsetHmaxCumulative(
    return SCIP_OKAY;
 }
 
-/** returns the right bound of the time axis to be considered */
+/** returns the right bound of the time axis to be considered */  /*lint -e{715}*/
 int SCIPgetHmaxCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -13896,7 +13888,7 @@ int SCIPgetHmaxCumulative(
    return consdata->hmax;
 }
 
-/** returns the activities of the cumulative constraint */
+/** returns the activities of the cumulative constraint */  /*lint -e{715}*/
 SCIP_VAR** SCIPgetVarsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -13917,7 +13909,7 @@ SCIP_VAR** SCIPgetVarsCumulative(
    return consdata->vars;
 }
 
-/** returns the activities of the cumulative constraint */
+/** returns the activities of the cumulative constraint */  /*lint -e{715}*/
 int SCIPgetNVarsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -13938,7 +13930,7 @@ int SCIPgetNVarsCumulative(
    return consdata->nvars;
 }
 
-/** returns the capacity of the cumulative constraint */
+/** returns the capacity of the cumulative constraint */  /*lint -e{715}*/
 int SCIPgetCapacityCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -13959,7 +13951,7 @@ int SCIPgetCapacityCumulative(
    return consdata->capacity;
 }
 
-/** returns the durations of the cumulative constraint */
+/** returns the durations of the cumulative constraint */  /*lint -e{715}*/
 int* SCIPgetDurationsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -13980,7 +13972,7 @@ int* SCIPgetDurationsCumulative(
    return consdata->durations;
 }
 
-/** returns the demands of the cumulative constraint */
+/** returns the demands of the cumulative constraint */  /*lint -e{715}*/
 int* SCIPgetDemandsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -14028,7 +14020,7 @@ SCIP_RETCODE SCIPcheckCumulativeCondition(
    return SCIP_OKAY;
 }
 
-/** normalize cumulative condition */
+/** normalize cumulative condition */  /*lint -e{715}*/
 SCIP_RETCODE SCIPnormalizeCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of start time variables (activities) */
@@ -14039,9 +14031,8 @@ SCIP_RETCODE SCIPnormalizeCumulativeCondition(
    int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
    int*                  nchgsides           /**< pointer to count number of side changes */
    )
-{
-   SCIP_CALL( normalizeCumulativeCondition(scip, nvars, vars, durations, demands, capacity,
-         nchgcoefs, nchgsides) );
+{  /*lint --e{715}*/
+   SCIP_CALL( normalizeCumulativeCondition(scip, nvars, demands, capacity, nchgcoefs, nchgsides) );
 
    return SCIP_OKAY;
 }
@@ -14438,7 +14429,7 @@ SCIP_RETCODE SCIPcreateWorstCaseProfile(
    return SCIP_OKAY;
 }
 
-/** computes w.r.t. the given worst case resource profile the first time point where the given capacity can be violated */
+/** computes w.r.t. the given worst case resource profile the first time point where the given capacity can be violated */  /*lint -e{715}*/
 int SCIPcomputeHmin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROFILE*         profile,            /**< worst case resource profile */
@@ -14468,7 +14459,7 @@ int SCIPcomputeHmin(
    return INT_MAX;
 }
 
-/** computes w.r.t. the given worst case resource profile the first time point where the given capacity is satisfied for sure */
+/** computes w.r.t. the given worst case resource profile the first time point where the given capacity is satisfied for sure */  /*lint -e{715}*/
 int SCIPcomputeHmax(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROFILE*         profile,            /**< worst case profile */

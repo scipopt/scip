@@ -3909,6 +3909,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
       SCIP_Real xyref_[2];
 
       assert(swapped == 1);
+      assert(fswapped != NULL);
 
       xyref_[0] = xyref[1];
       xyref_[1] = xyref[0];
@@ -4103,6 +4104,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(
       SCIP_Real xyref_[2];
 
       assert(swapped == 1);
+      assert(fswapped != NULL);
 
       xyref_[0] = xyref[1];
       xyref_[1] = xyref[0];
@@ -4313,7 +4315,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimator(
       SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->z, consdata->zcoef) );
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** generates a cut */
@@ -6284,7 +6286,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreBivariate)
          SCIPenableNLP(scip);
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
@@ -8054,7 +8056,7 @@ SCIP_RETCODE SCIPcreateConsBasicBivariate(
    return SCIP_OKAY;
 }
 
-/** gets the linear variable of a bivariate constraint, or NULL if no such variable */
+/** gets the linear variable of a bivariate constraint, or NULL if no such variable */   /*lint -e{715}*/
 SCIP_VAR* SCIPgetLinearVarBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8066,7 +8068,7 @@ SCIP_VAR* SCIPgetLinearVarBivariate(
    return SCIPconsGetData(cons)->z;
 }
 
-/** gets the coefficients of the linear variable of a bivariate constraint */
+/** gets the coefficients of the linear variable of a bivariate constraint */   /*lint -e{715}*/
 SCIP_Real SCIPgetLinearCoefBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8078,7 +8080,7 @@ SCIP_Real SCIPgetLinearCoefBivariate(
    return SCIPconsGetData(cons)->zcoef;
 }
 
-/** gets the expression tree of a bivariate constraint */
+/** gets the expression tree of a bivariate constraint */   /*lint -e{715}*/
 SCIP_EXPRTREE* SCIPgetExprtreeBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8090,7 +8092,7 @@ SCIP_EXPRTREE* SCIPgetExprtreeBivariate(
    return SCIPconsGetData(cons)->f;
 }
 
-/** gets the left hand side of a bivariate constraint */
+/** gets the left hand side of a bivariate constraint */   /*lint -e{715}*/
 SCIP_Real SCIPgetLhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8102,7 +8104,7 @@ SCIP_Real SCIPgetLhsBivariate(
    return SCIPconsGetData(cons)->lhs;
 }
 
-/** gets the right hand side of a bivariate constraint */
+/** gets the right hand side of a bivariate constraint */   /*lint -e{715}*/
 SCIP_Real SCIPgetRhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */

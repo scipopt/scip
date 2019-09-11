@@ -5163,7 +5163,7 @@ SCIP_VAR** SCIPgetVarsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
@@ -5183,7 +5183,7 @@ SCIP_VAR** SCIPgetVarsAnd(
 }
 
 
-/** gets the resultant variable in AND-constraint */
+/** gets the resultant variable in AND-constraint */   /*lint -e715*/
 SCIP_VAR* SCIPgetResultantAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

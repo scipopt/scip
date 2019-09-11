@@ -256,14 +256,14 @@ void multInt(
 }
 
 
-/** method for creating a string out of an Int which is a mpz_t or SCIP_Longint */
+/** method for creating a string out of an Int which is a mpz_t or SCIP_Longint */   /*lint -e{715}*/
 static
 void toString(
    Int                   value,              /**< number */
    char**                buffer,             /**< pointer to buffer for storing the string */
    int                   buffersize          /**< length of the buffer */
    )
-{  /*lint --e{715}*/
+{
 #ifdef SCIP_WITH_GMP
    (void) mpz_get_str(*buffer, 10, value);
 #else

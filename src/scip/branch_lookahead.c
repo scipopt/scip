@@ -4385,6 +4385,7 @@ SCIP_RETCODE selectVarRecursive(
 
             if( config->usebincons )
             {
+               assert(binconsdata != NULL); /* for lint */
                nbincons = binconsdata->conslist->nviolatedcons;
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found <%i> violating binary constraints.\n",
                      nbincons);
@@ -4399,6 +4400,7 @@ SCIP_RETCODE selectVarRecursive(
 
             if( config->usedomainreduction )
             {
+               assert(domainreductions != NULL); /* for lint */
                ndomreds = domainreductions->nviolatedvars;
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found <%i> bound changes.\n", ndomreds);
 

@@ -3276,8 +3276,8 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
          &conshdlrdata->balanceddepth, TRUE, DEFAULT_BALANCEDDEPTH, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/balancedcutoff",
-         "determines that balanced branching is only used if the branching cut off value \
-         w.r.t. the current LP solution is greater than a given value",
+         "determines that balanced branching is only used if the branching cut off value "
+         "w.r.t. the current LP solution is greater than a given value",
          &conshdlrdata->balancedcutoff, TRUE, DEFAULT_BALANCEDCUTOFF, 0.01, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
