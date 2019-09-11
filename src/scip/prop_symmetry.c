@@ -1263,6 +1263,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int nallvars;
    int c;
    int j;
+   SCIP_Bool avoidtrivialcases = FALSE;
 
    assert( scip != NULL );
    assert( npermvars != NULL );
@@ -1675,7 +1676,8 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArray(scip, &consvars, nallvars);
 
    /* if no active constraint contains active variables */
-   if ( matrixdata.nrhscoef == 0 )
+   SCIP_CALL( SCIPgetBoolParam(scip, "propagating/" PROP_NAME "/avoidtrivialcases", &avoidtrivialcases) );
+   if ( avoidtrivialcases && matrixdata.nrhscoef == 0 )
    {
       *success = TRUE;
 
@@ -3666,6 +3668,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/usecolumnsparsity",
          "Should the number of conss a variable is contained in be exploited in symmetry detection?",
          &propdata->usecolumnsparsity, TRUE, DEFAULT_USECOLUMNSPARSITY, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/avoidtrivialcases",
+         "Should we avoid computing symmetries if all objective coefficients are different?",
+         NULL, TRUE, FALSE, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
