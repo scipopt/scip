@@ -34,6 +34,52 @@
 #include "heur_tm.h"
 
 
+
+static
+SCIP_RETCODE graphBuildV5E5(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH**               g,                  /**< the graph */
+   SCIP_Bool             pc                  /**< create pc graph? */
+)
+{
+   GRAPH* graph;
+   const int nnodes = 5;
+   const int nedges = 5;
+
+   SCIP_CALL(graph_init(scip, g, nnodes, 2 * nedges, 1));
+   graph = *g;
+
+   for( int i = 1; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph_knot_add(graph, 0);
+
+   graph->source = 0;
+
+   graph_edge_add(scip, graph, 0, 1, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 2, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 4, 1.0, 1.0);
+   graph_edge_add(scip, graph, 2, 3, 1.0, 1.0);
+   graph_edge_add(scip, graph, 3, 4, 1.0, 1.0);
+
+   if( pc )
+   {
+      graph_pc_init(scip, graph, nnodes, -1);
+
+      for( int i = 0; i < nnodes; i++ )
+         graph->prize[i] = 0.0;
+
+      graph->prize[0] = 1.0;
+
+      SCIP_CALL( graph_pc_2pc(scip, graph) );
+   }
+
+   SCIP_CALL(graph_init_history(scip, graph));
+   SCIP_CALL(graph_path_init(scip, graph));
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_RETCODE extArc(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -463,6 +509,129 @@ SCIP_RETCODE extTest2_variants(
 
 
 static
+SCIP_RETCODE pseudoAncestorsCreation(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+
+   assert(scip);
+
+   SCIP_CALL( graphBuildV5E5(scip, &graph, FALSE) );
+   assert(graph->knots == 5 && graph->edges == 10);
+
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 2, graph) );
+   assert(graph_get_nPseudoAncestorsEdge(graph, 0) == 1);
+   assert(graph_get_nPseudoAncestorsEdge(graph, 1) == 1);
+   assert(graph_get_nPseudoAncestorsEdge(graph, 2) == 0);
+
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 3, graph) );
+   assert(graph_get_nPseudoAncestorsEdge(graph, 0) == 2);
+   assert(graph_get_nPseudoAncestorsEdge(graph, 1) == 2);
+
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 1, 4, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 1, 1, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 1, 0, graph) );
+   assert(graph_get_nPseudoAncestorsEdge(graph, 0) == 5);
+   assert(graph_get_nPseudoAncestorsEdge(graph, 1) == 5);
+
+   graph_free_pseudoAncestorsEdgeBlock(scip, 1, graph);
+   assert(graph_get_nPseudoAncestorsEdge(graph, 0) == 0);
+   assert(graph_get_nPseudoAncestorsEdge(graph, 1) == 0);
+
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 2, graph) );
+   assert(graph_get_nPseudoAncestorsEdge(graph, 0) == 1);
+   assert(graph_get_nPseudoAncestorsEdge(graph, 1) == 1);
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   return SCIP_OKAY;
+}
+
+
+static
+SCIP_RETCODE pseudoAncestorsMerge(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SCIP_Bool conflict;
+
+   assert(scip);
+
+   SCIP_CALL( graphBuildV5E5(scip, &graph, FALSE) );
+   assert(graph->knots == 5 && graph->edges == 10);
+
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 2, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 3, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 4, 3, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 4, 4, graph) );
+   SCIP_CALL( graph_pseudoAncestors_appendMoveEdge(scip, 0, 4, FALSE, graph, &conflict)  );
+   assert(conflict);
+   assert( graph_get_nPseudoAncestorsEdge(graph, 0) == 3 );
+   assert( graph_get_nPseudoAncestorsEdge(graph, 4) == 0);
+
+
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 6, 1, graph) );
+   SCIP_CALL( graph_pseudoAncestors_appendMoveEdge(scip, 0, 6, FALSE, graph, &conflict)  );
+   assert(!conflict);
+   assert( graph_get_nPseudoAncestorsEdge(graph, 0) == 4 );
+   assert( graph_get_nPseudoAncestorsEdge(graph, 6) == 0);
+
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   return SCIP_OKAY;
+}
+
+
+static
+SCIP_RETCODE pseudoAncestorsHash(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SCIP_Bool conflict;
+   int* hasharr;
+
+   assert(scip);
+
+   SCIP_CALL( graphBuildV5E5(scip, &graph, FALSE) );
+   assert(graph->knots == 5 && graph->edges == 10);
+
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, graph->knots) );
+
+
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 2, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 3, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 4, 3, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 4, 4, graph) );
+   graph_pseudoAncestors_hashEdge(graph->pseudoancestors, 0, hasharr);
+   graph_pseudoAncestors_hashEdgeDirty(graph->pseudoancestors, 4, TRUE, &conflict, hasharr);
+   assert(conflict);
+
+
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 6, 1, graph) );
+   graph_pseudoAncestors_hashEdgeDirty(graph->pseudoancestors, 6, TRUE, &conflict, hasharr);
+   assert(!conflict);
+
+   graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, 6, hasharr);
+   graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, 0, hasharr);
+
+   for( int k = 0; k < graph->knots; k++ )
+      assert(hasharr[k] == 0);
+
+   SCIPfreeCleanBufferArray(scip, &hasharr);
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_RETCODE extTest1(
    SCIP*                 scip                /**< SCIP data structure */
 )
@@ -830,6 +999,42 @@ SCIP_RETCODE sdPcMwTest4(
 
    return SCIP_OKAY;
 }
+
+
+/** test pseudo ancestors */
+SCIP_RETCODE pseudoAncestors_test(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   assert(scip);
+
+   SCIP_CALL( pseudoAncestorsCreation(scip) );
+   SCIP_CALL( pseudoAncestorsMerge(scip) );
+   SCIP_CALL( pseudoAncestorsHash(scip) );
+
+   printf("pseudoAncestors_test passed \n");
+   assert(0);
+
+
+   return SCIP_OKAY;
+}
+
+
+/** tests all */
+SCIP_RETCODE testAll(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   assert(scip);
+
+   SCIP_CALL( reduce_extTest(scip) );
+   SCIP_CALL( dheap_Test(scip) );
+   SCIP_CALL( reduce_sdPcMwTest(scip) );
+   SCIP_CALL( heur_extendPcMwOuterTest(scip) );
+
+   return SCIP_OKAY;
+}
+
 
 /** tests extended reduction techniques */
 SCIP_RETCODE reduce_extTest(

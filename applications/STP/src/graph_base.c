@@ -4632,6 +4632,8 @@ void graph_free_history(
       }
       SCIPfreeMemoryArray(scip, &(p->ancestors));
    }
+
+   assert(p->pseudoancestors == NULL && p->ancestors == NULL);
 }
 
 /** free the deep history */
