@@ -588,6 +588,43 @@ SCIP_RETCODE pseudoAncestorsMerge(
 
 
 static
+SCIP_RETCODE pseudoAncestorsMergePc(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SCIP_Bool conflict;
+
+   assert(scip);
+
+   SCIP_CALL( graphBuildV5E5(scip, &graph, TRUE) );
+   assert(graph->knots > 5 && graph->edges > 10);
+
+   SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 0, 2, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 0, 3, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 4, 3, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 4, 4, graph) );
+   SCIP_CALL( graph_pseudoAncestors_appendMoveNode(scip, 0, 4, FALSE, graph, &conflict)  );
+   assert(conflict);
+   assert( graph_get_nPseudoAncestorsNode(graph, 0) == 3 );
+   assert( graph_get_nPseudoAncestorsNode(graph, 4) == 0);
+
+
+   SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 2, 1, graph) );
+   SCIP_CALL( graph_pseudoAncestors_appendMoveNode(scip, 0, 2, FALSE, graph, &conflict)  );
+   assert(!conflict);
+   assert( graph_get_nPseudoAncestorsNode(graph, 0) == 4 );
+   assert( graph_get_nPseudoAncestorsNode(graph, 2) == 0);
+
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   return SCIP_OKAY;
+}
+
+
+static
 SCIP_RETCODE pseudoAncestorsHash(
    SCIP*                 scip                /**< SCIP data structure */
 )
@@ -630,6 +667,50 @@ SCIP_RETCODE pseudoAncestorsHash(
 
    return SCIP_OKAY;
 }
+
+static
+SCIP_RETCODE pseudoAncestorsHashPc(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SCIP_Bool conflict;
+   int* hasharr;
+
+   assert(scip);
+
+   SCIP_CALL( graphBuildV5E5(scip, &graph, TRUE) );
+   assert(graph->knots > 5 && graph->edges > 10);
+
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, graph->knots) );
+
+   SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 0, 2, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 0, 3, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 4, 3, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 4, 4, graph) );
+   graph_pseudoAncestors_hashNode(graph->pseudoancestors, 0, hasharr);
+   graph_pseudoAncestors_hashNodeDirty(graph->pseudoancestors, 4, TRUE, &conflict, hasharr);
+   assert(conflict);
+
+
+   SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 2, 1, graph) );
+   graph_pseudoAncestors_hashNodeDirty(graph->pseudoancestors, 2, TRUE, &conflict, hasharr);
+   assert(!conflict);
+
+   graph_pseudoAncestors_unhashNode(graph->pseudoancestors, 2, hasharr);
+   graph_pseudoAncestors_unhashNode(graph->pseudoancestors, 0, hasharr);
+
+   for( int k = 0; k < graph->knots; k++ )
+      assert(hasharr[k] == 0);
+
+   SCIPfreeCleanBufferArray(scip, &hasharr);
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   return SCIP_OKAY;
+}
+
 
 static
 SCIP_RETCODE extTest1(
@@ -1011,6 +1092,8 @@ SCIP_RETCODE pseudoAncestors_test(
    SCIP_CALL( pseudoAncestorsCreation(scip) );
    SCIP_CALL( pseudoAncestorsMerge(scip) );
    SCIP_CALL( pseudoAncestorsHash(scip) );
+   SCIP_CALL( pseudoAncestorsMergePc(scip) );
+   SCIP_CALL( pseudoAncestorsHashPc(scip) );
 
    printf("pseudoAncestors_test passed \n");
    assert(0);

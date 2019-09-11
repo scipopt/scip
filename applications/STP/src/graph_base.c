@@ -947,7 +947,7 @@ SCIP_Bool graph_pc_knotIsFixedTerm(
 }
 
 
-/** check whether node is fixed terminal */
+/** check whether node is a dummy (pseudo) terminal */
 SCIP_Bool graph_pc_knotIsDummyTerm(
    const GRAPH*          g,                  /**< the graph */
    int                   node                /**< node to be checked */

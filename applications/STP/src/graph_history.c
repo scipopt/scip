@@ -937,6 +937,7 @@ SCIP_RETCODE graph_pseudoAncestors_addToNode(
    assert(graph_pc_isPcMw(g));
    assert(pseudoancestors->ans_nodes);
    assert(node_target >= 0 && node_target < g->pseudoancestors->nnodes);
+   assert(!graph_pc_knotIsDummyTerm(g, node_target));
    assert(ancestor >= 0 && ancestor < g->pseudoancestors->nnodes);
 
    SCIP_CALL( blockedAncestors_addAncestor(scip, node_target, ancestor, pseudoancestors->nnodes, pseudoancestors->ans_nodes) );
