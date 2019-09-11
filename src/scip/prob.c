@@ -461,7 +461,7 @@ SCIP_RETCODE SCIPprobFree(
 
       if( SCIPvarGetNUses((*prob)->vars[v]) > 1 )
       {
-         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP. Consider releasing variable first.\n",
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP.\n",
             (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->vars[v]));
          unreleasedvar = TRUE;
       }
@@ -478,7 +478,7 @@ SCIP_RETCODE SCIPprobFree(
 
       if( SCIPvarGetNUses((*prob)->fixedvars[v]) > 1 )
       {
-         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP. Consider releasing variable first.\n",
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP.\n",
             (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->fixedvars[v]));
          unreleasedvar = TRUE;
       }
