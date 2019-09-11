@@ -188,6 +188,9 @@ elif [ "${PERFORMANCE}" == "mergerequest" ]; then
   touch $RBDB
 fi
 
+: ${GLBSEEDSHIFT:=0}
+: ${STARTPERM:=0}
+
 SEEDSBND=$(expr ${SEEDS} + ${GLBSEEDSHIFT})
 PERMUTEBND=$(expr ${PERMUTE} + ${STARTPERM})
 
