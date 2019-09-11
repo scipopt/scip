@@ -14,7 +14,7 @@
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 // use one pass of value tracking
--vt_passes(1)
+-vt_passes(2)
 
 // use the integer model for enums
 +fie
@@ -28,6 +28,7 @@
 -e801   // goto statement used
 -e818   // parameter of function could be pointer to const
 -e834   // operator '-' followed by operator '+' could be confusing without parentheses
+-e835   // zero given as left argument to -
 -e1731  // public virtual function
 -e1784  // symbol previously declared as "C"
 -e2666  // expression with side effects passed to unexpanded parameter: parameter is not referenced in the expansion
@@ -38,9 +39,15 @@
 // ignoring return value of function
 -esym(534,printf,fprintf,fclose,fputs,strcat,strcpy,SCIPfclose)
 
+// cast from 'int' to 'uint64_t' results in sign extension
+-emacro(571,SCIPhashTwo)
+
+// avoid: is potentially uninitialized
+-emacro(644,assert)
+
 // expression with side effects passed to repeated parameter of macro
--emacro(666,MAX)
--emacro(666,MIN)
+--emacro(666,MAX)
+--emacro(666,MIN)
 
 // loop is likely not entered
 -emacro(681,SCIPdebugMsg)
@@ -53,6 +60,7 @@
 
 // generally turn off warnings about unused parameters (possibly too strong)
 -emacro(715,SCIP_DECL_*)
+-emacro(715,TCLIQUE_*)
 
 // loss of sign in promotion from 'int' to 'unsigned long'
 -emacro(737,SCIPfreeBlockMemoryArray)
@@ -83,3 +91,6 @@
 -emacro(776,BMSreallocBlockMemoryArray)
 -emacro(776,BMSfreeBlockMemoryArray)
 -emacro(776,SCIPsetAllocBufferArray)
+
+// previous value assigned to 'retcode' not used
+-emacro(838,SCIP_CALL_TERMINATE)
