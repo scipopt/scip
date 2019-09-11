@@ -1807,8 +1807,8 @@ SCIP_RETCODE reduce_simple_fixedConflict(
 
       if( g->oeat[e] != EAT_FREE )
       {
-         const int* pseudoancestors = graph_get_pseudoAncestors(g, e);
-         const int nPseudoancestors = graph_get_nPseudoAncestors(g, e);
+         const int* pseudoancestors = graph_get_pseudoAncestorsEdge(g, e);
+         const int nPseudoancestors = graph_get_nPseudoAncestorsEdge(g, e);
 
          assert(g->oeat[e + 1] != EAT_FREE);
          assert(nPseudoancestors == 0 || pseudoancestors != NULL);

@@ -3480,7 +3480,7 @@ void graph_edge_del(
       SCIPintListNodeFree(scip, &((g->ancestors)[e]));
       SCIPintListNodeFree(scip, &((g->ancestors)[Edge_anti(e)]));
 
-      SCIP_CALL_ABORT( graph_free_pseudoAncestorsBlock(scip, e, g) );
+      graph_free_pseudoAncestorsEdgeBlock(scip, e, g);
    }
 
    /* delete first arc */
