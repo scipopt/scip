@@ -117,11 +117,11 @@ struct SCIP_ConshdlrData
 
 enum Proprule
 {
-   PROPRULE_1,                          /**< v_i = TRUE                                   =>  r   = TRUE            */
-   PROPRULE_2,                          /**< r   = FALSE                                  =>  v_i = FALSE for all i */
-   PROPRULE_3,                          /**< v_i = FALSE for all i                        =>  r   = FALSE           */
-   PROPRULE_4,                          /**< r   = TRUE, v_i = FALSE for all i except j   =>  v_j = TRUE            */
-   PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
+   PROPRULE_1       = 0,                     /**< v_i = TRUE                                   =>  r   = TRUE            */
+   PROPRULE_2       = 1,                     /**< r   = FALSE                                  =>  v_i = FALSE for all i */
+   PROPRULE_3       = 2,                     /**< v_i = FALSE for all i                        =>  r   = FALSE           */
+   PROPRULE_4       = 3,                     /**< r   = TRUE, v_i = FALSE for all i except j   =>  v_j = TRUE            */
+   PROPRULE_INVALID = 4                      /**< propagation was applied without a specific propagation rule */
 };
 typedef enum Proprule PROPRULE;
 
