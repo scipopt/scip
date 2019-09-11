@@ -9833,7 +9833,7 @@ SCIP_RETCODE SCIPvarAddVlb(
             SCIP_Real lb = SCIPvarGetLbGlobal(var);
             SCIP_Real ub = SCIPvarGetUbGlobal(var);
 
-            /* the variable bound constraint defines a new upper */
+            /* the variable bound constraint defines a new upper bound */
             if( SCIPsetIsGT(set, vlbcoef, 1.0) )
             {
                SCIP_Real newub = vlbconstant / (1.0 - vlbcoef);
@@ -9869,7 +9869,7 @@ SCIP_RETCODE SCIPvarAddVlb(
                      (*nbdchgs)++;
                }
             }
-            /* the variable bound constraint defines a new lower */
+            /* the variable bound constraint defines a new lower bound */
             else
             {
                SCIP_Real newlb;

@@ -397,11 +397,15 @@ Fixed bugs
 - fixed counting of aggregations in XOR constraint handler
 - fixed handling of unbounded solutions
 - fixed update of LP size information when an LP error occured during probing
+- handle special case of variable bound constraints during aggregating variables
+- tighten sides of linear constraints before trying to upgrade them to more specialized constraints (knapsack, logic-or etc.) when calling SCIPupgradeConsLinear()
+
 
 Miscellaneous
 -------------
 - checks in debug mode that clean buffer memory is really clean when being freed are now disabled by default
 - don't compute symmetries if reoptimization is enabled
+- prefer integral values when fixing an almost-fixed continuous variable in the trivial presolver
 
 Known bugs
 ----------
@@ -579,7 +583,6 @@ Fixed bugs
 - avoid copying of unbounded solutions from sub-SCIPs as those cannot be checked completely
 - corrected the output of the first LP value in case of branch-and-price
 - fixed possible integer overflow, which led to wrong conclusion of infeasibility, in energetic reasoning of cons_cumulative.c
-- handle special case of variable bound constraints during aggregating variables
 
 Miscellaneous
 -------------
