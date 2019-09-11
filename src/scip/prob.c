@@ -406,8 +406,10 @@ SCIP_RETCODE SCIPprobFree(
    SCIP_LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    )
 {
-   SCIP_Bool unreleasedvar = FALSE;
    int v;
+#ifndef NDEBUG
+   SCIP_Bool unreleasedvar = FALSE;
+#endif
 
    assert(prob != NULL);
    assert(*prob != NULL);
@@ -463,7 +465,9 @@ SCIP_RETCODE SCIPprobFree(
       {
          SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP.\n",
             (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->vars[v]));
+#ifndef NDEBUG
          unreleasedvar = TRUE;
+#endif
       }
 
       SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, NULL, set, TRUE) );
@@ -480,7 +484,9 @@ SCIP_RETCODE SCIPprobFree(
       {
          SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP.\n",
             (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->fixedvars[v]));
+#ifndef NDEBUG
          unreleasedvar = TRUE;
+#endif
       }
 
       SCIP_CALL( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, eventqueue, lp) );
