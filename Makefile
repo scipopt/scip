@@ -962,14 +962,14 @@ ifeq ($(FILES),)
 		$(SHELL) -ec 'for i in $^; \
 			do \
 				echo $$i; \
-				$(PCLINT) pclint/main-gcc.lnt +os\(pclint.out\) -u -zero \
+				$(PCLINT) pclint/main-gcc.lnt +os\(pclint.out\) -b -u -zero \
 				$(USRFLAGS) $(FLAGS) -Ipclint -uNDEBUG -uSCIP_WITH_READLINE -uSCIP_ROUNDING_FE -D_BSD_SOURCE $$i; \
 			done'
 else
 		$(SHELL) -ec  'for i in $(FILES); \
 			do \
 				echo $$i; \
-				$(PCLINT) pclint/main-gcc.lnt +os\(pclint.out\) -u -zero \
+				$(PCLINT) pclint/main-gcc.lnt +os\(pclint.out\) -b -u -zero \
 				$(USRFLAGS) $(FLAGS) -Ipclint -uNDEBUG -uSCIP_WITH_READLINE -uSCIP_ROUNDING_FE -D_BSD_SOURCE $$i; \
 			done'
 endif
