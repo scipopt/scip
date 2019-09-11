@@ -6321,6 +6321,12 @@ SCIP_RETCODE treeCreateProbingNode(
 
       SCIPsetDebugMsg(set, "created probing child node #%" SCIP_LONGINT_FORMAT " at depth %d, probing depth %d\n",
          SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetDepth(node) - SCIPnodeGetDepth(tree->probingroot));
+
+      currentnode->data.probingnode->ncols = SCIPlpGetNCols(lp);
+      currentnode->data.probingnode->nrows = SCIPlpGetNRows(lp);
+
+      SCIPsetDebugMsg(set, "updated probingnode information of parent (%d cols, %d rows)\n",
+         currentnode->data.probingnode->ncols, currentnode->data.probingnode->nrows);
    }
 
    /* create the new active path */

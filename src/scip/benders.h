@@ -360,19 +360,6 @@ void SCIPbendersRemoveSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** sets the subproblem setup flag */
-void SCIPbendersSetSubproblemIsSetup(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool             issetup             /**< flag to indicate whether the subproblem has been setup */
-   );
-
-/** returns the subproblem setup flag */
-SCIP_Bool SCIPbendersSubproblemIsSetup(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber          /**< the subproblem number */
-   );
-
 /** Sets whether the subproblem is enabled or disabled. A subproblem is disabled if it has been merged into the master
  *  problem.
  */

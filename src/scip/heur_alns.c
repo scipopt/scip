@@ -39,6 +39,7 @@
 #include "scip/scip_bandit.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
 #include "scip/scip_event.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
@@ -903,14 +904,10 @@ SCIP_RETCODE transferSolution(
    SCIP_VAR** subvars;            /* the variables of the subproblem */
    SCIP_HEUR* heur;               /* alns heuristic structure */
    SCIP_SOL*  subsol;             /* solution of the subproblem */
-   SCIP_VAR** vars;               /* the original problem's variables                */
-   int        nvars;
    SCIP_SOL*  newsol;             /* solution to be created for the original problem */
-   SCIP_Real* subsolvals;         /* solution values of the subproblem               */
    SCIP_Bool  success;
    NH_STATS*  runstats;
    SCIP_SOL*  oldbestsol;
-   int i;
 
    assert(subscip != NULL);
 
@@ -927,24 +924,7 @@ SCIP_RETCODE transferSolution(
    assert(subvars != NULL);
    assert(runstats != NULL);
 
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(sourcescip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   for( i = 0; i < nvars; ++i )
-   {
-      /* skip variables not present in sub-SCIP */
-      if( subvars[i] == NULL )
-         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
-      else
-         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
-   }
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(sourcescip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(sourcescip, newsol, nvars, vars, subsolvals) );
+   SCIP_CALL( SCIPtranslateSubSol(sourcescip, subscip, subsol, heur, subvars, &newsol) );
 
    oldbestsol = SCIPgetBestSol(sourcescip);
 
@@ -979,8 +959,6 @@ SCIP_RETCODE transferSolution(
 
    /* update new upper bound for reward later */
    runstats->newupperbound = SCIPgetUpperbound(sourcescip);
-
-   SCIPfreeBufferArray(sourcescip, &subsolvals);
 
    return SCIP_OKAY;
 }

@@ -598,7 +598,8 @@ SCIP_RETCODE generateCut(
    SCIP_EXPRINT*         exprint,            /**< expression interpreter */
    SCIP_NLROW*           nlrow,              /**< constraint */
    CONVEXSIDE            convexside,         /**< whether we use rhs or lhs of nlrow */
-   SCIP_ROW*             row                 /**< storage for cut */
+   SCIP_ROW*             row,                /**< storage for cut */
+   SCIP_Bool*            success             /**< buffer to store whether the gradient was finite */
    )
 {
    SCIP_Real activity;
@@ -611,6 +612,7 @@ SCIP_RETCODE generateCut(
    assert(row != NULL);
 
    gradx0 = 0.0;
+   *success = TRUE;
 
    /* an nlrow has a linear part, quadratic part and expression tree; ideally one would just build the gradient but we
     * do not know if the different parts share variables or not, so we can't just build the gradient; for this reason
@@ -665,6 +667,13 @@ SCIP_RETCODE generateCut(
 
          for( i = 0; i < SCIPexprtreeGetNVars(tree); i++ )
          {
+            /* check gradient entries: function might not be differentiable */
+            if( !SCIPisFinite(grad[i]) || SCIPisInfinity(scip, grad[i]) || SCIPisInfinity(scip, -grad[i]) )
+            {
+               *success = FALSE;
+               break;
+            }
+
             gradx0 +=  grad[i] * SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(tree)[i]);
             SCIP_CALL( SCIPaddVarToRow(scip, row, SCIPexprtreeGetVars(tree)[i], grad[i]) );
          }
@@ -674,6 +683,10 @@ SCIP_RETCODE generateCut(
    }
 
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+
+   /* if there was a problem computing the cut -> return */
+   if( ! *success )
+      return SCIP_OKAY;
 
 #ifdef CUT_DEBUG
    SCIPdebugMsg(scip, "gradient: ");
@@ -809,6 +822,7 @@ SCIP_RETCODE separateCuts(
       SCIP_ROW*   row;
       SCIP_Real   activity;
       CONVEXSIDE  convexside;
+      SCIP_Bool   success;
       char        rowname[SCIP_MAXSTRLEN];
 
       nlrow = nlrows[nlrowsidx[i]];
@@ -828,11 +842,11 @@ SCIP_RETCODE separateCuts(
       /* @todo: when local nlrows get supported in SCIP, one can think of recomputing the interior point */
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &row, sepa, rowname, -SCIPinfinity(scip), SCIPinfinity(scip),
                FALSE, FALSE , TRUE) );
-      SCIP_CALL( generateCut(scip, sol, sepadata->exprinterpreter, nlrow, convexside, row) );
+      SCIP_CALL( generateCut(scip, sol, sepadata->exprinterpreter, nlrow, convexside, row, &success) );
 
       /* add cut */
       SCIPdebugMsg(scip, "cut <%s> has efficacy %g\n", SCIProwGetName(row), SCIPgetCutEfficacy(scip, NULL, row));
-      if( SCIPisCutEfficacious(scip, NULL, row) )
+      if( success && SCIPisCutEfficacious(scip, NULL, row) )
       {
          SCIP_Bool infeasible;
 

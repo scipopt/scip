@@ -14,9 +14,15 @@ add_executable(sciptsp
    src/HeurFarthestInsert.cpp
    src/HeurFrats.cpp
    src/ProbDataTSP.cpp
-   src/ReaderTSP.cpp)
+   src/ReaderTSP.cpp
+   src/gzstream.cpp)
 
 target_link_libraries(sciptsp ${SCIP_LIBRARIES})
+
+find_package(ZLIB)
+if(ZLIB_FOUND)
+   target_link_libraries(sciptsp ${ZLIB_LIBRARIES})
+endif()
 
 if( TARGET examples )
     add_dependencies( examples sciptsp )

@@ -7876,6 +7876,10 @@ SCIP_RETCODE applyAlternativeBoundsFixing(
       var = vars[v];
       assert(var != NULL);
 
+      /* ignore variables for which no alternative bounds have been computed */
+      if( alternativelbs[v] == INT_MAX && alternativeubs[v] == INT_MIN )
+         continue;
+
       lb = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
       ub = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var));
 
