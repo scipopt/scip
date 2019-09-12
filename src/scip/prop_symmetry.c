@@ -1676,8 +1676,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArray(scip, &consvars, nallvars);
 
    /* if no active constraint contains active variables */
-   SCIP_CALL( SCIPgetBoolParam(scip, "propagating/" PROP_NAME "/avoidtrivialcases", &avoidtrivialcases) );
-   if ( avoidtrivialcases && matrixdata.nrhscoef == 0 )
+   if ( matrixdata.nrhscoef == 0 )
    {
       *success = TRUE;
 
@@ -1778,7 +1777,8 @@ SCIP_RETCODE computeSymmetryGroup(
    }
 
    /* If every variable is unique, terminate. -> no symmetries can be present */
-   if ( matrixdata.nuniquevars == nvars )
+   SCIP_CALL( SCIPgetBoolParam(scip, "propagating/" PROP_NAME "/avoidtrivialcases", &avoidtrivialcases) );
+   if ( avoidtrivialcases && matrixdata.nuniquevars == nvars )
    {
       *success = TRUE;
 
