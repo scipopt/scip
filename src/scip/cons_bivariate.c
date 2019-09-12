@@ -3909,7 +3909,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternA(
       SCIP_Real xyref_[2];
 
       assert(swapped == 1);
-      assert(fswapped != NULL);
+      assert(fswapped != NULL); /*lint !e644*/
 
       xyref_[0] = xyref[1];
       xyref_[1] = xyref[0];
@@ -4104,7 +4104,7 @@ SCIP_RETCODE generate1ConvexIndefiniteUnderestimatorInTheInteriorPatternB(
       SCIP_Real xyref_[2];
 
       assert(swapped == 1);
-      assert(fswapped != NULL);
+      assert(fswapped != NULL);  /*lint !e644*/
 
       xyref_[0] = xyref[1];
       xyref_[1] = xyref[0];

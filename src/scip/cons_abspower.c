@@ -6944,14 +6944,14 @@ SCIP_DECL_CONSCOPY(consCopyAbspower)
    if( *valid )
    {
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->z, &z, varmap, consmap, global, valid) );
-   }
 
-   if( *valid )
-   {
-      assert(z != NULL); /* for lint */
-      SCIP_CALL( SCIPcreateConsAbspower(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
-            x, z, consdata->exponent, consdata->xoffset, consdata->zcoef, consdata->lhs, consdata->rhs,
-            initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );  /*lint !e644*/
+      if( *valid )
+      {
+         assert(z != NULL); /* for lint */
+         SCIP_CALL( SCIPcreateConsAbspower(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
+               x, z, consdata->exponent, consdata->xoffset, consdata->zcoef, consdata->lhs, consdata->rhs,
+               initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );  /*lint !e644*/
+      }
    }
 
    return SCIP_OKAY;

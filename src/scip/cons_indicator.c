@@ -5930,7 +5930,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    SCIPdebugMsg(scip, "Presolved %d constraints (fixed %d variables, removed %d variables, and deleted %d constraints).\n",
       nconss, *nfixedvars - oldnfixedvars, removedvars, *ndelconss - oldndelconss);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 
@@ -6897,11 +6897,11 @@ SCIP_DECL_CONSGETVARS(consGetVarsIndicator)
    assert( scip != NULL );
    assert( cons != NULL );
    assert( vars != NULL );
-   assert( varssize >= 0 );
    assert( success != NULL );
 
    if ( varssize < 0 )
       return SCIP_INVALIDDATA;
+   assert( varssize >= 0 );
 
    (*success) = TRUE;
 
