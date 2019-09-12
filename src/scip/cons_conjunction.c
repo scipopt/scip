@@ -872,6 +872,7 @@ SCIP_RETCODE SCIPaddConsElemConjunction(
 
    assert(cons != NULL);
    assert(addcons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

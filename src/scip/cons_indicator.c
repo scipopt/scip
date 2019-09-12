@@ -7722,6 +7722,7 @@ SCIP_RETCODE SCIPaddVarIndicator(
 
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+   assert( SCIPconsGetSCIP(cons) == scip );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -7768,6 +7769,8 @@ SCIP_RETCODE SCIPsetLinearConsIndicator(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+
+   assert( SCIPconsGetSCIP(cons) == scip );
 
    if ( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
@@ -7858,6 +7861,7 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
    assert( cons != NULL );
    assert( binvar != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+   assert( SCIPconsGetSCIP(cons) == scip );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -7956,6 +7960,7 @@ SCIP_RETCODE SCIPsetSlackVarUb(
 
    assert( scip != NULL );
    assert( cons != NULL );
+   assert( SCIPconsGetSCIP(cons) == scip );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
 
    consdata = SCIPconsGetData(cons);
@@ -7981,6 +7986,7 @@ SCIP_Bool SCIPisViolatedIndicator(
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
+   assert( SCIPconsGetSCIP(cons) == scip );
 
    /* deleted constraints should always be satisfied */
    if ( SCIPconsIsDeleted(cons) )
@@ -8049,6 +8055,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
 
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+   assert( SCIPconsGetSCIP(cons) == scip );
    assert( sol != NULL );
    assert( changed != NULL );
 

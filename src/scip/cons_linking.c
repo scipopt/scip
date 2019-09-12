@@ -3439,6 +3439,9 @@ SCIP_VAR* SCIPgetIntvarLinking(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
@@ -3461,6 +3464,9 @@ SCIP_RETCODE SCIPgetBinvarsLinking(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -3504,6 +3510,9 @@ int SCIPgetNBinvarsLinking(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
@@ -3524,6 +3533,9 @@ int* SCIPgetValsLinking(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

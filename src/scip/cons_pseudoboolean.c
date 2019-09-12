@@ -9596,7 +9596,7 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(var != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -9672,7 +9672,7 @@ SCIP_RETCODE SCIPaddTermPseudoboolean(
    )
 {
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(nvars == 0 || vars != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -9696,7 +9696,7 @@ SCIP_VAR* SCIPgetIndVarPseudoboolean(
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9720,7 +9720,7 @@ SCIP_CONS* SCIPgetLinearConsPseudoboolean(
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9744,7 +9744,7 @@ SCIP_LINEARCONSTYPE SCIPgetLinearConsTypePseudoboolean(
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9768,7 +9768,7 @@ int SCIPgetNLinVarsWithoutAndPseudoboolean(
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9801,7 +9801,7 @@ SCIP_RETCODE SCIPgetLinDatasWithoutAndPseudoboolean(
    int nvars;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(nlinvars != NULL);
    assert(*nlinvars == 0 || linvars != NULL);
    assert(*nlinvars == 0 || lincoefs != NULL);
@@ -9860,7 +9860,7 @@ SCIP_RETCODE SCIPgetAndDatasPseudoboolean(
    int c;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(nandconss != NULL);
    assert(*nandconss == 0 || andconss != NULL);
    assert(*nandconss == 0 || andcoefs != NULL);
@@ -9914,7 +9914,7 @@ int SCIPgetNAndsPseudoboolean(
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9947,7 +9947,7 @@ SCIP_RETCODE SCIPchgLhsPseudoboolean(
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9997,6 +9997,8 @@ SCIP_RETCODE SCIPchgRhsPseudoboolean(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(SCIPconsGetSCIP(cons) == scip);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not pseudo boolean\n");
@@ -10038,6 +10040,8 @@ SCIP_Real SCIPgetLhsPseudoboolean(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(SCIPconsGetSCIP(cons) == scip);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not pseudo boolean\n");
@@ -10060,6 +10064,8 @@ SCIP_Real SCIPgetRhsPseudoboolean(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

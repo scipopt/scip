@@ -3434,13 +3434,15 @@ SCIP_RETCODE SCIPcreateConsBasicBounddisjunction(
    return SCIP_OKAY;
 }
 
-/** gets number of variables in bound disjunction constraint */   /*lint -e{715}*/
+/** gets number of variables in bound disjunction constraint */
 int SCIPgetNVarsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -3455,13 +3457,15 @@ int SCIPgetNVarsBounddisjunction(
    return consdata->nvars;
 }
 
-/** gets array of variables in bound disjunction constraint */   /*lint -e{715}*/
+/** gets array of variables in bound disjunction constraint */
 SCIP_VAR** SCIPgetVarsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -3476,13 +3480,15 @@ SCIP_VAR** SCIPgetVarsBounddisjunction(
    return consdata->vars;
 }
 
-/** gets array of bound types in bound disjunction constraint */   /*lint -e{715}*/
+/** gets array of bound types in bound disjunction constraint */
 SCIP_BOUNDTYPE* SCIPgetBoundtypesBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -3497,13 +3503,15 @@ SCIP_BOUNDTYPE* SCIPgetBoundtypesBounddisjunction(
    return consdata->boundtypes;
 }
 
-/** gets array of bounds in bound disjunction constraint */   /*lint -e{715}*/
+/** gets array of bounds in bound disjunction constraint */
 SCIP_Real* SCIPgetBoundsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

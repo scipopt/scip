@@ -5144,6 +5144,7 @@ int SCIPgetNVarsAnd(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5163,11 +5164,12 @@ SCIP_VAR** SCIPgetVarsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
-{  /*lint --e{715}*/
+{
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5183,7 +5185,7 @@ SCIP_VAR** SCIPgetVarsAnd(
 }
 
 
-/** gets the resultant variable in AND-constraint */   /*lint -e715*/
+/** gets the resultant variable in AND-constraint */
 SCIP_VAR* SCIPgetResultantAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -5192,6 +5194,7 @@ SCIP_VAR* SCIPgetResultantAnd(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5216,6 +5219,7 @@ SCIP_Bool SCIPisAndConsSorted(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5240,6 +5244,7 @@ SCIP_RETCODE SCIPsortAndCons(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5272,6 +5277,7 @@ SCIP_RETCODE SCIPchgAndConsCheckFlagWhenUpgr(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5304,6 +5310,7 @@ SCIP_RETCODE SCIPchgAndConsRemovableFlagWhenUpgr(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

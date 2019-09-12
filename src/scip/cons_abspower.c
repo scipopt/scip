@@ -7399,8 +7399,9 @@ SCIP_RETCODE SCIPgetNlRowAbspower(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(cons  != NULL);
+   assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(nlrow != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -7416,7 +7417,7 @@ SCIP_RETCODE SCIPgetNlRowAbspower(
    return SCIP_OKAY;
 }
 
-/** gets nonlinear variable x in absolute power constraint */  /*lint -e715*/
+/** gets nonlinear variable x in absolute power constraint */
 SCIP_VAR* SCIPgetNonlinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
@@ -7426,6 +7427,7 @@ SCIP_VAR* SCIPgetNonlinearVarAbspower(
 
    assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7433,7 +7435,7 @@ SCIP_VAR* SCIPgetNonlinearVarAbspower(
    return consdata->x;
 }
 
-/** gets linear variable z in absolute power constraint */  /*lint -e715*/
+/** gets linear variable z in absolute power constraint */
 SCIP_VAR* SCIPgetLinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
@@ -7443,6 +7445,7 @@ SCIP_VAR* SCIPgetLinearVarAbspower(
 
    assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7455,11 +7458,12 @@ SCIP_Real SCIPgetExponentAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{  /*lint --e{715}*/
+{
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7472,11 +7476,12 @@ SCIP_Real SCIPgetOffsetAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{  /*lint --e{715}*/
+{
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7489,11 +7494,12 @@ SCIP_Real SCIPgetCoefLinearAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{  /*lint --e{715}*/
+{
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7506,11 +7512,12 @@ SCIP_Real SCIPgetLhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{  /*lint --e{715}*/
+{
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7523,11 +7530,12 @@ SCIP_Real SCIPgetRhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{  /*lint --e{715}*/
+{
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7550,6 +7558,7 @@ SCIP_Real SCIPgetViolationAbspower(
 
    assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7583,6 +7592,7 @@ SCIP_Bool SCIPisConvexAbspower(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

@@ -8056,7 +8056,7 @@ SCIP_RETCODE SCIPcreateConsBasicBivariate(
    return SCIP_OKAY;
 }
 
-/** gets the linear variable of a bivariate constraint, or NULL if no such variable */   /*lint -e{715}*/
+/** gets the linear variable of a bivariate constraint, or NULL if no such variable */
 SCIP_VAR* SCIPgetLinearVarBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8064,11 +8064,12 @@ SCIP_VAR* SCIPgetLinearVarBivariate(
 {
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    return SCIPconsGetData(cons)->z;
 }
 
-/** gets the coefficients of the linear variable of a bivariate constraint */   /*lint -e{715}*/
+/** gets the coefficients of the linear variable of a bivariate constraint */
 SCIP_Real SCIPgetLinearCoefBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8076,11 +8077,12 @@ SCIP_Real SCIPgetLinearCoefBivariate(
 {
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    return SCIPconsGetData(cons)->zcoef;
 }
 
-/** gets the expression tree of a bivariate constraint */   /*lint -e{715}*/
+/** gets the expression tree of a bivariate constraint */
 SCIP_EXPRTREE* SCIPgetExprtreeBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8088,11 +8090,12 @@ SCIP_EXPRTREE* SCIPgetExprtreeBivariate(
 {
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    return SCIPconsGetData(cons)->f;
 }
 
-/** gets the left hand side of a bivariate constraint */   /*lint -e{715}*/
+/** gets the left hand side of a bivariate constraint */
 SCIP_Real SCIPgetLhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8100,11 +8103,12 @@ SCIP_Real SCIPgetLhsBivariate(
 {
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    return SCIPconsGetData(cons)->lhs;
 }
 
-/** gets the right hand side of a bivariate constraint */   /*lint -e{715}*/
+/** gets the right hand side of a bivariate constraint */
 SCIP_Real SCIPgetRhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -8112,6 +8116,7 @@ SCIP_Real SCIPgetRhsBivariate(
 {
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    return SCIPconsGetData(cons)->rhs;
 }

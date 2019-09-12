@@ -13518,6 +13518,8 @@ SCIP_RETCODE SCIPaddCoefKnapsack(
 {
    assert(var != NULL);
 
+   assert(SCIPconsGetSCIP(cons) == scip);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
@@ -13536,6 +13538,8 @@ SCIP_Longint SCIPgetCapacityKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13561,6 +13565,8 @@ SCIP_RETCODE SCIPchgCapacityKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13590,6 +13596,8 @@ int SCIPgetNVarsKnapsack(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(SCIPconsGetSCIP(cons) == scip);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
@@ -13610,6 +13618,8 @@ SCIP_VAR** SCIPgetVarsKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13632,6 +13642,8 @@ SCIP_Longint* SCIPgetWeightsKnapsack(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(SCIPconsGetSCIP(cons) == scip);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
@@ -13652,6 +13664,8 @@ SCIP_Real SCIPgetDualsolKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13676,6 +13690,8 @@ SCIP_Real SCIPgetDualfarkasKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13702,6 +13718,8 @@ SCIP_ROW* SCIPgetRowKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

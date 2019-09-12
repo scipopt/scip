@@ -9623,7 +9623,7 @@ SCIP_RETCODE SCIPaddLinearVarNonlinear(
    )
 {
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(var  != NULL);
    assert(!SCIPisInfinity(scip, REALABS(coef)));
 
@@ -9644,7 +9644,7 @@ SCIP_RETCODE SCIPsetExprtreesNonlinear(
    )
 {
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(!SCIPconsIsActive(cons));
    assert(SCIPconsGetData(cons) != NULL);
    assert(exprtrees != NULL || nexprtrees == 0);
@@ -9666,7 +9666,7 @@ SCIP_RETCODE SCIPaddExprtreesNonlinear(
    )
 {
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(!SCIPconsIsActive(cons));
    assert(SCIPconsGetData(cons) != NULL);
    assert(exprtrees != NULL || nexprtrees == 0);
@@ -9685,7 +9685,8 @@ SCIP_RETCODE SCIPgetNlRowNonlinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(cons  != NULL);
+   assert(scip  != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(nlrow != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -9707,7 +9708,8 @@ int SCIPgetNLinearVarsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   assert(cons != NULL);
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->nlinvars;
@@ -9719,7 +9721,8 @@ SCIP_VAR** SCIPgetLinearVarsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   assert(cons != NULL);
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->linvars;
@@ -9731,7 +9734,8 @@ SCIP_Real* SCIPgetLinearCoefsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   assert(cons != NULL);
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->lincoefs;
@@ -9743,7 +9747,8 @@ int SCIPgetNExprtreesNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   assert(cons != NULL);
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
 
@@ -9756,7 +9761,8 @@ SCIP_EXPRTREE** SCIPgetExprtreesNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   assert(cons != NULL);
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
 
@@ -9769,7 +9775,8 @@ SCIP_Real* SCIPgetExprtreeCoefsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   assert(cons != NULL);
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
 
@@ -9782,7 +9789,8 @@ SCIP_EXPRGRAPHNODE* SCIPgetExprgraphNodeNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   assert(cons != NULL);
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->exprgraphnode;
@@ -9794,8 +9802,8 @@ SCIP_Real SCIPgetLhsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   assert(cons != NULL);
-   assert(SCIPconsGetData(cons) != NULL);
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    return SCIPconsGetData(cons)->lhs;
 }
@@ -9806,7 +9814,8 @@ SCIP_Real SCIPgetRhsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   assert(cons != NULL);
+   assert(scip != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->rhs;
@@ -9822,7 +9831,7 @@ SCIP_RETCODE SCIPcheckCurvatureNonlinear(
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
@@ -9847,7 +9856,7 @@ SCIP_RETCODE SCIPgetCurvatureNonlinear(
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(curvature != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -9881,7 +9890,7 @@ SCIP_RETCODE SCIPgetExprtreeCurvaturesNonlinear(
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(curvatures != NULL);
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
 
@@ -9918,7 +9927,7 @@ SCIP_RETCODE SCIPgetViolationNonlinear(
    SCIP_Bool      solviolbounds;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(violation != NULL);
 
    if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE && SCIPconsIsActive(cons) )
@@ -9957,7 +9966,7 @@ int SCIPgetLinvarMayDecreaseNonlinear(
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -9977,7 +9986,7 @@ int SCIPgetLinvarMayIncreaseNonlinear(
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

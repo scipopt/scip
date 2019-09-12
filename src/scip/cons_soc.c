@@ -5398,7 +5398,7 @@ SCIP_RETCODE SCIPgetNlRowSOC(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(cons  != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(nlrow != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -5420,7 +5420,7 @@ int SCIPgetNLhsVarsSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->nvars;
@@ -5432,7 +5432,7 @@ SCIP_VAR** SCIPgetLhsVarsSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->vars;
@@ -5444,7 +5444,7 @@ SCIP_Real* SCIPgetLhsCoefsSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->coefs;
@@ -5456,7 +5456,7 @@ SCIP_Real* SCIPgetLhsOffsetsSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->offsets;
@@ -5468,7 +5468,7 @@ SCIP_Real SCIPgetLhsConstantSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->constant;
@@ -5480,7 +5480,7 @@ SCIP_VAR* SCIPgetRhsVarSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->rhsvar;
@@ -5492,7 +5492,7 @@ SCIP_Real SCIPgetRhsCoefSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->rhscoeff;
@@ -5504,7 +5504,7 @@ SCIP_Real SCIPgetRhsOffsetSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   assert(cons != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
 
    return SCIPconsGetData(cons)->rhsoffset;
@@ -5535,7 +5535,7 @@ SCIP_RETCODE SCIPaddToNlpiProblemSOC(
    const char*    name;
 
    assert(scip     != NULL);
-   assert(cons     != NULL);
+   assert(SCIPconsGetSCIP(cons) == scip);
    assert(nlpi     != NULL);
    assert(nlpiprob != NULL);
    assert(scipvar2nlpivar != NULL);
