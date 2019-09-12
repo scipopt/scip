@@ -8540,3 +8540,16 @@ int SCIPconsGetNUpgradeLocks(
 
    return cons->nupgradelocks;
 }
+
+#ifndef NDEBUG
+/** returns corresponding SCIP instance in debug mode only */
+SCIP_EXPORT
+SCIP* SCIPconsGetSCIP(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert( cons != NULL );
+
+   return cons->scip;
+}
+#endif

@@ -185,7 +185,7 @@ Interface changes
 - new API functions SCIPconshdlrGetNUpdateConss() and SCIPconshdlrGetUpdateConss(), for expert users only
 - new API function SCIPgetNConflictDualproofsApplied()
 - new API functions SCIPeventGetOldtype() and SCIPeventGetNewtype() for the new event when changing the variable type
-
+- new API function SCIPconsGetSCIP() (only available in debug mode
 
 ### Command line interface
 

@@ -868,6 +868,14 @@ int SCIPconsGetNUpgradeLocks(
 #define SCIPconsIsAdded(cons)           ((cons)->addarraypos >= 0)
 #define SCIPconsGetNUpgradeLocks(cons)  ((cons)->nupgradelocks)
 
+#else
+
+/** returns corresponding SCIP instance in debug mode only */
+SCIP_EXPORT
+SCIP* SCIPconsGetSCIP(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 #endif
 
 /* @} */
