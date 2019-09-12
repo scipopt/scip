@@ -41,6 +41,9 @@
 
 // cast from 'int' to 'uint64_t' results in sign extension
 -emacro(571,SCIPhashTwo)
+-emacro(571,SCIPhashFour)
+-emacro(571,SCIPcombineTwoInt)
+-etype(571,size_t)
 
 // avoid: is potentially uninitialized
 -emacro(644,assert)
@@ -85,6 +88,7 @@
 -emacro(776,SCIPreallocBufferArray)
 -emacro(776,SCIPallocBufferArray)
 -emacro(776,SCIPduplicateBufferArray)
+-emacro(776,SCIPallocBlockMemoryArray)
 -emacro(776,BMScopyMemoryArray)
 -emacro(776,BMSallocMemoryArray)
 -emacro(776,BMSclearMemoryArray)
