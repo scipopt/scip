@@ -96,7 +96,12 @@
  *
  * @todo Possibly turn off propagator in subtrees.
  * @todo Check application of conflict resolution.
- *
+ * @todo Check whether one should switch the role of 0 and 1
+ * @todo Implement stablizer computation?
+ * @todo Implement isomorphism pruning?
+ * @todo Implement particular preprocessing rules
+ * @todo Separate permuted cuts (first experiments not successful)
+ * @todo Allow the computation of local symmetries
  */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_OUTPUT_COMPONENT */
