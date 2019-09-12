@@ -3038,10 +3038,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
    }
 
    /* sorts C1, F, C2 and R */
-   if( nvarsC1 > 0 )
-   {
-      SCIPsortRealInt(sortkeysC1, varsC1, nvarsC1);
-   }
+   assert(nvarsC1 > 0);
+   SCIPsortRealInt(sortkeysC1, varsC1, nvarsC1);
+
    if( nvarsC2 > 0 )
    {
       SCIPsortDownRealInt(sortkeysC2, varsC2, nvarsC2);
@@ -6050,7 +6049,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
     *  - scale a~_j = a_j * intscalar
     *  - substitute x~_j = 1 - x_j if a~_j < 0
     */
-   rhs = rhs*intscalar;
+   rhs = rhs * intscalar;
 
    SCIPdebugMsg(scip, " -> rhs = %.15g\n", rhs);
    minact = 0;
@@ -6060,7 +6059,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
       SCIP_VAR* var;
       SCIP_Longint val;
 
-      val = (SCIP_Longint)SCIPfloor(scip, binvals[i]*intscalar);
+      val = (SCIP_Longint)SCIPfloor(scip, binvals[i] * intscalar);
       if( val == 0 )
          continue;
 
@@ -6075,7 +6074,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          assert(val < 0);
 
          SCIP_CALL( SCIPgetNegatedVar(scip, binvars[i], &var) );
-         val = -val;
+         val = -val;  /*lint !e2704*/
          rhs += val;
          SCIPdebugMsg(scip, " -> negative scaled binary variable %+" SCIP_LONGINT_FORMAT "<%s> (unscaled %.15g): substituted by (1 - <%s>) (rhs=%.15g)\n",
             -val, SCIPvarGetName(binvars[i]), binvals[i], SCIPvarGetName(var), rhs);
@@ -11884,7 +11883,7 @@ SCIP_RETCODE createNormalizedKnapsack(
       else
       {
          SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &transvars[v]) );
-         weights[v] = -weight;
+         weights[v] = -weight; /*lint !e2704*/
          capacity -= weight;
       }
       assert(transvars[v] != NULL);
@@ -12447,7 +12446,7 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
    else
       *result = SCIP_DIDNOTFIND;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** presolving method of constraint handler */
