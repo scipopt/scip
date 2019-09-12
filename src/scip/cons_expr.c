@@ -22,6 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/*lint -e528*/
+
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
@@ -1072,9 +1074,21 @@ SCIP_RETCODE forwardPropExpr(
             /* we should not have entered this expression if its activity was already uptodate */
             assert(expr->activitytag < conshdlrdata->curboundstag);
 
-            /* reset activity to infinity if invalid, because SCIPtightenConsExprExprInterval seems to assume valid activity in expr */
             if( expr->activitytag < conshdlrdata->lastboundrelax )
+            {
+               /* reset activity to infinity if invalid, because SCIPtightenConsExprExprInterval seems to assume valid activity in expr */
                SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->activity);
+            }
+            else if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
+            {
+               /* if already empty, then don't try to compute even better activitiy
+                * we should have noted that we are infeasible, though (if not remove the assert and enable below code)
+                */
+               assert(infeasible == NULL || *infeasible);
+               /* if( infeasible != NULL )
+                  *infeasible = TRUE; */
+               break;
+            }
 
             /* start with existing activity of expression if we are not collecting expressions for reverse propagation
              * the reason for the latter is that expr->activity might currently store bounds from the previous
@@ -1120,7 +1134,7 @@ SCIP_RETCODE forwardPropExpr(
 #endif
 
                   /* intersect with interval */
-                  SCIPintervalIntersect(&interval, interval, nlhdlrinterval);
+                  SCIPintervalIntersectEps(&interval, SCIPepsilon(scip), interval, nlhdlrinterval);
                }
             }
             else
@@ -1138,18 +1152,19 @@ SCIP_RETCODE forwardPropExpr(
 #endif
 
                /* intersect with interval */
-               SCIPintervalIntersect(&interval, interval, exprhdlrinterval);
+               SCIPintervalIntersectEps(&interval, SCIPepsilon(scip), interval, exprhdlrinterval);
             }
 
             /* if expression is integral, then we try to tighten the interval bounds a bit
              * this should undo the addition of some unnecessary safety added by use of nextafter() in interval arithmetics, e.g., when doing pow()
+             * it would be ok to use ceil() and floor(), but for safety we use SCIPceil and SCIPfloor for now
              */
             if( expr->isintegral )
             {
                if( interval.inf > -SCIP_INTERVAL_INFINITY )
-                  interval.inf = ceil(interval.inf);
+                  interval.inf = SCIPceil(scip, interval.inf);
                if( interval.sup <  SCIP_INTERVAL_INFINITY )
-                  interval.sup = floor(interval.sup);
+                  interval.sup = SCIPfloor(scip, interval.sup);
                /* SCIPdebugMsg(scip, "applying integrality: [%.15g,%.15g]\n", interval.inf, interval.sup); */
             }
 
@@ -1171,7 +1186,7 @@ SCIP_RETCODE forwardPropExpr(
                   /* it would be odd if the domain of an auxiliary variable were empty */
                   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, auxvarbounds));
 
-                  SCIPintervalIntersect(&previnterval, previnterval, auxvarbounds);
+                  SCIPintervalIntersectEps(&previnterval, SCIPepsilon(scip), previnterval, auxvarbounds);
                }
 
                /* if previnterval allow a further tightening, then reversepropagation
@@ -1189,7 +1204,7 @@ SCIP_RETCODE forwardPropExpr(
                   SCIPdebugMsg(scip, "do not insert expr <%p> (%s) into reversepropqueue, interval = [%.15g,%.15g] is subset of previnterval=[%.15g,%.15g]\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), interval.inf, interval.sup, previnterval.inf, previnterval.sup);
                } */
 
-               SCIPintervalIntersect(&interval, interval, previnterval);
+               SCIPintervalIntersectEps(&interval, SCIPepsilon(scip), interval, previnterval);
                /* SCIPdebugMsg(scip, "intersected with previnterval [%.15g,%.15g] -> [%.15g,%.15g]\n", previnterval.inf, previnterval.sup, interval.inf, interval.sup); */
             }
 
@@ -5646,6 +5661,8 @@ SCIP_RETCODE separatePointExpr(
 
       /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
       SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
+      /* SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+      SCIPinfoMessage(scip, NULL, " (%p): auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> auxvalue: %.15g\n", (void*)expr, auxvarvalue, expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue); */
 
       if( maxauxviolation != NULL )
       {
@@ -5658,7 +5675,7 @@ SCIP_RETCODE separatePointExpr(
             *maxauxviolation = expr->enfos[e]->auxvalue - auxvarvalue;
       }
 
-      SCIPdebugMsg(scip, "sepa of nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, REALABS(expr->enfos[e]->auxvalue - auxvarvalue), REALABS(expr->evalvalue - auxvarvalue), underestimate, overestimate);
+      SCIPdebugMsg(scip, "sepa of nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate);
 
       /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
       if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > minviolation) )  /*lint !e777*/
@@ -5807,6 +5824,160 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** prints violation information
+ *
+ *  assumes that constraint violations have been computed
+ */
+#ifdef __GNUC__
+__attribute__((unused))
+#endif
+static
+SCIP_RETCODE analyzeViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
+   unsigned int          soltag              /**< tag of solution */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   int c;
+
+   assert(conss != NULL || nconss == 0);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss != NULL && conss[c] != NULL);
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* skip constraints that are not enabled, deleted, or have separation disabled */
+      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) || !SCIPconsIsSeparationEnabled(conss[c]) )
+         continue;
+      assert(SCIPconsIsActive(conss[c]));
+
+      /* skip non-violated constraints */
+      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
+         continue;
+
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         SCIP_Real auxvarvalue;
+         SCIP_Real auxvarlb;
+         SCIP_Real auxvarub;
+         SCIP_Bool violunder;
+         SCIP_Bool violover;
+         SCIP_Real origviol;
+         SCIP_Real auxviol;
+         int e;
+
+         /* it only makes sense to call the separation callback if there is a variable attached to the expression */
+         if( expr->auxvar == NULL )
+         {
+            if( SCIPisConsExprExprVar(expr) )
+            {
+               SCIP_VAR* var;
+               var = SCIPgetConsExprExprVarVar(expr);
+               auxvarvalue = SCIPgetSolVal(scip, sol, var);
+               auxvarlb = SCIPvarGetLbLocal(var);
+               auxvarub = SCIPvarGetUbLocal(var);
+
+               origviol = MAX(auxvarlb - auxvarvalue, auxvarvalue - auxvarub);
+               if( origviol <= 0.0 )
+                  continue;
+
+               SCIPinfoMessage(scip, NULL, "var <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(var), auxvarlb, auxvarub, auxvarvalue);
+               if( auxvarlb > auxvarvalue )
+                  SCIPinfoMessage(scip, NULL, " var >= lb violated by %g", auxvarlb - auxvarvalue);
+               if( auxvarub < auxvarvalue )
+                  SCIPinfoMessage(scip, NULL, " var <= ub violated by %g", auxvarvalue - auxvarub);
+               SCIPinfoMessage(scip, NULL, "\n");
+            }
+
+            continue;
+         }
+
+         auxvarvalue = SCIPgetSolVal(scip, sol, expr->auxvar);
+         auxvarlb = SCIPvarGetLbLocal(expr->auxvar);
+         auxvarub = SCIPvarGetUbLocal(expr->auxvar);
+
+         /* make sure that this expression has been evaluated - so far we assume that this happened */
+         /* SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, soltag) ); */
+
+         /* compute violation and decide whether under- or overestimate is required */
+         if( expr->evalvalue != SCIP_INVALID ) /*lint !e777*/
+         {
+            /* the expression could be evaluated, then look how much and on which side it is violated */
+            origviol = auxvarvalue - expr->evalvalue;
+
+            /* first, violation of auxvar <= expr, which is violated if auxvar - expr > 0 */
+            violover = SCIPgetConsExprExprNLocksNeg(expr) > 0 && auxvarvalue - expr->evalvalue > 0.0;
+
+            /* next, violation of auxvar >= expr, which is violated if expr - auxvar > 0 */
+            violunder = SCIPgetConsExprExprNLocksPos(expr) > 0 && expr->evalvalue - auxvarvalue > 0.0;
+         }
+         else
+         {
+            /* if expression could not be evaluated, then both under- and overestimate should be considered */
+            origviol = SCIP_INVALID;
+            violover = SCIPgetConsExprExprNLocksNeg(expr) > 0;
+            violunder = SCIPgetConsExprExprNLocksPos(expr) > 0;
+         }
+
+         /* no violation w.r.t. the original variables -> skip expression */
+         if( !violover && !violunder )
+            continue;
+
+         SCIPinfoMessage(scip, NULL, "expr ");
+         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+         SCIPinfoMessage(scip, NULL, " (%p)[%.15g,%.15g] = %.15g\n", (void*)expr, expr->activity.inf, expr->activity.sup, expr->evalvalue);
+
+         SCIPinfoMessage(scip, NULL, "  auxvar <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(expr->auxvar), auxvarlb, auxvarub, auxvarvalue);
+         if( violover )
+            SCIPinfoMessage(scip, NULL, " auxvar <= expr violated by %g", origviol);
+         if( violunder )
+            SCIPinfoMessage(scip, NULL, " auxvar >= expr violated by %g", -origviol);
+         if( auxvarlb > auxvarvalue )
+            SCIPinfoMessage(scip, NULL, " auxvar >= auxvar's lb violated by %g", auxvarlb - auxvarvalue);
+         if( auxvarub < auxvarvalue )
+            SCIPinfoMessage(scip, NULL, " auxvar <= auxvar's ub violated by %g", auxvarvalue - auxvarub);
+
+         SCIPinfoMessage(scip, NULL, "\n");
+
+         /* compute aux-violation (nonlinear handlers) */
+         for( e = 0; e < expr->nenfos; ++e )
+         {
+            SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+            nlhdlr = expr->enfos[e]->nlhdlr;
+            assert(nlhdlr != NULL);
+
+            /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
+            SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
+
+            SCIPinfoMessage(scip, NULL, "  nlhdlr <%s> = %.15g", nlhdlr->name, expr->enfos[e]->auxvalue);
+
+            auxviol = expr->enfos[e]->auxvalue == SCIP_INVALID ? SCIP_INVALID : auxvarvalue - expr->enfos[e]->auxvalue;  /*lint !e777*/
+            if( violover && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > 0.0) )  /*lint !e777*/
+               SCIPinfoMessage(scip, NULL, " auxvar <= nlhdlr-expr violated by %g", auxviol);
+            if( violunder && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > 0.0) )  /*lint !e777*/
+               SCIPinfoMessage(scip, NULL, " auxvar >= nlhdlr-expr violated by %g", -auxviol);
+            SCIPinfoMessage(scip, NULL, "\n");
+         }
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+} /*lint !e715*/
 
 /** helper function to enforce constraints */
 static
@@ -5858,6 +6029,8 @@ SCIP_RETCODE enforceConstraints(
    if( *result == SCIP_FEASIBLE )
       return SCIP_OKAY;
 
+   /* SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag) ); */
+
    /* try to propagate */
    nchgbds = 0;
    ndelconss = 0;
@@ -5906,7 +6079,7 @@ SCIP_RETCODE enforceConstraints(
 
    if( nnotify > 0 )
    {
-      SCIPdebugMsg(scip, "registered %d unfixed variables as branching candidates", nnotify);
+      SCIPdebugMsg(scip, "registered %d unfixed variables as branching candidates\n", nnotify);
       ++conshdlrdata->ndesperatebranch;
 
       return SCIP_OKAY;
@@ -11131,16 +11304,17 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
 
    if( expr->isintegral )
    {
-      /* apply integrality to new bounds */
+      /* apply integrality to new bounds
+       * it should be ok to use normal ceil() and floor(), but for safety, we use SCIPceil and SCIPfloor for now
+       */
       if( newbounds.inf > -SCIP_INTERVAL_INFINITY )
-         newbounds.inf = ceil(newbounds.inf);
+         newbounds.inf = SCIPceil(scip, newbounds.inf);
       if( newbounds.sup <  SCIP_INTERVAL_INFINITY )
-         newbounds.sup = floor(newbounds.sup);
+         newbounds.sup = SCIPfloor(scip, newbounds.sup);
       /* SCIPdebugMsg(scip, "applied integrality: [%.15g,%.15g]\n", newbounds.inf, newbounds.sup); */
    }
 
-   /* intersect old interval with the new one */
-   SCIPintervalIntersect(&expr->activity, expr->activity, newbounds);
+   SCIPintervalIntersectEps(&expr->activity, SCIPepsilon(scip), expr->activity, newbounds);
 
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
@@ -11344,6 +11518,9 @@ void SCIPaddConsExprExprBranchScore(
       expr->brscore = 0.0;
       expr->brscoretag = branchscoretag;
    }
+
+   /* SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL);
+   SCIPinfoMessage(scip, NULL, " branchscore %g for expression %p, activity [%.15g,%.15g]\n", branchscore, (void*)expr, expr->activity.inf, expr->activity.sup); */
 
    expr->brscore += branchscore;
 }

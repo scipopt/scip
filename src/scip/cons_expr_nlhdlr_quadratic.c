@@ -820,7 +820,10 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
    /* if estimating on non-convex side, then do nothing */
    if( ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) ||
        (!overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE) )
+   {
+      SCIPdebugMsg(scip, "not estimating on nonconvex side (overestimate=%d, curv=%s)\n", overestimate, SCIPexprcurvGetName(nlhdlrexprdata->curvature));
       return SCIP_OKAY;
+   }
 
    /*
     * compute estimator: quadfun(sol) + \nabla quadfun(sol) (x - sol)

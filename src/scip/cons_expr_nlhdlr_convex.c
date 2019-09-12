@@ -917,6 +917,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
       deriv = SCIPgetConsExprExprPartialDiff(scip, conshdlr, nlexpr, var);
       if( deriv == SCIP_INVALID ) /*lint !e777*/
       {
+         SCIPdebugMsg(scip, "gradient evaluation error for component %d of %p\n", i, (void*)expr);
          *success = FALSE;
          break;
       }

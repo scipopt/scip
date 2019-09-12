@@ -430,7 +430,16 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
       if( SCIPcompareConsExprExprs(children[i], children[i + 1]) == 0 )
       {
          changed = TRUE;
-         coefs[i+1] += coefs[i];
+         /* if we substract two almost equal not-so-small numbers, then set new coefficient to 0.0
+          * instead of some tiny value that is likely the result of some random round-off error
+          * E.g., on instance ex1221, we have x1^2 + b3 = 1.25.
+          *   Probing finds an aggregation x1 = 1.11803 - 0.618034 b3.
+          *   Simplify would then produce 1.25 + 1e-16 x1 = 1.25.
+          */
+         if( SCIPisEQ(scip, coefs[i], -coefs[i+1]) && REALABS(coefs[i]) >= 1.0 )
+            coefs[i+1] = 0.0;
+         else
+            coefs[i+1] += coefs[i];
          continue;
       }
 
@@ -1404,6 +1413,8 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
    minlinactivityinf = 0;
    maxlinactivityinf = 0;
 
+   SCIPdebugMsg(scip, "reverse prop with %d children: %.20g", constant);
+
    SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nexprs) );
 
    /* shift coefficients into the intervals of the children; compute the min and max activities */
@@ -1412,10 +1423,7 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
       SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bounds[c], SCIPgetConsExprExprActivity(scip, exprs[c]),
          weights[c]);  /*lint !e613 */
 
-#ifdef SCIP_MORE_DEBUG
-      SCIPdebugMsg(scip, "child %d: [%.16g,%.16g] * %.16g = [%.16g,%.16g]\n", c, SCIPgetConsExprExprActivity(scip, exprs[c]).inf, SCIPgetConsExprExprActivity(scip, exprs[c]).sup,
-         weights[c], bounds[c].inf, bounds[c].sup);
-#endif
+      SCIPdebugMsgPrint(scip, " %+.20g*[%.20g,%.20g]", weights[c], SCIPgetConsExprExprActivity(scip, exprs[c]).inf, SCIPgetConsExprExprActivity(scip, exprs[c]).sup); /*lint !e613 */
 
       if( SCIPisInfinity(scip, SCIPintervalGetSup(bounds[c])) )
          ++maxlinactivityinf;
@@ -1435,7 +1443,7 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
    }
    maxlinactivity = -maxlinactivity; /* correct sign */
 
-   SCIPdebugMsg(scip, "reverse prop with %d children: lhs = [%.16g,%.16g] in rhs = [%.16g,%.16g]\n", nexprs,
+   SCIPdebugMsgPrint(scip, " = [%.20g,%.20g] in rhs = [%.20g,%.20g]\n",
       minlinactivityinf ? -SCIP_INTERVAL_INFINITY : minlinactivity,
       maxlinactivityinf ?  SCIP_INTERVAL_INFINITY : maxlinactivity,
       interval.inf, interval.sup);
@@ -1486,8 +1494,12 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
          }
       }
 
+      SCIPdebugMsg(scip, "child %d: %.20g*x in [%.20g,%.20g]", c, weights[c], childbounds.inf, childbounds.sup);
+
       /* divide by the child coefficient */
       SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &childbounds, childbounds, weights[c]);
+
+      SCIPdebugMsgPrint(scip, " -> x = [%.20g,%.20g]\n", childbounds.inf, childbounds.sup);
 
       /* try to tighten the bounds of the expression */
       SCIP_CALL( SCIPtightenConsExprExprInterval(scip, exprs[c], childbounds, force, reversepropqueue,
