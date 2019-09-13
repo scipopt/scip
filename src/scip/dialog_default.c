@@ -3468,7 +3468,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
          SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
          fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3515,17 +3515,16 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMIPStart)
          if( sol == NULL )
          {
             SCIPdialogMessage(scip, NULL, "no mip start available\n");
-            fclose(file);
          }
          else
          {
             SCIP_CALL_FINALLY( SCIPprintMIPStart(scip, sol, file), fclose(file) );
 
             SCIPdialogMessage(scip, NULL, "written mip start information to file <%s>\n", filename);
-            fclose(file);
          }
+         fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3645,7 +3644,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
 
          fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3689,7 +3688,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
          SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
          fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3771,7 +3770,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
          else if( ! SCIPparseReal(scip, refstrs[i], &refvals[i], &endptr) )
          {
             SCIPdialogMessage(scip, NULL, "Could not parse value '%s', please try again or type 'q' to quit\n", refstrs[i]);
-            --i;
+            --i; /*lint !e850*/
          }
       }
 
