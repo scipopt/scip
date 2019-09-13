@@ -73,6 +73,7 @@
 -emacro(681,SCIPstatDebugMsg)
 -emacro(681,SCIPdebugPrintf)
 -emacro(681,SCIPstatisticMessage)
+-emacro(681,SCIPstatisticPrintf)
 
 // generally turn off warnings about unused parameters (possibly too strong)
 -emacro(715,SCIP_DECL_*)
