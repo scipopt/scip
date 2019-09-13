@@ -54,6 +54,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
    int*                  labelmovedvars,     /**< unique label for each moved permvar (-1 = not affected) or NULL if not needed */
+   int*                  nmovedvars          /**< pointer to store number of moved vars */
    );
 
 #ifdef __cplusplus
