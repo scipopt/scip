@@ -937,7 +937,7 @@ SCIP_RETCODE solveAndEvalSubscip(
    }
    else
    {
-      SCIPdebugMessage("--> solving interrupted (status=%d, time=%.2f)\n",
+      SCIPdebugMessage("--> solving interrupted (status=%u, time=%.2f)\n",
          SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip));
 
       /* transfer global fixings to the original problem; we can only do this, if we did not find a solution in the

@@ -2895,7 +2895,7 @@ SCIP_RETCODE collectCliqueConss(
       }
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 /** creating all necessary data in array structure, collect all clique constraint variables and occurrences,
@@ -6439,7 +6439,7 @@ SCIP_RETCODE fixAdditionalVars(
 
       assert(v1 < consdata1->nvars);
       index0 = SCIPvarGetIndex(consdata0->vars[v0]);
-      for( ; SCIPvarGetIndex(consdata1->vars[v1]) < index0 && !(*cutoff); ++v1 )
+      for( ; SCIPvarGetIndex(consdata1->vars[v1]) < index0 && !(*cutoff); ++v1 ) /*lint !e445*/
       {
          SCIP_Bool fixed;
 
@@ -8024,7 +8024,7 @@ SCIP_DECL_CONSPROP(consPropSetppc)
    else if( nfixedvars > 0 )
       *result = SCIP_REDUCEDDOM;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 

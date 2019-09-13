@@ -6406,7 +6406,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                useboundvar = FALSE;
 
                /* restart 'for'-loop */
-               j = -1;
+               j = -1;  /*lint !e850*/
                cnt = 0;
                continue;
             }
@@ -6529,7 +6529,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                useboundvar = FALSE;
 
                /* restart 'for'-loop */
-               j = -1;
+               j = -1;  /*lint !e850*/
                cnt = 0;
                continue;
             }
@@ -6731,7 +6731,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          }
          else
             *stopsolving = TRUE;
-      }
+      } /*lint !e438*/
    }
 }
 
@@ -7671,6 +7671,7 @@ SCIP_RETCODE makeSOS1conflictgraphFeasible(
    assert( conshdlr != NULL );
    assert( sol != NULL );
    assert( changed != NULL );
+   assert( allroundable != NULL );
 
    *allroundable = TRUE;
    *changed = FALSE;
@@ -7799,6 +7800,7 @@ SCIP_RETCODE makeSOS1constraintsFeasible(
    assert( conshdlr != NULL );
    assert( sol != NULL );
    assert( changed != NULL );
+   assert( allroundable != NULL );
 
    *allroundable = TRUE;
    *changed = FALSE;
@@ -9702,7 +9704,7 @@ SCIP_DECL_CONSRESPROP(consRespropSOS1)
       assert( inferinfo >= -conshdlrdata->nsos1vars );
       assert( inferinfo <= -1 );
 
-      var = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, -inferinfo - 1);
+      var = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, -inferinfo - 1);  /*lint !e2704*/
    }
    else
    {
@@ -10805,7 +10807,7 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
       SCIP_CALL( makeSOS1conflictgraphFeasible(scip, conshdlr, sol, changed, &allroundable) );
    }
 
-   if ( ! allroundable )
+   if ( ! allroundable ) /*lint !e774*/
       return SCIP_OKAY;
 
    /* check whether objective value of rounded solution is good enough */

@@ -909,7 +909,7 @@ SCIP_RETCODE propSOS2(
             ++(*ngen);
       }
       /* cannot locally delete constraint, since position of second entry is not fixed! */
-   }
+   } /*lint !e438*/
    /* if exactly two variables are fixed to be nonzero */
    else if ( consdata->nfixednonzeros == 2 )
    {

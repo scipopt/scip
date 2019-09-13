@@ -27,7 +27,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define _USE_MATH_DEFINES   /* to get M_PI on Windows */  /*lint !750 */
+#define _USE_MATH_DEFINES   /* to get M_PI on Windows */
 #define SCIP_PRIVATE_ROWPREP
 
 #include "blockmemshell/memory.h"
@@ -4847,15 +4847,15 @@ SCIP_DECL_CONSCOPY(consCopySOC)
    {
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->rhsvar, &rhsvar, varmap, consmap, global, valid) );
       assert(!(*valid) || rhsvar != NULL);
-   }
 
-   /* only create the target constraint, if all variables could be copied */
-   if( *valid )
-   {
-      SCIP_CALL( SCIPcreateConsSOC(scip, cons, name ? name : SCIPconsGetName(sourcecons),
-            consdata->nvars, vars, consdata->coefs, consdata->offsets, consdata->constant,
-            rhsvar, consdata->rhscoeff, consdata->rhsoffset,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );  /*lint !e644 */
+      /* only create the target constraint, if all variables could be copied */
+      if( *valid )
+      {
+         SCIP_CALL( SCIPcreateConsSOC(scip, cons, name ? name : SCIPconsGetName(sourcecons),
+               consdata->nvars, vars, consdata->coefs, consdata->offsets, consdata->constant,
+               rhsvar, consdata->rhscoeff, consdata->rhsoffset,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );  /*lint !e644 */
+      }
    }
 
    SCIPfreeBufferArray(sourcescip, &vars);
