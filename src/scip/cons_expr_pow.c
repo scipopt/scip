@@ -1640,6 +1640,18 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
 
    SCIPdebugMsgPrint(scip, " -> [%.15g,%.15g]\n", interval.inf, interval.sup);
 
+   if( exponent < 0.0 )
+   {
+      /* push lower bound from >= -epsilon to >=  epsilon to avoid pole at 0 (domain error)
+       * push upper bound from <=  epsilon to <= -epsilon to avoid pole at 0 (domain error)
+       * this can lead to a cutoff if domain would otherwise be very close around 0
+       */
+      if( interval.inf > -SCIPepsilon(scip) && interval.inf < SCIPepsilon(scip) )
+         interval.inf = SCIPepsilon(scip);
+      else if( interval.sup < SCIPepsilon(scip) && interval.sup > -SCIPepsilon(scip) )
+         interval.sup = -SCIPepsilon(scip);
+   }
+
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], interval, force, reversepropqueue, infeasible,
          nreductions) );
