@@ -1852,7 +1852,7 @@ SCIP_RETCODE computeSymmetryGroup(
 
       /* remove variables from permutations that are not affected by any permutation */
       percentagemovedvars = (SCIP_Real) *nmovedvars / (SCIP_Real) nvars;
-      if ( compresssymetries && SCIPisLE(scip, percentagemovedvars, compressionthreshold) )
+      if ( *nmovedvars > 0 && compresssymetries && SCIPisLE(scip, percentagemovedvars, compressionthreshold) )
       {
          int** compressedperms;
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &compressedperms, *nperms) );
