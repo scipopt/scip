@@ -1758,7 +1758,7 @@ SCIP_RETCODE computeSymmetryGroup(
             vt->ub = SCIPvarGetUbGlobal(var);
          }
          vt->type = SCIPvarGetType(var);
-         vt->nconss = usecolumnsparsity ? nconssforvar[j] : 0;
+         vt->nconss = usecolumnsparsity ? nconssforvar[j] : 0; /*lint !e613*/
 
          if ( ! SCIPhashtableExists(vartypemap, (void*) vt) )
          {
