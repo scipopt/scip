@@ -60,7 +60,6 @@ void blisshook(
    assert( data->scip != NULL );
    assert( data->npermvars < (int) n );
    assert( data->maxgenerators >= 0);
-   assert( data->labelmovedvars != NULL );
 
    /* make sure we do not generate more that maxgenerators many permutations, if the limit in bliss is not available */
    if ( data->maxgenerators != 0 && data->nperms >= data->maxgenerators )
@@ -81,7 +80,7 @@ void blisshook(
          isIdentity = false;
 
          /* remeber that variable j is moved */
-         if ( data->labelmovedvars[j] == -1 )
+         if ( data->labelmovedvars != NULL && data->labelmovedvars[j] == -1 )
             data->labelmovedvars[j] = (data->nmovedvars)++;
       }
    }
