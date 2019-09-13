@@ -628,7 +628,9 @@ set_tests_properties(write_and_read_settings
 set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
 file(MAKE_DIRECTORY ${shell_tmp_dir})
 
-foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
+# disabled reopt on FullIns_3 until #2758 is dealt with
+# foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
+foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl)
     foreach(setting ${settings_reopt})
         configure_file(interactiveshell/${testname}.bat.in interactiveshell/${testname}-${setting}.bat)
         add_test(NAME ${testname}-${setting}
