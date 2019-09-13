@@ -42,8 +42,12 @@
 // last value assigned to '_restat_' not used
 -emacro(438,SCIP_CALL)
 
+// is likely uninitialized
+-emacro(530,va_*)
+-ecall(530,vsnprintf)
+
 // ignoring return value of function
--esym(534,printf,fprintf,fclose,fputs,fseek,strcat,strcpy,SCIPfclose)
+-esym(534,printf,fprintf,fclose,fputs,fseek,fflush,strcat,strcpy,SCIPfclose)
 
 // cast from 'int' to 'uint64_t' results in sign extension
 -emacro(571,SCIPhashTwo)
@@ -107,6 +111,7 @@
 -emacro(776,SCIPallocClearBufferArray)
 -emacro(776,SCIPallocBlockMemoryArray)
 -emacro(776,SCIPduplicateBlockMemoryArray)
+-emacro(776,BMSallocMemorySize)
 -emacro(776,BMScopyMemoryArray)
 -emacro(776,BMSallocMemoryArray)
 -emacro(776,BMSclearMemoryArray)
