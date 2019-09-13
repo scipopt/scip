@@ -274,6 +274,18 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropLog)
    /* f = log(c0) -> c0 = exp(f) */
    SCIPintervalExp(SCIP_INTERVAL_INFINITY, &childbound, SCIPgetConsExprExprActivity(scip, expr));
 
+   /* force child lower bound to be at least epsilon away from 0
+    * this can help a lot in enforcement (try ex8_5_3)
+    * child being equal 0 is already forbidden, so making it strictly greater-equal epsilon enforces
+    * and hopefully doesn't introduce much problems
+    * if childbound.sup < epsilon, too, then this will result in a cutoff
+    */
+   if( childbound.inf < SCIPepsilon(scip) )
+   {
+      SCIPdebugMsg(scip, "Pushing child lower bound from %g to %g; upper bound remains at %g\n", childbound.inf, SCIPepsilon(scip), childbound.sup);
+      childbound.inf = SCIPepsilon(scip);
+   }
+
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, force, reversepropqueue,
          infeasible, nreductions) );
