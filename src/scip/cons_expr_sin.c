@@ -316,7 +316,7 @@ SCIP_Bool computeLeftMidTangentSin(
    if( COS(lb) < 0.0 )
    {
       /* in [pi/2,pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
-      if( SIN(lb) <= 0.0 )
+      if( SCIPisLE(scip, SIN(lb), 0.0) )
          return FALSE;
       else
          startingpoint = lb + 1.25*M_PI - lbmodpi;
@@ -324,7 +324,7 @@ SCIP_Bool computeLeftMidTangentSin(
    else
    {
       /* in ascending area, take the midpoint of the possible area in descending part */
-      if( SIN(lb) < 0.0 )
+      if( SCIPisLT(scip, SIN(lb), 0.0) )
          startingpoint = lb + 2.25*M_PI - lbmodpi;
       else
          startingpoint = lb + 1.25*M_PI - lbmodpi;
@@ -350,7 +350,7 @@ SCIP_Bool computeLeftMidTangentSin(
       *issecant = TRUE;
    }
 
-   if( tangentpoint == lb )  /*lint !e777 */
+   if( SCIPisEQ(scip, tangentpoint, lb) )  /*lint !e777 */
       return FALSE;
 
    /* compute secant between lower bound and connection point */
@@ -401,16 +401,16 @@ SCIP_Bool computeRightMidTangentSin(
    /* choose starting point for Newton procedure */
    if( COS(ub) > 0.0 )
    {
-      /* in [pi/2,pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
-      if( SIN(ub) <= 0.0 )
+      /* in [3*pi/2,2*pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
+      if( SCIPisLE(scip, SIN(ub), 0.0) )
          return FALSE;
       else
          startingpoint = ub - M_PI_4 - ubmodpi;
    }
    else
    {
-      /* in ascending area, take the midpoint of the possible area in descending part */
-      if( SIN(ub) < 0.0 )
+      /* in descending area, take the midpoint of the possible area in ascending part */
+      if( SCIPisLE(scip, SIN(ub), 0.0) )
          startingpoint = ub - 1.25*M_PI - ubmodpi;
       else
          startingpoint = ub - M_PI_4 - ubmodpi;
@@ -436,7 +436,7 @@ SCIP_Bool computeRightMidTangentSin(
       *issecant = TRUE;
    }
 
-   if( tangentpoint == ub )  /*lint !e777 */
+   if( SCIPisEQ(scip, tangentpoint, ub) )  /*lint !e777 */
       return FALSE;
 
    /* compute secant between lower bound and connection point */
