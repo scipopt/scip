@@ -48,10 +48,6 @@
 // avoid: is potentially uninitialized
 -emacro(644,assert)
 
-// expression with side effects passed to repeated parameter of macro
---emacro(666,MAX)
---emacro(666,MIN)
-
 // loop is likely not entered
 -emacro(681,SCIPdebugMsg)
 -emacro(681,SCIPdebugMessage)
