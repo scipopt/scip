@@ -1907,6 +1907,7 @@ SCIP_RETCODE computeSymmetryGroup(
 
       SCIPfreeBlockMemoryArray(scip, &labelmovedvars, matrixdata.npermvars);
    }
+   else
    {
       SCIPfreeBlockMemoryArray(scip, &vars, nvars);
    }
