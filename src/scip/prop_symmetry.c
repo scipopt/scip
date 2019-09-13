@@ -440,7 +440,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValVartype)
 
    k = (SYM_VARTYPE*) key;
 
-   return SCIPhashTwo(SCIPcombineThreeInt(SCIPrealHashCode(k->obj), SCIPrealHashCode(k->lb), SCIPrealHashCode(k->nconss)), SCIPrealHashCode(k->ub));
+   return SCIPhashFour(SCIPrealHashCode(k->obj), SCIPrealHashCode(k->lb), SCIPrealHashCode((double) k->nconss), SCIPrealHashCode(k->ub));
 }
 
 /** data struct to store arrays used for sorting rhs types */
