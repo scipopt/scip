@@ -80,8 +80,9 @@
 -emacro(737,BMSfreeBlockMemoryArray)
 -emacro(737,BMSfreeBlockMemoryArrayNull)
 
-// cannot turn off warning otherwise: local macro '_USE_MATH_DEFINES' not referenced
+// cannot turn off warning otherwise: local macro not referenced
 -esym(750,_USE_MATH_DEFINES)
+-esym(750,NONLINCONSUPGD_PRIORITY)
 
 // boolean condition for 'while' always evaluates to 'false'
 -emacro(774,SCIPdebugMsg)

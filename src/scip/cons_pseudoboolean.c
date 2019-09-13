@@ -5400,24 +5400,20 @@ SCIP_RETCODE updateConsanddataUses(
    consanddatas = consdata->consanddatas;
    nconsanddatas = consdata->nconsanddatas;
    assert(nconsanddatas > 0 && consanddatas != NULL);
+   assert(consdata->andcoefs != NULL);
 
    /* remove old locks */
-   if( nconsanddatas > 0 )
+   for( c = nconsanddatas - 1; c >= 0; --c )
    {
-      assert(consdata->andcoefs != NULL);
+      CONSANDDATA* consanddata;
 
-      for( c = nconsanddatas - 1; c >= 0; --c )
-      {
-         CONSANDDATA* consanddata;
+      consanddata = consanddatas[c];
+      assert(consanddata != NULL);
 
-         consanddata = consanddatas[c];
-         assert(consanddata != NULL);
+      if( !consanddata->istransformed )
+         continue;
 
-         if( !consanddata->istransformed )
-            continue;
-
-         SCIP_CALL( removeOldLocks(scip, cons, consanddata, consdata->andcoefs[c], consdata->lhs, consdata->rhs) );
-      }
+      SCIP_CALL( removeOldLocks(scip, cons, consanddata, consdata->andcoefs[c], consdata->lhs, consdata->rhs) );
    }
 
    /* correct consandata usage counters and data */
@@ -7451,7 +7447,7 @@ SCIP_RETCODE findAggregation(
 	     */
 	 }
 #endif
-      }
+      } /*lint !e438*/
       /* we have a constraint in the form of: x1 + x2 * x3 + ~x2 * x3 + ~x2 * ~x3 == 1
        * this leads to the aggregation x1 = x2 * ~x3
        *
@@ -7538,7 +7534,7 @@ SCIP_RETCODE findAggregation(
 	 SCIP_CALL( SCIPdelCons(scip, consdata->lincons) );
 	 SCIP_CALL( SCIPdelCons(scip, cons) );
 	 (*ndelconss) += 2;
-      }
+      } /*lint !e438*/
    }
 
    if( SCIPconsIsDeleted(cons) )
@@ -8776,13 +8772,13 @@ SCIP_DECL_CONSGETVARS(consGetVarsPseudoboolean)
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(vars != NULL);
-   assert(varssize >= 0);
    assert(success != NULL);
 
    if( varssize < 0 )
       return SCIP_INVALIDDATA;
+   assert(varssize >= 0);
 
-   (*success) = TRUE;
+   *success = TRUE;
 
    /* pseudoboolean constraint is already deleted */
    if( SCIPconsIsDeleted(cons) )
