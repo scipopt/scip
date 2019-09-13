@@ -19,25 +19,31 @@
 // use the integer model for enums
 +fie
 
+// turn off the following warning, because this often arises from old lint versions
+-e72
+
 // turn off general warnings:
+-e451   // Header file repeatedly included but does not have a standard include guard
+-e537   // Repeated include file
 -e717   // monocarpic do-while used to group statements
 -e730   // boolean used as argument to function
 -e731   // boolean arguments to ==
 -e773   // expression-like macro not parenthesized
--e788   // enum constant not used within default switch (possibly too strong)
+-e788   // enum constant not used within default switch [possibly too strong]
 -e801   // goto statement used
--e818   // parameter of function could be pointer to const
--e834   // operator '-' followed by operator '+' could be confusing without parentheses
--e835   // zero given as left argument to -
+-e818   // parameter of function could be pointer to const [interesting but clutters output]
+-e834   // operator '-' followed by operator '+' could be confusing without parentheses [seems uninformative]
+-e835   // zero given as left argument to - [the compiler gets rid of this, e.g., x = 0 - 1]
 -e1731  // public virtual function
--e1784  // symbol previously declared as "C"
+-e1784  // symbol previously declared as "C" [only for information, but clutters output]]
 -e2666  // expression with side effects passed to unexpanded parameter: parameter is not referenced in the expansion
+-e2704  // potentially negating the most negative number [often if x = -y, and y is int, only relevant if y = INT_MAX]
 
 // last value assigned to '_restat_' not used
 -emacro(438,SCIP_CALL)
 
 // ignoring return value of function
--esym(534,printf,fprintf,fclose,fputs,strcat,strcpy,SCIPfclose)
+-esym(534,printf,fprintf,fclose,fputs,fseek,strcat,strcpy,SCIPfclose)
 
 // cast from 'int' to 'uint64_t' results in sign extension
 -emacro(571,SCIPhashTwo)
@@ -48,6 +54,11 @@
 // avoid: is potentially uninitialized
 -emacro(644,assert)
 
+// turn off messages for quad precision
+-emacro(647,QUAD_ARRAY_SIZE)
+-emacro(666,SCIPquadprecProdQD)
+-emacro(666,SCIPquadprecSumQD)
+
 // loop is likely not entered
 -emacro(681,SCIPdebugMsg)
 -emacro(681,SCIPdebugMessage)
@@ -56,6 +67,8 @@
 -emacro(681,debugMessage)
 -emacro(681,SCIPsetDebugMsg)
 -emacro(681,SCIPstatDebugMsg)
+-emacro(681,SCIPdebugPrintf)
+-emacro(681,SCIPstatisticMessage)
 
 // generally turn off warnings about unused parameters (possibly too strong)
 -emacro(715,SCIP_DECL_*)
@@ -67,14 +80,20 @@
 -emacro(737,BMSfreeBlockMemoryArray)
 -emacro(737,BMSfreeBlockMemoryArrayNull)
 
+// cannot turn off warning otherwise: local macro '_USE_MATH_DEFINES' not referenced
+-esym(750,_USE_MATH_DEFINES)
+
 // boolean condition for 'while' always evaluates to 'false'
 -emacro(774,SCIPdebugMsg)
 -emacro(774,SCIPdebugMessage)
 -emacro(774,SCIPdebugPrintf)
 -emacro(774,SCIPsetDebugMsg)
 -emacro(774,SCIPstatisticPrintf)
+-emacro(774,SCIPstatisticMessage)
 -emacro(774,SCIPdebugMsgPrint)
 -emacro(774,debugMessage)
+-emacro(774,SCIP_CALL_TERMINATE)
+-emacro(774,MCFdebugMessage)
 
 // generally allow comparisons to SCIP_INVALID, testing floating point values
 -esym(777,SCIP_INVALID)
@@ -84,7 +103,9 @@
 -emacro(776,SCIPreallocBufferArray)
 -emacro(776,SCIPallocBufferArray)
 -emacro(776,SCIPduplicateBufferArray)
+-emacro(776,SCIPallocClearBufferArray)
 -emacro(776,SCIPallocBlockMemoryArray)
+-emacro(776,SCIPduplicateBlockMemoryArray)
 -emacro(776,BMScopyMemoryArray)
 -emacro(776,BMSallocMemoryArray)
 -emacro(776,BMSclearMemoryArray)
