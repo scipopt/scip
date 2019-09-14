@@ -543,6 +543,105 @@ SCIP_Bool blockedAncestors_isValid(
    return isValid;
 }
 
+
+/** initializes singleton ancestors */
+SCIP_RETCODE graph_singletonAncestorsNode_init(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   int                   node,               /**< node to initialize from */
+   SANSNODE*             singletonans        /**< singleton node ancestors */
+)
+{
+   const int* const pseudoancestors = graph_get_pseudoAncestorsNode(g, node);
+   SCIP_Bool conflict = FALSE;
+
+   assert(scip && g && singletonans);
+   assert(node >= 0 && node < g->knots);
+   assert(g->pcancestors);
+   assert(graph_pc_isPcMw(g));
+   assert(singletonans->ancestors == NULL && singletonans->pseudoancestors == NULL);
+
+   singletonans->npseudoancestors = graph_get_nPseudoAncestorsNode(g, node);
+   singletonans->node = node;
+
+   BMScopyMemoryArray(singletonans->pseudoancestors, pseudoancestors, singletonans->npseudoancestors);
+
+   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(singletonans->ancestors), g->pcancestors[node], &conflict) );
+
+   assert(!conflict);
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes singleton edge ancestors */
+SCIP_RETCODE graph_singletonAncestorsEdge_init(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   int                   edge,               /**< edge to initialize from */
+   SANSEDGE*             singletonans        /**< singleton edge ancestors */
+)
+{
+   const int* const pseudoancestors = graph_get_pseudoAncestorsEdge(g, edge);
+   SCIP_Bool conflict = FALSE;
+
+   assert(scip && g && singletonans);
+   assert(edge >= 0 && edge < g->edges);
+   assert(singletonans->ancestors == NULL && singletonans->revancestors == NULL && singletonans->pseudoancestors == NULL);
+
+   singletonans->npseudoancestors = graph_get_nPseudoAncestorsEdge(g, edge);
+   singletonans->edge = edge;
+
+   BMScopyMemoryArray(singletonans->pseudoancestors, pseudoancestors, singletonans->npseudoancestors);
+   assert(singletonans->npseudoancestors > 0 || singletonans->pseudoancestors == NULL);
+
+   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(singletonans->ancestors), g->ancestors[edge], &conflict) );
+   assert(!conflict);
+
+   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(singletonans->revancestors), g->ancestors[flipedge(edge)], &conflict) );
+   assert(!conflict);
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes singleton ancestors */
+void graph_singletonAncestorsNode_freeMembers(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SANSNODE*             singletonans        /**< singleton node ancestors */
+)
+{
+   assert(scip && singletonans);
+   assert(singletonans->ancestors);
+   assert(singletonans->pseudoancestors || singletonans->npseudoancestors == 0);
+   assert(singletonans->npseudoancestors >= 0);
+
+   if( singletonans->npseudoancestors > 0 )
+      SCIPfreeMemoryArray(scip, &(singletonans->pseudoancestors));
+
+   SCIPintListNodeFree(scip, &(singletonans->ancestors));
+}
+
+
+/** initializes singleton edge ancestors */
+void graph_singletonAncestorsEdge_freeMembers(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SANSEDGE*             singletonans        /**< singleton edge ancestors */
+)
+{
+   assert(scip && singletonans);
+   assert(singletonans->ancestors && singletonans->revancestors);
+   assert(singletonans->pseudoancestors || singletonans->npseudoancestors == 0);
+   assert(singletonans->npseudoancestors >= 0);
+
+   if( singletonans->npseudoancestors > 0 )
+        SCIPfreeMemoryArray(scip, &(singletonans->pseudoancestors));
+
+   SCIPintListNodeFree(scip, &(singletonans->ancestors));
+   SCIPintListNodeFree(scip, &(singletonans->revancestors));
+}
+
+
 /** hash ancestors of given edge */
 void graph_pseudoAncestors_hashEdge(
    const PSEUDOANS*      pseudoancestors,    /**< pseudo-ancestors */
@@ -557,6 +656,7 @@ void graph_pseudoAncestors_hashEdge(
 
    blockedAncestors_hash(pseudoancestors->ans_halfedges, halfedge, hasharr);
 }
+
 
 /** hash ancestors of given node */
 void graph_pseudoAncestors_hashNode(
@@ -1076,35 +1176,36 @@ SCIP_RETCODE graph_fixed_add(
 
    if( npseudonodes > 0 )
    {
-      int fixnnodes = fixedcomponents->nfixnodes;
-      const int fixnnodes_new = fixnnodes + npseudonodes;
+      int nfixnnodes = fixedcomponents->nfixnodes;
+      const int nfixnnodes_new = nfixnnodes + npseudonodes;
 
       assert(pseudonodes);
 
-      if( fixnnodes == 0 )
+      if( nfixnnodes == 0 )
       {
          assert(!fixedcomponents->fixpseudonodes);
-         assert(fixnnodes_new == npseudonodes);
+         assert(nfixnnodes_new == npseudonodes);
 
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(fixedcomponents->fixpseudonodes), fixnnodes_new) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(fixedcomponents->fixpseudonodes), nfixnnodes_new) );
       }
       else
       {
          assert(fixedcomponents->fixpseudonodes);
 
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(fixedcomponents->fixpseudonodes), fixnnodes, fixnnodes_new) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(fixedcomponents->fixpseudonodes), nfixnnodes, nfixnnodes_new) );
       }
 
       for( int i = 0; i < npseudonodes; i++ )
-         fixedcomponents->fixpseudonodes[fixnnodes++] = pseudonodes[i];
+         fixedcomponents->fixpseudonodes[nfixnnodes++] = pseudonodes[i];
 
-      assert(fixnnodes == fixnnodes_new);
+      assert(nfixnnodes == nfixnnodes_new);
 
-      fixedcomponents->nfixnodes = fixnnodes_new;
+      fixedcomponents->nfixnodes = nfixnnodes_new;
    }
 
    return SCIP_OKAY;
 }
+
 
 /** adds ancestors from given edges */
 SCIP_RETCODE graph_fixed_addEdge(
@@ -1117,14 +1218,12 @@ SCIP_RETCODE graph_fixed_addEdge(
    assert(edge >= 0 && edge < g->edges);
    assert(g->ancestors);
 
-   SCIP_CALL( graph_fixed_add(scip, g->ancestors[edge], NULL, 0, g) );
+   SCIP_CALL( graph_fixed_add(scip, g->ancestors[edge], graph_get_pseudoAncestorsEdge(g, edge),
+         graph_get_nPseudoAncestorsEdge(g, edge), g) );
 
-#if 0
-   SCIP_CALL( graph_fixed_add(scip, g->ancestors[edge], graph_get_pseudoAncestors(g, edge),
-         graph_get_nPseudoAncestors(g, edge), g) );
-#endif
    return SCIP_OKAY;
 }
+
 
 /** adds ancestors from given edges */
 SCIP_RETCODE graph_fixed_addNodePc(
@@ -1136,12 +1235,38 @@ SCIP_RETCODE graph_fixed_addNodePc(
    assert(scip && g);
    assert(node >= 0 && node < g->knots);
    assert(graph_pc_isPcMw(g));
+   assert(!graph_pc_knotIsDummyTerm(g, node)); /* todo really? */
    assert(g->ancestors && g->pcancestors);
 
-   SCIP_CALL( graph_fixed_add(scip, g->pcancestors[node], NULL, 0, g) );
+   SCIP_CALL( graph_fixed_add(scip, g->pcancestors[node], graph_get_pseudoAncestorsNode(g, node),
+         graph_get_nPseudoAncestorsNode(g, node), g) );
 
    return SCIP_OKAY;
 }
+
+
+/** moves ancestors from given edges */
+SCIP_RETCODE graph_fixed_moveNodePc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   node,               /**< node */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   assert(scip && g);
+   assert(node >= 0 && node < g->knots);
+   assert(graph_pc_isPcMw(g));
+   assert(g->ancestors && g->pcancestors);
+
+   SCIP_CALL( graph_fixed_addNodePc(scip, node, g) );
+
+   if( g->pcancestors[node] )
+      SCIPintListNodeFree(scip, &(g->pcancestors[node]));
+
+   graph_free_pseudoAncestorsNodeBlock(scip, node, g);
+
+   return SCIP_OKAY;
+}
+
 
 /** gets fixed edges */
 IDX* graph_get_fixedges(

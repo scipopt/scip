@@ -2550,6 +2550,8 @@ SCIP_RETCODE graph_pc_contractEdgeAncestors(
       assert(ets >= 0);
    }
 
+   /* note: pseudo ancestors are contracted in call to graph_knot_contract */
+
    SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->pcancestors[s], NULL) );
    SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[s]), g->pcancestors[t], NULL) );
 
@@ -2584,16 +2586,12 @@ SCIP_RETCODE graph_pc_contractEdge(
 
    assert(ets != EAT_LAST);
 
+   /* is either endpoint a fixed terminal? */
    if( graph_pc_knotIsFixedTerm(g, s) || graph_pc_knotIsFixedTerm(g, t) )
    {
       assert(graph_pc_isRootedPcMw(g));
 
-      if( g->pcancestors[s] != NULL )
-      {
-         SCIP_CALL( graph_fixed_addNodePc(scip, s, g) );
-         SCIPintListNodeFree(scip, &(g->pcancestors[s]));
-      }
-
+      SCIP_CALL( graph_fixed_moveNodePc(scip, s, g) );
       SCIP_CALL( graph_fixed_addEdge(scip, ets, g) );
 
       if( !graph_pc_knotIsFixedTerm(g, s) )
@@ -2607,7 +2605,7 @@ SCIP_RETCODE graph_pc_contractEdge(
          /* need to make t a fixed term */
          assert(g->source != t);
          graph_pc_deleteTermExtension(scip, g, t);
-         assert(g->prize[s] = FARAWAY);
+         assert(g->prize[s] == FARAWAY);
          g->prize[t] = FARAWAY;
       }
 
@@ -2630,9 +2628,6 @@ SCIP_RETCODE graph_pc_contractEdge(
 
       if( !graph_pc_knotIsFixedTerm(g, i ) )
          graph_pc_subtractPrize(scip, g, g->cost[ets] - g->prize[s], i);
-
-      /* contract s into t */
-      SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
    }
    else
    {
@@ -2643,8 +2638,10 @@ SCIP_RETCODE graph_pc_contractEdge(
          else
             graph_pc_subtractPrize(scip, g, -(g->prize[s]), i);
       }
-      SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
    }
+
+   /* contract s into t */
+   SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
    assert(g->grad[s] == 0);
    SCIPdebugMessage("PcMw contract: %d into %d \n", s, t);
 
@@ -2802,6 +2799,7 @@ void graph_knot_chg(
    }
 }
 
+
 /** delete node */
 void graph_knot_del(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2810,13 +2808,54 @@ void graph_knot_del(
    SCIP_Bool             freeancestors       /**< free edge ancestors? */
    )
 {
-   assert(g          != NULL);
-   assert(k          >= 0);
-   assert(k          <  g->knots);
+   assert(scip && g);
+   assert(k >= 0 && k < g->knots);
 
    while( g->outbeg[k] != EAT_LAST )
       graph_edge_del(scip, g, g->outbeg[k], freeancestors);
 }
+
+
+/** pseudo deletes non-terminal of degree 2 */
+SCIP_RETCODE graph_knot_replaceDeg2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   vertex,             /**< the vertex */
+   GRAPH*                g,                  /**< the graph */
+   int*                  solnode             /**< marks whether an node is part of a given solution (CONNECT), or is NULL */
+   )
+{
+   const int e1 = g->outbeg[vertex];
+   const int e2 = g->oeat[e1];
+   const int i1 = g->head[e1];
+   const int i2 = g->head[e2];
+
+   assert(scip && g);
+   assert(vertex >= 0 && vertex < g->knots);
+   assert(!Is_term(g->term[vertex]));
+   assert(g->grad[vertex] == 2);
+   assert(e1 >= 0 && e2 >= 0);
+   assert(SCIPisEQ(scip, g->cost[e2], g->cost[flipedge(e2)]));
+
+   g->cost[e1] += g->cost[e2];
+   g->cost[flipedge(e1)] += g->cost[e2];
+
+   SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->ancestors[flipedge(e2)], NULL));
+   SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->ancestors[e2], NULL));
+
+   if( graph_pc_isPcMw(g) )
+   {
+      assert(g->mark[i1] || i1 == g->source);
+      assert(g->mark[i2] || i2 == g->source);
+
+      SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->pcancestors[vertex], NULL));
+      SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->pcancestors[vertex], NULL));
+   }
+
+   SCIP_CALL(graph_knot_contract(scip, g, solnode, i2, vertex));
+
+   return SCIP_OKAY;
+}
+
 
 /** pseudo delete node, i.e. reconnect neighbors; maximum degree of 4! */
 SCIP_RETCODE graph_knot_delPseudo(
@@ -2884,6 +2923,8 @@ SCIP_RETCODE graph_knot_delPseudo(
    }
    else
    {
+      assert(g->pcancestors == NULL || g->pcancestors[vertex] == NULL);
+
       nodeancestors = NULL;
       vertexprize = 0.0;
    }
@@ -3216,9 +3257,7 @@ SCIP_RETCODE graph_knot_contract(
    while( p->outbeg[s] != EAT_LAST )
    {
       es = p->outbeg[s];
-      SCIPintListNodeFree(scip, &(p->ancestors[es]));
-      SCIPintListNodeFree(scip, &(p->ancestors[Edge_anti(es)]));
-      graph_edge_del(scip, p, es, FALSE);
+      graph_edge_del(scip, p, es, TRUE);
    }
 
    if( sgrad >= 2 )
@@ -5040,7 +5079,7 @@ SCIP_RETCODE graph_pack(
    q->source = new[g->source];
 
    if( rpcmw )
-      assert(q->prize[q->source] = FARAWAY);
+      assert(FARAWAY == q->prize[q->source]);
 
    /* add edges */
    for( int i = 0; i < oldnedges; i += 2 )

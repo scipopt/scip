@@ -136,7 +136,7 @@ void updateFixedEdges(
    {
       const int i = curr->index;
       assert(i < graph->edges);
-      assert(remain[i] != PROP_STP_EDGE_KILLED &&  remain[flipedge(i)] != PROP_STP_EDGE_KILLED);
+      assert(remain[i] != PROP_STP_EDGE_KILLED && remain[flipedge(i)] != PROP_STP_EDGE_KILLED);
 
       if( remain[i] == PROP_STP_EDGE_UNSET )
       {

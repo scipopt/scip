@@ -522,8 +522,7 @@ SCIP_RETCODE reduce_contractZeroEdges(
                {
                   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[g->head[e]]), g->ancestors[e], NULL) );
                   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[g->tail[e]]), g->ancestors[e], NULL) );
-                  assert(0); // todo
-
+                  assert(0 && "currently not implemented");
                }
                else
                {
@@ -531,7 +530,7 @@ SCIP_RETCODE reduce_contractZeroEdges(
                }
 
             }
-      // todo contract...
+
             SCIP_CALL( graph_knot_contract(scip, g, NULL, g->tail[e], g->head[e]) );
             count++;
          }
@@ -598,26 +597,16 @@ SCIP_RETCODE reduce_simple(
    SCIP_Real*            fixed,              /**< pointer to offset value */
    int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT),
                                                   or NULL */
-   int*                  nelims,              /**< pointer to number of reductions */
+   int*                  nelims,             /**< pointer to number of reductions */
    int*                  edgestate           /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
    )
 {
-   int i;
-   int i1;
-   int i2;
-   int e1;
-   int e2;
-   int nnodes;
-   int rerun = TRUE;
-   int done  = TRUE;
-   int count = 0;
-   SCIP_Bool checkstate = (edgestate != NULL);
+   SCIP_Bool rerun = TRUE;
+   int elimscount = 0;
+   const int nnodes = g->knots;
+   const SCIP_Bool checkstate = (edgestate != NULL);
 
-   assert(g      != NULL);
-   assert(fixed  != NULL);
-   assert(nelims != NULL);
-
-   nnodes = g->knots;
+   assert(scip && g && fixed && nelims);
 
    SCIPdebugMessage("Degree Test: ");
 
@@ -626,14 +615,14 @@ SCIP_RETCODE reduce_simple(
    {
       rerun = FALSE;
 
-      for( i = 0; i < nnodes; i++ )
+      for( int i = 0; i < nnodes; i++ )
       {
          assert(g->grad[i] >= 0);
 
          if( g->grad[i] == 1 )
          {
-            e1  = g->outbeg[i];
-            i1  = g->head[e1];
+            const int e1  = g->outbeg[i];
+            const int i1  = g->head[e1];
 
             assert(e1 >= 0);
             assert(e1 == Edge_anti(g->inpbeg[i]));
@@ -657,7 +646,7 @@ SCIP_RETCODE reduce_simple(
 
                SCIP_CALL( graph_knot_contract(scip, g, solnode, i1, i) );
             }
-            count++;
+            elimscount++;
 
             assert(g->grad[i] == 0);
 
@@ -672,32 +661,25 @@ SCIP_RETCODE reduce_simple(
 
             continue;
          }
+
          if( g->grad[i] == 2 && !checkstate  )
          {
-            e1 = g->outbeg[i];
-            e2 = g->oeat[e1];
-            i1 = g->head[e1];
-            i2 = g->head[e2];
+            const int e1 = g->outbeg[i];
+            const int e2 = g->oeat[e1];
+            const int i1 = g->head[e1];
+            const int i2 = g->head[e2];
+            SCIP_Bool eliminationDone = TRUE;
 
             assert(e1 >= 0);
             assert(e2 >= 0);
 
             do
             {
-               done = TRUE;
-
                if( !Is_term(g->term[i]) )
                {
-                  assert(EQ(g->cost[e2], g->cost[Edge_anti(e2)]));
+                  SCIP_CALL( graph_knot_replaceDeg2(scip, i, g, solnode) );
 
-                  g->cost[e1]            += g->cost[e2];
-                  g->cost[Edge_anti(e1)] += g->cost[e2];
-
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->ancestors[flipedge(e2)], NULL) );
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->ancestors[e2], NULL) );
-
-                  SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
-                  count++;
+                  elimscount++;
 
                   break;
                }
@@ -720,7 +702,7 @@ SCIP_RETCODE reduce_simple(
                      SCIP_CALL( graph_fixed_addEdge(scip, e2, g) );
                      SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
                   }
-                  count++;
+                  elimscount++;
 
                   break;
                }
@@ -730,7 +712,7 @@ SCIP_RETCODE reduce_simple(
 
                   SCIP_CALL( graph_fixed_addEdge(scip, e1, g) );
                   SCIP_CALL( graph_knot_contract(scip, g, solnode, i1, i) );
-                  count++;
+                  elimscount++;
                   break;
                }
                if( Is_term(g->term[i2]) && !Is_term(g->term[i1]) && SCIPisLE(scip, g->cost[e2], g->cost[e1]) )
@@ -739,25 +721,24 @@ SCIP_RETCODE reduce_simple(
 
                   SCIP_CALL( graph_fixed_addEdge(scip, e2, g) );
                   SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
-                  count++;
+                  elimscount++;
                   break;
                }
-               done = FALSE;
+               eliminationDone = FALSE;
             }
             while( FALSE );
 
-            if (done
-               && (((i1 < i) && (g->grad[i1] < 3))
-                  || ((i2 < i) && (g->grad[i2] < 3))))
+            if( eliminationDone && (((i1 < i) && (g->grad[i1] < 3)) || ((i2 < i) && (g->grad[i2] < 3))) )
                rerun = TRUE;
          }
+
          if( Is_term(g->term[i]) && g->grad[i] > 2 && !checkstate )
          {
             SCIP_Real mincost = FARAWAY;
             int ett = UNKNOWN;
-            for( e1 = g->outbeg[i]; e1 != EAT_LAST; e1 = g->oeat[e1] )
+            for( int e1 = g->outbeg[i]; e1 != EAT_LAST; e1 = g->oeat[e1] )
             {
-               i1 = g->head[e1];
+               const int i1 = g->head[e1];
 
                if( SCIPisLT(scip, g->cost[e1], mincost) )
                {
@@ -782,10 +763,10 @@ SCIP_RETCODE reduce_simple(
          }
       }
    }
-   SCIPdebugMessage(" %d Knots deleted\n", count);
+   SCIPdebugMessage(" %d Knots deleted\n", elimscount);
    assert(graph_valid(g));
 
-   *nelims += count;
+   *nelims += elimscount;
    return SCIP_OKAY;
 }
 
@@ -1525,23 +1506,10 @@ SCIP_RETCODE reduce_simple_pc(
                const int i1 = g->head[e1];
                const int i2 = g->head[e2];
 
-               assert(e1 >= 0);
-               assert(e2 >= 0);
-
-               assert(g->mark[i1] || i1 == g->source);
-               assert(g->mark[i2] || i2 == g->source);
-               assert(SCIPisEQ(scip, g->cost[e2], g->cost[flipedge(e2)]));
-
-               g->cost[e1]            += g->cost[e2];
-               g->cost[flipedge(e1)]  += g->cost[e2];
-
                SCIPdebugMessage("contract non-terminals %d %d \n ", i2, i);
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->ancestors[flipedge(e2)], NULL) );
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->ancestors[e2], NULL) );
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->pcancestors[i], NULL) );
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->pcancestors[i], NULL) );
 
-               SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
+               SCIP_CALL( graph_knot_replaceDeg2(scip, i, g, solnode) );
+
                (*countnew)++;
 
                if( (Is_term(g->term[i2]) && (i2 < i)) || (Is_term(g->term[i1]) && (i1 < i)) )
