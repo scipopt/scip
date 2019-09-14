@@ -1058,6 +1058,7 @@ SCIP_RETCODE applyFixings(
             SCIP_CALL( SCIPdelCons(scip, cons) );
             if( ndelconss != NULL && naddconss != NULL )
             {
+               assert( naddconss != NULL );  /* for lint */
                ++(*ndelconss);
                ++(*naddconss);
             }
@@ -4396,7 +4397,7 @@ SCIP_DECL_CONSPROP(consPropLogicor)
    else
       *result = SCIP_DIDNOTFIND;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 /** presolving method of constraint handler */

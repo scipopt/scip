@@ -200,9 +200,9 @@ unsigned int calculateHashKey(
    /* hashkey should be (x1+1) * (x2+1) * ... * (xn+1) + x1 + x2 + ... + xn */
    hashkey = 1;
    for( i = 0; i < size; i++ )
-      hashkey *= indices[i] + 1;
+      hashkey *= (unsigned) indices[i] + 1;
    for( i = 0; i < size; i++ )
-      hashkey += indices[i];
+      hashkey += (unsigned) indices[i];
 
    return hashkey;
 }

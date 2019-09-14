@@ -1256,9 +1256,9 @@ SCIP_RETCODE solveSubNLP(
    case SCIP_STATUS_GAPLIMIT:
    case SCIP_STATUS_SOLLIMIT:
    case SCIP_STATUS_BESTSOLLIMIT:
-      /* these should not happen, but if one does, it's save to go to CLEANUP */
-      SCIPABORT();
-   case SCIP_STATUS_OPTIMAL: 
+      /* these should not happen, but if one does, it's safe to go to CLEANUP */
+      SCIPABORT();    /*lint -fallthrough*/
+   case SCIP_STATUS_OPTIMAL:
    case SCIP_STATUS_INFEASIBLE: 
    case SCIP_STATUS_USERINTERRUPT:
    case SCIP_STATUS_TIMELIMIT:

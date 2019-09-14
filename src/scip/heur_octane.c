@@ -283,6 +283,7 @@ SCIP_RETCODE generateAverageRay(
          {
             tableaurowind = tableaurowinds[j][i];
             rownorm[tableaurowind] += tableaurows[j][tableaurowind] * tableaurows[j][tableaurowind];
+            assert(usedrowids != NULL);  /* for lint */
             if( !usedrowids[tableaurowind] )
             {
                usedrowids[tableaurowind] = TRUE;
