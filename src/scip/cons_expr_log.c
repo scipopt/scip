@@ -193,9 +193,16 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalLog)
    childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
 
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+   {
       SCIPintervalSetEmpty(interval);
-   else
-      SCIPintervalLog(SCIP_INTERVAL_INFINITY, interval, childinterval);
+      return SCIP_OKAY;
+   }
+
+   /* pretend childinterval to be >= epsilon, see also reversepropLog */
+   if( childinterval.inf < SCIPepsilon(scip) )
+      childinterval.inf = SCIPepsilon(scip);
+
+   SCIPintervalLog(SCIP_INTERVAL_INFINITY, interval, childinterval);
 
    return SCIP_OKAY;
 }

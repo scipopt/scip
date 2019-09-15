@@ -1430,6 +1430,17 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
 
+   if( exponent < 0.0 )
+   {
+      /* avoid epsilon-interval around 0 if possible and exponent is negative,
+       * see also reversepropPow
+       */
+      if( childinterval.inf > -SCIPepsilon(scip) && childinterval.inf < SCIPepsilon(scip) )
+         childinterval.inf = SCIPepsilon(scip);
+      else if( childinterval.sup < SCIPepsilon(scip) && childinterval.sup > -SCIPepsilon(scip) )
+         childinterval.sup = -SCIPepsilon(scip);
+   }
+
    SCIPintervalPowerScalar(SCIP_INTERVAL_INFINITY, interval, childinterval, exponent);
 
    /* make sure 0^negative is an empty interval, as some other codes do not handle intervals like [inf,inf] well
@@ -1638,8 +1649,6 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
       SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &interval, child, exponent, interval);
    }
 
-   SCIPdebugMsgPrint(scip, " -> [%.15g,%.15g]\n", interval.inf, interval.sup);
-
    if( exponent < 0.0 )
    {
       /* push lower bound from >= -epsilon to >=  epsilon to avoid pole at 0 (domain error)
@@ -1651,6 +1660,8 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
       else if( interval.sup < SCIPepsilon(scip) && interval.sup > -SCIPepsilon(scip) )
          interval.sup = -SCIPepsilon(scip);
    }
+
+   SCIPdebugMsgPrint(scip, " -> [%.15g,%.15g]\n", interval.inf, interval.sup);
 
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], interval, force, reversepropqueue, infeasible,
