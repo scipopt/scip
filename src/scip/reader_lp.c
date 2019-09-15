@@ -1285,6 +1285,8 @@ SCIP_RETCODE readObjective(
       /* set the linear objective values */
       for( i = 0; i < ncoefs; ++i )
       {
+         assert(vars != NULL);  /* for lint */
+         assert(coefs != NULL);
          SCIP_CALL( SCIPchgVarObj(scip, vars[i], SCIPvarGetObj(vars[i]) + coefs[i]) );
       }
 
@@ -1761,6 +1763,7 @@ SCIP_RETCODE readConstraints(
          syntaxError(scip, lpinput, "Indicator part can only consist of one binary variable.");
          goto TERMINATE;
       }
+      assert(coefs != NULL);
       if( !SCIPisEQ(scip, coefs[0], 1.0) )
       {
          syntaxError(scip, lpinput, "There cannot be a coefficient before the binary indicator variable.");
@@ -1771,7 +1774,7 @@ SCIP_RETCODE readConstraints(
          syntaxError(scip, lpinput, "Indicator part cannot handle equations.");
          goto TERMINATE;
       }
-
+      assert(vars != NULL);
       retcode = createIndicatorConstraint(scip, lpinput, name, vars[0], lhs);
    }
 
@@ -2579,7 +2582,7 @@ void appendLine(
     *   sprintf(linebuffer, "%s%s", linebuffer, extension); 
     * because of overlapping memory areas in memcpy used in sprintf.
     */
-   strncat(linebuffer, extension, LP_MAX_PRINTLEN - strlen(linebuffer));
+   (void) strncat(linebuffer, extension, LP_MAX_PRINTLEN - strlen(linebuffer));
 
    (*linecnt) += (int) strlen(extension);
 
@@ -2641,6 +2644,9 @@ void printRow(
    /* print coefficients */
    for( v = 0; v < nlinvars; ++v )
    {
+      assert(linvars != NULL);  /* for lint */
+      assert(linvals != NULL);
+
       var = linvars[v];
       assert( var != NULL );
 
@@ -2660,6 +2666,7 @@ void printRow(
       /* print linear coefficients of quadratic variables */
       for( v = 0; v < nquadvarterms; ++v )
       {
+         assert(quadvarterms != NULL);   /* for lint */
          if( quadvarterms[v].lincoef == 0.0 )
             continue;
 
@@ -2679,6 +2686,7 @@ void printRow(
       /* print square terms */
       for( v = 0; v < nquadvarterms; ++v )
       {
+         assert(quadvarterms != NULL);   /* for lint */
          if( quadvarterms[v].sqrcoef == 0.0 )
             continue;
 
