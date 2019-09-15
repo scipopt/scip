@@ -47,7 +47,7 @@
 -ecall(530,vsnprintf)
 
 // ignoring return value of function
--esym(534,printf,fprintf,fclose,fputs,fseek,fflush,strcat,strcpy,SCIPfclose)
+-esym(534,printf,fprintf,fclose,fputs,fputc,fseek,fflush,strcat,strcpy,SCIPfclose,SCIPfseek,memset,memcpy,memmove)
 
 // cast from 'int' to 'uint64_t' results in sign extension
 -emacro(571,SCIPhashTwo)
@@ -78,12 +78,15 @@
 // generally turn off warnings about unused parameters (possibly too strong)
 -emacro(715,SCIP_DECL_*)
 -emacro(715,TCLIQUE_*)
+-emacro(715,CREATE_CONSTRAINT)
+
 
 // loss of sign in promotion from 'int' to 'unsigned long'
 -emacro(737,SCIPfreeBlockMemoryArray)
 -emacro(737,SCIPfreeBlockMemoryArrayNull)
 -emacro(737,BMSfreeBlockMemoryArray)
 -emacro(737,BMSfreeBlockMemoryArrayNull)
+-emacro(737,BMSallocMemorySize)
 
 // cannot turn off warning otherwise: local macro not referenced
 -esym(750,_USE_MATH_DEFINES)
