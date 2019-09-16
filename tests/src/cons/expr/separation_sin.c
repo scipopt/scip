@@ -398,12 +398,8 @@ Test(separation, sinus_v, .init = setup, .fini = teardown,
    SCIP_ROWPREP* rtangent;
    SCIP_ROWPREP* lmidtangent;
    SCIP_ROWPREP* rmidtangent;
-   SCIP_Real newtonpoint;
    SCIP_Real childlb;
    SCIP_Real childub;
-   SCIP_Real lincoef;
-   SCIP_Real linconst;
-   SCIP_Bool success;
 
    secant = NULL;
    ltangent = NULL;
