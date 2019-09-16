@@ -156,7 +156,7 @@ set(settings_reopt
     "reopt-test-settings-varorderinterdiction-r"
     )
 
-   
+
 #
 # Indicator instances
 #
