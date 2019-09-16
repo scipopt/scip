@@ -643,7 +643,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                         SYM_CONSTTYPE* ct;
 
                         /* check whether we have to resize */
-                        if ( nuniqueconsts >= constarraysize )
+                        if( nuniqueconsts >= constarraysize )
                         {
                            int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
                            assert(newsize >= 0);
