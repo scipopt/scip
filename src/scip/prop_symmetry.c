@@ -1284,7 +1284,6 @@ SCIP_RETCODE computeSymmetryGroup(
    int nuniquevararray = 0;
    int nhandleconss;
    int nactiveconss;
-   int nlinconss;
    int nexprconss;
    int nconss;
    int nvars;
@@ -1330,7 +1329,6 @@ SCIP_RETCODE computeSymmetryGroup(
    /* compute the number of active constraints */
    nactiveconss = SCIPgetNActiveConss(scip);
    nexprconss = SCIPconshdlrGetNActiveConss(exprconshdlr);
-   nlinconss = nactiveconss - nexprconss;
 
    /* exit if no active constraints are available */
    if ( nactiveconss == 0 )
@@ -1762,7 +1760,7 @@ SCIP_RETCODE computeSymmetryGroup(
          return SCIP_ERROR;
       }
    }
-   assert( matrixdata.nrhscoef <= 2 * nlinconss );
+   assert( matrixdata.nrhscoef <= 2 * (nactiveconss - nexprconss) );
    assert( matrixdata.nrhscoef >= 0 );
 
    SCIPfreeBlockMemoryArray(scip, &consvals, nallvars);
