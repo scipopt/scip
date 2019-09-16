@@ -656,7 +656,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                         ct = &uniqueconstarray[nuniqueconsts];
                         ct->value = constant;
 
-                        if( !SCIPhashtableExists(consttypemap, (void *) ct))
+                        if( !SCIPhashtableExists(consttypemap, (void *) ct) )
                         {
                            SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                            ct->color = nusedcolors++;
