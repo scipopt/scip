@@ -3493,6 +3493,9 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
+         /* we also need to update the events and locks if restart is forced since global bound change events on binary
+          * variable are also catched in this case. If it would not be updated and forcerestart = TRUE, then a event
+          * might be droped on a wrong variable. */
          if( conshdlrdata->forcerestart )
          {
             assert( conshdlrdata->eventhdlrrestart != NULL );
