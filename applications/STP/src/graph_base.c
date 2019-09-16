@@ -40,8 +40,11 @@
 #include "graph.h"
 #include "heur_tm.h"
 
-#define STP_DELPSEUDO_MAXGRAD 5
+#define STP_DELPSEUDO_MAXGRAD   5
 #define STP_DELPSEUDO_MAXNEDGES 10
+#define STP_DELPSEUDO_NOEDGE    -1
+#define STP_DELPSEUDO_SKIPEDGE  -2
+
 
 /*
  * local functions
@@ -49,7 +52,7 @@
 
 /** can edge in pseudo-elimination method be cut off? */
 inline static
-SCIP_Bool cutoffEdge(
+SCIP_Bool isCutoffEdge(
    SCIP*                 scip,               /**< SCIP data */
    const SCIP_Real*      cutoffs,            /**< cutoff values for each incident edge */
    const SCIP_Real*      cutoffsrev,         /**< revere cutoff values (or NULL if undirected) */
@@ -267,6 +270,96 @@ void compEdges(
       }
       i++;
    }
+}
+
+/** gets replacement edge; helper function for pseudo-elimination */
+static
+SCIP_RETCODE delPseudoGetReplaceEdges(
+   SCIP*                 scip,               /**< SCIP data */
+   const GRAPH*          g,                  /**< graph */
+   const SCIP_Real*      cutoffs,            /**< cutoff values for each incident edge (or NULL) */
+   const SCIP_Real*      cutoffsrev,         /**< reverse edge cutoff values (or NULL if undirected or non-existent) */
+   const int*            incedge,            /**< incident edges */
+   const SCIP_Real*      ecost,              /**< edge cost */
+   const SCIP_Real*      ecostrev,           /**< reverse edge cost */
+   const int*            adjvert,            /**< adjacent vertices */
+   SCIP_Real             vertexprize,        /**< prize if Pc/Mw */
+   int                   degree,             /**< degree of node to be replaced */
+   int*                  neigbedge,          /**< neighboring edges array */
+   SCIP_Bool*            success             /**< enough replace edges available?  */
+)
+{
+   int* hasharr;
+   int edgecount = 0;
+   int replacecount = 0;
+   const int nspareedges = degree;
+
+   assert(scip && g && ecost && neigbedge);
+   assert(degree >= 0 && degree <= STP_DELPSEUDO_MAXGRAD);
+
+   *success = TRUE;
+
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, g->knots) );
+
+   for( int i = 0; i < STP_DELPSEUDO_MAXNEDGES; i++ )
+      neigbedge[i] = STP_DELPSEUDO_NOEDGE;
+
+   for( int i = 0; i < degree - 1 && *success; i++ )
+   {
+      const int adjvertex = adjvert[i];
+      const int iedge = incedge[i];
+
+      graph_pseudoAncestors_hashEdge(g->pseudoancestors, iedge, hasharr);
+
+      for( int j = i + 1; j < degree; j++ )
+      {
+         SCIP_Bool skipedge = isCutoffEdge(scip, cutoffs, cutoffsrev, ecost, ecostrev, vertexprize, i, j, edgecount);
+
+         if( !skipedge )
+         {
+            const int jedge = incedge[j];
+            skipedge = graph_pseudoAncestors_edgeIsHashed(g->pseudoancestors, jedge, hasharr);
+         }
+
+         edgecount++;
+         assert(edgecount <= STP_DELPSEUDO_MAXNEDGES);
+
+         /* can edge be discarded? */
+         if( skipedge )
+         {
+            neigbedge[edgecount - 1] = STP_DELPSEUDO_SKIPEDGE;
+         }
+         else
+         {
+            int e;
+
+            /* check whether edge already exists */
+            for( e = g->outbeg[adjvertex]; e != EAT_LAST; e = g->oeat[e] )
+               if( g->head[e] == adjvert[j] )
+               {
+                  assert(e >= 0);
+                  neigbedge[edgecount - 1] = e;
+                  break;
+               }
+
+            if( e != EAT_LAST )
+               continue;
+
+            /* not enough spare edges? */
+            if( ++replacecount > nspareedges )
+            {
+               *success = FALSE;
+               break;
+            }
+         }
+      } /* inner neighbor loop */
+
+      graph_pseudoAncestors_unhashEdge(g->pseudoancestors, iedge, hasharr);
+   }  /* outer neighbor loop */
+
+   SCIPfreeCleanBufferArray(scip, &hasharr);
+
+   return SCIP_OKAY;
 }
 
 /*
@@ -2826,7 +2919,6 @@ SCIP_RETCODE graph_knot_replaceDeg2(
 {
    const int e1 = g->outbeg[vertex];
    const int e2 = g->oeat[e1];
-   const int i1 = g->head[e1];
    const int i2 = g->head[e2];
 
    assert(scip && g);
@@ -2844,7 +2936,7 @@ SCIP_RETCODE graph_knot_replaceDeg2(
 
    if( graph_pc_isPcMw(g) )
    {
-      assert(g->mark[i1] || i1 == g->source);
+      assert(g->mark[g->head[e1]] || g->head[e1] == g->source);
       assert(g->mark[i2] || i2 == g->source);
 
       SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->pcancestors[vertex], NULL));
@@ -2862,15 +2954,13 @@ SCIP_RETCODE graph_knot_delPseudo(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
    const SCIP_Real*      edgecosts,          /**< edge costs for cutoff */
-   const SCIP_Real*      cutoffs,            /**< cutoff values for each incident edge */
-   const SCIP_Real*      cutoffsrev,         /**< revere cutoff values (or NULL if undirected) */
+   const SCIP_Real*      cutoffs,            /**< cutoff values for each incident edge (or NULL) */
+   const SCIP_Real*      cutoffsrev,         /**< reverse edge cutoff values (or NULL if undirected or non-existent) */
    int                   vertex,             /**< the vertex */
    SCIP_Bool*            success             /**< has node been pseudo-eliminated? */
    )
 {
-   IDX* ancestors[STP_DELPSEUDO_MAXGRAD];
-   IDX* revancestors[STP_DELPSEUDO_MAXGRAD];
-   IDX* nodeancestors;
+   SINGLETONANS ancestors[STP_DELPSEUDO_MAXGRAD];
    SCIP_Real ecost[STP_DELPSEUDO_MAXGRAD];
    SCIP_Real ecostrev[STP_DELPSEUDO_MAXGRAD];
    SCIP_Real ecostreal[STP_DELPSEUDO_MAXGRAD];
@@ -2882,12 +2972,10 @@ SCIP_RETCODE graph_knot_delPseudo(
    int nspareedges;
    int replacecount;
    int degree = g->grad[vertex];
+   int ancestorsnode;
 
-   assert(scip != NULL);
-   assert(success != NULL);
-   assert(g != NULL);
-   assert(vertex >= 0);
-   assert(vertex < g->knots);
+   assert(scip && success && g);
+   assert(vertex >= 0 && vertex < g->knots);
    assert(degree <= STP_DELPSEUDO_MAXGRAD);
 
 #ifndef NDEBUG
@@ -2904,35 +2992,32 @@ SCIP_RETCODE graph_knot_delPseudo(
    if( degree <= 1 )
       return SCIP_OKAY;
 
-   nspareedges = degree; /* todo */
-
-   edgecount = 0;
-
    if( Is_term(g->term[vertex]) )
    {
       assert(graph_pc_isPcMw(g));
+
       graph_pc_deleteTermExtension(scip, g, vertex);
 
       degree = g->grad[vertex];
       vertexprize = g->prize[vertex];
-      assert(vertexprize > 0.0);
-      nodeancestors = g->pcancestors[vertex];
+      ancestorsnode = vertex;
       g->prize[vertex] = 0.0;
       graph_knot_chg(g, vertex, -1);
+
+      assert(vertexprize > 0.0);
       assert(degree == 3);
    }
    else
    {
       assert(g->pcancestors == NULL || g->pcancestors[vertex] == NULL);
 
-      nodeancestors = NULL;
       vertexprize = 0.0;
+      ancestorsnode = -1;
    }
 
-   for( int i = 0; i < STP_DELPSEUDO_MAXNEDGES; i++ )
-      neigbedge[i] = -1;
+   edgecount = 0;
 
-   /* save old edges */
+   /* save the state of all incident edges */
    for( int e = g->outbeg[vertex]; e != EAT_LAST; e = g->oeat[e] )
    {
       assert(e >= 0);
@@ -2941,61 +3026,26 @@ SCIP_RETCODE graph_knot_delPseudo(
       ecostreal[edgecount] = g->cost[e];
       ecost[edgecount] = edgecosts[e];
       ecostrev[edgecount] = edgecosts[flipedge(e)];
-
       adjvert[edgecount++] = g->head[e];
 
       assert(edgecount <= STP_DELPSEUDO_MAXGRAD);
    }
 
    assert(edgecount == degree);
-   edgecount = 0;
-   replacecount = 0;
 
-   /* check whether there are enough spare edges */
-   for( int i = 0; i < degree - 1; i++ )
-   {
-      const int adjvertex = adjvert[i];
-      for( int j = i + 1; j < degree; j++ )
-      {
-         int e;
-         const SCIP_Bool cutoff = cutoffEdge(scip, cutoffs, cutoffsrev, ecost, ecostrev, vertexprize, i, j, edgecount);
-         int todo; // check whether conflict with pseudo ancestors! already in bd34 test!
-         assert(edgecount < STP_DELPSEUDO_MAXNEDGES);
+   SCIP_CALL( delPseudoGetReplaceEdges(scip, g, cutoffs, cutoffsrev, incedge, ecost, ecostrev, adjvert,
+         vertexprize, degree, neigbedge, success) );
 
-         edgecount++;
+   /* not enough spare edges? */
+   if( !(*success) )
+      return SCIP_OKAY;
 
-         /* can edge be discarded? */
-         if( cutoff )
-            continue;
-
-         /* check whether edge already exists */
-         for( e = g->outbeg[adjvertex]; e != EAT_LAST; e = g->oeat[e] )
-            if( g->head[e] == adjvert[j] )
-            {
-               assert(e >= 0);
-               neigbedge[edgecount - 1] = e;
-               break;
-            }
-
-         if( e != EAT_LAST )
-            continue;
-
-         if( ++replacecount > nspareedges )
-         {
-            *success = FALSE;
-            return SCIP_OKAY;
-         }
-      }
-   }
+   nspareedges = degree; /* todo */
 
    for( int i = 0; i < degree; i++ )
    {
       const int e = incedge[i];
-      ancestors[i] = NULL;
-      revancestors[i] = NULL;
-
-      SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(ancestors[i]), g->ancestors[e], NULL));
-      SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(revancestors[i]), g->ancestors[flipedge(e)], NULL));
+      SCIP_CALL( graph_singletonAncestors_init(scip, g, e, &(ancestors[i])) );
    }
 
    /* replace edges */
@@ -3005,38 +3055,46 @@ SCIP_RETCODE graph_knot_delPseudo(
    {
       for( int j = i + 1; j < degree; j++ )
       {
-         const SCIP_Bool cutoff = cutoffEdge(scip, cutoffs, cutoffsrev, ecost, ecostrev, vertexprize, i, j, edgecount);
-
-         assert(edgecount < STP_DELPSEUDO_MAXNEDGES);
-
-         edgecount++;
+         const SCIP_Bool skipedge = (neigbedge[edgecount] == STP_DELPSEUDO_SKIPEDGE);
 
          /* do we need to insert edge at all? */
-         if( !cutoff )
+         if( !skipedge )
          {
-            const SCIP_Real newcost = ecostreal[i] + ecostreal[j] - vertexprize;
-            const int oldedge = incedge[(replacecount == nspareedges) ? replacecount - 1 : replacecount];
+            int newijedge;
+            const SCIP_Real newijcost = ecostreal[i] + ecostreal[j] - vertexprize;
+            const int oldincedge = incedge[(replacecount == nspareedges) ? replacecount - 1 : replacecount];
+            const int oldijedge = neigbedge[edgecount];
 #ifndef NDEBUG
-            const int oldtail = g->tail[oldedge];
-            const int oldhead = g->head[oldedge];
+            const int oldinctail = g->tail[oldincedge];
+            const int oldinchead = g->head[oldincedge];
 #endif
             assert(replacecount <= nspareedges);
-            assert(replacecount < nspareedges || neigbedge[edgecount - 1] >= 0);
+            assert(replacecount < nspareedges || neigbedge[edgecount] != STP_DELPSEUDO_NOEDGE);
 
-            SCIP_CALL( graph_edge_reinsert(scip, g, oldedge, adjvert[i], adjvert[j], newcost, ancestors[i], ancestors[j], revancestors[i],
-                  revancestors[j], nodeancestors, FALSE));
+            SCIP_CALL( graph_edge_reinsert(scip, g, oldincedge, adjvert[i], adjvert[j], newijcost,
+                  ancestorsnode, &(ancestors[i]), &(ancestors[j]), &newijedge) );
 
-            /* does no edge exist? */
-            if( neigbedge[edgecount - 1] < 0 )
+            /* does no original edge exist? */
+            if( oldijedge == STP_DELPSEUDO_NOEDGE )
+            {
                replacecount++;
-#ifndef NDEBUG
+               assert(newijedge >= 0);
+               assert(oldinctail != g->tail[oldincedge] || oldinchead != g->head[oldincedge]);
+
+               SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, newijedge, vertex, g) );
+            }
             else
             {
-               assert(oldtail == g->tail[oldedge]);
-               assert(oldhead == g->head[oldedge]);
+               assert(newijedge == oldijedge || newijedge == - 1);
+               assert(newijedge != oldincedge);
+               assert(oldinctail == g->tail[oldincedge] && oldinchead == g->head[oldincedge]);
+
+               SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, oldijedge, vertex, g) );
             }
-#endif
          }
+
+         edgecount++;
+         assert(edgecount <= STP_DELPSEUDO_MAXNEDGES);
       }
    }
 
@@ -3044,10 +3102,7 @@ SCIP_RETCODE graph_knot_delPseudo(
    graph_knot_del(scip, g, vertex, TRUE);
 
    for( int i = 0; i < degree; i++ )
-   {
-      SCIPintListNodeFree(scip, &(ancestors[i]));
-      SCIPintListNodeFree(scip, &(revancestors[i]));
-   }
+      graph_singletonAncestors_freeMembers(scip, &(ancestors[i]));
 
    return SCIP_OKAY;
 }
@@ -3322,6 +3377,8 @@ SCIP_RETCODE graph_knot_contractLowdeg2High(
    return SCIP_OKAY;
 }
 
+
+/** redirects given edge eki */
 int graph_edge_redirect(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
@@ -3334,6 +3391,9 @@ int graph_edge_redirect(
    )
 {
    int e;
+
+   assert(scip && g);
+   assert(SCIPisGE(scip, cost, 0.0));
 
    if( forcedelete )
       graph_edge_del(NULL, g, eki, FALSE);
@@ -3351,6 +3411,7 @@ int graph_edge_redirect(
    else
    {
 #ifndef NDEBUG
+      /* make sure that the edge does not exist! */
       for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
          assert(g->tail[e] == k);
@@ -3416,38 +3477,55 @@ int graph_edge_redirect(
 SCIP_RETCODE graph_edge_reinsert(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
-   int                   e1,                 /**< edge to reinsert */
-   int                   k1,                 /**< tail */
-   int                   k2,                 /**< head */
-   SCIP_Real             cost,               /**< edge cost */
-   IDX*                  ancestors0,         /**< ancestors of first edge */
-   IDX*                  ancestors1,         /**< ancestors of second edge */
-   IDX*                  revancestors0,      /**< reverse ancestors of first edge */
-   IDX*                  revancestors1,      /**< reverse ancestors of first edge */
-   IDX*                  nodeancestors,      /**< node ancestors or NULL */
-   SCIP_Bool             forcedelete         /**< delete edge e1 if it is not used? */
+   int                   edge,               /**< edge to reinsert */
+   int                   tail,               /**< new tail */
+   int                   head,               /**< new head */
+   SCIP_Real             cost,               /**< new edge cost */
+   int                   ancestornode,       /**< node to copy ancestors from or -1 */
+   SINGLETONANS*         ancestorsEdge0,     /**< ancestors of first edge */
+   SINGLETONANS*         ancestorsEdge1,     /**< ancestors of second edge */
+   int*                  insertedge          /**< pointer to inserted edge or -1 */
    )
 {
-   /* redirect; store new edge in n1 */
-   const int n1 = graph_edge_redirect(scip, g, e1, k1, k2, cost, forcedelete, TRUE);
+   const int newedge = graph_edge_redirect(scip, g, edge, tail, head, cost, FALSE, TRUE);
 
-   if( n1 >= 0 )
+   assert(ancestorsEdge0 && ancestorsEdge1 && insertedge);
+   assert(ancestornode >= 0 || ancestornode == -1);
+
+   /* is there a new edge? */
+   if( newedge >= 0 )
    {
-      SCIPintListNodeFree(scip, &(g->ancestors[n1]));
-      SCIPintListNodeFree(scip, &(g->ancestors[Edge_anti(n1)]));
+      IDX* const ancestors0 = ancestorsEdge0->ancestors;
+      IDX* const revancestors0 = ancestorsEdge0->revancestors;
+      IDX* const ancestors1 = ancestorsEdge1->ancestors;
+      IDX* const revancestors1 = ancestorsEdge1->revancestors;
 
-      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), revancestors0, NULL) );
-      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors1, NULL) );
+      SCIPintListNodeFree(scip, &(g->ancestors[newedge]));
+      SCIPintListNodeFree(scip, &(g->ancestors[Edge_anti(newedge)]));
 
-      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), ancestors0, NULL) );
-      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors1, NULL) );
+      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), revancestors0, NULL) );
+      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), ancestors1, NULL) );
 
-      if( nodeancestors != NULL )
+      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(newedge)]), ancestors0, NULL) );
+      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(newedge)]), revancestors1, NULL) );
+
+      if( ancestornode >= 0)
       {
-         SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), nodeancestors, NULL) );
-         SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), nodeancestors, NULL) );
+         IDX* const nodeans = g->pcancestors[ancestornode];
+         SCIP_Bool conflict = FALSE;
+
+         assert(graph_pc_isPcMw(g));
+
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), nodeans, NULL) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(newedge)]), nodeans, NULL) );
+
+         SCIP_CALL( graph_pseudoAncestors_appendCopyNodeToEdge(scip, newedge, ancestornode, FALSE, g, &conflict) );
+         assert(!conflict);
       }
    }
+
+   *insertedge = newedge;
+
    return SCIP_OKAY;
 }
 
