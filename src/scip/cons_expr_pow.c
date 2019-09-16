@@ -74,6 +74,12 @@ SCIP_Real signpow_roots[SIGNPOW_ROOTS_KNOWN+1] = {
    0.73192937842370733350    /* root for n=10 */
 };
 
+/** expression handler data */
+struct SCIP_ConsExpr_ExprHdlrData
+{
+   SCIP_Real             minzerodistance;    /**< minimal distance from zero to enforce for child in bound tightening */
+   SCIP_Bool             warnedonpole;       /**< whether we warned on enforcing a minimal distance from zero for child */
+};
 
 struct SCIP_ConsExpr_ExprData
 {
@@ -1280,6 +1286,17 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrPow)
 }
 
 static
+SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrPow)
+{  /*lint --e{715}*/
+   assert(exprhdlrdata != NULL);
+   assert(*exprhdlrdata != NULL);
+
+   SCIPfreeBlockMemory(scip, exprhdlrdata);
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataPow)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* sourceexprdata;
@@ -1429,6 +1446,46 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
    }
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
+
+   if( exponent < 0.0 )
+   {
+      SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
+      exprhdlrdata = SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlr(expr));
+      assert(exprhdlrdata != NULL);
+
+      if( exprhdlrdata->minzerodistance > 0.0 )
+      {
+         /* avoid small interval around 0 if possible, see also reversepropPow */
+         if( childinterval.inf > -exprhdlrdata->minzerodistance && childinterval.inf < exprhdlrdata->minzerodistance )
+         {
+            if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
+            {
+               SCIPwarningMessage(scip, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
+                  "Check your model formulation or use option constraints/expr/exprhdlr/pow/minzerodistance to avoid this warning.\n",
+                  exponent, childinterval.inf, exprhdlrdata->minzerodistance);
+               SCIPinfoMessage(scip, NULL, "Expression: ");
+               SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL) );
+               SCIPinfoMessage(scip, NULL, "\n");
+               exprhdlrdata->warnedonpole = TRUE;
+            }
+            childinterval.inf = exprhdlrdata->minzerodistance;
+         }
+         else if( childinterval.sup < exprhdlrdata->minzerodistance && childinterval.sup > -exprhdlrdata->minzerodistance )
+         {
+            if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
+            {
+               SCIPwarningMessage(scip, "Changing upper bound for child of pow(.,%g) from %g to %g.\n"
+                  "Check your model formulation or use option constraints/expr/exprhdlr/pow/minzerodistance to avoid this warning.\n",
+                  exponent, childinterval.sup, -exprhdlrdata->minzerodistance);
+               SCIPinfoMessage(scip, NULL, "Expression: ");
+               SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL) );
+               SCIPinfoMessage(scip, NULL, "\n");
+               exprhdlrdata->warnedonpole = TRUE;
+            }
+            childinterval.sup = -exprhdlrdata->minzerodistance;
+         }
+      }
+   }
 
    SCIPintervalPowerScalar(SCIP_INTERVAL_INFINITY, interval, childinterval, exponent);
 
@@ -1636,6 +1693,50 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
    {
       /* f = pow(c0, alpha) -> c0 = pow(f, 1/alpha) */
       SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &interval, child, exponent, interval);
+   }
+
+   if( exponent < 0.0 )
+   {
+      SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
+
+      exprhdlrdata = SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlr(expr));
+      assert(exprhdlrdata != NULL);
+
+      if( exprhdlrdata->minzerodistance > 0.0 )
+      {
+         /* push lower bound from >= -epsilon to >=  epsilon to avoid pole at 0 (domain error)
+          * push upper bound from <=  epsilon to <= -epsilon to avoid pole at 0 (domain error)
+          * this can lead to a cutoff if domain would otherwise be very close around 0
+          */
+         if( interval.inf > -exprhdlrdata->minzerodistance && interval.inf < exprhdlrdata->minzerodistance )
+         {
+            if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
+            {
+               SCIPwarningMessage(scip, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
+                  "Check your model formulation or use option constraints/expr/exprhdlr/pow/minzerodistance to avoid this warning.\n",
+                  exponent, interval.inf, exprhdlrdata->minzerodistance);
+               SCIPinfoMessage(scip, NULL, "Expression: ");
+               SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL) );
+               SCIPinfoMessage(scip, NULL, "\n");
+               exprhdlrdata->warnedonpole = TRUE;
+            }
+            interval.inf = exprhdlrdata->minzerodistance;
+         }
+         else if( interval.sup < exprhdlrdata->minzerodistance && interval.sup > -exprhdlrdata->minzerodistance )
+         {
+            if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
+            {
+               SCIPwarningMessage(scip, "Changing lower bound for child of pow(.,%g) from %g to %g.\n"
+                  "Check your model formulation or use option constraints/expr/exprhdlr/pow/minzerodistance to avoid this warning.\n",
+                  exponent, interval.sup, -exprhdlrdata->minzerodistance);
+               SCIPinfoMessage(scip, NULL, "Expression: ");
+               SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL) );
+               SCIPinfoMessage(scip, NULL, "\n");
+               exprhdlrdata->warnedonpole = TRUE;
+            }
+            interval.sup = -exprhdlrdata->minzerodistance;
+         }
+      }
    }
 
    SCIPdebugMsgPrint(scip, " -> [%.15g,%.15g]\n", interval.inf, interval.sup);
@@ -2335,12 +2436,15 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    )
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+   SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
+
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &exprhdlrdata) );
 
    SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, POWEXPRHDLR_NAME, POWEXPRHDLR_DESC,
-         POWEXPRHDLR_PRECEDENCE, evalPow, NULL) );
+         POWEXPRHDLR_PRECEDENCE, evalPow, exprhdlrdata) );
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrPow, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrPow, freehdlrPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataPow, freedataPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printPow) );
@@ -2353,6 +2457,10 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvaturePow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityPow) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/exprhdlr/" POWEXPRHDLR_NAME "/minzerodistance",
+      "minimal distance from zero to enforce for child in bound tightening",
+      &exprhdlrdata->minzerodistance, FALSE, SCIPepsilon(scip), 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
