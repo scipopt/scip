@@ -3495,9 +3495,11 @@ SCIP_RETCODE presolRoundIndicator(
 
          if( conshdlrdata->forcerestart )
          {
-			assert( conshdlrdata->eventhdlrrestart != NULL );
-            SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, -1) );
-            SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, NULL) );
+            assert( conshdlrdata->eventhdlrrestart != NULL );
+            SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_GBDCHANGED,
+                  conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, -1) );
+            SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart,
+                  (SCIP_EVENTDATA*) conshdlrdata, NULL) );
          }
 
          SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
