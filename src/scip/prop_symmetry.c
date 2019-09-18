@@ -251,6 +251,7 @@ struct SCIP_PropData
    SCIP_Bool             dynamic;            /**< whether symmetry should be broken dynamically (or statically) */
    SCIP_Bool             informbilinhdlr;    /**< whether the bilinear nlhdlr should be informed about the constraints */
    SCIP_Bool             applyprobing;       /**< whether probing should be applied for binary variables */
+   SCIP_Bool             islinearproblem;    /**< whether the whole problem is linear */
 
    /* data necessary for orbital fixing */
    SCIP_Bool             ofenabled;          /**< Run orbital fixing? */
@@ -1719,7 +1720,7 @@ SCIP_RETCODE computeSymmetryGroup(
                   /* for variables, we check whether they appear nonlinearly and store the result in the resp. array */
                   if( SCIPisConsExprExprVar(expr) )
                   {
-                     (*isnonlinvar)[SCIPvarGetIndex(SCIPgetConsExprExprVarVar(expr))]
+                     (*isnonlinvar)[SCIPvarGetProbindex(SCIPgetConsExprExprVarVar(expr))]
                         = (SCIPexpriteratorGetParentDFS(it) != rootexpr || SCIPgetConsExprExprHdlr(rootexpr) != sumexprhdlr);
                   }
                   else
@@ -1954,6 +1955,7 @@ SCIP_RETCODE computeSymmetryGroup(
    }
    else
    {
+      SCIPfreeBlockMemoryArrayNull(scip, isnonlinvar, nvars);
       SCIPfreeBlockMemoryArray(scip, &vars, nvars);
    }
 
@@ -2118,6 +2120,9 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = propdata->maxgenerators;
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
+   /* store whether problem is linear */
+   propdata->islinearproblem = (SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "expr")) == 0);
+
    /* actually compute (global) symmetry */
    SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries,
          &propdata->npermvars, &propdata->permvars, &propdata->nperms, &propdata->nmaxperms, &propdata->perms,
@@ -2172,7 +2177,7 @@ SCIP_RETCODE determineSymmetry(
       if ( nbinvarsaffected > 0 )
          propdata->binvaraffected = TRUE;
    }
-   else if ( propdata->symconsenabled )
+   else if ( propdata->islinearproblem && propdata->symconsenabled )
    {
       SCIP_CALL( SCIPdetermineBinvarAffectedSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
             propdata->npermvars, &propdata->binvaraffected) );
@@ -2180,7 +2185,7 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
    /* output warning if no binary variables are affected by some permutations (and we use polyhedral symmetry techniques) */
-   if ( propdata->usesymmetry == SYM_HANDLETYPE_SYMBREAK && ! propdata->binvaraffected )
+   if ( propdata->islinearproblem && propdata->usesymmetry == SYM_HANDLETYPE_SYMBREAK && ! propdata->binvaraffected )
    {
       assert( ! propdata->ofenabled );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
@@ -2669,14 +2674,20 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
    }
 
-   if ( propdata->nperms <= 0 || ! propdata->binvaraffected )
+   if ( propdata->nperms <= 0 )
    {
-      SCIPdebugMsg(scip, "Symmetry propagator: no symmetry on binary variables has been found, turning propagator off.\n");
+      SCIPdebugMsg(scip, "Symmetry propagator: no symmetry has been found, turning propagator off.\n");
+      propdata->symconsenabled = FALSE;
+      return SCIP_OKAY;
+   }
+   else if ( propdata->islinearproblem && ! propdata->binvaraffected )
+   {
+      SCIPdebugMsg(scip, "Symmetry propagator: problem is linear and no symmetry on binary variables has been found, turning propagator off.\n");
       propdata->symconsenabled = FALSE;
       return SCIP_OKAY;
    }
    assert( propdata->nperms > 0 );
-   assert( propdata->binvaraffected );
+   assert( !propdata->islinearproblem || propdata->binvaraffected );
    propdata->triedaddconss = TRUE;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genconss, propdata->nperms) );
