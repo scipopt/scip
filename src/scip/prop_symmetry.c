@@ -2332,6 +2332,7 @@ SCIP_RETCODE detectOrbitopes(
    for (i = 0; i < ncomponents; ++i)
    {
       SCIP_VAR*** vars;
+      SCIP_VAR*** varsallocorder;
       SCIP_CONS* cons;
       SCIP_Bool* usedperm;
       SCIP_Bool isorbitope = TRUE;
@@ -2380,9 +2381,7 @@ SCIP_RETCODE detectOrbitopes(
        * another permutation whose 2-cycles intersect pairwise in exactly one element */
 
       /* whether a permutation was considered to contribute to orbitope */
-      SCIP_CALL( SCIPallocBufferArray(scip, &usedperm, npermsincomponent) );
-      for (j = 0; j < npermsincomponent; ++j)
-         usedperm[j] = FALSE;
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &usedperm, npermsincomponent) );
       nusedperms = 0;
 
       /* orbitope matrix for indices of variables in permvars array */
@@ -2398,9 +2397,7 @@ SCIP_RETCODE detectOrbitopes(
          columnorder[j] = npermsincomponent + 2;
 
       /* count how often an element was used in the potential orbitope */
-      SCIP_CALL( SCIPallocBufferArray(scip, &nusedelems, npermvars) );
-      for (j = 0; j < npermvars; ++j)
-         nusedelems[j] = 0;
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &nusedelems, npermvars) );
 
       /* fill first two columns of orbitopevaridx matrix */
       row = 0;
@@ -2505,9 +2502,11 @@ SCIP_RETCODE detectOrbitopes(
 
       /* we have found a potential orbitope, prepare data for orbitope conshdlr */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, ntwocyclescomp) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varsallocorder, ntwocyclescomp) );
       for (j = 0; j < ntwocyclescomp; ++j)
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &vars[j], npermsincomponent + 1) ); /*lint !e866*/
+         varsallocorder[j] = vars[j]; /* to ensure that we can free the buffer in reverse order */
       }
 
       /* prepare variable matrix (reorder columns of orbitopevaridx) */
@@ -2531,15 +2530,20 @@ SCIP_RETCODE detectOrbitopes(
       }
 
       /* free data structures */
-      for (j = 0; j < ntwocyclescomp; ++j)
-         SCIPfreeBufferArray(scip, &vars[j]);
+      for (j = ntwocyclescomp - 1; j >= 0; --j)
+      {
+         SCIPfreeBufferArray(scip, &varsallocorder[j]);
+      }
+      SCIPfreeBufferArray(scip, &varsallocorder);
       SCIPfreeBufferArray(scip, &vars);
 
    FREEDATASTRUCTURES:
       SCIPfreeBufferArray(scip, &nusedelems);
       SCIPfreeBufferArray(scip, &columnorder);
-      for (j = 0; j < ntwocyclescomp; ++j)
+      for (j = ntwocyclescomp - 1; j >= 0; --j)
+      {
          SCIPfreeBufferArray(scip, &orbitopevaridx[j]);
+      }
       SCIPfreeBufferArray(scip, &orbitopevaridx);
       SCIPfreeBufferArray(scip, &usedperm);
    }
