@@ -949,6 +949,9 @@ SCIP_RETCODE extDistTest(
    graph_edge_add(scip, graph, 10, 11, 1.0, 1.0);
    graph_edge_add(scip, graph, 11, 12, 1.0, 1.0);
 
+   for( int k = 0; k < nnodes; k++ )
+      graph->mark[k] = graph->grad[k] > 0;
+
    SCIP_CALL( graph_init_history(scip, graph) );
    SCIP_CALL( graph_path_init(scip, graph) );
 
@@ -1251,14 +1254,12 @@ SCIP_RETCODE reduce_extTest(
    SCIP_CALL( extTest3_variants(scip, 4) );
    SCIP_CALL( extTest3_variants(scip, 5) );
 
-
    SCIP_CALL( extTest1(scip) );
    SCIP_CALL( extTest2_variants(scip, 1) );
    SCIP_CALL( extTest2_variants(scip, 2) );
    SCIP_CALL( extTest2_variants(scip, 3) );
    SCIP_CALL( extTest2_variants(scip, 4) );
    SCIP_CALL( extDistTest(scip) );
-
 
    printf("reduce_extTest: all ok \n");
 
