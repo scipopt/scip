@@ -1074,21 +1074,36 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    int**                 perms               /**< permutations */
    )
 {
+   SCIP_CONSHDLR* exprconshdlr;
+   SCIP_HASHMAP* varmap;
+   SCIP_VAR** occuringvars;
    SCIP_Real* permrow = 0;
+   SCIP_Bool success;
    int* rhsmatbeg = 0;
+   int nexprconss;
+   int noccuringvars;
    int oldrhs;
+   int i;
    int j;
    int p;
 
    SCIPdebugMsg(scip, "Checking whether symmetries are symmetries (generators: %u).\n", nperms);
 
-   /* set up dense row for permuted row */
+   /* set up dense arrow for permuted row */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &permrow, matrixdata->npermvars) );
 
    /* set up map between rows and first entry in matcoef array */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rhsmatbeg, matrixdata->nrhscoef) );
    for (j = 0; j < matrixdata->nrhscoef; ++j)
       rhsmatbeg[j] = -1;
+
+   /* get info for non-linear part */
+   exprconshdlr = SCIPfindConshdlr(scip, "expr");
+   nexprconss = SCIPconshdlrGetNConss(exprconshdlr);
+
+   /* create hashmaps for variable permutation and constraints in non-linear part array for occuring variables */
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), matrixdata->npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &occuringvars, matrixdata->npermvars) );
 
    /* build map from rhs into matrix */
    oldrhs = -1;
@@ -1116,7 +1131,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       int r1;
       int r2;
 
-      SCIPdebugMsg(scip, "Verifying automorphism group generator #%d ...\n", p);
+      SCIPdebugMsg(scip, "Verifying automorphism group generator #%d for linear part ...\n", p);
       P = perms[p];
       assert( P != NULL );
 
@@ -1129,7 +1144,11 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
          }
       }
 
-      /* check all constraints == rhs */
+      /*
+       *  linear part
+       */
+
+      /* check all linear constraints == rhs */
       for (r1 = 0; r1 < matrixdata->nrhscoef; ++r1)
       {
          int npermuted = 0;
@@ -1201,8 +1220,98 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             ++j;
          }
       }
+
+      /*
+       *  non-linear part
+       */
+
+      SCIPdebugMsg(scip, "Verifying automorphism group generator #%d for non-linear part ...\n", p);
+
+      /* fill hashmap according to permutation */
+      for( j = 0; j < matrixdata->npermvars; ++j )
+      {
+         SCIP_CALL( SCIPhashmapInsert(varmap, matrixdata->permvars[j], matrixdata->permvars[P[j]]) );
+      }
+
+      /* check all non-linear constraints */
+      for( i = 0; i < nexprconss; ++i )
+      {
+         SCIP_CONS* cons1;
+         int npermuted = 0;
+
+         cons1 = SCIPconshdlrGetConss(exprconshdlr)[i];
+
+         SCIP_CALL( SCIPgetConsVars(scip, cons1, occuringvars, matrixdata->npermvars, &success) );
+         assert(success);
+         SCIP_CALL( SCIPgetConsNVars(scip, cons1, &noccuringvars, &success) );
+         assert(success);
+
+         /* count number of affected variables in this constraint */
+         for( j = 0; j < noccuringvars; ++j )
+         {
+            int varidx = SCIPvarGetProbindex(occuringvars[j]);
+            assert(varidx >= 0 && varidx < matrixdata->npermvars);
+            if( P[varidx] != varidx )
+               ++npermuted;
+         }
+
+         /* if constraint is not affected by permutation, we do not have to check it */
+         if( npermuted > 0 )
+         {
+            SCIP_CONS* permutedcons = NULL;
+            SCIP_CONSEXPR_EXPR* permutedexpr;
+            SCIP_Bool found = FALSE;
+            SCIP_Bool infeasible;
+
+            /* copy contraints but exchange variables according to hashmap */
+            SCIP_CALL( SCIPgetConsCopy(scip, scip, cons1, &permutedcons, exprconshdlr, varmap, NULL, NULL,
+                  SCIPconsIsInitial(cons1), SCIPconsIsSeparated(cons1), SCIPconsIsEnforced(cons1),
+                  SCIPconsIsChecked(cons1), SCIPconsIsPropagated(cons1), SCIPconsIsLocal(cons1),
+                  SCIPconsIsModifiable(cons1), SCIPconsIsDynamic(cons1), SCIPconsIsRemovable(cons1),
+                  SCIPconsIsStickingAtNode(cons1), FALSE, &success) );
+            assert(success);
+            assert(permutedcons != NULL);
+
+            /* simplify permuted expr in order to guarantee sorted variables */
+            permutedexpr = SCIPgetExprConsExpr(scip, permutedcons);
+            SCIP_CALL( SCIPsimplifyConsExprExpr(scip, exprconshdlr, permutedexpr, &permutedexpr, &success, &infeasible) );
+            assert(!infeasible);
+
+            /* look for a constraint with same lhs, rhs and expression */
+            for( j = 0; j < nexprconss; ++j )
+            {
+               SCIP_CONS* cons2;
+
+               cons2 = SCIPconshdlrGetConss(exprconshdlr)[j];
+
+               if( SCIPisEQ(scip, SCIPgetRhsConsExpr(scip, cons2), SCIPgetRhsConsExpr(scip, permutedcons))
+                  && SCIPisEQ(scip, SCIPgetLhsConsExpr(scip, cons2), SCIPgetLhsConsExpr(scip, permutedcons))
+                  && (SCIPcompareConsExprExprs(SCIPgetExprConsExpr(scip, cons2), permutedexpr) == 0) )
+               {
+                  found = TRUE;
+                  break;
+               }
+            }
+
+            /* release copied constraint and expression because simplify captures it */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &permutedexpr) );
+            SCIP_CALL( SCIPreleaseCons(scip, &permutedcons) );
+
+            assert(found);
+            if( !found ) /*lint !e774*/
+            {
+               SCIPerrorMessage("Found permutation that is not a symmetry.\n");
+               return SCIP_ERROR;
+            }
+         }
+      }
+
+      /* reset varmap */
+      SCIP_CALL( SCIPhashmapRemoveAll(varmap) );
    }
 
+   SCIPhashmapFree(&varmap);
+   SCIPfreeBufferArray(scip, &occuringvars);
    SCIPfreeBlockMemoryArray(scip, &rhsmatbeg, matrixdata->nrhscoef);
    SCIPfreeBlockMemoryArray(scip, &permrow, matrixdata->npermvars);
 
