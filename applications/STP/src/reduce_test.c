@@ -509,6 +509,113 @@ SCIP_RETCODE extTest2_variants(
 
 
 static
+SCIP_RETCODE pseudoDelSingle(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes = 4;
+   const int nedges = 3;
+   SCIP_Real cutoff[] = {FARAWAY, FARAWAY, FARAWAY};
+   SCIP_Bool success;
+
+   SCIP_CALL(graph_init(scip, &graph, nnodes, 2 * nedges, 1));
+
+   for( int i = 1; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph_knot_add(graph, 0);
+
+   graph->source = 0;
+
+   graph_edge_add(scip, graph, 0, 1, 1.0, 1.0);
+   graph_edge_add(scip, graph, 0, 2, 1.0, 1.0);
+   graph_edge_add(scip, graph, 0, 3, 1.0, 1.0);
+
+   SCIP_CALL(graph_init_history(scip, graph));
+   SCIP_CALL(graph_path_init(scip, graph));
+
+
+   for( int e = 0; e < nedges; e += 2 )
+      assert(graph_get_nPseudoAncestorsEdge(graph, e) == 0);
+
+   SCIP_CALL( graph_knot_delPseudo(scip, graph, cutoff, NULL, NULL, 0, &success) );
+
+   assert(success);
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      assert(graph_get_nPseudoAncestorsEdge(graph, e) == 1);
+      assert(graph_get_pseudoAncestorsEdge(graph, e)[0] == 0);
+   }
+
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   return SCIP_OKAY;
+}
+
+
+static
+SCIP_RETCODE pseudoDelDouble(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes = 5;
+   const int nedges = 4;
+   SCIP_Real cutoff[] = {FARAWAY, FARAWAY, FARAWAY};
+   SCIP_Bool success;
+
+   SCIP_CALL(graph_init(scip, &graph, nnodes, 2 * nedges, 1));
+
+   for( int i = 1; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph_knot_add(graph, 0);
+
+   graph->source = 0;
+
+   graph_edge_add(scip, graph, 0, 1, 1.0, 1.0);
+   graph_edge_add(scip, graph, 0, 2, 1.0, 1.0);
+   graph_edge_add(scip, graph, 0, 3, 1.0, 1.0);
+   graph_edge_add(scip, graph, 3, 4, 1.0, 1.0);
+
+   SCIP_CALL(graph_init_history(scip, graph));
+   SCIP_CALL(graph_path_init(scip, graph));
+
+   for( int e = 0; e < nedges; e += 2 )
+      assert(graph_get_nPseudoAncestorsEdge(graph, e) == 0);
+
+   SCIP_CALL( graph_knot_delPseudo(scip, graph, cutoff, NULL, NULL, 0, &success) );
+   assert(success);
+
+   for( int e = graph->outbeg[1]; e != EAT_LAST; e = graph->oeat[e] )
+   {
+      if( graph->head[e] == 2 )
+      {
+         graph_edge_del(scip, graph, e, TRUE);
+
+         break;
+      }
+   }
+
+   SCIP_CALL( graph_knot_delPseudo(scip, graph, cutoff, NULL, NULL, 3, &success) );
+   assert(success);
+
+   assert(graph->grad[1] == 1);
+   assert(graph->grad[2] == 1);
+   assert(graph->grad[4] == 2);
+
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_RETCODE pseudoAncestorsCreation(
    SCIP*                 scip                /**< SCIP data structure */
 )
@@ -1096,8 +1203,21 @@ SCIP_RETCODE pseudoAncestors_test(
    SCIP_CALL( pseudoAncestorsHashPc(scip) );
 
    printf("pseudoAncestors_test passed \n");
-   assert(0);
 
+   return SCIP_OKAY;
+}
+
+/** test pseudo deletion */
+SCIP_RETCODE pseudoDel_test(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   assert(scip);
+
+   SCIP_CALL( pseudoDelSingle(scip) );
+   SCIP_CALL( pseudoDelDouble(scip) );
+
+   printf("pseudoDeletion test passed \n");
 
    return SCIP_OKAY;
 }
@@ -1110,6 +1230,7 @@ SCIP_RETCODE testAll(
 {
    assert(scip);
 
+   SCIP_CALL( pseudoDel_test(scip) );
    SCIP_CALL( reduce_extTest(scip) );
    SCIP_CALL( dheap_Test(scip) );
    SCIP_CALL( reduce_sdPcMwTest(scip) );
