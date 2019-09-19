@@ -6064,12 +6064,17 @@ SCIP_RETCODE enforceConstraints(
    SCIP_Real maxauxviol;
    SCIP_Real maxvarboundviol;
    SCIP_Real minviolation;
+   SCIP_Real mincutviolation;
    SCIP_RESULT propresult;
    SCIP_Bool force;
    unsigned int soltag;
    int nnotify;
+#ifdef PROP_IN_ENFORCE
+   SCIP_RESULT propresult;
+   SCIP_Bool force;
    int nchgbds;
    int ndelconss;
+#endif
    int c;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -6078,8 +6083,10 @@ SCIP_RETCODE enforceConstraints(
    maxviol = 0.0;
    soltag = ++conshdlrdata->lastsoltag;
 
+#ifdef PROP_IN_ENFORCE
    /* force tightenings when calling enforcement for the first time for a node */
    force = conshdlrdata->lastenfolpnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+#endif
    conshdlrdata->lastenfolpnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    for( c = 0; c < nconss; ++c )
@@ -6103,6 +6110,7 @@ SCIP_RETCODE enforceConstraints(
    SCIPdebugMsg(scip, "node %lld: enforcing constraints with max conssviol=%e, auxviolations in %g..%g, variable bounds violated by at most %g\n",
       SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxviol, minauxviol, maxauxviol, maxvarboundviol);
 
+#ifdef PROP_IN_ENFORCE
    /* try to propagate */
    nchgbds = 0;
    ndelconss = 0;
@@ -6113,6 +6121,7 @@ SCIP_RETCODE enforceConstraints(
       *result = propresult;
       return SCIP_OKAY;
    }
+#endif
 
    if( conshdlrdata->tightenlpfeastol && maxvarboundviol > maxauxviol )
    {
@@ -6138,7 +6147,7 @@ SCIP_RETCODE enforceConstraints(
       SCIPdebugMsg(scip, "enforce by separation for minviolation %g\n", minviolation);
 
       /* try to separate the LP solution */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, soltag, minviolation, SCIPfeastol(scip), result) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, soltag, minviolation, mincutviolation, result) );
 
       if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
          return SCIP_OKAY;
