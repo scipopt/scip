@@ -537,7 +537,7 @@ SCIP_RETCODE pseudoDelSingle(
 
 
    for( int e = 0; e < nedges; e += 2 )
-      assert(graph_get_nPseudoAncestorsEdge(graph, e) == 0);
+      assert(graph_edge_nPseudoAncestors(graph, e) == 0);
 
    SCIP_CALL( graph_knot_delPseudo(scip, graph, cutoff, NULL, NULL, 0, &success) );
 
@@ -545,8 +545,8 @@ SCIP_RETCODE pseudoDelSingle(
 
    for( int e = 0; e < nedges; e += 2 )
    {
-      assert(graph_get_nPseudoAncestorsEdge(graph, e) == 1);
-      assert(graph_get_pseudoAncestorsEdge(graph, e)[0] == 0);
+      assert(graph_edge_nPseudoAncestors(graph, e) == 1);
+      assert(graph_edge_getPseudoAncestors(graph, e)[0] == 0);
    }
 
 
@@ -586,7 +586,7 @@ SCIP_RETCODE pseudoDelDouble(
    SCIP_CALL(graph_path_init(scip, graph));
 
    for( int e = 0; e < nedges; e += 2 )
-      assert(graph_get_nPseudoAncestorsEdge(graph, e) == 0);
+      assert(graph_edge_nPseudoAncestors(graph, e) == 0);
 
    SCIP_CALL( graph_knot_delPseudo(scip, graph, cutoff, NULL, NULL, 0, &success) );
    assert(success);
@@ -628,27 +628,27 @@ SCIP_RETCODE pseudoAncestorsCreation(
    assert(graph->knots == 5 && graph->edges == 10);
 
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 2, graph) );
-   assert(graph_get_nPseudoAncestorsEdge(graph, 0) == 1);
-   assert(graph_get_nPseudoAncestorsEdge(graph, 1) == 1);
-   assert(graph_get_nPseudoAncestorsEdge(graph, 2) == 0);
+   assert(graph_edge_nPseudoAncestors(graph, 0) == 1);
+   assert(graph_edge_nPseudoAncestors(graph, 1) == 1);
+   assert(graph_edge_nPseudoAncestors(graph, 2) == 0);
 
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 3, graph) );
-   assert(graph_get_nPseudoAncestorsEdge(graph, 0) == 2);
-   assert(graph_get_nPseudoAncestorsEdge(graph, 1) == 2);
+   assert(graph_edge_nPseudoAncestors(graph, 0) == 2);
+   assert(graph_edge_nPseudoAncestors(graph, 1) == 2);
 
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 1, 4, graph) );
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 1, 1, graph) );
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 1, 0, graph) );
-   assert(graph_get_nPseudoAncestorsEdge(graph, 0) == 5);
-   assert(graph_get_nPseudoAncestorsEdge(graph, 1) == 5);
+   assert(graph_edge_nPseudoAncestors(graph, 0) == 5);
+   assert(graph_edge_nPseudoAncestors(graph, 1) == 5);
 
-   graph_free_pseudoAncestorsEdgeBlock(scip, 1, graph);
-   assert(graph_get_nPseudoAncestorsEdge(graph, 0) == 0);
-   assert(graph_get_nPseudoAncestorsEdge(graph, 1) == 0);
+   graph_edge_delPseudoAncestors(scip, 1, graph);
+   assert(graph_edge_nPseudoAncestors(graph, 0) == 0);
+   assert(graph_edge_nPseudoAncestors(graph, 1) == 0);
 
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 2, graph) );
-   assert(graph_get_nPseudoAncestorsEdge(graph, 0) == 1);
-   assert(graph_get_nPseudoAncestorsEdge(graph, 1) == 1);
+   assert(graph_edge_nPseudoAncestors(graph, 0) == 1);
+   assert(graph_edge_nPseudoAncestors(graph, 1) == 1);
 
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
@@ -676,15 +676,15 @@ SCIP_RETCODE pseudoAncestorsMerge(
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 4, 4, graph) );
    SCIP_CALL( graph_pseudoAncestors_appendMoveEdge(scip, 0, 4, FALSE, graph, &conflict)  );
    assert(conflict);
-   assert( graph_get_nPseudoAncestorsEdge(graph, 0) == 3 );
-   assert( graph_get_nPseudoAncestorsEdge(graph, 4) == 0);
+   assert( graph_edge_nPseudoAncestors(graph, 0) == 3 );
+   assert( graph_edge_nPseudoAncestors(graph, 4) == 0);
 
 
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 6, 1, graph) );
    SCIP_CALL( graph_pseudoAncestors_appendMoveEdge(scip, 0, 6, FALSE, graph, &conflict)  );
    assert(!conflict);
-   assert( graph_get_nPseudoAncestorsEdge(graph, 0) == 4 );
-   assert( graph_get_nPseudoAncestorsEdge(graph, 6) == 0);
+   assert( graph_edge_nPseudoAncestors(graph, 0) == 4 );
+   assert( graph_edge_nPseudoAncestors(graph, 6) == 0);
 
 
    graph_path_exit(scip, graph);
@@ -713,15 +713,15 @@ SCIP_RETCODE pseudoAncestorsMergePc(
    SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 4, 4, graph) );
    SCIP_CALL( graph_pseudoAncestors_appendMoveNode(scip, 0, 4, FALSE, graph, &conflict)  );
    assert(conflict);
-   assert( graph_get_nPseudoAncestorsNode(graph, 0) == 3 );
-   assert( graph_get_nPseudoAncestorsNode(graph, 4) == 0);
+   assert( graph_knot_nPseudoAncestors(graph, 0) == 3 );
+   assert( graph_knot_nPseudoAncestors(graph, 4) == 0);
 
 
    SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 2, 1, graph) );
    SCIP_CALL( graph_pseudoAncestors_appendMoveNode(scip, 0, 2, FALSE, graph, &conflict)  );
    assert(!conflict);
-   assert( graph_get_nPseudoAncestorsNode(graph, 0) == 4 );
-   assert( graph_get_nPseudoAncestorsNode(graph, 2) == 0);
+   assert( graph_knot_nPseudoAncestors(graph, 0) == 4 );
+   assert( graph_knot_nPseudoAncestors(graph, 2) == 0);
 
 
    graph_path_exit(scip, graph);

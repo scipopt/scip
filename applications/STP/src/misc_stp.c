@@ -201,6 +201,7 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
    return SCIP_OKAY;
 }
 
+
 /** free list */
 void SCIPintListNodeFree(
    SCIP*                 scip,               /**< SCIP data structure */

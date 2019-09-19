@@ -410,8 +410,7 @@ SCIP_RETCODE traverseChain(
       {
          e1 = ne;
 
-         SCIPintListNodeFree(scip, &(g->ancestors[e1]));
-         SCIPintListNodeFree(scip, &(g->ancestors[flipedge(e1)]));
+         graph_edge_delHistory(scip, g, e1);
 
          SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), ancestors, NULL) );
          SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), revancestors, NULL) );
@@ -1602,8 +1601,8 @@ SCIP_RETCODE reduce_simple_pc(
                   if( n1 >= 0)
                   {
                      /* add ancestors */
-                     SCIPintListNodeFree(scip, &(g->ancestors[n1]));
-                     SCIPintListNodeFree(scip, &(g->ancestors[Edge_anti(n1)]));
+                     graph_edge_delHistory(scip, g, n1);
+
                      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors, NULL) );
                      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors, NULL) );
                      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), g->pcancestors[i], NULL) );
@@ -1775,8 +1774,8 @@ SCIP_RETCODE reduce_simple_fixedConflict(
 
       if( g->oeat[e] != EAT_FREE )
       {
-         const int* pseudoancestors = graph_get_pseudoAncestorsEdge(g, e);
-         const int nPseudoancestors = graph_get_nPseudoAncestorsEdge(g, e);
+         const int* pseudoancestors = graph_edge_getPseudoAncestors(g, e);
+         const int nPseudoancestors = graph_edge_nPseudoAncestors(g, e);
 
          assert(g->oeat[e + 1] != EAT_FREE);
          assert(nPseudoancestors == 0 || pseudoancestors != NULL);

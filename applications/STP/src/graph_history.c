@@ -587,14 +587,14 @@ SCIP_RETCODE graph_singletonAncestors_init(
    assert(scip && g && singletonans);
    assert(edge >= 0 && edge < g->edges);
 
-   singletonans->npseudoancestors = graph_get_nPseudoAncestorsEdge(g, edge);
+   singletonans->npseudoancestors = graph_edge_nPseudoAncestors(g, edge);
    singletonans->edge = edge;
    singletonans->ancestors = NULL;
    singletonans->revancestors = NULL;
 
    if( singletonans->npseudoancestors > 0 )
    {
-      const int* const pseudoancestors = graph_get_pseudoAncestorsEdge(g, edge);
+      const int* const pseudoancestors = graph_edge_getPseudoAncestors(g, edge);
       SCIP_CALL( SCIPallocMemoryArray(scip, &(singletonans->pseudoancestors), singletonans->npseudoancestors) );
       BMScopyMemoryArray(singletonans->pseudoancestors, pseudoancestors, singletonans->npseudoancestors);
    }
@@ -844,7 +844,7 @@ void graph_free_pseudoAncestors(
 
 
 /** frees pseudo ancestor block for given edge */
-void graph_free_pseudoAncestorsEdgeBlock(
+void graph_edge_delPseudoAncestors(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   edge_free,          /**< edge for which to free pseudo ancestors */
    GRAPH*                g                   /**< the graph */
@@ -860,7 +860,7 @@ void graph_free_pseudoAncestorsEdgeBlock(
 
 
 /** frees pseudo ancestor block for given node */
-void graph_free_pseudoAncestorsNodeBlock(
+void graph_knot_delPseudoAncestors(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   node_free,          /**< node for which to free pseudo ancestors */
    GRAPH*                g                   /**< the graph */
@@ -875,7 +875,7 @@ void graph_free_pseudoAncestorsNodeBlock(
 
 
 /** returns number of pseudo ancestors for given edge */
-int graph_get_nPseudoAncestorsEdge(
+int graph_edge_nPseudoAncestors(
    const GRAPH*          g,            /**< the graph */
    int                   edge          /**< edge for which to return number of pseudo ancestors */
    )
@@ -890,7 +890,7 @@ int graph_get_nPseudoAncestorsEdge(
 
 
 /** returns number of pseudo ancestors for given node */
-int graph_get_nPseudoAncestorsNode(
+int graph_knot_nPseudoAncestors(
    const GRAPH*          g,            /**< the graph */
    int                   node          /**< node for which to return number of pseudo ancestors */
    )
@@ -903,7 +903,7 @@ int graph_get_nPseudoAncestorsNode(
 
 
 /** returns pseudo ancestors for given edge */
-const int* graph_get_pseudoAncestorsEdge(
+const int* graph_edge_getPseudoAncestors(
    const GRAPH*          g,            /**< the graph */
    int                   edge          /**< edge for which to return pseudo ancestors */
    )
@@ -918,7 +918,7 @@ const int* graph_get_pseudoAncestorsEdge(
 
 
 /** returns pseudo ancestors for given node */
-const int* graph_get_pseudoAncestorsNode(
+const int* graph_knot_getPseudoAncestors(
    const GRAPH*          g,            /**< the graph */
    int                   node          /**< node for which to return pseudo ancestors */
    )
@@ -1018,7 +1018,7 @@ SCIP_RETCODE graph_pseudoAncestors_appendMoveEdge(
 )
 {
    SCIP_CALL( graph_pseudoAncestors_appendCopyEdge(scip, edge_target, edge_source, revertIfConflict, g, conflict) );
-   graph_free_pseudoAncestorsEdgeBlock(scip, edge_source, g);
+   graph_edge_delPseudoAncestors(scip, edge_source, g);
 
    return SCIP_OKAY;
 }
@@ -1035,7 +1035,7 @@ SCIP_RETCODE graph_pseudoAncestors_appendMoveNode(
 )
 {
    SCIP_CALL( graph_pseudoAncestors_appendCopyNode(scip, node_target, node_source, revertIfConflict, g, conflict) );
-   graph_free_pseudoAncestorsNodeBlock(scip, node_source, g);
+   graph_knot_delPseudoAncestors(scip, node_source, g);
 
    return SCIP_OKAY;
 }
@@ -1257,8 +1257,8 @@ SCIP_RETCODE graph_fixed_addEdge(
    assert(edge >= 0 && edge < g->edges);
    assert(g->ancestors);
 
-   SCIP_CALL( graph_fixed_add(scip, g->ancestors[edge], graph_get_pseudoAncestorsEdge(g, edge),
-         graph_get_nPseudoAncestorsEdge(g, edge), g) );
+   SCIP_CALL( graph_fixed_add(scip, g->ancestors[edge], graph_edge_getPseudoAncestors(g, edge),
+         graph_edge_nPseudoAncestors(g, edge), g) );
 
    return SCIP_OKAY;
 }
@@ -1277,8 +1277,8 @@ SCIP_RETCODE graph_fixed_addNodePc(
    assert(!graph_pc_knotIsDummyTerm(g, node)); /* todo really? */
    assert(g->ancestors && g->pcancestors);
 
-   SCIP_CALL( graph_fixed_add(scip, g->pcancestors[node], graph_get_pseudoAncestorsNode(g, node),
-         graph_get_nPseudoAncestorsNode(g, node), g) );
+   SCIP_CALL( graph_fixed_add(scip, g->pcancestors[node], graph_knot_getPseudoAncestors(g, node),
+         graph_knot_nPseudoAncestors(g, node), g) );
 
    return SCIP_OKAY;
 }
@@ -1294,14 +1294,14 @@ SCIP_RETCODE graph_fixed_moveNodePc(
    assert(scip && g);
    assert(node >= 0 && node < g->knots);
    assert(graph_pc_isPcMw(g));
-   assert(g->ancestors && g->pcancestors);
+   assert(g->pcancestors);
 
    SCIP_CALL( graph_fixed_addNodePc(scip, node, g) );
 
    if( g->pcancestors[node] )
       SCIPintListNodeFree(scip, &(g->pcancestors[node]));
 
-   graph_free_pseudoAncestorsNodeBlock(scip, node, g);
+   graph_knot_delPseudoAncestors(scip, node, g);
 
    return SCIP_OKAY;
 }
