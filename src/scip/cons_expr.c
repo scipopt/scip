@@ -6114,6 +6114,24 @@ SCIP_RETCODE enforceConstraints(
       return SCIP_OKAY;
    }
 
+   if( conshdlrdata->tightenlpfeastol && maxvarboundviol > maxauxviol )
+   {
+      SCIPsetLPFeastol(scip, maxvarboundviol / 2.0);
+      SCIPdebugMsg(scip, "variable bound violation %g larger than auxiliary violation %g, reducing LP feastol to %g\n", maxvarboundviol, maxauxviol, SCIPgetLPFeastol(scip));
+
+      *result = SCIP_SOLVELP;
+      return SCIP_OKAY;
+   }
+
+   /* decide on minimal violation of cut */
+   if( sol == NULL )
+   {
+      /* we enforce an LP solution */
+      mincutviolation = SCIPgetLPFeastol(scip);
+   }
+   else
+      mincutviolation = SCIPfeastol(scip);
+
    minviolation = MIN(maxauxviol / 2.0, SCIPfeastol(scip));  /*lint !e666*/
    do
    {
