@@ -22,6 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/* #define DEBUG_ENFO */
+
 /*lint -e528*/
 
 #include <assert.h>
@@ -5893,13 +5895,14 @@ SCIP_RETCODE analyzeViolation(
                   continue;
 
                *maxvarboundviol = MAX(*maxvarboundviol, origviol);
-
+#ifdef DEBUG_ENFO
                SCIPinfoMessage(scip, NULL, "var <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(var), auxvarlb, auxvarub, auxvarvalue);
                if( auxvarlb > auxvarvalue )
                   SCIPinfoMessage(scip, NULL, " var >= lb violated by %g", auxvarlb - auxvarvalue);
                if( auxvarub < auxvarvalue )
                   SCIPinfoMessage(scip, NULL, " var <= ub violated by %g", auxvarvalue - auxvarub);
                SCIPinfoMessage(scip, NULL, "\n");
+#endif
             }
 
             continue;
@@ -5943,6 +5946,7 @@ SCIP_RETCODE analyzeViolation(
 
          *maxauxviol = MAX(*maxauxviol, REALABS(origviol));  /*lint !e666*/
 
+#ifdef DEBUG_ENFO
          SCIPinfoMessage(scip, NULL, "expr ");
          SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
          SCIPinfoMessage(scip, NULL, " (%p)[%.15g,%.15g] = %.15g\n", (void*)expr, expr->activity.inf, expr->activity.sup, expr->evalvalue);
@@ -5956,8 +5960,8 @@ SCIP_RETCODE analyzeViolation(
             SCIPinfoMessage(scip, NULL, " auxvar >= auxvar's lb violated by %g", auxvarlb - auxvarvalue);
          if( auxvarub < auxvarvalue )
             SCIPinfoMessage(scip, NULL, " auxvar <= auxvar's ub violated by %g", auxvarvalue - auxvarub);
-
          SCIPinfoMessage(scip, NULL, "\n");
+#endif
 
          /* compute aux-violation (nonlinear handlers) */
          for( e = 0; e < expr->nenfos; ++e )
@@ -5970,20 +5974,27 @@ SCIP_RETCODE analyzeViolation(
             /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
             SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
 
+#ifdef DEBUG_ENFO
             SCIPinfoMessage(scip, NULL, "  nlhdlr <%s> = %.15g", nlhdlr->name, expr->enfos[e]->auxvalue);
-
+#endif
             auxviol = expr->enfos[e]->auxvalue == SCIP_INVALID ? SCIP_INVALID : auxvarvalue - expr->enfos[e]->auxvalue;  /*lint !e777*/
             if( violover && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > 0.0) )  /*lint !e777*/
             {
+#ifdef DEBUG_ENFO
                SCIPinfoMessage(scip, NULL, " auxvar <= nlhdlr-expr violated by %g", auxviol);
+#endif
                *maxauxviol = MAX(*maxauxviol, auxviol);
             }
             if( violunder && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > 0.0) )  /*lint !e777*/
             {
+#ifdef DEBUG_ENFO
                SCIPinfoMessage(scip, NULL, " auxvar >= nlhdlr-expr violated by %g", -auxviol);
+#endif
                *maxauxviol = MAX(*maxauxviol, -auxviol);
             }
+#ifdef DEBUG_ENFO
             SCIPinfoMessage(scip, NULL, "\n");
+#endif
          }
       }
    }
