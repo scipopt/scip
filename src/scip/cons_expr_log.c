@@ -213,12 +213,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalLog)
 
    childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
 
-   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
-   {
-      SCIPintervalSetEmpty(interval);
-      return SCIP_OKAY;
-   }
-
    /* pretend childinterval to be >= epsilon, see also reversepropLog */
    if( childinterval.inf < exprhdlrdata->minzerodistance && exprhdlrdata->minzerodistance > 0.0 )
    {
@@ -233,6 +227,12 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalLog)
          exprhdlrdata->warnedonpole = TRUE;
       }
       childinterval.inf = exprhdlrdata->minzerodistance;
+   }
+
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+   {
+      SCIPintervalSetEmpty(interval);
+      return SCIP_OKAY;
    }
 
    SCIPintervalLog(SCIP_INTERVAL_INFINITY, interval, childinterval);

@@ -1439,11 +1439,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
-   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
-   {
-      SCIPintervalSetEmpty(interval);
-      return SCIP_OKAY;
-   }
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
 
@@ -1485,6 +1480,12 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalPow)
             childinterval.sup = -exprhdlrdata->minzerodistance;
          }
       }
+   }
+
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+   {
+      SCIPintervalSetEmpty(interval);
+      return SCIP_OKAY;
    }
 
    SCIPintervalPowerScalar(SCIP_INTERVAL_INFINITY, interval, childinterval, exponent);
