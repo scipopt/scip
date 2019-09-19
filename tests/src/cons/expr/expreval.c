@@ -44,6 +44,12 @@ void setup(void)
    /* include cons_expr: this adds the operator handlers */
    SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
 
+   /* turn off log() and pow() assuming arguments to a away from zero
+    * good for solving, but complicates unittesting
+    */
+   SCIP_CALL( SCIPsetRealParam(scip, "constraints/expr/exprhdlr/log/minzerodistance", 0.0) );
+   SCIP_CALL( SCIPsetRealParam(scip, "constraints/expr/exprhdlr/pow/minzerodistance", 0.0) );
+
    /* currently expr constraints cannot be created */
    /* get expr conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "expr");
@@ -574,6 +580,8 @@ Test(evalexprInterval, complicated_interval, .description = "Tests expression in
 
    /* include cons_expr: this adds the operator handlers */
    SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+   SCIP_CALL( SCIPsetRealParam(scip, "constraints/expr/exprhdlr/log/minzerodistance", 0.0) );
+   SCIP_CALL( SCIPsetRealParam(scip, "constraints/expr/exprhdlr/pow/minzerodistance", 0.0) );
 
    /* disable relaxing variable bounds in activity evaluation */
    SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/varboundrelax", 'n') );
