@@ -5605,8 +5605,7 @@ SCIP_RETCODE separatePointExpr(
    SCIP_Real             minviolation,       /**< minimal violation in an expression to call separation */
    SCIP_Real             mincutviolation,    /**< minimal violation of a cut if it should be added to the LP */
    SCIP_Bool*            separated,          /**< buffer to store whether solution could be separated */
-   SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility to was detected */
-   SCIP_Real*            maxauxviolation     /**< buffer to store maximal violation w.r.t. auxiliary variables (in exprs that are violated > minviolation), or NULL if not of interest */
+   SCIP_Bool*            infeasible          /**< buffer to store whether infeasibility to was detected */
    )
 {
    SCIP_Real auxvarvalue;
@@ -5663,17 +5662,6 @@ SCIP_RETCODE separatePointExpr(
       SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
       /* SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
       SCIPinfoMessage(scip, NULL, " (%p): auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> auxvalue: %.15g\n", (void*)expr, auxvarvalue, expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue); */
-
-      if( maxauxviolation != NULL )
-      {
-         /* update maxauxviolation */
-         if( expr->enfos[e]->auxvalue == SCIP_INVALID )  /*lint !e777*/
-            *maxauxviolation = SCIPinfinity(scip);
-         else if( overestimate && auxvarvalue - expr->enfos[e]->auxvalue > *maxauxviolation )
-            *maxauxviolation = auxvarvalue - expr->enfos[e]->auxvalue;
-         else if( underestimate && expr->enfos[e]->auxvalue - auxvarvalue > *maxauxviolation )
-            *maxauxviolation = expr->enfos[e]->auxvalue - auxvarvalue;
-      }
 
       SCIPdebugMsg(scip, "sepa of nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate);
 
@@ -5741,8 +5729,7 @@ SCIP_RETCODE separatePoint(
    unsigned int          soltag,             /**< tag of solution */
    SCIP_Real             minviolation,       /**< minimal violation in an expression to call separation */
    SCIP_Real             mincutviolation,    /**< minimal violation of a cut if it should be added to the LP */
-   SCIP_RESULT*          result,             /**< result of separation */
-   SCIP_Real*            maxauxviolation     /**< buffer to store maximal violation w.r.t. auxiliary variables (in exprs that are violated > minviolation), or NULL if not of interest */
+   SCIP_RESULT*          result              /**< result of separation */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -5799,7 +5786,7 @@ SCIP_RETCODE separatePoint(
             continue;
 
          SCIP_CALL( separatePointExpr(scip, conshdlr, conss[c], expr, sol, soltag, minviolation, mincutviolation,
-            &separated, &infeasible, maxauxviolation) );
+            &separated, &infeasible) );
 
          if( infeasible )
          {
@@ -5838,7 +5825,10 @@ SCIP_RETCODE analyzeViolation(
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
-   unsigned int          soltag              /**< tag of solution */
+   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Real*            maxconsviol,        /**< buffer to store maximal violation of constraints */
+   SCIP_Real*            maxauxviol,         /**< buffer to store maximal violation of auxiliaries (violation in "extended formulation") */
+   SCIP_Real*            maxvarboundviol     /**< buffer to store maximal violation of variable bounds */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -5847,9 +5837,16 @@ SCIP_RETCODE analyzeViolation(
    int c;
 
    assert(conss != NULL || nconss == 0);
+   assert(maxconsviol != NULL);
+   assert(maxauxviol != NULL);
+   assert(maxvarboundviol != NULL);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+   *maxconsviol = 0.0;
+   *maxauxviol = 0.0;
+   *maxvarboundviol = 0.0;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5862,6 +5859,8 @@ SCIP_RETCODE analyzeViolation(
       if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) || !SCIPconsIsSeparationEnabled(conss[c]) )
          continue;
       assert(SCIPconsIsActive(conss[c]));
+
+      *maxconsviol = MAX3(*maxconsviol, consdata->lhsviol, consdata->rhsviol);
 
       /* skip non-violated constraints */
       if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
@@ -5893,6 +5892,8 @@ SCIP_RETCODE analyzeViolation(
                if( origviol <= 0.0 )
                   continue;
 
+               *maxvarboundviol = MAX(*maxvarboundviol, origviol);
+
                SCIPinfoMessage(scip, NULL, "var <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(var), auxvarlb, auxvarub, auxvarvalue);
                if( auxvarlb > auxvarvalue )
                   SCIPinfoMessage(scip, NULL, " var >= lb violated by %g", auxvarlb - auxvarvalue);
@@ -5907,6 +5908,11 @@ SCIP_RETCODE analyzeViolation(
          auxvarvalue = SCIPgetSolVal(scip, sol, expr->auxvar);
          auxvarlb = SCIPvarGetLbLocal(expr->auxvar);
          auxvarub = SCIPvarGetUbLocal(expr->auxvar);
+
+         if( auxvarlb - auxvarvalue > *maxvarboundviol )
+            *maxvarboundviol = auxvarlb - auxvarvalue;
+         else if( auxvarvalue - auxvarub > *maxvarboundviol )
+            *maxvarboundviol = auxvarvalue - auxvarub;
 
          /* make sure that this expression has been evaluated - so far we assume that this happened */
          /* SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, soltag) ); */
@@ -5934,6 +5940,8 @@ SCIP_RETCODE analyzeViolation(
          /* no violation w.r.t. the original variables -> skip expression */
          if( !violover && !violunder )
             continue;
+
+         *maxauxviol = MAX(*maxauxviol, REALABS(origviol));  /*lint !e666*/
 
          SCIPinfoMessage(scip, NULL, "expr ");
          SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
@@ -5966,9 +5974,15 @@ SCIP_RETCODE analyzeViolation(
 
             auxviol = expr->enfos[e]->auxvalue == SCIP_INVALID ? SCIP_INVALID : auxvarvalue - expr->enfos[e]->auxvalue;  /*lint !e777*/
             if( violover && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > 0.0) )  /*lint !e777*/
+            {
                SCIPinfoMessage(scip, NULL, " auxvar <= nlhdlr-expr violated by %g", auxviol);
+               *maxauxviol = MAX(*maxauxviol, auxviol);
+            }
             if( violunder && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > 0.0) )  /*lint !e777*/
+            {
                SCIPinfoMessage(scip, NULL, " auxvar >= nlhdlr-expr violated by %g", -auxviol);
+               *maxauxviol = MAX(*maxauxviol, -auxviol);
+            }
             SCIPinfoMessage(scip, NULL, "\n");
          }
       }
@@ -5995,7 +6009,8 @@ SCIP_RETCODE enforceConstraints(
    SCIP_CONSDATA* consdata;
    SCIP_Real maxviol;
    SCIP_Real minviolation;
-   SCIP_Real maxauxviolation = 0.0;
+   /* SCIP_Real maxauxviol; */
+   /* SCIP_Real maxvarboundviol; */
    SCIP_RESULT propresult;
    SCIP_Bool force;
    unsigned int soltag;
@@ -6029,7 +6044,7 @@ SCIP_RETCODE enforceConstraints(
    if( *result == SCIP_FEASIBLE )
       return SCIP_OKAY;
 
-   /* SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag) ); */
+   /* SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxviol, &maxauxviol, &maxvarboundviol) ); */
 
    /* try to propagate */
    nchgbds = 0;
@@ -6048,7 +6063,7 @@ SCIP_RETCODE enforceConstraints(
       SCIPdebugMsg(scip, "enforce by separation for minviolation %g\n", minviolation);
 
       /* try to separate the LP solution */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, soltag, minviolation, SCIPfeastol(scip), result, &maxauxviolation) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, soltag, minviolation, SCIPfeastol(scip), result) );
 
       if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED )
          return SCIP_OKAY;
@@ -6058,9 +6073,7 @@ SCIP_RETCODE enforceConstraints(
       SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
       /* if no cut or branching candidate, then try less violated expressions
-       * maxauxviolation tells us the maximal value we need to choose to have at least one violation in exprs with current violation > minviolation considered
-       * the latter condition means, however, that maxauxviolation = 0 is possible, that is, for all exprs with violation > minviolation, the auxviolation is 0
-       * TODO for now, just reduce minviolation by a factor of 10, though taking maxauxviolation into account would be nice
+       * TODO maxauxviol would tell us the maximal value we need to choose to have at least one violation in exprs with current violation > minviolation considered
        */
       if( nnotify == 0 )
          minviolation /= 10.0;
@@ -6090,7 +6103,7 @@ SCIP_RETCODE enforceConstraints(
     * or the LP solution that we try to enforce here is not within bounds (see st_e40)
     * TODO if there is a gap left and LP solution is not within bounds, then pass modified LP solution to heur_trysol?
     */
-   SCIPdebugMsg(scip, "enforcement with max. violation %g, auxviolation %g, failed; cutting off node\n", maxviol, maxauxviolation);
+   SCIPdebugMsg(scip, "enforcement with max. violation %g failed; cutting off node\n", maxviol);
    *result = SCIP_CUTOFF;
    ++conshdlrdata->ndesperatecutoff;
 
@@ -7898,7 +7911,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExpr)
    /* call separation
     * TODO revise minviolation, should it be larger than feastol?
     */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, soltag, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, soltag, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result) );
 
    return SCIP_OKAY;
 }
@@ -7929,7 +7942,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
    /* call separation
     * TODO revise minviolation, should it be larger than feastol?
     */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, soltag, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, soltag, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result) );
 
    return SCIP_OKAY;
 }
