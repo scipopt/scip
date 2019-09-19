@@ -561,6 +561,10 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                {
                   SCIP_VAR* var = (SCIPgetConsExprExprVarVar(expr));
 
+                  /* check whether the variable is active; if not, then replace the inactive variable by its aggregation
+                   * or its fixed value; note that this step is equivalent as representing an inactive variable as sum
+                   * expression
+                   */
                   if( SCIPvarIsActive(var) )
                   {
                      node = SCIPvarGetProbindex(var);
