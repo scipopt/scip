@@ -6019,9 +6019,9 @@ SCIP_RETCODE enforceConstraints(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real maxviol;
+   SCIP_Real maxauxviol;
+   SCIP_Real maxvarboundviol;
    SCIP_Real minviolation;
-   /* SCIP_Real maxauxviol; */
-   /* SCIP_Real maxvarboundviol; */
    SCIP_RESULT propresult;
    SCIP_Bool force;
    unsigned int soltag;
@@ -6055,7 +6055,7 @@ SCIP_RETCODE enforceConstraints(
    if( *result == SCIP_FEASIBLE )
       return SCIP_OKAY;
 
-   /* SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxviol, &maxauxviol, &maxvarboundviol) ); */
+   SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxviol, &maxauxviol, &maxvarboundviol) );
 
    /* try to propagate */
    nchgbds = 0;
@@ -6068,7 +6068,7 @@ SCIP_RETCODE enforceConstraints(
       return SCIP_OKAY;
    }
 
-   minviolation = SCIPfeastol(scip);
+   minviolation = MIN(maxauxviol / 2.0, SCIPfeastol(scip));  /*lint !e666*/
    do
    {
       SCIPdebugMsg(scip, "enforce by separation for minviolation %g\n", minviolation);
@@ -6083,9 +6083,7 @@ SCIP_RETCODE enforceConstraints(
       SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, soltag, minviolation, FALSE, &nnotify) );
       SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
-      /* if no cut or branching candidate, then try less violated expressions
-       * TODO maxauxviol would tell us the maximal value we need to choose to have at least one violation in exprs with current violation > minviolation considered
-       */
+      /* if no cut or branching candidate, then try less violated expressions */
       if( nnotify == 0 )
          minviolation /= 10.0;
    }
