@@ -5829,6 +5829,7 @@ SCIP_RETCODE analyzeViolation(
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    unsigned int          soltag,             /**< tag of solution */
    SCIP_Real*            maxconsviol,        /**< buffer to store maximal violation of constraints */
+   SCIP_Real*            minauxviol,         /**< buffer to store minimal (nonzero) violation of auxiliaries */
    SCIP_Real*            maxauxviol,         /**< buffer to store maximal violation of auxiliaries (violation in "extended formulation") */
    SCIP_Real*            maxvarboundviol     /**< buffer to store maximal violation of variable bounds */
    )
@@ -5847,6 +5848,7 @@ SCIP_RETCODE analyzeViolation(
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
 
    *maxconsviol = 0.0;
+   *minauxviol = SCIPinfinity(scip);
    *maxauxviol = 0.0;
    *maxvarboundviol = 0.0;
 
@@ -5945,6 +5947,7 @@ SCIP_RETCODE analyzeViolation(
             continue;
 
          *maxauxviol = MAX(*maxauxviol, REALABS(origviol));  /*lint !e666*/
+         *minauxviol = MIN(*minauxviol, REALABS(origviol));  /*lint !e666*/
 
 #ifdef DEBUG_ENFO
          SCIPinfoMessage(scip, NULL, "expr ");
@@ -5984,6 +5987,7 @@ SCIP_RETCODE analyzeViolation(
                SCIPinfoMessage(scip, NULL, " auxvar <= nlhdlr-expr violated by %g", auxviol);
 #endif
                *maxauxviol = MAX(*maxauxviol, auxviol);
+               *minauxviol = MIN(*minauxviol, auxviol);
             }
             if( violunder && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > 0.0) )  /*lint !e777*/
             {
@@ -5991,6 +5995,7 @@ SCIP_RETCODE analyzeViolation(
                SCIPinfoMessage(scip, NULL, " auxvar >= nlhdlr-expr violated by %g", -auxviol);
 #endif
                *maxauxviol = MAX(*maxauxviol, -auxviol);
+               *minauxviol = MIN(*minauxviol, -auxviol);
             }
 #ifdef DEBUG_ENFO
             SCIPinfoMessage(scip, NULL, "\n");
@@ -6019,9 +6024,10 @@ SCIP_RETCODE enforceConstraints(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real maxviol;
+   SCIP_Real minauxviol;
+   SCIP_Real maxauxviol;
+   SCIP_Real maxvarboundviol;
    SCIP_Real minviolation;
-   /* SCIP_Real maxauxviol; */
-   /* SCIP_Real maxvarboundviol; */
    SCIP_RESULT propresult;
    SCIP_Bool force;
    unsigned int soltag;
@@ -6048,14 +6054,18 @@ SCIP_RETCODE enforceConstraints(
       /* compute max violation */
       maxviol = MAX3(maxviol, consdata->lhsviol, consdata->rhsviol);
    }
-   SCIPdebugMsg(scip, "enforcing constraints with maxviol=%e node %lld\n", maxviol, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
-
    *result = maxviol > SCIPfeastol(scip) ? SCIP_INFEASIBLE : SCIP_FEASIBLE;
 
    if( *result == SCIP_FEASIBLE )
+   {
+      SCIPdebugMsg(scip, "skip enforcing constraints with maxviol=%e node %lld\n", maxviol, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
       return SCIP_OKAY;
+   }
 
-   /* SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxviol, &maxauxviol, &maxvarboundviol) ); */
+   SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxviol, &minauxviol, &maxauxviol, &maxvarboundviol) );
+
+   SCIPdebugMsg(scip, "node %lld: enforcing constraints with max conssviol=%e, auxviolations in %g..%g, variable bounds violated by at most %g\n",
+      SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxviol, minauxviol, maxauxviol, maxvarboundviol);
 
    /* try to propagate */
    nchgbds = 0;
@@ -6068,7 +6078,7 @@ SCIP_RETCODE enforceConstraints(
       return SCIP_OKAY;
    }
 
-   minviolation = SCIPfeastol(scip);
+   minviolation = MIN(maxauxviol / 2.0, SCIPfeastol(scip));  /*lint !e666*/
    do
    {
       SCIPdebugMsg(scip, "enforce by separation for minviolation %g\n", minviolation);
@@ -6083,13 +6093,15 @@ SCIP_RETCODE enforceConstraints(
       SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, soltag, minviolation, FALSE, &nnotify) );
       SCIPdebugMsg(scip, "registered %d external branching candidates\n", nnotify);
 
-      /* if no cut or branching candidate, then try less violated expressions
-       * TODO maxauxviol would tell us the maximal value we need to choose to have at least one violation in exprs with current violation > minviolation considered
-       */
-      if( nnotify == 0 )
+      /* if no cut or branching candidate, then try less violated expressions */
+      if( nnotify == 0 && minviolation > minauxviol )
+      {
          minviolation /= 10.0;
+         continue;
+      }
+      break;
    }
-   while( nnotify == 0 && minviolation > 1.0/SCIPinfinity(scip) ); /* stopping at SCIPepsilon is not sufficient for numerically difficult instances, but something like 1e-100 doesn't seem useful, too; use 1e-20 for now */
+   while( TRUE );  /*lint !e506 */
 
    if( nnotify > 0 )
       return SCIP_OKAY;
