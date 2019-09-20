@@ -418,7 +418,7 @@ SCIP_RETCODE traverseChain(
       }
       else
       {
-	 for( e1 = g->outbeg[i]; e1 != EAT_LAST; e1 = g->oeat[e1] )
+         for( e1 = g->outbeg[i]; e1 != EAT_LAST; e1 = g->oeat[e1] )
             if( g->head[e1] == k )
                break;
          assert(e1 != EAT_LAST);
@@ -431,7 +431,8 @@ SCIP_RETCODE traverseChain(
          g->cost[e1] = 0.0;
       else
          g->cost[e1] = -g->prize[k];
-      assert(SCIPisLE(scip, g->prize[i], 0.0) );
+
+      assert(SCIPisLE(scip, g->prize[i], 0.0));
    }
 
    *final = k;
@@ -1159,7 +1160,7 @@ SCIP_RETCODE reduce_simple_mw(
             }
             else
             {
-               SCIP_CALL( graph_pc_contractEdgeAncestors(scip, g, i2, i, flipedge_Uint(e)) );
+               SCIP_CALL( graph_pc_contractNodeAncestors(scip, g, i2, i, flipedge_Uint(e)) );
                SCIP_CALL( graph_knot_contract(scip, g, solnode, i2, i) );
             }
 
@@ -1563,55 +1564,43 @@ SCIP_RETCODE reduce_simple_pc(
          {
             if( !is_maxprize(scip, g, i, &maxprize) )
             {
-               int i2 = 0;
+               int edgecount = 0;
                for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
                {
                   const int i1 = g->head[e];
                   if( g->mark[i1] || (!pc && i1 == g->source) )
                   {
-                     assert(i2 < 2);
+                     assert(edgecount < 2);
 
-                     edges2[i2] = e;
-                     nodes2[i2++] = i1;
+                     edges2[edgecount] = e;
+                     nodes2[edgecount++] = i1;
                   }
                }
 
-               assert(i2 >= 2);
+               assert(edgecount >= 2);
                if( SCIPisLE(scip, g->prize[i], g->cost[edges2[0]]) && SCIPisLE(scip, g->prize[i], g->cost[edges2[1]]) )
                {
-                  IDX* ancestors = NULL;
-                  IDX* revancestors = NULL;
-                  int n1;
-                  const int e = edges2[0];
+                  SINGLETONANS ancestors0;
+                  SINGLETONANS ancestors1;
+                  int newedge;
+                  const int e0 = edges2[0];
                   const int e1 = edges2[1];
+
+                  SCIP_CALL( graph_singletonAncestors_init(scip, g, e0, &(ancestors0)) );
+                  SCIP_CALL( graph_singletonAncestors_init(scip, g, e1, &(ancestors1)) );
 
                   assert(!fixedterm);
 
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[e], NULL) );
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[Edge_anti(e1)], NULL) );
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[Edge_anti(e)], NULL) );
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[e1], NULL) );
                   SCIPdebugMessage("delete - term - %d\n ", i);
 
-                  /* contract edge */
-                  n1 = graph_edge_redirect(scip, g, e, nodes2[1], nodes2[0], g->cost[e] + g->cost[e1] - g->prize[i],
-                        TRUE, TRUE);
+                  SCIP_CALL( graph_edge_reinsert(scip, g, e0, nodes2[1], nodes2[0], g->cost[e0] + g->cost[e1] - g->prize[i],
+                        i, &ancestors1, &ancestors0, &newedge) );
 
-                  /* new edge inserted? */
-                  if( n1 >= 0)
-                  {
-                     /* add ancestors */
-                     graph_edge_delHistory(scip, g, n1);
-
-                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors, NULL) );
-                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors, NULL) );
-                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), g->pcancestors[i], NULL) );
-                     SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), g->pcancestors[i], NULL) );
-                  }
                   (*countnew) += graph_pc_deleteTerm(scip, g, i);
                   (*fixed) += g->prize[i];
-                  SCIPintListNodeFree(scip, &(ancestors));
-                  SCIPintListNodeFree(scip, &(revancestors));
+
+                  graph_singletonAncestors_freeMembers(scip, &(ancestors0));
+                  graph_singletonAncestors_freeMembers(scip, &(ancestors1));
                }
             }
          }

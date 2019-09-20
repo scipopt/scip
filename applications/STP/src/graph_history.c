@@ -411,6 +411,78 @@ SCIP_Bool blockedAncestors_blockIsValid(
 
 /** appends copy of pseudo ancestors of source to target */
 static
+SCIP_RETCODE blockedAncestors_appendArray(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   block_target,       /**< target block */
+   const int*            ancestors_source,   /**< ancestors to append */
+   int                   size_source,        /**< number of ancestors to append */
+   SCIP_Bool             breakOnConflict,    /**< break on conflict */
+   int                   nnodes,             /**< number of nodes of underlying graph */
+   BLOCKANS*             blockedans_target,  /**< blocked pseudo-ancestors */
+   SCIP_Bool*            conflict            /**< conflict? */
+)
+{
+   int* ancestors_target;
+   int* hasharr;
+   int position_target;
+   const int size_target_org = blockedans_target->sizes[block_target];
+   const int size_targetPlusSource = size_target_org + size_source;
+
+   assert(size_source > 0);
+   assert(ancestors_source && blockedans_target);
+
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, nnodes) );
+
+   /* need to realloc target ancestor array? */
+   if( size_targetPlusSource > blockedans_target->capacities[block_target] )
+   {
+      const int capacity_up = getNextPow2(size_targetPlusSource);
+      SCIP_CALL( blockedAncestors_realloc(scip, block_target, capacity_up, blockedans_target) );
+   }
+
+   ancestors_target = blockedans_target->blocks[block_target];
+
+   /* mark ancestors of target */
+   blockedAncestors_hash(blockedans_target, block_target, hasharr);
+
+   position_target = size_target_org;
+
+   /* add source to target */
+   for( int e = 0; e < size_source; e++ )
+   {
+      const int ancestor = ancestors_source[e];
+
+      if( blockedAncestors_hashIsHit(blockedans_target, ancestor, hasharr) )
+      {
+         *conflict = TRUE;
+
+         if( breakOnConflict )
+            break;
+
+         continue;
+      }
+
+      assert(position_target < blockedans_target->capacities[block_target]);
+
+      ancestors_target[position_target++] = ancestor;
+   }
+
+   assert(position_target <= size_targetPlusSource);
+   assert(position_target >= blockedans_target->sizes[block_target]);
+
+   blockedans_target->sizes[block_target] = position_target;
+
+   /* unmark ancestors of target */
+   blockedAncestors_unhashPartial(blockedans_target, block_target, size_target_org, hasharr);
+
+   SCIPfreeCleanBufferArray(scip, &hasharr);
+
+   return SCIP_OKAY;
+}
+
+
+/** appends copy of pseudo ancestors of source to target */
+static
 SCIP_RETCODE blockedAncestors_appendCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   block_target,       /**< target block */
@@ -422,7 +494,6 @@ SCIP_RETCODE blockedAncestors_appendCopy(
    SCIP_Bool*            conflict            /**< conflict? */
 )
 {
-   int position_target;
    const int size_source = blockedans_source->sizes[block_source];
 
    assert(scip && blockedans_source && blockedans_target && conflict);
@@ -436,56 +507,8 @@ SCIP_RETCODE blockedAncestors_appendCopy(
    if( size_source > 0 )
    {
       const int* const ancestors_source = blockedans_source->blocks[block_source];
-      int* ancestors_target;
-      int* hasharr;
-      const int size_target_org = blockedans_target->sizes[block_target];
-      const int size_targetPlusSource = size_target_org + size_source;
 
-      SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, nnodes) );
-
-      /* need to realloc target ancestor array? */
-      if( size_targetPlusSource > blockedans_target->capacities[block_target] )
-      {
-         const int capacity_up = getNextPow2(size_targetPlusSource);
-         SCIP_CALL( blockedAncestors_realloc(scip, block_target, capacity_up, blockedans_target) );
-      }
-
-      ancestors_target = blockedans_target->blocks[block_target];
-
-      /* mark ancestors of target */
-      blockedAncestors_hash(blockedans_target, block_target, hasharr);
-
-      position_target = size_target_org;
-
-      /* add source to target */
-      for( int e = 0; e < size_source; e++ )
-      {
-         const int ancestor = ancestors_source[e];
-
-         if( blockedAncestors_hashIsHit(blockedans_target, ancestor, hasharr) )
-         {
-            *conflict = TRUE;
-
-            if( breakOnConflict )
-               break;
-
-            continue;
-         }
-
-         assert(position_target < blockedans_target->capacities[block_target]);
-
-         ancestors_target[position_target++] = ancestor;
-      }
-
-      assert(position_target <= size_targetPlusSource);
-      assert(position_target >= blockedans_target->sizes[block_target]);
-
-      blockedans_target->sizes[block_target] = position_target;
-
-      /* unmark ancestors of target */
-      blockedAncestors_unhashPartial(blockedans_target, block_target, size_target_org, hasharr);
-
-      SCIPfreeCleanBufferArray(scip, &hasharr);
+      SCIP_CALL( blockedAncestors_appendArray(scip, block_target, ancestors_source, size_source, breakOnConflict, nnodes, blockedans_target, conflict) );
    }
 
    return SCIP_OKAY;
@@ -1002,6 +1025,56 @@ SCIP_RETCODE graph_pseudoAncestors_appendCopyNodeToEdge(
 
    SCIP_CALL( blockedAncestors_appendCopy(scip, target,  pseudoancestors->ans_nodes, node_source, revertIfConflict,
          pseudoancestors->nnodes, pseudoancestors->ans_halfedges, conflict) );
+
+   return SCIP_OKAY;
+}
+
+
+/** appends copy of pseudo ancestors of edge source to node target */
+SCIP_RETCODE graph_pseudoAncestors_appendCopyEdgeToNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   node_target,        /**< node target */
+   int                   edge_source,        /**< edge source */
+   SCIP_Bool             revertIfConflict,   /**< break on conflict */
+   GRAPH*                g,                  /**< the graph */
+   SCIP_Bool*            conflict            /**< conflict? */
+)
+{
+   PSEUDOANS* const pseudoancestors = g->pseudoancestors;
+   const int source = edge_source / 2;
+
+   assert(scip && g && pseudoancestors && conflict);
+
+   SCIP_CALL( blockedAncestors_appendCopy(scip, node_target,  pseudoancestors->ans_halfedges, source, revertIfConflict,
+         pseudoancestors->nnodes, pseudoancestors->ans_nodes, conflict) );
+
+   return SCIP_OKAY;
+}
+
+
+/** appends copy of pseudo ancestors of node source to edge target */
+SCIP_RETCODE graph_pseudoAncestors_appendCopySingToEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edge_target,        /**< edge target */
+   const SINGLETONANS*   source,             /**< source */
+   SCIP_Bool             revertIfConflict,   /**< break on conflict */
+   GRAPH*                g,                  /**< the graph */
+   SCIP_Bool*            conflict            /**< conflict? */
+)
+{
+   assert(scip && g && conflict && source);
+
+   if( source->npseudoancestors > 0 )
+   {
+      const PSEUDOANS* const pseudoancestors = g->pseudoancestors;
+      const int* const ancestors = source->pseudoancestors;
+      const int target = edge_target / 2;
+      const int nancestors = source->npseudoancestors;
+
+      assert(pseudoancestors);
+
+      SCIP_CALL( blockedAncestors_appendArray(scip, target, ancestors, nancestors, revertIfConflict, g->knots, pseudoancestors->ans_halfedges, conflict) );
+   }
 
    return SCIP_OKAY;
 }

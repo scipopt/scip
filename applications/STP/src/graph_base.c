@@ -2624,7 +2624,7 @@ void graph_pc_chgPrize(
 }
 
 /** contract ancestors of an edge of (rooted) prize-collecting Steiner tree problem or maximum-weight connected subgraph problem */
-SCIP_RETCODE graph_pc_contractEdgeAncestors(
+SCIP_RETCODE graph_pc_contractNodeAncestors(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
    int                   t,                  /**< tail node to be contracted (surviving node) */
@@ -2632,24 +2632,33 @@ SCIP_RETCODE graph_pc_contractEdgeAncestors(
    int                   ets                 /**< edge from t to s or -1 */
    )
 {
+   SCIP_Bool conflict;
+
    assert(g != NULL);
    assert(scip != NULL);
 
    if( ets < 0 )
    {
+      assert(ets == -1);
+
       for( ets = g->outbeg[t]; ets != EAT_LAST; ets = g->oeat[ets] )
          if( g->head[ets] == s )
             break;
-      assert(ets >= 0);
    }
 
-   /* note: pseudo ancestors are contracted in call to graph_knot_contract */
+   assert(ets >= 0 && ets < g->edges);
 
    SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->pcancestors[s], NULL) );
    SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[s]), g->pcancestors[t], NULL) );
 
    SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[s]), g->ancestors[ets], NULL));
    SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->ancestors[ets], NULL));
+
+   SCIP_CALL( graph_pseudoAncestors_appendCopyNode(scip, t, s, FALSE, g, &conflict) );
+   assert(!conflict);
+
+   SCIP_CALL( graph_pseudoAncestors_appendCopyEdgeToNode(scip, t, ets, FALSE, g, &conflict) );
+      assert(!conflict);
 
    return SCIP_OKAY;
 }
@@ -2712,7 +2721,7 @@ SCIP_RETCODE graph_pc_contractEdge(
 
    assert(!graph_pc_isRootedPcMw(g) || (s != g->source && t != g->source));
 
-   SCIP_CALL( graph_pc_contractEdgeAncestors(scip, g, t, s, ets) );
+   SCIP_CALL( graph_pc_contractNodeAncestors(scip, g, t, s, ets) );
 
    /* are both endpoints of the edge to be contracted terminals? */
    if( Is_term(g->term[t]) && Is_term(g->term[s]) )
@@ -2924,6 +2933,7 @@ SCIP_RETCODE graph_knot_replaceDeg2(
    const int e1 = g->outbeg[vertex];
    const int e2 = g->oeat[e1];
    const int i2 = g->head[e2];
+   SCIP_Bool conflict;
 
    assert(scip && g);
    assert(vertex >= 0 && vertex < g->knots);
@@ -2935,8 +2945,11 @@ SCIP_RETCODE graph_knot_replaceDeg2(
    g->cost[e1] += g->cost[e2];
    g->cost[flipedge(e1)] += g->cost[e2];
 
-   SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->ancestors[flipedge(e2)], NULL));
-   SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->ancestors[e2], NULL));
+   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->ancestors[flipedge(e2)], NULL) );
+   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->ancestors[e2], NULL) );
+
+   SCIP_CALL( graph_pseudoAncestors_appendCopyEdge(scip, e1, e2, FALSE, g, &conflict) );
+   assert(!conflict);
 
    if( graph_pc_isPcMw(g) )
    {
@@ -2945,6 +2958,9 @@ SCIP_RETCODE graph_knot_replaceDeg2(
 
       SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), g->pcancestors[vertex], NULL));
       SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), g->pcancestors[vertex], NULL));
+
+      SCIP_CALL( graph_pseudoAncestors_appendCopyNodeToEdge(scip, e1, vertex, FALSE, g, &conflict) );
+      assert(!conflict);
    }
 
    SCIP_CALL(graph_knot_contract(scip, g, solnode, i2, vertex));
@@ -3078,22 +3094,22 @@ SCIP_RETCODE graph_knot_delPseudo(
             SCIP_CALL( graph_edge_reinsert(scip, g, oldincedge, adjvert[i], adjvert[j], newijcost,
                   ancestorsnode, &(ancestors[i]), &(ancestors[j]), &newijedge) );
 
+            /* has a new edge been inserted (or the existing one been updated)? */
+            if( newijedge >= 0 )
+               SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, newijedge, vertex, g) );
+
             /* does no original edge exist? */
             if( oldijedge == STP_DELPSEUDO_NOEDGE )
             {
                replacecount++;
                assert(newijedge >= 0);
                assert(oldinctail != g->tail[oldincedge] || oldinchead != g->head[oldincedge]);
-
-               SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, newijedge, vertex, g) );
             }
             else
             {
                assert(newijedge == oldijedge || newijedge == - 1);
                assert(newijedge != oldincedge);
                assert(oldinctail == g->tail[oldincedge] && oldinchead == g->head[oldincedge]);
-
-               SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, oldijedge, vertex, g) );
             }
          }
 
@@ -3111,13 +3127,13 @@ SCIP_RETCODE graph_knot_delPseudo(
    return SCIP_OKAY;
 }
 
-/** contract an edge, given by its endpoints */
+/** contracts node s into node t */
 SCIP_RETCODE graph_knot_contract(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                p,                  /**< graph data structure */
    int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT),
                                                 or NULL */
-   int                   t,                  /**< tail node to be contracted */
+   int                   t,                  /**< tail node to be contracted (surviving node) */
    int                   s                   /**< head node to be contracted */
    )
 {
@@ -3252,7 +3268,9 @@ SCIP_RETCODE graph_knot_contract(
 
          if( copyPseudoancestors )
          {
-            int todo; // new append method
+            SCIP_Bool conflict;
+            SCIP_CALL( graph_pseudoAncestors_appendCopySingToEdge(scip, et, &(ancestors[i]), FALSE, p, &conflict) );
+            assert(!conflict);
          }
       }
    }
@@ -3267,6 +3285,7 @@ SCIP_RETCODE graph_knot_contract(
          int es = p->outbeg[s];
          const int head = knot[i];
          const int tail = t;
+         SCIP_Bool conflict;
 
          assert(es != EAT_LAST);
 
@@ -3275,8 +3294,8 @@ SCIP_RETCODE graph_knot_contract(
          assert(p->ancestors[es] == NULL);
          SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(p->ancestors[es]), ancestors[i].ancestors, NULL) );
 
-         int todo; //new method for appending
-
+         SCIP_CALL( graph_pseudoAncestors_appendCopySingToEdge(scip, es, &(ancestors[i]), FALSE, p, &conflict) );
+         assert(!conflict);
 
          p->grad[head]++;
          p->grad[tail]++;
@@ -3469,35 +3488,41 @@ SCIP_RETCODE graph_edge_reinsert(
    int                   head,               /**< new head */
    SCIP_Real             cost,               /**< new edge cost */
    int                   ancestornode,       /**< node to copy ancestors from or -1 */
-   SINGLETONANS*         ancestorsEdge0,     /**< ancestors of first edge */
-   SINGLETONANS*         ancestorsEdge1,     /**< ancestors of second edge */
+   SINGLETONANS*         ancestorsBackward,  /**< backwards (edge) ancestors */
+   SINGLETONANS*         ancestorsForward,   /**< forward (edge) ancestors */
    int*                  insertedge          /**< pointer to inserted edge or -1 */
    )
 {
    const int newedge = graph_edge_redirect(scip, g, edge, tail, head, cost, FALSE, TRUE);
 
-   assert(ancestorsEdge0 && ancestorsEdge1 && insertedge);
+   assert(ancestorsBackward && ancestorsForward && insertedge);
    assert(ancestornode >= 0 || ancestornode == -1);
 
    /* is there a new edge? */
    if( newedge >= 0 )
    {
-      IDX* const ancestors0 = ancestorsEdge0->ancestors;
-      IDX* const revancestors0 = ancestorsEdge0->revancestors;
-      IDX* const ancestors1 = ancestorsEdge1->ancestors;
-      IDX* const revancestors1 = ancestorsEdge1->revancestors;
+      IDX* const ancestorsBack = ancestorsBackward->ancestors;
+      IDX* const revancestorsBack = ancestorsBackward->revancestors;
+      IDX* const ancestorsFor = ancestorsForward->ancestors;
+      IDX* const revancestorsFor = ancestorsForward->revancestors;
+      SCIP_Bool conflict = FALSE;
 
       graph_edge_delHistory(scip, g, newedge);
 
-      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), revancestors0, NULL) );
-      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), ancestors1, NULL) );
-      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(newedge)]), ancestors0, NULL) );
-      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(newedge)]), revancestors1, NULL) );
+      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), revancestorsBack, NULL) );
+      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), ancestorsFor, NULL) );
+      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(newedge)]), ancestorsBack, NULL) );
+      SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(newedge)]), revancestorsFor, NULL) );
+
+      SCIP_CALL( graph_pseudoAncestors_appendCopySingToEdge(scip, newedge, ancestorsBackward, FALSE, g, &conflict) );
+      assert(!conflict);
+
+      SCIP_CALL( graph_pseudoAncestors_appendCopySingToEdge(scip, newedge, ancestorsForward, FALSE, g, &conflict) );
+      assert(!conflict);
 
       if( ancestornode >= 0)
       {
          IDX* const nodeans = g->pcancestors[ancestornode];
-         SCIP_Bool conflict = FALSE;
 
          assert(graph_pc_isPcMw(g));
 
@@ -4380,10 +4405,13 @@ void graph_get_isTerm(
 SCIP_RETCODE graph_get_edgeConflicts(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g                   /**< the graph */
-      )
+)
 {
    int* childcount;
+   int* pseudonodecount;
    int nconflicts;
+   int npseudoconflicts;
+   const int nnodes = g->knots;
    const int nedges = g->edges;
    const int nedgesorg = g->orgedges;
 
@@ -4394,43 +4422,103 @@ SCIP_RETCODE graph_get_edgeConflicts(
    printf("orgedes %d \n", nedgesorg);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &childcount, nedgesorg / 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pseudonodecount, nnodes) );
 
    for( int e = 0; e < nedgesorg / 2; e++ )
       childcount[e] = 0;
 
+   for( int e = 0; e < nnodes; e++ )
+      pseudonodecount[e] = 0;
+
+   nconflicts = 0;
+   npseudoconflicts = 0;
+
    for( int e = 0; e < nedges; e += 2 )
+   {
+      SCIP_Bool hasConflict = FALSE;
+      SCIP_Bool hasPseudoConflict = FALSE;
+
+      const int nPseudoAncestors = graph_edge_nPseudoAncestors(g, e);
+      const int* pseudoAncestors = graph_edge_getPseudoAncestors(g, e);
       for( IDX* curr = g->ancestors[e]; curr != NULL; curr = curr->parent )
       {
          assert(curr->index >= 0 && curr->index / 2 < nedgesorg / 2);
+         if( childcount[curr->index / 2] > 0 )
+            hasConflict = TRUE;
+
          childcount[curr->index / 2]++;
       }
 
+      for( int k = 0; k < nPseudoAncestors; k++ )
+      {
+         const int a = pseudoAncestors[k];
+         assert(a >= 0 && a < nnodes);
+
+         if( pseudonodecount[a] > 0 )
+            hasPseudoConflict = TRUE;
+
+         pseudonodecount[a]++;
+      }
+
+      if( hasConflict )
+      {
+         nconflicts++;
+         assert(hasPseudoConflict);
+      }
+
+      if( hasPseudoConflict )
+         npseudoconflicts++;
+   }
+
    if( graph_pc_isPcMw(g) )
    {
-      const int nnodes = g->knots;
       assert(g->extended);
 
-      for( int k = 0; k < nnodes; k++ )
+      for( int e = 0; e < nnodes; e++ )
       {
-         if( Is_term(g->term[k]) )
-            continue;
-
-         for( IDX* curr = g->pcancestors[k]; curr != NULL; curr = curr->parent )
+         if( !Is_term(g->term[e]) )
          {
-            assert(curr->index >= 0 && curr->index / 2 < nedgesorg / 2);
-            childcount[curr->index / 2]++;
+            SCIP_Bool hasConflict = FALSE;
+            SCIP_Bool hasPseudoConflict = FALSE;
+
+            const int nPseudoAncestors = graph_knot_nPseudoAncestors(g, e);
+            const int* pseudoAncestors = graph_knot_getPseudoAncestors(g, e);
+            for( IDX* curr = g->pcancestors[e]; curr != NULL; curr = curr->parent )
+            {
+               assert(curr->index >= 0 && curr->index / 2 < nedgesorg / 2);
+               if( childcount[curr->index / 2] > 0 )
+                  hasConflict = TRUE;
+
+               childcount[curr->index / 2]++;
+            }
+
+            for( int k = 0; k < nPseudoAncestors; k++ )
+            {
+               const int a = pseudoAncestors[k];
+               assert(a >= 0 && a < nnodes);
+
+               if( pseudonodecount[a] > 0 )
+                  hasPseudoConflict = TRUE;
+
+               pseudonodecount[a]++;
+            }
+
+            if( hasConflict )
+            {
+               nconflicts++;
+               assert(hasPseudoConflict);
+            }
+
+            if( hasPseudoConflict )
+               npseudoconflicts++;
          }
       }
    }
 
-   nconflicts = 0;
+   printf("number of edge conflicts %d \n", nconflicts);
+   printf("number of pseudo-ancestor conflicts %d \n", npseudoconflicts);
 
-   for( int e = 0; e < nedgesorg / 2; e++ )
-      if( childcount[e] > 1 )
-         nconflicts++;
-
-   printf("nconflicts %d \n", nconflicts);
-
+   SCIPfreeBufferArray(scip, &pseudonodecount);
    SCIPfreeBufferArray(scip, &childcount);
 
    return SCIP_OKAY;
