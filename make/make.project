@@ -583,7 +583,7 @@ endif
 
 # define flags for WORHP
 ifeq ($(WORHP),true)
-FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/include
+FLAGS		+=	-I$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/include
 LDFLAGS  += $(LINKCC_l)worhp
 LDFLAGS  += $(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib
 ifneq ($(LINKRPATH),)
