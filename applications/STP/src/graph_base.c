@@ -2623,6 +2623,7 @@ void graph_pc_chgPrize(
    assert(SCIPisGE(scip, g->prize[i], 0.0) || g->stp_type == STP_MWCSP);
 }
 
+
 /** contract ancestors of an edge of (rooted) prize-collecting Steiner tree problem or maximum-weight connected subgraph problem */
 SCIP_RETCODE graph_pc_contractNodeAncestors(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2658,10 +2659,11 @@ SCIP_RETCODE graph_pc_contractNodeAncestors(
    assert(!conflict);
 
    SCIP_CALL( graph_pseudoAncestors_appendCopyEdgeToNode(scip, t, ets, FALSE, g, &conflict) );
-      assert(!conflict);
+   assert(!conflict);
 
    return SCIP_OKAY;
 }
+
 
 /** contract an edge of (rooted) prize-collecting Steiner tree problem or maximum-weight connected subgraph problem */
 SCIP_RETCODE graph_pc_contractEdge(

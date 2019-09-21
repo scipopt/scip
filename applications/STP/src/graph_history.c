@@ -1064,6 +1064,8 @@ SCIP_RETCODE graph_pseudoAncestors_appendCopySingToEdge(
 {
    assert(scip && g && conflict && source);
 
+   *conflict = FALSE;
+
    if( source->npseudoancestors > 0 )
    {
       const PSEUDOANS* const pseudoancestors = g->pseudoancestors;
