@@ -8259,14 +8259,13 @@ SCIP_RETCODE extractCliques(
             /* compute value that needs to be exceeded */
             threshold = consdata->rhs - consdata->glbminactivity;
 
-            i = 0;
-            j = i + 1;
+            j = 1;
 #if 0 /* assertion should only hold when constraints were fully propagated and boundstightened */
             /* check that it is possible to choose binvar[i], otherwise it should have been fixed to zero */
-            assert(SCIPisFeasLE(scip, binvarvals[i], threshold));
+            assert(SCIPisFeasLE(scip, binvarvals[0], threshold));
 #endif
             /* check if at least two variables are in a clique */
-            if( SCIPisFeasGT(scip, binvarvals[i] + binvarvals[j], threshold) )
+            if( SCIPisFeasGT(scip, binvarvals[0] + binvarvals[j], threshold) )
             {
                ++j;
                /* check for extending the clique */
@@ -8279,7 +8278,7 @@ SCIP_RETCODE extractCliques(
                assert(j >= 2);
 
                /* add clique with at least two variables */
-               SCIP_CALL( SCIPaddClique(scip, &(binvars[i]), NULL, j - i, FALSE, &infeasible, &nbdchgs) );
+               SCIP_CALL( SCIPaddClique(scip, binvars, NULL, j, FALSE, &infeasible, &nbdchgs) );
 
                if( infeasible )
                   *cutoff = TRUE;
@@ -8295,13 +8294,13 @@ SCIP_RETCODE extractCliques(
                {
                   SCIP_VAR** clqvars;
                   int lastfit = j - 2;
-                  assert(lastfit >= i);
+                  assert(lastfit >= 0);
 
                   /* copy all 'main'-clique variables */
-                  SCIP_CALL( SCIPduplicateBufferArray(scip, &clqvars, &(binvars[i]), j - i) );
+                  SCIP_CALL( SCIPduplicateBufferArray(scip, &clqvars, binvars, j) );
 
                   /* iterate up to the end with j and up to the front with lastfit, and check for different cliques */
-                  while( lastfit >= i && j < nposbinvars )
+                  while( lastfit >= 0 && j < nposbinvars )
                   {
                      /* check if two variables are in a clique */
                      if( SCIPisFeasGT(scip, binvarvals[lastfit] + binvarvals[j], threshold) )
@@ -8309,7 +8308,7 @@ SCIP_RETCODE extractCliques(
                         clqvars[lastfit + 1] = binvars[j];
 
                         /* add clique with at least two variables */
-                        SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, lastfit - i + 2, FALSE, &infeasible, &nbdchgs) );
+                        SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, lastfit + 2, FALSE, &infeasible, &nbdchgs) );
 
                         if( infeasible )
                         {
@@ -8319,7 +8318,7 @@ SCIP_RETCODE extractCliques(
 
                         *nchgbds += nbdchgs;
 
-                        cliquenonzerosadded += (lastfit - i + 2);
+                        cliquenonzerosadded += (lastfit + 2);
                         if( cliquenonzerosadded >= MAX_CLIQUE_NONZEROS_PER_CONS )
                         {
                            stopped = TRUE;
@@ -8727,15 +8726,14 @@ SCIP_RETCODE extractCliques(
             /* compute value that needs to be exceeded */
             threshold = consdata->lhs - consdata->glbmaxactivity;
 
-            i = 0;
-            j = i + 1;
+            j = 1;
 
 #if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check if the variable should not have already been fixed to one */
-            assert(!SCIPisFeasLT(scip, -binvarvals[i], threshold));
+            assert(!SCIPisFeasLT(scip, -binvarvals[0], threshold));
 #endif
 
-            if( SCIPisFeasLT(scip, -binvarvals[i] - binvarvals[j], threshold) )
+            if( SCIPisFeasLT(scip, -binvarvals[0] - binvarvals[j], threshold) )
             {
                ++j;
                /* check for extending the clique */
@@ -8748,7 +8746,7 @@ SCIP_RETCODE extractCliques(
                assert(j >= 2);
 
                /* add negated clique with at least two variables */
-               SCIP_CALL( SCIPaddClique(scip, &(binvars[i]), values, j - i, FALSE, &infeasible, &nbdchgs) );
+               SCIP_CALL( SCIPaddClique(scip, binvars, values, j, FALSE, &infeasible, &nbdchgs) );
 
                if( infeasible )
                   *cutoff = TRUE;
@@ -8764,13 +8762,13 @@ SCIP_RETCODE extractCliques(
                {
                   SCIP_VAR** clqvars;
                   int lastfit = j - 2;
-                  assert(lastfit >= i);
+                  assert(lastfit >= 0);
 
                   /* copy all 'main'-clique variables */
-                  SCIP_CALL( SCIPduplicateBufferArray(scip, &clqvars, &(binvars[i]), j - i) );
+                  SCIP_CALL( SCIPduplicateBufferArray(scip, &clqvars, binvars, j) );
 
                   /* iterate up to the end with j and up to the front with lastfit, and check for different cliques */
-                  while( lastfit >= i && j < nposbinvars )
+                  while( lastfit >= 0 && j < nposbinvars )
                   {
                      /* check if two variables are in a negated clique */
                      if( SCIPisFeasLT(scip, -binvarvals[lastfit] - binvarvals[j], threshold) )
@@ -8778,7 +8776,7 @@ SCIP_RETCODE extractCliques(
                         clqvars[lastfit + 1] = binvars[j];
 
                         /* add clique with at least two variables */
-                        SCIP_CALL( SCIPaddClique(scip, clqvars, values, lastfit - i + 2, FALSE, &infeasible, &nbdchgs) );
+                        SCIP_CALL( SCIPaddClique(scip, clqvars, values, lastfit + 2, FALSE, &infeasible, &nbdchgs) );
 
                         if( infeasible )
                         {
@@ -8788,7 +8786,7 @@ SCIP_RETCODE extractCliques(
 
                         *nchgbds += nbdchgs;
 
-                        cliquenonzerosadded += (lastfit - i + 2);
+                        cliquenonzerosadded += lastfit + 2;
                         if( cliquenonzerosadded >= MAX_CLIQUE_NONZEROS_PER_CONS )
                            break;
 
