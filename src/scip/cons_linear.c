@@ -4232,6 +4232,7 @@ SCIP_RETCODE normalizeCons(
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(infeasible != NULL);
 
    *infeasible = FALSE;
 
@@ -7702,7 +7703,7 @@ SCIP_RETCODE propagateCons(
 
          if( nfixedvars > 0 )
             *nchgbds += 2*nfixedvars;
-      }
+      } /*lint !e438*/
 
       /* check constraint for infeasibility and redundancy */
       if( !(*cutoff) )
