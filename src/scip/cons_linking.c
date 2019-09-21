@@ -2345,10 +2345,8 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
 static
 SCIP_DECL_CONSPROP(consPropLinking)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
-   SCIP_Bool addcut;
-   SCIP_Bool mustcheck;
-   int nchgbds;
+   SCIP_Bool cutoff = FALSE;
+   int nchgbds = 0;
    int c;
 
    assert(conshdlr != NULL);
@@ -2358,17 +2356,17 @@ SCIP_DECL_CONSPROP(consPropLinking)
 
    SCIPdebugMsg(scip, "propagating %d/%d " CONSHDLR_NAME " constraints\n", nusefulconss, nconss);
 
-   cutoff = FALSE;
-   nchgbds = 0;
-   addcut = FALSE;
-   mustcheck = TRUE;
-
    /* propagate all useful set partitioning / packing / covering constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
+      SCIP_Bool addcut;
+      SCIP_Bool mustcheck;
+      int nchgbdslocal = 0;
+
       SCIP_CALL( processIntegerBoundChg(scip, conss[c], &cutoff, &nchgbds, &mustcheck) );
       SCIP_CALL( processBinvarFixings(scip, conss[c], &cutoff, &nchgbds, &addcut, &mustcheck) );
-   }
+      nchgbds += nchgbdslocal;
+   } /*lint !e438*/
 
    /* return the correct result */
    if( cutoff )
@@ -2708,7 +2706,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
    else if( oldndelconss < *ndelconss || oldnfixedvars < *nfixedvars || oldnchgbds < *nchgbds || oldnaggrvars < *naggrvars)
       *result = SCIP_SUCCESS;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 
