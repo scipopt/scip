@@ -96,7 +96,13 @@
  *
  * @todo Possibly turn off propagator in subtrees.
  * @todo Check application of conflict resolution.
- *
+ * @todo Check whether one should switch the role of 0 and 1
+ * @todo Implement stablizer computation?
+ * @todo Implement isomorphism pruning?
+ * @todo Implement particular preprocessing rules
+ * @todo Separate permuted cuts (first experiments not successful)
+ * @todo Allow the computation of local symmetries
+ * @todo Order rows of orbitopes (in particular packing/partitioning) w.r.t. cliques in conflict graph.
  */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_OUTPUT_COMPONENT */
@@ -140,6 +146,7 @@
 #define DEFAULT_MAXGENERATORS        1500    /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
 #define DEFAULT_CHECKSYMMETRIES     FALSE    /**< Should all symmetries be checked after computation? */
 #define DEFAULT_DISPLAYNORBITVARS   FALSE    /**< Should the number of variables affected by some symmetry be displayed? */
+#define DEFAULT_USECOLUMNSPARSITY   FALSE    /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
 #define DEFAULT_DOUBLEEQUATIONS      FALSE   /**< Double equations to positive/negative version? */
 
 /* default parameters for symmetry constraints */
@@ -210,10 +217,10 @@ struct SCIP_PropData
    int                   maxgenerators;      /**< limit on the number of generators that should be produced within symmetry detection (0 = no limit) */
    SCIP_Bool             checksymmetries;    /**< Should all symmetries be checked after computation? */
    SCIP_Bool             displaynorbitvars;  /**< Whether the number of variables in non-trivial orbits shall be computed */
-   SCIP_Bool             doubleequations;    /**< Double equations to positive/negative version? */
-
    SCIP_Bool             computedsymmetry;   /**< Have we already tried to compute symmetries? */
    int                   usesymmetry;        /**< encoding of active symmetry handling methods (for debugging) */
+   SCIP_Bool             usecolumnsparsity;  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
+   SCIP_Bool             doubleequations;    /**< Double equations to positive/negative version? */
 
    /* for symmetry constraints */
    SCIP_Bool             symconsenabled;     /**< Should symmetry constraints be added? */
@@ -389,7 +396,7 @@ SCIP_DECL_HASHGETKEY(SYMhashGetKeyVartype)
 
 /** returns TRUE iff both keys are equal
  *
- *  Compare the types of two variables according to objective, lower and upper bound, and variable type.
+ *  Compare the types of two variables according to objective, lower and upper bound, variable type, and column sparsity.
  */
 static
 SCIP_DECL_HASHKEYEQ(SYMhashKeyEQVartype)
@@ -418,6 +425,10 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQVartype)
    if ( k1->type != k2->type )
       return FALSE;
 
+   /* if still undecided, take number of conss var is contained in */
+   if ( k1->nconss != k2->nconss )
+      return FALSE;
+
    return TRUE;
 }
 
@@ -429,7 +440,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValVartype)
 
    k = (SYM_VARTYPE*) key;
 
-   return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(k->obj), SCIPrealHashCode(k->lb)), SCIPrealHashCode(k->ub));
+   return SCIPhashFour(SCIPrealHashCode(k->obj), SCIPrealHashCode(k->lb), SCIPrealHashCode((double) k->nconss), SCIPrealHashCode(k->ub));
 }
 
 /** data struct to store arrays used for sorting rhs types */
@@ -633,6 +644,8 @@ SCIP_RETCODE freeSymmetryData(
    /* free data of added constraints */
    if ( propdata->genconss != NULL )
    {
+      assert( propdata->ngenconss > 0 || (ISORBITALFIXINGACTIVE(propdata->usesymmetry) && propdata->norbitopes == 0) );
+
       /* release constraints */
       for (i = 0; i < propdata->ngenconss; ++i)
       {
@@ -819,7 +832,8 @@ SCIP_RETCODE collectCoefficients(
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             istransformed,      /**< whether the constraint is transformed */
    SYM_RHSSENSE          rhssense,           /**< identifier of constraint type */
-   SYM_MATRIXDATA*       matrixdata          /**< matrix data to be filled in */
+   SYM_MATRIXDATA*       matrixdata,         /**< matrix data to be filled in */
+   int*                  nconssforvar        /**< pointer to array to store for each var the number of conss */
    )
 {
    SCIP_VAR** vars;
@@ -920,6 +934,8 @@ SCIP_RETCODE collectCoefficients(
 
          assert( 0 <= SCIPvarGetProbindex(vars[j]) && SCIPvarGetProbindex(vars[j]) < SCIPgetNVars(scip) );
 
+         if ( nconssforvar != NULL )
+            nconssforvar[SCIPvarGetProbindex(vars[j])] += 1;
          matrixdata->matvaridx[nmatcoef] = SCIPvarGetProbindex(vars[j]);
          matrixdata->matcoef[nmatcoef++] = vals[j];
          if ( SCIPisPositive(scip, vals[j]) )
@@ -927,7 +943,7 @@ SCIP_RETCODE collectCoefficients(
          else
             negcoef = TRUE;
       }
-      ++nrhscoef;
+      nrhscoef++;
 
       /* add negative of equation; increases chance to detect symmetry, but might increase time to compute symmetry. */
       if ( doubleequations && poscoef && negcoef )
@@ -979,6 +995,9 @@ SCIP_RETCODE collectCoefficients(
 
             assert( 0 <= SCIPvarGetProbindex(vars[j]) && SCIPvarGetProbindex(vars[j]) < SCIPgetNVars(scip) );
 
+            if ( nconssforvar != NULL )
+               nconssforvar[SCIPvarGetProbindex(vars[j])] += 1;
+
             matrixdata->matcoef[nmatcoef++] = -vals[j];
          }
          nrhscoef++;
@@ -1004,6 +1023,9 @@ SCIP_RETCODE collectCoefficients(
             matrixdata->matrhsidx[nmatcoef] = nrhscoef;
 
             assert( 0 <= SCIPvarGetProbindex(vars[j]) && SCIPvarGetProbindex(vars[j]) < SCIPgetNVars(scip) );
+
+            if ( nconssforvar != NULL )
+               nconssforvar[SCIPvarGetProbindex(vars[j])] += 1;
 
             matrixdata->matvaridx[nmatcoef] = SCIPvarGetProbindex(vars[j]);
             matrixdata->matcoef[nmatcoef++] = vals[j];
@@ -1215,6 +1237,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
    SCIP_Bool             local,              /**< Use local variable bounds? */
    SCIP_Bool             checksymmetries,    /**< Should all symmetries be checked after computation? */
+   SCIP_Bool             usecolumnsparsity,  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
@@ -1236,6 +1259,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SYM_SORTRHSTYPE sortrhstype;
    SCIP_Real oldcoef = SCIP_INVALID;
    SCIP_Real val;
+   int* nconssforvar = NULL;
    int nuniquevararray = 0;
    int nhandleconss;
    int nactiveconss;
@@ -1332,6 +1356,12 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvars, nallvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvals, nallvars) );
 
+   /* allocate memory for getting the number of constraints that contain a variable */
+   if ( usecolumnsparsity )
+   {
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &nconssforvar, nvars) );
+   }
+
    /* loop through all constraints */
    for (c = 0; c < nconss; ++c)
    {
@@ -1364,7 +1394,7 @@ SCIP_RETCODE computeSymmetryGroup(
       {
          SCIP_CALL( collectCoefficients(scip, doubleequations, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
                SCIPgetNVarsLinear(scip, cons), SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons),
-               SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
+               SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata, nconssforvar) );
       }
       else if ( strcmp(conshdlrname, "linking") == 0 )
       {
@@ -1390,9 +1420,9 @@ SCIP_RETCODE computeSymmetryGroup(
          consvals[nconsvars - 1] = -1;
 
          SCIP_CALL( collectCoefficients(scip, doubleequations, consvars, consvals, nconsvars, 0.0, 0.0,
-                        SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
+               SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata, nconssforvar) );
          SCIP_CALL( collectCoefficients(scip, doubleequations, consvars, NULL, nconsvars - 1, 1.0, 1.0,
-                        SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata) );
+               SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata, nconssforvar) );
       }
       else if ( strcmp(conshdlrname, "setppc") == 0 )
       {
@@ -1402,16 +1432,13 @@ SCIP_RETCODE computeSymmetryGroup(
          switch ( SCIPgetTypeSetppc(scip, cons) )
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
-            SCIP_CALL( collectCoefficients(scip, doubleequations, linvars, 0, nconsvars, 1.0, 1.0, SCIPconsIsTransformed(cons),
-                  SYM_SENSE_EQUATION, &matrixdata) );
+            SCIP_CALL( collectCoefficients(scip, doubleequations, linvars, 0, nconsvars, 1.0, 1.0, SCIPconsIsTransformed(cons), SYM_SENSE_EQUATION, &matrixdata, nconssforvar) );
             break;
          case SCIP_SETPPCTYPE_PACKING :
-            SCIP_CALL( collectCoefficients(scip, doubleequations, linvars, 0, nconsvars, -SCIPinfinity(scip), 1.0,
-                  SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata) );
+            SCIP_CALL( collectCoefficients(scip, doubleequations, linvars, 0, nconsvars, -SCIPinfinity(scip), 1.0, SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata, nconssforvar) );
             break;
          case SCIP_SETPPCTYPE_COVERING :
-            SCIP_CALL( collectCoefficients(scip, doubleequations, linvars, 0, nconsvars, 1.0, SCIPinfinity(scip),
-                  SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata) );
+            SCIP_CALL( collectCoefficients(scip, doubleequations, linvars, 0, nconsvars, 1.0, SCIPinfinity(scip), SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata, nconssforvar) );
             break;
          default:
             SCIPerrorMessage("Unknown setppc type %d.\n", SCIPgetTypeSetppc(scip, cons));
@@ -1445,7 +1472,7 @@ SCIP_RETCODE computeSymmetryGroup(
          assert( nconsvars <= nallvars );
 
          SCIP_CALL( collectCoefficients(scip, doubleequations, consvars, consvals, nconsvars, (SCIP_Real) SCIPgetRhsXor(scip, cons),
-               (SCIP_Real) SCIPgetRhsXor(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_XOR, &matrixdata) );
+               (SCIP_Real) SCIPgetRhsXor(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_XOR, &matrixdata, nconssforvar) );
       }
       else if ( strcmp(conshdlrname, "and") == 0 )
       {
@@ -1470,7 +1497,7 @@ SCIP_RETCODE computeSymmetryGroup(
          assert( nconsvars <= nallvars );
 
          SCIP_CALL( collectCoefficients(scip, doubleequations, consvars, consvals, nconsvars, 0.0, 0.0,
-               SCIPconsIsTransformed(cons), SYM_SENSE_AND, &matrixdata) );
+               SCIPconsIsTransformed(cons), SYM_SENSE_AND, &matrixdata, nconssforvar) );
       }
       else if ( strcmp(conshdlrname, "or") == 0 )
       {
@@ -1495,12 +1522,12 @@ SCIP_RETCODE computeSymmetryGroup(
          assert( nconsvars <= nallvars );
 
          SCIP_CALL( collectCoefficients(scip, doubleequations, consvars, consvals, nconsvars, 0.0, 0.0,
-               SCIPconsIsTransformed(cons), SYM_SENSE_OR, &matrixdata) );
+               SCIPconsIsTransformed(cons), SYM_SENSE_OR, &matrixdata, nconssforvar) );
       }
       else if ( strcmp(conshdlrname, "logicor") == 0 )
       {
          SCIP_CALL( collectCoefficients(scip, doubleequations, SCIPgetVarsLogicor(scip, cons), 0, SCIPgetNVarsLogicor(scip, cons),
-               1.0, SCIPinfinity(scip), SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata) );
+               1.0, SCIPinfinity(scip), SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata, nconssforvar) );
       }
       else if ( strcmp(conshdlrname, "knapsack") == 0 )
       {
@@ -1515,7 +1542,7 @@ SCIP_RETCODE computeSymmetryGroup(
          assert( nconsvars <= nallvars );
 
          SCIP_CALL( collectCoefficients(scip, doubleequations, SCIPgetVarsKnapsack(scip, cons), consvals, nconsvars, -SCIPinfinity(scip),
-               (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata) );
+               (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata, nconssforvar) );
       }
       else if ( strcmp(conshdlrname, "varbound") == 0 )
       {
@@ -1526,7 +1553,7 @@ SCIP_RETCODE computeSymmetryGroup(
          consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
          SCIP_CALL( collectCoefficients(scip, doubleequations, consvars, consvals, 2, SCIPgetLhsVarbound(scip, cons),
-               SCIPgetRhsVarbound(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata) );
+               SCIPgetRhsVarbound(scip, cons), SCIPconsIsTransformed(cons), SYM_SENSE_INEQUALITY, &matrixdata, nconssforvar) );
       }
       else if ( strcmp(conshdlrname, "bounddisjunction") == 0 )
       {
@@ -1598,6 +1625,9 @@ SCIP_RETCODE computeSymmetryGroup(
                SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                   "   Deactivated symmetry handling methods, there exist constraints that cannot be handled by symmetry methods.\n");
 
+               if ( usecolumnsparsity )
+                  SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
+
                SCIPfreeBlockMemoryArrayNull(scip, &consvals, nallvars);
                SCIPfreeBlockMemoryArrayNull(scip, &consvars, nallvars);
                SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
@@ -1619,7 +1649,7 @@ SCIP_RETCODE computeSymmetryGroup(
          {
             /* add information for bounddisjunction of type 1 */
             SCIP_CALL( collectCoefficients(scip, doubleequations, consvars, consvals, nbounddisjvars, 0.0, 0.0,
-                  SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDIS_TYPE_1, &matrixdata) );
+                  SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDIS_TYPE_1, &matrixdata, nconssforvar) );
          }
          else
          {
@@ -1633,7 +1663,7 @@ SCIP_RETCODE computeSymmetryGroup(
             consvals[0] = 1.0;
 
             SCIP_CALL( collectCoefficients(scip, doubleequations, consvars, consvals, 1, lhs, rhs,
-                  SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDIS_TYPE_2, &matrixdata) );
+                  SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDIS_TYPE_2, &matrixdata, nconssforvar) );
          }
       }
       else
@@ -1653,6 +1683,9 @@ SCIP_RETCODE computeSymmetryGroup(
    if ( matrixdata.nrhscoef == 0 )
    {
       *success = TRUE;
+
+      if ( usecolumnsparsity )
+         SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
 
       /* free matrix data */
       SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
@@ -1724,6 +1757,7 @@ SCIP_RETCODE computeSymmetryGroup(
             vt->ub = SCIPvarGetUbGlobal(var);
          }
          vt->type = SCIPvarGetType(var);
+         vt->nconss = usecolumnsparsity ? nconssforvar[j] : 0; /*lint !e613*/
 
          if ( ! SCIPhashtableExists(vartypemap, (void*) vt) )
          {
@@ -1744,6 +1778,35 @@ SCIP_RETCODE computeSymmetryGroup(
             matrixdata.permvarcolors[j] = vtr->color;
          }
       }
+   }
+
+   /* If every variable is unique, terminate. -> no symmetries can be present */
+   if ( matrixdata.nuniquevars == nvars )
+   {
+      *success = TRUE;
+
+      /* free matrix data */
+      SCIPfreeBlockMemoryArray(scip, &uniquevararray, nvars);
+
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoefcolors, matrixdata.nrhscoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoefcolors, matrixdata.nmatcoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
+      SCIPhashtableFree(&vartypemap);
+
+      if ( usecolumnsparsity )
+         SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
+
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoef, 2 * nactiveconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matvaridx, matrixdata.nmaxmatcoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matrhsidx, matrixdata.nmaxmatcoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matidx, matrixdata.nmaxmatcoef);
+      SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef);
+
+      SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+
+      return SCIP_OKAY;
    }
 
    /* find non-equivalent matrix entries (use sorting to avoid too many map calls) */
@@ -1846,6 +1909,9 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoefcolors, matrixdata.nmatcoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
    SCIPhashtableFree(&vartypemap);
+
+   if ( usecolumnsparsity )
+      SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
 
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
@@ -2016,7 +2082,7 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
    /* actually compute (global) symmetry */
-   SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries,
+   SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries, propdata->usecolumnsparsity,
          &propdata->npermvars, &propdata->permvars, &propdata->nperms, &propdata->nmaxperms, &propdata->perms,
          &propdata->log10groupsize, &successful) );
 
@@ -2265,6 +2331,7 @@ SCIP_RETCODE detectOrbitopes(
    for (i = 0; i < ncomponents; ++i)
    {
       SCIP_VAR*** vars;
+      SCIP_VAR*** varsallocorder;
       SCIP_CONS* cons;
       SCIP_Bool* usedperm;
       SCIP_Bool isorbitope = TRUE;
@@ -2313,9 +2380,7 @@ SCIP_RETCODE detectOrbitopes(
        * another permutation whose 2-cycles intersect pairwise in exactly one element */
 
       /* whether a permutation was considered to contribute to orbitope */
-      SCIP_CALL( SCIPallocBufferArray(scip, &usedperm, npermsincomponent) );
-      for (j = 0; j < npermsincomponent; ++j)
-         usedperm[j] = FALSE;
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &usedperm, npermsincomponent) );
       nusedperms = 0;
 
       /* orbitope matrix for indices of variables in permvars array */
@@ -2331,9 +2396,7 @@ SCIP_RETCODE detectOrbitopes(
          columnorder[j] = npermsincomponent + 2;
 
       /* count how often an element was used in the potential orbitope */
-      SCIP_CALL( SCIPallocBufferArray(scip, &nusedelems, npermvars) );
-      for (j = 0; j < npermvars; ++j)
-         nusedelems[j] = 0;
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &nusedelems, npermvars) );
 
       /* fill first two columns of orbitopevaridx matrix */
       row = 0;
@@ -2438,9 +2501,11 @@ SCIP_RETCODE detectOrbitopes(
 
       /* we have found a potential orbitope, prepare data for orbitope conshdlr */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, ntwocyclescomp) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varsallocorder, ntwocyclescomp) );
       for (j = 0; j < ntwocyclescomp; ++j)
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &vars[j], npermsincomponent + 1) ); /*lint !e866*/
+         varsallocorder[j] = vars[j]; /* to ensure that we can free the buffer in reverse order */
       }
 
       /* prepare variable matrix (reorder columns of orbitopevaridx) */
@@ -2464,15 +2529,20 @@ SCIP_RETCODE detectOrbitopes(
       }
 
       /* free data structures */
-      for (j = 0; j < ntwocyclescomp; ++j)
-         SCIPfreeBufferArray(scip, &vars[j]);
+      for (j = ntwocyclescomp - 1; j >= 0; --j)
+      {
+         SCIPfreeBufferArray(scip, &varsallocorder[j]);
+      }
+      SCIPfreeBufferArray(scip, &varsallocorder);
       SCIPfreeBufferArray(scip, &vars);
 
    FREEDATASTRUCTURES:
       SCIPfreeBufferArray(scip, &nusedelems);
       SCIPfreeBufferArray(scip, &columnorder);
-      for (j = 0; j < ntwocyclescomp; ++j)
+      for (j = ntwocyclescomp - 1; j >= 0; --j)
+      {
          SCIPfreeBufferArray(scip, &orbitopevaridx[j]);
+      }
       SCIPfreeBufferArray(scip, &orbitopevaridx);
       SCIPfreeBufferArray(scip, &usedperm);
    }
@@ -3600,6 +3670,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/recomputerestart",
          "recompute symmetries after a restart has occured?",
          &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/usecolumnsparsity",
+         "Should the number of conss a variable is contained in be exploited in symmetry detection?",
+         &propdata->usecolumnsparsity, TRUE, DEFAULT_USECOLUMNSPARSITY, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )

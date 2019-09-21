@@ -1523,7 +1523,7 @@ SCIP_RETCODE rowEventSideChanged(
    /* check, if the row is being tracked for coefficient changes
     * if so, issue ROWSIDECHANGED event
     */
-   if( (row->eventfilter->len > 0 && (row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWSIDECHANGED) != 0) )
+   if( (row->eventfilter->len > 0 && !(row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWSIDECHANGED)) )
    {
       SCIP_EVENT* event;
 
@@ -18494,8 +18494,18 @@ SCIP_RETCODE SCIPlpGetDegeneracy(
          }
          assert(nfixedcols + nfixedrows <= ncols + nineq + nbasicequalities - nrows - nalreadyfixedcols - nimplicitfixedrows);
 
-         lp->degeneracy = 1.0 - 1.0 * (nfixedcols + nfixedrows) / (ncols + nineq - nrows + nbasicequalities - nalreadyfixedcols);
-         lp->varconsratio = 1.0 * (ncols + nineq + nbasicequalities - nfixedcols - nfixedrows - nalreadyfixedcols) / nrows;
+         if( ncols + nineq - nrows + nbasicequalities - nalreadyfixedcols > 0 )
+            lp->degeneracy = 1.0 - 1.0 * (nfixedcols + nfixedrows) / (ncols + nineq - nrows + nbasicequalities - nalreadyfixedcols);
+         else
+            lp->degeneracy = 0.0;
+
+         if( nrows > 0 )
+            lp->varconsratio = 1.0 * (ncols + nineq + nbasicequalities - nfixedcols - nfixedrows - nalreadyfixedcols) / nrows;
+         else
+            lp->varconsratio = 1.0; /* @todo should this rather be set to a large value? */
+         assert(lp->degeneracy >= 0);
+         assert(SCIPsetIsLE(set, lp->degeneracy, 1.0));
+         assert(SCIPsetIsGE(set, lp->varconsratio, 1.0));
       }
       else
       {

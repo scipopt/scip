@@ -8878,6 +8878,7 @@ SCIP_RETCODE tightenSides(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(nchgsides != NULL);
+   assert(infeasible != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -18523,6 +18524,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_Real negcoeffsum;
    SCIP_Bool infeasible;
    SCIP_Bool integral;
+   int nchgsides;
    int nposbin;
    int nnegbin;
    int nposint;
@@ -18598,6 +18600,12 @@ SCIP_RETCODE SCIPupgradeConsLinear(
     * TODO: this needs to be fixed on master by changing the API and passing a pointer to whether the constraint is
     *       proven to be infeasible.
     */
+   if( infeasible )
+      return SCIP_OKAY;
+
+   /* tighten sides */
+   SCIP_CALL( tightenSides(scip, cons, &nchgsides, &infeasible) );
+
    if( infeasible )
       return SCIP_OKAY;
 

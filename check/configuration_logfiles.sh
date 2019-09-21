@@ -81,7 +81,7 @@ then
     fname=$SCIPPATH/$OUTPUTDIR/`basename $EVALFILE .eval`.meta
     if ! test -e $fname
     then
-        echo @Permutation $p > $fname
+        echo @Permutation $PERM > $fname
         echo @Seed $SEED >> $fname
         echo @Settings $SETNAME >> $fname
         echo @TstName $TSTNAME >> $fname

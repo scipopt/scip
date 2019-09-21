@@ -37,6 +37,7 @@ struct SYM_Vartype
    SCIP_Real             lb;                 /**< lower bound of variable */
    SCIP_Real             ub;                 /**< upper bound of variable */
    SCIP_VARTYPE          type;               /**< type of variable */
+   int                   nconss;             /**< number of conss a variable is contained in */
    int                   color;              /**< store color */
 };
 
