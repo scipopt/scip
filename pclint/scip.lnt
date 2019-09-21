@@ -19,6 +19,9 @@
 // use the integer model for enums
 +fie
 
+// underlying type for enum is always int
++fei
+
 // turn off the following warning, because this often arises from old lint versions
 -e72
 
