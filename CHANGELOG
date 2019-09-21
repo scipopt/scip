@@ -52,6 +52,8 @@ Build system
 
 ### Makefile
 
+- added support for building against Ipopt >= 3.13
+
 Fixed bugs
 ----------
 
