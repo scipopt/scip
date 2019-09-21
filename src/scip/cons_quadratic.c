@@ -15119,12 +15119,9 @@ SCIP_Bool SCIPisConcaveQuadratic(
    SCIP_Bool isconvex;
    SCIP_Bool isconcave;
 
-<<<<<<< HEAD
    assert(SCIPconsGetSCIP(cons) == scip);
    assert(SCIPconsGetData(cons) != NULL);
-=======
    assert(cons != NULL);
->>>>>>> master
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

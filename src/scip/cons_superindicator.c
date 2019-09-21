@@ -732,7 +732,7 @@ SCIP_RETCODE enforceConstraint(
             SCIP_CALL( SCIPenforelaxCons(scip, consdata->slackcons, sol, solinfeasible, &locresult) );
          }
 
-         SCIPdebugPrintf(" --> %slocresult=%u\n", locresult == SCIP_FEASIBLE ? "satisfied, " : "", locresult);
+         SCIPdebugPrintf(" --> %slocresult=%d\n", locresult == SCIP_FEASIBLE ? "satisfied, " : "", locresult);
       }
       /* otherwise check if we have not yet detected infeasibility */
       else if( *result == SCIP_FEASIBLE )

@@ -18743,5 +18743,5 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    }
 #endif
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
