@@ -1696,7 +1696,7 @@ SCIP_RETCODE forbidFixation(
 
          fixval = SCIPvarGetLbGlobal(subvar);
          assert(fixval == SCIPvarGetUbGlobal(subvar)); /* variable should be fixed in sub-SCIP */   /*lint !e777*/
-         assert((int)fixval == fixval); /* we have rounded values before fixing */
+         assert((int)fixval == fixval); /*lint !e777*/ /* we have rounded values before fixing */
          assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetLbGlobal(var) == fixval || SCIPvarGetUbGlobal(var) == fixval); /* for binaries, the fixval should be either 0.0 or 1.0 */  /*lint !e777*/ 
 
          if( SCIPvarGetLbGlobal(var) < fixval )
@@ -2561,6 +2561,7 @@ SCIP* SCIPgetSubScipHeurSubNlp(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
@@ -2578,6 +2579,7 @@ SCIP_VAR** SCIPgetVarMappingScip2SubScipHeurSubNlp(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
@@ -2595,6 +2597,7 @@ SCIP_VAR** SCIPgetVarMappingSubScip2ScipHeurSubNlp(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
@@ -2612,6 +2615,7 @@ SCIP_SOL* SCIPgetStartCandidateHeurSubNlp(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 

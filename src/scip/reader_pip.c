@@ -1066,8 +1066,8 @@ SCIP_RETCODE readPolynomial(
             goto TERMINATE_READPOLYNOMIAL;
          }
          exponents[nfactors-1] = exponent;  /*lint !e530*/
-         if( SCIPisIntegral(scip, exponent) && exponent > 0.0 )
-            monomialdegree += (int)exponent - 1; /* -1, because we added +1 when we put the variable into varidxs */
+         if( SCIPisIntegral(scip, exponent) && exponent > 0.0 ) /*lint !e530*/
+            monomialdegree += (int)exponent - 1; /*lint !e530*//* -1, because we added +1 when we put the variable into varidxs */
          else
             monomialdegree = SCIP_EXPR_DEGREEINFINITY;
 
@@ -1587,7 +1587,7 @@ SCIP_RETCODE readConstraints(
       getLinearAndQuadraticCoefs(exprtree, &constant, &nlinvars, linvars, lincoefs, &nquadcoefs, quadvars1, quadvars2, quadcoefs);
 
       /* assign the left and right hand side, depending on the constraint sense */
-      switch( sense )
+      switch( sense ) /*lint !e530*/
       {
       case PIP_SENSE_GE:
          lhs = sidevalue - constant;

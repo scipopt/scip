@@ -118,6 +118,7 @@ SCIP_RETCODE propagateRootRedcostBinvar(
    SCIP_Real rootsol;
    SCIP_Real rootlpobjval;
 
+   assert(scip != NULL);
    assert(SCIPgetDepth(scip) == 0);
 
    /* skip binary variable if it is locally fixed */

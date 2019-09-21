@@ -367,7 +367,7 @@ void relaxVar(
 
       SCIPdebugMsg(scip, "Row <%s> changed:Coefficient <%g>, LHS <%g> --> <%g>, RHS <%g> --> <%g>\n",
          SCIProwGetName(colrow), colval, lhs, matrix->lhs[rowindex], rhs, matrix->rhs[rowindex]);
-   }
+   } /*lint !e438*/
 }
 
 /** transforms bounds of a given variable s.t. its lower bound equals zero afterwards.

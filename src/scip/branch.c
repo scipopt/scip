@@ -919,7 +919,7 @@ void branchcandInsertPseudoCand(
    vartype = SCIPvarGetType(var);
    branchpriority = SCIPvarGetBranchPriority(var);
 
-   SCIPdebugMessage("inserting pseudo candidate <%s> of type %d and priority %d into candidate set at position %d (maxprio: %d)\n",
+   SCIPdebugMessage("inserting pseudo candidate <%s> of type %u and priority %d into candidate set at position %d (maxprio: %d)\n",
       SCIPvarGetName(var), vartype, branchpriority, insertpos, branchcand->pseudomaxpriority);
 
    /* insert the variable into pseudocands, making sure, that the highest priority candidates are at the front

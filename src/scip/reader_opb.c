@@ -1492,7 +1492,7 @@ SCIP_RETCODE readConstraints(
    }
 
    /* assign the left and right hand side, depending on the constraint sense */
-   switch( sense )
+   switch( sense ) /*lint !e530*/
    {
    case OPB_SENSE_GE:
       lhs = sidevalue;
@@ -2139,7 +2139,7 @@ void appendBuffer(
    assert(linecnt != NULL);
    assert(extension != NULL);
 
-   if( (*linecnt) + strlen(extension) >= OPB_MAX_LINELEN - 1 )
+   if( (*linecnt) + (int) strlen(extension) >= OPB_MAX_LINELEN - 1 )
       writeBuffer(scip, file, linebuffer, linecnt);
 
    /* append extension to linebuffer */
