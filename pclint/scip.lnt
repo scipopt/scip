@@ -39,6 +39,9 @@
 -e2666  // expression with side effects passed to unexpanded parameter: parameter is not referenced in the expansion
 -e2704  // potentially negating the most negative number [often if x = -y, and y is int, only relevant if y = INT_MAX]
 
+// for the time being turn off warning 666 (expression with side effects passed to repeated parameter of macro), since it currently produces too much noise
+-e666
+
 // last value assigned to '_restat_' not used
 -emacro(438,SCIP_CALL)
 
@@ -62,6 +65,9 @@
 -emacro(647,QUAD_ARRAY_SIZE)
 -emacro(666,SCIPquadprecProdQD)
 -emacro(666,SCIPquadprecSumQD)
+-emacro(644,SCIPquadprecSumQD)
+-emacro(644,QUAD)
+-emacro(665,QUAD)
 
 // loop is likely not entered
 -emacro(681,SCIPdebugMsg)
@@ -79,7 +85,7 @@
 -emacro(715,SCIP_DECL_*)
 -emacro(715,TCLIQUE_*)
 -emacro(715,CREATE_CONSTRAINT)
-
+-emacro(715,DECL_*)
 
 // loss of sign in promotion from 'int' to 'unsigned long'
 -emacro(737,SCIPfreeBlockMemoryArray)
