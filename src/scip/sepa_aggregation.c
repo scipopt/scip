@@ -404,6 +404,8 @@ SCIP_RETCODE setupAggregationData(
                SCIP_CALL( SCIPreallocBufferArray(scip, &aggrdata->aggrrows, aggrrowsminsize) );
                SCIP_CALL( SCIPreallocBufferArray(scip, &aggrdata->aggrrowscoef, aggrrowsminsize) );
             }
+            assert(aggrdata->aggrrows != NULL);
+            assert(aggrdata->aggrrowscoef != NULL);
 
             for( k = 0; k < ncolnonzeros; ++k )
             {
@@ -634,6 +636,7 @@ SCIP_RETCODE aggregateNextRow(
          SCIPABORT();
       }
       assert(ngoodrows > 0); /* bounddistance was negative for this variable, so it should have good rows */
+      assert(ngoodrows <= nrows);
 
       for( k = 0; k < ngoodrows; ++k )
       {

@@ -363,7 +363,7 @@ SCIP_RETCODE solCutIsViolated(
          norm = SQRT(cutsqrnorm);
 
          SCIPfreeBufferArray(scip, &cutcoefs);
-      }
+      }  /*lint !e438*/
       else
       {
          switch ( mipdata->normtype )
