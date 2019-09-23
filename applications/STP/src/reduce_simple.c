@@ -1585,6 +1585,7 @@ SCIP_RETCODE reduce_simple_pc(
                   int newedge;
                   const int e0 = edges2[0];
                   const int e1 = edges2[1];
+                  SCIP_Bool conflict;
 
                   SCIP_CALL( graph_singletonAncestors_init(scip, g, e0, &(ancestors0)) );
                   SCIP_CALL( graph_singletonAncestors_init(scip, g, e1, &(ancestors1)) );
@@ -1594,13 +1595,20 @@ SCIP_RETCODE reduce_simple_pc(
                   SCIPdebugMessage("delete - term - %d\n ", i);
 
                   SCIP_CALL( graph_edge_reinsert(scip, g, e0, nodes2[1], nodes2[0], g->cost[e0] + g->cost[e1] - g->prize[i],
-                        i, &ancestors1, &ancestors0, &newedge) );
+                        i, &ancestors1, &ancestors0, &newedge, &conflict) );
 
                   (*countnew) += graph_pc_deleteTerm(scip, g, i);
                   (*fixed) += g->prize[i];
 
                   graph_singletonAncestors_freeMembers(scip, &(ancestors0));
                   graph_singletonAncestors_freeMembers(scip, &(ancestors1));
+
+                  if( conflict )
+                  {
+                     assert(newedge >= 0);
+                     graph_edge_del(scip, g, newedge, TRUE);
+                     (*countnew)++;
+                  }
                }
             }
          }
