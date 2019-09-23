@@ -12378,7 +12378,7 @@ SCIP_RETCODE includeConshdlrExprBasic(
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/varboundrelax",
          "strategy on how to relax variable bounds during bound tightening: relax (n)ot, relax by (a)bsolute value, relax always by a(b)solute value, relax by (r)relative value",
-         &conshdlrdata->varboundrelax, TRUE, 'a', "nabr", NULL, NULL) );
+         &conshdlrdata->varboundrelax, TRUE, 'r', "nabr", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/varboundrelaxamount",
          "by how much to relax variable bounds during bound tightening if strategy 'a', 'b', or 'r'",
