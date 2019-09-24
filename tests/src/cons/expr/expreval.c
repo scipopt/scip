@@ -66,7 +66,7 @@ void setup(void)
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 
-   SCIP_CALL( SCIPsetRealParam(scip, "numerics/feastol", 1.0e-8) );
+   SCIP_CALL( SCIPsetRealParam(scip, "numerics/feastol", 1.0e-7) );
 }
 
 /* releases variables, frees scip */
