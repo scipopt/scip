@@ -571,7 +571,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/event_softtimelimit.o \
 			scip/disp_default.o \
 			scip/event_solvingphase.o \
-			scip/prop_symmetry.o \
 			scip/prop_sync.o \
 			scip/event_globalbnd.o \
 			scip/heur_sync.o \
