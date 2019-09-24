@@ -2368,8 +2368,8 @@ SCIP_RETCODE determineSymmetry(
    }
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
-   /* exit if no binary variables are affected by symmetry */
-   if ( ! propdata->binvaraffected )
+   /* exit if problem is linear and no binary variables are affected by symmetry */
+   if ( propdata->islinearproblem && ! propdata->binvaraffected )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
 
@@ -2396,7 +2396,7 @@ SCIP_RETCODE determineSymmetry(
 #endif
 
    /* in linear case, we only need the components for orbital fixing and orbitope detection */
-   if ( propdata->ofenabled || ( propdata->symconsenabled && propdata->detectorbitopes ) )
+   if ( !propdata->islinearproblem || propdata->ofenabled || ( propdata->symconsenabled && propdata->detectorbitopes ) )
    {
       SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
             propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
