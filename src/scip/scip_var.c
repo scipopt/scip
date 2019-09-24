@@ -2923,6 +2923,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get strong branching values for */
    int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Bool             idempotent,         /**< should scip's state remain the same after the call (statistics, column states...), or should it be updated ? */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up */
    SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
@@ -2986,7 +2987,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    }
 
    /* call strong branching for column with fractional value */
-   SCIP_CALL( SCIPcolGetStrongbranch(col, FALSE, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
+   SCIP_CALL( SCIPcolGetStrongbranch(col, FALSE, scip->set, scip->stat, scip->transprob, scip->lp, itlim, !idempotent, !idempotent,
          down, up, downvalid, upvalid, lperror) );
 
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
@@ -2994,7 +2995,17 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
     */
    if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
    {
-      SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+      if( !idempotent )
+      {
+         SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+      }
+      else
+      {
+         if( downinf != NULL )
+            *downinf = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
+         if( upinf != NULL )
+            *upinf = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
+      }
    }
 
    return SCIP_OKAY;
@@ -3642,6 +3653,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get strong branching values for */
    int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Bool             idempotent,         /**< should scip's state remain the same after the call (statistics, column states...), or should it be updated ? */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up */
    SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
@@ -3702,7 +3714,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    }
 
    /* call strong branching for column */
-   SCIP_CALL( SCIPcolGetStrongbranch(col, TRUE, scip->set, scip->stat, scip->transprob, scip->lp, itlim,
+   SCIP_CALL( SCIPcolGetStrongbranch(col, TRUE, scip->set, scip->stat, scip->transprob, scip->lp, itlim, !idempotent, !idempotent,
          down, up, downvalid, upvalid, lperror) );
 
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
@@ -3710,7 +3722,17 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
     */
    if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
    {
-      SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+      if( !idempotent )
+      {
+         SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+      }
+      else
+      {
+         if( downinf != NULL )
+            *downinf = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
+         if( upinf != NULL )
+            *upinf = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
+      }
    }
 
    return SCIP_OKAY;
