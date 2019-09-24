@@ -32,6 +32,9 @@ void setup(void)
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
+   /* disable upgrade to conshdlr_expr, so that we can test upgrade to soc */
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/quadratic/upgrade/expr", FALSE) );
+
    /* create a problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 }
