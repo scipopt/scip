@@ -455,6 +455,38 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    int                   nvars               /**< number of variables in both variable arrays */
    );
 
+/** translates a solution from a subscip to the main scip
+ *
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
+ * are represented as NULL entry in the \p subvars array.
+ *
+ * @note This method allocates a new solution of the main \p scip that needs to be freed by the user.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPtranslateSubSol(
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_SOL**            newsol              /**< buffer to store pointer to created solution in main SCIP */
+   );
+
+/** checks the solutions from the subscip and adds the first one that is found feasible to the master SCIP
+ *
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
+ * are represented as NULL entry in the \p subvars array.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPtranslateSubSols(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_Bool*            success,            /**< pointer to store, whether new solution was found */
+   int*                  solindex            /**< pointer to store solution index of stored solution, or NULL if not of interest */
+   );
+
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
  *  map, it is just returned as target constraint; elsewise a new constraint will be created; this created constraint is
  *  added to the constraint hash map and returned as target constraint; the variable map is used to map the variables of

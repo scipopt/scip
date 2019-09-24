@@ -184,6 +184,7 @@ set(scipsources
     scip/prop_pseudoobj.c
     scip/prop_redcost.c
     scip/prop_rootredcost.c
+    scip/prop_symmetry.c
     scip/prop_vbounds.c
     scip/prop_symmetry.c
     scip/prop_sync.c

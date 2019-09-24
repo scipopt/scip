@@ -306,55 +306,6 @@ SCIP_RETCODE restrictToBinaryBounds(
 }
 
 
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure                        */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< RENS heuristic structure                            */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
-   SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-   )
-{
-   SCIP_VAR** vars;                          /* the original problem's variables                */
-   int        nvars;                         /* the original problem's number of variables      */
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-   SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
-   int i;
-
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-   assert(subsol != NULL);
-
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-
-   /* copy the solution values */
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   for( i = 0; i < nvars; ++i )
-   {
-      if( subvars[i] == NULL )
-         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
-      else
-         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
-   }
-
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
-   /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-
-   SCIPfreeBufferArray(scip, &subsolvals);
-
-   return SCIP_OKAY;
-}
-
 /* ---------------- Callback methods of event handler ---------------- */
 
 /* exec the event handler
@@ -629,7 +580,11 @@ SCIP_RETCODE setupAndSolveSubscip(
       success = FALSE;
       for( i = 0; i < nsubsols && (!success || heurdata->addallsols); ++i )
       {
-         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
+         SCIP_SOL* newsol;
+
+         SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], heur, subvars, &newsol) );
+
+         SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
          if( success )
             *result = SCIP_FOUNDSOL;
       }
