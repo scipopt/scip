@@ -237,6 +237,7 @@ struct SCIP_PropData
    int                   nsymresacks;        /**< number of symresack constraints */
    SCIP_Bool             detectorbitopes;    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
    int                   norbitopes;         /**< number of orbitope constraints */
+   SCIP_Bool*            isnonlinvar;        /**< array indicating whether variables apper non-linearly */
    SCIP_Bool             islinearproblem;    /**< whether the whole problem is linear */
 
    /* data necessary for orbital fixing */
@@ -1806,7 +1807,7 @@ SCIP_RETCODE computeSymmetryGroup(
             consvals[0] = 1.0;
 
             SCIP_CALL( collectCoefficients(scip, doubleequations, consvars, consvals, 1, lhs, rhs,
-                  SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDIS_TYPE_2, &matrixdata) );
+                  SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDIS_TYPE_2, &matrixdata, nconssforvar) );
          }
       }
       else if ( strcmp(conshdlrname, "expr") == 0 )
@@ -2294,9 +2295,10 @@ SCIP_RETCODE determineSymmetry(
    propdata->islinearproblem = (SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "expr")) == 0);
 
    /* actually compute (global) symmetry */
-   SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries,
-         &propdata->npermvars, &propdata->permvars, &propdata->nperms, &propdata->nmaxperms, &propdata->perms,
-         &propdata->log10groupsize, &propdata->isnonlinvar, &successful) );
+   SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, maxgenerators, symspecrequirefixed, FALSE,
+         propdata->checksymmetries, propdata->usecolumnsparsity, &propdata->npermvars, &propdata->permvars,
+         &propdata->nperms, &propdata->nmaxperms, &propdata->perms, &propdata->log10groupsize,
+         &propdata->isnonlinvar, &successful) );
 
    /* mark that we have computed the symmetry group */
    propdata->computedsymmetry = TRUE;
