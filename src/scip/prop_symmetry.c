@@ -1995,6 +1995,9 @@ SCIP_RETCODE computeSymmetryGroup(
       if ( usecolumnsparsity )
          SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
 
+      if( nexprconss > 0 )
+         SCIPfreeBlockMemoryArrayNull(scip, isnonlinvar, nvars);
+
       SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
       SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
       SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoef, 2 * nactiveconss);
