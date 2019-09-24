@@ -77,24 +77,30 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
-)
+    )
+#
+# settings for the componentshandler test
+#
+set(settings_compHandlerTest
+    "components_during_solve"
+    )
 #
 # settings to run a reduced MIP test
 #
 set(settings_fastMIP
-    "vbcvisualization"
-    "bakvisualization"
-    "alldisp"
-    "fullstrongbfs"
-    "allfull"
     "all_aggressive"
+    "alldisp"
+    "allfull"
+    "bakvisualization"
+    "fullstrongbfs"
     "cgmip"
     "cgmipstrong"
     "cgmipviol"
-    "presolving_off"
-    "separating_off"
     "lookahead-abbrev-bincons"
     "lookahead-addclique-scaledcutoffscore"
+    "presolving_off"
+    "separating_off"
+    "vbcvisualization"
   )
 set(settings_MINLP
     "minlp"
@@ -156,6 +162,14 @@ set(settings_Indicator
     "indicatorupgrade"
    )
 
+set(settings_reopt
+    "reopt-test-settings-usesplitcons-TRUE"
+    "reopt-test-settings-varorderinterdiction-d"
+    "reopt-test-settings-varorderinterdiction-i"
+    "reopt-test-settings-varorderinterdiction-r"
+    )
+
+   
 #
 # Indicator instances
 #
@@ -213,7 +227,13 @@ set(instances_MIP
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
     )
-
+#
+# Instances for component handler test
+#
+set(instances_compHandlerTest
+    "instances/MIP/lseu_dcmulti.cip\;189302"
+    "instances/MIP/4sHB.cip\;67"
+    )
 #
 # Reduced set of MIP instances for more expensive settings
 #
@@ -444,6 +464,7 @@ endmacro(add_instancetests)
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
+add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
@@ -509,6 +530,8 @@ set(basenames_opb_wrongformat
     misc03.mps
     rgn.mps
     vpm2.fzn
+    lseu_dcmulti.cip
+    lseu_dcmulti_sHB.cip
     )
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 
@@ -628,6 +651,31 @@ set_tests_properties(write_and_read_settings
                         FAIL_REGULAR_EXPRESSION "ERROR"
                         DEPENDS scip-build
                     )
+
+#
+# reopt test.
+# We substitute first path placeholders in the .in file, which creates a new file under the binary directory
+# Then run SCIP to execute the list of commands defined there.
+#
+
+set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
+file(MAKE_DIRECTORY ${shell_tmp_dir})
+
+# disabled reopt on FullIns_3 until #2758 is dealt with
+# foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
+foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl)
+    foreach(setting ${settings_reopt})
+        configure_file(interactiveshell/${testname}.bat.in interactiveshell/${testname}-${setting}.bat)
+        add_test(NAME ${testname}-${setting}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/${testname}-${setting}.bat
+                )
+        set_tests_properties(${testname}-${setting} PROPERTIES
+                                            PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                            FAIL_REGULAR_EXPRESSION "Validation         : Fail")
+        endforeach()
+
+endforeach()
+
 
 #
 # define sets of linear classification results

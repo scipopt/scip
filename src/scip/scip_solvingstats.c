@@ -1128,6 +1128,30 @@ SCIP_Longint SCIPgetNConflictConssApplied(
    return SCIPconflictGetNAppliedConss(scip->conflict);
 }
 
+/** get total number of dual proof constraints added to the problem
+ *
+ *  @return the total number of dual proof constraints added to the problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_Longint SCIPgetNConflictDualproofsApplied(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNConflictDualproofsApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPconflictGetNDualrayInfSuccess(scip->conflict) + SCIPconflictGetNDualrayBndSuccess(scip->conflict);
+}
+
 /** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
  *
  *  @return the maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
@@ -3402,7 +3426,8 @@ void SCIPprintSolutionStatistics(
     * that the original problem is infeasible, even without the objective limit, i.e., we cannot be sure that we
     * actually reached the objective limit. */
    objlimitreached = FALSE;
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, primalbound) )
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0
+      && !SCIPisInfinity(scip, primalbound) && SCIPgetStatus(scip) != SCIP_STATUS_INFORUNBD )
       objlimitreached = TRUE;
 
    if( scip->primal->nsolsfound != scip->primal->nlimsolsfound )

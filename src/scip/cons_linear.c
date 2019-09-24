@@ -732,7 +732,7 @@ SCIP_RETCODE consCatchEvent(
 
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[pos],
          SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED
-         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED,
+         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED,
          eventhdlr, consdata->eventdata[pos], &consdata->eventdata[pos]->filterpos) );
 
    consdata->removedfixings = consdata->removedfixings && SCIPvarIsActive(consdata->vars[pos]);
@@ -767,7 +767,7 @@ SCIP_RETCODE consDropEvent(
 
    SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos],
          SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED
-         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED,
+         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED,
          eventhdlr, consdata->eventdata[pos], consdata->eventdata[pos]->filterpos) );
 
    SCIPfreeBlockMemory(scip, &consdata->eventdata[pos]); /*lint !e866*/
@@ -7955,11 +7955,9 @@ SCIP_RETCODE extractCliques(
       /* fast abort if no binaries exist */
       if( !SCIPvarIsBinary(consdata->vars[0]) )
       {
-#ifdef SCIP_DISABLED_CODE /* we have no event yet that signals type changes of variables; thus, we cannot ensure that the sorting is always up-to-date */
 #ifndef NDEBUG
          for( i = 1; i < consdata->nvars; i++ )
             assert(!SCIPvarIsBinary(consdata->vars[i]));
-#endif
 #endif
          return SCIP_OKAY;
       }
@@ -8884,6 +8882,7 @@ SCIP_RETCODE tightenSides(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(nchgsides != NULL);
+   assert(infeasible != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -17128,7 +17127,6 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          consdata->maxactdeltavar = NULL;
       }
    }
-
    else if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != 0 )
    {
       /* there is only one lock left: we may multi-aggregate the variable as slack of an equation */
@@ -17170,6 +17168,16 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          else
             consdata->coefsorted = FALSE;
       }
+   }
+   else if( (eventtype & SCIP_EVENTTYPE_TYPECHANGED) != 0 )
+   {
+      assert(SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED);
+
+      /* for presolving it only matters if a variable type changed from continuous to some kind of integer */
+      consdata->presolved = (consdata->presolved && SCIPeventGetOldtype(event) < SCIP_VARTYPE_CONTINUOUS);
+
+      /* the ordering is preserved if the type changes from something different to binary to binary but SCIPvarIsBinary() is true */
+      consdata->indexsorted = (consdata->indexsorted && SCIPeventGetNewtype(event) == SCIP_VARTYPE_BINARY && SCIPvarIsBinary(var));
    }
    else
    {
@@ -18545,6 +18553,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_Real negcoeffsum;
    SCIP_Bool infeasible;
    SCIP_Bool integral;
+   int nchgsides;
    int nposbin;
    int nnegbin;
    int nposint;
@@ -18620,6 +18629,12 @@ SCIP_RETCODE SCIPupgradeConsLinear(
     * TODO: this needs to be fixed on master by changing the API and passing a pointer to whether the constraint is
     *       proven to be infeasible.
     */
+   if( infeasible )
+      return SCIP_OKAY;
+
+   /* tighten sides */
+   SCIP_CALL( tightenSides(scip, cons, &nchgsides, &infeasible) );
+
    if( infeasible )
       return SCIP_OKAY;
 

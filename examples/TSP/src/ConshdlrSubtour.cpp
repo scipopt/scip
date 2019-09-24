@@ -462,7 +462,7 @@ SCIP_DECL_CONSCHECK(ConshdlrSubtour::scip_check)
       assert(graph != NULL);
 
       // if a subtour is found, the solution must be infeasible
-      found = findSubtour(scip, graph, sol);      
+      found = findSubtour(scip, graph, sol);
       if( found )
       {
          *result = SCIP_INFEASIBLE;

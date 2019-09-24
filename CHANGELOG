@@ -51,6 +51,11 @@ Features
 - Symmetry handling constraints (cons_orbisack, cons_orbitope, cons_symresack) now have an additional parameter to encode
   whether they are model constraints, i.e., define the problem, or whether they are only present to handle symmetries.
 
+- The symmetry code has been completely restructured. The presolvers presol_symbreak and presol_symmetry as well as the propagator
+  prop_orbitalfixing have been merged into the single propagator prop_symmetry to avoid storing the same information
+  multiple times. This propagator is now responsible for adding symmetry handling constraints as well as activating orbital
+  fixing. Moreover, the new file symmetry.c contains general functions for symmetry computations like orbit computations.
+
 - Variables can now be marked as "relaxation-only". This flag should be used to introduce new variables that are required
   to define a relaxation, but that are not part of any checked constraints. Essentially, these variables should only be used
   in the current SCIP solve and disregarded after a restart or in SCIP copies. Hence, these variables are not copied by SCIPcopy and
@@ -59,6 +64,18 @@ Features
 
 - The OSiL reader now supports nonlinear expressions of type "signpower".
 
+- Expressions of form abs(x)^p * x in a nonlinear constraint are now sometimes recognized and handled by abspower constraints.
+
+- If polyhedral symmetry handling methods are used (cons_orbisack, cons_orbitope, cons_symresack), it is now possible to
+  recompute symmetries if a restart occured.
+
+- handle linear binary variables as if squared in simple upgrade from quadratic to second-order cone constraints
+
+- new variable event when changing the variable type
+
+- It is no longer necessary to provide a SCIP pointer for the subproblem in SCIPaddBendersSubproblem if custom solving
+  methods are defined. A NULL pointer can be supplied to SCIPaddBendersSubproblem. In this case, no internal Benders'
+  cut generation methods can be used.
 
 Performance improvements
 ------------------------
@@ -105,13 +122,18 @@ Interface changes
     LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
 - Symmetry:
-  + removed method SCIP_RETCODE SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
+  + removed method SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
-  + extended method SCIP_RETCODE SCIPgetGeneratorsSymmetry(): It is possible to access both the original and
+  + renamed SCIPgetGeneratorsSymmetry() to SCIPgetSymmetry() and removed two arguments
+  + extended method SCIPgetSymmetry(): It is possible to access both the original and
     transposed permutations matrix as well as the (independent symmetry) components of a permutation group now.
   + arguments of functions SCIPcreateConsOrbisack(), SCIPcreateConsBasicOrbisack(), SCIPcreateConsOrbitope(),
     SCIPcreateConsBasicOrbitope(), SCIPcreateConsSymresack(), SCIPcreateConsBasicSymresack(), and SCIPcreateSymbreakCons() extended
     by "ismodelcons" to encode whether the constraints are model constraints or not
+  + the function SCIPgetSymmetry() no longer accepts the parameter recompute, but has parameter permvarmap as new input
+  + removed SCIPgetPermvarsObjSymmetry(), SCIPsetSymmetryComponentblocked(), SCIPgetSymmetryComponentblocked(),
+    SCIPgetSyminfoGloballyFixedVars(), SCIPcomputeGroupOrbitsSymbreak, SCIPincludePresolSymmetry(),SCIPincludePresolSymbreak(),
+    and SCIPincludePropOrbitalfixing()
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 - Benders' decomposition
   + changed SCIPstoreBenderscutCut() in scip_benders.c to SCIPstoreBendersCut(). Where this function used to take a
@@ -158,11 +180,18 @@ Interface changes
   by the LP relaxation, by strong branching, by the current pseudo solution, or by a primal heuristic.
   The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
 - added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
-- new API functions SCIPsetCommonSubscipParams() and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
+- new API functions SCIPsetCommonSubscipParams(), SCIPtranslateSubSol(), and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
 - new API function SCIPgetLPDegeneracy() to get two measures for the degeneracy of the current LP
 - new API functions SCIPdivesetIsAvailable() to check preconditions of a dive set and SCIPdivesetIsPublic() to check if the dive set can be used
   by other primal heuristics.
+- new API functions SCIPcomputeOrbitsSym(), SCIPcomputeOrbitsFilterSym(), SCIPgetPropertiesPerm(), SCIPdetermineBinvarAffectedSym(),
+  SCIPdetermineNVarsAffectedSym(), SCIPcomputeComponentsSym(), and SCIPextendSubOrbitope(), SCIPgenerateOrbitopeVarsMatrix() for symmetry computations
 - new API functions SCIPvarIsRelaxationOnly() and SCIPvarMarkRelaxationOnly() to query and set, resp., whether a variable is marked as relaxation-only
+- new API functions SCIPconshdlrGetNUpdateConss() and SCIPconshdlrGetUpdateConss(), for expert users only
+- new API function SCIPgetNConflictDualproofsApplied()
+- new API functions SCIPeventGetOldtype() and SCIPeventGetNewtype() for the new event when changing the variable type
+- new API function SCIPisConvexConsQuadratic() to check whether a quadratic constraint is convex when a given set of variables would be fixed
+
 
 ### Command line interface
 
@@ -173,7 +202,7 @@ Interface changes
 - renamed parameter "propagating/orbitalfixing/enableafterrestart" to ".../recomputerestart"
 - Parameter "misc/allowdualreds" is now called "misc/allowstrongdualreds"
 - Parameter "misc/allowobjprop" is now called "misc/allowweakdualreds"
-- changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: 0, old value: 5) in cons_orbitope.c
+- changed default values of propagation (new value: 1, old value: 5) and separation frequency (new value: -1, old value: 5) in cons_orbitope.c
 - all primal heuristics that use sub-SCIPs are disabled within the heuristics fast emphasis setting
 - deleted parameter heuristics/localbranching/useuct, use heuristics/useuctsubscip instead
 - changed default value of "presolving/symbreak/detectorbitopes" (new value: TRUE, old value: FALSE)
@@ -181,6 +210,20 @@ Interface changes
 - deleted parameter "constraints/orbisack/checkalwaysfeas"
 - deleted parameter "constraints/orbitope/checkalwaysfeas"
 - deleted parameter "constraints/symresack/checkalwaysfeas"
+- deleted parameter "presolving/symmetry/maxgenerators"
+- deleted parameter "presolving/symmetry/checksymmetries"
+- deleted parameter "presolving/symmetry/displaynorbitvars"
+- deleted parameter "presolving/symbreak/conssaddlp"
+- deleted parameter "presolving/symbreak/addsymresacks"
+- deleted parameter "presolving/symbreak/computeorbits"
+- deleted parameter "presolving/symbreak/detectorbitopes"
+- deleted parameter "presolving/symbreak/addconsstiming"
+- deleted parameter "propagating/orbitalfixing/symcomptiming"
+- deleted parameter "propagating/orbitalfixing/performpresolving"
+- deleted parameter "propagating/orbitalfixing/recomputerestart"
+- changed default value of "heur/coefdiving/freq" (old: 10, new: -1)
+- changed default value of "heur/conflictdiving/freq" (old: -1, new: 10)
+- changed default value of "heur/conflictdiving/lockweight" (old: 1.0, new: 0.75)
 
 ### New parameters
 
@@ -231,6 +274,18 @@ Interface changes
   - constraints/benderslp/iterlimit: after the root node, only iterlimit fractional LP solutions are used at each node
     to generate Benders' decomposition cuts.
 
+- new parameters for symmetry handling
+  - new parameter "propagating/symmetry/maxgenerators"
+  - new parameter "propagating/symmetry/checksymmetries"
+  - new parameter "propagating/symmetry/displaynorbitvars"
+  - new parameter "propagating/symmetry/conssaddlp"
+  - new parameter "propagating/symmetry/addsymresacks"
+  - new parameter "propagating/symmetry/detectorbitopes"
+  - new parameter "propagating/symmetry/addconsstiming"
+  - new parameter "propagating/symmetry/ofsymcomptiming"
+  - new parameter "propagating/symmetry/performpresolving"
+  - new parameter "propagating/symmetry/recomputerestart"
+
 ### Data structures
 
 ### Build system
@@ -264,6 +319,7 @@ Fixed bugs
 ----------
 
 - fix and improve memory handling in symmetry computation
+- fix shown number of applied conflicts in solving statistics
 
 Miscellaneous
 -------------
@@ -307,6 +363,9 @@ Interface changes
 
 ### Changed parameters
 
+- enabling aggressive presolving now activates all available presolving plugins,
+  and decreases the presolving/restartfac parameter correctly with respect to default.
+
 ### New parameters
 
 ### Data structures
@@ -327,6 +386,8 @@ Build system
 
 ### Makefile
 
+- added support for building against Ipopt >= 3.13
+
 Fixed bugs
 ----------
 
@@ -337,10 +398,18 @@ Fixed bugs
 - fixed bug in SCIPreoptReleaseData() when freeing all stored constraints
 - fixed bug when freeing the transformed problem via interactive shell if reoptimization is enabled
 - fixed two issues related to (near-)redundant logicor constraints in presolving
+- fixed counting of aggregations in XOR constraint handler
+- fixed handling of unbounded solutions
+- fixed update of LP size information when an LP error occured during probing
+- handle special case of variable bound constraints during aggregating variables
+- tighten sides of linear constraints before trying to upgrade them to more specialized constraints (knapsack, logic-or etc.) when calling SCIPupgradeConsLinear()
+
 
 Miscellaneous
 -------------
 - checks in debug mode that clean buffer memory is really clean when being freed are now disabled by default
+- don't compute symmetries if reoptimization is enabled
+- prefer integral values when fixing an almost-fixed continuous variable in the trivial presolver
 
 Known bugs
 ----------

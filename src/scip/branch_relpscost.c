@@ -89,7 +89,7 @@
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE   /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 #define DEFAULT_DYNAMICWEIGHTS   TRUE        /**< should the weights of the branching rule be adjusted dynamically during solving based
                                               *   infeasible and objective leaf counters? */
-#define DEFAULT_DEGENERACYAWARE  FALSE       /**< should degeneracy be taken into account to update weights and skip strong branching? */
+#define DEFAULT_DEGENERACYAWARE  1           /**< should degeneracy be taken into account to update weights and skip strong branching? (0: off, 1: after root, 2: always)*/
 
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -124,7 +124,7 @@ struct SCIP_BranchruleData
                                                *  better than the best strong-branching or pseudo-candidate? */
    SCIP_Bool             dynamicweights;     /**< should the weights of the branching rule be adjusted dynamically during
                                               *   solving based on objective and infeasible leaf counters? */
-   SCIP_Bool             degeneracyaware;    /**< should degeneracy be taken into account to update weights and skip strong branching? */
+   int                   degeneracyaware;    /**< should degeneracy be taken into account to update weights and skip strong branching? (0: off, 1: after root, 2: always) */
    int                   confidencelevel;    /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
    int*                  nlcount;            /**< array to store nonlinear count values */
    int                   nlcountsize;        /**< length of nlcount array */
@@ -637,7 +637,7 @@ SCIP_RETCODE execRelpscost(
       SCIP_Real degeneracyfactor = 1.0;
 
       /* get LP degeneracy information and compute a factor to change weighting of pseudo cost score vs. other scores */
-      if( branchruledata->degeneracyaware )
+      if( branchruledata->degeneracyaware > 0 && (SCIPgetDepth(scip) > 0 || branchruledata->degeneracyaware > 1) )
       {
          SCIP_Real degeneracy;
          SCIP_Real varconsratio;
@@ -1773,9 +1773,9 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "should the weights of the branching rule be adjusted dynamically during solving based on objective and infeasible leaf counters?",
          &branchruledata->dynamicweights, TRUE, DEFAULT_DYNAMICWEIGHTS,
          NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/degeneracyaware",
-         "should degeneracy be taken into account to update weights and skip strong branching?",
-         &branchruledata->degeneracyaware, TRUE, DEFAULT_DEGENERACYAWARE,
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/degeneracyaware",
+         "should degeneracy be taken into account to update weights and skip strong branching? (0: off, 1: after root, 2: always)",
+         &branchruledata->degeneracyaware, TRUE, DEFAULT_DEGENERACYAWARE, 0, 2,
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );

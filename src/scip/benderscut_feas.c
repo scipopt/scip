@@ -458,6 +458,15 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeas)
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
+   if( subproblem == NULL )
+   {
+      SCIPdebugMsg(scip, "The subproblem %d is set to NULL. The <%s> Benders' decomposition cut can not be executed.\n",
+         probnumber, BENDERSCUT_NAME);
+
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
    /* setting a flag to indicate whether the NLP relaxation should be used to generate cuts */
    nlprelaxation = SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem);
 
