@@ -1935,12 +1935,8 @@ SCIP_RETCODE reduce_da(
 
    if( extended || 1 )
    {
-      int todo;
+      int removeme; // should not be necessary anymore with conflict deletion... make a check?
       SCIP_CALL( reduce_deleteConflictEdges(scip, graph) );
-
-
-
-
    }
 
    /* initialize */
@@ -2150,8 +2146,7 @@ SCIP_RETCODE reduce_da(
               //   graph_printInfo(graph);
               //   printf("newly fixed %d \n", extfixed);
 //                 assert(0);
-
-              }
+         }
 
 
          updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, (run == 0));
@@ -2189,11 +2184,17 @@ SCIP_RETCODE reduce_da(
 
       if( !directed && !SCIPisZero(scip, minpathcost) && nodereplacing )
       {
-         nfixed += reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
+         const int nreplacings = reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
+         nfixed += nreplacings;
+
+         if( nreplacings > 0 )
+         {
+            int todo; // clean pool
+         }
 
          if( extended || 1 )
          {
-            int todo;
+            int todo; // should not be necessary anymore, but check!
             if( rpc )
                graph_pc_2org(graph);
 
