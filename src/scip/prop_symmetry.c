@@ -3206,7 +3206,7 @@ SCIP_RETCODE propagateOrbitalFixing(
 
    /* possibly compute symmetry */
    SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
-   assert( propdata->binvaraffected || ! propdata->ofenabled );
+   assert( !propdata->islinearproblem || propdata->binvaraffected || ! propdata->ofenabled );
 
    /* return if there is no symmetry available */
    nperms = propdata->nperms;
