@@ -711,6 +711,7 @@ SCIP_RETCODE freeSymmetryData(
       propdata->nmovedpermvars = 0;
       propdata->log10groupsize = -1.0;
       propdata->binvaraffected = FALSE;
+      propdata->isnonlinvar = NULL;
    }
    propdata->nperms = -1;
 
