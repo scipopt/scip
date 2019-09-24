@@ -13,17 +13,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_symmetry.h
- * @ingroup PRESOLVERS
- * @brief  presolver for storing symmetry information about current problem
+/**@file   prop_symmetry.h
+ * @ingroup PROPAGATORS
+ * @brief  propagator for symmetry handling
  * @author Marc Pfetsch
  * @author Thomas Rehn
+ * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PRESOL_SYMMETRY_H_
-#define __SCIP_PRESOL_SYMMETRY_H_
+#ifndef __SCIP_PROP_SYMMETRY_H_
+#define __SCIP_PROP_SYMMETRY_H_
 
 #include <scip/scip.h>
 
@@ -33,21 +34,19 @@ extern "C" {
 
 #include <symmetry/type_symmetry.h>
 
-/** include symmetry presolver */
+/** include symmetry propagator */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludePresolSymmetry(
+SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** return symmetry group generators */
+/** return currently available symmetry group information */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetGeneratorsSymmetry(
+SCIP_RETCODE SCIPgetSymmetry(
    SCIP*                 scip,               /**< SCIP data structure */
-   SYM_SPEC              symspecrequire,     /**< symmetry specification for which we need to compute symmetries */
-   SYM_SPEC              symspecrequirefixed,/**< symmetry specification of variables which must be fixed by symmetries */
-   SCIP_Bool             recompute,          /**< Have symmetries already been computed? */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
+   SCIP_HASHMAP**        permvarmap,         /**< pointer to store hash map of permvars (or NULL) */
    int*                  nperms,             /**< pointer to store number of permutations */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix (or NULL)*/
    int***                permstrans,         /**< pointer to store permutation generators as (npermvars x nperms) matrix (or NULL)*/
@@ -58,41 +57,6 @@ SCIP_RETCODE SCIPgetGeneratorsSymmetry(
    int**                 vartocomponent,     /**< pointer to store assignment from variable to its component (or NULL) */
    int*                  ncomponents         /**< pointer to store number of components (or NULL) */
    );
-
-/** return objective coefficients of permuted variables at time of symmetry computation */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetPermvarsObjSymmetry(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real**           permvarsobj         /**< pointer to store objective coefficients of permuted variables (NULL if not available) */
-   );
-
-/** block component of symmetry group to be considered by symmetry handling routines */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetSymmetryComponentblocked(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   i                   /**< index of component to block */
-   );
-
-/** get blocked status component of symmetry group */
-SCIP_EXPORT
-SCIP_Shortbool SCIPgetSymmetryComponentblocked(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   i                   /**< index of component to check blocked status */
-   );
-
-SCIP_EXPORT
-/** return symmetry information on globally fixed variables */
-SCIP_RETCODE SCIPgetSyminfoGloballyFixedVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Shortbool**      bg0,                /**< pointer to store array indicating whether var is globally fixed to 0 */
-   int**                 bg0list,            /**< pointer to store list of vars globally fixed to 0 */
-   int**                 nbg0,               /**< pointer to store memory position of number of vars globally fixed to 0 */
-   SCIP_Shortbool**      bg1,                /**< pointer to store array indicating whether var is globally fixed to 1 */
-   int**                 bg1list,            /**< pointer to store list of vars globally fixed to 1 */
-   int**                 nbg1,               /**< pointer to store memory position of number of vars globally fixed to 1 */
-   SCIP_HASHMAP**        permvarmap          /**< pointer to store hash map of permvars */
-   );
-
 
 #ifdef __cplusplus
 }

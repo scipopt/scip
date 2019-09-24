@@ -36,6 +36,7 @@
 #include <scip/cons_expr_sum.h>
 #include <scip/cons_expr_pow.h>
 #include <scip/cons_expr_iterator.h>
+#include <scip/cons_linear.h>
 
 using std::vector;
 
@@ -269,7 +270,6 @@ SCIP_RETCODE createVariableNodes(
    assert(nnodes == 0);
    assert(nedges == 0);
    assert(nusedcolors == 0);
-
    SCIPdebugMsg(scip, "Creating graph with colored nodes for variables.\n");
 
    success = TRUE;
@@ -290,7 +290,9 @@ SCIP_RETCODE createVariableNodes(
       ++nnodes;
    }
 
+   /* this is not exactly true, since we skip auxvars, but it doesn't matter if some colors are not used at all */
    nusedcolors = matrixdata->nuniquevars;
+
    return SCIP_OKAY;
 }
 
