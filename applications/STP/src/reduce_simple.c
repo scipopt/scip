@@ -495,7 +495,7 @@ void adjust0term(
 
 
 /** contract edges of weight zero */
-SCIP_RETCODE reduce_contractZeroEdges(
+SCIP_RETCODE reduce_simple_contract0Edges(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Bool             savehistory         /**< save the history? */
@@ -542,7 +542,7 @@ SCIP_RETCODE reduce_contractZeroEdges(
 
 
 /* removes parallel edges */
-SCIP_RETCODE deleteMultiedges(
+SCIP_RETCODE reduce_simple_deleteMultiedges(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g                   /**< graph data structure */
 )
@@ -764,7 +764,7 @@ SCIP_RETCODE reduce_simple(
       }
    }
    SCIPdebugMessage(" %d Knots deleted\n", elimscount);
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
    *nelims += elimscount;
    return SCIP_OKAY;
@@ -966,14 +966,14 @@ SCIP_RETCODE reduce_simple_sap(
             graph_edge_del(scip, g, g->inpbeg[i], TRUE);
 
    SCIPdebugMessage("dirdeg %d Knots deleted\n", *count);
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
 }
 
 
 /** root proximity terminal test (SAP) */
-SCIP_RETCODE reduce_rpt(
+SCIP_RETCODE reduce_simple_rpt(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to offset value */
@@ -1333,9 +1333,9 @@ SCIP_RETCODE reduce_simple_mw(
    SCIPdebugMessage("chains after: %d \n", nchains(g));
    assert(!adjterms(g));
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
-   SCIP_CALL( level0save(scip, g) );
+   SCIP_CALL( level0(scip, g) );
 
    return SCIP_OKAY;
 }
@@ -1672,9 +1672,9 @@ SCIP_RETCODE reduce_simple_pc(
       (*countall) += (*countnew);
 
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
-   SCIP_CALL( level0save(scip, g) );
+   SCIP_CALL( level0(scip, g) );
 
    return SCIP_OKAY;
 }

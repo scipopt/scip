@@ -670,7 +670,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       /* delete all vertices not reachable from the root */
       SCIP_CALL( level0(scip, prunegraph) );
 
-      assert(graph_valid(prunegraph));
+      assert(graph_valid(scip, prunegraph));
 
       graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
 

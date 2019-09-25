@@ -1323,7 +1323,7 @@ SCIP_RETCODE computeSteinerTree(
 
    SCIPrandomPermuteIntArray(randnumgen, perm, 0, nnodes - 1);
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
    /* CONSTCOND */
    for( ;; )

@@ -70,7 +70,6 @@ typedef struct reduce_costs_data
 /* reduce.c
  */
 extern SCIP_RETCODE level0(SCIP*, GRAPH*);
-extern SCIP_RETCODE level0save(SCIP*, GRAPH*);
 extern SCIP_RETCODE level0infeas(SCIP*, GRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE level0RpcRmw(SCIP*, GRAPH*, SCIP_Real*);
 extern SCIP_RETCODE level0RpcRmwInfeas(SCIP*, GRAPH*, SCIP_Real*, SCIP_Bool*);
@@ -150,8 +149,8 @@ extern SCIP_RETCODE    heur_extendPcMwOuterTest(SCIP*);
 
 /* reduce_simple.c
  */
-extern SCIP_RETCODE    deleteMultiedges(SCIP*, GRAPH*);
-extern SCIP_RETCODE    reduce_contractZeroEdges(SCIP*, GRAPH*, SCIP_Bool);
+extern SCIP_RETCODE    reduce_simple_deleteMultiedges(SCIP*, GRAPH*);
+extern SCIP_RETCODE    reduce_simple_contract0Edges(SCIP*, GRAPH*, SCIP_Bool);
 extern SCIP_RETCODE    reduce_simple(SCIP*, GRAPH*, SCIP_Real*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_simple_hc(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_simple_mw(SCIP*, GRAPH*, int*, SCIP_Real*, int*);
@@ -159,7 +158,7 @@ extern SCIP_RETCODE    reduce_simple_pc(SCIP*, const int*, GRAPH*, SCIP_Real*, i
 extern SCIP_RETCODE    reduce_simple_aritculations(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_simple_fixedConflict(SCIP*, const int*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_simple_sap(SCIP*, GRAPH*, SCIP_Real*, int*);
-extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
+extern SCIP_RETCODE    reduce_simple_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
 
 /* reduce_util.c
  */

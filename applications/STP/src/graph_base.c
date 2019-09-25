@@ -2655,10 +2655,10 @@ SCIP_RETCODE graph_pc_contractNodeAncestors(
    SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[s]), g->ancestors[ets], NULL));
    SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->ancestors[ets], NULL));
 
-   SCIP_CALL( graph_pseudoAncestors_appendCopyNode(scip, t, s, FALSE, g, &conflict) );
+   SCIP_CALL( graph_pseudoAncestors_appendCopyEdgeToNode(scip, t, ets, FALSE, g, &conflict) );
    assert(!conflict);
 
-   SCIP_CALL( graph_pseudoAncestors_appendCopyEdgeToNode(scip, t, ets, FALSE, g, &conflict) );
+   SCIP_CALL( graph_pseudoAncestors_appendCopyNode(scip, t, s, FALSE, g, &conflict) );
    assert(!conflict);
 
    return SCIP_OKAY;
@@ -4419,6 +4419,7 @@ SCIP_RETCODE graph_get_edgeConflicts(
    int* pseudonodecount;
    int nconflicts;
    int npseudoconflicts;
+   int npseudofixed;
    const int nnodes = g->knots;
    const int nedges = g->edges;
    const int nedgesorg = g->orgedges;
@@ -4438,6 +4439,7 @@ SCIP_RETCODE graph_get_edgeConflicts(
    for( int e = 0; e < nnodes; e++ )
       pseudonodecount[e] = 0;
 
+   npseudofixed = graph_get_nFixpseudonodes(scip, g);
    nconflicts = 0;
    npseudoconflicts = 0;
 
@@ -4525,6 +4527,7 @@ SCIP_RETCODE graph_get_edgeConflicts(
 
    printf("number of edge conflicts %d \n", nconflicts);
    printf("number of pseudo-ancestor conflicts %d \n", npseudoconflicts);
+   printf("number of fixed pseudo-ancestors %d \n", npseudofixed);
 
    SCIPfreeBufferArray(scip, &pseudonodecount);
    SCIPfreeBufferArray(scip, &childcount);
@@ -4995,7 +4998,7 @@ SCIP_RETCODE graph_copy_data(
 
       BMScopyMemoryArray(g->grid_ncoords, p->grid_ncoords, p->grid_dim);
    }
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
 }
@@ -5016,6 +5019,86 @@ SCIP_RETCODE graph_copy(
 
    return SCIP_OKAY;
 }
+
+
+/** marks the current graph */
+void graph_mark(
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   const int nnodes = g->knots;
+
+   assert(g);
+
+   for( int k = 0; k < nnodes; k++ )
+      g->mark[k] = (g->grad[k] > 0);
+
+   if( graph_pc_isPcMw(g) && !g->extended )
+   {
+      const int root = g->source;
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( (Is_pterm(g->term[k]) || k == root) )
+            g->mark[k] = FALSE;
+      }
+
+      if( graph_pc_isRootedPcMw(g) )
+         g->mark[root] = TRUE;
+   }
+}
+
+
+/** is the current graph properly marked? */
+SCIP_Bool graph_isMarked(
+   const GRAPH*          g                   /**< the graph */
+   )
+{
+   assert(g);
+
+   if( graph_pc_isPcMw(g) && !g->extended )
+   {
+      const int nnodes = g->knots;
+      const int root = g->source;
+      const int rooted = graph_pc_isRootedPcMw(g);
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( Is_pterm(g->term[k]) || (!rooted && k == root) )
+         {
+            if( g->mark[k] )
+               return FALSE;
+         }
+         else
+         {
+            if( g->mark[k] != (g->grad[k] > 0) )
+               return FALSE;
+         }
+      }
+
+      if( rooted )
+      {
+         if( !g->mark[root] )
+            return FALSE;
+      }
+
+   }
+   else
+   {
+      const int nnodes = g->knots;
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( g->mark[k] != (g->grad[k] > 0) )
+         {
+            return FALSE;
+         }
+      }
+   }
+
+   return TRUE;
+}
+
 
 void graph_show(
    const GRAPH*          p                   /**< the graph */
@@ -5109,7 +5192,7 @@ SCIP_RETCODE graph_pack(
 
    assert(scip      != NULL);
    assert(graph     != NULL);
-   assert(graph_valid(graph));
+   assert(graph_valid(scip, graph));
    assert(!graph->is_packed);
 
    g = graph;
@@ -5295,7 +5378,7 @@ SCIP_RETCODE graph_pack(
    g->stp_type = UNKNOWN;
    graph_free(scip, &g, FALSE);
 
-   assert(graph_valid(q));
+   assert(graph_valid(scip, q));
 
    if( verbose )
       printf("Nodes: %d  Edges: %d  Terminals: %d\n", q->knots, q->edges, q->terms);
@@ -5362,56 +5445,50 @@ void graph_trail(
 SCIP_RETCODE graph_trail_arr(
    SCIP*                 scip,               /**< scip struct */
    const GRAPH*          g,                  /**< the new graph */
-   int                   i                   /**< node to start from */
+   int                   start,              /**< node to start from */
+   SCIP_Bool*            nodevisited         /**< marks which node has been visited */
    )
 {
-   int* const gmark = g->mark;
+   int* stackarr;
+   int stacksize;
+   const int nnodes = g->knots;
 
-   assert(scip   != NULL);
-   assert(g      != NULL);
-   assert(i      >= 0);
-   assert(i      <  g->knots);
+   assert(g && scip && nodevisited);
+   assert(start >= 0 && start < g->knots);
 
-   if( !gmark[i] )
+   for( int i = 0; i < nnodes; i++ )
+      nodevisited[i] = FALSE;
+
+   nodevisited[start] = TRUE;
+
+   if( g->grad[start] == 0 )
+      return SCIP_OKAY;
+
+   stacksize = 0;
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &stackarr, nnodes));
+
+   stackarr[stacksize++] = start;
+
+   /* DFS loop */
+   while( stacksize != 0 )
    {
-      int* stackarr;
-      int a;
-      int head;
-      int node;
-      int nnodes;
-      int stacksize;
+      const int node = stackarr[--stacksize];
 
-      gmark[i] = TRUE;
-
-      if( g->grad[i] == 0 )
-         return SCIP_OKAY;
-
-      nnodes = g->knots;
-      stacksize = 0;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &stackarr, nnodes) );
-
-      stackarr[stacksize++] = i;
-
-      /* DFS loop */
-      while( stacksize != 0 )
+      /* traverse outgoing arcs */
+      for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
       {
-         node = stackarr[--stacksize];
+         const int head = g->head[a];
 
-         /* traverse outgoing arcs */
-         for( a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
+         if( !nodevisited[head] )
          {
-            head = g->head[a];
-
-            if( !gmark[head] )
-            {
-               gmark[head] = TRUE;
-               stackarr[stacksize++] = head;
-            }
+            nodevisited[head] = TRUE;
+            stackarr[stacksize++] = head;
          }
       }
-      SCIPfreeBufferArray(scip, &stackarr);
    }
+   SCIPfreeBufferArray(scip, &stackarr);
+
    return SCIP_OKAY;
 }
 
@@ -5423,47 +5500,44 @@ SCIP_RETCODE graph_termsReachable(
    )
 {
    const int nnodes = g->knots;
+   SCIP_Bool* nodevisited;
 
    assert(g != NULL);
    assert(reachable != NULL);
 
-   for( int k = 0; k < nnodes; k++ )
-      g->mark[k] = FALSE;
-
    *reachable = TRUE;
 
-   graph_trail_arr(scip, g, g->source);
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodevisited, nnodes) );
+   SCIP_CALL( graph_trail_arr(scip, g, g->source, nodevisited) );
 
    for( int k = 0; k < nnodes; k++ )
-      if( Is_term(g->term[k]) && !g->mark[k] )
+   {
+      if( Is_term(g->term[k]) && !nodevisited[k] )
       {
          *reachable = FALSE;
          break;
       }
+   }
+
+   SCIPfreeBufferArray(scip, &nodevisited);
 
    return SCIP_OKAY;
 }
 
+
 /** is the given graph valid? */
 SCIP_Bool graph_valid(
+   SCIP*                 scip,               /**< scip struct */
    const GRAPH*          g                   /**< the graph */
    )
 {
-   const char* fehler1  = "*** Graph invalid: Head invalid, Knot %d, Edge %d, Tail=%d, Head=%d\n";
-   const char* fehler2  = "*** Graph invalid: Tail invalid, Knot %d, Edge %d, Tail=%d, Head=%d\n";
-   const char* fehler3  = "*** Graph invalid: Source invalid, Layer %d, Source %d, Terminal %d\n";
-   const char* fehler4  = "*** Graph invalid: FREE invalid, Edge %d/%d\n";
-   const char* fehler5  = "*** Graph invalid: Anti invalid, Edge %d/%d, Tail=%d/%d, Head=%d/%d\n";
-   const char* fehler6  = "*** Graph invalid: Knot %d with Grad 0 has Edges\n";
-   const char* fehler7  = "*** Graph invalid: Knot %d not connected\n";
-   const char* fehler9  = "*** Graph invalid: Wrong Terminal count, count is %d, should be %d\n";
-
    int nterms;
    const int nnodes = g->knots;
    const int nedges = g->edges;
+   SCIP_Bool isValid = TRUE;
+   SCIP_Bool* nodevisited = NULL;
 
-   assert(g != NULL);
-
+   assert(scip && g);
    nterms = g->terms;
 
    for( int k = 0; k < nnodes; k++ )
@@ -5478,55 +5552,96 @@ SCIP_Bool graph_valid(
             break;
 
       if( e != EAT_LAST )
-         return((void)fprintf(stderr, fehler1, k, e, g->tail[e], g->head[e]), FALSE);
+      {
+         isValid = FALSE;
+         SCIPdebugMessage("*** Graph invalid: Head invalid, Knot %d, Edge %d, Tail=%d, Head=%d\n",
+               k, e, g->tail[e], g->head[e]);
+
+         goto EXIT;
+      }
 
       for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          if( g->tail[e] != k )
             break;
 
       if( e != EAT_LAST )
-         return((void)fprintf(stderr, fehler2, k, e, g->tail[e], g->head[e]), FALSE);
+      {
+         isValid = FALSE;
+         SCIPdebugMessage("*** Graph invalid: Tail invalid, Knot %d, Edge %d, Tail=%d, Head=%d\n",
+               k, e, g->tail[e], g->head[e]);
+
+         goto EXIT;
+      }
    }
 
    if( nterms != 0 )
-      return((void)fprintf(stderr, fehler9, g->terms, g->terms - nterms), FALSE);
+   {
+      isValid = FALSE;
+      SCIPdebugMessage("*** Graph invalid: Wrong Terminal count, count is %d, should be %d\n",
+            g->terms, g->terms - nterms);
 
-   if( (g->source < 0 )
-      || (g->source >= g->knots)
-      || (g->term[g->source] != 0))
-      return((void)fprintf(stderr, fehler3,
-            0, g->source, g->term[g->source]), FALSE);
+      goto EXIT;
+   }
+
+   if( (g->source < 0 ) || (g->source >= g->knots) || (g->term[g->source] != 0) )
+   {
+      isValid = FALSE;
+      SCIPdebugMessage("*** Graph invalid: Source invalid, Layer %d, Source %d, Terminal %d\n",
+            0, g->source, g->term[g->source]);
+
+      goto EXIT;
+   }
 
    for( int e = 0; e < nedges; e += 2 )
    {
       if( (g->ieat[e] == EAT_FREE) && (g->oeat[e] == EAT_FREE)
          && (g->ieat[e + 1] == EAT_FREE) && (g->oeat[e + 1] == EAT_FREE) )
+      {
          continue;
+      }
 
       if( (g->ieat[e] == EAT_FREE) || (g->oeat[e] == EAT_FREE)
          || (g->ieat[e + 1] == EAT_FREE) || (g->oeat[e + 1] == EAT_FREE) )
-         return((void)fprintf(stderr, fehler4, e, e + 1), FALSE);
+      {
+         isValid = FALSE;
+         SCIPdebugMessage("*** Graph invalid: FREE invalid, Edge %d/%d\n",
+               e, e + 1);
+
+         goto EXIT;
+      }
 
       if( (g->head[e] != g->tail[e + 1]) || (g->tail[e] != g->head[e + 1]) )
-         return((void)fprintf(stderr, fehler5,
-               e, e + 1, g->head[e], g->tail[e + 1],
-               g->tail[e], g->head[e + 1]), FALSE);
+      {
+         isValid = FALSE;
+         SCIPdebugMessage("*** Graph invalid: Anti invalid, Edge %d/%d, Tail=%d/%d, Head=%d/%d\n",
+               e, e + 1, g->head[e], g->tail[e + 1],  g->tail[e], g->head[e + 1]);
+
+         goto EXIT;
+      }
    }
-
-   for( int k = 0; k < nnodes; k++ )
-      g->mark[k] = FALSE;
-
-   graph_trail(g, g->source);
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &nodevisited, nnodes) );
+   SCIP_CALL_ABORT( graph_trail_arr(scip, g, g->source, nodevisited) );
 
    for( int k = 0; k < nnodes; k++ )
    {
-      if( (g->grad[k] == 0)
-         && ((g->inpbeg[k] != EAT_LAST) || (g->outbeg[k] != EAT_LAST)) )
-         return((void)fprintf(stderr, fehler6, k), FALSE);
+      if( (g->grad[k] == 0) && ((g->inpbeg[k] != EAT_LAST) || (g->outbeg[k] != EAT_LAST)) )
+      {
+         isValid = FALSE;
+         SCIPdebugMessage("*** Graph invalid: Knot %d with Grad 0 has Edges\n",
+               k);
 
-      if( !g->mark[k] && ((g->grad[k] > 0) || (Is_term(g->term[k])))
+         goto EXIT;
+      }
+
+      if( !nodevisited[k] && ((g->grad[k] > 0) || (Is_term(g->term[k])))
          && g->stp_type != STP_PCSPG && g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP )
-         return((void)fprintf(stderr, fehler7, k), FALSE);
+      {
+         isValid = FALSE;
+         SCIPdebugMessage("*** Graph invalid: Knot %d not connected\n",
+               k);
+
+         goto EXIT;
+      }
    }
 
    if( graph_pc_isPcMw(g) )
@@ -5547,13 +5662,15 @@ SCIP_Bool graph_valid(
             assert(k != root);
 
             SCIPdebugMessage("inconsistent term2edge for %d \n", k);
-            return FALSE;
+            isValid = FALSE;
+            goto EXIT;
          }
 
          if( rooted && graph_pc_knotIsFixedTerm(g, k) && g->prize[k] != FARAWAY )
          {
             SCIPdebugMessage("inconsistent prize for %d \n", k);
-            return FALSE;
+            isValid = FALSE;
+            goto EXIT;
          }
 
          if( k == root || (rooted && g->term2edge[k] < 0) )
@@ -5570,7 +5687,8 @@ SCIP_Bool graph_valid(
             if( g->grad[k] != 2 )
             {
                SCIPdebugMessage("terminal degree != 2 for %d \n", k);
-               return FALSE;
+               isValid = FALSE;
+               goto EXIT;
             }
 
             for( e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
@@ -5580,7 +5698,8 @@ SCIP_Bool graph_valid(
             if( e == EAT_LAST )
             {
                SCIPdebugMessage("no edge to root for term %d \n", term);
-               return FALSE;
+               isValid = FALSE;
+               goto EXIT;
             }
 
             for( e2 = g->outbeg[term]; e2 != EAT_LAST; e2 = g->oeat[e2] )
@@ -5593,7 +5712,8 @@ SCIP_Bool graph_valid(
             if( e2 == EAT_LAST)
             {
                SCIPdebugMessage("no terminal for dummy %d \n", g->head[e2]);
-               return FALSE;
+               isValid = FALSE;
+               goto EXIT;
             }
 
             assert(pterm != root);
@@ -5601,13 +5721,15 @@ SCIP_Bool graph_valid(
             if( e2 != g->term2edge[term] )
             {
                SCIPdebugMessage("term2edge for node %d faulty \n", term);
-               return FALSE;
+               isValid = FALSE;
+               goto EXIT;
             }
 
             if( g->cost[e] != g->prize[pterm] )
             {
                SCIPdebugMessage("prize mismatch for node %d: \n", k);
-               return FALSE;
+               isValid = FALSE;
+               goto EXIT;
             }
          }
          else if( (extended ? Is_pterm(g->term[k]) : Is_term(g->term[k])) )
@@ -5620,28 +5742,17 @@ SCIP_Bool graph_valid(
          if( !rooted )
          {
             SCIPdebugMessage("wrong terminal count \n");
-            return FALSE;
+            isValid = FALSE;
+            goto EXIT;
          }
       }
-
-      for( int k = 0; k < nnodes; k++ )
-      {
-          g->mark[k] = (g->grad[k] > 0);
-
-          if( !extended && (Is_pterm(g->term[k]) || k == root)  )
-                g->mark[k] = FALSE;
-      }
-      if( !extended && (g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP) )
-         g->mark[root] = TRUE;
-
-   }
-   else
-   {
-      for( int k = 0; k < nnodes; k++ )
-         g->mark[k] = (g->grad[k] > 0);
    }
 
-   return TRUE;
+
+   EXIT:
+
+   SCIPfreeBufferArrayNull(scip, &nodevisited);
+   return isValid;
 }
 
 

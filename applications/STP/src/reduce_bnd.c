@@ -1445,7 +1445,7 @@ SCIP_RETCODE computePertubedSol(
    }
 
    assert(!(*apsol) || graph_sol_valid(scip, graph, result));
-   assert(graph_valid(transgraph));
+   assert(graph_valid(scip, transgraph));
    assert(root == transgraph->source);
 
    SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, pathdist, &lb, FALSE, FALSE, gnodearr, transresult, NULL, state, root, TRUE, -1.0, nodearrchar) );
@@ -2169,7 +2169,7 @@ SCIP_RETCODE reduce_da(
 
          if( nfixed > 0 )
             SCIP_CALL(level0(scip, graph));
-         assert(graph_valid(graph));
+         assert(graph_valid(scip, graph));
 
          if( !rpc )
          {
@@ -2187,9 +2187,10 @@ SCIP_RETCODE reduce_da(
          const int nreplacings = reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
          nfixed += nreplacings;
 
-         if( nreplacings > 0 )
+         if( nreplacings > 0 && userec )
          {
-            int todo; // clean pool
+            SCIPStpHeurRecFreePool(scip, &pool);
+            SCIP_CALL( SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE) );
          }
 
          if( extended || 1 )
@@ -2230,7 +2231,7 @@ TERMINATE:
    SCIPfreeBufferArray(scip, &marked);
    SCIPfreeBufferArray(scip, &result);
 
-   assert(graph_valid(graph));
+   assert(graph_valid(scip, graph));
 
    return SCIP_OKAY;
 }
@@ -3046,7 +3047,7 @@ SCIP_RETCODE reduce_daPcMw(
 
       SCIP_CALL( graph_pc_getRsap(scip, graph, &transgraph, roots, nroots, tmproot) );
 
-      assert(graph_valid(transgraph));
+      assert(graph_valid(scip, transgraph));
 
       transnnodes = transgraph->knots;
       transnedges = transgraph->edges;
@@ -3073,7 +3074,7 @@ SCIP_RETCODE reduce_daPcMw(
                gnodearr, NULL, transresult, state, tmproot, FALSE, -1.0, nodearrchar));
       }
 
-      assert(graph_valid(transgraph));
+      assert(graph_valid(scip, transgraph));
 
       for( int e = graph->outbeg[tmproot]; e != EAT_LAST; e = graph->oeat[e] )
       {
@@ -3190,7 +3191,7 @@ SCIP_RETCODE reduce_daPcMw(
    if( edgearrint == NULL )
       SCIPfreeBufferArray(scip, &result);
 
-   assert(graph_valid(graph));
+   assert(graph_valid(scip, graph));
 
    return SCIP_OKAY;
 }
@@ -3772,7 +3773,7 @@ SCIP_RETCODE reduce_bound(
    SCIPfreeBufferArrayNull(scip, &stnode);
    SCIPfreeBufferArrayNull(scip, &result);
 
-   assert(graph_valid(graph));
+   assert(graph_valid(scip, graph));
 
    return SCIP_OKAY;
 }
@@ -4007,7 +4008,7 @@ SCIP_RETCODE reduce_boundPrune(
    assert(solnode != NULL);
    assert(soledge != NULL);
    assert(graph->source >= 0);
-   assert(graph_valid(graph));
+   assert(graph_valid(scip, graph));
    assert(!graph->extended);
    assert( graph->stp_type != STP_RPCSPG || Is_term(graph->term[root]) );
 
@@ -4049,7 +4050,7 @@ SCIP_RETCODE reduce_boundPrune(
       assert(adjgraph != NULL);
       graph_knot_chg(adjgraph, 0, 0);
       adjgraph->source = 0;
-      assert(graph_valid(adjgraph));
+      assert(graph_valid(scip, adjgraph));
 
       /* compute MST on adjgraph */
       SCIP_CALL( SCIPallocBufferArray(scip, &mst, nterms) );
@@ -4527,7 +4528,7 @@ SCIP_RETCODE reduce_boundHop(
    /* compute MST on adjgraph */
    graph_knot_chg(adjgraph, 0, 0);
    adjgraph->source = 0;
-   assert(graph_valid(adjgraph));
+   assert(graph_valid(scip, adjgraph));
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nterms) );
    SCIP_CALL( graph_path_init(scip, adjgraph) );
    graph_path_exec(scip, adjgraph, MST_MODE, 0, adjgraph->cost, mst);
@@ -4638,7 +4639,7 @@ SCIP_RETCODE reduce_boundHop(
 
    /* free memory*/
    SCIPfreeBufferArray(scip, &mst);
-   assert(graph_valid(graph));
+   assert(graph_valid(scip, graph));
 
    return SCIP_OKAY;
 }
@@ -4766,7 +4767,7 @@ SCIP_RETCODE reduce_boundHopR(
 
    SCIPdebugMessage("eliminated (edges) in hcr bound reduce: %d,\n", *nelims);
 
-   assert(graph_valid(graph));
+   assert(graph_valid(scip, graph));
 
    return SCIP_OKAY;
 }
@@ -5003,7 +5004,7 @@ SCIP_RETCODE reduce_boundHopRc(
    /* free memory */
    SCIPfreeBufferArray(scip, &result);
 
-   assert(graph_valid(graph));
+   assert(graph_valid(scip, graph));
 
    return SCIP_OKAY;
 }

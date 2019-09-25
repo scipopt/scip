@@ -322,6 +322,7 @@ static void bea_save(
 /*--- Returns  : Nothing.                                                 ---*/
 /*---------------------------------------------------------------------------*/
 void graph_save(
+   SCIP* scip,
    const GRAPH* g,
    const char*  filename,
    FILETYPE     type)
@@ -330,9 +331,8 @@ void graph_save(
 
    FILE* fp;
 
-   assert(g                != NULL);
-   assert(graph_valid(g));
-   assert(filename         != NULL);
+   assert(g && scip && filename);
+   assert(graph_valid(scip, g));
    assert(strlen(filename) > 0);
    assert((type == FF_BEA) || (type == FF_STP));
 

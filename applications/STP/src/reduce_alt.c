@@ -1279,7 +1279,7 @@ SCIP_RETCODE reduce_sdPc(
    SCIPdebugMessage("SDPC eliminations: %d \n", *nelims);
    graph_free(scip, &netgraph, TRUE);
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
 }
@@ -3199,7 +3199,7 @@ SCIP_RETCODE reduce_sdsp(
    SCIPfreeBufferArrayNull(scip, &pathmaxnodehead);
    SCIPfreeBufferArrayNull(scip, &pathmaxnodetail);
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
 }
@@ -3715,7 +3715,7 @@ SCIP_RETCODE reduce_bd34(
 
    SCIPdebugMessage("bd34: %d nodes deleted\n", *nelims);
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
 }
@@ -3981,7 +3981,7 @@ SCIP_RETCODE reduce_nts(
    graph_path_exit(scip, auxg);
    graph_free(scip, &auxg, TRUE);
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
 }
@@ -4705,7 +4705,7 @@ SCIP_RETCODE reduce_ledge(
    *nelims = 0;
    nedges = g->edges;
    nnodes = g->knots;
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
    nterms = 0;
    for( k = 0; k < nnodes; k++ )
@@ -4805,7 +4805,7 @@ SCIP_RETCODE reduce_ledge(
    }
    netgraph->source = 0;
 
-   assert(graph_valid(netgraph));
+   assert(graph_valid(scip, netgraph));
 
    for( k = 0; k < netnnodes; k++ )
       netgraph->mark[k] = TRUE;
@@ -4877,7 +4877,7 @@ SCIP_RETCODE reduce_ledge(
    SCIPfreeBufferArray(scip, &edgeorg);
    SCIPfreeBufferArray(scip, &blocked);
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
    return SCIP_OKAY;
 }
 
@@ -4984,7 +4984,7 @@ void reduce_ans(
    assert(count  != NULL);
    assert(marked != NULL);
    assert(g->stp_type == STP_MWCSP);
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
    *count = 0;
 
@@ -5034,7 +5034,7 @@ void reduce_ans(
          assert(marked[j] == FALSE);
    }
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 }
 
 /** advanced adjacent neighbourhood reduction for the MWCSP */
@@ -5139,7 +5139,7 @@ void reduce_ansAdv(
          assert(marked[k2] == FALSE);
    }
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 }
 
 
@@ -5266,7 +5266,7 @@ void reduce_ansAdv2(
       }
    }
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 }
 
 
@@ -6035,5 +6035,5 @@ void reduce_nnp(
 
    *count = localcount;
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 }

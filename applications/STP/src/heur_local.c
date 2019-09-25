@@ -325,7 +325,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    assert(graph != NULL);
    assert(cost != NULL);
    assert(best_result != NULL);
-   assert(graph_valid(graph));
+   assert(graph_valid(scip, graph));
 
    newnverts = 0;
 

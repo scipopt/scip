@@ -146,7 +146,7 @@ SCIP_RETCODE computeNewSols(
    int nruns;
    const int nnodes = g->knots;
 
-   assert(graph_valid(prunegraph));
+   assert(graph_valid(scip, prunegraph));
    assert(g->edges == prunegraph->edges);
 
    /*
@@ -825,10 +825,10 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          else
             SCIP_CALL(level0(scip, prunegraph));
 
-         assert(graph_valid(prunegraph));
+         assert(graph_valid(scip, prunegraph));
 
          /* is the reduced graph still feasible? */
-         if( !graph_valid(prunegraph) )
+         if( !graph_valid(scip, prunegraph) )
             break;
 
          /* get number of remaining edges */

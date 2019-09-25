@@ -196,7 +196,7 @@ SCIP_RETCODE nvreduce_sl(
 
    *nelims = totalelims;
 
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
 }
@@ -359,62 +359,25 @@ SCIP_RETCODE execPc_BND(
    return SCIP_OKAY;
 }
 
-/* remove unconnected vertices, overwrites g->mark */
+
+/* remove unconnected vertices */
 SCIP_RETCODE level0(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g                   /**< graph data structure */
 )
 {
-   int nnodes;
-
-   assert(scip != NULL);
-   assert(g != NULL);
-
-   nnodes = g->knots;
-
-   for( int k = 0; k < nnodes; k++ )
-      g->mark[k] = FALSE;
-
-   SCIP_CALL( graph_trail_arr(scip, g, g->source) );
-
-   for( int k = nnodes - 1; k >= 0 ; k-- )
-   {
-      if( !g->mark[k] && (g->grad[k] > 0) )
-      {
-         assert(!Is_term(g->term[k]));
-
-         while( g->inpbeg[k] != EAT_LAST )
-            graph_edge_del(scip, g, g->inpbeg[k], TRUE);
-      }
-   }
-   return SCIP_OKAY;
-}
-
-
-
-/* remove unconnected vertices, keep g->mark */
-SCIP_RETCODE level0save(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g                   /**< graph data structure */
-)
-{
-   int* savemark;
    const int nnodes = g->knots;
+   SCIP_Bool* nodevisited;
 
-   assert(scip != NULL);
-   assert(g != NULL);
+   assert(scip && g);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &savemark, nnodes) );
-   BMScopyMemoryArray(savemark, g->mark, nnodes);
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodevisited, nnodes) );
 
-   for( int k = nnodes - 1; k >= 0; k-- )
-      g->mark[k] = FALSE;
-
-   SCIP_CALL( graph_trail_arr(scip, g, g->source) );
+   SCIP_CALL( graph_trail_arr(scip, g, g->source, nodevisited) );
 
    for( int k = nnodes - 1; k >= 0 ; k-- )
    {
-      if( !g->mark[k] && (g->grad[k] > 0) )
+      if( !nodevisited[k] && (g->grad[k] > 0) )
       {
          assert(!Is_term(g->term[k]));
 
@@ -423,12 +386,11 @@ SCIP_RETCODE level0save(
       }
    }
 
-   BMScopyMemoryArray(g->mark, savemark, nnodes);
-
-   SCIPfreeBufferArray(scip, &savemark);
+   SCIPfreeBufferArray(scip, &nodevisited);
 
    return SCIP_OKAY;
 }
+
 
 /* remove unconnected vertices, including pseudo terminals, and checks for feasibility (adapts g->mark) */
 SCIP_RETCODE level0RpcRmwInfeas(
@@ -548,29 +510,26 @@ SCIP_RETCODE level0RpcRmw(
    return SCIP_OKAY;
 }
 
-/* remove unconnected vertices and checks whether problem is infeasible, overwrites g->mark */
+/* remove unconnected vertices and checks whether problem is infeasible  */
 SCIP_RETCODE level0infeas(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Bool*            infeas              /**< is problem infeasible? */
 )
 {
-   int nnodes;
+   const int nnodes = g->knots;
+   SCIP_Bool* nodevisited;
 
-   assert(scip != NULL);
-   assert(g != NULL);
-   assert(infeas != NULL);
+   assert(scip && g && infeas);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodevisited, nnodes) );
 
    *infeas = FALSE;
-   nnodes = g->knots;
+
+   SCIP_CALL( graph_trail_arr(scip, g, g->source, nodevisited) );
 
    for( int k = 0; k < nnodes; k++ )
-      g->mark[k] = FALSE;
-
-   SCIP_CALL( graph_trail_arr(scip, g, g->source) );
-
-   for( int k = 0; k < nnodes; k++ )
-      if( !g->mark[k] && Is_term(g->term[k]) )
+      if( !nodevisited[k] && Is_term(g->term[k]) )
       {
          assert(k != g->source);
          *infeas = TRUE;
@@ -579,12 +538,14 @@ SCIP_RETCODE level0infeas(
 
    for( int k = 0; k < nnodes; k++ )
    {
-      if( !g->mark[k] && (g->grad[k] > 0) )
+      if( !nodevisited[k] && (g->grad[k] > 0) )
       {
          while( g->inpbeg[k] != EAT_LAST )
             graph_edge_del(scip, g, g->inpbeg[k], TRUE);
       }
    }
+
+   SCIPfreeBufferArray(scip, &nodevisited);
 
    return SCIP_OKAY;
 }
@@ -1141,7 +1102,7 @@ SCIP_RETCODE reduceSap(
 
       if( rpt )
       {
-         SCIP_CALL( reduce_rpt(scip, g, fixed, &rptnelims) );
+         SCIP_CALL( reduce_simple_rpt(scip, g, fixed, &rptnelims) );
          if( rptnelims <= redbound )
             rpt = FALSE;
       }
@@ -1838,7 +1799,7 @@ SCIP_RETCODE redLoopStp(
    SCIP_RANDNUMGEN* randnumgen;
 
    assert(reductbound > 0);
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
@@ -1846,7 +1807,7 @@ SCIP_RETCODE redLoopStp(
    ub = upperbound;
    fix = 0.0;
 
-   SCIP_CALL( reduce_contractZeroEdges(scip, g, TRUE) );
+   SCIP_CALL( reduce_simple_contract0Edges(scip, g, TRUE) );
    SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &i, NULL) );
 
    /* get timelimit parameter */
@@ -2166,7 +2127,7 @@ SCIP_RETCODE reduce(
    SCIP_CALL( level0(scip, graph) );
    show = FALSE;
 
-   assert(graph_valid(graph));
+   assert(graph_valid(scip, graph));
 
    graph_path_exit(scip, graph);
 

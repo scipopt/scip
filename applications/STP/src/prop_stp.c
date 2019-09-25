@@ -816,7 +816,7 @@ SCIP_RETCODE redbasedVarfixing(
    if( *probisinfeas )
       goto TERMINATE;
 
-   if( !graph_valid(propgraph) )
+   if( !graph_valid(scip, propgraph) )
    {
       printf("FAIL: problem in propagation has become invalid! \n");
       return SCIP_ERROR;
@@ -838,7 +838,7 @@ SCIP_RETCODE redbasedVarfixing(
    }
 #endif
 
-   assert(graph_valid(propgraph));
+   assert(graph_valid(scip, propgraph));
 
    /* try to fix edges ... */
 

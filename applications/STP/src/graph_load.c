@@ -1587,7 +1587,7 @@ SCIP_RETCODE graph_load(
          g->knots, g->edges, g->terms, g->source);
 #endif
 
-      assert(graph_valid(g));
+      assert(graph_valid(scip, g));
       return SCIP_OKAY;
    }
    else

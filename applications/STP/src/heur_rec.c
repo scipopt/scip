@@ -524,7 +524,7 @@ SCIP_RETCODE computeReducedProbSolution(
       SCIPfreeBufferArray(scip, &orgprize);
    }
 
-   assert(graph_valid(solgraph));
+   assert(graph_valid(scip, solgraph));
 
    /* run local heuristic (with original costs) */
    if( !SCIPisStopped(scip) && probtype != STP_DHCSTP && probtype != STP_DCSTP
@@ -1450,14 +1450,13 @@ SCIP_RETCODE buildsolgraph(
       SCIPfreeBufferArray(scip, &dnodemap);
       SCIPfreeBufferArray(scip, &solnode);
 
-      if( !graph_valid(newgraph) )
+      if( !graph_valid(scip, newgraph) )
       {
          assert(usestppool);
 
          for( int k = 1; k < selectedsols; k++ )
          {
-            int todo; //activate and clean pool in reduce_bnd
-            //assert(!poolSolIsUnreduced(graph, solselection[k], pool));
+            assert(!poolSolIsUnreduced(graph, solselection[k], pool));
          }
 
          graph_free(scip, &newgraph, TRUE);
@@ -1718,7 +1717,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          SCIP_Real offsetdummy;
 
          SCIPdebugMessage("REC: solution successfully built \n");
-         assert(graph_valid(solgraph));
+         assert(graph_valid(scip, solgraph));
 
          /* reduce new graph */
          if( probtype == STP_DHCSTP || probtype == STP_DCSTP || probtype == STP_NWSPG || probtype == STP_SAP || probtype == STP_RMWCSP )
@@ -1756,7 +1755,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          else
             SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, newsoledges, stnodes) );
 
-         assert(graph_sol_valid(scip, graph, newsoledges));
+         assert(graph_sol_valid(scip, graph, newsoledges) || SCIPisStopped(scip));
          pobj = graph_sol_getObj(graph->cost, newsoledges, 0.0, nedges);
 
          SCIPdebugMessage("REC: new obj: %f \n", pobj);
@@ -1850,7 +1849,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    *success = FALSE;
    assert(graph->stp_type == STP_MWCSP);
-   assert(graph_valid(graph));
+   assert(graph_valid(scip, graph));
 
    /* killed solution edge? */
    for( int e = 0; e < nedges; e++ )

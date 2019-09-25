@@ -327,7 +327,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       root = g->source;
 
    assert(Is_term(g->term[root]));
-   assert(graph_valid(g));
+   assert(graph_valid(scip, g));
    assert(!pcmw || graph_pc_knotIsFixedTerm(g, root));
 
    if( addsol )
@@ -534,7 +534,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       }
    }
 #endif
-   assert(graph_valid(newgraph));
+   assert(graph_valid(scip, newgraph));
 
    /* get solution on new graph by PRUNE heuristic */
    SCIP_CALL( SCIPStpHeurPruneRun(scip, NULL, newgraph, newedges, &success, FALSE, TRUE) );
