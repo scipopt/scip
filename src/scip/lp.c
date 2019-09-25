@@ -4329,8 +4329,15 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
 
    *lperror = FALSE;
 
+   /* stat->nlps is currently not increased if the LP was solved with 0 iterations. Normally, those are cleanup solves
+    * that we want to ignore, but it may as well happen for node LPs; in this case, we want to call strong branching as
+    * the old result is not valid anymore. Since this method should almost never be called for the same LP again,
+    * anyway, we can just disable the check for now.
+    */
+#ifdef SCIP_CODE_TODO
    if( col->validsblp != stat->nlps || itlim > col->sbitlim )
    {
+#endif
       col->validsblp = stat->nlps;
       col->sbsolval = col->primsol;
       col->sblpobjval = SCIPlpGetObjval(lp, set, prob);
@@ -4426,7 +4433,9 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
          /* stop timing */
          SCIPclockStop(stat->strongbranchtime, set);
       }
+#ifdef SCIP_CODE_TODO
    }
+#endif
    assert(*lperror || col->sbdown < SCIP_INVALID);
    assert(*lperror || col->sbup < SCIP_INVALID);
 
@@ -4521,8 +4530,10 @@ SCIP_RETCODE SCIPcolGetStrongbranches(
       assert(col->lpipos >= 0);
       assert(col->lppos >= 0);
 
+#ifdef SCIP_CODE_TODO
       if( col->validsblp != stat->nlps || itlim > col->sbitlim )
       {
+#endif
          col->validsblp = stat->nlps;
          col->sbsolval = col->primsol;
          col->sblpobjval = SCIPlpGetObjval(lp, set, prob);
@@ -4555,6 +4566,7 @@ SCIP_RETCODE SCIPcolGetStrongbranches(
             subidx[nsubcols] = j;
             subcols[nsubcols++] = col;
          }
+#ifdef SCIP_CODE_TODO
       }
       else
       {
@@ -4566,6 +4578,7 @@ SCIP_RETCODE SCIPcolGetStrongbranches(
          if( upvalid != NULL )
             upvalid[j] = col->sbupvalid;
       }
+#endif
    }
 
    SCIPsetDebugMsg(set, "performing strong branching on %d variables with %d iterations\n", ncols, itlim);

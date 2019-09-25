@@ -320,6 +320,7 @@ Fixed bugs
 
 - fix and improve memory handling in symmetry computation
 - fix shown number of applied conflicts in solving statistics
+- fix wrongly skipping strong branching call and using old information if LP was solved with 0 iterations
 
 Miscellaneous
 -------------
