@@ -1745,9 +1745,11 @@ SCIP_RETCODE reduce_simple_fixedConflict(
    *countnew = 0;
 
    assert(scip && g && g->pseudoancestors);
-   assert(!g->is_packed);
 
    if( nfixednodes == 0 )
+      return SCIP_OKAY;
+
+   if( g->is_packed )
       return SCIP_OKAY;
 
    assert(fixednodes);
@@ -1783,13 +1785,13 @@ SCIP_RETCODE reduce_simple_fixedConflict(
             assert(ancestor >= 0 && ancestor < nnodes);
 
             if( hasharr[ancestor] != 0 )
+            {
                graph_edge_del(scip, g, e, TRUE);
+               (*countnew)++;
 
-            (*countnew)++;
-
-            printf("conflict deleted edge %d \n", e);
-
-            break;
+               printf("conflict deleted edge %d \n", e);
+               break;
+            }
          }
       }
    }

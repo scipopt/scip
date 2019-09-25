@@ -1935,6 +1935,8 @@ SCIP_RETCODE reduce_da(
 
    if( extended || 1 )
    {
+      assert(graph_valid_ancestors(scip, graph));
+
       int removeme; // should not be necessary anymore with conflict deletion... make a check?
       SCIP_CALL( reduce_deleteConflictEdges(scip, graph) );
    }
@@ -2195,9 +2197,12 @@ SCIP_RETCODE reduce_da(
 
          if( extended || 1 )
          {
-            int todo; // should not be necessary anymore, but check!
             if( rpc )
                graph_pc_2org(graph);
+
+            assert(graph_valid_ancestors(scip, graph));
+            int todo; // should not be necessary anymore, but check!
+
 
             SCIP_CALL(reduce_deleteConflictEdges(scip, graph));
 

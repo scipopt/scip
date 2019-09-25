@@ -82,6 +82,50 @@ int getNextPow2(int number)
 }
 
 
+/** mark ancestors of given edge */
+static
+SCIP_Bool ancestorsMarkConflict(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge,               /**< edge to use */
+   int*                  ancestormark        /**< ancestor mark array */
+   )
+{
+   assert(edge >= 0);
+
+   for( IDX* curr = graph->ancestors[edge]; curr != NULL;  curr = curr->parent )
+   {
+      const unsigned idx = ((unsigned) curr->index) / 2;
+
+      assert(curr->index >= 0 && idx < (unsigned) (MAX(graph->edges, graph->orgedges) / 2));
+
+      if( ancestormark[idx] )
+         return TRUE;
+
+      ancestormark[idx] = 1;
+   }
+
+   return FALSE;
+}
+
+
+/** unmark ancestors of given edge */
+static
+void ancestorsUnmarkConflict(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge,               /**< edge to use */
+   int*                  ancestormark        /**< ancestor mark array */
+   )
+{
+   assert(edge >= 0);
+
+   for( IDX* curr = graph->ancestors[edge]; curr != NULL; curr = curr->parent )
+   {
+      assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
+      ancestormark[((unsigned) curr->index) / 2] = 0;
+   }
+}
+
+
 /** initialize */
 static
 SCIP_RETCODE blockedAncestors_init(
@@ -653,6 +697,63 @@ void graph_singletonAncestors_freeMembers(
 
    SCIPintListNodeFree(scip, &(singletonans->ancestors));
    SCIPintListNodeFree(scip, &(singletonans->revancestors));
+}
+
+
+/** valid ancestors (no conflicts)? */
+SCIP_Bool graph_valid_ancestors(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g                   /**< the graph */
+)
+{
+   int* edgemark;
+   const int nedges = g->edges;
+   const int nancestors = MAX(g->edges, g->orgedges) / 2;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
+   SCIP_Bool isValid = TRUE;
+
+   assert(scip != NULL && g != NULL);
+   assert(g->ancestors != NULL);
+   assert(!graph_pc_isPcMw(g) || !g->extended);
+
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &edgemark, nancestors) );
+
+   for( int e = 0; e < nancestors; e++ )
+      edgemark[e] = FALSE;
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      SCIP_Bool conflict;
+
+      if( g->oeat[e] == EAT_FREE )
+         continue;
+
+      if( pcmw && g->cost[e] != g->cost[e + 1] )
+         continue;
+
+      conflict = ancestorsMarkConflict(g, e, edgemark);
+      ancestorsUnmarkConflict(g, e, edgemark);
+
+      if( conflict )
+      {
+         isValid = FALSE;
+         break;
+      }
+
+      conflict = ancestorsMarkConflict(g, e + 1, edgemark);
+      ancestorsUnmarkConflict(g, e + 1, edgemark);
+
+      if( conflict )
+      {
+         isValid = FALSE;
+         break;
+      }
+
+   }
+
+   SCIPfreeBufferArray(scip, &edgemark);
+
+   return isValid;
 }
 
 

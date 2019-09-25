@@ -1843,7 +1843,6 @@ SCIP_RETCODE redLoopStp(
                SCIP_CALL(reduce_simple(scip, g, &fix, solnode, &degtnelims, NULL));
 
             reduceStatsPrint(fullreduce, "le", lenelims);
-            SCIPdebugMessage("le: %d \n", lenelims);
 
             if( SCIPgetTotalTime(scip) > timelimit )
                break;
@@ -1859,7 +1858,6 @@ SCIP_RETCODE redLoopStp(
                sd = FALSE;
 
             reduceStatsPrint(fullreduce, "sd", sdnelims);
-            SCIPdebugMessage("sd: %d, \n", sdnelims);
 
             if( SCIPgetTotalTime(scip) > timelimit )
                break;
@@ -1874,7 +1872,6 @@ SCIP_RETCODE redLoopStp(
                sdc = FALSE;
 
             reduceStatsPrint(fullreduce, "sdsp", sdcnelims);
-            SCIPdebugMessage("sdsp: %d \n", sdcnelims);
 
             if( SCIPgetTotalTime(scip) > timelimit )
                break;
@@ -1892,7 +1889,6 @@ SCIP_RETCODE redLoopStp(
                SCIP_CALL(reduce_simple(scip, g, &fix, solnode, &degtnelims, NULL));
 
             reduceStatsPrint(fullreduce, "bd3", bd3nelims);
-            SCIPdebugMessage("bd3: %d \n", bd3nelims);
 
             if( SCIPgetTotalTime(scip) > timelimit )
                break;
@@ -1907,7 +1903,6 @@ SCIP_RETCODE redLoopStp(
                nvsl = FALSE;
 
             reduceStatsPrint(fullreduce, "nvsl", nvslnelims);
-            SCIPdebugMessage("nvsl: %d \n", nvslnelims);
 
             if( SCIPgetTotalTime(scip) > timelimit )
                break;
@@ -1925,7 +1920,6 @@ SCIP_RETCODE redLoopStp(
                da = FALSE;
 
             reduceStatsPrint(fullreduce, "da", danelims);
-            SCIPdebugMessage("da: %d \n", danelims);
 
             if( SCIPgetTotalTime(scip) > timelimit )
                break;
@@ -1941,11 +1935,11 @@ SCIP_RETCODE redLoopStp(
                bred = FALSE;
 
             reduceStatsPrint(fullreduce, "bnd", brednelims);
-            SCIPdebugMessage("bnd: %d \n\n", brednelims);
 
             if( SCIPgetTotalTime(scip) > timelimit )
                break;
          }
+
          SCIP_CALL(level0(scip, g));
          SCIP_CALL(reduce_simple(scip, g, &fix, solnode, &degtnelims, NULL));
 
@@ -1992,6 +1986,16 @@ SCIP_RETCODE redLoopStp(
 
          SCIP_CALL(reduce_simple(scip, g, &fix, solnode, &extendedelims, NULL));
 
+         if( nodereplacing )
+         {
+            int conflictnelims = 0;
+
+            SCIP_CALL( reduce_simple_fixedConflict(scip, NULL, g, &conflictnelims) );
+
+            reduceStatsPrint(fullreduce, "fixedconflict", conflictnelims);
+            extendedelims += conflictnelims;
+         }
+
          if( extendedelims > STP_RED_EXFACTOR * reductbound )
          {
             le = TRUE;
@@ -2008,6 +2012,9 @@ SCIP_RETCODE redLoopStp(
 
    if( fullreduce )
    {
+      assert(graph_valid_ancestors(scip, g));
+
+      int todo; // none!
       SCIP_CALL( reduce_deleteConflictEdges(scip, g) );
    }
 
