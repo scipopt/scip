@@ -940,6 +940,49 @@ const int* graph_edge_getPseudoAncestors(
 }
 
 
+/** prints pseudo ancestors for given node */
+void graph_knot_printPseudoAncestors(
+   const GRAPH*          g,            /**< the graph */
+   int                   node          /**< node for which to return pseudo ancestors */
+   )
+{
+   int* ancestors;
+   int nancestors;
+
+   assert(g && g->pseudoancestors && g->pseudoancestors->ans_nodes);
+   assert(node >= 0 && node < g->pseudoancestors->nnodes);
+
+   ancestors = g->pseudoancestors->ans_nodes->blocks[node];
+   nancestors = g->pseudoancestors->ans_nodes->sizes[node];
+
+   printf("node %d \n", node);
+
+   for( int i = 0; i < nancestors; i++ )
+      printf("...ancestor: %d \n", ancestors[i]);
+}
+
+
+/** prints pseudo ancestors for given edge */
+void graph_edge_printPseudoAncestors(
+   const GRAPH*          g,            /**< the graph */
+   int                   edge          /**< edge for which to return pseudo ancestors */
+   )
+{
+   const int halfedge = edge / 2;
+   int* ancestors;
+   int nancestors;
+
+   assert(g && g->pseudoancestors && g->pseudoancestors->ans_halfedges);
+   assert(halfedge >= 0 && halfedge < g->pseudoancestors->halfnedges);
+
+   ancestors = g->pseudoancestors->ans_halfedges->blocks[halfedge];
+   nancestors = g->pseudoancestors->ans_halfedges->sizes[halfedge];
+
+   for( int i = 0; i < nancestors; i++ )
+      printf("...ancestor: %d \n", ancestors[i]);
+}
+
+
 /** returns pseudo ancestors for given node */
 const int* graph_knot_getPseudoAncestors(
    const GRAPH*          g,            /**< the graph */
