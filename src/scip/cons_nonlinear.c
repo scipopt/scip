@@ -10074,7 +10074,7 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
 
       /* solve the linear problem */
       SCIP_CALL( SCIPsolveLinearProb(3, m, rhs, x, &success) );
-      assert(success);
+      /* assert(success); */
 
       *delta  = rhs[0];
       *alpha  = x[0];
