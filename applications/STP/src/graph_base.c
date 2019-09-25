@@ -4428,13 +4428,11 @@ SCIP_RETCODE graph_get_edgeConflicts(
    int npseudofixed;
    const int nnodes = g->knots;
    const int nedges = g->edges;
-   const int nedgesorg = g->orgedges;
+   const int nedgesorg = MAX(g->orgedges, g->edges);
 
    assert(scip != NULL && g != NULL);
    assert(g->ancestors != NULL);
    assert(nedgesorg % 2 == 0);
-
-   printf("orgedes %d \n", nedgesorg);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &childcount, nedgesorg / 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pseudonodecount, nnodes) );
@@ -4484,6 +4482,7 @@ SCIP_RETCODE graph_get_edgeConflicts(
 
       if( hasPseudoConflict )
          npseudoconflicts++;
+
    }
 
    if( graph_pc_isPcMw(g) )
