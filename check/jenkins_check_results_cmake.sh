@@ -63,6 +63,8 @@ if ! [[ $PERMUTE =~ $re ]] ; then
   PERMUTE="0"
 fi
 export PERMUTE
+export STARTPERM
+export GLBSEEDSHIFT
 export GITHASH=$(git describe --always --dirty  | sed -re 's/^.+-g//')
 
 # read from stdin
