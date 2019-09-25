@@ -2987,6 +2987,7 @@ SCIP_RETCODE createAndAddProofcons(
    SCIP_Real globalminactivity;
    SCIP_Bool applyglobal;
    SCIP_Bool toolong;
+   SCIP_Bool contonly;
    SCIP_CONFTYPE conflicttype;
    char name[SCIP_MAXSTRLEN];
    int nnz;
@@ -3081,9 +3082,18 @@ SCIP_RETCODE createAndAddProofcons(
    /* if conflict contains variables that are invalid after a restart, then don't take conflict
     * TODO it would be better if the linear constraint would be removed at the restart
     */
+   contonly = TRUE;
    for( i = 0; i < nnz; ++i )
+   {
       if( SCIPvarIsRelaxationOnly(vars[inds[i]]) )
          return SCIP_OKAY;
+
+      if( SCIPvarIsIntegral(vars[inds[i]]) )
+         contonly = FALSE;
+   }
+
+   if( !applyglobal && contonly )
+      return SCIP_OKAY;
 
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%d", conflict->ndualrayinfsuccess);
@@ -3103,7 +3113,7 @@ SCIP_RETCODE createAndAddProofcons(
    }
 
    /* do not upgrade linear constraints of size 1 */
-   if( nnz > 1 && applyglobal )
+   if( nnz > 1 )
    {
       upgdcons = NULL;
       /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
