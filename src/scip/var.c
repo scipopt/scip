@@ -4914,6 +4914,8 @@ SCIP_RETCODE tryAggregateIntVars(
    SCIP_Longint classstep;
    SCIP_Longint xsol;
    SCIP_Longint ysol;
+   SCIP_Longint newlb;
+   SCIP_Longint newub;
    SCIP_Bool success;
    SCIP_VARTYPE vartype;
 
@@ -5048,6 +5050,20 @@ SCIP_RETCODE tryAggregateIntVars(
    assert(((c - b*ysol)%a) == 0);
 
    xsol = (c - b*ysol)/a;
+
+   /* check that aggregation still works after rounding of bound if variable will get fixed:
+    * 
+    * for very large values b the corresponding new integer lower and upper bound of the aggregation variable
+    * might be rounded to be equal (and thus the aggregation variable would be fixed), but the corresponding value
+    * is outside the current bounds of the aggregation variable; in this case the integer aggregation is
+    * numerically instable and thus not applicable
+    */
+   newlb = SCIPsetFeasCeil(set, (varx->glbdom.lb - xsol)/(-b));
+   newub = SCIPsetFeasCeil(set, (varx->glbdom.ub - xsol)/(-b));
+   if( SCIPsetIsEQ(set, newlb, newub) && SCIPsetIsGT(set, varx->glbdom.lb, newlb) )
+   {
+      return SCIP_OKAY;
+   }
 
    /* determine variable type for new artificial variable:
     *
