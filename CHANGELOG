@@ -77,6 +77,8 @@ Features
   methods are defined. A NULL pointer can be supplied to SCIPaddBendersSubproblem. In this case, no internal Benders'
   cut generation methods can be used.
 
+- New branching rule `vanillastrongbranch`, mostly for scientific purpose, with the following features: 1) no cutoff or domain reduction: only branching; 2) idempotent (optional): leave SCIP, as much as possible, in the same state before / after the strong branching calls - basically, do not update any statistic; 3) donotbranch (optional): do no perform branching. So that the brancher can be called as an oracle only (on which variable would you branch ? But do not branch please); 4) scoreall (optional): keep scoring variables, even if infeasibility is detected; 5) collectscores (optional): store the candidate scores from the last call, which can then be retrieved by calling SCIPgetVanillafullstrongData(); 6) integralcands (optional): consider integral candidates for branching, i.e., get candidates from SCIPgetPseudoBranchCands() instead of SCIPgetLPBranchCands().
+
 Performance improvements
 ------------------------
 
@@ -114,6 +116,8 @@ Interface changes
     which is passed as new argument to SCIPcreateDiveset(). SCIPcreateDiveset() has another new parameter "ispublic".
 
 - new callback `SCIP_DECL_CONSHDLRCOPY` and `SCIP_DECL_CONSCOPY` in cons_orbisack and cons_symresack
+
+- new `idempotent` argument to SCIPgetVarStrongbranchInt() and SCIPgetVarStrongbranchFrac(), so that statistics are not updated during the call. Likewise, new `updatecol` and `updatestat` arguments to SCIPcolGetStrongbranch().
 
 ### Deleted and changed API methods
 
