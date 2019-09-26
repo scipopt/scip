@@ -68,6 +68,7 @@ struct SCIP_BranchruleData
    int                   ncands;                /**< number of candidates */
    int                   npriocands;            /**< number of priority candidates */
    int                   bestcand;              /**< best branching candidate */
+   int                   candcapacity;          /**< capacity of candidate arrays */
 };
 
 SCIP_RETCODE runVanillaStrongBranching(
@@ -147,8 +148,13 @@ SCIP_DECL_BRANCHEXIT(branchExitVanillafullstrong)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   SCIPfreeBufferArrayNull(scip, &branchruledata->cands);
-   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->candscores, branchruledata->ncands);
+   /* free candidate arrays if any */
+   if( branchruledata->candscores )
+      SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->candscores, branchruledata->candcapacity);
+   if( branchruledata->cands )
+      SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->cands, branchruledata->candcapacity);
+
+   branchruledata->candcapacity = -1;
    branchruledata->ncands = -1;
    branchruledata->npriocands = -1;
    branchruledata->bestcand = -1;
@@ -167,6 +173,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpVanillafullstrong)
    SCIP_Real provedbound;
    SCIP_Bool bestdownvalid;
    SCIP_Bool bestupvalid;
+   SCIP_VAR** cands;
+   int ncands;
+   int npriocands;
+   int i;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -181,27 +191,40 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpVanillafullstrong)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   /* release candidates and scores arrays if any */
-   SCIPfreeBufferArrayNull(scip, &branchruledata->cands);
-   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->candscores, branchruledata->ncands);
-
    /* get branching candidates, either all non-fixed variables or only the
     * fractional ones */
-   if( branchruledata->integralcands ) {
-      SCIP_CALL( SCIPgetPseudoBranchCands(scip, &branchruledata->cands, &branchruledata->ncands, &branchruledata->npriocands) );
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &branchruledata->cands, branchruledata->cands, branchruledata->ncands) );
-   }
-   else {
-      SCIP_CALL( SCIPgetLPBranchCands(scip, &branchruledata->cands, NULL, NULL, &branchruledata->ncands, &branchruledata->npriocands, NULL) );
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &branchruledata->cands, branchruledata->cands, branchruledata->ncands) );
-   }
-   assert(branchruledata->ncands > 0);
-   assert(branchruledata->npriocands > 0);
+   if( branchruledata->integralcands )
+      SCIP_CALL( SCIPgetPseudoBranchCands(scip, &cands, &ncands, &npriocands) );
+   else
+      SCIP_CALL( SCIPgetLPBranchCands(scip, &cands, NULL, NULL, &ncands, &npriocands, NULL) );
 
-   /* allocate candidate scores array if needed */
-   if( branchruledata->collectscores ) {
-      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &branchruledata->candscores, branchruledata->ncands) );
+   assert(ncands > 0);
+   assert(npriocands > 0);
+
+   /* increase candidate arrays capacity if needed */
+   if( ncands > branchruledata->candcapacity )
+   {
+      /* free previously allocated arrays if any */
+      if( branchruledata->candscores )
+         SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->candscores, branchruledata->candcapacity);
+      if( branchruledata->cands )
+         SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->cands, branchruledata->candcapacity);
+
+      /* update capacity */
+      branchruledata->candcapacity = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    }
+
+   /* allocate new candidate arrays if needed */
+   if( branchruledata->cands == NULL )
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->cands, branchruledata->candcapacity) );
+   if( branchruledata->candscores == NULL && branchruledata->collectscores )
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->candscores, branchruledata->candcapacity) );
+
+   /* copy candidates */
+   branchruledata->ncands = ncands;
+   branchruledata->npriocands = npriocands;
+   for( i = 0; i < ncands; i++ )
+       branchruledata->cands[i] = cands[i];
 
    SCIP_CALL( runVanillaStrongBranching(scip, branchruledata->cands, branchruledata->ncands, branchruledata->npriocands,
      branchruledata->scoreall, branchruledata->idempotent, branchruledata->candscores,
@@ -281,6 +304,7 @@ SCIP_RETCODE SCIPincludeBranchruleVanillafullstrong(
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
    branchruledata->cands = NULL;
    branchruledata->candscores = NULL;
+   branchruledata->candcapacity = -1;
    branchruledata->ncands = -1;
    branchruledata->npriocands = -1;
    branchruledata->bestcand = -1;
@@ -455,7 +479,8 @@ SCIP_RETCODE runVanillaStrongBranching(
       assert(downinf || !downconflict);
       assert(upinf || !upconflict);
 
-      if( !idempotent ) {
+      if( !idempotent )
+      {
          /* display node information line */
          if( SCIPgetDepth(scip) == 0 && nsbcalls % 100 == 0 )
          {
@@ -535,7 +560,7 @@ SCIP_RETCODE SCIPgetVanillafullstrongData(
    {
       *cands = branchruledata->cands;
    }
-   if( candscores )
+   if( candscores && branchruledata->collectscores )
    {
       *candscores = branchruledata->candscores;
    }
