@@ -2655,17 +2655,13 @@ SCIP_RETCODE graph_pc_contractNodeAncestors(
    SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[s]), g->ancestors[ets], NULL));
    SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->ancestors[ets], NULL));
 
+#if 0
    SCIP_CALL( graph_pseudoAncestors_appendCopyEdgeToNode(scip, t, ets, FALSE, g, &conflict) );
-   if( conflict )
-   {
-      graph_knot_printPseudoAncestors(g, t);
-      graph_edge_printPseudoAncestors(g, ets);
-   }
-
    assert(!conflict);
 
    SCIP_CALL( graph_pseudoAncestors_appendCopyNode(scip, t, s, FALSE, g, &conflict) );
    assert(!conflict);
+#endif
 
    return SCIP_OKAY;
 }
