@@ -2912,7 +2912,7 @@ SCIP_RETCODE SCIPsolveLinearProb3(
 
    if( info != 0 )
    {
-      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      SCIPdebugMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
       *success = FALSE;
    }
    else
@@ -2974,7 +2974,7 @@ SCIP_RETCODE SCIPsolveLinearProb(
 
    if( info != 0 )
    {
-      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      SCIPdebugMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
       *success = FALSE;
    }
    else
