@@ -328,21 +328,21 @@ SCIP_RETCODE SCIPincludeBranchruleVanillafullstrong(
          "should integral variables in the current LP solution be considered as branching candidates ?",
          &branchruledata->integralcands, FALSE, DEFAULT_INTEGRALCANDS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "branching/vanillafullstrong/scoreall",
-         "should strong branching scores be computed for all candidates, or can we early stop when a variable has infinite score ?",
-         &branchruledata->scoreall, FALSE, DEFAULT_SCOREALL, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/vanillafullstrong/idempotent",
          "should strong branching side-effects be prevented (e.g., domain changes, stat updates etc.) ?",
          &branchruledata->idempotent, FALSE, DEFAULT_IDEMPOTENT, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/vanillafullstrong/scoreall",
+         "should strong branching scores be computed for all candidates, or can we early stop when a variable has infinite score ?",
+         &branchruledata->scoreall, TRUE, DEFAULT_SCOREALL, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/vanillafullstrong/collectscores",
          "should strong branching scores be collected ?",
-         &branchruledata->collectscores, FALSE, DEFAULT_COLLECTSCORES, NULL, NULL) );
+         &branchruledata->collectscores, TRUE, DEFAULT_COLLECTSCORES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/vanillafullstrong/donotbranch",
          "should branching be skipped ?",
-         &branchruledata->donotbranch, FALSE, DEFAULT_DONOTBRANCH, NULL, NULL) );
+         &branchruledata->donotbranch, TRUE, DEFAULT_DONOTBRANCH, NULL, NULL) );
 
    return SCIP_OKAY;
 }
