@@ -1,3 +1,4 @@
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -1897,25 +1898,13 @@ SCIP_RETCODE reduce_da(
    int nfixed;
    STP_Bool* marked;
 
-   assert(ub != NULL);
-   assert(scip != NULL);
-   assert(graph != NULL);
-   assert(nelims != NULL);
-   assert(nodearrint != NULL);
+   assert(ub && scip && graph && nelims && nodearrint);
    assert(!rpc || !graph->extended);
-
-   nfixed = 0;
-   minpathcost = 0.0;
+   assert(graph_valid_ancestors(scip, graph));
 
    if( graph->terms <= 1 )
       return SCIP_OKAY;
 
-   if( SCIPisGE(scip, *ub, 0.0) )
-      upperbound = *ub;
-   else
-      upperbound = FARAWAY;
-
-   /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgefixingbounds, nedges) );
@@ -1932,16 +1921,16 @@ SCIP_RETCODE reduce_da(
    else
       pool = NULL;
 
-
-   if( extended || 1 )
-   {
-      assert(graph_valid_ancestors(scip, graph));
-
-      int removeme; // should not be necessary anymore with conflict deletion... make a check?
-      SCIP_CALL( reduce_deleteConflictEdges(scip, graph) );
-   }
-
    /* initialize */
+
+   nfixed = 0;
+   minpathcost = 0.0;
+
+   if( SCIPisGE(scip, *ub, 0.0) )
+      upperbound = *ub;
+   else
+      upperbound = FARAWAY;
+
    k = 0;
    nterms = 0;
    for( int i = 0; i < nnodes; i++ )
@@ -2192,22 +2181,15 @@ SCIP_RETCODE reduce_da(
          if( nreplacings > 0 && userec )
          {
             SCIPStpHeurRecFreePool(scip, &pool);
-            SCIP_CALL( SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE) );
+            SCIP_CALL(SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE));
          }
 
-         if( extended || 1 )
+         assert(graph_valid_ancestors(scip, graph));
+
+         if( rpc )
          {
-            if( rpc )
-               graph_pc_2org(graph);
-
-            assert(graph_valid_ancestors(scip, graph));
-            int todo; // should not be necessary anymore, but check!
-
-
-            SCIP_CALL(reduce_deleteConflictEdges(scip, graph));
-
-            if( rpc )
-               graph_pc_2trans(graph);
+            graph_pc_2org(graph);
+            graph_pc_2trans(graph);
          }
       }
 

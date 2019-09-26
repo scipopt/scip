@@ -2010,13 +2010,7 @@ SCIP_RETCODE redLoopStp(
    }
    while( rerun && !SCIPisStopped(scip) ); /* extensive reduction loop */
 
-   if( fullreduce )
-   {
-      assert(graph_valid_ancestors(scip, g));
-
-      int todo; // none!
-      SCIP_CALL( reduce_deleteConflictEdges(scip, g) );
-   }
+   assert(graph_valid_ancestors(scip, g));
 
    /* free random number generator */
    SCIPfreeRandom(scip, &randnumgen);

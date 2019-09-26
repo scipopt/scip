@@ -2342,8 +2342,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* presolving */
    SCIP_CALL( reduce(scip, graph, &offset, reduction, probdata->minelims, TRUE) );
 
-   SCIP_CALL( graph_get_edgeConflicts(scip, graph) ); int todo; // kill
-
 #ifdef WITH_UG
    SCIP_CALL( graph_pack(scip, graph, &packedgraph, FALSE) );
 #else
