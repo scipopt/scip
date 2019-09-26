@@ -53,14 +53,18 @@
 extern "C" {
 #endif
 
-/** creates the vanilla full strong branching rule and includes it in SCIP */
-EXTERN
+/** creates the vanilla full strong branching rule and includes it in SCIP
+ *
+ *  @ingroup BranchingRuleIncludes
+ */
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleVanillafullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** recovers candidate variables and their scores from last vanilla full strong branching call */
-EXTERN
+/** recovers candidate variables and their scores from last vanilla full
+ * strong branching call */
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVanillafullstrongData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           cands,              /**< candidate variables */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_vanillafullstrong.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  vanilla full strong LP branching rule
  * @author Tobias Achterberg
  * @author Maxime Gasse
@@ -119,7 +120,6 @@ SCIP_DECL_BRANCHFREE(branchFreeVanillafullstrong)
 
    return SCIP_OKAY;
 }
-
 
 /** initialization method of branching rule (called after problem was transformed) */
 static
