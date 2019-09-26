@@ -4914,8 +4914,8 @@ SCIP_RETCODE tryAggregateIntVars(
    SCIP_Longint classstep;
    SCIP_Longint xsol;
    SCIP_Longint ysol;
-   SCIP_Longint newlb;
-   SCIP_Longint newub;
+   SCIP_Real newlb;
+   SCIP_Real newub;
    SCIP_Bool success;
    SCIP_VARTYPE vartype;
 
