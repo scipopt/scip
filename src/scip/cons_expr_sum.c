@@ -754,6 +754,8 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
 
    SCIPintervalSet(interval, exprdata->constant);
 
+   SCIPdebugMsg(scip, "inteval %p with %d children: %.20g", (void*)expr, SCIPgetConsExprExprNChildren(expr), exprdata->constant);
+
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       SCIP_INTERVAL childinterval;
@@ -775,7 +777,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
          SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &suminterval, childinterval, exprdata->coefficients[c]);
          SCIPintervalAdd(SCIP_INTERVAL_INFINITY, interval, *interval, suminterval);
       }
+
+      SCIPdebugMsgPrint(scip, " %+.20g*[%.20g,%.20g]", exprdata->coefficients[c], childinterval.inf, childinterval.sup);
+
    }
+   SCIPdebugMsgPrint(scip, " = [%.20g,%.20g]\n", interval->inf, interval->sup);
 
    return SCIP_OKAY;
 }
