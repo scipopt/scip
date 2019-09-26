@@ -2633,8 +2633,6 @@ SCIP_RETCODE graph_pc_contractNodeAncestors(
    int                   ets                 /**< edge from t to s or -1 */
    )
 {
-   SCIP_Bool conflict;
-
    assert(g != NULL);
    assert(scip != NULL);
 
@@ -2656,6 +2654,8 @@ SCIP_RETCODE graph_pc_contractNodeAncestors(
    SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->ancestors[ets], NULL));
 
 #if 0
+   SCIP_Bool conflict;
+
    SCIP_CALL( graph_pseudoAncestors_appendCopyEdgeToNode(scip, t, ets, FALSE, g, &conflict) );
    assert(!conflict);
 

@@ -1789,7 +1789,7 @@ SCIP_RETCODE reduce_simple_fixedConflict(
                graph_edge_del(scip, g, e, TRUE);
                (*countnew)++;
 
-               printf("conflict deleted edge %d \n", e);
+               SCIPdebugMessage("conflict deleted edge %d \n", e);
                break;
             }
          }
