@@ -885,14 +885,12 @@ SCIP_RETCODE aggregation(
 
       if( cmirsuccess )
       {
-         SCIP_CALL( addCut(scip, sol, sepadata->cmir, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal,
-               sepadata->dynamiccuts, cutrank, "cmir", cutoff, ncuts, &cut) ); /*lint !e644*/
+         SCIP_CALL( addCut(scip, sol, sepadata->cmir, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal, sepadata->dynamiccuts, cutrank, "cmir", cutoff, ncuts, &cut) ); /*lint !e644*/
       }
       else if ( flowcoversuccess )
       {
          /* cppcheck-suppress uninitvar */
-         SCIP_CALL( addCut(scip, sol, sepadata->flowcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, flowcovercutislocal,
-               sepadata->dynamiccuts, cutrank, "flowcover", cutoff, ncuts, &cut) ); /*lint !e644*/
+         SCIP_CALL( addCut(scip, sol, sepadata->flowcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, flowcovercutislocal, sepadata->dynamiccuts, cutrank, "flowcover", cutoff, ncuts, &cut) ); /*lint !e644*/
       }
 
       if ( *cutoff )
