@@ -325,6 +325,7 @@ SCIP_RETCODE setupAggregationData(
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->aggrrowsstart, ncontvars + nimplvars + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->nbadvarsinrow, nrows) );
    SCIP_CALL( SCIPaggrRowCreate(scip, &aggrdata->aggrrow) );
+   assert( aggrdata->aggrrow != NULL );
    BMSclearMemoryArray(aggrdata->nbadvarsinrow, nrows);
 
    aggrdata->nbounddistvars = 0;
@@ -799,10 +800,8 @@ SCIP_RETCODE aggregation(
    int nrows;
    int maxtestdelta;
 
-   SCIP_Real cutrhs;
-   SCIP_Real cutefficacy;
-
    assert(scip != NULL);
+   assert(aggrdata != NULL);
    assert(sepa != NULL);
    assert(rowlhsscores != NULL);
    assert(rowrhsscores != NULL);
@@ -835,7 +834,7 @@ SCIP_RETCODE aggregation(
    maxtestdelta = sepadata->maxtestdelta == -1 ? INT_MAX : sepadata->maxtestdelta;
 
    /* add start row to the initially empty aggregation row (aggrrow) */
-   SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) );
+   SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) ); /*lint !e644*/
 
    /* try to generate cut from the current aggregated row; add cut if found, otherwise add another row to aggrrow
     * in order to get rid of a continuous variable
@@ -843,15 +842,17 @@ SCIP_RETCODE aggregation(
    naggrs = 0;
    while( naggrs <= maxaggrs )
    {
-      int cutrank;
-      int cutnnz;
+      int cutrank = 0;
+      int cutnnz = 0;
       SCIP_Bool aggrsuccess;
       SCIP_Bool cmirsuccess;
-      SCIP_Bool cmircutislocal;
+      SCIP_Bool cmircutislocal = FALSE;
       SCIP_Bool flowcoversuccess;
       SCIP_Real flowcoverefficacy;
-      SCIP_Bool flowcovercutislocal;
+      SCIP_Bool flowcovercutislocal = FALSE;
       SCIP_ROW* cut = NULL;
+      SCIP_Real cutrhs = SCIP_INVALID;
+      SCIP_Real cutefficacy;
 
       *wastried = TRUE;
 
@@ -863,7 +864,7 @@ SCIP_RETCODE aggregation(
 
       if( sepadata->sepflowcover )
       {
-         SCIP_CALL( SCIPcalcFlowCover(scip, sol, POSTPROCESS, BOUNDSWITCH, allowlocal, aggrdata->aggrrow,
+         SCIP_CALL( SCIPcalcFlowCover(scip, sol, POSTPROCESS, BOUNDSWITCH, allowlocal, aggrdata->aggrrow, /*lint !e644*/
             cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
       }
       else
