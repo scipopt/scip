@@ -867,6 +867,10 @@ SCIP_RETCODE aggregation(
          flowcoversuccess = FALSE;
       }
 
+      /* initialize the cutefficacy variable with the flowcoverefficacy, so that only CMIR cuts
+       * that have a higher efficacy than that of a flowcover cut possibly found in the call above
+       * are returned since the flowcover cut is overwritten in that case.
+       */
       cutefficacy = flowcoverefficacy;
 
       if( sepadata->sepcmir )
