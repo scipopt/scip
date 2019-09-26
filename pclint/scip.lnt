@@ -138,6 +138,9 @@
 -emacro(776,BMSmoveMemoryArray)
 -emacro(776,SCIPsetAllocBufferArray)
 
+-emacro(826,SCIP_DEF_RBTREE_FIND)
+-emacro(826,FOR_EACH_NODE)
+
 // previous value assigned to 'retcode' not used
 -emacro(838,SCIP_CALL_TERMINATE)
 
