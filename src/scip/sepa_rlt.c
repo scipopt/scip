@@ -480,8 +480,9 @@ SCIP_RETCODE addBilinProduct(
    else
    {  /* linexpr has not been added yet, add it here */
 #ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "\nnew linearisation for termpos %d", termpos);
+      SCIPinfoMessage(scip, NULL, "\nnew linearisation for product %s%s: ", SCIPvarGetName(x), SCIPvarGetName(y));
       SCIPprintConsExprExpr(scip, sepadata->conshdlr, sepadata->bilinterms[termpos], NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
       if( sepadata->nlinexprs[termpos] + 1 > sepadata->slinexprs[termpos] )
@@ -536,8 +537,8 @@ SCIP_RETCODE addBilinProduct(
 #ifdef SCIP_DEBUG
    for( int i = 0; i < sepadata->nlinexprs[termpos]; ++i )
    {
-      SCIPinfoMessage(scip, NULL, "\n");
       SCIPprintConsExprExpr(scip, sepadata->conshdlr, sepadata->linexprs[termpos][i], NULL);
+      SCIPinfoMessage(scip, NULL, ", overest %d, underest %d\n", sepadata->linoverestimate[termpos][i], sepadata->linunderestimate[termpos][i]);
    }
 #endif
 
@@ -1617,8 +1618,7 @@ SCIP_RETCODE createSepaData(
                   if( !SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t) mapidx) )
                   {
                      SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &linexpr, auxvar) );
-                     SCIP_CALL( addBilinProduct(scip, sepadata, expr, x, y, &linexpr, FALSE, SCIPgetConsExprExprNLocksNeg(expr) > 0,
-                        SCIPgetConsExprExprNLocksPos(expr) > 0, varmap) );
+                     SCIP_CALL( addBilinProduct(scip, sepadata, expr, x, y, &linexpr, FALSE, TRUE, TRUE, varmap) );
                   }
                   else
                   {
@@ -1924,7 +1924,11 @@ SCIP_RETCODE addRltTerm(
    /* if the auxiliary variable for this term exists, simply add it to the cut with the previous coefficient */
    if( linexpr != NULL )
    {
-      SCIPdebugMsg(scip, "linearisation expression for %s and %s found, will be added to cut\n", SCIPvarGetName(colvar), SCIPvarGetName(var));
+      SCIPdebugMsg(scip, "linearisation expression for %s and %s found, will be added to cut:\n", SCIPvarGetName(colvar), SCIPvarGetName(var));
+#ifdef SCIP_DEBUG
+      SCIPprintConsExprExpr(scip, sepadata->conshdlr, linexpr, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
+#endif
       assert(!SCIPisInfinity(scip, REALABS(coefauxvar)));
       SCIP_CALL( addLinearisationToRow(scip, sepadata->conshdlr, cut, linexpr, coefauxvar, finalside) );
    }
@@ -2724,10 +2728,11 @@ SCIP_RETCODE separateRltCuts(
 
                /* release the projected cut */
                if( cut != NULL )
-                  SCIP_CALL( SCIPreleaseRow(scip, &cut) ); /* TODO use parameter */
+                  SCIP_CALL( SCIPreleaseRow(scip, &cut) );
             }
 
-            /* if the projected cut was generated successfully and is violated, generate the actual cut */
+            /* if we don't use projection or if the projected cut was generated successfully and is violated,
+             * generate the actual cut */
             if( success )
                SCIP_CALL( computeRltCuts(scip, sepa, sepadata, &cut, row, sol, xj, &success, uselb[k], uselhs[k],
                   allowlocal, buildeqcut) );
