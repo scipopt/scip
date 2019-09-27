@@ -2110,51 +2110,6 @@ SCIP_RETCODE roundFixingValue(
    return SCIP_OKAY;
 }
 
-
-/** copy the solution of the subproblem to newsol */
-static
-SCIP_RETCODE copySol(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem */
-   SCIP_SOL**            newsol              /**< solution to the original problem */
-   )
-{
-   SCIP_VAR** vars;                          /* the original problem's variables */
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem */
-   int        nvars;
-   int i;
-
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-   assert(subsol != NULL);
-   assert(newsol != NULL);
-   assert(*newsol != NULL);
-
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   for( i = 0; i < nvars; ++i )
-   {
-      if( subvars[i] == NULL )
-         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
-      else
-         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
-   }
-
-   SCIP_CALL( SCIPsetSolVals(scip, *newsol, nvars, vars, subsolvals) );
-
-   SCIPfreeBufferArray(scip, &subsolvals);
-
-   return SCIP_OKAY;
-}
-
-
 /** solve subproblem and pass best feasible solution to original SCIP instance */
 static
 SCIP_RETCODE solveSubproblem(
@@ -2346,11 +2301,8 @@ SCIP_RETCODE solveSubproblem(
    if( SCIPgetNSols(subscip) > 0 && (SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE || heurdata->minimprove > 0.0) )
    {
       SCIP_SOL** subsols;
-      SCIP_Bool success;
+      SCIP_Bool success = FALSE;
       int nsubsols;
-
-      /* create solution */
-      SCIP_CALL( SCIPcreateSol(scip, sol, heur) );
 
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted */
@@ -2358,30 +2310,30 @@ SCIP_RETCODE solveSubproblem(
       subsols = SCIPgetSols(subscip);
       assert(subsols != NULL);
 
-      success = FALSE;
-      for( i = 0; i < nsubsols && !success; i++ )
+      for( i = 0; i < nsubsols; i++ )
       {
          /* transform solution to original problem */
-         SCIP_CALL( copySol(scip, subscip, subvars, subsols[i], sol) );
+         SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], heur, subvars, sol) );
 
          /* try to add new solution to scip */
          SCIP_CALL( SCIPtrySol(scip, *sol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+
+         if( success )
+         {
+            SCIPdebugMsg(scip, "heuristic found %d solutions in subproblem; solution %d feasible in original problem\n", nsubsols, i);
+            break;
+         }
+         else
+         {
+            /* free solution structure, since SCIPtranslateSubSol would recreate in the next round */
+            SCIP_CALL( SCIPfreeSol(scip, sol) );
+            assert(*sol == NULL);
+         }
       }
 
-      if( success )
-      {
-         assert(i >= 1);
-         SCIPdebugMsg(scip, "heuristic found %d solutions in subproblem; solution %d feasible in original problem\n", nsubsols, i);
-      }
-      else
-      {
-         /* free solution structure, since we found no feasible solution */
-         SCIP_CALL( SCIPfreeSol(scip, sol) );
-         *sol = NULL;
-      }
-
-      /* if the best subproblem solution was not accepted in the original problem, we do not trust the solving status */
-      *validsolved = *validsolved && i == 1;
+      /* if the best subproblem solution was not accepted in the original problem, then we do not trust the solving status */
+      if( !success || i > 0 )
+         *validsolved = FALSE;
    }
 
    if( *validsolved )

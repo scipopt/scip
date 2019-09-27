@@ -65,7 +65,7 @@ int GAMSsolvetraceCreate(
    double                timefreq            /**< interval in seconds when to write T-lines to trace files, 0 to disable T-lines */
 )
 {
-   char optnrstr[5];
+   char optnrstr[12];
 
    assert(solvetrace != NULL);
    assert(filename != NULL);

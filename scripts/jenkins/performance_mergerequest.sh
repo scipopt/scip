@@ -18,10 +18,16 @@
 # ----------|------------------------------------------|--------------
 # GITBRANCH | master                                   | master, v60-bugfix, consexpr
 # TESTMODE  | ""                                       | mip, minlp, short
+# QUICKMODE | ""                                       | quick, continue, ""
 
 echo "This is performance_mergerequest.sh running."
 : ${TESTMODE:="all"}
 : ${GITBRANCH:=${gitlabTargetBranch}}
+: ${QUICKMODE:=""}
+
+if [ "${gitlabTriggerPhrase}" != "" ]; then
+  QUICKMODE=$(echo "${gitlabTriggerPhrase}" | cut -f4 -d " ")
+fi
 
 ORIGBRANCH=${GITBRANCH}
 
@@ -29,10 +35,22 @@ if [ "${TESTMODE}" == "short" ]; then
   echo "Testing short"
 elif [ "${TESTMODE}" == "mip" ]; then
   echo "Testing mip"
+  if [ "${QUICKMODE}" == "quick" ]; then
+    echo "Testing mip quick"
+    TESTMODE=quick_mip
+  elif [ "${QUICKMODE}" == "continue" ]; then
+    echo "Testing mip continue"
+    TESTMODE=continue_mip
+  fi
 elif [ "${TESTMODE}" == "minlp" ]; then
   echo "Testing minlp"
-# elif [ "${TESTMODE}" == "sap" ]; then
-#   echo "Testing sap"
+  if [ "${QUICKMODE}" == "quick" ]; then
+    echo "Testing minlp quick"
+    TESTMODE=quick_minlp
+  elif [ "${QUICKMODE}" == "continue" ]; then
+    echo "Testing minlp continue"
+    TESTMODE=continue_minlp
+  fi
 else
   echo "Nothing to do, exiting."
   exit 0
@@ -56,6 +74,7 @@ fi
 
 export FULLGITHASH=$(git show -s --pretty=%H)
 export MODE=performance
+export MRSETTINGS="MR-${gitlabMergeRequestIid}"
 
 ####################################
 ### jobs configuration variables ###
@@ -72,16 +91,25 @@ export MODE=performance
 #    JOBS[x,y]="EXCLUSIVE=true EXECUTABLE=scipoptspx/bin/scip BINID=scipoptspx-${GITBRANCH} MEM=100 QUEUE=opt TEST=short TIME=10 PERMUTE=2 SETTINGS=default PERFORMANCE=mergerequest"
 
 RANDOMSEED=$(date +%Y%m%d%H%M)
+export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
 
 # for descriptions on the testsets see scip/check/testsets/README.md
 # jobs running
 
 if [ "${TESTMODE}" == "short" ]; then
-  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=false MEM=5000 QUEUE=opt TEST=short TIME=60 SETTINGS=default PERFORMANCE=mergerequest SEEDS=0"
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} EXCLUSIVE=false MEM=5000 QUEUE=opt TEST=short TIME=60 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=0"
 elif [ "${TESTMODE}" == "mip" ]; then
-  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev12merged-solvable TIME=7200 SETTINGS=default PERFORMANCE=mergerequest SEEDS=4"
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=4"
 elif [ "${TESTMODE}" == "minlp" ]; then
-  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=mergerequest PERMUTE=4"
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_${MRSETTINGS} PERFORMANCE=mergerequest PERMUTE=4"
+elif [ "${TESTMODE}" == "quick_mip" ]; then
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=1"
+elif [ "${TESTMODE}" == "quick_minlp" ]; then
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_${MRSETTINGS} PERFORMANCE=mergerequest PERMUTE=1"
+elif [ "${TESTMODE}" == "continue_mip" ]; then
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M620v3 TEST=mipdev2-solvable TIME=7200 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=2 GLBSEEDSHIFT=2"
+elif [ "${TESTMODE}" == "continue_minlp" ]; then
+  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_${MRSETTINGS} PERFORMANCE=mergerequest PERMUTE=2 STARTPERM=2"
 #elif [ "${TESTMODE}" == "sap" ]; then
 #  JOB="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sapdev-solvable TIME=3600 SETTINGS=${SAPSETTINGS} PERFORMANCE=mergerequest SEEDS=2"
 fi
@@ -128,12 +156,12 @@ if [ "${GITLOG}" == "" ]; then
   exit 1
 fi
 
-# ensure that the current branch is not ahead of the latest performance run
+# ensure that the current branch has not branched off ahead of the latest performance run
 GITLOG=$(git log origin/${ORIGBRANCH} --pretty=format:'%H' | grep ${COMPAREHASH} -B1 | head -n 1)
 if [ "${GITLOG}" != "${COMPAREHASH}" ]; then
   GITCHECK=$(git log --pretty=format:'%H' | grep ${GITLOG})
   if [ "${GITCHECK}" != "" ]; then
-    export FAILREASON="Your branch is ahead of the latest performance run of ${ORIGBRANCH}. Abort!"
+    export FAILREASON="Your branch has not branched off from the same commit on ${ORIGBRANCH} where the latest performance run started (look for branch with name performance-*). Abort!"
     echo ${FAILREASON}
     exit 1
   fi
@@ -181,9 +209,10 @@ SCIP_BINARY=${BUILD_DIR}/bin/scip
 #  - When building a default setting with random seed, use a capital D. No setting name should be a prefix of another!
 
 # MIP settings
+touch "settings/${MRSETTINGS}.set"
 
 # MINLP settings
-${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set limits gap 1e-4 set diffsave settings/minlp_default.set q"
+${SCIP_BINARY} -c "set numerics checkfeastolfac 1000.0 set limits gap 1e-4 set diffsave settings/minlp_${MRSETTINGS}.set q"
 
 # create more required symlinks
 ln -fs /nfs/optimi/kombadon/IP check/

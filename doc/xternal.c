@@ -76,7 +76,7 @@
  *
  * \verbinclude output.log
  *
- * @version  6.0.1.3
+ * @version  6.0.2.4
  *
  * \image html scippy.png
  */
@@ -6867,18 +6867,21 @@
  *    @refsnippet{src/scip/cons_linear.c,SnippetDebugAssertions}
  *
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
- *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
- *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
+ *    function <code>consCatchEvent()</code>. This is particularly important for, e.g., array indices like
+ *    the variable <code>pos</code> in this example, where using the <code>consdata->vars[pos]</code>
  *    pointer could result in unexspected behaviour
- *    if the asserted precondition on <code>pos</code> were not matched and \<pos\> were an arbitrary index
+ *    if the asserted precondition on <code>pos</code> were not matched and <code>pos</code> were an arbitrary index
  *    outside the array range.
  *
  *  - In order to activate assertions, use the <b>Debug mode</b> by compiling SCIP via
  *   \code
+ *    cmake -DCMAKE_BUILD_TYPE=Debug
+ *   \endcode
+ *   or the Makefile equivalent
+ *   \code
  *    make OPT=dbg
- *   \endcode and run the code. See \ref MAKE for further information about compiler options for SCIP.
- *
- *  - Spending only little extra time on
+ *   \endcode and run the code. See \ref CMAKE and \ref MAKE for further information about compiler options for SCIP.
+ *     As a rule of thumb, Spending only little extra time on
  *    asserting preconditions saves most of the time spent on debugging!
  *
  *  - Turn on <b>additional debug output</b> by adding the line
@@ -6897,17 +6900,19 @@
  *  - For checking the usage of SCIP memory, you can use
  *    <code>SCIPprintMemoryDiagnostic()</code>. This outputs memory that is currently in use,
  *    which can be useful after a <code>SCIPfree()</code> call.
- *  - If there are memory leaks for which you cannot detect the origin, you can remake your code with the option NOBLKBUFMEM=true
- *    (do not forget to clean your code before with <code>make OPT=... LPS=... clean</code>). After that valgrind (or similar) helps
+ *  - If there are memory leaks for which you cannot detect the origin, you can recompile your code with the option <code>cmake -DNOBLKBUFMEM=on</code>
+ *    (or <code>make NOBLKBUFMEM=true</code> if you are using the Makefile system.
+ *    Also for the Makefile system, do not forget to clean your code before with <code>make OPT=... LPS=... clean</code>)
+ *    Only with that change, valgrind (or similar) reliably helps
  *    to detect leaked memory.
  *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
  *    you can use the debugging mechanism (see \ref EXAMPLE_2). Therefore, a given solution is read and it
  *    is checked for every reduction, whether the solution will be pruned globally.
  *
  * @section EXAMPLE_1 How to activate debug messages
- * For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
- * in DBG mode, and run the SCIP interactive shell to solve p0033.mps from the
- * <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
+ * For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.c, recompile SCIP
+ * in Debug mode, and run the SCIP interactive shell to solve p0033.mps from the
+ * <a href="http://miplib2010.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  *
  * \include debugexamples/example1.txt
  *
@@ -6917,7 +6922,7 @@
  * The optimal solution can now be written to a file:
  * \include debugexamples/example2_1.txt
  *
- * If we afterwards recompile SCIP with the additional compiler flag <code>DEBUGSOL=true</code>,
+ * If we afterwards recompile SCIP with the additional compiler flag <code>cmake -DDEBUGSOL=on</code> (<code>make DEBUGSOL=true</code> in the Makefile system),
  * set the parameter <code>misc/debugsol = check/p0033.sol</code>, and run SCIP again it will output:
  * \include debugexamples/example2_2.txt
  * Further debug output would only appear, if the solution was cut off in the solving process.

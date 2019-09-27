@@ -190,9 +190,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
-   SCIPintervalAbs(SCIP_INTERVAL_INFINITY, interval, childinterval);
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+      SCIPintervalSetEmpty(interval);
+   else
+      SCIPintervalAbs(SCIP_INTERVAL_INFINITY, interval, childinterval);
 
    return SCIP_OKAY;
 }
@@ -526,51 +528,33 @@ static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureAbs)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
-   SCIP_EXPRCURV childcurv;
    SCIP_INTERVAL childbounds;
    SCIP_Real childinf;
    SCIP_Real childsup;
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(exprcurvature != SCIP_EXPRCURV_UNKNOWN);
+   assert(success != NULL);
+   assert(childcurv != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   childcurv = SCIPgetConsExprExprCurvature(child);
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, TRUE) );
    childinf = SCIPintervalGetInf(childbounds);
    childsup = SCIPintervalGetSup(childbounds);
 
-   *curvature = SCIP_EXPRCURV_UNKNOWN;
-
-   /* TODO do we need to consider the cases where childinf >= 0 or childsup <= 0.0 holds? */
-   switch( childcurv )
-   {
-      case SCIP_EXPRCURV_UNKNOWN:
-         *curvature = SCIP_EXPRCURV_UNKNOWN;
-         break;
-
-      case SCIP_EXPRCURV_CONVEX:
-         if( childinf >= 0.0 )
-            *curvature = SCIP_EXPRCURV_CONVEX;
-         else if( childsup <= 0.0 )
-            *curvature = SCIP_EXPRCURV_CONCAVE;
-         break;
-
-      case SCIP_EXPRCURV_CONCAVE:
-         if( childsup <= 0.0 )
-            *curvature = SCIP_EXPRCURV_CONVEX;
-         else if( childinf >= 0.0 )
-            *curvature = SCIP_EXPRCURV_CONCAVE;
-         break;
-
-      case SCIP_EXPRCURV_LINEAR:
-         *curvature = SCIP_EXPRCURV_CONVEX;
-         break;
-   }
+   *success = TRUE;
+   if( childinf >= 0.0 )  /* |f(x)| = f(x) */
+      childcurv[0] = exprcurvature;
+   else if( childsup <= 0.0 ) /* |f(x)| = -f(x) */
+      childcurv[0] = SCIPexprcurvNegate(exprcurvature);
+   else if( exprcurvature == SCIP_EXPRCURV_CONVEX )   /* |f(x)|, f mixed sign, is convex if f is linear */
+      childcurv[0] = SCIP_EXPRCURV_LINEAR;
+   else /* |f(x)|, f mixed sign, is never concave nor linear */
+      *success = FALSE;
 
    return SCIP_OKAY;
 }

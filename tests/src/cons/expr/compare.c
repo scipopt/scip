@@ -47,6 +47,7 @@ static SCIP_CONSEXPR_EXPR* expr_halfx; /* 0.5 * x */
 static SCIP_CONSEXPR_EXPR* expr_sqrtx; /* \sqrt x */
 static SCIP_CONSEXPR_EXPR* expr_half_sqrx; /* 0.5 * x^2 */
 static SCIP_CONSEXPR_EXPR* expr_sqrx; /* x^2 */
+static SCIP_CONSEXPR_EXPR* expr_signsqrx; /* signpower(x,2) */
 static SCIP_CONSEXPR_EXPR* expr_sum_fracpow; /* (x+y)^3.2 */
 static SCIP_CONSEXPR_EXPR* expr_subprod_fracpow; /* x*(y*(x+y))^2.8 */
 
@@ -106,6 +107,9 @@ void setup(void)
    /* create expression sqrx: x^2 */
    SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &expr_sqrx, expr_x, 2.0) );
 
+   /* create expression signsqrx: signpower(x,2) */
+   SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, conshdlr, &expr_signsqrx, expr_x, 2.0) );
+
    /* create expression half_srqx: 0.5*x^2 */
    aux = 0.5;
    SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_half_sqrx, 1, &expr_sqrx, &aux, 0.0) );
@@ -142,6 +146,7 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum_fracpow) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_halfx) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sqrx) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_signsqrx) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_half_sqrx) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sqrtx) );
 
@@ -207,6 +212,9 @@ Test(compare, exponents)
    cr_expect( SCIPcompareConsExprExprs(expr_prod, expr_sum_fracpow) == -1 );
    cr_expect( SCIPcompareConsExprExprs(expr_sum_fracpow, expr_prod) == 1 );
    cr_expect( SCIPcompareConsExprExprs(expr_sum_fracpow, expr_sum_fracpow) == 0 );
+
+   /* compare signed and unsigned power (same exponents) */
+   cr_expect( SCIPcompareConsExprExprs(expr_sqrx, expr_signsqrx) == -1 );
 }
 
 Test(compare, sums_and_products)

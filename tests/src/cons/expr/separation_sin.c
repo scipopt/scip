@@ -36,7 +36,7 @@ void checkCut(SCIP_ROWPREP* cut, SCIP_VAR* childvar, SCIP_Real lhs, SCIP_Real rh
    cr_assert(SCIPisInfinity(scip, -lhs) != SCIPisInfinity(scip, rhs)); /* exactly one side must be infinite */
    cr_expect_eq(cut->sidetype, SCIPisInfinity(scip, -lhs) ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT);
    side = SCIPisInfinity(scip, -lhs) ? rhs : lhs;
-   cr_expect(SCIPisEQ(scip, cut->side, side), "side %g is not as expected (%g)", cut->side, side);
+   cr_expect(SCIPisEQ(scip, cut->side, side), "side of cut %s (%g) is not as expected (%g)", cut->name, cut->side, side);
 
    /* check vars and coefs */
    cr_expect_eq(cut->nvars, 2);
@@ -46,7 +46,9 @@ void checkCut(SCIP_ROWPREP* cut, SCIP_VAR* childvar, SCIP_Real lhs, SCIP_Real rh
       coef = cut->coefs[i];
 
       if( var == childvar )
-         cr_expect(SCIPisEQ(scip, coef, varcoef));
+      {
+         cr_expect(SCIPisEQ(scip, coef, varcoef), "coef of cut %s (%g) is not as expected (%g)", cut->name, coef, varcoef);
+      }
       else if( var == auxvar )
          cr_expect_eq(coef, -1.0);
       else
@@ -379,6 +381,84 @@ Test(separation, sinus_z, .init = setup, .fini = teardown,
    /* check secant */
    cr_expect_eq(linconst, -0.5 * SIN(3) + 1.5 * SIN(1));
    cr_expect_eq(lincoef, 0.5 * (SIN(3) - SIN(1)));
+
+   /* release expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+
+/* tests for interval [-pi,pi] */
+Test(separation, sinus_v, .init = setup, .fini = teardown,
+   .description = "test separation for a sinus expression in large range"
+   )
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_ROWPREP* secant;
+   SCIP_ROWPREP* ltangent;
+   SCIP_ROWPREP* rtangent;
+   SCIP_ROWPREP* lmidtangent;
+   SCIP_ROWPREP* rmidtangent;
+   SCIP_Real childlb;
+   SCIP_Real childub;
+
+   secant = NULL;
+   ltangent = NULL;
+   rtangent = NULL;
+   lmidtangent = NULL;
+   rmidtangent = NULL;
+
+   SCIP_CALL( SCIPcreateConsExprExprSin(scip, conshdlr, &expr, vexpr) );
+
+   /* add the auxiliary variable to the expression; variable will be released in CONSEXITSOL */
+   SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
+   SCIP_CALL( SCIPaddVarLocks(scip, auxvar, 1, 1) );
+   expr->auxvar = auxvar;
+
+   childlb = SCIPvarGetLbLocal(v);
+   childub = SCIPvarGetUbLocal(v);
+
+   /*
+    * test initial overestimation
+    */
+
+   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent,
+      childlb, childub, FALSE) );
+
+   /* check cuts which could not be computed */
+   cr_expect(secant == NULL);
+   cr_expect(ltangent == NULL);
+   cr_expect(rmidtangent == NULL);
+
+   /* check rtangent */
+   checkCut(rtangent, v, -M_PI, SCIPinfinity(scip), -1);
+
+   /* check lmidtangent */
+   checkCut(lmidtangent, v, -0.682459570501030, SCIPinfinity(scip), 0.217233628211222);
+
+   /* release cuts */
+   SCIPfreeRowprep(scip, &rtangent);
+   SCIPfreeRowprep(scip, &lmidtangent);
+
+   /*
+    * test initial underestimation
+    */
+
+   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &secant, &ltangent, &rtangent, &lmidtangent, &rmidtangent,
+      childlb, childub, TRUE) );
+
+   /* check cuts which could not be computed */
+   cr_expect(rtangent == NULL);
+   cr_expect(lmidtangent == NULL);
+
+   /* check ltangent */
+   checkCut(ltangent, v, -SCIPinfinity(scip), M_PI, -1);
+
+   /* check rmidtangent */
+   checkCut(rmidtangent, v, -SCIPinfinity(scip), 0.682459570501030, 0.217233628211222);
+
+   /* release cuts */
+   SCIPfreeRowprep(scip, &ltangent);
+   SCIPfreeRowprep(scip, &rmidtangent);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

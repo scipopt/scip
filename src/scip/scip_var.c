@@ -5224,7 +5224,8 @@ SCIP_RETCODE SCIPtightenVarLb(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the lower bound improved */
+   if( tightened != NULL && lb < SCIPcomputeVarLbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -5340,7 +5341,8 @@ SCIP_RETCODE SCIPtightenVarUb(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the upper bound improved */
+   if( tightened != NULL && ub > SCIPcomputeVarUbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -8135,11 +8137,13 @@ SCIP_RETCODE SCIPchgVarType(
       /* second change variable type */
       if( SCIPvarGetProbindex(var) >= 0 )
       {
-         SCIP_CALL( SCIPprobChgVarType(scip->origprob, scip->mem->probmem, scip->set, scip->branchcand, scip->cliquetable, var, vartype) );
+         SCIP_CALL( SCIPprobChgVarType(scip->origprob, scip->mem->probmem, scip->set, scip->primal, scip->lp,
+            scip->branchcand, scip->eventqueue, scip->cliquetable, var, vartype) );
       }
       else
       {
-         SCIP_CALL( SCIPvarChgType(var, vartype) );
+         SCIP_CALL( SCIPvarChgType(var, scip->mem->probmem, scip->set, scip->primal, scip->lp,
+            scip->eventqueue, vartype) );
       }
       break;
 
@@ -8162,11 +8166,13 @@ SCIP_RETCODE SCIPchgVarType(
       /* second change variable type */
       if( SCIPvarGetProbindex(var) >= 0 )
       {
-         SCIP_CALL( SCIPprobChgVarType(scip->transprob, scip->mem->probmem, scip->set, scip->branchcand, scip->cliquetable, var, vartype) );
+         SCIP_CALL( SCIPprobChgVarType(scip->transprob, scip->mem->probmem, scip->set, scip->primal, scip->lp,
+            scip->branchcand, scip->eventqueue, scip->cliquetable, var, vartype) );
       }
       else
       {
-         SCIP_CALL( SCIPvarChgType(var, vartype) );
+         SCIP_CALL( SCIPvarChgType(var, scip->mem->probmem, scip->set, scip->primal, scip->lp,
+            scip->eventqueue, vartype) );
       }
       break;
 

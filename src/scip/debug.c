@@ -1278,7 +1278,7 @@ SCIP_RETCODE SCIPdebugCheckAggregation(
    }
 
    /* print debug message if the aggregation violates the debugging solution */
-   if( !SCIPsetIsEQ(set, solval, val) )
+   if( !SCIPsetIsRelEQ(set, solval, val) )
    {
       if( naggrvars == 1 )
       {
@@ -1287,13 +1287,13 @@ SCIP_RETCODE SCIPdebugCheckAggregation(
          /* get solution value of y variable */
          SCIP_CALL( getSolutionValue(set, aggrvars[0], &aggrsolval) );
 
-         SCIPerrorMessage("aggregation <%s>[%g] = %g<%s>[%g] + %g violates debugging solution\n",
-            SCIPvarGetName(var), solval, scalars[0], SCIPvarGetName(aggrvars[0]), aggrsolval, constant);
+         SCIPerrorMessage("aggregation <%s>[%g] = %g<%s>[%g] + %g violates debugging solution (expected %g)\n",
+            SCIPvarGetName(var), solval, scalars[0], SCIPvarGetName(aggrvars[0]), aggrsolval, constant, val);
       }
       else
       {
-         SCIPerrorMessage("multi-aggregation <%s>[%g] = ... %d vars ... + %g violates debugging solution\n",
-            SCIPvarGetName(var), solval, naggrvars, constant);
+         SCIPerrorMessage("multi-aggregation <%s>[%g] = ... %d vars ... + %g violates debugging solution (expected %g)\n",
+            SCIPvarGetName(var), solval, naggrvars, constant, val);
       }
       SCIPABORT();
    }

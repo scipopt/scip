@@ -331,7 +331,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
    changed = FALSE;
 
    /* TODO: maybe have a flag to know if it is simplified ? */
-   SCIP_CALL( SCIPduplicateConsExprExpr(scip, conshdlr, expr, &duplicate) );
+   SCIP_CALL( SCIPduplicateConsExprExpr(scip, conshdlr, expr, &duplicate, TRUE) );
+   assert(duplicate != NULL);
 
    nchildren = SCIPgetConsExprExprNChildren(duplicate);
 
@@ -429,7 +430,16 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySum)
       if( SCIPcompareConsExprExprs(children[i], children[i + 1]) == 0 )
       {
          changed = TRUE;
-         coefs[i+1] += coefs[i];
+         /* if we substract two almost equal not-so-small numbers, then set new coefficient to 0.0
+          * instead of some tiny value that is likely the result of some random round-off error
+          * E.g., on instance ex1221, we have x1^2 + b3 = 1.25.
+          *   Probing finds an aggregation x1 = 1.11803 - 0.618034 b3.
+          *   Simplify would then produce 1.25 + 1e-16 x1 = 1.25.
+          */
+         if( SCIPisEQ(scip, coefs[i], -coefs[i+1]) && REALABS(coefs[i]) >= 1.0 )
+            coefs[i+1] = 0.0;
+         else
+            coefs[i+1] += coefs[i];
          continue;
       }
 
@@ -744,12 +754,18 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
 
    SCIPintervalSet(interval, exprdata->constant);
 
+   SCIPdebugMsg(scip, "inteval %p with %d children: %.20g", (void*)expr, SCIPgetConsExprExprNChildren(expr), exprdata->constant);
+
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       SCIP_INTERVAL childinterval;
 
       childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[c]);
-      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+      {
+         SCIPintervalSetEmpty(interval);
+         break;
+      }
 
       /* compute coefficients[c] * childinterval and add the result to the so far computed interval */
       if( exprdata->coefficients[c] == 1.0 )
@@ -761,7 +777,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
          SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &suminterval, childinterval, exprdata->coefficients[c]);
          SCIPintervalAdd(SCIP_INTERVAL_INFINITY, interval, *interval, suminterval);
       }
+
+      SCIPdebugMsgPrint(scip, " %+.20g*[%.20g,%.20g]", exprdata->coefficients[c], childinterval.inf, childinterval.sup);
+
    }
+   SCIPdebugMsgPrint(scip, " = [%.20g,%.20g]\n", interval->inf, interval->sup);
 
    return SCIP_OKAY;
 }
@@ -1151,30 +1171,16 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSum)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(childcurv != NULL);
+   assert(success != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   /* start with linear curvature */
-   *curvature = SCIP_EXPRCURV_LINEAR;
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+      childcurv[i] = SCIPexprcurvMultiply(exprdata->coefficients[i], exprcurvature);
 
-   for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && *curvature != SCIP_EXPRCURV_UNKNOWN; ++i )
-   {
-      SCIP_EXPRCURV childcurv = SCIPgetConsExprExprCurvature(SCIPgetConsExprExprChildren(expr)[i]);
-
-      /* consider negative coefficients for the curvature of a child */
-      if( exprdata->coefficients[i] < 0.0 )
-      {
-         if( childcurv == SCIP_EXPRCURV_CONVEX )
-            childcurv = SCIP_EXPRCURV_CONCAVE;
-         else if( childcurv == SCIP_EXPRCURV_CONCAVE )
-            childcurv = SCIP_EXPRCURV_CONVEX;
-      }
-
-      /* use bit operations for determining the resulting curvature */
-      *curvature = (SCIP_EXPRCURV)((*curvature) & childcurv);
-   }
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -1413,6 +1419,8 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
    minlinactivityinf = 0;
    maxlinactivityinf = 0;
 
+   SCIPdebugMsg(scip, "reverse prop with %d children: %.20g", constant);
+
    SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nexprs) );
 
    /* shift coefficients into the intervals of the children; compute the min and max activities */
@@ -1420,6 +1428,8 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
    {
       SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bounds[c], SCIPgetConsExprExprActivity(scip, exprs[c]),
          weights[c]);  /*lint !e613 */
+
+      SCIPdebugMsgPrint(scip, " %+.20g*[%.20g,%.20g]", weights[c], SCIPgetConsExprExprActivity(scip, exprs[c]).inf, SCIPgetConsExprExprActivity(scip, exprs[c]).sup); /*lint !e613 */
 
       if( SCIPisInfinity(scip, SCIPintervalGetSup(bounds[c])) )
          ++maxlinactivityinf;
@@ -1438,6 +1448,11 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
       }
    }
    maxlinactivity = -maxlinactivity; /* correct sign */
+
+   SCIPdebugMsgPrint(scip, " = [%.20g,%.20g] in rhs = [%.20g,%.20g]\n",
+      minlinactivityinf ? -SCIP_INTERVAL_INFINITY : minlinactivity,
+      maxlinactivityinf ?  SCIP_INTERVAL_INFINITY : maxlinactivity,
+      interval.inf, interval.sup);
 
    /* if there are too many unbounded bounds, then could only compute infinite bounds for children, so give up */
    if( (minlinactivityinf >= 2 || SCIPisInfinity(scip, SCIPintervalGetSup(interval))) &&
@@ -1485,8 +1500,12 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
          }
       }
 
+      SCIPdebugMsg(scip, "child %d: %.20g*x in [%.20g,%.20g]", c, weights[c], childbounds.inf, childbounds.sup);
+
       /* divide by the child coefficient */
       SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &childbounds, childbounds, weights[c]);
+
+      SCIPdebugMsgPrint(scip, " -> x = [%.20g,%.20g]\n", childbounds.inf, childbounds.sup);
 
       /* try to tighten the bounds of the expression */
       SCIP_CALL( SCIPtightenConsExprExprInterval(scip, exprs[c], childbounds, force, reversepropqueue,

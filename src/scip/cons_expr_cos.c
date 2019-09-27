@@ -162,9 +162,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalCos)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
-   SCIPintervalCos(SCIP_INTERVAL_INFINITY, interval, childinterval);
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+      SCIPintervalSetEmpty(interval);
+   else
+      SCIPintervalCos(SCIP_INTERVAL_INFINITY, interval, childinterval);
 
    return SCIP_OKAY;
 }
@@ -344,15 +346,25 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureCos)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(exprcurvature != SCIP_EXPRCURV_UNKNOWN);
+   assert(childcurv != NULL);
+   assert(success != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    childinterval = SCIPgetConsExprExprActivity(scip, child);
 
-   *curvature = SCIPcomputeCurvatureSin(SCIPgetConsExprExprCurvature(child), childinterval.inf + M_PI_2,
-      childinterval.sup + M_PI_2);
+   /* TODO rewrite SCIPcomputeCurvatureSin so it provides the reverse operation */
+   *success = TRUE;
+   if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_CONCAVE, childinterval.inf + M_PI_2, childinterval.sup + M_PI_2) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_CONCAVE;
+   else if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_CONVEX, childinterval.inf + M_PI_2, childinterval.sup + M_PI_2) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_CONVEX;
+   else if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_LINEAR, childinterval.inf + M_PI_2, childinterval.sup + M_PI_2) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_LINEAR;
+   else
+      *success = FALSE;
 
    return SCIP_OKAY;
 }

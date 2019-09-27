@@ -603,6 +603,14 @@ SCIP_INTERVAL intevalBilinear(
       return interval;
    }
 
+   /* x or y has empty interval -> empty */
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0])) ||
+       SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[1])) )
+   {
+      SCIPintervalSetEmpty(&interval);
+      return interval;
+   }
+
    /* compute all feasible points */
    getFeasiblePointsBilinear(scip, expr, underineqs, nunderineqs, overineqs, noverineqs, FALSE, xs, ys, &npoints);
 
@@ -610,7 +618,7 @@ SCIP_INTERVAL intevalBilinear(
    if( npoints == 0 )
    {
       SCIPintervalSetEmpty(&interval);
-       return interval;
+      return interval;
    }
 
    /* compute the minimum and maximum over all computed points */

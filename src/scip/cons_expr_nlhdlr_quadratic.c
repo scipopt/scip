@@ -820,7 +820,10 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
    /* if estimating on non-convex side, then do nothing */
    if( ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) ||
        (!overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE) )
+   {
+      SCIPdebugMsg(scip, "not estimating on nonconvex side (overestimate=%d, curv=%s)\n", overestimate, SCIPexprcurvGetName(nlhdlrexprdata->curvature));
       return SCIP_OKAY;
+   }
 
    /*
     * compute estimator: quadfun(sol) + \nabla quadfun(sol) (x - sol)
@@ -944,8 +947,14 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
       {
          SCIP_INTERVAL linterminterval;
 
-         SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &linterminterval,
-               SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->linexprs[i]), nlhdlrexprdata->lincoefs[i]);
+         linterminterval = SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->linexprs[i]);
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, linterminterval) )
+         {
+            SCIPdebugMsg(scip, "Activity of linear part is empty due to child %d\n", i);
+            SCIPintervalSetEmpty(interval);
+            return SCIP_OKAY;
+         }
+         SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &linterminterval, linterminterval, nlhdlrexprdata->lincoefs[i]);
          SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &nlhdlrexprdata->linactivity, nlhdlrexprdata->linactivity, linterminterval);
       }
 
@@ -976,8 +985,15 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
          SCIP_Real quadub;
          SCIP_Real quadlb;
 
-         /* b = [c_l] */
          quadexpr = &nlhdlrexprdata->quadexprterms[i];
+
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, quadexpr->expr)) )
+         {
+            SCIPintervalSetEmpty(interval);
+            return SCIP_OKAY;
+         }
+
+         /* b = [c_l] */
          SCIPintervalSet(&b, quadexpr->lincoef);
          for( j = 0; j < quadexpr->nadjbilin; ++j )
          {
@@ -988,9 +1004,15 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
             if( bilinterm->expr1 != quadexpr->expr )
                continue;
 
+            bterm = SCIPgetConsExprExprActivity(scip, bilinterm->expr2);
+            if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bterm) )
+            {
+               SCIPintervalSetEmpty(interval);
+               return SCIP_OKAY;
+            }
+
             /* b += [b_jl * expr_j] for j \in P_l */
-            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bterm, SCIPgetConsExprExprActivity(scip, bilinterm->expr2),
-                  bilinterm->coef);
+            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bterm, bterm, bilinterm->coef);
             SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &b, b, bterm);
 
 #ifdef DEBUG_PROP

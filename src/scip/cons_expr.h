@@ -239,6 +239,12 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrPower(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
    );
 
+/** returns expression handler for signed power expressions */
+SCIP_EXPORT
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrSignPower(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   );
+
 /** returns expression handler for exponential expressions */
 SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrExponential(
@@ -275,6 +281,12 @@ SCIP_Bool SCIPhasConsExprExprHdlrPrint(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
+/** returns whether expression handler implements the backward differentiation callback */
+SCIP_EXPORT
+SCIP_Bool SCIPhasConsExprExprHdlrBwdiff(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
 /** returns whether expression handler implements the interval evaluation callback */
 SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrIntEval(
@@ -290,6 +302,12 @@ SCIP_Bool SCIPhasConsExprExprHdlrEstimate(
 /** returns whether expression handler implements the simplification callback */
 SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
+/** returns whether expression handler implements the curvature callback */
+SCIP_EXPORT
+SCIP_Bool SCIPhasConsExprExprHdlrCurvature(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
@@ -339,6 +357,20 @@ SCIP_DECL_CONSEXPR_EXPRHASH(SCIPhashConsExprExprHdlr);
 SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRCOMPARE(SCIPcompareConsExprExprHdlr);
 
+/** calls the backward-differentiation callback of an expression handler
+ *
+ * further, allows to different w.r.t. given expression and children values
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPbwdiffConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   int                        childidx,     /**< index of child w.r.t. which to compute derivative */
+   SCIP_Real*                 derivative,   /**< buffer to store value of derivative */
+   SCIP_Real*                 childrenvals, /**< values for children, or NULL if values stored in children should be used */
+   SCIP_Real                  exprval       /**< value for expression, used only if childrenvals is not NULL */
+);
+
 /** calls the evaluation callback of an expression handler
  *
  * further, allows to evaluate w.r.t. given children values
@@ -363,6 +395,10 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(SCIPestimateConsExprExprHdlr);
 /** calls the simplification method of an expression handler */
 SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(SCIPsimplifyConsExprExprHdlr);
+
+/** calls the curvature check method of an expression handler */
+SCIP_EXPORT
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(SCIPcurvatureConsExprExprHdlr);
 
 /** calls the expression callback for reverse propagation */
 SCIP_EXPORT
@@ -448,16 +484,14 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    SCIP_CONSEXPR_EXPR*     newchild          /**< the new child */
    );
 
-/** duplicates the given expression
- *
- * If a copy could not be created (e.g., due to missing copy callbacks in expression handlers), *copyexpr will be set to NULL.
- */
+/** duplicates the given expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
-   SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
+   SCIP_CONSEXPR_EXPR**  copyexpr,           /**< buffer to store duplicate of expr */
+   SCIP_Bool             copychildren        /**< whether children (and all successors) should be copied, too */
    );
 
 /** gets the number of times the expression is currently captured */

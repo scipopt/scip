@@ -4938,8 +4938,12 @@ static
 void checkCurvatureEasy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< quadratic constraint */
+   SCIP_HASHMAP*         assumevarfixed,     /**< variables to be assumed to be fixed, or NULL */
    SCIP_Bool*            determined,         /**< pointer to store whether the curvature could be determined */
-   SCIP_Bool             checkmultivariate   /**< whether curvature will be checked later on for multivariate functions */
+   SCIP_Bool             checkmultivariate,  /**< whether curvature will be checked later on for multivariate functions */
+   SCIP_Bool*            isconvex,           /**< buffer to store whether found convex */
+   SCIP_Bool*            isconcave,          /**< buffer to store whether found concave */
+   SCIP_Real*            maxnonconvexity     /**< buffer to store "maximal nonconvexity" */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -4948,6 +4952,9 @@ void checkCurvatureEasy(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(determined != NULL);
+   assert(isconvex != NULL);
+   assert(isconcave != NULL);
+   assert(maxnonconvexity != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4955,67 +4962,75 @@ void checkCurvatureEasy(
    nquadvars = consdata->nquadvars;
    *determined = TRUE;
 
-   if( consdata->iscurvchecked )
-      return;
-
    SCIPdebugMsg(scip, "Checking curvature of constraint <%s> without multivariate functions\n", SCIPconsGetName(cons));
 
-   consdata->maxnonconvexity = 0.0;
+   *maxnonconvexity = 0.0;
    if( nquadvars == 1 )
    {
       assert(consdata->nbilinterms == 0);
-      consdata->isconvex      = !SCIPisNegative(scip, consdata->quadvarterms[0].sqrcoef);
-      consdata->isconcave     = !SCIPisPositive(scip, consdata->quadvarterms[0].sqrcoef);
-      consdata->iscurvchecked = TRUE;
+      if( assumevarfixed == NULL || !SCIPhashmapExists(assumevarfixed, (void*)consdata->quadvarterms[0].var) )
+      {
+         *isconvex      = !SCIPisNegative(scip, consdata->quadvarterms[0].sqrcoef);
+         *isconcave     = !SCIPisPositive(scip, consdata->quadvarterms[0].sqrcoef);
 
-      if( !SCIPisInfinity(scip, -consdata->lhs) && consdata->quadvarterms[0].sqrcoef > 0.0 )
-         consdata->maxnonconvexity =  consdata->quadvarterms[0].sqrcoef;
-      if( !SCIPisInfinity(scip,  consdata->rhs) && consdata->quadvarterms[0].sqrcoef < 0.0 )
-         consdata->maxnonconvexity = -consdata->quadvarterms[0].sqrcoef;
+         if( !SCIPisInfinity(scip, -consdata->lhs) && consdata->quadvarterms[0].sqrcoef > 0.0 )
+            *maxnonconvexity =  consdata->quadvarterms[0].sqrcoef;
+         if( !SCIPisInfinity(scip,  consdata->rhs) && consdata->quadvarterms[0].sqrcoef < 0.0 )
+            *maxnonconvexity = -consdata->quadvarterms[0].sqrcoef;
+      }
+      else
+      {
+         /* only variable should be assumed to be fixed, so we are linear */
+         *isconvex = TRUE;
+         *isconcave = TRUE;
+      }
    }
    else if( nquadvars == 0 )
    {
-      consdata->isconvex = TRUE;
-      consdata->isconcave = TRUE;
-      consdata->iscurvchecked = TRUE;
+      *isconvex = TRUE;
+      *isconcave = TRUE;
    }
    else if( consdata->nbilinterms == 0 )
    {
       int v;
 
-      consdata->isconvex = TRUE;
-      consdata->isconcave = TRUE;
+      *isconvex = TRUE;
+      *isconcave = TRUE;
 
       for( v = nquadvars - 1; v >= 0; --v )
       {
-         consdata->isconvex  = consdata->isconvex  && !SCIPisNegative(scip, consdata->quadvarterms[v].sqrcoef);
-         consdata->isconcave = consdata->isconcave && !SCIPisPositive(scip, consdata->quadvarterms[v].sqrcoef);
+         /* skip assumed-to-be-fixed variables */
+         if( assumevarfixed != NULL && SCIPhashmapExists(assumevarfixed, (void*)consdata->quadvarterms[v].var) )
+            continue;
+
+         *isconvex  = *isconvex  && !SCIPisNegative(scip, consdata->quadvarterms[v].sqrcoef);
+         *isconcave = *isconcave && !SCIPisPositive(scip, consdata->quadvarterms[v].sqrcoef);
 
          if( !SCIPisInfinity(scip, -consdata->lhs) &&  consdata->quadvarterms[v].sqrcoef > consdata->maxnonconvexity )
-            consdata->maxnonconvexity =  consdata->quadvarterms[0].sqrcoef;
+            *maxnonconvexity =  consdata->quadvarterms[0].sqrcoef;
          if( !SCIPisInfinity(scip,  consdata->rhs) && -consdata->quadvarterms[v].sqrcoef > consdata->maxnonconvexity )
-            consdata->maxnonconvexity = -consdata->quadvarterms[0].sqrcoef;
+            *maxnonconvexity = -consdata->quadvarterms[0].sqrcoef;
       }
-
-      consdata->iscurvchecked = TRUE;
    }
    else if( !checkmultivariate )
    {
-      consdata->isconvex  = FALSE;
-      consdata->isconcave = FALSE;
-      consdata->iscurvchecked = TRUE;
-      consdata->maxnonconvexity = SCIPinfinity(scip);
+      *isconvex  = FALSE;
+      *isconcave = FALSE;
+      *maxnonconvexity = SCIPinfinity(scip);
    }
    else
       *determined = FALSE;
 }
 
-/** checks a quadratic constraint for convexity and/or concavity */
+/** checks a quadratic constraint for convexity and/or concavity while checking multivariate functions */
 static
-SCIP_RETCODE checkCurvature(
+SCIP_RETCODE checkCurvatureExpensive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< quadratic constraint */
-   SCIP_Bool             checkmultivariate   /**< whether curvature should also be checked for multivariate functions */
+   SCIP_HASHMAP*         assumevarfixed,     /**< variables to be assumed to be fixed, or NULL */
+   SCIP_Bool*            isconvex,           /**< buffer to store whether found convex */
+   SCIP_Bool*            isconcave,          /**< buffer to store whether found concave */
+   SCIP_Real*            maxnonconvexity     /**< buffer to store "maximal nonconvexity" */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -5027,42 +5042,32 @@ SCIP_RETCODE checkCurvature(
    int            row;
    int            col;
    double*        alleigval;
-   SCIP_Bool      determined;
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(isconvex != NULL);
+   assert(isconcave != NULL);
+   assert(maxnonconvexity != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    n = consdata->nquadvars;
 
-   if( consdata->iscurvchecked )
-      return SCIP_OKAY;
-
-   /* easy checks for curvature detection */
-   checkCurvatureEasy(scip, cons, &determined, checkmultivariate);
-
-   /* if curvature was already detected stop */
-   if( determined )
-   {
-      return SCIP_OKAY;
-   }
-
    SCIPdebugMsg(scip, "Checking curvature of constraint <%s> with multivariate functions\n", SCIPconsGetName(cons));
 
-   if( n == 2 )
+   if( n == 2 && assumevarfixed == NULL )
    {
       SCIP_Real tracehalf;
       SCIP_Real discriminantroot;
 
       /* compute eigenvalues by hand */
       assert(consdata->nbilinterms == 1);
-      consdata->isconvex =
+      *isconvex =
          consdata->quadvarterms[0].sqrcoef >= 0 &&
          consdata->quadvarterms[1].sqrcoef >= 0 &&
          4 * consdata->quadvarterms[0].sqrcoef * consdata->quadvarterms[1].sqrcoef >= consdata->bilinterms[0].coef * consdata->bilinterms[0].coef;
-      consdata->isconcave = 
+      *isconcave =
          consdata->quadvarterms[0].sqrcoef <= 0 &&
          consdata->quadvarterms[1].sqrcoef <= 0 &&
          4 * consdata->quadvarterms[0].sqrcoef * consdata->quadvarterms[1].sqrcoef >= consdata->bilinterms[0].coef * consdata->bilinterms[0].coef;
@@ -5074,13 +5079,12 @@ SCIP_RETCODE checkCurvature(
       assert(!SCIPisNegative(scip, discriminantroot));
       discriminantroot = SQRT(MAX(0.0, discriminantroot));
 
-      consdata->maxnonconvexity = 0.0;
+      *maxnonconvexity = 0.0;
       if( !SCIPisInfinity(scip, -consdata->lhs) )
-         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, tracehalf + discriminantroot);
+         *maxnonconvexity = MAX(*maxnonconvexity, tracehalf + discriminantroot);
       if( !SCIPisInfinity(scip, consdata->rhs) )
-         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, discriminantroot - tracehalf);
+         *maxnonconvexity = MAX(*maxnonconvexity, discriminantroot - tracehalf);
 
-      consdata->iscurvchecked = TRUE;
       return SCIP_OKAY;
    }
 
@@ -5089,10 +5093,9 @@ SCIP_RETCODE checkCurvature(
    if( nn < 0 || (unsigned) (int) nn > UINT_MAX / sizeof(SCIP_Real) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "cons_quadratic - n is too large to check the curvature\n");
-      consdata->isconvex = FALSE;
-      consdata->isconcave = FALSE;
-      consdata->iscurvchecked = TRUE;
-      consdata->maxnonconvexity = SCIPinfinity(scip);
+      *isconvex = FALSE;
+      *isconcave = FALSE;
+      *maxnonconvexity = SCIPinfinity(scip);
       return SCIP_OKAY;
    }
 
@@ -5100,13 +5103,17 @@ SCIP_RETCODE checkCurvature(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix, nn) );
    BMSclearMemoryArray(matrix, nn);
 
-   consdata->isconvex  = TRUE;
-   consdata->isconcave = TRUE;
-   consdata->maxnonconvexity = 0.0;
+   *isconvex  = TRUE;
+   *isconcave = TRUE;
+   *maxnonconvexity = 0.0;
 
    SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), n) );
    for( i = 0; i < n; ++i )
    {
+      /* skip variables that we assume are fixed -> 0 row/col in coef matrix */
+      if( assumevarfixed != NULL && SCIPhashmapExists(assumevarfixed, (void*)consdata->quadvarterms[i].var) )
+         continue;
+
       if( consdata->quadvarterms[i].nadjbilin > 0 )
       {
          SCIP_CALL( SCIPhashmapInsertInt(var2index, consdata->quadvarterms[i].var, i) );
@@ -5115,30 +5122,29 @@ SCIP_RETCODE checkCurvature(
       else
       {
          /* if pure square term, then update maximal nonconvex eigenvalue, as it will not be considered in lapack call below */
-         if( !SCIPisInfinity(scip, -consdata->lhs) && consdata->quadvarterms[i].sqrcoef > consdata->maxnonconvexity )
-            consdata->maxnonconvexity = consdata->quadvarterms[i].sqrcoef;
-         if( !SCIPisInfinity(scip, consdata->rhs) && -consdata->quadvarterms[i].sqrcoef > consdata->maxnonconvexity )
-            consdata->maxnonconvexity = -consdata->quadvarterms[i].sqrcoef;
+         if( !SCIPisInfinity(scip, -consdata->lhs) && consdata->quadvarterms[i].sqrcoef > *maxnonconvexity )
+            *maxnonconvexity = consdata->quadvarterms[i].sqrcoef;
+         if( !SCIPisInfinity(scip, consdata->rhs) && -consdata->quadvarterms[i].sqrcoef > *maxnonconvexity )
+            *maxnonconvexity = -consdata->quadvarterms[i].sqrcoef;
       }
       /* nonzero elements on diagonal tell a lot about convexity/concavity */
       if( SCIPisNegative(scip, consdata->quadvarterms[i].sqrcoef) )
-         consdata->isconvex  = FALSE;
+         *isconvex  = FALSE;
       if( SCIPisPositive(scip, consdata->quadvarterms[i].sqrcoef) )
-         consdata->isconcave = FALSE;
+         *isconcave = FALSE;
    }
 
    /* skip lapack call, if we know already that we are indefinite
     * NOTE: this will leave out updating consdata->maxnonconvexity, so that it only provides a lower bound in this case
     */
-   if( !consdata->isconvex && !consdata->isconcave )
+   if( !*isconvex && !*isconcave )
    {
       SCIPfreeBufferArray(scip, &matrix);
       SCIPhashmapFree(&var2index);
-      consdata->iscurvchecked = TRUE;
       /* make sure that maxnonconvexity is strictly different from zero if nonconvex
        * TODO one could think about doing some eigenvalue estimation here (Gershgorin)
        */
-      consdata->maxnonconvexity = MAX(1000.0, consdata->maxnonconvexity);
+      *maxnonconvexity = MAX(1000.0, *maxnonconvexity);
       return SCIP_OKAY;
    }
 
@@ -5146,6 +5152,10 @@ SCIP_RETCODE checkCurvature(
    {
       for( i = 0; i < consdata->nbilinterms; ++i )
       {
+         /* skip variables that we assume are fixed -> 0 row/col in coef matrix */
+         if( assumevarfixed != NULL && (SCIPhashmapExists(assumevarfixed, (void*)consdata->bilinterms[i].var1) || SCIPhashmapExists(assumevarfixed, (void*)consdata->bilinterms[i].var2)) )
+            continue;
+
          assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var1));
          assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var2));
          row = SCIPhashmapGetImageInt(var2index, consdata->bilinterms[i].var1);
@@ -5164,8 +5174,8 @@ SCIP_RETCODE checkCurvature(
       if( LapackDsyev(FALSE, n, matrix, alleigval) != SCIP_OKAY )
       {
          SCIPwarningMessage(scip, "Failed to compute eigenvalues of quadratic coefficient matrix of constraint %s. Assuming matrix is indefinite.\n", SCIPconsGetName(cons));
-         consdata->isconvex = FALSE;
-         consdata->isconcave = FALSE;
+         *isconvex = FALSE;
+         *isconcave = FALSE;
       }
       else
       {
@@ -5177,9 +5187,8 @@ SCIP_RETCODE checkCurvature(
          SCIP_Bool allbinary;
          printf("cons <%s>[%g,%g] spectrum = [%g,%g]\n", SCIPconsGetName(cons), consdata->lhs, consdata->rhs, alleigval[0], alleigval[n-1]);
 #endif
-         consdata->isconvex  &= !SCIPisNegative(scip, alleigval[0]);   /*lint !e514*/
-         consdata->isconcave &= !SCIPisPositive(scip, alleigval[n-1]); /*lint !e514*/
-         consdata->iscurvchecked = TRUE;
+         *isconvex  &= !SCIPisNegative(scip, alleigval[0]);   /*lint !e514*/
+         *isconcave &= !SCIPisPositive(scip, alleigval[n-1]); /*lint !e514*/
 #ifdef DECONVEXIFY
          for( i = 0; i < consdata->nquadvars; ++i )
             if( !SCIPvarIsBinary(consdata->quadvarterms[i].var) )
@@ -5210,22 +5219,54 @@ SCIP_RETCODE checkCurvature(
 
       /* update largest eigenvalue causing nonconvexity according to sides */
       if( !SCIPisInfinity(scip, -consdata->lhs) )
-         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, alleigval[n-1]);
+         *maxnonconvexity = MAX(*maxnonconvexity, alleigval[n-1]);
       if( !SCIPisInfinity(scip, consdata->rhs) )
-         consdata->maxnonconvexity = MAX(consdata->maxnonconvexity, -alleigval[0]);
+         *maxnonconvexity = MAX(*maxnonconvexity, -alleigval[0]);
 
       SCIPfreeBufferArray(scip, &alleigval);
    }
    else
    {
-      consdata->isconvex = FALSE;
-      consdata->isconcave = FALSE;
-      consdata->iscurvchecked = TRUE; /* set to TRUE since it does not help to repeat this procedure again and again (that will not bring Ipopt in) */
-      consdata->maxnonconvexity = SCIPinfinity(scip);
+      *isconvex = FALSE;
+      *isconcave = FALSE;
+      *maxnonconvexity = SCIPinfinity(scip);
    }
 
    SCIPhashmapFree(&var2index);
    SCIPfreeBufferArray(scip, &matrix);
+
+   return SCIP_OKAY;
+}
+
+
+/** checks a quadratic constraint for convexity and/or concavity */
+static
+SCIP_RETCODE checkCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< quadratic constraint */
+   SCIP_Bool             checkmultivariate   /**< whether curvature should also be checked for multivariate functions */
+   )
+{
+   SCIP_Bool determined;
+   SCIP_Bool isconvex;
+   SCIP_Bool isconcave;
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->iscurvchecked )
+      return SCIP_OKAY;
+
+   checkCurvatureEasy(scip, cons, NULL, &determined, checkmultivariate, &isconvex, &isconcave, &consdata->maxnonconvexity);
+   if( !determined && checkmultivariate )
+   {
+      SCIP_CALL( checkCurvatureExpensive(scip, cons, NULL, &isconvex, &isconcave, &consdata->maxnonconvexity) );
+   }
+
+   consdata->isconvex = isconvex;
+   consdata->isconcave = isconcave;
+   consdata->iscurvchecked = TRUE;
 
    return SCIP_OKAY;
 }
@@ -6873,7 +6914,7 @@ void generateCutLTIcomputeCoefs(
    else if( (xlow < xl && xupp > xu) || (ylow < yl && yupp > yu) )
    {
       /* Case 5: both outside of bounding box, N and S or W and E. */
-#if 0
+#ifdef SCIP_DISABLED_CODE
       SCIP_Real xlow2;
       SCIP_Real ylow2;
       SCIP_Real xupp2;
@@ -6905,7 +6946,7 @@ void generateCutLTIcomputeCoefs(
       SCIPdebugMsg(scip, "lower: %9g\t%9g\tprod %9g\n", xlow, ylow, xlow*ylow);
       SCIPdebugMsg(scip, "upper: %9g\t%9g\tprod %9g\n", xupp, yupp, xupp*yupp);
 
-#if 1
+#ifndef SCIP_DISABLED_CODE
       /* Nothing to find. Just separate two inequalities at the same point, just using different support */
       if( generateCutLTIgenMulCoeff(scip, xlow, ylow, xupp, yupp, FALSE, cx, cy, cw) )
       {
@@ -7570,7 +7611,8 @@ SCIP_RETCODE generateCutNonConvex(
          SCIPdebugMsg(scip, "McCormick = %g (%u)\n", refx * coef + refy * coef2 + constant, *success);
 
          /* tries to compute a tighter relaxation for xy by using valid linear inequalities */
-         if( conshdlrdata->bilinestimators != NULL && ubx - lbx >= 0.1 && uby - lby >= 0.1
+         if( consdata->bilintermsidx != NULL && conshdlrdata->bilinestimators != NULL
+            && ubx - lbx >= 0.1 && uby - lby >= 0.1
             && (SCIPgetNSepaRounds(scip) <= conshdlrdata->bilinineqmaxseparounds || SCIPgetDepth(scip) == 0) )
          {
             BILINESTIMATOR* bilinestimator;
@@ -12070,26 +12112,6 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
    return SCIP_OKAY;
 }
 
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 0
-static
-SCIP_DECL_CONSINITPRE(consInitpreQuadratic)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
-   int c;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(conss != NULL || nconss == 0);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   return SCIP_OKAY;
-}
-#endif
-
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
@@ -15054,15 +15076,29 @@ SCIP_Bool SCIPisConvexQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   SCIP_CONSDATA* consdata;
    SCIP_Bool determined;
+   SCIP_Bool isconvex;
+   SCIP_Bool isconcave;
 
    assert(cons != NULL);
-   assert(SCIPconsGetData(cons) != NULL);
 
-   checkCurvatureEasy(scip, cons, &determined, FALSE);
-   assert(determined);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
-   return (SCIPconsGetData(cons)->isconvex);
+   if( consdata->iscurvchecked )
+      return consdata->isconvex;
+
+   checkCurvatureEasy(scip, cons, NULL, &determined, TRUE, &isconvex, &isconcave, &consdata->maxnonconvexity);
+
+   if( determined )
+   {
+      consdata->isconvex = isconvex;
+      consdata->isconcave = isconcave;
+      consdata->iscurvchecked = TRUE;
+   }
+
+   return isconvex;
 }
 
 /** Indicates whether the quadratic function of a quadratic constraint is (known to be) concave. */
@@ -15071,15 +15107,95 @@ SCIP_Bool SCIPisConcaveQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool determined;
+   SCIP_Bool isconvex;
+   SCIP_Bool isconcave;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->iscurvchecked )
+      return consdata->isconcave;
+
+   checkCurvatureEasy(scip, cons, NULL, &determined, TRUE, &isconvex, &isconcave, &consdata->maxnonconvexity);
+
+   if( determined )
+   {
+      consdata->isconvex = isconvex;
+      consdata->isconcave = isconcave;
+      consdata->iscurvchecked = TRUE;
+   }
+
+   return isconcave;
+}
+
+/** Checks and indicates whether the quadratic constraint is convex. */
+SCIP_RETCODE SCIPisConvexConsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_Bool*            result              /**< buffer where to store whether constraint is convex (under given variable fixing) */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real maxnonconvexity;
+   SCIP_Bool isconvex;
+   SCIP_Bool isconcave;
    SCIP_Bool determined;
 
    assert(cons != NULL);
-   assert(SCIPconsGetData(cons) != NULL);
+   assert(result != NULL);
 
-   checkCurvatureEasy(scip, cons, &determined, FALSE);
-   assert(determined);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
-   return (SCIPconsGetData(cons)->isconcave);
+   if( consdata->iscurvchecked )
+   {
+      /* if already checked and convex (w.r.t. all vars), then will also be convex after fixing some vars */
+      if( consdata->isconvex && SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         *result = TRUE;
+         return SCIP_OKAY;
+      }
+      if( consdata->isconcave && SCIPisInfinity(scip, consdata->rhs) )
+      {
+         *result = TRUE;
+         return SCIP_OKAY;
+      }
+
+      /* if no variables to be fixed, then previous negative result will hold */
+      if( assumevarfixed == NULL )
+      {
+         *result = FALSE;
+         return SCIP_OKAY;
+      }
+   }
+
+   checkCurvatureEasy(scip, cons, assumevarfixed, &determined, TRUE, &isconvex, &isconcave, &maxnonconvexity);
+   if( !determined )
+   {
+      SCIP_CALL( checkCurvatureExpensive(scip, cons, assumevarfixed, &isconvex, &isconcave, &maxnonconvexity) );
+   }
+
+   if( assumevarfixed == NULL )
+   {
+      consdata->isconvex = isconvex;
+      consdata->isconcave = isconcave;
+      consdata->maxnonconvexity = maxnonconvexity;
+      consdata->iscurvchecked = TRUE;
+   }
+
+   if( (isconvex && SCIPisInfinity(scip, -consdata->lhs)) || (isconcave && SCIPisInfinity(scip, consdata->rhs)) )
+   {
+      *result = TRUE;
+      return SCIP_OKAY;
+   }
+
+   *result = FALSE;
+   return SCIP_OKAY;
 }
 
 /** Computes the violation of a constraint by a solution */

@@ -152,12 +152,38 @@ Test(derivative, pow)
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.3) );
    SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
-   cr_expect_eq(SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, x), -3.0 * pow(2.3,-4));
+   cr_expect_eq(SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, x), -3.0 * pow(2.3, -4));
 
    /* try an undefined point */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
    cr_expect_eq(SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, x), SCIP_INVALID);
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+Test(derivative, signpow)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   const char* input = "signpower(<x>[C],2.5)";
+
+   /* create expression */
+   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+
+   /* try positive */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.3) );
+   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   cr_expect_eq(SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, x), 2.5 * pow(2.3, 1.5));
+
+   /* try 0 */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
+   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   cr_expect_eq(SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, x), 0.0);
+
+   /* try negative */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.42) );
+   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   cr_expect_eq(SCIPgetConsExprExprPartialDiff(scip, conshdlr, expr, x), 2.5 * pow(1.42, 1.5));
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
