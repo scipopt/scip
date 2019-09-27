@@ -391,8 +391,8 @@ SCIP_RETCODE addBilinProduct(
          SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &(prodexprs[1]), y) );
          SCIP_CALL( SCIPcreateConsExprExprProduct(scip, sepadata->conshdlr, &expr, 2, prodexprs, 1.0) );
 
-         SCIPreleaseConsExprExpr(scip, &(prodexprs[1]));
-         SCIPreleaseConsExprExpr(scip, &(prodexprs[0]));
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(prodexprs[1])) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(prodexprs[0])) );
 
          new = TRUE;
       }
@@ -416,7 +416,7 @@ SCIP_RETCODE addBilinProduct(
          xpos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx);
       }
       if( sepadata->nvarbilinvars[xpos] == 0 )
-         SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[xpos], SCIPgetNVars(scip));
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[xpos], SCIPgetNVars(scip)) );
       sepadata->varbilinvars[xpos][sepadata->nvarbilinvars[xpos]] = y;
       ++sepadata->nvarbilinvars[xpos];
 
@@ -433,7 +433,7 @@ SCIP_RETCODE addBilinProduct(
          ypos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx);
       }
       if( sepadata->nvarbilinvars[ypos] == 0 )
-         SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[ypos], SCIPgetNVars(scip));
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->varbilinvars[ypos], SCIPgetNVars(scip)) );
       if( xidx != yidx )
       {
          sepadata->varbilinvars[ypos][sepadata->nvarbilinvars[ypos]] = x;
@@ -475,7 +475,7 @@ SCIP_RETCODE addBilinProduct(
    if( found )
    {
       assert(SCIPcompareConsExprExprs(sepadata->linexprs[termpos][linpos], *linexpr) == 0);
-      SCIPreleaseConsExprExpr(scip, linexpr);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, linexpr) );
    }
    else
    {  /* linexpr has not been added yet, add it here */
@@ -569,7 +569,7 @@ SCIP_RETCODE createLinearisation(
 
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, sepadata->conshdlr, *linexpr, &simplified, &changed, &infeasible) );
 
-   SCIPreleaseConsExprExpr(scip, linexpr);
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, linexpr) );
    *linexpr = simplified;
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &linchildren[2]) );
@@ -743,7 +743,7 @@ SCIP_RETCODE extractProducts(
  *  implied bounds of the form vars[varpos1] == !f => vars[varpos2] >=/<= bound
  */
 static
-void detectProductsImplbnd(
+SCIP_RETCODE detectProductsImplbnd(
    SCIP*          scip,
    SCIP_SEPADATA* sepadata,
    SCIP_Real*     coefs1,
@@ -789,7 +789,7 @@ void detectProductsImplbnd(
       coefs2[varpos1] = SCIPvarGetLbGlobal(var2) - impllb;
       if( !xval )
          coefs2[varpos1] *= -1.0;
-      extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, impllb, uselhs1, TRUE, varmap, f);
+      SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, impllb, uselhs1, TRUE, varmap, f) );
    }/* TODO what if there is no reasonable bound on y? */
 
    if( foundub )
@@ -797,15 +797,17 @@ void detectProductsImplbnd(
       coefs2[varpos1] = SCIPvarGetUbGlobal(var2) - implub;
       if( !xval )
          coefs2[varpos1] *= -1.0;
-      extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, implub, uselhs1, FALSE, varmap, f);
+      SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, implub, uselhs1, FALSE, varmap, f) );
    }
+
+   return SCIP_OKAY;
 }
 
 /** extract products from a relation given by coefs1, vars, lhs1 and rhs1 and
  *  cliques containing vars[0] and vars[varpos]
  */
 static
-void detectProductsClique(
+SCIP_RETCODE detectProductsClique(
    SCIP*          scip,
    SCIP_SEPADATA* sepadata,
    SCIP_Real*     coefs1,
@@ -843,15 +845,17 @@ void detectProductsClique(
       SCIPdebugMsg(scip, "vars %s and %s are in a clique\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
       coefs2[varpos1] = xval ? 1.0 : -1.0;
       coefs2[varpos2] = 1.0;
-      extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, xval ? 1.0 : 0.0, uselhs1, FALSE, varmap, f);
+      SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, xval ? 1.0 : 0.0, uselhs1, FALSE, varmap, f) );
    }
    if( SCIPvarsHaveCommonClique(var1, xval, var2, FALSE, TRUE) )
    {
       SCIPdebugMsg(scip, "vars %s and (1-%s) are in a clique\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
       coefs2[varpos1] = xval ? 1.0 : -1.0;
       coefs2[varpos2] = -1.0;
-      extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, xval ? 0.0 : -1.0, uselhs1, FALSE, varmap, f);
+      SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, xval ? 0.0 : -1.0, uselhs1, FALSE, varmap, f) );
    }
+
+   return SCIP_OKAY;
 }
 
 static
@@ -1006,7 +1010,7 @@ SCIP_RETCODE createRelationTables(
             foundhashdata->nrows = 1;
             foundhashdata->vars = hashdata.vars;
 
-            SCIPhashtableInsert(hashtable2, (void*)foundhashdata);
+            SCIP_CALL( SCIPhashtableInsert(hashtable2, (void*)foundhashdata) );
 
             /* update the variable arrays */
             for( v1 = 0; v1 < 2; ++v1 )
@@ -1088,7 +1092,7 @@ SCIP_RETCODE createRelationTables(
             foundhashdata->nrows = 1;
             foundhashdata->vars = hashdata.vars;
 
-            SCIPhashtableInsert(hashtable3, (void*)foundhashdata);
+            SCIP_CALL( SCIPhashtableInsert(hashtable3, (void*)foundhashdata) );
          }
       }
    }
@@ -1147,7 +1151,8 @@ SCIP_RETCODE detectHiddenProducts(
    SCIP_CALL( SCIPallocBufferArray(scip, &nrelated_vars, SCIPgetNVars(scip)) );
 
    /* add relations to hashtables */
-   SCIP_CALL( createRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, related_vars, nrelated_vars, &nvars_in_2rels) );
+   SCIP_CALL( createRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, related_vars,
+      nrelated_vars, &nvars_in_2rels) );
 
 #ifdef SCIP_DEBUG
    SCIPinfoMessage(scip, NULL, "\nrelated vars:");
@@ -1274,24 +1279,24 @@ SCIP_RETCODE detectHiddenProducts(
                   if( SCIPvarGetType(vars_xwy[1]) != SCIP_VARTYPE_BINARY )
                   { /* w is non-binary - look for implied bounds x = !f => w >=/<= bound */
                      SCIPdebugMsg(scip, "Implied relation + implied bounds on w:\n");
-                     detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 0, 1, varmap, xfixing);
+                     SCIP_CALL( detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 0, 1, varmap, xfixing) );
                   }
                   else
                   { /* w is binary - look for cliques containing x and w */
                      SCIPdebugMsg(scip, "Implied relation + cliques with x and w:\n");
-                     detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 0, 1, varmap, xfixing);
+                     SCIP_CALL( detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 0, 1, varmap, xfixing) );
                   }
 
                   /* implied bounds and cliques with y */
                   if( SCIPvarGetType(vars_xwy[2]) != SCIP_VARTYPE_BINARY )
                   { /* y is non-binary - look for implied bounds x = !f => y >=/<= bound */
                      SCIPdebugMsg(scip, "Implied relation + implied bounds on y:\n");
-                     detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 0, 2, varmap, xfixing);
+                     SCIP_CALL( detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 0, 2, varmap, xfixing) );
                   }
                   else
                   { /* y is binary - look for cliques containing x and y */
                      SCIPdebugMsg(scip, "Implied relation + cliques with x and y:\n");
-                     detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 0, 2, varmap, xfixing);
+                     SCIP_CALL( detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 0, 2, varmap, xfixing) );
                   }
 
                   /* use unconditional relations (i.e. relations of w and y) */
@@ -1300,31 +1305,32 @@ SCIP_RETCODE detectHiddenProducts(
                   if( SCIPvarGetType(vars_xwy[1]) == SCIP_VARTYPE_BINARY && SCIPvarGetType(vars_xwy[2]) != SCIP_VARTYPE_BINARY )
                   {
                      SCIPdebugMsg(scip, "Implied relation + implied bounds with w and y:\n");
-                     detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 1, 2, varmap, FALSE);
-                     detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 1, 2, varmap, TRUE);
+                     SCIP_CALL( detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 1, 2, varmap, FALSE) );
+                     SCIP_CALL( detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 1, 2, varmap, TRUE) );
                   }
 
                   /* implied bound y == 0/1 => w >=/<= bound */
                   if( SCIPvarGetType(vars_xwy[2]) == SCIP_VARTYPE_BINARY && SCIPvarGetType(vars_xwy[1]) != SCIP_VARTYPE_BINARY )
                   {
                      SCIPdebugMsg(scip, "Implied relation + implied bounds with y and w:\n");
-                     detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 2, 1, varmap, FALSE);
-                     detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 2, 1, varmap, TRUE);
+                     SCIP_CALL( detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 2, 1, varmap, FALSE) );
+                     SCIP_CALL( detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 2, 1, varmap, TRUE) );
                   }
 
                   /* cliques containing w and y */
                   if( SCIPvarGetType(vars_xwy[1]) == SCIP_VARTYPE_BINARY && SCIPvarGetType(vars_xwy[2]) == SCIP_VARTYPE_BINARY )
                   {
                      SCIPdebugMsg(scip, "Implied relation + cliques with w and y:\n");
-                     detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 1, 2, varmap, FALSE);
-                     detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 1, 2, varmap, TRUE);
+                     SCIP_CALL( detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 1, 2, varmap, FALSE) );
+                     SCIP_CALL( detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 1, 2, varmap, TRUE) );
                   }
 
                   /* inequalities containing w and y */
                   if( SCIPvarGetType(vars_xwy[1]) != SCIP_VARTYPE_BINARY && SCIPvarGetType(vars_xwy[2]) != SCIP_VARTYPE_BINARY )
                   {
                      SCIPdebugMsg(scip, "Implied relation + unconditional with w and y:\n");
-                     detectProductsUnconditional(scip, sepadata, hashtable2, coefs1, vars_xwy, side1, uselhs1, 1, 2, varmap, xfixing);
+                     SCIP_CALL( detectProductsUnconditional(scip, sepadata, hashtable2, coefs1, vars_xwy, side1, uselhs1,
+                        1, 2, varmap, xfixing) );
                   }
                }
             }
@@ -1390,7 +1396,8 @@ SCIP_RETCODE detectHiddenProducts(
                coefs2[1] = 1.0;
                coefs2[2] = -SCIPvarGetVlbCoefs(vars_xwy[1])[j];
 
-               extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, side1, SCIPvarGetVlbConstants(vars_xwy[1])[j], uselhs1, TRUE, varmap, xfixing);
+               SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, side1,
+                  SCIPvarGetVlbConstants(vars_xwy[1])[j], uselhs1, TRUE, varmap, xfixing) );
             }
 
             SCIPdebugMsg(scip, "Implic of x = %s + implied ub on w = %s:\n", SCIPvarGetName(vars_xwy[0]), SCIPvarGetName(vars_xwy[1]));
@@ -1405,7 +1412,8 @@ SCIP_RETCODE detectHiddenProducts(
                coefs2[1] = 1.0;
                coefs2[2] = -SCIPvarGetVubCoefs(vars_xwy[1])[j];
 
-               extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, side1, SCIPvarGetVubConstants(vars_xwy[1])[j], uselhs1, FALSE, varmap, xfixing);
+               SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, side1,
+                  SCIPvarGetVubConstants(vars_xwy[1])[j], uselhs1, FALSE, varmap, xfixing) );
             }
 
             /* use unconditional relations containing w */
@@ -1417,7 +1425,8 @@ SCIP_RETCODE detectHiddenProducts(
             {
                vars_xwy[2] = related_vars[varpos][j];
                SCIPdebugMsg(scip, "Implied bound + unconditional with w and y:\n");
-               detectProductsUnconditional(scip, sepadata, hashtable2, coefs1, vars_xwy, side1, uselhs1, 1, 2, varmap, xfixing);
+               SCIP_CALL( detectProductsUnconditional(scip, sepadata, hashtable2, coefs1, vars_xwy, side1, uselhs1,
+                  1, 2, varmap, xfixing) );
             }
          }
       }
@@ -1605,7 +1614,6 @@ SCIP_RETCODE createSepaData(
                   /* compute unique index of the bilinear term */
                   mapidx = xidx * sepadata->maxvarindex + yidx;
 
-                  /*  */
                   if( !SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t) mapidx) )
                   {
                      SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &linexpr, auxvar) );
@@ -1899,7 +1907,7 @@ SCIP_RETCODE addRltTerm(
 
    if( auxpos != -1 )
    {
-      updateBestEstimators(scip, sepadata, auxpos, sol);
+      SCIP_CALL( updateBestEstimators(scip, sepadata, auxpos, sol) );
 
       assert(sepadata->bestunderestimator[auxpos] >= 0 && sepadata->bestunderestimator[auxpos] <= sepadata->nlinexprs[auxpos]);
       assert(sepadata->bestoverestimator[auxpos] >= 0 && sepadata->bestoverestimator[auxpos] <= sepadata->nlinexprs[auxpos]);
@@ -2121,8 +2129,8 @@ SCIP_RETCODE computeRltCuts(
    {
       SCIP_VAR* colvar;
       colvar = SCIPcolGetVar(SCIProwGetCols(row)[i]);
-      addRltTerm(scip, sepadata, sol, *cut, var, colvar, SCIProwGetVals(row)[i], uselb, uselhs, local, computeEqCut,
-         &coefvar, &finalside, success);
+      SCIP_CALL( addRltTerm(scip, sepadata, sol, *cut, var, colvar, SCIProwGetVals(row)[i], uselb, uselhs, local,
+         computeEqCut, &coefvar, &finalside, success) );
    }
 
    if( REALABS(finalside) > MAXVARBOUND )
@@ -2231,8 +2239,8 @@ SCIP_RETCODE computeProjRltCut(
    /* iterate over all variables in the row and add the corresponding terms to the cuts */
    for( i = 0; i < projlp->nNonz[idx]; ++i )
    {
-      addRltTerm(scip, sepadata, sol, *cut, var, projlp->vars[idx][i], projlp->coefs[idx][i], uselb, uselhs,
-         local, computeEqCut, &coefvar, &finalside, success);
+      SCIP_CALL( addRltTerm(scip, sepadata, sol, *cut, var, projlp->vars[idx][i], projlp->coefs[idx][i],
+         uselb, uselhs, local, computeEqCut, &coefvar, &finalside, success) );
    }
 
    if( REALABS(finalside) > MAXVARBOUND )
@@ -2526,7 +2534,7 @@ SCIP_RETCODE markRowsXj(
          idx = SCIPvarGetIndex(xi) * sepadata->maxvarindex + SCIPvarGetIndex(xj);
       assert( SCIPhashmapExists(sepadata->bilinvarsmap, (void*)(size_t)idx) );
       img = SCIPhashmapGetImageInt(sepadata->bilinvarsmap, (void*)(size_t) idx);
-      SCIPevalConsExprExpr(scip, conshdlr, sepadata->bilinterms[img], sol, 0);
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, sepadata->bilinterms[img], sol, 0) );
 
       /* get largest violations on both sides, update bestunder- and overestimator for this product */
       SCIP_CALL( updateBestEstimators(scip, sepadata, img, sol) );
@@ -2701,8 +2709,8 @@ SCIP_RETCODE separateRltCuts(
                   continue;
 
                /* compute the rlt cut for a projected row first */
-               SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, pos, sol, xj, &success, uselb[k], uselhs[k],
-                                         allowlocal, buildeqcut) );
+               SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, pos, sol, xj, &success, uselb[k],
+                  uselhs[k], allowlocal, buildeqcut) );
 
                /* if the projected cut is not violated, set success to FALSE */
                if( cut != NULL )
@@ -2839,9 +2847,9 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolRlt)
    return SCIP_OKAY;
 }
 
-/** creates an array of rows suitable for RLT cut generation */
+/** fills an array of rows suitable for RLT cut generation */
 static
-void storeSuitableRows(
+SCIP_RETCODE storeSuitableRows(
    SCIP*          scip,        /**< SCIP data structure */
    SCIP_SEPA*     sepa,        /**< separator */
    SCIP_SEPADATA* sepadata,    /**< separator data */
@@ -2900,11 +2908,13 @@ void storeSuitableRows(
 
       /* if we are here, the row has passed all checks and should be added to rows */
       rows[new_nrows] = prob_rows[r];
-      SCIPhashmapSetImageInt(row_to_pos, (void*)(size_t)SCIProwGetIndex(prob_rows[r]), new_nrows);
+      SCIP_CALL( SCIPhashmapSetImageInt(row_to_pos, (void*)(size_t)SCIProwGetIndex(prob_rows[r]), new_nrows) );
       ++new_nrows;
    }
 
    *nrows = new_nrows;
+
+   return SCIP_OKAY;
 }
 
 /** LP solution separation method of separator */
@@ -2998,7 +3008,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    SCIP_CALL( SCIPallocBufferArray(scip, &rows, nrows) );
    SCIP_CALL( SCIPhashmapCreate(&row_to_pos, SCIPblkmem(scip), nrows) );
 
-   storeSuitableRows(scip, sepa, sepadata, prob_rows, rows, &nrows, row_to_pos, allowlocal);
+   SCIP_CALL( storeSuitableRows(scip, sepa, sepadata, prob_rows, rows, &nrows, row_to_pos, allowlocal) );
 
    if( sepadata->isinitialround || sepadata->onlyinitial )
    {
@@ -3014,21 +3024,21 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    }
    else /* suitable rows have been found */
    {
-      SCIPreallocBufferArray(scip, &rows, nrows);
+      SCIP_CALL( SCIPreallocBufferArray(scip, &rows, nrows) );
    }
 
    /* create the projected problem */
    PROJLP* projlp;
    if( sepadata->useprojection )
    {
-      createProjLP(scip, rows, nrows, NULL, &projlp, allowlocal);
+      SCIP_CALL( createProjLP(scip, rows, nrows, NULL, &projlp, allowlocal) );
 #ifdef SCIP_DEBUG
       printProjLP(scip, projlp, nrows, NULL);
 #endif
    }
 
    /* separate the cuts */
-   separateRltCuts(scip, sepa, sepadata, sepadata->conshdlr, NULL, row_to_pos, projlp, rows, nrows, allowlocal, &ncuts, result);
+   SCIP_CALL( separateRltCuts(scip, sepa, sepadata, sepadata->conshdlr, NULL, row_to_pos, projlp, rows, nrows, allowlocal, &ncuts, result) );
 
    /* free the projected problem */
    if( sepadata->useprojection )
