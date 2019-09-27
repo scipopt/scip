@@ -588,8 +588,8 @@ SCIP_RETCODE extractProducts(
    SCIP_VAR**     vars,      /**< 3 variables involved in the inequalities in the order x,w,y */
    SCIP_Real*     coefs1,    /**< coefficients of the first inequality */
    SCIP_Real*     coefs2,    /**< coefficients of the second inequality */
-   SCIP_Real      side1,     /**< side of the first inequality */
-   SCIP_Real      side2,     /**< side of the second inequality */
+   SCIP_Real      side1,     /**< side of the first (implied) inequality */
+   SCIP_Real      side2,     /**< side of the second (implied) inequality */
    SCIP_Real      uselhs1,   /**< is the first inequality >=? */
    SCIP_Real      uselhs2,   /**< is the second inequality >=? */
    SCIP_HASHMAP*  varmap,    /**< variable map */
@@ -610,9 +610,9 @@ SCIP_RETCODE extractProducts(
    assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY);
 
    SCIPdebugMsg(scip, "Extracting product from two relations:\n");
-   SCIPdebugMsg(scip, "Relation 1: %g%s + %g%s + %g%s %s %g\n", coefs1[0], SCIPvarGetName(vars[0]), coefs1[1],
+   SCIPdebugMsg(scip, "Relation 1: %s == %d => %g%s + %g%s %s %g\n", SCIPvarGetName(vars[0]), f, coefs1[1],
       SCIPvarGetName(vars[1]), coefs1[2], SCIPvarGetName(vars[2]), uselhs1 ? ">=" : "<=", side1);
-   SCIPdebugMsg(scip, "Relation 2: %g%s + %g%s + %g%s %s %g\n", coefs2[0], SCIPvarGetName(vars[0]), coefs2[1],
+   SCIPdebugMsg(scip, "Relation 2: %s == %d => %g%s + %g%s %s %g\n", SCIPvarGetName(vars[0]), !f, coefs2[1],
       SCIPvarGetName(vars[1]), coefs2[2], SCIPvarGetName(vars[2]), uselhs2 ? ">=" : "<=", side2);
 
    /* look for suitable binary variables */
@@ -700,7 +700,7 @@ SCIP_RETCODE extractProducts(
          SCIPvarGetName(x), sign2*coefs2[ypos], SCIPvarGetName(y), side2);
 
       lincoefs[0] = sign2*coefs2[wpos]*sign1*coefs1[wpos]*mult;
-      lincoefs[1] = (sign2*coefs2[xpos]*sign1*coefs1[wpos] - side2*sign1*coefs1[wpos] + side1*sign2*coefs2[wpos] )*mult;
+      lincoefs[1] = (-side2*sign1*coefs1[wpos] + side1*sign2*coefs2[wpos])*mult;
       lincoefs[2] = sign2*coefs2[wpos]*sign1*coefs1[ypos]*mult;
 
       SCIPdebugMsg(scip, "product: %s%s %s %g%s + %g%s + %g%s + %g\n", SCIPvarGetName(x), SCIPvarGetName(y), overest ? ">=" : "<=",
@@ -727,7 +727,7 @@ SCIP_RETCODE extractProducts(
          sign2*coefs2[xpos], SCIPvarGetName(x), sign2*coefs2[ypos], SCIPvarGetName(y), side2);
 
       lincoefs[0] = sign1*coefs1[wpos]*sign2*coefs2[wpos]*mult;
-      lincoefs[1] = (sign1*coefs1[xpos]*sign2*coefs2[wpos] - side1*sign2*coefs2[wpos] + side2*sign1*coefs1[wpos] )*mult;
+      lincoefs[1] = (-side1*sign2*coefs2[wpos] + side2*sign1*coefs1[wpos])*mult;
       lincoefs[2] = sign1*coefs1[wpos]*sign2*coefs2[ypos]*mult;
 
       SCIPdebugMsg(scip, "product: %s%s %s %g%s + %g%s + %g%s + %g\n", SCIPvarGetName(x), SCIPvarGetName(y), overest ? "<=" : ">=",
@@ -763,6 +763,7 @@ SCIP_RETCODE detectProductsImplbnd(
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_Bool xval;
+   SCIP_Bool globalside;
 
    assert( varpos1 != varpos2 );
 
@@ -773,6 +774,10 @@ SCIP_RETCODE detectProductsImplbnd(
 
    xval = !f;
 
+   globalside = varpos1 != 0 && xval;
+   /* if it is an unconditional relation (i.e. in w and y) and xval = 1, then global bound is used as side
+    * (since the big-M inequality is then written as var2 - (implbnd - globbnd)var1 <=/>= globbnd) */
+
    if( varpos1 != 2 && varpos2 != 2 )
       coefs2[2] = 0.0;
    else if( varpos1 != 1 && varpos2 != 1 )
@@ -782,7 +787,7 @@ SCIP_RETCODE detectProductsImplbnd(
 
    coefs2[varpos2] = 1.0;
 
-   /* get implications x == xval  =>  y <= foundub (or y >= foundub) */
+   /* get implications x == xval  =>  y <= implub (or y >= implub) */
    SCIPvarGetImplicVarBounds(var1, xval, var2, &impllb, &implub, &foundlb, &foundub);
 
    if( foundlb )
@@ -790,15 +795,17 @@ SCIP_RETCODE detectProductsImplbnd(
       coefs2[varpos1] = SCIPvarGetLbGlobal(var2) - impllb;
       if( !xval )
          coefs2[varpos1] *= -1.0;
-      SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, impllb, uselhs1, TRUE, varmap, f) );
-   }/* TODO what if there is no reasonable bound on y? */
+      SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1,
+         globalside ? SCIPvarGetLbGlobal(var2) : impllb, uselhs1, TRUE, varmap, f) );
+   }
 
    if( foundub )
    {
       coefs2[varpos1] = SCIPvarGetUbGlobal(var2) - implub;
       if( !xval )
          coefs2[varpos1] *= -1.0;
-      SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, implub, uselhs1, FALSE, varmap, f) );
+      SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1,
+         globalside ? SCIPvarGetUbGlobal(var2) : implub, uselhs1, FALSE, varmap, f) );
    }
 
    return SCIP_OKAY;
@@ -825,6 +832,7 @@ SCIP_RETCODE detectProductsClique(
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_Bool xval;
+   SCIP_Real side;
 
    var1 = vars[varpos1];
    var2 = vars[varpos2];
@@ -843,17 +851,29 @@ SCIP_RETCODE detectProductsClique(
     * for a FALSE val: var is changed to (1-var) => reverse the coef, substract 1 from side */
    if( SCIPvarsHaveCommonClique(var1, xval, var2, TRUE, TRUE) )
    {
-      SCIPdebugMsg(scip, "vars %s and %s are in a clique\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
+      SCIPdebugMsg(scip, "vars %s%s and %s are in a clique\n", xval ? "" : "!", SCIPvarGetName(var1), SCIPvarGetName(var2));
       coefs2[varpos1] = xval ? 1.0 : -1.0;
       coefs2[varpos2] = 1.0;
-      SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, xval ? 1.0 : 0.0, uselhs1, FALSE, varmap, f) );
+
+      if( varpos1 != 0 && xval ) /* relation is unconditional and clique has var1 */
+         side = 1.0;
+      else
+         side = 0.0;
+
+      SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, side, uselhs1, FALSE, varmap, f) );
    }
    if( SCIPvarsHaveCommonClique(var1, xval, var2, FALSE, TRUE) )
    {
-      SCIPdebugMsg(scip, "vars %s and (1-%s) are in a clique\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
+      SCIPdebugMsg(scip, "vars %s%s and !%s are in a clique\n", xval ? "" : "!", SCIPvarGetName(var1), SCIPvarGetName(var2));
       coefs2[varpos1] = xval ? 1.0 : -1.0;
       coefs2[varpos2] = -1.0;
-      SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, xval ? 0.0 : -1.0, uselhs1, FALSE, varmap, f) );
+
+      if( varpos1 != 0 && xval ) /* relation is unconditional and clique has var1 */
+         side = 0.0;
+      else
+         side = -1.0;
+
+      SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, side, uselhs1, FALSE, varmap, f) );
    }
 
    return SCIP_OKAY;
@@ -1219,6 +1239,9 @@ SCIP_RETCODE detectHiddenProducts(
                if( REALABS(side1) == SCIPinfinity(scip) )
                   continue;
 
+               if( xfixing )
+                  side1 -= coefs1[0];
+
                /* permute w and y */
                for( j = 1; j <= 2; ++j )
                {
@@ -1263,6 +1286,9 @@ SCIP_RETCODE detectHiddenProducts(
 
                      if( REALABS(side2) == SCIPinfinity(scip) )
                         continue;
+
+                     if( !xfixing )
+                        side2 -= coefs2[0];
 
                      SCIPdebugMsg(scip, "Two implied relations:\n");
                      SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, side1, side2, uselhs1, uselhs2, varmap, xfixing) );
@@ -1368,13 +1394,13 @@ SCIP_RETCODE detectHiddenProducts(
             if( SCIPvarGetImplTypes(vars_xwy[0], xfixing)[i] == SCIP_BOUNDTYPE_LOWER )
             {
                coefs1[0] = SCIPvarGetLbGlobal(vars_xwy[1]) - SCIPvarGetImplBounds(vars_xwy[0], xfixing)[i];
-               side1 = xfixing ? SCIPvarGetLbGlobal(vars_xwy[1]) : SCIPvarGetImplBounds(vars_xwy[0], xfixing)[i];
+               side1 = SCIPvarGetImplBounds(vars_xwy[0], xfixing)[i];
                uselhs1 = TRUE;
             }
             else
             {
                coefs1[0] = SCIPvarGetUbGlobal(vars_xwy[1]) - SCIPvarGetImplBounds(vars_xwy[0], xfixing)[i];
-               side1 = xfixing ? SCIPvarGetUbGlobal(vars_xwy[1]) : SCIPvarGetImplBounds(vars_xwy[0], xfixing)[i];
+               side1 = SCIPvarGetImplBounds(vars_xwy[0], xfixing)[i];
                uselhs1 = FALSE;
             }
             if( !xfixing )
