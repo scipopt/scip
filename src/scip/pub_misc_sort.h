@@ -146,6 +146,18 @@ void SCIPsortPtrRealRealInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of four joint arrays of pointers/Reals/Reals/ints/SCIP_Bools, sorted by first array in non-decreasing order */
+SCIP_EXPORT
+void SCIPsortPtrRealRealIntBool(
+   void**                ptrarray,           /**< pointer array to be sorted */
+   SCIP_Real*            realarray1,         /**< SCIP_Real array to be permuted in the same way */
+   SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of three joint arrays of pointers/Reals/Bools, sorted by first array in non-decreasing order */
 SCIP_EXPORT
 void SCIPsortPtrRealBool(
@@ -1320,6 +1332,24 @@ void SCIPsortedvecInsertPtrRealRealInt(
    SCIP_Real             field1val,          /**< additional value of new element */
    SCIP_Real             field2val,          /**< additional value of new element */
    int                   field3val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
+/** insert a new element into four joint arrays of pointers/Reals/Reals/ints/SCIP_Bools, sorted by first array in non-decreasing order */
+SCIP_EXPORT
+void SCIPsortedvecInsertPtrRealRealIntBool(
+   void**                ptrarray,           /**< pointer array where an element is to be inserted */
+   SCIP_Real*            realarray1,         /**< SCIP_Real array where an element is to be inserted */
+   SCIP_Real*            realarray2,         /**< SCIP_Real array where an element is to be inserted */
+   int*                  intarray,           /**< int array where an element is to be inserted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be inserted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void*                 keyval,             /**< key value of new element */
+   SCIP_Real             field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
+   int                   field3val,          /**< additional value of new element */
+   SCIP_Bool             field4val,          /**< additional value of new element */
    int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
@@ -2929,6 +2959,19 @@ void SCIPsortedvecDelPosPtrRealRealInt(
    SCIP_Real*            realarray1,         /**< SCIP_Real array where an element is to be deleted */
    SCIP_Real*            realarray2,         /**< SCIP_Real array where an element is to be deleted */
    int*                  intarray,           /**< int array where an element is to be deleted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from four joint arrays of pointers/RealsReals/ints/SCIP_Bools, sorted by first array in non-decreasing order */
+SCIP_EXPORT
+void SCIPsortedvecDelPosPtrRealRealIntBool(
+   void**                ptrarray,           /**< pointer array where an element is to be deleted */
+   SCIP_Real*            realarray1,         /**< SCIP_Real array where an element is to be deleted */
+   SCIP_Real*            realarray2,         /**< SCIP_Real array where an element is to be deleted */
+   int*                  intarray,           /**< int array where an element is to be deleted */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array where an element is to be deleted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
