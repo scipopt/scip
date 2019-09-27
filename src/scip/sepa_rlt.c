@@ -2042,6 +2042,8 @@ SCIP_RETCODE addRltTerm(
    }
    else
       *coefvar += coefcolvar;
+
+   return SCIP_OKAY;
 }
 
 /** creates the RLT-cuts formed by multiplying a given row with (x - lb) or (ub - x)
@@ -2657,19 +2659,18 @@ SCIP_RETCODE separateRltCuts(
          row = rows[pos];
          assert(SCIProwGetIndex(row) == row_idcs[r]);
 
-         /* check whether this row and var fulfill the conditions */
-         /* for now this is disabled */
-         /* TODO decide what to do with this */
-#if 0
-         SCIP_CALL( isAcceptableRow(scip, sepadata, row, xj, sepadata->varpriorities[j], &accepted) );
-
-         if( !accepted )
+         if( !sepadata->useprojection )
          {
-            SCIPdebugMsg(scip, "rejected row %s for variable %s\n", SCIProwGetName(row), SCIPvarGetName(xj));
-            row_marks[r] = 0;
-            continue;
+            /* check whether this row and var fulfill the conditions */
+            SCIP_CALL( isAcceptableRow(scip, sepadata, row, xj, sepadata->varpriorities[j], &accepted) );
+
+            if( !accepted )
+            {
+               SCIPdebugMsg(scip, "rejected row %s for variable %s\n", SCIProwGetName(row), SCIPvarGetName(xj));
+               row_marks[r] = 0;
+               continue;
+            }
          }
-#endif
 
          SCIPdebugMsg(scip, "accepted row %s for variable %s\n", SCIProwGetName(rows[r]), SCIPvarGetName(xj));
 #ifdef SCIP_DEBUG
