@@ -52,6 +52,13 @@
 // last value assigned to '_restat_' not used
 -emacro(438,SCIP_CALL)
 
+// redundant left argument to comma
+-emacro(505,SCIPtpiInitLock)
+-emacro(505,SCIPtpiDestroyLock)
+-emacro(505,SCIPtpiAcquireLock)
+-emacro(505,SCIPtpiReleaseLock)
+
+
 // is likely uninitialized
 -emacro(530,va_*)
 -ecall(530,vsnprintf)
@@ -113,16 +120,13 @@
 -emacro(774,SCIPdebugPrintf)
 -emacro(774,SCIPsetDebugMsgPrint)
 -emacro(774,SCIPsetDebugMsg)
+-emacro(774,SCIPstatDebugMsg)
 -emacro(774,SCIPstatisticPrintf)
 -emacro(774,SCIPstatisticMessage)
 -emacro(774,SCIPdebugMsgPrint)
 -emacro(774,debugMessage)
 -emacro(774,SCIP_CALL_TERMINATE)
 -emacro(774,MCFdebugMessage)
-
-// generally allow comparisons to SCIP_INVALID, testing floating point values
--esym(777,SCIP_INVALID)
--esym(777,SCIP_UNKNOWN)
 
 // possible truncation of addition
 -emacro(776,SCIPreallocBufferArray)
@@ -140,6 +144,14 @@
 -emacro(776,BMSfreeBlockMemoryArray)
 -emacro(776,BMSmoveMemoryArray)
 -emacro(776,SCIPsetAllocBufferArray)
+-emacro(776,SCIPsetReallocBufferArray)
+
+// generally allow comparisons to SCIP_INVALID, testing floating point values
+-esym(777,SCIP_INVALID)
+-esym(777,SCIP_UNKNOWN)
+
+// avoid problems with pc-lint for suppressions within assert (careful!)
+-emacro(777,assert)
 
 -emacro(826,SCIP_DEF_RBTREE_FIND)
 -emacro(826,FOR_EACH_NODE)
@@ -149,3 +161,4 @@
 
 // constant out of range for '>' portion of compound comparison operator '>='
 -estring(2650, ">=")
+
