@@ -294,7 +294,7 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    }
 
    SCIP_CALL( SCIPbanditCreateEpsgreedy(SCIPblkmem(scip), SCIPbuffer(scip), vtable, epsgreedy,
-         priorities, eps, preferrecent, decayfactor, avglim, nactions, SCIPinitializeRandomSeed(scip, (int)initseed % INT_MAX)) );
+         priorities, eps, preferrecent, decayfactor, avglim, nactions, SCIPinitializeRandomSeed(scip, initseed)) );
 
    return SCIP_OKAY;
 }
