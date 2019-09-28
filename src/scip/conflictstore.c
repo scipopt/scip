@@ -1270,7 +1270,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 
          assert(SCIPsetIsGT(set, conflictstore->dualprimalbnds[i], cutoffbound));
 
-         rhs = SCIPgetRhsLinear(NULL, dualproof);
+         rhs = SCIPgetRhsLinear(set->scip, dualproof);
 
          if( !SCIPsetIsInfinity(set, rhs) )
          {
