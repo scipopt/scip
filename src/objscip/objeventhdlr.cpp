@@ -262,6 +262,7 @@ scip::ObjEventhdlr* SCIPgetObjEventhdlr(
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
+   assert(scip != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 

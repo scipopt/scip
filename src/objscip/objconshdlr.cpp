@@ -683,6 +683,7 @@ scip::ObjConshdlr* SCIPgetObjConshdlr(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
+   assert(scip != NULL);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 

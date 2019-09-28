@@ -14878,6 +14878,7 @@ int SCIPgetNLinearVarsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14892,6 +14893,7 @@ SCIP_VAR** SCIPgetLinearVarsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14906,6 +14908,7 @@ SCIP_Real* SCIPgetCoefsLinearVarsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14919,6 +14922,7 @@ int SCIPgetNQuadVarTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14933,6 +14937,7 @@ SCIP_QUADVARTERM* SCIPgetQuadVarTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14945,6 +14950,7 @@ SCIP_RETCODE SCIPsortQuadVarTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14964,6 +14970,7 @@ SCIP_RETCODE SCIPfindQuadVarTermQuadratic(
    int*                  pos                 /**< buffer to store position of quadvarterm for var, or -1 if not found */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
    assert(var != NULL);
@@ -14980,6 +14987,7 @@ int SCIPgetNBilinTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14994,6 +15002,7 @@ SCIP_BILINTERM* SCIPgetBilinTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -15006,6 +15015,7 @@ SCIP_Real SCIPgetLhsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -15018,6 +15028,7 @@ SCIP_Real SCIPgetRhsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -15032,6 +15043,7 @@ int SCIPgetLinvarMayDecreaseQuadratic(
 {
    SCIP_CONSDATA*     consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -15051,6 +15063,7 @@ int SCIPgetLinvarMayIncreaseQuadratic(
 {
    SCIP_CONSDATA*     consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -15068,6 +15081,7 @@ SCIP_RETCODE SCIPcheckCurvatureQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
 
    SCIP_CALL( checkCurvature(scip, cons, TRUE) );
@@ -15086,6 +15100,7 @@ SCIP_Bool SCIPisConvexQuadratic(
    SCIP_Bool isconvex;
    SCIP_Bool isconcave;
 
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
    assert(cons != NULL);
@@ -15119,6 +15134,7 @@ SCIP_Bool SCIPisConcaveQuadratic(
    SCIP_Bool isconvex;
    SCIP_Bool isconcave;
 
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
    assert(cons != NULL);

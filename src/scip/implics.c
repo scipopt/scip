@@ -916,7 +916,7 @@ SCIP_Bool SCIPimplicsContainsImpl(
    int posadd;
 
    return implicsSearchImplic(implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
-}
+}  /*lint !e638*/
 
 
 

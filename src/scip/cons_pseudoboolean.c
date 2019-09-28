@@ -10034,6 +10034,8 @@ SCIP_Real SCIPgetLhsPseudoboolean(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not pseudo boolean\n");
@@ -10056,6 +10058,8 @@ SCIP_Real SCIPgetRhsPseudoboolean(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

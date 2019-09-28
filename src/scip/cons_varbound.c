@@ -5101,6 +5101,8 @@ SCIP_Real SCIPgetLhsVarbound(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
@@ -5121,6 +5123,8 @@ SCIP_Real SCIPgetRhsVarbound(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5143,6 +5147,8 @@ SCIP_VAR* SCIPgetVarVarbound(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
@@ -5163,6 +5169,8 @@ SCIP_VAR* SCIPgetVbdvarVarbound(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5185,6 +5193,8 @@ SCIP_Real SCIPgetVbdcoefVarbound(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a variable bound constraint\n");
@@ -5205,6 +5215,8 @@ SCIP_Real SCIPgetDualsolVarbound(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5229,6 +5241,8 @@ SCIP_Real SCIPgetDualfarkasVarbound(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5255,6 +5269,8 @@ SCIP_ROW* SCIPgetRowVarbound(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

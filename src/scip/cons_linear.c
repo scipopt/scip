@@ -5269,7 +5269,6 @@ SCIP_RETCODE analyzeConflict(
 /** check if there is any hope of tightening some bounds */
 static
 SCIP_Bool canTightenBounds(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linear constraint */
    )
 {
@@ -7040,7 +7039,7 @@ SCIP_RETCODE tightenBounds(
       return SCIP_OKAY;
 
    /* check if constraint has any chances of tightening bounds */
-   if( !canTightenBounds(scip, cons) )
+   if( !canTightenBounds(cons) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -11041,8 +11040,7 @@ SCIP_RETCODE aggregateVariables(
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  nfixedvars,         /**< pointer to count number of fixed variables */
-   int*                  naggrvars,          /**< pointer to count number of aggregated variables */
-   int*                  ndelconss           /**< pointer to count number of deleted constraints */
+   int*                  naggrvars           /**< pointer to count number of aggregated variables */
    )
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
@@ -16296,7 +16294,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          /* aggregation variable in equations */
          if( conshdlrdata->aggregatevariables )
          {
-            SCIP_CALL( aggregateVariables(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+            SCIP_CALL( aggregateVariables(scip, cons, &cutoff, nfixedvars, naggrvars) );
             if( cutoff )
                break;
          }
@@ -18212,6 +18210,7 @@ SCIP_Real SCIPgetLhsLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -18235,6 +18234,7 @@ SCIP_Real SCIPgetRhsLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -18297,6 +18297,7 @@ int SCIPgetNVarsLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -18320,6 +18321,7 @@ SCIP_VAR** SCIPgetVarsLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -18343,6 +18345,7 @@ SCIP_Real* SCIPgetValsLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -18371,6 +18374,7 @@ SCIP_Real SCIPgetActivityLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -18398,6 +18402,7 @@ SCIP_Real SCIPgetFeasibilityLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -18424,6 +18429,7 @@ SCIP_Real SCIPgetDualsolLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(!SCIPconsIsOriginal(cons)); /* original constraints would always return 0 */
 
@@ -18451,6 +18457,7 @@ SCIP_Real SCIPgetDualfarkasLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(!SCIPconsIsOriginal(cons)); /* original constraints would always return 0 */
 
@@ -18480,6 +18487,7 @@ SCIP_ROW* SCIPgetRowLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )

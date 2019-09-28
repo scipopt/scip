@@ -4281,6 +4281,7 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(tree != NULL);
    assert(!SCIPtreeProbing(tree));
    assert(lp != NULL);
+   assert(conflictstore != NULL);
    assert(cutoff != NULL);
 
    SCIPsetDebugMsg(set, "focusing node #%" SCIP_LONGINT_FORMAT " of type %d in depth %d\n",

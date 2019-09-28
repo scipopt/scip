@@ -2066,7 +2066,7 @@ SCIP_RETCODE adjustCutoffbound(
 
       if( addedvars != NULL )
       {
-         SCIP_Bool foundimplics;
+         SCIP_Bool foundimplics = FALSE;
          SCIP_CALL( getConflictImplics(scip, objimplics->objvars, start, end, bdchgidx, addedvars, cutoffbound, &foundimplics) );
       } /*lint !e438*/
    }

@@ -1054,13 +1054,13 @@ SCIP_RETCODE domchgMakeDynamic(
          SCIP_ALLOC( BMSreallocBlockMemorySize(blkmem, domchg, sizeof(SCIP_DOMCHGBOUND), sizeof(SCIP_DOMCHGDYN)) );
          (*domchg)->domchgdyn.nholechgs = 0;
          (*domchg)->domchgdyn.holechgs = NULL;
-         (*domchg)->domchgdyn.boundchgssize = (*domchg)->domchgdyn.nboundchgs;
+         (*domchg)->domchgdyn.boundchgssize = (int) (*domchg)->domchgdyn.nboundchgs;
          (*domchg)->domchgdyn.holechgssize = 0;
          (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_DYNAMIC; /*lint !e641*/
          break;
       case SCIP_DOMCHGTYPE_BOTH:
          SCIP_ALLOC( BMSreallocBlockMemorySize(blkmem, domchg, sizeof(SCIP_DOMCHGBOTH), sizeof(SCIP_DOMCHGDYN)) );
-         (*domchg)->domchgdyn.boundchgssize = (*domchg)->domchgdyn.nboundchgs;
+         (*domchg)->domchgdyn.boundchgssize = (int) (*domchg)->domchgdyn.nboundchgs;
          (*domchg)->domchgdyn.holechgssize = (*domchg)->domchgdyn.nholechgs;
          (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_DYNAMIC; /*lint !e641*/
          break;
@@ -2867,7 +2867,6 @@ void printBounds(
 /** prints hole list to file stream */
 static
 void printHolelist(
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_HOLELIST*        holelist,           /**< hole list pointer to hole of interest */
@@ -2960,7 +2959,7 @@ SCIP_RETCODE SCIPvarPrint(
          printBounds(set, messagehdlr, file, lb, ub, "lazy bounds");
 
       holelist = SCIPvarGetHolelistOriginal(var);
-      printHolelist(set, messagehdlr, file, holelist, "original holes");
+      printHolelist(messagehdlr, file, holelist, "original holes");
    }
    else
    {
@@ -2984,11 +2983,11 @@ SCIP_RETCODE SCIPvarPrint(
 
       /* global hole list */
       holelist = SCIPvarGetHolelistGlobal(var);
-      printHolelist(set, messagehdlr, file, holelist, "global holes");
+      printHolelist(messagehdlr, file, holelist, "global holes");
 
       /* local hole list */
       holelist = SCIPvarGetHolelistLocal(var);
-      printHolelist(set, messagehdlr, file, holelist, "local holes");
+      printHolelist(messagehdlr, file, holelist, "local holes");
    }
 
    /* fixings and aggregations */
@@ -3075,7 +3074,7 @@ SCIP_RETCODE SCIPvarAddLocks(
    SCIP_VAR* lockvar;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
    assert(var->nlocksup[locktype] >= 0);
    assert(var->nlocksdown[locktype] >= 0);
    assert(var->scip == set->scip);
@@ -3191,7 +3190,7 @@ int SCIPvarGetNLocksDownType(
    int i;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
    assert(var->nlocksdown[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
@@ -3248,7 +3247,7 @@ int SCIPvarGetNLocksUpType(
    int i;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
    assert(var->nlocksup[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
@@ -5027,12 +5026,12 @@ SCIP_RETCODE tryAggregateIntVars(
 
    /* search upwards from ysol = 0 */
    ysol = 0;
-   currentclass = c%a;
+   currentclass = c % a;
    if( currentclass < 0 )
       currentclass += a;
    assert(0 <= currentclass && currentclass < a);
 
-   classstep = (-b)%a;
+   classstep = (-b) % a;
 
    if( classstep < 0 )
       classstep += a;
@@ -5047,7 +5046,7 @@ SCIP_RETCODE tryAggregateIntVars(
       ysol++;
    }
    assert(ysol < a);
-   assert(((c - b*ysol)%a) == 0);
+   assert(((c - b*ysol) % a) == 0);
 
    xsol = (c - b*ysol)/a;
 
@@ -5089,7 +5088,7 @@ SCIP_RETCODE tryAggregateIntVars(
    SCIP_CALL( SCIPvarRelease(&aggvar, blkmem, set, eventqueue, lp) );
 
    return SCIP_OKAY;
-}
+}  /*lint !e438*/
 
 /** performs second step of SCIPaggregateVars():
  *  the variable to be aggregated is chosen among active problem variables x' and y', preferring a less strict variable

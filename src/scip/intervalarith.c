@@ -208,7 +208,7 @@ SCIP_Bool SCIPintervalHasRoundingControl(
    return FALSE;
 }
 
-/** sets rounding mode of floating point operations */
+/** sets rounding mode of floating point operations */ /*lint -e715*/
 void SCIPintervalSetRoundingMode(
    SCIP_ROUNDMODE        roundmode           /**< rounding mode to activate */
    )

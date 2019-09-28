@@ -189,6 +189,8 @@ SCIP_RETCODE addHistory(
    const char*           s                   /**< string to add to the command history */
    )
 {  /*lint --e{715}*/
+   assert(s != NULL);
+
    /* nothing to do here */
    return SCIP_OKAY;
 }
@@ -202,7 +204,7 @@ int getHistoryLength(
    return 0;
 }
 
-/** removes a single element from the history list */
+/** removes a single element from the history list */ /*lint -e715*/
 static
 SCIP_RETCODE removeHistory(
    int                   pos                 /**< list position of history entry to remove */
@@ -219,6 +221,8 @@ SCIP_RETCODE writeHistory(
    const char*           filename            /**< name of file to (over)write history to */
    )
 {  /*lint --e{715}*/
+   assert(filename != NULL);
+
    /* nothing to do here */
    return SCIP_OKAY;
 }
@@ -331,6 +335,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    char readlineversion[20];
 #endif
 
+   assert(set != NULL);
    assert(dialoghdlr != NULL);
 
    SCIP_ALLOC( BMSallocMemory(dialoghdlr) );

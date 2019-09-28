@@ -2846,6 +2846,7 @@ SCIP_RETCODE determineBestBounds(
    if( boundsfortrans != NULL && boundsfortrans[v] > -3 )
    {
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || ( boundsfortrans[v] == -2 || boundsfortrans[v] == -1 ));
+      assert(boundtypesfortrans != NULL);
 
       /* user has explicitly specified a bound to be used */
       if( boundtypesfortrans[v] == SCIP_BOUNDTYPE_LOWER )

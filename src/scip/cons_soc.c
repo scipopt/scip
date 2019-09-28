@@ -5420,6 +5420,7 @@ int SCIPgetNLhsVarsSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5432,6 +5433,7 @@ SCIP_VAR** SCIPgetLhsVarsSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5444,6 +5446,7 @@ SCIP_Real* SCIPgetLhsCoefsSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5456,6 +5459,7 @@ SCIP_Real* SCIPgetLhsOffsetsSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5468,6 +5472,7 @@ SCIP_Real SCIPgetLhsConstantSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5480,6 +5485,7 @@ SCIP_VAR* SCIPgetRhsVarSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5492,6 +5498,7 @@ SCIP_Real SCIPgetRhsCoefSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -5504,6 +5511,7 @@ SCIP_Real SCIPgetRhsOffsetSOC(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 

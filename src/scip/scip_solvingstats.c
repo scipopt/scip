@@ -4109,7 +4109,7 @@ int SCIPgetNImplications(
  *
  *  @deprecated because binary implications are now stored as cliques, please use SCIPwriteCliqueGraph() instead
  *
- */
+ */ /*lint -e715*/
 SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name, or NULL for stdout */

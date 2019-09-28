@@ -1853,7 +1853,7 @@ void SCIPprobUpdateBestRootSol(
    }
 }
 
-/** informs problem, that the presolving process was finished, and updates all internal data structures */
+/** informs problem, that the presolving process was finished, and updates all internal data structures */ /*lint -e715*/
 SCIP_RETCODE SCIPprobExitPresolve(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set                 /**< global SCIP settings */

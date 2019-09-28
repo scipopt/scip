@@ -263,6 +263,7 @@ scip::ObjPricer* SCIPgetObjPricer(
 {
    SCIP_PRICERDATA* pricerdata;
 
+   assert(scip != NULL);
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
 
