@@ -1678,7 +1678,7 @@ SCIP_RETCODE redLoopPc(
          {
             SCIP_Real ub = -1.0;
             SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
-                  nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE, nodereplacing) );
+                  nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, FALSE, TRUE, nodereplacing) );
          }
          else
          {

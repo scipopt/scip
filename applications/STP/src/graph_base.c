@@ -3034,10 +3034,16 @@ SCIP_RETCODE graph_knot_delPseudo(
    }
    else
    {
-      assert(g->pcancestors == NULL || g->pcancestors[vertex] == NULL);
-
       vertexprize = 0.0;
       ancestorsnode = -1;
+
+      if( g->pcancestors && g->pcancestors[vertex] )
+      {
+         assert(graph_pc_isPcMw(g));
+         assert(SCIPisZero(scip, g->prize[vertex]));
+
+         ancestorsnode = vertex;
+      }
    }
 
    edgecount = 0;
@@ -3645,6 +3651,9 @@ void graph_edge_del(
 
    g->ieat[e] = EAT_FREE;
    g->oeat[e] = EAT_FREE;
+
+   assert(g->tail[e] >= 0 && g->tail[e] < g->knots);
+   assert(g->head[e] >= 0 && g->head[e] < g->knots);
 }
 
 /** delete an edge from standard, DCSR (if existent) and CSR (if existent) data structures */
@@ -5047,6 +5056,8 @@ void graph_mark(
       if( graph_pc_isRootedPcMw(g) )
          g->mark[root] = TRUE;
    }
+
+   assert(graph_isMarked(g));
 }
 
 
@@ -5067,22 +5078,37 @@ SCIP_Bool graph_isMarked(
       {
          if( Is_pterm(g->term[k]) || (!rooted && k == root) )
          {
+            assert(g->grad[k] == 2 || k == root);
+
             if( g->mark[k] )
+            {
+               graph_knot_printInfo(g, k);
+               printf("pseudo-terminal %d is marked \n", k);
                return FALSE;
+            }
          }
          else
          {
             if( g->mark[k] != (g->grad[k] > 0) )
+            {
+               if( k == root && g->mark[k] )
+                  continue;
+
+               graph_knot_printInfo(g, k);
+               printf("node %d: mark=%d grad=%d \n", k, g->mark[k], g->grad[k]);
                return FALSE;
+            }
          }
       }
 
       if( rooted )
       {
          if( !g->mark[root] )
+         {
+            printf("root not marked \n");
             return FALSE;
+         }
       }
-
    }
    else
    {
@@ -5092,6 +5118,8 @@ SCIP_Bool graph_isMarked(
       {
          if( g->mark[k] != (g->grad[k] > 0) )
          {
+            graph_knot_printInfo(g, k);
+            printf("node %d: mark=%d grad=%d \n", k, g->mark[k], g->grad[k]);
             return FALSE;
          }
       }

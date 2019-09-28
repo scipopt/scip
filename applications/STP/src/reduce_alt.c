@@ -3453,10 +3453,7 @@ SCIP_RETCODE reduce_bd34(
 
    SCIPdebugMessage("BD34-Reduction: ");
 
-   assert(scip != NULL);
-   assert(g != NULL);
-   assert(heap != NULL);
-   assert(nelims != NULL);
+   assert(scip && g && heap && nelims);
    assert(!g->extended);
 
    /* initialize new graph for bd4 tests */
@@ -3469,7 +3466,7 @@ SCIP_RETCODE reduce_bd34(
       for( int k2 = STP_BD_MAXDEGREE - 1; k2 >= k + 1; k2-- )
          graph_edge_add(scip, auxg, k, k2, 1.0, 1.0);
 
-   /* init graph for mst computation */
+   /* initilaize graph for MST computation */
    SCIP_CALL( graph_path_init(scip, auxg) );
 
    *nelims = 0;
@@ -3482,11 +3479,8 @@ SCIP_RETCODE reduce_bd34(
       SCIP_CALL( SCIPallocBufferArray(scip, &pathmaxnodetail, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &pathmaxnodehead, nnodes) );
    }
-   else
-   {
-      for( int  i = 0; i < nnodes; i++ )
-         g->mark[i] = (g->grad[i] > 0);
-   }
+
+   graph_mark(g);
 
    for( int i = 0; i < nnodes; i++ )
    {

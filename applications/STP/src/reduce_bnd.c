@@ -2126,18 +2126,7 @@ SCIP_RETCODE reduce_da(
          initializeDaDistances(scip, graph, daroot, cost, vnoi, pathdist, costrev, vbase, pathedge, state);
 
 
-         if( 0 )
-         {
 
-                 int nn;
-                 int extfixed;
-                 reduce_extendedEdge2(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, FALSE, marked, &extfixed);
-                 nfixed += extfixed;
-
-              //   graph_printInfo(graph);
-              //   printf("newly fixed %d \n", extfixed);
-//                 assert(0);
-         }
 
 
          updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, (run == 0));
@@ -2151,12 +2140,31 @@ SCIP_RETCODE reduce_da(
             nfixed += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (apsol ? result : NULL), upperbound);
          }
 
+         if( extended && !rpc )
+         {
+            int extfixed = reduce_extendedEdge(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, nodearrint, marked, FALSE);
+            nfixed += extfixed;
+            printf("newly fixedFIRST =%d \n", extfixed);
+         }
+
          if( extended )
-            nfixed += reduce_extendedEdge(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, nodearrint, marked, FALSE);
+             {
+
+                     int nn;
+                     int extfixed;
+                     reduce_extendedEdge2(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, FALSE, marked, &extfixed);
+                     nfixed += extfixed;
+
+                     graph_printInfo(graph);
+                     printf("newly fixedSECOND =%d \n", extfixed);
+          //           exit(1);
+    //                 assert(0);
+             }
+
 
          if( !directed && !SCIPisZero(scip, minpathcost) && nodereplacing )
             SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
-                  lpobjval, upperbound, daroot, (run == 0), extended));
+                  lpobjval, upperbound, daroot, (run == 0), extended && !rpc));
 
          if( nfixed > 0 )
             SCIP_CALL(level0(scip, graph));

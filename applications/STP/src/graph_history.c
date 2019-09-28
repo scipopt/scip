@@ -315,7 +315,7 @@ void blockedAncestors_hashDirty(
 
       for( int k2 = 0; k2 < k; k2++ )
       {
-         const int a = ancestorsblock[k];
+         const int a = ancestorsblock[k2];
          assert(a >= 0 );
          assert(hasharr[a] == 1);
 
@@ -714,7 +714,6 @@ SCIP_Bool graph_valid_ancestors(
 
    assert(scip != NULL && g != NULL);
    assert(g->ancestors != NULL);
-   assert(!graph_pc_isPcMw(g) || !g->extended);
 
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &edgemark, nancestors) );
 
@@ -728,7 +727,7 @@ SCIP_Bool graph_valid_ancestors(
       if( g->oeat[e] == EAT_FREE )
          continue;
 
-      if( pcmw && g->cost[e] != g->cost[e + 1] )
+      if( pcmw && !SCIPisEQ(scip, g->cost[e], g->cost[e + 1]) )
          continue;
 
       conflict = ancestorsMarkConflict(g, e, edgemark);
@@ -821,7 +820,7 @@ void graph_pseudoAncestors_unhashNode(
 void graph_pseudoAncestors_hashEdgeDirty(
    const PSEUDOANS*      pseudoancestors,    /**< pseudo-ancestors */
    int                   edge,               /**< edge for which to hash */
-   SCIP_Bool             revertIfConflict,    /**< break on conflict? */
+   SCIP_Bool             revertIfConflict,   /**< revert on conflict? */
    SCIP_Bool*            conflict,           /**< conflict? */
    int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
 )
@@ -839,7 +838,7 @@ void graph_pseudoAncestors_hashEdgeDirty(
 void graph_pseudoAncestors_hashNodeDirty(
    const PSEUDOANS*      pseudoancestors,    /**< pseudo-ancestors */
    int                   node,               /**< node for which to hash */
-   SCIP_Bool             revertIfConflict,    /**< break on conflict? */
+   SCIP_Bool             revertIfConflict,   /**< revert on conflict? */
    SCIP_Bool*            conflict,           /**< conflict? */
    int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
 )
