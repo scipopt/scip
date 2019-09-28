@@ -51,13 +51,15 @@
 
 // last value assigned to '_restat_' not used
 -emacro(438,SCIP_CALL)
+-emacro(438,SCIP_CALL_ABORT)
 
 // redundant left argument to comma
 -emacro(505,SCIPtpiInitLock)
 -emacro(505,SCIPtpiDestroyLock)
 -emacro(505,SCIPtpiAcquireLock)
 -emacro(505,SCIPtpiReleaseLock)
-
+-emacro(505,SCIPtpiInitCondition)
+-emacro(505,SCIPtpiWaitCondition)
 
 // is likely uninitialized
 -emacro(530,va_*)
@@ -76,14 +78,15 @@
 -emacro(644,assert)
 
 // turn off messages for quad precision
--emacro(647,QUAD_ARRAY_SIZE)
--emacro(666,SCIPquadprecProdQD)
--emacro(666,SCIPquadprecSumQD)
 -emacro(644,SCIPquadprecSumQD)
+-emacro(644,SCIPquadprecProdQD)
 -emacro(644,QUAD_ASSIGN)
 -emacro(644,QUAD_TO_DBL)
 -emacro(644,QUAD)
+-emacro(647,QUAD_ARRAY_SIZE)
 -emacro(665,QUAD)
+-emacro(666,SCIPquadprecProdQD)
+-emacro(666,SCIPquadprecSumQD)
 
 // loop is likely not entered
 -emacro(681,SCIPdebugMsg)
@@ -96,6 +99,7 @@
 -emacro(681,SCIPdebugPrintf)
 -emacro(681,SCIPstatisticMessage)
 -emacro(681,SCIPstatisticPrintf)
+-emacro(681,SCIPsetDebugMsgPrint)
 
 // generally turn off warnings about unused parameters (possibly too strong)
 -emacro(715,SCIP_DECL_*)
@@ -136,6 +140,7 @@
 -emacro(776,SCIPallocBlockMemoryArray)
 -emacro(776,SCIPduplicateBlockMemoryArray)
 -emacro(776,BMSallocMemorySize)
+-emacro(776,BMSallocBlockMemoryArray)
 -emacro(776,BMScopyMemoryArray)
 -emacro(776,BMSallocMemoryArray)
 -emacro(776,BMSclearMemoryArray)
