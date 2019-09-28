@@ -2232,7 +2232,7 @@ SCIP_RETCODE doConshdlrCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/proptiming", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when constraint propagation should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS)", SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)(&(*conshdlr)->proptiming), TRUE, proptiming, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
+         (int*)(&(*conshdlr)->proptiming), TRUE, (int) proptiming, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/eagerfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
@@ -7263,7 +7263,7 @@ SCIP_RETCODE SCIPconsAddLocks(
    assert(cons != NULL);
    assert(cons->conshdlr != NULL);
    assert(cons->conshdlr->conslock != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
    assert(cons->nlockspos[locktype] >= 0);
    assert(cons->nlocksneg[locktype] >= 0);
    assert(-2 <= nlockspos && nlockspos <= 2);
@@ -8456,7 +8456,7 @@ SCIP_Bool SCIPconsIsLockedTypePos(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
 
    return (cons->nlockspos[locktype] > 0);
 }
@@ -8468,7 +8468,7 @@ SCIP_Bool SCIPconsIsLockedTypeNeg(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
 
    return (cons->nlocksneg[locktype] > 0);
 }
@@ -8480,7 +8480,7 @@ SCIP_Bool SCIPconsIsLockedType(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
 
    return (cons->nlockspos[locktype] > 0 || cons->nlocksneg[locktype] > 0);
 }
@@ -8492,7 +8492,7 @@ int SCIPconsGetNLocksTypePos(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
 
    return cons->nlockspos[locktype];
 }
@@ -8504,7 +8504,7 @@ int SCIPconsGetNLocksTypeNeg(
    )
 {
    assert(cons != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
 
    return cons->nlocksneg[locktype];
 }
@@ -8538,7 +8538,7 @@ int SCIPconsGetNUpgradeLocks(
 {
    assert(cons != NULL);
 
-   return cons->nupgradelocks;
+   return (int) cons->nupgradelocks;
 }
 
 #ifndef NDEBUG

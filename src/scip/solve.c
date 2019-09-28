@@ -392,7 +392,6 @@ SCIP_RETCODE propagationRound(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
@@ -607,13 +606,13 @@ SCIP_RETCODE propagateDomains(
       propround++;
 
       /* perform the propagation round by calling the propagators and constraint handlers */
-      SCIP_CALL( propagationRound(blkmem, set, stat, primal, tree, depth, fullpropagation, FALSE, &delayed, &propagain, timingmask, cutoff, postpone) );
+      SCIP_CALL( propagationRound(blkmem, set, stat, tree, depth, fullpropagation, FALSE, &delayed, &propagain, timingmask, cutoff, postpone) );
 
       /* if the propagation will be terminated, call the delayed propagators */
       while( delayed && (!propagain || propround >= maxproprounds) && !(*cutoff) )
       {
          /* call the delayed propagators and constraint handlers */
-         SCIP_CALL( propagationRound(blkmem, set, stat, primal, tree, depth, fullpropagation, TRUE, &delayed, &propagain, timingmask, cutoff, postpone) );
+         SCIP_CALL( propagationRound(blkmem, set, stat, tree, depth, fullpropagation, TRUE, &delayed, &propagain, timingmask, cutoff, postpone) );
       }
 
       /* if a reduction was found, we want to do another full propagation round (even if the propagator only claimed
@@ -794,7 +793,7 @@ SCIP_RETCODE updatePseudocost(
             int nboundchgs;
 
             boundchgs = node->domchg->domchgbound.boundchgs;
-            nboundchgs = node->domchg->domchgbound.nboundchgs;
+            nboundchgs = (int) node->domchg->domchgbound.nboundchgs;
             for( i = 0; i < nboundchgs; ++i )
             {
                var = boundchgs[i].var;
@@ -2209,7 +2208,7 @@ SCIP_RETCODE SCIPpriceLoop(
 
       /* if the lower bound is already higher than the cutoff bound, we can stop pricing */
       mustprice = mustprice && SCIPsetIsLT(set, SCIPnodeGetLowerbound(currentnode), primal->cutoffbound);
-   }
+   }  /*lint !e438*/
    assert(lp->flushed);
    assert(lp->solved || *lperror);
 
@@ -2504,7 +2503,7 @@ SCIP_RETCODE priceAndCutLoop(
             assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
             *lperror = *lperror || lp->resolvelperror;
-         }
+         } /*lint !e438*/
       }
       assert(lp->flushed || *cutoff || *unbounded);
       assert(lp->solved || *lperror || *cutoff || *unbounded);
@@ -2735,7 +2734,7 @@ SCIP_RETCODE priceAndCutLoop(
 
                         stalllpobjval = lpobjval;
                         stallnfracs = nfracs;
-                     }
+                     }  /*lint !e438*/
                      else
                      {
                         stalling = (stalllpsolstat == SCIPlpGetSolstat(lp));
@@ -2833,7 +2832,7 @@ SCIP_RETCODE priceAndCutLoop(
       (*cutoff || *unbounded) ? SCIPsetInfinity(set) : *lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set, transprob));
 
    return SCIP_OKAY;
-}
+}  /*lint !e438*/
 
 /** updates the current lower bound with the pseudo objective value, cuts off node by bounding, and applies conflict
  *  analysis if the pseudo objective lead to the cutoff
@@ -4058,7 +4057,7 @@ SCIP_RETCODE solveNode(
    int actdepth;
    int nlperrors;
    int nloops;
-   SCIP_Bool foundsol = FALSE;
+   SCIP_Bool foundsol;
    SCIP_Bool focusnodehaslp;
    SCIP_Bool lpsolved;
    SCIP_Bool initiallpsolved;

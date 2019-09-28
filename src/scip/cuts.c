@@ -3007,7 +3007,7 @@ SCIP_RETCODE determineBestBounds(
       }
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** Transform equation \f$ a \cdot x = b; lb \leq x \leq ub \f$ into standard form
@@ -4818,7 +4818,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          tmpcoefs[k - intstart] = -tmpcoefs[k - intstart];
          tmpvalues[k - intstart] = oldsolval;
       }
-   }
+   } /*lint !e438*/
 
    if( bestefficacy > 0.0 )
    {
@@ -5460,7 +5460,7 @@ SCIP_RETCODE determineBoundForSNF(
       binvarused[vubvarprobidx] = 1;
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** construct a 0-1 single node flow relaxation (with some additional simple constraints) of a mixed integer set
@@ -5570,6 +5570,16 @@ SCIP_RETCODE constructSNFRelaxation(
    *localbdsused = FALSE;
    QUAD_ASSIGN_Q(transrhs, rowrhs);
    snf->ntransvars = 0;
+
+   assert(snf->transvarcoefs != NULL); /* for lint */
+   assert(snf->transvarvubcoefs != NULL);
+   assert(snf->transbinvarsolvals != NULL);
+   assert(snf->transcontvarsolvals != NULL);
+   assert(snf->aggrconstants != NULL);
+   assert(snf->aggrcoefscont != NULL);
+   assert(snf->origcontvars != NULL);
+   assert(snf->origbinvars != NULL);
+   assert(snf->aggrcoefsbin != NULL);
 
    /* transform non-binary variables */
    for( i = 0; i < nnonbinvarsrow; ++i )
