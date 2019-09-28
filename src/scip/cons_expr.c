@@ -11379,8 +11379,11 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       return SCIP_OKAY;
    }
 
+   /* force tightening if it would mean fixing the variable */
+   force = force || SCIPisEQ(scip, newlb, newub);
+
    /* check which bound can be tightened
-    * if we are called from forward propagation, then the old bounds will be [-infty,infty], so we will lightly have tightenlb|tightenub */
+    * if we are called from forward propagation, then the old bounds will be [-infty,infty], so we will likely have tightenlb|tightenub */
    if( force )
    {
       tightenlb = !SCIPisHugeValue(scip, -newlb) && SCIPisGT(scip, newlb, oldlb);
