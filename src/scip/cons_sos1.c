@@ -10501,7 +10501,7 @@ SCIP_RETCODE SCIPaddVarSOS1(
 
    assert( scip != NULL );
    assert( var != NULL );
-   assert( SCIPconsGetSCIP(cons) == scip );
+   assert( cons != NULL );
 
    SCIPdebugMsg(scip, "adding variable <%s> to constraint <%s> with weight %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), weight);
 
@@ -10534,7 +10534,7 @@ SCIP_RETCODE SCIPappendVarSOS1(
 
    assert( scip != NULL );
    assert( var != NULL );
-   assert( SCIPconsGetSCIP(cons) == scip );
+   assert( cons != NULL );
 
    SCIPdebugMsg(scip, "appending variable <%s> to constraint <%s>\n", SCIPvarGetName(var), SCIPconsGetName(cons));
 
@@ -10564,7 +10564,7 @@ int SCIPgetNVarsSOS1(
    SCIP_CONSDATA* consdata;
 
    assert( scip != NULL );
-   assert( SCIPconsGetSCIP(cons) == scip );
+   assert( cons != NULL );
 
    if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -10589,7 +10589,7 @@ SCIP_VAR** SCIPgetVarsSOS1(
    SCIP_CONSDATA* consdata;
 
    assert( scip != NULL );
-   assert( SCIPconsGetSCIP(cons) == scip );
+   assert( cons != NULL );
 
    if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -10614,7 +10614,7 @@ SCIP_Real* SCIPgetWeightsSOS1(
    SCIP_CONSDATA* consdata;
 
    assert( scip != NULL );
-   assert( SCIPconsGetSCIP(cons) == scip );
+   assert( cons != NULL );
 
    if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

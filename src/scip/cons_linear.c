@@ -2606,7 +2606,7 @@ void consdataGetActivityBounds(
    getMaxActivity(scip, consdata, consdata->maxactivityposinf, consdata->maxactivityneginf,
       consdata->maxactivityposhuge, consdata->maxactivityneghuge, 0.0, FALSE, goodrelax,
       maxactivity, maxisrelax, &issettoinfinity);
-} /*lint !e438*/
+}
 
 /** calculates activity bounds for constraint after setting variable to zero */
 static
@@ -5269,6 +5269,7 @@ SCIP_RETCODE analyzeConflict(
 /** check if there is any hope of tightening some bounds */
 static
 SCIP_Bool canTightenBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linear constraint */
    )
 {
@@ -7039,7 +7040,7 @@ SCIP_RETCODE tightenBounds(
       return SCIP_OKAY;
 
    /* check if constraint has any chances of tightening bounds */
-   if( !canTightenBounds(cons) )
+   if( !canTightenBounds(scip, cons) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -7698,7 +7699,7 @@ SCIP_RETCODE propagateCons(
          }
          else
          {
-            SCIPdebugMsg(scip, "linear constraint <%s> found %d bound changes, %d fixings and %d added constraints\n", SCIPconsGetName(cons), *nchgbds - oldnchgbds, nfixedvars, naddconss);
+            SCIPdebugMsg(scip, "linear constraint <%s> found %d bound changes and %d fixings\n", SCIPconsGetName(cons), *nchgbds - oldnchgbds, nfixedvars);
          }
 
          if( nfixedvars > 0 )
@@ -11040,7 +11041,8 @@ SCIP_RETCODE aggregateVariables(
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  nfixedvars,         /**< pointer to count number of fixed variables */
-   int*                  naggrvars           /**< pointer to count number of aggregated variables */
+   int*                  naggrvars,          /**< pointer to count number of aggregated variables */
+   int*                  ndelconss           /**< pointer to count number of deleted constraints */
    )
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
@@ -16294,7 +16296,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          /* aggregation variable in equations */
          if( conshdlrdata->aggregatevariables )
          {
-            SCIP_CALL( aggregateVariables(scip, cons, &cutoff, nfixedvars, naggrvars) );
+            SCIP_CALL( aggregateVariables(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
             if( cutoff )
                break;
          }
@@ -18132,7 +18134,7 @@ SCIP_RETCODE SCIPchgCoefLinear(
    int i;
 
    assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
    assert(var != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -18194,7 +18196,7 @@ SCIP_RETCODE SCIPdelCoefLinear(
    )
 {
    assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
    assert(var != NULL);
 
    SCIP_CALL( SCIPchgCoefLinear(scip, cons, var, 0.0) );
@@ -18210,8 +18212,7 @@ SCIP_Real SCIPgetLhsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -18234,8 +18235,7 @@ SCIP_Real SCIPgetRhsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -18258,7 +18258,7 @@ SCIP_RETCODE SCIPchgLhsLinear(
    )
 {
    assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -18278,9 +18278,6 @@ SCIP_RETCODE SCIPchgRhsLinear(
    SCIP_Real             rhs                 /**< new right hand side */
    )
 {
-   assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
-
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not linear\n");
@@ -18300,8 +18297,7 @@ int SCIPgetNVarsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -18324,8 +18320,7 @@ SCIP_VAR** SCIPgetVarsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -18348,8 +18343,7 @@ SCIP_Real* SCIPgetValsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -18377,8 +18371,7 @@ SCIP_Real SCIPgetActivityLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -18405,8 +18398,7 @@ SCIP_Real SCIPgetFeasibilityLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -18432,8 +18424,7 @@ SCIP_Real SCIPgetDualsolLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
    assert(!SCIPconsIsOriginal(cons)); /* original constraints would always return 0 */
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -18460,8 +18451,7 @@ SCIP_Real SCIPgetDualfarkasLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
    assert(!SCIPconsIsOriginal(cons)); /* original constraints would always return 0 */
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -18490,8 +18480,7 @@ SCIP_ROW* SCIPgetRowLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -18544,8 +18533,8 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    int i;
 
    assert(scip != NULL);
+   assert(cons != NULL);
    assert(upgdcons != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
 
    *upgdcons = NULL;
 

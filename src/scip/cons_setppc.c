@@ -9223,7 +9223,6 @@ SCIP_RETCODE SCIPaddCoefSetppc(
    )
 {
    assert(var != NULL);
-   assert(SCIPconsGetSCIP(cons) == scip);
 
    /*debugMsg(scip, "adding variable <%s> to setppc constraint <%s>\n",
      SCIPvarGetName(var), SCIPconsGetName(cons));*/
@@ -9247,8 +9246,6 @@ int SCIPgetNVarsSetppc(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(SCIPconsGetSCIP(cons) == scip);
-
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
@@ -9269,8 +9266,6 @@ SCIP_VAR** SCIPgetVarsSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
-
-   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9293,8 +9288,6 @@ SCIP_SETPPCTYPE SCIPgetTypeSetppc(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(SCIPconsGetSCIP(cons) == scip);
-
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
@@ -9314,8 +9307,6 @@ SCIP_Real SCIPgetDualsolSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
-
-   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9340,8 +9331,6 @@ SCIP_Real SCIPgetDualfarkasSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
-
-   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9369,8 +9358,6 @@ SCIP_ROW* SCIPgetRowSetppc(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(SCIPconsGetSCIP(cons) == scip);
-
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
@@ -9391,8 +9378,6 @@ int SCIPgetNFixedonesSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
-
-   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9415,8 +9400,6 @@ int SCIPgetNFixedzerosSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
-
-   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

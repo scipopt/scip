@@ -5919,8 +5919,6 @@ int SCIPgetNVarsXor(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(SCIPconsGetSCIP(cons) == scip);
-
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not an xor constraint\n");
@@ -5941,8 +5939,6 @@ SCIP_VAR** SCIPgetVarsXor(
    )
 {
    SCIP_CONSDATA* consdata;
-
-   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5965,8 +5961,6 @@ SCIP_VAR* SCIPgetIntVarXor(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(SCIPconsGetSCIP(cons) == scip);
-
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not an xor constraint\n");
@@ -5987,8 +5981,6 @@ SCIP_Bool SCIPgetRhsXor(
    )
 {
    SCIP_CONSDATA* consdata;
-
-   assert(SCIPconsGetSCIP(cons) == scip);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
