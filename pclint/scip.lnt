@@ -73,6 +73,8 @@
 -emacro(666,SCIPquadprecProdQD)
 -emacro(666,SCIPquadprecSumQD)
 -emacro(644,SCIPquadprecSumQD)
+-emacro(644,QUAD_ASSIGN)
+-emacro(644,QUAD_TO_DBL)
 -emacro(644,QUAD)
 -emacro(665,QUAD)
 
@@ -109,6 +111,7 @@
 -emacro(774,SCIPdebugMsg)
 -emacro(774,SCIPdebugMessage)
 -emacro(774,SCIPdebugPrintf)
+-emacro(774,SCIPsetDebugMsgPrint)
 -emacro(774,SCIPsetDebugMsg)
 -emacro(774,SCIPstatisticPrintf)
 -emacro(774,SCIPstatisticMessage)
