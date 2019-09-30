@@ -19,12 +19,23 @@
  * @author Tobias Achterberg
  * @author Maxime Gasse
  *
- * The full strong branching rule applies strong branching to every fractional variable of the LP solution
- * at the current node of the branch-and-bound search. The rule selects the candidate
- * which will cause the highest gain of the dual bound in the created sub-tree among all branching variables.
- *
- * For calculating the gain, a look-ahead is performed by solving the child node LPs which will result
- * from branching on a variable.
+ * The vanilla full strong branching rule is a purged implementation of full
+ * strong branching, for academic purposes. It implements full strong branching
+ * with the following specific features:
+ * - no cutoff or domain reduction: only branching.
+ * - idempotent (optional): leave SCIP, as much as possible, in the same state
+ *   before / after the strong branching calls. Basically, do not update any
+ *   statistic.
+ * - donotbranch (optional): do no perform branching. So that the brancher can
+ *   be called as an oracle only (on which variable would you branch ? But do
+ *   not branch please).
+ * - scoreall (optional): continue scoring variables, even if infeasibility is
+ *   detected along the way.
+ * - collectscores (optional): store the candidate scores from the last call,
+ *   which can then be retrieved by calling SCIPgetVanillafullstrongData().
+ * - integralcands (optional): get candidates from SCIPgetPseudoBranchCands()
+ *   instead of SCIPgetLPBranchCands(), i.e., consider all non-fixed variables
+ *   as branching candidates, not only fractional ones.
  *
  * For a more mathematical description and a comparison between the strong branching rule and other branching rules
  * in SCIP, we refer to
