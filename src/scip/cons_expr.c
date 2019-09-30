@@ -1085,7 +1085,7 @@ SCIP_RETCODE forwardPropExpr(
             }
             else if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
             {
-               /* if already empty, then don't try to compute even better activitiy
+               /* if already empty, then don't try to compute even better activity
                 * we should have noted that we are infeasible, though (if not remove the assert and enable below code)
                 */
                assert(infeasible == NULL || *infeasible);
@@ -1466,6 +1466,8 @@ SCIP_RETCODE propConss(
 
          /* in the first round, we reevaluate all bounds to remove some possible leftovers that could be in this
           * expression from a reverse propagation in a previous propagation round
+          * (TODO: do we still need this since we have the tag's???
+          * this means that we propagate all constraints even if there was only very few boundchanges that related to only a few constraints)
           * in other rounds, we skip already propagated constraints
           */
          if( (consdata->ispropagated && roundnr > 0) || !SCIPconsIsPropagationEnabled(conss[i]) )
@@ -2252,7 +2254,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    assert(eventdata != NULL);
    expr = (SCIP_CONSEXPR_EXPR*) eventdata;
 
-   SCIPdebugMsg(scip, "  exec event %u for variable <%s>\n", eventtype, SCIPvarGetName(SCIPeventGetVar(event)));
+   SCIPdebugMsg(scip, "  exec event %#x for variable <%s>\n", eventtype, SCIPvarGetName(SCIPeventGetVar(event)));
 
    /* for real variables notify constraints to repropagate and possibly resimplify */
    if( SCIPisConsExprExprVar(expr) )
