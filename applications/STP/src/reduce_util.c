@@ -385,25 +385,25 @@ void distDataPathRootsFree(
    DISTDATA*             distdata            /**< to be initialized */
    )
 {
-   int* pathroot_blocksizes;
+   int* pathroot_blocksizesmax;
    PRSTATE** pathroot_blocks;
    const int halfnedges = g->edges / 2;
 
    assert(scip && g && distdata);
 
-   pathroot_blocksizes = distdata->pathroot_blocksizes;
+   pathroot_blocksizesmax = distdata->pathroot_blocksizesmax;
    pathroot_blocks = distdata->pathroot_blocks;
 
    for( int e = halfnedges - 1; e >= 0 ; e-- )
    {
-      const int size = pathroot_blocksizes[e];
+      const int maxsize = pathroot_blocksizesmax[e];
 
       /* is edge used? */
-      if( size > 0 )
+      if( maxsize > 0 )
       {
          assert(pathroot_blocks[e] != NULL);
 
-         SCIPfreeBlockMemoryArray(scip, &(pathroot_blocks[e]), size);
+         SCIPfreeBlockMemoryArray(scip, &(pathroot_blocks[e]), maxsize);
       }
       else
       {
@@ -747,7 +747,17 @@ void reduce_distDataDeleteEdge(
       }
    }
 
-   SCIPfreeBlockMemoryArray(scip, &(distdata->pathroot_blocks[halfedge]), npathroots);
+   if( distdata->pathroot_blocksizesmax[halfedge] > 0  )
+   {
+      assert(distdata->pathroot_blocksizes[halfedge] <= distdata->pathroot_blocksizesmax[halfedge]);
+
+      SCIPfreeBlockMemoryArray(scip, &(distdata->pathroot_blocks[halfedge]), distdata->pathroot_blocksizesmax[halfedge]);
+   }
+   else
+   {
+      assert(distdata->pathroot_blocks[halfedge] == NULL);
+   }
+
    distdata->pathroot_blocksizes[halfedge] = 0;
    distdata->pathroot_blocksizesmax[halfedge] = 0;
 }
