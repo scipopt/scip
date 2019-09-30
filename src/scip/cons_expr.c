@@ -5869,6 +5869,7 @@ SCIP_RETCODE enforceExprNlhdlr(
    SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
    SCIP_Bool             separated,          /**< whether another nonlinear handler already added a cut for this expression */
    SCIP_Bool             allowweakcuts,      /**< whether we allow for weak cuts */
+   SCIP_Bool             addbranchscores,    /**< whether to add branching scores */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -5988,7 +5989,7 @@ SCIP_RETCODE enforceExprNlhdlr(
       SCIPfreeRowprep(scip, &rowprep);
    }
 
-   if( *result == SCIP_DIDNOTFIND )
+   if( *result == SCIP_DIDNOTFIND && addbranchscores )
    {
       SCIP_Bool branchscoresuccess = FALSE;
 
@@ -6012,9 +6013,8 @@ SCIP_RETCODE enforceExpr(
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    unsigned int          soltag,             /**< tag of solution */
    SCIP_Bool             allowweakcuts,      /**< whether we allow weak cuts */
-   SCIP_Bool*            separated,          /**< buffer to store whether solution could be separated */
-   SCIP_Bool*            addedbranchcand,    /**< buffer to store whether a branching candidate was registered */
-   SCIP_Bool*            infeasible          /**< buffer to store whether infeasibility to was detected */
+   SCIP_Bool             addbranchscores,    /**< whether to add branching scores */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
    SCIP_Real auxvarvalue;
@@ -6027,13 +6027,9 @@ SCIP_RETCODE enforceExpr(
    assert(scip != NULL);
    assert(expr != NULL);
    assert(expr->auxvar != NULL);  /* there must be a variable attached to the expression in order to construct a cut here */
-   assert(separated != NULL);
-   assert(addedbranchcand != NULL);
-   assert(infeasible != NULL);
+   assert(result != NULL);
 
-   *separated = FALSE;
-   *addedbranchcand = FALSE;
-   *infeasible = FALSE;
+   *result = SCIP_DIDNOTFIND;
 
    auxvarvalue = SCIPgetSolVal(scip, sol, expr->auxvar);
 
@@ -6083,26 +6079,31 @@ SCIP_RETCODE enforceExpr(
          /* call the separation or estimation callback of the nonlinear handler for overestimation */
          hdlrresult = SCIP_DIDNOTFIND;
          SCIP_CALL( enforceExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol,
-            expr->enfos[e]->auxvalue, TRUE, *separated, allowweakcuts, &hdlrresult) );
+            expr->enfos[e]->auxvalue, TRUE, *result == SCIP_SEPARATED, allowweakcuts, addbranchscores, &hdlrresult) );
 
          if( hdlrresult == SCIP_CUTOFF )
          {
             SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
-            *infeasible = TRUE;
+            *result = SCIP_CUTOFF;
             break;
          }
 
          if( hdlrresult == SCIP_SEPARATED )
          {
             SCIPdebugMsg(scip, "nlhdlr <%s> separating the current solution\n", nlhdlr->name);
-            *separated = TRUE;
+            *result = SCIP_SEPARATED;
             /* TODO or should we always just stop here? */
          }
 
          if( hdlrresult == SCIP_BRANCHED )
          {
             SCIPdebugMsg(scip, "nlhdlr <%s> added branching candidate\n", nlhdlr->name);
-            *addedbranchcand = TRUE;
+            assert(addbranchscores);
+
+            /* separation takes precedence over branching */
+            assert(*result == SCIP_DIDNOTFIND || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED);
+            if( *result == SCIP_DIDNOTFIND )
+               *result = SCIP_BRANCHED;
          }
       }
 
@@ -6111,26 +6112,31 @@ SCIP_RETCODE enforceExpr(
          /* call the separation or estimation callback of the nonlinear handler for underestimation */
          hdlrresult = SCIP_DIDNOTFIND;
          SCIP_CALL( enforceExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol,
-            expr->enfos[e]->auxvalue, FALSE, *separated, allowweakcuts, &hdlrresult) );
+            expr->enfos[e]->auxvalue, FALSE, *result == SCIP_SEPARATED, allowweakcuts, addbranchscores, &hdlrresult) );
 
          if( hdlrresult == SCIP_CUTOFF )
          {
             SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
-            *infeasible = TRUE;
+            *result = SCIP_CUTOFF;
             break;
          }
 
          if( hdlrresult == SCIP_SEPARATED )
          {
             SCIPdebugMsg(scip, "nlhdlr <%s> separating the current solution\n", nlhdlr->name);
-            *separated = TRUE;
+            *result = SCIP_SEPARATED;
             /* TODO or should we always just stop here? */
          }
 
          if( hdlrresult == SCIP_BRANCHED )
          {
             SCIPdebugMsg(scip, "nlhdlr <%s> added branching candidate\n", nlhdlr->name);
-            *addedbranchcand = TRUE;
+            assert(addbranchscores);
+
+            /* separation takes precedence over branching */
+            assert(*result == SCIP_DIDNOTFIND || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED);
+            if( *result == SCIP_DIDNOTFIND )
+               *result = SCIP_BRANCHED;
          }
       }
    }
@@ -6148,6 +6154,7 @@ SCIP_RETCODE enforceConstraints2(
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    unsigned int          soltag,             /**< tag of solution */
    SCIP_Bool             allowweakcuts,      /**< whether to allow weak cuts in this round */
+   SCIP_Bool             addbranchscores,    /**< whether to add branching scores */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
@@ -6155,9 +6162,6 @@ SCIP_RETCODE enforceConstraints2(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_Bool separated;
-   SCIP_Bool addedbranchcand;
-   SCIP_Bool infeasible;
    int c;
 
    assert(conss != NULL || nconss == 0);
@@ -6167,7 +6171,8 @@ SCIP_RETCODE enforceConstraints2(
    assert(conshdlrdata != NULL);
 
    /* increase tag to tell whether branching scores in expression belong to this sweep */
-   ++(conshdlrdata->lastbrscoretag);
+   if( addbranchscores )
+      ++(conshdlrdata->lastbrscoretag);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
@@ -6206,20 +6211,25 @@ SCIP_RETCODE enforceConstraints2(
 
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
+         SCIP_Bool resultexpr;
+
          /* it only makes sense to call the separation callback if there is a variable attached to the expression */
          if( expr->auxvar == NULL )
             continue;
 
-         SCIP_CALL( enforceExpr(scip, conshdlr, conss[c], expr, sol, soltag, allowweakcuts, &separated, &addedbranchcand, &infeasible) );
+         SCIP_CALL( enforceExpr(scip, conshdlr, conss[c], expr, sol, soltag, allowweakcuts, addbranchscores, &resultexpr) );
 
-         if( infeasible )
+         if( resultexpr == SCIP_CUTOFF )
          {
             *result = SCIP_CUTOFF;
             break;
          }
 
-         if( separated )
+         if( resultexpr == SCIP_SEPARATED )
             *result = SCIP_SEPARATED;
+
+         if( resultexpr == SCIP_BRANCHED && *result != SCIP_SEPARATED )
+            *result = SCIP_BRANCHED;
       }
 
       if( *result == SCIP_CUTOFF )
@@ -6228,7 +6238,7 @@ SCIP_RETCODE enforceConstraints2(
 
    SCIPexpriteratorFree(&it);
 
-   if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || !addedbranchcand )
+   if( *result != SCIP_BRANCHED )
       return SCIP_OKAY;
 
    /* propagate branching scores from expressions with children to variable expressions
@@ -6622,16 +6632,24 @@ SCIP_RETCODE enforceConstraints(
    }
 
    /* try without weak cuts */
-   SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, FALSE, result) );
+   SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, FALSE, TRUE, result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED )
+   {
+      if( *result == SCIP_BRANCHED )
+         *result = SCIP_INFEASIBLE;
       return SCIP_OKAY;
+   }
 
    /* retry with weak cuts */
-   SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, TRUE, result) );
+   SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, TRUE, TRUE, result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED )
+   {
+      if( *result == SCIP_BRANCHED )
+         *result = SCIP_INFEASIBLE;
       return SCIP_OKAY;
+   }
 
 #if 0
    if( conshdlrdata->tightenlpfeastol && maxvarboundviol > 0.0 )
