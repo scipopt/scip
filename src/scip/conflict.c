@@ -3082,7 +3082,9 @@ SCIP_RETCODE createAndAddProofcons(
 
    /* check if conflict contains variables that are invalid after a restart to label it appropriately */
    hasrelaxvar = FALSE;
+   contonly = TRUE;
    for( i = 0; i < nnz && !hasrelaxvar; ++i )
+   {
       hasrelaxvar = SCIPvarIsRelaxationOnly(vars[inds[i]]);
 
       if( SCIPvarIsIntegral(vars[inds[i]]) )
