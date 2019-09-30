@@ -6071,6 +6071,14 @@ SCIP_RETCODE enforceExpr(
       /* SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
       SCIPinfoMessage(scip, NULL, " (%p): auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> auxvalue: %.15g\n", (void*)expr, auxvarvalue, expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue); */
 
+      /* TODO if expr is root of constraint (consdata->expr == expr),
+       * then compare auxvalue with constraint sides instead of auxvarvalue, as the former is what actually matters
+       * that is, if auxvalue is good enough for the constraint to be satisfied, but when looking at evalvalue we see
+       * the the constraint is violated, then some of the auxvars that nlhdlr uses is not having a good enough value,
+       * so we should enforce in these auxiliaries first
+       * if changing this here, we must also adapt analyzeViolation
+       */
+
       SCIPdebugMsg(scip, "sepa of nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate);
 
       /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
