@@ -1136,6 +1136,14 @@ int RtoString(
    return ret;
 }
 
+const char* RgetString(
+   SCIP_Rational*        r
+   )
+{
+   assert(r != NULL);
+   return r->r->str().c_str();
+}
+
 /** return the strlen of a rational number */
 SCIP_Longint Rstrlen(
    SCIP_Rational*        r                /** rational to consider */
@@ -1540,8 +1548,8 @@ SCIP_RETCODE SCIPrationalarrayCopy(
    SCIP_CALL( SCIPrationalarrayCreate(rationalarray, blkmem) );
    if( sourcerationalarray->valssize > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*rationalarray)->vals, sourcerationalarray->vals, \
-                     sourcerationalarray->valssize) );
+      SCIP_CALL( RcopyArray(blkmem, &(*rationalarray)->vals, sourcerationalarray->vals,
+            sourcerationalarray->valssize) );
    }
    (*rationalarray)->valssize = sourcerationalarray->valssize;
    (*rationalarray)->firstidx = sourcerationalarray->firstidx;

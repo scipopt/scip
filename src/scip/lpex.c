@@ -3475,7 +3475,7 @@ SCIP_RETCODE SCIPlpexCreate(
    (*lp)->flushaddedrows = FALSE;
    (*lp)->updateintegrality = TRUE;
    (*lp)->flushed = TRUE;
-   (*lp)->solved = TRUE;
+   (*lp)->solved = FALSE;
    (*lp)->primalfeasible = TRUE;
    (*lp)->primalchecked = TRUE;
    (*lp)->dualfeasible = TRUE;
@@ -4226,7 +4226,7 @@ void SCIProwexGetSolFeasibility(
 
    assert(row != NULL);
 
-   SCIProwexGetSolActivity(row, set, stat, sol, result);
+   SCIProwexGetSolActivity(row, set, stat, sol, NULL, FALSE, result);
 
    Rdiff(temp1, row->rhs, result);
    Rdiff(temp2, result, row->lhs);
@@ -4242,7 +4242,9 @@ void SCIProwexGetSolActivity(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_SOLEX*           solex,              /**< exact primal CIP solution */
+   SCIP_Bool             useexact,           /**< should the exact solution be used */
+   SCIP_Rational*        result              /**< resulting activity */
    )
 {
    /** todo: exip: rational solution might be necessary */
@@ -4263,8 +4265,10 @@ void SCIProwexGetSolActivity(
 
       assert((i < rowex->nlpcols) == (rowex->linkpos[i] >= 0
          && colex->lppos >= 0));
-
-      RsetReal(solval, SCIPsolGetVal(sol, set, stat, colex->var));
+      if( useexact )
+         SCIPsolexGetVal(solval, solex, set, stat, colex->var);
+      else
+         RsetReal(solval, SCIPsolGetVal(sol, set, stat, colex->var));
 
       if( RisAbsInfinity(solval) ) /*lint !e777*/
       {

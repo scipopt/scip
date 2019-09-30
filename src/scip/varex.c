@@ -357,7 +357,7 @@ SCIP_Rational* SCIPvarGetBestBoundLocalExact(
    assert(var->exactdata->obj != NULL);
 
    if( RisPositive(var->exactdata->obj) || RisZero(var->exactdata->obj) )
-      return var->exactdata->locdom.ub;
+      return var->exactdata->locdom.lb;
    else
       return var->exactdata->locdom.ub;
 }
@@ -695,7 +695,7 @@ SCIP_RETCODE SCIPvarAddExactData(
    SCIP_CALL( Rcopy(blkmem, &var->exactdata->locdom.ub, ub) );
 
    var->exactdata->excol = NULL;
-   var->exactdata->exvarstatus = SCIP_VARSTATUS_LOOSE;
+   var->exactdata->exvarstatus = var->varstatus;
 
    if( obj != NULL )
       SCIP_CALL( Rcopy(blkmem, &var->exactdata->obj, obj) );

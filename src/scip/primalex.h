@@ -54,7 +54,8 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPprimalexCreate(
    SCIP_PRIMALEX**       primal,             /**< pointer to exact primal data */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PRIMAL*          fpstorage           /**< fp storage */
    );
 
 
@@ -67,7 +68,7 @@ SCIP_RETCODE SCIPprimalexFree(
 
 /** adds exact primal solution to solution storage, frees the solution afterwards */
 extern
-SCIP_RETCODE SCIPprimalexAddSolFree(
+SCIP_RETCODE SCIPprimalexTrySolFree(
    SCIP_PRIMALEX*        primal,             /**< primal data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -98,9 +99,9 @@ SCIP_RETCODE SCIPprimalexClear(
 /** inserts solution into the global array of all existing primal solutions */
 extern
 SCIP_RETCODE SCIPprimalexSolexCreated(
-   SCIP_PRIMALEX*          primal,             /**< primal data */
+   SCIP_PRIMALEX*        primal,             /**< primal data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_SOLEX*             sol                 /**< primal CIP solution */
+   SCIP_SOLEX*           sol                 /**< primal CIP solution */
    );
 
 /** removes solution from the global array of all existing primal solutions */
@@ -109,8 +110,6 @@ void SCIPprimalexSolexFreed(
    SCIP_PRIMALEX*          primal,             /**< primal data */
    SCIP_SOLEX*             sol                 /**< primal CIP solution */
    );
-
-
 
 #ifdef __cplusplus
 }

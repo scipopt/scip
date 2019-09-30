@@ -34,6 +34,7 @@
 #include "scip/relax.h"
 #include "scip/set.h"
 #include "scip/sol.h"
+#include "scip/solex.h"
 #include "scip/stat.h"
 #include "scip/struct_lp.h"
 #include "scip/struct_prob.h"
@@ -382,8 +383,11 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->viol.relviolbounds = sourcesol->viol.relviolbounds;
    (*sol)->viol.relviolcons = sourcesol->viol.relviolcons;
    (*sol)->viol.relviollprows = sourcesol->viol.relviollprows;
-   /** @todo exip: copy solex here */
-   (*sol)->solex = NULL;
+   if( sourcesol->solex != NULL )
+   {
+      SCIP_CALL( SCIPsolexCopy(&(*sol)->solex, blkmem, set, stat, primal->primalex, sourcesol->solex) );
+      (*sol)->solex->fpsol = (*sol);
+   }
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -771,6 +775,10 @@ SCIP_RETCODE SCIPsolFree(
 
    SCIP_CALL( SCIPrealarrayFree(&(*sol)->vals) );
    SCIP_CALL( SCIPboolarrayFree(&(*sol)->valid) );
+   if( (*sol)->solex != NULL )
+   {
+      SCIP_CALL( SCIPsolexFree(&((*sol)->solex), blkmem, primal->primalex) );
+   }
    BMSfreeBlockMemory(blkmem, sol);
 
    return SCIP_OKAY;

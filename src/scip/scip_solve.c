@@ -87,6 +87,7 @@
 #include "scip/pricer.h"
 #include "scip/pricestore.h"
 #include "scip/primal.h"
+#include "scip/primalex.h"
 #include "scip/prob.h"
 #include "scip/prop.h"
 #include "scip/reader.h"
@@ -443,12 +444,13 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPeventqueueCreate(&scip->eventqueue) );
    SCIP_CALL( SCIPbranchcandCreate(&scip->branchcand) );
    SCIP_CALL( SCIPlpCreate(&scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
+   SCIP_CALL( SCIPprimalCreate(&scip->primal) );
    if( SCIPisExactSolve(scip) )
    {
       SCIP_CALL( SCIPlpexCreate(&scip->lpex, SCIPblkmem(scip), scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
-      SCIP_CALL( SCIPprimalexCreate(&scip->primalex, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPprimalexCreate(&scip->primalex, SCIPblkmem(scip), scip->primal) );
    }
-   SCIP_CALL( SCIPprimalCreate(&scip->primal) );
+
    SCIP_CALL( SCIPtreeCreate(&scip->tree, scip->mem->probmem, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
    SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree) );
    SCIP_CALL( SCIPconflictCreate(&scip->conflict, scip->mem->probmem, scip->set) );
@@ -2128,13 +2130,13 @@ SCIP_RETCODE freeTransform(
 
    /* free the debug solution which might live in transformed primal data structure */
    SCIP_CALL( SCIPdebugFreeSol(scip->set) ); /*lint !e506 !e774*/
-   SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
 
    if( SCIPisExactSolve(scip) )
    {
       SCIP_CALL( SCIPlpexFree(&scip->lpex, SCIPblkmem(scip), scip->set, scip->eventqueue, scip->eventfilter) );
       SCIP_CALL( SCIPprimalexFree(&scip->primalex, SCIPblkmem(scip)) );
    }
+   SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
    SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
 
    SCIP_CALL( SCIPbranchcandFree(&scip->branchcand) );

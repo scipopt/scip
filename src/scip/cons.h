@@ -104,6 +104,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   SCIP_DECL_CONSCHECKEX ((*conscheckex)),   /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    SCIP_DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
@@ -292,6 +293,20 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** calls exact feasibility check method of constraint handler */
+SCIP_RETCODE SCIPconshdlrCheckExact(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SOLEX*           sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
@@ -532,6 +547,13 @@ extern
 void SCIPconshdlrSetGetDiveBdChgs(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)) /**< constraint handler diving solution enforcement method */
+   );
+
+/** sets exact cons checking method of constraint handler */
+extern
+void SCIPconshdlrSetCheckExact(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSCHECKEX((*conscheckex))     /**< constraint handler exact solution checking method */
    );
 
 /*

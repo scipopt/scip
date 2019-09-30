@@ -70,7 +70,7 @@
 #define DEFAULT_INITCAND         100         /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0           /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
 #define DEFAULT_MAXBDCHGS        5           /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
-#define DEFAULT_MAXPROPROUNDS   -2           /**< maximum number of propagation rounds to be performed during strong branching
+#define DEFAULT_MAXPROPROUNDS    0           /**< maximum number of propagation rounds to be performed during strong branching
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
 #define DEFAULT_PROBINGBOUNDS    TRUE        /**< should valid bounds be identified in a probing-like fashion during strong
                                               *   branching (only with propagation)? */
@@ -800,7 +800,7 @@ SCIP_RETCODE execRelpscost(
          SCIP_Bool usesb;
 
          assert(branchcands[c] != NULL);
-         assert(!SCIPisFeasIntegral(scip, branchcandssol[c]));
+         assert(!SCIPisFeasIntegral(scip, branchcandssol[c]) || SCIPisExactSolve(scip));
 
          /* get conflict, inference, cutoff, nonlinear, and pseudo cost scores for candidate */
          conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
@@ -992,7 +992,7 @@ SCIP_RETCODE execRelpscost(
 
          /* get candidate number to initialize */
          c = initcands[i];
-         assert(!SCIPisFeasIntegral(scip, branchcandssol[c]));
+         assert(!SCIPisFeasIntegral(scip, branchcandssol[c]) || SCIPisExactSolve(scip));
 
          if( branchruledata->skipbadinitcands )
          {
@@ -1418,7 +1418,7 @@ SCIP_RETCODE execRelpscost(
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nbranchcands);
       assert(!SCIPisFeasIntegral(scip, branchcandssol[bestcand]));
-      assert(!allcolsinlp || SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
+      assert(!allcolsinlp || SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)) || exactsolve);
       assert(!bestsbdowncutoff && !bestsbupcutoff);
 
       var = branchcands[bestcand];

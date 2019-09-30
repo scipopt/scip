@@ -160,6 +160,7 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSENFORELAX ((*consenforelax)); /**< enforcing constraints for relaxation solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops));    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck));     /**< check feasibility of primal solution */
+   SCIP_DECL_CONSCHECKEX ((*conscheckex));     /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop));      /**< propagate variable domains */
    SCIP_DECL_CONSPRESOL  ((*conspresol));    /**< presolving method */
    SCIP_DECL_CONSRESPROP ((*consresprop));   /**< propagation conflict resolving method */

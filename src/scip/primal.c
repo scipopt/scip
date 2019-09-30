@@ -140,6 +140,7 @@ SCIP_RETCODE SCIPprimalCreate(
    (*primal)->upperbound = SCIP_INVALID;
    (*primal)->cutoffbound = SCIP_INVALID;
    (*primal)->updateviolations = TRUE;
+   (*primal)->primalex = NULL;
 
    return SCIP_OKAY;
 }

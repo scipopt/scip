@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
-
+ 
 #include "scip/bounding_exact.h"
 #include "scip/struct_set.h"
 #include "scip/pub_message.h"
@@ -52,7 +52,30 @@
 #define PSWARMSTARTAUXPROB         TRUE
 #define PSPOSTPROCESSDUALSOL       TRUE
 
+static
+SCIP_Bool fpLPisIntFeasible(
+   SCIP_LP*              lp,
+   SCIP_SET*             set,
+   SCIP_STAT*            stat
+   )
+{
+   SCIP_Real primsol;
+   SCIP_Bool feasible;
+   int nfracs;
+   int i;
 
+   assert( SCIPlpIsSolved(lp));
+
+   feasible = TRUE;
+   for( i = 0; i < lp->ncols && feasible; i++ )
+   {
+      primsol = SCIPcolGetPrimsol(lp->cols[i]);
+      if( !SCIPsetIsIntegral(set, primsol) )
+         feasible = FALSE;
+   }
+
+   return feasible;
+}
 
 /** evaluates the result of the exact LP */
 static
@@ -212,14 +235,14 @@ SCIP_RETCODE solveLpExact(
             RgetRealRelax(lpex->lpobjval, SCIP_ROUND_DOWNWARDS), lp->lpobjval);
       lp->lpobjval = RgetRealRelax(lpex->lpobjval, SCIP_ROUND_DOWNWARDS);
       lp->hasprovedbound = TRUE;
-      lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
+      lpex->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    }
    else if( SCIPlpiexIsPrimalUnbounded(lpex->lpiex) )
    {
       /** @todo exip: where to save the ray? */
       SCIP_CALL( SCIPlpexGetPrimalRay(lpex, set, NULL) );
       lp->hasprovedbound = TRUE;
-      lp->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDEDRAY;
+      lpex->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDEDRAY;
    }
    else if( SCIPlpiexIsPrimalInfeasible(lpex->lpiex) )
    {
@@ -2145,7 +2168,6 @@ SCIP_RETCODE constructPSData(
 
    SCIP_CALL( RcreateArray(blkmem, &psdata->violation, lpex->ncols) );
    SCIP_CALL( RcreateArray(blkmem, &psdata->correction, psdata->nextendedrows) );
-   psdata->approxdualsize = lpex->ncols + lpex->nrows;
    psdata->violationsize = lpex->ncols;
 
    SCIPclockStop(stat->provedfeaspstime, set);
@@ -3375,7 +3397,7 @@ char chooseBoundingMethod(
    if( dualfarkas )
    {
       /* check if neumair-scher is possible */
-      if( SCIPlpexBSpossible(lpex) )
+      if( SCIPlpexBSpossible(lpex) && !SCIPisCertificateActive(set->scip) )
          dualboundmethod = 'n';
       /* check if project and shift is possible */
       else if( SCIPlpexPSpossible(lpex) )
@@ -3680,7 +3702,7 @@ SCIP_RETCODE boundShift(
    SCIPsetFreeBufferArray(set, &y);
 
    *safebound = SCIPintervalGetInf(minprod);
-   //printf("safebound computed: %e, previous fp-bound: %e, difference %e \n", *safebound, lp->lpobjval, *safebound - lp->lpobjval);
+   SCIPdebugMessage("safebound computed: %e, previous fp-bound: %e.17, difference %e.17 \n", *safebound, lp->lpobjval, *safebound - lp->lpobjval);
 
    /* stop timing and update number of calls and fails, and proved bound status */
    if ( usefarkas )
@@ -3702,15 +3724,7 @@ SCIP_RETCODE boundShift(
       stat->nboundshift++;
       if( !SCIPsetIsInfinity(set, -1.0 * (*safebound)) )
       {
-#ifdef WITH_EXACTSOLVE
-         /* SCIP_CONS** conss;
-
-         conss = SCIPgetConss(set->scip);
-         assert(conss != NULL);
-         assert(SCIPgetnrows(set->scip) == 1); */
-
-         //SCIP_CALL( SCIPcomputeDualboundQuality(set->scip, conss[0], *safebound) );
-#endif
+         lp->lpobjval = *safebound;
          lp->hasprovedbound = TRUE;
       }
       else
@@ -3766,10 +3780,15 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
    char dualboundmethod;
 
    /* If we are not in exact solving mode, just return */
-   if( !set->misc_exactsolve || lp->hasprovedbound )
+   if( !set->misc_exactsolve )
       return SCIP_OKAY;
 
    assert(set->misc_exactsolve);
+   assert(!lp->hasprovedbound);
+
+   /* if the lp was solved to optimality and there are no fractional variables we solve exactly to generate a feasible solution */
+   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lp, set, stat) )
+      lpex->forceexactsolve = TRUE;
 
    /* choose which bounding method to use. only needed if automatic is enabled. */
    if( lpex->forceexactsolve )
@@ -3782,6 +3801,8 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
                               prob, itlim, lperror, dualfarkas, safebound);
    else
       dualboundmethod = set->misc_dbmethod;
+
+   SCIPdebugMessage("Computing safe bound for lp with status: %d using bounding method %c \n", SCIPlpGetSolstat(lp), dualboundmethod);
 
    switch(dualboundmethod)
    {
@@ -3800,7 +3821,7 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
          SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
          SCIPABORT();
          break;
-      /* project and scale */
+      /* project and shift */
       case 'p':
          SCIP_CALL( constructPSData(lp, lpex, set, stat, messagehdlr, eventqueue, eventfilter,
                         prob, blkmem) );

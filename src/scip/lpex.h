@@ -349,11 +349,13 @@ void SCIProwexGetSolFeasibility(
 /** returns the activity of a row for a given solution */
 extern
 void SCIProwexGetSolActivity(
-   SCIP_ROWEX*           row,                /**< LP row */
+   SCIP_ROWEX*           rowex,              /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_SOLEX*           solex,              /**< exact primal CIP solution */
+   SCIP_Bool             useexact,           /**< should the exact solution be used */
+   SCIP_Rational*        result              /**< resulting activity */
    );
 
 /** decreases usage counter of LP row, and frees memory if necessary */

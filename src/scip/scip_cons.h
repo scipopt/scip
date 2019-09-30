@@ -121,6 +121,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   SCIP_DECL_CONSCHECKEX ((*conscheckex)),   /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    SCIP_DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
@@ -599,6 +600,22 @@ SCIP_RETCODE SCIPsetConshdlrGetDiveBdChgs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)) /**< constraint handler diving solution enforcement method */
+   );
+
+/** sets exact solution checking method
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetConshdlrCheckExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSCHECKEX((*conscheckex))     /**< constraint handler diving solution enforcement method */
    );
 
 /** returns the constraint handler of the given name, or NULL if not existing */

@@ -74,13 +74,26 @@ SCIP_RETCODE SCIPsolexCreateLPexSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates primal CIP solution, initialized to the current solution */
+SCIP_RETCODE SCIPsolexCreateCurrentSol(
+   SCIP_SOLEX**          sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_PRIMALEX*        primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates a copy of a primal CIP solution */
 SCIP_RETCODE SCIPsolexCopy(
    SCIP_SOLEX**          sol,                /**< pointer to store the copy of the primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_PRIMALEX*        primal,             /**< primal data */
    SCIP_SOLEX*           sourcesol           /**< primal CIP solution to copy */
    );
 
@@ -113,6 +126,17 @@ SCIP_RETCODE SCIPsolexSetVal(
    SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_VAR*             var,                /**< variable to add to solution */
    SCIP_Rational*        val                 /**< solution value of variable */
+   );
+
+/** overwrite FP solution with exact values */
+SCIP_RETCODE SCIPsolexOverwriteFPSol(
+   SCIP_SOL*             fpsol,              /**< fp primal CIP solution */
+   SCIP_SOLEX*           sol,                /**< exact primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< problem data */
+   SCIP_PROB*            transprob,          /**< problem data */
+   SCIP_TREE*            tree                /**< branch and bound tree, or NULL */
    );
 
 /** returns value of variable in primal CIP solution */
@@ -163,6 +187,16 @@ SCIP_RETCODE SCIPsolexLinkLPexSol(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LPEX*            lp                  /**< current LP data */
+   );
+
+/** copies current pseudo solution into CIP solution by linking */
+SCIP_RETCODE SCIPsolexLinkPseudoSol(
+   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LPEX*            lp                  /**< current LP data */
    );
 
@@ -219,6 +253,16 @@ extern
 void SCIPsolexSetPrimalexIndex(
    SCIP_SOLEX*             sol,                /**< primal CIP solution */
    int                   primalindex         /**< new primal index of solution */
+   );
+
+extern
+SCIP_SOL* SCIPsolexGetFpSol(
+   SCIP_SOLEX*           sol                 /**< primal CIP solution */
+   );
+
+extern
+SCIP_SOLEX* SCIPsolGetExSol(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 #endif

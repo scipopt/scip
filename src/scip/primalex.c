@@ -262,6 +262,29 @@ SCIP_RETCODE ensureSolsSize(
    return SCIP_OKAY;
 }
 
+/** ensures, that existingsols array can store at least num entries */
+static
+SCIP_RETCODE ensureExistingsolsSize(
+   SCIP_PRIMALEX*        primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(primal->nexistingsols <= primal->existingsolssize);
+
+   if( num > primal->existingsolssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&primal->existingsols, newsize) );
+      primal->existingsolssize = newsize;
+   }
+   assert(num <= primal->existingsolssize);
+
+   return SCIP_OKAY;
+}
+
 /** adds exact primal solution to solution storage at given position */
 static
 SCIP_RETCODE primalexAddSol(
@@ -273,6 +296,7 @@ SCIP_RETCODE primalexAddSol(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -282,6 +306,7 @@ SCIP_RETCODE primalexAddSol(
    )
 {
    SCIP_SOLEX* sol;
+   SCIP_Bool stored;
    /* cppcheck-suppress unassignedVariable */
    SCIP_EVENT event;
    SCIP_Rational* obj;
@@ -334,6 +359,7 @@ SCIP_RETCODE primalexAddSol(
    /* completely fill the solution's own value array to unlink it from the LP or pseudo solution */
    SCIP_CALL( SCIPsolexUnlink(sol, set, transprob) );
 
+#if 0
    /* allocate memory for solution storage */
    SCIP_CALL( ensureSolsSize(primal, set, set->limit_maxsol) );
 
@@ -379,19 +405,53 @@ SCIP_RETCODE primalexAddSol(
          primal->nlimsolsfound++;
    }
 
-   /* if an original solution was added during solving, try to transfer it to the transformed space */
-   if( (sol->solorigin == SCIP_SOLORIGIN_ORIGINAL) && SCIPsetGetStage(set) == SCIP_STAGE_SOLVING && set->misc_transorigsols )
+   SCIPsetDebugMsg(set, " -> stored at position %d of %d solutions, found %" SCIP_LONGINT_FORMAT " solutions\n",
+      insertpos, primal->nsols, primal->nsolsfound);
+
+   /* update the solution value sums in variables */
+   /* if( !SCIPsolIsOriginal(sol) )
    {
-      SCIPerrorMessage("feature not implemented in exact mode yet \n");
-      SCIPABORT();
-      /* SCIP_Bool added;
+      SCIPsolUpdateVarsum(sol, set, stat, transprob,
+         (SCIP_Real)(primal->nsols - insertpos)/(SCIP_Real)(2.0*primal->nsols - 1.0));
+   }
+ */
+   /* change color of node in visualization output */
+   // SCIPvisualFoundSolution(stat->visual, set, stat, SCIPtreeGetCurrentNode(tree), insertpos == 0 ? TRUE : FALSE, sol);
+   #endif
+   SCIP_CALL( SCIPsolexOverwriteFPSol(sol->fpsol, sol, set, stat, origprob, transprob, tree) );
+   /* note: we copy the solution so to not destroy the double-link between sol and fpsol */
+   SCIP_CALL( SCIPprimalAddSolFree(primal->fpstorage, blkmem, set, messagehdlr, stat,
+            origprob, transprob, tree, reopt,
+            lp->fplp, eventqueue, eventfilter, &sol->fpsol, &stored) );
+
+   /* check, if the global upper bound has to be updated */
+   if( RisLT(obj, primal->cutoffbound) && insertpos == 0 )
+   {
+      Rset(primal->upperbound, obj);
+      Rset(primal->cutoffbound, obj);
+
+      primal->nbestsolsfound++;
+      stat->bestsolnode = stat->nnodes;
+   }
+   // else
+   // {
+   //    /* issue POORSOLFOUND event */
+   //    SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_POORSOLFOUND) );
+   // }
+   // SCIP_CALL( SCIPeventChgSol(&event, sol->fpsol) );
+   // SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+
+   /* if an original solution was added during solving, try to transfer it to the transformed space */
+   /* if( SCIPsolIsOriginal(sol) && SCIPsetGetStage(set) == SCIP_STAGE_SOLVING && set->misc_transorigsols )
+   {
+      SCIP_Bool added;
 
       SCIP_CALL( SCIPprimalTransformSol(primal, sol, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt,
             lp, eventqueue, eventfilter, NULL, NULL, 0, &added) );
 
       SCIPsetDebugMsg(set, "original solution %p was successfully transferred to the transformed problem space\n",
-         (void*)sol); */
-   }
+         (void*)sol);
+   } */
 
    return SCIP_OKAY;
 }
@@ -399,13 +459,15 @@ SCIP_RETCODE primalexAddSol(
 /** creates exact primal data */
 SCIP_RETCODE SCIPprimalexCreate(
    SCIP_PRIMALEX**       primal,             /**< pointer to exact primal data */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PRIMAL*          fpstorage           /**< the fp primal storage */
    )
 {
    assert(primal != NULL);
 
    SCIP_ALLOC( BMSallocMemory(primal) );
    (*primal)->sols = NULL;
+   (*primal)->existingsols = NULL;
    (*primal)->solssize = 0;
    (*primal)->nsolsfound = 0;
    (*primal)->nlimsolsfound = 0;
@@ -418,6 +480,9 @@ SCIP_RETCODE SCIPprimalexCreate(
    (*primal)->existingsolssize = 0;
    (*primal)->nexistingsols = 0;
    (*primal)->updateviolations = TRUE;
+   /* double-link the two storages */
+   (*primal)->fpstorage = fpstorage;
+   fpstorage->primalex = (*primal);
    SCIP_CALL( RcreateString(blkmem, &(*primal)->upperbound, "inf") );
    SCIP_CALL( RcreateString(blkmem, &(*primal)->cutoffbound, "inf") );
 
@@ -444,6 +509,7 @@ SCIP_RETCODE SCIPprimalexFree(
    Rdelete(blkmem, &(*primal)->cutoffbound);
    Rdelete(blkmem, &(*primal)->upperbound);
 
+   BMSfreeMemoryArrayNull(&(*primal)->existingsols);
    BMSfreeMemoryArrayNull(&(*primal)->sols);
    BMSfreeMemory(primal);
 
@@ -451,7 +517,7 @@ SCIP_RETCODE SCIPprimalexFree(
 }
 
 /** adds exact primal solution to solution storage, frees the solution afterwards */
-SCIP_RETCODE SCIPprimalexAddSolFree(
+SCIP_RETCODE SCIPprimalexTrySolFree(
    SCIP_PRIMALEX*        primal,             /**< primal data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -500,7 +566,7 @@ SCIP_RETCODE SCIPprimalexAddSolFree(
    if( feasible )
    {
       SCIP_CALL( primalexAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-      tree, lp, eventqueue, eventfilter, sol, insertpos, replace) );
+            tree, reopt, lp, eventqueue, eventfilter, sol, insertpos, replace) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */
       *sol = NULL;
@@ -508,8 +574,12 @@ SCIP_RETCODE SCIPprimalexAddSolFree(
    }
    else
    {
+      SCIP_SOL* fpsol;
       /* the solution is too bad or infeasible -> free it immediately */
+      fpsol = (*sol)->fpsol;
       SCIP_CALL( SCIPsolexFree(sol, blkmem, primal) );
+      SCIP_CALL( SCIPsolFree(&fpsol, blkmem, primal->fpstorage) );
+   
       *stored = FALSE;
    }
 

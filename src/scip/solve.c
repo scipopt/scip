@@ -2871,13 +2871,14 @@ SCIP_RETCODE applyBounding(
 
       /* update lower bound w.r.t. the pseudo solution */
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set, transprob);
+
+      SCIP_CALL( SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex, focusnode, set, transprob, pseudoobjval) );
+
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, pseudoobjval);
       SCIPsetDebugMsg(set, " -> lower bound: %g [%g] (pseudoobj: %g [%g]), cutoff bound: %g [%g]\n",
          SCIPnodeGetLowerbound(focusnode), SCIPprobExternObjval(transprob, origprob, set, SCIPnodeGetLowerbound(focusnode)) + SCIPgetOrigObjoffset(set->scip),
          pseudoobjval, SCIPprobExternObjval(transprob, origprob, set, pseudoobjval) + SCIPgetOrigObjoffset(set->scip),
          primal->cutoffbound, SCIPprobExternObjval(transprob, origprob, set, primal->cutoffbound) + SCIPgetOrigObjoffset(set->scip));
-
-      SCIP_CALL( SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex, focusnode, set, transprob, FALSE) );
 
       /* check for infeasible node by bounding */
       if( (set->misc_exactsolve && SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound)
@@ -4751,22 +4752,24 @@ SCIP_RETCODE addCurrentSolution(
       {
          SCIP_CALL( SCIPsolexCreateLPexSol(&solex, sol, blkmem, set, stat, transprob, set->scip->primalex, tree, lp->lpex, NULL) );
 
-         SCIP_CALL( SCIPprimalexAddSolFree(set->scip->primalex, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpex,
+         SCIP_CALL( SCIPprimalexTrySolFree(set->scip->primalex, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpex,
                eventqueue, eventfilter, &solex, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
-      }
-
-      SCIPsetDebugMsg(set, "found lp solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
-
-      if( checksol || set->misc_exactsolve )
-      {
-         /* if we want to solve exactly, we have to check the solution exactly again */
-         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
       }
       else
       {
-         SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, &sol, &foundsol) );
+         SCIPsetDebugMsg(set, "found lp solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
+
+         if( checksol || set->misc_exactsolve )
+         {
+            /* if we want to solve exactly, we have to check the solution exactly again */
+            SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
+                  eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
+                  eventqueue, eventfilter, &sol, &foundsol) );
+         }
       }
 
       if( foundsol )
@@ -5139,28 +5142,7 @@ SCIP_RETCODE SCIPsolveCIP(
          {
             SCIP_RESULT result;
 
-            assert(set->misc_exactsolve);
-            {
-               /** @todo: exip: is this the way to go? */
-               SCIP_Real bound;
-               SCIP_Bool lperror;
-               /** have to force exact lp solve, since we can't branch anymore and fp-lp is infeasible*/
-               lp->lpex->forceexactsolve = TRUE;
-               lp->hasprovedbound = FALSE;
-
-               SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, 
-                     transprob, lp->lpiitlim, &lperror, lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL, &bound);
-               SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp);
-               if( SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound )
-               {
-                  result = SCIP_CUTOFF;
-                  cutoff = TRUE;
-               }
-               else
-                  result = SCIP_REDUCEDDOM;
-            }
-
-            while( result == SCIP_REDUCEDDOM )
+            do
             {
                result = SCIP_DIDNOTRUN;
                if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 )
@@ -5177,6 +5159,7 @@ SCIP_RETCODE SCIPsolveCIP(
                   assert(result != SCIP_DIDNOTRUN && result != SCIP_DIDNOTFIND);
                }
             }
+            while( result == SCIP_REDUCEDDOM );
          }
          assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 

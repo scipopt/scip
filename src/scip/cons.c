@@ -2022,6 +2022,7 @@ SCIP_RETCODE doConshdlrCreate(
    SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   SCIP_DECL_CONSCHECKEX ((*conscheckex)),   /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    SCIP_DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
@@ -2094,6 +2095,7 @@ SCIP_RETCODE doConshdlrCreate(
    (*conshdlr)->consenforelax = consenforelax;
    (*conshdlr)->consenfops = consenfops;
    (*conshdlr)->conscheck = conscheck;
+   (*conshdlr)->conscheckex = conscheckex;
    (*conshdlr)->consprop = consprop;
    (*conshdlr)->conspresol = conspresol;
    (*conshdlr)->consresprop = consresprop;
@@ -2300,6 +2302,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   SCIP_DECL_CONSCHECKEX ((*conscheckex)),   /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    SCIP_DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
@@ -2330,8 +2333,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
       checkpriority, sepafreq, propfreq, eagerfreq, maxprerounds, delaysepa, delayprop, needscons, proptiming,
       presoltiming, conshdlrcopy, consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
       consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenforelax, consenfops, conscheck,
-      consprop, conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars,
-      consprint, conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, conshdlrdata),
+      conscheckex, consprop, conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, 
+      consdelvars, consprint, conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, conshdlrdata),
       (void) SCIPconshdlrFree(conshdlr, set) );
 
    return SCIP_OKAY;
@@ -3810,6 +3813,68 @@ SCIP_RETCODE SCIPconshdlrCheck(
    return SCIP_OKAY;
 }
 
+/** calls exact feasibility check method of constraint handler */
+SCIP_RETCODE SCIPconshdlrCheckExact(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
+   assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
+   assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
+   assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(set != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
+
+   if( conshdlr->conscheckex != NULL && (!conshdlr->needscons || conshdlr->ncheckconss > 0) )
+   {
+      SCIPsetDebugMsg(set, "checking %d constraints of handler <%s> exactly\n", conshdlr->ncheckconss, conshdlr->name);
+
+      /* because during constraint processing, constraints of this handler may be deleted, activated, deactivated,
+       * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
+       * external method; to avoid this, these changes will be buffered and processed after the method call
+       */
+      conshdlrDelayUpdates(conshdlr);
+
+      /* start timing */
+      SCIPclockStart(conshdlr->checktime, set);
+
+      /* call external method */
+      SCIP_CALL( conshdlr->conscheckex(set->scip, conshdlr, conshdlr->checkconss, conshdlr->ncheckconss,
+            sol, checkintegrality, checklprows, printreason, completely, result) );
+      SCIPsetDebugMsg(set, " -> checking returned result <%d>\n", *result);
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->checktime, set);
+
+      /* update statistics */
+      conshdlr->ncheckcalls++;
+
+      /* perform the cached constraint updates */
+      SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
+
+      /* evaluate result */
+      if( *result != SCIP_INFEASIBLE && *result != SCIP_FEASIBLE )
+      {
+         SCIPerrorMessage("feasibility check of constraint handler <%s> returned invalid result <%d>\n", conshdlr->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** calls propagation method of constraint handler */
 SCIP_RETCODE SCIPconshdlrPropagate(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -4550,6 +4615,17 @@ void SCIPconshdlrSetGetDiveBdChgs(
    assert(conshdlr != NULL);
 
    conshdlr->consgetdivebdchgs = consgetdivebdchgs;
+}
+
+/** sets exact cons checking method of constraint handler */
+void SCIPconshdlrSetCheckExact(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSCHECKEX((*conscheckex))     /**< constraint handler exact solution checking method */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->conscheckex = conscheckex;
 }
 
 /** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active

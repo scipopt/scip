@@ -170,6 +170,7 @@
 #include "scip/scip_reopt.h"
 #include "scip/scip_sepa.h"
 #include "scip/scip_sol.h"
+#include "scip/scip_solex.h"
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_table.h"

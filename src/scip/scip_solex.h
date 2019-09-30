@@ -410,7 +410,7 @@ SCIP_Real SCIPretransformExObj(
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
 EXTERN
-SCIP_RETCODE SCIPprintSolEx(
+SCIP_RETCODE SCIPprintSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOLEX*           sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -878,10 +878,22 @@ SCIP_RETCODE SCIPupdatePrimalRayEx(
 
 EXTERN
 SCIP_RETCODE SCIPoverwriteFPsol(
-   SCIP*                 scip,
-   SCIP_SOL*             sol,
-   SCIP_SOLEX*           solex
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SOLEX*           solex               /**< exact primal CIP solution */
    );
+
+EXTERN
+SCIP_SOL* SCIPgetSolexFpSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOLEX*           solex               /**< exact primal CIP solution */
+   );
+
+SCIP_SOLEX* SCIPgetSolExSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< exact primal CIP solution */
+   );
+
 
 /**@} */
 

@@ -19,7 +19,6 @@
  *
  */
 
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "blockmemshell/memory.h"
 #include "scip/certificate.h"
@@ -1153,6 +1152,8 @@ SCIP_RETCODE consPrintConsSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_SOL*             sol,                /**< solution to print */
+   SCIP_SOLEX*           solex,              /**< exact solution to print */
+   SCIP_Bool             useexactsol,        /**< should the exact sol be used */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
@@ -1208,7 +1209,16 @@ SCIP_RETCODE consPrintConsSol(
          /* print variable name */
          SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[v], TRUE) );
 
-         SCIPinfoMessage(scip, file, " (%+.9g)", SCIPgetSolVal(scip, sol, consdata->vars[v]));
+         if( !useexactsol )
+            SCIPinfoMessage(scip, file, " (%+.9g)", SCIPgetSolVal(scip, sol, consdata->vars[v]));
+         else
+         {
+            SCIP_Rational* tmp;
+            SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &tmp) );
+            SCIPgetSolExVal(scip, solex, consdata->vars[v], tmp);
+            SCIPinfoMessage(scip, file, "(%s)", RgetString(tmp));
+            RdeleteTemp(SCIPbuffer(scip), &tmp);
+         }
       }
    }
 
@@ -2922,13 +2932,15 @@ void consdataGetActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_SOL*             sol,                /**< solution to get activity for, NULL to current solution */
+   SCIP_SOLEX*           solex,              /**< exact solution to get activity for, NULL to current solution */
+   SCIP_Bool             useexact,           /**< should the exact solution be used */
    SCIP_Rational*        activity            /**< pointer to store the activity */
    )
 {
    assert(scip != NULL);
    assert(consdata != NULL);
 
-   if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
+   if( ((sol == NULL && !useexact) || (solex == NULL && useexact)) && !SCIPhasCurrentNodeLP(scip) )
       consdataComputePseudoActivity(scip, consdata, activity);
    else
    {
@@ -2946,7 +2958,10 @@ void consdataGetActivity(
 
       for( v = 0; v < consdata->nvars; ++v )
       {
-         RsetReal(solval, SCIPgetSolVal(scip, sol, consdata->vars[v]));
+         if( useexact )
+            SCIPgetSolExVal(scip, solex, consdata->vars[v], solval);
+         else
+            RsetReal(solval, SCIPgetSolVal(scip, sol, consdata->vars[v]));
 
          if( RisNegative(consdata->vals[v]) )
             negsign = TRUE;
@@ -3002,7 +3017,7 @@ void consdataGetFeasibility(
    RcreateTemp(SCIPbuffer(scip), &op1);
    RcreateTemp(SCIPbuffer(scip), &op2);
 
-   consdataGetActivity(scip, consdata, sol, activity);
+   consdataGetActivity(scip, consdata, sol, NULL, FALSE, activity);
    Rdiff(op1, consdata->rhs, activity);
    Rdiff(op2, activity, consdata->lhs);
 
@@ -7043,6 +7058,8 @@ SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_SOL*             sol,                /**< solution to be checked, or NULL for current solution */
+   SCIP_SOLEX*           solex,              /**< exact solution to be checked, or NULL for current solution */
+   SCIP_Bool             useexactsol,        /**< should the sol or solex be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool             checkrelmaxabs,     /**< Should the violation for a constraint with side 0.0 be checked relative
                                               *   to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)? */
@@ -7067,8 +7084,7 @@ SCIP_RETCODE checkCons(
    SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &rhsviol) );
 
    SCIPdebugMsg(scip, "checking linear constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebugPrintCons(scip, cons, NULL);
-   SCIPdebug(SCIPprintSol(scip, sol, NULL, FALSE));
+   SCIPdebug(consPrintConsSol(scip, cons, sol, solex, useexactsol, NULL));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7082,10 +7098,10 @@ SCIP_RETCODE checkCons(
       else if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
          consdataComputePseudoActivity(scip, consdata, activity);
       else
-         SCIPgetRowSolActivityExact(scip, consdata->exrow, sol, activity);
+         SCIPgetRowSolActivityExact(scip, consdata->exrow, sol, solex, useexactsol, activity);
    }
    else
-      consdataGetActivity(scip, consdata, sol, activity);
+      consdataGetActivity(scip, consdata, sol, solex, useexactsol, activity);
 
    SCIPdebugMsg(scip, "  consdata activity=%.15g (lhs=%.15g, rhs=%.15g, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
       RgetRealApprox(activity), RgetRealApprox(consdata->lhs), RgetRealApprox(consdata->rhs), (void*)consdata->row, checklprows,
@@ -7098,7 +7114,7 @@ SCIP_RETCODE checkCons(
 
    if( RisPositive(lhsviol) && RisGT(lhsviol, rhsviol) )
    {
-      Rset(absviol, lhsviol);
+      Rset(absviol, lhsviol); 
       RrelDiff(relviol, consdata->lhs, activity);
    }
    else if( RisPositive(rhsviol) )
@@ -7282,7 +7298,7 @@ SCIP_RETCODE separateCons(
    oldncuts = *ncuts;
    *cutoff = FALSE;
 
-   SCIP_CALL( checkCons(scip, cons, sol, (sol != NULL), conshdlrdata->checkrelmaxabs, &violated) );
+   SCIP_CALL( checkCons(scip, cons, sol, NULL, FALSE, (sol != NULL), conshdlrdata->checkrelmaxabs, &violated) );
 
    if( violated )
    {
@@ -14720,6 +14736,7 @@ SCIP_RETCODE enforceConstraint(
    checkrelmaxabs = conshdlrdata->checkrelmaxabs;
 
    SCIPdebugMsg(scip, "Enforcement method of linear constraints for %s solution\n", sol == NULL ? "LP" : "relaxation");
+   SCIPdebug( SCIPprintSol(scip, sol, NULL, FALSE));
 
    /* check for violated constraints
     * LP is processed at current node -> we can add violated linear constraints to the SCIP_LP
@@ -14729,7 +14746,7 @@ SCIP_RETCODE enforceConstraint(
    /* check all useful linear constraints for feasibility */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, checkrelmaxabs, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], sol, NULL, FALSE, FALSE, checkrelmaxabs, &violated) );
 
       if( violated )
       {
@@ -14745,7 +14762,7 @@ SCIP_RETCODE enforceConstraint(
    /* check all obsolete linear constraints for feasibility */
    for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, checkrelmaxabs, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], sol, NULL, FALSE, FALSE, checkrelmaxabs, &violated) );
 
       if( violated )
       {
@@ -15780,7 +15797,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactLinear)
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, TRUE, checkrelmaxabs, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], NULL, NULL, FALSE, TRUE, checkrelmaxabs, &violated) );
    }
 
    if( violated )
@@ -15797,6 +15814,83 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactLinear)
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckExactLinear)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool checkrelmaxabs;
+   SCIP_Bool checkexact;
+   SCIP_SOLEX* solex;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   checkrelmaxabs = conshdlrdata->checkrelmaxabs;
+   /* if the fp-solution has a stand-in exact solution we check that instead */
+   solex = SCIPgetSolExSol(scip, sol);
+   checkexact = (solex != NULL);
+
+   /*debugMsg(scip, "Check method of linear constraints\n");*/
+
+   /* check all linear constraints for feasibility */
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
+   {
+      SCIP_Bool violated = FALSE;
+      SCIP_CALL( checkCons(scip, conss[c], sol, solex, checkexact, checklprows, checkrelmaxabs, &violated) );
+
+      if( violated )
+      {
+         *result = SCIP_INFEASIBLE;
+
+         if( printreason )
+         {
+            SCIP_CONSDATA* consdata;
+            SCIP_Rational* activity;
+            
+            SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &activity) );
+
+            consdata = SCIPconsGetData(conss[c]);
+            assert( consdata != NULL);
+
+            consdataGetActivity(scip, consdata, sol, NULL, FALSE, activity);
+
+            SCIP_CALL( consPrintConsSol(scip, conss[c], sol, NULL, FALSE, NULL ) );
+            SCIPinfoMessage(scip, NULL, ";\n");
+
+            if( RisAbsInfinity(activity) ) /*lint !e777*/
+               SCIPinfoMessage(scip, NULL, "activity invalid due to positive and negative infinity contributions\n");
+            else if( RisLT(activity, consdata->lhs) )
+            {
+               char buf[SCIP_MAXSTRLEN];
+               Rdiff(activity, consdata->lhs, activity);
+               RtoString(activity, buf, SCIP_MAXSTRLEN);
+               SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %s \n", buf);
+            }
+            else if( RisGT(activity, consdata->rhs) )
+            {
+               char buf[SCIP_MAXSTRLEN];
+               Rdiff(activity, activity, consdata->rhs);
+               RtoString(activity, buf, SCIP_MAXSTRLEN);
+               SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %s \n", buf);
+            }
+
+            RdeleteTemp(SCIPbuffer(scip), &activity);
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** feasibility check method of constraint handler for integral solutions */
+static
+SCIP_DECL_CONSCHECKEX(consCheckExactLinearExact)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool checkrelmaxabs;
@@ -15820,7 +15914,8 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       SCIP_Bool violated = FALSE;
-      SCIP_CALL( checkCons(scip, conss[c], sol, checklprows, checkrelmaxabs, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], NULL, sol, TRUE, checklprows, checkrelmaxabs, &violated) );
+      SCIPdebug(consPrintConsSol(scip, conss[c], NULL, sol, TRUE, NULL));
 
       if( violated )
       {
@@ -15830,15 +15925,15 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
          {
             SCIP_CONSDATA* consdata;
             SCIP_Rational* activity;
-            
+
             SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &activity) );
 
             consdata = SCIPconsGetData(conss[c]);
             assert( consdata != NULL);
 
-            consdataGetActivity(scip, consdata, sol, activity);
+            consdataGetActivity(scip, consdata, NULL, sol, TRUE, activity);
 
-            SCIP_CALL( consPrintConsSol(scip, conss[c], sol, NULL ) );
+            SCIP_CALL( consPrintConsSol(scip, conss[c], NULL, sol, TRUE, NULL ) );
             SCIPinfoMessage(scip, NULL, ";\n");
 
             if( RisAbsInfinity(activity) ) /*lint !e777*/
@@ -17181,6 +17276,7 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
    assert(conshdlr != NULL);
 
    /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCheckExact(scip, conshdlr, consCheckExactLinearExact) );
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyExactLinear, consCopyExactLinear) );
    SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveExactLinear) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteExactLinear) );
@@ -18154,9 +18250,9 @@ void SCIPgetActivityExactLinear(
    assert(consdata != NULL);
 
    if( consdata->exrow != NULL )
-      SCIPgetRowSolActivityExact(scip, consdata->exrow, sol, ret);
+      SCIPgetRowSolActivityExact(scip, consdata->exrow, sol, NULL, FALSE, ret);
    else
-      consdataGetActivity(scip, consdata, sol, ret);
+      consdataGetActivity(scip, consdata, sol, NULL, FALSE, ret);
 }
 
 /** gets the feasibility of the linear constraint in the given solution */

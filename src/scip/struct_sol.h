@@ -29,6 +29,7 @@
 #include "scip/def.h"
 #include "scip/type_misc.h"
 #include "scip/type_sol.h"
+#include "scip/type_solex.h"
 #include "scip/type_heur.h"
 
 

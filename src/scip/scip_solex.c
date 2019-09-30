@@ -176,11 +176,15 @@ void SCIPgetSolExVal(
    assert( var->scip == scip );
 
    if( sol != NULL )
+   {
       SCIPsolexGetVal(res, sol, scip->set, scip->stat, var);
+   }
+   else
+   {
+      SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolExVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolExVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   Rset(res, SCIPvarGetSolEx(var, SCIPtreeHasCurrentNodeLP(scip->tree)));
+      Rset(res, SCIPvarGetSolEx(var, SCIPtreeHasCurrentNodeLP(scip->tree)));
+   }
 }
 
 /** returns transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
@@ -236,22 +240,94 @@ SCIP_RETCODE SCIPoverwriteFPsol(
    assert(sol != NULL);
    assert(solex != NULL);
 
-   nvars = SCIPgetNVars(scip);
-   vars = SCIPgetVars(scip);
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPoverwriteFPSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &res) );
+   SCIP_CALL( SCIPsolexOverwriteFPSol(sol, solex, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree) );
 
-   for( v = 0; v < nvars; ++v )
+   return SCIP_OKAY;
+}
+
+
+SCIP_SOL* SCIPgetSolexFpSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOLEX*           solex               /**< exact primal CIP solution */
+   )
+{
+   assert(scip != NULL);
+   assert(solex != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolexFpSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPsolexGetFpSol(solex);
+}
+
+SCIP_SOLEX* SCIPgetSolExSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< exact primal CIP solution */
+   )
+{
+   assert(scip != NULL);
+   assert(sol != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolExSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPsolGetExSol(sol);
+}
+
+EXTERN
+SCIP_RETCODE SCIPprintSolex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOLEX*           sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   SCIP_Rational* objvalue;
+   SCIP_Bool currentsol;
+   SCIP_Bool oldquiet = FALSE;
+
+   assert(SCIPisTransformed(scip) || sol != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintSolex", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   currentsol = (sol == NULL);
+   if( currentsol )
    {
-      SCIPgetSolExVal(scip, solex, vars[v], res);
+      SCIP_CALL( SCIPcheckStage(scip, "SCIPprintSolex(sol==NULL)", \
+            FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-      SCIP_CALL( SCIPsetSolVal(scip, sol, vars[v], RgetRealApprox(res)) );
+      /* create a temporary solution that is linked to the current solution */
+      SCIP_CALL( SCIPsolexCreateCurrentSol(&sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primalex,
+            scip->tree, scip->lpex, NULL) );
    }
 
-   SCIPgetSolExTransObj(scip, solex, res);
-   SCIPsolSetObjVal(sol, RgetRealRelax(res, SCIP_ROUND_UPWARDS));
+   if( file != NULL && scip->messagehdlr != NULL )
+   {
+      oldquiet = SCIPmessagehdlrIsQuiet(scip->messagehdlr);
+      SCIPmessagehdlrSetQuiet(scip->messagehdlr, FALSE);
+   }
 
-   RdeleteTemp(SCIPbuffer(scip), &res);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
+
+   /** @todo exip: convert to origobj, or extern objval respectively */
+   objvalue = SCIPsolexGetObj(sol, scip->set, scip->transprob, scip->origprob);
+   Rmessage(scip->messagehdlr, file, objvalue);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+
+
+   SCIP_CALL( SCIPsolexPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, FALSE,
+         printzeros) );
+
+   if( file != NULL && scip->messagehdlr != NULL )
+   {
+      SCIPmessagehdlrSetQuiet(scip->messagehdlr, oldquiet);
+   }
+
+   if( currentsol )
+   {
+      /* free temporary solution */
+      SCIP_CALL( SCIPsolexFree(&sol, scip->mem->probmem, scip->primalex) );
+   }
 
    return SCIP_OKAY;
 }

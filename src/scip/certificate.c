@@ -29,6 +29,7 @@
 #include "scip/cons_exactlp.h"
 #include "scip/scip.h"
 #include "scip/set.h"
+#include "scip/lp.h"
 #include "scip/lpex.h"
 #include "scip/pub_misc.h"
 #include "scip/prob.h"
@@ -1337,7 +1338,6 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          {
             val = RisPositive(vals[len]) ? row->lhs : row->rhs;
             RaddProd(farkasrhs, vals[len], val);
-
          }
 
          len++;
@@ -1368,8 +1368,8 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    return SCIP_OKAY;
 }
 
-/** Print a dual bound from an exact lp solution */
-SCIP_RETCODE SCIPcertificatePrintDualPseudoObj(
+/** Print a dual bound from the pseudo solution */
+SCIP_RETCODE  SCIPcertificatePrintDualPseudoObj(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
    SCIP_LPEX*            lpex,               /**< the exact lp */
    SCIP_NODE*            node,               /**< current node */
@@ -1382,7 +1382,6 @@ SCIP_RETCODE SCIPcertificatePrintDualPseudoObj(
    SCIP_Rational* pseudoobjval;
    SCIP_Rational** bounds;
    SCIP_Longint* dualind;
-   SCIP_Longint certindex;
    int nvars;
    int duallen;
    int i;
@@ -1392,36 +1391,37 @@ SCIP_RETCODE SCIPcertificatePrintDualPseudoObj(
    assert(certificate != NULL);
    assert(prob != NULL);
    assert(set != NULL);
+   
+   if( !SCIPcertificateIsActive(certificate) )
+      return SCIP_OKAY;
 
    if( psval > SCIPnodeGetLowerbound(node) )
    {
-
       vars = SCIPprobGetVars(prob);
       nvars = SCIPprobGetNVars(prob);
       SCIP_CALL( RcreateTemp(set->buffer, &pseudoobjval) );
-      SCIP_CALL( RcreateArrayTemp(set->buffer, &bounds, lpex->ncols) );
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &dualind, lpex->ncols) );
 
-      certindex = -1;
       RsetReal(pseudoobjval, psval);
       duallen = SCIPprobGetNObjVars(prob, set);
+      SCIP_CALL( RcreateArrayTemp(set->buffer, &bounds, duallen) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &dualind, duallen) );
       /* computes pseudo objective value (with bound change if necessary) */
       /*lint --e{838}*/
 
       nnonzeros = 0;
-      for( i = 0; i < lpex->ncols; i++ )
+      for( i = 0; i < nvars; i++ )
       {
-         SCIP_Rational* obj = SCIPcolexGetObj(lpex->cols[i]);
+         SCIP_Rational* obj = SCIPvarGetObjExact(vars[i]);
          if( !RisZero(obj) )
          {
-            Rset(bounds[nnonzeros], SCIPcolexGetBestBound(lpex->cols[i]));
+            Rset(bounds[nnonzeros], obj);
 
             assert(!RisAbsInfinity(bounds[nnonzeros]));
 
             /* retrieve the line in the certificate of the bound */
-            Rset(certificate->workbound->boundval, bounds[nnonzeros]);
-            certificate->workbound->varindex = SCIPvarGetIndex(lpex->cols[i]->var);
-            certificate->workbound->isupper = RisEqual(bounds[nnonzeros], SCIPcolexGetUb(lpex->cols[i]));
+            Rset(certificate->workbound->boundval, SCIPvarGetBestBoundLocalExact(vars[i]));
+            certificate->workbound->varindex = SCIPvarGetIndex(vars[i])  - SCIPprobGetNVars(prob);
+            certificate->workbound->isupper = RisEqual(certificate->workbound->boundval, SCIPvarGetUbLocalExact(vars[i]));
 
             image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
 
@@ -1440,13 +1440,12 @@ SCIP_RETCODE SCIPcertificatePrintDualPseudoObj(
       /* print pseudo solution into certificate file */
       SCIPcertificatePrintDualbound(certificate, NULL, pseudoobjval, duallen,
          dualind, bounds);
-      assert(certindex != -1);
 
       SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1,
          pseudoobjval) );
 
       SCIPsetFreeBufferArray(set, &dualind);
-      RdeleteArrayTemp(set->buffer, &bounds, lpex->ncols);
+      RdeleteArrayTemp(set->buffer, &bounds, nnonzeros);
       RdeleteTemp(set->buffer, &pseudoobjval);
    }
 
@@ -1555,7 +1554,7 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
    assert(stat != NULL);
 
    /* certificate is disabled on probing nodes */
-   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE || lp->diving )
       return SCIP_OKAY;
 
    /* check whether output should be created */
@@ -1703,10 +1702,10 @@ int SCIPcertificatePrintUnsplitting(
       SCIPcertificatePrintProofMessage(certificate, " { uns %d %d  %d %d  } -1\n", nodedata->derindex_left, nodedata->assumptionindex_left, 
          nodedata->derindex_right, nodedata->assumptionindex_right);
       SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound) );
-      if( SCIPnodeGetParent(node) == NULL && certificate->derindex_root >= 0 )
+      /* if( SCIPnodeGetParent(node) == NULL && certificate->derindex_root >= 0 )
       {
          SCIP_Rational* ratone;
-         
+
          SCIP_CALL( RcreateTemp(set->buffer, &ratone) );
 
          if( certificate->rootinfeas )
@@ -1716,10 +1715,12 @@ int SCIPcertificatePrintUnsplitting(
 
          SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, 1, &(certificate->derindex_root), &ratone );
          RdeleteTemp(set->buffer, &ratone);
-      }
+      } */
    }
    else
+   {
       SCIPdebugMessage("Node %lld is a leaf! \n", SCIPnodeGetNumber(node));
+   }
 
    certificateFreeNodeData(certificate, node);
 

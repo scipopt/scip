@@ -60,6 +60,7 @@ struct SCIP_Primal
    int                   nexistingsols;      /**< number of primal CIP solutions stored in existingsols array */
 
    SCIP_Bool             updateviolations;   /**< marks whether the updating of violations is turned on */
+   SCIP_PRIMALEX*        primalex;           /**< exact solution storage */
 };
 
 struct SCIP_PrimalEx

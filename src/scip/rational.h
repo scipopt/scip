@@ -500,6 +500,10 @@ int RtoString(
    int                   strlen              /**< maximal length that can be copied to str */
    );
 
+const char* RgetString(
+   SCIP_Rational*        r
+   );
+
 /** return the strlen of a rational number */
 SCIP_Longint Rstrlen(
    SCIP_Rational*        r                /** rational to consider */

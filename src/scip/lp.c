@@ -12429,7 +12429,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
          SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
 
-         if( set->misc_exactsolve && !lp->diving )
+         /** @todo exip: placeholder for probing/diving, this needs to be refactored at some point */
+         if( set->misc_exactsolve && !lp->diving && !lp->probing && !lp->strongbranchprobing )
          {
             SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                      prob, itlim, lperror, FALSE, &(lp->lpobjval) ) );
