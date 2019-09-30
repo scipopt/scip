@@ -132,8 +132,12 @@ SCIP_DECL_BRANCHINIT(branchInitVanillafullstrong)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   assert(branchruledata->candscores == NULL);
-   assert(branchruledata->cands == NULL);
+   branchruledata->cands = NULL;
+   branchruledata->candscores = NULL;
+   branchruledata->candcapacity = -1;
+   branchruledata->ncands = -1;
+   branchruledata->npriocands = -1;
+   branchruledata->bestcand = -1;
 
    return SCIP_OKAY;
 }
@@ -158,6 +162,9 @@ SCIP_DECL_BRANCHEXIT(branchExitVanillafullstrong)
    branchruledata->ncands = -1;
    branchruledata->npriocands = -1;
    branchruledata->bestcand = -1;
+
+   assert(branchruledata->candscores == NULL);
+   assert(branchruledata->cands == NULL);
 
    return SCIP_OKAY;
 }
@@ -302,12 +309,6 @@ SCIP_RETCODE SCIPincludeBranchruleVanillafullstrong(
 
    /* create fullstrong branching rule data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
-   branchruledata->cands = NULL;
-   branchruledata->candscores = NULL;
-   branchruledata->candcapacity = -1;
-   branchruledata->ncands = -1;
-   branchruledata->npriocands = -1;
-   branchruledata->bestcand = -1;
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
@@ -366,8 +367,6 @@ SCIP_RETCODE runVanillaStrongBranching(
    )
 {  /*lint --e{715}*/
    SCIP_Real lpobjval;
-   SCIP_Bool exactsolve;
-   SCIP_Bool allcolsinlp;
    int nsbcalls;
    int c;
 
@@ -381,14 +380,6 @@ SCIP_RETCODE runVanillaStrongBranching(
    assert(bestupvalid != NULL);
    assert(provedbound != NULL);
    assert(ncands > 0);
-
-   /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
-    * for cutting off sub problems and improving lower bounds of children
-    */
-   exactsolve = SCIPisExactSolve(scip);
-
-   /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
-   allcolsinlp = SCIPallColsInLP(scip);
 
    /* get current LP objective bound of the local sub problem and global cutoff bound */
    lpobjval = SCIPgetLPObjval(scip);
@@ -472,8 +463,8 @@ SCIP_RETCODE runVanillaStrongBranching(
       downgain = down - lpobjval;
       upgain = up - lpobjval;
 
-      assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
-      assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
+      assert(!SCIPallColsInLP(scip) || SCIPisExactSolve(scip) || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
+      assert(!SCIPallColsInLP(scip) || SCIPisExactSolve(scip) || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
       assert(downinf || !downconflict);
       assert(upinf || !upconflict);
 
@@ -524,8 +515,8 @@ SCIP_RETCODE runVanillaStrongBranching(
       if( !integral && !scoreall && downinf && upinf )
       {
          /* we should only detect infeasibility if the LP is a valid relaxation */
-         assert(allcolsinlp);
-         assert(!exactsolve);
+         assert(SCIPallColsInLP(scip));
+         assert(!SCIPisExactSolve(scip));
 
          SCIPdebugMsg(scip, " -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(var));
          break;
