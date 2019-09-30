@@ -6673,29 +6673,28 @@ SCIP_RETCODE enforceConstraints(
       return SCIP_OKAY;
    }
 
+   SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, becoming desperate now...\n", maxviol);
+
    if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxvarboundviol) )
    {
-      SCIPsetLPFeastol(scip, maxvarboundviol / 2.0);
-      SCIPdebugMsg(scip, "could not enforce violation in regular ways, but variable bounds are violated, reducing LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip));
+      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), maxvarboundviol / 2.0));
+      SCIPdebugMsg(scip, "variable bounds are violated by more than eps, reduced LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip));
 
       *result = SCIP_SOLVELP;
       return SCIP_OKAY;
    }
 
-   SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, becoming desperate now...\n", maxviol);
-#if 0
-   if( conshdlrdata->tightenlpfeastol && maxviol < 10.0*SCIPfeastol(scip) && SCIPgetLPFeastol(scip) > SCIPepsilon(scip) )
+   if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxauxviol) && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) )
    {
-      /* if only small violation, try whether tighten the LP feasibility tolerance could help
-       * maybe it is just some variable bound that is violated too much and we cannot separate this
+      /* try whether tighten the LP feasibility tolerance could help
+       * maybe it is just some cut that hasn't been taken into account sufficiently
        */
-      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), 0.1 * SCIPgetLPFeastol(scip)));  /* TODO take actual LP primal violation into account */
-      SCIPdebugMsg(scip, "reduced LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip));
+      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxauxviol / 2.0, SCIPgetLPFeastol(scip) / 10.0)));
+      SCIPdebugMsg(scip, "reduced LP feasibility tolerance to %g and hope\n", SCIPgetLPFeastol(scip));
 
       *result = SCIP_SOLVELP;
       return SCIP_OKAY;
    }
-#endif
 
    /* could not find branching candidates even when looking at minimal violated (>eps) expressions
     * now look if we find any unfixed variable that we could still branch on
