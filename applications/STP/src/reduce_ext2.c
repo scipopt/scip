@@ -61,6 +61,7 @@ typedef struct reduction_data
    const SCIP_Real cutoff;
    const SCIP_Real treeredcostoffset;
    const SCIP_Bool equality;
+   const int redCostRoot;
 } REDDATA;
 
 /** extension data */
@@ -747,7 +748,7 @@ SCIP_Real extTreeGetRedcosts(
       tree_redcost += termpaths[leaf].dist;
    }
 
-   // todo for the general case we also must consider the case that tail[edge] is the root!
+   // todo for the general case we also must consider the reverse case!
    if( extedge != -1 )
    {
       const int base = graph->tail[extedge];
@@ -756,8 +757,16 @@ SCIP_Real extTreeGetRedcosts(
 
       assert(extedge >= 0 && extedge < graph->edges);
       assert(extdata->tree_deg[base] == 1);
+      assert(base != extdata->reddata->redCostRoot);
 
-      tree_redcost += redcost[extedge] + termpaths[extvert].dist - termpaths[base].dist;
+      if( extvert == extdata->reddata->redCostRoot )
+      {
+         assert(Is_term(graph->term[extvert]));
+
+         tree_redcost = FARAWAY;
+      }
+      else
+         tree_redcost += redcost[extedge] + termpaths[extvert].dist - termpaths[base].dist;
    }
 
    return tree_redcost;
@@ -1399,8 +1408,8 @@ SCIP_RETCODE reduce_extendedCheckArc(
          const SCIP_Real treeredcostoffset = rootdist[tail];
 
          REDDATA reddata = { .reducedcosts = redcost, .rootdist = rootdist, .termpaths = node2termpaths,
-            .edgedeleted = edgedeleted, .pseudoancestor_mark = pseudoancestor_mark,
-            .cutoff = cutoff, .treeredcostoffset = treeredcostoffset, .equality = equality};
+            .edgedeleted = edgedeleted, .pseudoancestor_mark = pseudoancestor_mark,  .cutoff = cutoff,
+            .treeredcostoffset = treeredcostoffset, .equality = equality, .redCostRoot = root};
          EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
             .extstack_state = extstack_state, .extstack_size = 0, .tree_leaves = tree_leaves,
             .tree_edges = tree_edges, .tree_deg = tree_deg, .tree_nleaves = 0,
