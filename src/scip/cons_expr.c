@@ -209,9 +209,7 @@ struct SCIP_ConshdlrData
    unsigned int             lastdifftag;     /**< last tag used for computing gradients */
    unsigned int             lastbrscoretag;  /**< last branching score tag used */
 
-   SCIP_Longint             lastenfolpnodenum; /**< number of node for which enforcement has been called last */
-   SCIP_Longint             lastenfopsnodenum; /**< number of node for which enforcement has been called last */
-   SCIP_Longint             lastpropnodenum; /**< number node for which propagation has been called last */
+   SCIP_Longint             lastpropnodenum; /**< number of node for which propagation has been called last */
 
    int                      lastconsindex;   /**< last used consindex, plus one */
 
@@ -225,6 +223,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool                vp_dualsimplex;  /**< whether to use dual simplex instead of primal simplex for facet computing LP */
    SCIP_Bool                reformbinprods;  /**< whether to reformulate products of binary variables during presolving */
    int                      reformbinprodsfac; /**< minimum number of terms to reformulate bilinear binary products by factorizing variables (<= 1: disabled) */
+   SCIP_Bool                tightenlpfeastol;/**< whether to tighten LP feasibility tolerance during enforcement, if it seems useful */
+   SCIP_Bool                propinenforce;   /**< whether to (re)run propagation in enforcement */
 
    /* statistics */
    SCIP_Longint             ndesperatebranch;/**< number of times we branched on some variable because normal enforcement was not successful */
@@ -1460,6 +1460,9 @@ SCIP_RETCODE propConss(
    *result = SCIP_DIDNOTFIND;
    roundnr = 0;
    cutoff = FALSE;
+
+   /* remember that we called propagation for this node */
+   conshdlrdata->lastpropnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    /* main propagation loop */
    do
@@ -6586,12 +6589,6 @@ SCIP_RETCODE enforceConstraints(
    SCIP_Real maxvarboundviol;
    unsigned int soltag;
    int nnotify;
-#ifdef PROP_IN_ENFORCE
-   SCIP_RESULT propresult;
-   SCIP_Bool force;
-   int nchgbds;
-   int ndelconss;
-#endif
    int c;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -6599,12 +6596,6 @@ SCIP_RETCODE enforceConstraints(
 
    maxviol = 0.0;
    soltag = ++conshdlrdata->lastsoltag;
-
-#ifdef PROP_IN_ENFORCE
-   /* force tightenings when calling enforcement for the first time for a node */
-   force = conshdlrdata->lastenfolpnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-#endif
-   conshdlrdata->lastenfolpnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    for( c = 0; c < nconss; ++c )
    {
@@ -6627,18 +6618,25 @@ SCIP_RETCODE enforceConstraints(
    SCIPdebugMsg(scip, "node %lld: enforcing constraints with max conssviol=%e, auxviolations in %g..%g, variable bounds violated by at most %g\n",
       SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxviol, minauxviol, maxauxviol, maxvarboundviol);
 
-#ifdef PROP_IN_ENFORCE
    /* try to propagate */
-   nchgbds = 0;
-   ndelconss = 0;
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, &propresult, &nchgbds, &ndelconss) );
-
-   if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
+   if( conshdlrdata->propinenforce )
    {
-      *result = propresult;
-      return SCIP_OKAY;
+      SCIP_RESULT propresult;
+      SCIP_Bool force;
+      int nchgbds = 0;
+      int ndelconss = 0;
+
+      /* force tightenings when calling propagation for the first time for a node */
+      force = conshdlrdata->lastpropnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+
+      SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, &propresult, &nchgbds, &ndelconss) );
+
+      if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
+      {
+         *result = propresult;
+         return SCIP_OKAY;
+      }
    }
-#endif
 
    if( conshdlrdata->tightenlpfeastol && maxvarboundviol > maxauxviol )
    {
@@ -8603,10 +8601,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 
    /* TODO call enforceConstraints here, maybe with some flag to indicate ENFOPS? */
 
-   /* force tightenings when calling enforcement for the first time for a node */
-   force = conshdlrdata->lastenfopsnodenum == SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-   conshdlrdata->lastenfopsnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-
    soltag = ++conshdlrdata->lastsoltag;
 
    *result = SCIP_FEASIBLE;
@@ -8621,6 +8615,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 
    if( *result == SCIP_FEASIBLE )
       return SCIP_OKAY;
+
+   /* force tightenings when calling propagation for the first time for a node */
+   force = conshdlrdata->lastpropnodenum == SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    /* try to propagate */
    nchgbds = 0;
@@ -8776,7 +8773,6 @@ SCIP_DECL_CONSPROP(consPropExpr)
 
    /* force tightenings when calling propagation for the first time for a node */
    force = conshdlrdata->lastpropnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-   conshdlrdata->lastpropnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    nchgbds = 0;
    ndelconss = 0;
@@ -13003,6 +12999,14 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/reformbinprodsfac",
          "minimum number of terms to reformulate bilinear binary products by factorizing variables (<= 1: disabled)",
          &conshdlrdata->reformbinprodsfac, FALSE, 50, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/tightenlpfeastol",
+         "whether to tighten LP feasibility tolerance during enforcement, if it seems useful",
+         &conshdlrdata->tightenlpfeastol, TRUE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/propinenforce",
+         "whether to (re)run propagation in enforcement",
+         &conshdlrdata->propinenforce, TRUE, FALSE, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
