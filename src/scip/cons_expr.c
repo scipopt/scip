@@ -229,6 +229,7 @@ struct SCIP_ConshdlrData
    /* statistics */
    SCIP_Longint             ndesperatebranch;/**< number of times we branched on some variable because normal enforcement was not successful */
    SCIP_Longint             ndesperatecutoff;/**< number of times we cut off a node in enforcement because no branching candidate could be found */
+   SCIP_Longint             ntightenlp;      /**< number of times we requested solving the LP with a smaller feasibility tolerance when enforcing */
    SCIP_Longint             nforcelp;        /**< number of times we forced solving the LP when enforcing a pseudo solution */
    SCIP_CLOCK*              canonicalizetime;/**< time spend for canonicalization */
    SCIP_Longint             ncanonicalizecalls; /**< number of times we called canonicalization */
@@ -6644,10 +6645,11 @@ SCIP_RETCODE enforceConstraints(
       }
    }
 
-   if( conshdlrdata->tightenlpfeastol && maxvarboundviol > maxauxviol )
+   if( conshdlrdata->tightenlpfeastol && maxvarboundviol > maxauxviol && sol == NULL )
    {
       SCIPsetLPFeastol(scip, maxvarboundviol / 2.0);
       SCIPdebugMsg(scip, "variable bound violation %g larger than auxiliary violation %g, reducing LP feastol to %g\n", maxvarboundviol, maxauxviol, SCIPgetLPFeastol(scip));
+      ++conshdlrdata->ntightenlp;
 
       *result = SCIP_SOLVELP;
       return SCIP_OKAY;
@@ -6675,22 +6677,24 @@ SCIP_RETCODE enforceConstraints(
 
    SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, becoming desperate now...\n", maxviol);
 
-   if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxvarboundviol) )
+   if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxvarboundviol) && sol == NULL )
    {
       SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), maxvarboundviol / 2.0));
       SCIPdebugMsg(scip, "variable bounds are violated by more than eps, reduced LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip));
+      ++conshdlrdata->ntightenlp;
 
       *result = SCIP_SOLVELP;
       return SCIP_OKAY;
    }
 
-   if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxauxviol) && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) )
+   if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxauxviol) && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
    {
       /* try whether tighten the LP feasibility tolerance could help
        * maybe it is just some cut that hasn't been taken into account sufficiently
        */
       SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxauxviol / 2.0, SCIPgetLPFeastol(scip) / 10.0)));
       SCIPdebugMsg(scip, "reduced LP feasibility tolerance to %g and hope\n", SCIPgetLPFeastol(scip));
+      ++conshdlrdata->ntightenlp;
 
       *result = SCIP_SOLVELP;
       return SCIP_OKAY;
@@ -7219,10 +7223,11 @@ void printConshdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "ConsExpr Enforce   : %10s %10s %10s\n", "DespBranch", "DespCutoff", "ForceLP");
+   SCIPinfoMessage(scip, file, "ConsExpr Enforce   : %10s %10s %10s %10s\n", "DespBranch", "DespCutoff", "TightenLP", "ForceLP");
    SCIPinfoMessage(scip, file, "  %-18s", "");
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatebranch);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatecutoff);
+   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ntightenlp);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nforcelp);
    SCIPinfoMessage(scip, file, "\n");
    SCIPinfoMessage(scip, file, "ConsExpr Presolve  : %10s\n", "CanonTime");
@@ -8248,6 +8253,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
    /* reset statistics in constraint handler */
    conshdlrdata->ndesperatebranch = 0;
    conshdlrdata->ndesperatecutoff = 0;
+   conshdlrdata->ntightenlp = 0;
    conshdlrdata->nforcelp = 0;
    SCIP_CALL( SCIPresetClock(scip, conshdlrdata->canonicalizetime) );
 
