@@ -450,13 +450,14 @@ SCIP_RETCODE extTest2_variants(
       SCIP_CALL( graph_init_history(scip, graph) );
       SCIP_CALL( graph_path_init(scip, graph) );
 
+      SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 1, graph) );
+
       for( int e = graph->outbeg[10]; e != EAT_LAST; e = graph->oeat[e] )
       {
-         const int head = graph->head[e];
-         if( head == 11  )
+         if( graph->head[e] == 11  )
          {
-            SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(graph->ancestors[e]), graph->ancestors[0], NULL) );
-            SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(graph->ancestors[flipedge(e)]), graph->ancestors[1], NULL) );
+            SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, e, 1, graph) );
+            break;
          }
       }
 

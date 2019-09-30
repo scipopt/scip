@@ -125,8 +125,23 @@ SCIP_Bool extTreeIsFlawed(
 
       assert(e >= 0 && e < nedges);
 
-      if( edgecount[e] > 0 || tree_deg[tail] <= 0 || tree_deg[head] <= 0 )
+      if( edgecount[e] > 0 || edgecount[flipedge(e)] > 0  )
+      {
+         printf("FLAW: double edge \n");
          flawed = TRUE;
+      }
+
+      if( tree_deg[tail] <= 0 )
+      {
+         printf("FLAW: non-positive degree for %d (%d) \n", tail, tree_deg[tail]);
+         flawed = TRUE;
+      }
+
+      if( tree_deg[head] <= 0 )
+      {
+         printf("FLAW: non-positive degree for %d (%d) \n", head, tree_deg[head]);
+         flawed = TRUE;
+      }
 
       degreecount[tail]++;
       degreecount[head]++;
@@ -146,18 +161,27 @@ SCIP_Bool extTreeIsFlawed(
          leavescount++;
 
       if( degreecount[head] != tree_deg[head] )
+      {
+         printf("FLAW: wrong degree  \n");
          flawed = TRUE;
+      }
    }
 
    /* leaves check */
    if( !flawed && leavescount != nleaves )
+   {
+      printf("FLAW wrong leaves count %d != %d \n", leavescount, nleaves);
       flawed = TRUE;
+   }
 
    for( int i = 0; i < nleaves && !flawed; i++ )
    {
       const int leaf = tree_leaves[i];
       if( degreecount[leaf] != 1 )
+      {
+         printf("FLAW wrong leaf %d degree %d != %d \n", leaf, degreecount[leaf], 1);
          flawed = TRUE;
+      }
    }
 
    /* clean-up */
@@ -275,7 +299,7 @@ void extRemoveNodeFromLeaves(
    int* const tree_deg = extdata->tree_deg;
 
    /* not the initial edge? */
-   if( tree_deg[leaf] != graph->knots )
+   if( leaf != extdata->tree_root )
    {
       /* update tree leaves array */
 
@@ -535,7 +559,7 @@ void extTreeAddStackTop(
 
       assert(extdata->tree_nedges < extdata->extstack_maxsize);
       assert(edge >= 0 && edge < graph->edges);
-      assert(tree_deg[head] == 0 && tree_deg[comproot] > 0);
+      assert(tree_deg[head] == 0 && (tree_deg[comproot] > 0 || comproot == extdata->tree_root));
       assert(comproot == graph->tail[edge]);
 
       extdata->tree_redcost += redcost[edge];
@@ -545,10 +569,7 @@ void extTreeAddStackTop(
       tree_deg[head] = 1;
       tree_parentNode[head] = comproot;
       tree_parentEdgeCost[head] = graph->cost[edge];
-
-      /* not the initial edge? */
-      if( stackpos > 0 )
-         tree_deg[comproot]++;
+      tree_deg[comproot]++;
 
       /* no conflict found yet? */
       if( conflictIteration == -1 )
@@ -1026,7 +1047,7 @@ void extStackExpand(
          {
             assert(datasize < extdata->extstack_maxsize);
             extstack_data[datasize++] = extedges[j];
-            SCIPdebugMessage("  %d \n", graph->head[extedges[j]]);
+            SCIPdebugMessage(" head %d \n", graph->head[extedges[j]]);
          }
       }
 
@@ -1224,17 +1245,13 @@ void extCheckArc(
 {
    const int head = graph->head[edge];
    const int tail = graph->tail[edge];
-   const int nnodes = graph->knots;
    int* const tree_deg = extdata->tree_deg;
    int* const extstack_state = extdata->extstack_state;
    int nupdatestalls = 0;
    SCIP_Bool success = TRUE;
    SCIP_Bool conflict = FALSE;
 
-   int todo;
-//   assert(tree_deg[tail] == 0);
-
-   tree_deg[tail] = nnodes;
+   // todo method: inizialize or something...edge list
 
    /* put 'edge' on the stack */
    extdata->extstack_size = 1;
@@ -1245,6 +1262,7 @@ void extCheckArc(
    extdata->tree_leaves[0] = tail;
    extdata->tree_parentNode[tail] = -1;
    extdata->tree_nleaves = 1;
+   assert(extdata->tree_deg[tail] == 0);
 
    extTreeSyncWithStack(scip, graph, extdata, &nupdatestalls, &conflict);
 
@@ -1302,7 +1320,7 @@ void extCheckArc(
    } /* DFS loop */
 
    *deletable = success;
-   assert(tree_deg[head] == 1 && tree_deg[tail] == nnodes);
+   assert(tree_deg[head] == 1 && tree_deg[tail] == 1);
 
    tree_deg[head] = 0;
    tree_deg[tail] = 0;
@@ -1375,8 +1393,6 @@ SCIP_RETCODE reduce_extendedCheckArc(
 
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
 
-      tree_deg[root] = -1;
-
       /* can we extend from head? */
       if( extLeafIsExtendable(graph, isterm, head) )
       {
@@ -1396,10 +1412,6 @@ SCIP_RETCODE reduce_extendedCheckArc(
 
          extCheckArc(scip, graph, isterm, edge, &extdata, deletable);
       }
-
-      /* finalize arrays */
-
-      tree_deg[root] = 0;
 
 #ifndef NDEBUG
       for( int i = 0; i < nnodes; i++ )
@@ -1444,7 +1456,8 @@ SCIP_RETCODE reduce_extendedEdge2(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
-   REDCOST redcostdata = {redcost, rootdist, termpaths, minpathcost, root};
+   REDCOST redcostdata = { .redEdgeCost = redcost, .rootToNodeDist = rootdist,
+         .nodeTo3TermsPaths = termpaths, .cutoff = minpathcost, .redCostRoot = root};
    DISTDATA distdata;
 
    assert(scip && graph && redcost);
