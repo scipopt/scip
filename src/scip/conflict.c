@@ -2988,6 +2988,7 @@ SCIP_RETCODE createAndAddProofcons(
    SCIP_Bool applyglobal;
    SCIP_Bool toolong;
    SCIP_Bool contonly;
+   SCIP_Bool hasrelaxvar;
    SCIP_CONFTYPE conflicttype;
    char name[SCIP_MAXSTRLEN];
    int nnz;
@@ -3079,14 +3080,10 @@ SCIP_RETCODE createAndAddProofcons(
       return SCIP_OKAY;
    }
 
-   /* if conflict contains variables that are invalid after a restart, then don't take conflict
-    * TODO it would be better if the linear constraint would be removed at the restart
-    */
-   contonly = TRUE;
-   for( i = 0; i < nnz; ++i )
-   {
-      if( SCIPvarIsRelaxationOnly(vars[inds[i]]) )
-         return SCIP_OKAY;
+   /* check if conflict contains variables that are invalid after a restart to label it appropriately */
+   hasrelaxvar = FALSE;
+   for( i = 0; i < nnz && !hasrelaxvar; ++i )
+      hasrelaxvar = SCIPvarIsRelaxationOnly(vars[inds[i]]);
 
       if( SCIPvarIsIntegral(vars[inds[i]]) )
          contonly = FALSE;
@@ -3137,7 +3134,7 @@ SCIP_RETCODE createAndAddProofcons(
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
    {
       /* add constraint based on dual ray to storage */
-      SCIP_CALL( SCIPconflictstoreAddDualraycons(conflictstore, cons, blkmem, set, stat, transprob, reopt) );
+      SCIP_CALL( SCIPconflictstoreAddDualraycons(conflictstore, cons, blkmem, set, stat, transprob, reopt, hasrelaxvar) );
    }
    else
    {
@@ -3191,7 +3188,7 @@ SCIP_RETCODE createAndAddProofcons(
       }
 
       /* add constraint based on dual solution to storage */
-      SCIP_CALL( SCIPconflictstoreAddDualsolcons(conflictstore, cons, blkmem, set, stat, transprob, reopt, scale, updateside) );
+      SCIP_CALL( SCIPconflictstoreAddDualsolcons(conflictstore, cons, blkmem, set, stat, transprob, reopt, scale, updateside, hasrelaxvar) );
    }
 
    if( applyglobal )

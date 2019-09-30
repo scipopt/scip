@@ -544,11 +544,25 @@ endif
 ifeq ($(IPOPT),true)
 LINKER		=	CPP
 # we require here Ipopt >= 3.10.0
-# - all linker flags are in share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt
-# - shared libraries are installed into the lib directory, so add this to the rpath
-FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
-IPOPTLIBS       =       $(shell cat $(SCIPDIR)/$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
+# check whether we can find Ipopt via pkg-config
+IPOPTPC := $(shell PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig pkg-config --exists ipopt && echo true)
+ifeq ($(IPOPTPC),true)
+  # use pkg-config to figure out compiler and linker flags
+  FLAGS += $(shell PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig pkg-config --cflags ipopt)
+  IPOPTLIBS := $(shell PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig pkg-config --libs ipopt)
+else
+  # fallback:
+  # - assume header files in include/coin or include/coin-or
+  # - all linker flags are in share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt, if this file exists, otherwise use -lipopt (another fallback)
+  FLAGS += -I$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin-or -I$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
+  ifneq ($(wildcard $(SCIPDIR)/$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt),)
+    IPOPTLIBS := $(shell cat $(SCIPDIR)/$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
+  else
+    IPOPTLIBS := $(LINKCC_L)$(SCIPDIR)/$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib $(LINKCC_l)ipopt
+  endif
+endif
 LDFLAGS		+=	$(IPOPTLIBS)
+# - shared libraries are installed into Ipopt's lib directory, so add this to the rpath
 ifneq ($(LINKRPATH),)
 ifneq ($(SCIPINTERNAL),)
 LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
@@ -568,7 +582,7 @@ endif
 
 # define flags for WORHP
 ifeq ($(WORHP),true)
-FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/include
+FLAGS		+=	-I$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/include
 LDFLAGS  += $(LINKCC_l)worhp
 LDFLAGS  += $(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib
 ifneq ($(LINKRPATH),)
