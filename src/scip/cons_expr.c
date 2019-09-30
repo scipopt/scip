@@ -6710,6 +6710,61 @@ SCIP_RETCODE enforceConstraints(
    return SCIP_OKAY;
 }
 
+/** helper function to call separate for all violated constraints */
+static
+SCIP_RETCODE separateConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   unsigned int soltag;
+   SCIP_Bool haveviol = FALSE;
+   int c;
+
+   *result = SCIP_DIDNOTFIND;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   soltag = ++conshdlrdata->lastsoltag;
+
+   /* compute violations */
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss[c] != NULL);
+
+      /* skip constraints that are not enabled, deleted, or have separation disabled */
+      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) || !SCIPconsIsSeparationEnabled(conss[c]) )
+         continue;
+      assert(SCIPconsIsActive(conss[c]));
+
+      SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* skip non-violated constraints */
+      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
+         haveviol = TRUE;
+   }
+
+   /* if none of our constraints are violated, don't attempt separation */
+   if( !haveviol )
+      return SCIP_OKAY;
+
+   /* call separation */
+   SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, FALSE, FALSE, result) );
+
+   return SCIP_OKAY;
+}
+
 /** checks for a linear variable that can be increased or decreased without harming feasibility */
 static
 void consdataFindUnlockedLinearVar(
@@ -8489,28 +8544,7 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
 static
 SCIP_DECL_CONSSEPALP(consSepalpExpr)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   unsigned int soltag;
-   int c;
-
-   *result = SCIP_DIDNOTFIND;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   soltag = ++conshdlrdata->lastsoltag;
-
-   /* compute violations */
-   for( c = 0; c < nconss; ++c )
-   {
-      assert(conss[c] != NULL);
-      SCIP_CALL( computeViolation(scip, conss[c], NULL, soltag) );
-   }
-
-   /* call separation
-    * TODO revise minviolation, should it be larger than feastol?
-    */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, soltag, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result) );
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -8520,28 +8554,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExpr)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   unsigned int soltag;
-   int c;
-
-   *result = SCIP_DIDNOTFIND;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   soltag = ++conshdlrdata->lastsoltag;
-
-   /* compute violations */
-   for( c = 0; c < nconss; ++c )
-   {
-      assert(conss[c] != NULL);
-      SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
-   }
-
-   /* call separation
-    * TODO revise minviolation, should it be larger than feastol?
-    */
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, soltag, SCIPfeastol(scip), SCIPgetSepaMinEfficacy(scip), result) );
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
