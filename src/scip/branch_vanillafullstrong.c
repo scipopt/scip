@@ -373,8 +373,6 @@ SCIP_RETCODE runVanillaStrongBranching(
 
    assert(scip != NULL);
    assert(cands != NULL);
-   assert(candssol != NULL);
-   assert(candsfrac != NULL);
    assert(bestcand != NULL);
    assert(bestdown != NULL);
    assert(bestup != NULL);
