@@ -126,18 +126,15 @@ SCIP_DECL_BRANCHFREE(branchFreeVanillafullstrong)
 static
 SCIP_DECL_BRANCHINIT(branchInitVanillafullstrong)
 {  /*lint --e{715}*/
+#ifndef NDEBUG
    SCIP_BRANCHRULEDATA* branchruledata;
 
    /* initialize branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
+#endif
    assert(branchruledata != NULL);
-
-   branchruledata->cands = NULL;
-   branchruledata->candscores = NULL;
-   branchruledata->candcapacity = -1;
-   branchruledata->ncands = -1;
-   branchruledata->npriocands = -1;
-   branchruledata->bestcand = -1;
+   assert(branchruledata->candscores == NULL);
+   assert(branchruledata->cands == NULL);
 
    return SCIP_OKAY;
 }
@@ -162,9 +159,6 @@ SCIP_DECL_BRANCHEXIT(branchExitVanillafullstrong)
    branchruledata->ncands = -1;
    branchruledata->npriocands = -1;
    branchruledata->bestcand = -1;
-
-   assert(branchruledata->candscores == NULL);
-   assert(branchruledata->cands == NULL);
 
    return SCIP_OKAY;
 }
@@ -309,6 +303,12 @@ SCIP_RETCODE SCIPincludeBranchruleVanillafullstrong(
 
    /* create fullstrong branching rule data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
+   branchruledata->cands = NULL;
+   branchruledata->candscores = NULL;
+   branchruledata->candcapacity = -1;
+   branchruledata->ncands = -1;
+   branchruledata->npriocands = -1;
+   branchruledata->bestcand = -1;
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
