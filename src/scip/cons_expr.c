@@ -6204,10 +6204,16 @@ SCIP_RETCODE enforceConstraints2(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* skip constraints that are not enabled, deleted, or have separation disabled */
-      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) || !SCIPconsIsSeparationEnabled(conss[c]) )
+      /* skip constraints that are not enabled or deleted */
+      if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
          continue;
       assert(SCIPconsIsActive(conss[c]));
+
+      /* skip constraints that have separation disabled if also branchscoring is disabled
+       * I take addbranchscores as proxy for we-are-in-separation, thus ignore separation-enabled in enforcement
+       */
+      if( !addbranchscores && !SCIPconsIsSeparationEnabled(conss[c]) )
+         continue;
 
       /* skip non-violated constraints */
       if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
@@ -6706,8 +6712,7 @@ SCIP_RETCODE enforceConstraints(
 
    /* if everything is fixed in violated constraints, then let's cut off the node
     * either bound tightening failed to identify a possible cutoff due to tolerances
-    * or the LP solution that we try to enforce here is not within bounds (see st_e40)
-    * TODO if there is a gap left and LP solution is not within bounds, then pass modified LP solution to heur_trysol?
+    * or tightenlpfeastol=FALSE and the LP solution that we try to enforce here is not within bounds (see st_e40)
     */
    SCIPdebugMsg(scip, "enforcement with max. violation %g failed; cutting off node\n", maxviol);
    *result = SCIP_CUTOFF;
