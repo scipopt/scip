@@ -297,7 +297,6 @@ void extRemoveNodeFromLeaves(
 )
 {
    int* const tree_leaves = extdata->tree_leaves;
-   int* const tree_deg = extdata->tree_deg;
 
    /* not the initial edge? */
    if( leaf != extdata->tree_root )
@@ -306,7 +305,7 @@ void extRemoveNodeFromLeaves(
 
       int comprootpos;
 
-      assert(tree_deg[leaf] == 1);
+      assert(extdata->tree_deg[leaf] == 1);
 
       /* switch last leaf and root component */
       extdata->tree_nleaves--;
@@ -1544,6 +1543,7 @@ SCIP_RETCODE reduce_extendedEdge2(
          if( deletable )
          {
             graph_edge_delFull(scip, graph, e, TRUE);
+            reduce_distDataDeleteEdge(scip, graph, e, &distdata);
 
             if( graph->grad[tail] == 0 )
                graph->mark[tail] = FALSE;
