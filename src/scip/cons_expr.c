@@ -5896,7 +5896,10 @@ SCIP_RETCODE enforceExprNlhdlr(
 
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
+   {
+      SCIPdebugMsg(scip, "sepa of nlhdlr %s succeeded with result %d\n", SCIPgetConsExprNlhdlrName(nlhdlr), *result);
       return SCIP_OKAY;
+   }
 
    *result = SCIP_DIDNOTFIND;
 
@@ -5943,10 +5946,16 @@ SCIP_RETCODE enforceExprNlhdlr(
             cutisweak = (cutviol < 0.5 * (auxvalue - auxvarval));
 
             if( !allowweakcuts && cutisweak )
+            {
+               SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak\n", SCIPgetConsExprNlhdlrName(nlhdlr));
                sepasuccess = FALSE;
+            }
          }
          else
+         {
             sepasuccess = FALSE;
+            SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut does not separate\n", SCIPgetConsExprNlhdlrName(nlhdlr));
+         }
       }
 
       /* clean up estimator */
@@ -6079,7 +6088,7 @@ SCIP_RETCODE enforceExpr(
        * if changing this here, we must also adapt analyzeViolation
        */
 
-      SCIPdebugMsg(scip, "sepa of nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate);
+      SCIPdebugMsg(scip, "enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate);
 
       /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
       if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > minviolation) )  /*lint !e777*/
@@ -6308,6 +6317,7 @@ SCIP_RETCODE enforceConstraints2(
    SCIPexpriteratorFree(&it);
 
    /* register external branching candidates */
+   *result = SCIP_DIDNOTFIND;
    for( c = 0; c < nconss; ++c )
    {
       int i;
@@ -6659,16 +6669,14 @@ SCIP_RETCODE enforceConstraints(
       return SCIP_OKAY;
    }
 
-#if 0
-   if( conshdlrdata->tightenlpfeastol && maxvarboundviol > 0.0 )
+   if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxvarboundviol) )
    {
       SCIPsetLPFeastol(scip, maxvarboundviol / 2.0);
-      SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, branching candidates are fixed but out of bounds, so reduced LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip));
+      SCIPdebugMsg(scip, "could not enforce violation in regular ways, but variable bounds are violated, reducing LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip));
 
       *result = SCIP_SOLVELP;
       return SCIP_OKAY;
    }
-#endif
 
    SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, becoming desperate now...\n", maxviol);
 #if 0
