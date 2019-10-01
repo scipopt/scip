@@ -682,25 +682,25 @@ SCIP_Bool extTruncate(
 
    if( extdata->tree_depth >= extdata->tree_maxdepth )
    {
-      SCIPdebugMessage("truncate (depth) \n");
+      SCIPdebugMessage("truncate (depth too high) \n");
       return TRUE;
    }
 
    if( extdata->tree_nedges >= extdata->tree_maxnedges )
    {
-      SCIPdebugMessage("truncate (tree size) \n");
+      SCIPdebugMessage("truncate (too many tree edges) \n");
       return TRUE;
    }
 
    if( extdata->tree_nleaves >= extdata->tree_maxnleaves )
    {
-      SCIPdebugMessage("truncate (number of leaves) \n");
+      SCIPdebugMessage("truncate (too many leaves) \n");
       return TRUE;
    }
 
    if( extstack_start[stackpos] >= extdata->extstack_maxedges )
    {
-      SCIPdebugMessage("truncate (edges on stack) \n");
+      SCIPdebugMessage("truncate (too many edges on stack) \n");
       return TRUE;
    }
 

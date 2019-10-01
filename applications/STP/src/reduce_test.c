@@ -236,6 +236,121 @@ SCIP_RETCODE checkSdWalk(
 
 
 static
+SCIP_RETCODE extTest5_variants(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   variant             /**< 1,2 */
+)
+{
+   GRAPH* graph;
+   const int nnodes = 85;
+   const int nedges = 88;
+   const int root = 0;
+
+   SCIP_Real* rootdist;
+   SCIP_Real* redcost;
+   PATH* termpaths;
+   STP_Bool* edgedeleted = NULL;
+   SCIP_Real cutoff;
+   int edge;
+   SCIP_Bool deletable;
+
+   assert(scip);
+   assert(variant == 1 || variant == 2);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &rootdist, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redcost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termpaths, 3 * nnodes) );
+
+   /* build graph */
+   graph_knot_add(graph, 0);
+
+   /* also add dummy nodes to avoid full stack */
+   for( int i = 1; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph->source = 0;
+
+   graph_edge_add(scip, graph, 0, 1, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 2, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 3, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 4, 1.0, 1.0);
+   graph_edge_add(scip, graph, 1, 5, 1.0, 1.0);
+
+   graph_edge_add(scip, graph, 2, 6, 1.0, 1.0);
+   graph_edge_add(scip, graph, 3, 7, 1.0, 1.0);
+   graph_edge_add(scip, graph, 4, 8, 1.0, 1.0);
+   graph_edge_add(scip, graph, 5, 9, 1.0, 1.0);
+
+   graph_edge_add(scip, graph, 6, 10, 1.0, 1.0);
+   graph_edge_add(scip, graph, 7, 10, 1.0, 1.0);
+   graph_edge_add(scip, graph, 8, 10, 1.0, 1.0);
+   graph_edge_add(scip, graph, 9, 10, 1.0, 1.0);
+
+   graph_edge_add(scip, graph, 0, 10, 0.9, 0.9);
+
+   graph_mark(graph);
+
+   /* necessary data structures */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      rootdist[i] = 0.0;
+      termpaths[i].dist = 0.0;
+   }
+
+   for( int i = 0; i < nedges; i++ )
+      redcost[i] = 1.0;
+
+   cutoff = 100.0;
+   edge = 0;
+
+   graph_knot_chg(graph, 6, 0);
+   graph_knot_chg(graph, 7, 0);
+   graph_knot_chg(graph, 8, 0);
+   graph_knot_chg(graph, 9, 0);
+
+   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_path_init(scip, graph) );
+
+   if( variant == 1 )
+   {
+      SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, -1, root, nnodes, &deletable, TRUE));
+      assert(deletable);
+   }
+   else
+   {
+      int edgedelete = -1;
+
+      assert(variant == 2);
+
+      for( int e = graph->outbeg[0]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         if( graph->head[e] == 10 )
+            edgedelete = e;
+      }
+
+      assert(edgedelete >= 0);
+
+      SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, edgedelete, root, nnodes, &deletable, TRUE));
+      assert(!deletable);
+   }
+
+   /* clean up */
+
+   SCIPfreeBufferArray(scip, &termpaths);
+   SCIPfreeBufferArray(scip, &redcost);
+   SCIPfreeBufferArray(scip, &rootdist);
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+   assert(graph == NULL);
+
+   return SCIP_OKAY;
+}
+
+
+static
 SCIP_RETCODE extTest4_variants(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   variant             /**< 1,2,3 */
@@ -305,12 +420,11 @@ SCIP_RETCODE extTest4_variants(
    graph_knot_chg(graph, 4, 0);
    graph_knot_chg(graph, 5, 0);
 
+   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_path_init(scip, graph) );
 
    if( variant == 1 )
    {
-      SCIP_CALL( graph_init_history(scip, graph) );
-      SCIP_CALL( graph_path_init(scip, graph) );
-
       SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, -1, root, nnodes, &deletable, TRUE));
       assert(deletable);
    }
@@ -325,9 +439,6 @@ SCIP_RETCODE extTest4_variants(
       }
 
       assert(edgedelete >= 0);
-
-      SCIP_CALL( graph_init_history(scip, graph) );
-      SCIP_CALL( graph_path_init(scip, graph) );
 
       SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, edgedelete, root, nnodes, &deletable, TRUE));
       assert(!deletable);
@@ -345,9 +456,6 @@ SCIP_RETCODE extTest4_variants(
       }
 
       assert(edgedelete >= 0);
-
-      SCIP_CALL( graph_init_history(scip, graph) );
-      SCIP_CALL( graph_path_init(scip, graph) );
 
       SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, edgedelete, root, nnodes, &deletable, TRUE));
       assert(deletable);
@@ -416,8 +524,7 @@ SCIP_RETCODE extTest3_variants(
    graph_edge_add(scip, graph, 8, 0, 1.0, 1.0);
    graph_edge_add(scip, graph, 9, 0, 1.0, 1.0);
 
-   for( int i = 1; i < nnodes; i++ )
-      graph->mark[i] = (graph->grad[i] > 0);
+   graph_mark(graph);
 
    /* necessary data structures */
    for( int i = 0; i < nnodes; i++ )
@@ -561,8 +668,8 @@ SCIP_RETCODE extTest2_variants(
    graph_edge_add(scip, graph, 10, 11, 1.0, 1.0);
    graph_edge_add(scip, graph, 11, 12, 1.0, 1.0);
 
-   for( int i = 1; i < nnodes; i++ )
-      graph->mark[i] = (graph->grad[i] > 0);
+   graph_mark(graph);
+
 
    /* necessary data structures */
    for( int i = 0; i < nnodes; i++ )
@@ -1007,9 +1114,7 @@ SCIP_RETCODE extTest1(
    SCIP_CALL( graph_init_history(scip, graph) );
    SCIP_CALL( graph_path_init(scip, graph) );
 
-   for( int i = 1; i < nnodes; i++ )
-      graph->mark[i] = (graph->grad[i] > 0);
-
+   graph_mark(graph);
 
    /* necessary data structures */
    for( int i = 0; i < nnodes; i++ )
@@ -1087,8 +1192,7 @@ SCIP_RETCODE extDistTest(
    graph_edge_add(scip, graph, 10, 11, 1.0, 1.0);
    graph_edge_add(scip, graph, 11, 12, 1.0, 1.0);
 
-   for( int k = 0; k < nnodes; k++ )
-      graph->mark[k] = graph->grad[k] > 0;
+   graph_mark(graph);
 
    SCIP_CALL( graph_init_history(scip, graph) );
    SCIP_CALL( graph_path_init(scip, graph) );
@@ -1386,6 +1490,9 @@ SCIP_RETCODE reduce_extTest(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+   SCIP_CALL( extTest5_variants(scip, 1) );
+   SCIP_CALL( extTest5_variants(scip, 2) );
+
    SCIP_CALL( extTest4_variants(scip, 1) );
    SCIP_CALL( extTest4_variants(scip, 2) );
    SCIP_CALL( extTest4_variants(scip, 3) );
@@ -1571,8 +1678,7 @@ SCIP_RETCODE heur_extendPcMwOuterTest(
    SCIP_CALL(graph_init_history(scip, graph));
    SCIP_CALL(graph_path_init(scip, graph));
 
-   for( int i = 0; i < nnodes; i++ )
-      graph->mark[i] = (graph->grad[i] > 0);
+   graph_mark(graph);
 
    SCIP_CALL(SCIPallocBufferArray(scip, &stvertex, nnodes));
    SCIP_CALL(SCIPallocBufferArray(scip, &stedge, nedges));
