@@ -790,6 +790,8 @@ SCIP_Real reduce_distDataGetSD(
 
       graph_dijkLimited_reset(g, distdata->dijkdata);
 
+      SCIPdebugMessage("vertex %d is dirty, recompute \n", vertex1);
+
       distdata->pathroot_isdirty[vertex1] = FALSE;
    }
 

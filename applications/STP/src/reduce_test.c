@@ -123,6 +123,8 @@ SCIP_RETCODE extArc(
    {
       graph_edge_delFull(scip, graph, edgedelete, TRUE);
       reduce_distDataDeleteEdge(scip, graph, edgedelete, &distdata);
+
+      graph_mark(graph);
    }
 
    /* actual test */
@@ -236,7 +238,7 @@ SCIP_RETCODE checkSdWalk(
 static
 SCIP_RETCODE extTest4_variants(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   variant             /**< 1,2 */
+   int                   variant             /**< 1,2,3 */
 )
 {
    GRAPH* graph;
@@ -253,7 +255,7 @@ SCIP_RETCODE extTest4_variants(
    SCIP_Bool deletable;
 
    assert(scip);
-   assert(variant == 1 || variant == 2);
+   assert(variant == 1 || variant == 2 || variant == 3);
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
@@ -281,6 +283,10 @@ SCIP_RETCODE extTest4_variants(
    graph_edge_add(scip, graph, 0, 6, 0.9, 0.9);
    graph_edge_add(scip, graph, 0, 7, 0.9, 0.9);
 
+   if( variant == 3 )
+      graph_edge_add(scip, graph, 7, 8, 0.9, 0.9);
+
+
    graph_mark(graph);
 
    /* necessary data structures */
@@ -296,7 +302,7 @@ SCIP_RETCODE extTest4_variants(
    cutoff = 100.0;
    edge = 0;
 
-   graph_knot_chg(graph, 7, 0);
+   graph_knot_chg(graph, 4, 0);
    graph_knot_chg(graph, 5, 0);
 
 
@@ -308,7 +314,7 @@ SCIP_RETCODE extTest4_variants(
       SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, -1, root, nnodes, &deletable, TRUE));
       assert(deletable);
    }
-   else
+   else if( variant == 2 )
    {
       int edgedelete = -1;
 
@@ -325,6 +331,26 @@ SCIP_RETCODE extTest4_variants(
 
       SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, edgedelete, root, nnodes, &deletable, TRUE));
       assert(!deletable);
+   }
+   else
+   {
+      int edgedelete = -1;
+
+      assert(variant == 3);
+
+      for( int e = graph->outbeg[7]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         if( graph->head[e] == 8 )
+            edgedelete = e;
+      }
+
+      assert(edgedelete >= 0);
+
+      SCIP_CALL( graph_init_history(scip, graph) );
+      SCIP_CALL( graph_path_init(scip, graph) );
+
+      SCIP_CALL(extArc(scip, graph, rootdist, redcost, termpaths, edgedeleted, cutoff, edge, edgedelete, root, nnodes, &deletable, TRUE));
+      assert(deletable);
    }
 
    /* clean up */
@@ -1362,6 +1388,8 @@ SCIP_RETCODE reduce_extTest(
 {
    SCIP_CALL( extTest4_variants(scip, 1) );
    SCIP_CALL( extTest4_variants(scip, 2) );
+   SCIP_CALL( extTest4_variants(scip, 3) );
+
 
    SCIP_CALL( extTest3_variants(scip, 1) );
    SCIP_CALL( extTest3_variants(scip, 2) );
