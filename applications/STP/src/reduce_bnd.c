@@ -2148,18 +2148,27 @@ SCIP_RETCODE reduce_da(
          }
 
          if( extended )
-             {
+         {
 
-                     int nn;
-                     int extfixed;
-                     reduce_extendedEdge2(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, FALSE, marked, &extfixed);
-                     nfixed += extfixed;
+            int nn;
+            int extfixed;
+            reduce_extendedEdge2(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, FALSE, marked, &extfixed);
+            nfixed += extfixed;
+#define EXT_WRITE
+            graph_printInfo(graph);
+            printf("newly fixedSECOND =%d \n", extfixed);
+            //exit(1);
+#ifdef EXT_WRITE
+            {
+               FILE *fp;
 
-                     graph_printInfo(graph);
-                     printf("newly fixedSECOND =%d \n", extfixed);
-          //           exit(1);
-    //                 assert(0);
-             }
+               fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/deleteme/test.txt", "a+");
+               fprintf(fp, "%d \n", extfixed);
+               fclose(fp);
+               exit(1);
+            }
+#endif
+         }
 
 
          if( !directed && !SCIPisZero(scip, minpathcost) && nodereplacing )
