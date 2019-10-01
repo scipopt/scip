@@ -2160,10 +2160,11 @@ SCIP_RETCODE reduce_da(
             //exit(1);
 #ifdef EXT_WRITE
             {
+
                FILE *fp;
 
                fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/deleteme/test.txt", "a+");
-               fprintf(fp, "%d \n", extfixed);
+               fprintf(fp, "%s %d \n", SCIPgetProbName(scip), extfixed);
                fclose(fp);
                exit(1);
             }
