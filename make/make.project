@@ -449,6 +449,23 @@ LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libqsopt.$(OSTYPE).$
 endif
 
 #-------------------------------------------------------
+# define flags for Glop
+ifeq ($(LPS),glop)
+LINKER		=	CPP
+FLAGS		+=	-I$(LIBDIR)/shared/ortools -I$(LIBDIR)/shared/ortools/ortools/gen -I$(LIBDIR)/shared/ortools/dependencies/install/include
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared/ortools/lib $(LINKCC_l)ortools \
+			$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared/ortools/dependencies/install/lib $(LINKCC_l)glog
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/ortools/lib/libortools.$(SHAREDLIBEXT) \
+			$(SCIPREALPATH)/$(LIBDIR)/shared/ortools/dependencies/install/lib/libglog.$(SHAREDLIBEXT)
+ifneq ($(LINKRPATH),)
+ORTOOLSDIR	= 	$(dir $(realpath $(SCIPREALPATH)/$(LIBDIR)/shared/ortools/lib/libortools.$(SHAREDLIBEXT)))
+LPSLDFLAGS	+=      $(LINKRPATH)$(ORTOOLSDIR)
+GLOGDIR		= 	$(dir $(realpath $(SCIPREALPATH)/$(LIBDIR)/shared/ortools/dependencies/install/lib/libglog.$(SHAREDLIBEXT)))
+LPSLDFLAGS	+=      $(LINKRPATH)$(GLOGDIR)
+endif
+endif
+
+#-------------------------------------------------------
 # define empty flags for "none"
 ifeq ($(LPS),none)
 LPSLDFLAGS	+=
