@@ -918,6 +918,10 @@ SCIP_RETCODE SolveInternal(
    std::unique_ptr<TimeLimit> time_limit = TimeLimit::FromParameters(*lpi->parameters);
    lpi->linear_program->AddSlackVariablesWhereNecessary(false);
 
+   /* possibly ignore warm start information for next solve */
+   if ( lpi->from_scratch )
+      lpi->solver->ClearStateForNextSolve();
+
    if (! lpi->solver->Solve(*(lpi->linear_program), time_limit.get()).ok())
    {
       lpi->linear_program->DeleteSlackVariables();
@@ -2050,7 +2054,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    switch ( type )
    {
    case SCIP_LPPAR_FROMSCRATCH:
-      *ival = lpi->from_scratch;
+      *ival = (int) lpi->from_scratch;
       break;
    case SCIP_LPPAR_FASTMIP:
       *ival = lpi->fast_mip;
@@ -2092,7 +2096,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    switch ( type )
    {
    case SCIP_LPPAR_FROMSCRATCH:
-      lpi->from_scratch = ival;
+      lpi->from_scratch = (bool) ival;
       break;
    case SCIP_LPPAR_FASTMIP:
       lpi->fast_mip = ival;
