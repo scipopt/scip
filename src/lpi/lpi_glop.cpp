@@ -68,6 +68,7 @@ using operations_research::glop::DenseBooleanRow;
 using operations_research::glop::DenseColumn;
 using operations_research::glop::DenseRow;
 using operations_research::glop::SparseColumn;
+using operations_research::glop::ScatteredColumn;
 using operations_research::glop::Fractional;
 using operations_research::glop::GetProblemStatusString;
 using operations_research::glop::ProblemStatus;
@@ -1930,9 +1931,21 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    assert( lpi->linear_program != NULL );
    assert( coef != NULL );
 
-   SCIPerrorMessage("SCIPlpiGetBInvCol - not implemented.\n");
+   /* we need to loop through the rows to extract the values for column c */
+   const ColIndex col(c);
+   const RowIndex num_rows = lpi->linear_program->num_constraints();
+   for (int row = 0; row < num_rows; ++row)
+   {
+      ScatteredRow solution;
+      lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(row), &solution);
+      coef[row] = solution[col];
+   }
 
-   return SCIP_LPERROR;
+   /* Only returns a dense vector, so set ninds to -1. */
+   if ( ninds != NULL )
+      *ninds = -1;
+
+   return SCIP_OKAY;
 }
 
 /** get row of inverse basis matrix times constraint matrix B^-1 * A
@@ -1955,9 +1968,22 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert( lpi->linear_program != NULL );
    assert( coef != NULL );
 
-   SCIPerrorMessage("SCIPlpiGetBInvARow - not implemented.\n");
+   /* we need to loop through the columns to extract the values for row r */
+   const RowIndex row(r);
+   const ColIndex num_cols = lpi->linear_program->num_variables();
+   for (ColIndex col(0); col < num_cols; ++col)
+   {
+      ScatteredColumn solution;
+      lpi->solver->GetBasisFactorization().RightSolveForProblemColumn(col, &solution);
 
-   return SCIP_LPERROR;
+      coef[col.value()] = solution[row];
+   }
+
+   /* Only returns a dense vector, so set ninds to -1. */
+   if ( ninds != NULL )
+      *ninds = -1;
+
+   return SCIP_OKAY;
 }
 
 /** get column of inverse basis matrix times constraint matrix B^-1 * A
@@ -1979,9 +2005,17 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert( lpi->linear_program != NULL );
    assert( coef != NULL );
 
-   SCIPerrorMessage("SCIPlpiGetBInvACol - not implemented.\n");
+   ScatteredColumn solution;
+   lpi->solver->GetBasisFactorization().RightSolveForProblemColumn(ColIndex(c), &solution);
+   const RowIndex num_rows = solution.values.size();
+   for (RowIndex row(0); row < num_rows; ++row)
+      coef[row.value()] = solution[row];
 
-   return SCIP_LPERROR;
+   /* Only returns a dense vector, so set ninds to -1. */
+   if ( ninds != NULL )
+      *ninds = -1;
+
+   return SCIP_OKAY;
 }
 
 /**@} */
