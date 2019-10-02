@@ -906,6 +906,47 @@ SCIP_Bool graph_pseudoAncestors_nodeIsHashed(
    return blockedAncestors_hashIsHitBlock(pseudoancestors->ans_nodes, node, hasharr);
 }
 
+
+/** any ancestors of given edges in conflict? */
+SCIP_Bool graph_pseudoAncestors_edgesInConflict(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   const int*            edges,              /**< edges to check */
+   int                   nedges              /**< number of edges to check */
+)
+{
+   const PSEUDOANS* const pseudoancestors = g->pseudoancestors;
+   int* hasharr;
+   const int nnodes = g->knots;
+   int i;
+   SCIP_Bool conflict = FALSE;
+
+   assert(g && edges);
+
+   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &hasharr, nnodes) );
+
+    for( i = 0; i < nedges; i++ )
+    {
+       graph_pseudoAncestors_hashEdgeDirty(pseudoancestors, edges[i], TRUE, &conflict, hasharr);
+
+       if( conflict )
+          break;
+    }
+
+    for( int j = 0; j < i; j++ )
+       graph_pseudoAncestors_unhashEdge(pseudoancestors, edges[j], hasharr);
+
+#ifndef NDEBUG
+    for( int j = 0; j < nnodes; j++ )
+       assert(hasharr[0] == 0);
+#endif
+
+    SCIPfreeCleanBufferArray(scip, &hasharr);
+
+    return conflict;
+}
+
+
 /** initializes pseudo ancestors */
 SCIP_RETCODE graph_init_pseudoAncestors(
    SCIP*                 scip,               /**< SCIP data structure */

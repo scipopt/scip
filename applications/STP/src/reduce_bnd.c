@@ -2154,7 +2154,7 @@ SCIP_RETCODE reduce_da(
             int extfixed;
             reduce_extendedEdge2(scip, graph, vnoi, cost, pathdist, (apsol ? result : NULL), minpathcost, daroot, FALSE, marked, &extfixed);
             nfixed += extfixed;
-#define EXT_WRITE
+//#define EXT_WRITE
             graph_printInfo(graph);
             printf("newly fixedSECOND =%d \n", extfixed);
             //exit(1);
