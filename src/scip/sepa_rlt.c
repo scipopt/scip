@@ -64,7 +64,7 @@
 #define DEFAULT_ONLYCONTROWS      FALSE /**< default value for parameter eqrowsfirst */
 #define DEFAULT_ONLYINITIAL        TRUE /**< default value for parameter onlyinitial */
 #define DEFAULT_USEINSUBSCIP      FALSE /**< default value for parameter useinsubscip */
-#define DEFAULT_USEPROJECTION     FALSE /**< default value for parameter useprojection */
+#define DEFAULT_USEPROJECTION      TRUE /**< default value for parameter useprojection */
 
 #define MAXVARBOUND                1e+5 /**< maximum allowed variable bound for computing an RLT-cut */
 
@@ -96,6 +96,7 @@ struct SCIP_SepaData
    int*                  varpriorities;      /**< priorities of the variables in varssorted */
    int                   maxvarindex;        /**< maximum variable index when creating bilinvarsmap */
    int                   nbilinterms;        /**< total number of bilinear terms */
+   int                   sbilinterms;        /**< size of bilinear terms arrays */
    int                   nbilinvars;         /**< total number of variables occurring in bilinear terms */
    SCIP_Bool             iscreated;          /**< indicates whether the sepadata has been initialized yet */
    SCIP_Bool             isinitialround;     /**< indicates that this is the first round and initial rows are used */
@@ -247,19 +248,21 @@ SCIP_RETCODE freeSepaData(
       SCIPfreeBlockMemoryArrayNull(scip, &sepadata->varbilinvars[i], sepadata->nvarbilinvars[i]);
    }
 
-   SCIPfreeBlockMemoryArray(scip, &sepadata->isimplicit, sepadata->nbilinterms);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->nbilinterms);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->bestoverestimator, sepadata->nbilinterms);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->bestunderestimator, sepadata->nbilinterms);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->linoverestimate, sepadata->nbilinterms);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->linunderestimate, sepadata->nbilinterms);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->bilinlocksneg, sepadata->nbilinterms);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->bilinlockspos, sepadata->nbilinterms);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->bilinterms, sepadata->nbilinterms);
-
-   SCIPfreeBlockMemoryArray(scip, &sepadata->slinexprs, sepadata->nbilinterms);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->nlinexprs, sepadata->nbilinterms);
-   SCIPfreeBlockMemoryArray(scip, &sepadata->linexprs, sepadata->nbilinterms);
+   if( sepadata->sbilinterms > 0 )
+   {
+      SCIPfreeBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->sbilinterms);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->bestoverestimator, sepadata->sbilinterms);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->bestunderestimator, sepadata->sbilinterms);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->linoverestimate, sepadata->sbilinterms);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->linunderestimate, sepadata->sbilinterms);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->slinexprs, sepadata->sbilinterms);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->nlinexprs, sepadata->sbilinterms);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->linexprs, sepadata->sbilinterms);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->bilinlocksneg, sepadata->sbilinterms);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->bilinlockspos, sepadata->sbilinterms);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->isimplicit, sepadata->sbilinterms);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->bilinterms, sepadata->sbilinterms);
+   }
 
    SCIPfreeBlockMemoryArray(scip, &sepadata->varpriorities, sepadata->nbilinvars);
    SCIPfreeBlockMemoryArray(scip, &sepadata->nvarbilinvars, sepadata->nbilinvars);
@@ -270,6 +273,41 @@ SCIP_RETCODE freeSepaData(
    SCIPhashmapFree(&sepadata->bilinvarsmap);
 
    sepadata->iscreated = FALSE;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE ensureBilinSizes(
+   SCIP*          scip,
+   SCIP_SEPADATA* sepadata,
+   int            n
+   )
+{
+   assert(sepadata->nbilinterms <= sepadata->sbilinterms);
+
+   if( n > sepadata->sbilinterms )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, n);
+
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bilinterms, sepadata->sbilinterms, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->isimplicit, sepadata->sbilinterms, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bilinlockspos, sepadata->sbilinterms, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bilinlocksneg, sepadata->sbilinterms, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->linexprs, sepadata->sbilinterms, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->nlinexprs, sepadata->sbilinterms, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->slinexprs, sepadata->sbilinterms, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->linunderestimate, sepadata->sbilinterms, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->linoverestimate, sepadata->sbilinterms, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bestunderestimator, sepadata->sbilinterms, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bestoverestimator, sepadata->sbilinterms, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->sbilinterms, newsize) );
+
+      sepadata->sbilinterms = newsize;
+   }
+   assert(n <= sepadata->sbilinterms);
 
    return SCIP_OKAY;
 }
@@ -361,7 +399,6 @@ SCIP_RETCODE addBilinProduct(
 )
 {
    int mapidx, xidx, yidx;
-   int xpos, ypos;
    SCIP_CONSEXPR_EXPR* prodexprs[2];
    SCIP_Bool new = FALSE;
    int termpos, linpos;
@@ -404,6 +441,8 @@ SCIP_RETCODE addBilinProduct(
    if( termpos == INT_MAX )
    { /* this is the first time we come across this product */
       /* store variables if it's the first time they are found in a bilinear term */
+      int xpos, ypos;
+
       if( !SCIPhashmapExists(varmap, (void*)(size_t) xidx) )
       {
          SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) xidx, sepadata->nbilinvars) ); /*lint !e571*/
@@ -446,6 +485,8 @@ SCIP_RETCODE addBilinProduct(
                                       sepadata->nbilinterms) ); /*lint !e571*/
 
       /* add variables and exprs to bilin-arrays and capture them */
+      SCIP_CALL( ensureBilinSizes(scip, sepadata, sepadata->nbilinterms + 1) );
+
       sepadata->bilinterms[sepadata->nbilinterms] = expr;
       SCIPcaptureConsExprExpr(expr);
       sepadata->isimplicit[sepadata->nbilinterms] = isimplicit;
@@ -535,7 +576,7 @@ SCIP_RETCODE addBilinProduct(
    if( new )
       SCIPreleaseConsExprExpr(scip, &expr);
 
-   SCIPdebugMsg(scip, "Updated linearisations are:\n");
+   SCIPdebugMsg(scip, "Updated linearisations for termpos are:\n");
 #ifdef SCIP_DEBUG
    for( int i = 0; i < sepadata->nlinexprs[termpos]; ++i )
    {
@@ -1527,6 +1568,7 @@ SCIP_RETCODE createSepaData(
 
    sepadata->nbilinvars = 0;
    sepadata->nbilinterms = 0;
+   sepadata->sbilinterms = 0;
 
    conss = SCIPconshdlrGetConss(sepadata->conshdlr);
    nconss = SCIPconshdlrGetNConss(sepadata->conshdlr);
@@ -1549,19 +1591,18 @@ SCIP_RETCODE createSepaData(
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &sepadata->nvarbilinvars, nvars) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &sepadata->varpriorities, nvars) );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->linexprs, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->nlinexprs, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->slinexprs, nvars) );
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->bilinterms, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->bilinlockspos, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->bilinlocksneg, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->linunderestimate, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->linoverestimate, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->bestunderestimator, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->bestoverestimator, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->eqlinexpr, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->isimplicit, nvars) );
+   sepadata->bilinterms = NULL;
+   sepadata->bilinlockspos = NULL;
+   sepadata->bilinlocksneg = NULL;
+   sepadata->linunderestimate = NULL;
+   sepadata->linoverestimate = NULL;
+   sepadata->bestunderestimator = NULL;
+   sepadata->bestoverestimator = NULL;
+   sepadata->eqlinexpr = NULL;
+   sepadata->isimplicit = NULL;
+   sepadata->linexprs = NULL;
+   sepadata->nlinexprs = NULL;
+   sepadata->slinexprs = NULL;
 
    /* find maximum variable index */
    for( i = 0; i < SCIPgetNVars(scip); ++i )
@@ -1668,7 +1709,13 @@ SCIP_RETCODE createSepaData(
       }
    }
 
+   int oldnterms = sepadata->nbilinterms;
+
    SCIP_CALL( detectHiddenProducts(scip, sepadata, varmap) );
+
+   if( sepadata->nbilinterms - oldnterms > 0 )
+      SCIPinfoMessage(scip, NULL, "\nFound hidden products");
+   SCIPinfoMessage(scip, NULL, "\nNumber of hidden products: %d", sepadata->nbilinterms - oldnterms);
 
    /* reallocate arrays to fit actually sizes */
    if( sepadata->nbilinvars < nvars )
@@ -1677,22 +1724,6 @@ SCIP_RETCODE createSepaData(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varbilinvars, nvars, sepadata->nbilinvars) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->nvarbilinvars, nvars, sepadata->nbilinvars) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varpriorities, nvars, sepadata->nbilinvars) );
-   }
-
-   if( sepadata->nbilinterms < nvars )
-   {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->linexprs, nvars, sepadata->nbilinterms) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->nlinexprs, nvars, sepadata->nbilinterms) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->slinexprs, nvars, sepadata->nbilinterms) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bilinterms, nvars, sepadata->nbilinterms) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bilinlockspos, nvars, sepadata->nbilinterms) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bilinlocksneg, nvars, sepadata->nbilinterms) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bestunderestimator, nvars, sepadata->nbilinterms) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bestoverestimator, nvars, sepadata->nbilinterms) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->eqlinexpr, nvars, sepadata->nbilinterms) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->linunderestimate, nvars, sepadata->nbilinterms) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->linoverestimate, nvars, sepadata->nbilinterms) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->isimplicit, nvars, sepadata->nbilinterms) );
    }
 
    for( i = 0; i < sepadata->nbilinvars; ++i )
@@ -1809,7 +1840,7 @@ SCIP_RETCODE updateBestEstimators(
          viol_above = -prodviol;
          sepadata->bestoverestimator[pos] = i;
       }
-      if( sepadata->eqlinexpr[pos] == -1 && sepadata->linunderestimate[pos] && sepadata->linunderestimate[pos] )
+      if( sepadata->eqlinexpr[pos] == -1 && sepadata->linunderestimate[pos][i] && sepadata->linunderestimate[pos][i] )
       {
          sepadata->eqlinexpr[pos] = i;
       }
@@ -1872,7 +1903,7 @@ SCIP_RETCODE isAcceptableRow(
          ++(*currentnunknown);
    }
 
-   *acceptable = *currentnunknown <= sepadata->maxunknownterms;
+   *acceptable = sepadata->maxunknownterms < 0 || *currentnunknown <= sepadata->maxunknownterms;
 
    return SCIP_OKAY;
 }
