@@ -1990,7 +1990,7 @@ SCIP_RETCODE determineSymmetry(
    {
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
-      propdata->nperms = 0;
+
       return SCIP_OKAY;
    }
 
