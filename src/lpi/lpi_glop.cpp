@@ -39,6 +39,9 @@
 #include "ortools/util/stats.h"
 #include "ortools/util/time_limit.h"
 
+#include "glog/logging.h"
+#include "glog/vlog_is_on.h"
+
 #include "lpi/lpi.h"
 #include "scip/pub_message.h"
 
@@ -2060,7 +2063,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->fast_mip;
       break;
    case SCIP_LPPAR_LPINFO:
-      *ival = lpi->lp_info;
+      *ival = (int) lpi->lp_info;
       break;
    case SCIP_LPPAR_LPITLIM:
       *ival = lpi->parameters->max_number_of_iterations();
@@ -2102,7 +2105,16 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->fast_mip = ival;
       break;
    case SCIP_LPPAR_LPINFO:
-      lpi->lp_info = ival;
+      if ( ival == 0 )
+      {
+         google::SetVLOGLevel("*", google::GLOG_INFO);
+         lpi->lp_info = false;
+      }
+      else
+      {
+         google::SetVLOGLevel("*", google::GLOG_FATAL);
+         lpi->lp_info = true;
+      }
       break;
    case SCIP_LPPAR_LPITLIM:
       lpi->parameters->set_max_number_of_iterations(ival);
