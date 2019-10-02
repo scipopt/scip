@@ -2585,7 +2585,34 @@ SCIP_RETCODE addSymresackConss(
    assert( propdata->nperms <= 0 || perms != NULL );
    assert( permvars != NULL );
    assert( npermvars > 0 );
-   assert( ncomponents > 0 );
+
+   /* if components have not been computed */
+   if ( ncomponents == -1 )
+   {
+      assert( ! propdata->ofenabled );
+      assert( ! propdata->detectorbitopes );
+
+      /* loop through perms and add symresack constraints */
+      for (p = 0; p < propdata->nperms; ++p)
+      {
+         SCIP_CONS* cons;
+         char name[SCIP_MAXSTRLEN];
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_perm%d", p);
+         SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[p], permvars, npermvars, FALSE,
+               conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+
+         /* do not release constraint here - will be done later */
+         propdata->genconss[propdata->ngenconss++] = cons;
+         ++propdata->nsymresacks;
+         ++nsymresackcons;
+      }
+      SCIPdebugMsg(scip, "Added %d symresack constraints.\n", nsymresackcons);
+
+      return SCIP_OKAY;
+   }
 
    /* loop through components */
    for (i = 0; i < ncomponents; ++i)
