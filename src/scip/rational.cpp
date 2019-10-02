@@ -1136,12 +1136,13 @@ int RtoString(
    return ret;
 }
 
+/* allocates and returns a null-terminated string-representation of the rational */
 const char* RgetString(
    SCIP_Rational*        r
    )
 {
    assert(r != NULL);
-   return r->r->str().c_str();
+   return mpq_get_str(0, 10, r->r->backend().data());
 }
 
 /** return the strlen of a rational number */
@@ -1171,14 +1172,14 @@ void Rprint(
    if( r->isinf )
    {
       if( file == NULL )
-         std::cout << *(r->r) << "inf";
+         std::cout << *(r->r) << "inf" << std::endl;
       else
          fprintf(file, "%d inf", r->r->sign());
    }
    else
    {
       if( file == NULL )
-         std::cout << *(r->r);
+         std::cout << *(r->r) << std::endl;
       else
          fprintf(file, "%s", r->r->str().c_str());
    }
@@ -1284,7 +1285,7 @@ SCIP_Real RgetRealRelax(
 
 /** round rational to next integer in direction of roundmode */
 SCIP_Bool RroundInteger(
-   long int*                 retval,             /**< the resulting rounded lon int */
+   long int*             retval,             /**< the resulting rounded lon int */
    SCIP_Rational*        src,                /**< the rational to round */
    SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
    )
