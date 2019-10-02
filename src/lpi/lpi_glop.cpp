@@ -1416,8 +1416,8 @@ SCIP_Bool SCIPlpiIsIterlimExc(
    assert( lpi != NULL );
    assert( lpi->solver != NULL );
 
-   return lpi->solver->GetNumberOfIterations() >=
-         lpi->parameters->max_number_of_iterations();
+  int maxiter = lpi->parameters->max_number_of_iterations();
+  return maxiter >= 0 && lpi->solver->GetNumberOfIterations() >= maxiter;
 }
 
 /** returns TRUE iff the time limit was reached */
@@ -1554,7 +1554,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    const RowIndex num_rows = lpi->linear_program->num_constraints();
    const DenseColumn& dual_ray = lpi->solver->GetDualRay();
    for (RowIndex row(0); row < num_rows; ++row)
-      dualfarkas[row.value()] = dual_ray[row];
+      dualfarkas[row.value()] = -dual_ray[row];  /* reverse sign */
 
    return SCIP_OKAY;
 }
