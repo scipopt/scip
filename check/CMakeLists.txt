@@ -96,6 +96,11 @@ set(settings_fastMIP
     "lookahead-abbrev-bincons"
     "lookahead-addclique-scaledcutoffscore"
   )
+set(settings_MIPEX
+    "exlp-auto"
+    "exactlp"
+    "ps"
+    "ps_exlp")
 set(settings_MINLP
     "minlp"
     "undercover1"
@@ -210,6 +215,17 @@ list(APPEND
     instances_Indicator
     "/instances/Indicator/indicatortest.zpl\;-2"
     "instances/Indicator/mcf64-4-1.zpl\;10"
+    )
+# exact ip instances
+set(instances_MIPEX
+    "instances/MIPEX/egout.zpl\;568.1007"
+    "instances/MIPEX/enigma.zpl\;0"
+    "instances/MIPEX/flugpl.zpl\;1201500"
+    "instances/MIPEX/misc03.zpl\;0"
+    "instances/MIPEX/mod008.zpl\;0"
+    "instances/MIPEX/rgn.zpl\;82.1999974"
+    "instances/MIPEX/stein27.zpl\;18"
+    "instances/MIPEX/stein45.zpl\;0"
     )
 #
 # this instance was part of the original coverage tests. However, it causes
@@ -406,6 +422,7 @@ add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_default "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
+add_instancetests(instances_MIPEX settings_MIPEX "MIPEX")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
 add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")

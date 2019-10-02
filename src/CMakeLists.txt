@@ -257,7 +257,6 @@ set(scipsources
     scip/pricestore.c
     scip/pricer.c
     scip/primal.c
-    scip/primalex.c
     scip/prob.c
     scip/prop.c
     scip/rational.cpp
