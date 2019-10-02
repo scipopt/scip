@@ -248,7 +248,7 @@ SCIP_RETCODE createDisaggr(
 
    /* create row */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_row_%s", (void*) expr);
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &nlhdlrexprdata->row, conshdlr, name, -SCIPinfinity(scip),
+   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &nlhdlrexprdata->row, conshdlr, name, -SCIPinfinity(scip),
          nlhdlrexprdata->offsets[nterms-1], FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, nlhdlrexprdata->row, nvars, vars, coefs) );
 
@@ -403,7 +403,7 @@ SCIP_RETCODE generateCutSol(
       if( SCIPisGT(scip, SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviolation) )
       {
          (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d", (void*) expr, k);
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, conshdlr) );
+         SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, cut, rowprep, conshdlr) );
       }
 
       /* free memory */
@@ -458,7 +458,7 @@ SCIP_RETCODE detectSocNorm(
    assert(child != NULL);
 
    /* check whether expression is a SQRT and has a sum as child with at least 2 children and a non-negative constant */
-   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrPow(conshdlr) || SCIPgetConsExprExprPowExponent(expr) != 0.5
+   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrPower(conshdlr) || SCIPgetConsExprExprPowExponent(expr) != 0.5
       || SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(child) < 2
       || SCIPgetConsExprExprSumConstant(child) < 0.0)
       return SCIP_OKAY;
@@ -483,7 +483,7 @@ SCIP_RETCODE detectSocNorm(
    /* check if all children are squares or linear terms with matching square term */
    for( i = 0; i < nchildren; ++i )
    {
-      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPow(conshdlr) && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
+      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr) && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
       {
          SCIP_CONSEXPR_EXPR* squarearg = SCIPgetConsExprExprChildren(children[i])[0];
 
@@ -545,7 +545,7 @@ SCIP_RETCODE detectSocNorm(
    {
       SCIP_VAR* argauxvar;
 
-      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPow(conshdlr) && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
+      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr) && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
       {
          SCIP_CONSEXPR_EXPR* squarearg;
 
