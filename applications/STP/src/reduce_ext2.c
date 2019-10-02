@@ -70,7 +70,7 @@ typedef struct extension_data
    int* const extstack_data;
    int* const extstack_start;
    int* const extstack_state;
-   int extstack_size;
+   int extstack_ncomponents;
    int* const tree_leaves;
    int* const tree_edges;
    int* const tree_deg;                      /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for current tail,
@@ -215,7 +215,7 @@ void extPrintStack(
 #ifdef SCIP_DEBUG
    const int* const extstack_data = extdata->extstack_data;
    const int* const extstack_start = extdata->extstack_start;
-   const int stackpos = extdata->extstack_size - 1;
+   const int stackpos = extdata->extstack_ncomponents - 1;
 
    for( int j = 0; j <= stackpos; j++ )
    {
@@ -284,7 +284,7 @@ void extAddInitialComponent(
       extdata->extstack_data[i] = e;
    }
 
-   extdata->extstack_size = 1;
+   extdata->extstack_ncomponents = 1;
    extdata->extstack_state[0] = EXT_STATE_EXPANDED;
    extdata->extstack_start[0] = 0;
    extdata->extstack_start[1] = ncompedges;
@@ -573,7 +573,7 @@ void extTreeAddStackTop(
    REDDATA* const reddata = extdata->reddata;
    const SCIP_Real* const redcost = reddata->reducedcosts;
    int* const pseudoancestor_mark = reddata->pseudoancestor_mark;
-   const int stackpos = extdata->extstack_size - 1;
+   const int stackpos = extdata->extstack_ncomponents - 1;
    const int comproot = graph->tail[extstack_data[extstack_start[stackpos]]];
    int conflictIteration = -1;
 
@@ -650,7 +650,7 @@ void extTreeSyncWithStack(
    SCIP_Bool*            conflict            /**< conflict found? */
 )
 {
-   const int stackposition = extdata->extstack_size - 1;
+   const int stackposition = extdata->extstack_ncomponents - 1;
    REDDATA* const reddata = extdata->reddata;
 
    assert(scip && graph && extdata && reddata && nupdatestalls && conflict);
@@ -711,7 +711,7 @@ SCIP_Bool extTruncate(
 {
    const int* const extstack_data = extdata->extstack_data;
    const int* const extstack_start = extdata->extstack_start;
-   const int stackpos = extdata->extstack_size - 1;
+   const int stackpos = extdata->extstack_ncomponents - 1;
 
    assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED);
 
@@ -874,7 +874,7 @@ SCIP_Bool extRuleOutPeriph(
       /* compute special distances and compare with tree bottleneck distances */
       // todo build MST graph
       DISTDATA* const distdata = extdata->distdata;
-      const int stackpos = extdata->extstack_size - 1;
+      const int stackpos = extdata->extstack_ncomponents - 1;
       const int* const extstack_data = extdata->extstack_data;
       const int* const extstack_start = extdata->extstack_start;
       const int* const leaves = extdata->tree_leaves;
@@ -951,7 +951,7 @@ void extBacktrack(
    int* const extstack_start = extdata->extstack_start;
    int* const extstack_state = extdata->extstack_state;
    int* const tree_deg = extdata->tree_deg;
-   int stackpos = extdata->extstack_size - 1;
+   int stackpos = extdata->extstack_ncomponents - 1;
    const int stackstart = extstack_start[stackpos];
 
    assert(graph && reddata && extdata);
@@ -1028,7 +1028,7 @@ void extBacktrack(
       assert(extstack_state[stackpos] == EXT_STATE_NONE || extstack_state[stackpos] == EXT_STATE_MARKED);
    }
 
-   extdata->extstack_size = stackpos + 1;
+   extdata->extstack_ncomponents = stackpos + 1;
 
    assert(!extTreeIsFlawed(scip, graph, extdata));
 }
@@ -1047,7 +1047,7 @@ void extStackExpand(
    int* const extstack_data = extdata->extstack_data;
    int* const extstack_start = extdata->extstack_start;
    int* const extstack_state = extdata->extstack_state;
-   int stackpos = extdata->extstack_size - 1;
+   int stackpos = extdata->extstack_ncomponents - 1;
    int datasize = extstack_start[stackpos];
    const int setsize = extstack_start[stackpos + 1] - extstack_start[stackpos];
    const uint32_t powsize = pow(2, setsize);
@@ -1103,9 +1103,9 @@ void extStackExpand(
       assert(extstack_start[stackpos] - extstack_start[stackpos - 1] > 0);
    }
 
-   assert(stackpos >= extdata->extstack_size);
+   assert(stackpos >= extdata->extstack_ncomponents);
 
-   extdata->extstack_size = stackpos;
+   extdata->extstack_ncomponents = stackpos;
 }
 
 
@@ -1124,7 +1124,7 @@ void extExtend(
    int* const extstack_data = extdata->extstack_data;
    int* const extstack_start = extdata->extstack_start;
    int* const extstack_state = extdata->extstack_state;
-   int stackpos = extdata->extstack_size - 1;
+   int stackpos = extdata->extstack_ncomponents - 1;
    int nfullextensions;
    int nsingleextensions;
    SCIP_Bool with_ruledout_leaf;
@@ -1261,11 +1261,11 @@ void extExtend(
 #ifdef SCIP_DEBUG
       printf("added extending edges:  \n");
 
-      for( int i = extstack_start[extdata->extstack_size]; i < extstack_start[stackpos + 1]; i++ )
+      for( int i = extstack_start[extdata->extstack_ncomponents]; i < extstack_start[stackpos + 1]; i++ )
          graph_edge_printInfo(graph, extstack_data[i]);
 #endif
 
-      extdata->extstack_size = stackpos + 1;
+      extdata->extstack_ncomponents = stackpos + 1;
 
       *success = TRUE;
 
@@ -1305,12 +1305,12 @@ void extCheckArc(
    extExtend(scip, graph, isterm, extdata, &success);
 
    assert(extstack_state[0] == EXT_STATE_MARKED);
-   assert(success || 1 == extdata->extstack_size);
+   assert(success || 1 == extdata->extstack_ncomponents);
 
    /* limited DFS backtracking; stops once back at 'edge' */
-   while( extdata->extstack_size > 1 )
+   while( extdata->extstack_ncomponents > 1 )
    {
-      const int stackposition = extdata->extstack_size - 1;
+      const int stackposition = extdata->extstack_ncomponents - 1;
       conflict = FALSE;
 
       extTreeSyncWithStack(scip, graph, extdata, &nupdatestalls, &conflict);
@@ -1435,7 +1435,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
             .edgedeleted = edgedeleted, .pseudoancestor_mark = pseudoancestor_mark,  .cutoff = cutoff,
             .treeredcostoffset = treeredcostoffset, .equality = equality, .redCostRoot = root};
          EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
-            .extstack_state = extstack_state, .extstack_size = 0, .tree_leaves = tree_leaves,
+            .extstack_state = extstack_state, .extstack_ncomponents = 0, .tree_leaves = tree_leaves,
             .tree_edges = tree_edges, .tree_deg = tree_deg, .tree_nleaves = 0,
             .tree_bottleneckDistNode = bottleneckDistNode, .tree_parentNode = tree_parentNode,
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcost = treeredcostoffset,
