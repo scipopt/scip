@@ -18,7 +18,8 @@
  * @brief  LP interface for Glop
  * @author Corentin Le Molgat
  * @author Laurent Perron
- * @authro Marc Pfetsch
+ * @author Marc Pfetsch
+ * @author Frederic Didier
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1436,7 +1437,18 @@ SCIP_Bool SCIPlpiIsStable(
    assert( lpi != NULL );
    assert( lpi->solver != NULL );
 
-   return lpi->solver->GetProblemStatus() != ProblemStatus::ABNORMAL && lpi->solver->GetProblemStatus() != ProblemStatus::INVALID_PROBLEM;
+   /* For correctness, we need to report "unstable" if Glop was not able to prove optimality because of numerical
+    * issues. Currently Glop still reports primal/dual feasible if at the end, one status is within the tolerance but not
+    * the other. */
+
+   const ProblemStatus status = lpi->solver->GetProblemStatus();
+   if ( (status == ProblemStatus::PRIMAL_FEASIBLE || status == ProblemStatus::DUAL_FEASIBLE) &&
+      ! SCIPlpiIsObjlimExc(lpi) && ! SCIPlpiIsIterlimExc(lpi) && ! SCIPlpiIsTimelimExc(lpi))
+   {
+      SCIPdebugMessage("OPTIMAL not reached and no limit: unstable.\n");
+      return FALSE;
+   }
+   return status != ProblemStatus::ABNORMAL && status != ProblemStatus::INVALID_PROBLEM && status != ProblemStatus::IMPRECISE;
 }
 
 /** returns TRUE iff the objective limit was reached */
