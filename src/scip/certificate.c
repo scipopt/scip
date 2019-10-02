@@ -1508,7 +1508,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    }
 
    /* print rounding derivation */
-   if( RisNegInfinity(lowerbound) && certificate->objintegral && !RisIntegral(lowerbound) )
+   if( !RisNegInfinity(lowerbound) && certificate->objintegral && !RisIntegral(lowerbound) )
    {
       long int ceilint;
 
@@ -1516,13 +1516,9 @@ SCIP_Longint SCIPcertificatePrintDualbound(
 
       SCIPcertificatePrintProofMessage(certificate, "R%d G ", certificate->indexcounter - 1);
       updateFilesize(certificate, 4.0 + ceil(log10(certificate->indexcounter - 1 + 1)));
+      Rround(lowerbound, lowerbound, SCIP_ROUND_UPWARDS);
 
-      if( !RroundInteger(&ceilint, lowerbound, SCIP_ROUND_UPWARDS) )
-      {
-         SCIPerrorMessage("too large to be represented as long long \n");
-         SCIPABORT();
-      }
-      SCIPcertificatePrintProofMessage(certificate, "%ld", ceilint);
+      SCIPcertificatePrintProofRational(certificate, lowerbound, 10);
 
       SCIPcertificatePrintProofMessage(certificate, " ");
       SCIPcertificatePrintProofMessage(certificate, "OBJ");

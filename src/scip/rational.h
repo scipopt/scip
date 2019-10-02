@@ -535,6 +535,13 @@ SCIP_Real RgetRealApprox(
     SCIP_Rational*  r                   /**< the rational to convert */
    );
 
+EXTERN
+void Rround(
+   SCIP_Rational*        retval,             /**< the resulting rounded integer */
+   SCIP_Rational*        src,                /**< the rational to round */
+   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   );
+
 /** round rational to next integer in direction of roundmode */
 EXTERN
 SCIP_Bool RroundInteger(

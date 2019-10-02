@@ -1283,9 +1283,40 @@ SCIP_Real RgetRealRelax(
    return realapprox;
 }
 
+void Rround(
+   SCIP_Rational*        retval,             /**< the resulting rounded integer */
+   SCIP_Rational*        src,                /**< the rational to round */
+   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   )
+{
+   mpz_t roundint;
+
+   assert(src != NULL);
+   assert(retval != NULL);
+
+   mpz_init(roundint);
+   switch (roundmode)
+   {
+   case SCIP_ROUND_DOWNWARDS:
+      mpz_fdiv_q(roundint, mpq_numref(*RgetGMP(src)), mpq_denref(*RgetGMP(src)));
+      break;
+   case SCIP_ROUND_UPWARDS:
+      mpz_cdiv_q(roundint, mpq_numref(*RgetGMP(src)), mpq_denref(*RgetGMP(src)));
+      break;
+   case SCIP_ROUND_NEAREST:
+   default:
+      SCIPerrorMessage("roundmode not supported for integer-rounding \n");
+      SCIPABORT();
+      break;
+   }
+   mpq_set_z(*RgetGMP(retval), roundint);
+
+   mpz_clear(roundint);
+}
+
 /** round rational to next integer in direction of roundmode */
 SCIP_Bool RroundInteger(
-   long int*             retval,             /**< the resulting rounded lon int */
+   long int*             retval,             /**< the resulting rounded long int */
    SCIP_Rational*        src,                /**< the rational to round */
    SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
    )
