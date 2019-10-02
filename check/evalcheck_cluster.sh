@@ -104,7 +104,7 @@ do
 
       if [ ${NMISSING} -gt 0 -a ${REMOVE} -eq 1 ]
       then
-        echo "Exiting because ${NMISSING} out/err/set files are missing, please rerun without the REMOVE flag"
+        echo "Exiting because ${NMISSING} out/err/set file$([ ${NMISSING} -gt 1 ] && echo "s are" || echo " is" ) missing, please rerun without the REMOVE flag"
         exit
       fi
 
