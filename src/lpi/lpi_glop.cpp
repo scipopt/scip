@@ -66,6 +66,7 @@ using operations_research::glop::DenseBooleanColumn;
 using operations_research::glop::DenseBooleanRow;
 using operations_research::glop::DenseColumn;
 using operations_research::glop::DenseRow;
+using operations_research::glop::SparseColumn;
 using operations_research::glop::Fractional;
 using operations_research::glop::GetProblemStatusString;
 using operations_research::glop::ProblemStatus;
@@ -235,9 +236,12 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert( ind != NULL );
    assert( val != NULL );
 
-   SCIPerrorMessage("SCIPlpiLoadColLP() has not been implemented yet.\n");
+   lpi->linear_program->Clear();
+   SCIP_CALL( SCIPlpiAddRows(lpi, nrows, lhs, rhs, rownames, 0, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, colnames, nnonz, beg, ind, val) );
+   SCIP_CALL( SCIPlpiChgObjsen(lpi, objsen) );
 
-   return SCIP_LPERROR;
+   return SCIP_OKAY;
 }
 
 /** adds columns to the LP */
@@ -712,9 +716,40 @@ SCIP_RETCODE SCIPlpiGetCols(
    assert( (lb != NULL && ub != NULL) || (lb == NULL && ub == NULL) );
    assert( (nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL) );
 
-   SCIPerrorMessage("SCIPlpiGetCols() has not been implemented yet.\n");
+   if ( nnonz != NULL )
+      *nnonz = 0;
 
-   return SCIP_LPERROR;
+   const DenseRow& tmplb = lpi->linear_program->variable_lower_bounds();
+   const DenseRow& tmpub = lpi->linear_program->variable_upper_bounds();
+
+   int index = 0;
+   for (ColIndex col(firstcol); col <= ColIndex(lastcol); ++col)
+   {
+      if ( lb != NULL )
+         lb[index] = tmplb[col];
+      if ( ub != NULL )
+         ub[index] = tmpub[col];
+
+      if ( nnonz != NULL )
+      {
+         assert( beg != NULL );
+         assert( ind != NULL );
+         assert( val != NULL );
+         beg[index] = *nnonz;
+
+         const SparseColumn& column = lpi->linear_program->GetSparseColumn(col);
+         for (const SparseColumn::Entry& entry : column)
+         {
+            const RowIndex row = entry.row();
+            ind[*nnonz] = row.value();
+            val[*nnonz] = entry.coefficient();
+            ++(*nnonz);
+         }
+      }
+      ++index;
+   }
+
+   return SCIP_OKAY;
 }
 
 /** gets rows from LP problem object; the arrays have to be large enough to store all values.
