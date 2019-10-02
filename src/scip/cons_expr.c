@@ -13599,7 +13599,6 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
       double coefs[2] = { 0.0, 0.0 };
 
       SCIP_CALL( computeVertexPolyhedralFacetBivariate(scip, overestimate, p1, p2, p3, p4, funvals[0], funvals[1], funvals[2], funvals[3], xstar2, targetvalue, success, coefs, facetconstant) );
-      assert(*success);   /* "performance-assert" */
 
       facetcoefs[idx1] = coefs[0];
       facetcoefs[idx2] = coefs[1];
@@ -13607,7 +13606,6 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
    else
    {
       SCIP_CALL( computeVertexPolyhedralFacetLP(scip, conshdlr, overestimate, xstar, box, nallvars, nonfixedpos, funvals, nvars, targetvalue, success, facetcoefs, facetconstant) );
-      assert(*success);   /* "performance-assert" */
    }
    if( !*success )
    {
