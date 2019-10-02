@@ -97,7 +97,6 @@ struct SCIP_SepaData
    int                   maxvarindex;        /**< maximum variable index when creating bilinvarsmap */
    int                   nbilinterms;        /**< total number of bilinear terms */
    int                   nbilinvars;         /**< total number of variables occurring in bilinear terms */
-   int                   currentnunknown;    /**< number of unknown terms in current row (not printed) */
    SCIP_Bool             iscreated;          /**< indicates whether the sepadata has been initialized yet */
    SCIP_Bool             isinitialround;     /**< indicates that this is the first round and initial rows are used */
 
@@ -110,8 +109,9 @@ struct SCIP_SepaData
    int*                  slinexprs;          /**< sizes of linexprs arrays for each bilinear term */
    SCIP_Bool**           linunderestimate;   /**< does the linearisation underestimate the product? */
    SCIP_Bool**           linoverestimate;    /**< does the linearisation overestimate the product? */
-   int*                  bestunderestimator; /**< position of the most violated linear underestimator */
-   int*                  bestoverestimator;  /**< position of the most violated linear overestimator */
+   int*                  bestunderestimator; /**< position of the most violated linear underestimator (nlinexprs[i] if none) */
+   int*                  bestoverestimator;  /**< position of the most violated linear overestimator (nlinexprs[i] if none) */
+   int*                  eqlinexpr;          /**< position of the linexpr that is equal to the product (nlinexprs[i] if none) */
 
    /* parameters */
    int                   maxlinexprs;        /**< maximum number of linearisation expressions per bilinear term */
@@ -248,6 +248,7 @@ SCIP_RETCODE freeSepaData(
    }
 
    SCIPfreeBlockMemoryArray(scip, &sepadata->isimplicit, sepadata->nbilinterms);
+   SCIPfreeBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->nbilinterms);
    SCIPfreeBlockMemoryArray(scip, &sepadata->bestoverestimator, sepadata->nbilinterms);
    SCIPfreeBlockMemoryArray(scip, &sepadata->bestunderestimator, sepadata->nbilinterms);
    SCIPfreeBlockMemoryArray(scip, &sepadata->linoverestimate, sepadata->nbilinterms);
@@ -458,6 +459,7 @@ SCIP_RETCODE addBilinProduct(
       sepadata->bilinlocksneg[sepadata->nbilinterms] = SCIPgetConsExprExprNLocksNeg(expr);
       sepadata->bestunderestimator[sepadata->nbilinterms] = -1;
       sepadata->bestoverestimator[sepadata->nbilinterms] = -1;
+      sepadata->eqlinexpr[sepadata->nbilinterms] = -1;
 
       termpos = sepadata->nbilinterms;
       ++sepadata->nbilinterms;
@@ -1558,6 +1560,7 @@ SCIP_RETCODE createSepaData(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->linoverestimate, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->bestunderestimator, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->bestoverestimator, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->eqlinexpr, nvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->isimplicit, nvars) );
 
    /* find maximum variable index */
@@ -1686,6 +1689,7 @@ SCIP_RETCODE createSepaData(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bilinlocksneg, nvars, sepadata->nbilinterms) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bestunderestimator, nvars, sepadata->nbilinterms) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bestoverestimator, nvars, sepadata->nbilinterms) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->eqlinexpr, nvars, sepadata->nbilinterms) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->linunderestimate, nvars, sepadata->nbilinterms) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->linoverestimate, nvars, sepadata->nbilinterms) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->isimplicit, nvars, sepadata->nbilinterms) );
@@ -1760,46 +1764,6 @@ int getBilinPos(
    return -1;
 }
 
-/** tests if a row contains too many unknown bilinear terms w.r.t. the parameters */
-static
-SCIP_RETCODE isAcceptableRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPADATA*        sepadata,           /**< separation data */
-   SCIP_ROW*             row,                /**< the row to be tested */
-   SCIP_VAR*             var,                /**< the variable that is to be multiplied with row */
-   int                   nlocks,             /**< the number of locks of the variable */
-   SCIP_Bool*            acceptable          /**< buffer to store the result */
-   )
-{
-   int i;
-   int nterms = 0;
-   int linpos;
-
-   assert(row != NULL);
-   assert(var != NULL);
-
-   /* test if the ratio of non-zeroes and known terms of this variable is ok */
-   if( SCIProwGetNNonz(row) * sepadata->maxnonzeroprop > nlocks )
-   {
-      *acceptable = FALSE;
-      return SCIP_OKAY;
-   }
-
-   for( i = 0; (i < SCIProwGetNNonz(row)) && (sepadata->maxunknownterms >= 0 || nterms <= sepadata->maxunknownterms); ++i )
-   {
-      linpos = getBilinPos(scip, sepadata, var, SCIPcolGetVar(SCIProwGetCols(row)[i]) );
-
-      if( linpos == -1 )
-         ++nterms;
-   }
-
-   sepadata->currentnunknown = nterms;
-
-   *acceptable = nterms <= sepadata->maxunknownterms;
-
-   return SCIP_OKAY;
-}
-
 /** update the positions of the most violated linear
  * under- and overestimators for a given product
  */
@@ -1819,11 +1783,11 @@ SCIP_RETCODE updateBestEstimators(
 
    if( sepadata->bestunderestimator[pos] != -1 )
    { /* the estimators have already been updated in this round */
-      assert(sepadata->bestoverestimator[pos] != -1);
+      assert(sepadata->bestoverestimator[pos] != -1 && sepadata->eqlinexpr[pos] != -1);
       return SCIP_OKAY;
    }
 
-   assert(sepadata->bestunderestimator[pos] == -1 && sepadata->bestoverestimator[pos] == -1);
+   assert(sepadata->bestunderestimator[pos] == -1 && sepadata->bestoverestimator[pos] == -1 && sepadata->eqlinexpr[pos] == -1);
 
    /* evaluate the product expression */
    SCIP_CALL( SCIPevalConsExprExpr(scip, sepadata->conshdlr, sepadata->bilinterms[pos], sol, 0) );
@@ -1845,12 +1809,70 @@ SCIP_RETCODE updateBestEstimators(
          viol_above = -prodviol;
          sepadata->bestoverestimator[pos] = i;
       }
+      if( sepadata->eqlinexpr[pos] == -1 && sepadata->linunderestimate[pos] && sepadata->linunderestimate[pos] )
+      {
+         sepadata->eqlinexpr[pos] = i;
+      }
    }
 
    if( sepadata->bestunderestimator[pos] == -1 ) /* haven't found an underestimator */
       sepadata->bestunderestimator[pos] = sepadata->nlinexprs[pos];
    if( sepadata->bestoverestimator[pos] == -1 ) /* haven't found an overestimator */
       sepadata->bestoverestimator[pos] = sepadata->nlinexprs[pos];
+   if( sepadata->eqlinexpr[pos] == -1 ) /* haven't found an equality estimator */
+      sepadata->eqlinexpr[pos] = sepadata->nlinexprs[pos];
+
+   return SCIP_OKAY;
+}
+
+/** tests if a row contains too many unknown bilinear terms w.r.t. the parameters */
+static
+SCIP_RETCODE isAcceptableRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separation data */
+   SCIP_ROW*             row,                /**< the row to be tested */
+   SCIP_VAR*             var,                /**< the variable that is to be multiplied with row */
+   int                   nlocks,             /**< the number of locks of the variable */
+   int*                  currentnunknown,    /**< number of unknown terms in current row */
+   SCIP_Bool*            acceptable,         /**< buffer to store the result */
+   SCIP_SOL*             sol                 /**< solution to be separated */
+   )
+{
+   int i;
+   int linpos;
+
+   *currentnunknown = 0;
+
+   assert(row != NULL);
+   assert(var != NULL);
+
+   /* test if the ratio of non-zeroes and known terms of this variable is ok */
+   if( SCIProwGetNNonz(row) * sepadata->maxnonzeroprop > nlocks )
+   {
+      *acceptable = FALSE;
+      return SCIP_OKAY;
+   }
+
+   for( i = 0; (i < SCIProwGetNNonz(row)) && (sepadata->maxunknownterms < 0 || *currentnunknown <= sepadata->maxunknownterms); ++i )
+   {
+      linpos = getBilinPos(scip, sepadata, var, SCIPcolGetVar(SCIProwGetCols(row)[i]) );
+
+      /* if the product hasn't been found, no linearisations for it are known */
+      if( linpos == -1 )
+      {
+         ++(*currentnunknown);
+         continue;
+      }
+
+      if( sepadata->eqlinexpr[linpos] != -1 )
+         updateBestEstimators(scip, sepadata, linpos, sol);
+
+      /* known terms are only those that have equality estimators */
+      if( sepadata->eqlinexpr[linpos] == sepadata->nlinexprs[linpos] )
+         ++(*currentnunknown);
+   }
+
+   *acceptable = *currentnunknown <= sepadata->maxunknownterms;
 
    return SCIP_OKAY;
 }
@@ -1933,15 +1955,24 @@ SCIP_RETCODE addRltTerm(
 
    if( auxpos != -1 )
    {
-      SCIP_CALL( updateBestEstimators(scip, sepadata, auxpos, sol) );
+      SCIP_CALL( updateBestEstimators(scip, sepadata, auxpos, sol) ); /* TODO isn't this repeating? */
 
       assert(sepadata->bestunderestimator[auxpos] >= 0 && sepadata->bestunderestimator[auxpos] <= sepadata->nlinexprs[auxpos]);
       assert(sepadata->bestoverestimator[auxpos] >= 0 && sepadata->bestoverestimator[auxpos] <= sepadata->nlinexprs[auxpos]);
+      assert(sepadata->eqlinexpr[auxpos] >= 0 && sepadata->eqlinexpr[auxpos] <= sepadata->nlinexprs[auxpos]);
 
-      if((uselhs && coefauxvar > 0.0) || (!uselhs && coefauxvar < 0.0)) { /* look for overestimator */
+      if( computeEqCut )
+      { /* use an equality linearisation (which should exist for computeEqCut to be TRUE) */
+         assert(sepadata->bestoverestimator[auxpos] != sepadata->nlinexprs[auxpos]);
+         linexpr = sepadata->linexprs[auxpos][sepadata->bestoverestimator[auxpos]];
+      }
+      else if((uselhs && coefauxvar > 0.0) || (!uselhs && coefauxvar < 0.0))
+      { /* use an overestimator */
          if( sepadata->bestoverestimator[auxpos] != sepadata->nlinexprs[auxpos] )
             linexpr = sepadata->linexprs[auxpos][sepadata->bestoverestimator[auxpos]];
-      } else { /* look for underestimator */
+      }
+      else
+      { /* use an underestimator */
          if( sepadata->bestunderestimator[auxpos] != sepadata->nlinexprs[auxpos] )
             linexpr = sepadata->linexprs[auxpos][sepadata->bestunderestimator[auxpos]];
       }
@@ -2569,6 +2600,8 @@ SCIP_RETCODE markRowsXj(
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, sepadata->bilinterms[img], sol, 0) );
 
       /* get largest violations on both sides, update bestunder- and overestimator for this product */
+      /* if equality cuts are computed, we might end up using a different linearisation;
+       * so this is an optimistic (i.e. taking the largest possible violation) estimation */
       SCIP_CALL( updateBestEstimators(scip, sepadata, img, sol) );
       posunder = sepadata->bestunderestimator[img];
       posover = sepadata->bestoverestimator[img];
@@ -2674,7 +2707,7 @@ SCIP_RETCODE separateRltCuts(
       /* generate the projected cut and if it is violated, generate the actual cut */
       for( r = 0; r < nmarked; ++r )
       {
-         int pos;
+         int pos, currentnunknown;
          SCIP_ROW* row;
 
          assert(row_marks[r] != 0);
@@ -2689,17 +2722,13 @@ SCIP_RETCODE separateRltCuts(
          row = rows[pos];
          assert(SCIProwGetIndex(row) == row_idcs[r]);
 
-         if( !sepadata->useprojection )
+         /* check whether this row and var fulfill the conditions */
+         SCIP_CALL( isAcceptableRow(scip, sepadata, row, xj, sepadata->varpriorities[j], &currentnunknown, &accepted, sol) );
+         if( !accepted )
          {
-            /* check whether this row and var fulfill the conditions */
-            SCIP_CALL( isAcceptableRow(scip, sepadata, row, xj, sepadata->varpriorities[j], &accepted) );
-
-            if( !accepted )
-            {
-               SCIPdebugMsg(scip, "rejected row %s for variable %s\n", SCIProwGetName(row), SCIPvarGetName(xj));
-               row_marks[r] = 0;
-               continue;
-            }
+            SCIPdebugMsg(scip, "rejected row %s for variable %s\n", SCIProwGetName(row), SCIPvarGetName(xj));
+            row_marks[r] = 0;
+            continue;
          }
 
          SCIPdebugMsg(scip, "accepted row %s for variable %s\n", SCIProwGetName(rows[r]), SCIPvarGetName(xj));
@@ -2709,7 +2738,7 @@ SCIP_RETCODE separateRltCuts(
          iseqrow = SCIPisEQ(scip, SCIProwGetLhs(row), SCIProwGetRhs(row));
 
          /* if all terms are known and it is an equality row, compute equality cuts */
-         buildeqcut = (sepadata->currentnunknown == 0 && iseqrow);
+         buildeqcut = (currentnunknown == 0 && iseqrow);
 
          /* go over all suitable combinations of sides and bounds and compute the respective cuts */
          for( k = 0; k < 4; ++k )
@@ -2720,6 +2749,7 @@ SCIP_RETCODE separateRltCuts(
                if( k % 2 == 1 )
                   continue;
             }
+            /* otherwise which cuts are generated depends on the marks */
             else
             {
                if( row_marks[r] == 1 && uselb[k] == uselhs[k] )
@@ -2769,7 +2799,9 @@ SCIP_RETCODE separateRltCuts(
                if( SCIPisFeasLT(scip, SCIPgetRowFeasibility(scip, cut), 0.0) )
                {
                   /* add the row to SCIP; equality cuts are forced to be added to the LP */
-                  SCIP_CALL(SCIPaddRow(scip, cut, FALSE, &infeasible));
+                  SCIPdebugMsg(scip, "\nadding cut obtained from row %d and multiplied with id %d (%s, %s), eq = %s",
+                     SCIProwGetIndex(row), SCIPvarGetIndex(xj), uselb[k] ? "lb" : "ub", uselhs[k] ? "lhs" : "rhs", buildeqcut ? "true" : "false");
+                  SCIP_CALL(SCIPaddRow(scip, cut, buildeqcut, &infeasible));
                   ++*ncuts;
 
                   if( infeasible )
@@ -2783,12 +2815,12 @@ SCIP_RETCODE separateRltCuts(
                   }
                }
                else
-                  SCIPdebugMsg(scip, "the cut was created successfully, but not accepted by scip\n");
+                  SCIPdebugMsg(scip,"\nthe cut from row %d and mult %d was created successfully, but not accepted by scip", SCIProwGetIndex(row), SCIPvarGetIndex(xj));
             } else
                SCIPdebugMsg(scip, "the generation of the cut failed\n");
 
             /* release the cut */
-            if( cut != NULL)
+            if( cut != NULL )
             {
                SCIP_CALL(SCIPreleaseRow(scip, &cut));
             }
@@ -2817,6 +2849,7 @@ SCIP_RETCODE separateRltCuts(
       /* reset the values of bestunder- and overestimator */
       sepadata->bestunderestimator[j] = -1;
       sepadata->bestoverestimator[j] = -1;
+      sepadata->eqlinexpr[j] = -1;
    }
    SCIPfreeCleanBufferArray(scip, &row_marks);
    SCIPfreeBufferArray(scip, &row_idcs);

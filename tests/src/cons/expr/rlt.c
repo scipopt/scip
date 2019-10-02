@@ -222,6 +222,7 @@ Test(rlt, separation)
    SCIP_Real* cutvals;
    SCIP_Bool result;
    SCIP_Bool success;
+   int currentnunknown;
 
    /* create test row1: -10 <= 4x - 7y + z <= 5 */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row1, "test_row", -10.0, 5.0, FALSE, FALSE, FALSE) );
@@ -236,7 +237,7 @@ Test(rlt, separation)
    /*
     * cut for row1 and (x-0)
     */
-   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, x, 3, &result) );
+   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, x, 3, &currentnunknown, &result, NULL) );
    cr_expect(result);
    cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutlhs, row1, NULL, x, &success, TRUE, TRUE, TRUE, FALSE), SCIP_OKAY);
    cr_assert(success);
@@ -280,7 +281,7 @@ Test(rlt, separation)
    SCIP_CALL( SCIPreleaseRow(scip, &cutrhs) );
 
    /* check for not acceptable row */
-   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, y, 1, &result) );
+   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, y, 1, &currentnunknown, &result, NULL) );
    cr_expect(!result);
    SCIP_CALL( SCIPreleaseRow(scip, &row1) );
 
