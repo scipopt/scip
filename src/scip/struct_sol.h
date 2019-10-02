@@ -29,7 +29,7 @@
 #include "scip/def.h"
 #include "scip/type_misc.h"
 #include "scip/type_sol.h"
-#include "scip/type_solex.h"
+#include "scip/type_valsex.h"
 #include "scip/type_heur.h"
 
 
@@ -63,7 +63,7 @@ struct SCIP_Viol
  */
 struct SCIP_Sol
 {
-   SCIP_SOLEX*           solex;
+   SCIP_VALSEX*          valsex;             /**< exact solution values if this is an exact solution */
    SCIP_Real             obj;                /**< objective value of solution */
    SCIP_Real             time;               /**< clock time, when the solution was discovered */
    SCIP_Longint          nodenum;            /**< last node number of current run, where this solution was modified */

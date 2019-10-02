@@ -37,7 +37,6 @@
 #include "scip/type_result.h"
 #include "scip/type_var.h"
 #include "scip/type_sol.h"
-#include "scip/type_solex.h"
 #include "scip/type_scip.h"
 #include "scip/type_timing.h"
 #include "scip/type_heur.h"
@@ -458,49 +457,6 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
 #define SCIP_DECL_CONSCHECK(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_SOL* sol, \
-      SCIP_Bool checkintegrality, SCIP_Bool checklprows, SCIP_Bool printreason, SCIP_Bool completely, SCIP_RESULT* result)
-
-/** feasibility check method of constraint handler for exact rational integral solutions
- *
- *  The given exact solution has to be checked for feasibility without tolerances.
- *  
- *  The check methods of the active constraint handlers are called in decreasing order of their check
- *  priorities until the first constraint handler returned with the result SCIP_INFEASIBLE.
- *  The integrality constraint handler has a check priority of zero. A constraint handler which can
- *  (or wants) to check its constraints only for integral solutions should have a negative check priority
- *  (e.g. the alldiff-constraint can only operate on integral solutions).
- *  A constraint handler which wants to check feasibility even on non-integral solutions must have a
- *  check priority greater than zero (e.g. if the check is much faster than testing all variables for
- *  integrality).
- *
- *  In some cases, integrality conditions or rows of the current LP don't have to be checked, because their
- *  feasibility is already checked or implicitly given. In these cases, 'checkintegrality' or
- *  'checklprows' is FALSE.
- *
- *  If the solution is not NULL, SCIP should also be informed about the constraint violation with a call to
- *  SCIPupdateSolConsViolation() and additionally SCIPupdateSolLPRowViolation() for every row of the constraint's current
- *  representation in the LP relaxation, if any such rows exist.
- *  As a convenience method, SCIPupdateSolLPConsViolation() can be used if the constraint
- *  is represented completely by a set of LP rows, meaning that the current constraint violation is equal to the maximum
- *  of the contraint violations of the corresponding LP rows.
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - conshdlr        : the constraint handler itself
- *  - conss           : array of constraints to process
- *  - nconss          : number of constraints to process
- *  - sol             : the exact solution to check feasibility for
- *  - checkintegrality: Has integrality to be checked?
- *  - checklprows     : Do constraints represented by rows in the current LP have to be checked?
- *  - printreason     : Should the reason for the violation be printed?
- *  - completely      : Should all violations be checked?
- *  - result          : pointer to store the result of the feasibility checking call
- *
- *  possible return values for *result:
- *  - SCIP_INFEASIBLE : at least one constraint of the handler is infeasible
- *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
- */
-#define SCIP_DECL_CONSCHECKEX(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_SOLEX* sol, \
       SCIP_Bool checkintegrality, SCIP_Bool checklprows, SCIP_Bool printreason, SCIP_Bool completely, SCIP_RESULT* result)
 
 /** domain propagation method of constraint handler

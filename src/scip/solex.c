@@ -27,7 +27,6 @@
 #include "scip/misc.h"
 #include "scip/nlp.h"
 #include "scip/primal.h"
-#include "scip/primalex.h"
 #include "scip/prob.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
@@ -45,7 +44,7 @@
 #include "scip/struct_prob.h"
 #include "scip/struct_set.h"
 #include "scip/struct_sol.h"
-#include "scip/struct_solex.h"
+#include "scip/struct_valsex.h"
 #include "scip/struct_stat.h"
 #include "scip/struct_var.h"
 #include "scip/tree.h"
@@ -57,12 +56,12 @@
 /** clears solution arrays of primal CIP solution */
 static
 SCIP_RETCODE solexClearArrays(
-   SCIP_SOLEX*           sol                 /**< primal CIP solution */
+   SCIP_SOL*             sol                /**< primal CIP solution */
    )
 {
    assert(sol != NULL);
 
-   SCIP_CALL( SCIPboolarrayClear(sol->valid) );
+   SCIP_CALL( SCIPboolarrayClear(sol->valsex->valid) );
    sol->hasinfval = FALSE;
 
    return SCIP_OKAY;
@@ -71,7 +70,7 @@ SCIP_RETCODE solexClearArrays(
 /** sets value of variable in the solution's array */
 static
 SCIP_RETCODE solexSetArrayVal(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Rational*        val                 /**< value to set variable to */
@@ -87,10 +86,10 @@ SCIP_RETCODE solexSetArrayVal(
    SCIPvarMarkNotDeletable(var);
 
    /* mark the variable valid */
-   SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
+   SCIP_CALL( SCIPboolarraySetVal(sol->valsex->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
 
    /* set the value in the solution array */
-   SCIP_CALL( SCIPrationalarraySetVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, val) );
+   SCIP_CALL( SCIPrationalarraySetVal(sol->valsex->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, val) );
 
    /* store whether the solution has infinite values assigned to variables */
    if( RisAbsInfinity(val) ) /*lint !e777*/
@@ -102,7 +101,7 @@ SCIP_RETCODE solexSetArrayVal(
 /** increases value of variable in the solution's array */
 static
 SCIP_RETCODE solexIncArrayVal(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Rational*        incval              /**< increase of variable's solution value */
@@ -118,18 +117,18 @@ SCIP_RETCODE solexIncArrayVal(
    SCIPvarMarkNotDeletable(var);
 
    /* if the variable was not valid, mark it to be valid and set the value to the incval (it is 0.0 if not valid) */
-   if( !SCIPboolarrayGetVal(sol->valid, idx) )
+   if( !SCIPboolarrayGetVal(sol->valsex->valid, idx) )
    {
       /* mark the variable valid */
-      SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
+      SCIP_CALL( SCIPboolarraySetVal(sol->valsex->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
 
       /* set the value in the solution array */
-      SCIP_CALL( SCIPrationalarraySetVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, incval) );
+      SCIP_CALL( SCIPrationalarraySetVal(sol->valsex->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, incval) );
    }
    else
    {
       /* increase the value in the solution array */
-      SCIP_CALL( SCIPrationalarrayIncVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, incval) );
+      SCIP_CALL( SCIPrationalarrayIncVal(sol->valsex->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, incval) );
    }
 
    /* store whether the solution has infinite values assigned to variables */
@@ -143,7 +142,7 @@ SCIP_RETCODE solexIncArrayVal(
 static
 void solexGetArrayVal(
    SCIP_Rational*        res,
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
@@ -156,7 +155,7 @@ void solexGetArrayVal(
    /* check, if the variable's value is valid */
    if( SCIPboolarrayGetVal(sol->valid, idx) )
    {
-      SCIPrationalarrayGetVal(sol->vals, idx, res);
+      SCIPrationalarrayGetVal(sol->valsex->vals, idx, res);
    }
    else
    {
@@ -189,7 +188,7 @@ void solexGetArrayVal(
 /** stores solution value of variable in solution's own array */
 static
 SCIP_RETCODE solexUnlinkVar(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -235,7 +234,7 @@ SCIP_RETCODE solexUnlinkVar(
 /** sets the solution time, nodenum, runnum, and depth stamp to the current values */
 static
 void solexStamp(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_Bool             checktime           /**< should the time be updated? */
@@ -264,11 +263,11 @@ void solexStamp(
 
 /** creates primal CIP solution, initialized to zero */
 SCIP_RETCODE SCIPsolexCreate(
-   SCIP_SOLEX**          sol,                /**< pointer to primal CIP solution */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PRIMALEX*        primal,             /**< primal data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
@@ -277,20 +276,12 @@ SCIP_RETCODE SCIPsolexCreate(
    assert(blkmem != NULL);
    assert(stat != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );
-   SCIP_CALL( SCIPrationalarrayCreate(&(*sol)->vals, blkmem) );
-   SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
-   (*sol)->heur = heur;
-   (*sol)->solorigin = SCIP_SOLORIGIN_ZERO;
-   SCIP_CALL( Rcreate(blkmem, &(*sol)->obj) );
-   (*sol)->primalindex = -1;
-   (*sol)->hasinfval = FALSE;
-   //SCIPsolResetViolations(*sol);
-   //stat->solindex++;
-   //solStamp(*sol, stat, tree, TRUE);
-   //SCIPsolResetViolations(*sol);
+   SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
 
-   // SCIP_CALL( SCIPprimalexSolexCreated(primal, set, *sol) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(*sol)->valsex ) );
+   SCIP_CALL( SCIPrationalarrayCreate(&(*sol)->valsex->vals, blkmem) );
+   SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valsex->valid, blkmem) );
+   SCIP_CALL( Rcreate(blkmem, &(*sol)->valsex->obj) );
 
    return SCIP_OKAY;
 }
@@ -332,28 +323,21 @@ SCIP_RETCODE SCIPsolCreateOriginal(
 #endif
 
 /** creates a copy of a primal CIP solution */
-SCIP_RETCODE SCIPsolexCopy(
-   SCIP_SOLEX**          sol,                /**< pointer to store the copy of the primal CIP solution */
+SCIP_RETCODE SCIPvalsexCopy(
+   SCIP_VALSEX**         valsex,             /**< pointer to store the copy of the primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PRIMALEX*        primal,             /**< primal data */
-   SCIP_SOLEX*           sourcesol           /**< primal CIP solution to copy */
+   SCIP_VALSEX*          sourcevals           /**< primal CIP solution to copy */
    )
 {
-   assert(sol != NULL);
-   assert(sourcesol != NULL);
+   assert(valsex != NULL);
+   assert(*valsex != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );
-   SCIP_CALL( SCIPrationalarrayCopy(&(*sol)->vals, blkmem, sourcesol->vals) );
-   SCIP_CALL( SCIPboolarrayCopy(&(*sol)->valid, blkmem, sourcesol->valid) );
-   (*sol)->heur = sourcesol->heur;
-   SCIP_CALL( Rcopy(blkmem, &(*sol)->obj, sourcesol->obj) );
-   (*sol)->primalindex = -1;
-   (*sol)->solorigin = sourcesol->solorigin;
-   (*sol)->hasinfval = sourcesol->hasinfval;
-
-   // SCIP_CALL( SCIPprimalexSolexCreated(primal, set, *sol) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, valsex) );
+   SCIP_CALL( SCIPrationalarrayCopy(&(*valsex)->vals, blkmem, sourcevals->vals) );
+   SCIP_CALL( SCIPboolarrayCopy(&(*valsex)->valid, blkmem, sourcevals->valid) );
+   SCIP_CALL( Rcopy(blkmem, &(*valsex)->obj, sourcevals->obj) );
 
    return SCIP_OKAY;
 }
@@ -363,7 +347,7 @@ SCIP_RETCODE SCIPsolexCopy(
  *  which is copied into the existing solution and freed afterwards
  */
 SCIP_RETCODE SCIPsolTransform(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution to change, living in original space */
+   SCIP_SOL*             sol,                /**< primal CIP solution to change, living in original space */
    SCIP_SOLEX**          transsol,           /**< pointer to corresponding transformed primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -387,11 +371,11 @@ SCIP_RETCODE SCIPsolTransform(
     * the transformed one gets the original arrays, because they have to be freed anyway and freeing the transsol
     * automatically frees its arrays
     */
-   tmpvals = sol->vals;
+   tmpvals = sol->valsex->vals;
    tmpvalid = sol->valid;
-   sol->vals = tsol->vals;
+   sol->valsex->vals = tsol->valsex->vals;
    sol->valid = tsol->valid;
-   tsol->vals = tmpvals;
+   tsol->valsex->vals = tmpvals;
    tsol->valid = tmpvalid;
 
    /* copy solorigin and objective (should be the same, only to avoid numerical issues);
@@ -410,7 +394,7 @@ SCIP_RETCODE SCIPsolTransform(
  *  deteriorated by this method.
  */
 SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< either original or transformed problem, depending on sol origin */
@@ -547,13 +531,12 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
 
 /** creates primal CIP solution, initialized to the current LP solution */
 SCIP_RETCODE SCIPsolexCreateLPexSol(
-   SCIP_SOLEX**          sol,                /**< pointer to primal CIP solution */
-   SCIP_SOL*             fpsol,              /**< corresponding inexact soltution, or NULL */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_PRIMALEX*        primal,             /**< primal data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -564,10 +547,7 @@ SCIP_RETCODE SCIPsolexCreateLPexSol(
    assert(lp->solved);
 
    SCIP_CALL( SCIPsolexCreate(sol, blkmem, set, stat, primal, tree, heur) );
-   SCIP_CALL( SCIPsolexLinkLPexSol(*sol, set, stat, prob, tree, lp) );
-
-   (*sol)->fpsol = fpsol;
-   fpsol->solex = *sol;
+   SCIP_CALL( SCIPsolexLinkLPexSol(*sol, lp) );
 
    return SCIP_OKAY;
 }
@@ -620,12 +600,12 @@ SCIP_RETCODE SCIPsolCreateRelaxSol(
 
 /** creates primal CIP solution, initialized to the current pseudo solution */
 SCIP_RETCODE SCIPsolexCreatePseudoSol(
-   SCIP_SOLEX**          sol,                /**< pointer to primal CIP solution */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_PRIMALEX*        primal,             /**< primal data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -634,19 +614,19 @@ SCIP_RETCODE SCIPsolexCreatePseudoSol(
    assert(sol != NULL);
 
    SCIP_CALL( SCIPsolexCreate(sol, blkmem, set, stat, primal, tree, heur) );
-   SCIP_CALL( SCIPsolexLinkPseudoSol(*sol, set, stat, prob, tree, lp) );
+   SCIP_CALL( SCIPsolexLinkPseudoSol(*sol, set, prob, lp) );
 
    return SCIP_OKAY;
 }
 
 /** creates primal CIP solution, initialized to the current solution */
 SCIP_RETCODE SCIPsolexCreateCurrentSol(
-   SCIP_SOLEX**          sol,                /**< pointer to primal CIP solution */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_PRIMALEX*        primal,             /**< primal data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LPEX*            lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -657,7 +637,7 @@ SCIP_RETCODE SCIPsolexCreateCurrentSol(
    if( SCIPtreeHasCurrentNodeLP(tree) )
    {
       assert(lp->solved);
-      SCIP_CALL( SCIPsolexCreateLPexSol(sol, (*sol)->fpsol, blkmem, set, stat, prob, primal, tree, lp, heur) );
+      SCIP_CALL( SCIPsolexCreateLPexSol(sol, blkmem, set, stat, prob, primal, tree, lp, heur) );
    }
    else
    {
@@ -737,84 +717,60 @@ SCIP_RETCODE SCIPsolCreateUnknown(
 #endif
 
 /** frees primal CIP solution */
-SCIP_RETCODE SCIPsolexFree(
-   SCIP_SOLEX**          sol,                /**< pointer to primal CIP solution */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_PRIMALEX*        primal              /**< primal data */
+SCIP_RETCODE SCIPvalsexFree(
+   SCIP_VALSEX**         valsex,             /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    SCIP_SOL* fpsol;
 
-   assert(sol != NULL);
-   assert(*sol != NULL);
+   assert(valsex != NULL);
+   assert(*valsex != NULL);
 
-   // SCIPprimalexSolexFreed(primal, *sol);
-
-   Rdelete(blkmem, &(*sol)->obj);
-   SCIP_CALL( SCIPrationalarrayFree(&(*sol)->vals) );
-   SCIP_CALL( SCIPboolarrayFree(&(*sol)->valid) );
-   fpsol = (*sol)->fpsol;
-   BMSfreeBlockMemory(blkmem, sol);
-   if( fpsol != NULL )
-      fpsol->solex = NULL;
+   Rdelete(blkmem, &(*valsex)->obj);
+   SCIP_CALL( SCIPrationalarrayFree(&(*valsex)->vals) );
+   SCIP_CALL( SCIPboolarrayFree(&(*valsex)->valid) );
+   BMSfreeBlockMemory(blkmem, valsex);
 
    return SCIP_OKAY;
 }
 
 /** copies current exact LP solution into CIP solution by linking */
 SCIP_RETCODE SCIPsolexLinkLPexSol(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_LPEX*            lp                  /**< current LP data */
    )
 {
    assert(sol != NULL);
-   assert(stat != NULL);
-   assert(tree != NULL);
    assert(lp != NULL);
    assert(lp->solved);
-
-   SCIPsetDebugMsg(set, "linking solution to exact LP\n");
 
    /* clear the old solution arrays */
    SCIP_CALL( solexClearArrays(sol) );
 
    /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
-   Rset(sol->obj, lp->lpobjval);
-
+   Rset(sol->valsex->obj, lp->lpobjval);
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
-   //solStamp(sol, stat, tree, TRUE);
-
-   //SCIPsetDebugMsg(set, " -> objective value: %g\n", sol->obj);
 
    return SCIP_OKAY;
 }
 
 /** copies current pseudo solution into CIP solution by linking */
 SCIP_RETCODE SCIPsolexLinkPseudoSol(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LPEX*            lp                  /**< current LP data */
    )
 {
    assert(sol != NULL);
-   assert(stat != NULL);
-   assert(tree != NULL);
 
-   SCIPsetDebugMsg(set, "linking solution to pseudo solution\n");
 
    /* clear the old solution arrays */
    SCIP_CALL( solexClearArrays(sol) );
 
    /* link solution to pseudo solution */
-   SCIPlpexGetPseudoObjval(lp, set, prob, sol->obj);
-   sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
+   SCIPlpexGetPseudoObjval(lp, set, prob, sol->valsex->obj);
 
    SCIPsetDebugMsg(set, " -> objective value: %g\n", sol->obj);
 
@@ -824,7 +780,7 @@ SCIP_RETCODE SCIPsolexLinkPseudoSol(
 #if 0
 /** copies current solution (LP or pseudo solution) into CIP solution by linking */
 SCIP_RETCODE SCIPsolLinkCurrentSol(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
@@ -851,16 +807,13 @@ SCIP_RETCODE SCIPsolLinkCurrentSol(
 
 /** clears primal CIP solution */
 SCIP_RETCODE SCIPsolexClear(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_TREE*            tree                /**< branch and bound tree */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    assert(sol != NULL);
 
    SCIP_CALL( solexClearArrays(sol) );
-   sol->solorigin = SCIP_SOLORIGIN_ZERO;
-   RsetReal(sol->obj, 0.0);
+   RsetReal(sol->valsex->obj, 0.0);
 
    return SCIP_OKAY;
 }
@@ -868,7 +821,7 @@ SCIP_RETCODE SCIPsolexClear(
 
 /** stores solution values of variables in solution's own array */
 SCIP_RETCODE SCIPsolexUnlink(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob                /**< transformed problem data */
    )
@@ -897,7 +850,7 @@ SCIP_RETCODE SCIPsolexUnlink(
 
 /** sets value of variable in primal CIP solution */
 SCIP_RETCODE SCIPsolexSetVal(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
@@ -935,9 +888,9 @@ SCIP_RETCODE SCIPsolexSetVal(
 
             SCIP_CALL( solexSetArrayVal(sol, set, var, val) );
             obj = SCIPvarGetObjExact(var);
-            RdiffProd(sol->obj, obj, oldval);
+            RdiffProd(sol->valsex->obj, obj, oldval);
 
-            RaddProd(sol->obj, obj, val);
+            RaddProd(sol->valsex->obj, obj, val);
 
          }
       }
@@ -955,9 +908,9 @@ SCIP_RETCODE SCIPsolexSetVal(
          SCIP_Rational* obj;
          SCIP_CALL( solexSetArrayVal(sol, set, var, val) );
          obj = SCIPvarGetObjExact(var);
-         RdiffProd(sol->obj, obj, oldval);
+         RdiffProd(sol->valsex->obj, obj, oldval);
 
-         RaddProd(sol->obj, obj, val);
+         RaddProd(sol->valsex->obj, obj, val);
 
       }
       return SCIP_OKAY;
@@ -1000,8 +953,7 @@ SCIP_RETCODE SCIPsolexSetVal(
 
 /** overwrite FP solution with exact values */
 SCIP_RETCODE SCIPsolexOverwriteFPSol(
-   SCIP_SOL*             fpsol,              /**< fp primal CIP solution */
-   SCIP_SOLEX*           sol,                /**< exact primal CIP solution */
+   SCIP_SOL*             sol,                /**< exact primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            origprob,           /**< problem data */
@@ -1016,7 +968,6 @@ SCIP_RETCODE SCIPsolexOverwriteFPSol(
    int i;
 
    assert(sol != NULL);
-   assert(fpsol != NULL);
 
    vars = SCIPprobGetVars(transprob);
    nvars = SCIPprobGetNVars(transprob);
@@ -1027,11 +978,11 @@ SCIP_RETCODE SCIPsolexOverwriteFPSol(
    for( i = 0; i < nvars; i++ )
    {
       SCIPsolexGetVal(solval, sol, set, stat, vars[i]);  
-      SCIP_CALL( SCIPsolSetVal(fpsol, set, stat, tree, vars[i], RgetRealApprox(solval)) );      
+      SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[i], RgetRealApprox(solval)) );      
    }
 
    obj = SCIPsolexGetObj(sol, set, transprob, origprob);
-   SCIPsolSetObjVal(fpsol, RgetRealRelax(obj, SCIP_ROUND_UPWARDS));
+   SCIPsolSetObjVal(sol, RgetRealRelax(obj, SCIP_ROUND_UPWARDS));
 
    RdeleteTemp(set->buffer, &solval);
 
@@ -1041,7 +992,7 @@ SCIP_RETCODE SCIPsolexOverwriteFPSol(
 #if 0
 /** increases value of variable in primal CIP solution */
 SCIP_RETCODE SCIPsolexIncVal(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -1119,7 +1070,7 @@ SCIP_RETCODE SCIPsolexIncVal(
 /** returns value of variable in primal CIP solution */
 void SCIPsolexGetVal(
    SCIP_Rational*        res,                /**< resulting rational */
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_VAR*             var                 /**< variable to get value for */
@@ -1196,7 +1147,7 @@ void SCIPsolexGetVal(
    /** @todo exip: this check with lpcount has to be adapted */
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
       assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var)) 
-      || sol->fpsol->lpcount == stat->lpcount );
+      || sol->lpcount == stat->lpcount );
       solexGetArrayVal(res, sol, var);
       break;
 
@@ -1240,7 +1191,7 @@ void SCIPsolexGetVal(
 #if 0
 /** returns value of variable in primal ray represented by primal CIP solution */
 SCIP_Real SCIPsolexGetRayVal(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution, representing a primal ray */
+   SCIP_SOL*             sol,                /**< primal CIP solution, representing a primal ray */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_VAR*             var                 /**< variable to get value for */
@@ -1310,7 +1261,7 @@ SCIP_Real SCIPsolexGetRayVal(
 
 /** gets objective value of primal CIP solution in transformed problem */
 SCIP_Rational* SCIPsolexGetObj(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob            /**< original problem data */
@@ -1329,13 +1280,13 @@ SCIP_Rational* SCIPsolexGetObj(
     //  return SCIPprobInternObjval(transprob, origprob, set, sol->obj);
    }
    else
-      return sol->obj;
+      return sol->valsex->obj;
 }
 
 #if 0
 /** updates primal solutions after a change in a variable's objective value */
 void SCIPsolUpdateVarObj(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Rational*        oldobj,             /**< old objective value */
    SCIP_Rational*        newobj              /**< new objective value */
@@ -1355,7 +1306,7 @@ void SCIPsolUpdateVarObj(
 
 /* mark the given solution as partial solution */
 SCIP_RETCODE SCIPsolMarkPartial(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_VAR**            vars,               /**< problem variables */
@@ -1398,7 +1349,7 @@ SCIP_RETCODE SCIPsolMarkPartial(
          SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
 
          /* set the value in the solution array */
-         SCIP_CALL( SCIPrationalarraySetVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, vals[v]) );
+         SCIP_CALL( SCIPrationalarraySetVal(sol->valsex->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, vals[v]) );
       }
       else
       {
@@ -1421,7 +1372,7 @@ SCIP_RETCODE SCIPsolMarkPartial(
  *        branch-and-price). Therefore, modifiable constraints can not be double-checked in the original space.
  */
 SCIP_RETCODE SCIPsolexCheck(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1440,13 +1391,13 @@ SCIP_RETCODE SCIPsolexCheck(
    int h;
 
    assert(sol != NULL);
-   assert(!SCIPsolexIsOriginal(sol));
+   assert(!SCIPsolIsOriginal(sol));
    assert(set != NULL);
    assert(prob != NULL);
    assert(feasible != NULL);
 
    SCIPsetDebugMsg(set, "checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%u)\n",
-      RgetRealApprox(sol->obj), sol->fpsol->nodenum, sol->solorigin);
+      RgetRealApprox(sol->valsex->obj), sol->nodenum, sol->solorigin);
 
    *feasible = TRUE;
 
@@ -1526,7 +1477,7 @@ SCIP_RETCODE SCIPsolexCheck(
    for( h = 0; h < set->nconshdlrs && (*feasible || completely); ++h )
    {
       /** @todo: exip turn this into checkExact new callback */
-      SCIP_CALL( SCIPconshdlrCheckExact(set->conshdlrs[h], blkmem, set, stat, sol,
+      SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
             checkintegrality, checklprows, printreason, completely, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
 
@@ -1548,7 +1499,7 @@ SCIP_RETCODE SCIPsolexCheck(
 
 /** try to round given solution */
 SCIP_RETCODE SCIPsolRound(
-   SCIP_SOLEX*           sol,                /**< primal solution */
+   SCIP_SOL*             sol,                /**< primal solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
@@ -1620,7 +1571,7 @@ SCIP_RETCODE SCIPsolRound(
 
 /** updates the solution value sums in variables by adding the value in the given solution */
 void SCIPsolUpdateVarsum(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
@@ -1648,7 +1599,7 @@ void SCIPsolUpdateVarsum(
 
 /** retransforms solution to original problem space */
 SCIP_RETCODE SCIPsolRetransform(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            origprob,           /**< original problem */
@@ -1775,7 +1726,7 @@ SCIP_RETCODE SCIPsolRetransform(
  *  from the solution pool (objective coefficients might have changed in the meantime)
  */
 void SCIPsolRecomputeObj(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            origprob            /**< original problem */
@@ -1811,8 +1762,8 @@ void SCIPsolRecomputeObj(
 
 /** returns whether the given solutions are equal */
 SCIP_Bool SCIPsolexsAreEqual(
-   SCIP_SOLEX*           sol1,               /**< first primal CIP solution */
-   SCIP_SOLEX*           sol2,               /**< second primal CIP solution */
+   SCIP_SOL*             sol1,               /**< first primal CIP solution */
+   SCIP_SOL*             sol2,               /**< second primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            origprob,           /**< original problem */
@@ -1821,22 +1772,22 @@ SCIP_Bool SCIPsolexsAreEqual(
    )
 {
    SCIP_PROB* prob;
-   SCIP_Rational* tmp1; 
-   SCIP_Rational* tmp2; 
+   SCIP_Rational* tmp1;
+   SCIP_Rational* tmp2;
    int v;
    SCIP_Bool result = TRUE;
 
    assert(sol1 != NULL);
    assert(sol2 != NULL);
    assert((sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL) && (sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL) || transprob != NULL);
-   
+
    SCIP_CALL( RcreateTemp(set->buffer, &tmp1) );
    SCIP_CALL( RcreateTemp(set->buffer, &tmp2) );
    /* if both solutions are original or both are transformed, take the objective values stored in the solutions */
    if( (sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL) == (sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL) )
    {
-      Rset(tmp1, sol1->obj);
-      Rset(tmp2, sol2->obj);
+      Rset(tmp1, sol1->valsex->obj);
+      Rset(tmp2, sol2->valsex->obj);
    }
    /* one solution is original and the other not, so we have to get for both the objective in the transformed problem */
    else
@@ -1875,7 +1826,7 @@ SCIP_Bool SCIPsolexsAreEqual(
 
 /** outputs non-zero elements of solution to file stream */
 SCIP_RETCODE SCIPsolexPrint(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -1981,26 +1932,6 @@ SCIP_RETCODE SCIPsolexPrint(
    return SCIP_OKAY;
 }
 
-/** returns sol corresponding to exact sol, or NULL */
-SCIP_SOL* SCIPsolexGetSol(
-   SCIP_SOLEX*           sol                 /**< exact solution */
-   )
-{
-   assert(sol != NULL);
-
-   return sol->fpsol;
-}
-
-/** returns exact sol corresponding to sol, or NULL */
-SCIP_SOLEX* SCIPsolGetSolex(
-   SCIP_SOL*             sol                 /**< fp solution */
-   )
-{
-   assert(sol != NULL);
-
-   return sol->solex;
-}
-
 /** hard-set the obj value of a solution  */
 void SCIPsolSetObjVal(
    SCIP_SOL*             sol,                /**< primal solution */
@@ -2015,7 +1946,7 @@ void SCIPsolSetObjVal(
 #if 0
 /** outputs non-zero elements of solution representing a ray to file stream */
 SCIP_RETCODE SCIPsolPrintRay(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -2122,52 +2053,11 @@ SCIP_RETCODE SCIPsolPrintRay(
 }
 #endif
 
-/** returns whether the given solution is defined on original variables */
-SCIP_Bool SCIPsolexIsOriginal(
-   SCIP_SOLEX*           sol                 /**< primal CIP solution */
+SCIP_Bool SCIPsolIsExactSol(
+   SCIP_SOL*             sol                /**< primal CIP solution */
    )
 {
    assert(sol != NULL);
 
-   return (sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || sol->solorigin == SCIP_SOLORIGIN_PARTIAL);
-}
-
-/** gets current position of solution in array of existing solutions of primal data */
-int SCIPsolexGetPrimalexIndex(
-   SCIP_SOLEX*           sol                 /**< primal CIP solution */
-   )
-{
-   assert(sol != NULL);
-
-   return sol->primalindex;
-}
-
-/** sets current position of solution in array of existing solutions of primal data */
-void SCIPsolexSetPrimalexIndex(
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
-   int                   primalindex         /**< new primal index of solution */
-   )
-{
-   assert(sol != NULL);
-
-   sol->primalindex = primalindex;
-}
-
-SCIP_SOL* SCIPsolexGetFpSol(
-   SCIP_SOLEX*           sol                 /**< primal CIP solution */
-   )
-{
-   assert(sol != NULL);
-   assert(sol->fpsol != NULL);
-
-   return sol->fpsol;
-}
-
-SCIP_SOLEX* SCIPsolGetExSol(
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   )
-{
-   assert(sol != NULL);
-
-   return sol->solex;
+   return sol->valsex != NULL;
 }

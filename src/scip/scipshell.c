@@ -120,9 +120,9 @@ SCIP_RETCODE fromCommandLine(
 
          SCIP_CALL( SCIPcreateSolCopy(scip, &origsol, bestsol) );
          SCIP_CALL( SCIPretransformSol(scip, origsol) );
-         if( SCIPisExactSolve(scip) && SCIPgetSolExSol(scip, bestsol) != NULL )
+         if( SCIPisExactSolve(scip) && SCIPisExactSol(scip, bestsol) )
          {
-            SCIP_CALL( SCIPprintSolex(scip, SCIPgetSolExSol(scip, bestsol), NULL, FALSE) );
+            SCIP_CALL( SCIPprintSolex(scip, bestsol, NULL, FALSE) );
          }
          else
          {

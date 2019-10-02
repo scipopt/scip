@@ -1777,7 +1777,7 @@ void SCIPcertificatePrintRtpInfeas(
 void SCIPcertificatePrintSolex(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol                 /**< primal CIP solution, may be NULL */
+   SCIP_SOL*             sol                 /**< primal CIP solution, may be NULL */
    )
 {
    SCIP_VAR** vars;

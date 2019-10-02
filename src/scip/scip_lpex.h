@@ -158,7 +158,6 @@ void SCIPgetRowSolActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEX*           row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_SOLEX*           solex,              /**< primal CIP solution */
    SCIP_Bool             useexact,           /**< true if solex should be considered instead of sol */
    SCIP_Rational*        result              /**< result pointer */
    );

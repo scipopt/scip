@@ -114,7 +114,6 @@ SCIP_RETCODE checkIntegralityExact(
    )
 {
    SCIP_VAR** vars;
-   SCIP_SOLEX* solex;
    SCIP_Rational* solval;
    int nvars;
    int nbin;
@@ -129,7 +128,6 @@ SCIP_RETCODE checkIntegralityExact(
    SCIPdebugMessage("checking integrality of exact LP solution:\n");
 
    /* gets primal solution vector of exact LP */
-   solex = SCIPsolGetSolex(sol);
    integral = TRUE;
    fpintegral = TRUE;
 
@@ -141,7 +139,10 @@ SCIP_RETCODE checkIntegralityExact(
    /* check whether primal solution satisfies all integrality restrictions */
    for( v = 0; v < nbin + nint && integral; ++v )
    {
-      RsetReal(solval, SCIPgetSolVal(scip, sol, vars[v]));
+      if( SCIPsolIsExactSol(sol) )
+         SCIPgetSolexVal(scip, sol, vars[v], solval);
+      else
+         RsetReal(solval, SCIPgetSolVal(scip, sol, vars[v]));
 
       assert(SCIPvarGetProbindex(vars[v]) == v);
       assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER );
@@ -388,6 +389,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    return SCIP_OKAY;
 }
 
+#if 0
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECKEX(consCheckIntegralExact)
@@ -420,7 +422,7 @@ SCIP_DECL_CONSCHECKEX(consCheckIntegralExact)
 
    for( v = 0; v < nbin + nint && integral; ++v )
    {
-      SCIPgetSolExVal(scip, sol, vars[v], solval);
+      SCIPgetSolexVal(scip, sol, vars[v], solval);
 
       if( SCIPisInfinity(scip, REALABS(RgetRealApprox(solval))) )
          inrange = FALSE;
@@ -456,6 +458,7 @@ SCIP_DECL_CONSCHECKEX(consCheckIntegralExact)
 
    return SCIP_OKAY;
 }
+#endif
 
 /** variable rounding lock method of constraint handler */
 static
@@ -557,7 +560,6 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );
    SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsIntegral) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxIntegral) );
-   SCIP_CALL( SCIPsetConshdlrCheckExact(scip, conshdlr, consCheckIntegralExact) );
 
    return SCIP_OKAY;
 }

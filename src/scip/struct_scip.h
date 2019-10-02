@@ -70,7 +70,6 @@ struct Scip
    SCIP_STAT*            stat;               /**< dynamic problem statistics */
    SCIP_PROB*            origprob;           /**< original problem data */
    SCIP_PRIMAL*          origprimal;         /**< primal data and solution storage for solution candidates */
-   SCIP_PRIMALEX*        origprimalex;
 
    /* REOPTIMIZATION */
    SCIP_REOPT*           reopt;              /**< reoptimization data */
@@ -84,7 +83,6 @@ struct Scip
    SCIP_NLP*             nlp;                /**< NLP data */
    SCIP_RELAXATION*      relaxation;         /**< global relaxation data */
    SCIP_PRIMAL*          primal;             /**< primal data and solution storage */
-   SCIP_PRIMALEX*        primalex;           /**< primal data and solution storage */
    SCIP_TREE*            tree;               /**< branch and bound tree */
    SCIP_CONFLICT*        conflict;           /**< conflict analysis data */
    SCIP_CLIQUETABLE*     cliquetable;        /**< collection of cliques */

@@ -30,7 +30,7 @@
 #include "scip/type_heur.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
-#include "scip/type_solex.h"
+#include "scip/type_sol.h"
 #include "scip/type_var.h"
 #include "scip/rational.h"
 
@@ -79,9 +79,9 @@ extern "C" {
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
-SCIP_RETCODE SCIPcreateSolEx(
+SCIP_RETCODE SCIPcreateSolex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX**          sol,                /**< pointer to store the solution */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
@@ -94,9 +94,9 @@ SCIP_RETCODE SCIPcreateSolEx(
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
-SCIP_RETCODE SCIPcreateLPSolEx(
+SCIP_RETCODE SCIPcreateLPSolex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX**          sol,                /**< pointer to store the solution */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
@@ -109,9 +109,9 @@ SCIP_RETCODE SCIPcreateLPSolEx(
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
-SCIP_RETCODE SCIPcreatePseudoSolEx(
+SCIP_RETCODE SCIPcreatePseudoSolex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX**          sol,                /**< pointer to store the solution */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
@@ -135,9 +135,9 @@ SCIP_RETCODE SCIPcreatePseudoSolEx(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
-SCIP_RETCODE SCIPfreeSolEx(
+SCIP_RETCODE SCIPfreeSolex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX**          sol                 /**< pointer to the solution */
+   SCIP_SOL**            sol                 /**< pointer to the solution */
    );
 
 /** stores solution values of variables in solution's own array
@@ -157,9 +157,9 @@ SCIP_RETCODE SCIPfreeSolEx(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
-SCIP_RETCODE SCIPunlinkSolEx(
+SCIP_RETCODE SCIPunlinkSolex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol                 /**< primal solution */
+   SCIP_SOL*             sol                 /**< primal solution */
    );
 
 /** sets value of variable in primal CIP solution
@@ -182,9 +182,9 @@ SCIP_RETCODE SCIPunlinkSolEx(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
-SCIP_RETCODE SCIPsetSolExVal(
+SCIP_RETCODE SCIPsetSolexVal(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal solution */
+   SCIP_SOL*             sol,                /**< primal solution */
    SCIP_VAR*             var,                /**< variable to add to solution */
    SCIP_Rational*        val                 /**< solution value of variable */
    );
@@ -209,9 +209,9 @@ SCIP_RETCODE SCIPsetSolExVal(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
-SCIP_RETCODE SCIPsetSolExVals(
+SCIP_RETCODE SCIPsetSolexVals(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal solution */
+   SCIP_SOL*             sol,                /**< primal solution */
    int                   nvars,              /**< number of variables to set solution value for */
    SCIP_VAR**            vars,               /**< array with variables to add to solution */
    SCIP_Rational**       vals                /**< array with solution values of variables */
@@ -238,9 +238,9 @@ SCIP_RETCODE SCIPsetSolExVals(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
-void SCIPgetSolExVal(
+void SCIPgetSolexVal(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    SCIP_VAR*             var,                /**< variable to get value for */
    SCIP_Rational*        res                 /**< resulting rational */
    );
@@ -265,9 +265,9 @@ void SCIPgetSolExVal(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
-void SCIPgetSolExVals(
+void SCIPgetSolexVals(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    int                   nvars,              /**< number of variables to get solution value for */
    SCIP_VAR**            vars,               /**< array with variables to get value for */
    SCIP_Rational**       res                 /**< arraty to store solution values of variables */
@@ -292,9 +292,9 @@ void SCIPgetSolExVals(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
-void SCIPgetSolExOrigObj(
+void SCIPgetSolexOrigObj(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
    SCIP_Rational*        res                 /**< result pointer to store rational */
    );
 
@@ -316,9 +316,9 @@ void SCIPgetSolExOrigObj(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
-void SCIPgetSolExTransObj(
+void SCIPgetSolexTransObj(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
    SCIP_Rational*        res                 /**< result pointer to store rational */
    );
 
@@ -334,9 +334,9 @@ void SCIPgetSolExTransObj(
  *
  */
 EXTERN
-SCIP_RETCODE SCIPrecomputeSolExObj(
+SCIP_RETCODE SCIPrecomputeSolexObj(
    SCIP*                 scip,
-   SCIP_SOLEX*           sol
+   SCIP_SOL*             sol
    );
 
 /** maps original space objective value into transformed objective value
@@ -355,7 +355,7 @@ SCIP_RETCODE SCIPrecomputeSolExObj(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_Real SCIPtransformExObj(
+SCIP_Real SCIPtransformObjex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Rational*        obj                 /**< original space objective value to transform */
    );
@@ -376,7 +376,7 @@ SCIP_Real SCIPtransformExObj(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_Real SCIPretransformExObj(
+SCIP_Real SCIPretransformObjex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Rational*        obj                 /**< transformed objective value to retransform in original space */
    );
@@ -412,7 +412,7 @@ SCIP_Real SCIPretransformExObj(
 EXTERN
 SCIP_RETCODE SCIPprintSolex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
@@ -420,7 +420,7 @@ SCIP_RETCODE SCIPprintSolex(
 
 /** returns dual solution value of a constraint */
 EXTERN
-SCIP_RETCODE SCIPgetDualSolExVal(
+SCIP_RETCODE SCIPgetDualSolexVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the dual solution should be returned */
    SCIP_Rational*        dualsolval,         /**< pointer to store the dual solution value */
@@ -429,7 +429,7 @@ SCIP_RETCODE SCIPgetDualSolExVal(
 
 /** check whether the dual solution is available
  *
- * @note This is used when calling \ref SCIPprintDualSolEx()
+ * @note This is used when calling \ref SCIPprintDualSolex()
  *
  * @return is dual solution available?
  *
@@ -437,7 +437,7 @@ SCIP_RETCODE SCIPgetDualSolExVal(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_Bool SCIPisDualSolExAvailable(
+SCIP_Bool SCIPisDualSolexAvailable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             printreason         /**< print warning message if dualsol is not available? */
    );
@@ -454,7 +454,7 @@ SCIP_Bool SCIPisDualSolExAvailable(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPprintDualSolEx(
+SCIP_RETCODE SCIPprintDualSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
@@ -481,7 +481,7 @@ SCIP_RETCODE SCIPprintDualSolEx(
 EXTERN
 SCIP_RETCODE SCIPprintRayEx(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal solution representing ray */
+   SCIP_SOL*             sol,                /**< primal solution representing ray */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
@@ -506,7 +506,7 @@ SCIP_RETCODE SCIPprintRayEx(
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
 EXTERN
-int SCIPgetNSolsEx(
+int SCIPgetNSolexs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -528,7 +528,7 @@ int SCIPgetNSolsEx(
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
 EXTERN
-SCIP_SOL** SCIPgetSolsEx(
+SCIP_SOL** SCIPgetSolexs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -551,7 +551,7 @@ SCIP_SOL** SCIPgetSolsEx(
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
 EXTERN
-SCIP_SOL* SCIPgetBestSolEx(
+SCIP_SOL* SCIPgetBestSolex(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -575,9 +575,9 @@ SCIP_SOL* SCIPgetBestSolEx(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
-SCIP_RETCODE SCIPretransformSolEx(
+SCIP_RETCODE SCIPretransformSolex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol                 /**< primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 
@@ -599,9 +599,9 @@ SCIP_RETCODE SCIPretransformSolEx(
  *  @note Do not call during propagation, use heur_trysol instead.
  */
 EXTERN
-SCIP_RETCODE SCIPaddSolEx(
+SCIP_RETCODE SCIPaddSolex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
@@ -623,9 +623,9 @@ SCIP_RETCODE SCIPaddSolEx(
  *  @note Do not call during propagation, use heur_trysol instead.
  */
 EXTERN
-SCIP_RETCODE SCIPaddSolExFree(
+SCIP_RETCODE SCIPaddSolexFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX**          sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
@@ -639,7 +639,7 @@ SCIP_RETCODE SCIPaddSolExFree(
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
-SCIP_RETCODE SCIPaddCurrentSolEx(
+SCIP_RETCODE SCIPaddCurrentSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
@@ -661,9 +661,9 @@ SCIP_RETCODE SCIPaddCurrentSolEx(
  *  @note Do not call during propagation, use heur_trysol instead.
  */
 EXTERN
-SCIP_RETCODE SCIPtrySolEx(
+SCIP_RETCODE SCIPtrySolex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
    SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
@@ -688,9 +688,9 @@ SCIP_RETCODE SCIPtrySolEx(
  *  @note Do not call during propagation, use heur_trysol instead.
  */
 EXTERN
-SCIP_RETCODE SCIPtrySolExFree(
+SCIP_RETCODE SCIPtrySolexFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX**          sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
    SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
@@ -709,7 +709,7 @@ SCIP_RETCODE SCIPtrySolExFree(
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN
-SCIP_RETCODE SCIPtryCurrentSolEx(
+SCIP_RETCODE SCIPtryCurrentSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
@@ -736,9 +736,9 @@ SCIP_RETCODE SCIPtryCurrentSolEx(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPcheckSolEx(
+SCIP_RETCODE SCIPcheckSolex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
    SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
@@ -765,9 +765,9 @@ SCIP_RETCODE SCIPcheckSolEx(
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
-SCIP_RETCODE SCIPcheckSolExOrig(
+SCIP_RETCODE SCIPcheckSolexOrig(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
    SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_Bool             completely          /**< Should all violations be checked if printreason is true? */
@@ -775,57 +775,57 @@ SCIP_RETCODE SCIPcheckSolExOrig(
 
 /** update integrality violation of a solution */
 EXTERN
-void SCIPupdateSolExIntegralityViolation(
+void SCIPupdateSolexIntegralityViolation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Rational*        absviol             /**< absolute violation */
    );
 
 /** update bound violation of a solution */
 EXTERN
-void SCIPupdateSolExBoundViolation(
+void SCIPupdateSolexBoundViolation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Rational*        absviol,            /**< absolute violation */
    SCIP_Rational*        relviol             /**< relative violation */
    );
 
 /** update LP row violation of a solution */
 EXTERN
-void SCIPupdateSolExLPRowViolation(
+void SCIPupdateSolexLPRowViolation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Rational*        absviol,            /**< absolute violation */
    SCIP_Rational*        relviol             /**< relative violation */
    );
 
 /** update constraint violation of a solution */
 EXTERN
-void SCIPupdateSolExConsViolation(
+void SCIPupdateSolexConsViolation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Rational*        absviol,            /**< absolute violation */
    SCIP_Rational*        relviol             /**< relative violation */
    );
 
 /** update LP row and constraint violations of a solution */
 EXTERN
-void SCIPupdateSolExLPConsViolation(
+void SCIPupdateSolexLPConsViolation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal CIP solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Rational*        absviol,            /**< absolute violation */
    SCIP_Rational*        relviol             /**< relative violation */
    );
 
 /** allow violation updates */
 EXTERN
-void SCIPactivateSolExViolationUpdates(
+void SCIPactivateSolexViolationUpdates(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** disallow violation updates */
 EXTERN
-void SCIPdeactivateSolExViolationUpdates(
+void SCIPdeactivateSolexViolationUpdates(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -873,26 +873,22 @@ SCIP_Real SCIPgetPrimalRayExVal(
 EXTERN
 SCIP_RETCODE SCIPupdatePrimalRayEx(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           primalray           /**< the new primal ray */
+   SCIP_SOL*             primalray           /**< the new primal ray */
    );
 
 EXTERN
 SCIP_RETCODE SCIPoverwriteFPsol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_SOLEX*           solex               /**< exact primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 EXTERN
-SCIP_SOL* SCIPgetSolexFpSol(
+SCIP_Bool SCIPisExactSol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           solex               /**< exact primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-SCIP_SOLEX* SCIPgetSolExSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< exact primal CIP solution */
-   );
+
 
 
 /**@} */

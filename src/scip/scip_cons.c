@@ -181,7 +181,6 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
-   SCIP_DECL_CONSCHECKEX ((*conscheckex)),   /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    SCIP_DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
@@ -216,7 +215,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
          delaysepa, delayprop, needscons, proptiming, presoltiming, conshdlrcopy,
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
          consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenforelax, consenfops, conscheck,
-         conscheckex, consprop, conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable,
+         consprop, conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable,
          consdelvars, consprint, conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
 
@@ -275,7 +274,7 @@ SCIP_RETCODE SCIPincludeConshdlrBasic(
          SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_ALWAYS,
          NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-         NULL, NULL, NULL, NULL, NULL, consenfolp, NULL, consenfops, conscheck, NULL, NULL,
+         NULL, NULL, NULL, NULL, NULL, consenfolp, NULL, consenfops, conscheck, NULL,
          NULL, NULL, conslock, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, NULL, NULL, NULL, NULL, conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
@@ -947,29 +946,6 @@ SCIP_RETCODE SCIPsetConshdlrGetDiveBdChgs(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetConshdlrGetDiveBdChgs", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconshdlrSetGetDiveBdChgs(conshdlr, consgetdivebdchgs);
-
-   return SCIP_OKAY;
-}
-
-/** sets exact solution checking method
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- */
-SCIP_RETCODE SCIPsetConshdlrCheckExact(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSCHECKEX((*conscheckex))     /**< constraint handler diving solution enforcement method */
-   )
-{
-   assert(scip != NULL);
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetConshdlrCheckExact", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIPconshdlrSetCheckExact(conshdlr, conscheckex);
 
    return SCIP_OKAY;
 }

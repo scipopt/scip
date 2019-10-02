@@ -87,7 +87,6 @@
 #include "scip/pricer.h"
 #include "scip/pricestore.h"
 #include "scip/primal.h"
-#include "scip/primalex.h"
 #include "scip/prob.h"
 #include "scip/prop.h"
 #include "scip/reader.h"
@@ -447,8 +446,8 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
    if( SCIPisExactSolve(scip) )
    {
+      SCIP_CALL( Rcreate(SCIPblkmem(scip), &scip->primal->cutoffboundex) );
       SCIP_CALL( SCIPlpexCreate(&scip->lpex, SCIPblkmem(scip), scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
-      SCIP_CALL( SCIPprimalexCreate(&scip->primalex, SCIPblkmem(scip), scip->primal) );
    }
 
    SCIP_CALL( SCIPtreeCreate(&scip->tree, scip->mem->probmem, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
@@ -2134,7 +2133,6 @@ SCIP_RETCODE freeTransform(
    if( SCIPisExactSolve(scip) )
    {
       SCIP_CALL( SCIPlpexFree(&scip->lpex, SCIPblkmem(scip), scip->set, scip->eventqueue, scip->eventfilter) );
-      SCIP_CALL( SCIPprimalexFree(&scip->primalex, SCIPblkmem(scip)) );
    }
    SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
    SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );

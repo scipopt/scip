@@ -353,8 +353,7 @@ void SCIProwexGetSolActivity(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_SOLEX*           solex,              /**< exact primal CIP solution */
-   SCIP_Bool             useexact,           /**< should the exact solution be used */
+   SCIP_Bool             useexact,           /**< should an exact solution be used */
    SCIP_Rational*        result              /**< resulting activity */
    );
 

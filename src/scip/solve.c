@@ -38,11 +38,11 @@
 #include "scip/heur.h"
 #include "scip/interrupt.h"
 #include "scip/lp.h"
+#include "scip/lpex.h"
 #include "scip/nodesel.h"
 #include "scip/pricer.h"
 #include "scip/pricestore.h"
 #include "scip/primal.h"
-#include "scip/primalex.h"
 #include "scip/prob.h"
 #include "scip/prop.h"
 #include "scip/pub_cons.h"
@@ -2881,9 +2881,22 @@ SCIP_RETCODE applyBounding(
          primal->cutoffbound, SCIPprobExternObjval(transprob, origprob, set, primal->cutoffbound) + SCIPgetOrigObjoffset(set->scip));
 
       /* check for infeasible node by bounding */
-      if( (set->misc_exactsolve && SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound)
-         || (!set->misc_exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)) )
+      /* @todo exip: this is sort of hacky, maybe add exact lowerbound to nodes? or similar */
+      if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound) )
       {
+         if( set->misc_exactsolve )
+         {
+            SCIP_Rational* lpobj;
+
+            SCIP_CALL( RcreateTemp(set->buffer, &lpobj) );
+            SCIPlpexGetObjval(lp->lpex, set, transprob, lpobj);
+            if( !RisGE(lpobj, primal->cutoffboundex) )
+            {
+               RdeleteTemp(set->buffer, &lpobj);
+               return SCIP_OKAY;
+            }
+            RdeleteTemp(set->buffer, &lpobj);
+         }
          SCIPsetDebugMsg(set, "node is cut off by bounding (lower=%g, upper=%g)\n",
             SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
          SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
@@ -4699,7 +4712,6 @@ SCIP_RETCODE addCurrentSolution(
 {
    SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
    SCIP_SOL* sol;
-   SCIP_SOLEX* solex;
    SCIP_Bool foundsol;
 
    /* found a feasible solution */
@@ -4747,16 +4759,16 @@ SCIP_RETCODE addCurrentSolution(
       SCIPclockStart(stat->lpsoltime, set);
 
       /* add solution to storage */
-      SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
       if( set->misc_exactsolve && lp->lpex->solved )
       {
-         SCIP_CALL( SCIPsolexCreateLPexSol(&solex, sol, blkmem, set, stat, transprob, set->scip->primalex, tree, lp->lpex, NULL) );
+         SCIP_CALL( SCIPsolexCreateLPexSol(&sol, blkmem, set, stat, transprob, set->scip->primal, tree, lp->lpex, NULL) );
 
-         SCIP_CALL( SCIPprimalexTrySolFree(set->scip->primalex, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpex,
-               eventqueue, eventfilter, &solex, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
+         SCIP_CALL( SCIPprimalTrySolexFree(set->scip->primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpex,
+               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
       }
       else
       {
+         SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
          SCIPsetDebugMsg(set, "found lp solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
          if( checksol || set->misc_exactsolve )

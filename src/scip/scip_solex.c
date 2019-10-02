@@ -164,14 +164,14 @@
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-void SCIPgetSolExVal(
+void SCIPgetSolexVal(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    SCIP_VAR*             var,                /**< variable to get value for */
    SCIP_Rational*        res                 /**< resulting rational */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolExVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolexVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    assert( var->scip == scip );
 
@@ -181,9 +181,9 @@ void SCIPgetSolExVal(
    }
    else
    {
-      SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolExVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolexVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-      Rset(res, SCIPvarGetSolEx(var, SCIPtreeHasCurrentNodeLP(scip->tree)));
+      Rset(res, SCIPvarGetSolex(var, SCIPtreeHasCurrentNodeLP(scip->tree)));
    }
 }
 
@@ -204,19 +204,19 @@ void SCIPgetSolExVal(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-void SCIPgetSolExTransObj(
+void SCIPgetSolexTransObj(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
    SCIP_Rational*        res                 /**< result pointer to store rational */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolExTransObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolexTransObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    if( sol != NULL )
       Rset(res, SCIPsolexGetObj(sol, scip->set, scip->transprob, scip->origprob));
    else
    {
-      SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolExTransObj(sol==NULL)", \
+      SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolexTransObj(sol==NULL)", \
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
          SCIPlpexGetObjval(scip->lpex, scip->set, scip->transprob, res);
@@ -227,8 +227,7 @@ void SCIPgetSolExTransObj(
 
 SCIP_RETCODE SCIPoverwriteFPsol(
    SCIP*                 scip,
-   SCIP_SOL*             sol,
-   SCIP_SOLEX*           solex
+   SCIP_SOL*             sol
    )
 {
    int v;
@@ -238,46 +237,18 @@ SCIP_RETCODE SCIPoverwriteFPsol(
 
    assert(scip != NULL);
    assert(sol != NULL);
-   assert(solex != NULL);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPoverwriteFPSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   SCIP_CALL( SCIPsolexOverwriteFPSol(sol, solex, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree) );
+   SCIP_CALL( SCIPsolexOverwriteFPSol(sol, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree) );
 
    return SCIP_OKAY;
-}
-
-
-SCIP_SOL* SCIPgetSolexFpSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           solex               /**< exact primal CIP solution */
-   )
-{
-   assert(scip != NULL);
-   assert(solex != NULL);
-
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolexFpSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   return SCIPsolexGetFpSol(solex);
-}
-
-SCIP_SOLEX* SCIPgetSolExSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< exact primal CIP solution */
-   )
-{
-   assert(scip != NULL);
-   assert(sol != NULL);
-
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolExSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   return SCIPsolGetExSol(sol);
 }
 
 EXTERN
 SCIP_RETCODE SCIPprintSolex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
@@ -297,7 +268,7 @@ SCIP_RETCODE SCIPprintSolex(
             FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
       /* create a temporary solution that is linked to the current solution */
-      SCIP_CALL( SCIPsolexCreateCurrentSol(&sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primalex,
+      SCIP_CALL( SCIPsolexCreateCurrentSol(&sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
             scip->tree, scip->lpex, NULL) );
    }
 
@@ -326,8 +297,20 @@ SCIP_RETCODE SCIPprintSolex(
    if( currentsol )
    {
       /* free temporary solution */
-      SCIP_CALL( SCIPsolexFree(&sol, scip->mem->probmem, scip->primalex) );
+      SCIP_CALL( SCIPsolFree(&sol, scip->mem->probmem, scip->primal) );
    }
 
    return SCIP_OKAY;
+}
+
+SCIP_Bool SCIPisExactSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(SCIPisTransformed(scip) || sol != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPisExactSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPsolIsExactSol(sol);
 }

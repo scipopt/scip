@@ -28,9 +28,11 @@
 #include "scip/visual.h"
 #include "scip/event.h"
 #include "scip/lp.h"
+#include "scip/lpex.h"
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
+#include "scip/solex.h"
 #include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/reopt.h"
@@ -140,7 +142,7 @@ SCIP_RETCODE SCIPprimalCreate(
    (*primal)->upperbound = SCIP_INVALID;
    (*primal)->cutoffbound = SCIP_INVALID;
    (*primal)->updateviolations = TRUE;
-   (*primal)->primalex = NULL;
+   (*primal)->cutoffboundex = NULL;
 
    return SCIP_OKAY;
 }
@@ -183,6 +185,9 @@ SCIP_RETCODE SCIPprimalFree(
    BMSfreeMemoryArrayNull(&(*primal)->sols);
    BMSfreeMemoryArrayNull(&(*primal)->partialsols);
    BMSfreeMemoryArrayNull(&(*primal)->existingsols);
+   if( (*primal)->cutoffboundex != NULL )
+      Rdelete(blkmem, &(*primal)->cutoffboundex);
+
    BMSfreeMemory(primal);
 
    return SCIP_OKAY;
@@ -1928,4 +1933,133 @@ void SCIPprimalSetUpdateViolations(
    assert(primal != NULL);
 
    primal->updateviolations = updateviolations;
+}
+
+
+/** adds exact primal solution to solution storage at given position */
+static
+SCIP_RETCODE primalAddSolex(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_SOL**            solptr,             /**< pointer to primal CIP solution */
+   int                   insertpos,          /**< position in solution storage to add solution to */
+   SCIP_Bool             replace             /**< should the solution at insertpos be replaced by the new solution? */
+   )
+{
+   SCIP_Bool stored;
+   /* cppcheck-suppress unassignedVariable */
+   SCIP_EVENT event;
+   SCIP_Rational* obj;
+   SCIP_Real fpobj;
+   SCIP_SOL* sol;
+   int pos;
+
+   assert(primal != NULL);
+   assert(set != NULL);
+   assert(solptr != NULL);
+   assert(stat != NULL);
+   assert(transprob != NULL);
+   assert(origprob != NULL);
+   assert(0 <= insertpos && insertpos < set->limit_maxsol);
+   assert(tree == NULL || !SCIPtreeInRepropagation(tree));
+
+   sol = *solptr;
+   assert(sol != NULL);
+   obj = SCIPsolexGetObj(sol, set, transprob, origprob);
+   fpobj = RgetRealRelax(obj, SCIP_ROUND_UPWARDS);
+
+   SCIPsetDebugMsg(set, "insert exact primal solution %p with obj %g at position %d (replace=%u):\n",
+      (void*)sol, RgetRealApprox(obj), insertpos, replace);
+
+   SCIPdebug( SCIP_CALL( SCIPsolexPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
+
+   /* completely fill the solution's own value array to unlink it from the LP or pseudo solution */
+   SCIP_CALL( SCIPsolexUnlink(sol, set, transprob) );
+
+   SCIP_CALL( SCIPsolexOverwriteFPSol(sol, set, stat, origprob, transprob, tree) );
+   Rset(primal->cutoffboundex, SCIPsolexGetObj(sol, set, transprob, origprob) );
+
+   /* note: we copy the solution so to not destroy the double-link between sol and fpsol */
+   SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat,
+            origprob, transprob, tree, reopt,
+            lp->fplp, eventqueue, eventfilter, &sol, &stored) );
+
+   return SCIP_OKAY;
+}
+
+/** adds exact primal solution to solution storage, frees the solution afterwards */
+SCIP_RETCODE SCIPprimalTrySolexFree(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEX*            lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SCIP_Bool             printreason,        /**< Should all the reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
+   )
+{
+   SCIP_Bool replace = FALSE;
+   SCIP_Bool feasible;
+   int insertpos;
+
+   assert(primal != NULL);
+   assert(transprob != NULL);
+   assert(origprob != NULL);
+   assert(sol != NULL);
+   assert(*sol != NULL);
+   assert(stored != NULL);
+
+   insertpos = -1;
+
+   /* insert solution into solution storage */
+
+   if( solOfInterest(primal, set, stat, origprob, transprob, *sol, &insertpos, &replace) )
+   {
+      /* check solution for feasibility */
+      SCIP_CALL( SCIPsolexCheck(*sol, set, messagehdlr, blkmem, stat, transprob, printreason, completely, checkbounds,
+            checkintegrality, checklprows, &feasible) );
+   }
+   else
+      feasible  = FALSE;
+
+   if( feasible )
+   {
+      SCIP_CALL( primalAddSolex(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
+            tree, reopt, lp, eventqueue, eventfilter, sol, insertpos, replace) );
+
+      /* clear the pointer, such that the user cannot access the solution anymore */
+      *sol = NULL;
+      *stored = TRUE;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsolFree(sol, blkmem, primal) );
+      *stored = FALSE;
+   }
+
+   assert(*sol == NULL);
+
+   return SCIP_OKAY;
 }

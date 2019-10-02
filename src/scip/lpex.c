@@ -4218,15 +4218,15 @@ void SCIProwexGetSolFeasibility(
    )
 {
    SCIP_Real activity;
-   SCIP_Rational* temp1;    
-   SCIP_Rational* temp2; 
-
+   SCIP_Rational* temp1;
+   SCIP_Rational* temp2;
+   
    RcreateTemp(set->buffer, &temp1);
    RcreateTemp(set->buffer, &temp2);
 
    assert(row != NULL);
 
-   SCIProwexGetSolActivity(row, set, stat, sol, NULL, FALSE, result);
+   SCIProwexGetSolActivity(row, set, stat, sol, FALSE, result);
 
    Rdiff(temp1, row->rhs, result);
    Rdiff(temp2, result, row->lhs);
@@ -4242,8 +4242,7 @@ void SCIProwexGetSolActivity(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_SOLEX*           solex,              /**< exact primal CIP solution */
-   SCIP_Bool             useexact,           /**< should the exact solution be used */
+   SCIP_Bool             useexact,           /**< should an exact solution be used */
    SCIP_Rational*        result              /**< resulting activity */
    )
 {
@@ -4266,7 +4265,7 @@ void SCIProwexGetSolActivity(
       assert((i < rowex->nlpcols) == (rowex->linkpos[i] >= 0
          && colex->lppos >= 0));
       if( useexact )
-         SCIPsolexGetVal(solval, solex, set, stat, colex->var);
+         SCIPsolexGetVal(solval, sol, set, stat, colex->var);
       else
          RsetReal(solval, SCIPsolGetVal(sol, set, stat, colex->var));
 

@@ -30,7 +30,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_tree.h"
 #include "scip/type_certificate.h"
-#include "scip/type_solex.h"
+#include "scip/type_sol.h"
 #include "scip/type_lpex.h"
 #include "scip/type_var.h"
 #include "scip/pub_fileio.h"
@@ -305,7 +305,7 @@ extern
 void SCIPcertificatePrintSolex(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOLEX*           sol                 /**< primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 #ifdef __cplusplus

@@ -352,7 +352,6 @@ void SCIPgetRowSolActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEX*           row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_SOLEX*           solex,              /**< primal CIP solution */
    SCIP_Bool             useexact,           /**< true if solex should be considered instead of sol */
    SCIP_Rational*        result              /**< result pointer */
    )
@@ -360,7 +359,7 @@ void SCIPgetRowSolActivityExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
-      SCIProwexGetSolActivity(row, scip->set, scip->stat, sol, solex, useexact, result);
+      SCIProwexGetSolActivity(row, scip->set, scip->stat, sol, useexact, result);
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       Rset(result, SCIProwexGetLPActivity(row, scip->set, scip->stat, scip->lpex));
    else

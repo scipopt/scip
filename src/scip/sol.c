@@ -299,7 +299,7 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
-   (*sol)->solex = NULL;
+   (*sol)->valsex = NULL;
 
    SCIPsolResetViolations(*sol);
    stat->solindex++;
@@ -336,7 +336,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
-   (*sol)->solex = NULL;
+   (*sol)->valsex = NULL;
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
    SCIPsolResetViolations(*sol);
@@ -383,11 +383,13 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->viol.relviolbounds = sourcesol->viol.relviolbounds;
    (*sol)->viol.relviolcons = sourcesol->viol.relviolcons;
    (*sol)->viol.relviollprows = sourcesol->viol.relviollprows;
-   if( sourcesol->solex != NULL )
+   if( SCIPsolIsExactSol(sourcesol) )
    {
-      SCIP_CALL( SCIPsolexCopy(&(*sol)->solex, blkmem, set, stat, primal->primalex, sourcesol->solex) );
-      (*sol)->solex->fpsol = (*sol);
+      SCIP_CALL( SCIPvalsexCopy( &(*sol)->valsex, blkmem, set, stat, sourcesol->valsex) );
    }
+   else
+      (*sol)->valsex = NULL;
+
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -435,8 +437,13 @@ SCIP_RETCODE SCIPsolTransform(
    sol->solorigin = tsol->solorigin;
    sol->obj = tsol->obj;
 
-   /** @todo exip: copy solex here */
-   sol->solex = NULL;
+   /** @todo exip: wrap this? */
+   {
+      SCIP_VALSEX* tmpvalsex;
+      tmpvalsex = sol->valsex;
+      sol->valsex = tsol->valsex;
+      tsol->valsex = tmpvalsex;
+   }
 
    SCIP_CALL( SCIPsolFree(transsol, blkmem, primal) );
 
@@ -719,6 +726,7 @@ SCIP_RETCODE SCIPsolCreatePartial(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
+   (*sol)->valsex = NULL;
    stat->solindex++;
    solStamp(*sol, stat, NULL, TRUE);
    SCIPsolResetViolations(*sol);
@@ -752,6 +760,7 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    (*sol)->hasinfval = FALSE;
+   (*sol)->valsex = NULL;
    stat->solindex++;
    solStamp(*sol, stat, tree, TRUE);
    SCIPsolResetViolations(*sol);
@@ -775,9 +784,9 @@ SCIP_RETCODE SCIPsolFree(
 
    SCIP_CALL( SCIPrealarrayFree(&(*sol)->vals) );
    SCIP_CALL( SCIPboolarrayFree(&(*sol)->valid) );
-   if( (*sol)->solex != NULL )
+   if( SCIPsolIsExactSol(*sol) )
    {
-      SCIP_CALL( SCIPsolexFree(&((*sol)->solex), blkmem, primal->primalex) );
+      SCIP_CALL( SCIPvalsexFree(&((*sol)->valsex), blkmem) );
    }
    BMSfreeBlockMemory(blkmem, sol);
 

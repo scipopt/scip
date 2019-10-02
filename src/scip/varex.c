@@ -608,7 +608,7 @@ SCIP_Rational* SCIPvarGetPseudoSolex(
 }
 
 /** gets current LP or pseudo solution value of variable */
-SCIP_Rational* SCIPvarGetSolEx(
+SCIP_Rational* SCIPvarGetSolex(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
    )
