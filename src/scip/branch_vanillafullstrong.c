@@ -48,9 +48,12 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-#define DEFAULT_INTEGRALCANDS      FALSE   /**< should integral variables in the current LP solution be considered as branching candidates ? */
-#define DEFAULT_SCOREALL           FALSE   /**< should strong branching scores be computed for all candidates, or can we early stop when a variable has infinite score ? */
-#define DEFAULT_IDEMPOTENT         FALSE   /**< should strong branching side-effects be prevented (e.g., domain changes, stat updates etc.) ? */
+#define DEFAULT_INTEGRALCANDS      FALSE   /**< should integral variables in the current LP solution be considered as
+                                            *   branching candidates ? */
+#define DEFAULT_SCOREALL           FALSE   /**< should strong branching scores be computed for all candidates, or can
+                                            *   we early stop when a variable has infinite score ? */
+#define DEFAULT_IDEMPOTENT         FALSE   /**< should strong branching side-effects be prevented (e.g., domain
+                                            *   changes, stat updates etc.) ? */
 #define DEFAULT_COLLECTSCORES      FALSE   /**< should strong branching scores be collected ? */
 #define DEFAULT_DONOTBRANCH        FALSE   /**< should branching be done ? */
 
@@ -58,9 +61,12 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   SCIP_Bool             integralcands;         /**< should integral variables in the current LP solution be considered as branching candidates ? */
-   SCIP_Bool             scoreall;              /**< should strong branching scores be computed for all candidates, or can we early stop when a node is detected infeasible ? */
-   SCIP_Bool             idempotent;            /**< should strong branching side-effects be prevented (e.g., domain changes, stat updates etc.) ? */
+   SCIP_Bool             integralcands;         /**< should integral variables in the current LP solution be considered
+                                                 *   as branching candidates ? */
+   SCIP_Bool             scoreall;              /**< should strong branching scores be computed for all candidates, or
+                                                 *   can we early stop when a node is detected infeasible ? */
+   SCIP_Bool             idempotent;            /**< should strong branching side-effects be prevented (e.g., domain
+                                                 *   changes, stat updates etc.) ? */
    SCIP_Bool             collectscores;         /**< should strong branching scores be collected ? */
    SCIP_Bool             donotbranch;           /**< should branching be done ? */
    SCIP_VAR**            cands;                 /**< candidate variables */
@@ -86,7 +92,7 @@ SCIP_RETCODE runVanillaStrongBranching(
    SCIP_Bool*            bestdownvalid,
    SCIP_Bool*            bestupvalid,
    SCIP_Real*            provedbound
-);
+   );
 
 
 /*
@@ -250,8 +256,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpVanillafullstrong)
 
       /* perform the branching */
       SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s>[%g,%g] (solval=%g, down=%g, up=%g, score=%g)\n",
-         branchruledata->ncands, branchruledata->bestcand, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val,
-         bestdown, bestup, bestscore);
+         branchruledata->ncands, branchruledata->bestcand, SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+         SCIPvarGetUbLocal(var), val, bestdown, bestup, bestscore);
       SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, &eqchild, &upchild) );
 
       /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
@@ -354,8 +360,10 @@ SCIP_RETCODE runVanillaStrongBranching(
    SCIP_VAR**            cands,            /**< branching candidates                                */
    int                   ncands,           /**< number of branching candidates                      */
    int                   npriocands,       /**< number of priority branching candidates             */
-   SCIP_Bool             scoreall,         /**< should strong branching scores be computed for all candidates, or can we early stop when a node is detected infeasible ? */
-   SCIP_Bool             idempotent,       /**< should strong branching side-effects be prevented (e.g., domain changes, stat updates etc.) ? */
+   SCIP_Bool             scoreall,         /**< should strong branching scores be computed for all candidates, or can
+                                            *   we early stop when a node is detected infeasible ? */
+   SCIP_Bool             idempotent,       /**< should strong branching side-effects be prevented (e.g., domain
+                                            *   changes, stat updates etc.) ? */
    SCIP_Real*            scores,           /**< candidate scores */
    int*                  bestcand,         /**< best candidate for branching                        */
    SCIP_Real*            bestdown,         /**< objective value of the down branch for bestcand     */
