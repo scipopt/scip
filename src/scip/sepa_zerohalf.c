@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_zerohalf.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  {0,1/2}-cuts separator
  * @author Robert Lion Gottwald
  * @author Manuel Kutschka
@@ -1085,11 +1086,15 @@ SCIP_RETCODE buildMod2Matrix(
       if( useub )
       {
          assert(ubsol > 0.0);
+
+         /* coverity[var_deref_model] */
          SCIP_CALL( mod2MatrixAddCol(scip, mod2matrix, origcol2col, vars[i], ubsol, mod2(scip, ub)) );
       }
       else
       {
          assert(lbsol > 0.0);
+
+         /* coverity[var_deref_model] */
          SCIP_CALL( mod2MatrixAddCol(scip, mod2matrix, origcol2col, vars[i], lbsol, mod2(scip, lb)) );
       }
    }
@@ -1147,11 +1152,13 @@ SCIP_RETCODE buildMod2Matrix(
             assert(SCIPisEQ(scip, lhs, rhs));
 
             /* use rhs */
+            /* coverity[var_deref_model] */
             SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
          }
          else
          {
             /* use both */
+            /* coverity[var_deref_model] */
             SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
             SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
          }
@@ -1159,11 +1166,13 @@ SCIP_RETCODE buildMod2Matrix(
       else if( rhsslack <= maxslack )
       {
          /* use rhs */
+         /* coverity[var_deref_model] */
          SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
       }
       else if( lhsslack <= maxslack )
       {
          /* use lhs */
+         /* coverity[var_deref_model] */
          SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
       }
    }
@@ -1825,8 +1834,8 @@ SCIP_RETCODE generateZerohalfCut(
    }
 
   TERMINATE:
-   SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
+   SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeCleanBufferArray(scip, &tmpcoefs);
 
    return SCIP_OKAY;

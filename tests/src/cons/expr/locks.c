@@ -103,6 +103,8 @@ SCIP_RETCODE chgBounds(
    SCIP_CALL( SCIPchgVarLb(scip, y, lby) );
    SCIP_CALL( SCIPchgVarUb(scip, y, uby) );
 
+   SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+
    return SCIP_OKAY;
 }
 

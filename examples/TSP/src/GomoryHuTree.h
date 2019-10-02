@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,72 +27,85 @@
 #include "objscip/objscip.h"
 
 
+/** a node in the graph */
 typedef struct GraphNode
 {
-   int                   id;            /**< number of the node*/
-   int                   dist;   
- 
-   double                x;             /**< 2D-coordinate in some metric*/
-   double                y;             /**< second coordinate */
-   double                excess;
-   double                mincap;        /**< capacity of minimum cut between node and parent in GH cut tree */
+   int                   id;                 /**< number of the node*/
+   int                   dist;               /**< distances used in push-relabel */
 
-   SCIP_Bool             unmarked;      /**< while BFS in progress */
-   SCIP_Bool             alive;    
+   double                x;                  /**< 2D-coordinate in some metric */
+   double                y;                  /**< second coordinate */
+   double                excess;             /**< excess of node used in push-relabel */
+   double                mincap;             /**< capacity of minimum cut between node and parent in GH cut tree */
 
-   struct GraphEdge      *first_edge;   /**< in list of incident edges */
-   struct GraphEdge      *scan_ptr;     /**< next edge to be scanned when node will be visited again */
-  
-   struct GraphNode      *bfs_link;     /**< for one way BFS working queue */
-   struct GraphNode      *stack_link;   /**< for stack of active node */
-   struct GraphNode      *parent;       /**< pointer of Gomory-Hu cut tree */
+   SCIP_Bool             unmarked;           /**< while BFS in progress */
+   SCIP_Bool             alive;              /**< marks alive (active) nodes in push-relabel */
 
+   struct GraphEdge*     first_edge;         /**< in list of incident edges */
+   struct GraphEdge*     scan_ptr;           /**< next edge to be scanned when node will be visited again */
+
+   struct GraphNode*     bfs_link;           /**< for one way BFS working queue */
+   struct GraphNode*     stack_link;         /**< for stack of active node */
+   struct GraphNode*     parent;             /**< pointer of Gomory-Hu cut tree */
 } GRAPHNODE;
 
 
+/** an edge in the graph */
 typedef struct GraphEdge
-{ 
-   double                cap;           /**< capacity used in maxflow */
-   double                rcap;          /**< residual capacity used in maxflow */
-   double                length;        /**< length of the edge measured by some fixed metric */
+{
+   double                cap;                /**< capacity used in maxflow */
+   double                rcap;               /**< residual capacity used in maxflow */
+   double                length;             /**< length of the edge measured by some fixed metric */
 
-   struct GraphEdge      *next;         /**< in incidence list of node from which edge is emanating */
-   struct GraphEdge      *back;         /**< pointer to reverse edge */
+   struct GraphEdge*     next;               /**< in incidence list of node from which edge is emanating */
+   struct GraphEdge*     back;               /**< pointer to reverse edge */
 
-   GRAPHNODE             *adjac;        /**< pointer to adjacent node */
-   
-   SCIP_VAR*             var;
+   GRAPHNODE*            adjac;              /**< pointer to adjacent node */
 
+   SCIP_VAR*             var;                /**< variable associated to edge */
 } GRAPHEDGE;
 
 
+/** undirected graph */
 typedef struct Graph
-{ 
-   int                   nuses;   
-   int                   nnodes;        /**< number of nodes of the graph */
-   int                   nedges;        /**< number of edges */
-   int                   nedgesnonzero;        
+{
+   int                   nuses;              /**< usage counter */
+   int                   nnodes;             /**< number of nodes of the graph */
+   int                   nedges;             /**< number of edges */
+   int                   nedgesnonzero;      /**< nonzero edges (not currently used) */
 
-   GRAPHNODE             *nodes;        /**< array containing the nodes of the graph */
-
-   GRAPHEDGE             *edges;        /**< array containing all halfedges (thus, it's size is two times nedges) */
-
+   GRAPHNODE*            nodes;              /**< array containing the nodes of the graph */
+   GRAPHEDGE*            edges;              /**< array containing all halfedges (thus, it's size is two times nedges) */
 } GRAPH;
 
 
-extern
-SCIP_Bool create_graph(int n, int m, GRAPH** gr);
+/** create a graph */
+SCIP_EXPORT
+SCIP_Bool create_graph(
+   int                   n,                  /**< number of nodes */
+   int                   m,                  /**< number of edges */
+   GRAPH**               gr                  /**< pointer to store graph */
+   );
 
-extern
-void capture_graph(GRAPH* gr);
-   
-extern
-void release_graph(GRAPH** gr);
-   
-extern
-SCIP_Bool gmincut(GRAPH *gr, double *mincap, long *n_shore);
+/** capture graph */
+SCIP_EXPORT
+void capture_graph(
+   GRAPH*                gr                  /**< graph */
+   );
 
-extern
-SCIP_Bool ghc_tree (GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol);
+/** release graph */
+SCIP_EXPORT
+void release_graph(
+   GRAPH**               gr                  /**< graph */
+   );
+
+/** Determines Gomory/Hu cut tree for input graph with capacitated edges */
+SCIP_EXPORT
+SCIP_Bool ghc_tree(
+   GRAPH*                gr,                 /**< graph */
+   SCIP_Bool**           cuts,               /**< array of arrays to store cuts */
+   int*                  ncuts,              /**< pointer to store number of cuts */
+   double                minviol             /**< minimal violation of a cut to be returned */
+   );
 
 #endif

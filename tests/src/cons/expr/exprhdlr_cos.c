@@ -52,6 +52,9 @@ void setup(void)
    conshdlr = SCIPfindConshdlr(scip, "expr");
    cr_assert(conshdlr != NULL);
 
+   /* disable relaxing variable bounds in activity evaluation */
+   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/varboundrelax", 'n') );
+
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
@@ -204,9 +207,9 @@ Test(cos, inteval, .description = "Tests the expression interval evaluation.")
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, cosexpr, sol, 0) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, cosexpr, 0, NULL, NULL) );
+      SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, cosexpr, &interval, FALSE) );
 
-      interval = SCIPgetConsExprExprInterval(cosexpr);
       cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), detreslb[i]));
       cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), detresub[i]));
    }
@@ -217,9 +220,9 @@ Test(cos, inteval, .description = "Tests the expression interval evaluation.")
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, cosexpr, sol, 0) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, cosexpr, 0, NULL, NULL) );
+      SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, cosexpr, &interval, FALSE) );
 
-      interval = SCIPgetConsExprExprInterval(cosexpr);
       cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), rndreslb[i]));
       cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), rndresub[i]));
    }
@@ -286,11 +289,12 @@ Test(cos, simplify, .description = "Tests the expression simplification.")
    SCIP_CONSEXPR_EXPR *expr2;
    SCIP_CONSEXPR_EXPR *expr3;
    SCIP_Bool changed;
+   SCIP_Bool infeasible;
 
    /* expr1 = <5.0>, expr2 = cos(<5.0>), expr3 is buffer for simplification */
    SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0) );
    SCIP_CALL( SCIPcreateConsExprExprCos(scip, conshdlr, &expr2, expr1) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr2, &expr3, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr2, &expr3, &changed, &infeasible) );
    SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr2, sol, 0) );
 
    cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));

@@ -417,7 +417,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(sepaHdlr)
       SCIP_ROW* cut;
 
       SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "testhdlrcut_cvx");
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, conshdlr) );
+      SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &cut, rowprep, conshdlr) );
 
       assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= mincutviolation);
 
@@ -453,7 +453,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(intevalHdlr)
    assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
    assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
-   SCIPintervalQuadBivar(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, SCIPgetConsExprExprInterval(nlhdlrexprdata->exprx), SCIPgetConsExprExprInterval(nlhdlrexprdata->expry));
+   SCIPintervalQuadBivar(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->exprx), SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->expry));
    SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, interval, *interval, nlhdlrexprdata->constant);
 
    return SCIP_OKAY;
@@ -468,17 +468,17 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(reversepropHdlr)
    assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
    assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
-   rhs = SCIPgetConsExprExprInterval(expr);
+   rhs = SCIPgetConsExprExprActivity(scip, expr);
    SCIPintervalSubScalar(SCIP_INTERVAL_INFINITY, &rhs, rhs, nlhdlrexprdata->constant);
 
    /* solve conv({x in xbnds : xxcoef*x^2 + yycoef*y^2 + xycoef*x*y + xcoef*x + ycoef*y \in rhs, y \in ybnds}) */
-   SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, rhs, SCIPgetConsExprExprInterval(nlhdlrexprdata->exprx), SCIPgetConsExprExprInterval(nlhdlrexprdata->expry));
+   SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, rhs, SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->exprx), SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->expry));
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, nlhdlrexprdata->exprx, childbounds, force, reversepropqueue, infeasible, nreductions) );
 
    if( !*infeasible )
    {
       /* solve conv({y in ybnds : yycoef*y^2 + xxcoef*x^2 + xycoef*y*x + ycoef*y + xcoef*x \in rhs, x \in xbnds}) */
-      SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->yycoef, nlhdlrexprdata->xxcoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->ycoef, nlhdlrexprdata->xcoef, rhs, SCIPgetConsExprExprInterval(nlhdlrexprdata->expry), SCIPgetConsExprExprInterval(nlhdlrexprdata->exprx));
+      SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->yycoef, nlhdlrexprdata->xxcoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->ycoef, nlhdlrexprdata->xcoef, rhs, SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->expry), SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->exprx));
       SCIP_CALL( SCIPtightenConsExprExprInterval(scip, nlhdlrexprdata->expry, childbounds, force, reversepropqueue, infeasible, nreductions) );
    }
 

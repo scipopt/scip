@@ -62,12 +62,15 @@ void setup(void)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    cr_assert_not_null(conshdlrdata);
 
-   /* get nlhdlr */
+   /* get quadratic nlhdlr, disable all others except for default */
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
       if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "quadratic") == 0 )
       {
          nlhdlr = conshdlrdata->nlhdlrs[h];
-         break;
+      }
+      else if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "default") != 0 )
+      {
+         conshdlrdata->nlhdlrs[h]->enabled = FALSE;
       }
    cr_assert_not_null(nlhdlr);
 
@@ -116,6 +119,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    SCIP_Bool enforceabove;
    SCIP_Bool success;
    SCIP_Bool changed = FALSE;
+   SCIP_Bool infeasible;
    SCIP_VAR* var;
 
    /* skip when no ipopt */
@@ -124,8 +128,9 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <x>", NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
    cr_expect(changed);
+   cr_expect_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
 
@@ -166,8 +171,8 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
-/* detects x^2 + 2*x exp(y x^2) + exp(y x^2)^2 <= 1 as convex quadratic expression:
- * simplify yields x^2 + 2 * x exp(x^2 y) + exp(x^2 y)^2 <= 1 --> should detect x^2 + 2 x * w + w^2
+/* detects x^2 + 2*x cos(y x^2) + cos(y x^2)^2 <= 1 as convex quadratic expression:
+ * simplify yields x^2 + 2 * x cos(x^2 y) + cos(x^2 y)^2 <= 1 --> should detect x^2 + 2 x * w + w^2
  */
 Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
 {
@@ -175,7 +180,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* expexpr;
+   SCIP_CONSEXPR_EXPR* cosexpr;
    SCIP_CONS* cons;
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
@@ -188,23 +193,23 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
 
    /* create expression, simplify it and find common subexpressions*/
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <x>^2 + 2 * <x> * exp(<y> * <x>^2) + exp(<y> * <x>^2)^2 <= 1", TRUE, TRUE,
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <x>^2 + 2 * <x> * cos(<y> * <x>^2) + cos(<y> * <x>^2)^2 <= 1", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
    success = FALSE;
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, &infeasible) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_assert(!infeasible);
 
    /* get expr and work with it */
    expr = SCIPgetExprConsExpr(scip, cons);
 
-   /* get exponential expression */
+   /* get cosine expression */
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 3);
-   expexpr = SCIPgetConsExprExprChildren(expr)[1]; /*  x * exp(x^2 y) */
-   expexpr = SCIPgetConsExprExprChildren(expexpr)[1]; /* exp(x^2 y) */
-   cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expexpr)), "exp", "expecting exp got %s\n",
-         SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expexpr)));
+   cosexpr = SCIPgetConsExprExprChildren(expr)[1]; /*  x * cos(x^2 y) */
+   cosexpr = SCIPgetConsExprExprChildren(cosexpr)[1]; /* cos(x^2 y) */
+   cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(cosexpr)), "cos", "expecting cos got %s\n",
+         SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(cosexpr)));
    /* detect */
    provided = SCIP_CONSEXPR_EXPRENFO_NONE;
    enforcebelow = FALSE;
@@ -231,13 +236,13 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
 
-   /* expr exp(x^2 y) is quadratic */
+   /* expr cos(x^2 y) is quadratic */
    quad = nlhdlrexprdata->quadexprterms[1];
    cr_assert_not_null(quad.expr);
-   cr_expect_eq(expexpr, quad.expr);
+   cr_expect_eq(cosexpr, quad.expr);
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 0.0, quad.sqrcoef);
-   cr_expect_not_null(SCIPgetConsExprExprAuxVar(quad.expr), "exp expr should have auxiliary variable!\n");
+   cr_expect_not_null(SCIPgetConsExprExprAuxVar(quad.expr), "cos expr should have auxiliary variable!\n");
 
 
    SCIP_BILINEXPRTERM bilin;
@@ -246,7 +251,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert_not_null(bilin.expr2);
    cr_expect_eq(SCIPgetConsExprExprAuxVar(bilin.expr1), x, "Expecting expr's auxvar %s in bilin term, got %s\n",
          SCIPvarGetName(x), SCIPvarGetName(SCIPgetConsExprExprAuxVar(bilin.expr1)));
-   cr_expect_eq(bilin.expr2, expexpr);
+   cr_expect_eq(bilin.expr2, cosexpr);
    cr_expect_eq(2.0, bilin.coef, "Expecting bilinear coef of %g, got %g\n", 2.0, bilin.coef);
 
    /* free auxvar(s) created by detect from above */
@@ -282,7 +287,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_assert(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* this adds locks which are needed for detectNlhdlrs */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, &infeasible) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_assert_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -372,11 +377,13 @@ Test(nlhdlrquadratic, noproperquadratic1, .init = setup, .fini = teardown)
    SCIP_Bool enforceabove;
    SCIP_Bool success;
    SCIP_Bool changed = FALSE;
+   SCIP_Bool infeasible;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <y>^2 + <w>*<z>", NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
    cr_expect_not(changed);
+   cr_expect_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
 
@@ -408,11 +415,13 @@ Test(nlhdlrquadratic, noproperquadratic2, .init = setup, .fini = teardown)
    SCIP_Bool enforceabove;
    SCIP_Bool success;
    SCIP_Bool changed = FALSE;
+   SCIP_Bool infeasible;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"log(<x>)^2 + sin(<y>)^2 + cos(<z>)^2", NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
    cr_expect(changed);
+   cr_expect_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
 
@@ -456,13 +465,15 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
    SCIP_Bool enforceabove;
    SCIP_Bool success;
    SCIP_Bool changed = FALSE;
+   SCIP_Bool infeasible;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 + <y>^2 + <z>^2 * <x>", NULL, &expr) );
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
    cr_expect(changed);
+   cr_expect_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
@@ -508,13 +519,15 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
    SCIP_Bool enforceabove;
    SCIP_Bool success;
    SCIP_Bool changed = FALSE;
+   SCIP_Bool infeasible;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"-<z>*<x> + <y>*<z>", NULL, &expr) );
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
    cr_expect(changed);
+   cr_expect_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
@@ -639,8 +652,8 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_Bool enforceabove;
    SCIP_Bool success;
    SCIP_INTERVAL interval;
-   SCIP_INTERVAL exprinterval;
    SCIP_Bool changed = FALSE;
+   SCIP_Bool infeasible;
    SCIP_Real matinf = -40.474214;
    SCIP_Real matsup = 36.508894;
 
@@ -648,8 +661,9 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 - 3.1*<x>*<y> + 12.2*<z>*<w> + <w>^2 + 1.3*<z>*<x> - 4.8754*<z>^2 - 0.5*<y>^2 - 17.1*<x> + 22.02*<y> + 5*<z> - <w>", NULL, &expr) );
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
    cr_expect(changed);
+   cr_expect_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    expr = simplified;
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
@@ -689,8 +703,8 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    }
 
    /* interval evaluate */
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
    SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
    SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, NULL) );
 
    cr_expect_float_eq(interval.inf, matinf, 1e-7, "got %f, expected %f\n", interval.inf, matinf); cr_expect_leq(interval.inf, matinf);
@@ -699,12 +713,10 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    /* test reverse propagation */
    {
       SCIP_QUEUE* queue;
-      SCIP_Bool infeasible = FALSE;
       int nreductions = 0;
+      infeasible = FALSE;
       SCIP_CALL( SCIPqueueCreate(&queue, 4, 2.0) );
-      exprinterval.inf = 35;
-      exprinterval.sup = 35;
-      SCIPsetConsExprExprEvalInterval(expr, &exprinterval, 0);
+      SCIPintervalSet(&expr->activity, 35);
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );
       SCIP_CALL( nlhdlrReversepropQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, expr) );

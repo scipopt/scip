@@ -64,6 +64,17 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataValue)
 }
 
 static
+SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataValue)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   /* nothing much to do, as currently the data is the pointer */
+   SCIPsetConsExprExprData(expr, NULL);
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
 {  /*lint --e{715}*/
    assert(expr != NULL);
@@ -147,10 +158,10 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureValue)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(success != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 0);
 
-   *curvature = SCIP_EXPRCURV_LINEAR;
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -195,7 +206,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrValue, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataValue, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataValue, freedataValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printValue) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalValue) );
@@ -220,6 +231,7 @@ SCIP_RETCODE SCIPcreateConsExprExprValue(
 
    assert(consexprhdlr != NULL);
    assert(expr != NULL);
+   assert(SCIPisFinite(value));
 
    assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_EXPRDATA*));
    memcpy(&exprdata, &value, sizeof(SCIP_Real));

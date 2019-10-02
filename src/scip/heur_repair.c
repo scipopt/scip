@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_repair.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  repair primal heuristic
  * @author Gregor Hendel
  * @author Thomas Nagel
@@ -60,7 +61,7 @@
 
 #define HEUR_NAME             "repair"
 #define HEUR_DESC             "tries to repair a primal infeasible solution"
-#define HEUR_DISPCHAR         '!'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
@@ -485,9 +486,6 @@ SCIP_RETCODE createNewSol(
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
    )
 {
-   SCIP_VAR** vars;                          /* the original problem's variables                */
-   int        nvars;                         /* the original problem's number of variables      */
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
 
    assert(scip != NULL);
@@ -495,22 +493,8 @@ SCIP_RETCODE createNewSol(
    assert(subvars != NULL);
    assert(subsol != NULL);
 
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsol, heur, subvars, &newsol) );
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
    /* try to add new solution to SCIP and free it immediately */
    SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
@@ -525,8 +509,6 @@ SCIP_RETCODE createNewSol(
       }
    }
 #endif
-
-   SCIPfreeBufferArray(scip, &subsolvals);
 
    return SCIP_OKAY;
 }

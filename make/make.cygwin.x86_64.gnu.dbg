@@ -1,4 +1,4 @@
-FLAGS		+=      #-DROUNDING_FE
+FLAGS		+=      #-DSCIP_ROUNDING_FE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN) -m64
 CXXFLAGS	+=	$(GXXWARN) -m64 -std=c++0x

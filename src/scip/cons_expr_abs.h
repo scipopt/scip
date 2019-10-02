@@ -33,7 +33,7 @@ extern "C" {
 #endif
 
 /** creates a absolute expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprAbs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -42,7 +42,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAbs(
    );
 
 /** creates the handler for absolute expression and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */

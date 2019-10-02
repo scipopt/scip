@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -268,7 +268,6 @@ SCIP_RETCODE setupProblem(
       SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtrees[0], expr, 1, 0, NULL) );
       SCIP_CALL( SCIPexprtreeSetVars(exprtrees[0], 1, &const1) );
 
-
       /* expression for 1.0 / const1 */
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &const1expr, SCIP_EXPR_VARIDX, 0) );
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_INTPOWER, const1expr, -1) );
@@ -277,12 +276,10 @@ SCIP_RETCODE setupProblem(
       SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtrees[1], expr, 1, 0, NULL) );
       SCIP_CALL( SCIPexprtreeSetVars(exprtrees[1], 1, &const1) );
 
-
       /* create nonlinear constraint for exprtree[0] + 0.615 * exprtree[1] - const2 = 0.0 */
       coefs[0] = 1.0;
       coefs[1] = 0.615;
       SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &defconst2, "defconst2", 1, &const2, &minusone, 2, exprtrees, coefs, 0.0, 0.0) );
-
 
       /* free expression trees, because they were copied by the constraint */
       SCIP_CALL( SCIPexprtreeFree(&exprtrees[0]) );
@@ -386,7 +383,6 @@ SCIP_RETCODE setupProblem(
       SCIP_CALL( SCIPcreateConsBasicSetpart(scip, &selectwire, "selectwire", nwires, y) );
    }
 
-
    /* add constraints to problem */
    SCIP_CALL( SCIPaddCons(scip, voldef) );
    SCIP_CALL( SCIPaddCons(scip, defconst1) );
@@ -397,7 +393,6 @@ SCIP_RETCODE setupProblem(
    SCIP_CALL( SCIPaddCons(scip, coilwidth) );
    SCIP_CALL( SCIPaddCons(scip, defwire) );
    SCIP_CALL( SCIPaddCons(scip, selectwire) );
-
 
    /* release variables and constraints
     * the problem has them captured, and we do not require them anymore
@@ -427,7 +422,7 @@ SCIP_RETCODE setupProblem(
    return SCIP_OKAY;
 }
 
-/* runs string example */
+/** runs string example */
 static
 SCIP_RETCODE runString(void)
 {
@@ -471,10 +466,10 @@ SCIP_RETCODE runString(void)
 
 /** main method starting SCIP */
 int main(
-   int                        argc,          /**< number of arguments from the shell */
-   char**                     argv           /**< array of shell arguments */
-   )  /*lint --e{715}*/
-{
+   int                   argc,               /**< number of arguments from the shell */
+   char**                argv                /**< array of shell arguments */
+   )
+{  /*lint --e{715}*/
    SCIP_RETCODE retcode;
 
    retcode = runString();

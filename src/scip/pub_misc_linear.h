@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,7 +39,7 @@ extern "C" {
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPconsGetRhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which right-hand side is queried */
@@ -50,7 +50,7 @@ SCIP_Real SCIPconsGetRhs(
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPconsGetLhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to get left hand side for */
@@ -64,7 +64,7 @@ SCIP_Real SCIPconsGetLhs(
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsVals(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the coefficients are wanted */
@@ -77,7 +77,7 @@ SCIP_RETCODE SCIPgetConsVals(
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the dual farkas solution
  */
-EXTERN
+SCIP_EXPORT
 void SCIPconsGetDualfarkas(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to get left hand side for */
@@ -99,7 +99,7 @@ void SCIPconsGetDualsol(
 /** returns the row of an arbitrary SCIP constraint that can be represented as a single linear constraint
  *  or NULL of no row is awailable
  */
-EXTERN
+SCIP_EXPORT
 SCIP_ROW* SCIPconsGetRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to get left hand side for */

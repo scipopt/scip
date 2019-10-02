@@ -2,7 +2,7 @@ CC		=	icc
 CXX		=	icpc
 LINKCC		=	icc
 LINKCXX		=	icpc
-FLAGS		+=	-DROUNDING_FE
+FLAGS		+=	-DSCIP_ROUNDING_FE
 OFLAGS		+=	-O0 -g -fp-model extended -w1 -wd279,383,444,810,981  #-fno-rtti #-Xc
 CFLAGS		+=      -std=c99 -D_XOPEN_SOURCE=600
 CXXFLAGS		+=	-std=c++0x

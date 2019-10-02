@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlpi/expr.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for expressions, expression trees, expression graphs, and related
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
@@ -353,6 +354,123 @@ SCIP_EXPRCURV SCIPexprcurvPower(
    return SCIP_EXPRCURV_UNKNOWN;
 }
 
+/** gives required curvature for base so that base^exponent has given curvature under given bounds on base and constant exponent
+ * returns curvature unknown if expected curvature cannot be obtained
+ */
+SCIP_EXPRCURV SCIPexprcurvPowerInv(
+   SCIP_INTERVAL         basebounds,         /**< bounds on base function */
+   SCIP_Real             exponent,           /**< exponent, must not be 0 */
+   SCIP_EXPRCURV         powercurv           /**< expected curvature for power */
+   )
+{
+   SCIP_Bool expisint;
+
+   assert(basebounds.inf <= basebounds.sup);
+   assert(exponent != 0.0);
+   assert(powercurv != SCIP_EXPRCURV_UNKNOWN);
+
+   if( exponent == 1.0 )
+      return powercurv;
+
+   /* power is usually never linear, now that exponent != 1 */
+   if( powercurv == SCIP_EXPRCURV_LINEAR )
+      return SCIP_EXPRCURV_UNKNOWN;
+
+   expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
+
+   /* if exponent is fractional, then power is only defined for a non-negative base
+    * boundtightening should have ensured this before calling this function,
+    * but sometimes this does not work and so we correct this here for us
+    */
+   if( !expisint && basebounds.inf < 0.0 )
+   {
+      basebounds.inf = 0.0;
+      if( basebounds.sup < 0.0 )
+         return SCIP_EXPRCURV_UNKNOWN;
+   }
+
+   /* if basebounds contains 0.0, consider negative and positive interval separately, if possible */
+   if( basebounds.inf < 0.0 && basebounds.sup > 0.0 )
+   {
+      SCIP_INTERVAL leftbounds;
+      SCIP_INTERVAL rightbounds;
+      SCIP_EXPRCURV leftcurv;
+      SCIP_EXPRCURV rightcurv;
+
+      /* something like x^(-2) may look convex on each side of zero, but is not convex on the whole interval due to the singularity at 0.0 */
+      if( exponent < 0.0 )
+         return SCIP_EXPRCURV_UNKNOWN;
+
+      SCIPintervalSetBounds(&leftbounds,  basebounds.inf, 0.0);
+      SCIPintervalSetBounds(&rightbounds, 0.0, basebounds.sup);
+
+      leftcurv = SCIPexprcurvPowerInv(leftbounds, exponent, powercurv);
+      rightcurv = SCIPexprcurvPowerInv(rightbounds, exponent, powercurv);
+
+      /* now need to intersect */
+      if( leftcurv == SCIP_EXPRCURV_LINEAR )
+         return rightcurv;
+      if( rightcurv == SCIP_EXPRCURV_LINEAR )
+         return leftcurv;
+      if( leftcurv == SCIP_EXPRCURV_UNKNOWN || rightcurv == SCIP_EXPRCURV_UNKNOWN )
+         return SCIP_EXPRCURV_UNKNOWN;
+      assert(leftcurv == SCIP_EXPRCURV_CONVEX || leftcurv == SCIP_EXPRCURV_CONCAVE);
+      assert(rightcurv == SCIP_EXPRCURV_CONVEX || rightcurv == SCIP_EXPRCURV_CONCAVE);
+      return SCIP_EXPRCURV_LINEAR;
+   }
+   assert(basebounds.inf >= 0.0 || basebounds.sup <= 0.0);
+
+   /* inverting the logic from SCIPexprcurvPower here */
+   if( powercurv == SCIP_EXPRCURV_CONVEX )
+   {
+      SCIP_Real sign;
+
+      if( basebounds.sup <= 0.0 && exponent < 0.0 && expisint && ((int)exponent)%2 == 0 )
+         return SCIP_EXPRCURV_CONVEX;
+      if( basebounds.inf >= 0.0 && exponent > 1.0 )
+         return SCIP_EXPRCURV_CONVEX;
+      if( basebounds.sup <= 0.0 && exponent > 1.0 && expisint && ((int)exponent)%2 == 0 )
+         return SCIP_EXPRCURV_CONCAVE;
+      if( basebounds.inf >= 0.0 && exponent < 0.0 )
+         return SCIP_EXPRCURV_CONCAVE;
+
+      /* base^(exponent-2) is negative, if base < 0.0 and exponent is odd */
+      sign = exponent * (exponent - 1.0);
+      assert(basebounds.inf >= 0.0 || expisint);
+      if( basebounds.inf < 0.0 && ((int)exponent)%2 != 0 )
+         sign *= -1.0;
+      assert(sign != 0.0);
+
+      if( sign > 0.0 )
+         return SCIP_EXPRCURV_LINEAR;
+   }
+   else
+   {
+      SCIP_Real sign;
+
+      assert(powercurv == SCIP_EXPRCURV_CONCAVE);  /* linear handled at top, unknown should not be the case */
+
+      if( basebounds.sup <= 0.0 && exponent < 0.0 && expisint && ((int)exponent)%2 != 0 )
+         return SCIP_EXPRCURV_CONVEX;
+      if( basebounds.sup <= 0.0 && exponent > 1.0 && expisint && ((int)exponent)%2 != 0 )
+         return SCIP_EXPRCURV_CONCAVE;
+      if( basebounds.inf >= 0.0 && exponent < 1.0 && exponent >= 0.0 )
+         return SCIP_EXPRCURV_CONCAVE;
+
+      /* base^(exponent-2) is negative, if base < 0.0 and exponent is odd */
+      sign = exponent * (exponent - 1.0);
+      assert(basebounds.inf >= 0.0 || expisint);
+      if( basebounds.inf < 0.0 && ((int)exponent)%2 != 0 )
+         sign *= -1.0;
+      assert(sign != 0.0);
+
+      if( sign < 0.0 )
+         return SCIP_EXPRCURV_LINEAR;
+   }
+
+   return SCIP_EXPRCURV_UNKNOWN;
+}
+
 /** gives curvature for a monomial with given curvatures and bounds for each factor
  *
  *  See Maranas and Floudas, Finding All Solutions of Nonlinearly Constrained Systems of Equations, JOGO 7, 1995
@@ -368,6 +486,7 @@ SCIP_EXPRCURV SCIPexprcurvMonomial(
 {
    SCIP_Real mult;
    SCIP_Real e;
+   SCIP_INTERVAL bounds;
    SCIP_EXPRCURV curv;
    SCIP_EXPRCURV fcurv;
    int nnegative;
@@ -408,21 +527,29 @@ SCIP_EXPRCURV SCIPexprcurvMonomial(
       f = factoridxs != NULL ? factoridxs[j] : j;
       if( factorcurv[f] == SCIP_EXPRCURV_UNKNOWN ) /*lint !e613*/
          return SCIP_EXPRCURV_UNKNOWN;
-      if( factorbounds[f].inf < 0.0 && factorbounds[f].sup > 0.0 )  /*lint !e613*/
-         return SCIP_EXPRCURV_UNKNOWN;
 
       e = exponents != NULL ? exponents[j] : 1.0;
+      bounds = factorbounds[f];  /*lint !e613*/
+
+      /* if argument is negative, then exponent should be integer; correct bounds if that doesn't hold */
+      if( !EPSISINT(e, 0.0) && bounds.inf < 0.0 )  /*lint !e835*/
+      {
+         bounds.inf = 0.0;
+         if( bounds.sup < 0.0 )
+            return SCIP_EXPRCURV_UNKNOWN;
+      }
+
+      if( bounds.inf < 0.0 && bounds.sup > 0.0 )
+         return SCIP_EXPRCURV_UNKNOWN;
+
       if( e < 0.0 )
          ++nnegative;
       else
          ++npositive;
       sum += e;
 
-      if( factorbounds[f].inf < 0.0 )  /*lint !e613*/
+      if( bounds.inf < 0.0 )
       {
-         /* if argument is negative, then exponent should be integer */
-         assert(EPSISINT(e, 0.0));  /*lint !e835*/
-
          /* flip j'th argument: (f_j)^(exp_j) = (-1)^(exp_j) (-f_j)^(exp_j) */
 
          /* -f_j has negated curvature of f_j */
@@ -468,6 +595,134 @@ SCIP_EXPRCURV SCIPexprcurvMonomial(
    curv = SCIPexprcurvMultiply(mult, curv);
 
    return curv;
+}
+
+/** for a monomial with given bounds for each factor, gives condition on the curvature of each factor, so that monomial has a requested curvature, if possible
+ *
+ * @return whether monomialcurv can be achieved
+ */
+SCIP_Bool SCIPexprcurvMonomialInv(
+   SCIP_EXPRCURV         monomialcurv,       /**< desired curvature */
+   int                   nfactors,           /**< number of factors in monomial */
+   SCIP_Real*            exponents,          /**< exponents in monomial, or NULL if all 1.0 */
+   SCIP_INTERVAL*        factorbounds,       /**< bounds of each factor */
+   SCIP_EXPRCURV*        factorcurv          /**< buffer to store required curvature of each factor */
+   )
+{
+   int nnegative;
+   int npositive;
+   SCIP_INTERVAL bounds;
+   SCIP_Real e;
+   SCIP_Real sum;
+   int j;
+
+   assert(monomialcurv != SCIP_EXPRCURV_UNKNOWN);
+   assert(nfactors >= 1);
+   assert(factorbounds != NULL);
+   assert(factorcurv != NULL);
+
+   if( nfactors == 1 )
+   {
+      factorcurv[0] = SCIPexprcurvPowerInv(factorbounds[0], exponents != NULL ? exponents[0] : 1.0, monomialcurv);
+      return factorcurv[0] != SCIP_EXPRCURV_UNKNOWN;
+   }
+
+   /* any decent monomial with at least 2 factors is not linear */
+   if( monomialcurv == SCIP_EXPRCURV_LINEAR )
+      return FALSE;
+
+   /* count positive and negative exponents, sum of exponents; flip negative factors */
+   nnegative = 0; /* number of negative exponents */
+   npositive = 0; /* number of positive exponents */
+   sum = 0.0;     /* sum of exponents */
+   for( j = 0; j < nfactors; ++j )
+   {
+      e = exponents != NULL ? exponents[j] : 1.0;
+      assert(e != 0.0);  /* should have been simplified away */
+
+      bounds = factorbounds[j];
+
+      /* if argument is negative, then exponent should be integer
+       * if that didn't happen, consider argument as if non-negative
+       */
+      if( !EPSISINT(e, 0.0) && bounds.inf < 0.0 )  /*lint !e835*/
+      {
+         bounds.inf = 0.0;
+         if( bounds.sup < 0.0 )
+            return FALSE;
+      }
+
+      /* mixed signs are bad */
+      if( bounds.inf < 0.0 && bounds.sup > 0.0 )
+         return FALSE;
+
+      if( e < 0.0 )
+         ++nnegative;
+      else
+         ++npositive;
+      sum += e;
+
+      if( bounds.inf < 0.0 )
+      {
+         /* flip j'th argument: (f_j)^(exp_j) = (-1)^(exp_j) (-f_j)^(exp_j)
+          * thus, negate monomial, if exponent is odd, i.e., (-1)^(exp_j) = -1
+          */
+         if( (int)e % 2 != 0 )
+            monomialcurv = SCIPexprcurvNegate(monomialcurv);
+      }
+   }
+
+   /* if all factors are linear, then a product f_j^exp_j with f_j >= 0 is convex if
+    * - all exponents are negative, or
+    * - all except one exponent j* are negative and exp_j* >= 1 - sum_{j!=j*}exp_j, but the latter is equivalent to sum_j exp_j >= 1
+    * further, the product is concave if
+    * - all exponents are positive and the sum of exponents is <= 1.0
+    *
+    * if factors are nonlinear, then we require additionally, that for convexity
+    * - each factor is convex if exp_j >= 0, or concave if exp_j <= 0, i.e., exp_j*f_j'' >= 0
+    * and for concavity, we require that
+    * - all factors are concave, i.e., exp_j*f_j'' <= 0
+    */
+
+   if( monomialcurv == SCIP_EXPRCURV_CONVEX )
+   {
+      if( nnegative < nfactors-1 )  /* at least two positive exponents */
+         return FALSE;
+      if( nnegative < nfactors && !EPSGE(sum, 1.0, 1e-9) )  /* one negative exponent, but sum is not >= 1 */
+         return FALSE;
+
+      /* monomial will be convex, if each factor is convex if exp_j >= 0, or concave if exp_j <= 0, i.e., exp_j*f_j'' >= 0 */
+      for( j = 0; j < nfactors; ++j )
+      {
+         e = exponents != NULL ? exponents[j] : 1.0;
+         if( factorbounds[j].inf < 0.0 && EPSISINT(e, 0.0) )  /* if factor is negative, then factorcurv[j] need to be flipped, which we can also get by flipping e */  /*lint !e835*/
+            e = -e;
+         if( e >= 0.0 )
+            factorcurv[j] = SCIP_EXPRCURV_CONVEX;
+         else
+            factorcurv[j] = SCIP_EXPRCURV_CONCAVE;
+      }
+   }
+   else
+   {
+      assert(monomialcurv == SCIP_EXPRCURV_CONCAVE);
+      if( npositive < nfactors )  /* at least one negative exponent */
+         return FALSE;
+      if( !EPSLE(sum, 1.0, 1e-9) )  /* sum is not <= 1 */
+         return FALSE;
+
+      /* monomial will be concave, if each factor is concave */
+      for( j = 0; j < nfactors; ++j )
+      {
+         e = exponents != NULL ? exponents[j] : 1.0;
+         if( factorbounds[j].inf < 0.0 && EPSISINT(e, 0.0) )  /* if factor is negative, then factorcurv[j] need to be flipped, i.e. convex */  /*lint !e835*/
+            factorcurv[j] = SCIP_EXPRCURV_CONVEX;
+         else
+            factorcurv[j] = SCIP_EXPRCURV_CONCAVE;
+      }
+   }
+
+   return TRUE;
 }
 
 /** gives name as string for a curvature */
@@ -1017,6 +1272,7 @@ SCIP_RETCODE polynomialdataMultiplyByPolynomial(
       polynomialdataMultiplyByConstant(blkmem, polynomialdata, factordata->constant);
       return SCIP_OKAY;
    }
+   assert(factordata->monomials != NULL);
 
    if( factordata->nmonomials == 1 && factordata->constant == 0.0 )
    {
@@ -8391,7 +8647,7 @@ void SCIPexprPrint(
 
       if( expr->nchildren == 0 )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", constant);
          break;
       }
 
@@ -8399,12 +8655,12 @@ void SCIPexprPrint(
 
       if( constant != 0.0 )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", constant);
       }
 
       for( i = 0; i < expr->nchildren; ++i )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", ((SCIP_Real*)expr->data.data)[i]);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", ((SCIP_Real*)expr->data.data)[i]);
          SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
       }
 
@@ -8423,20 +8679,20 @@ void SCIPexprPrint(
       SCIPmessageFPrintInfo(messagehdlr, file, "(");
 
       if( quadraticdata->constant != 0.0 )
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", quadraticdata->constant);
 
       if( quadraticdata->lincoefs != NULL )
          for( i = 0; i < expr->nchildren; ++i )
          {
             if( quadraticdata->lincoefs[i] == 0.0 )
                continue;
-            SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->lincoefs[i]);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", quadraticdata->lincoefs[i]);
             SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
          }
 
       for( i = 0; i < quadraticdata->nquadelems; ++i )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->quadelems[i].coef);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", quadraticdata->quadelems[i].coef);
          SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx1], messagehdlr, file, varnames, paramnames, paramvals);
          if( quadraticdata->quadelems[i].idx1 == quadraticdata->quadelems[i].idx2 )
          {
@@ -8467,13 +8723,13 @@ void SCIPexprPrint(
 
       if( polynomialdata->constant != 0.0 || polynomialdata->nmonomials == 0 )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", polynomialdata->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", polynomialdata->constant);
       }
 
       for( i = 0; i < polynomialdata->nmonomials; ++i )
       {
          monomialdata = polynomialdata->monomials[i];
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g", monomialdata->coef);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g", monomialdata->coef);
 
          for( j = 0; j < monomialdata->nfactors; ++j )
          {
@@ -8482,11 +8738,11 @@ void SCIPexprPrint(
             SCIPexprPrint(expr->children[monomialdata->childidxs[j]], messagehdlr, file, varnames, paramnames, paramvals);
             if( monomialdata->exponents[j] < 0.0 )
             {
-               SCIPmessageFPrintInfo(messagehdlr, file, "^(%.20g)", monomialdata->exponents[j]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "^(%.15g)", monomialdata->exponents[j]);
             }
             else if( monomialdata->exponents[j] != 1.0 )
             {
-               SCIPmessageFPrintInfo(messagehdlr, file, "^%.20g", monomialdata->exponents[j]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "^%.15g", monomialdata->exponents[j]);
             }
          }
       }
@@ -9404,6 +9660,7 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
 {
    SCIP_EXPRGRAPHNODE* node_;
    int pos;
+   int i;
 
    assert(exprgraph != NULL);
    assert(node != NULL);
@@ -9423,6 +9680,7 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
    assert(pos < (*node)->nparents);
    assert((*node)->parents[pos] == parent);
 
+#ifdef SCIP_DISABLED_CODE
    /* move last parent to pos, if pos is before last
     * update sorted flag */
    if( pos < (*node)->nparents-1 )
@@ -9430,6 +9688,13 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
       (*node)->parents[pos]  = (*node)->parents[(*node)->nparents-1];
       (*node)->parentssorted = ((*node)->nparents <= 2);
    }
+#else
+   /* move all parents behind pos one position up
+    * this is faster than moving the last parent to position pos if there are many repeated calls to this function as the parents array remains sorted
+    */
+   for( i = pos+1; i < (*node)->nparents; ++i )
+      (*node)->parents[i-1] = (*node)->parents[i];
+#endif
    --(*node)->nparents;
 
    /* keep pointer to *node in case it is still used */
@@ -9586,7 +9851,7 @@ SCIP_RETCODE exprgraphNodeReplaceChild(
    SCIP_EXPRGRAPHNODE*   newchild            /**< node that should take position of oldchild */
    )
 {
-   int i;
+   int childpos = -1;
 
    assert(exprgraph != NULL);
    assert(node != NULL);
@@ -9599,27 +9864,34 @@ SCIP_RETCODE exprgraphNodeReplaceChild(
 
    SCIPdebugMessage("replace child %p in node %p by %p\n", (void*)*oldchild, (void*)node, (void*)newchild);
 
-   /* search for oldchild in children array */
-   for( i = 0; i < node->nchildren; ++i )
+   /* let's see if child is just next to the place where we looked in a previous call to this function */
+   if( exprgraph->lastreplacechildpos >= 0 && exprgraph->lastreplacechildpos+1 < node->nchildren && node->children[exprgraph->lastreplacechildpos+1] == *oldchild )
    {
-      if( node->children[i] == *oldchild )
-      {
-         /* add as parent to newchild */
-         SCIP_CALL( exprgraphNodeAddParent(exprgraph->blkmem, newchild, node) );
-
-         /* remove as parent from oldchild */
-         SCIP_CALL( exprgraphNodeRemoveParent(exprgraph, oldchild, node) );
-
-         /* set newchild as child i */
-         node->children[i] = newchild;
-
-         /* we're done */
-         break;
-      }
+      childpos = exprgraph->lastreplacechildpos+1;
    }
-   assert(i < node->nchildren); /* assert that oldchild has been found in children array */
+   else for( childpos = 0; childpos < node->nchildren; ++childpos )
+   {
+      /* search for oldchild in children array */
+      if( node->children[childpos] == *oldchild )
+         break;
+   }
+   assert(childpos >= 0);
+   assert(childpos < node->nchildren);
+   assert(node->children[childpos] == *oldchild);
+
+   /* add as parent to newchild */
+   SCIP_CALL( exprgraphNodeAddParent(exprgraph->blkmem, newchild, node) );
+
+   /* remove as parent from oldchild */
+   SCIP_CALL( exprgraphNodeRemoveParent(exprgraph, oldchild, node) );
+
+   /* set newchild as child i */
+   node->children[childpos] = newchild;
 
    node->simplified = FALSE;
+
+   /* remember to look next to childpos first next time */
+   exprgraph->lastreplacechildpos = childpos;
 
    return SCIP_OKAY;
 }
@@ -14150,7 +14422,7 @@ SCIP_RETCODE SCIPexprgraphNodeSplitOffLinear(
       }
 
       /* if there is no linear part or no space left for linear variables, then stop */
-      if( quaddata->lincoefs != NULL || linvarssize == 0 )
+      if( quaddata->lincoefs == NULL || linvarssize == 0 )
          break;
 
       /* check which childs are used in quadratic terms */

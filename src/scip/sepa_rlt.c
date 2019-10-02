@@ -51,8 +51,8 @@
 #define DEFAULT_MAXNCUTS             -1 /**< default value for parameter maxncuts */
 #define DEFAULT_MAXROUNDS             1 /**< default value for parameter maxrounds */
 #define DEFAULT_MAXROUNDSROOT        10 /**< default value for parameter maxroundsroot */
-#define DEFAULT_ONLYEQROWS         TRUE /**< default value for parameter eqrowsfirst */
-#define DEFAULT_ONLYCONTROWS       TRUE /**< default value for parameter eqrowsfirst */
+#define DEFAULT_ONLYEQROWS        FALSE /**< default value for parameter eqrowsfirst */
+#define DEFAULT_ONLYCONTROWS      FALSE /**< default value for parameter eqrowsfirst */
 #define DEFAULT_ONLYINITIAL        TRUE /**< default value for parameter onlyinitial */
 #define DEFAULT_USEINSUBSCIP      FALSE /**< default value for parameter useinsubscip */
 
@@ -1000,12 +1000,12 @@ SCIP_RETCODE SCIPincludeSepaRlt(
 
    SCIP_CALL( SCIPaddIntParam(scip,
       "separating/" SEPA_NAME "/maxrounds",
-      "maximal number of eccuts separation rounds per node (-1: unlimited)",
+      "maximal number of separation rounds per node (-1: unlimited)",
       &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
       "separating/" SEPA_NAME "/maxroundsroot",
-      "maximal number of eccuts separation rounds in the root node (-1: unlimited)",
+      "maximal number of separation rounds in the root node (-1: unlimited)",
       &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

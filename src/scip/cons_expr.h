@@ -38,7 +38,7 @@ extern "C" {
 /**@{ */
 
 /** creates the handler for an expression handler and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    SCIP*                       scip,         /**< SCIP data structure */
    SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
@@ -51,7 +51,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    );
 
 /** set the expression handler callbacks to copy and free an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrCopyFreeHdlr(
    SCIP*                      scip,              /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,          /**< expression constraint handler */
@@ -61,7 +61,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCopyFreeHdlr(
 );
 
 /** set the expression handler callbacks to copy and free expression data */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrCopyFreeData(
    SCIP*                      scip,              /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,          /**< expression constraint handler */
@@ -71,7 +71,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCopyFreeData(
 );
 
 /** set the print callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrPrint(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -80,7 +80,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrPrint(
 );
 
 /** set the parse callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrParse(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -89,7 +89,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrParse(
 );
 
 /** set the curvature detection callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrCurvature(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -98,7 +98,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCurvature(
 );
 
 /** set the monotonicity detection callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrMonotonicity(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -107,7 +107,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrMonotonicity(
 );
 
 /** set the integrality detection callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -116,7 +116,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntegrality(
 );
 
 /** set the hash callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrHash(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -125,7 +125,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrHash(
 );
 
 /** set the compare callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrCompare(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -134,7 +134,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCompare(
 );
 
 /** set the derivative evaluation callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrBwdiff(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -143,7 +143,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrBwdiff(
 );
 
 /** set the interval evaluation callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -152,7 +152,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
 );
 
 /** set the simplify callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrSimplify(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -161,7 +161,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrSimplify(
 );
 
 /** set the reverse propagation callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrReverseProp(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -170,7 +170,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrReverseProp(
 );
 
 /** set the separation and estimation callbacks of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -182,7 +182,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
 );
 
 /** set the branching score callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsExprExprHdlrBranchscore(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
@@ -191,153 +191,191 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrBranchscore(
 );
 
 /** gives expression handlers */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
 );
 
 /** gives number of expression handlers */
-EXTERN
+SCIP_EXPORT
 int SCIPgetConsExprExprNHdlrs(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
 );
 
 /** returns an expression handler of a given name (or NULL if not found) */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLR* SCIPfindConsExprExprHdlr(
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    const char*                name           /**< name of expression handler */
    );
 
 /** returns expression handler for variable expressions */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrVar(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
    );
 
 /** returns expression handler for constant value expressions */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrValue(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
    );
 
 /** returns expression handler for sum expressions */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrSum(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
    );
 
 /** returns expression handler for product expressions */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrProduct(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
    );
 
 /** returns expression handler for power expressions */
-EXTERN
-SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrPow(
+SCIP_EXPORT
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrPower(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   );
+
+/** returns expression handler for signed power expressions */
+SCIP_EXPORT
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrSignPower(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   );
+
+/** returns expression handler for exponential expressions */
+SCIP_EXPORT
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrExponential(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
    );
 
 /** gives the name of an expression handler */
-EXTERN
+SCIP_EXPORT
 const char* SCIPgetConsExprExprHdlrName(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
 );
 
 /** gives the description of an expression handler (can be NULL) */
-EXTERN
+SCIP_EXPORT
 const char* SCIPgetConsExprExprHdlrDescription(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
 );
 
 /** gives the precedence of an expression handler */
-EXTERN
+SCIP_EXPORT
 unsigned int SCIPgetConsExprExprHdlrPrecedence(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
 );
 
 /** gives the data of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLRDATA* SCIPgetConsExprExprHdlrData(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr      /**< expression handler */
 );
 
 /** returns whether expression handler implements the print callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrPrint(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
+/** returns whether expression handler implements the backward differentiation callback */
+SCIP_EXPORT
+SCIP_Bool SCIPhasConsExprExprHdlrBwdiff(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
 /** returns whether expression handler implements the interval evaluation callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrIntEval(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
 /** returns whether expression handler implements the estimator callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrEstimate(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
 /** returns whether expression handler implements the simplification callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrSimplify(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
+/** returns whether expression handler implements the curvature callback */
+SCIP_EXPORT
+SCIP_Bool SCIPhasConsExprExprHdlrCurvature(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+   );
+
 /** returns whether expression handler implements the reverse propagation callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrReverseProp(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
 /** returns whether expression handler implements the initialization callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrInitSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
 /** returns whether expression handler implements the deinitialization callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrExitSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
 /** returns whether expression handler implements the separation callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
 /** returns whether expression handler implements the branching score callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrBranchingScore(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
 /** calls the print callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRPRINT(SCIPprintConsExprExprHdlr);
 
 /** calls the parse callback of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRPARSE(SCIPparseConsExprExprHdlr);
 
 /** calls the expression hash callback */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRHASH(SCIPhashConsExprExprHdlr);
 
 /** calls the expression compare callback */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRCOMPARE(SCIPcompareConsExprExprHdlr);
+
+/** calls the backward-differentiation callback of an expression handler
+ *
+ * further, allows to different w.r.t. given expression and children values
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPbwdiffConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   int                        childidx,     /**< index of child w.r.t. which to compute derivative */
+   SCIP_Real*                 derivative,   /**< buffer to store value of derivative */
+   SCIP_Real*                 childrenvals, /**< values for children, or NULL if values stored in children should be used */
+   SCIP_Real                  exprval       /**< value for expression, used only if childrenvals is not NULL */
+);
 
 /** calls the evaluation callback of an expression handler
  *
  * further, allows to evaluate w.r.t. given children values
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPevalConsExprExprHdlr(
    SCIP*                      scip,         /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
@@ -347,39 +385,43 @@ SCIP_RETCODE SCIPevalConsExprExprHdlr(
 );
 
 /** calls the expression interval evaluation callback */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(SCIPintevalConsExprExprHdlr);
 
 /** calls estimator method of expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRESTIMATE(SCIPestimateConsExprExprHdlr);
 
 /** calls the simplification method of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(SCIPsimplifyConsExprExprHdlr);
 
+/** calls the curvature check method of an expression handler */
+SCIP_EXPORT
+SCIP_DECL_CONSEXPR_EXPRCURVATURE(SCIPcurvatureConsExprExprHdlr);
+
 /** calls the expression callback for reverse propagation */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(SCIPreversepropConsExprExprHdlr);
 
 /** calls the separation initialization method of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(SCIPinitsepaConsExprExprHdlr);
 
 /** calls the separation deinitialization method of an expression handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPREXITSEPA(SCIPexitsepaConsExprExprHdlr);
 
 /** calls separator method of expression handler to separate a given solution */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRSEPA(SCIPsepaConsExprExprHdlr);
 
 /** calls the expression branching score callback */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(SCIPbranchscoreConsExprExprHdlr);
 
 /** increments the branching score count of an expression handler */
-EXTERN
+SCIP_EXPORT
 void SCIPincrementConsExprExprHdlrNBranchScore(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr
    );
@@ -390,7 +432,7 @@ void SCIPincrementConsExprExprHdlrNBranchScore(
 /**@{ */
 
 /** creates and captures an expression with given expression data and children */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
@@ -401,7 +443,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr(
    );
 
 /** creates and captures an expression with given expression data and up to two children */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExpr2(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
@@ -413,7 +455,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr2(
    );
 
 /** creates and captures an expression from a node in an (old-style) expression graph */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExpr3(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
@@ -423,7 +465,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
    );
 
 /** appends child to the children list of expr */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPappendConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
@@ -434,7 +476,7 @@ SCIP_RETCODE SCIPappendConsExprExpr(
  *
  * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreplaceConsExprExprChild(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
@@ -442,45 +484,43 @@ SCIP_RETCODE SCIPreplaceConsExprExprChild(
    SCIP_CONSEXPR_EXPR*     newchild          /**< the new child */
    );
 
-/** duplicates the given expression
- *
- * If a copy could not be created (e.g., due to missing copy callbacks in expression handlers), *copyexpr will be set to NULL.
- */
-EXTERN
+/** duplicates the given expression */
+SCIP_EXPORT
 SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
-   SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
+   SCIP_CONSEXPR_EXPR**  copyexpr,           /**< buffer to store duplicate of expr */
+   SCIP_Bool             copychildren        /**< whether children (and all successors) should be copied, too */
    );
 
 /** gets the number of times the expression is currently captured */
-EXTERN
+SCIP_EXPORT
 int SCIPgetConsExprExprNUses(
    SCIP_CONSEXPR_EXPR*   expr               /**< expression */
    );
 
 /** captures an expression (increments usage count) */
-EXTERN
+SCIP_EXPORT
 void SCIPcaptureConsExprExpr(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression to be captured */
    );
 
 /** releases an expression (decrements usage count and possibly frees expression) */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreleaseConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR**  expr                /**< pointer to expression to be released */
    );
 
 /** gives the number of children of an expression */
-EXTERN
+SCIP_EXPORT
 int SCIPgetConsExprExprNChildren(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
 /** gives the children of an expression (can be NULL if no children) */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_EXPR** SCIPgetConsExprExprChildren(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
@@ -489,19 +529,19 @@ SCIP_CONSEXPR_EXPR** SCIPgetConsExprExprChildren(
  *
  * This identifies the type of the expression (sum, variable, ...).
  */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlr(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
 /** gets the expression data of an expression */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
 /** returns whether an expression is a variable expression */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisConsExprExprVar(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
@@ -510,7 +550,7 @@ SCIP_Bool SCIPisConsExprExprVar(
  *
  * @note for variable expression it returns the corresponding variable
  */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR* SCIPgetConsExprExprAuxVar(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
@@ -521,14 +561,14 @@ SCIP_VAR* SCIPgetConsExprExprAuxVar(
  * freedata-callback is not called before.
  * This function is intended to be used by expression handler.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPsetConsExprExprData(
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_CONSEXPR_EXPRDATA* exprdata          /**< expression data to be set (can be NULL) */
    );
 
 /** print an expression as info-message */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
@@ -537,7 +577,7 @@ SCIP_RETCODE SCIPprintConsExprExpr(
    );
 
 /** initializes printing of expressions in dot format to a give FILE* pointer */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintConsExprExprDotInit(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
@@ -547,7 +587,7 @@ SCIP_RETCODE SCIPprintConsExprExprDotInit(
    );
 
 /** initializes printing of expressions in dot format to a file with given filename */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintConsExprExprDotInit2(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
@@ -556,7 +596,7 @@ SCIP_RETCODE SCIPprintConsExprExprDotInit2(
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
    );
 
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintConsExprExprDot(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_PRINTDOTDATA* dotdata,      /**< data as initialized by \ref SCIPprintConsExprExprDotInit() */
@@ -564,7 +604,7 @@ SCIP_RETCODE SCIPprintConsExprExprDot(
    );
 
 /** finishes printing of expressions in dot format */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintConsExprExprDotFinal(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata      /**< buffer where dot printing data has been stored */
@@ -579,14 +619,14 @@ SCIP_RETCODE SCIPprintConsExprExprDotFinal(
  * It prints the expression into a temporary file in dot format, then calls dot to create a postscript file, then calls ghostview (gv) to show the file.
  * SCIP will hold until ghostscript is closed.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPshowConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
    );
 
 /** prints structure of an expression a la Maple's dismantle */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdismantleConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
@@ -609,7 +649,7 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
  *
  * See also @ref parseExpr.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPparseConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -631,7 +671,7 @@ SCIP_RETCODE SCIPparseConsExprExpr(
  * The tag is stored together with the value and can be received via
  * SCIPgetConsExprExprEvalTag().
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPevalConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
@@ -641,13 +681,13 @@ SCIP_RETCODE SCIPevalConsExprExpr(
    );
 
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprValue(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
 /** sets the evaluation value */
-EXTERN
+SCIP_EXPORT
 void SCIPsetConsExprExprEvalValue(
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_Real               value,            /**< value to set */
@@ -655,7 +695,7 @@ void SCIPsetConsExprExprEvalValue(
    );
 
 /** gives the evaluation tag from the last evaluation, or 0 */
-EXTERN
+SCIP_EXPORT
 unsigned int SCIPgetConsExprExprEvalTag(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
@@ -711,7 +751,7 @@ unsigned int SCIPgetConsExprExprEvalTag(
  * If an error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
@@ -721,7 +761,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    );
 
 /** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprPartialDiff(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -730,58 +770,52 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
    );
 
 /** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprDerivative(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
 /**@} */  /* end of differentiation methods */
 
-/** evaluates an expression over a box
+/** returns the activity of the expression
  *
- * Initiates an expression walk to also evaluate children, if necessary.
- * The resulting interval can be received via SCIPgetConsExprExprEvalInterval().
- * If the box does not overlap with the domain of the function behind the expression
- * (e.g., sqrt([-2,-1]) or 1/[0,0]) this interval will be empty.
- *
- * For variables, the local variable bounds, possibly relaxed by some amount, are used as interval.
- * The actual interval is determined by the intevalvar function, if not NULL.
- * If NULL, then the local bounds of the variable are taken without modification.
- *
- * If a nonzero \p boxtag is passed, then only (sub)expressions are
- * reevaluated that have a different tag. If a tag of 0 is passed,
- * then subexpressions are always reevaluated.
- * The tag is stored together with the interval and can be received via
- * SCIPgetConsExprExprEvalIntervalTag().
+ * The caller needs to make sure that the activity is valid.
+ * For expression and nonlinear handlers, this is made sure when the following callbacks are called:
+ * - interval evaluation (intervals for children only)
+ * - reverse propagation
+ * - monotonicity computation
+ * - convexity detection
+ * - structure detection
  */
-EXTERN
-SCIP_RETCODE SCIPevalConsExprExprInterval(
+SCIP_EXPORT
+SCIP_INTERVAL SCIPgetConsExprExprActivity(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
-   unsigned int            boxtag,           /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable */
-   void*                   intevalvardata    /**< data to be passed to intevalvar call */
-   );
-
-/** returns the interval from the last interval evaluation of an expression (interval can be empty) */
-EXTERN
-SCIP_INTERVAL SCIPgetConsExprExprInterval(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
-/** sets the evaluation interval */
-EXTERN
-void SCIPsetConsExprExprEvalInterval(
+/** returns the tag associated with the activity of the expression
+ *
+ * Can be compared with SCIPgetConsExprCurBoundsTag() and SCIPgetConsExprLastBoundRelaxTag()
+ * to check whether the activity currently stored in this expression is current and valid, respectively.
+ */
+SCIP_EXPORT
+unsigned int SCIPgetConsExprExprActivityTag(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   );
+
+/** possibly reevaluates and then returns the activity of the expression
+ *
+ * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
+ * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
+ * since last evaluation.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPevalConsExprExprActivity(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler, or NULL */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   SCIP_INTERVAL*          interval,         /**< interval to set */
-   unsigned int            tag               /**< tag of variable domains that were evaluated, or 0. */
-   );
-
-/** gives the box tag from the last interval evaluation, or 0 */
-EXTERN
-unsigned int SCIPgetConsExprExprEvalIntervalTag(
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   SCIP_INTERVAL*          activity,         /**< interval where to store expression */
+   SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
    );
 
 /** tightens the bounds of an expression and stores the result in the expression interval; variables in variable
@@ -789,7 +823,7 @@ unsigned int SCIPgetConsExprExprEvalIntervalTag(
  *
  *  If a reversepropqueue is given, then the expression will be added to the queue if its bounds could be tightened without detecting infeasibility.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
@@ -800,6 +834,33 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
    );
 
+/** mark constraints that include this expression to be propagated again
+ *
+ * This can be used by, e.g., nlhdlrs, to trigger a new propagation of constraints without
+ * a change of variable bounds, e.g., because new information on the expression is available
+ * that could potentially lead to tighter expression activity values.
+ *
+ * Note, that this call marks also constraints for propagation which only share some variable
+ * with this expression.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPmarkConsExprExprPropagate(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to propagate again */
+   );
+
+/** increments the curboundstag and resets lastboundrelax in constraint handler data
+ *
+ * @note This method is not intended for normal use.
+ *   These tags are maintained by the event handler for variable bound change events.
+ *   This method is used by some unittests.
+ */
+SCIP_EXPORT
+void SCIPincrementConsExprCurBoundsTag(
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
+   SCIP_Bool               boundrelax        /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
+   );
+
 /** adds branching score to an expression
  *
  * Adds a score to the expression-specific branching score.
@@ -807,7 +868,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
  * In an expression with children, the scores are distributed to its children.
  * In an expression that is a variable, the score may be used to identify a variable for branching.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPaddConsExprExprBranchScore(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to add branching score */
@@ -816,7 +877,7 @@ void SCIPaddConsExprExprBranchScore(
    );
 
 /** returns the hash value of an expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsExprExprHash(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
@@ -828,7 +889,7 @@ SCIP_RETCODE SCIPgetConsExprExprHash(
  * @note if auxiliary variable already present for that expression, then only returns this variable
  * @note for a variable expression it returns the corresponding variable
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
@@ -840,7 +901,7 @@ SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
  * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
  * @note: The given expressions are assumed to be simplified.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPcompareConsExprExprs(
    SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
    SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
@@ -851,30 +912,32 @@ int SCIPcompareConsExprExprs(
  * The given expression will be released and overwritten with the simplified expression.
  * To keep the expression, duplicate it via SCIPduplicateConsExprExpr before calling this method.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_CONSEXPR_EXPR**    simplified,       /**< buffer to store simplified expression */
-   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              changed,          /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              infeasible        /**< buffer to store whether infeasibility has been detected */
    );
 
 /** reformulate an expression; this functions works similar as SCIPsimplifyConsExprExpr() but instead of calling the
  *  simplify callback of an expression handler it iterates through all nonlinear handlers and uses the reformulation
  *  callback
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreformulateConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_CONSEXPR_EXPR**    refrootexpr,      /**< buffer to store reformulated expression */
-   SCIP_Bool*              changed           /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              changed,          /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*              infeasible        /**< buffer to store whether infeasibility has been detected */
    );
 
 /** sets the curvature of an expression */
-EXTERN
+SCIP_EXPORT
 void SCIPsetConsExprExprCurvature(
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_EXPRCURV         curvature           /**< curvature of the expression */
@@ -884,7 +947,7 @@ void SCIPsetConsExprExprCurvature(
  *
  *  @note Call SCIPcomputeConsExprExprCurvature before calling this function.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_EXPRCURV SCIPgetConsExprExprCurvature(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
@@ -893,17 +956,14 @@ SCIP_EXPRCURV SCIPgetConsExprExprCurvature(
  *
  *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** returns the monotonicity of an expression w.r.t. to a given child
- *
- *  @note Call SCIPevalConsExprExprInterval before using this function.
- */
-EXTERN
+/** returns the monotonicity of an expression w.r.t. to a given child */
+SCIP_EXPORT
 SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
@@ -911,13 +971,13 @@ SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(
    );
 
 /** returns the number of positive rounding locks of an expression */
-EXTERN
+SCIP_EXPORT
 int SCIPgetConsExprExprNLocksPos(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
 /** returns the number of negative rounding locks of an expression */
-EXTERN
+SCIP_EXPORT
 int SCIPgetConsExprExprNLocksNeg(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
@@ -925,7 +985,7 @@ int SCIPgetConsExprExprNLocksNeg(
 /** computes integrality information of a given expression and all its subexpressions; the integrality information can
  * be accessed via SCIPisConsExprExprIntegral()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
@@ -933,7 +993,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprIntegral(
    );
 
 /** returns whether an expression is integral */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisConsExprExprIntegral(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
@@ -942,7 +1002,7 @@ SCIP_Bool SCIPisConsExprExprIntegral(
  *
  * The function counts variables in common sub-expressions only once.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsExprExprNVars(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
@@ -956,7 +1016,7 @@ SCIP_RETCODE SCIPgetConsExprExprNVars(
  *
  * @note function captures variable expressions
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsExprExprVarExprs(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
@@ -973,22 +1033,34 @@ SCIP_RETCODE SCIPgetConsExprExprVarExprs(
 /**@{ */
 
 /** gets the index an expression iterator can use to store iterator specific data in an expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPactivateConsExprExprHdlrIterator(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
    int*                       iterindex       /**< buffer to store iteration index */
    );
 
 /** returns the index that an expression iterator used to store iterator specific data in an expression */
-EXTERN
+SCIP_EXPORT
 void SCIPdeactivateConsExprExprHdlrIterator(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
    int                        iterindex       /**< iteration index that is not used anymore */
    );
 
 /** get a new tag that can be used to mark an expression as visited */
-EXTERN
+SCIP_EXPORT
 unsigned int SCIPgetConsExprExprHdlrNewVisitedTag(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
+/** gets tag indicating current local variable bounds */
+SCIP_EXPORT
+unsigned int SCIPgetConsExprCurBoundsTag(
+   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
+/** gets the curboundstag at the last time where variable bounds were relaxed */
+SCIP_EXPORT
+unsigned int SCIPgetConsExprLastBoundRelaxTag(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
@@ -1015,13 +1087,13 @@ unsigned int SCIPgetConsExprExprHdlrNewVisitedTag(
 
 
 /** creates the handler for expr constraints and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** includes an expression constraint upgrade method into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprconsUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_EXPRCONSUPGD((*exprconsupgd)),  /**< method to call for upgrading expression constraint, or NULL */
@@ -1034,7 +1106,7 @@ SCIP_RETCODE SCIPincludeExprconsUpgrade(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -1072,7 +1144,7 @@ SCIP_RETCODE SCIPcreateConsExpr(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -1088,28 +1160,50 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
 /**@{ */
 
 /** returns the expression of the given expression constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the left hand side of an expression constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLhsConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the right hand side of an expression constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRhsConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** gives the unique index of an expression constraint
+ *
+ * Each expression constraint gets an index assigned when it is created.
+ * This index never changes and is unique among all expression constraints
+ * within the same SCIP instance.
+ * Thus, it can be used to sort a set of expression constraints.
+ */
+SCIP_EXPORT
+int SCIPgetConsExprIndex(
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** compares two expression constraints by its index
+ *
+ * Usable as compare operator in array sort functions.
+ */
+SCIP_EXPORT
+int SCIPcompareConsExprIndex(
+   void*                 cons1,
+   void*                 cons2
+   );
+
 /** returns an equivalent linear constraint if possible */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLinearConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -1117,7 +1211,7 @@ SCIP_RETCODE SCIPgetLinearConsExpr(
    );
 
 /** returns a variable that appears linearly that may be decreased without making any other constraint infeasible */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLinvarMayDecreaseExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
@@ -1127,7 +1221,7 @@ SCIP_RETCODE SCIPgetLinvarMayDecreaseExpr(
    );
 
 /** returns a variable that appears linearly that may be increased without making any other constraint infeasible */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
@@ -1142,7 +1236,7 @@ SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
 /**@{ */
 
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    SCIP*                       scip,         /**< SCIP data structure */
    SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
@@ -1156,7 +1250,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    );
 
 /** set the copy handler callback of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 void SCIPsetConsExprNlhdlrCopyHdlr(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
@@ -1164,7 +1258,7 @@ void SCIPsetConsExprNlhdlrCopyHdlr(
 );
 
 /** set the nonlinear handler callback to free the nonlinear handler data */
-EXTERN
+SCIP_EXPORT
 void SCIPsetConsExprNlhdlrFreeHdlrData(
    SCIP*                      scip,              /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,            /**< nonlinear handler */
@@ -1172,7 +1266,7 @@ void SCIPsetConsExprNlhdlrFreeHdlrData(
 );
 
 /** set the expression handler callback to free expression specific data of nonlinear handler */
-EXTERN
+SCIP_EXPORT
 void SCIPsetConsExprNlhdlrFreeExprData(
    SCIP*                      scip,              /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,            /**< nonlinear handler */
@@ -1180,7 +1274,7 @@ void SCIPsetConsExprNlhdlrFreeExprData(
 );
 
 /** set the initialization and deinitialization callback of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 void SCIPsetConsExprNlhdlrInitExit(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
@@ -1196,7 +1290,7 @@ void SCIPsetConsExprNlhdlrReformulate(
    );
 
 /** set the propagation callbacks of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 void SCIPsetConsExprNlhdlrProp(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
@@ -1205,7 +1299,7 @@ void SCIPsetConsExprNlhdlrProp(
 );
 
 /** set the separation callbacks of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 void SCIPsetConsExprNlhdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
@@ -1216,7 +1310,7 @@ void SCIPsetConsExprNlhdlrSepa(
 );
 
 /** set the branching score callback of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 void SCIPsetConsExprNlhdlrBranchscore(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
@@ -1224,32 +1318,32 @@ void SCIPsetConsExprNlhdlrBranchscore(
 );
 
 /** gives name of nonlinear handler */
-EXTERN
+SCIP_EXPORT
 const char* SCIPgetConsExprNlhdlrName(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 );
 
 /** gives description of nonlinear handler, can be NULL */
-EXTERN
+SCIP_EXPORT
 const char* SCIPgetConsExprNlhdlrDesc(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 );
 
 /** gives priority of nonlinear handler */
-EXTERN
+SCIP_EXPORT
 int SCIPgetConsExprNlhdlrPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 );
 
 /** returns a nonlinear handler of a given name (or NULL if not found) */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_NLHDLR* SCIPfindConsExprNlhdlr(
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    const char*                name           /**< name of nonlinear handler */
    );
 
 /** gives handler data of nonlinear handler */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
 );
@@ -1258,95 +1352,183 @@ SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
  *
  * @return NULL if expr has not been detected by nlhdlr or nlhdlr did not store data
  */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_NLHDLREXPRDATA* SCIPgetConsExprNlhdlrExprData(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_CONSEXPR_EXPR*        expr           /**< expression */
 );
 
 /** returns whether nonlinear handler implements the reformulation callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprNlhdlrReformulate(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
 /** returns whether nonlinear handler implements the interval evaluation callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprNlhdlrInteval(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
 /** returns whether nonlinear handler implements the reverse propagation callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprNlhdlrReverseProp(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
 /** returns whether nonlinear handler implements the separation initialization callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprNlhdlrInitSepa(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
 /** returns whether nonlinear handler implements the separation deinitialization callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprNlhdlrExitSepa(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
 /** returns whether nonlinear handler implements the separation callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprNlhdlrSepa(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
 /** returns whether nonlinear handler implements the estimator callback */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprNlhdlrEstimate(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
 /** call the detect callback of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr);
 
 /** calls the reformulation callback of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(SCIPreformulateConsExprNlhdlr);
 
 /** call the auxiliary evaluation callback of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(SCIPevalauxConsExprNlhdlr);
 
 /** calls the interval evaluation callback of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(SCIPintevalConsExprNlhdlr);
 
 /** calls the reverse propagation callback of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(SCIPreversepropConsExprNlhdlr);
 
 /** calls the separation initialization callback of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(SCIPinitsepaConsExprNlhdlr);
 
 /** calls the separation deinitialization callback of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(SCIPexitsepaConsExprNlhdlr);
 
 /** calls the separation callback of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr);
 
 /** calls the estimator callback of a nonlinear handler */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr);
 
 /** calls the nonlinear handler branching score callback */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
 
 /** @} */
+
+/** computes a facet of the convex or concave envelope of a vertex polyhedral function
+ *
+ * If \f$ f(x) \f$ is vertex-polyhedral, then \f$ g \f$ is a convex underestimator if and only if
+ * \f$ g(v^i) \leq f(v^i), \forall i \f$, where \f$ \{ v^i \}_{i = 1}^{2^n} \subseteq \mathbb R^n \f$ are the vertices
+ * of the domain of \f$ x \f$, \f$ [\ell,u] \f$. Hence, we can compute a linear underestimator by solving the following
+ * LP (we don't necessarily get a facet of the convex envelope, see Technical detail below):
+ *
+ * \f{align*}{
+ *              \max \, & \alpha^T x^* + \beta \\
+ *     s.t. \; & \alpha^T v^i + \beta \le f(v^i), \, \forall i = 1, \ldots, 2^n
+ * \f}
+ *
+ * In principle, one would need to update the LP whenever the domain changes. However, \f$ [\ell,u] = T([0, 1]^n) \f$,
+ * where \f$ T \f$ is an affine linear invertible transformation given by \f$ T(y)_i = (u_i - \ell_i) y_i + \ell_i \f$.
+ * Working with the change of variables \f$ x = T(y) \f$ allows us to keep the constraints of the LP, even if the domain
+ * changes. Indeed, after the change of variables, the problem is: find an affine underestimator \f$ g \f$ such that \f$
+ * g(T(y)) \le f(T(y)) \f$, for all \f$ y \in [0, 1]^n \f$. Now \f$ f(T(y)) \f$ is componentwise affine, but still
+ * satisfies that \f$ g \f$ is a valid underestimator if and only if \f$ g(T(u)) \leq f(T(u)), \forall u \in \{0, 1\}^n
+ * \f$. So we now look for \f$ \bar g(y) := g(T(y)) = g(((u_i - \ell_i) y_i + \ell_i)_i) = \bar \alpha^T y + \bar \beta
+ * \f$, where \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i \f$ and \f$ \bar \beta = \sum_i \alpha_i \ell_i + \beta \f$. So
+ * we find \f$ \bar g \f$ by solving the LP:
+ *
+ * \f{align*}{
+ *              \max \, & \bar \alpha^T T^{-1}(x^*) + \bar \beta \\
+ *     s.t. \; & \bar \alpha^T u + \bar \beta \le f(T(u)), \, \forall u \in \{0, 1\}^n
+ * \f}
+ *
+ * and recover \f$ g \f$ by solving \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i, \bar \beta = \sum_i \alpha_i \ell_i +
+ * \beta \f$. Notice that \f$ f(T(u^i)) = f(v^i) \f$ so the right hand side doesn't change after the change of variables.
+ *
+ * Furthermore, the LP has more constraints than variables, so we solve its dual:
+ * \f{align*}{
+ *              \min \, & \sum_i \lambda_i f(v^i) \\
+ *     s.t. \; & \sum_i \lambda_i u^i = T^{-1}(x^*) \\
+ *             & \sum_i \lambda_i = 1 \\
+ *             & \forall i, \, \lambda_i \geq 0
+ * \f}
+ *
+ * In case we look for an overestimate, we do exactly the same, but have to maximize in the dual LP instead
+ * of minimize.
+ *
+ * #### Technical and implementation details
+ * -# \f$ U \f$ has exponentially many variables, so we only apply this separator for \f$ n \leq 14 \f$.
+ * -# If the bounds are not finite, there is no underestimator. Also, \f$ T^{-1}(x^*) \f$ must be in the domain,
+ * otherwise the dual is infeasible.
+ * -# After a facet is computed, we check whether it is a valid facet (i.e. we check \f$ \alpha^T v + \beta \le f(v) \f$
+ *  for every vertex \f$ v \f$). If we find a violation of at most ADJUSTFACETFACTOR * SCIPlpfeastol, then we weaken \f$
+ *  \beta \f$ by this amount, otherwise, we discard the cut.
+ * -# If a variable is fixed within tolerances, we replace it with its value and compute the facet of the remaining
+ * expression. Note that since we are checking the cut for validity, this will never produce wrong result.
+ * -# If \f$ x^* \f$ is in the boundary of the domain, then the LP has infinitely many solutions, some of which might
+ * have very bad numerical properties. For this reason, we perturb \f$ x^* \f$ to be in the interior of the region.
+ * Furthermore, for some interior points, there might also be infinitely many solutions (e.g. for \f$ x y \f$ in \f$
+ * [0,1]^2 \f$ any point \f$ (x^*, y^*) \f$ such that \f$ y^* = 1 - x^* \f$ has infinitely many solutions). For this
+ * reason, we perturb any given \f$ x^* \f$. The idea is to try to get a facet of the convex/concave envelope. This only
+ * happens when the solution has \f$ n + 1 \f$ non zero \f$ \lambda \f$'s (i.e. the primal has a unique solution).
+ * -# We need to compute \f$ f(v^i) \f$ for every vertex of \f$ [\ell,u] \f$. A vertex is encoded by a number between 0
+ * and \f$ 2^n - 1 \f$, via its binary representation (0 bit is lower bound, 1 bit is upper bound), so we can compute
+ * all these values by iterating between 0 and \f$ 2^n - 1 \f$.
+ * -# To check that the computed cut is valid we do the following: we use a gray code to loop over the vertices
+ * of the box domain w.r.t. unfixed variables in order to evaluate the underestimator. To ensure the validity of the
+ * underestimator, we check whether \f$ \alpha v^i + \beta \le f(v^i) \f$ for every vertex \f$ v^i \f$ and adjust
+ * \f$ \beta \f$ if the maximal violation is small.
+ *
+ * @todo the solution is a facet if all variables of the primal have positive reduced costs (i.e. the solution is
+ * unique). In the dual, this means that there are \f$ n + 1 \f$ variables with positive value. Can we use this or some
+ * other information to handle any of both cases (point in the boundary or point in the intersection of polytopes
+ * defining different pieces of the convex envelope)? In the case where the point is in the boundary, can we use that
+ * information to maybe solve another to find a facet? How do the polytopes defining the pieces where the convex
+ * envelope is linear looks like, i.e, given a point in the interior of a facet of the domain, does the midpoint of the
+ * segment joining \f$ x^* \f$ with the center of the domain, always belongs to the interior of one of those polytopes?
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_Bool             overestimate,       /**< whether to compute facet of concave (TRUE) or convex (FALSE) envelope */
+   SCIP_DECL_VERTEXPOLYFUN((*function)),     /**< pointer to vertex polyhedral function */
+   void*                 fundata,            /**< data for function evaluation (can be NULL) */
+   SCIP_Real*            xstar,              /**< point to be separated */
+   SCIP_Real*            box,                /**< box where to compute facet: should be lb_1, ub_1, lb_2, ub_2... */
+   int                   nallvars,           /**< half of the length of box */
+   SCIP_Real             targetvalue,        /**< target value: no need to compute facet if value in xstar would be worse than this value */
+   SCIP_Bool*            success,            /**< buffer to store whether a facet could be computed successfully */
+   SCIP_Real*            facetcoefs,         /**< buffer to store coefficients of facet defining inequality; must be an array of length at least nallvars */
+   SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
+);
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc.c
+ * @ingroup OTHER_CFILES
  * @brief  miscellaneous methods
  * @author Tobias Achterberg
  * @author Gerald Gamrath
@@ -974,19 +975,12 @@ void SCIPqueueClear(
    queue->firstused = -1;
 }
 
-/** inserts element at the end of the queue */
-SCIP_RETCODE SCIPqueueInsert(
-   SCIP_QUEUE*           queue,              /**< queue */
-   void*                 elem                /**< element to be inserted */
+/** reallocates slots if queue is necessary */
+static
+SCIP_RETCODE queueCheckSize(
+   SCIP_QUEUE*           queue               /**< queue */
    )
 {
-   assert(queue != NULL);
-   assert(queue->slots != NULL);
-   assert(queue->firstused >= -1 && queue->firstused < queue->size);
-   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
-   assert(queue->firstused > -1 || queue->firstfree == 0);
-   assert(elem != NULL);
-
    if( queue->firstfree == queue->firstused )
    {
       int sizediff;
@@ -1003,10 +997,15 @@ SCIP_RETCODE SCIPqueueInsert(
    }
    assert(queue->firstfree != queue->firstused);
 
-   /* insert element as leaf in the tree, move it towards the root as long it is better than its parent */
-   queue->slots[queue->firstfree] = elem;
-   ++(queue->firstfree);
+   return SCIP_OKAY;
+}
 
+/** checks and adjusts marker of first free and first used slot */
+static
+void queueCheckMarker(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
    /* if we saved the value at the last position we need to reset the firstfree position */
    if( queue->firstfree == queue->size )
       queue->firstfree = 0;
@@ -1014,11 +1013,60 @@ SCIP_RETCODE SCIPqueueInsert(
    /* if a first element was added, we need to update the firstused counter */
    if( queue->firstused == -1 )
       queue->firstused = 0;
+}
+
+/** inserts pointer element at the end of the queue */
+SCIP_RETCODE SCIPqueueInsert(
+   SCIP_QUEUE*           queue,              /**< queue */
+   void*                 elem                /**< element to be inserted */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->slots != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+   assert(elem != NULL);
+
+   /* check allocated memory */
+   SCIP_CALL( queueCheckSize(queue) );
+
+   /* insert element at the first free slot */
+   queue->slots[queue->firstfree].ptr = elem;
+   ++(queue->firstfree);
+
+   /* check and adjust marker */
+   queueCheckMarker(queue);
 
    return SCIP_OKAY;
 }
 
-/** removes and returns the first element of the queue */
+/** inserts unsigned integer element at the end of the queue */
+SCIP_RETCODE SCIPqueueInsertUInt(
+   SCIP_QUEUE*           queue,              /**< queue */
+   unsigned int          elem                /**< element to be inserted */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->slots != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   /* check allocated memory */
+   SCIP_CALL( queueCheckSize(queue) );
+
+   /* insert element at the first free slot */
+   queue->slots[queue->firstfree].uinteger = elem;
+   ++(queue->firstfree);
+
+   /* check and adjust marker */
+   queueCheckMarker(queue);
+
+   return SCIP_OKAY;
+}
+
+/** removes and returns the first pointer element of the queue, or NULL if no element exists */
 void* SCIPqueueRemove(
    SCIP_QUEUE*           queue               /**< queue */
    )
@@ -1049,10 +1097,44 @@ void* SCIPqueueRemove(
       queue->firstfree = 0; /* this is not necessary but looks better if we have an empty list to reset this value */
    }
 
-   return (queue->slots[pos]);
+   return (queue->slots[pos].ptr);
 }
 
-/** returns the first element of the queue without removing it */
+/** removes and returns the first unsigned integer element of the queue, or UINT_MAX if no element exists */
+unsigned int SCIPqueueRemoveUInt(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   int pos;
+
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   if( queue->firstused == -1 )
+      return UINT_MAX;
+
+   assert(queue->slots != NULL);
+
+   pos = queue->firstused;
+   ++(queue->firstused);
+
+   /* if we removed the value at the last position we need to reset the firstused position */
+   if( queue->firstused == queue->size )
+      queue->firstused = 0;
+
+   /* if we reached the first free position we can reset both, firstused and firstused, positions */
+   if( queue->firstused == queue->firstfree )
+   {
+      queue->firstused = -1;
+      queue->firstfree = 0; /* this is not necessary but looks better if we have an empty list to reset this value */
+   }
+
+   return (queue->slots[pos].uinteger);
+}
+
+/** returns the first element of the queue without removing it, or NULL if no element exists */
 void* SCIPqueueFirst(
    SCIP_QUEUE*           queue               /**< queue */
    )
@@ -1067,7 +1149,25 @@ void* SCIPqueueFirst(
 
    assert(queue->slots != NULL);
 
-   return queue->slots[queue->firstused];
+   return queue->slots[queue->firstused].ptr;
+}
+
+/** returns the first unsigned integer element of the queue without removing it, or UINT_MAX if no element exists */
+unsigned int SCIPqueueFirstUInt(
+   SCIP_QUEUE*           queue               /**< queue */
+   )
+{
+   assert(queue != NULL);
+   assert(queue->firstused >= -1 && queue->firstused < queue->size);
+   assert(queue->firstfree >= 0 && queue->firstused < queue->size);
+   assert(queue->firstused > -1 || queue->firstfree == 0);
+
+   if( queue->firstused == -1 )
+      return UINT_MAX;
+
+   assert(queue->slots != NULL);
+
+   return queue->slots[queue->firstused].uinteger;
 }
 
 /** returns whether the queue is empty */
@@ -2615,7 +2715,6 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 /* computes the distance from it's desired position for the element stored at pos */
 #define ELEM_DISTANCE(pos) (((pos) + hashmap->mask + 1 - (hashmap->hashes[(pos)]>>(hashmap->shift))) & hashmap->mask)
 
-
 /** inserts element in hash table */
 static
 SCIP_RETCODE hashmapInsert(
@@ -2815,6 +2914,7 @@ SCIP_RETCODE SCIPhashmapCreate(
    (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
    (*hashmap)->nelements = 0;
+   (*hashmap)->hashmaptype = SCIP_HASHMAPTYPE_UNKNOWN;
 
    SCIP_ALLOC( BMSallocBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->slots, nslots) );
    SCIP_ALLOC( BMSallocClearBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->hashes, nslots) );
@@ -2855,9 +2955,9 @@ void SCIPhashmapFree(
                        (unsigned int)(*hashmap)->nelements, (unsigned int)(*hashmap)->nelements, (unsigned int)nslots,
                        100.0*(SCIP_Real)(*hashmap)->nelements/(SCIP_Real)(nslots));
       if( (*hashmap)->nelements > 0 )
-         SCIPdebugMessage(", avg. probe length is %.1f, max. probe length is %u",
+         SCIPdebugPrintf(", avg. probe length is %.1f, max. probe length is %u",
                           (SCIP_Real)(probelensum)/(SCIP_Real)(*hashmap)->nelements, (unsigned int)maxprobelen);
-      SCIPdebugMessage("\n");
+      SCIPdebugPrintf("\n");
    }
 #endif
 
@@ -2884,6 +2984,12 @@ SCIP_RETCODE SCIPhashmapInsert(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_POINTER);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_POINTER;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -2914,6 +3020,12 @@ SCIP_RETCODE SCIPhashmapInsertInt(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_INT);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_INT;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -2944,6 +3056,12 @@ SCIP_RETCODE SCIPhashmapInsertReal(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_REAL);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_REAL;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -2969,6 +3087,7 @@ void* SCIPhashmapGetImage(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_POINTER);
 
    if( hashmapLookup(hashmap, origin, &pos) )
       return hashmap->slots[pos].image.ptr;
@@ -2976,7 +3095,7 @@ void* SCIPhashmapGetImage(
    return NULL;
 }
 
-/** retrieves image of given origin from the hash map, or NULL if no image exists */
+/** retrieves image of given origin from the hash map, or INT_MAX if no image exists */
 int SCIPhashmapGetImageInt(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
@@ -2988,6 +3107,7 @@ int SCIPhashmapGetImageInt(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_INT);
 
    if( hashmapLookup(hashmap, origin, &pos) )
       return hashmap->slots[pos].image.integer;
@@ -2995,7 +3115,7 @@ int SCIPhashmapGetImageInt(
    return INT_MAX;
 }
 
-/** retrieves image of given origin from the hash map, or NULL if no image exists */
+/** retrieves image of given origin from the hash map, or SCIP_INVALID if no image exists */
 SCIP_Real SCIPhashmapGetImageReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
@@ -3007,6 +3127,7 @@ SCIP_Real SCIPhashmapGetImageReal(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_REAL);
 
    if( hashmapLookup(hashmap, origin, &pos) )
       return hashmap->slots[pos].image.real;
@@ -3029,6 +3150,12 @@ SCIP_RETCODE SCIPhashmapSetImage(
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_POINTER);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_POINTER;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3057,6 +3184,12 @@ SCIP_RETCODE SCIPhashmapSetImageInt(
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_INT);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_INT;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3085,6 +3218,12 @@ SCIP_RETCODE SCIPhashmapSetImageReal(
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_REAL);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_REAL;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3450,8 +3589,8 @@ SCIP_RETCODE SCIPhashsetCreate(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, hashset) );
 
-   /* dont create too small hashtables, i.e. at least size 32, and increase
-    * the given size by divinding it by 0.9, since then no rebuilding will
+   /* do not create too small hashtables, i.e. at least size 32, and increase
+    * the given size by dividing it by 0.9, since then no rebuilding will
     * be necessary if the given number of elements are inserted. Finally round
     * to the next power of two.
     */
@@ -9182,6 +9321,14 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    return SCIP_OKAY;
 }
 
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
+ */
+#ifndef __clang__
+#pragma STD FENV_ACCESS ON
+#endif
+
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
  *  number inside the interval was found
@@ -9222,6 +9369,8 @@ SCIP_Bool SCIPfindSimpleRational(
 
    return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
 }
+
+#pragma STD FENV_ACCESS OFF
 
 /** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number
  *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);
@@ -9756,7 +9905,9 @@ unsigned int SCIPcalcFibHash(
    SCIP_Real             v                   /**< value to be hashed */
    )
 {
-   return ((unsigned long long)(v * 2654435769)) % UINT_MAX;
+   if( v >= 0 )
+      return ((unsigned long long)(v * 2654435769)) % UINT_MAX;
+   return ((unsigned long long)(-v * 683565275)) % UINT_MAX;
 }
 #endif
 
@@ -9996,6 +10147,61 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
    return SCIP_OKAY;
 }
 
+/** computes set intersection (duplicates removed) of two pointer arrays that are ordered ascendingly */
+void SCIPcomputeArraysIntersectionPtr
+   (
+      void**                array1,                   /**< pointer to first data array */
+      int                   narray1,                  /**< number of entries of first array */
+      void**                array2,                   /**< pointer to second data array */
+      int                   narray2,                  /**< number of entries of second array */
+      SCIP_DECL_SORTPTRCOMP((*ptrcomp)),              /**< data element comparator */
+      void**                intersectarray,           /**< intersection of array1 and array2
+                                                       *   (note: it is possible to use array1 for this input argument) */
+      int*                  nintersectarray           /**<  pointer to store number of entries of intersection array
+                                                       *   (note: it is possible to use narray1 for this input argument)*/
+   )
+{
+   int cnt = 0;
+   int k = 0;
+   int v1;
+   int v2;
+
+   assert( array1 != NULL );
+   assert( array2 != NULL );
+   assert( intersectarray != NULL );
+   assert( nintersectarray != NULL );
+
+   /* determine intersection of array1 and array2 */
+   for (v1 = 0; v1 < narray1; ++v1)
+   {
+      assert( v1 == 0 || (*ptrcomp)(array1[v1], array1[v1-1]) >= 0 );
+
+      /* skip duplicate entries */
+      if ( v1+1 < narray1 && array1[v1] == array1[v1+1])
+         continue;
+
+      for (v2 = k; v2 < narray2; ++v2)
+      {
+         assert( v2 == 0 || (*ptrcomp)(array2[v2], array2[v2-1]) > 0 || array2[v2] == array2[v2-1] );
+
+         if ( (*ptrcomp)(array2[v2], array1[v1]) > 0 )
+         {
+            k = v2;
+            break;
+         }
+         else if ( array2[v2] == array1[v1] )
+         {
+            intersectarray[cnt++] = array2[v2];
+            k = v2 + 1;
+            break;
+         }
+      }
+   }
+
+   /* store size of intersection array */
+   *nintersectarray = cnt;
+}
+
 
 /** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
 SCIP_RETCODE SCIPcomputeArraysSetminus(
@@ -10094,7 +10300,7 @@ void SCIPprintSysError(
    if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
       SCIPmessagePrintError("Unknown error number %d or error message too long.\n", errno);
    SCIPmessagePrintError("%s: %s\n", message, buf);
-#elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
+#elif (_POSIX_C_SOURCE >= 200112L || __DARWIN_C_LEVEL > 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
    /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
    if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
       SCIPmessagePrintError("Unknown error number %d.\n", errno);
@@ -10135,7 +10341,7 @@ char* SCIPstrtok(
    char**                ptrptr              /**< pointer to working char pointer - must stay the same while parsing */
    )
 {
-#ifdef NO_STRTOK_R
+#ifdef SCIP_NO_STRTOK_R
    return strtok(s, delim);
 #else
    return strtok_r(s, delim, ptrptr);
@@ -10422,7 +10628,7 @@ void SCIPsplitFilename(
       lastdot = NULL;
 
    /* detect known compression extensions */
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
    if( lastdot != NULL )
    {
       char* compext;
@@ -10520,10 +10726,10 @@ SCIP_Real SCIPcomputeGap(
 }
 
 /*
- *Union-Find data structure
+ * disjoint set (union-find) data structure
  */
 
-/** creates a disjoint set (union find) structure \p uf for \p ncomponents many components (of size one) */
+/** creates a disjoint set (union find) structure \p djset for \p ncomponents many components (of size one) */
 SCIP_RETCODE SCIPdisjointsetCreate(
    SCIP_DISJOINTSET**    djset,              /**< disjoint set (union find) data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -10546,12 +10752,13 @@ SCIP_RETCODE SCIPdisjointsetCreate(
    return SCIP_OKAY;
 }
 
-/** clears the disjoint set (union find) structure \p uf */
+/** clears the disjoint set (union find) structure \p djset */
 void SCIPdisjointsetClear(
    SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    )
 {
    int i;
+
    djset->componentcount = djset->size;
 
    /* reset all components to be unconnected */
@@ -10561,7 +10768,6 @@ void SCIPdisjointsetClear(
       djset->sizes[i] = 1;
    }
 }
-
 
 /** finds and returns the component identifier of this \p element */
 int SCIPdisjointsetFind(

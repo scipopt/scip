@@ -32,14 +32,14 @@ extern "C" {
 #endif
 
 /** creates the handler for variable expression and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates a variable expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -48,10 +48,49 @@ SCIP_RETCODE SCIPcreateConsExprExprVar(
    );
 
 /** gets the variable of a variable expression */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR* SCIPgetConsExprExprVarVar(
    SCIP_CONSEXPR_EXPR*   expr                /**< variable expression */
    );
+
+/** registers event handler to catch variable events on variable
+ *
+ * Additionally, the given constraint is stored in the data of the variable-expression.
+ * When an event occurs, all stored constraints are notified.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcatchConsExprExprVarEvent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< variable expression */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_CONS*            cons                /**< expr constraint */
+   );
+
+/** unregisters event handler to catch variable events on variable
+ *
+ * The given constraint is removed from the constraints array in the data of the variable-expression.
+ * If this was the last constraint, then the event handler is unregistered for this variable.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdropConsExprExprVarEvent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< variable expression */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_CONS*            cons                /**< expr constraint */
+   );
+
+/** gives number of constraints for which the expression catches bound change events on the variable */
+SCIP_EXPORT
+int SCIPgetConsExprExprVarNConss(
+   SCIP_CONSEXPR_EXPR*   expr                /**< variable expression */
+   );
+
+/** gives constraints for which the expression catches bound change events on the variable */
+SCIP_EXPORT
+SCIP_CONS** SCIPgetConsExprExprVarConss(
+   SCIP_CONSEXPR_EXPR*   expr                /**< variable expression */
+   );
+
 
 #ifdef __cplusplus
 }

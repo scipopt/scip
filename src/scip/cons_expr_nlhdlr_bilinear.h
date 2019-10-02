@@ -31,25 +31,25 @@ extern "C" {
 #endif
 
 /** returns an array of expressions that have been detected by the bilinear nonlinear handler */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_EXPR** SCIPgetConsExprNlhdlrBilinearExprs(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
    );
 
 /** returns an array of nonlinear handler expressions data of expressions that have been detected by the bilinear nonlinear handler */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSEXPR_NLHDLREXPRDATA** SCIPgetConsExprNlhdlrBilinearExprsdata(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
    );
 
 /** returns the total number of expressions that have been detected by the bilinear nonlinear handler */
-EXTERN
+SCIP_EXPORT
 int SCIPgetConsExprNlhdlrBilinearNExprs(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
    );
 
 /** adds a globally valid inequality of the form xcoef x <= ycoef y + constant to a product expression of the form x*y */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConsExprNlhdlrBilinearIneq(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler */
@@ -61,7 +61,7 @@ SCIP_RETCODE SCIPaddConsExprNlhdlrBilinearIneq(
    );
 
 /** includes bilinear nonlinear handler to consexpr */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBilinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */

@@ -77,13 +77,14 @@ Test(linconsupg, linear)
    SCIP_CONS* lincons;
    SCIP_CONS* cons;
    SCIP_Bool changed;
+   SCIP_Bool infeasible;
    int i;
 
    const char* input = "1.0 * <x> + 2.0 * <y> - 3.0 * <z> + 0.5";
 
    /* create expression constraint */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "test", simplified, -2.0, 2.0) );
 
    /* get an equivalent linear constraint */
@@ -123,12 +124,13 @@ Test(linconsupg, quadratic)
    SCIP_CONS* lincons;
    SCIP_CONS* cons;
    SCIP_Bool changed;
+   SCIP_Bool infeasible;
 
    const char* input = "<x>^2 + <y>";
 
    /* create expression constraint */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "test", simplified, -2.0, 2.0) );
 
    /* get an equivalent linear constraint, which should not be possible  */

@@ -33,7 +33,7 @@ extern "C" {
 #endif
 
 /** creates an exponential expression */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprExp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -42,7 +42,7 @@ SCIP_RETCODE SCIPcreateConsExprExprExp(
    );
 
 /** creates the handler for exponential expressions and includes it into the expression constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */

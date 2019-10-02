@@ -358,9 +358,9 @@ SCIP_Bool SCIPexpriteratorIsInit(
 
 /** initializes an expression iterator
  *
- * \note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
+ * @note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
  *
- * \note If expr is NULL, then iterator will be ended (SCIPexpriteratorIsEnd() is TRUE). Useful if following with SCIPexpriteratorRestartDFS().
+ * @note If expr is NULL, then iterator will be ended (SCIPexpriteratorIsEnd() is TRUE). Useful if following with SCIPexpriteratorRestartDFS().
  *
  * If type is DFS, then stopstages will be set to ENTEREXPR. Use SCIPexpriteratorSetStagesDFS to change this.
  *
@@ -691,7 +691,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetParentDFS(
 
 /** gives the iterator specific user data of the current expression
  *
- * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
 SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetCurrentUserData(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
@@ -706,7 +706,7 @@ SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetCurrentUserData(
 
 /** gives the iterator specific user data of the current expressions current child
  *
- * \note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
+ * @note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
  */
 SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetChildUserDataDFS(
    SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
@@ -725,7 +725,7 @@ SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetChildUserDataDFS(
 
 /** gives the iterator specific user data of a given expression
  *
- * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
 SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetExprUserData(
    SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
@@ -741,11 +741,11 @@ SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetExprUserData(
 
 /** sets the iterator specific user data of the current expression for an expression iteration if in DFS mode
  *
- * \note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
 void SCIPexpriteratorSetCurrentUserData(
-   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPRITERATOR_USERDATA    userdata     /**< data to be stored */
+   SCIP_CONSEXPR_ITERATOR*         iterator, /**< expression iterator */
+   SCIP_CONSEXPRITERATOR_USERDATA  userdata  /**< data to be stored */
    )
 {
    assert(iterator != NULL);
@@ -755,13 +755,29 @@ void SCIPexpriteratorSetCurrentUserData(
    iterator->curr->iterdata[iterator->iterindex].userdata = userdata;
 }
 
+/** sets the iterator specific user data of a given expression
+ *
+ * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
+ */
+void SCIPexpriteratorSetExprUserData(
+   SCIP_CONSEXPR_ITERATOR*         iterator, /**< expression iterator */
+   SCIP_CONSEXPR_EXPR*             expr,     /**< expression where to set iterator data */
+   SCIP_CONSEXPRITERATOR_USERDATA  userdata  /**< data to be stored in current child */
+   )
+{
+   assert(iterator != NULL);
+   assert(iterator->iterindex >= 0);
+
+   expr->iterdata[iterator->iterindex].userdata = userdata;
+}
+
 /** sets the iterator specific user data of the current expressions current child
  *
- * \note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
+ * @note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
  */
 void SCIPexpriteratorSetChildUserData(
-   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPRITERATOR_USERDATA    userdata     /**< data to be stored in current child */
+   SCIP_CONSEXPR_ITERATOR*         iterator, /**< expression iterator */
+   SCIP_CONSEXPRITERATOR_USERDATA  userdata  /**< data to be stored in current child */
    )
 {
    assert(iterator != NULL);

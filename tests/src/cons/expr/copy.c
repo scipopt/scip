@@ -86,7 +86,7 @@ Test(copy, copy, .init = setup, .fini = teardown)
    /* copy SCIP */
    valid = FALSE;
    SCIP_CALL( SCIPcreate(&subscip) );
-   SCIP_CALL( SCIPcopy(scip, subscip, NULL, NULL, "copytest_", TRUE, FALSE, FALSE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, NULL, NULL, "copytest_", TRUE, FALSE, FALSE, FALSE, &valid) );
 
    /* check copying was valid and some sanity checks */
    cr_assert(valid);

@@ -118,12 +118,14 @@ Test(pow, simplify, .description = "Tests the expression simplification.")
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
    SCIP_Bool changed = FALSE;
+   SCIP_Bool infeasible;
 
    /* binary variable to positive exponent */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x>^17.43", NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
 
    cr_expect(changed);
+   cr_assert_not(infeasible);
    cr_assert_eq(SCIPgetConsExprExprHdlr(expr), SCIPfindConsExprExprHdlr(conshdlr, "pow"));
    cr_assert_eq(SCIPgetConsExprExprHdlr(simplified), SCIPgetConsExprExprHdlrVar(conshdlr));
    cr_assert_eq(x, SCIPgetConsExprExprVarVar(simplified));
@@ -133,9 +135,10 @@ Test(pow, simplify, .description = "Tests the expression simplification.")
    /* binary variable to negative exponent -> nothing happens */
    changed = FALSE;
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x>^(-1.43)", NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
 
    cr_expect_not(changed);
+   cr_assert_not(infeasible);
    cr_assert_eq(SCIPgetConsExprExprHdlr(expr), SCIPfindConsExprExprHdlr(conshdlr, "pow"));
    cr_assert_eq(SCIPgetConsExprExprHdlr(simplified), SCIPfindConsExprExprHdlr(conshdlr, "pow"));
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

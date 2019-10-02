@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,25 +39,6 @@
 #include "scip/type_scip.h"
 #include "scip/type_timing.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -74,7 +55,7 @@ extern "C" {
  *        in future releases; consider using SCIPincludePresolBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePresol(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of presolver */
@@ -99,7 +80,7 @@ SCIP_RETCODE SCIPincludePresol(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludePresol() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePresolBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL**         presolptr,          /**< reference to presolver, or NULL */
@@ -113,7 +94,7 @@ SCIP_RETCODE SCIPincludePresolBasic(
    );
 
 /** sets copy method of presolver */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPresolCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL*          presol,             /**< presolver */
@@ -121,7 +102,7 @@ SCIP_RETCODE SCIPsetPresolCopy(
    );
 
 /** sets destructor method of presolver */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPresolFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL*          presol,             /**< presolver */
@@ -129,7 +110,7 @@ SCIP_RETCODE SCIPsetPresolFree(
    );
 
 /** sets initialization method of presolver */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPresolInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL*          presol,             /**< presolver */
@@ -137,7 +118,7 @@ SCIP_RETCODE SCIPsetPresolInit(
    );
 
 /** sets deinitialization method of presolver */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPresolExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL*          presol,             /**< presolver */
@@ -145,7 +126,7 @@ SCIP_RETCODE SCIPsetPresolExit(
    );
 
 /** sets solving process initialization method of presolver */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPresolInitpre(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL*          presol,             /**< presolver */
@@ -160,26 +141,26 @@ SCIP_RETCODE SCIPsetPresolExitpre(
    );
 
 /** returns the presolver of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_PRESOL* SCIPfindPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of presolver */
    );
 
 /** returns the array of currently available presolvers */
-EXTERN
+SCIP_EXPORT
 SCIP_PRESOL** SCIPgetPresols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available presolvers */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPresols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of a presolver */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPresolPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL*          presol,             /**< presolver */

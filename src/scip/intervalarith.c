@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   intervalarith.c
+ * @ingroup OTHER_CFILES
  * @brief  interval arithmetics for provable bounds
  * @author Tobias Achterberg
  * @author Stefan Vigerske
@@ -33,7 +34,27 @@
 #include "scip/pub_message.h"
 #include "scip/misc.h"
 
-#ifdef ROUNDING_FE
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
+ */
+#ifndef __clang__
+#pragma STD FENV_ACCESS ON
+#endif
+
+/* Unfortunately, the FENV_ACCESS pragma is essentially ignored by GCC at the moment (2019),
+ * see #2650 and https://gcc.gnu.org/bugzilla/show_bug.cgi?id=34678.
+ * There are ways to work around this by declaring variables volatile or inserting more assembler code,
+ * but there is always the danger that something would be overlooked.
+ * A more drastic but safer way seems to be to just disable all compiler optimizations for this file.
+ * The Intel compiler seems to implement FENV_ACCESS correctly, but also defines __GNUC__.
+ */
+#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+#endif
+
+#ifdef SCIP_ROUNDING_FE
 #define ROUNDING
 /*
  * Linux rounding operations
@@ -79,7 +100,7 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 
 
 
-#ifdef ROUNDING_FP
+#ifdef SCIP_ROUNDING_FP
 #define ROUNDING
 /*
  * OSF rounding operations
@@ -125,7 +146,7 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 
 
 
-#ifdef ROUNDING_MS
+#ifdef SCIP_ROUNDING_MS
 #define ROUNDING
 /*
  * Microsoft compiler rounding operations
@@ -212,10 +233,11 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 /** gets the negation of a double
  * Do this in a way that the compiler does not "optimize" it away, which usually does not considers rounding modes.
  * However, compiling with -frounding-math would allow to return -x here.
+ * @todo We now set the FENV_ACCESS pragma to on, which is the same as -frounding-math, so we might be able to eliminate this.
  */
 static
 double negate(
-   /* we explicitely use double here, since I'm not sure the assembler code would work as it for other float's */
+   /* we explicitly use double here, since I'm not sure the assembler code would work as it for other float's */
    double                x                   /**< number that should be negated */
    )
 {
@@ -234,7 +256,7 @@ double negate(
  */
 static
 double negate(
-   /* we explicitely use double here, since I'm not sure the assembler code would work as it for other float's */
+   /* we explicitly use double here, since I'm not sure the assembler code would work as it for other float's */
    double                x                   /**< number that should be negated */
    )
 {
@@ -470,6 +492,45 @@ void SCIPintervalIntersect(
 
    resultant->inf = MAX(operand1.inf, operand2.inf);
    resultant->sup = MIN(operand1.sup, operand2.sup);
+}
+
+/** intersection of two intervals with epsilon tolerance
+ *
+ * If intersection of operand1 and operand2 is empty, but minimal (relative) distance of intervals
+ * is at most epsilon, then set resultant to singleton containing the point in operand1
+ * that is closest to operand2, i.e.,
+ * - resultant = { operand1.sup }, if operand1.sup < operand2.inf and reldiff(operand2.inf,operand1.sup) <= eps
+ * - resultant = { operand1.inf }, if operand1.inf > operand2.sup and reldiff(operand1.inf,operand2.sup) <= eps
+ * - resultant = intersection of operand1 and operand2, otherwise
+ */
+void SCIPintervalIntersectEps(
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_Real             eps,                /**< epsilon */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   )
+{
+   assert(resultant != NULL);
+   assert(eps >= 0.0);
+
+   if( operand1.sup < operand2.inf )
+   {
+      if( SCIPrelDiff(operand2.inf, operand1.sup) <= eps )
+      {
+         SCIPintervalSet(resultant, operand1.sup);
+         return;
+      }
+   }
+   else if( operand1.inf > operand2.sup )
+   {
+      if( SCIPrelDiff(operand1.inf, operand2.sup) <= eps )
+      {
+         SCIPintervalSet(resultant, operand1.inf);
+         return;
+      }
+   }
+
+   SCIPintervalIntersect(resultant, operand1, operand2);
 }
 
 /** interval enclosure of the union of two intervals */
@@ -2756,10 +2817,10 @@ void SCIPintervalEntropy(
 {
    SCIP_Real loginf;
    SCIP_Real logsup;
-   SCIP_Real infcand1;
-   SCIP_Real infcand2;
-   SCIP_Real supcand1;
-   SCIP_Real supcand2;
+   SCIP_Real infcand1 = 0.0;
+   SCIP_Real infcand2 = 0.0;
+   SCIP_Real supcand1 = 0.0;
+   SCIP_Real supcand2 = 0.0;
    SCIP_Real extr;
    SCIP_Real inf;
    SCIP_Real sup;
@@ -2785,21 +2846,43 @@ void SCIPintervalEntropy(
 
    /* first, compute the logarithms (roundmode nearest, then nextafter) */
    assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-   loginf = operand.inf > 0.0 ? log(operand.inf) : 0.0;
-   logsup = log(operand.sup);
-   infcand1 = operand.inf > 0.0 ? SCIPnextafter(loginf, SCIP_REAL_MAX) : 0.0;
-   infcand2 = SCIPnextafter(logsup, SCIP_REAL_MAX);
-   supcand1 = operand.inf > 0.0 ? SCIPnextafter(loginf, SCIP_REAL_MIN) : 0.0;
-   supcand2 = SCIPnextafter(logsup, SCIP_REAL_MIN);
+   if( operand.inf > 0.0 )
+   {
+      loginf = log(operand.inf);
+      infcand1 = SCIPnextafter(loginf, SCIP_REAL_MAX);
+      supcand1 = SCIPnextafter(loginf, SCIP_REAL_MIN);
+   }
+   if( operand.sup < infinity )
+   {
+      logsup = log(operand.sup);
+      infcand2 = SCIPnextafter(logsup, SCIP_REAL_MAX);
+      supcand2 = SCIPnextafter(logsup, SCIP_REAL_MIN);
+   }
 
    /* second, multiply with operand.inf/sup using upward rounding
     * thus, for infinum, negate after muliplication; for supremum, negate before multiplication
     */
    SCIPintervalSetRoundingModeUpwards();
-   infcand1 = SCIPnegateReal(operand.inf * infcand1);
-   infcand2 = SCIPnegateReal(operand.sup * infcand2);
-   supcand1 = SCIPnegateReal(operand.inf) * supcand1;
-   supcand2 = SCIPnegateReal(operand.sup) * supcand2;
+   if( operand.inf > 0.0 )
+   {
+      infcand1 = SCIPnegateReal(operand.inf * infcand1);
+      supcand1 = SCIPnegateReal(operand.inf) * supcand1;
+   }
+   else
+   {
+      infcand1 = 0.0;
+      supcand1 = 0.0;
+   }
+   if( operand.sup < infinity )
+   {
+      infcand2 = SCIPnegateReal(operand.sup * infcand2);
+      supcand2 = SCIPnegateReal(operand.sup) * supcand2;
+   }
+   else
+   {
+      infcand2 = -infinity;
+      supcand2 = -infinity;
+   }
 
    /* restore original rounding mode (asserted to be "to-nearest" above) */
    SCIPintervalSetRoundingModeToNearest();
@@ -3274,7 +3357,7 @@ void SCIPintervalSolveUnivariateQuadExpression(
    if( xbnds.sup >= 0 )
    {
       SCIPintervalSolveUnivariateQuadExpressionPositive(infinity, &xpos, sqrcoeff, lincoeff, rhs, xbnds);
-      SCIPdebugMessage("  solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] for x in [%g,%g] are [%.20g,%.20g]\n",
+      SCIPdebugMessage("  solutions of [%g,%g]*x^2 + [%g,%g]*x in [%g,%g] for x in [%g,%g] are [%.15g,%.15g]\n",
          sqrcoeff.inf, sqrcoeff.sup, lincoeff.inf, lincoeff.sup, rhs.inf, rhs.sup, MAX(xbnds.inf, 0.0), xbnds.sup, xpos.inf, xpos.sup);
    }
    else
@@ -4437,3 +4520,8 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       SCIPintervalIntersect(resultant, *resultant, xbnds);
    }
 }
+
+/* pop -O0 from beginning, though it probably doesn't matter here at the end of the compilation unit */
+#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
+#pragma GCC pop_options
+#endif

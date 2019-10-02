@@ -138,6 +138,8 @@ typedef enum
  * that *targetexprdata will be set. This data will then be used
  * to create a new expression.
  *
+ * This callback must be implemented for expressions that have data.
+ *
  *  input:
  *  - targetscip         : target SCIP main data structure
  *  - targetexprhdlr     : expression handler in target SCIP
@@ -160,6 +162,8 @@ typedef enum
  *
  * The method frees the data of an expression.
  * It assumes that expr->exprdata will be set to NULL.
+ *
+ * This callback must be implemented for expressions that have data.
  *
  *  input:
  *  - scip          : SCIP main data structure
@@ -216,20 +220,32 @@ typedef enum
 
 /** expression curvature detection callback
  *
- * The method computes the curvature of an given expression. It assumes that the interval evaluation of the expression
- * has been called before and the expression has been simplified.
+ * The method returns whether an expression can have a desired curvature under conditions on the
+ * curvature of the children.
+ * That is, the method shall return TRUE in success and requirements on the curvature for each child
+ * which will suffice for this expression to be convex (or concave, or linear, as specified by caller)
+ * w.r.t. the current activities of all children.
+ * It can return "unknown" for a child's curvature if its curvature does not matter (though that's
+ * rarely the case).
+ *
+ * The method assumes that the activity evaluation of the expression has been called before
+ * and the expression has been simplified.
  *
  * input:
  *  - scip : SCIP main data structure
  *  - conshdlr : expression constraint handler
  *  - expr : expression to check the curvature for
- *  - curvature : buffer to store the curvature of the expression
+ *  - exprcurvature : desired curvature of this expression
+ *  - success: buffer to store whether the desired curvature be obtained
+ *  - childcurv: array to store required curvature for each child
  */
 #define SCIP_DECL_CONSEXPR_EXPRCURVATURE(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_EXPRCURV* curvature)
+   SCIP_EXPRCURV exprcurvature, \
+   SCIP_Bool* success, \
+   SCIP_EXPRCURV* childcurv )
 
 /** expression monotonicity detection callback
  *
@@ -383,12 +399,14 @@ typedef enum
  *
  * input:
  *  - scip           : SCIP main data structure
+ *  - consexprhdlr   : expression constraint handler
  *  - expr           : expression to simplify
  * output:
  *  - simplifiedexpr : the simplified expression
  */
 #define SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(x) SCIP_RETCODE x (\
    SCIP*                 scip,               \
+   SCIP_CONSHDLR*        conshdlr,           \
    SCIP_CONSEXPR_EXPR*   expr,               \
    SCIP_CONSEXPR_EXPR**  simplifiedexpr)
 
@@ -419,6 +437,7 @@ typedef enum
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : expression constraint handler
+ *  - cons            : expression constraint
  *  - expr            : expression
  *  - overestimate    : whether the expression needs to be overestimated
  *  - underestimate   : whether the expression needs to be underestimated
@@ -429,6 +448,7 @@ typedef enum
 #define SCIP_DECL_CONSEXPR_EXPRINITSEPA(x) SCIP_RETCODE x (\
       SCIP* scip, \
       SCIP_CONSHDLR* conshdlr, \
+      SCIP_CONS* cons, \
       SCIP_CONSEXPR_EXPR* expr, \
       SCIP_Bool overestimate, \
       SCIP_Bool underestimate, \
@@ -450,6 +470,8 @@ typedef enum
  *
  * input:
  *  - scip : SCIP main data structure
+ *  - conshdlr : expression constraint handler
+ *  - cons : expression constraint
  *  - expr : expression
  *  - sol  : solution to be separated (NULL for the LP solution)
  *  - overestimate : whether the expression needs to be over- or underestimated
@@ -460,6 +482,7 @@ typedef enum
 #define SCIP_DECL_CONSEXPR_EXPRSEPA(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONS* cons, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_SOL* sol, \
    SCIP_Bool overestimate, \
@@ -551,11 +574,11 @@ typedef struct SCIP_ConsExpr_Iterator      SCIP_CONSEXPR_ITERATOR;      /**< exp
 #define SCIP_CONSEXPR_PRINTDOT_NLOCKS       0x8u /**< print number of locks */
 #define SCIP_CONSEXPR_PRINTDOT_EVALVALUE   0x10u /**< print evaluation value */
 #define SCIP_CONSEXPR_PRINTDOT_EVALTAG     0x30u /**< print evaluation value and tag */
-#define SCIP_CONSEXPR_PRINTDOT_INTERVAL    0x40u /**< print interval value */
-#define SCIP_CONSEXPR_PRINTDOT_INTERVALTAG 0xC0u /**< print interval value and tag */
+#define SCIP_CONSEXPR_PRINTDOT_ACTIVITY    0x40u /**< print activity value */
+#define SCIP_CONSEXPR_PRINTDOT_ACTIVITYTAG 0xC0u /**< print activity value and corresponding tag */
 
 /** print everything */
-#define SCIP_CONSEXPR_PRINTDOT_ALL SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EXPRHDLR | SCIP_CONSEXPR_PRINTDOT_NUSES | SCIP_CONSEXPR_PRINTDOT_NLOCKS | SCIP_CONSEXPR_PRINTDOT_EVALTAG | SCIP_CONSEXPR_PRINTDOT_INTERVALTAG
+#define SCIP_CONSEXPR_PRINTDOT_ALL SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EXPRHDLR | SCIP_CONSEXPR_PRINTDOT_NUSES | SCIP_CONSEXPR_PRINTDOT_NLOCKS | SCIP_CONSEXPR_PRINTDOT_EVALTAG | SCIP_CONSEXPR_PRINTDOT_ACTIVITYTAG
 
 
 typedef unsigned int                      SCIP_CONSEXPR_PRINTDOT_WHAT; /**< type for printdot bitflags */
@@ -615,11 +638,13 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *
  * - scip SCIP data structure
  * - nlhdlr nonlinear handler
+ * - expr expression
  * - nlhdlrexprdata nonlinear handler expression data to be freed
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
 /** callback to be called in initialization
@@ -674,7 +699,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * - conshdlr expr-constraint handler
  * - nlhdlr nonlinear handler
  * - expr expression to analyze
- * - isroot indicates whether expression defines a constraint, that is, is the root of an expression
+ * - cons the constraint that expression defines, or NULL when the expr does not define any constraint, that is, when is not the root of an expression
  * - enforcemethods enforcement methods that are provided by some nonlinear handler (to be updated by detect callback)
  * - enforcedbelow indicates whether an enforcement method for expr <= auxvar exists (to be updated by detect callback) or is not necessary
  * - enforcedabove indicates whether an enforcement method for expr >= auxvar exists (to be updated by detect callback) or is not necessary
@@ -686,7 +711,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_Bool isroot, \
+   SCIP_CONS* cons, \
    SCIP_CONSEXPR_EXPRENFO_METHOD* enforcemethods, \
    SCIP_Bool* enforcedbelow, \
    SCIP_Bool* enforcedabove, \
@@ -783,6 +808,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : expression constraint handler
+ *  - cons            : expression constraint
  *  - nlhdlr          : nonlinear handler
  *  - nlhdlrexprdata  : exprdata of nonlinear handler
  *  - expr            : expression
@@ -795,6 +821,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 #define SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(x) SCIP_RETCODE x (\
       SCIP* scip, \
       SCIP_CONSHDLR* conshdlr, \
+      SCIP_CONS* cons, \
       SCIP_CONSEXPR_NLHDLR* nlhdlr, \
       SCIP_CONSEXPR_EXPR* expr, \
       SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
@@ -837,6 +864,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * input:
  *  - scip : SCIP main data structure
  *  - conshdlr : cons expr handler
+ *  - cons : expression constraint
  *  - nlhdlr : nonlinear handler
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
@@ -851,6 +879,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 #define SCIP_DECL_CONSEXPR_NLHDLRSEPA(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
+   SCIP_CONS* cons, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
@@ -932,6 +961,22 @@ typedef struct SCIP_ConsExpr_NlhdlrData     SCIP_CONSEXPR_NLHDLRDATA;      /**< 
 typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
 
 /** @} */
+
+/** evaluation callback for (vertex-polyhedral) functions used as input for facet computation of its envelopes
+ *
+ * input:
+ * - args the point to be evaluated
+ * - nargs the number of arguments of the function (length of array args)
+ * - funcdata user-data of function evaluation callback
+ *
+ * return:
+ * - value of function in point x or SCIP_INVALID if could not be evaluated
+ */
+#define SCIP_DECL_VERTEXPOLYFUN(f) SCIP_Real f (SCIP_Real* args, int nargs, void* funcdata)
+
+/** maximum dimension of vertex-polyhedral function for which we can try to compute a facet of its convex or concave envelope */
+#define SCIP_MAXVERTEXPOLYDIM 14
+
 
 #ifdef __cplusplus
 }

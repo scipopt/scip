@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_zpl.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  ZIMPL model file reader
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -23,7 +24,7 @@
 
 #include "scip/reader_zpl.h"
 
-#ifdef WITH_ZIMPL
+#ifdef SCIP_WITH_ZIMPL
 
 #include <unistd.h>
 #include <stdbool.h>
@@ -1602,7 +1603,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-#ifdef WITH_ZIMPL
+#ifdef SCIP_WITH_ZIMPL
 #if (ZIMPL_VERSION >= 320)
    SCIP_READERDATA* readerdata;
    SCIP_READER* reader;

@@ -49,6 +49,9 @@ void setup(void)
    /* include cons_expr: this adds the operator handlers */
    SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
 
+   /* disable relaxing variable bounds in activity evaluation */
+   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/varboundrelax", 'n') );
+
    /* get expr conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "expr");
    cr_assert(conshdlr != NULL);
@@ -167,7 +170,7 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
 Test(entropy, inteval, .description = "Tests the expression interval evaluation.")
 {
    SCIP_INTERVAL intervalEntropy;
-   SCIP_INTERVAL intervalProd;
+   /*FIXME SCIP_INTERVAL intervalProd;*/
    SCIP_Real rndlb[4];
    SCIP_Real rndub[4];
    SCIP_Real rndreslb[4];
@@ -206,16 +209,18 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, entropyexpr, 0, NULL, NULL) );
+      SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, entropyexpr, &intervalEntropy, FALSE) );
 
-      intervalEntropy = SCIPgetConsExprExprInterval(entropyexpr);
       cr_expect(SCIPisEQ(scip, intervalEntropy.inf, detreslb[i]));
       cr_expect(SCIPisEQ(scip, intervalEntropy.sup, detresub[i]));
 
+      /* FIXME what was this code meant to do?
       intervalProd = SCIPgetConsExprExprInterval(entropyexpr);
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, negprodexpr, 0, NULL, NULL) );
       cr_expect(SCIPisLE(scip, intervalEntropy.inf, intervalProd.inf));
       cr_expect(SCIPisGE(scip, intervalEntropy.sup, intervalProd.sup));
+      */
    }
 
    /* random part */
@@ -223,16 +228,18 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, entropyexpr, 0, NULL, NULL) );
+      SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, entropyexpr, &intervalEntropy, FALSE) );
 
-      intervalEntropy = SCIPgetConsExprExprInterval(entropyexpr);
       cr_expect(SCIPisEQ(scip, intervalEntropy.inf, rndreslb[i]));
       cr_expect(SCIPisEQ(scip, intervalEntropy.sup, rndresub[i]));
 
+      /* FIXME what was this code meant to do?
       intervalProd = SCIPgetConsExprExprInterval(entropyexpr);
       SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, negprodexpr, 0, NULL, NULL) );
       cr_expect(SCIPisLE(scip, intervalEntropy.inf, intervalProd.inf));
       cr_expect(SCIPisGE(scip, intervalEntropy.sup, intervalProd.sup));
+      */
    }
 }
 
@@ -300,14 +307,16 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    SCIP_CONSEXPR_EXPR* expr2;
    SCIP_CONSEXPR_EXPR* expr3;
    SCIP_Bool changed = FALSE;
+   SCIP_Bool infeasible;
 
    /* expr1 = <5.0>, expr2 = entropy(<5.0>), expr3 is buffer for simplification */
    SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr1, 5.0));
    SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, conshdlr, &expr2, expr1));
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr2, &expr3, &changed));
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr2, &expr3, &changed, &infeasible));
    SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr2, sol, 0) );
 
    cr_expect(changed);
+   cr_assert_not(infeasible);
    cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));
    cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr2), -5.0 * log(5.0)));
 
@@ -319,9 +328,10 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
     * expr1 is buffer for simplification and expr2 is used to store children
     */
    changed = FALSE;
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, prodexpr, &expr1, &changed));
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, prodexpr, &expr1, &changed, &infeasible));
 
    cr_expect(changed);
+   cr_assert_not(infeasible);
    cr_expect(SCIPgetConsExprExprHdlr(expr1) == SCIPgetConsExprExprHdlrSum(conshdlr));
    cr_expect(SCIPgetConsExprExprNChildren(expr1) == 1);
    cr_expect(SCIPgetConsExprExprSumCoefs(expr1)[0] == -1.0);
@@ -338,9 +348,10 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
     * expr1 is buffer for simplification
     */
    changed = FALSE;
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, negprodexpr, &expr1, &changed));
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, negprodexpr, &expr1, &changed, &infeasible));
 
    cr_expect(changed);
+   cr_assert_not(infeasible);
    cr_expect(SCIPgetConsExprExprHdlr(expr1) == SCIPfindConsExprExprHdlr(conshdlr, "entropy"));
    cr_expect(SCIPgetConsExprExprNChildren(expr1) == 1);
    cr_expect(SCIPgetConsExprExprChildren(expr1)[0] == xexpr);

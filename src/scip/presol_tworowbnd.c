@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_tworowbnd.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  do bound tightening by using two rows
  * @author Dieter Weninger
  *
@@ -1441,7 +1442,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
 
    if( initialized && complete )
    {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_lpface.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  lpface primal heuristic that searches the optimal LP face inside a sub-MIP
  * @author Gregor Hendel
  */
@@ -55,7 +56,7 @@
 
 #define HEUR_NAME             "lpface"
 #define HEUR_DESC             "LNS heuristic that searches the optimal LP face inside a sub-MIP"
-#define HEUR_DISPCHAR         '_'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1104000
 #define HEUR_FREQ             15
 #define HEUR_FREQOFS          0
@@ -172,6 +173,10 @@ SCIP_RETCODE fixVariables(
       if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
          continue;
 
+      /* skip variables not in sub-SCIP (relaxation-only variables)*/
+      if( subvars[i] == NULL )
+         continue;
+
       solval = SCIPgetSolVal(scip, NULL, var);
       col = SCIPvarGetCol(vars[i]);
       assert(col != NULL);
@@ -231,7 +236,7 @@ SCIP_RETCODE createRows(
    /* get the rows and their number */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
 
-   /* copy all rows to linear constraints */
+   /* copy all global rows to linear constraints, unless they contain relaxation-only variables */
    for( i = 0; i < nrows; i++ )
    {
       SCIP_VAR** consvars;                   /* new constraint's variables               */
@@ -272,7 +277,17 @@ SCIP_RETCODE createRows(
       /* allocate memory array to be filled with the corresponding subproblem variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
       for( j = 0; j < nnonz; j++ )
+      {
          consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
+         if( consvars[j] == NULL )
+            break;
+      }
+      /* skip row if not all variables are in sub-SCIP, i.e., relaxation-only variables */
+      if( j < nnonz )
+      {
+         SCIPfreeBufferArray(scip, &consvars);
+         continue;
+      }
 
       dualsol = SCIProwGetDualsol(rows[i]);
       rowsolactivity = SCIPgetRowActivity(scip, rows[i]);
@@ -340,6 +355,7 @@ SCIP_RETCODE setupSubproblem(
    {
       if( ! SCIPisZero(subscip, SCIPvarGetObj(vars[i])) )
       {
+         assert(subvars[i] != NULL);  /* a relaxation-only variable cannot have an objective coefficient */
          SCIP_CALL( SCIPaddCoefLinear(subscip, origobjcons, subvars[i], SCIPvarGetObj(vars[i])) );
 #ifndef NDEBUG
          nobjvars++;
@@ -350,69 +366,6 @@ SCIP_RETCODE setupSubproblem(
 
    SCIP_CALL( SCIPaddCons(subscip, origobjcons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &origobjcons) );
-
-   return SCIP_OKAY;
-}
-
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_HEUR*            heur,               /**< lpface heuristic structure */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem */
-   int*                  solindex,           /**< pointer to store index of the solution */
-   SCIP_Bool*            success             /**< pointer to store whether new solution was found or not */
-   )
-{
-   SCIP_VAR** vars;                          /* the original problem's variables                */
-   int        nvars;
-   SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-   SCIP_Bool printreason;
-   SCIP_Bool completely;
-
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-   assert(subsol != NULL);
-
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-   *solindex = SCIPsolGetIndex(newsol);
-
-#ifdef SCIP_DEBUG
-   printreason = TRUE;
-   completely = TRUE;
-   SCIPdebugMsg(scip, "trying to transfer LP face solution with solution value %16.9g to main problem\n",
-      SCIPretransformObj(scip, SCIPgetSolTransObj(scip, newsol)));
-#else
-   printreason = FALSE;
-   completely = FALSE;
-#endif
-
-   /* try to add new solution to scip and free it immediately */
-   *success = FALSE;
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, printreason, completely, TRUE, TRUE, TRUE, success) );
-
-   SCIPdebugMsg(scip, "Transfer was %s successful\n", *success ? "" : "not");
-
-   SCIPfreeBufferArray(scip, &subsolvals);
 
    return SCIP_OKAY;
 }
@@ -805,7 +758,6 @@ SCIP_RETCODE setupSubscipLpface(
       SCIP_Bool valid;
       char probname[SCIP_MAXSTRLEN];
 
-
       /* copy all plugins */
       SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
             TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
@@ -824,7 +776,7 @@ SCIP_RETCODE setupSubscipLpface(
    }
    else
    {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "lpface", TRUE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "lpface", TRUE, FALSE, FALSE, TRUE, &success) );
 
       if( heurdata->copycuts )
       {
@@ -838,7 +790,10 @@ SCIP_RETCODE setupSubscipLpface(
    {
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-      SCIP_CALL( changeSubvariableObjective(scip, subscip, vars[i], subvars[i], heurdata) );
+      if( subvars[i] != NULL )
+      {
+         SCIP_CALL( changeSubvariableObjective(scip, subscip, vars[i], subvars[i], heurdata) );
+      }
    }
 
    /* free hash map */
@@ -888,7 +843,6 @@ SCIP_RETCODE solveSubscipLpface(
 {
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_Bool success;
-   int i;
 
    assert( scip != NULL );
    assert( subscip != NULL );
@@ -962,21 +916,13 @@ SCIP_RETCODE solveSubscipLpface(
    }
    else if( SCIPgetNSols(subscip) > 0 )
    {
-      SCIP_SOL** subsols;
-      int nsubsols;
       int solindex;
 
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one is accepted
        */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
-      success = FALSE;
-      solindex = -1;
-      for( i = 0; i < nsubsols && !success; ++i )
-      {
-         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &solindex, &success) );
-      }
+      SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, &solindex) );
+      SCIPdebugMsg(scip, "Transfer was %s successful\n", success ? "" : "not");
 
       /* we found an optimal solution and are done. Thus, we free the subscip immediately */
       if( success )

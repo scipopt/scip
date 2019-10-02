@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    presol_dualinfer.c
- * @ingroup PRESOLVERS
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief   dual inference presolver
  * @author  Dieter Weninger
  *
@@ -1136,7 +1136,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
 
    if( initialized && complete )
    {

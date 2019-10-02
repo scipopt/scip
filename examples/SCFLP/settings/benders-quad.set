@@ -1,0 +1,17 @@
+# SCIP version 6.0.0.2
+
+# maximal number of restarts (-1: unlimited)
+# [type: int, advanced: FALSE, range: [-1,2147483647], default: -1]
+presolving/maxrestarts = 0
+
+# Should Benders' decomposition be used to solve the problem?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+reading/scflpreader/usebenders = TRUE
+
+# the number of scenarios that will be randomly generated
+# [type: int, advanced: FALSE, range: [1,2147483647], default: 250]
+reading/scflpreader/numscenarios = 1
+
+# should the problem be formulated with quadratic costs
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+reading/scflpreader/quadcosts = TRUE

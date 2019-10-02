@@ -70,15 +70,11 @@ static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyCos)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
-   SCIP_CONSHDLR* conshdlr;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
@@ -165,10 +161,12 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalCos)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
-   childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
+   childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
 
-   SCIPintervalCos(SCIP_INTERVAL_INFINITY, interval, childinterval);
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+      SCIPintervalSetEmpty(interval);
+   else
+      SCIPintervalCos(SCIP_INTERVAL_INFINITY, interval, childinterval);
 
    return SCIP_OKAY;
 }
@@ -180,14 +178,18 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
    SCIP_Real childlb;
    SCIP_Real childub;
    SCIP_Bool success;
+   SCIP_VAR* childvar;
 
    SCIP_ROWPREP* cuts[5];   /* 0: secant, 1: left tangent, 2: right tangent, 3: left mid tangent, 4: right mid tangent */
    int i;
 
    *infeasible = FALSE;
 
-   childlb = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).inf;
-   childub = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]).sup;
+   childvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
+   assert(childvar != NULL);
+
+   childlb = SCIPvarGetLbLocal(childvar);
+   childub = SCIPvarGetUbLocal(childvar);
 
    /* no need for cut if child is fixed */
    if( SCIPisRelEQ(scip, childlb, childub) )
@@ -211,7 +213,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
                /* make a SCIP_ROW and add to LP */
                SCIP_ROW* row;
 
-               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
+               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], cons) );
                SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
             }
@@ -239,7 +241,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaCos)
                /* make a SCIP_ROW and add to LP */
                SCIP_ROW* row;
 
-               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], conshdlr) );
+               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], cons) );
                SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
             }
@@ -293,8 +295,8 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropCos)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(nreductions != NULL);
-   assert(SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)) >= -1.0);
-   assert(SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)) <= 1.0);
+   assert(SCIPintervalGetInf(SCIPgetConsExprExprActivity(scip, expr)) >= -1.0);
+   assert(SCIPintervalGetSup(SCIPgetConsExprExprActivity(scip, expr)) <= 1.0);
 
    *nreductions = 0;
 
@@ -302,12 +304,12 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropCos)
    assert(child != NULL);
 
    /* get the child interval and shift it to match sine */
-   newbounds = SCIPgetConsExprExprInterval(child);
+   newbounds = SCIPgetConsExprExprActivity(scip, child);
    newbounds.inf += M_PI_2;
    newbounds.sup += M_PI_2;
 
    /* compute the new child interval */
-   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, SCIPgetConsExprExprInterval(expr), newbounds, &newbounds) );
+   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, SCIPgetConsExprExprActivity(scip, expr), newbounds, &newbounds) );
 
    /* shift the new interval back */
    newbounds.inf -= M_PI_2;
@@ -344,15 +346,25 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureCos)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(exprcurvature != SCIP_EXPRCURV_UNKNOWN);
+   assert(childcurv != NULL);
+   assert(success != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
-   childinterval = SCIPgetConsExprExprInterval(child);
+   childinterval = SCIPgetConsExprExprActivity(scip, child);
 
-   *curvature = SCIPcomputeCurvatureSin(SCIPgetConsExprExprCurvature(child), childinterval.inf + M_PI_2,
-      childinterval.sup + M_PI_2);
+   /* TODO rewrite SCIPcomputeCurvatureSin so it provides the reverse operation */
+   *success = TRUE;
+   if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_CONCAVE, childinterval.inf + M_PI_2, childinterval.sup + M_PI_2) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_CONCAVE;
+   else if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_CONVEX, childinterval.inf + M_PI_2, childinterval.sup + M_PI_2) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_CONVEX;
+   else if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_LINEAR, childinterval.inf + M_PI_2, childinterval.sup + M_PI_2) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_LINEAR;
+   else
+      *success = FALSE;
 
    return SCIP_OKAY;
 }
@@ -372,7 +384,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityCos)
    assert(childidx == 0);
 
    assert(SCIPgetConsExprExprChildren(expr)[0] != NULL);
-   interval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   interval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
 
    *result = SCIP_MONOTONE_UNKNOWN;
    inf = SCIPintervalGetInf(interval);

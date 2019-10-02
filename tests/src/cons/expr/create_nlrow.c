@@ -38,6 +38,7 @@ static SCIP_VAR* x4;
 static SCIP_VAR* x5;
 static const char* input;
 static SCIP_Bool changed;
+static SCIP_Bool infeasible;
 
 static
 void setup(void)
@@ -88,7 +89,7 @@ Test(test_create_nlrow, noquad)
 
    /* create constraint from input string */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, input, NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplifiedexpr, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplifiedexpr, &changed, &infeasible) );
 
    /* add constraint to SCIP and release it */
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &consexpr, "test", simplifiedexpr, 0, 1) );
@@ -141,7 +142,7 @@ Test(test_create_nlrow, nolin)
 
    /* create constraint from input string */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, input, NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplifiedexpr, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplifiedexpr, &changed, &infeasible) );
 
    /* add constraint to SCIP and release it */
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &consexpr, "test", simplifiedexpr, 0, 1) );

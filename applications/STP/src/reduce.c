@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -715,9 +715,6 @@ SCIP_RETCODE reduceSap(
    int     nnodes;
    int     nedges;
    int     nterms;
-   int     danelims;
-   int     sdnelims;
-   int     rptnelims;
    int     degtnelims;
    int     redbound;
    STP_Bool    da = TRUE;
@@ -766,6 +763,10 @@ SCIP_RETCODE reduceSap(
    /* main loop */
    while( (sd || rpt || da) && !SCIPisStopped(scip) )
    {
+      int danelims = 0;
+      int sdnelims = 0;
+      int rptnelims = 0;
+
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
@@ -847,7 +848,6 @@ SCIP_RETCODE reduceNw(
    int     nnodes;
    int     nedges;
    int     nterms;
-   int     danelims;
    int     redbound;
 
    STP_Bool*   nodearrchar;
@@ -885,6 +885,8 @@ SCIP_RETCODE reduceNw(
 
    while( (da) && !SCIPisStopped(scip) )
    {
+      int danelims = 0;
+
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 

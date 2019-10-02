@@ -24,7 +24,7 @@
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_nlhdlr_bilinear.c"
-
+#include "scip/struct_cons_expr.h"
 
 #include "include/scip_test.h"
 
@@ -84,11 +84,56 @@ SCIP_RETCODE createAndDetect(
 {
    SCIP_Bool infeasible;
 
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, cons, "cons", rootexpr, -10.0, 10.0) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, cons, "cons", rootexpr, -100.0, 100.0) );
    SCIP_CALL( SCIPaddConsLocks(scip, *cons, 1, 0) );
    SCIP_CALL( SCIPinitlpCons(scip, *cons, &infeasible) );
    SCIP_CALL( SCIPclearCuts(scip) ); /* we have to clear the separation store */
    SCIP_CALL( SCIPaddConsLocks(scip, *cons, -1, 0) );
+
+   return SCIP_OKAY;
+}
+
+/** free enfo data in expression
+ * used when we do a detect on a constraint that wasn't added to SCIP, so the conshdlr will not do this for us
+ */
+static
+SCIP_RETCODE freeEnfoData(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression where to free enfo data */
+   )
+{
+   int e;
+
+   /* free data stored by nonlinear handlers */
+   for( e = 0; e < expr->nenfos; ++e )
+   {
+      SCIP_CONSEXPR_NLHDLR* nlhdlr_;
+
+      assert(expr->enfos[e] != NULL);
+
+      nlhdlr_ = expr->enfos[e]->nlhdlr;
+      assert(nlhdlr_ != NULL);
+
+      if( expr->enfos[e]->issepainit )
+      {
+         /* call the separation deinitialization callback of the nonlinear handler */
+         SCIP_CALL( SCIPexitsepaConsExprNlhdlr(scip, nlhdlr_, expr, expr->enfos[e]->nlhdlrexprdata) );
+         expr->enfos[e]->issepainit = FALSE;
+      }
+
+      /* free nlhdlr exprdata, if there is any and there is a method to free this data */
+      if( expr->enfos[e]->nlhdlrexprdata != NULL && nlhdlr_->freeexprdata != NULL )
+      {
+         SCIP_CALL( (*nlhdlr_->freeexprdata)(scip, nlhdlr_, expr, &expr->enfos[e]->nlhdlrexprdata) );
+         assert(expr->enfos[e]->nlhdlrexprdata == NULL);
+      }
+
+      /* free enfo data */
+      SCIPfreeBlockMemory(scip, &expr->enfos[e]); /*lint !e866 */
+   }
+
+   /* free array with enfo data */
+   SCIPfreeBlockMemoryArrayNull(scip, &expr->enfos, expr->nenfos);
+   expr->nenfos = 0;
 
    return SCIP_OKAY;
 }
@@ -216,6 +261,7 @@ Test(nlhdlrbilinear, add_inequality)
    cr_expect(!success);
 
    /* free memory */
+   SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
@@ -310,12 +356,13 @@ Test(nlhdlrbilinear, separation_single)
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
    SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetConsExprNlhdlrExprData(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowprep, &success) );
    cr_expect(success);
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+   SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
    SCIP_CALL( checkCut(row, 0.5790816326530611, 0.3637755102040817, -1.0, -0.7846938775510204) );
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
    SCIPfreeRowprep(scip, &rowprep);
 
    /* free memory */
+   SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
@@ -374,12 +421,13 @@ Test(nlhdlrbilinear, separation_two)
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
    SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetConsExprNlhdlrExprData(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowprep, &success) );
    cr_expect(success);
-   SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+   SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
    SCIP_CALL( checkCut(row, 1.45445115010332, 0.9772255750516624, -1.0, -1.9213268615442665) );
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
    SCIPfreeRowprep(scip, &rowprep);
 
    /* free memory */
+   SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
@@ -413,15 +461,16 @@ Test(nlhdlrbilinear, inteval_corner)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, -1.0, 7.0, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
-   interval = SCIPgetConsExprExprInterval(expr);
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -10.0), "expect -10.0 got %g\n", SCIPintervalGetInf(interval));
    cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), 12.0), "expect 12.0 got %g\n", SCIPintervalGetSup(interval));
 
    /* free memory */
+   SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
@@ -451,15 +500,16 @@ Test(nlhdlrbilinear, inteval_single_line)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, -1.0, 3.5, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
-   interval = SCIPgetConsExprExprInterval(expr);
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -3.0625), "expect -3.0625 got %g\n", SCIPintervalGetInf(interval));
    cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), 15.0), "expect 15.0 got %g\n", SCIPintervalGetSup(interval));
 
    /* free memory */
+   SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
@@ -496,15 +546,16 @@ Test(nlhdlrbilinear, inteval_three_lines)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, 0.1, 3.5, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
-   interval = SCIPgetConsExprExprInterval(expr);
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -19.2), "expect -19.2 got %g\n", SCIPintervalGetInf(interval));
    cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), 4.248046875), "expect 4.248046875 got %g\n", SCIPintervalGetSup(interval));
 
    /* free memory */
+   SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[1]) );
@@ -538,15 +589,16 @@ Test(nlhdlrbilinear, inteval_parallel)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, -1.0, 1.0, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
-   interval = SCIPgetConsExprExprInterval(expr);
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -0.25), "expect -0.25 got %g\n", SCIPintervalGetInf(interval));
    cr_expect(SCIPisEQ(scip, SCIPintervalGetSup(interval), 1.0), "expect 1.0 got %g\n", SCIPintervalGetSup(interval));
 
    /* free memory */
+   SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
@@ -556,6 +608,7 @@ Test(nlhdlrbilinear, reverseprop_single)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;
    SCIP_CONS* cons;
+   SCIP_INTERVAL activity;
    SCIP_INTERVAL intervalx;
    SCIP_INTERVAL intervaly;
    SCIP_Bool success;
@@ -578,10 +631,11 @@ Test(nlhdlrbilinear, reverseprop_single)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, 1.0, -1.0, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).inf, -1.0));
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).sup, 0.0));
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
+   cr_expect(SCIPisEQ(scip, activity.inf, -1.0));
+   cr_expect(SCIPisEQ(scip, activity.sup, 0.0));
 
    /* compute intervals; inequality cuts off two corner points */
    nlhdlrexprdata = SCIPgetConsExprNlhdlrExprData(nlhdlr, expr);
@@ -592,6 +646,7 @@ Test(nlhdlrbilinear, reverseprop_single)
    cr_expect(SCIPisEQ(scip, intervaly.sup, 1.0));
 
    /* free memory */
+   SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
@@ -628,17 +683,18 @@ Test(nlhdlrbilinear, reverseprop_levelset)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, 0.7, 0.1, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).inf, -1.0));
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).sup, 1.0));
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   cr_expect(SCIPisEQ(scip, interval.inf, -1.0));
+   cr_expect(SCIPisEQ(scip, interval.sup, 1.0));
 
    /* tighten the lower bound of the expression */
    SCIPintervalSetBounds(&interval, -0.8, 0.5);
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, FALSE, NULL, &cutoff, &ntightenings) );
    cr_expect(!cutoff);
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).inf, -0.8));
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).sup, 0.5));
+   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).inf, -0.8));
+   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).sup, 0.5));
 
    /* compute intervals; inequality cuts off two corner points */
    nlhdlrexprdata = SCIPgetConsExprNlhdlrExprData(nlhdlr, expr);
@@ -651,6 +707,7 @@ Test(nlhdlrbilinear, reverseprop_levelset)
    cr_expect(SCIPisEQ(scip, intervaly.sup, 1.0));
 
    /* free memory */
+   SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
@@ -685,17 +742,18 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, 1.0, 0.0, &success) );
    cr_expect(success);
 
-   /* evaluate expression */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).inf, -1.0));
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).sup, 1.0));
+   /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
+   cr_expect(SCIPisEQ(scip, interval.inf, -1.0));
+   cr_expect(SCIPisEQ(scip, interval.sup, 1.0));
 
    /* tighten the lower bound of the expression */
    SCIPintervalSetBounds(&interval, -1.0, 0.5);
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, expr, interval, FALSE, NULL, &cutoff, &ntightenings) );
    cr_expect(!cutoff);
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).inf, -1.0));
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprInterval(expr).sup, 0.5));
+   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).inf, -1.0));
+   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).sup, 0.5));
 
    /* compute intervals; inequality does not intersect the level set in the interior of the domain -> no tightening */
    nlhdlrexprdata = SCIPgetConsExprNlhdlrExprData(nlhdlr, expr);
@@ -706,6 +764,7 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
    cr_expect(SCIPisEQ(scip, intervaly.sup, 1.0));
 
    /* free memory */
+   SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }

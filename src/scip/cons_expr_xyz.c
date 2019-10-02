@@ -212,6 +212,16 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaXyz)
    return SCIP_OKAY;
 }
 
+/** expression under/overestimation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateXyz)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+}
+
 /** expression reverse propagation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropXyz)
@@ -279,6 +289,22 @@ SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityXyz)
    return SCIP_OKAY;
 }
 
+/** expression branching score callback */
+static
+SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreXyz)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for xyz expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -312,6 +338,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityXyz) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityXyz) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrBranchscore(scip, consexprhdlr, exprhdlr, branchscoreXyz) );
 
    return SCIP_OKAY;
 }

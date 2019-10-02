@@ -1,4 +1,4 @@
-FLAGS		+=	-DROUNDING_FP  # if ROUNDING_FP does not work, try ROUNDING_FE or without
+FLAGS		+=	-DSCIP_ROUNDING_FP  # if SCIP_ROUNDING_FP does not work, try SCIP_ROUNDING_FE or without
 OFLAGS		+=	-O -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN) -std=c++0x

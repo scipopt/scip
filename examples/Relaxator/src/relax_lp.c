@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -90,7 +90,7 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
    SCIP_CALL( SCIPcreate(&relaxscip) );
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(relaxscip), SCIPgetNVars(scip)) );
    valid = FALSE;
-   SCIP_CALL( SCIPcopy(scip, relaxscip, varmap, NULL, "relaxscip", FALSE, FALSE, FALSE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, relaxscip, varmap, NULL, "relaxscip", FALSE, FALSE, FALSE, FALSE, &valid) );
 
    /* change variable types */
    for( i = 0; i < SCIPgetNVars(relaxscip); ++i )
@@ -117,7 +117,7 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
       if( (! SCIPisRelaxSolValid(scip)) || SCIPisGT(scip, relaxval, SCIPgetRelaxSolObj(scip)) )
       {
          SCIPdebugMsg(scip, "Setting LP relaxation solution, which improved upon earlier solution\n");
-         SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+         SCIP_CALL( SCIPclearRelaxSolVals(scip, relax) );
 
          for( i = 0; i < SCIPgetNVars(scip); ++i )
          {
@@ -129,11 +129,11 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
 
             solval = SCIPgetSolVal(relaxscip, SCIPgetBestSol(relaxscip), relaxvar);
 
-            SCIP_CALL( SCIPsetRelaxSolVal(scip, SCIPgetVars(scip)[i], solval) );
+            SCIP_CALL( SCIPsetRelaxSolVal(scip, relax, SCIPgetVars(scip)[i], solval) );
          }
 
          /* mark relaxation solution to be valid and inform SCIP that the relaxation included all LP rows */
-         SCIP_CALL( SCIPmarkRelaxSolValid(scip, TRUE) );
+         SCIP_CALL( SCIPmarkRelaxSolValid(scip, relax, TRUE) );
       }
 
       SCIPdebugMsg(scip, "LP lower bound = %g\n", relaxval);

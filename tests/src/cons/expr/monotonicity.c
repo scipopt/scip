@@ -50,6 +50,11 @@ void setup(void)
    conshdlr = SCIPfindConshdlr(scip, "expr");
    cr_assert(conshdlr != NULL);
 
+   /* disable relaxing variable bounds in activity evaluation
+    * (relaxes a bound M_PI to M_PI + epsilon, which weakens monotonicity computations
+    */
+   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/varboundrelax", 'n') );
+
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test") );
 
@@ -89,6 +94,7 @@ SCIP_RETCODE createExpr(
    SCIP_CONSEXPR_EXPR* origexpr;
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
    SCIP_Bool changed;
+   SCIP_Bool infeasible;
 
    /* release previous expression */
    if( expr != NULL )
@@ -100,7 +106,7 @@ SCIP_RETCODE createExpr(
    cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &origexpr), SCIP_OKAY);
 
    /* simplify expression */
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, origexpr, &expr, &changed) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, origexpr, &expr, &changed, &infeasible) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &origexpr) );
 
    /* check name of the corresponding expression handler */
@@ -127,6 +133,9 @@ SCIP_RETCODE chgBounds(
    cr_assert(lb <= ub);
    SCIP_CALL( SCIPchgVarLbGlobal(scip, var, lb) );
    SCIP_CALL( SCIPchgVarUbGlobal(scip, var, ub) );
+
+   SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
+
    return SCIP_OKAY;
 }
 
@@ -137,16 +146,16 @@ SCIP_RETCODE testMonotonicity(
    SCIP_MONOTONE        expectedres         /**< expected result */
    )
 {
+   SCIP_INTERVAL activity;
+
    cr_assert(i < SCIPgetConsExprExprNChildren(expr));
 
    /* evaluate all subexpressions */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
 
    /* check curvature */
-   cr_expect(SCIPgetConsExprExprMonotonicity(scip, expr, i) == expectedres, "expect %d, got %d",
+   cr_expect(SCIPgetConsExprExprMonotonicity(scip, expr, i) == expectedres, "got %d, expected %d",
       SCIPgetConsExprExprMonotonicity(scip, expr, i), expectedres);
-
-   assert(SCIPgetConsExprExprMonotonicity(scip, expr, i) == expectedres);
 
    return SCIP_OKAY;
 }
@@ -271,6 +280,16 @@ Test(monotonicity, pow)
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
    SCIP_CALL( chgBounds(x, -1.0, 1.0) );
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
+
+   SCIP_CALL( createExpr("signpower(<x>,2)", "signpower") );
+
+   SCIP_CALL( chgBounds(x, 0.0, SCIPinfinity(scip)) );
+   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_INC) );
+   SCIP_CALL( chgBounds(x, -SCIPinfinity(scip), 0.0) );
+   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_INC) );
+   SCIP_CALL( chgBounds(x, -1.0, 1.0) );
+   SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_INC) );
+
 }
 
 /* check for product expression with two factors */

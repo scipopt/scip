@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,6 +25,7 @@
 
 #include "scip/scip.h"
 #include "symmetry/type_symmetry.h"
+#include "scip/cons_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,10 +38,34 @@ struct SYM_Vartype
    SCIP_Real             lb;                 /**< lower bound of variable */
    SCIP_Real             ub;                 /**< upper bound of variable */
    SCIP_VARTYPE          type;               /**< type of variable */
+   int                   nconss;             /**< number of conss a variable is contained in */
    int                   color;              /**< store color */
 };
 
-/** data for symmetry group computation */
+/** data of operators that are considered to be equivalent */
+struct SYM_Optype
+{
+   SCIP_CONSEXPR_EXPR*   expr;               /**< the underlying expression */
+   int                   level;              /**< level of operator in its expression tree */
+   int                   color;              /**< store color */
+};
+
+/** data of constants that have the same value */
+struct SYM_Consttype
+{
+   SCIP_Real             value;              /**< value of constant */
+   int                   color;              /**< store color */
+};
+
+/** data of coefficients that have the same value */
+struct SYM_Rhstype
+{
+   SCIP_Real             lhs;                /**< value of left-hand-side */
+   SCIP_Real             rhs;                /**< value of right-hand-side */
+   int                   color;              /**< store color */
+};
+
+/** data for symmetry group computation on linear constraints */
 struct SYM_Matrixdata
 {
    SCIP_Real*            matcoef;            /**< nonzero coefficients appearing in the matrix */
@@ -61,6 +86,14 @@ struct SYM_Matrixdata
    int                   nuniquevars;        /**< number of unique variable types */
    int                   nuniquerhs;         /**< number of unique rhs types */
    int                   nuniquemat;         /**< number of unique matrix coefficients */
+};
+
+/** data for symmetry group computation on nonlinear constraints */
+struct SYM_Exprdata
+{
+   int                   nuniqueconstants;   /**< number of unique constaints */
+   int                   nuniqueoperators;   /**< number of unique operators */
+   int                   nuniquecoefs;       /**< number of unique coefficients */
 };
 
 #ifdef __cplusplus

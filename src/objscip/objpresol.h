@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -169,7 +169,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyPresol is called here
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeObjPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjPresol*      objpresol,          /**< presolver object */
@@ -177,14 +177,14 @@ SCIP_RETCODE SCIPincludeObjPresol(
    );
 
 /** returns the presol object of the given name, or 0 if not existing */
-EXTERN
+SCIP_EXPORT
 scip::ObjPresol* SCIPfindObjPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of presolver */
    );
 
 /** returns the presol object for the given presolver */
-EXTERN
+SCIP_EXPORT
 scip::ObjPresol* SCIPgetObjPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL*          presol              /**< presolver */

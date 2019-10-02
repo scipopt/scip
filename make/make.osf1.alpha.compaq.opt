@@ -1,6 +1,6 @@
 CC		=	cc
 CXX		=	cxx
-FLAGS		+=      -DNDEBUG -DROUNDING_FP
+FLAGS		+=      -DNDEBUG -DSCIP_ROUNDING_FP
 OFLAGS		+=	-O4 -fast -std
 CFLAGS		+=	
 CXXFLAGS	+=	-nortti -D__USE_STD_IOSTREAM # -noexceptions (CLP uses exceptions)

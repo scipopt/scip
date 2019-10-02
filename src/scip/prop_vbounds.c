@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_vbounds.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  variable upper and lower bound propagator
  * @author Stefan Heinz
  * @author Jens Schulz
@@ -1877,6 +1878,7 @@ SCIP_RETCODE propagateVbounds(
     */
    while( SCIPpqueueNElems(propdata->propqueue) > 0 )
    {
+      /* coverity[pointer_conversion_loses_bits] */
       topopos = ((int)(size_t)SCIPpqueueRemove(propdata->propqueue)) - 1;
       assert(propdata->inqueue[topopos]);
       startpos = propdata->topoorder[topopos];
@@ -2903,13 +2905,11 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    }
 #endif
    SCIPfreeCleanBufferArray(scip, &nodeinfeasible);
-
+   SCIPfreeBufferArray(scip, &nodeonstack);
    SCIPfreeBufferArray(scip, &cliquecurrentexit);
    SCIPfreeBufferArray(scip, &cliquefirstentry);
-
    SCIPfreeBufferArray(scip, &nodelowlink);
    SCIPfreeBufferArray(scip, &nodeindex);
-   SCIPfreeBufferArray(scip, &nodeonstack);
    SCIPfreeBufferArray(scip, &infeasnodes);
    SCIPfreeBufferArray(scip, &sccstarts);
    SCIPfreeBufferArray(scip, &sccvars);
@@ -3033,6 +3033,7 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
    propdata = (SCIP_PROPDATA*)SCIPeventhdlrGetData(eventhdlr);
    assert(propdata != NULL);
 
+   /* coverity[pointer_conversion_loses_bits] */
    idx = (int) (size_t) eventdata;
    assert(idx >= 0);
 
