@@ -2366,23 +2366,23 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_FEASTOL:
       lpi->parameters->set_primal_feasibility_tolerance(dval);
       break;
-    case SCIP_LPPAR_DUALFEASTOL:
+   case SCIP_LPPAR_DUALFEASTOL:
       lpi->parameters->set_dual_feasibility_tolerance(dval);
       break;
-    case SCIP_LPPAR_OBJLIM:
-       if (lpi->linear_program->IsMaximizationProblem())
-          lpi->parameters->set_objective_lower_limit(dval);
-       else
-          lpi->parameters->set_objective_upper_limit(dval);
-       break;
-    case SCIP_LPPAR_LPTILIM:
-       lpi->parameters->set_max_time_in_seconds(dval);
-       break;
-    case SCIP_LPPAR_ROWREPSWITCH:
-       lpi->rowrepswitch = dval;
-       break;
-    default:
-       return SCIP_PARAMETERUNKNOWN;
+   case SCIP_LPPAR_OBJLIM:
+      if (lpi->linear_program->IsMaximizationProblem())
+         lpi->parameters->set_objective_lower_limit(dval);
+      else
+         lpi->parameters->set_objective_upper_limit(dval);
+      break;
+   case SCIP_LPPAR_LPTILIM:
+      lpi->parameters->set_max_time_in_seconds(dval);
+      break;
+   case SCIP_LPPAR_ROWREPSWITCH:
+      lpi->rowrepswitch = dval;
+      break;
+   default:
+      return SCIP_PARAMETERUNKNOWN;
    }
 
    return SCIP_OKAY;
