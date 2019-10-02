@@ -1661,9 +1661,12 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 
 /** convert Glop variable basis status to SCIP status */
 static
-int ConvertGlopVariableStatus(VariableStatus status, Fractional rc)
+SCIP_BASESTAT ConvertGlopVariableStatus(
+   VariableStatus        status,             /**< variable status */
+   Fractional            rc                  /**< reduced cost of variable */
+   )
 {
-   switch (status)
+   switch ( status )
    {
    case VariableStatus::BASIC:
       return SCIP_BASESTAT_BASIC;
@@ -1675,15 +1678,20 @@ int ConvertGlopVariableStatus(VariableStatus status, Fractional rc)
       return SCIP_BASESTAT_ZERO;
    case VariableStatus::FIXED_VALUE:
       return rc > 0.0 ? SCIP_BASESTAT_LOWER : SCIP_BASESTAT_UPPER;
+   default:
+      SCIPerrorMessage("invalid Glop basis status.\n");
+      abort();
    }
-   return 0;
 }
 
 /** convert Glop constraint basis status to SCIP status */
 static
-int ConvertGlopConstraintStatus(ConstraintStatus status, Fractional rc)
+SCIP_BASESTAT ConvertGlopConstraintStatus(
+   ConstraintStatus      status,             /**< constraint status */
+   Fractional            rc                  /**< reduced cost of constraint (slack variable) */
+   )
 {
-   switch (status)
+   switch ( status )
    {
    case ConstraintStatus::BASIC:
       return SCIP_BASESTAT_BASIC;
@@ -1695,9 +1703,57 @@ int ConvertGlopConstraintStatus(ConstraintStatus status, Fractional rc)
       return SCIP_BASESTAT_ZERO;
    case ConstraintStatus::FIXED_VALUE:
       return rc > 0.0 ? SCIP_BASESTAT_LOWER : SCIP_BASESTAT_UPPER;
+   default:
+      SCIPerrorMessage("invalid Glop basis status.\n");
+      abort();
    }
-   return 0;
 }
+
+/** Convert SCIP variable status to Glop status */
+VariableStatus ConvertSCIPVariableStatus(
+   int                   status              /**< SCIP variable status */
+   )
+{
+   switch ( status )
+   {
+   case SCIP_BASESTAT_BASIC:
+      return VariableStatus::BASIC;
+   case SCIP_BASESTAT_UPPER:
+      return VariableStatus::AT_UPPER_BOUND;
+   case SCIP_BASESTAT_LOWER:
+      return VariableStatus::AT_LOWER_BOUND;
+   case SCIP_BASESTAT_ZERO:
+      return VariableStatus::FREE;
+   default:
+      SCIPerrorMessage("invalid SCIP basis status.\n");
+      abort();
+   }
+}
+
+/** Convert a SCIP constraint status to its corresponding Glop slack VariableStatus.
+ *
+ *  Note that we swap the upper/lower bounds.
+ */
+VariableStatus ConvertSCIPConstraintStatusToSlackStatus(
+   int                   status              /**< SCIP constraint status */
+   )
+{
+   switch ( status )
+   {
+   case SCIP_BASESTAT_BASIC:
+      return VariableStatus::BASIC;
+   case SCIP_BASESTAT_UPPER:
+      return VariableStatus::AT_LOWER_BOUND;
+   case SCIP_BASESTAT_LOWER:
+      return VariableStatus::AT_UPPER_BOUND;
+   case SCIP_BASESTAT_ZERO:
+      return VariableStatus::FREE;
+   default:
+      SCIPerrorMessage("invalid SCIP basis status.\n");
+      abort();
+   }
+}
+
 
 /** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
 SCIP_RETCODE SCIPlpiGetBase(
@@ -1716,7 +1772,7 @@ SCIP_RETCODE SCIPlpiGetBase(
       for (ColIndex col(0); col < num_cols; ++col)
       {
          int i = col.value();
-         cstat[i] = ConvertGlopVariableStatus(lpi->solver->GetVariableStatus(col), lpi->solver->GetReducedCost(col));
+         cstat[i] = (int) ConvertGlopVariableStatus(lpi->solver->GetVariableStatus(col), lpi->solver->GetReducedCost(col));
       }
    }
 
@@ -1726,7 +1782,7 @@ SCIP_RETCODE SCIPlpiGetBase(
       for (RowIndex row(0); row < num_rows; ++row)
       {
          int i = row.value();
-         rstat[i] = ConvertGlopConstraintStatus(lpi->solver->GetConstraintStatus(row), lpi->solver->GetDualValue(row));
+         rstat[i] = (int) ConvertGlopConstraintStatus(lpi->solver->GetConstraintStatus(row), lpi->solver->GetDualValue(row));
       }
    }
 
@@ -1742,12 +1798,27 @@ SCIP_RETCODE SCIPlpiSetBase(
 {
    assert( lpi != NULL );
    assert( lpi->linear_program != NULL );
-   assert( cstat != NULL || lpi->linear_program->num_variables() == 0 );
-   assert( rstat != NULL || lpi->linear_program->num_constraints() == 0 );
 
-   SCIPerrorMessage("SCIPlpiSetBase - not implemented.\n");
+   const ColIndex num_cols = lpi->linear_program->num_variables();
+   const RowIndex num_rows = lpi->linear_program->num_constraints();
 
-   return SCIP_LPERROR;
+   assert( cstat != NULL || num_cols == 0 );
+   assert( rstat != NULL || num_rows == 0 );
+
+   SCIPdebugMessage("SCIPlpiSetBase\n");
+
+   BasisState state;
+   state.statuses.reserve(ColIndex(num_cols.value() + num_rows.value()));
+
+   for (ColIndex col(0); col < num_cols; ++col)
+      state.statuses[col] = ConvertSCIPVariableStatus(cstat[col.value()]);
+
+   for (RowIndex row(0); row < num_rows; ++row)
+      state.statuses[num_cols + RowToColIndex(row)] = ConvertSCIPConstraintStatusToSlackStatus(cstat[row.value()]);
+
+   lpi->solver->LoadStateForNextSolve(state);
+
+   return SCIP_OKAY;
 }
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
