@@ -1884,13 +1884,6 @@ SCIP_RETCODE computeSymmetryGroup(
       if ( usecolumnsparsity )
          SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
 
-      if( nexprconss > 0 )
-      {
-         SCIPexpriteratorFree(&it);
-         SCIPhashsetFree(&auxvars, SCIPblkmem(scip));
-         SCIPfreeBlockMemoryArrayNull(scip, isnonlinvar, nvars);
-      }
-
       /* free matrix data */
       SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
       SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
