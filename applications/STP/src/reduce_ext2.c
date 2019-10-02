@@ -261,6 +261,41 @@ SCIP_Bool extLeafIsExtendable(
 }
 
 
+/** adds initial component to stack (needs to be star component rooted in root)*/
+static
+void extAddInitialComponent(
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            compedges,          /**< component edges */
+   int                   ncompedges,         /**< number of component edges */
+   int                   root,               /**< root of the component */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   assert(compedges && extdata);
+   assert(ncompedges >= 1 && ncompedges < STP_EXT_MAXGRAD);
+   assert(ncompedges < extdata->extstack_maxedges);
+
+   for( int i = 0; i < ncompedges; i++ )
+   {
+      const int e = compedges[i];
+      assert(e >= 0 && e < graph->edges);
+      assert(graph->tail[e] == root);
+
+      extdata->extstack_data[i] = e;
+   }
+
+   extdata->extstack_size = 1;
+   extdata->extstack_state[0] = EXT_STATE_EXPANDED;
+   extdata->extstack_start[0] = 0;
+   extdata->extstack_start[1] = ncompedges;
+   extdata->tree_leaves[0] = root;
+   extdata->tree_parentNode[root] = -1;
+   extdata->tree_nleaves = 1;
+   assert(extdata->tree_deg[root] == 0);
+}
+
+
+
 /** finds position of given leaf in leaves data */
 static
 int extFindLeafPos(
@@ -1259,18 +1294,8 @@ void extCheckArc(
    SCIP_Bool success = TRUE;
    SCIP_Bool conflict = FALSE;
 
-   // todo method: inizialize or something...edge list
-
    /* put 'edge' on the stack */
-   extdata->extstack_size = 1;
-   extdata->extstack_start[0] = 0;
-   extdata->extstack_start[1] = 1;
-   extdata->extstack_data[0] = edge;
-   extdata->extstack_state[0] = EXT_STATE_EXPANDED;
-   extdata->tree_leaves[0] = tail;
-   extdata->tree_parentNode[tail] = -1;
-   extdata->tree_nleaves = 1;
-   assert(extdata->tree_deg[tail] == 0);
+   extAddInitialComponent(graph, &edge, 1, tail, extdata);
 
    extTreeSyncWithStack(scip, graph, extdata, &nupdatestalls, &conflict);
 

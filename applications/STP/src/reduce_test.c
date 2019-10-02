@@ -177,16 +177,12 @@ SCIP_RETCODE checkSdWalk(
    SCIP_CALL( graph_init_history(scip, graph) );
    SCIP_CALL( graph_path_init(scip, graph) );
 
-   for( int i = 0; i < nnodes; i++ )
-      graph->mark[i] = (graph->grad[i] > 0);
+   graph_mark(graph);
 
    graph_pc_2org(graph);
 
-
    SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1) );
-
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal1, nedges) );
-
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal1, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearr_int1, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearr_int2, nnodes) );
