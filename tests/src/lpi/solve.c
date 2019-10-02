@@ -53,6 +53,14 @@ static SCIP_LPI* lpi = NULL;
 }                                                                                               \
 while ( FALSE )
 
+/** macro to keep control of infinity
+ *
+ *  Some LPIs use std::numeric_limits<SCIP_Real>::infinity() as finity value. Comparing two infinty values then yields
+ *  nan. This is a workaround. */
+#define cr_assert_float_eq_inf(Actual, Expected, Epsilon, FormatString, ...) \
+   if ( fabs(Actual) < 1e30 && fabs(Expected) < 1e30 )                       \
+      cr_assert_float_eq(Actual, Expected, Epsilon, FormatString, __VA_ARGS__);
+
 /** setup of test suite */
 static
 void setup(void)
@@ -422,8 +430,8 @@ SCIP_RETCODE checkData(
    /* compare data */
    for (j = 0; j < ncols; ++j)
    {
-      cr_assert_float_eq(lpilb[j], lb[j], EPS, "Violation of lower bound %d: %g != %g\n", j, lpilb[j], lb[j]);
-      cr_assert_float_eq(lpiub[j], ub[j], EPS, "Violation of upper bound %d: %g != %g\n", j, lpiub[j], ub[j]);
+      cr_assert_float_eq_inf(lpilb[j], lb[j], EPS, "Violation of lower bound %d: %g != %g\n", j, lpilb[j], lb[j]);
+      cr_assert_float_eq_inf(lpiub[j], ub[j], EPS, "Violation of upper bound %d: %g != %g\n", j, lpiub[j], ub[j]);
 
       cr_assert_float_eq(lpiobj[j], obj[j], EPS, "Violation of objective coefficient %d: %g != %g\n", j, lpiobj[j], obj[j]);
 
@@ -452,8 +460,8 @@ SCIP_RETCODE checkData(
 
    for (i = 0; i < nrows; ++i)
    {
-      cr_assert_float_eq(lpilhs[i], lhs[i], EPS, "Violation of lhs %d: %g != %g\n", i, lpilhs[i], lhs[i]);
-      cr_assert_float_eq(lpilhs[i], lhs[i], EPS, "Violation of rhs %d: %g != %g\n", i, lpirhs[i], rhs[i]);
+      cr_assert_float_eq_inf(lpilhs[i], lhs[i], EPS, "Violation of lhs %d: %g != %g\n", i, lpilhs[i], lhs[i]);
+      cr_assert_float_eq_inf(lpilhs[i], lhs[i], EPS, "Violation of rhs %d: %g != %g\n", i, lpirhs[i], rhs[i]);
    }
 
    BMSfreeMemoryArray(&lpirhs);
