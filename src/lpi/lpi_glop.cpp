@@ -2470,6 +2470,9 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_SCALING:
       *ival = lpi->parameters->use_scaling();
       break;
+   case SCIP_LPPAR_RANDOMSEED:
+      *ival = (int) lpi->parameters->random_seed();
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }
@@ -2521,6 +2524,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       lpi->parameters->set_use_scaling(ival);
+      break;
+   case SCIP_LPPAR_RANDOMSEED:
+      assert( ival >= 0 );
+      lpi->parameters->set_random_seed(ival);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
