@@ -110,7 +110,7 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   snprintf(glopname, 100, "Glop %d.%d", operations_research::OrToolsMajorVersion(), operations_research::OrToolsMinorVersion());
+   (void) snprintf(glopname, 100, "Glop %d.%d", operations_research::OrToolsMajorVersion(), operations_research::OrToolsMinorVersion());
    return glopname;
 }
 
@@ -127,17 +127,18 @@ void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    )
 {
+   assert( lpi != NULL );
    SCIPerrorMessage("SCIPlpiGetSolverPointer() has not been implemented yet.\n");
    return NULL;
 }
 
-/** pass integrality information to LP solver */
+/** pass integrality information to LP solver */ /*lint -e{715}*/
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
-{  /*lint --e{715}*/
+{
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -185,20 +186,20 @@ SCIP_RETCODE SCIPlpiCreate(
    assert( lpi != NULL );
    assert( name != NULL );
 
-   // Initilialize memory.
+   /* Initilialize memory. */
    SCIP_ALLOC(BMSallocMemory(lpi));
    (*lpi)->linear_program = new operations_research::glop::LinearProgram();
    (*lpi)->solver = new operations_research::glop::RevisedSimplex();
    (*lpi)->parameters = new operations_research::glop::GlopParameters();
 
-   // Set problem name and objective direction.
+   /* Set problem name and objective direction. */
    (*lpi)->linear_program->SetName(std::string(name));
    SCIP_CALL( SCIPlpiChgObjsen(*lpi, objsen) );
 
    (*lpi)->from_scratch = false;
    (*lpi)->fast_mip = false;
    (*lpi)->lp_info = false;
-   (*lpi)->rowrepswitch = false;
+   (*lpi)->rowrepswitch = -1.0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->lp_modified_since_last_solve = true;
    (*lpi)->lp_time_limit_was_reached = false;
@@ -394,24 +395,30 @@ SCIP_RETCODE SCIPlpiAddRows(
    assert( lpi->linear_program != NULL );
    assert( lhs != NULL );
    assert( rhs != NULL );
-   assert( nnonz == 0 || beg != NULL );
-   assert( nnonz == 0 || ind != NULL );
-   assert( nnonz == 0 || val != NULL );
 
    SCIPdebugMessage("adding %d rows with %d nonzeros.\n", nrows, nnonz);
 
    /* @todo add names */
-   int nz = 0;
-   for (int i = 0; i < nrows; ++i)
+   if ( nnonz > 0 )
    {
-      const RowIndex row = lpi->linear_program->CreateNewConstraint();
-      lpi->linear_program->SetConstraintBounds(row, lhs[i], rhs[i]);
-      const int end = (nnonz == 0 || i == nrows - 1) ? nnonz : beg[i + 1];
-      while (nz < end)
+      assert( beg != NULL );
+      assert( ind != NULL );
+      assert( val != NULL );
+      assert( nrows > 0 );
+
+      int nz = 0;
+      for (int i = 0; i < nrows; ++i)
       {
-         lpi->linear_program->SetCoefficient(row, ColIndex(ind[nz]), val[nz]);
-         ++nz;
+         const RowIndex row = lpi->linear_program->CreateNewConstraint();
+         lpi->linear_program->SetConstraintBounds(row, lhs[i], rhs[i]);
+         const int end = (nnonz == 0 || i == nrows - 1) ? nnonz : beg[i + 1];
+         while (nz < end)
+         {
+            lpi->linear_program->SetCoefficient(row, ColIndex(ind[nz]), val[nz]);
+            ++nz;
+         }
       }
+      assert( nz == nnonz );
    }
    lpi->lp_modified_since_last_solve = true;
 
@@ -716,7 +723,8 @@ SCIP_RETCODE SCIPlpiGetNNonz(
 
    SCIPdebugMessage("getting number of non-zeros.\n");
 
-   *nnonz = lpi->linear_program->num_entries().value();
+   *nnonz = (int) lpi->linear_program->num_entries().value();
+
    return SCIP_OKAY;
 }
 
@@ -968,6 +976,7 @@ SCIP_RETCODE SCIPlpiGetCoef(
 /**@{ */
 
 /** common function between the two LPI Solve() functions */
+static
 SCIP_RETCODE SolveInternal(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
@@ -1126,9 +1135,9 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
 
    if ( lpi->solver->Solve(*(lpi->linear_program), time_limit.get()).ok() )
    {
-      num_iterations += lpi->solver->GetNumberOfIterations();
+      num_iterations += (int) lpi->solver->GetNumberOfIterations();
       *down = lpi->solver->GetObjectiveValue();
-      *downvalid = IsDualBoundValid(lpi->solver->GetProblemStatus());
+      *downvalid = IsDualBoundValid(lpi->solver->GetProblemStatus()) ? TRUE : FALSE;
 
       SCIPdebugMessage("down: itlim=%d col=%d [%f,%f] obj=%f status=%d iter=%ld.\n", itlim, col_index, lb, EPSCEIL(psol - 1.0, eps),
          lpi->solver->GetObjectiveValue(), (int) lpi->solver->GetProblemStatus(), lpi->solver->GetNumberOfIterations());
@@ -1137,7 +1146,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    {
       SCIPerrorMessage("error during solve");
       *down = 0.0;
-      *downvalid = false;
+      *downvalid = FALSE;
    }
 
    /* Up branch. */
@@ -1145,9 +1154,9 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
 
    if ( lpi->solver->Solve(*(lpi->linear_program), time_limit.get()).ok() )
    {
-      num_iterations += lpi->solver->GetNumberOfIterations();
+      num_iterations += (int) lpi->solver->GetNumberOfIterations();
       *up = lpi->solver->GetObjectiveValue();
-      *upvalid = IsDualBoundValid(lpi->solver->GetProblemStatus());
+      *upvalid = IsDualBoundValid(lpi->solver->GetProblemStatus()) ? TRUE : FALSE;
 
       SCIPdebugMessage("up: itlim=%d col=%d [%f,%f] obj=%f status=%d iter=%ld.\n", itlim, col_index, EPSFLOOR(psol + 1.0, eps), ub,
          lpi->solver->GetObjectiveValue(), (int) lpi->solver->GetProblemStatus(), lpi->solver->GetNumberOfIterations());
@@ -1156,7 +1165,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    {
       SCIPerrorMessage("error during solve");
       *up = 0.0;
-      *upvalid = false;
+      *upvalid = FALSE;
    }
 
    /*  Restore bound. */
@@ -1273,7 +1282,7 @@ SCIP_Bool SCIPlpiWasSolved(
    assert( lpi != NULL );
 
    /* @todo Track this to avoid uneeded resolving. */
-   return ! (lpi->lp_modified_since_last_solve);
+   return ( ! lpi->lp_modified_since_last_solve );
 }
 
 /** gets information about primal and dual feasibility of the current LP solution
@@ -1495,8 +1504,8 @@ SCIP_Bool SCIPlpiIsIterlimExc(
    assert( lpi != NULL );
    assert( lpi->solver != NULL );
 
-  int maxiter = lpi->parameters->max_number_of_iterations();
-  return maxiter >= 0 && lpi->solver->GetNumberOfIterations() >= maxiter;
+   int maxiter = (int) lpi->parameters->max_number_of_iterations();
+   return maxiter >= 0 && lpi->solver->GetNumberOfIterations() >= maxiter;
 }
 
 /** returns TRUE iff the time limit was reached */
@@ -1529,8 +1538,9 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
 {
    assert( lpi != NULL );
    assert( lpi->solver != NULL );
+   assert( success != NULL );
 
-   /* do nothing */
+   *success = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1648,7 +1658,7 @@ SCIP_RETCODE SCIPlpiGetIterations(
    assert( lpi->solver != NULL );
    assert( iterations != NULL );
 
-   *iterations = lpi->solver->GetNumberOfIterations();
+   *iterations = (int) lpi->solver->GetNumberOfIterations();
 
    return SCIP_OKAY;
 }
@@ -1735,6 +1745,7 @@ SCIP_BASESTAT ConvertGlopConstraintStatus(
 }
 
 /** Convert SCIP variable status to Glop status */
+static
 VariableStatus ConvertSCIPVariableStatus(
    int                   status              /**< SCIP variable status */
    )
@@ -1759,6 +1770,7 @@ VariableStatus ConvertSCIPVariableStatus(
  *
  *  Note that we swap the upper/lower bounds.
  */
+static
 VariableStatus ConvertSCIPConstraintStatusToSlackStatus(
    int                   status              /**< SCIP constraint status */
    )
@@ -2236,13 +2248,13 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (int) lpi->from_scratch;
       break;
    case SCIP_LPPAR_FASTMIP:
-      *ival = lpi->fast_mip;
+      *ival = (int) lpi->fast_mip;
       break;
    case SCIP_LPPAR_LPINFO:
       *ival = (int) lpi->lp_info;
       break;
    case SCIP_LPPAR_LPITLIM:
-      *ival = lpi->parameters->max_number_of_iterations();
+      *ival = (int) lpi->parameters->max_number_of_iterations();
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = lpi->parameters->use_preprocessing();
@@ -2278,17 +2290,18 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->from_scratch = (bool) ival;
       break;
    case SCIP_LPPAR_FASTMIP:
-      lpi->fast_mip = ival;
+      assert( ival == 0 || ival == 1 );
+      lpi->fast_mip = ival == 1 ? true : false;
       break;
    case SCIP_LPPAR_LPINFO:
       if ( ival == 0 )
       {
-         google::SetVLOGLevel("*", google::GLOG_INFO);
+         (void) google::SetVLOGLevel("*", google::GLOG_INFO);
          lpi->lp_info = false;
       }
       else
       {
-         google::SetVLOGLevel("*", google::GLOG_FATAL);
+         (void) google::SetVLOGLevel("*", google::GLOG_FATAL);
          lpi->lp_info = true;
       }
       break;
