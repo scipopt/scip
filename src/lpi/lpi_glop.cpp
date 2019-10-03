@@ -569,8 +569,22 @@ SCIP_RETCODE SCIPlpiChgBounds(
       return SCIP_OKAY;
 
    for (int i = 0; i < ncols; ++i)
-      lpi->linear_program->SetVariableBounds(ColIndex(ind[i]), lb[i], ub[i]);
+   {
+      SCIPdebugMessage("  col %d: [%g,%g]\n", ind[i], lb[i], ub[i]);
 
+      if ( SCIPlpiIsInfinity(lpi, lb[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
+
+      lpi->linear_program->SetVariableBounds(ColIndex(ind[i]), lb[i], ub[i]);
+   }
    lpi->lp_modified_since_last_solve = true;
 
    return SCIP_OKAY;
