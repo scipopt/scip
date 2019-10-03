@@ -421,6 +421,8 @@ SCIP_RETCODE SCIPlpiAddRows(
    assert( lpi->linear_program != NULL );
    assert( lhs != NULL );
    assert( rhs != NULL );
+   assert( nnonz >= 0) ;
+   assert( nrows >= 0) ;
 
    SCIPdebugMessage("adding %d rows with %d nonzeros.\n", nrows, nnonz);
 
@@ -431,6 +433,16 @@ SCIP_RETCODE SCIPlpiAddRows(
       assert( ind != NULL );
       assert( val != NULL );
       assert( nrows > 0 );
+
+#ifndef NDEBUG
+      /* perform check that no new columns are added - this is likely to be a mistake */
+      const ColIndex num_cols = lpi->linear_program->num_variables();
+      for (int j = 0; j < nnonz; ++j)
+      {
+         assert( val[j] != 0.0 );
+         assert( 0 <= ind[j] && ind[j] < num_cols.value() );
+      }
+#endif
 
       int nz = 0;
       for (int i = 0; i < nrows; ++i)
