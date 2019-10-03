@@ -2567,6 +2567,9 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_ROWREPSWITCH:
       *dval = lpi->rowrepswitch;
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+      *dval = lpi->parameters->markowitz_singularity_threshold();
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }
@@ -2605,6 +2608,9 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
       lpi->rowrepswitch = dval;
+      break;
+   case SCIP_LPPAR_MARKOWITZ:
+      lpi->parameters->set_markowitz_singularity_threshold(dval);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
