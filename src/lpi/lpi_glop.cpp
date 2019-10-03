@@ -290,29 +290,55 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert( obj != NULL );
    assert( lb != NULL );
    assert( ub != NULL );
-   assert( nnonz == 0 || beg != NULL );
-   assert( nnonz == 0 || ind != NULL );
-   assert( nnonz == 0 || val != NULL );
    assert( nnonz >= 0) ;
    assert( ncols >= 0) ;
 
    SCIPdebugMessage("adding %d columns with %d nonzeros.\n", ncols, nnonz);
 
-   /* @todo: add names */
-   int nz = 0;
-   for (int i = 0; i < ncols; ++i)
+   /* @todo add names */
+   if ( nnonz > 0 )
    {
-      const ColIndex col = lpi->linear_program->CreateNewVariable();
-      lpi->linear_program->SetVariableBounds(col, lb[i], ub[i]);
-      lpi->linear_program->SetObjectiveCoefficient(col, obj[i]);
-      const int end = (nnonz == 0 || i == ncols - 1) ? nnonz : beg[i + 1];
-      while (nz < end)
+      assert( beg != NULL );
+      assert( ind != NULL );
+      assert( val != NULL );
+      assert( ncols > 0 );
+
+#ifndef NDEBUG
+      /* perform check that no new rows are added */
+      RowIndex num_rows = lpi->linear_program->num_constraints();
+      for (int j = 0; j < nnonz; ++j)
       {
-         lpi->linear_program->SetCoefficient(RowIndex(ind[nz]), col, val[nz]);
-         ++nz;
+         assert( 0 <= ind[j] && ind[j] < num_rows.value() );
+         assert( val[j] != 0.0 );
+      }
+#endif
+
+      int nz = 0;
+      for (int i = 0; i < ncols; ++i)
+      {
+         const ColIndex col = lpi->linear_program->CreateNewVariable();
+         lpi->linear_program->SetVariableBounds(col, lb[i], ub[i]);
+         lpi->linear_program->SetObjectiveCoefficient(col, obj[i]);
+         const int end = (nnonz == 0 || i == ncols - 1) ? nnonz : beg[i + 1];
+         while (nz < end)
+         {
+            lpi->linear_program->SetCoefficient(RowIndex(ind[nz]), col, val[nz]);
+            ++nz;
+         }
       }
    }
+   else
+   {
+      for (int i = 0; i < ncols; ++i)
+      {
+         const ColIndex col = lpi->linear_program->CreateNewVariable();
+         lpi->linear_program->SetVariableBounds(col, lb[i], ub[i]);
+         lpi->linear_program->SetObjectiveCoefficient(col, obj[i]);
+      }
+   }
+
    lpi->lp_modified_since_last_solve = true;
+
    return SCIP_OKAY;
 }
 
