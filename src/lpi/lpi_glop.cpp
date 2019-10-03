@@ -687,12 +687,56 @@ SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_Real             scaleval            /**< scaling multiplier */
    )
 {
+   SCIP_Real* vals;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int nnonz;
+   int* inds;
+   int beg;
+
    assert( lpi != NULL );
    assert( lpi->linear_program != NULL );
 
-   SCIPerrorMessage("SCIPlpiScaleRow() has not been implemented yet.\n");
+   SCIPdebugMessage("Scale row %d by %f.\n", row, scaleval);
 
-   return SCIP_LPERROR;
+   /* alloc memory */
+   ColIndex num_cols = lpi->linear_program->num_variables();
+
+   SCIP_ALLOC( BMSallocMemoryArray(&inds, num_cols.value()) );
+   SCIP_ALLOC( BMSallocMemoryArray(&vals, num_cols.value()) );
+
+   /* get the row */
+   SCIP_CALL( SCIPlpiGetRows(lpi, row, row, &lhs, &rhs, &nnonz, &beg, inds, vals) );
+
+   /* scale row coefficients */
+   for (int j = 0; j < nnonz; ++j)
+   {
+      SCIP_CALL( SCIPlpiChgCoef(lpi, row, inds[j], vals[j] * scaleval) );
+   }
+   BMSfreeMemoryArray(&vals);
+   BMSfreeMemoryArray(&inds);
+
+   /* scale row sides */
+   if ( ! SCIPlpiIsInfinity(lpi, -lhs) )
+      lhs *= scaleval;
+   else if ( scaleval < 0.0 )
+      lhs = SCIPlpiInfinity(lpi);
+
+   if ( ! SCIPlpiIsInfinity(lpi, rhs) )
+      rhs *= scaleval;
+   else if ( scaleval < 0.0 )
+      rhs = -SCIPlpiInfinity(lpi);
+
+   if ( scaleval > 0.0 )
+   {
+      SCIP_CALL( SCIPlpiChgSides(lpi, 1, &row, &lhs, &rhs) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPlpiChgSides(lpi, 1, &row, &rhs, &lhs) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** multiplies a column with a non-zero scalar; the objective value is multiplied with the scalar, and the bounds
@@ -704,6 +748,64 @@ SCIP_RETCODE SCIPlpiScaleCol(
    SCIP_Real             scaleval            /**< scaling multiplier */
    )
 {
+   SCIP_Real* vals;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real obj;
+   int nnonz;
+   int* inds;
+   int beg;
+
+   assert( lpi != NULL );
+   assert( lpi->linear_program != NULL );
+
+   SCIPdebugMessage("Scale column %d by %f.\n", col, scaleval);
+
+   /* alloc memory */
+   RowIndex num_rows = lpi->linear_program->num_constraints();
+
+   SCIP_ALLOC( BMSallocMemoryArray(&inds, num_rows.value()) );
+   SCIP_ALLOC( BMSallocMemoryArray(&vals, num_rows.value()) );
+
+   /* get the column */
+   SCIP_CALL( SCIPlpiGetCols(lpi, col, col, &lb, &ub, &nnonz, &beg, inds, vals) );
+
+   /* scale column coefficients */
+   for (int j = 0; j < nnonz; ++j)
+   {
+      SCIP_CALL( SCIPlpiChgCoef(lpi, col, inds[j], vals[j] * scaleval) );
+   }
+   BMSfreeMemoryArray(&vals);
+   BMSfreeMemoryArray(&inds);
+
+   /* scale objective value */
+   SCIP_CALL( SCIPlpiGetObj(lpi, col, col, &obj) );
+   obj *= scaleval;
+   SCIP_CALL( SCIPlpiChgObj(lpi, 1, &col, &obj) );
+
+   /* scale bound */
+   if ( ! SCIPlpiIsInfinity(lpi, -lb) )
+      lb *= scaleval;
+   else if ( scaleval < 0.0 )
+      lb = SCIPlpiInfinity(lpi);
+
+   if ( ! SCIPlpiIsInfinity(lpi, ub) )
+      ub *= scaleval;
+   else if ( scaleval < 0.0 )
+      ub = -SCIPlpiInfinity(lpi);
+
+   if ( scaleval > 0.0 )
+   {
+      SCIP_CALL( SCIPlpiChgBounds(lpi, 1, &col, &lb, &ub) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPlpiChgBounds(lpi, 1, &col, &ub, &lb) );
+   }
+
+   return SCIP_OKAY;
+
+
    assert( lpi != NULL );
    assert( lpi->linear_program != NULL );
 
