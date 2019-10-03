@@ -1989,16 +1989,12 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert( lpi->linear_program != NULL );
    assert( coef != NULL );
 
-   /* we need to loop through the columns to extract the values for row r */
-   const RowIndex row(r);
+   /* get row of basis inverse, loop through columns and muliply with matrix */
+   ScatteredRow solution;
+   lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(r), &solution);
    const ColIndex num_cols = lpi->linear_program->num_variables();
    for (ColIndex col(0); col < num_cols; ++col)
-   {
-      ScatteredColumn solution;
-      lpi->solver->GetBasisFactorization().RightSolveForProblemColumn(col, &solution);
-
-      coef[col.value()] = solution[row];
-   }
+      coef[col.value()] = operations_research::glop::ScalarProduct(solution.values, lpi->linear_program->GetSparseColumn(col));
 
    /* Only returns a dense vector, so set ninds to -1. */
    if ( ninds != NULL )
