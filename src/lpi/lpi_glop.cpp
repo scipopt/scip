@@ -69,6 +69,7 @@ using operations_research::glop::DenseColumn;
 using operations_research::glop::DenseRow;
 using operations_research::glop::SparseColumn;
 using operations_research::glop::ScatteredColumn;
+using operations_research::glop::SparseMatrix;
 using operations_research::glop::Fractional;
 using operations_research::glop::GetProblemStatusString;
 using operations_research::glop::ProblemStatus;
@@ -611,8 +612,10 @@ SCIP_RETCODE SCIPlpiChgCoef(
    assert( lpi != NULL );
    assert( lpi->linear_program != NULL );
 
-   SCIPerrorMessage("SCIPlpiChgCoef() has not been implemented yet.\n");
-   return SCIP_LPERROR;
+   SCIPdebugMessage("Set coefficient (%d,%d) to %f.\n", row, col, newval);
+   lpi->linear_program->SetCoefficient(RowIndex(row), ColIndex(col), newval);
+
+   return SCIP_OKAY;
 }
 
 /** changes the objective sense */
@@ -1005,9 +1008,11 @@ SCIP_RETCODE SCIPlpiGetCoef(
    assert( lpi->linear_program != NULL );
    assert( val != NULL );
 
-   SCIPerrorMessage("SCIPlpiGetCoef() has not been implemented yet.\n");
+   /* quite slow method: possibly needs linear time if matrix is not sorted */
+   const SparseMatrix& matrix = lpi->linear_program->GetSparseMatrix();
+   *val = matrix.LookUpValue(RowIndex(row), ColIndex(col));
 
-   return SCIP_LPERROR;
+   return SCIP_OKAY;
 }
 
 /**@} */
