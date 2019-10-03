@@ -420,6 +420,15 @@ SCIP_RETCODE SCIPlpiAddRows(
       }
       assert( nz == nnonz );
    }
+   else
+   {
+      for (int i = 0; i < nrows; ++i)
+      {
+         const RowIndex row = lpi->linear_program->CreateNewConstraint();
+         lpi->linear_program->SetConstraintBounds(row, lhs[i], rhs[i]);
+      }
+   }
+
    lpi->lp_modified_since_last_solve = true;
 
    return SCIP_OKAY;
