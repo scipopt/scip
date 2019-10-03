@@ -858,9 +858,50 @@ SCIP_RETCODE SCIPlpiGetRows(
    assert( (lhs == NULL && rhs == NULL) || (rhs != NULL && lhs != NULL) );
    assert( (nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL) );
 
-   SCIPerrorMessage("SCIPlpiGetRows() has not been implemented yet.\n");
+   const DenseColumn& tmplhs = lpi->linear_program->constraint_lower_bounds();
+   const DenseColumn& tmprhs = lpi->linear_program->constraint_upper_bounds();
 
-   return SCIP_LPERROR;
+   if ( nnonz != NULL )
+   {
+      assert( beg != NULL );
+      assert( ind != NULL );
+      assert( val != NULL );
+
+      const SparseMatrix& matrixtrans = lpi->linear_program->GetTransposeSparseMatrix();
+
+      *nnonz = 0;
+      int index = 0;
+      for (RowIndex row(firstrow); row <= RowIndex(lastrow); ++row, ++index)
+      {
+         if ( lhs != NULL )
+            lhs[index] = tmplhs[row];
+         if ( rhs != NULL )
+            rhs[index] = tmprhs[row];
+
+         beg[index] = *nnonz;
+         const SparseColumn& column = matrixtrans.column(ColIndex(row.value()));
+         for (const SparseColumn::Entry& entry : column)
+         {
+            const RowIndex rowidx = entry.row();
+            ind[*nnonz] = rowidx.value();
+            val[*nnonz] = entry.coefficient();
+            ++(*nnonz);
+         }
+      }
+   }
+   else
+   {
+      int index = 0;
+      for (RowIndex row(firstrow); row <= RowIndex(lastrow); ++row, ++index)
+      {
+         if ( lhs != NULL )
+            lhs[index] = tmplhs[row];
+         if ( rhs != NULL )
+            rhs[index] = tmprhs[row];
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 /** gets column names */
