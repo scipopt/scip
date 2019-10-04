@@ -2057,11 +2057,6 @@ SCIP_RETCODE reduce(
 
    SCIP_CALL( level0(scip, graph) );
 
-#if 0
-   if( level == 2 )
-      SCIP_CALL( deleteMultiedges(scip, graph) );
-#endif
-
    /* if no reduction methods available, return */
    if( graph->stp_type == STP_DCSTP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_NWPTSPG || graph->stp_type == STP_BRMWCSP )
    {

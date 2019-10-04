@@ -53,9 +53,9 @@
 /** reduction data */
 typedef struct reduction_data
 {
-   const SCIP_Real* const reducedcosts;
-   const SCIP_Real* const rootdist;
-   const PATH* const termpaths;
+   const SCIP_Real* const redCosts;
+   const SCIP_Real* const rootToNodeDist;
+   const PATH* const nodeTo3TermsPaths;
    const STP_Bool* const edgedeleted;
    int* const pseudoancestor_mark;
    const SCIP_Real cutoff;
@@ -78,7 +78,8 @@ typedef struct extension_data
    int tree_nleaves;
    SCIP_Real* const tree_bottleneckDistNode; /**< needs to be set to -1.0 (for all nodes) */
    int* const tree_parentNode;
-   SCIP_Real* const tree_parentEdgeCost;
+   SCIP_Real* const tree_parentEdgeCost;     /**< of size nnodes */
+   SCIP_Real* const tree_redcostSwap;        /**< of size nnodes */
    SCIP_Real tree_redcost;
    const int tree_root;
    int tree_nedges;
@@ -571,7 +572,7 @@ void extTreeAddStackTop(
    int* const tree_parentNode = extdata->tree_parentNode;
    SCIP_Real* const tree_parentEdgeCost = extdata->tree_parentEdgeCost;
    REDDATA* const reddata = extdata->reddata;
-   const SCIP_Real* const redcost = reddata->reducedcosts;
+   const SCIP_Real* const redcost = reddata->redCosts;
    int* const pseudoancestor_mark = reddata->pseudoancestor_mark;
    const int stackpos = extdata->extstack_ncomponents - 1;
    const int comproot = graph->tail[extstack_data[extstack_start[stackpos]]];
@@ -666,7 +667,7 @@ void extTreeSyncWithStack(
    if( ++(*nupdatestalls) > EXT_REDCOST_NRECOMP )
    {
       SCIP_Real treecost = reddata->treeredcostoffset;
-      const SCIP_Real* const redcost = reddata->reducedcosts;
+      const SCIP_Real* const redcost = reddata->redCosts;
       const int* const tree_edges = extdata->tree_edges;
       const int tree_nedges = extdata->tree_nedges;
 
@@ -760,38 +761,41 @@ SCIP_Bool extTruncate(
 /** get peripheral reduced cost of current tree including  */
 static
 SCIP_Real extTreeGetRedcosts(
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    const EXTDATA*        extdata,            /**< extension data */
    int                   extedge             /**< edge for extension or -1 */
 )
 {
-   REDDATA* const reddata = extdata->reddata;
+   const REDDATA* const reddata = extdata->reddata;
    const int* const tree_leaves = extdata->tree_leaves;
-   const PATH* const termpaths = reddata->termpaths;
+   const PATH* const nodeTo3TermsPaths = reddata->nodeTo3TermsPaths;
    const int nleaves = extdata->tree_nleaves;
    SCIP_Real tree_redcost = extdata->tree_redcost; /* includes reduced costs to initial tail */
+   SCIP_Bool checkReverseTrees = TRUE;  /* do we need to consider the reverse reduced cost trees? */
 
    assert(graph && reddata && extdata);
-   assert(nleaves > 1);
+   assert(nleaves > 1 && tree_leaves[0] == extdata->tree_root);
 
+   // todo more sophisticated test that takes common terminals into account
    for( int i = 1; i < nleaves; i++ )
    {
       const int leaf = tree_leaves[i];
       assert(extdata->tree_deg[leaf] == 1);
 
-      tree_redcost += termpaths[leaf].dist;
+      tree_redcost += nodeTo3TermsPaths[leaf].dist;
    }
 
-   // todo for the general case we also must consider the reverse case!
+   // todo needs to be adapted for pseudo elimination tests...
+
    if( extedge != -1 )
    {
       const int base = graph->tail[extedge];
       const int extvert = graph->head[extedge];
-      const SCIP_Real* const redcost = reddata->reducedcosts;
+      const SCIP_Real* const redcost = reddata->redCosts;
 
       assert(extedge >= 0 && extedge < graph->edges);
-      assert(extdata->tree_deg[base] == 1);
-      assert(base != extdata->reddata->redCostRoot);
+      assert(extdata->tree_deg[base] == 1 && base != extdata->reddata->redCostRoot);
 
       if( extvert == extdata->reddata->redCostRoot )
       {
@@ -800,7 +804,41 @@ SCIP_Real extTreeGetRedcosts(
          tree_redcost = FARAWAY;
       }
       else
-         tree_redcost += redcost[extedge] + termpaths[extvert].dist - termpaths[base].dist;
+         tree_redcost += redcost[extedge] + nodeTo3TermsPaths[extvert].dist - nodeTo3TermsPaths[base].dist;
+
+      if( reddata->edgedeleted != NULL && reddata->edgedeleted[flipedge(extedge)] )
+         checkReverseTrees = FALSE;
+   }
+
+   // todo more sophisticated test that takes common terminals into account
+   if( checkReverseTrees )
+   {
+#if 0
+      SCIP_Real tree_redcostReverse = extdata->tree_redcost - extdata->reddata->treeredcostoffset + nodeTo3TermsPaths[tree_leaves[0]];
+      const SCIP_Real* const rootToNodeDist = reddata->rootToNodeDist;
+
+      /* take each leaf as root of the tree */
+      for( int i = 1; i < nleaves; i++ )
+      {
+         const int leaf = tree_leaves[i];
+         const SCIP_Real swapcost = swap[leaf]; // todo build swap array
+
+         if( SCIPisLT(scip, swapcost, FARAWAY) )
+         {
+            const int tree_redcostLeaf = tree_redcostReverse + swapcost + rootToNodeDist[leaf];
+
+            for( int j = 1; j < nleaves; j++ )
+            {
+               if( i == j )
+                  continue;
+
+               tree_redcostLeaf += nodeTo3TermsPaths[leaf].dist;
+            }
+
+            tree_redcost = MIN(tree_redcost, tree_redcostLeaf);
+         }
+      }
+#endif
    }
 
    return tree_redcost;
@@ -833,7 +871,7 @@ SCIP_Bool extRuleOutSimple(
    }
    else
    {
-      const SCIP_Real tree_redcost = extTreeGetRedcosts(graph, extdata, edge);
+      const SCIP_Real tree_redcost = extTreeGetRedcosts(scip, graph, extdata, edge);
       const SCIP_Real cutoff = reddata->cutoff;
 
       if( reddata->equality ? (SCIPisGE(scip, tree_redcost, cutoff)) : SCIPisGT(scip, tree_redcost, cutoff) )
@@ -861,7 +899,7 @@ SCIP_Bool extRuleOutPeriph(
 )
 {
    REDDATA* const reddata = extdata->reddata;
-   const SCIP_Real tree_redcost = extTreeGetRedcosts(graph, extdata, -1);
+   const SCIP_Real tree_redcost = extTreeGetRedcosts(scip, graph, extdata, -1);
    const SCIP_Real cutoff = reddata->cutoff;
 
    if( reddata->equality ? (SCIPisGE(scip, tree_redcost, cutoff)) : SCIPisGT(scip, tree_redcost, cutoff) )
@@ -960,7 +998,7 @@ void extBacktrack(
    /* top component already expanded? */
    if( extstack_state[stackpos] != EXT_STATE_NONE )
    {
-      const SCIP_Real* const redcost = reddata->reducedcosts;
+      const SCIP_Real* const redcost = reddata->redCosts;
       int* const tree_leaves = extdata->tree_leaves;
       int* const pseudoancestor_mark = reddata->pseudoancestor_mark;
       const int comproot = graph->tail[extstack_data[extstack_start[stackpos]]];
@@ -1380,13 +1418,13 @@ SCIP_RETCODE reduce_extendedCheckArc(
    const int root = redcostdata->redCostRoot;
    const SCIP_Real* redcost = redcostdata->redEdgeCost;
    const SCIP_Real* rootdist = redcostdata->rootToNodeDist;
-   const PATH* node2termpaths = redcostdata->nodeTo3TermsPaths;
+   const PATH* nodeToTermpaths = redcostdata->nodeTo3TermsPaths;
    const SCIP_Real cutoff = redcostdata->cutoff;
    const int head = graph->head[edge];
    const int tail = graph->tail[edge];
-   const SCIP_Real edgebound = redcost[edge] + rootdist[tail] + node2termpaths[head].dist;
+   const SCIP_Real edgebound = redcost[edge] + rootdist[tail] + nodeToTermpaths[head].dist;
 
-   assert(scip && graph && redcost && rootdist && node2termpaths && deletable && distdata && tree_deg && bottleneckDistNode);
+   assert(scip && graph && redcost && rootdist && nodeToTermpaths && deletable && distdata && tree_deg && bottleneckDistNode);
    assert(edge >= 0 && edge < graph->edges);
    assert(!graph_pc_isPcMw(graph) || !graph->extended);
    assert(graph->mark[tail] && graph->mark[head]);
@@ -1411,6 +1449,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
       int* tree_leaves;
       int* tree_parentNode;
       SCIP_Real* tree_parentEdgeCost;
+      SCIP_Real* tree_redcostSwap;
       int* pseudoancestor_mark;
       const int nnodes = graph->knots;
       const int maxdfsdepth = (graph->edges > STP_EXT_EDGELIMIT) ? STP_EXT_MINDFSDEPTH : STP_EXT_MAXDFSDEPTH;
@@ -1423,6 +1462,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_leaves, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentNode, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentEdgeCost, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &tree_redcostSwap, nnodes) );
 
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
 
@@ -1431,17 +1471,17 @@ SCIP_RETCODE reduce_extendedCheckArc(
       {
          const SCIP_Real treeredcostoffset = rootdist[tail];
 
-         REDDATA reddata = { .reducedcosts = redcost, .rootdist = rootdist, .termpaths = node2termpaths,
+         REDDATA reddata = { .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
             .edgedeleted = edgedeleted, .pseudoancestor_mark = pseudoancestor_mark,  .cutoff = cutoff,
-            .treeredcostoffset = treeredcostoffset, .equality = equality, .redCostRoot = root};
+            .treeredcostoffset = treeredcostoffset, .equality = equality, .redCostRoot = root };
          EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
             .extstack_state = extstack_state, .extstack_ncomponents = 0, .tree_leaves = tree_leaves,
             .tree_edges = tree_edges, .tree_deg = tree_deg, .tree_nleaves = 0,
             .tree_bottleneckDistNode = bottleneckDistNode, .tree_parentNode = tree_parentNode,
-            .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcost = treeredcostoffset,
+            .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap, .tree_redcost = treeredcostoffset,
             .tree_root = tail, .tree_nedges = 0,  .tree_depth = 0, .extstack_maxsize = nnodes - 1,
             .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXT_MAXNLEAVES, .tree_maxdepth = maxdfsdepth,
-            .tree_maxnedges = STP_EXT_MAXTREESIZE, .reddata = &reddata, .distdata = distdata};
+            .tree_maxnedges = STP_EXT_MAXTREESIZE, .reddata = &reddata, .distdata = distdata };
 
          extCheckArc(scip, graph, isterm, edge, &extdata, deletable);
       }
@@ -1456,6 +1496,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
 #endif
 
       SCIPfreeCleanBufferArray(scip, &pseudoancestor_mark);
+      SCIPfreeBufferArray(scip, &tree_redcostSwap);
       SCIPfreeBufferArray(scip, &tree_parentEdgeCost);
       SCIPfreeBufferArray(scip, &tree_parentNode);
       SCIPfreeBufferArray(scip, &tree_leaves);
