@@ -2584,10 +2584,13 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       *dval = lpi->rowrepswitch;
       SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_ROWREPSWITCH = %f.\n", *dval);
       break;
+#if 0
+   /* currently do not apply Markowitz parameter, since the default value does not seem suitable for Glop */
    case SCIP_LPPAR_MARKOWITZ:
       *dval = lpi->parameters->markowitz_singularity_threshold();
       SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_MARKOWITZ = %f.\n", *dval);
       break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }
@@ -2630,10 +2633,13 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_ROWREPSWITCH -> %f.\n", dval);
       lpi->rowrepswitch = dval;
       break;
+#if 0
+   /* currently do not apply Markowitz parameter, since the default value does not seem suitable for Glop */
    case SCIP_LPPAR_MARKOWITZ:
       SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_MARKOWITZ -> %f.\n", dval);
       lpi->parameters->set_markowitz_singularity_threshold(dval);
       break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }
