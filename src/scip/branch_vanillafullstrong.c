@@ -395,15 +395,18 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpVanillafullstrong)
       if( branchruledata->candscores != NULL)
       {
          SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->candscores, branchruledata->candcapacity);
+         branchruledata->candscores = NULL;
       }
       if( branchruledata->cands != NULL)
       {
          SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->cands, branchruledata->candcapacity);
+         branchruledata->cands = NULL;
       }
 
       /* update capacity */
-      branchruledata->candcapacity = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+      branchruledata->candcapacity = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
    }
+   assert(branchruledata->candcapacity >= ncands);
 
    /* allocate new candidate arrays if needed */
    if( branchruledata->cands == NULL )
