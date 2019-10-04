@@ -1,6 +1,0 @@
-# SCIP version 3.0.0
-
-# Separate using the alternative LP?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/indicator/sepaalternativelp = TRUE
-

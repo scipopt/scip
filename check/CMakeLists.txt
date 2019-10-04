@@ -50,9 +50,10 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
-    #constraints
+
+    #constraints and branching
     "indicatorlogicorsepa"
-    "indicatoralterlp"
+    "indicatoralterlp_vanilla"
 
     #presolving and branching
     "convertinttobin_mostinf"
