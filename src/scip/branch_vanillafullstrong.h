@@ -63,11 +63,11 @@ SCIP_RETCODE SCIPincludeBranchruleVanillafullstrong(
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetVanillafullstrongData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR***           cands,              /**< candidate variables; or NULL, of not needed */
-   SCIP_Real**           candscores,         /**< candidate scores; or NULL, of not needed */
-   int*                  ncands,             /**< number of candidates; or NULL, of not needed */
-   int*                  npriocands,         /**< number of priority candidates; or NULL, of not needed */
-   int*                  bestcand            /**< best branching candidate; or NULL, of not needed */
+   SCIP_VAR***           cands,              /**< pointer to store candidate variables; or NULL */
+   SCIP_Real**           candscores,         /**< pointer to store candidate scores; or NULL */
+   int*                  ncands,             /**< pointer to store number of candidates; or NULL */
+   int*                  npriocands,         /**< pointer to store number of priority candidates; or NULL */
+   int*                  bestcand            /**< pointer to store best branching candidate; or NULL */
    );
 
 

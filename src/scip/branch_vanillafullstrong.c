@@ -388,11 +388,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpVanillafullstrong)
    if( ncands > branchruledata->candcapacity )
    {
       /* free previously allocated arrays if any */
-      if( branchruledata->candscores )
+      if( branchruledata->candscores != NULL)
       {
          SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->candscores, branchruledata->candcapacity);
       }
-      if( branchruledata->cands )
+      if( branchruledata->cands != NULL)
       {
          SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->cands, branchruledata->candcapacity);
       }
@@ -543,11 +543,11 @@ SCIP_RETCODE SCIPincludeBranchruleVanillafullstrong(
 /** recovers candidate variables and their scores from last vanilla full strong branching call */
 SCIP_RETCODE SCIPgetVanillafullstrongData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR***           cands,              /**< candidate variables; or NULL, of not needed */
-   SCIP_Real**           candscores,         /**< candidate scores; or NULL, of not needed */
-   int*                  ncands,             /**< number of candidates; or NULL, of not needed */
-   int*                  npriocands,         /**< number of priority candidates; or NULL, of not needed */
-   int*                  bestcand            /**< best branching candidate; or NULL, of not needed */
+   SCIP_VAR***           cands,              /**< pointer to store candidate variables; or NULL */
+   SCIP_Real**           candscores,         /**< pointer to store candidate scores; or NULL */
+   int*                  ncands,             /**< pointer to store number of candidates; or NULL */
+   int*                  npriocands,         /**< pointer to store number of priority candidates; or NULL */
+   int*                  bestcand            /**< pointer to store best branching candidate; or NULL */
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
