@@ -219,14 +219,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 
    if( SCIPisExactSolve(scip) )
    {
-      SCIP_CALL( SCIPenfoIntegralityExact(scip, result ) );
+      SCIP_CALL( SCIPenfoIntegralityExact(scip, result) );
       if( *result == SCIP_FEASIBLE )
          return SCIP_OKAY;
-      else if ( *result == SCIP_REDUCEDDOM )
-      {
-         SCIP_Real bound;
-         SCIPcomputeSafeBound(scip, FALSE, &bound);
-      }
    }
 
    /* call branching methods */

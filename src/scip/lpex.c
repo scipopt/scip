@@ -6347,7 +6347,6 @@ SCIP_RETCODE SCIPlpexEnfoIntegralityExact(
    SCIP_Real frac;
    SCIP_VAR* var;
    SCIP_Rational* primsolex;
-   SCIP_Bool integral = TRUE;
    SCIP_Bool exintegral = TRUE;
 
    assert(result != NULL);
@@ -6389,30 +6388,13 @@ SCIP_RETCODE SCIPlpexEnfoIntegralityExact(
       if( vartype == SCIP_VARTYPE_CONTINUOUS )
          continue;
 
-      /* check, if the LP solution value is fractional. */
-      frac = SCIPsetFeasFrac(set, primsol);
-
-      /* The fractionality should not be smaller than -feastol, however, if the primsol is large enough
-         * and close to an integer, fixed precision floating point arithmetic might give us values slightly
-         * smaller than -feastol. Originally, the "frac >= -feastol"-check was within SCIPsetIsFeasFracIntegral(),
-         * however, we relaxed it to "frac >= -2*feastol" and have the stricter check here for small-enough primsols.
-         */
-      assert(SCIPsetIsGE(set, frac, -SCIPsetFeastol(set)) || (primsol > 1e14 * SCIPsetFeastol(set)));
-
-      integral =  SCIPsetIsFeasFracIntegral(set, frac);
       exintegral = RisIntegral(primsolex);
-      if( !integral )
+      if( !exintegral )
          break;
    }
 
    if( exintegral )
       *result = SCIP_FEASIBLE;
-   else if( integral )
-   {
-      lpex->forceexactsolve = TRUE;
-      lp->hasprovedbound = FALSE;
-      *result = SCIP_REDUCEDDOM;
-   }
    else
       *result = SCIP_INFEASIBLE;
 

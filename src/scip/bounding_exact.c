@@ -69,7 +69,11 @@ SCIP_Bool fpLPisIntFeasible(
    feasible = TRUE;
    for( i = 0; i < lp->ncols && feasible; i++ )
    {
-      primsol = SCIPcolGetPrimsol(lp->cols[i]);
+      SCIP_COL* col;
+      col = lp->cols[i];
+      if( SCIPvarGetType(SCIPcolGetVar(col)) == SCIP_VARTYPE_CONTINUOUS )
+         continue;
+      primsol = SCIPcolGetPrimsol(col);
       if( !SCIPsetIsIntegral(set, primsol) )
          feasible = FALSE;
    }
@@ -3797,8 +3801,10 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
       lpex->forceexactsolve = FALSE;
    }
    else if( set->misc_dbmethod == 'a' )
+   {
       dualboundmethod = chooseBoundingMethod(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                               prob, itlim, lperror, dualfarkas, safebound);
+   }
    else
       dualboundmethod = set->misc_dbmethod;
 

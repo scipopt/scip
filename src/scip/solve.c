@@ -2886,16 +2886,19 @@ SCIP_RETCODE applyBounding(
       {
          if( set->misc_exactsolve )
          {
-            SCIP_Rational* lpobj;
+            SCIP_Rational* bound;
 
-            SCIP_CALL( RcreateTemp(set->buffer, &lpobj) );
-            SCIPlpexGetObjval(lp->lpex, set, transprob, lpobj);
-            if( !RisGE(lpobj, primal->cutoffboundex) )
+            assert(lp->hasprovedbound);
+
+            SCIP_CALL( RcreateTemp(set->buffer, &bound) );
+            SCIPlpexGetObjval(lp->lpex, set, transprob, bound);
+
+            if( !RisGE(bound, primal->cutoffboundex) )
             {
-               RdeleteTemp(set->buffer, &lpobj);
+               RdeleteTemp(set->buffer, &bound);
                return SCIP_OKAY;
             }
-            RdeleteTemp(set->buffer, &lpobj);
+            RdeleteTemp(set->buffer, &bound);
          }
          SCIPsetDebugMsg(set, "node is cut off by bounding (lower=%g, upper=%g)\n",
             SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
@@ -4763,7 +4766,7 @@ SCIP_RETCODE addCurrentSolution(
       {
          SCIP_CALL( SCIPsolexCreateLPexSol(&sol, blkmem, set, stat, transprob, set->scip->primal, tree, lp->lpex, NULL) );
 
-         SCIP_CALL( SCIPprimalTrySolexFree(set->scip->primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpex,
+         SCIP_CALL( SCIPprimalTrySolexFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpex,
                eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );
       }
       else

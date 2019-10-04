@@ -14719,6 +14719,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool checkrelmaxabs;
    SCIP_Bool violated;
+   SCIP_Bool checkexact;
    SCIP_Bool cutoff = FALSE;
    int c;
 
@@ -14731,6 +14732,10 @@ SCIP_RETCODE enforceConstraint(
    assert(conshdlrdata != NULL);
 
    checkrelmaxabs = conshdlrdata->checkrelmaxabs;
+   if( sol == NULL )
+      checkexact = SCIPlpexIsSolved(scip);
+   else
+      checkexact = SCIPisExactSol(scip, sol);
 
    SCIPdebugMsg(scip, "Enforcement method of linear constraints for %s solution\n", sol == NULL ? "LP" : "relaxation");
    SCIPdebug( SCIPprintSol(scip, sol, NULL, FALSE));
@@ -14743,7 +14748,7 @@ SCIP_RETCODE enforceConstraint(
    /* check all useful linear constraints for feasibility */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, FALSE, checkrelmaxabs, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], sol, checkexact, FALSE, checkrelmaxabs, &violated) );
 
       if( violated )
       {
@@ -14759,7 +14764,7 @@ SCIP_RETCODE enforceConstraint(
    /* check all obsolete linear constraints for feasibility */
    for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, FALSE, checkrelmaxabs, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], sol, checkexact, FALSE, checkrelmaxabs, &violated) );
 
       if( violated )
       {
