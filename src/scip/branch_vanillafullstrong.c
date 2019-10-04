@@ -377,9 +377,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpVanillafullstrong)
    /* get branching candidates, either all non-fixed variables or only the
     * fractional ones */
    if( branchruledata->integralcands )
+   {
       SCIP_CALL( SCIPgetPseudoBranchCands(scip, &cands, &ncands, &npriocands) );
+   }
    else
+   {
       SCIP_CALL( SCIPgetLPBranchCands(scip, &cands, NULL, NULL, &ncands, &npriocands, NULL) );
+   }
 
    assert(ncands > 0);
    assert(npriocands > 0);
