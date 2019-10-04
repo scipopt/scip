@@ -69,12 +69,14 @@ using operations_research::glop::DenseColumn;
 using operations_research::glop::DenseRow;
 using operations_research::glop::SparseColumn;
 using operations_research::glop::ScatteredColumn;
+using operations_research::glop::ScatteredColumnIterator;
 using operations_research::glop::SparseMatrix;
 using operations_research::glop::Fractional;
 using operations_research::glop::GetProblemStatusString;
 using operations_research::glop::ProblemStatus;
 using operations_research::glop::RowIndex;
 using operations_research::glop::ScatteredRow;
+using operations_research::glop::ScatteredRowIterator;
 using operations_research::glop::VariableStatus;
 
 
@@ -2119,10 +2121,24 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    ScatteredRow solution;
    lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(r), &solution);
    const ColIndex num_cols = solution.values.size();
+
+   /* if we want a sparse vector and sparsity information is available */
+   if ( ninds != NULL && inds != NULL && ! solution.non_zeros.empty() )
+   {
+      *ninds = 0;
+      ScatteredRowIterator end = solution.end();
+      for (ScatteredRowIterator iter = solution.begin(); iter != end; ++iter)
+      {
+         coef[(*ninds)] = (*iter).coefficient();
+         inds[(*ninds)++] = (*iter).column().value();
+      }
+      return SCIP_OKAY;
+   }
+
+   /* dense version */
    for (ColIndex col(0); col < num_cols; ++col)
       coef[col.value()] = solution[col];
 
-   /* Only returns a dense vector, so set ninds to -1. */
    if ( ninds != NULL )
       *ninds = -1;
 
@@ -2155,6 +2171,28 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    /* we need to loop through the rows to extract the values for column c */
    const ColIndex col(c);
    const RowIndex num_rows = lpi->linear_program->num_constraints();
+
+   /* if we want a sparse vector */
+   if ( ninds != NULL && inds != NULL )
+   {
+      const SCIP_Real eps = 1e-06;
+
+      *ninds = 0;
+      for (int row = 0; row < num_rows; ++row)
+      {
+         ScatteredRow solution;
+         lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(row), &solution);
+         SCIP_Real val = solution[col];
+         if ( fabs(val) >= eps )
+         {
+            coef[(*ninds)] = val;
+            inds[(*ninds)++] = row;
+         }
+      }
+      return SCIP_OKAY;
+   }
+
+   /* dense version */
    for (int row = 0; row < num_rows; ++row)
    {
       ScatteredRow solution;
@@ -2162,7 +2200,6 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       coef[row] = solution[col];
    }
 
-   /* Only returns a dense vector, so set ninds to -1. */
    if ( ninds != NULL )
       *ninds = -1;
 
@@ -2193,10 +2230,29 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    ScatteredRow solution;
    lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(r), &solution);
    const ColIndex num_cols = lpi->linear_program->num_variables();
+
+   /* if we want a sparse vector */
+   if ( ninds != NULL && inds != NULL )
+   {
+      const SCIP_Real eps = 1e-06;
+
+      *ninds = 0;
+      for (ColIndex col(0); col < num_cols; ++col)
+      {
+         SCIP_Real val = operations_research::glop::ScalarProduct(solution.values, lpi->linear_program->GetSparseColumn(col));
+         if ( fabs(val) >= eps )
+         {
+            coef[(*ninds)] = val;
+            inds[(*ninds)++] = col.value();
+         }
+      }
+      return SCIP_OKAY;
+   }
+
+   /* dense version */
    for (ColIndex col(0); col < num_cols; ++col)
       coef[col.value()] = operations_research::glop::ScalarProduct(solution.values, lpi->linear_program->GetSparseColumn(col));
 
-   /* Only returns a dense vector, so set ninds to -1. */
    if ( ninds != NULL )
       *ninds = -1;
 
@@ -2225,10 +2281,24 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    ScatteredColumn solution;
    lpi->solver->GetBasisFactorization().RightSolveForProblemColumn(ColIndex(c), &solution);
    const RowIndex num_rows = solution.values.size();
+
+   /* if we want a sparse vector and sparsity information is available */
+   if ( ninds != NULL && inds != NULL && ! solution.non_zeros.empty() )
+   {
+      *ninds = 0;
+      ScatteredColumnIterator end = solution.end();
+      for (ScatteredColumnIterator iter = solution.begin(); iter != end; ++iter)
+      {
+         coef[(*ninds)] = (*iter).coefficient();
+         inds[(*ninds)++] = (*iter).row().value();
+      }
+      return SCIP_OKAY;
+   }
+
+   /* dense version */
    for (RowIndex row(0); row < num_rows; ++row)
       coef[row.value()] = solution[row];
 
-   /* Only returns a dense vector, so set ninds to -1. */
    if ( ninds != NULL )
       *ninds = -1;
 
