@@ -32,15 +32,6 @@
  * - integralcands (optional): get candidates from SCIPgetPseudoBranchCands() instead of SCIPgetLPBranchCands(), i.e.,
  *   consider all non-fixed variables as branching candidates, not only fractional ones.
  *
- * For a more mathematical description and a comparison between the strong branching rule and other branching rules
- * in SCIP, we refer to
- *
- * @par
- * Tobias Achterberg@n
- * Constraint Integer Programming@n
- * PhD Thesis, Technische Universität Berlin, 2007@n
- *
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -68,16 +59,15 @@ SCIP_RETCODE SCIPincludeBranchruleVanillafullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** recovers candidate variables and their scores from last vanilla full
- * strong branching call */
+/** recovers candidate variables and their scores from last vanilla full strong branching call */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetVanillafullstrongData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR***           cands,              /**< candidate variables */
-   SCIP_Real**           candscores,         /**< candidate scores */
-   int*                  ncands,             /**< number of candidates */
-   int*                  npriocands,         /**< number of priority candidates */
-   int*                  bestcand            /**< best branching candidate */
+   SCIP_VAR***           cands,              /**< candidate variables; or NULL, of not needed */
+   SCIP_Real**           candscores,         /**< candidate scores; or NULL, of not needed */
+   int*                  ncands,             /**< number of candidates; or NULL, of not needed */
+   int*                  npriocands,         /**< number of priority candidates; or NULL, of not needed */
+   int*                  bestcand            /**< best branching candidate; or NULL, of not needed */
    );
 
 

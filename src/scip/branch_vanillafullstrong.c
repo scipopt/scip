@@ -77,23 +77,194 @@ struct SCIP_BranchruleData
    int                   candcapacity;          /**< capacity of candidate arrays */
 };
 
-SCIP_RETCODE runVanillaStrongBranching(
-   SCIP*                 scip,
-   SCIP_VAR**            cands,
-   int                   ncands,
-   int                   npriocands,
-   SCIP_Bool             scoreall,
-   SCIP_Bool             idempotent,
-   SCIP_Real*            scores,
-   int*                  bestcand,
-   SCIP_Real*            bestdown,
-   SCIP_Real*            bestup,
-   SCIP_Real*            bestscore,
-   SCIP_Bool*            bestdownvalid,
-   SCIP_Bool*            bestupvalid,
-   SCIP_Real*            provedbound
-   );
 
+/*
+ * local methods
+ */
+
+
+/** selects a variable from a set of candidates by strong branching */
+SCIP_RETCODE runVanillaStrongBranching(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_VAR**            cands,            /**< branching candidates */
+   int                   ncands,           /**< number of branching candidates */
+   int                   npriocands,       /**< number of branching candidates with highest priority */
+   SCIP_Bool             scoreall,         /**< should strong branching scores be computed for all candidates, or can
+                                            *   we early stop when a node is detected infeasible ? */
+   SCIP_Bool             idempotent,       /**< should strong branching side-effects be prevented (e.g., domain
+                                            *   changes, stat updates etc.) ? */
+   SCIP_Real*            scores,           /**< candidate scores */
+   int*                  bestcand,         /**< best candidate for branching */
+   SCIP_Real*            bestdown,         /**< objective value of the down branch for bestcand */
+   SCIP_Real*            bestup,           /**< objective value of the up branch for bestcand */
+   SCIP_Real*            bestscore,        /**< score for bestcand */
+   SCIP_Bool*            bestdownvalid,    /**< is bestdown a valid dual bound for the down branch? */
+   SCIP_Bool*            bestupvalid,      /**< is bestup a valid dual bound for the up branch? */
+   SCIP_Real*            provedbound       /**< proved dual bound for current subtree */
+   )
+{  /*lint --e{715}*/
+   SCIP_Real lpobjval;
+   int nsbcalls;
+   int c;
+
+   assert(scip != NULL);
+   assert(cands != NULL);
+   assert(bestcand != NULL);
+   assert(bestdown != NULL);
+   assert(bestup != NULL);
+   assert(bestscore != NULL);
+   assert(bestdownvalid != NULL);
+   assert(bestupvalid != NULL);
+   assert(provedbound != NULL);
+   assert(ncands > 0);
+
+   /* get current LP objective bound of the local sub problem and global cutoff bound */
+   lpobjval = SCIPgetLPObjval(scip);
+   *provedbound = lpobjval;
+
+   *bestcand = 0;
+   *bestdown = lpobjval;
+   *bestup = lpobjval;
+   *bestdownvalid = TRUE;
+   *bestupvalid = TRUE;
+   *bestscore = -SCIPinfinity(scip);
+
+   if( scores != NULL )
+      for( c = 0; c < ncands; ++c )
+         scores[c] = -SCIPinfinity(scip);
+
+   /* if only one candidate exists, choose this one without applying strong branching; also, when SCIP is about to be
+    * stopped, all strongbranching evaluations will be aborted anyway, thus we can return immediately
+    */
+   if( (!scoreall && ncands == 1) || SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* this assert may not hold if SCIP is stopped, thus we only check it here */
+   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
+
+   /* initialize strong branching without propagation */
+   SCIP_CALL( SCIPstartStrongbranch(scip, FALSE) );
+
+   /* compute strong branching scores */
+   nsbcalls = 0;
+   for( c = 0; c < ncands ; ++c )
+   {
+      SCIP_VAR* var;
+      SCIP_Real val;
+      SCIP_Bool integral;
+      SCIP_Real down, up;
+      SCIP_Real downgain, upgain;
+      SCIP_Bool downvalid, upvalid;
+      SCIP_Bool downinf, upinf;
+      SCIP_Bool downconflict, upconflict;
+      SCIP_Bool lperror;
+      SCIP_Real score;
+
+      var = cands[c];
+      assert(var != NULL);
+
+      val = SCIPvarGetLPSol(var);
+      integral = SCIPisFeasIntegral(scip, val);
+
+      up = -SCIPinfinity(scip);
+      down = -SCIPinfinity(scip);
+
+      SCIPdebugMsg(scip, "applying vanilla strong branching on variable <%s> with solution %g\n",
+         SCIPvarGetName(var), val);
+
+      /* apply strong branching */
+      if( integral )
+      {
+         SCIP_CALL( SCIPgetVarStrongbranchInt(scip, cands[c], INT_MAX, idempotent,
+               &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, cands[c], INT_MAX, idempotent,
+               &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+      }
+      nsbcalls++;
+
+      /* check for an error in strong branching */
+      if( lperror )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+            "(node %" SCIP_LONGINT_FORMAT ") error in strong branching call for variable <%s> with solution %g\n",
+            SCIPgetNNodes(scip), SCIPvarGetName(var), val);
+         break;
+      }
+
+      /* evaluate strong branching */
+      down = MAX(down, lpobjval);
+      up = MAX(up, lpobjval);
+      downgain = down - lpobjval;
+      upgain = up - lpobjval;
+
+      assert(!SCIPallColsInLP(scip) || SCIPisExactSolve(scip) || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
+      assert(!SCIPallColsInLP(scip) || SCIPisExactSolve(scip) || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
+      assert(downinf || !downconflict);
+      assert(upinf || !upconflict);
+
+      if( !idempotent )
+      {
+         /* display node information line */
+         if( SCIPgetDepth(scip) == 0 && nsbcalls % 100 == 0 )
+         {
+            SCIP_CALL( SCIPprintDisplayLine(scip, NULL, SCIP_VERBLEVEL_HIGH, TRUE) );
+         }
+         /* update variable pseudo cost values */
+         if( !downinf && downvalid )
+         {
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, var, integral ? -1.0 : 0.0 - SCIPfrac(scip, val), downgain, 1.0) );
+         }
+         if( !upinf && upvalid )
+         {
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, var, integral ? +1.0 : 1.0 - SCIPfrac(scip, val), upgain, 1.0) );
+         }
+      }
+
+      /* compute strong branching score */
+      if( integral )
+         score = SCIPgetBranchScore(scip, var, MIN(downgain, upgain), 0.0);
+      else
+         score = SCIPgetBranchScore(scip, var, downgain, upgain);
+
+      /* collect scores if requested */
+      if( scores != NULL )
+         scores[c] = score;
+
+      /* check for a better score */
+      if( score > *bestscore )
+      {
+         *bestcand = c;
+         *bestdown = down;
+         *bestup = up;
+         *bestdownvalid = downvalid;
+         *bestupvalid = upvalid;
+         *bestscore = score;
+      }
+
+      SCIPdebugMsg(scip, " -> cand %d/%d (prio:%d) var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
+         c, ncands, npriocands, SCIPvarGetName(var), val, downgain, upgain, score,
+         SCIPvarGetName(cands[*bestcand]), *bestscore);
+
+      /* node is infeasible -> early stopping (highest score) */
+      if( !integral && !scoreall && downinf && upinf )
+      {
+         /* we should only detect infeasibility if the LP is a valid relaxation */
+         assert(SCIPallColsInLP(scip));
+         assert(!SCIPisExactSolve(scip));
+
+         SCIPdebugMsg(scip, " -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(var));
+         break;
+      }
+   }
+
+   /* end strong branching */
+   SCIP_CALL( SCIPendStrongbranch(scip) );
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods
@@ -156,10 +327,14 @@ SCIP_DECL_BRANCHEXIT(branchExitVanillafullstrong)
    assert(branchruledata != NULL);
 
    /* free candidate arrays if any */
-   if( branchruledata->candscores )
+   if( branchruledata->candscores != NULL )
+   {
       SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->candscores, branchruledata->candcapacity);
-   if( branchruledata->cands )
+   }
+   if( branchruledata->cands != NULL )
+   {
       SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->cands, branchruledata->candcapacity);
+   }
 
    branchruledata->candcapacity = -1;
    branchruledata->ncands = -1;
@@ -213,9 +388,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpVanillafullstrong)
    {
       /* free previously allocated arrays if any */
       if( branchruledata->candscores )
+      {
          SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->candscores, branchruledata->candcapacity);
+      }
       if( branchruledata->cands )
+      {
          SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->cands, branchruledata->candcapacity);
+      }
 
       /* update capacity */
       branchruledata->candcapacity = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
@@ -223,20 +402,25 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpVanillafullstrong)
 
    /* allocate new candidate arrays if needed */
    if( branchruledata->cands == NULL )
+   {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->cands, branchruledata->candcapacity) );
+   }
    if( branchruledata->candscores == NULL && branchruledata->collectscores )
+   {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->candscores, branchruledata->candcapacity) );
+   }
 
    /* copy candidates */
    branchruledata->ncands = ncands;
    branchruledata->npriocands = npriocands;
+
    for( i = 0; i < ncands; i++ )
-       branchruledata->cands[i] = cands[i];
+      branchruledata->cands[i] = cands[i];
 
    SCIP_CALL( runVanillaStrongBranching(scip, branchruledata->cands, branchruledata->ncands, branchruledata->npriocands,
-     branchruledata->scoreall, branchruledata->idempotent, branchruledata->candscores,
-     &branchruledata->bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid,
-     &bestupvalid, &provedbound) );
+         branchruledata->scoreall, branchruledata->idempotent, branchruledata->candscores,
+         &branchruledata->bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid,
+         &bestupvalid, &provedbound) );
 
    if( !branchruledata->donotbranch )
    {
@@ -332,223 +516,43 @@ SCIP_RETCODE SCIPincludeBranchruleVanillafullstrong(
    /* fullstrong branching rule parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/vanillafullstrong/integralcands",
-         "should integral variables in the current LP solution be considered as branching candidates ?",
+         "should integral variables in the current LP solution be considered as branching candidates?",
          &branchruledata->integralcands, FALSE, DEFAULT_INTEGRALCANDS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/vanillafullstrong/idempotent",
-         "should strong branching side-effects be prevented (e.g., domain changes, stat updates etc.) ?",
+         "should strong branching side-effects be prevented (e.g., domain changes, stat updates etc.)?",
          &branchruledata->idempotent, FALSE, DEFAULT_IDEMPOTENT, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/vanillafullstrong/scoreall",
-         "should strong branching scores be computed for all candidates, or can we early stop when a variable has infinite score ?",
+         "should strong branching scores be computed for all candidates, or can we early stop when a variable has infinite score?",
          &branchruledata->scoreall, TRUE, DEFAULT_SCOREALL, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/vanillafullstrong/collectscores",
-         "should strong branching scores be collected ?",
+         "should strong branching scores be collected?",
          &branchruledata->collectscores, TRUE, DEFAULT_COLLECTSCORES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/vanillafullstrong/donotbranch",
-         "should branching be skipped ?",
+         "should candidates only be scored, but no branching be performed?",
          &branchruledata->donotbranch, TRUE, DEFAULT_DONOTBRANCH, NULL, NULL) );
 
    return SCIP_OKAY;
 }
 
-/** selects a variable from a set of candidates by strong branching */
-SCIP_RETCODE runVanillaStrongBranching(
-   SCIP*                 scip,             /**< original SCIP data structure                        */
-   SCIP_VAR**            cands,            /**< branching candidates                                */
-   int                   ncands,           /**< number of branching candidates                      */
-   int                   npriocands,       /**< number of priority branching candidates             */
-   SCIP_Bool             scoreall,         /**< should strong branching scores be computed for all candidates, or can
-                                            *   we early stop when a node is detected infeasible ? */
-   SCIP_Bool             idempotent,       /**< should strong branching side-effects be prevented (e.g., domain
-                                            *   changes, stat updates etc.) ? */
-   SCIP_Real*            scores,           /**< candidate scores */
-   int*                  bestcand,         /**< best candidate for branching                        */
-   SCIP_Real*            bestdown,         /**< objective value of the down branch for bestcand     */
-   SCIP_Real*            bestup,           /**< objective value of the up branch for bestcand       */
-   SCIP_Real*            bestscore,        /**< score for bestcand                                  */
-   SCIP_Bool*            bestdownvalid,    /**< is bestdown a valid dual bound for the down branch? */
-   SCIP_Bool*            bestupvalid,      /**< is bestup a valid dual bound for the up branch?     */
-   SCIP_Real*            provedbound       /**< proved dual bound for current subtree               */
-   )
-{  /*lint --e{715}*/
-   SCIP_Real lpobjval;
-   int nsbcalls;
-   int c;
-
-   assert(scip != NULL);
-   assert(cands != NULL);
-   assert(bestcand != NULL);
-   assert(bestdown != NULL);
-   assert(bestup != NULL);
-   assert(bestscore != NULL);
-   assert(bestdownvalid != NULL);
-   assert(bestupvalid != NULL);
-   assert(provedbound != NULL);
-   assert(ncands > 0);
-
-   /* get current LP objective bound of the local sub problem and global cutoff bound */
-   lpobjval = SCIPgetLPObjval(scip);
-   *provedbound = lpobjval;
-
-   *bestcand = 0;
-   *bestdown = lpobjval;
-   *bestup = lpobjval;
-   *bestdownvalid = TRUE;
-   *bestupvalid = TRUE;
-   *bestscore = -SCIPinfinity(scip);
-
-   if( scores )
-      for( c = 0; c < ncands ; ++c )
-         scores[c] = -SCIPinfinity(scip);
-
-   /* if only one candidate exists, choose this one without applying strong branching; also, when SCIP is about to be
-    * stopped, all strongbranching evaluations will be aborted anyway, thus we can return immediately
-    */
-   if( (!scoreall && ncands == 1) || SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   /* this assert may not hold if SCIP is stopped, thus we only check it here */
-   assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
-
-   /* initialize strong branching without propagation */
-   SCIP_CALL( SCIPstartStrongbranch(scip, FALSE) );
-
-   /* compute strong branching scores */
-   nsbcalls = 0;
-   for( c = 0; c < ncands ; ++c )
-   {
-      SCIP_VAR* var;
-      SCIP_Real val;
-      SCIP_Bool integral;
-      SCIP_Real down, up;
-      SCIP_Real downgain, upgain;
-      SCIP_Bool downvalid, upvalid;
-      SCIP_Bool downinf, upinf;
-      SCIP_Bool downconflict, upconflict;
-      SCIP_Bool lperror;
-      SCIP_Real score;
-
-      var = cands[c];
-      assert(var != NULL);
-
-      val = SCIPvarGetLPSol(var);
-      integral = SCIPisFeasIntegral(scip, val);
-
-      up = -SCIPinfinity(scip);
-      down = -SCIPinfinity(scip);
-
-      SCIPdebugMsg(scip, "applying vanilla strong branching on variable <%s> with solution %g\n",
-         SCIPvarGetName(var), val);
-
-      /* apply strong branching */
-      if( integral )
-      {
-         SCIP_CALL( SCIPgetVarStrongbranchInt(scip, cands[c], INT_MAX, idempotent,
-            &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, cands[c], INT_MAX, idempotent,
-            &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
-      }
-      nsbcalls++;
-
-      /* check for an error in strong branching */
-      if( lperror )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-            "(node %" SCIP_LONGINT_FORMAT ") error in strong branching call for variable <%s> with solution %g\n",
-            SCIPgetNNodes(scip), SCIPvarGetName(var), val);
-         break;
-      }
-
-      /* evaluate strong branching */
-      down = MAX(down, lpobjval);
-      up = MAX(up, lpobjval);
-      downgain = down - lpobjval;
-      upgain = up - lpobjval;
-
-      assert(!SCIPallColsInLP(scip) || SCIPisExactSolve(scip) || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
-      assert(!SCIPallColsInLP(scip) || SCIPisExactSolve(scip) || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
-      assert(downinf || !downconflict);
-      assert(upinf || !upconflict);
-
-      if( !idempotent )
-      {
-         /* display node information line */
-         if( SCIPgetDepth(scip) == 0 && nsbcalls % 100 == 0 )
-         {
-            SCIP_CALL( SCIPprintDisplayLine(scip, NULL, SCIP_VERBLEVEL_HIGH, TRUE) );
-         }
-         /* update variable pseudo cost values */
-         if( !downinf && downvalid )
-         {
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, var, integral ? -1.0 : 0.0 - SCIPfrac(scip, val), downgain, 1.0) );
-         }
-         if( !upinf && upvalid )
-         {
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, var, integral ? +1.0 : 1.0 - SCIPfrac(scip, val), upgain, 1.0) );
-         }
-      }
-
-      /* compute strong branching score */
-      if( integral )
-         score = SCIPgetBranchScore(scip, var, MIN(downgain, upgain), 0.0);
-      else
-         score = SCIPgetBranchScore(scip, var, downgain, upgain);
-
-      /* collect scores if requested */
-      if( scores )
-         scores[c] = score;
-
-      /* check for a better score */
-      if( score > *bestscore )
-      {
-         *bestcand = c;
-         *bestdown = down;
-         *bestup = up;
-         *bestdownvalid = downvalid;
-         *bestupvalid = upvalid;
-         *bestscore = score;
-      }
-
-      SCIPdebugMsg(scip, " -> cand %d/%d (prio:%d) var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
-         c, ncands, npriocands, SCIPvarGetName(var), val, downgain, upgain, score,
-         SCIPvarGetName(cands[*bestcand]), *bestscore);
-
-      /* node is infeasible -> early stopping (highest score) */
-      if( !integral && !scoreall && downinf && upinf )
-      {
-         /* we should only detect infeasibility if the LP is a valid relaxation */
-         assert(SCIPallColsInLP(scip));
-         assert(!SCIPisExactSolve(scip));
-
-         SCIPdebugMsg(scip, " -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(var));
-         break;
-      }
-   }
-
-   /* end strong branching */
-   SCIP_CALL( SCIPendStrongbranch(scip) );
-
-   return SCIP_OKAY;
-}
 
 /** recovers candidate variables and their scores from last vanilla full strong branching call */
 SCIP_RETCODE SCIPgetVanillafullstrongData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR***           cands,              /**< candidate variables */
-   SCIP_Real**           candscores,         /**< candidate scores */
-   int*                  ncands,             /**< number of candidates */
-   int*                  npriocands,         /**< number of priority candidates */
-   int*                  bestcand            /**< best branching candidate */
-)
+   SCIP_VAR***           cands,              /**< candidate variables; or NULL, of not needed */
+   SCIP_Real**           candscores,         /**< candidate scores; or NULL, of not needed */
+   int*                  ncands,             /**< number of candidates; or NULL, of not needed */
+   int*                  npriocands,         /**< number of priority candidates; or NULL, of not needed */
+   int*                  bestcand            /**< best branching candidate; or NULL, of not needed */
+   )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_BRANCHRULE* branchrule;
+
+   assert(scip != NULL);
 
    branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
    branchruledata = SCIPbranchruleGetData(branchrule);
