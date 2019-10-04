@@ -2941,6 +2941,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    )
 {
    SCIP_COL* col;
+   SCIP_Real localdown;
+   SCIP_Real localup;
+   SCIP_Bool localdownvalid;
+   SCIP_Bool localupvalid;
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -2988,7 +2992,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
 
    /* call strong branching for column with fractional value */
    SCIP_CALL( SCIPcolGetStrongbranch(col, FALSE, scip->set, scip->stat, scip->transprob, scip->lp, itlim, !idempotent, !idempotent,
-         down, up, downvalid, upvalid, lperror) );
+         &localdown, &localup, &localdownvalid, &localupvalid, lperror) );
 
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
@@ -3002,11 +3006,20 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
       else
       {
          if( downinf != NULL )
-            *downinf = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
+            *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
          if( upinf != NULL )
-            *upinf = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
+            *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
       }
    }
+
+   if( down != NULL )
+      *down = localdown;
+   if( up != NULL )
+      *up = localup;
+   if( downvalid != NULL )
+      *downvalid = localdownvalid;
+   if( upvalid != NULL )
+      *upvalid = localupvalid;
 
    return SCIP_OKAY;
 }
@@ -3671,6 +3684,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    )
 {
    SCIP_COL* col;
+   SCIP_Real localdown;
+   SCIP_Real localup;
+   SCIP_Bool localdownvalid;
+   SCIP_Bool localupvalid;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetVarStrongbranchInt", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -3715,7 +3732,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
 
    /* call strong branching for column */
    SCIP_CALL( SCIPcolGetStrongbranch(col, TRUE, scip->set, scip->stat, scip->transprob, scip->lp, itlim, !idempotent, !idempotent,
-         down, up, downvalid, upvalid, lperror) );
+         &localdown, &localup, &localdownvalid, &localupvalid, lperror) );
 
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
@@ -3729,11 +3746,20 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
       else
       {
          if( downinf != NULL )
-            *downinf = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
+            *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
          if( upinf != NULL )
-            *upinf = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
+            *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
       }
    }
+
+   if( down != NULL )
+      *down = localdown;
+   if( up != NULL )
+      *up = localup;
+   if( downvalid != NULL )
+      *downvalid = localdownvalid;
+   if( upvalid != NULL )
+      *upvalid = localupvalid;
 
    return SCIP_OKAY;
 }
