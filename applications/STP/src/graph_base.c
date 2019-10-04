@@ -4692,6 +4692,35 @@ SCIP_RETCODE graph_init_history(
    return SCIP_OKAY;
 }
 
+
+/** builds complete graph (Kn) with unit edge weights and no terminals */
+SCIP_RETCODE graph_buildCompleteGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH**               g,                  /**< new graph */
+   int                   nnodes              /**< number of nodes */
+   )
+{
+   const int nedges = nnodes * (nnodes - 1);
+   GRAPH* graph;
+
+   assert(scip && g);
+   assert(nnodes >= 1);
+
+   SCIP_CALL( graph_init(scip, g, nnodes, nedges, 1) );
+
+   graph = *g;
+
+   for( int k = 0; k < nnodes; k++ )
+      graph_knot_add(graph, -1);
+
+   for( int k = 0; k < nnodes - 1; k++ )
+      for( int k2 = nnodes - 1; k2 >= k + 1; k2-- )
+         graph_edge_add(scip, graph, k, k2, 1.0, 1.0);
+
+   return SCIP_OKAY;
+}
+
+
 /** enlarge given graph */
 SCIP_RETCODE graph_resize(
    SCIP*                 scip,               /**< SCIP data structure */

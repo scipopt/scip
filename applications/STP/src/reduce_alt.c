@@ -3345,16 +3345,8 @@ SCIP_RETCODE reduce_bd34WithSd(
    assert(scip && g && netgraph && netmst && vnoi);
    assert(!graph_pc_isPcMw(g));
 
-   /* initialize new graph for bd test */
-   SCIP_CALL( graph_init(scip, &auxg, STP_BD_MAXDEGREE, 2 * STP_BD_MAXDNEDGES, 1) );
-
-   for( int k = 0; k < STP_BD_MAXDEGREE; k++ )
-      graph_knot_add(auxg, -1);
-
-   for( int k = 0; k < STP_BD_MAXDEGREE - 1; k++ )
-      for( int k2 = STP_BD_MAXDEGREE - 1; k2 >= k + 1; k2-- )
-         graph_edge_add(scip, auxg, k, k2, 1.0, 1.0);
-
+   /* build auxiliary graph */
+   SCIP_CALL( graph_buildCompleteGraph(scip, &auxg, STP_BD_MAXDEGREE) );
    assert(auxg->edges == 2 * STP_BD_MAXDNEDGES);
 
    SCIP_CALL( graph_path_init(scip, auxg) );
@@ -3371,10 +3363,10 @@ SCIP_RETCODE reduce_bd34WithSd(
       for( int i = 0; i < nnodes; i++ )
       {
          if( Is_term(g->term[i]) || g->grad[i] != degree )
+         {
             continue;
-
-         assert(g->mark[i]);
-
+         }
+         else
          {
             int k = 0;
             for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
@@ -3385,6 +3377,8 @@ SCIP_RETCODE reduce_bd34WithSd(
             }
             assert(k == degree);
          }
+
+         assert(g->mark[i]);
 
          /* vertex of degree 3? */
          if( degree == 3 )
@@ -3505,17 +3499,10 @@ SCIP_RETCODE reduce_bd34(
    assert(scip && g && heap && nelims);
    assert(!g->extended);
 
-   /* initialize new graph for bd4 tests */
-   SCIP_CALL( graph_init(scip, &auxg, STP_BD_MAXDEGREE, 2 * STP_BD_MAXDNEDGES, 1) );
+   /* build auxiliary graph */
+   SCIP_CALL( graph_buildCompleteGraph(scip, &auxg, STP_BD_MAXDEGREE) );
+   assert(auxg->edges == 2 * STP_BD_MAXDNEDGES);
 
-   for( int k = 0; k < STP_BD_MAXDEGREE; k++ )
-      graph_knot_add(auxg, -1);
-
-   for( int k = 0; k < STP_BD_MAXDEGREE; k++ )
-      for( int k2 = STP_BD_MAXDEGREE - 1; k2 >= k + 1; k2-- )
-         graph_edge_add(scip, auxg, k, k2, 1.0, 1.0);
-
-   /* initilaize graph for MST computation */
    SCIP_CALL( graph_path_init(scip, auxg) );
 
    *nelims = 0;
