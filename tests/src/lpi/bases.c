@@ -255,11 +255,14 @@ Test(complex, test1)
    SCIP_Real binvrow[3];
    SCIP_Real binvcol[3];
    SCIP_Real coef[3];
+   SCIP_Real coeftwo[3];
    SCIP_Real objval;
    int cstats[3];
    int nrows;
    int rstats[3];
    int basinds[3];
+   int inds[3];
+   int ninds;
    int idx;
    int entry;
    int i;
@@ -309,6 +312,19 @@ Test(complex, test1)
    cr_expect_float_eq(binvrow[1], 1.0, EPS);
    cr_expect_float_eq(binvrow[2], 0.5, EPS);
 
+   /* check whether sparse version is available and the same */
+   SCIP_CALL( SCIPlpiGetBInvRow(lpi, i, coef, inds, &ninds) );
+   if ( ninds >= 0 )
+   {
+      cr_assert( ninds == 2 );
+      for (entry = 0; entry < ninds; ++entry)
+      {
+         idx = coef[entry];
+         cr_assert( 0 <= idx && idx < 3 );
+         cr_expect_float_eq(coef[entry], binvrow[idx], EPS);
+      }
+   }
+
    /* check first column of basis inverse */
    SCIP_CALL( SCIPlpiGetBInvCol(lpi, 0, binvcol, NULL, NULL) );
 
@@ -328,6 +344,13 @@ Test(complex, test1)
       }
    }
 
+   /* check whether number of nonzeros fits */
+   SCIP_CALL( SCIPlpiGetBInvCol(lpi, 0, coef, inds, &ninds) );
+   if ( ninds >= 0 )
+   {
+      cr_assert( ninds == 1 );
+   }
+
    /* check basis inverse times nonbasic matrix for row corresponding to the basic slack variable */
    cr_assert_geq(i, 0);
    cr_assert_lt(i, nrows);
@@ -337,6 +360,19 @@ Test(complex, test1)
    cr_expect_float_eq(coef[0], -0.5, EPS);
    cr_expect_float_eq(coef[1], 0.0, EPS);
    cr_expect_float_eq(coef[2], 0.0, EPS);
+
+   /* check nonzeros */
+   SCIP_CALL( SCIPlpiGetBInvARow(lpi, i, NULL, coeftwo, inds, &ninds) );
+   if ( ninds >= 0 )
+   {
+      cr_assert( ninds == 1 );
+      for (entry = 0; entry < ninds; ++entry)
+      {
+         idx = coef[entry];
+         cr_assert( 0 <= idx && idx < 3 );
+         cr_expect_float_eq(coeftwo[entry], coef[idx], EPS);
+      }
+   }
 
    /* check first column of basis inverse times nonbasic matrix */
    SCIP_CALL( SCIPlpiGetBInvACol(lpi, 0, coef, NULL, NULL) );
@@ -355,6 +391,13 @@ Test(complex, test1)
             cr_expect_float_eq(coef[entry], exp_avals[idx], EPS);
          }
       }
+   }
+
+   /* check nonzeros */
+   SCIP_CALL( SCIPlpiGetBInvACol(lpi, 0, coef, inds, &ninds) );
+   if ( ninds >= 0 )
+   {
+      cr_assert( ninds == 3 );
    }
 }
 
