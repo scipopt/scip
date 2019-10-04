@@ -84,6 +84,7 @@ struct SCIP_BranchruleData
 
 
 /** selects a variable from a set of candidates by strong branching */
+static
 SCIP_RETCODE runVanillaStrongBranching(
    SCIP*                 scip,             /**< SCIP data structure */
    SCIP_VAR**            cands,            /**< branching candidates */
