@@ -2446,32 +2446,39 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    assert( lpi != NULL );
    assert( lpi->parameters != NULL );
 
-   SCIPdebugMessage("SCIPlpiGetIntpar type=%d\n", type);
    switch ( type )
    {
    case SCIP_LPPAR_FROMSCRATCH:
       *ival = (int) lpi->from_scratch;
+      SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_FROMSCRATCH = %d.\n", *ival);
       break;
    case SCIP_LPPAR_FASTMIP:
       *ival = (int) lpi->fast_mip;
+      SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_FASTMIP = %d.\n", *ival);
       break;
    case SCIP_LPPAR_LPINFO:
       *ival = (int) lpi->lp_info;
+      SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_LPINFO = %d.\n", *ival);
       break;
    case SCIP_LPPAR_LPITLIM:
       *ival = (int) lpi->parameters->max_number_of_iterations();
+      SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_LPITLIM = %d.\n", *ival);
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = lpi->parameters->use_preprocessing();
+      SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_PRESOLVING = %d.\n", *ival);
       break;
    case SCIP_LPPAR_PRICING:
       *ival = lpi->pricing;
+      SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_PRICING = %d.\n", *ival);
       break;
    case SCIP_LPPAR_SCALING:
       *ival = lpi->parameters->use_scaling();
+      SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_SCALING = %d.\n", *ival);
       break;
    case SCIP_LPPAR_RANDOMSEED:
       *ival = (int) lpi->parameters->random_seed();
+      SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_RANDOMSEED = %d.\n", *ival);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -2490,18 +2497,19 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    assert( lpi != NULL );
    assert( lpi->parameters != NULL );
 
-   SCIPdebugMessage("setting int parameter %d to %d\n", type, ival);
-
    switch ( type )
    {
    case SCIP_LPPAR_FROMSCRATCH:
+      SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_FROMSCRATCH -> %d.\n", ival);
       lpi->from_scratch = (bool) ival;
       break;
    case SCIP_LPPAR_FASTMIP:
+      SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_FASTMIP -> %d.\n", ival);
       assert( ival == 0 || ival == 1 );
       lpi->fast_mip = ival == 1 ? true : false;
       break;
    case SCIP_LPPAR_LPINFO:
+      SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_LPINFO -> %d.\n", ival);
       if ( ival == 0 )
       {
          (void) google::SetVLOGLevel("*", google::GLOG_INFO);
@@ -2514,18 +2522,23 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       }
       break;
    case SCIP_LPPAR_LPITLIM:
+      SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_LPITLIM -> %d.\n", ival);
       lpi->parameters->set_max_number_of_iterations(ival);
       break;
    case SCIP_LPPAR_PRESOLVING:
+      SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_PRESOLVING -> %d.\n", ival);
       lpi->parameters->set_use_preprocessing(ival);
       break;
    case SCIP_LPPAR_PRICING:
+      SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_PRICING -> %d.\n", ival);
       lpi->pricing = (SCIP_Pricing)ival;
       break;
    case SCIP_LPPAR_SCALING:
+      SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_SCALING -> %d.\n", ival);
       lpi->parameters->set_use_scaling(ival);
       break;
    case SCIP_LPPAR_RANDOMSEED:
+      SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_RANDOMSEED -> %d.\n", ival);
       assert( ival >= 0 );
       lpi->parameters->set_random_seed(ival);
       break;
@@ -2546,29 +2559,34 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    assert( lpi != NULL );
    assert( lpi->parameters != NULL );
 
-   SCIPdebugMessage("SCIPlpiGetRealpar type=%d\n", type);
    switch ( type )
    {
    case SCIP_LPPAR_FEASTOL:
       *dval = lpi->parameters->primal_feasibility_tolerance();
+      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_FEASTOL = %f.\n", *dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
       *dval = lpi->parameters->dual_feasibility_tolerance();
+      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_DUALFEASTOL = %f.\n", *dval);
       break;
    case SCIP_LPPAR_OBJLIM:
       if (lpi->linear_program->IsMaximizationProblem())
          *dval = lpi->parameters->objective_lower_limit();
       else
          *dval = lpi->parameters->objective_upper_limit();
+      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_OBJLIM = %f.\n", *dval);
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = lpi->parameters->max_time_in_seconds();
+      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_LPTILIM = %f.\n", *dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
       *dval = lpi->rowrepswitch;
+      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_ROWREPSWITCH = %f.\n", *dval);
       break;
    case SCIP_LPPAR_MARKOWITZ:
       *dval = lpi->parameters->markowitz_singularity_threshold();
+      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_MARKOWITZ = %f.\n", *dval);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -2587,29 +2605,33 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    assert( lpi != NULL );
    assert( lpi->parameters != NULL );
 
-   SCIPdebugMessage("setting real parameter %d to %.15g\n", type, dval);
-
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_FEASTOL -> %f.\n", dval);
       lpi->parameters->set_primal_feasibility_tolerance(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_DUALFEASTOL -> %f.\n", dval);
       lpi->parameters->set_dual_feasibility_tolerance(dval);
       break;
    case SCIP_LPPAR_OBJLIM:
+      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_OBJLIM -> %f.\n", dval);
       if (lpi->linear_program->IsMaximizationProblem())
          lpi->parameters->set_objective_lower_limit(dval);
       else
          lpi->parameters->set_objective_upper_limit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_LPTILIM -> %f.\n", dval);
       lpi->parameters->set_max_time_in_seconds(dval);
       break;
    case SCIP_LPPAR_ROWREPSWITCH:
+      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_ROWREPSWITCH -> %f.\n", dval);
       lpi->rowrepswitch = dval;
       break;
    case SCIP_LPPAR_MARKOWITZ:
+      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_MARKOWITZ -> %f.\n", dval);
       lpi->parameters->set_markowitz_singularity_threshold(dval);
       break;
    default:
