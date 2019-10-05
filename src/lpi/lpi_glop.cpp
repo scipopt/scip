@@ -37,6 +37,8 @@
 #include "ortools/glop/lp_solver.h"
 #include "ortools/glop/revised_simplex.h"
 #include "ortools/lp_data/lp_print_utils.h"
+#include "ortools/lp_data/proto_utils.h"
+#include "ortools/util/file_util.h"
 #include "ortools/util/stats.h"
 #include "ortools/util/time_limit.h"
 
@@ -78,7 +80,7 @@ using operations_research::glop::RowIndex;
 using operations_research::glop::ScatteredRow;
 using operations_research::glop::ScatteredRowIterator;
 using operations_research::glop::VariableStatus;
-
+using operations_research::MPModelProto;
 
 /** LP interface */
 struct SCIP_LPi
@@ -2768,11 +2770,20 @@ SCIP_RETCODE SCIPlpiReadLP(
    )
 {
    assert( lpi != NULL );
+   assert( lpi->linear_program != NULL );
    assert( fname != NULL );
 
-   SCIPerrorMessage("SCIPlpiReadLP - not implemented.\n");
+   const std::string filespec(fname);
+   MPModelProto proto;
+   if ( ! ReadFileToProto(filespec, &proto) )
+   {
+      SCIPerrorMessage("Could not read <%s>\n", fname);
+      return SCIP_READERROR;
+   }
+   lpi->linear_program->Clear();
+   MPModelProtoToLinearProgram(proto, lpi->linear_program);
 
-   return SCIP_LPERROR;
+   return SCIP_OKAY;
 }
 
 /** writes LP to a file */
@@ -2782,11 +2793,19 @@ SCIP_RETCODE SCIPlpiWriteLP(
    )
 {
    assert( lpi != NULL );
+   assert( lpi->linear_program != NULL );
    assert( fname != NULL );
 
-   SCIPerrorMessage("SCIPlpiWriteLP - not implemented.\n");
+   MPModelProto proto;
+   LinearProgramToMPModelProto(*lpi->linear_program, &proto);
+   const std::string filespec(fname);
+   if ( ! WriteProtoToFile(filespec, proto, operations_research::ProtoWriteFormat::kProtoText, true) )
+   {
+      SCIPerrorMessage("Could not write <%s>\n", fname);
+      return SCIP_READERROR;
+   }
 
-   return SCIP_LPERROR;
+   return SCIP_OKAY;
 }
 
 /**@} */
