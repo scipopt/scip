@@ -2012,6 +2012,22 @@ SCIP_RETCODE updateTimeseries(
    return SCIP_OKAY;
 }
 
+/** todo convert SCIP_INVALID into string '-' */
+static
+char* real2String(
+   SCIP_Real             num,                /**< number to convert to string */
+   char*                 buf,                /**< string buffer */
+   int                   digits              /**< number of decimal digits */
+   )
+{
+   if( num == SCIP_INVALID )
+      sprintf(buf, "-");
+   else
+      sprintf(buf, "%11.*f", digits, num);
+
+   return buf;
+}
+
 /** print a treesize estimation report into the string buffer */
 static
 char* printReport(
@@ -2060,14 +2076,22 @@ char* printReport(
    /* print time series forecasts */
    for( t = 0; t < NTIMESERIES; ++t )
    {
+      SCIP_Real trend;
+      SCIP_Real smoothestim;
       TIMESERIES* ts = eventhdlrdata->timeseries[t];
-      ptr += sprintf(ptr, "  %-17s: %11.0f %11.5f %11.5f %11d %11.0f\n",
+      char trendstr[SCIP_MAXSTRLEN];
+      char smoothestimstr[SCIP_MAXSTRLEN];
+
+      trend = doubleexpsmoothGetTrend(&ts->des);
+      smoothestim = timeseriesGetSmoothEstimation(ts);
+
+      ptr += sprintf(ptr, "  %-17s: %11.0f %11.5f %11s %11d %11s\n",
             timeseriesGetName(ts),
             timeseriesEstimate(ts, eventhdlrdata->treedata),
             timeseriesGet(ts),
-            doubleexpsmoothGetTrend(&ts->des),
+            real2String(trend, trendstr, 5),
             timeseriesGetResolution(ts),
-            timeseriesGetSmoothEstimation(ts));
+            real2String(smoothestim, smoothestimstr, 0));
    }
 
    if( reportnum > 0 )
@@ -2114,7 +2138,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       SCIP_CALL( updateTimeseries(scip, eventhdlrdata, treedata, nchildren == 0) );
 
       /* should a new report be printed? */
-      if( treedata->progress >= eventhdlrdata->proglastreport + 1.0 / (SCIP_Real)NREPORTS )
+      if( SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN && treedata->progress >= eventhdlrdata->proglastreport + 1.0 / (SCIP_Real)NREPORTS )
       {
          char strbuf[SCIP_MAXSTRLEN];
 
