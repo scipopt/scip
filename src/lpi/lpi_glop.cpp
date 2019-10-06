@@ -144,8 +144,23 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
 {
-   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
-   return SCIP_LPERROR;
+   assert( lpi != NULL );
+   assert( lpi->linear_program != NULL );
+   assert( ncols == 0 || ncols == lpi->linear_program->num_variables().value() );
+
+   /* Pass on integrality information (currently not used by Glop) */
+   for (ColIndex col(0); col < ColIndex(ncols); ++col)
+   {
+      assert( intInfo != NULL );
+      int info = intInfo[col.value()];
+      assert( info == 0 || info == 1 );
+      if ( info == 0 )
+         lpi->linear_program->SetVariableType(col, operations_research::glop::LinearProgram::VariableType::CONTINUOUS);
+      else
+         lpi->linear_program->SetVariableType(col, operations_research::glop::LinearProgram::VariableType::INTEGER);
+   }
+
+   return SCIP_OKAY;
 }
 
 /** informs about availability of a primal simplex solving method */
