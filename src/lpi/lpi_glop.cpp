@@ -105,7 +105,8 @@ struct SCIP_LPi
    bool                  checkcondition;     /**< should condition number of LP basis be checked for stability? */
 };
 
-
+/** default values for feasibility tolerances */
+#define DEFAULT_FEASTOL  1e-6
 
 /*
  * LP Interface Methods
@@ -228,6 +229,12 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->lp_time_limit_was_reached = false;
    (*lpi)->conditionlimit = -1.0;
    (*lpi)->checkcondition = false;
+
+   /* set default tolerances (default in  Glop: 1e-8) */
+#if 0
+   (*lpi)->parameters->set_primal_feasibility_tolerance(DEFAULT_FEASTOL);
+   (*lpi)->parameters->set_dual_feasibility_tolerance(DEFAULT_FEASTOL);
+#endif
 
    return SCIP_OKAY;
 }
