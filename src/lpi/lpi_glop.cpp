@@ -37,6 +37,7 @@
 #include "ortools/glop/lp_solver.h"
 #include "ortools/glop/revised_simplex.h"
 #include "ortools/lp_data/lp_print_utils.h"
+#include "ortools/lp_data/lp_data_utils.h"
 #include "ortools/lp_data/proto_utils.h"
 #include "ortools/util/file_util.h"
 #include "ortools/util/stats.h"
@@ -65,6 +66,7 @@ using operations_research::glop::BasisState;
 using operations_research::glop::ColIndex;
 using operations_research::glop::ColIndexVector;
 using operations_research::glop::ConstraintStatus;
+using operations_research::glop::ConstraintStatusColumn;
 using operations_research::glop::DenseBooleanColumn;
 using operations_research::glop::DenseBooleanRow;
 using operations_research::glop::DenseColumn;
@@ -80,14 +82,17 @@ using operations_research::glop::RowIndex;
 using operations_research::glop::ScatteredRow;
 using operations_research::glop::ScatteredRowIterator;
 using operations_research::glop::VariableStatus;
+using operations_research::glop::VariableStatusRow;
 using operations_research::MPModelProto;
 
 /** LP interface */
 struct SCIP_LPi
 {
-   operations_research::glop::LinearProgram*  linear_program;     /**< the linear program */
-   operations_research::glop::RevisedSimplex* solver;             /**< direct reference to the revised simplex, not passing through lp_solver */
-   operations_research::glop::GlopParameters* parameters;         /**< parameters */
+   operations_research::glop::LinearProgram*   linear_program;     /**< the linear program */
+   operations_research::glop::LinearProgram*   scaled_lp;          /**< scaled linear program */
+   operations_research::glop::RevisedSimplex*  solver;             /**< direct reference to the revised simplex, not passing through lp_solver */
+   operations_research::glop::GlopParameters*  parameters;         /**< parameters */
+   operations_research::glop::LpScalingHelper* scaler;             /**< scaler auxiliary class */
 
    /* for the time being, store parameters not yet supported by this interface. */
    bool                  lp_info;
@@ -211,8 +216,10 @@ SCIP_RETCODE SCIPlpiCreate(
    /* Initilialize memory. */
    SCIP_ALLOC(BMSallocMemory(lpi));
    (*lpi)->linear_program = new operations_research::glop::LinearProgram();
+   (*lpi)->scaled_lp = new operations_research::glop::LinearProgram();
    (*lpi)->solver = new operations_research::glop::RevisedSimplex();
    (*lpi)->parameters = new operations_research::glop::GlopParameters();
+   (*lpi)->scaler = new operations_research::glop::LpScalingHelper();
 
    /* Set problem name and objective direction. */
    (*lpi)->linear_program->SetName(std::string(name));
@@ -242,8 +249,10 @@ SCIP_RETCODE SCIPlpiFree(
 {
    SCIPdebugMessage("SCIPlpiFree\n");
 
+   delete (*lpi)->scaler;
    delete (*lpi)->parameters;
    delete (*lpi)->solver;
+   delete (*lpi)->scaled_lp;
    delete (*lpi)->linear_program;
 
    BMSfreeMemory(lpi);
@@ -1211,6 +1220,25 @@ SCIP_RETCODE SCIPlpiGetCoef(
 /**@name Solving Methods */
 /**@{ */
 
+/** update scaled linear program */
+static
+void updateScaledLP(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+  if ( ! lpi->lp_modified_since_last_solve )
+     return;
+
+  lpi->scaled_lp->PopulateFromLinearProgram(*lpi->linear_program);
+
+  /* @todo: Avoid doing a copy if there is no scaling. */
+  /* @todo: Avoid rescaling if not much changed. */
+  if ( lpi->parameters->use_scaling() )
+    lpi->scaler->Scale(lpi->scaled_lp);
+
+  lpi->scaled_lp->AddSlackVariablesWhereNecessary(false);
+}
+
 /** common function between the two LPI Solve() functions */
 static
 SCIP_RETCODE SolveInternal(
@@ -1221,23 +1249,23 @@ SCIP_RETCODE SolveInternal(
    assert( lpi->solver != NULL );
    assert( lpi->parameters != NULL );
 
+   updateScaledLP(lpi);
+
    lpi->solver->SetParameters(*(lpi->parameters));
    lpi->lp_time_limit_was_reached = false;
 
    std::unique_ptr<TimeLimit> time_limit = TimeLimit::FromParameters(*lpi->parameters);
-   lpi->linear_program->AddSlackVariablesWhereNecessary(false);
 
    /* possibly ignore warm start information for next solve */
    if ( lpi->from_scratch )
       lpi->solver->ClearStateForNextSolve();
 
-   if (! lpi->solver->Solve(*(lpi->linear_program), time_limit.get()).ok())
+   if ( ! lpi->solver->Solve(*(lpi->scaled_lp), time_limit.get()).ok() )
    {
       lpi->linear_program->DeleteSlackVariables();
       return SCIP_LPERROR;
    }
    lpi->lp_time_limit_was_reached = time_limit->LimitReached();
-   lpi->linear_program->DeleteSlackVariables();
 
    SCIPdebugMessage("status=%s  obj=%f  iter=%ld.\n", GetProblemStatusString(lpi->solver->GetProblemStatus()).c_str(),
       lpi->solver->GetObjectiveValue(), lpi->solver->GetNumberOfIterations());
@@ -1302,6 +1330,8 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
    assert( lpi->linear_program != NULL );
    assert( lpi->solver != NULL );
 
+   updateScaledLP(lpi);
+
    /* @todo Save state and do all the branching from there. */
    return SCIP_OKAY;
 }
@@ -1353,29 +1383,31 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
 
    SCIPdebugMessage("calling strongbranching on fractional variable %d (%d iterations)\n", col_index, itlim);
 
+   /* We work on the scaled problem. */
    const ColIndex col(col_index);
-   const Fractional lb = lpi->linear_program->variable_lower_bounds()[col];
-   const Fractional ub = lpi->linear_program->variable_upper_bounds()[col];
+   const Fractional lb = lpi->scaled_lp->variable_lower_bounds()[col];
+   const Fractional ub = lpi->scaled_lp->variable_upper_bounds()[col];
+   const double value = psol * lpi->scaler->VariableScalingFactor(col);
 
    /* Configure solver. */
 
-   /* @todo Use the iteration limit once glop support incrementality. */
+   /* @todo Use the iteration limit once glop supports incrementality. */
    int num_iterations = 0;
    lpi->parameters->set_use_dual_simplex(true);
    lpi->solver->SetParameters(*(lpi->parameters));
 
    /* Down branch. */
    const Fractional eps = lpi->parameters->primal_feasibility_tolerance();
-   lpi->linear_program->SetVariableBounds(col, lb, EPSCEIL(psol - 1.0, eps));
+   lpi->scaled_lp->SetVariableBounds(col, lb, EPSCEIL(value - 1.0, eps));
    std::unique_ptr<TimeLimit> time_limit = TimeLimit::FromParameters(*lpi->parameters);
 
-   if ( lpi->solver->Solve(*(lpi->linear_program), time_limit.get()).ok() )
+   if ( lpi->solver->Solve(*(lpi->scaled_lp), time_limit.get()).ok() )
    {
       num_iterations += (int) lpi->solver->GetNumberOfIterations();
       *down = lpi->solver->GetObjectiveValue();
       *downvalid = IsDualBoundValid(lpi->solver->GetProblemStatus()) ? TRUE : FALSE;
 
-      SCIPdebugMessage("down: itlim=%d col=%d [%f,%f] obj=%f status=%d iter=%ld.\n", itlim, col_index, lb, EPSCEIL(psol - 1.0, eps),
+      SCIPdebugMessage("down: itlim=%d col=%d [%f,%f] obj=%f status=%d iter=%ld.\n", itlim, col_index, lb, EPSCEIL(value - 1.0, eps),
          lpi->solver->GetObjectiveValue(), (int) lpi->solver->GetProblemStatus(), lpi->solver->GetNumberOfIterations());
    }
    else
@@ -1386,15 +1418,15 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    }
 
    /* Up branch. */
-   lpi->linear_program->SetVariableBounds(col, EPSFLOOR(psol + 1.0, eps), ub);
+   lpi->scaled_lp->SetVariableBounds(col, EPSFLOOR(value + 1.0, eps), ub);
 
-   if ( lpi->solver->Solve(*(lpi->linear_program), time_limit.get()).ok() )
+   if ( lpi->solver->Solve(*(lpi->scaled_lp), time_limit.get()).ok() )
    {
       num_iterations += (int) lpi->solver->GetNumberOfIterations();
       *up = lpi->solver->GetObjectiveValue();
       *upvalid = IsDualBoundValid(lpi->solver->GetProblemStatus()) ? TRUE : FALSE;
 
-      SCIPdebugMessage("up: itlim=%d col=%d [%f,%f] obj=%f status=%d iter=%ld.\n", itlim, col_index, EPSFLOOR(psol + 1.0, eps), ub,
+      SCIPdebugMessage("up: itlim=%d col=%d [%f,%f] obj=%f status=%d iter=%ld.\n", itlim, col_index, EPSFLOOR(value + 1.0, eps), ub,
          lpi->solver->GetObjectiveValue(), (int) lpi->solver->GetProblemStatus(), lpi->solver->GetNumberOfIterations());
    }
    else
@@ -1405,7 +1437,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    }
 
    /*  Restore bound. */
-   lpi->linear_program->SetVariableBounds(col, lb, ub);
+   lpi->scaled_lp->SetVariableBounds(col, lb, ub);
    if ( iter != NULL )
       *iter = num_iterations;
 
@@ -1710,7 +1742,6 @@ SCIP_Bool SCIPlpiIsStable(
    /* For correctness, we need to report "unstable" if Glop was not able to prove optimality because of numerical
     * issues. Currently Glop still reports primal/dual feasible if at the end, one status is within the tolerance but not
     * the other. */
-
    const ProblemStatus status = lpi->solver->GetProblemStatus();
    if ( (status == ProblemStatus::PRIMAL_FEASIBLE || status == ProblemStatus::DUAL_FEASIBLE) &&
       ! SCIPlpiIsObjlimExc(lpi) && ! SCIPlpiIsIterlimExc(lpi) && ! SCIPlpiIsTimelimExc(lpi))
@@ -1842,11 +1873,11 @@ SCIP_RETCODE SCIPlpiGetSol(
    {
       int i = col.value();
 
-      if (primsol != NULL)
-         primsol[i] = lpi->solver->GetVariableValue(col);
+      if ( primsol != NULL )
+         primsol[i] = lpi->scaler->UnscaleVariableValue(col, lpi->solver->GetVariableValue(col));
 
-      if (redcost != NULL)
-         redcost[i] = lpi->solver->GetReducedCost(col);
+      if ( redcost != NULL )
+         redcost[i] = lpi->scaler->UnscaleReducedCost(col, lpi->solver->GetReducedCost(col));
    }
 
    const RowIndex num_rows = lpi->linear_program->num_constraints();
@@ -1854,11 +1885,11 @@ SCIP_RETCODE SCIPlpiGetSol(
    {
       int j = row.value();
 
-      if (dualsol != NULL)
-         dualsol[j] = lpi->solver->GetDualValue(row);
+      if ( dualsol != NULL )
+         dualsol[j] = lpi->scaler->UnscaleDualValue(row, lpi->solver->GetDualValue(row));
 
-      if (activity != NULL)
-         activity[j] = lpi->solver->GetConstraintActivity(row);
+      if ( activity != NULL )
+         activity[j] = lpi->scaler->UnscaleConstraintActivity(row, lpi->solver->GetConstraintActivity(row));
    }
 
    return SCIP_OKAY;
@@ -1879,7 +1910,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    const ColIndex num_cols = lpi->linear_program->num_variables();
    const DenseRow& primal_ray = lpi->solver->GetPrimalRay();
    for (ColIndex col(0); col < num_cols; ++col)
-      ray[col.value()] = primal_ray[col];
+      ray[col.value()] = lpi->scaler->UnscaleVariableValue(col, primal_ray[col]);
 
    return SCIP_OKAY;
 }
@@ -1899,7 +1930,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    const RowIndex num_rows = lpi->linear_program->num_constraints();
    const DenseColumn& dual_ray = lpi->solver->GetDualRay();
    for (RowIndex row(0); row < num_rows; ++row)
-      dualfarkas[row.value()] = -dual_ray[row];  /* reverse sign */
+      dualfarkas[row.value()] = -lpi->scaler->UnscaleDualValue(row, dual_ray[row]);  /* reverse sign */
 
    return SCIP_OKAY;
 }
@@ -1995,7 +2026,7 @@ SCIP_BASESTAT ConvertGlopVariableStatus(
 static
 SCIP_BASESTAT ConvertGlopConstraintStatus(
    ConstraintStatus      status,             /**< constraint status */
-   Fractional            rc                  /**< reduced cost of constraint (slack variable) */
+   Fractional            dual                /**< dual variable value */
    )
 {
    switch ( status )
@@ -2009,7 +2040,7 @@ SCIP_BASESTAT ConvertGlopConstraintStatus(
    case ConstraintStatus::FREE:
       return SCIP_BASESTAT_ZERO;
    case ConstraintStatus::FIXED_VALUE:
-      return rc > 0.0 ? SCIP_BASESTAT_LOWER : SCIP_BASESTAT_UPPER;
+      return dual > 0.0 ? SCIP_BASESTAT_LOWER : SCIP_BASESTAT_UPPER;
    default:
       SCIPerrorMessage("invalid Glop basis status.\n");
       abort();
@@ -2075,7 +2106,7 @@ SCIP_RETCODE SCIPlpiGetBase(
 
    assert( lpi->solver->GetProblemStatus() ==  ProblemStatus::OPTIMAL );
 
-   if (cstat != NULL)
+   if ( cstat != NULL )
    {
       const ColIndex num_cols = lpi->linear_program->num_variables();
       for (ColIndex col(0); col < num_cols; ++col)
@@ -2085,7 +2116,7 @@ SCIP_RETCODE SCIPlpiGetBase(
       }
    }
 
-   if (rstat != NULL)
+   if ( rstat != NULL )
    {
       const RowIndex num_rows = lpi->linear_program->num_constraints();
       for (RowIndex row(0); row < num_rows; ++row)
@@ -2181,6 +2212,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
    ScatteredRow solution;
    lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(r), &solution);
+   lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(r)), &solution);
+
    const ColIndex num_cols = solution.values.size();
 
    /* if we want a sparse vector and sparsity information is available */
@@ -2243,6 +2276,8 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       {
          ScatteredRow solution;
          lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(row), &solution);
+         lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(row)), &solution);
+
          SCIP_Real val = solution[col];
          if ( fabs(val) >= eps )
          {
@@ -2258,6 +2293,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    {
       ScatteredRow solution;
       lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(row), &solution);
+      lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(row)), &solution);
       coef[row] = solution[col];
    }
 
