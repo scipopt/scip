@@ -92,14 +92,17 @@ struct SCIP_LPi
    /* for the time being, store parameters not yet supported by this interface. */
    bool                  fast_mip;
    bool                  lp_info;
-   double                rowrepswitch;
+   SCIP_Real             rowrepswitch;
    SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
 
    /* the following is used by SCIPlpiWasSolved() */
    bool                  lp_modified_since_last_solve;
    bool                  lp_time_limit_was_reached;
 
+   /* other data */
    bool                  from_scratch;       /**< store whether basis is ignored for next solving call */
+   SCIP_Real             conditionlimit;     /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+   bool                  checkcondition;     /**< should condition number of LP basis be checked for stability? */
 };
 
 
@@ -223,6 +226,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->lp_modified_since_last_solve = true;
    (*lpi)->lp_time_limit_was_reached = false;
+   (*lpi)->conditionlimit = -1.0;
+   (*lpi)->checkcondition = false;
 
    return SCIP_OKAY;
 }
@@ -1710,7 +1715,27 @@ SCIP_Bool SCIPlpiIsStable(
       SCIPdebugMessage("OPTIMAL not reached and no limit: unstable.\n");
       return FALSE;
    }
-   return status != ProblemStatus::ABNORMAL && status != ProblemStatus::INVALID_PROBLEM && status != ProblemStatus::IMPRECISE;
+
+   if ( status == ProblemStatus::ABNORMAL || status == ProblemStatus::INVALID_PROBLEM || status == ProblemStatus::IMPRECISE )
+      return FALSE;
+
+   /* If we have a regular basis and the condition limit is set, we compute (an upper bound on) the condition number of
+    * the basis; everything above the specified threshold is then counted as instable. */
+   if ( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
+   {
+      SCIP_RETCODE retcode;
+      SCIP_Real kappa;
+
+      retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
+      if ( retcode != SCIP_OKAY )
+         SCIPABORT();
+      assert( kappa != SCIP_INVALID ); /*lint !e777*/
+
+      if ( kappa > lpi->conditionlimit )
+         return FALSE;
+   }
+
+   return TRUE;
 }
 
 /** returns TRUE iff the objective limit was reached */
@@ -1903,9 +1928,25 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    )
 {
    assert( lpi != NULL );
+   assert( lpi->solver != NULL );
    assert( quality != NULL );
 
-   *quality = SCIP_INVALID;
+   SCIPdebugMessage("Requesting solution quality: quality %d\n", qualityindicator);
+
+   switch ( qualityindicator )
+   {
+   case SCIP_LPSOLQUALITY_ESTIMCONDITION:
+      *quality = lpi->solver->GetBasisFactorization().ComputeInfinityNormConditionNumber();
+      break;
+
+   case SCIP_LPSOLQUALITY_EXACTCONDITION:
+      *quality = lpi->solver->GetBasisFactorization().ComputeInfinityNormConditionNumberUpperBound();
+      break;
+
+   default:
+      SCIPerrorMessage("Solution quality %d unknown.\n", qualityindicator);
+      return SCIP_INVALIDDATA;
+   }
 
    return SCIP_OKAY;
 }
@@ -2690,6 +2731,9 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       *dval = lpi->rowrepswitch;
       SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_ROWREPSWITCH = %f.\n", *dval);
       break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      *dval = lpi->conditionlimit;
+      break;
 #if 0
    /* currently do not apply Markowitz parameter, since the default value does not seem suitable for Glop */
    case SCIP_LPPAR_MARKOWITZ:
@@ -2738,6 +2782,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_ROWREPSWITCH:
       SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_ROWREPSWITCH -> %f.\n", dval);
       lpi->rowrepswitch = dval;
+      break;
+   case SCIP_LPPAR_CONDITIONLIMIT:
+      lpi->conditionlimit = dval;
+      lpi->checkcondition = (dval >= 0.0);
       break;
 #if 0
    /* currently do not apply Markowitz parameter, since the default value does not seem suitable for Glop */
