@@ -2604,6 +2604,25 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_PRICING:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_PRICING -> %d.\n", ival);
       lpi->pricing = (SCIP_Pricing)ival;
+      switch ( lpi->pricing )
+      {
+      case SCIP_PRICING_LPIDEFAULT:
+      case SCIP_PRICING_AUTO:
+      case SCIP_PRICING_PARTIAL:
+      case SCIP_PRICING_STEEP:
+      case SCIP_PRICING_STEEPQSTART:
+         lpi->parameters->set_feasibility_rule(operations_research::glop::GlopParameters_PricingRule_STEEPEST_EDGE);
+         break;
+      case SCIP_PRICING_FULL:
+         /* Dantzig does not really fit, but use it anyway */
+         lpi->parameters->set_feasibility_rule(operations_research::glop::GlopParameters_PricingRule_DANTZIG);
+         break;
+      case SCIP_PRICING_DEVEX:
+         lpi->parameters->set_feasibility_rule(operations_research::glop::GlopParameters_PricingRule_DEVEX);
+         break;
+      default:
+         return SCIP_PARAMETERUNKNOWN;
+      }
       break;
    case SCIP_LPPAR_SCALING:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_SCALING -> %d.\n", ival);
