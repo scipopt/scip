@@ -90,9 +90,7 @@ struct SCIP_LPi
    operations_research::glop::GlopParameters* parameters;         /**< parameters */
 
    /* for the time being, store parameters not yet supported by this interface. */
-   bool                  fast_mip;
    bool                  lp_info;
-   SCIP_Real             rowrepswitch;
    SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
 
    /* the following is used by SCIPlpiWasSolved() */
@@ -221,9 +219,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_CALL( SCIPlpiChgObjsen(*lpi, objsen) );
 
    (*lpi)->from_scratch = false;
-   (*lpi)->fast_mip = false;
    (*lpi)->lp_info = false;
-   (*lpi)->rowrepswitch = -1.0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->lp_modified_since_last_solve = true;
    (*lpi)->lp_time_limit_was_reached = false;
@@ -2581,15 +2577,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    assert( lpi != NULL );
    assert( lpi->parameters != NULL );
 
+   /* Not (yet) supported by Glop: SCIP_LPPAR_FASTMIP, SCIP_LPPAR_THREADS, SCIP_LPPAR_TIMING, SCIP_LPPAR_POLISHING, SCIP_LPPAR_REFACTOR */
    switch ( type )
    {
    case SCIP_LPPAR_FROMSCRATCH:
       *ival = (int) lpi->from_scratch;
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_FROMSCRATCH = %d.\n", *ival);
-      break;
-   case SCIP_LPPAR_FASTMIP:
-      *ival = (int) lpi->fast_mip;
-      SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_FASTMIP = %d.\n", *ival);
       break;
    case SCIP_LPPAR_LPINFO:
       *ival = (int) lpi->lp_info;
@@ -2607,10 +2600,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->pricing;
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_PRICING = %d.\n", *ival);
       break;
+#if 0
    case SCIP_LPPAR_SCALING:
       *ival = lpi->parameters->use_scaling();
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_SCALING = %d.\n", *ival);
       break;
+#endif
    case SCIP_LPPAR_RANDOMSEED:
       *ival = (int) lpi->parameters->random_seed();
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_RANDOMSEED = %d.\n", *ival);
@@ -2637,11 +2632,6 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FROMSCRATCH:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_FROMSCRATCH -> %d.\n", ival);
       lpi->from_scratch = (bool) ival;
-      break;
-   case SCIP_LPPAR_FASTMIP:
-      SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_FASTMIP -> %d.\n", ival);
-      assert( ival == 0 || ival == 1 );
-      lpi->fast_mip = ival == 1 ? true : false;
       break;
    case SCIP_LPPAR_LPINFO:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_LPINFO -> %d.\n", ival);
@@ -2687,10 +2677,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          return SCIP_PARAMETERUNKNOWN;
       }
       break;
+#if 0
    case SCIP_LPPAR_SCALING:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_SCALING -> %d.\n", ival);
       lpi->parameters->set_use_scaling(ival);
       break;
+#endif
    case SCIP_LPPAR_RANDOMSEED:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_RANDOMSEED -> %d.\n", ival);
       assert( ival >= 0 );
@@ -2713,6 +2705,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    assert( lpi != NULL );
    assert( lpi->parameters != NULL );
 
+   /* Not (yet) supported by Glop: SCIP_LPPAR_ROWREPSWITCH, SCIP_LPPAR_BARRIERCONVTOL */
    switch ( type )
    {
    case SCIP_LPPAR_FEASTOL:
@@ -2733,10 +2726,6 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_LPTILIM:
       *dval = lpi->parameters->max_time_in_seconds();
       SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_LPTILIM = %f.\n", *dval);
-      break;
-   case SCIP_LPPAR_ROWREPSWITCH:
-      *dval = lpi->rowrepswitch;
-      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_ROWREPSWITCH = %f.\n", *dval);
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
       *dval = lpi->conditionlimit;
@@ -2785,10 +2774,6 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_LPTILIM:
       SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_LPTILIM -> %f.\n", dval);
       lpi->parameters->set_max_time_in_seconds(dval);
-      break;
-   case SCIP_LPPAR_ROWREPSWITCH:
-      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_ROWREPSWITCH -> %f.\n", dval);
-      lpi->rowrepswitch = dval;
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
       lpi->conditionlimit = dval;
