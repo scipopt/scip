@@ -2049,7 +2049,7 @@ SCIP_RETCODE reduce(
    /* initialize shortest path algorithms */
    SCIP_CALL( graph_path_init(scip, graph) );
 
-#if 1
+#if 0
 #ifndef NDEBUG
    SCIP_CALL( testAll(scip) );
 #endif

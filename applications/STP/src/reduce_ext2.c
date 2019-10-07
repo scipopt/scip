@@ -778,12 +778,11 @@ SCIP_Real extTreeGetRedcostBound(
    const EXTDATA*        extdata             /**< extension data */
 )
 {
-   const REDDATA* const reddata = extdata->reddata;
    const int* const tree_leaves = extdata->tree_leaves;
    const int nleaves = extdata->tree_nleaves;
    SCIP_Real tree_redcost;
 
-   assert(graph && reddata && extdata);
+   assert(graph && extdata);
    assert(nleaves > 1 && tree_leaves[0] == extdata->tree_root);
 
    tree_redcost = FARAWAY;
@@ -794,7 +793,6 @@ SCIP_Real extTreeGetRedcostBound(
    for( int i = 0; i < nleaves; i++ )
    {
       const int leaf = tree_leaves[i];
-      printf("check leaf %d \n", leaf);
       tree_redcost = MIN(tree_redcost, extTreeGetDirectedRedcost(scip, graph, extdata, leaf));
    }
 
