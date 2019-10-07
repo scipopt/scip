@@ -399,6 +399,7 @@ DECL_CURVCHECK(curvCheckProductComposite)
    SCIP_MONOTONE fmonotonicity;
    SCIP_EXPRCURV desiredcurv;
    SCIP_EXPRCURV hcurv;
+   SCIP_EXPRCURV dummy;
    int fidx;
 
    assert(nlexpr != NULL);
@@ -482,28 +483,28 @@ DECL_CURVCHECK(curvCheckProductComposite)
       /* f(c h(x)+d)h(x) is convex if c*f is monotonically increasing (c f' >= 0) and either
       *   - f is convex (f'' >= 0) and h is nonnegative (h >= 0) and h is convex (h'' >= 0) and [f is nonnegative (f >= 0) or h is linear (h''=0)], or
       *   - f is concave (f'' <= 0) and h is nonpositive (h <= 0) and h is concave (h'' <= 0) and [f is nonpositive (f <= 0) or h is linear (h''=0)]
+      *  as the curvature requirements on f are on f only and not the composition f(h), we can ignore the requirements returned by SCIPcurvatureConsExprExprHdlr (last arg)
       */
       if( (c > 0.0 && fmonotonicity != SCIP_MONOTONE_INC) || (c < 0.0 && fmonotonicity != SCIP_MONOTONE_DEC) )
          return SCIP_OKAY;
 
-      /* check whether f can be convex (h>=0) or concave (h<=0), resp., and derive requirements for h
-       */
+      /* check whether f can be convex (h>=0) or concave (h<=0), resp., and derive requirements for h */
       if( hbounds.inf >= 0 )
       {
-         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, f, SCIP_EXPRCURV_CONVEX, success, &hcurv) );
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, f, SCIP_EXPRCURV_CONVEX, success, &dummy) );
 
-         /* now h also needs to be convex; and if f < 0 or h is also required to be concave, then h actually needs to be linear */
-         if( fbounds.inf < 0.0 || hcurv == SCIP_EXPRCURV_CONCAVE )
+         /* now h also needs to be convex; and if f < 0, then h actually needs to be linear */
+         if( fbounds.inf < 0.0 )
             hcurv = SCIP_EXPRCURV_LINEAR;
          else
             hcurv = SCIP_EXPRCURV_CONVEX;
       }
       else
       {
-         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, f, SCIP_EXPRCURV_CONCAVE, success, &hcurv) );
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, f, SCIP_EXPRCURV_CONCAVE, success, &dummy) );
 
-         /* now h also needs to be concave; and if f > 0 or h is also required to be convex, then h actually needs to be linear */
-         if( fbounds.sup > 0.0 || hcurv == SCIP_EXPRCURV_CONVEX )
+         /* now h also needs to be concave; and if f > 0, then h actually needs to be linear */
+         if( fbounds.sup > 0.0 )
             hcurv = SCIP_EXPRCURV_LINEAR;
          else
             hcurv = SCIP_EXPRCURV_CONCAVE;
@@ -515,6 +516,7 @@ DECL_CURVCHECK(curvCheckProductComposite)
       /* f(c h(x)+d)*h(x) is concave if c*f is monotonically decreasing (c f' <= 0) and either
       *   - f is convex (f'' >= 0) and h is nonpositive (h <= 0) and h is concave (h'' <= 0) and [f is nonnegative (f >= 0) or h is linear (h''=0)], or
       *   - f is concave (f'' <= 0) and h is nonnegative (h >= 0) and h is convex (h'' >= 0) and [f is nonpositive (f <= 0) or h is linear (h''=0)]
+      *  as the curvature requirements on f are on f only and not the composition f(h), we can ignore the requirements returned by SCIPcurvatureConsExprExprHdlr (last arg)
       */
       if( (c > 0.0 && fmonotonicity != SCIP_MONOTONE_DEC) || (c < 0.0 && fmonotonicity != SCIP_MONOTONE_INC) )
          return SCIP_OKAY;
@@ -522,20 +524,20 @@ DECL_CURVCHECK(curvCheckProductComposite)
       /* check whether f can be convex (h<=0) or concave (h>=0), resp., and derive requirements for h */
       if( hbounds.sup <= 0 )
       {
-         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, f, SCIP_EXPRCURV_CONVEX, success, &hcurv) );
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, f, SCIP_EXPRCURV_CONVEX, success, &dummy) );
 
-         /* now h also needs to be concave; and if f < 0 or h is also required to be convex, then h actually needs to be linear */
-         if( fbounds.inf < 0.0 || hcurv == SCIP_EXPRCURV_CONVEX )
+         /* now h also needs to be concave; and if f < 0, then h actually needs to be linear */
+         if( fbounds.inf < 0.0 )
             hcurv = SCIP_EXPRCURV_LINEAR;
          else
             hcurv = SCIP_EXPRCURV_CONCAVE;
       }
       else
       {
-         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, f, SCIP_EXPRCURV_CONCAVE, success, &hcurv) );
+         SCIP_CALL( SCIPcurvatureConsExprExprHdlr(scip, conshdlr, f, SCIP_EXPRCURV_CONCAVE, success, &dummy) );
 
-         /* now h also needs to be convex; and if f > 0 or h is also required to be concave, then h actually needs to be linear */
-         if( fbounds.sup > 0.0 || hcurv == SCIP_EXPRCURV_CONCAVE )
+         /* now h also needs to be convex; and if f > 0, then h actually needs to be linear */
+         if( fbounds.sup > 0.0 )
             hcurv = SCIP_EXPRCURV_LINEAR;
          else
             hcurv = SCIP_EXPRCURV_CONVEX;
