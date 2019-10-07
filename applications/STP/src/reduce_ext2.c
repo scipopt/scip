@@ -276,11 +276,17 @@ void extAddInitialComponent(
    assert(ncompedges < extdata->extstack_maxedges);
    assert(root >= 0 && root < graph->knots);
 
+#ifdef SCIP_DEBUG
+   printf("\n --- ADD initial component --- \n\n");
+#endif
+
    for( int i = 0; i < ncompedges; i++ )
    {
       const int e = compedges[i];
       assert(e >= 0 && e < graph->edges);
       assert(graph->tail[e] == root);
+
+      SCIPdebugMessage("edge %d: %d->%d \n", e, graph->tail[e], graph->head[e]);
 
       extdata->extstack_data[i] = e;
    }
@@ -296,9 +302,6 @@ void extAddInitialComponent(
    extdata->tree_parentEdgeCost[root] = -1.0;
    extdata->tree_nleaves = 1;
    assert(extdata->tree_deg[root] == 0);
-
-   if( root == extdata->reddata->redCostRoot )
-      extdata->tree_redcostSwap[root] = FARAWAY;
 }
 
 
@@ -585,7 +588,7 @@ void extTreeAddStackTop(
    const int stackpos = extdata->extstack_ncomponents - 1;
    const int comproot = graph->tail[extstack_data[extstack_start[stackpos]]];
    int conflictIteration = -1;
-   const SCIP_Bool noReversedRedCostTree = SCIPisGE(scip, tree_redcostSwap[comproot], FARAWAY);
+   const SCIP_Bool noReversedRedCostTree = (reddata->redCostRoot == extdata->tree_root || SCIPisGE(scip, tree_redcostSwap[comproot], FARAWAY));
 
    assert(!(*conflict));
    assert(stackpos >= 0);
@@ -791,6 +794,7 @@ SCIP_Real extTreeGetRedcostBound(
    for( int i = 0; i < nleaves; i++ )
    {
       const int leaf = tree_leaves[i];
+      printf("check leaf %d \n", leaf);
       tree_redcost = MIN(tree_redcost, extTreeGetDirectedRedcost(scip, graph, extdata, leaf));
    }
 
@@ -905,7 +909,7 @@ SCIP_Bool extRuleOutPeriph(
 
    if( reddata->equality ? (SCIPisGE(scip, tree_redcost, cutoff)) : SCIPisGT(scip, tree_redcost, cutoff) )
    {
-      SCIPdebugMessage("Rule-out periph (red. cost) \n");
+      SCIPdebugMessage("Rule-out periph (with red.cost=%f) \n", tree_redcost);
       return TRUE;
    }
    else
