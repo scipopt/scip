@@ -322,7 +322,7 @@ void computeSecant(
       }
       else
       {
-         assert(SCIPisFeasZero(scip, (pow(xub,exponent)-pow(xlb,exponent))/(xub-xlb)));
+         /* assert(SCIPisFeasZero(scip, (pow(xub,exponent)-pow(xlb,exponent))/(xub-xlb))); */
          return;
       }
    }
