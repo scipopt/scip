@@ -1014,13 +1014,23 @@ SCIP_RETCODE forwardPropExpr(
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
 
+   /* if value is valid and empty, then we cannot improve, so do nothing */
+   if( rootexpr->activitytag >= conshdlrdata->lastboundrelax && SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rootexpr->activity) )
+   {
+      SCIPdebugMsg(scip, "stored activity of root expr is empty and valid (activitytag >= lastboundrelax (%u)), skip forwardPropExpr -> cutoff\n", conshdlrdata->lastboundrelax);
+
+      if( infeasible != NULL )
+         *infeasible = TRUE;
+
+      return SCIP_OKAY;
+   }
+
    /* if value is up-to-date, then nothing to do */
    if( rootexpr->activitytag == conshdlrdata->curboundstag )
    {
       SCIPdebugMsg(scip, "activitytag of root expr equals curboundstag (%u), skip forwardPropExpr\n", conshdlrdata->curboundstag);
 
-      if( infeasible != NULL && SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rootexpr->activity) )
-         *infeasible = TRUE;
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rootexpr->activity)); /* handled in previous if() */
 
       return SCIP_OKAY;
    }
