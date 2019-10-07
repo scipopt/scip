@@ -1040,6 +1040,34 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 }
 
 static
+SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSum)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(success != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   memcpy(coefs, exprdata->coefficients, SCIPgetConsExprExprNChildren(expr) * sizeof(SCIP_Real));
+   *constant = exprdata->constant;
+   *success = TRUE;
+
+   if( branchcand != NULL )
+   {
+      /* for none of our children, branching would improve the underestimator, so set branchcand[i]=FALSE everywhere
+       * if we branch for numerical reasons, then cons-expr-core should figure out what the candidates are
+       */
+      memset(branchcand, 0, SCIPgetConsExprExprNChildren(expr) * sizeof(SCIP_Bool));
+   }
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreSum)
 {
    SCIP_ROWPREP* rowprep;
@@ -1249,7 +1277,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSum, exitSepaSum, sepaSum, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSum, exitSepaSum, sepaSum, estimateSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBranchscore(scip, consexprhdlr, exprhdlr, branchscoreSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSum) );

@@ -5976,12 +5976,44 @@ SCIP_RETCODE enforceExprNlhdlr(
          if( !allowweakcuts )
          {
             SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
+            /* TODO cut could be weak now? - recheck */
          }
          else
          {
+            /* if estimate didn't report branchscores explicitly, then consider branching on those children for which the following cleanup
+             * changes coefficients (we had/have this in cons_expr_sum this way)
+             */
+            if( !branchscoresuccess )
+               rowprep->recordmodifications = TRUE;
+
             SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
+
+            if( !sepasuccess && !branchscoresuccess && rowprep->nmodifiedvars > 0 )
+            {
+               int i;
+
+               for( i = 0; i < rowprep->nmodifiedvars; ++i )
+               {
+                  /* FIXME rowprep->modifiedvars[i] gives us a var or auxvar: now how to find the corresponding expression???
+                   * the code below should work if the auxvars is associated to the immediate children, as it happens with sum-exprs
+                   */
+                  SCIP_CONSEXPR_EXPR* child;
+                  int c;
+                  for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+                  {
+                     child = SCIPgetConsExprExprChildren(expr)[c];
+                     if( SCIPgetConsExprExprAuxVar(child) == rowprep->modifiedvars[i] )
+                     {
+                        SCIPaddConsExprExprBranchScore(scip, expr, conshdlrdata->lastbrscoretag, REALABS(auxvalue - SCIPgetSolVal(scip, sol, auxvar)));
+                        //SCIPdebugMsg(scip, "added branchingscore for expr %p with auxvar <%s> (coef %g)\n", SCIPgetConsExprExprChildren(expr)[i], SCIPvarGetName(auxvar), SCIPgetConsExprExprData(expr)->coefficients[i]);
+
+                        branchscoresuccess = TRUE;
+                     }
+                  }
+               }
+               assert(branchscoresuccess);
+            }
          }
-         /* TODO cut could be weak now? - recheck */
       }
 
       /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
