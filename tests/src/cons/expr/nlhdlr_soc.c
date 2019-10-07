@@ -188,7 +188,7 @@ Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
    SCIP_Bool success;
    int i;
 
-   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   /* create expression constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: (<x>^2 + <y>^2 + <z>^2)^0.5 <= 1", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -236,7 +236,7 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
    SCIP_Bool success;
    int i;
 
-   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   /* create expression constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: (<x>^2 + <y>^2 + <z>^2)^0.5 - <w> <= 0", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -285,7 +285,7 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    SCIP_Bool success;
    int i;
 
-   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   /* create expression constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: (8 + 2*(<x> + 1)^2 + 3*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1) <= 0", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -338,20 +338,10 @@ Test(nlhdlrsoc, disaggregation, .description = "detects more complex norm expres
    SCIP_Bool success;
    int i;
 
-   /* create expression and simplify it: note it fails if not simplified, the order matters! */
+   /* create expression constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: (8 + 2*(<x> + 1)^2 + 3*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1) <= 0", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
-
-   /* create expression and simplify it: note it fails if not simplified, the order matters! */
-   //SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr,
-   //   (char*) "(8 + 2*(<x> + 1)^2 + 3*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1)", NULL, &expr) );
-   /* SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
-   cr_expect(changed);
-   cr_expect(!infeasible);
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   expr = simplified;
-   normexpr = SCIPgetConsExprExprChildren(expr)[1]; */
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
 
