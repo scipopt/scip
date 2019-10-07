@@ -103,6 +103,7 @@ void extdataClean(
    extdata->tree_nedges = 0;
    extdata->tree_depth = 0;
    extdata->tree_root = -1;
+   extdata->tree_redcost = 0.0;
 }
 
 
@@ -1085,6 +1086,8 @@ SCIP_Bool extTruncate(
       return TRUE;
    }
 
+
+
    if( extdata->tree_nedges >= extdata->tree_maxnedges )
    {
       SCIPdebugMessage("truncate (too many tree edges) \n");
@@ -1756,8 +1759,13 @@ SCIP_RETCODE reduce_extendedCheckEdge(
             extdataClean(graph, &extdata);
             extCheckArc(scip, graph, isterm, flipedge(edge), &extdata, deletable);
          }
+      }
 
-         assert(reddataIsClean(graph, &reddata) && extdataIsClean(graph, &extdata));
+      for( int i = 0; i < nnodes; i++ )
+      {
+         assert(pseudoancestor_mark[i] == 0);
+         assert(tree_deg[i] == 0 || tree_deg[i] == -1);
+         assert(bottleneckDistNode[i] == -1.0);
       }
 
       SCIPfreeCleanBufferArray(scip, &pseudoancestor_mark);
