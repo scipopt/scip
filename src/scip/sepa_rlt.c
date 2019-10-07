@@ -995,7 +995,7 @@ SCIP_RETCODE SCIPincludeSepaRlt(
          &sepadata->maxusedvars, FALSE, DEFAULT_MAXUSEDVARS, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/maxnonzeroprop",
-         "maximal proportion of known bilinear terms of a variable to non-zeroes of a row that is adccepted",
+         "maximal proportion of known bilinear terms of a variable to non-zeroes of a row that is accepted",
          &sepadata->maxnonzeroprop, FALSE, DEFAULT_MAXNONZEROPROP, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
