@@ -6705,6 +6705,7 @@ SCIP_RETCODE enforceConstraints(
    {
       /* try whether tighten the LP feasibility tolerance could help
        * maybe it is just some cut that hasn't been taken into account sufficiently
+       * in the next enforcement round, we would then also allow even weaker cuts, as we want a minimal cut violation of LP's feastol
        */
       SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxauxviol / 2.0, SCIPgetLPFeastol(scip) / 10.0)));
       SCIPdebugMsg(scip, "reduced LP feasibility tolerance to %g and hope\n", SCIPgetLPFeastol(scip));
