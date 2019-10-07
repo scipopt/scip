@@ -1994,7 +1994,11 @@ SCIP_RETCODE computeSymmetryGroup(
          SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
 
       if( nexprconss > 0 )
+      {
+         SCIPexpriteratorFree(&it);
+         SCIPhashsetFree(&auxvars, SCIPblkmem(scip));
          SCIPfreeBlockMemoryArrayNull(scip, isnonlinvar, nvars);
+      }
 
       SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
       SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
