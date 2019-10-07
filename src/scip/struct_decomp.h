@@ -38,12 +38,18 @@ struct SCIP_Decomp
    SCIP_HASHMAP*         cons2block;         /**< hash map from SCIP constraints to block labels */
    SCIP_Real             score;              /**< score of this decomposition */
    SCIP_Real             modularity;         /**< modularity score (comparison of within community edges and random decomposition) */
+   SCIP_Real             areascore;          /**< area score (fraction of matrix area outside block assignments) of this decomposition */
    int                   idxlargestblock;    /**< index of the of the largest block (regarding the number of constraints) */
    int                   idxsmallestblock;   /**< index of the smallest block (regarding the number of constraints) */
    int*                  varssize;           /**< variable size for each block, sorted by increasing block label */
    int*                  consssize;          /**< constraint size for each block, sorted by increasing block label */
    int*                  labels;             /**< integer label for each block */
    int                   nblocks;            /**< the number of variable blocks without the linking block */
+   int                   memsize;            /**< memory size for block-related arrays, initially equal to nblocks + 1 */
+   int                   nedges;             /**< the number of edges in the block decomposition graph */
+   int                   mindegree;          /**< the minimum degree of the block decomposition graph */
+   int                   maxdegree;          /**< the maximum degree of the block decomposition graph */
+   int                   ncomponents;        /**< the number of connected components in the block decomposition graph */
    SCIP_Bool             haschanges;         /**< has this decomposition pending data structure updates? */
    SCIP_Bool             original;           /**< is this a decomposition in the original (TRUE) or transformed space? */
    SCIP_Bool             benderslabels;      /**< should the variables be labeled for the application of Benders' decomposition */
