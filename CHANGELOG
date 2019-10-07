@@ -135,6 +135,9 @@ Interface changes
 - new `idempotent` argument to SCIPgetVarStrongbranchInt() and SCIPgetVarStrongbranchFrac(),
   so that statistics are not updated during the call. Likewise, new `updatecol` and `updatestat` arguments to SCIPcolGetStrongbranch().
 
+- callback `SCIP_DECL_CONSHDLRENFOLP` can now also return SCIP_SOLVELP as *result, which indicates to the SCIP core that the LP relaxation
+  should be solved again because the primal feasibility tolerance of the LP has been tightened (using SCIPsetLPFeastol())
+
 ### Deleted and changed API methods
 
 - LPI:
@@ -177,6 +180,7 @@ Interface changes
   - SCIProwGetOriginCons() now returns a SCIP_CONS* instead of a SCIP_CONSHDLR*, use SCIProwGetOriginConshdlr() for the previous behavior
   - SCIPcreateRowCons() and SCIPcreateEmptyRowCons() now expect a SCIP_CONS* instead of a SCIP_CONSHDLR*,
     use SCIPcreateRowConshdlr() and SCIPcreateEmptyRowConshdlr(), respectively, for the previous behavior
+  - deprecated SCIPlpfeastol() and SCIPchgLpfeastol(), use SCIPgetLPFeastol() and SCIPsetLPFeastol()
 
 - new parameter "divecontext" for every method that queries statistics for a diveset. The context can be used to distinguish between the dive set
   as single (standalone) heuristic or within Adaptive Diving.
@@ -211,6 +215,8 @@ Interface changes
 - new API function SCIPgetNConflictDualproofsApplied()
 - new API functions SCIPeventGetOldtype() and SCIPeventGetNewtype() for the new event when changing the variable type
 - new API function SCIPisConvexConsQuadratic() to check whether a quadratic constraint is convex when a given set of variables would be fixed
+- new API functions SCIPgetLPFeastol(), SCIPsetLPFeastol(), and SCIPresetLPFeastol() to get, set, and reset (to the default), respectively, the primal
+  feasibility tolerance for the LP relaxation
 
 
 ### Command line interface
