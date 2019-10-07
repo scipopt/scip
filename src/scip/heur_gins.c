@@ -90,7 +90,7 @@
                                              **< cutpool of the original scip be copied to constraints of the subscip */
 #define DEFAULT_BESTSOLLIMIT    3            /**< limit on number of improving incumbent solutions in sub-CIP */
 #define DEFAULT_FIXCONTVARS FALSE           /**< should continuous variables outside the neighborhoods get fixed? */
-#define DEFAULT_POTENTIAL      'r'          /**< the reference point to compute the neighborhood potential: (r)oot or (p)seudo solution */
+#define DEFAULT_POTENTIAL      'r'          /**< the reference point to compute the neighborhood potential: (r)oot, (l)ocal lp, or (p)seudo solution */
 #define DEFAULT_MAXDISTANCE     3           /**< maximum distance to selected variable to enter the subproblem, or -1 to
                                              *   select the distance that best approximates the minimum fixing rate from below */
 #define DEFAULT_RANDSEED       71
@@ -788,12 +788,17 @@ SCIP_Real getPotential(
       {
          /* use difference to pseudo solution using the bound in the objective direction */
          case 'p':
-            referencepoint = SCIPvarGetObj(var) > 0.0 ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
+            referencepoint = varobj > 0.0 ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
             break;
 
          /* use root LP solution difference */
          case 'r':
             referencepoint = SCIPvarGetRootSol(var);
+            break;
+
+         /* use local LP solution */
+         case 'l':
+            referencepoint = SCIPgetSolVal(scip, NULL, var);
             break;
          default:
             SCIPerrorMessage("Unknown potential computation %c specified\n", heurdata->potential);
@@ -805,7 +810,7 @@ SCIP_Real getPotential(
          continue;
 
       /* calculate the delta to the variables best bound */
-      objdelta = (SCIPgetSolVal(scip, sol, var) - referencepoint) * SCIPvarGetObj(var);
+      objdelta = (SCIPgetSolVal(scip, sol, var) - referencepoint) * varobj;
       potential += objdelta;
    }
 
@@ -1018,14 +1023,14 @@ SCIP_RETCODE selectInitialVariableDecomposition(
 {
    SCIP_SOL* sol;
    SCIP_VAR** vars;
-   int nbinvars;
-   int nintvars;
    SCIP_VAR** varscopy;
-   int nvars;
    int* varlabels;
    int* discvaridxs;
-   int currblockstart = 0;
    SCIP_Real bestpotential;
+   int nbinvars;
+   int nintvars;
+   int nvars;
+   int currblockstart = 0;
    int bestvaridx;
    int cntmessages;
 
@@ -2398,8 +2403,8 @@ SCIP_RETCODE SCIPincludeHeurGins(
          &heurdata->maxdistance, FALSE, DEFAULT_MAXDISTANCE, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/potential",
-         "the reference point to compute the neighborhood potential: (r)oot or (p)seudo solution",
-         &heurdata->potential, TRUE, DEFAULT_POTENTIAL, "pr", NULL, NULL) );
+         "the reference point to compute the neighborhood potential: (r)oot, (l)ocal lp, or (p)seudo solution",
+         &heurdata->potential, TRUE, DEFAULT_POTENTIAL, "lpr", NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/userollinghorizon",
          "should the heuristic solve a sequence of sub-MIP's around the first selected variable",
