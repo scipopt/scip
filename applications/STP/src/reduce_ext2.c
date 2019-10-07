@@ -24,8 +24,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-//#define SCIP_DEBUG
+#define SCIP_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -92,7 +91,97 @@ typedef struct extension_data
    DISTDATA* const distdata;
 } EXTDATA;
 
+
+static
+void extdataClean(
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   extdata->extstack_ncomponents = 0;
+   extdata->tree_nleaves = 0;
+   extdata->tree_nedges = 0;
+   extdata->tree_depth = 0;
+   extdata->tree_root = -1;
+}
+
+
 #ifndef NDEBUG
+static
+SCIP_Bool extdataIsClean(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   if( extdata->extstack_ncomponents != 0 )
+   {
+      printf("extdata->extstack_ncomponents %d \n", extdata->extstack_ncomponents);
+      return FALSE;
+   }
+
+   if( extdata->tree_nleaves != 0 )
+   {
+      printf("extdata->tree_nleaves %d \n", extdata->tree_nleaves);
+      return FALSE;
+   }
+
+   if( extdata->tree_root != -1 )
+   {
+      printf("extdata->tree_root %d \n", extdata->tree_root);
+      return FALSE;
+   }
+
+   if( extdata->tree_nedges != 0 )
+   {
+      printf("extdata->tree_nedges %d \n", extdata->tree_nedges);
+      return FALSE;
+   }
+
+   if( extdata->tree_depth != 0 )
+   {
+      printf("extdata->tree_depth %d \n", extdata->tree_depth);
+      return FALSE;
+   }
+
+   for( int i = 0; i < graph->knots; i++ )
+   {
+      if( !(extdata->tree_deg[i] == 0 || extdata->tree_deg[i] == -1) )
+      {
+         printf("extdata->tree_deg[i] %d \n", extdata->tree_deg[i]);
+         return FALSE;
+      }
+
+      if( extdata->tree_bottleneckDistNode[i] != -1.0 )
+      {
+         printf("extdata->bottleneckDistNode[i] %f \n", extdata->tree_bottleneckDistNode[i]);
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
+
+static
+SCIP_Bool reddataIsClean(
+   const GRAPH*          graph,              /**< graph data structure */
+   const REDDATA*        reddata             /**< reduction data */
+)
+{
+
+   for( int i = 0; i < graph->knots; i++ )
+   {
+      if( reddata->pseudoancestor_mark[i] != 0 )
+      {
+         printf("pseudoancestor_mark %d \n", reddata->pseudoancestor_mark[i]);
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
+
 static
 SCIP_Bool extTreeIsFlawed(
    SCIP*                 scip,               /**< SCIP */
@@ -128,7 +217,9 @@ SCIP_Bool extTreeIsFlawed(
 
       if( edgecount[e] > 0 || edgecount[flipedge(e)] > 0  )
       {
+         printf("tree_nedges %d \n", tree_nedges);
          printf("FLAW: double edge \n");
+         graph_edge_printInfo(graph, e);
          flawed = TRUE;
       }
 
@@ -1396,6 +1487,8 @@ void extCheckArc(
    SCIP_Bool success = TRUE;
    SCIP_Bool conflict = FALSE;
 
+   assert(reddataIsClean(graph, extdata->reddata) && extdataIsClean(graph, extdata));
+
    /* put 'edge' on the stack */
    extAddInitialComponent(graph, &edge, 1, tail, extdata);
 
@@ -1455,7 +1548,7 @@ void extCheckArc(
    } /* DFS loop */
 
    *deletable = success;
-   assert(tree_deg[head] == 1 && tree_deg[tail] == 1);
+   assert(tree_deg[head] == 1 && tree_deg[tail] == 1 && extdata->tree_nedges == 1);
 
    tree_deg[head] = 0;
    tree_deg[tail] = 0;
@@ -1657,19 +1750,14 @@ SCIP_RETCODE reduce_extendedCheckEdge(
          if( extLeafIsExtendable(graph, isterm, head) )
             extCheckArc(scip, graph, isterm, edge, &extdata, deletable);
 
-         for( int i = 0; i < nnodes; i++ )
-         {
-            assert(pseudoancestor_mark[i] == 0 && (tree_deg[i] == 0 || tree_deg[i] == -1) && bottleneckDistNode[i] == -1.0);
-         }
-
          /* try to extend from tail? */
          if( !(*deletable) && extLeafIsExtendable(graph, isterm, tail) )
-            extCheckArc(scip, graph, isterm, flipedge(edge), &extdata, deletable);
-
-         for( int i = 0; i < nnodes; i++ )
          {
-            assert(pseudoancestor_mark[i] == 0 && (tree_deg[i] == 0 || tree_deg[i] == -1) && bottleneckDistNode[i] == -1.0);
+            extdataClean(graph, &extdata);
+            extCheckArc(scip, graph, isterm, flipedge(edge), &extdata, deletable);
          }
+
+         assert(reddataIsClean(graph, &reddata) && extdataIsClean(graph, &extdata));
       }
 
       SCIPfreeCleanBufferArray(scip, &pseudoancestor_mark);
@@ -1762,6 +1850,7 @@ SCIP_RETCODE reduce_extendedEdge2(
          if( SCIPisZero(scip, redcost[e]) || SCIPisZero(scip, redcost[erev]) )
             continue;
 
+#if 0
          if( !edgedeletable[e] )
          {
             SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata, edgedeletable,
@@ -1783,6 +1872,10 @@ SCIP_RETCODE reduce_extendedEdge2(
 
             deletable = (deletable && erevdeletable);
          }
+#else
+         SCIP_CALL( reduce_extendedCheckEdge(scip, graph, &redcostdata, edgedeletable,
+               isterm, e, allowequality, &distdata, bottleneckDist, tree_deg, &deletable) );
+#endif
 
          if( deletable )
          {
