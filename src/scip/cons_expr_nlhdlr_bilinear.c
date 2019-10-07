@@ -1095,6 +1095,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateBilinear)
    SCIP_Bool mccsuccess = TRUE;
 
    *success = FALSE;
+   *addedbranchscores = FALSE;
 
    /* check whether an inequality is available */
    if( nlhdlrexprdata->noverineqs == 0 && nlhdlrexprdata->nunderineqs == 0 )

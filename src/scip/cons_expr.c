@@ -5584,6 +5584,7 @@ SCIP_RETCODE separatePointExprNlhdlr(
       SCIP_ROWPREP* rowprep;
       SCIP_VAR* auxvar;
       SCIP_Bool success = FALSE;
+      SCIP_Bool addedbranchscores = FALSE;
 
       *result = SCIP_DIDNOTFIND;
 
@@ -5592,7 +5593,8 @@ SCIP_RETCODE separatePointExprNlhdlr(
       auxvar = SCIPgetConsExprExprAuxVar(expr);
       assert(auxvar != NULL);
 
-      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success) );
+      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &success, FALSE, 0, &addedbranchscores) );
+      assert(!addedbranchscores);
 
       /* complete estimator to cut and clean it up */
       if( success )
@@ -5895,7 +5897,7 @@ SCIP_RETCODE enforceExprNlhdlr(
       mincutviolation = SCIPfeastol(scip);
 
    /* call separation callback of the nlhdlr
-    * TODO we should change this to an enforcement-callback?
+    * TODO we should change this to an enforcement-callback
     */
    SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
       mincutviolation, separated, result, &ncuts) );
@@ -5916,13 +5918,14 @@ SCIP_RETCODE enforceExprNlhdlr(
       SCIP_VAR* auxvar;
       SCIP_Real cutviol;
       SCIP_Bool sepasuccess = FALSE;
+      SCIP_Bool branchscoresuccess = FALSE;
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
       auxvar = SCIPgetConsExprExprAuxVar(expr);
       assert(auxvar != NULL);
 
-      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &sepasuccess) );
+      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &sepasuccess, addbranchscores, conshdlrdata->lastbrscoretag, &branchscoresuccess) );
 
       if( sepasuccess )
       {
@@ -6009,12 +6012,21 @@ SCIP_RETCODE enforceExprNlhdlr(
 
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
+      else if( branchscoresuccess )
+      {
+         SCIPdebugMsg(scip, "separation with estimate of nlhdlr %s failed, but branching candidates added\n", SCIPgetConsExprNlhdlrName(nlhdlr));
+         *result = SCIP_BRANCHED;  /* well, not branched, but added a branching candidate */
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "separation with estimate of nlhdlr %s failed and not branching candidates (!)\n", SCIPgetConsExprNlhdlrName(nlhdlr));
+      }
 
       SCIPfreeRowprep(scip, &rowprep);
    }
-
-   if( *result == SCIP_DIDNOTFIND && addbranchscores )
+   else if( *result == SCIP_DIDNOTFIND && addbranchscores )
    {
+      /* TODO remove when changing sepa callback into enfo callback */
       SCIP_Bool branchscoresuccess = FALSE;
 
       SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, conshdlrdata->lastbrscoretag, &branchscoresuccess) );
@@ -10214,7 +10226,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(SCIPestimateConsExprExprHdlr)
    if( SCIPhasConsExprExprHdlrEstimate(expr->exprhdlr) )
    {
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
-      SCIP_CALL( expr->exprhdlr->estimate(scip, conshdlr, expr, sol, overestimate, targetvalue, coefs, constant, islocal, success) );
+      SCIP_CALL( expr->exprhdlr->estimate(scip, conshdlr, expr, sol, overestimate, targetvalue, coefs, constant, islocal, success, branchcand) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
 
       /* update statistics */
@@ -14069,10 +14081,12 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
    assert(nlhdlr != NULL);
    assert(nlhdlr->sepatime != NULL);
    assert(success != NULL);
+   assert(addedbranchscores != NULL);
 
    if( nlhdlr->estimate == NULL )
    {
       *success = FALSE;
+      *addedbranchscores = FALSE;
       return SCIP_OKAY;
    }
 
@@ -14086,7 +14100,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
 #endif
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
-   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue, rowprep, success) );
+   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue, rowprep, success, addbranchscores, brscoretag, addedbranchscores) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
 
    /* update statistics */

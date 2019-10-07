@@ -1072,6 +1072,9 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvex)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex);
+
 /** estimator callback */
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
@@ -1091,6 +1094,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    assert(success != NULL);
 
    *success = FALSE;
+   *addedbranchscores = FALSE;
 
    /* if estimating on non-convex side, then do nothing */
    curvature = SCIPgetConsExprExprCurvature(nlexpr);
@@ -1148,7 +1152,16 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    }
 
    if( !*success )
+   {
+      /* branching scores are meant to be added if that would help to improve the estimator,
+       * but that would never be the case for convex
+       * TODO for now still register branchscores if we failed to estimate, but maybe we should never do this?
+       *   there is still the fallback in cons-expr that would just add any unfixed variable as branching candidate
+       */
+      SCIP_CALL( nlhdlrBranchscoreConvex(scip, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, brscoretag, addedbranchscores) );
+
       return SCIP_OKAY;
+   }
 
    /* next add f(sol) */
    SCIPaddRowprepConstant(rowprep, auxvalue);

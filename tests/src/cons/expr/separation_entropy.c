@@ -38,7 +38,7 @@ Test(separation, entropy, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 0.0) );
 
-   SCIP_CALL( estimateEntropy(scip, conshdlr, expr, sol, TRUE, -SCIPinfinity(scip), &coef, &constant, &local, &success) );
+   SCIP_CALL( estimateEntropy(scip, conshdlr, expr, sol, TRUE, -SCIPinfinity(scip), &coef, &constant, &local, &success, NULL) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, 2.0, SCIPepsilon(scip));
@@ -49,7 +49,7 @@ Test(separation, entropy, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -10.0) );
 
-   SCIP_CALL( estimateEntropy(scip,  conshdlr, expr, sol, FALSE, SCIPinfinity(scip), &coef, &constant, &local, &success) );
+   SCIP_CALL( estimateEntropy(scip,  conshdlr, expr, sol, FALSE, SCIPinfinity(scip), &coef, &constant, &local, &success, NULL) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, 1.5 * log(3.0) - 1.5 * log(1.0), SCIPepsilon(scip));

@@ -248,11 +248,15 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 { /*lint --e{715}*/
    SCIP_Real constant;
+   SCIP_Bool* branchcand = NULL;
+   int nchildren = 0;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(rowprep != NULL);
    assert(success != NULL);
+
+   *addedbranchscores = FALSE;
 
    /* if we did not say that we will separate on this side, then stand by it */
    if( !overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) == 0 )
@@ -266,12 +270,22 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       return SCIP_OKAY;
    }
 
+   nchildren = SCIPgetConsExprExprNChildren(expr);
+
    /* make sure enough space is available in rowprep arrays */
-   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, SCIPgetConsExprExprNChildren(expr)) );
-   assert(rowprep->varssize >= SCIPgetConsExprExprNChildren(expr));
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren) );
+   assert(rowprep->varssize >= nchildren);
+
+   if( addbranchscores )
+   {
+      int c;
+      SCIP_CALL( SCIPallocBufferArray(scip, &branchcand, nchildren) );
+      for( c = 0; c < nchildren; ++c )
+         branchcand[c] = TRUE;
+   }
 
    /* call the estimation callback of the expression handler */
-   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, targetvalue, rowprep->coefs, &constant, &rowprep->local, success) );
+   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, targetvalue, rowprep->coefs, &constant, &rowprep->local, success, branchcand) );
 
    if( *success )
    {
@@ -293,6 +307,56 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
          (void*)expr,
          sol != NULL ? "sol" : "lp",
          sol != NULL ? SCIPsolGetIndex(sol) : SCIPgetNLPs(scip));
+   }
+
+   if( addbranchscores )
+   {
+      SCIP_Real violation;
+      int c;
+
+      /* check how much is the violation on the side that we estimate */
+      if( auxvalue == SCIP_INVALID ) /*lint !e777*/
+      {
+         /* if cannot evaluate, then always branch */
+         violation = SCIPinfinity(scip);
+      }
+      else
+      {
+         SCIP_Real auxval;
+
+         /* get value of auxiliary variable of this expression */
+         assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
+         auxval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
+
+         /* compute the violation
+          * if we underestimate, then we enforce expr <= auxval, so violation is (positive part of) auxvalue - auxval
+          * if we overestimate,  then we enforce expr >= auxval, so violation is (positive part of) auxval - auxvalue
+          */
+         if( !overestimate )
+            violation = MAX(0.0, auxvalue - auxval);
+         else
+            violation = MAX(violation, auxval - auxvalue);
+      }
+      assert(violation >= 0.0);
+
+      for( c = 0; c < nchildren; ++c )
+      {
+         if( branchcand[c] )
+         {
+            SCIPaddConsExprExprBranchScore(scip, SCIPgetConsExprExprChildren(expr)[c], brscoretag, REALABS(violation));
+            *addedbranchscores = TRUE;
+         }
+      }
+
+      if( *addedbranchscores )
+      {
+         /* count this branchscore as belonging to the exprhdlr, too
+          * thus, it will be counted for the default nlhdlr, but also for this exprhdlr
+          */
+         SCIPincrementConsExprExprHdlrNBranchScore(SCIPgetConsExprExprHdlr(expr));
+      }
+
+      SCIPfreeBufferArray(scip, &branchcand);
    }
 
    return SCIP_OKAY;

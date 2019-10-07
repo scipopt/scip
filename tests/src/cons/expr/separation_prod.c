@@ -44,7 +44,7 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
 
-   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, TRUE, SCIPinfinity(scip), coefs, &constant, &islocal, &success) );
+   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, TRUE, SCIPinfinity(scip), coefs, &constant, &islocal, &success, NULL) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -4.5, SCIPepsilon(scip));
@@ -61,7 +61,7 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
 
-   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, FALSE, -SCIPinfinity(scip), coefs, &constant, &islocal, &success) );
+   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, FALSE, -SCIPinfinity(scip), coefs, &constant, &islocal, &success, NULL) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -9.0, SCIPepsilon(scip));
@@ -181,7 +181,7 @@ Test(separation, quadrilinear,
 
       SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 4, varexprs, -0.7) );
 
-      SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, round == 0, (round == 0 ? SCIPinfinity(scip) : -SCIPinfinity(scip)), facetcoefs, &facetconstant, &islocal, &success) );
+      SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, round == 0, (round == 0 ? SCIPinfinity(scip) : -SCIPinfinity(scip)), facetcoefs, &facetconstant, &islocal, &success, NULL) );
 
       cr_assert(success);
       cr_assert(islocal);

@@ -369,6 +369,10 @@ typedef enum
  * Note, that targetvalue can be infinite if any estimator will be accepted.
  * If successful, it shall store the coefficient of the i-th child in entry coefs[i] and
  * the constant part in \par constant.
+ * If branchcand is not NULL, then the callback shall set branchcand[i] to FALSE if
+ * branching in the i-th child would not improve the estimator.
+ * That is, if this callback is called with branchcand != NULL, then branchcand[i]
+ * will be initialized to TRUE for all children.
  *
  * input:
  *  - scip : SCIP main data structure
@@ -380,6 +384,7 @@ typedef enum
  *  - constant : buffer to store constant part of estimator
  *  - islocal : buffer to store whether estimator is valid locally only
  *  - success : buffer to indicate whether an estimator could be computed
+ *  - branchcand: array to indicate which children (not) to consider for branching, if not NULL
  */
 #define SCIP_DECL_CONSEXPR_EXPRESTIMATE(x) SCIP_RETCODE x (\
    SCIP* scip, \
@@ -391,7 +396,8 @@ typedef enum
    SCIP_Real* coefs, \
    SCIP_Real* constant, \
    SCIP_Bool* islocal, \
-   SCIP_Bool* success)
+   SCIP_Bool* success, \
+   SCIP_Bool* branchcand)
 
 /** expression simplify callback
  *
@@ -914,6 +920,9 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - targetvalue : a value the estimator shall exceed, can be +/-infinity
  *  - rowprep : a rowprep where to store the estimator
  *  - success : buffer to indicate whether an estimator could be computed
+ *  - addbranchscores: indicates whether to register branching scores
+ *  - brscoretag: value to be passed on to SCIPaddConsExprExprBranchScore()
+ *  - addedbranchscores: buffer to store whether the branching score callback was successful
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(x) SCIP_RETCODE x (\
    SCIP* scip, \
@@ -926,7 +935,10 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_Bool overestimate, \
    SCIP_Real targetvalue, \
    SCIP_ROWPREP* rowprep, \
-   SCIP_Bool* success)
+   SCIP_Bool* success, \
+   SCIP_Bool addbranchscores, \
+   unsigned int brscoretag, \
+   SCIP_Bool* addedbranchscores)
 
 /** nonlinear handler callback for branching scores
  *

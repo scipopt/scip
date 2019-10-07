@@ -637,7 +637,7 @@ Test(separation, convexsquare, .init = setup, .fini = teardown,
     */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
 
-   SCIP_CALL( estimatePow(scip, conshdlr, expr, sol, FALSE, SCIPinfinity(scip), &slope, &constant, &islocal, &success) );
+   SCIP_CALL( estimatePow(scip, conshdlr, expr, sol, FALSE, SCIPinfinity(scip), &slope, &constant, &islocal, &success, NULL) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -1.0, SCIPepsilon(scip));
@@ -650,7 +650,7 @@ Test(separation, convexsquare, .init = setup, .fini = teardown,
     */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
 
-   SCIP_CALL( estimatePow(scip, conshdlr, expr, sol, TRUE, -SCIPinfinity(scip), &slope, &constant, &islocal, &success) );
+   SCIP_CALL( estimatePow(scip, conshdlr, expr, sol, TRUE, -SCIPinfinity(scip), &slope, &constant, &islocal, &success, NULL) );
    cr_assert(success);
    cr_assert_float_eq(constant, 5.0, SCIPepsilon(scip));
    cr_assert_float_eq(slope, 4.0, SCIPepsilon(scip));

@@ -37,7 +37,7 @@ Test(separation, exponential, .init = setup, .fini = teardown,
    /* compute an overestimation (secant) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
 
-   SCIP_CALL( estimateExp(scip, conshdlr, expr, sol, TRUE, -SCIPinfinity(scip), &coef, &constant, &local, &success) );
+   SCIP_CALL( estimateExp(scip, conshdlr, expr, sol, TRUE, -SCIPinfinity(scip), &coef, &constant, &local, &success, NULL) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, (exp(5) + 5 * exp(-1)) / 6.0, SCIPepsilon(scip));
@@ -47,7 +47,7 @@ Test(separation, exponential, .init = setup, .fini = teardown,
    /* compute an underestimation (linearization) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
 
-   SCIP_CALL( estimateExp(scip, conshdlr, expr, sol, FALSE, SCIPinfinity(scip), &coef, &constant, &local, &success) );
+   SCIP_CALL( estimateExp(scip, conshdlr, expr, sol, FALSE, SCIPinfinity(scip), &coef, &constant, &local, &success, NULL) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -exp(2), SCIPepsilon(scip));

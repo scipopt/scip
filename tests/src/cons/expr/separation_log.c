@@ -37,7 +37,7 @@ Test(separation, logarithmic, .init = setup, .fini = teardown,
    /* compute an overestimation (linearization) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
 
-   SCIP_CALL( estimateLog(scip, conshdlr, expr, sol, TRUE, SCIPinfinity(scip), &coef, &constant, &islocal, &success) );
+   SCIP_CALL( estimateLog(scip, conshdlr, expr, sol, TRUE, SCIPinfinity(scip), &coef, &constant, &islocal, &success, NULL) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -1.0 + log(2.0), SCIPepsilon(scip));
@@ -47,7 +47,7 @@ Test(separation, logarithmic, .init = setup, .fini = teardown,
    /* compute an underestimation (secant) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
 
-   SCIP_CALL( estimateLog(scip, conshdlr, expr, sol, FALSE, -SCIPinfinity(scip), &coef, &constant, &islocal, &success) );
+   SCIP_CALL( estimateLog(scip, conshdlr, expr, sol, FALSE, -SCIPinfinity(scip), &coef, &constant, &islocal, &success, NULL) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -log(3.0)/2.0, SCIPepsilon(scip));

@@ -792,6 +792,9 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxQuadratic)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic);
+
 /** nonlinear handler estimation callback */
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
@@ -823,6 +826,12 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
    {
       SCIPdebugMsg(scip, "not estimating on nonconvex side (overestimate=%d, curv=%s)\n", overestimate, SCIPexprcurvGetName(nlhdlrexprdata->curvature));
       return SCIP_OKAY;
+   }
+
+   if( addbranchscores )
+   {
+      /* TODO as in nlhdlr_convex: probably we should not add branchscores when estimating a convex quadratic */
+      SCIP_CALL( nlhdlrBranchscoreQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, brscoretag, addedbranchscores) );
    }
 
    /*
