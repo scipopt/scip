@@ -92,6 +92,18 @@ then
     #echo "Reference value $OBJECTIVEVAL"
     echo set misc referencevalue $OBJECTIVEVAL      >> $TMPFILE
 fi
+
+INSTANCENAME=${INSTANCE%%.gz}
+for i in gz mps cip lp
+do
+    INSTANCENAME=${INSTANCENAME%%.${i}}
+done
+INSTANCESETTINGSFILE=${INSTANCENAME}.set
+if test -f $INSTANCESETTINGSFILE
+then
+    echo set load ${INSTANCESETTINGSFILE} >> $TMPFILE
+fi
+
 echo set limits time $TIMELIMIT        >> $TMPFILE
 echo set limits nodes $NODELIMIT       >> $TMPFILE
 echo set limits memory $MEMLIMIT       >> $TMPFILE
@@ -113,10 +125,7 @@ if test "$REOPT" = false
 then
     # read and solve the instance
     echo read $INSTANCE         >> $TMPFILE
-    INSTANCENAME=${INSTANCE%%.gz}
-    INSTANCENAME=${INSTANCENAME%%.mps}
-    INSTANCENAME=${INSTANCENAME%%.cip}
-    DECOMP=${INSTANCENAME}.dec
+    DECOMP=${INSTANCENAME}.dec.gz
     echo $DECOMP
     if test -f $DECOMP
     then

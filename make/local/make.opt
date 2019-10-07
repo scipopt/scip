@@ -26,7 +26,7 @@
 QUEUETYPE	=	srun
 QUEUE		=	mip-dbg
 PPN 		=	-1
-CLIENTTMPDIR	=	/usr/local/tmp
+CLIENTTMPDIR	=	/local/tmp
 NOWAITCLUSTER   =       1
 EXCLUSIVE	=	false
 

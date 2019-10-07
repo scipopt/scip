@@ -73,6 +73,7 @@
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_solve.h"
@@ -112,7 +113,7 @@ SCIP_RETCODE readDecomposition(
    SCIP_Bool error;
    int lineno;
    int nblocks;
-   int currblock;
+   int currblock = SCIP_DECOMP_LINKCONS;
    int* labels;
    int nconss;
    int consptr;
@@ -165,7 +166,7 @@ SCIP_RETCODE readDecomposition(
    {
       char buffer[SCIP_MAXSTRLEN];
       char consname[SCIP_MAXSTRLEN];
-      SCIP_CONS* cons;
+      SCIP_CONS* cons = NULL;
       int nread;
 
       /* get next line */
@@ -229,6 +230,14 @@ SCIP_RETCODE readDecomposition(
             nread = sscanf(buffer, "%1024s\n", consname);
             if( nread < 1 )
                error = TRUE;
+
+            cons = SCIPfindCons(scip, consname);
+            /* check if the constraint exists */
+            if( cons == NULL )
+            {
+               SCIPwarningMessage(scip, "Constraint <%s> in line %d does not exist.\n", consname, lineno);
+               continue;
+            }
             break;
 
          default:
@@ -237,15 +246,6 @@ SCIP_RETCODE readDecomposition(
 
       if( section == DEC_SECTION_NBLOCKS || section == DEC_SECTION_INIT )
          continue;
-
-      cons = SCIPfindCons(scip, consname);
-
-      /* check if the constraint does not exist */
-      if( cons == NULL )
-      {
-         SCIPwarningMessage(scip, "Constraint <%s> in line %d does not exist.\n", consname, lineno);
-         continue;
-      }
 
       /* check if buffer storage capacity has been reached, which means that there is a duplicate constraint entry */
       if( consptr == nconss )
@@ -276,8 +276,13 @@ SCIP_RETCODE readDecomposition(
    if( ! error )
    {
       char strbuf[SCIP_MAXSTRLEN];
+      SCIP_Bool benderslabels;
 
-      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), nblocks, TRUE) );
+      /* retrieving the Benders' variable labels setting */
+      SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/benderslabels", &benderslabels) );
+
+
+      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), nblocks, TRUE, benderslabels) );
 
       SCIP_CALL( SCIPdecompSetConsLabels(decomp, conss, labels, consptr) );
       SCIPdebugMsg(scip, "Setting labels for %d constraints.\n", consptr);
