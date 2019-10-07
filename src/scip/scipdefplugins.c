@@ -172,7 +172,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurShiftandpropagate(scip) );
    SCIP_CALL( SCIPincludeHeurShifting(scip) );
    SCIP_CALL( SCIPincludeHeurSimplerounding(scip) );
-   SCIP_CALL( SCIPincludeHeurStaircase(scip) );
    SCIP_CALL( SCIPincludeHeurSubNlp(scip) );
    SCIP_CALL( SCIPincludeHeurTrivial(scip) );
    SCIP_CALL( SCIPincludeHeurTrivialnegation(scip) );
