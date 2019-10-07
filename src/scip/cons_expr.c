@@ -5965,9 +5965,18 @@ SCIP_RETCODE enforceExprNlhdlr(
       /* clean up estimator */
       if( sepasuccess )
       {
-         /* TODO maybe modify/instruct SCIPcleanupRowprep to not scale up, at least if !allowweakcuts */
-         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
-         /* TODO cut could be weak now - recheck */
+         /* if not allowweakcuts, then do not attempt to get cuts more violated by scaling them up,
+          * instead, may even scale them down, that is, scale so that max coef is close to 1
+          */
+         if( !allowweakcuts )
+         {
+            SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
+         }
+         /* TODO cut could be weak now? - recheck */
       }
 
       /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
