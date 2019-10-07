@@ -182,18 +182,26 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValConss)
 {  /*lint --e{715}*/
    HASHDATA* hashdata;
    int minidx, mididx, maxidx;
+   int idx[3];
 
    hashdata = (HASHDATA*)key;
    assert(hashdata != NULL);
    assert(hashdata->vars != NULL);
    assert(hashdata->nvars == 3 || hashdata->nvars == 2);
 
-   minidx = SCIPvarGetIndex(hashdata->vars[0]);
-   mididx = SCIPvarGetIndex(hashdata->vars[1]);
-   maxidx = SCIPvarGetIndex(hashdata->vars[hashdata->nvars - 1]);
+   idx[0] = SCIPvarGetIndex(hashdata->vars[0]);
+   idx[1] = SCIPvarGetIndex(hashdata->vars[1]);
+   idx[2] = SCIPvarGetIndex(hashdata->vars[hashdata->nvars - 1]);
+
+   minidx = MIN(idx[0], MIN(idx[1], idx[2]));
+   maxidx = MAX(idx[0], MAX(idx[1], idx[2]));
+   if( idx[0] == maxidx )
+      mididx = MAX(idx[1], idx[2]);
+   else
+      mididx = MAX(idx[0], MIN(idx[1], idx[2]));
 
    /* vars should already be sorted by index */
-   assert(minidx < mididx && mididx <= maxidx);
+   assert(minidx <= mididx && mididx <= maxidx);
 
    return SCIPhashTwo(SCIPcombineTwoInt(hashdata->nvars, minidx),
                       SCIPcombineTwoInt(mididx, maxidx));
@@ -404,6 +412,9 @@ SCIP_RETCODE addBilinProduct(
    int termpos, linpos;
    SCIP_Bool found;
 
+   assert(SCIPgetConsExprExprHdlr(*linexpr) == SCIPgetConsExprExprHdlrVar(sepadata->conshdlr) ||
+          SCIPgetConsExprExprHdlr(*linexpr) == SCIPgetConsExprExprHdlrSum(sepadata->conshdlr));
+
    assert(underestimate || overestimate);
 
    /* the variables should be given in the correct order */
@@ -604,6 +615,10 @@ SCIP_RETCODE createLinearisation(
    SCIP_CONSEXPR_EXPR* simplified;
    SCIP_CONSEXPR_EXPR* linchildren[3];
    SCIP_Bool changed, infeasible;
+   int i;
+
+   for( i = 0; i <= 2; ++i )
+      assert(!SCIPisInfinity(scip, coefs[i]));
 
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &linchildren[0], w) );
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, sepadata->conshdlr, &linchildren[1], x) );
@@ -989,8 +1004,10 @@ SCIP_RETCODE detectProductsUnconditional(
          coefs2[varpos2] = SCIProwGetVals(row2)[pos2];
 
          SCIPdebugMsg(scip, "Unconditional:\n");
-         SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, SCIProwGetLhs(row2), uselhs1, TRUE, varmap, f) );
-         SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, SCIProwGetRhs(row2), uselhs1, FALSE, varmap, f) );
+         if( !SCIPisInfinity(scip,-SCIProwGetLhs(row2)) )
+            SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, SCIProwGetLhs(row2), uselhs1, TRUE, varmap, f) );
+         if( !SCIPisInfinity(scip, SCIProwGetRhs(row2)) )
+            SCIP_CALL( extractProducts(scip, sepadata, vars, coefs1, coefs2, side1, SCIProwGetRhs(row2), uselhs1, FALSE, varmap, f) );
       }
    }
    SCIPfreeBufferArray(scip, &(hashdata.vars));
@@ -1342,8 +1359,10 @@ SCIP_RETCODE detectHiddenProducts(
                   coefs2[1] = 1.0;
                   coefs2[2] = 0.0;
                   SCIPdebugMsg(scip, "w global bounds:\n");
-                  SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, side1, SCIPvarGetLbGlobal(vars_xwy[1]), uselhs1, TRUE, varmap, xfixing) );
-                  SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, side1, SCIPvarGetUbGlobal(vars_xwy[1]), uselhs1, FALSE, varmap, xfixing) );
+                  if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars_xwy[1])) )
+                     SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, side1, SCIPvarGetLbGlobal(vars_xwy[1]), uselhs1, TRUE, varmap, xfixing) );
+                  if( !SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars_xwy[1])) )
+                     SCIP_CALL( extractProducts(scip, sepadata, vars_xwy, coefs1, coefs2, side1, SCIPvarGetUbGlobal(vars_xwy[1]), uselhs1, FALSE, varmap, xfixing) );
 
                   /* do implied bounds and cliques with w */
                   if( SCIPvarGetType(vars_xwy[1]) != SCIP_VARTYPE_BINARY )
@@ -1355,18 +1374,6 @@ SCIP_RETCODE detectHiddenProducts(
                   { /* w is binary - look for cliques containing x and w */
                      SCIPdebugMsg(scip, "Implied relation + cliques with x and w:\n");
                      SCIP_CALL( detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 0, 1, varmap, xfixing) );
-                  }
-
-                  /* implied bounds and cliques with y */
-                  if( SCIPvarGetType(vars_xwy[2]) != SCIP_VARTYPE_BINARY )
-                  { /* y is non-binary - look for implied bounds x = !f => y >=/<= bound */
-                     SCIPdebugMsg(scip, "Implied relation + implied bounds on y:\n");
-                     SCIP_CALL( detectProductsImplbnd(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 0, 2, varmap, xfixing) );
-                  }
-                  else
-                  { /* y is binary - look for cliques containing x and y */
-                     SCIPdebugMsg(scip, "Implied relation + cliques with x and y:\n");
-                     SCIP_CALL( detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, uselhs1, 0, 2, varmap, xfixing) );
                   }
 
                   /* use unconditional relations (i.e. relations of w and y) */
@@ -1448,6 +1455,10 @@ SCIP_RETCODE detectHiddenProducts(
             }
             if( !xfixing )
                coefs1[0] = -coefs1[0];
+
+            /* if the global bound is equal to the implied bound, there is nothing to do */
+            if( coefs1[0] == 0.0 )
+               continue;
 
             /* the second relation is in w and y */
             coefs2[0] = 0.0;
@@ -1968,7 +1979,8 @@ SCIP_RETCODE addRltTerm(
    SCIP_Real refpointvar;
    SCIP_Real signfactor, boundfactor;
    SCIP_Real coefauxvar, coefcolvar;
-   int auxpos;
+   int auxpos, linpos;
+   SCIP_Bool posauxcoef;
 
    lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
    ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
@@ -1984,8 +1996,11 @@ SCIP_RETCODE addRltTerm(
    auxpos = getBilinPos(scip, sepadata, var, colvar);
    linexpr = NULL;
 
+   posauxcoef = (coefauxvar > 0.0 && uselb) || (coefauxvar < 0.0 && !uselb);
+
    if( auxpos != -1 )
    {
+      linpos = -1;
       SCIP_CALL( updateBestEstimators(scip, sepadata, auxpos, sol) ); /* TODO isn't this repeating? */
 
       assert(sepadata->bestunderestimator[auxpos] >= 0 && sepadata->bestunderestimator[auxpos] <= sepadata->nlinexprs[auxpos]);
@@ -1994,19 +2009,21 @@ SCIP_RETCODE addRltTerm(
 
       if( computeEqCut )
       { /* use an equality linearisation (which should exist for computeEqCut to be TRUE) */
-         assert(sepadata->bestoverestimator[auxpos] != sepadata->nlinexprs[auxpos]);
-         linexpr = sepadata->linexprs[auxpos][sepadata->bestoverestimator[auxpos]];
+         assert(sepadata->eqlinexpr[auxpos] != sepadata->nlinexprs[auxpos]);
+         linpos = sepadata->eqlinexpr[auxpos];
       }
-      else if((uselhs && coefauxvar > 0.0) || (!uselhs && coefauxvar < 0.0))
+      else if((uselhs && posauxcoef) || (!uselhs && !posauxcoef)) /* TODO does uselb also matter? */
       { /* use an overestimator */
          if( sepadata->bestoverestimator[auxpos] != sepadata->nlinexprs[auxpos] )
-            linexpr = sepadata->linexprs[auxpos][sepadata->bestoverestimator[auxpos]];
+            linpos = sepadata->bestoverestimator[auxpos];
       }
       else
       { /* use an underestimator */
          if( sepadata->bestunderestimator[auxpos] != sepadata->nlinexprs[auxpos] )
-            linexpr = sepadata->linexprs[auxpos][sepadata->bestunderestimator[auxpos]];
+            linpos = sepadata->bestunderestimator[auxpos];
       }
+      if( linpos != -1)
+         linexpr = sepadata->linexprs[auxpos][linpos];
    }
 
    /* if the auxiliary variable for this term exists, simply add it to the cut with the previous coefficient */
@@ -2837,7 +2854,8 @@ SCIP_RETCODE separateRltCuts(
 
                   if( infeasible )
                   {
-                     SCIPdebugMsg(scip, "CUTOFF! At least one of the cuts revealed infeasibility!\n");
+                     SCIPdebugMsg(scip,"CUTOFF! The cut was obtained from row %d and multiplied with id %d (%s, %s, eq = %s) revealed infeasibility\n",
+                                     SCIProwGetIndex(row), SCIPvarGetIndex(xj), uselb[k] ? "lb" : "ub", uselhs[k] ? "lhs" : "rhs", buildeqcut ? "true" : "false");
                      *result = SCIP_CUTOFF;
                   } else
                   {
