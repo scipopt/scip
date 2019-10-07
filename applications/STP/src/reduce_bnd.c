@@ -2125,10 +2125,6 @@ SCIP_RETCODE reduce_da(
 
          initializeDaDistances(scip, graph, daroot, cost, vnoi, pathdist, costrev, vbase, pathedge, state);
 
-
-
-
-
          updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, nedges, (run == 0), TRUE);
 
