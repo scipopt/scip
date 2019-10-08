@@ -735,7 +735,6 @@ SCIP_RETCODE setupSubscipLpface(
    SCIP_VAR**            fixvars,            /**< variables that should be fixed */
    SCIP_Real*            fixvals,            /**< corresponding fixing values */
    int                   nfixvars,           /**< number of variables that should be fixed */
-   SCIP_Bool*            keepthisscip,       /**< should the subscip be kept or deleted? */
    int                   nvars               /**< number of original problem's variables */
    )
 {
@@ -1255,7 +1254,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       /* initialize the subproblem */
       SCIP_CALL( SCIPcreate(&subscip) );
 
-      SCIP_CALL( setupSubscipLpface(scip, subscip, heurdata, subvars, vars, fixvars, fixvals, nfixvars, &keepthisscip, nvars) );
+      SCIP_CALL( setupSubscipLpface(scip, subscip, heurdata, subvars, vars, fixvars, fixvals, nfixvars, nvars) );
 
       SCIPfreeBufferArray(scip, &fixvals);
       SCIPfreeBufferArray(scip, &fixvars);
@@ -1265,7 +1264,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
    SCIP_CALL( retcode );
 
-TERMINATE:
    /* free subproblem or store it for the next run of the heuristic */
    if( ! keepthisscip )
    {
