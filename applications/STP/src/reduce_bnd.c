@@ -2153,7 +2153,7 @@ SCIP_RETCODE reduce_da(
 //#define EXT_WRITE
             graph_printInfo(graph);
             printf("newly fixedSECOND =%d \n", extfixed);
-            exit(1);
+          //  exit(1);
 #ifdef EXT_WRITE
             {
 

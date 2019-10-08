@@ -24,7 +24,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -1852,8 +1852,12 @@ SCIP_RETCODE reduce_extendedEdge2(
          SCIP_Bool deletable = TRUE;
          const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT && result[erev] != CONNECT);
 
+         int todo; // try && (on stp-all, pc-all debug, stp-solvable comparision)
+
+
          assert(flipedge(e) == erev);
          assert(SCIPisEQ(scip, graph->cost[e], graph->cost[erev]));
+
 
          if( SCIPisZero(scip, redcost[e]) || SCIPisZero(scip, redcost[erev]) )
             continue;
