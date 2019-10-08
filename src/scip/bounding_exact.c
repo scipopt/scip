@@ -2827,7 +2827,7 @@ SCIP_RETCODE getPSdual(
 
    lp->hasprovedbound = TRUE;
 
-   SCIPdebugMessage("calling getPSdualbound()\n");
+   SCIPdebugMessage("calling getPSdual()\n");
 
    /* decide if we should use ray or point to compute bound */
    if( !usefarkas && psdata->psuseintpoint && psdata->pshaspoint )

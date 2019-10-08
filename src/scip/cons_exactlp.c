@@ -1335,7 +1335,6 @@ void consdataComputePseudoActivity(
          else
          {
             RaddProd(pseudoactivity, val, bound);
-
          }
       }
    }
@@ -7052,7 +7051,8 @@ SCIP_RETCODE tightenBounds(
 
 /** checks linear constraint for feasibility of given solution or current solution */
 static
-SCIP_RETCODE checkCons(
+SCIP_RETCODE
+checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_SOL*             sol,                /**< solution to be checked, or NULL for current solution */
@@ -7064,6 +7064,8 @@ SCIP_RETCODE checkCons(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Real activityfp;
+   SCIP_Real absviolfp;
    SCIP_Rational* activity;
    SCIP_Rational* absviol;
    SCIP_Rational* relviol;
@@ -7087,6 +7089,15 @@ SCIP_RETCODE checkCons(
    assert(consdata != NULL);
 
    *violated = FALSE;
+
+   /* only check exact constraint if fp cons is feasible enough */
+   if( consdata->row != NULL && sol != NULL)
+   {
+      activityfp = SCIPgetRowSolActivity(scip, consdata->row, sol);
+      absviolfp = MAX(activityfp - consdata->rhsreal, consdata->lhsreal - activityfp);
+      if( !SCIPisFeasPositive(scip, absviolfp) )
+         goto cleanup;
+   }
 
    if( consdata->row != NULL )
    {

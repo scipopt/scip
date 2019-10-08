@@ -4280,7 +4280,8 @@ void SCIProwexGetSolActivity(
             RmultReal(solval, solval, 0.5);
       }
 
-      RaddProd(result, solval, rowex->vals[i]);
+      Rmult(solval, solval, rowex->vals[i]);
+      Radd(result, result, solval);
 
    }
 
