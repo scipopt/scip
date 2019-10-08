@@ -6130,7 +6130,7 @@ void SCIPlpexGetObjval(
    )
 {
    assert(lp != NULL);
-   assert(lp->solved);
+   assert(lp->fplp->hasprovedbound);
    assert((lp->nloosevars > 0) || (lp->looseobjvalinf == 0 && RisZero(lp->looseobjval)));
    assert(set != NULL);
 

@@ -15284,8 +15284,11 @@ SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
     */
    assert(scip != NULL);
 
-   SCIPerrorMessage("Exact presolving not implemented yet \n");
-   //SCIPABORT();
+   if( nconss > 0 )
+   {
+      assert(SCIPisExactSolve(scip));
+      SCIPwarningMessage(scip, "Exact presolving not implemented yet \n");
+   }
 
 #if 0
 #ifdef SCIP_STATISTIC
