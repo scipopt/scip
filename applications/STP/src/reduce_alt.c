@@ -815,20 +815,35 @@ SCIP_Bool isPseudoDeletableDeg3(
    const GRAPH*          g,                  /**< graph structure */
    const SCIP_Real*      sdsK3,              /**< (unordered) special distances of K3 */
    const int*            edgesK3,            /**< (unordered) edges of K3 */
-   SCIP_Real             costK3              /**< total edge cost */
+   SCIP_Real             costK3,             /**< total edge cost */
+   SCIP_Bool             allowEquality       /**< allow equality? */
 )
 {
    assert(scip && g && sdsK3 && edgesK3);
    assert(costK3 >= 0.0);
 
-   if( SCIPisLE(scip, sdsK3[0] + sdsK3[1], costK3) )
-      return TRUE;
+   if( allowEquality )
+   {
+      if( SCIPisLE(scip, sdsK3[0] + sdsK3[1], costK3) )
+         return TRUE;
 
-   if( SCIPisLE(scip, sdsK3[0] + sdsK3[2], costK3) )
-      return TRUE;
+      if( SCIPisLE(scip, sdsK3[0] + sdsK3[2], costK3) )
+         return TRUE;
 
-   if( SCIPisLE(scip, sdsK3[1] + sdsK3[2], costK3) )
-      return TRUE;
+      if( SCIPisLE(scip, sdsK3[1] + sdsK3[2], costK3) )
+         return TRUE;
+   }
+   else
+   {
+      if( SCIPisLT(scip, sdsK3[0] + sdsK3[1], costK3) )
+         return TRUE;
+
+      if( SCIPisLT(scip, sdsK3[0] + sdsK3[2], costK3) )
+         return TRUE;
+
+      if( SCIPisLT(scip, sdsK3[1] + sdsK3[2], costK3) )
+         return TRUE;
+   }
 
    if( graph_pseudoAncestors_edgesInConflict(scip, g, edgesK3, 3) )
       return TRUE;
@@ -911,7 +926,7 @@ SCIP_Bool isPseudoDeletable(
       }
 
       assert(sdcount == 3);
-      success = isPseudoDeletableDeg3(scip, g, sdK3, edgesK3, costsum - ecost[k]);
+      success = isPseudoDeletableDeg3(scip, g, sdK3, edgesK3, costsum - ecost[k], TRUE);
    }
 
    return success;
@@ -3392,7 +3407,7 @@ SCIP_RETCODE reduce_bd34WithSd(
             sd[2] = getSd(scip, g, netgraph, netmst, vnoi, mstsdist, termdist1, termdist2, ecost[2] + ecost[0], vbase, nodesid, neighbterms1, neighbterms2, adjvert[2],
                   adjvert[0], 300);
 
-            if( isPseudoDeletableDeg3(scip, g, sd, edges, costsum) )
+            if( isPseudoDeletableDeg3(scip, g, sd, edges, costsum, TRUE) )
             {
                SCIP_Bool success;
 
@@ -3610,7 +3625,7 @@ SCIP_RETCODE reduce_bd34(
                      reduce_getSd(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[2], adjvert[0], limit, pc, FALSE));
             }
 
-            if( isPseudoDeletableDeg3(scip, g, sd, edges, csum) )
+            if( isPseudoDeletableDeg3(scip, g, sd, edges, csum, !Is_term(g->term[i])) )
             {
                SCIP_Bool success;
 

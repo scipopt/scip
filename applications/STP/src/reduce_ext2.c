@@ -429,30 +429,23 @@ int extFindLeafPos(
 static inline
 void extRemoveNodeFromLeaves(
    const GRAPH*          graph,              /**< graph data structure */
-   int                   leaf,               /**< leaf to remove */
+   int                   leaf,              /**< leaf to remove */
    EXTDATA*              extdata            /**< extension data */
 )
 {
    int* const tree_leaves = extdata->tree_leaves;
+   int position;
 
-   /* not the initial edge? */
-   if( leaf != extdata->tree_root )
-   {
-      /* update tree leaves array */
+   assert(extdata->tree_deg[leaf] == 1);
 
-      int comprootpos;
+   /* switch last leaf and leaf to be removed */
+   extdata->tree_nleaves--;
+   assert(extdata->tree_nleaves > 0);
 
-      assert(extdata->tree_deg[leaf] == 1);
+   position = extFindLeafPos(extdata, leaf, extdata->tree_nleaves);
+   assert(position > 0);
 
-      /* switch last leaf and root component */
-      extdata->tree_nleaves--;
-      assert(extdata->tree_nleaves > 0);
-
-      comprootpos = extFindLeafPos(extdata, leaf, extdata->tree_nleaves);
-      assert(comprootpos > 0);
-
-      tree_leaves[comprootpos] = tree_leaves[extdata->tree_nleaves];
-   }
+   tree_leaves[position] = tree_leaves[extdata->tree_nleaves];
 }
 
 
@@ -688,8 +681,13 @@ void extTreeAddStackTop(
    assert(comproot >= 0 && comproot < graph->knots);
    assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED);
 
-   /* update tree leaves array */
-   extRemoveNodeFromLeaves(graph, comproot, extdata);
+   /* update tree leaves array todo might need to be changed for pseudo-elimination */
+   if( comproot != extdata->tree_root )
+      extRemoveNodeFromLeaves(graph, comproot, extdata);
+   else
+   {
+      assert(extdata->tree_nleaves == 1);
+   }
 
    /* add top expanded component to tree data */
    for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )

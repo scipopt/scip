@@ -610,7 +610,7 @@ SCIP_Bool blockedAncestors_isValid(
    int* hasharr;
    SCIP_Bool isValid = TRUE;
 
-   assert(scip && scip && blockedans);
+   assert(scip && blockedans);
    assert(nnodes >= 0);
 
    /* check whether sizes/capacities are correct */

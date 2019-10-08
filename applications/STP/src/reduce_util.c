@@ -286,7 +286,6 @@ SCIP_RETCODE distDataPathRootsInitialize(
 typedef struct pathroot_info
 {
    int pathroot_id;
-   int pathroot_state;
 } PRINFO;
 
 //#define USE_STRUCT

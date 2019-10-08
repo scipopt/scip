@@ -591,7 +591,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    SCIP_BRANCHRULEDATA* branchruledata;
    GRAPH* g;
    int branchruletype;
-   int branchvertex;
+   int branchvertex = UNKNOWN;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -641,8 +641,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    /* we should only have terminals in this case */
    if( branchvertex == UNKNOWN )
    {
-      SCIPdebugMessage("Stp branching did not run \n");
-      return SCIP_OKAY;
+      printf("Stp branching could not run \n");
+      return SCIP_ERROR;
    }
 
    SCIP_CALL( branchOnVertex(scip, g, branchvertex) );
