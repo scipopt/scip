@@ -51,15 +51,6 @@ enum SCIP_RoundModeR
    SCIP_ROUND_NEAREST
 };
 
-struct SCIP_RationalArray
-{
-   BMS_BLKMEM*           blkmem;             /**< block memory that stores the vals array */
-   SCIP_Rational**       vals;               /**< array values */
-   int                   valssize;           /**< size of vals array */
-   int                   firstidx;           /**< index of first element in vals array */
-   int                   minusedidx;         /**< index of first non zero element in vals array */
-   int                   maxusedidx;         /**< index of last non zero element in vals array */
-};
 
 typedef enum SCIP_RoundModeR SCIP_ROUNDMODER;
 
@@ -572,17 +563,8 @@ SCIP_RETCODE SCIPrationalarrayCopy(
 /** frees a dynamic array of real values */
 extern
 SCIP_RETCODE SCIPrationalarrayFree(
-   SCIP_RATIONALARRAY**      rationalarray   /**< pointer to the real array */
-   );
-
-/** extends dynamic array to be able to store indices from minidx to maxidx */
-extern
-SCIP_RETCODE SCIPrationalarrayExtend(
-   SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
-   int                   arraygrowinit,      /**< initial size of array */
-   SCIP_Real             arraygrowfac,       /**< growing factor of array */
-   int                   minidx,             /**< smallest index to allocate storage for */
-   int                   maxidx              /**< largest index to allocate storage for */
+   SCIP_RATIONALARRAY**      rationalarray,  /**< pointer to the real array */
+   BMS_BLKMEM*           blkmem          /**< block memory */
    );
 
 /** clears a dynamic real array */
@@ -603,8 +585,6 @@ void SCIPrationalarrayGetVal(
 extern
 SCIP_RETCODE SCIPrationalarraySetVal(
    SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
-   int                   arraygrowinit,      /**< initial size of array */
-   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to set value for */
     SCIP_Rational*  val                 /**< value to set array index to */
    );
@@ -613,22 +593,8 @@ SCIP_RETCODE SCIPrationalarraySetVal(
 extern
 SCIP_RETCODE SCIPrationalarrayIncVal(
    SCIP_RATIONALARRAY*   rationalarray,      /**< dynamic real array */
-   int                   arraygrowinit,      /**< initial size of array */
-   SCIP_Real             arraygrowfac,       /**< growing factor of array */
    int                   idx,                /**< array index to increase value for */
     SCIP_Rational*  incval              /**< value to increase array index */
-   );
-
-/** returns the minimal index of all stored non-zero elements */
-extern
-int SCIPrationalarrayGetMinIdx(
-   SCIP_RATIONALARRAY*   rationalarray       /**< dynamic real array */
-   );
-
-/** returns the maximal index of all stored non-zero elements */
-extern
-int SCIPrationalarrayGetMaxIdx(
-   SCIP_RATIONALARRAY*   rationalarray       /**< dynamic real array */
    );
 
 extern
