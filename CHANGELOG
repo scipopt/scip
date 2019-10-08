@@ -69,6 +69,7 @@ Fixed bugs
 - fixed update of LP size information when an LP error occured during probing
 - handle special case of variable bound constraints during aggregating variables
 - tighten sides of linear constraints before trying to upgrade them to more specialized constraints (knapsack, logic-or etc.) when calling SCIPupgradeConsLinear()
+- fixed an issue in repair heuristic in the case of loose (noncolumn) variables
 
 
 Miscellaneous
