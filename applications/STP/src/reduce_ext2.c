@@ -847,6 +847,12 @@ SCIP_Real extTreeGetDirectedRedcost(
             continue;
 
          redcost_directed += nodeTo3TermsPaths[leaf].dist;
+#if 0 // do terminals have infinity as second (is ok!)? also dominated pc ones? that would be bad! Maybe change that?
+         if( !SCIPisEQ(scip, nodeTo3TermsPaths[leaf].dist, nodeTo3TermsPaths[graph->knots + leaf].dist) )
+            printf("noneq %f %f \n", nodeTo3TermsPaths[leaf].dist, nodeTo3TermsPaths[graph->knots + leaf].dist);
+         else
+            printf("eq %d \n", 0);
+#endif
 
          // todo: more sophisticated test here that takes common terminals into account
       }
@@ -1857,7 +1863,7 @@ SCIP_RETCODE reduce_extendedEdge2(
          assert(SCIPisEQ(scip, graph->cost[e], graph->cost[erev]));
 
 
-         if( SCIPisZero(scip, redcost[e]) || SCIPisZero(scip, redcost[erev]) )
+         if( SCIPisZero(scip, redcost[e]) && SCIPisZero(scip, redcost[erev]) )
             continue;
 
 #if 0
