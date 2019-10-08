@@ -281,7 +281,11 @@ SCIP_RETCODE SCIPprintSolex(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
 
    /** @todo exip: convert to origobj, or extern objval respectively */
-   objvalue = SCIPsolexGetObj(sol, scip->set, scip->transprob, scip->origprob);
+   if( SCIPsolIsOriginal(sol) )
+      objvalue = SCIPsolexGetOrigObj(sol);
+   else
+      objvalue = SCIPsolexGetObj(sol, scip->set, scip->transprob, scip->origprob);
+
    Rmessage(scip->messagehdlr, file, objvalue);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
 

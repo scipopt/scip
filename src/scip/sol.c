@@ -1875,6 +1875,13 @@ SCIP_RETCODE SCIPsolRetransform(
 
    *hasinfval = FALSE;
 
+   /* transform exact values first (needs unchanged solorigin) */
+   /** @todo exip: this works only now because we do not presolve, and so solvals do not change. might need to be more sophisticated later */
+   if (set->misc_exactsolve)
+   {
+      SCIP_CALL( SCIPsolexRetransform(sol, set, stat, origprob, transprob, hasinfval) );
+   }
+
    /* This method was a performance bottleneck when retransforming a solution during presolving, before flattening the
     * aggregation graph. In that case, calling SCIPsolGetVal() on the original variable consumed too much
     * time. Therefore, we now first compute the active representation of each original variable using

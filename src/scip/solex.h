@@ -152,6 +152,11 @@ SCIP_Rational* SCIPsolexGetObj(
    SCIP_PROB*            origprob            /**< original problem data */
    );
 
+/** gets objective value of primal CIP solution which lives in the original problem space */
+SCIP_Rational* SCIPsolexGetOrigObj(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
 /** returns whether the given solutions are equal */
 SCIP_Bool SCIPsolexsAreEqual(
    SCIP_SOL*             sol1,               /**< first primal CIP solution */
@@ -188,16 +193,6 @@ SCIP_RETCODE SCIPsolexLinkPseudoSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_LPEX*            lp                  /**< current LP data */
-   );
-
-/** returns sol corresponding to exact sol, or NULL */
-SCIP_SOL* SCIPsolexGetSol(
-   SCIP_SOL*             sol                 /**< exact solution */
-   );
-
-/** returns exact sol corresponding to sol, or NULL */
-SCIP_SOL*   SCIPsolGetSolex(
-   SCIP_SOL*             sol                 /**< fp solution */
    );
 
 /** hard-set the obj value of a solution  */
@@ -247,6 +242,16 @@ void SCIPsolexSetPrimalexIndex(
 
 SCIP_Bool SCIPsolIsExactSol(
    SCIP_SOL*             sol                /**< primal CIP solution */
+   );
+
+/** retransforms exact part of solution to original problem space */
+SCIP_RETCODE SCIPsolexRetransform(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_Bool*            hasinfval           /**< pointer to store whether the solution has infinite values */
    );
 
 #endif

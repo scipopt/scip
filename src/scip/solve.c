@@ -2893,7 +2893,7 @@ SCIP_RETCODE applyBounding(
             SCIP_CALL( RcreateTemp(set->buffer, &bound) );
             SCIPlpexGetObjval(lp->lpex, set, transprob, bound);
 
-            if( !RisGE(bound, primal->cutoffboundex) )
+            if( !RisGE(bound, primal->cutoffboundex) && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
             {
                RdeleteTemp(set->buffer, &bound);
                return SCIP_OKAY;

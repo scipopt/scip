@@ -89,7 +89,7 @@ SCIP_RETCODE solexSetArrayVal(
    SCIP_CALL( SCIPboolarraySetVal(sol->valsex->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
 
    /* set the value in the solution array */
-   SCIP_CALL( SCIPrationalarraySetVal(sol->valsex->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, val) );
+   SCIP_CALL( SCIPrationalarraySetVal(sol->valsex->vals, idx, val) );
 
    /* store whether the solution has infinite values assigned to variables */
    if( RisAbsInfinity(val) ) /*lint !e777*/
@@ -123,12 +123,12 @@ SCIP_RETCODE solexIncArrayVal(
       SCIP_CALL( SCIPboolarraySetVal(sol->valsex->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
 
       /* set the value in the solution array */
-      SCIP_CALL( SCIPrationalarraySetVal(sol->valsex->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, incval) );
+      SCIP_CALL( SCIPrationalarraySetVal(sol->valsex->vals, idx, incval) );
    }
    else
    {
       /* increase the value in the solution array */
-      SCIP_CALL( SCIPrationalarrayIncVal(sol->valsex->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, incval) );
+      SCIP_CALL( SCIPrationalarrayIncVal(sol->valsex->vals, idx, incval) );
    }
 
    /* store whether the solution has infinite values assigned to variables */
@@ -153,7 +153,7 @@ void solexGetArrayVal(
    idx = SCIPvarGetIndex(var);
 
    /* check, if the variable's value is valid */
-   if( SCIPboolarrayGetVal(sol->valid, idx) )
+   if( SCIPboolarrayGetVal(sol->valsex->valid, idx) )
    {
       SCIPrationalarrayGetVal(sol->valsex->vals, idx, res);
    }
@@ -728,7 +728,7 @@ SCIP_RETCODE SCIPvalsexFree(
    assert(*valsex != NULL);
 
    Rdelete(blkmem, &(*valsex)->obj);
-   SCIP_CALL( SCIPrationalarrayFree(&(*valsex)->vals) );
+   SCIP_CALL( SCIPrationalarrayFree(&(*valsex)->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayFree(&(*valsex)->valid) );
    BMSfreeBlockMemory(blkmem, valsex);
 
@@ -750,6 +750,7 @@ SCIP_RETCODE SCIPsolexLinkLPexSol(
 
    /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
    Rset(sol->valsex->obj, lp->lpobjval);
+   sol->obj = RgetRealRelax(sol->valsex->obj, SCIP_ROUND_UPWARDS);
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
 
    return SCIP_OKAY;
@@ -977,8 +978,11 @@ SCIP_RETCODE SCIPsolexOverwriteFPSol(
    /* overwrite all the variables */
    for( i = 0; i < nvars; i++ )
    {
-      SCIPsolexGetVal(solval, sol, set, stat, vars[i]);  
-      SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[i], RgetRealApprox(solval)) );      
+      SCIP_ROUNDMODE roundmode;
+      SCIPsolexGetVal(solval, sol, set, stat, vars[i]);
+      roundmode = vars[i]->obj > 0 ? SCIP_ROUND_UPWARDS : SCIP_ROUND_DOWNWARDS;
+      SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[i],
+         RgetRealRelax(solval, roundmode)) );
    }
 
    obj = SCIPsolexGetObj(sol, set, transprob, origprob);
@@ -1281,6 +1285,17 @@ SCIP_Rational* SCIPsolexGetObj(
    }
    else
       return sol->valsex->obj;
+}
+
+/** gets objective value of primal CIP solution which lives in the original problem space */
+SCIP_Rational* SCIPsolexGetOrigObj(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+   assert(SCIPsolIsOriginal(sol));
+
+   return sol->valsex->obj;
 }
 
 #if 0
@@ -1596,9 +1611,10 @@ void SCIPsolUpdateVarsum(
       }
    }
 }
+#endif
 
 /** retransforms solution to original problem space */
-SCIP_RETCODE SCIPsolRetransform(
+SCIP_RETCODE SCIPsolexRetransform(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -1609,11 +1625,7 @@ SCIP_RETCODE SCIPsolRetransform(
 {
    SCIP_VAR** transvars;
    SCIP_VAR** vars;
-   SCIP_VAR** activevars;
-   SCIP_Real* solvals;
-   SCIP_Real* activevals;
-   SCIP_Real* transsolvals;
-   SCIP_Real constant;
+   SCIP_Rational** transsolvals;
    int requiredsize;
    int ntransvars;
    int nactivevars;
@@ -1645,83 +1657,40 @@ SCIP_RETCODE SCIPsolRetransform(
    /* allocate temporary memory for getting the active representation of the original variables, buffering the solution
     * values of all active variables and storing the original solution values
     */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &transsolvals, ntransvars + 1) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, ntransvars + 1) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevals, ntransvars + 1) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &solvals, nvars) );
+   SCIP_CALL( RcreateArrayTemp(set->buffer, &transsolvals, ntransvars) );
    assert(transsolvals != NULL); /* for flexelint */
-   assert(solvals != NULL); /* for flexelint */
 
    /* get the solution values of all active variables */
    for( v = 0; v < ntransvars; ++v )
    {
-      transsolvals[v] = SCIPsolGetVal(sol, set, stat, transvars[v]);
+      SCIPsolexGetVal(transsolvals[v], sol, set, stat, transvars[v]);
    }
 
-   /* get the solution in original problem variables */
-   for( v = 0; v < nvars; ++v )
-   {
-      activevars[0] = vars[v];
-      activevals[0] = 1.0;
-      nactivevars = 1;
-      constant = 0.0;
-
-      /* get active representation of the original variable */
-      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, activevars, activevals, &nactivevars, ntransvars + 1, &constant,
-            &requiredsize, TRUE) );
-      assert(requiredsize <= ntransvars);
-
-      /* compute solution value of the original variable */
-      solvals[v] = constant;
-      for( i = 0; i < nactivevars; ++i )
-      {
-         assert(0 <= SCIPvarGetProbindex(activevars[i]) && SCIPvarGetProbindex(activevars[i]) < ntransvars);
-         assert(!SCIPsetIsInfinity(set, -solvals[v]) || !SCIPsetIsInfinity(set, activevals[i] * transsolvals[SCIPvarGetProbindex(activevars[i])]));
-         assert(!SCIPsetIsInfinity(set, solvals[v]) || !SCIPsetIsInfinity(set, -activevals[i] * transsolvals[SCIPvarGetProbindex(activevars[i])]));
-         solvals[v] += activevals[i] * transsolvals[SCIPvarGetProbindex(activevars[i])];
-      }
-
-      if( SCIPsetIsInfinity(set, solvals[v]) )
-      {
-         solvals[v] = SCIPsetInfinity(set);
-         *hasinfval = TRUE;
-      }
-      else if( SCIPsetIsInfinity(set, -solvals[v]) )
-      {
-         solvals[v] = -SCIPsetInfinity(set);
-         *hasinfval = TRUE;
-      }
-   }
+   /** @todo exip: once we have exact presolving, we need to do here what we do in the fp case */
 
    /* clear the solution and convert it into original space */
-   SCIP_CALL( solClearArrays(sol) );
-   sol->solorigin = SCIP_SOLORIGIN_ORIGINAL;
-   sol->obj = origprob->objoffset;
+   SCIP_CALL( solexClearArrays(sol) );
+   RsetReal(sol->valsex->obj, origprob->objoffset);
 
    /* reinsert the values of the original variables */
    for( v = 0; v < nvars; ++v )
    {
       assert(SCIPvarGetUnchangedObj(vars[v]) == SCIPvarGetObj(vars[v])); /*lint !e777*/
 
-      if( !SCIPsetIsZero(set, solvals[v]) )
+      if( !RisZero(transsolvals[v]) )
       {
-         SCIP_CALL( solexSetArrayVal(sol, set, vars[v], solvals[v]) );
-         if( solvals[v] != SCIP_UNKNOWN ) /*lint !e777*/
-            sol->obj += SCIPvarGetUnchangedObj(vars[v]) * solvals[v];
+         SCIP_CALL( solexSetArrayVal(sol, set, vars[v], transsolvals[v]) );
+         RaddProd(sol->valsex->obj, SCIPvarGetObjExact(vars[v]), transsolvals[v]);
       }
    }
 
-   /**@todo remember the variables without original counterpart (priced variables) in the solution */
-
    /* free temporary memory */
-   SCIPsetFreeBufferArray(set, &solvals);
-   SCIPsetFreeBufferArray(set, &activevals);
-   SCIPsetFreeBufferArray(set, &activevars);
-   SCIPsetFreeBufferArray(set, &transsolvals);
+   RdeleteArrayTemp(set->buffer, &transsolvals, ntransvars);
 
    return SCIP_OKAY;
 }
 
+#if 0
 /** recomputes the objective value of an original solution, e.g., when transferring solutions
  *  from the solution pool (objective coefficients might have changed in the meantime)
  */
