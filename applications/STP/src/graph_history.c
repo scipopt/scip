@@ -965,11 +965,11 @@ SCIP_RETCODE graph_init_pseudoAncestors(
    pseudoancestors->nnodes = g->knots;
    pseudoancestors->halfnedges = g->edges / 2;
 
-   blockedAncestors_init(pseudoancestors->halfnedges, &(pseudoancestors->ans_halfedges));
+   SCIP_CALL( blockedAncestors_init(pseudoancestors->halfnedges, &(pseudoancestors->ans_halfedges)) );
 
    if( graph_pc_isPcMw(g) )
    {
-      blockedAncestors_init(g->knots, &(pseudoancestors->ans_nodes));
+      SCIP_CALL( blockedAncestors_init(g->knots, &(pseudoancestors->ans_nodes)) );
    }
    else
    {
