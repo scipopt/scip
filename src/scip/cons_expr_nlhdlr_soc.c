@@ -622,8 +622,6 @@ SCIP_RETCODE detectSocQuadraticSimple(
    SCIP_CONSEXPR_EXPR** children;
    SCIP_VAR** vars;
    SCIP_VAR* rhsvar;
-   SCIP_HASHMAP* expr2idx;
-   SCIP_HASHSET* linexprs;
    SCIP_Real* childcoefs;
    SCIP_Real* coefs;
    SCIP_Real* offsets;
@@ -632,10 +630,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
    int* termbegins;
    int* nnonzeroes;
    SCIP_Real constant;
-   SCIP_Real rhsarg;
    int rhsidx;
    int nchildren;
-   int nvars;
    int nextentry;
    int i;
 
@@ -790,25 +786,6 @@ SCIP_RETCODE detectSocQuadraticSimple(
    return SCIP_OKAY;
 }
 
-/** helper method to detect quadratic constraints that can be upgraded to SOCs */
-static
-SCIP_RETCODE detectSocQuadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_VAR*             auxvar,             /**< auxiliary variable */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
-   SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
-   )
-{
-   *success = FALSE;
-
-   /* check for simple soc-representable quadratic expression */
-   SCIP_CALL( detectSocQuadraticSimple(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
-
-   return SCIP_OKAY;
-}
-
 /** helper method to detect SOC structures */
 static
 SCIP_RETCODE detectSOC(
@@ -839,7 +816,8 @@ SCIP_RETCODE detectSOC(
 
    if( !(*success) )
    {
-      SCIP_CALL( detectSocQuadratic(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
+      /* check whether expression is a simple soc-respresentable quadratic expression */
+      SCIP_CALL( detectSocQuadraticSimple(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
    }
 
    return SCIP_OKAY;
