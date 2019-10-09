@@ -92,7 +92,7 @@ SCIP_RETCODE solexSetArrayVal(
    SCIP_CALL( SCIPrationalarraySetVal(sol->valsex->vals, idx, val) );
 
    /* store whether the solution has infinite values assigned to variables */
-   if( RisAbsInfinity(val) ) /*lint !e777*/
+   if( RatIsAbsInfinity(val) ) /*lint !e777*/
       sol->hasinfval = TRUE;
 
    return SCIP_OKAY;
@@ -132,7 +132,7 @@ SCIP_RETCODE solexIncArrayVal(
    }
 
    /* store whether the solution has infinite values assigned to variables */
-   if( RisAbsInfinity(incval) )
+   if( RatIsAbsInfinity(incval) )
       sol->hasinfval = TRUE;
 
    return SCIP_OKAY;
@@ -164,15 +164,15 @@ void solexGetArrayVal(
       {
       case SCIP_SOLORIGIN_ORIGINAL:
       case SCIP_SOLORIGIN_ZERO:
-         RsetReal(res, 0.0);
+         RatSetReal(res, 0.0);
          break;
 
       case SCIP_SOLORIGIN_LPSOL:
-         Rset(res, SCIPvarGetLPexSolex(var));
+         RatSet(res, SCIPvarGetLPexSolex(var));
          break;
 
       case SCIP_SOLORIGIN_PSEUDOSOL:
-         Rset(res, SCIPvarGetPseudoSolex(var));
+         RatSet(res, SCIPvarGetPseudoSolex(var));
          break;
 
       case SCIP_SOLORIGIN_PARTIAL:
@@ -281,7 +281,7 @@ SCIP_RETCODE SCIPsolexCreate(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(*sol)->valsex ) );
    SCIP_CALL( SCIPrationalarrayCreate(&(*sol)->valsex->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valsex->valid, blkmem) );
-   SCIP_CALL( Rcreate(blkmem, &(*sol)->valsex->obj) );
+   SCIP_CALL( RatCreateBlock(blkmem, &(*sol)->valsex->obj) );
 
    return SCIP_OKAY;
 }
@@ -337,7 +337,7 @@ SCIP_RETCODE SCIPvalsexCopy(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, valsex) );
    SCIP_CALL( SCIPrationalarrayCopy(&(*valsex)->vals, blkmem, sourcevals->vals) );
    SCIP_CALL( SCIPboolarrayCopy(&(*valsex)->valid, blkmem, sourcevals->valid) );
-   SCIP_CALL( Rcopy(blkmem, &(*valsex)->obj, sourcevals->obj) );
+   SCIP_CALL( RatCopy(blkmem, &(*valsex)->obj, sourcevals->obj) );
 
    return SCIP_OKAY;
 }
@@ -727,7 +727,7 @@ SCIP_RETCODE SCIPvalsexFree(
    assert(valsex != NULL);
    assert(*valsex != NULL);
 
-   Rdelete(blkmem, &(*valsex)->obj);
+   RatFreeBlock(blkmem, &(*valsex)->obj);
    SCIP_CALL( SCIPrationalarrayFree(&(*valsex)->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayFree(&(*valsex)->valid) );
    BMSfreeBlockMemory(blkmem, valsex);
@@ -749,8 +749,8 @@ SCIP_RETCODE SCIPsolexLinkLPexSol(
    SCIP_CALL( solexClearArrays(sol) );
 
    /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
-   Rset(sol->valsex->obj, lp->lpobjval);
-   sol->obj = RgetRealRelax(sol->valsex->obj, SCIP_ROUND_UPWARDS);
+   RatSet(sol->valsex->obj, lp->lpobjval);
+   sol->obj = RatRoundReal(sol->valsex->obj, SCIP_ROUND_UPWARDS);
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
 
    return SCIP_OKAY;
@@ -814,7 +814,7 @@ SCIP_RETCODE SCIPsolexClear(
    assert(sol != NULL);
 
    SCIP_CALL( solexClearArrays(sol) );
-   RsetReal(sol->valsex->obj, 0.0);
+   RatSetReal(sol->valsex->obj, 0.0);
 
    return SCIP_OKAY;
 }
@@ -869,11 +869,11 @@ SCIP_RETCODE SCIPsolexSetVal(
       || sol->solorigin == SCIP_SOLORIGIN_PARTIAL
       || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN);
    assert(var != NULL);
-   assert(!RisAbsInfinity(val));
+   assert(!RatIsAbsInfinity(val));
 
-   SCIPsetDebugMsg(set, "setting value of <%s> in exact solution %p to %g\n", SCIPvarGetName(var), (void*)sol, RgetRealApprox(val));
+   SCIPsetDebugMsg(set, "setting value of <%s> in exact solution %p to %g\n", SCIPvarGetName(var), (void*)sol, RatApproxReal(val));
 
-   SCIP_CALL( RcreateTemp(set->buffer, &oldval) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &oldval) );
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
    switch( SCIPvarGetStatusExact(var) )
@@ -883,15 +883,15 @@ SCIP_RETCODE SCIPsolexSetVal(
       {
          solexGetArrayVal(oldval, sol, var);
 
-         if( !RisEqual(val, oldval) )
+         if( !RatIsEqual(val, oldval) )
          {
             SCIP_Rational* obj;
 
             SCIP_CALL( solexSetArrayVal(sol, set, var, val) );
             obj = SCIPvarGetObjExact(var);
-            RdiffProd(sol->valsex->obj, obj, oldval);
+            RatDiffProd(sol->valsex->obj, obj, oldval);
 
-            RaddProd(sol->valsex->obj, obj, val);
+            RatAddProd(sol->valsex->obj, obj, val);
 
          }
       }
@@ -904,21 +904,21 @@ SCIP_RETCODE SCIPsolexSetVal(
 
       solexGetArrayVal(oldval, sol, var);
 
-      if( !RisEqual(val, oldval) )
+      if( !RatIsEqual(val, oldval) )
       {
          SCIP_Rational* obj;
          SCIP_CALL( solexSetArrayVal(sol, set, var, val) );
          obj = SCIPvarGetObjExact(var);
-         RdiffProd(sol->valsex->obj, obj, oldval);
+         RatDiffProd(sol->valsex->obj, obj, oldval);
 
-         RaddProd(sol->valsex->obj, obj, val);
+         RatAddProd(sol->valsex->obj, obj, val);
 
       }
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-      if( !RisEqual(val, SCIPvarGetLbGlobalExact(var)) )
+      if( !RatIsEqual(val, SCIPvarGetLbGlobalExact(var)) )
       {
          SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobalExact(var), val);
@@ -973,7 +973,7 @@ SCIP_RETCODE SCIPsolexOverwriteFPSol(
    vars = SCIPprobGetVars(transprob);
    nvars = SCIPprobGetNVars(transprob);
 
-   SCIP_CALL( RcreateTemp(set->buffer, &solval) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &solval) );
 
    /* overwrite all the variables */
    for( i = 0; i < nvars; i++ )
@@ -982,13 +982,13 @@ SCIP_RETCODE SCIPsolexOverwriteFPSol(
       SCIPsolexGetVal(solval, sol, set, stat, vars[i]);
       roundmode = vars[i]->obj > 0 ? SCIP_ROUND_UPWARDS : SCIP_ROUND_DOWNWARDS;
       SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, vars[i],
-         RgetRealRelax(solval, roundmode)) );
+         RatRoundReal(solval, roundmode)) );
    }
 
    obj = SCIPsolexGetObj(sol, set, transprob, origprob);
-   SCIPsolSetObjVal(sol, RgetRealRelax(obj, SCIP_ROUND_UPWARDS));
+   SCIPsolSetObjVal(sol, RatRoundReal(obj, SCIP_ROUND_UPWARDS));
 
-   RdeleteTemp(set->buffer, &solval);
+   RatFreeBuffer(set->buffer, &solval);
 
    return SCIP_OKAY;
 }
@@ -1106,32 +1106,32 @@ void SCIPsolexGetVal(
       SCIP_Rational* scalar;
       SCIP_Rational* constant; 
 
-      RcreateTemp(set->buffer, &scalar);
-      RcreateTemp(set->buffer, &constant);
+      RatCreateBuffer(set->buffer, &scalar);
+      RatCreateBuffer(set->buffer, &constant);
       /* we cannot get the value of a transformed variable for a solution that lives in the original problem space
        * -> get the corresponding original variable first
        */
       origvar = var;
-      RsetInt(scalar, 1, 1);
-      RsetReal(constant, 0.0);
+      RatSetInt(scalar, 1, 1);
+      RatSetReal(constant, 0.0);
       retcode = SCIPvarGetOrigvarSumExact(&origvar, scalar, constant);
       if ( retcode != SCIP_OKAY )
          return;
       if( origvar == NULL )
       {
          /* the variable has no original counterpart: in the original solution, it has a value of zero */
-         RsetReal(res, 0.0);
+         RatSetReal(res, 0.0);
          return;
       }
 
       assert(!SCIPvarIsTransformed(origvar));
 
       SCIPsolexGetVal(res, sol, set, stat, origvar);
-      Rmult(res, res, scalar);
-      Radd(res, res, constant);
+      RatMult(res, res, scalar);
+      RatAdd(res, res, constant);
 
-      RdeleteTemp(set->buffer, &constant);
-      RdeleteTemp(set->buffer, &scalar);
+      RatFreeBuffer(set->buffer, &constant);
+      RatFreeBuffer(set->buffer, &scalar);
 
       return;
    }
@@ -1157,9 +1157,9 @@ void SCIPsolexGetVal(
 
    case SCIP_VARSTATUS_FIXED:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-      assert(RisEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var))); /*lint !e777*/
-      assert(RisEqual(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var))); /*lint !e777*/
-      assert(RisEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var))); /*lint !e777*/
+      assert(RatIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var))); /*lint !e777*/
+      assert(RatIsEqual(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var))); /*lint !e777*/
+      assert(RatIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var))); /*lint !e777*/
       SCIPvarGetLbGlobalExact(var);
       break;
 
@@ -1181,14 +1181,14 @@ void SCIPsolexGetVal(
 
    case SCIP_VARSTATUS_NEGATED:
       SCIPsolexGetVal(res, sol, set, stat, SCIPvarGetNegationVar(var));
-      RdiffReal(res, res, SCIPvarGetNegationConstant(var));
-      Rneg(res, res);
+      RatDiffReal(res, res, SCIPvarGetNegationConstant(var));
+      RatNegate(res, res);
       break;
 
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      RsetReal(res, 0.0); /*lint !e527*/
+      RatSetReal(res, 0.0); /*lint !e527*/
    }
 }
 
@@ -1412,14 +1412,14 @@ SCIP_RETCODE SCIPsolexCheck(
    assert(feasible != NULL);
 
    SCIPsetDebugMsg(set, "checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%u)\n",
-      RgetRealApprox(sol->valsex->obj), sol->nodenum, sol->solorigin);
+      RatApproxReal(sol->valsex->obj), sol->nodenum, sol->solorigin);
 
    *feasible = TRUE;
 
    if( !printreason )
       completely = FALSE;
 
-   SCIP_CALL( RcreateTemp(set->buffer, &solval) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &solval) );
 
    /* check whether the solution respects the global bounds of the variables */
    if( checkbounds || sol->hasinfval )
@@ -1433,7 +1433,7 @@ SCIP_RETCODE SCIPsolexCheck(
          var = prob->vars[v];
          SCIPsolexGetVal(solval, sol, set, stat, var);
 
-         if( !RisAbsInfinity(solval) ) /*lint !e777*/
+         if( !RatIsAbsInfinity(solval) ) /*lint !e777*/
          {
             SCIP_Rational* lb;
             SCIP_Rational* ub;
@@ -1442,15 +1442,15 @@ SCIP_RETCODE SCIPsolexCheck(
             ub = SCIPvarGetUbGlobalExact(var);
 
             /* if we have to check bound and one of the current bounds is violated */
-            if( checkbounds && ((!RisNegInfinity(lb) && RisLT(solval, lb))
-                     || (!RisInfinity(ub) && RisGT(solval, ub))) )
+            if( checkbounds && ((!RatIsNegInfinity(lb) && RatIsLT(solval, lb))
+                     || (!RatIsInfinity(ub) && RatIsGT(solval, ub))) )
             {
                *feasible = FALSE;
 
                if( printreason )
                {
                   SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
-                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(RgetRealApprox(lb) - RgetRealApprox(solval), 0.0) + MAX(RgetRealApprox(solval) - RgetRealApprox(ub), 0.0));
+                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(RatApproxReal(lb) - RatApproxReal(solval), 0.0) + MAX(RatApproxReal(solval) - RatApproxReal(ub), 0.0));
                }
 #ifdef SCIP_DEBUG
                else
@@ -1464,11 +1464,11 @@ SCIP_RETCODE SCIPsolexCheck(
             /* check whether there are infinite variable values that lead to an objective value of +infinity */
             if( *feasible && sol->hasinfval )
             {
-               *feasible = *feasible && (!RisInfinity(solval) || !RisPositive(SCIPvarGetObjExact(var)) );
-               *feasible = *feasible && (!RisNegInfinity(solval) || !RisNegative(SCIPvarGetObjExact(var)) );
+               *feasible = *feasible && (!RatIsInfinity(solval) || !RatIsPositive(SCIPvarGetObjExact(var)) );
+               *feasible = *feasible && (!RatIsNegInfinity(solval) || !RatIsNegative(SCIPvarGetObjExact(var)) );
 
-               if( ((RisInfinity(solval) && RisPositive(SCIPvarGetObjExact(var)))) 
-                     || (RisNegInfinity(solval) && RisNegative(SCIPvarGetObjExact(var))) )
+               if( ((RatIsInfinity(solval) && RatIsPositive(SCIPvarGetObjExact(var)))) 
+                     || (RatIsNegInfinity(solval) && RatIsNegative(SCIPvarGetObjExact(var))) )
                {
                   if( printreason )
                   {
@@ -1505,7 +1505,7 @@ SCIP_RETCODE SCIPsolexCheck(
 #endif
    }
 
-   RdeleteTemp(set->buffer, &solval);
+   RatFreeBuffer(set->buffer, &solval);
 
    return SCIP_OKAY;
 }
@@ -1657,7 +1657,7 @@ SCIP_RETCODE SCIPsolexRetransform(
    /* allocate temporary memory for getting the active representation of the original variables, buffering the solution
     * values of all active variables and storing the original solution values
     */
-   SCIP_CALL( RcreateArrayTemp(set->buffer, &transsolvals, ntransvars) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &transsolvals, ntransvars) );
    assert(transsolvals != NULL); /* for flexelint */
 
    /* get the solution values of all active variables */
@@ -1670,22 +1670,22 @@ SCIP_RETCODE SCIPsolexRetransform(
 
    /* clear the solution and convert it into original space */
    SCIP_CALL( solexClearArrays(sol) );
-   RsetReal(sol->valsex->obj, origprob->objoffset);
+   RatSetReal(sol->valsex->obj, origprob->objoffset);
 
    /* reinsert the values of the original variables */
    for( v = 0; v < nvars; ++v )
    {
       assert(SCIPvarGetUnchangedObj(vars[v]) == SCIPvarGetObj(vars[v])); /*lint !e777*/
 
-      if( !RisZero(transsolvals[v]) )
+      if( !RatIsZero(transsolvals[v]) )
       {
          SCIP_CALL( solexSetArrayVal(sol, set, vars[v], transsolvals[v]) );
-         RaddProd(sol->valsex->obj, SCIPvarGetObjExact(vars[v]), transsolvals[v]);
+         RatAddProd(sol->valsex->obj, SCIPvarGetObjExact(vars[v]), transsolvals[v]);
       }
    }
 
    /* free temporary memory */
-   RdeleteArrayTemp(set->buffer, &transsolvals, ntransvars);
+   RatFreeBufferArray(set->buffer, &transsolvals, ntransvars);
 
    return SCIP_OKAY;
 }
@@ -1718,7 +1718,7 @@ void SCIPsolRecomputeObj(
    for( v = 0; v < nvars; ++v )
    {
       SCIPsolexGetVal(solval, sol, set, stat, vars[v]);
-      if( !RisZero(solval) && solval != SCIP_UNKNOWN ) /*lint !e777*/
+      if( !RatIsZero(solval) && solval != SCIP_UNKNOWN ) /*lint !e777*/
       {
          sol->obj += SCIPvarGetUnchangedObj(vars[v]) * solval;
       }
@@ -1750,23 +1750,23 @@ SCIP_Bool SCIPsolexsAreEqual(
    assert(sol2 != NULL);
    assert((sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL) && (sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL) || transprob != NULL);
 
-   SCIP_CALL( RcreateTemp(set->buffer, &tmp1) );
-   SCIP_CALL( RcreateTemp(set->buffer, &tmp2) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp1) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp2) );
    /* if both solutions are original or both are transformed, take the objective values stored in the solutions */
    if( (sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL) == (sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL) )
    {
-      Rset(tmp1, sol1->valsex->obj);
-      Rset(tmp2, sol2->valsex->obj);
+      RatSet(tmp1, sol1->valsex->obj);
+      RatSet(tmp2, sol2->valsex->obj);
    }
    /* one solution is original and the other not, so we have to get for both the objective in the transformed problem */
    else
    {
-      Rset(tmp1, SCIPsolexGetObj(sol1, set, transprob, origprob));
-      Rset(tmp2, SCIPsolexGetObj(sol2, set, transprob, origprob));
+      RatSet(tmp1, SCIPsolexGetObj(sol1, set, transprob, origprob));
+      RatSet(tmp2, SCIPsolexGetObj(sol2, set, transprob, origprob));
    }
 
    /* solutions with different objective values cannot be the same */
-   if( !RisEqual(tmp1, tmp2) )
+   if( !RatIsEqual(tmp1, tmp2) )
       result = FALSE;
 
    /* if one of the solutions is defined in the original space, the comparison has to be performed in the original
@@ -1783,12 +1783,12 @@ SCIP_Bool SCIPsolexsAreEqual(
       SCIPsolexGetVal(tmp1, sol1, set, stat, prob->vars[v]);
       SCIPsolexGetVal(tmp2, sol2, set, stat, prob->vars[v]);
 
-      if( !RisEqual(tmp1, tmp2) )
+      if( !RatIsEqual(tmp1, tmp2) )
          result = FALSE;
    }
 
-   RdeleteTemp(set->buffer, &tmp2);
-   RdeleteTemp(set->buffer, &tmp1);
+   RatFreeBuffer(set->buffer, &tmp2);
+   RatFreeBuffer(set->buffer, &tmp1);
 
    return result;
 }
@@ -1813,7 +1813,7 @@ SCIP_RETCODE SCIPsolexPrint(
    assert(prob != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || prob->transformed || transprob != NULL);
 
-   SCIP_CALL( RcreateTemp(set->buffer, &solval) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &solval) );
 
    /* display variables of problem data */
    for( v = 0; v < prob->nfixedvars; ++v )
@@ -1826,11 +1826,11 @@ SCIP_RETCODE SCIPsolexPrint(
 
       SCIPsolexGetVal(solval, sol, set, stat, prob->fixedvars[v]);
       if( printzeros || mipstart
-         || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !RisZero(solval))
+         || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !RatIsZero(solval))
          || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL) ) /*lint !e777*/
       {
          SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
-         Rmessage(messagehdlr, file, solval);
+         RatMessage(messagehdlr, file, solval);
 
          SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->fixedvars[v]));
       }
@@ -1846,10 +1846,10 @@ SCIP_RETCODE SCIPsolexPrint(
 
       SCIPsolexGetVal(solval, sol, set, stat, prob->vars[v]);
       if( printzeros || mipstart
-         || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !RisZero(solval)) ) /*lint !e777*/
+         || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !RatIsZero(solval)) ) /*lint !e777*/
       {
          SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->vars[v]));
-         Rmessage(messagehdlr, file, solval);
+         RatMessage(messagehdlr, file, solval);
          SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->vars[v]));
       }
    }
@@ -1869,10 +1869,10 @@ SCIP_RETCODE SCIPsolexPrint(
             continue;
 
          SCIPsolexGetVal(solval, sol, set, stat, transprob->fixedvars[v]);
-         if( printzeros || mipstart || !RisZero(solval) )
+         if( printzeros || mipstart || !RatIsZero(solval) )
          {
             SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
-            Rmessage(messagehdlr, file, solval);
+            RatMessage(messagehdlr, file, solval);
             SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->fixedvars[v]));
          }
       }
@@ -1887,16 +1887,16 @@ SCIP_RETCODE SCIPsolexPrint(
             continue;
 
          SCIPsolexGetVal(solval, sol, set, stat, transprob->vars[v]);
-         if( printzeros || !RisZero(solval) )
+         if( printzeros || !RatIsZero(solval) )
          {
             SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->vars[v]));
-            Rmessage(messagehdlr, file, solval);
+            RatMessage(messagehdlr, file, solval);
             SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->vars[v]));
          }
       }
    }
 
-   RdeleteTemp(set->buffer, &solval);
+   RatFreeBuffer(set->buffer, &solval);
 
    return SCIP_OKAY;
 }
@@ -1937,7 +1937,7 @@ SCIP_RETCODE SCIPsolPrintRay(
    {
       assert(prob->fixedvars[v] != NULL);
       solval = SCIPsolGetRayVal(sol, set, stat, prob->fixedvars[v]);
-      if( printzeros || !RisZero(solval) )
+      if( printzeros || !RatIsZero(solval) )
       {
          SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
@@ -1955,7 +1955,7 @@ SCIP_RETCODE SCIPsolPrintRay(
    {
       assert(prob->vars[v] != NULL);
       solval = SCIPsolGetRayVal(sol, set, stat, prob->vars[v]);
-      if( printzeros || !RisZero(solval) )
+      if( printzeros || !RatIsZero(solval) )
       {
          SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->vars[v]));
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
@@ -1981,7 +1981,7 @@ SCIP_RETCODE SCIPsolPrintRay(
             continue;
 
          solval = SCIPsolGetRayVal(sol, set, stat, transprob->fixedvars[v]);
-         if( printzeros || !RisZero(solval) )
+         if( printzeros || !RatIsZero(solval) )
          {
             SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
             if( solval == SCIP_UNKNOWN ) /*lint !e777*/
@@ -2002,7 +2002,7 @@ SCIP_RETCODE SCIPsolPrintRay(
             continue;
 
          solval = SCIPsolGetRayVal(sol, set, stat, transprob->vars[v]);
-         if( printzeros || !RisZero(solval) )
+         if( printzeros || !RatIsZero(solval) )
          {
             SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->vars[v]));
             if( solval == SCIP_UNKNOWN ) /*lint !e777*/

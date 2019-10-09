@@ -92,7 +92,7 @@ SCIP_RETCODE SCIPchgVarObjExact(
    assert( var->scip == scip );
 
    /* forbid infinite objective values */
-   if( RisAbsInfinity(newobj) )
+   if( RatIsAbsInfinity(newobj) )
    {
       SCIPerrorMessage("invalid objective value: objective value is infinite\n");
       return SCIP_INVALIDDATA;
@@ -144,12 +144,12 @@ SCIP_RETCODE SCIPaddVarExactData(
    assert(lb != NULL);
    assert(ub != NULL);
 
-   assert(RisLE(lb, ub));
+   assert(RatIsLE(lb, ub));
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateVar", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* forbid infinite objective function values */
-   if( obj != NULL && RisAbsInfinity(obj) )
+   if( obj != NULL && RatIsAbsInfinity(obj) )
    {
       SCIPerrorMessage("invalid objective function value: value is infinite\n");
       return SCIP_INVALIDDATA;
@@ -219,17 +219,17 @@ SCIP_RETCODE SCIPwriteVarsExactLinearsum(
    {
       if( vals != NULL )
       {
-         if( RisEqualReal(vals[v], 1.0) )
+         if( RatIsEqualReal(vals[v], 1.0) )
          {
             if( v > 0 )
                SCIPinfoMessage(scip, file, " +");
          }
-         else if( RisEqualReal(vals[v], -1.0) )
+         else if( RatIsEqualReal(vals[v], -1.0) )
             SCIPinfoMessage(scip, file, " -");
          else
          {
             char buf[SCIP_MAXSTRLEN];
-            RtoString(vals[v], buf, SCIP_MAXSTRLEN);
+            RatToString(vals[v], buf, SCIP_MAXSTRLEN);
             SCIPinfoMessage(scip, file, " %s", buf);
          }
       }

@@ -446,7 +446,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
    if( SCIPisExactSolve(scip) )
    {
-      SCIP_CALL( Rcreate(SCIPblkmem(scip), &scip->primal->cutoffboundex) );
+      SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &scip->primal->cutoffboundex) );
       SCIP_CALL( SCIPlpexCreate(&scip->lpex, SCIPblkmem(scip), scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
    }
 

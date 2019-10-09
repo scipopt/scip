@@ -186,7 +186,7 @@ SCIP_RETCODE SCIPprimalFree(
    BMSfreeMemoryArrayNull(&(*primal)->partialsols);
    BMSfreeMemoryArrayNull(&(*primal)->existingsols);
    if( (*primal)->cutoffboundex != NULL )
-      Rdelete(blkmem, &(*primal)->cutoffboundex);
+      RatFreeBlock(blkmem, &(*primal)->cutoffboundex);
 
    BMSfreeMemory(primal);
 
@@ -1976,10 +1976,10 @@ SCIP_RETCODE primalAddSolex(
    sol = *solptr;
    assert(sol != NULL);
    obj = SCIPsolexGetObj(sol, set, transprob, origprob);
-   fpobj = RgetRealRelax(obj, SCIP_ROUND_UPWARDS);
+   fpobj = RatRoundReal(obj, SCIP_ROUND_UPWARDS);
 
    SCIPsetDebugMsg(set, "insert exact primal solution %p with obj %g at position %d (replace=%u):\n",
-      (void*)sol, RgetRealApprox(obj), insertpos, replace);
+      (void*)sol, RatApproxReal(obj), insertpos, replace);
 
    SCIPdebug( SCIP_CALL( SCIPsolexPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
 
@@ -1987,7 +1987,7 @@ SCIP_RETCODE primalAddSolex(
    SCIP_CALL( SCIPsolexUnlink(sol, set, transprob) );
 
    SCIP_CALL( SCIPsolexOverwriteFPSol(sol, set, stat, origprob, transprob, tree) );
-   Rset(primal->cutoffboundex, SCIPsolexGetObj(sol, set, transprob, origprob) );
+   RatSet(primal->cutoffboundex, SCIPsolexGetObj(sol, set, transprob, origprob) );
 
    /* note: we copy the solution so to not destroy the double-link between sol and fpsol */
    SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat,

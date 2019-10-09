@@ -7404,7 +7404,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    var->locdom.lb = newbound;
    /* todo: exip this is temporary */
    if( set->misc_exactsolve )
-      RsetReal(var->exactdata->locdom.lb, newbound);
+      RatSetReal(var->exactdata->locdom.lb, newbound);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
@@ -7576,7 +7576,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    if( set->misc_exactsolve )
    {
       assert(var->exactdata != NULL);
-      RsetReal(var->exactdata->locdom.ub, newbound);
+      RatSetReal(var->exactdata->locdom.ub, newbound);
    }
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic

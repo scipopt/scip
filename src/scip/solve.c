@@ -2890,15 +2890,15 @@ SCIP_RETCODE applyBounding(
 
             assert(lp->hasprovedbound);
 
-            SCIP_CALL( RcreateTemp(set->buffer, &bound) );
+            SCIP_CALL( RatCreateBuffer(set->buffer, &bound) );
             SCIPlpexGetObjval(lp->lpex, set, transprob, bound);
 
-            if( !RisGE(bound, primal->cutoffboundex) && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
+            if( !RatIsGE(bound, primal->cutoffboundex) && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
             {
-               RdeleteTemp(set->buffer, &bound);
+               RatFreeBuffer(set->buffer, &bound);
                return SCIP_OKAY;
             }
-            RdeleteTemp(set->buffer, &bound);
+            RatFreeBuffer(set->buffer, &bound);
          }
          SCIPsetDebugMsg(set, "node is cut off by bounding (lower=%g, upper=%g)\n",
             SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);

@@ -182,7 +182,7 @@ static void RsetSpxR(
       Rational       spxr
    )
 {
-   RsetGMP(r, spxr.getMpqRef());
+   RatSetGMP(r, spxr.getMpqRef());
 }
 
 static void RsetSpxVector(
@@ -895,7 +895,7 @@ SCIP_RETCODE SCIPlpiexLoadColLP(
       for( j = 0; j < nnonz; j++ )
       {
          assert(val[j] != NULL);
-         assert(!RisZero(val[j]));
+         assert(!RatIsZero(val[j]));
       }
    }
 #endif
@@ -932,8 +932,8 @@ SCIP_RETCODE SCIPlpiexLoadColLP(
       /* create empty rows with given sides */
       for( i = 0; i < nrows; ++i )
       {
-         Rational spxlhs(*RgetGMP(lhs[i]));
-         Rational spxrhs(*RgetGMP(rhs[i]));
+         Rational spxlhs(*RatGetGMP(lhs[i]));
+         Rational spxrhs(*RatGetGMP(rhs[i]));
          rows.add(spxlhs, emptyVector, spxrhs);
       }
       spx->addRowsRational(rows);
@@ -997,7 +997,7 @@ SCIP_RETCODE SCIPlpiexAddCols(
       {
          assert( 0 <= ind[j] && ind[j] < nrows );
          assert( val[j] != NULL );
-         assert( !RisZero(val[j]) );
+         assert( !RatIsZero(val[j]) );
       }
    }
 #endif
@@ -1015,9 +1015,9 @@ SCIP_RETCODE SCIPlpiexAddCols(
       for( i = 0; i < ncols; ++i )
       {
          int j;
-         Rational spxlb(*RgetGMP(lb[i]));
-         Rational spxub(*RgetGMP(ub[i]));
-         Rational spxobj(*RgetGMP(obj[i]));
+         Rational spxlb(*RatGetGMP(lb[i]));
+         Rational spxub(*RatGetGMP(ub[i]));
+         Rational spxobj(*RatGetGMP(obj[i]));
 
          colVector.clear();
          if( nnonz > 0 )
@@ -1026,7 +1026,7 @@ SCIP_RETCODE SCIPlpiexAddCols(
             last = (i == ncols-1 ? nnonz : beg[i+1]);
             for( j = start; j < last; ++j )
             {
-               Rational spxval(*RgetGMP(val[j]));
+               Rational spxval(*RatGetGMP(val[j]));
                colVector.add(ind[j], spxval);
             }
          }
@@ -1137,7 +1137,7 @@ SCIP_RETCODE SCIPlpiexAddRows(
       int ncols = lpi->spx->numColsRational();
       for (int j = 0; j < nnonz; ++j)
       {
-         assert( !RisZero(val[j]) );
+         assert( !RatIsZero(val[j]) );
          assert( 0 <= ind[j] && ind[j] < ncols );
       }
    }
@@ -1155,8 +1155,8 @@ SCIP_RETCODE SCIPlpiexAddRows(
       /* create row vectors with given sides */
       for( i = 0; i < nrows; ++i )
       {
-          Rational spxlhs(*RgetGMP(lhs[i]));
-          Rational spxrhs(*RgetGMP(rhs[i]));
+          Rational spxlhs(*RatGetGMP(lhs[i]));
+          Rational spxrhs(*RatGetGMP(rhs[i]));
 
          rowVector.clear();
          if( nnonz > 0 )
@@ -1166,7 +1166,7 @@ SCIP_RETCODE SCIPlpiexAddRows(
             last = (i == nrows-1 ? nnonz : beg[i+1]);
             for( int j = start; j < last; ++j )
             {
-               Rational spxval(*RgetGMP(val[j]));
+               Rational spxval(*RatGetGMP(val[j]));
                rowVector.add(ind[j], spxval);
             }
          }
@@ -1290,18 +1290,18 @@ SCIP_RETCODE SCIPlpiexChgBounds(
          assert(0 <= ind[i] && ind[i] < lpi->spx->numColsRational());
          assert(lb[i] != NULL && ub[i] != NULL);
 
-         if( RisInfinity(lb[i]) )
+         if( RatIsInfinity(lb[i]) )
          {
             SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
             return SCIP_LPERROR;
          }
-         if( RisNegInfinity(ub[i]) )
+         if( RatIsNegInfinity(ub[i]) )
          {
             SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
             return SCIP_LPERROR;
          }
 
-         lpi->spx->changeBoundsRational(ind[i], RgetGMP(lb[i]), RgetGMP(ub[i]));
+         lpi->spx->changeBoundsRational(ind[i], RatGetGMP(lb[i]), RatGetGMP(ub[i]));
          assert(lpi->spx->lowerRational(ind[i]) <= lpi->spx->upperRational(ind[i]));
       }
    }
@@ -1350,7 +1350,7 @@ SCIP_RETCODE SCIPlpiexChgSides(
       for( i = 0; i < nrows; ++i )
       {
          assert(0 <= ind[i] && ind[i] < lpi->spx->numRowsRational());
-         lpi->spx->changeRangeRational(ind[i], RgetGMP(lhs[i]), RgetGMP(rhs[i]));
+         lpi->spx->changeRangeRational(ind[i], RatGetGMP(lhs[i]), RatGetGMP(rhs[i]));
          assert(lpi->spx->lhsRational(ind[i]) <= lpi->spx->rhsRational(ind[i]));
       }
    }
@@ -1388,7 +1388,7 @@ SCIP_RETCODE SCIPlpiexChgCoef(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->changeElementRational(row, col, RgetGMP(newval)) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->changeElementRational(row, col, RatGetGMP(newval)) );
 
    return SCIP_OKAY;
 }
@@ -1440,7 +1440,7 @@ SCIP_RETCODE SCIPlpiexChgObj(
       {
          assert(obj[i] != NULL);
          assert(0 <= ind[i] && ind[i] < lpi->spx->numColsRational());
-         lpi->spx->changeObjRational(ind[i], RgetGMP(obj[i]));
+         lpi->spx->changeObjRational(ind[i], RatGetGMP(obj[i]));
       }
    }
 #ifndef NDEBUG

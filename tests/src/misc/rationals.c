@@ -58,58 +58,58 @@ Test(rationals, creation, .description = "tests all the different methods to cre
    mpq_set_d(gmpr, 1.2345);
 
    /* create some rationals with different methods*/
-   RcreateNoMem(&rno);
-   Rcreate(blkmem, &rstring);
-   RsetString(rstring, "1/3");
-   Rcreate(blkmem, &rreal);
-   RsetReal(rreal, 1.234236);
-   Rcreate(blkmem, &rinte);
-   RsetInt(rinte, 1, 3);
-   RcreateGMP(blkmem, &rgmp, gmpr);
-   RcreateArray(blkmem, &rarray, 10);
+   RatCreate(&rno);
+   RatCreateBlock(blkmem, &rstring);
+   RatSetString(rstring, "1/3");
+   RatCreateBlock(blkmem, &rreal);
+   RatSetReal(rreal, 1.234236);
+   RatCreateBlock(blkmem, &rinte);
+   RatSetInt(rinte, 1, 3);
+   RatCreateGMP(blkmem, &rgmp, gmpr);
+   RatCreateBlockArray(blkmem, &rarray, 10);
 
    /* test setter methods */
-   RsetInt(rno, testint, 1);
-   cr_assert_eq(RgetRealApprox(rno), testint, "setting from and converting back to int did not give same result");
+   RatSetInt(rno, testint, 1);
+   cr_assert_eq(RatApproxReal(rno), testint, "setting from and converting back to int did not give same result");
    /* set to fp number */
-   RsetReal(rno, testreal);
-   cr_assert_eq(RgetRealApprox(rno), testreal, "setting from and converting back to real did not give same result");
-   cr_assert(RisFpRepresentable(rno), "fp-rep number not detected as representable");
+   RatSetReal(rno, testreal);
+   cr_assert_eq(RatApproxReal(rno), testreal, "setting from and converting back to real did not give same result");
+   cr_assert(RatIsFpRepresentable(rno), "fp-rep number not detected as representable");
 
 
    /* set to string rep */
-   RsetReal(rno, 0.1246912);
-   Rprint(rno, NULL);
-   printf("%.17e \n", RgetRealApprox(rno));
-   cr_assert(RisFpRepresentable(rno), "fp number 0.124691234 not fp representable, approximation is %e");
+   RatSetReal(rno, 0.1246912);
+   RatPrint(rno);
+   printf("%.17e \n", RatApproxReal(rno));
+   cr_assert(RatIsFpRepresentable(rno), "fp number 0.124691234 not fp representable");
 
    /* set to string rep */
-   RsetString(rno, "1/3");
-   cr_assert(!RisFpRepresentable(rno), "non-fp-rep number not detected as non-representable");
-   cr_assert(!RisEqualReal(rno, RgetRealApprox(rno)), "approximation of 1/3 should not be the same");
+   RatSetString(rno, "1/3");
+   cr_assert(!RatIsFpRepresentable(rno), "non-fp-rep number not detected as non-representable");
+   cr_assert(!RatIsEqualReal(rno, RatApproxReal(rno)), "approximation of 1/3 should not be the same");
 
    /* test rounding */
-   Rprint(rno, NULL);
-   printf("printing test approx: %.17e \n", RgetRealApprox(rno));
-   printf("rounding down:        %.17e \n", RgetRealRelax(rno, SCIP_ROUND_DOWNWARDS));
-   printf("rounding up:          %.17e \n", RgetRealRelax(rno, SCIP_ROUND_UPWARDS));
-   printf("rounding nearest:     %.17e \n", RgetRealRelax(rno, SCIP_ROUND_NEAREST));
+   RatPrint(rno);
+   printf("printing test approx: %.17e \n", RatApproxReal(rno));
+   printf("rounding down:        %.17e \n", RatRoundReal(rno, SCIP_ROUND_DOWNWARDS));
+   printf("rounding up:          %.17e \n", RatRoundReal(rno, SCIP_ROUND_UPWARDS));
+   printf("rounding nearest:     %.17e \n", RatRoundReal(rno, SCIP_ROUND_NEAREST));
 
    /* test that rounding down is lt rounding up */
-   cr_assert_lt(RgetRealRelax(rno, SCIP_ROUND_DOWNWARDS), RgetRealRelax(rno, SCIP_ROUND_UPWARDS), "rounding down should be lt rounding up");
+   cr_assert_lt(RatRoundReal(rno, SCIP_ROUND_DOWNWARDS), RatRoundReal(rno, SCIP_ROUND_UPWARDS), "rounding down should be lt rounding up");
 
    /* test gmp conversion */
-   RsetGMP(rno, gmpr);
-   cr_assert_eq(RgetRealApprox(rno), mpq_get_d(gmpr), "gmp and Rational should be the same ");
-   cr_assert(0 == mpq_cmp(gmpr, *RgetGMP(rno)));
+   RatSetGMP(rno, gmpr);
+   cr_assert_eq(RatApproxReal(rno), mpq_get_d(gmpr), "gmp and Rational should be the same ");
+   cr_assert(0 == mpq_cmp(gmpr, *RatGetGMP(rno)));
 
    /* delete the rationals */
-   RdeleteNoMem(&rno);
-   Rdelete(blkmem, &rstring);
-   Rdelete(blkmem, &rreal);
-   Rdelete(blkmem, &rinte);
-   Rdelete(blkmem, &rgmp);
-   RdeleteArray(blkmem, &rarray, 10);
+   RatFree(&rno);
+   RatFreeBlock(blkmem, &rstring);
+   RatFreeBlock(blkmem, &rreal);
+   RatFreeBlock(blkmem, &rinte);
+   RatFreeBlock(blkmem, &rgmp);
+   RatFreeBlockArray(blkmem, &rarray, 10);
 }
 
 Test(rationals, rounding, .description = "tests rational rounding speed")
@@ -126,25 +126,25 @@ Test(rationals, rounding, .description = "tests rational rounding speed")
    SCIP_Rational* r;  
    SCIP_Rational* r2;
 
-   RcreateNoMem(&r);
-   RcreateNoMem(&r2);
+   RatCreate(&r);
+   RatCreate(&r2);
 
    printf("Testing time for performing tasks %d times\n", niterations);
 
    startt = clock();
    for( i = 0; i < niterations; ++i )
    {
-      RsetReal(r, ((float)rand())/RAND_MAX);
+      RatSetReal(r, ((float)rand())/RAND_MAX);
    }
    endt = clock();
-   printf(" cpu time used for setting: %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC);
+   printf(" cpu time used for setting from real: %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC);
 
    runtime = 0;
    for( i = 0; i < niterations; ++i )
    {
-      RsetReal(r, ((float)rand())/RAND_MAX);
+      RatSetReal(r, ((float)rand())/RAND_MAX);
       startt = clock();
-      nrep += RisFpRepresentable(r) ? 1 : 0;
+      nrep += RatIsFpRepresentable(r) ? 1 : 0;
       endt = clock();
       runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
    }
@@ -155,10 +155,10 @@ Test(rationals, rounding, .description = "tests rational rounding speed")
    runtime = 0;
    for( i = 0; i < niterations; ++i )
    {
-      RsetReal(r, ((float)rand())/RAND_MAX);
+      RatSetReal(r, ((float)rand())/RAND_MAX);
       startt = clock();
-      addval += RgetRealRelax(r, SCIP_ROUND_DOWNWARDS);
-      addval += RgetRealRelax(r, SCIP_ROUND_UPWARDS);
+      addval += RatRoundReal(r, SCIP_ROUND_DOWNWARDS);
+      addval += RatRoundReal(r, SCIP_ROUND_UPWARDS);
       endt = clock();
       runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
    }
@@ -170,9 +170,9 @@ Test(rationals, rounding, .description = "tests rational rounding speed")
 
    for( i = 0; i < niterations; ++i )
    {
-      RsetReal(r, ((float)rand())/RAND_MAX);
+      RatSetReal(r, ((float)rand())/RAND_MAX);
       startt = clock();
-      addval += RgetRealApprox(r);
+      addval += RatApproxReal(r);
       endt = clock();
       runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
    }
@@ -181,10 +181,10 @@ Test(rationals, rounding, .description = "tests rational rounding speed")
    runtime = 0;
    for( i = 0; i < niterations; ++i )
    {
-      RsetReal(r, ((float)rand())/RAND_MAX);
-      RsetReal(r2, ((float)rand())/RAND_MAX);
+      RatSetReal(r, ((float)rand())/RAND_MAX);
+      RatSetReal(r2, ((float)rand())/RAND_MAX);
       startt = clock();
-      Radd(r, r, r2);
+      RatAdd(r, r, r2);
       endt = clock();
       runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
    }
@@ -193,17 +193,17 @@ Test(rationals, rounding, .description = "tests rational rounding speed")
    runtime = 0;
    for( i = 0; i < niterations; ++i )
    {
-      RsetReal(r, ((float)rand())/RAND_MAX);
-      RsetReal(r2, ((float)rand())/RAND_MAX);
+      RatSetReal(r, ((float)rand())/RAND_MAX);
+      RatSetReal(r2, ((float)rand())/RAND_MAX);
       startt = clock();
-      Rmult(r, r, r2);
+      RatMult(r, r, r2);
       endt = clock();
       runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
    }
    printf(" cpu time used for multiplication: %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC);
 
-   RdeleteNoMem(&r);
-   RdeleteNoMem(&r2);
+   RatFree(&r);
+   RatFree(&r2);
 }
 
 Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
@@ -220,70 +220,70 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
 
    BMS_BLKMEM* blkmem = BMScreateBlockMemory(1, 10);
 
-   RcreateString(blkmem, &infpos, "inf");
-   RcreateString(blkmem, &infneg, "-inf");
+   RatCreateString(blkmem, &infpos, "inf");
+   RatCreateString(blkmem, &infneg, "-inf");
 
-   Rcreate(blkmem, &r1);
-   Rcreate(blkmem, &r2);
-   Rcreate(blkmem, &r3);
-   Rcreate(blkmem, &r4);
-   Rcreate(blkmem, &r5);
+   RatCreateBlock(blkmem, &r1);
+   RatCreateBlock(blkmem, &r2);
+   RatCreateBlock(blkmem, &r3);
+   RatCreateBlock(blkmem, &r4);
+   RatCreateBlock(blkmem, &r5);
 
-   RsetReal(r1, 12.3548934);
-   RsetString(r2, "123646/1215977400");
-   RsetString(r3, "1/3");
-   RsetString(r4, "1/10");
+   RatSetReal(r1, 12.3548934);
+   RatSetString(r2, "123646/1215977400");
+   RatSetString(r3, "1/3");
+   RatSetString(r4, "1/10");
 
    doub = 12.3548933;
 
    /* test infinity values */
-   cr_assert(RisInfinity(infpos));
-   cr_assert(!RisInfinity(infneg));
-   cr_assert(RisNegInfinity(infneg));
-   cr_assert(RisAbsInfinity(infneg));
-   cr_assert(!RisNegInfinity(infpos));
+   cr_assert(RatIsInfinity(infpos));
+   cr_assert(!RatIsInfinity(infneg));
+   cr_assert(RatIsNegInfinity(infneg));
+   cr_assert(RatIsAbsInfinity(infneg));
+   cr_assert(!RatIsNegInfinity(infpos));
 
-   Radd(r5, r1, infpos);
-   cr_assert(RisInfinity(r5));
-   Radd(r5, r1, infneg);
-   cr_assert(RisNegInfinity(r5));
+   RatAdd(r5, r1, infpos);
+   cr_assert(RatIsInfinity(r5));
+   RatAdd(r5, r1, infneg);
+   cr_assert(RatIsNegInfinity(r5));
 
-   cr_assert(!RisEqual(r1, r2));
-   cr_assert(!RisEqualReal(r2, doub));
-   cr_assert(RisLT(r2, r3));
+   cr_assert(!RatIsEqual(r1, r2));
+   cr_assert(!RatIsEqualReal(r2, doub));
+   cr_assert(RatIsLT(r2, r3));
 
-   Radd(r5, r3, r3);
-   doub = RgetRealApprox(r3);
-   Rprint(r5, NULL);
-   printf("rounding nearest:     %.17e \n", RgetRealRelax(r5, SCIP_ROUND_NEAREST));
+   RatAdd(r5, r3, r3);
+   doub = RatApproxReal(r3);
+   RatPrint(r5);
+   printf("rounding nearest:     %.17e \n", RatRoundReal(r5, SCIP_ROUND_NEAREST));
    printf("rounding first:       %.17e \n", 2 * doub);
-   cr_assert_leq(2 * doub, RgetRealApprox(r5));
+   cr_assert_leq(2 * doub, RatApproxReal(r5));
 
-   RmultReal(infneg, infpos, 0);
-   cr_assert(RisZero(infneg));
-   cr_assert(!RisAbsInfinity(infneg));
+   RatMultReal(infneg, infpos, 0);
+   cr_assert(RatIsZero(infneg));
+   cr_assert(!RatIsAbsInfinity(infneg));
 
-   cr_assert(!RisFpRepresentable(r3));
-   cr_assert(RisFpRepresentable(r1));
-   cr_assert(!RisIntegral(r3));
-   RmultReal(r5, r3, 3);
-   cr_assert(RisIntegral(r5));
+   cr_assert(!RatIsFpRepresentable(r3));
+   cr_assert(RatIsFpRepresentable(r1));
+   cr_assert(!RatIsIntegral(r3));
+   RatMultReal(r5, r3, 3);
+   cr_assert(RatIsIntegral(r5));
 
-   RtoString(r3, buf, strlen(buf));
+   RatToString(r3, buf, SCIP_MAXSTRLEN);
    printf("Test print 1/3: %s \n", buf);
 
-   RtoString(infpos, buf, SCIP_MAXSTRLEN);
+   RatToString(infpos, buf, SCIP_MAXSTRLEN);
    printf("Test print inf: %s \n", buf);
 
-   RsetString(infneg, "-inf");
-   RtoString(infneg, buf, SCIP_MAXSTRLEN);
+   RatSetString(infneg, "-inf");
+   RatToString(infneg, buf, SCIP_MAXSTRLEN);
    printf("Test print -inf: %s \n", buf);
 
-   Rdelete(blkmem, &r1);
-   Rdelete(blkmem, &r2);
-   Rdelete(blkmem, &r3);
-   Rdelete(blkmem, &r4);
-   Rdelete(blkmem, &r5);
-   Rdelete(blkmem, &infpos);
-   Rdelete(blkmem, &infneg);
+   RatFreeBlock(blkmem, &r1);
+   RatFreeBlock(blkmem, &r2);
+   RatFreeBlock(blkmem, &r3);
+   RatFreeBlock(blkmem, &r4);
+   RatFreeBlock(blkmem, &r5);
+   RatFreeBlock(blkmem, &infpos);
+   RatFreeBlock(blkmem, &infneg);
 }

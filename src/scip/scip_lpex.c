@@ -183,35 +183,35 @@ void SCIProwexForceSort(
 
       t = 0;
       row->integral = TRUE;
-      assert(!RisZero(vals[0]));
+      assert(!RatIsZero(vals[0]));
       assert(row->linkpos[0] == -1);
 
       for( s = 1; s < row->len; ++s )
       {
-         assert(!RisZero(vals[s]));
+         assert(!RatIsZero(vals[s]));
          assert(row->linkpos[s] == -1);
 
          if( cols[s] == cols[t] )
          {
             /* merge entries with equal column */
-            Radd(vals[t], vals[t], vals[s]);
+            RatAdd(vals[t], vals[t], vals[s]);
          }
          else
          {
             /* go to the next entry, overwriting current entry if coefficient is zero */
-            if( !RisZero(vals[t]) )
+            if( !RatIsZero(vals[t]) )
             {
-               row->integral = row->integral && SCIPcolIsIntegral(cols[t]->fpcol) && RisIntegral(vals[t]);
+               row->integral = row->integral && SCIPcolIsIntegral(cols[t]->fpcol) && RatIsIntegral(vals[t]);
                t++;
             }
             cols[t] = cols[s];
             cols_index[t] = cols_index[s];
-            Rset(vals[t], vals[s]);
+            RatSet(vals[t], vals[s]);
          }
       }
-      if( !RisZero(vals[t]) )
+      if( !RatIsZero(vals[t]) )
       {
-         row->integral = row->integral && SCIPcolIsIntegral(cols[t]->fpcol) && RisIntegral(vals[t]);
+         row->integral = row->integral && SCIPcolIsIntegral(cols[t]->fpcol) && RatIsIntegral(vals[t]);
          t++;
       }
       assert(s == row->len);
@@ -361,9 +361,9 @@ void SCIPgetRowSolActivityExact(
    if( sol != NULL )
       SCIProwexGetSolActivity(row, scip->set, scip->stat, sol, useexact, result);
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      Rset(result, SCIProwexGetLPActivity(row, scip->set, scip->stat, scip->lpex));
+      RatSet(result, SCIProwexGetLPActivity(row, scip->set, scip->stat, scip->lpex));
    else
-      Rset(result, SCIProwexGetPseudoActivity(row, scip->set, scip->stat));
+      RatSet(result, SCIProwexGetPseudoActivity(row, scip->set, scip->stat));
 }
 
 

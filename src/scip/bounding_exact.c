@@ -236,8 +236,8 @@ SCIP_RETCODE solveLpExact(
       SCIP_CALL( SCIPlpexGetSol(lpex, set, stat, NULL, NULL) );
       SCIP_CALL( SCIPlpiexGetObjval(lpex->lpiex, lpex->lpobjval) );
       SCIPdebugMessage("Exact lp solve terminated with optimal. Safe dual bound is %e, previous lp obj-val was %e \n",
-            RgetRealRelax(lpex->lpobjval, SCIP_ROUND_DOWNWARDS), lp->lpobjval);
-      lp->lpobjval = RgetRealRelax(lpex->lpobjval, SCIP_ROUND_DOWNWARDS);
+            RatRoundReal(lpex->lpobjval, SCIP_ROUND_DOWNWARDS), lp->lpobjval);
+      lp->lpobjval = RatRoundReal(lpex->lpobjval, SCIP_ROUND_DOWNWARDS);
       lp->hasprovedbound = TRUE;
       lpex->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    }
@@ -329,14 +329,14 @@ SCIP_RETCODE allocIntMem(
    assert(set != NULL);
 
    /* allocate memory for aux problem */
-   SCIP_CALL( RcreateArrayTemp(set->buffer, psobj, psncols) );
-   SCIP_CALL( RcreateArrayTemp(set->buffer, pslb, psncols) );
-   SCIP_CALL( RcreateArrayTemp(set->buffer, psub, psncols) );
-   SCIP_CALL( RcreateArrayTemp(set->buffer, pslhs, psnrows) );
-   SCIP_CALL( RcreateArrayTemp(set->buffer, psrhs, psnrows) );
-   SCIP_CALL( RcreateArrayTemp(set->buffer, psval, psnnonz) );
-   SCIP_CALL( RcreateArrayTemp(set->buffer, sol, psncols) );
-   SCIP_CALL( RcreateTemp(set->buffer, objval) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, psobj, psncols) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, pslb, psncols) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, psub, psncols) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, pslhs, psnrows) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, psrhs, psnrows) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, psval, psnnonz) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, sol, psncols) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, objval) );
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, psbeg, psnrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, pslen, psnrows) );
@@ -396,16 +396,16 @@ SCIP_RETCODE psChooseS(
        */
       for( i = 0; i < nrows; i++ )
       {
-         if( !RisNegInfinity(lpex->rows[i]->lhs) )
+         if( !RatIsNegInfinity(lpex->rows[i]->lhs) )
             psdata->includedrows[i] = 1;
-         if( !RisInfinity(lpex->rows[i]->rhs) )
+         if( !RatIsInfinity(lpex->rows[i]->rhs) )
             psdata->includedrows[nrows + i] = 1;
       }
       for( i = 0; i < ncols; i++ )
       {
-         if( !RisNegInfinity(lpex->cols[i]->lb) )
+         if( !RatIsNegInfinity(lpex->cols[i]->lb) )
             psdata->includedrows[2*nrows + i] = 1;
-         if( !RisInfinity(lpex->cols[i]->ub) )
+         if( !RatIsInfinity(lpex->cols[i]->ub) )
             psdata->includedrows[2*nrows + ncols + i] = 1;
       }
    }
@@ -417,8 +417,8 @@ SCIP_RETCODE psChooseS(
 
       solveLpExact(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, 100, &lperror, FALSE);
 
-      SCIP_CALL( RcreateArrayTemp(set->buffer, &rootprimal, ncols) );
-      SCIP_CALL( RcreateArrayTemp(set->buffer, &rootactivity, nrows) );
+      SCIP_CALL( RatCreateBufferArray(set->buffer, &rootprimal, ncols) );
+      SCIP_CALL( RatCreateBufferArray(set->buffer, &rootactivity, nrows) );
 
       /* get the primal solution and activity */
       SCIP_CALL( SCIPlpiexGetSol(lpex->lpiex, NULL, rootprimal, NULL, rootactivity, NULL) );
@@ -428,21 +428,21 @@ SCIP_RETCODE psChooseS(
        */
       for( i = 0; i < nrows; i++ )
       {
-         if( RisEqual(rootactivity[i], lpex->rows[i]->lhs) )
+         if( RatIsEqual(rootactivity[i], lpex->rows[i]->lhs) )
             psdata->includedrows[i] = 1;
-         if( RisEqual(rootactivity[i], lpex->rows[i]->rhs) )
+         if( RatIsEqual(rootactivity[i], lpex->rows[i]->rhs) )
             psdata->includedrows[nrows + i] = 1;
       }
       for( i = 0; i < ncols; i++ )
       {
-         if( RisEqual(rootprimal[i], lpex->cols[i]->lb) )
+         if( RatIsEqual(rootprimal[i], lpex->cols[i]->lb) )
             psdata->includedrows[2*nrows + i] = 1;
-         if( RisEqual(rootprimal[i], lpex->cols[i]->ub) )
+         if( RatIsEqual(rootprimal[i], lpex->cols[i]->ub) )
             psdata->includedrows[2*nrows + ncols + i] = 1;
       }
 
-      RdeleteArrayTemp(set->buffer, &rootactivity, nrows);
-      RdeleteArrayTemp(set->buffer, &rootprimal, ncols);
+      RatFreeBufferArray(set->buffer, &rootactivity, nrows);
+      RatFreeBufferArray(set->buffer, &rootprimal, ncols);
    }
    else if( psdata->psdualcolselection == PS_DUALCOSTSEL_ACTIVE_FPLP )
    {
@@ -517,7 +517,7 @@ SCIP_RETCODE psFactorizeD(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projind, 2*nnonz + 2*ncols) );
    for( i = 0; i < 2*nnonz + 2*ncols; i++)
       projind[i]=0;
-   SCIP_CALL( RcreateArrayTemp(set->buffer, &projval, 2*nnonz + 2*ncols) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projvalgmp, 2*nnonz + 2*ncols) );
 
    /* allocate memory for the basis mapping */
@@ -549,7 +549,7 @@ SCIP_RETCODE psFactorizeD(
          for(j = 0; j < projlen[i]; j++)
          {
             projind[ projbeg[i] + j ] = lpex->rows[i]->cols_index[j];
-            Rset( projval[ projbeg[i] + j], lpex->rows[i]->vals[j]);
+            RatSet( projval[ projbeg[i] + j], lpex->rows[i]->vals[j]);
          }
          pos += projlen[i];
       }
@@ -561,7 +561,7 @@ SCIP_RETCODE psFactorizeD(
          for(j = 0; j < projlen[i]; j++)
          {
             projind[ projbeg[i] + j ] = lpex->rows[i - nrows]->cols_index[j];
-            Rneg( projval[ projbeg[i] + j], lpex->rows[i - nrows]->vals[j]);
+            RatNegate( projval[ projbeg[i] + j], lpex->rows[i - nrows]->vals[j]);
          }
          pos += projlen[i];
       }
@@ -571,7 +571,7 @@ SCIP_RETCODE psFactorizeD(
          projbeg[i] = pos;
          projlen[i] = 1;
          projind[pos] = i - 2*nrows;
-         RsetInt(projval[pos], 1, 1);
+         RatSetInt(projval[pos], 1, 1);
          pos ++;
       }
       /* -I part (ub constraints) */
@@ -580,7 +580,7 @@ SCIP_RETCODE psFactorizeD(
          projbeg[i] = pos;
          projlen[i] = 1;
          projind[pos] = i - (2*nrows + ncols);
-         RsetInt(projval[pos], -1, 1);
+         RatSetInt(projval[pos], -1, 1);
          pos ++;
       }
    }
@@ -593,7 +593,7 @@ SCIP_RETCODE psFactorizeD(
    for( i = 0; i < 2*nnonz + 2*ncols; i++ )
    {
       printf("   i=%d:\t projind=<%d>,\t projval=<", i, projind[i]);
-      Rprint(projval[i], NULL);
+      RatPrint(projval[i]);
       printf(">\n");
    }
 #endif
@@ -603,7 +603,7 @@ SCIP_RETCODE psFactorizeD(
     *   strictly positive value in the relative interior point
     * - D is equal to a subset of [A',-A',I,-I] and is given to the factor code in sparse column representation
     */
-   RsetGMPArray(projvalgmp, projval, 2 * nnonz + 2 * ncols);
+   RatSetGMPArray(projvalgmp, projval, 2 * nnonz + 2 * ncols);
 
    rval = RECTLUbuildFactorization(&psdata->rectfactor, ncols, psdata->npsbasis,
       psdata->psbasis, projvalgmp, projind, projbeg, projlen);
@@ -621,9 +621,9 @@ SCIP_RETCODE psFactorizeD(
    printf("   matrix factorization complete: %s\n", rval ? "failed" : "correct termination");
 #endif
 
-   RclearGMPArray(projvalgmp, 2 * nnonz+ 2 * ncols);
+   RatClearGMPArray(projvalgmp, 2 * nnonz+ 2 * ncols);
    SCIPsetFreeBufferArray(set, &projvalgmp);
-   RdeleteArrayTemp(set->buffer, &projval, 2*nnonz + 2*ncols);
+   RatFreeBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols);
    SCIPsetFreeBufferArray(set, &projind);
    SCIPsetFreeBufferArray(set, &projlen);
    SCIPsetFreeBufferArray(set, &projbeg);
@@ -712,7 +712,7 @@ SCIP_RETCODE setupPsOpt(
    {
       if( dvarincidence[i] )
       {
-         Rset(psobj[pos], lpex->rows[i]->lhs);
+         RatSet(psobj[pos], lpex->rows[i]->lhs);
          pos++;
       }
    }
@@ -720,7 +720,7 @@ SCIP_RETCODE setupPsOpt(
    {
       if( dvarincidence[nrows + i] )
       {
-         Rneg(psobj[pos], lpex->rows[i]->rhs);
+         RatNegate(psobj[pos], lpex->rows[i]->rhs);
          pos++;
       }
    }
@@ -728,7 +728,7 @@ SCIP_RETCODE setupPsOpt(
    {
       if( dvarincidence[2*nrows + i] )
       {
-         Rset(psobj[pos], lpex->cols[i]->lb);
+         RatSet(psobj[pos], lpex->cols[i]->lb);
          pos++;
       }
    }
@@ -736,56 +736,56 @@ SCIP_RETCODE setupPsOpt(
    {
       if( dvarincidence[2*nrows + ncols + i])
       {
-         Rneg(psobj[pos], lpex->cols[i]->ub);
+         RatNegate(psobj[pos], lpex->cols[i]->ub);
          pos++;
       }
    }
    assert(pos == ndvarmap);
 
    /* set alpha and beta. */
-   RsetReal(alpha, psdata->psobjweight);
-   RsetInt(beta, 1, 1);
+   RatSetReal(alpha, psdata->psobjweight);
+   RatSetInt(beta, 1, 1);
 
-   if( RisPositive(alpha) )
+   if( RatIsPositive(alpha) )
    {
-      Rdiff(beta, beta, alpha);
+      RatDiff(beta, beta, alpha);
 
       /*  beta = (1-alpha)*|OBJ|   Where OBJ = optimal objective value of root LP, if |OBJ|<1 use 1 instead */
       if( REALABS(SCIPlpGetObjval(lp, set, prob)) > 1 )
       {
-         RsetReal(tmp, REALABS(SCIPlpGetObjval(lp, set, prob)));
-         Rmult(beta, beta, tmp);
+         RatSetReal(tmp, REALABS(SCIPlpGetObjval(lp, set, prob)));
+         RatMult(beta, beta, tmp);
       }
       /* divide through by alpha and round beta to be a power of 2 */
-      Rdiv(beta, beta, alpha);
-      RsetInt(alpha, 1, 1);
-      RsetReal(beta, pow(2, (int) (log(RgetRealApprox(beta))/log(2))));
+      RatDiv(beta, beta, alpha);
+      RatSetInt(alpha, 1, 1);
+      RatSetReal(beta, pow(2, (int) (log(RatApproxReal(beta))/log(2))));
    }
 
    /* set objective to normalized value */
    for( i = 0; i < ndvarmap; i ++)
-      Rmult(psobj[i], psobj[i], alpha);
-   Rset(psobj[ndvarmap], beta);
+      RatMult(psobj[i], psobj[i], alpha);
+   RatSet(psobj[ndvarmap], beta);
 
    /* set variable bounds */
    for( i = 0; i < ndvarmap; i++ )
    {
-      RsetString(psub[i], "inf");
-      RsetInt(pslb[i], 0, 1);
+      RatSetString(psub[i], "inf");
+      RatSetInt(pslb[i], 0, 1);
    }
-   RsetInt(psub[ndvarmap], PSBIGM, 1);
-   RsetInt(pslb[ndvarmap], 0 ,1);
+   RatSetInt(psub[ndvarmap], PSBIGM, 1);
+   RatSetInt(pslb[ndvarmap], 0 ,1);
 
    /* set up constraint bounds */
    for( i = 0; i < ncols; i++ )
    {
-      Rset(pslhs[i], lpex->cols[i]->obj);
-      Rset(psrhs[i], lpex->cols[i]->obj);
+      RatSet(pslhs[i], lpex->cols[i]->obj);
+      RatSet(psrhs[i], lpex->cols[i]->obj);
    }
    for( i = 0; i < psdata->npsbasis; i++ )
    {
-      RsetInt(pslhs[ncols + i], 0, 1);
-      RsetString(psrhs[ncols + i], "inf");
+      RatSetInt(pslhs[ncols + i], 0, 1);
+      RatSetString(psrhs[ncols + i], "inf");
    }
 
    /* set up constraint matrix: this involves transposing the constraint matrix */
@@ -842,9 +842,9 @@ SCIP_RETCODE setupPsOpt(
             pos = psbeg[lpex->rows[indx]->cols_index[j]] + pslen[lpex->rows[indx]->cols_index[j]];
             psind[pos] = i;
             if(dvarmap[i]<nrows)
-               Rset(psval[pos], lpex->rows[indx]->vals[j]);
+               RatSet(psval[pos], lpex->rows[indx]->vals[j]);
             else
-               Rneg(psval[pos], lpex->rows[indx]->vals[j]);
+               RatNegate(psval[pos], lpex->rows[indx]->vals[j]);
             pslen[lpex->rows[indx]->cols_index[j]]++;
          }
       }
@@ -857,9 +857,9 @@ SCIP_RETCODE setupPsOpt(
          pos = psbeg[indx] + pslen[indx];
          psind[pos] = i;
          if( dvarmap[i] < 2*nrows + ncols)
-            RsetInt(psval[pos], 1, 1);
+            RatSetInt(psval[pos], 1, 1);
          else
-            RsetInt(psval[pos], -1, 1);
+            RatSetInt(psval[pos], -1, 1);
          pslen[indx]++;
       }
    }
@@ -871,9 +871,9 @@ SCIP_RETCODE setupPsOpt(
       if( psdata->includedrows[indx] )
       {
          psind[psbeg[pos]] = i;
-         RsetInt(psval[psbeg[pos]], 1, 1);
+         RatSetInt(psval[psbeg[pos]], 1, 1);
          psind[psbeg[pos] + 1] = psncols - 1;
-         RsetInt(psval[psbeg[pos] + 1], -1, 1);
+         RatSetInt(psval[psbeg[pos] + 1], -1, 1);
          pos++;
       }
    }
@@ -896,18 +896,18 @@ SCIP_RETCODE setupPsOpt(
       * and the lower bound for d
       */
 
-      RsetInt(psobj[ndvarmap], 0, 1);
+      RatSetInt(psobj[ndvarmap], 0, 1);
 
       /* update the rhs/lhs */
       for( i = 0; i < ncols; i++ )
       {
-         RsetInt(pslhs[i], 0, 1);
-         RsetInt(psrhs[i], 0, 1);
+         RatSetInt(pslhs[i], 0, 1);
+         RatSetInt(psrhs[i], 0, 1);
       }
 
       /* update bounds on d */
-      RsetString(psub[ndvarmap], "inf");
-      RsetInt(pslb[ndvarmap], 1 ,1);
+      RatSetString(psub[ndvarmap], "inf");
+      RatSetInt(pslb[ndvarmap], 1 ,1);
    }
 
    return SCIP_OKAY;
@@ -956,21 +956,21 @@ SCIP_RETCODE setupPsArb(
 
    /* set objective */
       for( i = 0; i < ncols + ndvarmap; i++ )
-         RsetInt( psobj[i ], 0, 1);
-      RsetInt( psobj[ncols + ndvarmap],-1,1);
+         RatSetInt( psobj[i ], 0, 1);
+      RatSetInt( psobj[ncols + ndvarmap],-1,1);
       for( i = ncols + ndvarmap + 1; i < psncols; i++ )
-         RsetInt( psobj[i], 1, 1);
+         RatSetInt( psobj[i], 1, 1);
 
       /* set variable bounds */
       for( i = 0; i < psncols; i++ )
-         RsetString(psub[i], "inf");
+         RatSetString(psub[i], "inf");
 
       for( i = 0; i < psncols; i++ )
       {
          if( i < ncols)
-            RsetString( pslb[i], "-inf" );
+            RatSetString( pslb[i], "-inf" );
          else
-            RsetInt( pslb[i], 0, 1);
+            RatSetInt( pslb[i], 0, 1);
       }
 
       /* set up constraint bounds */
@@ -978,18 +978,18 @@ SCIP_RETCODE setupPsArb(
       {
          if( i < ndvarmap )
          {
-            RsetInt(pslhs[i], 0, 1);
-            RsetInt(psrhs[i], 0, 1);
+            RatSetInt(pslhs[i], 0, 1);
+            RatSetInt(psrhs[i], 0, 1);
          }
          else if( i == psnrows - 1 )
          {
-            RsetInt(pslhs[i], 0, 1);
-            RsetString(psrhs[i], "inf");
+            RatSetInt(pslhs[i], 0, 1);
+            RatSetString(psrhs[i], "inf");
          }
          else
          {
-            RsetInt(pslhs[i], 1, 1);
-            RsetString(psrhs[i], "inf");
+            RatSetInt(pslhs[i], 1, 1);
+            RatSetString(psrhs[i], "inf");
          }
       }
 
@@ -1014,14 +1014,14 @@ SCIP_RETCODE setupPsArb(
                psind[ psbeg[i] + j ] = lpex->rows[indx]->cols_index[j];
                /* if it is an LHS constraint */
                if( dvarmap[i] < nrows )
-                  Rset( psval[ psbeg[i] + j], lpex->rows[indx]->vals[j]);
+                  RatSet( psval[ psbeg[i] + j], lpex->rows[indx]->vals[j]);
                /* otherwise it is the RHS of the constraint */
                else
-                  Rneg( psval[ psbeg[i] + j], lpex->rows[indx]->vals[j]);
+                  RatNegate( psval[ psbeg[i] + j], lpex->rows[indx]->vals[j]);
             }
             /* set I part of row */
             psind[ psbeg[i] + pslen[i] - 1] = ncols + i ;
-            RsetInt( psval[psbeg[i] + pslen[i] - 1 ], -1, 1);
+            RatSetInt( psval[psbeg[i] + pslen[i] - 1 ], -1, 1);
 
             /* update pos */
             pos += lpex->rows[indx]->len + 1;
@@ -1034,8 +1034,8 @@ SCIP_RETCODE setupPsArb(
             pslen[i] = 2;
             psind[pos] = indx;
             psind[pos + 1] = ncols + i;
-            RsetInt(psval[pos], 1, 1);
-            RsetInt(psval[pos+1], -1, 1);
+            RatSetInt(psval[pos], 1, 1);
+            RatSetInt(psval[pos+1], -1, 1);
             pos += 2;
          }
          /* current row comes from upper bound constraints of original problem */
@@ -1046,8 +1046,8 @@ SCIP_RETCODE setupPsArb(
             pslen[i] = 2;
             psind[pos] = indx;
             psind[pos + 1] = ncols + i;
-            RsetInt(psval[pos], -1, 1);
-            RsetInt(psval[pos+1], -1, 1);
+            RatSetInt(psval[pos], -1, 1);
+            RatSetInt(psval[pos+1], -1, 1);
             pos += 2;
          }
       }
@@ -1059,8 +1059,8 @@ SCIP_RETCODE setupPsArb(
          pslen[ndvarmap + i] = 2;
          psind[pos] = ncols + i;
          psind[pos + 1] = ncols + ndvarmap + 1 + i;
-         RsetInt(psval[pos], 1,1);
-         RsetInt(psval[pos+1],1,1);
+         RatSetInt(psval[pos], 1,1);
+         RatSetInt(psval[pos+1],1,1);
          pos += 2;
       }
 
@@ -1070,14 +1070,14 @@ SCIP_RETCODE setupPsArb(
       j = psbeg[ 2 * nextendedrows ];
       for( i = 0; i < ncols; i++ )
       {
-         if( !RisZero(lpex->cols[i]->obj) )
+         if( !RatIsZero(lpex->cols[i]->obj) )
          {
-            Rneg(psval[pos], lpex->cols[i]->obj);
+            RatNegate(psval[pos], lpex->cols[i]->obj);
             psind[pos] = i;
             pos++;
          }
       }
-      RsetInt(psval[pos], -1,1);
+      RatSetInt(psval[pos], -1,1);
       psind[pos] = ncols + ndvarmap;
       pos++;
       assert(pos == psnnonz);
@@ -1127,37 +1127,37 @@ SCIP_RETCODE setupPsArbDual(
    /* set up the objective*/
    for( i = 0; i < ndvarmap + 1; i++ )
    {
-      RsetInt(psobj[i], 0, 1);
+      RatSetInt(psobj[i], 0, 1);
    }
    for( i = ndvarmap + 1; i < psncols; i++ )
    {
-      RsetInt(psobj[i], -1, 1);
+      RatSetInt(psobj[i], -1, 1);
    }
 
    /* set variable bounds */
    for( i = 0; i < ndvarmap; i++ )
    {
-      RsetString(psub[i], "inf");
-      RsetInt(pslb[i], 0, 1);
+      RatSetString(psub[i], "inf");
+      RatSetInt(pslb[i], 0, 1);
    }
-   RsetString(psub[ndvarmap], "inf");
-   RsetInt(pslb[ndvarmap], 1 ,1);
+   RatSetString(psub[ndvarmap], "inf");
+   RatSetInt(pslb[ndvarmap], 1 ,1);
    for( i = ndvarmap + 1; i < psncols; i++ )
    {
-      RsetInt(psub[i], 1, 1);
-      RsetInt(pslb[i], 0, 1);
+      RatSetInt(psub[i], 1, 1);
+      RatSetInt(pslb[i], 0, 1);
    }
 
    /* set up constraint bounds */
    for( i = 0; i < ncols; i++ )
    {
-      RsetInt(pslhs[i], 0, 1);
-      RsetInt(psrhs[i], 0, 1);
+      RatSetInt(pslhs[i], 0, 1);
+      RatSetInt(psrhs[i], 0, 1);
    }
    for( i = 0; i < psdata->npsbasis; i++ )
    {
-      RsetInt(pslhs[ncols + i], 0, 1);
-      RsetString(psrhs[ncols + i], "inf");
+      RatSetInt(pslhs[ncols + i], 0, 1);
+      RatSetString(psrhs[ncols + i], "inf");
    }
 
    /* set up constraint matrix: this involves transposing the constraint matrix */
@@ -1222,9 +1222,9 @@ SCIP_RETCODE setupPsArbDual(
             pos = psbeg[lpex->rows[indx]->cols_index[j]] + pslen[lpex->rows[indx]->cols_index[j]];
             psind[pos] = i;
             if(dvarmap[i]<nrows)
-               Rset(psval[pos], lpex->rows[indx]->vals[j]);
+               RatSet(psval[pos], lpex->rows[indx]->vals[j]);
             else
-               Rneg(psval[pos], lpex->rows[indx]->vals[j]);
+               RatNegate(psval[pos], lpex->rows[indx]->vals[j]);
             pslen[lpex->rows[indx]->cols_index[j]]++;
          }
       }
@@ -1237,15 +1237,15 @@ SCIP_RETCODE setupPsArbDual(
          pos = psbeg[indx] + pslen[indx];
          psind[pos] = i;
          if( dvarmap[i] < 2*nrows + ncols)
-            RsetInt(psval[pos], 1, 1);
+            RatSetInt(psval[pos], 1, 1);
          else
-            RsetInt(psval[pos], -1, 1);
+            RatSetInt(psval[pos], -1, 1);
          pslen[indx]++;
       }
    }
    for( i = 0; i < ncols; i++ )
    {
-      Rneg(psval[psbeg[i] + pslen[i]], lpex->cols[i]->obj);
+      RatNegate(psval[psbeg[i] + pslen[i]], lpex->cols[i]->obj);
       psind[psbeg[i] + pslen[i]] = ndvarmap;
       pslen[i]++;
    }
@@ -1258,9 +1258,9 @@ SCIP_RETCODE setupPsArbDual(
       if( psdata->includedrows[indx] )
       {
          psind[psbeg[pos]] = i;
-         RsetInt(psval[psbeg[pos]], 1, 1);
+         RatSetInt(psval[psbeg[pos]], 1, 1);
          psind[psbeg[pos] + 1] = psncols - psnrows + pos;
-         RsetInt(psval[psbeg[pos] + 1], -1, 1);
+         RatSetInt(psval[psbeg[pos] + 1], -1, 1);
          pos++;
       }
    }
@@ -1322,28 +1322,28 @@ SCIP_RETCODE setupPsTwoStage(
        * problem, move the interiorness to the constraint bounds and optimize over the objective.
        */
    for( i = 0; i < ndvarmap; i ++)
-      RsetInt(psobj[i], 0, 1);
-   RsetInt(psobj[ndvarmap], 1, 1);
+      RatSetInt(psobj[i], 0, 1);
+   RatSetInt(psobj[ndvarmap], 1, 1);
 
    /* set variable bounds */
    for( i = 0; i < ndvarmap; i++ )
    {
-      RsetString(psub[i], "inf");
-      RsetInt(pslb[i], 0, 1);
+      RatSetString(psub[i], "inf");
+      RatSetInt(pslb[i], 0, 1);
    }
-   RsetInt(psub[ndvarmap], PSBIGM, 1);
-   RsetInt(pslb[ndvarmap], 0 ,1);
+   RatSetInt(psub[ndvarmap], PSBIGM, 1);
+   RatSetInt(pslb[ndvarmap], 0 ,1);
 
    /* set up constraint bounds */
    for( i = 0; i < ncols; i++ )
    {
-      Rset(pslhs[i], lpex->cols[i]->obj);
-      Rset(psrhs[i], lpex->cols[i]->obj);
+      RatSet(pslhs[i], lpex->cols[i]->obj);
+      RatSet(psrhs[i], lpex->cols[i]->obj);
    }
    for( i = 0; i < psdata->npsbasis; i++ )
    {
-      RsetInt(pslhs[ncols + i], 0, 1);
-      RsetString(psrhs[ncols + i], "inf");
+      RatSetInt(pslhs[ncols + i], 0, 1);
+      RatSetString(psrhs[ncols + i], "inf");
    }
 
    /* set up constraint matrix: this involves transposing the constraint matrix */
@@ -1401,9 +1401,9 @@ SCIP_RETCODE setupPsTwoStage(
             pos = psbeg[lpex->rows[indx]->cols_index[j]] + pslen[lpex->rows[indx]->cols_index[j]];
             psind[pos] = i;
             if(dvarmap[i]<nrows)
-               Rset(psval[pos], lpex->rows[indx]->vals[j]);
+               RatSet(psval[pos], lpex->rows[indx]->vals[j]);
             else
-               Rneg(psval[pos], lpex->rows[indx]->vals[j]);
+               RatNegate(psval[pos], lpex->rows[indx]->vals[j]);
             pslen[lpex->rows[indx]->cols_index[j]]++;
          }
       }
@@ -1416,9 +1416,9 @@ SCIP_RETCODE setupPsTwoStage(
          pos = psbeg[indx] + pslen[indx];
          psind[pos] = i;
          if( dvarmap[i] < 2*nrows + ncols)
-            RsetInt(psval[pos], 1, 1);
+            RatSetInt(psval[pos], 1, 1);
          else
-            RsetInt(psval[pos], -1, 1);
+            RatSetInt(psval[pos], -1, 1);
          pslen[indx]++;
       }
    }
@@ -1431,9 +1431,9 @@ SCIP_RETCODE setupPsTwoStage(
       if( psdata->includedrows[indx] )
       {
          psind[psbeg[pos]] = i;
-         RsetInt(psval[psbeg[pos]], 1, 1);
+         RatSetInt(psval[psbeg[pos]], 1, 1);
          psind[psbeg[pos] + 1] = psncols - 1;
-         RsetInt(psval[psbeg[pos] + 1], -1, 1);
+         RatSetInt(psval[psbeg[pos] + 1], -1, 1);
          pos++;
       }
    }
@@ -1543,9 +1543,9 @@ SCIP_RETCODE psComputeSintPointRay(
     *   (reduced from nextendedrows to ndvarmap)
     * - dvarincidence gives the incidence vector of variables used in aux problem
     */
-   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
-   SCIP_CALL( RcreateTemp(set->buffer, &alpha) );
-   SCIP_CALL( RcreateTemp(set->buffer, &beta) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &alpha) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &beta) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dvarmap, nextendedrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dvarincidence, nextendedrows) );
    {
@@ -1554,16 +1554,16 @@ SCIP_RETCODE psComputeSintPointRay(
          dvarincidence[i] = 0;
       for( i = 0; i < nrows; i++ )
       {
-         if( !RisNegInfinity(lprows[i]->lhs) )
+         if( !RatIsNegInfinity(lprows[i]->lhs) )
             dvarincidence[i] = 1;
-         if( !RisInfinity(lprows[i]->rhs) )
+         if( !RatIsInfinity(lprows[i]->rhs) )
             dvarincidence[nrows + i] = 1;
       }
       for( i = 0; i < ncols; i++ )
       {
-         if( !RisNegInfinity(lpcols[i]->lb) )
+         if( !RatIsNegInfinity(lpcols[i]->lb) )
             dvarincidence[2*nrows + i] = 1;
-         if( !RisInfinity(lpcols[i]->ub) )
+         if( !RatIsInfinity(lpcols[i]->ub) )
             dvarincidence[2*nrows + ncols + i] = 1;
       }
    }
@@ -1641,8 +1641,8 @@ SCIP_RETCODE psComputeSintPointRay(
          /* get optimal dual solution */
          SCIP_CALL( SCIPlpiexGetSol(pslpiex, objval, sol, NULL, NULL, NULL) );
 
-         Rset(psdata->commonslack, sol[psncols - 1]);
-         if( RisZero(psdata->commonslack) )
+         RatSet(psdata->commonslack, sol[psncols - 1]);
+         if( RatIsZero(psdata->commonslack) )
          {
             /* if commonslack == 0, point/ray is not interior */
             SCIPdebugMessage("   --> project-and-shift failed to find interior point/ray\n");
@@ -1653,9 +1653,9 @@ SCIP_RETCODE psComputeSintPointRay(
             for( i = 0; i < ndvarmap; i++ )
             {
                if( findintpoint )
-                  Rset( psdata->interiorpt[dvarmap[i]], sol[i]);
+                  RatSet( psdata->interiorpt[dvarmap[i]], sol[i]);
                else
-                  Rset( psdata->interiorray[dvarmap[i]], sol[i]);
+                  RatSet( psdata->interiorray[dvarmap[i]], sol[i]);
 
             }
             if( findintpoint )
@@ -1709,7 +1709,7 @@ SCIP_RETCODE psComputeSintPointRay(
       /* count the number of nonzeros of the aux problem: psnnonz*/
       for( i = 0; i < ncols; i++ )
       {
-         if( !RisZero(lpex->cols[i]->obj) )
+         if( !RatIsZero(lpex->cols[i]->obj) )
          {
             nobjnz++;
          }
@@ -1748,13 +1748,13 @@ SCIP_RETCODE psComputeSintPointRay(
 
          /* compute 1/lambda (lambda is the dual variable corresponding to the last row in the aux LP) */
          SCIP_CALL( SCIPlpiexGetSol(pslpiex, objval, NULL, sol, NULL, NULL) );
-         if( !RisZero(sol[psnrows - 1]) )
-            Rinv(psdata->commonslack, sol[psnrows - 1]);
+         if( !RatIsZero(sol[psnrows - 1]) )
+            RatInvert(psdata->commonslack, sol[psnrows - 1]);
          else
          {
-            RsetInt(psdata->commonslack, 0, 1);
+            RatSetInt(psdata->commonslack, 0, 1);
          }
-         if( RisZero(psdata->commonslack) )
+         if( RatIsZero(psdata->commonslack) )
          {
             SCIPdebugMessage("   --> project-and-shift did not find S-interior point/ray\n");
          }
@@ -1763,14 +1763,14 @@ SCIP_RETCODE psComputeSintPointRay(
          psdata->pshaspoint = TRUE;
          for( i = 0; i < ndvarmap; i++ )
          {
-            if( psdata->includedrows[dvarmap[i]] && RisZero(sol[i]) )
+            if( psdata->includedrows[dvarmap[i]] && RatIsZero(sol[i]) )
             {
                SCIPdebugMessage("   --> project-and-shift did not find S-interior point/ray\n");
                psdata->pshaspoint = FALSE;
                i = ndvarmap;
             }
             else
-               Rdiv( psdata->interiorpt[dvarmap[i]], sol[i], sol[psnrows - 1]);
+               RatDiv( psdata->interiorpt[dvarmap[i]], sol[i], sol[psnrows - 1]);
          }
       }
       else
@@ -1838,13 +1838,13 @@ SCIP_RETCODE psComputeSintPointRay(
 
          /* compute 1/lambda (lambda is the dual variable corresponding to the last row in the aux LP) */
          SCIP_CALL( SCIPlpiexGetSol(pslpiex, objval, sol, NULL, NULL, NULL) );
-         if( !RisZero(sol[ndvarmap]) )
-            Rinv(psdata->commonslack, sol[ndvarmap]);
+         if( !RatIsZero(sol[ndvarmap]) )
+            RatInvert(psdata->commonslack, sol[ndvarmap]);
          else
          {
-            RsetInt(psdata->commonslack, 0, 1);
+            RatSetInt(psdata->commonslack, 0, 1);
          }
-         if( RisZero(psdata->commonslack) == 0 )
+         if( RatIsZero(psdata->commonslack) == 0 )
          {
             SCIPdebugMessage("   --> interior point not found\n");
          }
@@ -1853,30 +1853,30 @@ SCIP_RETCODE psComputeSintPointRay(
          psdata->pshaspoint = TRUE;
          for( i = 0; i < ndvarmap; i++ )
          {
-            if( psdata->includedrows[dvarmap[i]] && RisZero(sol[i]) )
+            if( psdata->includedrows[dvarmap[i]] && RatIsZero(sol[i]) )
             {
                psdata->pshaspoint = FALSE;
                SCIPdebugMessage("   --> interior point not found\n");
                i = ndvarmap;
             }
             else
-               Rdiv( psdata->interiorpt[dvarmap[i]], sol[i], sol[ndvarmap]);
+               RatDiv( psdata->interiorpt[dvarmap[i]], sol[i], sol[ndvarmap]);
          }
 
 #ifdef PS_OUT
          printf("constraints all satisfied by slack=");
-         Rprint(psdata->commonslack, NULL);
+         RatPrint(psdata->commonslack);
          printf("\n");
 
          printf("objective value of aux problem=");
-         Rprint(objval, NULL);
+         RatPrint(objval);
          printf("\n");
 
          printf("relative interior solution:\n");
          for( i = 0; i <  psdata->nextendedrows; i++ )
          {
             printf("   i=%d: ", i);
-            Rprint(psdata->interiorpt[i], NULL);
+            RatPrint(psdata->interiorpt[i]);
             printf("\n");
          }
 #endif
@@ -1953,7 +1953,7 @@ SCIP_RETCODE psComputeSintPointRay(
       {
          if( dvarincidence[i] )
          {
-            Rset(psobj[pos], lpex->rows[i]->lhs);
+            RatSet(psobj[pos], lpex->rows[i]->lhs);
             pos++;
          }
       }
@@ -1961,7 +1961,7 @@ SCIP_RETCODE psComputeSintPointRay(
       {
          if( dvarincidence[nrows + i] )
          {
-            Rneg(psobj[pos], lpex->rows[i]->rhs);
+            RatNegate(psobj[pos], lpex->rows[i]->rhs);
             pos++;
          }
       }
@@ -1969,7 +1969,7 @@ SCIP_RETCODE psComputeSintPointRay(
       {
          if( dvarincidence[2*nrows + i] )
          {
-            Rset(psobj[pos], lpex->cols[i]->lb);
+            RatSet(psobj[pos], lpex->cols[i]->lb);
             pos++;
          }
       }
@@ -1977,15 +1977,15 @@ SCIP_RETCODE psComputeSintPointRay(
       {
          if( dvarincidence[2*nrows + ncols + i])
          {
-            Rneg(psobj[pos], lpex->cols[i]->ub);
+            RatNegate(psobj[pos], lpex->cols[i]->ub);
             pos++;
          }
       }
       assert(pos == ndvarmap);
-      RsetInt(psobj[ndvarmap], 0, 1);
+      RatSetInt(psobj[ndvarmap], 0, 1);
 
       /* set the lower bound on the interiorness based on the objective value */
-      Rset(pslb[ndvarmap], objval);
+      RatSet(pslb[ndvarmap], objval);
 
       /* reuse the psind array to pass indices to updated the bounds and objective */
       for( i = 0; i < psncols; i++ )
@@ -2009,8 +2009,8 @@ SCIP_RETCODE psComputeSintPointRay(
          SCIP_CALL( SCIPlpiexGetSol(pslpiex, objval, sol, NULL, NULL, NULL) );
 
          /* assign interior point solution to constraint handler data */
-         Rset(psdata->commonslack, sol[psncols - 1]);
-         if( RisZero(psdata->commonslack) )
+         RatSet(psdata->commonslack, sol[psncols - 1]);
+         if( RatIsZero(psdata->commonslack) )
          {
             SCIPdebugMessage("   --> interior point not found \n");
          }
@@ -2018,7 +2018,7 @@ SCIP_RETCODE psComputeSintPointRay(
          {
             for( i = 0; i < ndvarmap; i++ )
             {
-               Rset( psdata->interiorpt[dvarmap[i]], sol[i]);
+               RatSet( psdata->interiorpt[dvarmap[i]], sol[i]);
             }
             psdata->pshaspoint = TRUE;
          }
@@ -2038,9 +2038,9 @@ SCIP_RETCODE psComputeSintPointRay(
    for( i = 0; i < ndvarmap; i++ )
    {
       if( psdata->pshaspoint )
-         Rcanonicalize(psdata->interiorpt[i]);
+         RatCanonicalize(psdata->interiorpt[i]);
       if( psdata->pshasray )
-         Rcanonicalize(psdata->interiorray[i]);
+         RatCanonicalize(psdata->interiorray[i]);
    }
 
    /* free memory */
@@ -2065,21 +2065,21 @@ SCIP_RETCODE psComputeSintPointRay(
    SCIPsetFreeBufferArray(set, &pslen);
    SCIPsetFreeBufferArray(set, &psbeg);
 
-   RdeleteTemp(set->buffer, &objval);
-   RdeleteArrayTemp(set->buffer, &sol, psncols);
-   RdeleteArrayTemp(set->buffer, &psval, psnnonz);
-   RdeleteArrayTemp(set->buffer, &psrhs, psnrows);
-   RdeleteArrayTemp(set->buffer, &pslhs, psnrows);
-   RdeleteArrayTemp(set->buffer, &psub, psncols);
-   RdeleteArrayTemp(set->buffer, &pslb, psncols);
-   RdeleteArrayTemp(set->buffer, &psobj, psncols);
+   RatFreeBuffer(set->buffer, &objval);
+   RatFreeBufferArray(set->buffer, &sol, psncols);
+   RatFreeBufferArray(set->buffer, &psval, psnnonz);
+   RatFreeBufferArray(set->buffer, &psrhs, psnrows);
+   RatFreeBufferArray(set->buffer, &pslhs, psnrows);
+   RatFreeBufferArray(set->buffer, &psub, psncols);
+   RatFreeBufferArray(set->buffer, &pslb, psncols);
+   RatFreeBufferArray(set->buffer, &psobj, psncols);
 
    SCIPsetFreeBufferArray(set, &dvarincidence);
    SCIPsetFreeBufferArray(set, &dvarmap);
 
-   RdeleteTemp(set->buffer, &beta);
-   RdeleteTemp(set->buffer, &alpha);
-   RdeleteTemp(set->buffer, &tmp);
+   RatFreeBuffer(set->buffer, &beta);
+   RatFreeBuffer(set->buffer, &alpha);
+   RatFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -2131,7 +2131,7 @@ SCIP_RETCODE constructPSData(
    psdata->psdatacon = TRUE;
 
    SCIPdebugMessage("calling constructPSdata()\n");
-   SCIP_CALL( Rcreate(blkmem, &psdata->commonslack) );
+   SCIP_CALL( RatCreateBlock(blkmem, &psdata->commonslack) );
 
    /* process the bound changes */
    SCIP_CALL( SCIPsepastoreexApplyCuts(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
@@ -2153,13 +2153,13 @@ SCIP_RETCODE constructPSData(
       if( TRUE || !psdata->psuseintpoint )
       {
          /* try to compute the S-interior ray if we want to use it for bounding or infeasibility */
-         SCIP_CALL( RcreateArray(blkmem, &psdata->interiorray, psdata->nextendedrows) );
+         SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->interiorray, psdata->nextendedrows) );
          SCIP_CALL( psComputeSintPointRay(lp, lpex, set, prob, blkmem, FALSE) );
       }
       if( psdata->psuseintpoint || !psdata->pshasray )
       {
          /* now, compute S-interior point if we need it OR if the ray construction failed */
-         SCIP_CALL( RcreateArray(blkmem, &psdata->interiorpt, psdata->nextendedrows) );
+         SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->interiorpt, psdata->nextendedrows) );
          SCIP_CALL( psComputeSintPointRay(lp, lpex, set, prob, blkmem, TRUE) );
       }
    }
@@ -2170,8 +2170,8 @@ SCIP_RETCODE constructPSData(
       psdata->psdatafail = TRUE;
    }
 
-   SCIP_CALL( RcreateArray(blkmem, &psdata->violation, lpex->ncols) );
-   SCIP_CALL( RcreateArray(blkmem, &psdata->correction, psdata->nextendedrows) );
+   SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->violation, lpex->ncols) );
+   SCIP_CALL( RatCreateBlockArray(blkmem, &psdata->correction, psdata->nextendedrows) );
    psdata->violationsize = lpex->ncols;
 
    SCIPclockStop(stat->provedfeaspstime, set);
@@ -2269,12 +2269,12 @@ SCIP_RETCODE getPSdualTwo(
       useinteriorpoint = FALSE;
    }
 
-   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
-   SCIP_CALL( RcreateTemp(set->buffer, &tmp2) );
-   SCIP_CALL( RcreateTemp(set->buffer, &lambda1) );
-   SCIP_CALL( RcreateTemp(set->buffer, &lambda2) );
-   SCIP_CALL( RcreateTemp(set->buffer, &maxv) );
-   SCIP_CALL( RcreateTemp(set->buffer, &dualbound) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp2) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &lambda1) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &lambda2) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &maxv) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &dualbound) );
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
@@ -2287,10 +2287,10 @@ SCIP_RETCODE getPSdualTwo(
    nrowsps = psdata->nextendedrows/2 - ncols;
 
    /* allocate memory for approximate dual solution, dual cost vector, violation and correction */
-   SCIP_CALL( RcreateArrayTemp(set->buffer, &approxdual, nextendedrows) );
-   SCIP_CALL( RcreateArrayTemp(set->buffer, &costvect, nextendedrows) );
-   SCIP_CALL( RcreateArrayTemp(set->buffer, &violation, ncols) );
-   SCIP_CALL( RcreateArrayTemp(set->buffer, &correction, nextendedrows) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &approxdual, nextendedrows) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &costvect, nextendedrows) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &violation, ncols) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &correction, nextendedrows) );
 
    /* recover the objective coefs and approximate solution value of dual solution;
     * dual vars of lhs constraints (including -inf) and rhs constraints (including +inf),
@@ -2314,74 +2314,74 @@ SCIP_RETCODE getPSdualTwo(
       }
 
       if( !usefarkas )
-         RsetReal(tmp, SCIProwGetDualsol(lp->rows[i]));
+         RatSetReal(tmp, SCIProwGetDualsol(lp->rows[i]));
       else
-         RsetReal(tmp, SCIProwGetDualfarkas(lp->rows[i]));
+         RatSetReal(tmp, SCIProwGetDualfarkas(lp->rows[i]));
 
       /* lhs constraint */
-      if( RisPositive(tmp) )
-         Rset(approxdual[i], tmp);
+      if( RatIsPositive(tmp) )
+         RatSet(approxdual[i], tmp);
       /* rhs constraint */
       else
-         Rneg(approxdual[i+nrowsps], tmp);
+         RatNegate(approxdual[i+nrowsps], tmp);
 
-      Rset(costvect[i], lpex->rows[i]->lhs);
-      Rneg(costvect[i+nrowsps], lpex->rows[i]->rhs);
+      RatSet(costvect[i], lpex->rows[i]->lhs);
+      RatNegate(costvect[i+nrowsps], lpex->rows[i]->rhs);
    }
 
    cols = SCIPlpGetCols(lp);
    for( i = 0; i < ncols; i++ )
    {
       if( !usefarkas )
-         RsetReal(tmp, SCIPcolGetRedcost(cols[i], stat, lp));
+         RatSetReal(tmp, SCIPcolGetRedcost(cols[i], stat, lp));
       else
-         RsetReal(tmp, -SCIPcolGetFarkasCoef(cols[i], stat, lp));
+         RatSetReal(tmp, -SCIPcolGetFarkasCoef(cols[i], stat, lp));
       /* lb constraint */
-      if( RisPositive(tmp) )
-         Rset(approxdual[i + 2*nrowsps], tmp);
+      if( RatIsPositive(tmp) )
+         RatSet(approxdual[i + 2*nrowsps], tmp);
       /* ub constraint */
       else
-         Rneg(approxdual[i + 2*nrowsps + ncols], tmp);
+         RatNegate(approxdual[i + 2*nrowsps + ncols], tmp);
 
-      Rset(costvect[i + 2*nrowsps], lpex->cols[i]->lb);
-      Rneg(costvect[i + 2*nrowsps + ncols], lpex->cols[i]->ub);
+      RatSet(costvect[i + 2*nrowsps], lpex->cols[i]->lb);
+      RatNegate(costvect[i + 2*nrowsps + ncols], lpex->cols[i]->ub);
    }
 
 #ifdef PS_OUT
    printf("approximate dual solution:\n");
 
-   RsetInt(dualbound, 0, 1);
+   RatSetInt(dualbound, 0, 1);
    for( i = 0; i < nextendedrows; i++ )
    {
       printf("   i=%d: ", i);
-      Rprint(approxdual[i], NULL);
+      RatPrint(approxdual[i]);
       printf(" * ");
-      Rprint(costvect[i], NULL);
+      RatPrint(costvect[i]);
       printf("\n");
-      if( RisAbsInfinity(costvect[i]) )
-       assert(RisZero(approxdual[i]));
+      if( RatIsAbsInfinity(costvect[i]) )
+       assert(RatIsZero(approxdual[i]));
       else
       {
-         RaddProd(dualbound, approxdual[i], costvect[i]);
+         RatAddProd(dualbound, approxdual[i], costvect[i]);
       }
    }
 
    printf("   objective value=%.20f (", RgetRealApprox(dualbound));
-   Rprint(dualbound, NULL);
+   RatPrint(dualbound);
    printf(")\n");
 #endif
 
    /* first, ensure nonnegativity of dual solution and fix artificial dual variables to zero */
    for( i = 0; i < nextendedrows; i++ )
    {
-      if( RisNegative(approxdual[i]) )
-         RsetInt(approxdual[i], 0, 1);
-      else if( RisNegInfinity(costvect[i]) )
+      if( RatIsNegative(approxdual[i]) )
+         RatSetInt(approxdual[i], 0, 1);
+      else if( RatIsNegInfinity(costvect[i]) )
       {
          if( i < nextendedrows )
             assert(!psdata->includedrows[i]);
 
-         RsetInt(approxdual[i], 0, 1);
+         RatSetInt(approxdual[i], 0, 1);
       }
    }
 
@@ -2389,9 +2389,9 @@ SCIP_RETCODE getPSdualTwo(
    for( i = 0; i < ncols; i++ )
    {
       if( !usefarkas )
-         Rset(violation[i], lpex->cols[i]->obj);
+         RatSet(violation[i], lpex->cols[i]->obj);
       else
-         RsetInt(violation[i], 0, 1);
+         RatSetInt(violation[i], 0, 1);
    }
 
    /* A^ty for y corresponding to primal constraints */
@@ -2401,11 +2401,11 @@ SCIP_RETCODE getPSdualTwo(
       {
          currentrow = lpex->rows[i]->cols_index[j];
          /* avoid expensive null-sum */
-         if( RisEqual(approxdual[i], approxdual[i+nrowsps]) )
+         if( RatIsEqual(approxdual[i], approxdual[i+nrowsps]) )
             continue;
 
-         RdiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
-         RaddProd(violation[currentrow], approxdual[i+nrowsps], lpex->rows[i]->vals[j]);
+         RatDiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
+         RatAddProd(violation[currentrow], approxdual[i+nrowsps], lpex->rows[i]->vals[j]);
       }
    }
 
@@ -2415,12 +2415,12 @@ SCIP_RETCODE getPSdualTwo(
       for( j = 0; j < lpex->rows[i]->len; j++)
       {
          if( !usefarkas )
-            RsetReal(tmp, SCIProwGetDualsol(lp->rows[i]));
+            RatSetReal(tmp, SCIProwGetDualsol(lp->rows[i]));
          else
-            RsetReal(tmp, SCIProwGetDualfarkas(lp->rows[i]));
+            RatSetReal(tmp, SCIProwGetDualfarkas(lp->rows[i]));
 
          currentrow = lpex->rows[i]->cols_index[j];
-         RdiffProd(violation[currentrow], tmp, lpex->rows[i]->vals[j]);
+         RatDiffProd(violation[currentrow], tmp, lpex->rows[i]->vals[j]);
       }
    }
 
@@ -2428,10 +2428,10 @@ SCIP_RETCODE getPSdualTwo(
    for( i = 0; i < ncols; i++ )
    {
       /* avoid expensive null-sum */
-      if( RisEqual(approxdual[i+2*nrowsps], approxdual[i+2*nrowsps+ncols]) )
+      if( RatIsEqual(approxdual[i+2*nrowsps], approxdual[i+2*nrowsps+ncols]) )
             continue;
-      Rdiff(violation[i], violation[i], approxdual[i+2*nrowsps]);
-      Radd(violation[i], violation[i], approxdual[i+2*nrowsps+ncols]);
+      RatDiff(violation[i], violation[i], approxdual[i+2*nrowsps]);
+      RatAdd(violation[i], violation[i], approxdual[i+2*nrowsps+ncols]);
    }
 
 
@@ -2442,7 +2442,7 @@ SCIP_RETCODE getPSdualTwo(
    for( i = 0; i < ncols; i++ )
    {
       printf("   i=%d: ", i);
-      Rprint(violation[i], NULL);
+      RatPrint(violation[i]);
       printf("\n");
    }
 #endif
@@ -2451,7 +2451,7 @@ SCIP_RETCODE getPSdualTwo(
    isfeas = TRUE;
    for( i = 0; i < ncols && isfeas; i++ )
    {
-      if( !RisZero(violation[i]) )
+      if( !RatIsZero(violation[i]) )
          isfeas = FALSE;
    }
 
@@ -2462,8 +2462,8 @@ SCIP_RETCODE getPSdualTwo(
       SCIP_CALL( SCIPsetAllocBufferArray(set, &violationgmp, ncols) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &correctiongmp, nextendedrows) );
 
-      RsetGMPArray(violationgmp, violation, ncols);
-      RsetGMPArray(correctiongmp, correction, nextendedrows);
+      RatSetGMPArray(violationgmp, violation, ncols);
+      RatSetGMPArray(correctiongmp, correction, nextendedrows);
       rval = RECTLUsolveSystem( psdata->rectfactor, ncols, nextendedrows, violationgmp, correctiongmp);
       if( rval )
       {
@@ -2475,14 +2475,14 @@ SCIP_RETCODE getPSdualTwo(
 
          goto TERMINATE;
       }
-      RsetArrayGMP(correction, correctiongmp, nextendedrows);
+      RatSetArrayGMP(correction, correctiongmp, nextendedrows);
 
 #ifdef PS_OUT
       printf("correction of solution:\n");
       for( i = 0; i < psdata->npsbasis; i++ )
       {
          printf("   i=%d: ", i);
-         Rprint(correction[i], NULL);
+         RatPrint(correction[i]);
          printf(", position=%d\n", psdata->psbasis[i]);
       }
 #endif
@@ -2492,7 +2492,7 @@ SCIP_RETCODE getPSdualTwo(
        */
       for( i = 0; i < psdata->npsbasis; i++ )
       {
-         Radd(approxdual[psdata->psbasis[i]], approxdual[psdata->psbasis[i]], correction[i]);
+         RatAdd(approxdual[psdata->psbasis[i]], approxdual[psdata->psbasis[i]], correction[i]);
       }
    }
 
@@ -2501,7 +2501,7 @@ SCIP_RETCODE getPSdualTwo(
    for( i = 0; i < nextendedrows; i++ )
    {
       printf("   i=%d: ", i);
-      Rprint(approxdual[i], NULL);
+      RatPrint(approxdual[i]);
       printf("\n");
    }
 #endif
@@ -2516,50 +2516,50 @@ SCIP_RETCODE getPSdualTwo(
        */
 
       /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-      RsetInt(lambda1, 1, 1);
+      RatSetInt(lambda1, 1, 1);
       for( i = 0; i < nextendedrows; i++ )
       {
-         if( RisNegative(approxdual[i]) )
+         if( RatIsNegative(approxdual[i]) )
          {
-            Rset(tmp2, psdata->interiorpt[i]);
-            Rdiff(tmp, psdata->interiorpt[i], approxdual[i]);
-            Rdiv(tmp2, tmp2, tmp);
-            if( RisGT(lambda1, tmp2) )
-               Rset(lambda1, tmp2);
+            RatSet(tmp2, psdata->interiorpt[i]);
+            RatDiff(tmp, psdata->interiorpt[i], approxdual[i]);
+            RatDiv(tmp2, tmp2, tmp);
+            if( RatIsGT(lambda1, tmp2) )
+               RatSet(lambda1, tmp2);
          }
       }
-      RsetInt(lambda2, 1, 1);
-      Rdiff(lambda2, lambda2, lambda1);
+      RatSetInt(lambda2, 1, 1);
+      RatDiff(lambda2, lambda2, lambda1);
    }
    else
    {
       /* in this case we are using an interior ray that can be added freely to the solution */
-      RsetInt(lambda1, 1, 1);
+      RatSetInt(lambda1, 1, 1);
 
       /* compute lambda values: compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-      RsetInt(lambda1, 1, 1);
+      RatSetInt(lambda1, 1, 1);
       for( i = 0; i < nextendedrows; i++ )
       {
-         if( RisNegative(approxdual[i]) && psdata->includedrows[i] )
+         if( RatIsNegative(approxdual[i]) && psdata->includedrows[i] )
          {
-            Rdiv(tmp, approxdual[i], psdata->interiorray[i]);
-            Rneg(tmp, tmp);
-            if( RisLT(lambda2, tmp) ) /* changed to < */
-               Rset(lambda2, tmp);
+            RatDiv(tmp, approxdual[i], psdata->interiorray[i]);
+            RatNegate(tmp, tmp);
+            if( RatIsLT(lambda2, tmp) ) /* changed to < */
+               RatSet(lambda2, tmp);
          }
       }
    }
 
    /* perform shift */
-   if( !RisZero(lambda2) )
+   if( !RatIsZero(lambda2) )
    {
       for( i = 0; i < nextendedrows; i++ )
       {
-         Rmult(approxdual[i], approxdual[i], lambda1);
+         RatMult(approxdual[i], approxdual[i], lambda1);
       }
       for( i =0; i < nextendedrows; i++ )
       {
-         RaddProd(approxdual[i], useinteriorpoint ? psdata->interiorpt[i] : psdata->interiorray[i], lambda2);
+         RatAddProd(approxdual[i], useinteriorpoint ? psdata->interiorpt[i] : psdata->interiorray[i], lambda2);
       }
    }
 
@@ -2571,26 +2571,26 @@ SCIP_RETCODE getPSdualTwo(
    for( i = 0; i < nrowsps; i++ )
    {
       /* find the min value of y(lhs) and y(rhs) */
-      Rmin(tmp, approxdual[i], approxdual[i+nrowsps]);
+      RatMIN(tmp, approxdual[i], approxdual[i+nrowsps]);
 
       /* shift if both are nonzero */
-      if( RisPositive(tmp) )
+      if( RatIsPositive(tmp) )
       {
-         Rdiff(approxdual[i], approxdual[i], tmp);
-         Rdiff(approxdual[i+nrowsps], approxdual[i+nrowsps], tmp);
+         RatDiff(approxdual[i], approxdual[i], tmp);
+         RatDiff(approxdual[i+nrowsps], approxdual[i+nrowsps], tmp);
       }
    }
    /* y(lhs) and y(rhs) corresponding to bound constraints */
    for( i = 0; i < ncols; i++ )
    {
       /* find the min value of y(lhs) and y(rhs) */
-      Rmin(tmp, approxdual[i + 2*nrowsps], approxdual[i + 2*nrowsps + ncols]);
+      RatMIN(tmp, approxdual[i + 2*nrowsps], approxdual[i + 2*nrowsps + ncols]);
 
       /* shift if both are nonzero */
-      if( RisPositive(tmp) )
+      if( RatIsPositive(tmp) )
       {
-         Rdiff(approxdual[i+2*nrowsps], approxdual[i+2*nrowsps], tmp);
-         Rdiff(approxdual[i+2*nrowsps + ncols], approxdual[i+2*nrowsps + ncols], tmp);
+         RatDiff(approxdual[i+2*nrowsps], approxdual[i+2*nrowsps], tmp);
+         RatDiff(approxdual[i+2*nrowsps + ncols], approxdual[i+2*nrowsps + ncols], tmp);
       }
    }
 
@@ -2599,7 +2599,7 @@ SCIP_RETCODE getPSdualTwo(
    for( i = 0; i < nextendedrows; i++ )
    {
       printf("   i=%d: ", i);
-      Rprint(approxdual[i], NULL);
+      RatPrint(approxdual[i]);
       printf("\n");
    }
 #endif
@@ -2613,9 +2613,9 @@ SCIP_RETCODE getPSdualTwo(
    for( i = 0; i < ncols; i++ )
    {
       if( !usefarkas )
-         Rset(violation[i], lpex->cols[i]->obj);
+        RatSet(violation[i], lpex->cols[i]->obj);
       else
-         RsetInt(violation[i], 0, 1);
+         RatSetInt(violation[i], 0, 1);
    }
    for( i = 0; i < nrowsps; i++ )
    {
@@ -2623,19 +2623,19 @@ SCIP_RETCODE getPSdualTwo(
       {
          currentrow = lpex->rows[i]->cols_index[j];
          /* avoid expensive null-sum */
-         if( RisEqual(approxdual[i], approxdual[i+nrowsps]) )
+         if( RatIsEqual(approxdual[i], approxdual[i+nrowsps]) )
             continue;
-         RdiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
-         RaddProd(violation[currentrow], approxdual[i+nrowsps], lpex->rows[i]->vals[j]);
+         RatDiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
+         RatAddProd(violation[currentrow], approxdual[i+nrowsps], lpex->rows[i]->vals[j]);
       }
    }
    for( i = 0; i < ncols; i++ )
    {
       /* avoid expensive null-sum */
-      if( RisEqual(approxdual[i+2*nrowsps], approxdual[i+2*nrowsps+ncols]) )
+      if( RatIsEqual(approxdual[i+2*nrowsps], approxdual[i+2*nrowsps+ncols]) )
          continue;
-      Rdiff(violation[i], violation[i], approxdual[i+2*nrowsps]);
-      Radd(violation[i], violation[i], approxdual[i+2*nrowsps+ncols]);
+      RatDiff(violation[i], violation[i], approxdual[i+2*nrowsps]);
+      RatAdd(violation[i], violation[i], approxdual[i+2*nrowsps+ncols]);
    }
    /* add violations coming from non-initial rows */
    for( i = nrowsps; i < nrows; ++i )
@@ -2643,18 +2643,18 @@ SCIP_RETCODE getPSdualTwo(
       for( j = 0; j < lpex->rows[i]->len; j++)
       {
          if( !usefarkas )
-            RsetReal(tmp, SCIProwGetDualsol(lp->rows[i]));
+            RatSetReal(tmp, SCIProwGetDualsol(lp->rows[i]));
          else
-            RsetReal(tmp, SCIProwGetDualfarkas(lp->rows[i]));
+            RatSetReal(tmp, SCIProwGetDualfarkas(lp->rows[i]));
 
          currentrow = lpex->rows[i]->cols_index[j];
-         RdiffProd(violation[currentrow], tmp, lpex->rows[i]->vals[j]);
+         RatDiffProd(violation[currentrow], tmp, lpex->rows[i]->vals[j]);
       }
    }
 
    for( i = 0; i < ncols; i++ )
    {
-      if( !RisZero(violation[i]) )
+      if( !RatIsZero(violation[i]) )
       {
          SCIPdebugMessage("   dual solution incorrect, violates equalties\n");
          i = ncols;
@@ -2663,7 +2663,7 @@ SCIP_RETCODE getPSdualTwo(
    }
    for( i = 0; i < nextendedrows; i++ )
    {
-      if( RisNegative(approxdual[i]) )
+      if( RatIsNegative(approxdual[i]) )
       {
          SCIPdebugMessage("   dual solution incorrect, negative components\n");
          i = nextendedrows;
@@ -2675,21 +2675,21 @@ SCIP_RETCODE getPSdualTwo(
    assert(!rval);
 #endif
 
-   RsetInt(dualbound, 0, 1);
+   RatSetInt(dualbound, 0, 1);
    for( i = 0; i < nextendedrows; i++ )
    {
-      RaddProd(dualbound, approxdual[i], costvect[i]);
+      RatAddProd(dualbound, approxdual[i], costvect[i]);
    }
 
    if( !usefarkas )
    {
-      lp->lpobjval = RgetRealRelax(dualbound, SCIP_ROUND_DOWNWARDS);
+      lp->lpobjval = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
       lp->hasprovedbound = TRUE;
    }
    else
    {
       /* if the objective value of the corrected ray is positive we can prune node, otherwise not */
-      if( RisPositive(dualbound) )
+      if( RatIsPositive(dualbound) )
          lp->hasprovedbound = TRUE;
       else
       {
@@ -2700,19 +2700,19 @@ SCIP_RETCODE getPSdualTwo(
 
 #ifdef PS_OUT
    printf("   common slack=%.20f (", RgetRealApprox(psdata->commonslack));
-   Rprint(psdata->commonslack, NULL);
+   RatPrint(psdata->commonslack);
    printf(")\n");
 
    printf("   max violation=%.20f (", RgetRealApprox(maxv));
-   Rprint(maxv, NULL);
+   RatPrint(maxv);
    printf(")\n");
 
    printf("   lambda (use of interior point)=%.20f (", RgetRealApprox(lambda2));
-   Rprint(lambda2, NULL);
+   RatPrint(lambda2);
    printf(")\n");
 
    printf("   dual objective value=%.20f (", RgetRealApprox(dualbound));
-   Rprint(dualbound, NULL);
+   RatPrint(dualbound);
    printf(")\n");
 #endif
 
@@ -2720,26 +2720,26 @@ SCIP_RETCODE getPSdualTwo(
    /* free memory */
    if( correctiongmp != NULL )
    {
-      RclearGMPArray(correctiongmp, nextendedrows);
+      RatClearGMPArray(correctiongmp, nextendedrows);
       SCIPsetFreeBufferArray(set, &correctiongmp);
    }
    if( violationgmp != NULL )
    {
-      RclearGMPArray(violationgmp, ncols);
+      RatClearGMPArray(violationgmp, ncols);
       SCIPsetFreeBufferArray(set, &violationgmp);
    }
 
-   RdeleteArrayTemp(set->buffer, &correction, nextendedrows);
-   RdeleteArrayTemp(set->buffer, &violation, ncols);
-   RdeleteArrayTemp(set->buffer, &costvect, nextendedrows);
-   RdeleteArrayTemp(set->buffer, &approxdual, nextendedrows);
+   RatFreeBufferArray(set->buffer, &correction, nextendedrows);
+   RatFreeBufferArray(set->buffer, &violation, ncols);
+   RatFreeBufferArray(set->buffer, &costvect, nextendedrows);
+   RatFreeBufferArray(set->buffer, &approxdual, nextendedrows);
 
-   RdeleteTemp(set->buffer, &dualbound);
-   RdeleteTemp(set->buffer, &maxv);
-   RdeleteTemp(set->buffer, &lambda2);
-   RdeleteTemp(set->buffer, &lambda1);
-   RdeleteTemp(set->buffer, &tmp2);
-   RdeleteTemp(set->buffer, &tmp);
+   RatFreeBuffer(set->buffer, &dualbound);
+   RatFreeBuffer(set->buffer, &maxv);
+   RatFreeBuffer(set->buffer, &lambda2);
+   RatFreeBuffer(set->buffer, &lambda1);
+   RatFreeBuffer(set->buffer, &tmp2);
+   RatFreeBuffer(set->buffer, &tmp);
 
    if( usefarkas )
       SCIPclockStop(stat->provedinfeaspstime, set);
@@ -2842,12 +2842,12 @@ SCIP_RETCODE getPSdual(
       useinteriorpoint = FALSE;
    }
 
-   SCIP_CALL( RcreateTemp(set->buffer, &tmp) );
-   SCIP_CALL( RcreateTemp(set->buffer, &tmp2) );
-   SCIP_CALL( RcreateTemp(set->buffer, &lambda1) );
-   SCIP_CALL( RcreateTemp(set->buffer, &lambda2) );
-   SCIP_CALL( RcreateTemp(set->buffer, &maxv) );
-   SCIP_CALL( RcreateTemp(set->buffer, &dualbound) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp2) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &lambda1) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &lambda2) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &maxv) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &dualbound) );
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
@@ -2875,13 +2875,13 @@ SCIP_RETCODE getPSdual(
       else
          approxdual[i] = usefarkas ? lpex->cols[i - nrows]->redcost : lpex->cols[i - nrows]->farkascoef;
 
-      RsetInt(approxdual[i], 0, 1);
+      RatSetInt(approxdual[i], 0, 1);
       if( i < ncols )
-         RsetInt(violation[i], 0, 1);
+         RatSetInt(violation[i], 0, 1);
    }
    for( i = 0; i < nextendedrows; ++i )
    {
-      RsetInt(correction[i], 0, 1);
+      RatSetInt(correction[i], 0, 1);
    }
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &isupper, nrows + ncols) );
@@ -2910,11 +2910,11 @@ SCIP_RETCODE getPSdual(
       }
 
       if( !usefarkas )
-         RsetReal(approxdual[i], SCIProwGetDualsol(lp->rows[i]));
+         RatSetReal(approxdual[i], SCIProwGetDualsol(lp->rows[i]));
       else
-         RsetReal(approxdual[i], SCIProwGetDualfarkas(lp->rows[i]));
+         RatSetReal(approxdual[i], SCIProwGetDualfarkas(lp->rows[i]));
 
-      if( RisPositive(approxdual[i]) )
+      if( RatIsPositive(approxdual[i]) )
          isupper[i] = FALSE;
       else
          isupper[i] = TRUE;
@@ -2924,11 +2924,11 @@ SCIP_RETCODE getPSdual(
    for( i = 0; i < ncols; i++ )
    {
       if( !usefarkas )
-         RsetReal(approxdual[i+nrows], SCIPcolGetRedcost(cols[i], stat, lp));
+         RatSetReal(approxdual[i+nrows], SCIPcolGetRedcost(cols[i], stat, lp));
       else
-         RsetReal(approxdual[i+nrows], -SCIPcolGetFarkasCoef(cols[i], stat, lp));
+         RatSetReal(approxdual[i+nrows], -SCIPcolGetFarkasCoef(cols[i], stat, lp));
 
-      if( RisPositive(approxdual[i+nrows]) )
+      if( RatIsPositive(approxdual[i+nrows]) )
          isupper[i+nrows] = FALSE;
       else
          isupper[i+nrows] = TRUE;
@@ -2944,14 +2944,14 @@ SCIP_RETCODE getPSdual(
       else
          val = i < nrows ? lpex->rows[i]->rhs : lpex->cols[i - nrows]->ub;
 
-      if( RisAbsInfinity(val) )
-         RsetInt(approxdual[i], 0, 1);
+      if( RatIsAbsInfinity(val) )
+         RatSetInt(approxdual[i], 0, 1);
    }
 
 #ifdef PS_OUT
    printf("approximate dual solution:\n");
 
-   RsetInt(dualbound, 0, 1);
+   RatSetInt(dualbound, 0, 1);
    for( i = 0; i < nrows + ncols; i++ )
    {
       SCIP_Rational* val;
@@ -2962,18 +2962,18 @@ SCIP_RETCODE getPSdual(
          val = i < nrows ? lpex->rows[i]->rhs : lpex->cols[i - nrows]->ub;
 
       printf("   i=%d: ", i);
-      Rprint(approxdual[i], NULL);
+      RatPrint(approxdual[i]);
       printf(" * ");
-      Rprint(val, NULL);
+      RatPrint(val)
       printf("\n");
-      if( RisAbsInfinity(val) )
-         assert(RisZero(approxdual[i]));
+      if( RatIsAbsInfinity(val) )
+         assert(RatIsZero(approxdual[i]));
       else
-         RaddProd(dualbound, approxdual[i], val);
+         RatAddProd(dualbound, approxdual[i], val);
    }
 
    printf("   objective value=%.20f (", RgetRealApprox(dualbound));
-   Rprint(dualbound, NULL);
+   RatPrint(dualbound);
    printf(")\n");
 #endif
 
@@ -2984,12 +2984,12 @@ SCIP_RETCODE getPSdual(
       if( !usefarkas )
       {
          /* set to obj - bound-redcost */
-         Rdiff(violation[i], lpex->cols[i]->obj, approxdual[i + nrows]);
+         RatDiff(violation[i], lpex->cols[i]->obj, approxdual[i + nrows]);
       }
       else
       {
          /* set to 0 - bound-redcost */
-         Rneg(violation[i], approxdual[i+nrows]);
+         RatNegate(violation[i], approxdual[i+nrows]);
       }
    }
 
@@ -2999,7 +2999,7 @@ SCIP_RETCODE getPSdual(
       for( j = 0; j < lpex->rows[i]->len; j++)
       {
          currentrow = lpex->rows[i]->cols_index[j];
-         RdiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
+         RatDiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
       }
    }
 
@@ -3010,7 +3010,7 @@ SCIP_RETCODE getPSdual(
    for( i = 0; i < ncols; i++ )
    {
       printf("   i=%d: ", i);
-      Rprint(violation[i], NULL);
+      RatPrint(violation[i]);
       printf("\n");
    }
 #endif
@@ -3019,7 +3019,7 @@ SCIP_RETCODE getPSdual(
    isfeas = TRUE;
    for( i = 0; i < ncols && isfeas; i++ )
    {
-      if( !RisZero(violation[i]) )
+      if( !RatIsZero(violation[i]) )
          isfeas = FALSE;
    }
 
@@ -3031,7 +3031,7 @@ SCIP_RETCODE getPSdual(
       /* compute [z] with Dz=r (D depends on psdata->psdualcolselection) */
       SCIP_CALL( SCIPsetAllocBufferArray(set, &violationgmp, ncols) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &correctiongmp, nextendedrows) );
-      RsetGMPArray(violationgmp, violation, ncols);
+      RatSetGMPArray(violationgmp, violation, ncols);
 
       for ( i = 0; i < nextendedrows; i++)
       {
@@ -3049,14 +3049,14 @@ SCIP_RETCODE getPSdual(
 
          goto TERMINATE;
       }
-      RsetArrayGMP(correction, correctiongmp, nextendedrows);
+      RatSetArrayGMP(correction, correctiongmp, nextendedrows);
 
 #ifdef PS_OUT
       printf("correction of solution:\n");
       for( i = 0; i < psdata->npsbasis; i++ )
       {
          printf("   i=%d: ", i);
-         Rprint(correction[i], NULL);
+         RatPrint(correction[i]);
          printf(", position=%d\n", psdata->psbasis[i]);
       }
 #endif
@@ -3074,32 +3074,32 @@ SCIP_RETCODE getPSdual(
          {
             if( !isupper[map] )
             {
-               Radd(correction[i], correction[i], approxdual[map]);
-               RsetInt(approxdual[map], 0, 1);
+               RatAdd(correction[i], correction[i], approxdual[map]);
+               RatSetInt(approxdual[map], 0, 1);
             }
          }
          else if( map < 2 * nrowsps )
          {
             if( isupper[map - nrowsps] )
             {
-               Rdiff(correction[i], correction[i], approxdual[map - nrowsps]);
-               RsetInt(approxdual[map - nrowsps], 0, 1);
+               RatDiff(correction[i], correction[i], approxdual[map - nrowsps]);
+               RatSetInt(approxdual[map - nrowsps], 0, 1);
             }
          }
          else if( map < 2 * nrowsps + ncols )
          {
             if( !isupper[map - nrowsps + shift] )
             {
-               Radd(correction[i], correction[i], approxdual[map - nrowsps + shift]);
-               RsetInt(approxdual[map - nrowsps + shift], 0, 1);
+               RatAdd(correction[i], correction[i], approxdual[map - nrowsps + shift]);
+               RatSetInt(approxdual[map - nrowsps + shift], 0, 1);
             }
          }
          else
          {
             if( isupper[map - nrowsps - ncols  + shift] )
             {
-               Rdiff(correction[i], correction[i], approxdual[map - nrowsps - ncols + shift]);
-               RsetInt(approxdual[map - nrowsps - ncols + shift], 0, 1);
+               RatDiff(correction[i], correction[i], approxdual[map - nrowsps - ncols + shift]);
+               RatSetInt(approxdual[map - nrowsps - ncols + shift], 0, 1);
             }
          }
       }
@@ -3110,7 +3110,7 @@ SCIP_RETCODE getPSdual(
       for( i = 0; i < psdata->npsbasis; i++ )
       {
          printf("   i=%d: ", i);
-         Rprint(correction[i], NULL);
+         RatPrint(correction[i]);
          printf(", position=%d\n", psdata->psbasis[i]);
       }
 #endif
@@ -3125,36 +3125,36 @@ SCIP_RETCODE getPSdual(
          */
 
          /* compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-         RsetInt(lambda1, 1, 1);
+         RatSetInt(lambda1, 1, 1);
          for( i = 0; i < psdata->npsbasis; i++ )
          {
-            if( RisNegative(correction[i]) )
+            if( RatIsNegative(correction[i]) )
             {
                int map = psdata->psbasis[i];
 
-               Rset(tmp2, psdata->interiorpt[map]);
-               Rdiff(tmp, psdata->interiorpt[map], correction[i]);
-               Rdiv(tmp2, tmp2, tmp);
-               Rmin(lambda1, lambda1, tmp2);
+               RatSet(tmp2, psdata->interiorpt[map]);
+               RatDiff(tmp, psdata->interiorpt[map], correction[i]);
+               RatDiv(tmp2, tmp2, tmp);
+               RatMIN(lambda1, lambda1, tmp2);
             }
          }
-         RsetInt(lambda2, 1, 1);
-         Rdiff(lambda2, lambda2, lambda1);
+         RatSetInt(lambda2, 1, 1);
+         RatDiff(lambda2, lambda2, lambda1);
       }
       else
       {
          /* in this case we are using an interior ray that can be added freely to the solution */
          /* compute lambda values: compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
-         RsetInt(lambda1, 1, 1);
-         //RsetInt(lambda2, 0, 1);
+         RatSetInt(lambda1, 1, 1);
+         //RatSetInt(lambda2, 0, 1);
          for( i = 0; i < psdata->npsbasis; i++ )
          {
             int map = psdata->psbasis[i];
-            if( RisNegative(correction[i]) && psdata->includedrows[map] )
+            if( RatIsNegative(correction[i]) && psdata->includedrows[map] )
             {
-               Rdiv(tmp, correction[i], psdata->interiorray[map]);
-               Rneg(tmp, tmp);
-               Rmax(lambda2, lambda2, tmp);
+               RatDiv(tmp, correction[i], psdata->interiorray[map]);
+               RatNegate(tmp, tmp);
+               RatMAX(lambda2, lambda2, tmp);
             }
          }
       }
@@ -3162,18 +3162,18 @@ SCIP_RETCODE getPSdual(
 #ifdef PS_OUT
       printf("transformed projected dual solution:\n");
 
-      RsetInt(dualbound, 0, 1);
+      RatSetInt(dualbound, 0, 1);
       for( i = 0; i < nrows + ncols; i++ )
       {
          SCIP_Rational* val;
 
          printf("   i=%d: ", i);
-         Rprint(approxdual[i], NULL);
+         RatPrint(approxdual[i]);
          printf("\n");
       }
 
       printf("   lambda1: ");
-      Rprint(lambda1, NULL);
+      RatPrint(lambda1);
       printf(")\n");
 #endif
 
@@ -3182,41 +3182,41 @@ SCIP_RETCODE getPSdual(
       {
          int map = psdata->psbasis[i];
          if( map < nrowsps )
-            Radd(approxdual[map], approxdual[map], correction[i]);
+            RatAdd(approxdual[map], approxdual[map], correction[i]);
          else if( map < 2 * nrowsps )
-            Rdiff(approxdual[map - nrowsps], approxdual[map - nrowsps], correction[i]);
+            RatDiff(approxdual[map - nrowsps], approxdual[map - nrowsps], correction[i]);
          else if ( map < 2 * nrowsps + ncols )
-            Radd(approxdual[map - nrowsps + shift], approxdual[map - nrowsps + shift], correction[i]);
+            RatAdd(approxdual[map - nrowsps + shift], approxdual[map - nrowsps + shift], correction[i]);
          else
-            Rdiff(approxdual[map - nrowsps - ncols + shift], approxdual[map - nrowsps - ncols + shift], correction[i]);
+            RatDiff(approxdual[map - nrowsps - ncols + shift], approxdual[map - nrowsps - ncols + shift], correction[i]);
       }
 
 #ifdef PS_OUT
       printf("transformed projected dual solution:\n");
 
-      RsetInt(dualbound, 0, 1);
+      RatSetInt(dualbound, 0, 1);
       for( i = 0; i < nrows + ncols; i++ )
       {
          SCIP_Rational* val;
 
          printf("   i=%d: ", i);
-         Rprint(approxdual[i], NULL);
+         RatPrint(approxdual[i]);
          printf("\n");
       }
 
       printf("   lambda1: ");
-      Rprint(lambda1, NULL);
+      RatPrint(lambda1);
       printf(")\n");
 #endif
 
       /* perform shift */
-      if( !RisZero(lambda2) )
+      if( !RatIsZero(lambda2) )
       {
          for( i = 0; i < nrows + ncols; i++ )
          {
             if( i < nrows && i >= nrowsps )
                continue;
-            Rmult(approxdual[i], approxdual[i], lambda1);
+            RatMult(approxdual[i], approxdual[i], lambda1);
          }
          for( i = 0; i < nrows + ncols; i++ )
          {
@@ -3227,9 +3227,9 @@ SCIP_RETCODE getPSdual(
             if( i < nrows && i >= nrowsps )
                continue;
             map = (i < nrowsps) ? i + nrowsps : i + nrowsps + ncols - shift;
-            RdiffProd(approxdual[i], useinteriorpoint ? psdata->interiorpt[map] : psdata->interiorray[map], lambda2);
+            RatDiffProd(approxdual[i], useinteriorpoint ? psdata->interiorpt[map] : psdata->interiorray[map], lambda2);
             map = (i < nrowsps) ? i : i + nrowsps - shift;
-            RaddProd(approxdual[i], useinteriorpoint ? psdata->interiorpt[map] : psdata->interiorray[map], lambda2);
+            RatAddProd(approxdual[i], useinteriorpoint ? psdata->interiorpt[map] : psdata->interiorray[map], lambda2);
          }
       }
       shiftt = clock();
@@ -3239,7 +3239,7 @@ SCIP_RETCODE getPSdual(
       for( i = 0; i < nrows+ncols; i++ )
       {
          printf("   i=%d: ", i);
-         Rprint(approxdual[i], NULL);
+         RatPrint(approxdual[i]);
          printf("\n");
       }
 #endif
@@ -3254,26 +3254,26 @@ SCIP_RETCODE getPSdual(
    for( i = 0; i < ncols; i++ )
    {
       if( !usefarkas )
-         Rset(violation[i], lpex->cols[i]->obj);
+        RatSet(violation[i], lpex->cols[i]->obj);
       else
-         RsetInt(violation[i], 0, 1);
+         RatSetInt(violation[i], 0, 1);
    }
    for( i = 0; i < nrows; i++ )
    {
       for( j = 0; j < lpex->rows[i]->len; j++ )
       {
          currentrow = lpex->rows[i]->cols_index[j];
-         RdiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
+         RatDiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
       }
    }
    for( i = 0; i < ncols; i++ )
    {
-         Rdiff(violation[i], violation[i], approxdual[i + nrows]);
+         RatDiff(violation[i], violation[i], approxdual[i + nrows]);
    }
 
    for( i = 0; i < ncols && rval == 0; i++ )
    {
-      if( !RisZero(violation[i]) )
+      if( !RatIsZero(violation[i]) )
       {
          SCIPdebugMessage("   dual solution incorrect, violates equalties\n");
          rval = 1;
@@ -3284,30 +3284,30 @@ SCIP_RETCODE getPSdual(
    assert(!rval);
 #endif
 
-   RsetInt(dualbound, 0, 1);
+   RatSetInt(dualbound, 0, 1);
    for( i = 0; i < nrows + ncols; i++ )
    {
       SCIP_Rational* val;
-      if( RisPositive(approxdual[i]) )
+      if( RatIsPositive(approxdual[i]) )
          val = i < nrows ? lpex->rows[i]->lhs : lpex->cols[i - nrows]->lb;
       else
          val = i < nrows ? lpex->rows[i]->rhs : lpex->cols[i - nrows]->ub;
 
-      RaddProd(dualbound, approxdual[i], val);
+      RatAddProd(dualbound, approxdual[i], val);
    }
 
    if( !usefarkas )
    {
-      Rset(lpex->lpobjval, dualbound);
-      lp->lpobjval = RgetRealRelax(dualbound, SCIP_ROUND_DOWNWARDS);
+      RatSet(lpex->lpobjval, dualbound);
+      lp->lpobjval = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
       lp->hasprovedbound = TRUE;
    }
    else
    {
       /* if the objective value of the corrected ray is positive we can prune node, otherwise not */
-      if( RisPositive(dualbound) )
+      if( RatIsPositive(dualbound) )
       {
-         RsetString(lpex->lpobjval, "inf");
+         RatSetString(lpex->lpobjval, "inf");
          lp->lpobjval = SCIPsetInfinity(set);
          lp->hasprovedbound = TRUE;
       }
@@ -3320,19 +3320,19 @@ SCIP_RETCODE getPSdual(
 
 #ifdef PS_OUT
    printf("   common slack=%.20f (", RgetRealApprox(psdata->commonslack));
-   Rprint(psdata->commonslack, NULL);
+   RatPrint(psdata->commonslack);
    printf(")\n");
 
    printf("   max violation=%.20f (", RgetRealApprox(maxv));
-   Rprint(maxv, NULL);
+   RatPrint(maxv);
    printf(")\n");
 
    printf("   lambda (use of interior point)=%.20f (", RgetRealApprox(lambda2));
-   Rprint(lambda2, NULL);
+   RatPrint(lambda2);
    printf(")\n");
 
    printf("   dual objective value=%.20f (", RgetRealApprox(dualbound));
-   Rprint(dualbound, NULL);
+   RatPrint(dualbound);
    printf(")\n");
 #endif
 
@@ -3340,24 +3340,24 @@ SCIP_RETCODE getPSdual(
    /* free memory */
    if( correctiongmp != NULL )
    {
-      RclearGMPArray(correctiongmp, nextendedrows);
+      RatClearGMPArray(correctiongmp, nextendedrows);
       SCIPsetFreeBufferArray(set, &correctiongmp);
    }
    if( violationgmp != NULL )
    {
-      RclearGMPArray(violationgmp, ncols);
+      RatClearGMPArray(violationgmp, ncols);
       SCIPsetFreeBufferArray(set, &violationgmp);
    }
 
    SCIPsetFreeBufferArray(set, &isupper);
    SCIPsetFreeBufferArray(set, &approxdual);
 
-   RdeleteTemp(set->buffer, &dualbound);
-   RdeleteTemp(set->buffer, &maxv);
-   RdeleteTemp(set->buffer, &lambda2);
-   RdeleteTemp(set->buffer, &lambda1);
-   RdeleteTemp(set->buffer, &tmp2);
-   RdeleteTemp(set->buffer, &tmp);
+   RatFreeBuffer(set->buffer, &dualbound);
+   RatFreeBuffer(set->buffer, &maxv);
+   RatFreeBuffer(set->buffer, &lambda2);
+   RatFreeBuffer(set->buffer, &lambda1);
+   RatFreeBuffer(set->buffer, &tmp2);
+   RatFreeBuffer(set->buffer, &tmp);
 
    endt = clock();
    // startt, endt, setupt, violt, rectlut, projt, shiftt;
@@ -3672,7 +3672,7 @@ SCIP_RETCODE boundShift(
          SCIPintervalSet(&cinter[j], 0);
       else
       {
-         if( RisFpRepresentable(SCIPvarGetObjExact(SCIPcolGetVar(col))) )
+         if( RatIsFpRepresentable(SCIPvarGetObjExact(SCIPcolGetVar(col))) )
             SCIPintervalSet(&cinter[j], col->obj);
          else
          {

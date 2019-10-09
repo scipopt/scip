@@ -364,8 +364,8 @@ void SCIPintervalSetRational(
 {
    assert(resultant != NULL);
 
-   resultant->inf = RgetRealRelax(value, 0);
-   resultant->sup = RgetRealRelax(value, 1);
+   resultant->inf = RatRoundReal(value, 0);
+   resultant->sup = RatRoundReal(value, 1);
 }
 
 /** stores given infimum and supremum as interval */

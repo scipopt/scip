@@ -183,7 +183,7 @@ void SCIPgetSolexVal(
    {
       SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolexVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-      Rset(res, SCIPvarGetSolex(var, SCIPtreeHasCurrentNodeLP(scip->tree)));
+      RatSet(res, SCIPvarGetSolex(var, SCIPtreeHasCurrentNodeLP(scip->tree)));
    }
 }
 
@@ -213,7 +213,7 @@ void SCIPgetSolexTransObj(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolexTransObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    if( sol != NULL )
-      Rset(res, SCIPsolexGetObj(sol, scip->set, scip->transprob, scip->origprob));
+      RatSet(res, SCIPsolexGetObj(sol, scip->set, scip->transprob, scip->origprob));
    else
    {
       SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolexTransObj(sol==NULL)", \
@@ -286,7 +286,7 @@ SCIP_RETCODE SCIPprintSolex(
    else
       objvalue = SCIPsolexGetObj(sol, scip->set, scip->transprob, scip->origprob);
 
-   Rmessage(scip->messagehdlr, file, objvalue);
+   RatMessage(scip->messagehdlr, file, objvalue);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
 
 

@@ -154,7 +154,7 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    assert(sepastoreex != NULL);
    assert(set != NULL);
    assert(cut != NULL);
-   assert(!RisNegInfinity(SCIProwexGetLhs(cut)) || !RisInfinity(SCIProwexGetRhs(cut)));
+   assert(!RatIsNegInfinity(SCIProwexGetLhs(cut)) || !RatIsInfinity(SCIProwexGetRhs(cut)));
    assert(eventqueue != NULL);
    assert(eventfilter != NULL);
 

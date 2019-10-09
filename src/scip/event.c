@@ -90,10 +90,10 @@ SCIP_RETCODE updateLpexBdChg(
       SCIP_Rational* newbound; 
       SCIP_Rational* oldbound; 
 
-      SCIP_CALL( RcreateTemp(set->buffer, &newbound) );
-      SCIP_CALL( RcreateTemp(set->buffer, &oldbound) );
-      RsetReal(newbound, event->data.eventbdchg.newbound);
-      RsetReal(oldbound, event->data.eventbdchg.oldbound);
+      SCIP_CALL( RatCreateBuffer(set->buffer, &newbound) );
+      SCIP_CALL( RatCreateBuffer(set->buffer, &oldbound) );
+      RatSetReal(newbound, event->data.eventbdchg.newbound);
+      RatSetReal(oldbound, event->data.eventbdchg.oldbound);
 
       if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
       {
@@ -115,8 +115,8 @@ SCIP_RETCODE updateLpexBdChg(
          SCIP_CALL( SCIPlpexUpdateVarLbGlobal(lp, set, var, oldbound, newbound) );
       }
 
-      RdeleteTemp(set->buffer, &oldbound);
-      RdeleteTemp(set->buffer, &newbound);
+      RatFreeBuffer(set->buffer, &oldbound);
+      RatFreeBuffer(set->buffer, &newbound);
    }
 
    return SCIP_OKAY;
@@ -1640,10 +1640,10 @@ SCIP_RETCODE SCIPeventProcess(
          SCIP_Rational* newobj; 
          SCIP_Rational* oldobj; 
          
-         SCIP_CALL( RcreateTemp(set->buffer, &newobj) );
-         SCIP_CALL( RcreateTemp(set->buffer, &oldobj) );
-         RsetReal(newobj, event->data.eventobjchg.newobj);
-         RsetReal(oldobj, event->data.eventobjchg.oldobj);
+         SCIP_CALL( RatCreateBuffer(set->buffer, &newobj) );
+         SCIP_CALL( RatCreateBuffer(set->buffer, &oldobj) );
+         RatSetReal(newobj, event->data.eventobjchg.newobj);
+         RatSetReal(oldobj, event->data.eventobjchg.oldobj);
 
          if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
          {
@@ -1651,8 +1651,8 @@ SCIP_RETCODE SCIPeventProcess(
          }
          SCIP_CALL( SCIPlpexUpdateVarObj(lp->lpex, set, var, oldobj, newobj) );
 
-         RdeleteTemp(set->buffer, &oldobj);
-         RdeleteTemp(set->buffer, &newobj);
+         RatFreeBuffer(set->buffer, &oldobj);
+         RatFreeBuffer(set->buffer, &newobj);
       }
 
       /* inform all existing primal solutions about the objective change (only if this is not a temporary change in

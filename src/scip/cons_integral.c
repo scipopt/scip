@@ -131,7 +131,7 @@ SCIP_RETCODE checkIntegralityExact(
    integral = TRUE;
    fpintegral = TRUE;
 
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &solval) );
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &solval) );
 
    /* get all problem variables and integer region in vars array */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbin, &nint, NULL, NULL) );
@@ -142,26 +142,26 @@ SCIP_RETCODE checkIntegralityExact(
       if( SCIPsolIsExactSol(sol) )
          SCIPgetSolexVal(scip, sol, vars[v], solval);
       else
-         RsetReal(solval, SCIPgetSolVal(scip, sol, vars[v]));
+         RatSetReal(solval, SCIPgetSolVal(scip, sol, vars[v]));
 
       assert(SCIPvarGetProbindex(vars[v]) == v);
       assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER );
 
-      if( !RisIntegral(solval) )
+      if( !RatIsIntegral(solval) )
       {
          *result = SCIP_INFEASIBLE;
          if( printreason )
          {
             SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> =",
                SCIPvarGetName(vars[v]));
-            Rmessage(SCIPgetMessagehdlr(scip), NULL, solval);
+            RatMessage(SCIPgetMessagehdlr(scip), NULL, solval);
             SCIPinfoMessage(scip, NULL, "\n");
          }
          integral = FALSE;
       }
    }
 
-   RdeleteTemp(SCIPbuffer(scip), &solval);
+   RatFreeBuffer(SCIPbuffer(scip), &solval);
 
    return SCIP_OKAY;
 }
@@ -405,7 +405,7 @@ SCIP_DECL_CONSCHECKEX(consCheckIntegralExact)
    assert(scip != NULL);
    assert(SCIPisExactSolve(scip));
 
-   SCIP_CALL( RcreateTemp(SCIPbuffer(scip), &solval) );
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &solval) );
 
    SCIPdebugMsg(scip, "Check method of integrality constraint (checkintegrality=%u)\n", checkintegrality);
 
@@ -432,7 +432,7 @@ SCIP_DECL_CONSCHECKEX(consCheckIntegralExact)
          {
             SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> =",
                SCIPvarGetName(vars[v]));
-            Rmessage(SCIPgetMessagehdlr(scip), NULL, solval);
+            RatMessage(SCIPgetMessagehdlr(scip), NULL, solval);
             SCIPinfoMessage(scip, NULL, "\n");
          }
          integral = FALSE;
@@ -443,7 +443,7 @@ SCIP_DECL_CONSCHECKEX(consCheckIntegralExact)
    if( integral && SCIPlpexIsSolved(scip) )
       SCIPoverwriteFPsol(scip, sol->fpsol, sol);
 
-   RdeleteTemp(SCIPbuffer(scip), &solval);
+   RatFreeBuffer(SCIPbuffer(scip), &solval);
 
    if( integral && !inrange )
    {

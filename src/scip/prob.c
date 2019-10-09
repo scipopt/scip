@@ -562,7 +562,7 @@ SCIP_RETCODE SCIPprobTransform(
       {
          SCIP_CALL( SCIPvarCopyExactData(blkmem, targetvar, source->vars[v]) );
          if( source->objsense == SCIP_OBJSEN_MAXIMIZE )
-            Rneg(targetvar->exactdata->obj, targetvar->exactdata->obj);
+            RatNegate(targetvar->exactdata->obj, targetvar->exactdata->obj);
       }
 
       SCIP_CALL( SCIPprobAddVar(*target, blkmem, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
