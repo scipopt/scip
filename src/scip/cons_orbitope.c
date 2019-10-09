@@ -2958,6 +2958,7 @@ SCIP_RETCODE separateConstraints(
 }
 
 
+/** check whether all variables in an orbitope constraint are fixed */
 static
 SCIP_RETCODE checkRedundantCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2999,6 +3000,7 @@ SCIP_RETCODE checkRedundantCons(
    }
 
    *redundant = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -3363,11 +3365,10 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
          SCIPdebugMsg(scip, "orbitope constraint <%s> is redundant: it does not contain active variables\n",
             SCIPconsGetName(conss[c]));
          SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-         assert(!SCIPconsIsActive(conss[c]));
+         assert( ! SCIPconsIsActive(conss[c]) );
          (*ndelconss)++;
          continue;
       }
-
 
       SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixed, conshdlrdata->usedynamicprop) );
       *nfixedvars += nfixed;
