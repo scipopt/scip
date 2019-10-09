@@ -3358,20 +3358,24 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 
       SCIPdebugMsg(scip, "Presolving of orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-      SCIP_CALL( checkRedundantCons(scip, conss[c], &redundant) );
-
-      if ( redundant )
-      {
-         SCIPdebugMsg(scip, "orbitope constraint <%s> is redundant: it does not contain active variables\n",
-            SCIPconsGetName(conss[c]));
-         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-         assert( ! SCIPconsIsActive(conss[c]) );
-         (*ndelconss)++;
-         continue;
-      }
-
+      /* first propagate */
       SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixed, conshdlrdata->usedynamicprop) );
       *nfixedvars += nfixed;
+
+      if ( ! infeasible )
+      {
+         SCIP_CALL( checkRedundantCons(scip, conss[c], &redundant) );
+
+         if ( redundant )
+         {
+            SCIPdebugMsg(scip, "Orbitope constraint <%s> is redundant: it does not contain active variables\n",
+               SCIPconsGetName(conss[c]));
+            SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+            assert( ! SCIPconsIsActive(conss[c]) );
+            (*ndelconss)++;
+            continue;
+         }
+      }
    }
 
    if ( infeasible )
