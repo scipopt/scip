@@ -531,6 +531,45 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects more complex norm expres
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
+/* detects that 7cos(x)^2 - 2*u*y - 2sin(z)^2 <= 0 is no expression */
+Test(nlhdlrsoc, detectandfree8, .description = "detects more complex norm expression")
+{
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+   int i;
+
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: 7*<x>^2 - 2*<y>*<u> - 2*<z>^2 <= 0",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* this also creates the locks */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
+   cr_assert_not(infeasible);
+
+   expr = SCIPgetExprConsExpr(scip, cons);
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < expr->nenfos; ++i )
+   {
+      if( expr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_null(nlhdlrexprdata);
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
 /* disaggregates sqrt( 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) */
 Test(nlhdlrsoc, disaggregation, .description = "detects more complex norm expression")
 {
