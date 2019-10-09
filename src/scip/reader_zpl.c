@@ -111,23 +111,23 @@ SCIP_ReaderData
 
 /** convert between scips_rational and zimpl's numb type */
 static
-SCIP_Rational* RcreateNumb(
+SCIP_RETCODE RcreateNumb(
    BMS_BLKMEM*           mem,
+   SCIP_Rational**       rational,
    const Numb*           numb
    )
 {
    mpq_t temp;
-   SCIP_Rational* rat;
 
    mpq_init(temp);
    numb_get_mpq(numb, temp);
 
    SCIPdebug(gmp_printf("the rational is: %Qd\n",temp));
 
-   rat = RcreateGMP(mem, temp);
+   SCIP_CALL( RcreateGMP(mem, rational, temp) );
    mpq_clear(temp);
 
-   return rat;
+   return SCIP_OKAY;
 }
 
 /** abort the reading with an errormessage; this type of constraint is not supported
@@ -270,20 +270,20 @@ SCIP_RETCODE addConsTerm(
          SCIP_CALL( RcreateString(SCIPblkmem(scip), &ratrhs, "inf") );
          break;
       case CON_LHS:
-         ratlhs = RcreateNumb(SCIPblkmem(scip), lhs);
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratlhs, lhs) );
          SCIP_CALL( RcreateString(SCIPblkmem(scip), &ratrhs, "inf") );
          break;
       case CON_RHS:
-         ratrhs = RcreateNumb(SCIPblkmem(scip), rhs);
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratrhs, rhs) );
          SCIP_CALL( RcreateString(SCIPblkmem(scip), &ratlhs, "-inf") );
          break;
       case CON_RANGE:
-         ratlhs = RcreateNumb(SCIPblkmem(scip), lhs);
-         ratrhs = RcreateNumb(SCIPblkmem(scip), rhs);
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratlhs, lhs) );
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratrhs, rhs) );
          break;
       case CON_EQUAL:
-         ratlhs = RcreateNumb(SCIPblkmem(scip), lhs);
-         ratrhs = RcreateNumb(SCIPblkmem(scip), rhs);
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratlhs, lhs) );
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ratrhs, rhs) );
          assert(RisEqual(ratrhs, ratlhs));
          break;
       default:
@@ -484,7 +484,7 @@ SCIP_RETCODE addConsTerm(
                assert(mono_is_linear(term_get_element(term, i)));
 
                scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
-               scipvalrat = RcreateNumb(SCIPblkmem(scip), mono_get_coeff(term_get_element(term, i)));
+               SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &scipvalrat, mono_get_coeff(term_get_element(term, i))) );
 
                //Rprint(scipvalrat);
 
@@ -1002,7 +1002,7 @@ SCIP_RETCODE addVar(
       switch( bound_get_type(lower) )
       {
       case BOUND_VALUE:
-         lbrat = RcreateNumb(SCIPblkmem(scip), bound_get_value(lower));
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &lbrat, bound_get_value(lower)) );
          lb = RgetRealApprox(lbrat);
          break;
       case BOUND_INFTY:
@@ -1025,7 +1025,7 @@ SCIP_RETCODE addVar(
       switch( bound_get_type(upper) )
       {
       case BOUND_VALUE:
-         ubrat = RcreateNumb(SCIPblkmem(scip), bound_get_value(upper));
+         SCIP_CALL( RcreateNumb(SCIPblkmem(scip), &ubrat, bound_get_value(upper)) );
          ub = RgetRealApprox(ubrat);
          break;
       case BOUND_INFTY:
@@ -1537,7 +1537,7 @@ void xlp_addtocost(
    {
       char str[SCIP_MAXSTRLEN];
 
-      scipvalrat = RcreateNumb(SCIPblkmem(scip), cost);
+      RcreateNumb(SCIPblkmem(scip), &scipvalrat, cost);
       Radd(scipvalrat, scipvalrat, SCIPvarGetObjExact(scipvar));
 
       SCIPdebugMessage("zimpl reader: change obj<%g> of var: add<%g> as approx", SCIPvarGetObj(scipvar),
