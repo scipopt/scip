@@ -118,11 +118,10 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
 void SCIPStpHeurTMCompStarts(
    GRAPH*                graph,              /**< graph data structure */
    int*                  starts,             /**< starting points array */
-   int*                  runs               /**< pointer to number of runs */
+   int*                  runs                /**< pointer to number of runs */
    )
 {
    int r;
-   int k;
    int l;
    int root;
    int nruns;
@@ -146,7 +145,7 @@ void SCIPStpHeurTMCompStarts(
    randval = nnodes - nterms;
 
    /* use non-isolated terminals as starting points for TM heuristic */
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
       if( r >= nruns || r >= nterms )
          break;
@@ -157,7 +156,7 @@ void SCIPStpHeurTMCompStarts(
    }
 
    /* fill empty slots randomly */
-   for( k = 0; k < nnodes && r < nruns; k++ )
+   for( int k = 0; k < nnodes && r < nruns; k++ )
    {
       l = (k + randval) % nnodes;
       if( !Is_term(graph->term[l]) && graph->mark[l] )

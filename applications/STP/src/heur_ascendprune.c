@@ -293,7 +293,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */
    const GRAPH*          g,                  /**< the graph */
    const SCIP_Real*      redcosts,           /**< the reduced costs */
-   int*                  edgearrint,         /**< int edges array to store solution */
+   int*                  result,             /**< int edges array to store solution */
    int*                  nodearrint,         /**< int vertices array for internal computations */
    int                   root,               /**< the root (used for dual ascent) */
    STP_Bool*             nodearrchar,        /**< STP_Bool vertices array for internal computations */
@@ -304,7 +304,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    GRAPH* newgraph;
    SCIP_Real* nval;
    int* const mark = g->mark;
-   int* const newedges = edgearrint;
+   int* const newedges = result;
    int* const nodechild = nodearrint;
    int* edgeancestor;
    const int nnodes = g->knots;
@@ -318,7 +318,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    assert(g != NULL);
    assert(scip != NULL);
    assert(redcosts != NULL);
-   assert(edgearrint != NULL);
+   assert(result != NULL);
    assert(nodearrint != NULL);
    assert(nodearrchar != NULL);
    assert(!pcmw || g->extended);

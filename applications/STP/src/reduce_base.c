@@ -1112,7 +1112,7 @@ SCIP_RETCODE reduceSap(
       if( da )
       {
          SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, fixed, edgearrint, vbase, state, heap, nodearrint,
-               nodearrint2, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE, FALSE) );
+               nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE, FALSE) );
 
          if( danelims <= 2 * redbound )
             da = FALSE;
@@ -1213,7 +1213,7 @@ SCIP_RETCODE reduceNw(
          break;
 
       SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, fixed, edgearrint, vbase, state, heap, nodearrint,
-            nodearrint2, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE, FALSE) );
+            nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE, FALSE) );
 
       if( danelims <= 2 * redbound )
          da = FALSE;
@@ -1651,7 +1651,7 @@ SCIP_RETCODE redLoopPc(
 
          if( rpc )
             SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
-                  nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE, nodereplacing) );
+                  nodearrint, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE, nodereplacing) );
          else
             SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint,
                   state, nodearrchar, &danelims, TRUE, FALSE, FALSE, userec, (rounds == 0), randnumgen, prizesum, nodereplacing) );
@@ -1678,7 +1678,7 @@ SCIP_RETCODE redLoopPc(
          {
             SCIP_Real ub = -1.0;
             SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
-                  nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, FALSE, TRUE, nodereplacing) );
+                  nodearrint, nodearrchar, &danelims, 0, randnumgen, FALSE, TRUE, nodereplacing) );
          }
          else
          {
@@ -1914,7 +1914,7 @@ SCIP_RETCODE redLoopStp(
          {
             SCIP_CALL(
                   reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
-                        nodearrint2, nodearrchar, &danelims, inner_rounds, randnumgen, userec, FALSE, TRUE));
+                        nodearrchar, &danelims, inner_rounds, randnumgen, userec, FALSE, TRUE));
 
             if( danelims <= STP_RED_EXFACTOR * reductbound )
                da = FALSE;
@@ -1980,7 +1980,7 @@ SCIP_RETCODE redLoopStp(
          assert(!rerun);
 
          SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
-                     nodearrint2, nodearrchar, &extendedelims, inner_rounds, randnumgen, userec, TRUE, TRUE) );
+                     nodearrchar, &extendedelims, inner_rounds, randnumgen, userec, TRUE, TRUE) );
 
          reduceStatsPrint(fullreduce, "ext", extendedelims);
 
