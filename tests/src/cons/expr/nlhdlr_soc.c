@@ -132,7 +132,8 @@ void checkData(
    for( i = 0; i < nvars; ++i )
    {
       cr_assert_not_null(nlhdlrexprdata->vars[i]);
-      cr_expect_eq(nlhdlrexprdata->vars[i], vars[i], );
+      cr_expect_eq(nlhdlrexprdata->vars[i], vars[i], "expected variable %d to be %s, but got %s\n",
+         i+1, SCIPvarGetName(vars[i]), SCIPvarGetName(nlhdlrexprdata->vars[i]));
    }
 
    for( i = 0; i < nterms; ++i )
@@ -363,7 +364,7 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects more complex norm expres
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(expr->children[2]);
+   SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(expr->children[2]->children[0]);
    SCIP_VAR* vars[3] = {x, sinauxvar, y};
    SCIP_Real coefs[3] = {2.0, 1.0, 9.0};
    SCIP_Real offsets[3] = {0.0, 0.0, 0.0};

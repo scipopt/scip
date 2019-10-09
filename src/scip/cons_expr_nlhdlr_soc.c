@@ -608,14 +608,6 @@ SCIP_RETCODE detectSocNorm(
 
 /** Helper method to detect c + sum_i coef_i expr_i^2 <= coef_k expr_k^2.
  *  Binary linear variables are interpreted as quadratic terms.
- *
- *  If we find c + sum_i coef_i expr_i^2 <= rhs
- *  with coef_i > 0 for i != k and coef_k < 0,
- *  then we have to check whether coef_k expr_k^2 - c + rhs >= 0, i.e.,
- *  1. (c - rhs) / coef_k >= 0
- *  2. lb(expr_k) >= SQRT((c - rhs) / coef_k).
- *
- *  If these conditions hold, we can "upgrade" it to a SOC.
  */
 static
 SCIP_RETCODE detectSocQuadraticSimple(
@@ -676,6 +668,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
    /* check if all children are squares or binary linear terms */
    for( i = 0; i < nchildren; ++i )
    {
+      SCIP_Real rhslb;
+
       if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr)
          && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
       {
@@ -683,10 +677,11 @@ SCIP_RETCODE detectSocQuadraticSimple(
             continue;
 
          /* second variable with negative coefficient -> no SOC */
-         if( rhsvar != NULL )
+         if( rhsidx != -1 )
             return SCIP_OKAY;
 
-         rhsvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
+         rhslb = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[i])[0]).inf;
+
       }
       else if( SCIPisConsExprExprVar(children[i])
          && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
@@ -695,23 +690,25 @@ SCIP_RETCODE detectSocQuadraticSimple(
             continue;
 
          /* second variable with negative coefficient -> no SOC */
-         if( rhsvar != NULL )
+         if( rhsidx != -1 )
             return SCIP_OKAY;
 
-         rhsvar = SCIPgetConsExprExprVarVar(children[i]);
+         rhslb = 0.0;
       }
       else
       {
          return SCIP_OKAY;
       }
 
+      rhsidx = i;
+
       /* rhs variable and lhs constant have to be non-negative */
-      if( SCIPvarGetLbGlobal(rhsvar) < 0.0 || constant - SCIPvarGetUbGlobal(auxvar) < 0.0 )
+      if( rhslb < 0.0 || constant - SCIPvarGetUbGlobal(auxvar) < 0.0 )
          return SCIP_OKAY;
    }
 
    /* all terms have positive coefficients -> no SOC */
-   if( rhsvar == NULL )
+   if( rhsidx == -1 )
       return SCIP_OKAY;
 
    /* SOC was detected, allocate temporary memory for data to collect */
@@ -744,9 +741,18 @@ SCIP_RETCODE detectSocQuadraticSimple(
          assert(SCIPvarIsBinary(vars[i]));
       }
       else
-         vars[nextentry] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
+      {
+         assert(SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr));
+
+         /* create the necessary auxiliary variable, if not existent yet */
+         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
+               SCIPgetConsExprExprChildren(children[i])[0], &vars[nextentry]) );
+      }
 
       coefs[nextentry] = childcoefs[i];
+
+      assert(vars[nextentry] != NULL);
+      assert(coefs[nextentry] > 0.0);
 
       ++nextentry;
    }
@@ -754,8 +760,12 @@ SCIP_RETCODE detectSocQuadraticSimple(
    assert(nextentry == nchildren-1);
 
    /* add data for the rhs variable */
-   vars[nchildren-1] = rhsvar;
+   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
+         SCIPgetConsExprExprChildren(children[rhsidx])[0], &vars[nchildren-1]) );
+   assert(vars[nchildren-1] != NULL);
+
    coefs[nchildren-1] = -childcoefs[rhsidx];
+   assert(coefs[nchildren-1] > 0.0);
 
    /* create and store nonlinear handler expression data */
    SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx, termbegins, nnonzeroes,
@@ -826,6 +836,11 @@ SCIP_RETCODE detectSOC(
 
    /* check whether expression is given as norm */
    SCIP_CALL( detectSocNorm(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
+
+   if( !(*success) )
+   {
+      SCIP_CALL( detectSocQuadratic(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
+   }
 
    return SCIP_OKAY;
 }
