@@ -235,7 +235,7 @@ SCIP_RETCODE packingUpgrade(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &covered, nvars) );
 
-   for (i = 0l; i < nvars; ++i)
+   for (i = 0; i < nvars; ++i)
       covered[i] = FALSE;
 
    /* get number of cycles in permutation  */
