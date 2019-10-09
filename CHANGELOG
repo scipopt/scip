@@ -77,6 +77,10 @@ Features
   methods are defined. A NULL pointer can be supplied to SCIPaddBendersSubproblem. In this case, no internal Benders'
   cut generation methods can be used.
 
+- Using the parameter "constraints/symresack/checkmonotonicity" one can now decide to upgrade to packing/partitioning
+  symresacks even if the underlying permutation is not monotone.
+
+
 Performance improvements
 ------------------------
 
@@ -285,6 +289,7 @@ Interface changes
   - new parameter "propagating/symmetry/ofsymcomptiming"
   - new parameter "propagating/symmetry/performpresolving"
   - new parameter "propagating/symmetry/recomputerestart"
+  - new parameter "constraints/symresack/checkmonotonicity"
 
 ### Data structures
 
