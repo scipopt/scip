@@ -58,18 +58,6 @@ typedef enum SCIP_RoundModeR SCIP_ROUNDMODER;
  * Creation methods
  */
 
-/** Allocate and create a rational from nominator and denominator */
-EXTERN
-SCIP_Rational* RcreateInt(
-   BMS_BLKMEM*           mem,
-   int                   nom,                /**< the nominator */
-   int                   denom               /**< the denominator */
-   );
-
-/*
- * Creation methods
- */
-
 /** Allocate and create a rational from a string in the format, e.g. "12/35" */
 EXTERN
 SCIP_RETCODE RcreateString(

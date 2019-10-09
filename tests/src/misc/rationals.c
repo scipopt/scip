@@ -58,12 +58,15 @@ Test(rationals, creation, .description = "tests all the different methods to cre
    mpq_set_d(gmpr, 1.2345);
 
    /* create some rationals with different methods*/
-   rno = RcreateNoMem();
-   rstring = RcreateString(blkmem, "1/3");
-   rreal = RcreateReal(blkmem, 1.234236);
-   rinte = RcreateInt(blkmem, 1, 3);
-   rgmp = RcreateGMP(blkmem, gmpr);
-   rarray = RcreateArray(blkmem, 10);
+   RcreateNoMem(&rno);
+   Rcreate(blkmem, &rstring);
+   RsetString(rstring, "1/3");
+   Rcreate(blkmem, &rreal);
+   RsetReal(rreal, 1.234236);
+   Rcreate(blkmem, &rinte);
+   RsetInt(rinte, 1, 3);
+   RcreateGMP(blkmem, &rgmp, gmpr);
+   RcreateArray(blkmem, &rarray, 10);
 
    /* test setter methods */
    RsetInt(rno, testint, 1);
@@ -76,7 +79,7 @@ Test(rationals, creation, .description = "tests all the different methods to cre
 
    /* set to string rep */
    RsetReal(rno, 0.1246912);
-   Rprint(rno);
+   Rprint(rno, NULL);
    printf("%.17e \n", RgetRealApprox(rno));
    cr_assert(RisFpRepresentable(rno), "fp number 0.124691234 not fp representable, approximation is %e");
 
@@ -86,7 +89,7 @@ Test(rationals, creation, .description = "tests all the different methods to cre
    cr_assert(!RisEqualReal(rno, RgetRealApprox(rno)), "approximation of 1/3 should not be the same");
 
    /* test rounding */
-   Rprint(rno);
+   Rprint(rno, NULL);
    printf("printing test approx: %.17e \n", RgetRealApprox(rno));
    printf("rounding down:        %.17e \n", RgetRealRelax(rno, SCIP_ROUND_DOWNWARDS));
    printf("rounding up:          %.17e \n", RgetRealRelax(rno, SCIP_ROUND_UPWARDS));
@@ -120,8 +123,11 @@ Test(rationals, rounding, .description = "tests rational rounding speed")
 
    srand((unsigned int)time(NULL));
 
-   SCIP_Rational* r =  RcreateNoMem();
-   SCIP_Rational* r2 =  RcreateNoMem();
+   SCIP_Rational* r;  
+   SCIP_Rational* r2;
+
+   RcreateNoMem(&r);
+   RcreateNoMem(&r2);
 
    printf("Testing time for performing tasks %d times\n", niterations);
 
@@ -214,14 +220,19 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
 
    BMS_BLKMEM* blkmem = BMScreateBlockMemory(1, 10);
 
-   infpos = RcreateString(blkmem, "inf");
-   infneg = RcreateString(blkmem, "-inf");
+   RcreateString(blkmem, &infpos, "inf");
+   RcreateString(blkmem, &infneg, "-inf");
 
-   r1 = RcreateReal(blkmem, 12.3548934);
-   r2 = RcreateString(blkmem, "123646/1215977400");
-   r3 = RcreateString(blkmem, "1/3");
-   r4 = RcreateString(blkmem, "1/10");
-   r5 = Rcreate(blkmem);
+   Rcreate(blkmem, &r1);
+   Rcreate(blkmem, &r2);
+   Rcreate(blkmem, &r3);
+   Rcreate(blkmem, &r4);
+   Rcreate(blkmem, &r5);
+
+   RsetReal(r1, 12.3548934);
+   RsetString(r2, "123646/1215977400");
+   RsetString(r3, "1/3");
+   RsetString(r4, "1/10");
 
    doub = 12.3548933;
 
@@ -243,7 +254,7 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
 
    Radd(r5, r3, r3);
    doub = RgetRealApprox(r3);
-   Rprint(r5);
+   Rprint(r5, NULL);
    printf("rounding nearest:     %.17e \n", RgetRealRelax(r5, SCIP_ROUND_NEAREST));
    printf("rounding first:       %.17e \n", 2 * doub);
    cr_assert_leq(2 * doub, RgetRealApprox(r5));
@@ -258,14 +269,14 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    RmultReal(r5, r3, 3);
    cr_assert(RisIntegral(r5));
 
-   RtoString(r3, buf);
+   RtoString(r3, buf, strlen(buf));
    printf("Test print 1/3: %s \n", buf);
 
-   RtoString(infpos, buf);
+   RtoString(infpos, buf, SCIP_MAXSTRLEN);
    printf("Test print inf: %s \n", buf);
 
    RsetString(infneg, "-inf");
-   RtoString(infneg, buf);
+   RtoString(infneg, buf, SCIP_MAXSTRLEN);
    printf("Test print -inf: %s \n", buf);
 
    Rdelete(blkmem, &r1);

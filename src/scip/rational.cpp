@@ -146,20 +146,21 @@ SCIP_RETCODE RcreateString(
    char*                 desc                /**< the String describing the rational */
 )
 {
-   BMSallocBlockMemory(mem, rational);
+   SCIP_CALL( Rcreate(mem, rational) );
+
    if( 0 == strcmp(desc, "inf") )
    {
-      new (&(*rational)->r) Rational(1);
+      (*rational)->r  = 1;
       (*rational)->isinf = TRUE;
    }
    else if ( 0 == strcmp(desc, "-inf") )
    {
-      new (&(*rational)->r) Rational(-1);
+      (*rational)->r = -1;
       (*rational)->isinf = TRUE;
    }
    else
    {
-      new (&(*rational)->r) Rational(desc);
+      (*rational)->r  = Rational(desc);
       (*rational)->isinf = FALSE;
    }
    (*rational)->fpexact = SCIP_FPEXACT_UNKNOWN;
@@ -400,7 +401,6 @@ void Rset(
    )
 {
    assert(res != NULL);
-   assert(res->r != NULL);
 
    res->r = src->r;
    res->isinf = src->isinf;
