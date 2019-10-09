@@ -630,6 +630,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    int* termbegins;
    int* nnonzeroes;
    SCIP_Real constant;
+   SCIP_Real lhsconstant;
    int rhsidx;
    int nchildren;
    int ntranscoefs;
@@ -659,9 +660,6 @@ SCIP_RETCODE detectSocQuadraticSimple(
    nchildren = SCIPgetConsExprExprNChildren(expr);
    childcoefs = SCIPgetConsExprExprSumCoefs(expr);
    constant = SCIPgetConsExprExprSumConstant(expr);
-
-   if( constant - SCIPvarGetUbGlobal(auxvar) < 0.0 )
-      return SCIP_OKAY;
 
    /* initialize data */
    rhsvar = NULL;
@@ -697,8 +695,11 @@ SCIP_RETCODE detectSocQuadraticSimple(
             return SCIP_OKAY;
       }
       else if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrProduct(conshdlr)
-         && SCIPgetConsExprExprNChildren(children[i]) )
+         && SCIPgetConsExprExprNChildren(children[i]) == 2 )
       {
+         if( childcoefs[i] > 0.0 )
+            return SCIP_OKAY;
+
          /* second variable with negative coefficient or bilinear term -> no SOC */
          if( rhsidx != -1)
             return SCIP_OKAY;
@@ -722,6 +723,13 @@ SCIP_RETCODE detectSocQuadraticSimple(
    if( rhsidx == -1 )
       return SCIP_OKAY;
 
+   lhsconstant = constant - SCIPvarGetUbGlobal(auxvar);
+   if( ishyperbolic )
+      lhsconstant *= 4.0 / -childcoefs[rhsidx];
+
+   if( lhsconstant < 0.0 )
+      return SCIP_OKAY;
+
    nterms = ishyperbolic ? nchildren + 1 : nchildren;
    ntranscoefs = ishyperbolic ? nchildren + 3 : nchildren;
 
@@ -741,7 +749,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    {
       assert(childcoefs[rhsidx] != 0.0);
 
-      transcoefs[i] = ishyperbolic ? 4.0 / childcoefs[rhsidx] : 1.0;
+      transcoefs[i] = ishyperbolic ? 4.0 / -childcoefs[rhsidx] : 1.0;
       transcoefsidx[i] = i;
       termbegins[i] = i;
       nnonzeroes[i] = 1;
@@ -800,10 +808,10 @@ SCIP_RETCODE detectSocQuadraticSimple(
       nnonzeroes[nterms-2] = 2;
       nnonzeroes[nterms-1] = 2;
 
-      transcoefsidx[ntranscoefs-4] = nchildren-2;
-      transcoefsidx[ntranscoefs-3] = nchildren-1;
-      transcoefsidx[ntranscoefs-2] = nchildren-2;
-      transcoefsidx[ntranscoefs-1] = nchildren-1;
+      transcoefsidx[ntranscoefs-4] = nchildren-1;
+      transcoefsidx[ntranscoefs-3] = nchildren;
+      transcoefsidx[ntranscoefs-2] = nchildren-1;
+      transcoefsidx[ntranscoefs-1] = nchildren;
 
       transcoefs[ntranscoefs-4] = 1.0;
       transcoefs[ntranscoefs-3] = -1.0;
@@ -816,7 +824,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    /* create and store nonlinear handler expression data */
    SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx, termbegins, nnonzeroes,
-         constant - SCIPvarGetUbGlobal(auxvar), nterms, nterms, ntranscoefs, nlhdlrexprdata) );
+         lhsconstant, nterms, nterms, ntranscoefs, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 #ifdef SCIP_DEBUG
