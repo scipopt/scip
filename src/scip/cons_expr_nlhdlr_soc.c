@@ -648,7 +648,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    /* check whether expression is a sum with at least 3 quadratic children */
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr)
-      || SCIPgetConsExprExprNChildren(expr) < 2 )
+      || SCIPgetConsExprExprNChildren(expr) < 3 )
       return SCIP_OKAY;
 
    /* get children of the sum */
@@ -760,8 +760,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
          SCIPgetConsExprExprChildren(children[rhsidx])[0], &vars[nchildren-1]) );
    assert(vars[nchildren-1] != NULL);
 
-   coefs[nchildren-1] = -childcoefs[rhsidx];
-   assert(coefs[nchildren-1] > 0.0);
+   assert(childcoefs[rhsidx] < 0.0);
+   coefs[nchildren-1] = SQRT(-childcoefs[rhsidx]);
 
    /* create and store nonlinear handler expression data */
    SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx, termbegins, nnonzeroes,

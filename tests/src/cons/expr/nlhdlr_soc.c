@@ -127,7 +127,8 @@ void checkData(
    cr_expect_eq(nlhdlrexprdata->nvars, nvars);
    cr_expect_eq(nlhdlrexprdata->nterms, nterms);
    cr_expect_eq(nlhdlrexprdata->ntranscoefs, ntranscoefs);
-   cr_expect_eq(nlhdlrexprdata->constant, constant);
+   cr_expect_eq(nlhdlrexprdata->constant, constant, "expected constant %f, but got %f\n",
+      constant, nlhdlrexprdata->constant);
 
    for( i = 0; i < nvars; ++i )
    {
@@ -366,7 +367,7 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects more complex norm expres
    /* setup expected data */
    SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(expr->children[2]->children[0]);
    SCIP_VAR* vars[3] = {x, sinauxvar, y};
-   SCIP_Real coefs[3] = {2.0, 1.0, 9.0};
+   SCIP_Real coefs[3] = {2.0, 1.0, SQRT(9.0)};
    SCIP_Real offsets[3] = {0.0, 0.0, 0.0};
    SCIP_Real transcoefs[3] = {1.0, 1.0, 1.0};
    int transcoefsidx[3] = {0, 1, 2};
@@ -374,6 +375,97 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects more complex norm expres
 
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 0.0);
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+/* detects 5 - 7cos(x)^2 + y^2 + 2sin(z)^2 <= 4 as soc expression */
+Test(nlhdlrsoc, detectandfree5, .description = "detects more complex norm expression")
+{
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+   int i;
+
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: 5 - 7*cos(<x>)^2 + <y>^2 + 2*sin(<z>)^2 <= 4",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* this also creates the locks */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
+   cr_assert_not(infeasible);
+
+   expr = SCIPgetExprConsExpr(scip, cons);
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < expr->nenfos; ++i )
+   {
+      if( expr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_not_null(nlhdlrexprdata);
+
+   /* setup expected data */
+   SCIP_VAR* cosauxvar = SCIPgetConsExprExprAuxVar(expr->children[1]->children[0]);
+   SCIP_VAR* sinauxvar = SCIPgetConsExprExprAuxVar(expr->children[2]->children[0]);
+   SCIP_VAR* vars[3] = {y, sinauxvar, cosauxvar};
+   SCIP_Real coefs[3] = {1.0, 2.0, SQRT(7.0)};
+   SCIP_Real offsets[3] = {0.0, 0.0, 0.0};
+   SCIP_Real transcoefs[3] = {1.0, 1.0, 1.0};
+   int transcoefsidx[3] = {0, 1, 2};
+   int nnonzeroes[3] = {1, 1, 1};
+
+   /* check nlhdlrexprdata*/
+   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 3, 1);
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+/* detects that -7exp(x)^2 + y^2 - 2sin(z)^2 <= 1 is not a soc expression */
+Test(nlhdlrsoc, detectandfree6, .description = "detects more complex norm expression")
+{
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+   int i;
+
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: - 7*cos(<x>)^2 + <y>^2 - 2*sin(<z>)^2  <= 5",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* this also creates the locks */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
+   cr_assert_not(infeasible);
+
+   expr = SCIPgetConsExprExprChildren(SCIPgetExprConsExpr(scip, cons))[0];
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < expr->nenfos; ++i )
+   {
+      if( expr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_null(nlhdlrexprdata);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
