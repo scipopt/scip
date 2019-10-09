@@ -2958,6 +2958,7 @@ SCIP_RETCODE separateConstraints(
 }
 
 
+/** check whether an orbitope constraint is redundant, i.e., contains only inactive variables */
 static
 SCIP_RETCODE checkRedundantCons(
    SCIP*                 scip,               /**< SCIP data structure */
