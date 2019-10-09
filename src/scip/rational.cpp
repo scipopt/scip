@@ -45,7 +45,7 @@ using std::vector;
 using std::map;
 
 struct SCIP_Rational{
-   Rational* r;
+   Rational r;
    unsigned int isinf:1;
    unsigned int fpexact:2;
 };
@@ -76,7 +76,7 @@ long Rnumerator(
 #ifdef SCIP_WITH_DEBUG_ADAPTOR
    result =  mpz_get_si(&(r->r.backend().value().data())->_mp_num);
 #else
-   result = (boost::multiprecision::numerator(*r->r)).convert_to<long>();
+   result = (boost::multiprecision::numerator(r->r)).convert_to<long>();
 #endif
    return result;
 }
@@ -90,7 +90,7 @@ long Rdenominator(
 #ifdef SCIP_WITH_DEBUG_ADAPTOR
    result mpz_get_si(&(r->r.backend().value().data())->_mp_den);
 #else
-    result = (boost::multiprecision::denominator(*r->r)).convert_to<long>();
+    result = (boost::multiprecision::denominator(r->r)).convert_to<long>();
 #endif
    return result;
 }
@@ -101,11 +101,10 @@ SCIP_RETCODE RcreateNoMem(
 )
 {
    SCIP_ALLOC( BMSallocMemory(rational) );
-   (*rational)->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
 
    (*rational)->isinf = FALSE;
    (*rational)->fpexact = SCIP_FPEXACT_TRUE;
-   new ((*rational)->r) Rational(0);
+   new (&(*rational)->r) Rational(0);
 
    return SCIP_OKAY;
 }
@@ -117,11 +116,10 @@ SCIP_RETCODE Rcreate(
    )
 {
    SCIP_ALLOC( BMSallocBlockMemory(mem, rational) );
-   (*rational)->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
 
    (*rational)->isinf = FALSE;
    (*rational)->fpexact = SCIP_FPEXACT_TRUE;
-   new ((*rational)->r) Rational(0);
+   new (&(*rational)->r) Rational(0);
 
    return SCIP_OKAY;
 }
@@ -133,11 +131,10 @@ SCIP_RETCODE RcreateTemp(
    )
 {
    BMSallocBufferMemory(mem, rational);
-   (*rational)->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
 
    (*rational)->isinf = FALSE;
    (*rational)->fpexact = SCIP_FPEXACT_TRUE;
-   new ((*rational)->r) Rational(0);
+   new (&(*rational)->r) Rational(0);
 
    return SCIP_OKAY;
 }
@@ -150,20 +147,19 @@ SCIP_RETCODE RcreateString(
 )
 {
    BMSallocBlockMemory(mem, rational);
-   (*rational)->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
    if( 0 == strcmp(desc, "inf") )
    {
-      new ((*rational)->r) Rational(1);
+      new (&(*rational)->r) Rational(1);
       (*rational)->isinf = TRUE;
    }
    else if ( 0 == strcmp(desc, "-inf") )
    {
-      new ((*rational)->r) Rational(-1);
+      new (&(*rational)->r) Rational(-1);
       (*rational)->isinf = TRUE;
    }
    else
    {
-      new ((*rational)->r) Rational(desc);
+      new (&(*rational)->r) Rational(desc);
       (*rational)->isinf = FALSE;
    }
    (*rational)->fpexact = SCIP_FPEXACT_UNKNOWN;
@@ -235,31 +231,29 @@ SCIP_RETCODE Rcopy(
    SCIP_Rational*        src                 /**< rational to copy */
    )
 {
-   Rcreate(mem, rational);
+   SCIP_CALL( Rcreate(mem, rational) );
 
    Rset(*rational, src);
+
    return SCIP_OKAY;
 }
 
 
 /** cretae a rational from an mpq_t */
 #ifdef SCIP_WITH_GMP
-SCIP_Rational* RcreateGMP(
+SCIP_RETCODE RcreateGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational**       rational,           /**< pointer to the rational to create */
    mpq_t                 numb                /**< the gmp rational */
    )
 {
-   SCIP_Rational* retrat;
 
-   BMSallocBlockMemory(mem, &retrat);
-   retrat->r = static_cast<Rational*>(BMSallocMemoryCPP(sizeof(Rational)));
-   retrat->isinf = FALSE;
-   new (retrat->r) Rational(numb);
-   retrat->fpexact = SCIP_FPEXACT_UNKNOWN;
+   BMSallocBlockMemory(mem, rational);
+   new (&(*rational)->r) Rational(numb);
+   (*rational)->isinf = FALSE;
+   (*rational)->fpexact = SCIP_FPEXACT_UNKNOWN;
 
-   assert(retrat != NULL);
-
-   return retrat;
+   return SCIP_OKAY;
 }
 
 /** get the underlying mpq_t* */
@@ -270,12 +264,12 @@ SCIP_Rational* RcreateGMP(
    if( r->isinf )
    {
       /** @todo exip: get proper inf value in here */
-      RsetReal(r, 1e20 * r->r->sign());
+      RsetReal(r, 1e20 * r->r.sign());
    }
 #ifdef SCIP_WITH_DEBUG_ADAPTOR
-   return &(r->r->backend().value().data());
+   return &(r->r.backend().value().data());
 #else
-   return &(r->r->backend().data());
+   return &(r->r.backend().data());
 #endif
 }
 
@@ -284,7 +278,7 @@ void RsetGMP(
    const mpq_t           numb
    )
 {
-   *r->r = numb;
+   r->r = numb;
    r->isinf = FALSE;
    r->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
@@ -371,8 +365,7 @@ void RdeleteNoMem(
 {
    assert(*r != NULL);
 
-   (*r)->r->~Rational();
-   BMSfreeMemory(&((*r)->r));
+   (*r)->r.~Rational();
    BMSfreeMemory(r);
 }
 
@@ -384,8 +377,7 @@ void Rdelete(
 {
    assert(*r != NULL);
 
-   (*r)->r->~Rational();
-   BMSfreeMemory(&((*r)->r));
+   (*r)->r.~Rational();
    BMSfreeBlockMemory(mem, r);
 }
 
@@ -397,8 +389,7 @@ void RdeleteTemp(
 {
    assert(*r != NULL);
 
-   (*r)->r->~Rational();
-   BMSfreeMemory(&((*r)->r));
+   (*r)->r.~Rational();
    BMSfreeBufferMemory(mem, r);
 }
 
@@ -411,7 +402,7 @@ void Rset(
    assert(res != NULL);
    assert(res->r != NULL);
 
-   *(res->r) = *(src->r);
+   res->r = src->r;
    res->isinf = src->isinf;
    res->fpexact = src->fpexact;
 }
@@ -426,7 +417,7 @@ void RsetInt(
    assert(res != NULL);
    assert(denom != 0);
 
-   *(res->r) = (nom/denom);
+   res->r = (nom/denom);
    res->isinf = FALSE;
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 
@@ -442,17 +433,17 @@ void RsetString(
 
    if( 0 == strcmp(desc, "inf") )
    {
-      *(res->r) =  1;
+      res->r =  1;
       res->isinf = TRUE;
    }
    else if ( 0 == strcmp(desc, "-inf") )
    {
-      *(res->r) = -1;
+      res->r = -1;
       res->isinf = TRUE;
    }
    else
    {
-      *(res->r) = Rational(desc);
+      res->r = Rational(desc);
       res->isinf = FALSE;
    }
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
@@ -467,7 +458,7 @@ void RsetReal(
    assert(r != NULL);
 
    r->isinf = FALSE;
-   *(r->r) = real;
+   r->r = real;
    r->fpexact = SCIP_FPEXACT_TRUE;
 }
 
@@ -480,7 +471,7 @@ void Rcanonicalize(
    SCIP_Rational*        r                   /**< rational to put in canonical form */
    )
 {
-   mpq_canonicalize((*r->r).backend().data());
+   mpq_canonicalize(r->r.backend().data());
 }
 
 /** add two rationals and save the result in res*/
@@ -495,7 +486,7 @@ void Radd(
    if( op1->isinf || op2->isinf )
    {
       Rset(res, op1->isinf ? op1 : op2 );
-      if( op1->r->sign() != op2->r->sign() && op1->isinf && op2->isinf )
+      if( op1->r.sign() != op2->r.sign() && op1->isinf && op2->isinf )
       {
          SCIPerrorMessage("addition of pos and neg infinity not supported \n");
          SCIPABORT();
@@ -504,7 +495,7 @@ void Radd(
    else
    {
       res->isinf = FALSE;
-      *(res->r) = *(op1->r) + *(op2->r);
+      res->r = op1->r + op2->r;
    }
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
@@ -522,7 +513,7 @@ void RaddReal(
    else
    {
       res->isinf = FALSE;
-      *(res->r) = *(rat->r) + real;
+      res->r = rat->r + real;
    }
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
@@ -539,7 +530,7 @@ void Rdiff(
    if( op1->isinf || op2->isinf )
    {
       op1->isinf ? Rset(res, op1) : Rneg(res, op2);
-      if( op1->r->sign() != op2->r->sign() && op1->isinf && op2->isinf )
+      if( op1->r.sign() != op2->r.sign() && op1->isinf && op2->isinf )
       {
          SCIPerrorMessage("addition of pos and neg infinity not supported \n");
          SCIPABORT();
@@ -548,7 +539,7 @@ void Rdiff(
    else
    {
       res->isinf = FALSE;
-      *(res->r) = (*(op1->r)) - (*(op2->r));
+      res->r = (op1->r) - (op2->r);
    }
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
@@ -567,7 +558,7 @@ void RdiffReal(
    else
    {
       res->isinf = FALSE;
-      *(res->r) = *(rat->r) - real;
+      res->r = rat->r - real;
    }
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
@@ -586,13 +577,13 @@ void RrelDiff(
    assert(res != NULL && val1 != NULL && val2 != NULL);
    assert(!val1->isinf && !val2->isinf);
 
-   absval1 = abs(*(val1->r));
-   absval2 = abs(*(val2->r));
+   absval1 = abs(val1->r);
+   absval2 = abs(val2->r);
    quot = max(absval1, absval2);
    if( 1.0 > quot )
       quot = 1.0;
 
-   *res->r = ((val1->r)-(val2->r))/quot;
+   res->r = ((val1->r)-(val2->r))/quot;
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
 
@@ -607,21 +598,21 @@ void Rmult(
 
    if( op1->isinf || op2->isinf )
    {
-      if( op1->r->is_zero() || op2->r->is_zero() )
+      if( op1->r.is_zero() || op2->r.is_zero() )
       {
-         *(res->r) = 0;
+         res->r = 0;
          res->isinf = FALSE;
       }
       else
       {
          SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
-         *res->r = op1->r->sign() * op2->r->sign();
+         res->r = op1->r.sign() * op2->r.sign();
          res->isinf = TRUE;
       }
    }
    else
    {
-      *(res->r) = *(op1->r) * *(op2->r);
+      res->r = op1->r * op2->r;
       res->isinf = FALSE;
    }
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
@@ -642,7 +633,7 @@ void RmultReal(
        if( op2 == 0.0 )
        {
           res->isinf = FALSE;
-          *(res)->r = 0;
+          res->r = 0;
        }
        else
        {
@@ -651,7 +642,7 @@ void RmultReal(
     }
     else
     {
-       *(res->r) = *(op1->r) * op2;
+       res->r = op1->r * op2;
        res->isinf = FALSE;
     }
     res->fpexact = SCIP_FPEXACT_UNKNOWN;
@@ -669,7 +660,7 @@ void Rdiv(
    assert(!RisZero(op2));
    assert(!op1->isinf && !op2->isinf);
 
-   *res->r = *op1->r / *op2->r;
+   res->r = op1->r / op2->r;
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
 
@@ -699,12 +690,12 @@ void RaddProd(
 
    if( op1->isinf || op2->isinf )
    {
-      if( op1->r->is_zero() || op2->r->is_zero() )
+      if( op1->r.is_zero() || op2->r.is_zero() )
          return;
       else
       {
          SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
-         *res->r = op1->r->sign() * op2->r->sign();
+         res->r = op1->r.sign() * op2->r.sign();
          res->isinf = TRUE;
          res->fpexact = SCIP_FPEXACT_FALSE;
       }
@@ -712,7 +703,7 @@ void RaddProd(
    else
    {
       res->isinf = FALSE;
-      *(res->r) += *(op1->r) * (*(op2->r));
+      res->r += op1->r * op2->r;
    }
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
@@ -729,12 +720,12 @@ void RdiffProd(
 
    if( op1->isinf || op2->isinf )
    {
-      if( op1->r->is_zero() || op2->r->is_zero() )
+      if( op1->r.is_zero() || op2->r.is_zero() )
          return;
       else
       {
          SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
-         *res->r = op1->r->sign() * op2->r->sign();
+         res->r = op1->r.sign() * op2->r.sign();
          res->isinf = TRUE;
          res->fpexact = SCIP_FPEXACT_FALSE;
       }
@@ -742,7 +733,7 @@ void RdiffProd(
    else
    {
       res->isinf = FALSE;
-      *(res->r) -= *(op1->r) * (*(op2->r));
+      res->r -= op1->r * op2->r;
    }
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
@@ -755,7 +746,7 @@ void Rneg(
 {
    assert(res != NULL && op != NULL);
 
-   *(res->r) = -(*(op->r));
+   res->r = -op->r;
    res->isinf = op->isinf;
    res->fpexact = op->fpexact;
 }
@@ -769,7 +760,7 @@ void Rabs(
 {
    assert(res != NULL && op != NULL);
 
-   *(res->r) = abs(*(op->r));
+   res->r = abs(op->r);
    res->isinf = op->isinf;
    res->fpexact = op->fpexact;
 }
@@ -783,9 +774,9 @@ void Rinv(
 {
    assert(res != NULL && op != NULL);
    assert(!op->isinf);
-   assert(!op->r->is_zero());
+   assert(!op->r.is_zero());
 
-   *(res->r) = 1 / *(op->r);
+   res->r = 1 / op->r;
    res->isinf = FALSE;
    res->fpexact = SCIP_FPEXACT_UNKNOWN;
 }
@@ -806,21 +797,21 @@ void Rmin(
 
    if( r1->isinf )
    {
-      if( *(r1->r) > 0 )
+      if( r1->r > 0 )
          Rset(ret, r2);
       else
          Rset(ret, r1);
    }
    else if( r2->isinf )
    {
-      if( *(r2->r) > 0 )
+      if( r2->r > 0 )
          Rset(ret, r1);
       else
          Rset(ret, r2);
    }
    else
    {
-      *(ret->r) = min(*(r1->r), *(r2->r));
+      ret->r = min(r1->r, r2->r);
       ret->isinf = FALSE;
       ret->fpexact = SCIP_FPEXACT_UNKNOWN;
    }
@@ -838,21 +829,21 @@ void Rmax(
 
    if( r1->isinf )
    {
-      if( *(r1->r) > 0 )
+      if( r1->r > 0 )
          Rset(ret, r1);
       else
          Rset(ret, r2);
    }
    else if( r2->isinf )
    {
-      if( *(r2->r) > 0 )
+      if( r2->r > 0 )
          Rset(ret, r2);
       else
          Rset(ret, r1);
    }
    else
    {
-      *(ret->r) = max(*(r1->r), *(r2->r));
+      ret->r = max(r1->r, r2->r);
       ret->isinf = FALSE;
       ret->fpexact = SCIP_FPEXACT_UNKNOWN;
    }
@@ -866,7 +857,7 @@ SCIP_Bool RisEqual(
 {
    assert(r1 != NULL && r2 != NULL);
 
-   if( *(r1->r) == *(r2->r) )
+   if( r1->r == r2->r )
       return (r1->isinf == r2->isinf);
 
    return FALSE;
@@ -880,8 +871,8 @@ SCIP_Bool RisAbsEqual(
 {
    assert(r1 != NULL && r2 != NULL);
 
-   if( abs(*(r1->r)) == abs(*(r2->r)) )
-      return (r1->isinf == r2->isinf);
+   if( abs(r1->r) == abs(r2->r) )
+      return r1->isinf == r2->isinf;
 
    return FALSE;
 }
@@ -894,7 +885,7 @@ SCIP_Bool RisEqualReal(
 {
    assert(r1 != NULL);
 
-   return !r1->isinf && *(r1->r) == r2;
+   return !r1->isinf && r1->r == r2;
 }
 
 /** check if real approx of rational and a real are equal */
@@ -923,23 +914,23 @@ SCIP_Bool RisGT(
 
    if( r1->isinf )
    {
-      if( *(r1->r) < 0 )
+      if( r1->r < 0 )
          return FALSE;
-      else if( r2->isinf && *(r2->r) > 0 )
+      else if( r2->isinf && r2->r > 0 )
          return FALSE;
       else
          return TRUE;
    }
    else if( r2->isinf )
    {
-      if( *(r2->r) > 0 )
+      if( r2->r > 0 )
          return FALSE;
       else
          return TRUE;
    }
    else
    {
-      return *(r1->r) > *(r2->r);
+      return r1->r > r2->r;
    }
 }
 
@@ -956,7 +947,7 @@ SCIP_Bool RisAbsGT(
    else if( r2->isinf )
       return FALSE;
    else
-      return abs(*(r1->r)) > abs(*(r2->r));
+      return abs(r1->r) > abs(r2->r);
 }
 
 /** check if the first rational is smaller than the second*/
@@ -981,23 +972,23 @@ SCIP_Bool RisGE(
 
    if( r1->isinf )
    {
-      if( *(r1->r) > 0 )
+      if( r1->r > 0 )
          return TRUE;
-      else if( r2->isinf && *(r2->r) < 0 )
+      else if( r2->isinf && (r2->r) < 0 )
          return TRUE;
       else
          return FALSE;
    }
    else if( r2->isinf )
    {
-      if( *(r2->r) < 0 )
+      if( r2->r < 0 )
          return TRUE;
       else
          return FALSE;
    }
    else
    {
-      return *(r1->r) >= *(r2->r);
+      return r1->r >= r2->r;
    }
 }
 
@@ -1021,7 +1012,7 @@ SCIP_Bool RisZero(
 {
    assert(r != NULL);
 
-   return r->r->is_zero();
+   return r->r.is_zero();
 }
 
 /** check if the rational is positive */
@@ -1031,7 +1022,7 @@ SCIP_Bool RisPositive(
 {
    assert(r != NULL);
 
-   return r->r->sign() > 0;
+   return r->r.sign() > 0;
 }
 
 /** check if the rational is negative */
@@ -1041,7 +1032,7 @@ SCIP_Bool RisNegative(
 {
    assert(r != NULL);
 
-   return r->r->sign() < 0;
+   return r->r.sign() < 0;
 }
 
 /** check if the rational is positive infinity */
@@ -1051,7 +1042,7 @@ SCIP_Bool RisInfinity(
 {
    assert(r != NULL);
 
-   return r->isinf && r->r->sign() > 0;
+   return r->isinf && r->r.sign() > 0;
 }
 
 /** check if the rational is negative infinity */
@@ -1061,7 +1052,7 @@ SCIP_Bool RisNegInfinity(
 {
    assert(r != NULL);
 
-   return r->isinf && r->r->sign() < 0;
+   return r->isinf && r->r.sign() < 0;
 }
 
 /** check if the rational is negative infinity */
@@ -1070,7 +1061,7 @@ SCIP_Bool RisAbsInfinity(
    )
 {
    assert(r != NULL);
-   assert(!r->r->is_zero() || !r->isinf);
+   assert(!r->r.is_zero() || !r->isinf);
 
    return r->isinf;
 }
@@ -1083,9 +1074,9 @@ SCIP_Bool RisIntegral(
    assert(r != NULL);
 
 #ifdef SCIP_WITH_DEBUG_ADAPTOR
-   return !(r->isinf) && (mpz_cmp_ui(&r->r->backend().value().data()->_mp_den, 1) == 0);
+   return !(r->isinf) && (mpz_cmp_ui(&r->r.backend().value().data()->_mp_den, 1) == 0);
 #else
-   return !(r->isinf) && (mpz_cmp_ui(&r->r->backend().data()->_mp_den, 1) == 0);
+   return !(r->isinf) && (mpz_cmp_ui(&r->r.backend().data()->_mp_den, 1) == 0);
 #endif
 }
 
@@ -1129,14 +1120,14 @@ int RtoString(
 
    if( r->isinf )
    {
-      if( *(r->r) > 0 )
+      if( r->r > 0 )
          ret = SCIPstrncpy(str, "inf", strlen);
       else
          ret = SCIPstrncpy(str, "-inf", strlen);
    }
    else
    {
-      std::string s = r->r->str();
+      std::string s = r->r.str();
       ret = SCIPstrncpy(str, s.c_str(), strlen);
    }
 
@@ -1149,7 +1140,7 @@ const char* RgetString(
    )
 {
    assert(r != NULL);
-   return mpq_get_str(0, 10, r->r->backend().data());
+   return mpq_get_str(0, 10, r->r.backend().data());
 }
 
 /** return the strlen of a rational number */
@@ -1160,13 +1151,13 @@ SCIP_Longint Rstrlen(
    assert(r != NULL);
    if( r->isinf )
    {
-      if( *(r->r) > 0 )
+      if( r->r > 0 )
          return 3;
       else
          return 4;
    }
    else
-      return (SCIP_Longint) r->r->str().length();
+      return (SCIP_Longint) r->r.str().length();
 }
 
 /** print a rational to command line (for debugging) */
@@ -1179,16 +1170,16 @@ void Rprint(
    if( r->isinf )
    {
       if( file == NULL )
-         std::cout << *(r->r) << "inf" << std::endl;
+         std::cout << r->r << "inf" << std::endl;
       else
-         fprintf(file, "%d inf", r->r->sign());
+         fprintf(file, "%d inf", r->r.sign());
    }
    else
    {
       if( file == NULL )
-         std::cout << *(r->r) << std::endl;
+         std::cout << r->r << std::endl;
       else
-         fprintf(file, "%s", r->r->str().c_str());
+         fprintf(file, "%s", r->r.str().c_str());
    }
 }
 
@@ -1202,7 +1193,7 @@ void Rmessage(
    char buf[SCIP_MAXSTRLEN];
    assert(r != NULL);
 
-   SCIPmessageFPrintInfo(msg, file, "%s", r->r->str().c_str());
+   SCIPmessageFPrintInfo(msg, file, "%s", r->r.str().c_str());
 }
 
 /** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
@@ -1218,7 +1209,7 @@ SCIP_Real RgetRealRelax(
    assert(r != NULL);
 
    if( r->isinf )
-      return (r->r->sign() * SCIP_DEFAULT_INFINITY);
+      return (r->r.sign() * SCIP_DEFAULT_INFINITY);
    if( r->fpexact == SCIP_FPEXACT_TRUE || roundmode == SCIP_ROUND_NEAREST )
       return RgetRealApprox(r);
    if( (roundmode == SCIP_ROUND_DOWNWARDS && RisPositive(r)) || ((roundmode == SCIP_ROUND_UPWARDS) && RisNegative(r)) )
@@ -1368,9 +1359,9 @@ SCIP_Real RgetRealApprox(
    assert(r != NULL);
 
    if( r->isinf )
-      return (r->r->sign() * SCIP_DEFAULT_INFINITY);
+      return (r->r.sign() * SCIP_DEFAULT_INFINITY);
 
-   return mpq_get_d(r->r->backend().data());
+   return mpq_get_d(r->r.backend().data());
 }
 
 void testNumericsRational(
@@ -1568,9 +1559,9 @@ void SCIPrationalarrayGetVal(
    assert(idx >= 0);
    auto search = rationalarray->vals.find(idx);
    if(  search != rationalarray->vals.end() )
-      *(result->r) = search->second;
+      result->r = search->second;
    else
-      *(result->r) = 0;
+      result->r = 0;
 }
 
 /** sets value of entry in dynamic array */
@@ -1583,7 +1574,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    assert(rationalarray != NULL);
    assert(idx >= 0);
 
-   rationalarray->vals[idx] = (*(val->r));
+   rationalarray->vals[idx] = val->r;
 
    return SCIP_OKAY;
 }
@@ -1600,7 +1591,7 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
    if( RisZero(incval) )
       return SCIP_OKAY;
    else
-      rationalarray->vals[idx] += *(incval->r);
+      rationalarray->vals[idx] += incval->r;
 
    return SCIP_OKAY;
 }

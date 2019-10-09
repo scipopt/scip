@@ -130,8 +130,9 @@ SCIP_RETCODE Rcreate(
 #ifdef SCIP_WITH_GMP
 /** create a rational from an mpq_t */
 EXTERN
-SCIP_Rational* RcreateGMP(
+SCIP_RETCODE RcreateGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational**       rational,            /**< pointer to the rational to create */
     mpq_t           numb                /**< the mpq_rational */
    );
 
