@@ -632,8 +632,11 @@ SCIP_RETCODE detectSocQuadraticSimple(
    SCIP_Real constant;
    int rhsidx;
    int nchildren;
+   int ntranscoefs;
+   int nterms;
    int nextentry;
    int i;
+   SCIP_Bool ishyperbolic;
 
    assert(conshdlr != NULL);
    assert(expr != NULL);
@@ -657,26 +660,30 @@ SCIP_RETCODE detectSocQuadraticSimple(
    childcoefs = SCIPgetConsExprExprSumCoefs(expr);
    constant = SCIPgetConsExprExprSumConstant(expr);
 
+   if( constant - SCIPvarGetUbGlobal(auxvar) < 0.0 )
+      return SCIP_OKAY;
+
    /* initialize data */
    rhsvar = NULL;
    rhsidx = -1;
+   ishyperbolic = FALSE;
 
    /* check if all children are squares or binary linear terms */
    for( i = 0; i < nchildren; ++i )
    {
-      SCIP_Real rhslb;
-
       if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr)
          && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
       {
          if( childcoefs[i] > 0.0 )
             continue;
 
-         /* second variable with negative coefficient -> no SOC */
+         /* second variable with negative coefficient or bilinear term -> no SOC */
          if( rhsidx != -1 )
             return SCIP_OKAY;
 
-         rhslb = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[i])[0]).inf;
+         /* rhs variable is not non-negative -> no SOC */
+         if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[i])[0]).inf < 0.0 )
+            return SCIP_OKAY;
 
       }
       else if( SCIPisConsExprExprVar(children[i])
@@ -685,11 +692,23 @@ SCIP_RETCODE detectSocQuadraticSimple(
          if( childcoefs[i] > 0.0 )
             continue;
 
-         /* second variable with negative coefficient -> no SOC */
+         /* second variable with negative coefficient or bilinear term -> no SOC */
          if( rhsidx != -1 )
             return SCIP_OKAY;
+      }
+      else if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrProduct(conshdlr)
+         && SCIPgetConsExprExprNChildren(children[i]) )
+      {
+         /* second variable with negative coefficient or bilinear term -> no SOC */
+         if( rhsidx != -1)
+            return SCIP_OKAY;
 
-         rhslb = 0.0;
+         /* one of the expressions in the bilinear term is not non-negative -> no SOC */
+         if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[i])[0]).inf < 0.0
+            || SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[i])[1]).inf < 0.0 )
+            return SCIP_OKAY;
+
+         ishyperbolic = TRUE;
       }
       else
       {
@@ -697,34 +716,34 @@ SCIP_RETCODE detectSocQuadraticSimple(
       }
 
       rhsidx = i;
-
-      /* rhs variable and lhs constant have to be non-negative */
-      if( rhslb < 0.0 || constant - SCIPvarGetUbGlobal(auxvar) < 0.0 )
-         return SCIP_OKAY;
    }
 
-   /* all terms have positive coefficients -> no SOC */
+   /* all terms have positive coefficients adn no bilinear term -> no SOC */
    if( rhsidx == -1 )
       return SCIP_OKAY;
 
+   nterms = ishyperbolic ? nchildren + 1 : nchildren;
+   ntranscoefs = ishyperbolic ? nchildren + 3 : nchildren;
+
    /* SOC was detected, allocate temporary memory for data to collect */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &offsets, nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nnonzeroes, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nterms) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &offsets, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, ntranscoefs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, ntranscoefs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nnonzeroes, nterms) );
 
    *success = TRUE;
    nextentry = 0;
 
    for( i = 0; i < nchildren; ++i )
    {
-      transcoefs[i] = 1.0;
+      assert(childcoefs[rhsidx] != 0.0);
+
+      transcoefs[i] = ishyperbolic ? 4.0 / childcoefs[rhsidx] : 1.0;
       transcoefsidx[i] = i;
       termbegins[i] = i;
-      offsets[i] = 0.0;
       nnonzeroes[i] = 1;
 
       /* variable and coef for rhs has to be set to the last entry */
@@ -755,17 +774,49 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    assert(nextentry == nchildren-1);
 
-   /* add data for the rhs variable */
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
-         SCIPgetConsExprExprChildren(children[rhsidx])[0], &vars[nchildren-1]) );
-   assert(vars[nchildren-1] != NULL);
+   if (!ishyperbolic )
+   {
+      /* add data for the rhs variable */
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
+            SCIPgetConsExprExprChildren(children[rhsidx])[0], &vars[nchildren-1]) );
+      assert(vars[nchildren-1] != NULL);
 
-   assert(childcoefs[rhsidx] < 0.0);
-   coefs[nchildren-1] = SQRT(-childcoefs[rhsidx]);
+      assert(childcoefs[rhsidx] < 0.0);
+      coefs[nchildren-1] = SQRT(-childcoefs[rhsidx]);
+   }
+   else
+   {
+      /* add data for variables coming from bilinear term */
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
+            SCIPgetConsExprExprChildren(children[rhsidx])[0], &vars[nchildren-1]) );
+      assert(vars[nchildren-1] != NULL);
+
+      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
+            SCIPgetConsExprExprChildren(children[rhsidx])[1], &vars[nchildren]) );
+      assert(vars[nchildren] != NULL);
+
+      termbegins[nterms-1] = ntranscoefs-2;
+
+      nnonzeroes[nterms-2] = 2;
+      nnonzeroes[nterms-1] = 2;
+
+      transcoefsidx[ntranscoefs-4] = nchildren-2;
+      transcoefsidx[ntranscoefs-3] = nchildren-1;
+      transcoefsidx[ntranscoefs-2] = nchildren-2;
+      transcoefsidx[ntranscoefs-1] = nchildren-1;
+
+      transcoefs[ntranscoefs-4] = 1.0;
+      transcoefs[ntranscoefs-3] = -1.0;
+      transcoefs[ntranscoefs-2] = 1.0;
+      transcoefs[ntranscoefs-1] = 1.0;
+
+      coefs[nterms-2] = 1.0;
+      coefs[nterms-1] = 1.0;
+   }
 
    /* create and store nonlinear handler expression data */
    SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx, termbegins, nnonzeroes,
-         constant - SCIPvarGetUbGlobal(auxvar), nchildren, nchildren, nchildren, nlhdlrexprdata) );
+         constant - SCIPvarGetUbGlobal(auxvar), nterms, nterms, ntranscoefs, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 #ifdef SCIP_DEBUG
