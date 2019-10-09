@@ -457,7 +457,7 @@ Test(nlhdlrsoc, detectandfree6, .description = "detects more complex norm expres
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
    cr_assert_not(infeasible);
 
-   expr = SCIPgetConsExprExprChildren(SCIPgetExprConsExpr(scip, cons))[0];
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* find the nlhdlr expr data */
    for( i = 0; i < expr->nenfos; ++i )
