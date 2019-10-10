@@ -2089,7 +2089,7 @@ SCIP_RETCODE reduce_da(
    SCIP_CALL( daOrderRoots(scip, graph, terms, nFixedTerms, (prevrounds > 0), randnumgen) );
    assert(nruns > 0);
 
-   if( rpc ) graph_pc_2trans(graph);
+   if( rpc ) graph_pc_2transcheck(graph);
 
    for( int outerrounds = 0; outerrounds < 2; outerrounds++ )
    {

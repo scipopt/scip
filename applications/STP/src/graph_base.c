@@ -50,6 +50,62 @@
  * local functions
  */
 
+
+
+/** traverses the graph from vertex 'start' and marks all reached nodes */
+static
+SCIP_RETCODE trail(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< the new graph */
+   int                   start,              /**< node to start from */
+   SCIP_Bool             costAware,          /**< be cost aware? */
+   SCIP_Bool*            nodevisited         /**< marks which node has been visited */
+   )
+{
+   int* stackarr;
+   int stacksize;
+   const int nnodes = g->knots;
+
+   for( int i = 0; i < nnodes; i++ )
+      nodevisited[i] = FALSE;
+
+   nodevisited[start] = TRUE;
+
+   if( g->grad[start] == 0 )
+      return SCIP_OKAY;
+
+   stacksize = 0;
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &stackarr, nnodes));
+
+   stackarr[stacksize++] = start;
+
+   /* DFS loop */
+   while( stacksize != 0 )
+   {
+      const int node = stackarr[--stacksize];
+
+      /* traverse outgoing arcs */
+      for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
+      {
+         const int head = g->head[a];
+
+         if( !nodevisited[head] )
+         {
+            if( costAware && SCIPisGE(scip, g->cost[a], FARAWAY) )
+               continue;
+
+            nodevisited[head] = TRUE;
+            stackarr[stacksize++] = head;
+         }
+      }
+   }
+   SCIPfreeBufferArray(scip, &stackarr);
+
+   return SCIP_OKAY;
+}
+
+
 /** can edge in pseudo-elimination method be cut off? */
 inline static
 SCIP_Bool isCutoffEdge(
@@ -5445,110 +5501,39 @@ SCIP_RETCODE graph_pack(
 }
 
 
-/** traverse the graph and mark all reached nodes (g->mark[i] has to be FALSE for all i) */
-void graph_trail(
-   const GRAPH*          g,                  /**< the new graph */
-   int                   i                   /**< node to start from */
-   )
-{
-   int* gmark;
-
-   assert(g      != NULL);
-   assert(i      >= 0);
-   assert(i      <  g->knots);
-
-   gmark = g->mark;
-
-   if( !gmark[i] )
-   {
-      SCIP_QUEUE* queue;
-      int a;
-      int head;
-      int node;
-      int* pnode;
-
-      gmark[i] = TRUE;
-
-      if( g->grad[i] == 0 )
-         return;
-
-      SCIP_CALL_ABORT( SCIPqueueCreate(&queue, g->knots, 1.1) );
-      SCIP_CALL_ABORT( SCIPqueueInsert(queue, &i));
-
-      /* BFS loop */
-      while( !SCIPqueueIsEmpty(queue) )
-      {
-         pnode = (SCIPqueueRemove(queue));
-         node = *pnode;
-
-         /* traverse outgoing arcs */
-         for( a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
-         {
-            head = g->head[a];
-
-            if( !gmark[head] )
-            {
-               gmark[head] = TRUE;
-               SCIP_CALL_ABORT(SCIPqueueInsert(queue, &(g->head[a])));
-            }
-         }
-      }
-      SCIPqueueFree(&queue);
-   }
-}
-
-
-/** traverse the graph and mark all reached nodes (g->mark[i] has to be FALSE for all i) .... uses an array and should be faster
- *  than graph_trail, but needs a scip */
+/** traverses the graph from vertex 'start' and marks all reached nodes */
 SCIP_RETCODE graph_trail_arr(
-   SCIP*                 scip,               /**< scip struct */
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< the new graph */
    int                   start,              /**< node to start from */
    SCIP_Bool*            nodevisited         /**< marks which node has been visited */
    )
 {
-   int* stackarr;
-   int stacksize;
-   const int nnodes = g->knots;
-
    assert(g && scip && nodevisited);
    assert(start >= 0 && start < g->knots);
 
-   for( int i = 0; i < nnodes; i++ )
-      nodevisited[i] = FALSE;
-
-   nodevisited[start] = TRUE;
-
-   if( g->grad[start] == 0 )
-      return SCIP_OKAY;
-
-   stacksize = 0;
-
-   SCIP_CALL(SCIPallocBufferArray(scip, &stackarr, nnodes));
-
-   stackarr[stacksize++] = start;
-
-   /* DFS loop */
-   while( stacksize != 0 )
-   {
-      const int node = stackarr[--stacksize];
-
-      /* traverse outgoing arcs */
-      for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
-      {
-         const int head = g->head[a];
-
-         if( !nodevisited[head] )
-         {
-            nodevisited[head] = TRUE;
-            stackarr[stacksize++] = head;
-         }
-      }
-   }
-   SCIPfreeBufferArray(scip, &stackarr);
+   trail(scip, g, start, FALSE, nodevisited);
 
    return SCIP_OKAY;
 }
+
+
+/** traverses the graph and marks all reached nodes, does not take edge of cost >= FARAWAY */
+SCIP_RETCODE graph_trail_costAware(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< the new graph */
+   int                   start,              /**< node to start from */
+   SCIP_Bool*            nodevisited         /**< marks which node has been visited */
+   )
+{
+   assert(g && scip && nodevisited);
+   assert(start >= 0 && start < g->knots);
+
+   trail(scip, g, start, TRUE, nodevisited);
+
+   return SCIP_OKAY;
+}
+
 
 /** checks whether all terminals are reachable from root */
 SCIP_RETCODE graph_termsReachable(
@@ -5795,6 +5780,7 @@ SCIP_Bool graph_valid(
             npterms++;
          }
       }
+
       if( nterms != npterms || nterms != g->terms - 1 )
       {
          if( !rooted )
@@ -5804,7 +5790,22 @@ SCIP_Bool graph_valid(
             goto EXIT;
          }
       }
-   }
+
+      if( rooted )
+      {
+         SCIP_CALL_ABORT( graph_trail_costAware(scip, g, g->source, nodevisited) );
+
+         for( int k = 0; k < nnodes; k++ )
+         {
+            if( graph_pc_knotIsFixedTerm(g, k) && !nodevisited[k] )
+            {
+               SCIPdebugMessage("disconnected fixed terminal %d \n", k);
+               isValid = FALSE;
+               goto EXIT;
+            }
+         }
+      }
+   } /* is PC/MW */
 
 
    EXIT:

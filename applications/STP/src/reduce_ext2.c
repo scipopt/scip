@@ -1897,7 +1897,6 @@ SCIP_RETCODE reduce_extendedEdge2(
          {
             graph_edge_delFull(scip, graph, e, TRUE);
             reduce_distDataDeleteEdge(scip, graph, e, &distdata);
-
             if( graph->grad[tail] == 0 )
                graph->mark[tail] = FALSE;
 
