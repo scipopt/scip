@@ -57,7 +57,7 @@ Build system
 Fixed bugs
 ----------
 
-- fixed issue in SCIPtightenVarLb and SCIPtightenVarUb that occurs for small bound changes
+- fixed issue in SCIPtightenVar* and SCIPinferVar* that occurs for small bound changes
 - fixed rejecting minimal boundchange that changed sign of variable, even though SCIPisLb/UbBetter approved it
 - fixed issue in generateCutNonConvex() which is triggered when adding quadratic constraints during the solving process
 - fixed bug in freeing the reoptimization data if no problem exists
