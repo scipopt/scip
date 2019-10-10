@@ -91,6 +91,7 @@
 
 #define DEFAULT_PPSYMRESACK        TRUE /**< whether we allow upgrading to packing/partitioning symresacks */
 #define DEFAULT_CHECKMONOTONICITY  TRUE /**< check whether permutation is monotone when upgrading to packing/partitioning symresacks */
+
 /* macros for getting bounds of pseudo solutions in propagation */
 #define ISFIXED0(x)   (SCIPvarGetUbLocal(x) < 0.5 ? TRUE : FALSE)
 #define ISFIXED1(x)   (SCIPvarGetLbLocal(x) > 0.5 ? TRUE : FALSE)
@@ -138,8 +139,7 @@ struct SCIP_ConsData
 static
 SCIP_RETCODE consdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA**       consdata,           /**< pointer to symresack constraint data */
-   SCIP_Bool             checkmonotonicity   /**< whether we check in upgrading to packing/partitioning symresacks for monotonicity */
+   SCIP_CONSDATA**       consdata            /**< pointer to symresack constraint data */
    )
 {
    int nvars;
@@ -165,10 +165,9 @@ SCIP_RETCODE consdataFree(
 
    if ( (*consdata)->ndescentpoints > 0 )
    {
-      assert( checkmonotonicity );
       assert( (*consdata)->descentpoints != NULL );
 
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->descentpoints), (*consdata)->ndescentpoints);
+      SCIPfreeBlockMemoryArray(scip, &((*consdata)->descentpoints), (*consdata)->ndescentpoints);
    }
 
    if ( (*consdata)->ppupgrade )
@@ -238,7 +237,7 @@ SCIP_RETCODE packingUpgrade(
    for (i = 0; i < nvars; ++i)
       covered[i] = FALSE;
 
-   /* get number of cycles in permutation  */
+   /* get number of cycles in permutation */
    for (i = 0; i < nvars; ++i)
    {
       /* skip checked indices */
@@ -284,8 +283,7 @@ SCIP_RETCODE packingUpgrade(
 
    /* compute cycle decomposition: row i stores in entry 0 the length of the cycle,
     * the remaining entries are the coordinates in the cycle;
-    * store descent points as well if permutation is not monotne
-    */
+    * store descent points as well if permutation is not monotone */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cycledecomposition, ncycles) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &descentpoints, ndescentpoints) );
    for (i = 0; i < ncycles; ++i)
@@ -421,7 +419,7 @@ SCIP_RETCODE packingUpgrade(
       (*consdata)->cycledecomposition = cycledecomposition;
       (*consdata)->ndescentpoints = ndescentpoints;
       (*consdata)->descentpoints = descentpoints;
-      printf("ADDED MONOTONE PP SYMRESACK\n");
+      SCIPdebugMsg(scip, "added monotone PP symresack.\n");
 
       SCIPfreeBufferArray(scip, &indicesincycle);
       SCIPfreeBufferArray(scip, &covered);
@@ -713,12 +711,12 @@ SCIP_RETCODE initLP(
       }
       else
       {
+         SCIP_Real* coeffs;
+         SCIP_VAR** varsincons;
          int* imgdescentpoints;
          int* descentpoints;
          int* perm;
          int ndescentpoints;
-         SCIP_Real* coeffs;
-         SCIP_VAR** varsincons;
          int lastascent = 0;
          int newlastascent = 0;
          int nvarsincons = 1;
@@ -726,8 +724,6 @@ SCIP_RETCODE initLP(
          descentpoints = consdata->descentpoints;
          ndescentpoints = consdata->ndescentpoints;
          perm = consdata->perm;
-         vars = consdata->vars;
-         nvars = consdata->nvars;
 
          assert( descentpoints != NULL );
          assert( ndescentpoints > 0 );
@@ -1503,17 +1499,12 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopySymresack)
 static
 SCIP_DECL_CONSDELETE(consDeleteSymresack)
 {   /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( consdata != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   SCIP_CALL( consdataFree(scip, consdata, conshdlrdata->checkmonotonicity) );
+   SCIP_CALL( consdataFree(scip, consdata) );
 
    return SCIP_OKAY;
 }
