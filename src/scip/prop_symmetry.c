@@ -1978,15 +1978,15 @@ SCIP_RETCODE computeSymmetryGroup(
    *success = TRUE;
 
    /* free matrix data */
-   SCIPfreeBlockMemoryArray(scip, &uniquevararray, norigvars);
+   SCIPfreeBlockMemoryArray(scip, &uniquevararray, nvarsorig);
 
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoefcolors, matrixdata.nrhscoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoefcolors, matrixdata.nmatcoef);
-   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, norigvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvarsorig);
    SCIPhashtableFree(&vartypemap);
 
    if ( usecolumnsparsity )
-      SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, norigvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvarsorig);
 
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
