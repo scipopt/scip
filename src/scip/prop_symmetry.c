@@ -1954,6 +1954,7 @@ SCIP_RETCODE computeSymmetryGroup(
             *npermvars = *nmovedvars;
 
             SCIPfreeBufferArray(scip, &compressedpermvars);
+            SCIPfreeBlockMemoryArray(scip, &vars, nvars);
          }
          else
          {
