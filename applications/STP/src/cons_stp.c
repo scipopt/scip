@@ -1461,6 +1461,8 @@ SCIP_RETCODE dualascent_init(
          if( i != root )
          {
             SCIP_Real warmstart = FALSE;
+            assert(k < g->terms - 1);
+
             gnodearr[k]->number = i;
             gnodearr[k]->dist = g->grad[i];
 
@@ -2131,7 +2133,6 @@ SCIP_RETCODE SCIPStpDualAscent(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
-   SCIP_Real* RESTRICT   nodearrreal,        /**< real vertices array for internal computations or NULL */
    SCIP_Real*            objval,             /**< pointer to store objective value */
    SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
    SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
@@ -2141,8 +2142,7 @@ SCIP_RETCODE SCIPStpDualAscent(
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
    SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
-   SCIP_Real             damaxdeviation,     /**< maximum deviation for dual-ascent ( -1.0 for default) */
-   STP_Bool* RESTRICT    nodearrchar         /**< STP_Bool vertices array for internal computations or NULL */
+   SCIP_Real             damaxdeviation      /**< maximum deviation for dual-ascent ( -1.0 for default) */
    )
 {
    SCIP_CONSHDLR* conshdlr = NULL;
@@ -2682,15 +2682,11 @@ SCIP_RETCODE SCIPStpDualAscent(
        SCIP_Bool success;
        STP_Bool* RESTRICT mynodearrchar = NULL;
 
-       if( nodearrchar == NULL )
-          SCIP_CALL( SCIPallocBufferArray(scip, &mynodearrchar, nnodes) );
-       else
-          mynodearrchar = nodearrchar;
+       SCIP_CALL( SCIPallocBufferArray(scip, &mynodearrchar, nnodes) );
 
        SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, g, rescap, unsatarcs, cutverts, root, mynodearrchar, &success, TRUE) );
 
-       if( nodearrchar == NULL )
-          SCIPfreeBufferArray(scip, &mynodearrchar);
+       SCIPfreeBufferArray(scip, &mynodearrchar);
    }
 
    if( edgearrint == NULL )

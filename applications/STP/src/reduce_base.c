@@ -563,7 +563,6 @@ SCIP_RETCODE reduceStp(
 {
    PATH* vnoi;
    PATH* path;
-   GNODE** gnodearr;
    SCIP_Real*  nodearrreal;
    SCIP_Real*  edgearrreal;
    SCIP_Real*  edgearrreal2;
@@ -573,7 +572,6 @@ SCIP_RETCODE reduceStp(
    int*    nodearrint;
    int*    edgearrint;
    int*    nodearrint2;
-   int     i;
    int     nnodes;
    int     nedges;
    int     nterms;
@@ -591,19 +589,6 @@ SCIP_RETCODE reduceStp(
 
    if( SCIPisLE(scip, (double) nterms / (double) nnodes, 0.03) )
       bred = TRUE;
-
-   if( dualascent )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
-      for( i = 0; i < nterms - 1; i++ )
-      {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &gnodearr[i]) ); /*lint !e866*/
-      }
-   }
-   else
-   {
-      gnodearr = NULL;
-   }
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
@@ -630,7 +615,7 @@ SCIP_RETCODE reduceStp(
    reductbound = MAX(nedges / 1000, minelims);
 
    /* reduction loop */
-   SCIP_CALL( redLoopStp(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, edgearrreal2, heap, state,
+   SCIP_CALL( redLoopStp(scip, g, vnoi, path, nodearrreal, edgearrreal, edgearrreal2, heap, state,
          vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, -1.0, dualascent, bred, nodereplacing, reductbound, userec, (dualascent && userec)) );
 
    SCIPdebugMessage("Reduction Level 1: Fixed Cost = %.12e\n", *fixed);
@@ -648,13 +633,6 @@ SCIP_RETCODE reduceStp(
    SCIPfreeBufferArray(scip, &heap);
    SCIPfreeBufferArray(scip, &nodearrchar);
    SCIPfreeBufferArray(scip, &edgearrint);
-
-   if( gnodearr != NULL )
-   {
-      for( i = nterms - 2; i >= 0; i-- )
-         SCIPfreeBlockMemory(scip, &gnodearr[i]);
-      SCIPfreeBufferArray(scip, &gnodearr);
-   }
 
    return SCIP_OKAY;
 }
@@ -1026,7 +1004,6 @@ SCIP_RETCODE reduceSap(
    SCIP_Real*  nodearrreal;
    SCIP_Real*  edgearrreal;
    SCIP_Real*  edgearrreal2;
-   GNODE** gnodearr;
    int*    heap;
    int*    state;
    int*    vbase;
@@ -1034,10 +1011,8 @@ SCIP_RETCODE reduceSap(
    int*    edgearrint;
    int*    nodearrint2;
    int     e;
-   int     i;
    int     nnodes;
    int     nedges;
-   int     nterms;
    int     degtnelims;
    int     redbound;
    STP_Bool    da = TRUE;
@@ -1051,16 +1026,9 @@ SCIP_RETCODE reduceSap(
 
    nnodes = g->knots;
    nedges = g->edges;
-   nterms = g->terms;
 
    redbound = MAX(nnodes / 1000, minelims);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
-   for( i = 0; i < nterms - 1; i++ )
-   {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &gnodearr[i]) ); /*lint !e866*/
-   }
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
@@ -1111,7 +1079,7 @@ SCIP_RETCODE reduceSap(
 
       if( da )
       {
-         SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, fixed, edgearrint, vbase, state, heap, nodearrint,
+         SCIP_CALL( reduce_da(scip, g, vnoi, edgearrreal, edgearrreal2, nodearrreal, &ub, fixed, edgearrint, vbase, state, heap, nodearrint,
                nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE, FALSE) );
 
          if( danelims <= 2 * redbound )
@@ -1134,10 +1102,6 @@ SCIP_RETCODE reduceSap(
    SCIPfreeBufferArray(scip, &nodearrchar);
    SCIPfreeBufferArray(scip, &edgearrint);
 
-   for( i = nterms - 2; i >= 0; i-- )
-      SCIPfreeBlockMemory(scip, &gnodearr[i]);
-   SCIPfreeBufferArray(scip, &gnodearr);
-
    /* free random number generator */
    SCIPfreeRandom(scip, &randnumgen);
 
@@ -1159,17 +1123,14 @@ SCIP_RETCODE reduceNw(
    SCIP_Real*  edgearrreal2;
    SCIP_Real   ub = FARAWAY;
    SCIP_Real   timelimit;
-   GNODE** gnodearr;
    int*    heap;
    int*    state;
    int*    vbase;
    int*    nodearrint;
    int*    edgearrint;
    int*    nodearrint2;
-   int     i;
    int     nnodes;
    int     nedges;
-   int     nterms;
    int     redbound;
 
    STP_Bool*   nodearrchar;
@@ -1181,16 +1142,9 @@ SCIP_RETCODE reduceNw(
 
    nnodes = g->knots;
    nedges = g->edges;
-   nterms = g->terms;
 
    redbound = MAX(nnodes / 1000, minelims);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
-   for( i = 0; i < nterms - 1; i++ )
-   {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &gnodearr[i]) ); /*lint !e866*/
-   }
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
@@ -1212,7 +1166,7 @@ SCIP_RETCODE reduceNw(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
-      SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, fixed, edgearrint, vbase, state, heap, nodearrint,
+      SCIP_CALL( reduce_da(scip, g, vnoi, edgearrreal, edgearrreal2, nodearrreal, &ub, fixed, edgearrint, vbase, state, heap, nodearrint,
             nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE, FALSE) );
 
       if( danelims <= 2 * redbound )
@@ -1230,10 +1184,6 @@ SCIP_RETCODE reduceNw(
    SCIPfreeBufferArray(scip, &heap);
    SCIPfreeBufferArray(scip, &nodearrchar);
    SCIPfreeBufferArray(scip, &edgearrint);
-
-   for( i = nterms - 2; i >= 0; i-- )
-      SCIPfreeBlockMemory(scip, &gnodearr[i]);
-   SCIPfreeBufferArray(scip, &gnodearr);
 
    /* free random number generator */
    SCIPfreeRandom(scip, &randnumgen);
@@ -1650,7 +1600,7 @@ SCIP_RETCODE redLoopPc(
          SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
 
          if( rpc )
-            SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
+            SCIP_CALL( reduce_da(scip, g, vnoi, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
                   nodearrint, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE, nodereplacing) );
          else
             SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint,
@@ -1677,7 +1627,7 @@ SCIP_RETCODE redLoopPc(
          if( rpc )
          {
             SCIP_Real ub = -1.0;
-            SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
+            SCIP_CALL( reduce_da(scip, g, vnoi, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
                   nodearrint, nodearrchar, &danelims, 0, randnumgen, FALSE, TRUE, nodereplacing) );
          }
          else
@@ -1759,7 +1709,6 @@ SCIP_RETCODE redLoopStp(
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
    PATH*                 path,               /**< path data structure */
-   GNODE**               gnodearr,           /**< nodes-sized array  */
    SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
    SCIP_Real*            edgearrreal,        /**< edges-sized array  */
    SCIP_Real*            edgearrreal2,       /**< edges-sized array  */
@@ -1913,7 +1862,7 @@ SCIP_RETCODE redLoopStp(
          if( da )
          {
             SCIP_CALL(
-                  reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
+                  reduce_da(scip, g, vnoi, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
                         nodearrchar, &danelims, inner_rounds, randnumgen, userec, FALSE, TRUE));
 
             if( danelims <= STP_RED_EXFACTOR * reductbound )
@@ -1979,7 +1928,7 @@ SCIP_RETCODE redLoopStp(
 
          assert(!rerun);
 
-         SCIP_CALL( reduce_da(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
+         SCIP_CALL( reduce_da(scip, g, vnoi, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap, nodearrint,
                      nodearrchar, &extendedelims, inner_rounds, randnumgen, userec, TRUE, TRUE) );
 
          reduceStatsPrint(fullreduce, "ext", extendedelims);

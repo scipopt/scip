@@ -746,7 +746,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, state,
                vbase, nodearrint, edgearrint, nodearrint2, heap, NULL, nodearrchar, &offset, FALSE, FALSE, FALSE, reductbound, FALSE) );
       else
-         SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
+         SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, nodearrreal, cost, costrev, heap, state,
                vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, FALSE, FALSE) );
    }
 
@@ -844,7 +844,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, state,
                   vbase, nodearrint, edgearrint, nodearrint2, heap, solnode, nodearrchar, &offset, FALSE, FALSE, FALSE, reductbound, FALSE) );
          else
-            SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state, vbase, nodearrint, edgearrint,
+            SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, nodearrreal, cost, costrev, heap, state, vbase, nodearrint, edgearrint,
                   nodearrint2, solnode, nodearrchar, &offset, -1.0, FALSE, FALSE, TRUE, reductbound, FALSE, FALSE));
 
          /* delete all vertices not reachable from the root */

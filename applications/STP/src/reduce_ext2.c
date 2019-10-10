@@ -1864,7 +1864,7 @@ SCIP_RETCODE reduce_extendedEdge2(
          if( SCIPisZero(scip, redcost[e]) && SCIPisZero(scip, redcost[erev]) )
             continue;
 
-#if 0
+#ifdef CHECK_ARC
          if( !edgedeletable[e] )
          {
             SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata, edgedeletable,
@@ -1906,9 +1906,11 @@ SCIP_RETCODE reduce_extendedEdge2(
       }
    }
 
-   // todo edgedeletable is not valid anymore, because all inroot arcs are being marked as deleted...
+#ifdef CHECK_ARC
+   // edgedeletable is not valid anymore, because all inroot arcs are being marked as deleted...
    for( int e = 0; e < nedges; e++ )
       edgedeletable[e] = FALSE;
+#endif
 
    SCIPfreeBufferArray(scip, &bottleneckDist);
    SCIPfreeBufferArray(scip, &tree_deg);

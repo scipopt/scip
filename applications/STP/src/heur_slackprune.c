@@ -642,7 +642,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    /* perform initial reductions? */
    if( reducegraph )
    {
-      SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
+      SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, nodearrreal, cost, costrev, heap, state,
             vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, TRUE, fullreduce) );
    }
 
@@ -715,7 +715,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       reductbound = getRedBound(i, anedges);
 
       /* reduce graph, using the new upper bound and not letting BND eliminate solution edges */
-      SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, NULL, nodearrreal, cost, costrev, heap, state,
+      SCIP_CALL( redLoopStp(scip, prunegraph, vnoi, path, nodearrreal, cost, costrev, heap, state,
             vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew, -1.0, TRUE, FALSE, TRUE, reductbound, TRUE, fullreduce) );
 
       /* graph vanished? */
