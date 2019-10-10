@@ -73,6 +73,7 @@ set(settings_MIP
     "heurlprows"
     "lns_epsgreedy_vanilla"
     "lns_exp3"
+    "vanillafullstrong"
 #    "dynamic"
     "intobj"
 #    "nologicor"
