@@ -195,7 +195,7 @@ SEEDSBND=$(expr ${SEEDS} + ${GLBSEEDSHIFT})
 PERMUTEBND=$(expr ${PERMUTE} + ${STARTPERM})
 
 SEED=${GLBSEEDSHIFT}
-while [ ${SEED} -le ${SEEDSBND} ]; do
+while [ "${SEED}" -le "${SEEDSBND}" ]; do
   # get ending given by seed
   if [ "${SEED}" == "0" ]; then
     SEED_ENDING=""
@@ -203,7 +203,7 @@ while [ ${SEED} -le ${SEEDSBND} ]; do
     SEED_ENDING="-s${SEED}"
   fi
   PERM=${STARTPERM}
-  while [ ${PERM} -le ${PERMUTEBND} ]; do
+  while [ "${PERM}" -le "${PERMUTEBND}" ]; do
     # get ending given by permutation
     if [ "${PERM}" == "0" ]; then
       PERM_ENDING=""
@@ -335,6 +335,9 @@ ${SCIP_HEADER}
 
 SETTINGS FILE:
 ${SETFILE}
+
+BINARY:
+${PWD}/${EXECUTABLE}
 \`\`\`
 
 Here is a list of the instances and the assertion that fails (fails with _fail (abort)_), if any:
@@ -452,9 +455,9 @@ elif [ "${PERFORMANCE}" == "mergerequest" ]; then
   COMPAREIDS=""
 
   COUNT_S=${GLBSEEDSHIFT}
-  while [ ${COUNT_S} -le ${SEEDSBND} ]; do
+  while [ "${COUNT_S}" -le "${SEEDSBND}" ]; do
     COUNT_P=${STARTPERM}
-    while [ ${COUNT_P} -le ${PERMUTEBND} ]; do
+    while [ "${COUNT_P}" -le "${PERMUTEBND}" ]; do
       RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${FULLGITHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB} | grep -P "p=${COUNT_P} s=${COUNT_S}")
       if [ "${RBDB_STRS}" != "" ]; then
         if [ 2 -le $(echo "${RBDB_STRS}" |wc -l) ]; then
