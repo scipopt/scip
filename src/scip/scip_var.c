@@ -5519,7 +5519,8 @@ SCIP_RETCODE SCIPinferVarLbCons(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the lower bound improved */
+   if( tightened != NULL && lb < SCIPcomputeVarLbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -5632,7 +5633,8 @@ SCIP_RETCODE SCIPinferVarUbCons(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the upper bound improved */
+   if( tightened != NULL && ub > SCIPcomputeVarUbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -5912,7 +5914,8 @@ SCIP_RETCODE SCIPinferVarLbProp(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the lower bound improved */
+   if( tightened != NULL && lb < SCIPcomputeVarLbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -6026,7 +6029,8 @@ SCIP_RETCODE SCIPinferVarUbProp(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
-   if( tightened != NULL )
+   /* check whether the upper bound improved */
+   if( tightened != NULL && ub > SCIPcomputeVarUbLocal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -6249,7 +6253,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    }  /*lint !e788*/
 
    /* coverity: unreachable code */
-   if( tightened != NULL )
+   if( tightened != NULL && lb < SCIPcomputeVarLbGlobal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
@@ -6369,7 +6373,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    }  /*lint !e788*/
 
    /* coverity: unreachable code */
-   if( tightened != NULL )
+   if( tightened != NULL && ub > SCIPcomputeVarUbGlobal(scip, var) )
       *tightened = TRUE;
 
    return SCIP_OKAY;
