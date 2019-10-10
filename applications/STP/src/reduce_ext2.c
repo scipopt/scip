@@ -588,9 +588,7 @@ SCIP_Real extTreeGetBottleneckDist_marked(
       SCIP_Real bottleneck_local = 0.0;
       const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
-      currentNode = parentNode[vertex_unmarked];
-
-      assert(currentNode >= 0);
+      assert(parentNode[vertex_unmarked] >= 0);
 
       for( currentNode = vertex_unmarked; bottleneckDist_node[currentNode] < -0.5; currentNode = parentNode[currentNode] )
       {
@@ -604,7 +602,7 @@ SCIP_Real extTreeGetBottleneckDist_marked(
             if( pcmw && Is_term(graph->term[currentNode]) )
             {
                assert(graph_pc_termIsNonLeaf(graph, currentNode) && graph->prize[currentNode] > 0.0);
-               bottleneck_local += graph->prize[currentNode];
+               bottleneck_local -= graph->prize[currentNode];
             }
          }
          else
