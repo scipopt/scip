@@ -4419,8 +4419,8 @@ SCIP_DECL_CONSPROP(consPropVarbound)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
-   int nchgbds;
-   int nchgsides;
+   int nchgbds = 0;
+   int nchgsides = 0;
    int i;
 
    assert(conshdlr != NULL);
