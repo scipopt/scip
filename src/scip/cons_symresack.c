@@ -747,8 +747,8 @@ SCIP_RETCODE initLP(
          /* iteratively generate coefficient vector: the first entry is the descent point j and the remaining entries
           * are the corresponding ascent points less than perm[j]
           */
-         SCIP_CALL( SCIPallocCleanBufferArray(scip, &coeffs, nvars) );
-         SCIP_CALL( SCIPallocCleanBufferArray(scip, &varsincons, nvars) );
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &coeffs, nvars) );
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &varsincons, nvars) );
          coeffs[0] = 1.0;
          for (j = 0; j < ndescentpoints; ++j)
          {
