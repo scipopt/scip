@@ -5928,6 +5928,8 @@ SCIP_RETCODE enforceExprNlhdlr(
 
       SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &sepasuccess, addbranchscores, conshdlrdata->lastbrscoretag, &branchscoresuccess) );
 
+      /* TODO handle auxvalue == SCIP_INVALID below */
+
       if( sepasuccess )
       {
          /* complete estimator to cut */

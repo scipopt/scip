@@ -1072,9 +1072,6 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvex)
    return SCIP_OKAY;
 }
 
-static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex);
-
 /** estimator callback */
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
@@ -1151,18 +1148,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
       SCIPaddRowprepConstant(rowprep, -deriv * varval);
    }
 
-   if( !*success )
-   {
-      /* branching scores are meant to be added if that would help to improve the estimator,
-       * but that would never be the case for convex
-       * TODO for now still register branchscores if we failed to estimate, but maybe we should never do this?
-       *   there is still the fallback in cons-expr that would just add any unfixed variable as branching candidate
-       */
-      SCIP_CALL( nlhdlrBranchscoreConvex(scip, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, brscoretag, addedbranchscores) );
-
-      return SCIP_OKAY;
-   }
-
    /* next add f(sol) */
    SCIPaddRowprepConstant(rowprep, auxvalue);
    rowprep->local = FALSE;
@@ -1179,51 +1164,16 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 static
 SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
 { /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* nlexpr;
-   SCIP_CONSEXPR_EXPR* origexpr;
-   SCIP_Real violation;
-   int i;
-
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(nlhdlrexprdata != NULL);
    assert(success != NULL);
-
-   nlexpr = nlhdlrexprdata->nlexpr;
-   assert(nlexpr != NULL);
-
-   assert(SCIPgetConsExprExprAuxVar(expr) != NULL);
-   assert(auxvalue == SCIPgetConsExprExprValue(nlexpr)); /* given auxvalue should have been computed by nlhdlrEvalAuxConvex */  /*lint !e777*/
 
    *success = FALSE;
 
-   /* we separate only convex functions here, so there should be little use for branching
+   /* we separate only convex functions here, so there is no use for branching
     * if violations are small or there are numerical issues, then we will not have generated a cut, though
-    * in that case, we will still branch, that is, register branchscores for all depending var exprs
+    * in that case, we will still branch, but can also rely on the fallbacks in consexpr for this
     */
-
-   /* compute violation */
-   if( auxvalue == SCIP_INVALID ) /*lint !e777*/
-      violation = SCIPinfinity(scip); /* evaluation error -> we should branch */
-   else if( SCIPgetConsExprExprCurvature(nlexpr) == SCIP_EXPRCURV_CONVEX  )
-      violation = auxvalue - SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
-   else
-      violation = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) - auxvalue;
-
-   /* if violation is not on the side that we need to enforce, then no need for branching */
-   if( violation <= 0.0 )
-      return SCIP_OKAY;
-
-   /* register violation as branchscore in all leafs */
-   for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
-   {
-      origexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlexpr);
-      assert(origexpr != NULL);
-
-      SCIPaddConsExprExprBranchScore(scip, origexpr, brscoretag, violation);
-   }
-
-   *success = TRUE;
 
    return SCIP_OKAY;
 }
