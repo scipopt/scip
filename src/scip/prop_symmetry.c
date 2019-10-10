@@ -2609,39 +2609,39 @@ SCIP_RETCODE addSymresackConss(
          ++propdata->nsymresacks;
          ++nsymresackcons;
       }
-      SCIPdebugMsg(scip, "Added %d symresack constraints.\n", nsymresackcons);
-
-      return SCIP_OKAY;
    }
-
-   /* loop through components */
-   for (i = 0; i < ncomponents; ++i)
+   else
    {
-      /* skip components that were treated by different symmetry handling techniques */
-      if ( propdata->componentblocked[i] )
-         continue;
-
-      /* loop through perms in component i and add symresack constraints */
-      for (p = componentbegins[i]; p < componentbegins[i + 1]; ++p)
+      /* loop through components */
+      for (i = 0; i < ncomponents; ++i)
       {
-         SCIP_CONS* cons;
-         int permidx;
-         char name[SCIP_MAXSTRLEN];
+         /* skip components that were treated by different symmetry handling techniques */
+         if ( propdata->componentblocked[i] )
+            continue;
 
-         permidx = components[p];
+         /* loop through perms in component i and add symresack constraints */
+         for (p = componentbegins[i]; p < componentbegins[i + 1]; ++p)
+         {
+            SCIP_CONS* cons;
+            int permidx;
+            char name[SCIP_MAXSTRLEN];
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_component%d_perm%d", i, permidx);
-         SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[permidx], permvars, npermvars, FALSE,
-               conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            permidx = components[p];
 
-         SCIP_CALL( SCIPaddCons(scip, cons) );
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_component%d_perm%d", i, permidx);
+            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[permidx], permvars, npermvars, FALSE,
+                  conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-         /* do not release constraint here - will be done later */
-         propdata->genconss[propdata->ngenconss++] = cons;
-         ++propdata->nsymresacks;
-         ++nsymresackcons;
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+
+            /* do not release constraint here - will be done later */
+            propdata->genconss[propdata->ngenconss++] = cons;
+            ++propdata->nsymresacks;
+            ++nsymresackcons;
+         }
       }
    }
+
    SCIPdebugMsg(scip, "Added %d symresack constraints.\n", nsymresackcons);
 
    return SCIP_OKAY;

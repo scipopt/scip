@@ -2958,7 +2958,7 @@ SCIP_RETCODE separateConstraints(
 }
 
 
-/** check whether an orbitope constraint is redundant, i.e., contains only inactive variables */
+/** check whether all variables in an orbitope constraint are fixed */
 static
 SCIP_RETCODE checkRedundantCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3000,6 +3000,7 @@ SCIP_RETCODE checkRedundantCons(
    }
 
    *redundant = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -3348,7 +3349,10 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   /* propagate all useful constraints */
+   /* propagate all useful constraints
+    *
+    * @todo use an event handler to only propagate if a variable in the orbitope has been fixed
+    */
    for (c = 0; c < nconss && !infeasible; ++c)
    {
       int nfixed = 0;
@@ -3357,21 +3361,24 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
 
       SCIPdebugMsg(scip, "Presolving of orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-      SCIP_CALL( checkRedundantCons(scip, conss[c], &redundant) );
-
-      if ( redundant )
-      {
-         SCIPdebugMsg(scip, "orbitope constraint <%s> is redundant: it does not contain active variables\n",
-            SCIPconsGetName(conss[c]));
-         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-         assert(!SCIPconsIsActive(conss[c]));
-         (*ndelconss)++;
-         continue;
-      }
-
-
+      /* first propagate */
       SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixed, conshdlrdata->usedynamicprop) );
       *nfixedvars += nfixed;
+
+      if ( ! infeasible )
+      {
+         SCIP_CALL( checkRedundantCons(scip, conss[c], &redundant) );
+
+         if ( redundant )
+         {
+            SCIPdebugMsg(scip, "Orbitope constraint <%s> is redundant: it does not contain active variables\n",
+               SCIPconsGetName(conss[c]));
+            SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+            assert( ! SCIPconsIsActive(conss[c]) );
+            (*ndelconss)++;
+            continue;
+         }
+      }
    }
 
    if ( infeasible )
