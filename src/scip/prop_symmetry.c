@@ -1917,45 +1917,43 @@ SCIP_RETCODE computeSymmetryGroup(
       percentagemovedvars = (SCIP_Real) *nmovedvars / (SCIP_Real) nvars;
       if ( *nmovedvars > 0 && compresssymetries && SCIPisLE(scip, percentagemovedvars, compressionthreshold) )
       {
-         int** compressedperms;
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &compressedperms, *nperms) );
+         int* compressedperm;
+         SCIP_CALL( SCIPallocBufferArray(scip, &compressedperm, *nmovedvars) );
          for (i = 0; i < *nperms; ++i)
          {
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &compressedperms[i], *nmovedvars) );
             for (j = 0; j < matrixdata.npermvars; ++j)
             {
                if ( labelmovedvars[j] != -1 )
-                  compressedperms[i][labelmovedvars[j]] = labelmovedvars[(*perms)[i][j]];
+                  compressedperm[labelmovedvars[j]] = labelmovedvars[(*perms)[i][j]];
             }
+
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*perms)[i], *npermvars, *nmovedvars) );
+            for (j = 0; j < *nmovedvars; ++j)
+               (*perms)[i][j] = compressedperm[j];
          }
 
-         /* discard uncompressed permutations */
-         for (i = 0; i < *nperms; ++i)
-            SCIPfreeBlockMemoryArray(scip, &(*perms)[i], matrixdata.npermvars);
-         SCIPfreeBlockMemoryArray(scip, perms, *nperms);
-
-         *perms = compressedperms;
+         SCIPfreeBufferArray(scip, &compressedperm);
       }
 
       if ( *nperms > 0 )
       {
-         /* copy variables */
+         /* remove variables from permvars array that are not affected by any symmetry */
          if ( compresssymetries && SCIPisLE(scip, percentagemovedvars, compressionthreshold) )
          {
-            /* only variables affected by some symmetry have to be copied */
             SCIP_VAR** compressedpermvars;
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &compressedpermvars, *nmovedvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &compressedpermvars, *nmovedvars) );
             for (i = 0; i < matrixdata.npermvars; ++i)
             {
                if ( labelmovedvars[i] != -1 )
                   compressedpermvars[labelmovedvars[i]] = vars[i];
             }
 
-            *permvars = compressedpermvars;
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, permvars, *npermvars, *nmovedvars) );
+            for (i = 0; i < *nmovedvars; ++i)
+               (*permvars)[i] = compressedpermvars[i];
             *npermvars = *nmovedvars;
 
-            /* discard all variables present at time of symmetry computation */
-            SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+            SCIPfreeBufferArray(scip, &compressedpermvars);
          }
          else
          {
