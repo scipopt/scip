@@ -1929,7 +1929,7 @@ SCIP_RETCODE computeSymmetryGroup(
                   compressedperm[labelmovedvars[j]] = labelmovedvars[(*perms)[i][j]];
             }
 
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*perms)[i], *npermvars, *nmovedvars) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*perms)[i], nvars, *nmovedvars) );
             for (j = 0; j < *nmovedvars; ++j)
                (*perms)[i][j] = compressedperm[j];
          }
@@ -1950,7 +1950,7 @@ SCIP_RETCODE computeSymmetryGroup(
                   compressedpermvars[labelmovedvars[i]] = vars[i];
             }
 
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, permvars, *npermvars, *nmovedvars) );
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, permvars, *nmovedvars) );
             for (i = 0; i < *nmovedvars; ++i)
                (*permvars)[i] = compressedpermvars[i];
             *npermvars = *nmovedvars;
