@@ -159,6 +159,7 @@ SCIP_RETCODE runVanillaStrongBranching(
       SCIP_Bool downinf, upinf;
       SCIP_Bool downconflict, upconflict;
       SCIP_Bool lperror;
+      SCIP_Real gains[3];
       SCIP_Real score;
 
       var = cands[c];
@@ -225,10 +226,10 @@ SCIP_RETCODE runVanillaStrongBranching(
       }
 
       /* compute strong branching score */
-      if( integral )
-         score = SCIPgetBranchScore(scip, var, MIN(downgain, upgain), 0.0);
-      else
-         score = SCIPgetBranchScore(scip, var, downgain, upgain);
+      gains[0] = downgain;
+      gains[1] = upgain;
+      gains[2] = 0.0;
+      score = SCIPgetBranchScoreMultiple(scip, var, integral ? 3 : 2, gains);
 
       /* collect scores if requested */
       if( scores != NULL )
