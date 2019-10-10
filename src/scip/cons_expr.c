@@ -225,6 +225,7 @@ struct SCIP_ConshdlrData
    int                      reformbinprodsfac; /**< minimum number of terms to reformulate bilinear binary products by factorizing variables (<= 1: disabled) */
    SCIP_Bool                tightenlpfeastol;/**< whether to tighten LP feasibility tolerance during enforcement, if it seems useful */
    SCIP_Bool                propinenforce;   /**< whether to (re)run propagation in enforcement */
+   SCIP_Real                weakcutthreshold;/**< threshold for when to regard a cut from an estimator as weak */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -5935,23 +5936,34 @@ SCIP_RETCODE enforceExprNlhdlr(
          cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
          if( cutviol > 0.0 )
          {
-            /* SCIP_Real estimateval; */
-
-            /* cutviol is estimator value - auxvar value, so can restore estimator value */
-            /* estimateval = cutviol + auxvarval; */
-
-            /* assuming the estimator is c'x-b, the auxvar is z, and the expression is f(x)
-             * then we should have z <= c'x-b <= f(x)
-             * cutviol is z - c'x-b
-             * if the estimator value (c'x-b) is closer to z (auxvarvalue) then to f(x) (auxvalue), then let's call this a weak cut
-             * when linearizing convex expressions, this usually doesn't happen, since then c'x-b = f(x)
-             * TODO the 0.5 could become a parameter
-             * TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example)
-             */
-            if( !allowweakcuts && cutviol < 0.5 * (auxvalue - SCIPgetSolVal(scip, sol, auxvar)) )
+            /* check whether cut is weak */
+            if( !allowweakcuts )
             {
-               SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak\n", SCIPgetConsExprNlhdlrName(nlhdlr));
-               sepasuccess = FALSE;
+               SCIP_Real auxvarvalue;
+               /* SCIP_Real estimateval; */
+               /* cutviol is estimator value - auxvar value, so can restore estimator value */
+               /* estimateval = cutviol + auxvarval; */
+
+               /* let the estimator be c'x-b, the auxvar is z (=auxvarvalue), and the expression is f(x) (=auxvalue)
+                * then if we are underestimating and since the cut is violated, we should have z <= c'x-b <= f(x)
+                * cutviol is c'x-b - z
+                * if the estimator value (c'x-b) is too close to z (auxvarvalue), when compared to f(x) (auxvalue), then let's call this a weak cut
+                * that is, it's a weak cut if c'x-b <= z + weakcutthreshold * (f(x)-z)
+                *   <->   c'x-b - z <= weakcutthreshold * (f(x)-z)
+                *
+                * if we are overestimating, we have z >= c'x-b >= f(x), cutviol is z - (c'x-b)
+                * it's weak if c'x-b >= z - (1-weakcutthreshold) * (z - f(x))
+                *   <->   c'x-b - z >= (1-weakcutthreshold) * (f(x)-z)
+                *
+                * when linearizing convex expressions, then we should have c'x-b = f(x), so they would never be weak
+                */
+               auxvarvalue = SCIPgetSolVal(scip, sol, auxvar);
+               if( (!overestimate && (cutviol <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
+                   ( overestimate && (cutviol >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
+               {
+                  SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak\n", SCIPgetConsExprNlhdlrName(nlhdlr));
+                  sepasuccess = FALSE;
+               }
             }
          }
          else
@@ -5969,14 +5981,23 @@ SCIP_RETCODE enforceExprNlhdlr(
           */
          if( !allowweakcuts )
          {
+            SCIP_Real auxvarvalue;
+
             SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
 
-            /* if cut is weak now, then skip */
-            if( cutviol < 0.5 * (auxvalue - SCIPgetSolVal(scip, sol, auxvar)) )
+            auxvarvalue = SCIPgetSolVal(scip, sol, auxvar);
+            if( (!overestimate && (cutviol <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
+                ( overestimate && (cutviol >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
+            {
+               /* if cut is weak now, then skip */
+               SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak after cleanup\n", SCIPgetConsExprNlhdlrName(nlhdlr));
                sepasuccess = FALSE;
+            }
          }
          else
          {
+            /* TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example) */
+
             /* if estimate didn't report branchscores explicitly, then consider branching on those children for which the following cleanup
              * changes coefficients (we had/have this in cons_expr_sum this way)
              */
@@ -13122,6 +13143,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/propinenforce",
          "whether to (re)run propagation in enforcement",
          &conshdlrdata->propinenforce, TRUE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/weakcutthreshold",
+         "threshold for when to regard a cut from an estimator as weak (lower values allow more weak cuts)",
+         &conshdlrdata->weakcutthreshold, TRUE, 0.5, 0.0, 1.0, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
