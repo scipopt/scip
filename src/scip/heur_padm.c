@@ -87,7 +87,6 @@
 #define HEUR_USESSUBSCIP TRUE                  /**< does the heuristic use a secondary SCIP instance? */
 
 #define COUPLINGSIZE 3
-#define MAX_ADM_ITERATIONS 12
 
 /*
  * Data structures
@@ -178,6 +177,7 @@ static SCIP_DECL_HASHKEYVAL(indexesHashval)
 /** primal heuristic data */
 struct SCIP_HeurData
 {
+   int                   admiterations;
    SCIP_Real             gap;
    SCIP_Bool             scaling;
    SCIP_Bool             assignlinking;
@@ -776,10 +776,10 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    nblocks = SCIPdecompGetNBlocks(decomp);
 
    /* if problem has no constraints or no variables, return */
-   if (nconss == 0 || nvars == 0)
+   if( nconss == 0 || nvars == 0 )
    {
       SCIPdebugMsg(scip, "problem has no constraints or no variables\n");
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
 #if 0
@@ -1110,7 +1110,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       aIter = 0;
 
       /*  Alternating direction method loop */
-      while (solutionsdiffer && aIter < MAX_ADM_ITERATIONS)
+      while( solutionsdiffer && aIter < heurdata->admiterations )
       {
          aIter++;
          solutionsdiffer = FALSE;
@@ -1582,11 +1582,11 @@ TERMINATE:
 
 /** creates the PADM primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurPADM(
-    SCIP *scip /**< SCIP data structure */
+    SCIP*                scip                /**< SCIP data structure */
 )
 {
-   SCIP_HEURDATA *heurdata;
-   SCIP_HEUR *heur;
+   SCIP_HEURDATA* heurdata;
+   SCIP_HEUR* heur;
 
    /* create PADM primal heuristic data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
@@ -1598,9 +1598,9 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    /* use SCIPincludeHeurBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
-   SCIP_CALL(SCIPincludeHeurBasic(scip, &heur,
+   SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
                                   HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                                  HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecPADM, heurdata));
+                                  HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecPADM, heurdata) );
 
    assert(heur != NULL);
 
@@ -1613,6 +1613,9 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolPADM) );
 
    /* add padm primal heuristic parameters */
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/admiterations",
+      "maximal number of ADM iterations in each penalty loop", &heurdata->admiterations, TRUE, 12, 0, 100, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gap",
       "mipgap at start", &heurdata->gap, TRUE, 8.0, 0.0, 16.0, NULL, NULL) );
 
