@@ -4429,7 +4429,6 @@ SCIP_DECL_CONSPROP(consPropVarbound)
    assert(conshdlrdata != NULL);
 
    cutoff = FALSE;
-   nchgbds = 0;
 
    SCIPdebugMsg(scip, "propagating %d variable bound constraints\n", nmarkedconss);
 
