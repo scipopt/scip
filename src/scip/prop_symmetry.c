@@ -1276,6 +1276,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int nactiveconss;
    int nconss;
    int nvars;
+   int nvarsorig;
    int nallvars;
    int c;
    int j;
@@ -1302,6 +1303,7 @@ SCIP_RETCODE computeSymmetryGroup(
 
    nconss = SCIPgetNConss(scip);
    nvars = SCIPgetNVars(scip);
+   nvarsorig = nvars;
 
    /* exit if no constraints or no variables are available */
    if ( nconss == 0 || nvars == 0 )
@@ -1976,15 +1978,15 @@ SCIP_RETCODE computeSymmetryGroup(
    *success = TRUE;
 
    /* free matrix data */
-   SCIPfreeBlockMemoryArray(scip, &uniquevararray, nvars);
+   SCIPfreeBlockMemoryArray(scip, &uniquevararray, norigvars);
 
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhscoefcolors, matrixdata.nrhscoef);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.matcoefcolors, matrixdata.nmatcoef);
-   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, nvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.permvarcolors, norigvars);
    SCIPhashtableFree(&vartypemap);
 
    if ( usecolumnsparsity )
-      SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, norigvars);
 
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhsidx, 2 * nactiveconss);
    SCIPfreeBlockMemoryArrayNull(scip, &matrixdata.rhssense, 2 * nactiveconss);
