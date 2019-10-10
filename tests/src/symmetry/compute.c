@@ -401,7 +401,7 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPgetSymmetry(scip,
          &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
-   cr_assert( nperms == 0 );  /* problem should be empty */
+   cr_assert( nperms == -1 );  /* problem should be empty */
    cr_assert( ncomponents == -1 );
    cr_assert( components == NULL );
    cr_assert( componentbegins == NULL );
