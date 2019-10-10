@@ -5935,14 +5935,10 @@ SCIP_RETCODE enforceExprNlhdlr(
          cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
          if( cutviol > 0.0 )
          {
-            SCIP_Real estimateval;
-            SCIP_Real auxvarval;
-            SCIP_Bool cutisweak;
-
-            auxvarval = SCIPgetSolVal(scip, sol, auxvar);
+            /* SCIP_Real estimateval; */
 
             /* cutviol is estimator value - auxvar value, so can restore estimator value */
-            estimateval = cutviol + auxvarval;
+            /* estimateval = cutviol + auxvarval; */
 
             /* assuming the estimator is c'x-b, the auxvar is z, and the expression is f(x)
              * then we should have z <= c'x-b <= f(x)
@@ -5952,9 +5948,7 @@ SCIP_RETCODE enforceExprNlhdlr(
              * TODO the 0.5 could become a parameter
              * TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example)
              */
-            cutisweak = (cutviol < 0.5 * (auxvalue - auxvarval));
-
-            if( !allowweakcuts && cutisweak )
+            if( !allowweakcuts && cutviol < 0.5 * (auxvalue - SCIPgetSolVal(scip, sol, auxvar)) )
             {
                SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak\n", SCIPgetConsExprNlhdlrName(nlhdlr));
                sepasuccess = FALSE;
@@ -5976,7 +5970,10 @@ SCIP_RETCODE enforceExprNlhdlr(
          if( !allowweakcuts )
          {
             SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
-            /* TODO cut could be weak now? - recheck */
+
+            /* if cut is weak now, then skip */
+            if( cutviol < 0.5 * (auxvalue - SCIPgetSolVal(scip, sol, auxvar)) )
+               sepasuccess = FALSE;
          }
          else
          {
@@ -5988,6 +5985,7 @@ SCIP_RETCODE enforceExprNlhdlr(
 
             SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
 
+            /* if cleanup left us with a useless cut, then consider branching on variables for which coef were changed */
             if( !sepasuccess && !branchscoresuccess && rowprep->nmodifiedvars > 0 )
             {
                int nbradded = 0;
