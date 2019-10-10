@@ -5990,27 +5990,11 @@ SCIP_RETCODE enforceExprNlhdlr(
 
             if( !sepasuccess && !branchscoresuccess && rowprep->nmodifiedvars > 0 )
             {
-               int i;
+               int nbradded = 0;
 
-               for( i = 0; i < rowprep->nmodifiedvars; ++i )
-               {
-                  /* FIXME rowprep->modifiedvars[i] gives us a var or auxvar: now how to find the corresponding expression???
-                   * the code below should work if the auxvars is associated to the immediate children, as it happens with sum-exprs
-                   */
-                  SCIP_CONSEXPR_EXPR* child;
-                  int c;
-                  for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-                  {
-                     child = SCIPgetConsExprExprChildren(expr)[c];
-                     if( SCIPgetConsExprExprAuxVar(child) == rowprep->modifiedvars[i] )
-                     {
-                        SCIPaddConsExprExprBranchScore(scip, expr, conshdlrdata->lastbrscoretag, REALABS(auxvalue - SCIPgetSolVal(scip, sol, auxvar)));
-                        //SCIPdebugMsg(scip, "added branchingscore for expr %p with auxvar <%s> (coef %g)\n", SCIPgetConsExprExprChildren(expr)[i], SCIPvarGetName(auxvar), SCIPgetConsExprExprData(expr)->coefficients[i]);
+               SCIP_CALL( SCIPaddConsExprExprBranchScoresAuxVars(scip, conshdlr, expr, conshdlrdata->lastbrscoretag, REALABS(auxvalue - SCIPgetSolVal(scip, sol, auxvar)), rowprep->modifiedvars, rowprep->nmodifiedvars, &nbradded) );
 
-                        branchscoresuccess = TRUE;
-                     }
-                  }
-               }
+               branchscoresuccess = nbradded > 0;
                assert(branchscoresuccess);
             }
          }
@@ -12226,6 +12210,66 @@ void SCIPaddConsExprExprBranchScore(
    SCIPinfoMessage(scip, NULL, " branchscore %g for expression %p, activity [%.15g,%.15g]\n", branchscore, (void*)expr, expr->activity.inf, expr->activity.sup); */
 
    expr->brscore += branchscore;
+}
+
+/** adds branching score to children of expression for given auxiliary variables
+ *
+ * Iterates over the successors of expr for expressions that are associated with one of the given auxiliary variables
+ * and adds a given branching score.
+ * The branchscoretag argument is used to identify whether the score in the found expression needs to be reset
+ * before adding a new score.
+ *
+ * @note This method may modify the given auxvars array by means of sorting.
+ */
+SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression where to start searching */
+   unsigned int            branchscoretag,   /**< tag to identify current branching scores */
+   SCIP_Real               branchscore,      /**< branching score to add to expression */
+   SCIP_VAR**              auxvars,          /**< auxiliary variables for which to find expression */
+   int                     nauxvars,         /**< number of auxiliary variables */
+   int*                    nbrscoreadded     /**< buffer to store number of expressions where branching scores was added */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_VAR* auxvar;
+   int pos;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(nbrscoreadded != NULL);
+   assert(auxvars != NULL);
+
+   /* sort variables to make lookup below faster */
+   SCIPsortPtr((void**)auxvars, SCIPvarComp, nauxvars);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_BFS, FALSE) );
+
+   for( expr = SCIPexpriteratorGetNext(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
+   {
+      auxvar = SCIPgetConsExprExprAuxVar(expr);
+      if( auxvar == NULL )
+         continue;
+
+      /* if auxvar of expr is contained in of auxvars array, add branching score to expr */
+      if( SCIPsortedvecFindPtr((void**)auxvars, SCIPvarComp, auxvar, nauxvars, &pos) )
+      {
+         assert(auxvars[pos] == auxvar);
+         SCIPaddConsExprExprBranchScore(scip, expr, branchscoretag, branchscore);
+
+         SCIPdebugMsg(scip, "added branchingscore %g for expr %p with auxvar <%s> (coef %g)\n", branchscore, expr, SCIPvarGetName(auxvar));
+
+         if( ++*nbrscoreadded == nauxvars )
+            break;
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
 }
 
 /** returns the hash value of an expression */
