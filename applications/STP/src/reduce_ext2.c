@@ -496,7 +496,7 @@ void extTreeBottleneckMarkRootPath(
             if( pcmw && Is_term(graph->term[childNode]) )
             {
                assert(graph_pc_termIsNonLeaf(graph, childNode) && graph->prize[childNode] > 0.0);
-               bottleneck_local += graph->prize[childNode];
+               bottleneck_local -= graph->prize[childNode];
             }
          }
          else
