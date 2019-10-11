@@ -6022,7 +6022,10 @@ SCIP_RETCODE enforceExprNlhdlr(
                SCIP_CALL( SCIPaddConsExprExprBranchScoresAuxVars(scip, conshdlr, expr, conshdlrdata->lastbrscoretag, brscore, rowprep->modifiedvars, rowprep->nmodifiedvars, &nbradded) );
 
                branchscoresuccess = nbradded > 0;
-               assert(branchscoresuccess);
+               /* SCIPaddConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this expr's auxvar
+                * I don't think it makes sense to branch on that one (would it?)
+                */
+               assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar));
             }
          }
       }
