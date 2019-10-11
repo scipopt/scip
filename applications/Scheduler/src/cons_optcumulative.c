@@ -3986,6 +3986,8 @@ SCIP_DECL_CONSPARSE(consParseOptcumulative)
                initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
          (*success) = TRUE;
+
+         SCIPwarningMessage(scip, "ignoring hmin = %d and hmax = %d (not supported for the optional cumulative constraint, yet\n", hmin, hmax);
       }
    }
 
