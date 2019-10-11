@@ -32,12 +32,13 @@ add_executable(scipstp
     src/reader_stp.c
     src/reader_gr.c
     src/reduce_alt.c
+    src/reduce_base.c
     src/reduce_bnd.c
-    src/reduce_test.c
+    src/reduce_da.c
     src/reduce_ext.c
     src/reduce_ext2.c
-    src/reduce_base.c
     src/reduce_simple.c
+    src/reduce_test.c
     src/reduce_util.c
     src/validate.c
 )

@@ -1854,9 +1854,6 @@ SCIP_RETCODE reduce_extendedEdge2(
          SCIP_Bool deletable = TRUE;
          const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT && result[erev] != CONNECT);
 
-         int todo; // try && (on stp-all, pc-all debug, stp-solvable comparision)
-
-
          assert(flipedge(e) == erev);
          assert(SCIPisEQ(scip, graph->cost[e], graph->cost[erev]));
 
