@@ -252,7 +252,6 @@ Test(heuristic, complex_1)
    SCIP_Bool ispacked[24];
    int elements[24] = {0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
    int npacked;
-   int i;
 
    /* pack into a ring */
    SCIPpackCirclesGreedy(scip, rexts, xs, ys, 4.0, -1.0, -1.0, ispacked, elements, 24,
