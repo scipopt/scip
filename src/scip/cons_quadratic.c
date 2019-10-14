@@ -5014,7 +5014,11 @@ void checkCurvatureEasy(
       *maxnonconvexity = SCIPinfinity(scip);
    }
    else
+   {
+      *isconvex  = FALSE;
+      *isconcave = FALSE;
       *determined = FALSE;
+   }
 }
 
 /** checks a quadratic constraint for convexity and/or concavity while checking multivariate functions */
