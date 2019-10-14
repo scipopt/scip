@@ -117,6 +117,8 @@ Performance improvements
 
 - allow rapid learning at local nodes
 
+- variable fixings of LP face heuristic are now computed earlier; subproblem creation is skipped if not enough variables are fixed.
+
 Examples and applications
 -------------------------
 
