@@ -942,11 +942,18 @@ SCIP_Real extTreeGetDirectedRedcostProper(
             break;
 
          assert(term >= 0 && term < graph->knots);
-         assert(tree_deg[term] >= 0 && term != leaf);
+         assert(term != leaf);
 
          /* terminal not in current tree?*/
          if( tree_deg[term] == 0 )
             break;
+
+         if( tree_deg[term] < 0 )
+         {
+            assert(graph_pc_isPcMw(graph) && tree_deg[term] == -1);
+            assert(Is_pterm(graph->term[term]));
+            break;
+         }
       }
 
       /* no terminal reachable? */
