@@ -6183,6 +6183,21 @@ SCIP_RETCODE enforceExpr(
        * if changing this here, we must also adapt analyzeViolation
        */
 
+      /* if aux-violation is much smaller than orig-violation, then better enforce further down in the expression first
+       * TODO make factor a parameter
+       */
+      if( expr->enfos[e]->auxvalue != SCIP_INVALID && REALABS(expr->enfos[e]->auxvalue - auxvarvalue) < REALABS(expr->evalvalue - auxvarvalue) / 100.0 )
+      {
+         SCIPdebugMsg(scip, "skip enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate);
+         continue;
+      }
+
+      if( !allowweakcuts && expr->enfos[e]->auxvalue != SCIP_INVALID && SCIPisFeasZero(scip, expr->enfos[e]->auxvalue - auxvarvalue) )
+      {
+         SCIPdebugMsg(scip, "skip enforce using nlhdlr <%s> for expr %p (%s) with tiny auxviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, underestimate, overestimate);
+         continue;
+      }
+
       SCIPdebugMsg(scip, "enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate);
 
       /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
