@@ -106,6 +106,8 @@ Performance improvements
 
 - allow rapid learning at local nodes
 
+- restrict the number of the clique table nonzeros relative to the number of problem nonzeros, which could be a performance bottleneck.
+
 Examples and applications
 -------------------------
 
@@ -290,6 +292,8 @@ Interface changes
   - new parameter "propagating/symmetry/performpresolving"
   - new parameter "propagating/symmetry/recomputerestart"
   - new parameter "constraints/symresack/checkmonotonicity"
+
+- new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
 
 ### Data structures
 
