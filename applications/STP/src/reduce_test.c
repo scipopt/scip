@@ -403,6 +403,7 @@ SCIP_RETCODE extTest4_variants(
    /* necessary data structures */
    for( int i = 0; i < nnodes; i++ )
    {
+      int todo; // extra method that also sets edges and 3*
       rootdist[i] = 0.0;
       termpaths[i].dist = 0.0;
    }

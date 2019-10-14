@@ -31,7 +31,6 @@
 #include "graph.h"
 #include "reduce.h"
 
-#define EXT_ANCESTORS_MAX  16
 #define EXT_STATE_NONE     0
 #define EXT_STATE_EXPANDED 1
 #define EXT_STATE_MARKED   2
@@ -41,13 +40,9 @@
 #define STP_EXT_MINDFSDEPTH 4
 #define STP_EXT_MAXGRAD 8
 #define STP_EXT_MAXEDGES 500
-#define STP_EXT_MAXTREESIZE 20
-#define STP_EXT_MAXNLEAVES 20
+#define STP_EXTTREE_MAXNEDGES 25
+#define STP_EXTTREE_MAXNLEAVES 20
 #define STP_EXT_EDGELIMIT 50000
-
-#define EXEDGE_FREE 0
-#define EXEDGE_FIXED 1
-#define EXEDGE_KILLED 2
 
 /** reduction data */
 typedef struct reduction_data
@@ -87,6 +82,7 @@ typedef struct extension_data
    const int tree_maxnleaves;
    const int tree_maxdepth;
    const int tree_maxnedges;
+   const SCIP_Bool* const node_isterm;         /**< marks whether node is a terminal (or proper terminal for PC) */
    REDDATA* const reddata;
    DISTDATA* const distdata;
 } EXTDATA;
@@ -182,7 +178,7 @@ SCIP_Bool reddataIsClean(
    return TRUE;
 }
 
-
+/** is current tree flawed? */
 static
 SCIP_Bool extTreeIsFlawed(
    SCIP*                 scip,               /**< SCIP */
@@ -295,6 +291,86 @@ SCIP_Bool extTreeIsFlawed(
    return flawed;
 }
 #endif
+
+/** insertion sort; note: could be speed-up by use of sentinel value at position 0 */
+static inline
+void sortDescendingIntRealReal(
+   int*                  keyArr,             /**< key array of size 'nentries' */
+   SCIP_Real*            dataArr1,           /**< array of size 'nentries' */
+   SCIP_Real*            dataArr2,           /**< array of size 'nentries' */
+   int                   nentries            /**< number of entries */
+)
+{
+   assert(keyArr && dataArr1 && dataArr2);
+   assert(nentries >= 1);
+
+   for( int i = 1; i < nentries; i++ )
+   {
+      int j;
+      const int currKey = keyArr[i];
+      const SCIP_Real currData1 = dataArr1[i];
+      const SCIP_Real currData2 = dataArr2[i];
+
+      for( j = i - 1; j >= 0 && currKey > keyArr[j]; j-- )
+      {
+         keyArr[j + 1] = keyArr[j];
+         dataArr1[j + 1] = dataArr1[j];
+         dataArr2[j + 1] = dataArr2[j];
+      }
+
+      keyArr[j + 1] = currKey;
+      dataArr1[j + 1] = currData1;
+      dataArr2[j + 1] = currData2;
+   }
+
+#ifndef NDEBUG
+   for( int i = 1; i < nentries; i++ )
+      assert(keyArr[i - 1] >= keyArr[i] );
+#endif
+}
+
+/** helper for rooted tree reduced cost computation */
+static inline
+SCIP_Real getMinDistCombination(
+   SCIP*                 scip,               /**< SCIP */
+   const SCIP_Real*      firstTermDist,      /**< array of size 'nentries' */
+   const SCIP_Real*      secondTermDist,     /**< array of size 'nentries' */
+   int                   nentries            /**< number of entries to check */
+)
+{
+   SCIP_Real min;
+
+   assert(scip && firstTermDist && secondTermDist);
+   assert(nentries >= 1);
+
+   if( nentries == 1 )
+   {
+      min = firstTermDist[0];
+   }
+   else
+   {
+      SCIP_Real secondSum = 0.0;
+      min = FARAWAY;
+
+      for( int i = 0; i < nentries; i++ )
+      {
+         assert(SCIPisLE(scip, firstTermDist[i], secondTermDist[i]));
+         secondSum += secondTermDist[i];
+      }
+
+      for( int i = 0; i < nentries; i++ )
+      {
+         const SCIP_Real distCombination = secondSum + firstTermDist[i] - secondTermDist[i];
+
+         if( distCombination < min )
+            min = distCombination;
+      }
+
+      assert(SCIPisLE(scip, min, secondSum));
+   }
+
+   return min;
+}
 
 
 /** should we truncate from current component? */
@@ -807,8 +883,123 @@ void extTreeSyncWithStack(
 }
 
 
-/** gets reduced cost of current tree rooted at leave 'root' */
+/** gets reduced cost of current tree rooted at leave 'root', called direct if tree cannot */
 static
+SCIP_Real extTreeGetDirectedRedcostProper(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata,            /**< extension data */
+   int                   root                /**< the root for the orientation */
+)
+{
+   int nearestTerms[STP_EXTTREE_MAXNLEAVES];
+   SCIP_Real firstTermDist[STP_EXTTREE_MAXNLEAVES];
+   SCIP_Real secondTermDist[STP_EXTTREE_MAXNLEAVES];
+   const int* const tree_leaves = extdata->tree_leaves;
+   const int nleaves = extdata->tree_nleaves;
+   const SCIP_Real swapcost = extdata->tree_redcostSwap[root];
+   const REDDATA* const reddata = extdata->reddata;
+   const PATH* const nodeTo3TermsPaths = reddata->nodeTo3TermsPaths;
+   const SCIP_Bool* const isterm = extdata->node_isterm;
+   const int* tree_deg = extdata->tree_deg;
+
+   SCIP_Real redcost_directed = extdata->tree_redcost + reddata->rootToNodeDist[root] + swapcost;
+   const int nnodes = graph->knots;
+   int leavescount = 0;
+
+#ifndef NDEBUG
+   SCIP_Real redcost_debug = redcost_directed;
+   for( int i = 0; i < STP_EXTTREE_MAXNLEAVES; i++ )
+   {
+      nearestTerms[i] = -1;
+      firstTermDist[i] = -1.0;
+      secondTermDist[i++] = -1.0;
+   }
+   assert(SCIPisLT(scip, redcost_directed, FARAWAY));
+#endif
+
+   for( int j = 0; j < nleaves; j++ )
+   {
+      int i;
+      int term;
+      const int leaf = tree_leaves[j];
+
+      if( leaf == root || isterm[leaf] )
+      {
+         assert(leaf == root || 0.0 == nodeTo3TermsPaths[leaf].dist);
+         continue;
+      }
+
+      /* find closest valid terminal for extension */
+      for( i = 0; i < 3; i++ )
+      {
+         const int firstedge = nodeTo3TermsPaths[leaf + i * nnodes].edge;
+
+         if( firstedge == -1 )
+         {
+            term = -1;
+            break;
+         }
+
+         assert(firstedge >= 0 && firstedge < graph->edges && leaf == graph->head[firstedge]);
+         term = graph->tail[firstedge];
+         assert(tree_deg[term] >= 0 && term != leaf);
+
+         /* terminal not in current tree?*/
+         if( tree_deg[term] == 0 )
+            break;
+      }
+
+      assert(term >= -1 && term < graph->knots && term != leaf);
+
+      /* no terminal reachable? */
+      if( term == -1 )
+      {
+         assert(SCIPisGE(scip, nodeTo3TermsPaths[leaf + i * nnodes].dist, FARAWAY));
+         return FARAWAY;
+      }
+
+      nearestTerms[leavescount] = term;
+      firstTermDist[leavescount] = nodeTo3TermsPaths[leaf + i * nnodes].dist;
+      secondTermDist[leavescount] = (i < 2) ? nodeTo3TermsPaths[leaf + (i + 1) * nnodes].dist : firstTermDist[leavescount];
+  //  printf("i %d \n", i);
+  //printf("term=%d, first=%f second=%f def=%f \n", term, firstTermDist[leavescount], secondTermDist[leavescount], nodeTo3TermsPaths[leaf].dist);
+      leavescount++;
+
+#ifndef NDEBUG
+      redcost_debug += nodeTo3TermsPaths[leaf].dist;
+#endif
+   }
+
+   if( leavescount > 0 )
+   {
+      int first = 0;
+
+      sortDescendingIntRealReal(nearestTerms, firstTermDist, secondTermDist, leavescount);
+
+      for( int i = 1; i < leavescount; i++ )
+      {
+         assert(nearestTerms[i] >= 0 && firstTermDist[i] >= 0.0 && secondTermDist[i] >= 0.0);
+         if( nearestTerms[i] != nearestTerms[i - 1] )
+         {
+            const int n = i - first;
+            redcost_directed += getMinDistCombination(scip, firstTermDist + first, secondTermDist + first, n);
+            first = i;
+         }
+      }
+
+      redcost_directed += getMinDistCombination(scip, firstTermDist + first, secondTermDist + first, leavescount - first);
+   }
+
+ //  printf("redcost_directed=%f redcost_debug=%f  \n", redcost_directed, redcost_debug );
+
+   assert(SCIPisGE(scip, redcost_directed, redcost_debug));
+
+   return redcost_directed;
+}
+
+/** gets reduced cost of current tree rooted at leave 'root' */
+static inline
 SCIP_Real extTreeGetDirectedRedcost(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
@@ -816,51 +1007,19 @@ SCIP_Real extTreeGetDirectedRedcost(
    int                   root                /**< the root for the orientation */
 )
 {
-   const int* const tree_leaves = extdata->tree_leaves;
-   const int nleaves = extdata->tree_nleaves;
    const SCIP_Real* const tree_redcostSwap = extdata->tree_redcostSwap;
-   const SCIP_Real swapcost = tree_redcostSwap[root];
-   SCIP_Real redcost_directed = 0.0;
 
-   assert(graph && extdata && extdata->reddata);
-   assert(nleaves > 1 && tree_leaves[0] == extdata->tree_root);
+   assert(extdata->tree_nleaves > 1 && extdata->tree_nleaves < STP_EXTTREE_MAXNLEAVES);
+   assert(extdata->tree_leaves[0] == extdata->tree_root);
    assert(root >= 0 && root < graph->knots);
 
    /* is the rooting possible? */
-   if( SCIPisLT(scip, swapcost, FARAWAY) )
+   if( SCIPisLT(scip, tree_redcostSwap[root], FARAWAY) )
    {
-      const REDDATA* const reddata = extdata->reddata;
-      const SCIP_Real* const rootToNodeDist = reddata->rootToNodeDist;
-      const PATH* const nodeTo3TermsPaths = reddata->nodeTo3TermsPaths;
-
-      redcost_directed = extdata->tree_redcost + rootToNodeDist[root] + swapcost;
-
-      assert(SCIPisLT(scip, redcost_directed, FARAWAY));
-
-      for( int j = 0; j < nleaves; j++ )
-      {
-         const int leaf = tree_leaves[j];
-
-         if( leaf == root )
-            continue;
-
-         redcost_directed += nodeTo3TermsPaths[leaf].dist;
-#if 0 // do terminals have infinity as second (is ok!)? also dominated pc ones? that would be bad! Maybe change that?
-         if( !SCIPisEQ(scip, nodeTo3TermsPaths[leaf].dist, nodeTo3TermsPaths[graph->knots + leaf].dist) )
-            printf("noneq %f %f \n", nodeTo3TermsPaths[leaf].dist, nodeTo3TermsPaths[graph->knots + leaf].dist);
-         else
-            printf("eq %d \n", 0);
-#endif
-
-         // todo: more sophisticated test here that takes common terminals into account
-      }
-   }
-   else
-   {
-      redcost_directed = FARAWAY;
+      return extTreeGetDirectedRedcostProper(scip, graph, extdata, root);
    }
 
-   return redcost_directed;
+   return FARAWAY;
 }
 
 
@@ -1072,12 +1231,12 @@ SCIP_Bool extRuleOutPeriph(
 static
 SCIP_Bool extTruncate(
    const GRAPH*          graph,              /**< graph data structure */
-   const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
    const EXTDATA*        extdata             /**< extension data */
 )
 {
    const int* const extstack_data = extdata->extstack_data;
    const int* const extstack_start = extdata->extstack_start;
+   const SCIP_Bool* const  isterm = extdata->node_isterm;
    const int stackpos = extdata->extstack_ncomponents - 1;
 
    assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED);
@@ -1231,7 +1390,6 @@ static
 void extStackExpand(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
    EXTDATA*              extdata,            /**< extension data */
    SCIP_Bool*            success             /**< success pointer */
 )
@@ -1245,7 +1403,7 @@ void extStackExpand(
    const int setsize = extstack_start[stackpos + 1] - extstack_start[stackpos];
    const uint32_t powsize = pow(2, setsize);
 
-   assert(extdata && scip && graph && isterm && success);
+   assert(extdata && scip && graph && success);
    assert(setsize <= STP_EXT_MAXGRAD);
    assert(setsize > 0 && setsize <= 32);
    assert(stackpos >= 1);
@@ -1307,7 +1465,6 @@ static
 void extExtend(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
    EXTDATA*              extdata,            /**< extension data */
    SCIP_Bool*            success             /**< success pointer */
 )
@@ -1317,6 +1474,7 @@ void extExtend(
    int* const extstack_data = extdata->extstack_data;
    int* const extstack_start = extdata->extstack_start;
    int* const extstack_state = extdata->extstack_state;
+   const SCIP_Bool* const isterm = extdata->node_isterm;
    int stackpos = extdata->extstack_ncomponents - 1;
    int nfullextensions;
    int nsingleextensions;
@@ -1468,7 +1626,7 @@ void extExtend(
       *success = TRUE;
 
       /* try to expand last (smallest) component */
-      extStackExpand(scip, graph, isterm, extdata, success);
+      extStackExpand(scip, graph, extdata, success);
    }
 }
 
@@ -1478,7 +1636,6 @@ static
 void extCheckArc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   const SCIP_Bool*      isterm,             /**< marks whether node is a terminal (or proper terminal for PC) */
    int                   edge,               /**< directed edge to be checked */
    EXTDATA*              extdata,            /**< extension data */
    SCIP_Bool*            deletable           /**< is arc deletable? */
@@ -1502,7 +1659,7 @@ void extCheckArc(
    assert(!conflict);
    assert(extdata->tree_parentNode[head] == tail && extdata->tree_parentEdgeCost[head] == graph->cost[edge]);
 
-   extExtend(scip, graph, isterm, extdata, &success);
+   extExtend(scip, graph, extdata, &success);
 
    assert(extstack_state[0] == EXT_STATE_MARKED);
    assert(success || 1 == extdata->extstack_ncomponents);
@@ -1527,7 +1684,7 @@ void extCheckArc(
       {
          assert(extstack_state[stackposition] == EXT_STATE_NONE);
 
-         extStackExpand(scip, graph, isterm, extdata, &success);
+         extStackExpand(scip, graph, extdata, &success);
          continue;
       }
 
@@ -1540,7 +1697,7 @@ void extCheckArc(
          continue;
       }
 
-      if( extTruncate(graph, isterm, extdata) )
+      if( extTruncate(graph, extdata) )
       {
          success = FALSE;
          extBacktrack(scip, graph, success, FALSE, extdata);
@@ -1548,7 +1705,7 @@ void extCheckArc(
       }
 
       /* neither ruled out nor truncated, so extend */
-      extExtend(scip, graph, isterm, extdata, &success);
+      extExtend(scip, graph, extdata, &success);
 
    } /* DFS loop */
 
@@ -1645,10 +1802,10 @@ SCIP_RETCODE reduce_extendedCheckArc(
             .tree_bottleneckDistNode = bottleneckDistNode, .tree_parentNode = tree_parentNode,
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap, .tree_redcost = 0.0,
             .tree_root = -1, .tree_nedges = 0,  .tree_depth = 0, .extstack_maxsize = nnodes - 1,
-            .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXT_MAXNLEAVES, .tree_maxdepth = maxdfsdepth,
-            .tree_maxnedges = STP_EXT_MAXTREESIZE, .reddata = &reddata, .distdata = distdata };
+            .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = maxdfsdepth,
+            .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
-         extCheckArc(scip, graph, isterm, edge, &extdata, deletable);
+         extCheckArc(scip, graph, edge, &extdata, deletable);
       }
 
 #ifndef NDEBUG
@@ -1748,18 +1905,18 @@ SCIP_RETCODE reduce_extendedCheckEdge(
             .tree_bottleneckDistNode = bottleneckDistNode, .tree_parentNode = tree_parentNode,
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap, .tree_redcost = 0.0,
             .tree_root = -1, .tree_nedges = 0,  .tree_depth = 0, .extstack_maxsize = nnodes - 1,
-            .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXT_MAXNLEAVES, .tree_maxdepth = maxdfsdepth,
-            .tree_maxnedges = STP_EXT_MAXTREESIZE, .reddata = &reddata, .distdata = distdata };
+            .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = maxdfsdepth,
+            .tree_maxnedges = STP_EXTTREE_MAXNEDGES,  .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
          /* can we extend from head? */
          if( extLeafIsExtendable(graph, isterm, head) )
-            extCheckArc(scip, graph, isterm, edge, &extdata, deletable);
+            extCheckArc(scip, graph, edge, &extdata, deletable);
 
          /* try to extend from tail? */
          if( !(*deletable) && extLeafIsExtendable(graph, isterm, tail) )
          {
             extdataClean(graph, &extdata);
-            extCheckArc(scip, graph, isterm, flipedge(edge), &extdata, deletable);
+            extCheckArc(scip, graph, flipedge(edge), &extdata, deletable);
          }
       }
 
