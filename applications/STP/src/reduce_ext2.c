@@ -42,6 +42,7 @@
 #define STP_EXT_MAXEDGES 500
 #define STP_EXTTREE_MAXNEDGES 25
 #define STP_EXTTREE_MAXNLEAVES 20
+#define STP_EXTTREE_MAXNLEAVES_GUARD (STP_EXTTREE_MAXNLEAVES + STP_EXT_MAXGRAD)
 #define STP_EXT_EDGELIMIT 50000
 
 /** reduction data */
@@ -893,9 +894,9 @@ SCIP_Real extTreeGetDirectedRedcostProper(
    int                   root                /**< the root for the orientation */
 )
 {
-   int nearestTerms[STP_EXTTREE_MAXNLEAVES];
-   SCIP_Real firstTermDist[STP_EXTTREE_MAXNLEAVES];
-   SCIP_Real secondTermDist[STP_EXTTREE_MAXNLEAVES];
+   int nearestTerms[STP_EXTTREE_MAXNLEAVES_GUARD];
+   SCIP_Real firstTermDist[STP_EXTTREE_MAXNLEAVES_GUARD];
+   SCIP_Real secondTermDist[STP_EXTTREE_MAXNLEAVES_GUARD];
    const int* const tree_leaves = extdata->tree_leaves;
    const int nleaves = extdata->tree_nleaves;
    const SCIP_Real swapcost = extdata->tree_redcostSwap[root];
@@ -911,7 +912,7 @@ SCIP_Real extTreeGetDirectedRedcostProper(
 
 #ifndef NDEBUG
    SCIP_Real redcost_debug = redcost_directed;
-   for( int i = 0; i < STP_EXTTREE_MAXNLEAVES; i++ )
+   for( int i = 0; i < STP_EXTTREE_MAXNLEAVES_GUARD; i++ )
    {
       nearestTerms[i] = -1;
       firstTermDist[i] = -1.0;
@@ -1005,7 +1006,7 @@ SCIP_Real extTreeGetDirectedRedcost(
 {
    const SCIP_Real* const tree_redcostSwap = extdata->tree_redcostSwap;
 
-   assert(extdata->tree_nleaves > 1 && extdata->tree_nleaves < STP_EXTTREE_MAXNLEAVES);
+   assert(extdata->tree_nleaves > 1 && extdata->tree_nleaves < STP_EXTTREE_MAXNLEAVES_GUARD);
    assert(extdata->tree_leaves[0] == extdata->tree_root);
    assert(root >= 0 && root < graph->knots);
 
@@ -1242,8 +1243,6 @@ SCIP_Bool extTruncate(
       SCIPdebugMessage("truncate (depth too high) \n");
       return TRUE;
    }
-
-
 
    if( extdata->tree_nedges >= extdata->tree_maxnedges )
    {

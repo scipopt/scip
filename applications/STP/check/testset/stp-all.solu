@@ -744,8 +744,8 @@
 =opt=  oddcycle3 	4
 =opt=  oddwheel3 	5
 =opt=  se03      	12
-=best= w13c29     	508
-=best= w23c23     	694
+=opt=  w13c29     	507
+=opt=  w23c23     	689
 =opt=  w3c571     	2854
 =opt= taq0014	5326
 =opt= taq0023	621
