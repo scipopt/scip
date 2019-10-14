@@ -24,6 +24,9 @@
 #include "scip/event_restart.h"
 #include "scip/event_treesizeprediction.h"
 #include "scip/event_treeprofile.h"
+#include "type_disp.h"
+#include "scip/pub_disp.h"
+#include "scip/scip_disp.h"
 #include "pub_event.h"
 #include "pub_message.h"
 #include "scip_event.h"
@@ -173,6 +176,7 @@ struct SCIP_EventhdlrData
    SCIP_Bool             countonlyleaves;    /**< should only leaves count for the minnodes parameter? */
    SCIP_Real             estim_factor;       /**< factor by which the estimated number of nodes should exceed the current number of nodes */
    SCIP_Real             proglastreport;     /**< progress at which last report was printed */
+   SCIP_Bool             printreports;       /**< should periodic reports on estimation be printed? */
    int                   nreports;           /**< the number of reports already printed */
 };
 
@@ -2138,7 +2142,9 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       SCIP_CALL( updateTimeseries(scip, eventhdlrdata, treedata, nchildren == 0) );
 
       /* should a new report be printed? */
-      if( SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN && treedata->progress >= eventhdlrdata->proglastreport + 1.0 / (SCIP_Real)NREPORTS )
+      if( eventhdlrdata->printreports &&
+            SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN &&
+            treedata->progress >= eventhdlrdata->proglastreport + 1.0 / (SCIP_Real)NREPORTS )
       {
          char strbuf[SCIP_MAXSTRLEN];
 
@@ -2334,6 +2340,141 @@ SCIP_RETCODE includeTimeseries(
    return SCIP_OKAY;
 }
 
+#define DISP_NAME               "completed"
+#define DISP_DESC               "completion of search in percent (based on tree size estimation)"
+#define DISP_HEADER             "compl."
+#define DISP_WIDTH              8       /**< the width of the display column */
+#define DISP_PRIORITY           110000  /**< the priority of the display column */
+#define DISP_POSITION           30100   /**< the relative position of the display column */
+#define DISP_STRIPLINE          TRUE    /**< the default for whether the display column should be separated
+                                         *   with a line from its right neighbor */
+
+
+
+/** output method of display column to output file stream 'file' */
+static
+SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
+{  /*lint --e{715}*/
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   TREEDATA* treedata;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME) == 0);
+   assert(scip != NULL);
+
+   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   treedata = eventhdlrdata->treedata;
+
+   /* interpolate between ssg and progress */
+   SCIPinfoMessage(scip, file, "%7.2f%%", ((1.0 - treedata->ssg->value) + treedata->progress) * 50.0);
+
+   return SCIP_OKAY;
+}
+
+/* return an estimation of the final tree size */
+SCIP_Real SCIPgetTreesizeEstimation(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   TREEDATA* treedata;
+   SCIP_Real estim;
+   int t;
+
+   SCIP_Real coeffs_low[] = {
+      0.002, //            gap
+      0.381, //            progress
+      0.469,//            leaf-frequency
+      0.292, //            SSG
+      0.004  //            open-nodes
+   };
+
+   assert(scip != NULL);
+
+   assert(sizeof(coeffs_low)/sizeof(SCIP_Real) == NTIMESERIES);
+
+   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   treedata = eventhdlrdata->treedata;
+
+   /* combine time series estimations */
+   estim = 0.0;
+
+   if( treedata->progress <= 0.3 )
+   {
+      for( t = 0; t < NTIMESERIES; ++t )
+      {
+         SCIP_Real testim;
+         testim = timeseriesEstimate(eventhdlrdata->timeseries[t], treedata);
+
+         if( testim < 0.0 )
+            testim = treedata->nnodes;
+
+         estim += coeffs_low[t] * testim;
+      }
+   }
+   else if( treedata->progress <= 0.6 )
+   {
+      SCIP_Real coeffs_intermediate[] = {
+         0.011, //            gap
+         0.193, //            progress
+         0.351,//            leaf-frequency
+         0.012, //            SSG
+         0.051  //            open-nodes
+      };
+
+      for( t = 0; t < NTIMESERIES; ++t )
+      {
+         SCIP_Real testim;
+         testim = timeseriesEstimate(eventhdlrdata->timeseries[t], treedata);
+
+         if( testim < 0.0 )
+            testim = treedata->nnodes;
+
+         estim += coeffs_intermediate[t] * testim;
+      }
+
+      /* add WBE */
+      estim += 0.156 * estimateTreesizeBacktrackestim(eventhdlrdata->backtrackestim);
+   }
+   else
+   {
+      SCIP_Real coeffs_late[] = {
+         0.000, //            gap
+         0.033, //            progress
+         0.282,//            leaf-frequency
+         0.003, //            SSG
+         0.024  //            open-nodes
+      };
+
+      for( t = 0; t < NTIMESERIES; ++t )
+      {
+         SCIP_Real testim;
+         testim = timeseriesEstimate(eventhdlrdata->timeseries[t], treedata);
+
+         if( testim < 0.0 )
+            testim = treedata->nnodes;
+
+         estim += coeffs_late[t] * testim;
+      }
+
+      /* add WBE */
+      estim += 0.579 * estimateTreesizeBacktrackestim(eventhdlrdata->backtrackestim);
+   }
+
+
+   if( estim < treedata->nnodes )
+      return (SCIP_Real)treedata->nnodes;
+   else
+      return estim;
+}
+
+
+
+
 /** creates event handler for restart event */
 SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2410,6 +2551,9 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/hitcounterlim", "limit on the number of successive samples to really trigger a restart",
          &eventhdlrdata->hitcounterlim, FALSE, 50, 1, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "restarts/printreports", "should periodic reports on estimation be printed?",
+            &eventhdlrdata->printreports, TRUE, FALSE, NULL, NULL) );
+
 
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
@@ -2417,11 +2561,15 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
          NULL, NULL, tableOutputRestart,
          NULL, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
 
-   /* author bzfhende
-    *
-    * TODO include time series into event handler
-    */
+   /* include time series into event handler */
    SCIP_CALL( includeTimeseries(scip, eventhdlrdata) );
+
+   /* include display column */
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME, DISP_DESC, DISP_HEADER, SCIP_DISPSTATUS_AUTO,
+         NULL,
+         NULL, NULL, NULL,
+         NULL, NULL, dispOutputCompleted,
+         NULL, DISP_WIDTH, DISP_PRIORITY, DISP_POSITION, DISP_STRIPLINE) );
 
    return SCIP_OKAY;
 }

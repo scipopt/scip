@@ -38,6 +38,12 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/* return an estimation of the final tree size */
+EXTERN
+SCIP_Real SCIPgetTreesizeEstimation(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 #ifdef __cplusplus
 }
 #endif
