@@ -2595,6 +2595,7 @@ SCIP_RETCODE markRowsXj(
    SCIP_SOL*      sol,        /**< point to be separated (can be NULL) */
    int            j,          /**< index of the multiplier variable in sepadata */
    SCIP_Bool      local,      /**< are local cuts allowed? */
+   SCIP_HASHMAP*  row_to_pos, /**< hashmap linking row indices to positions in array */
    int*           row_marks,  /**< sparse array storing the row marks */
    int*           row_idcs,   /**< sparse array storing the marked row positions */
    int*           nmarked     /**< number of marked rows */
@@ -2632,7 +2633,10 @@ SCIP_RETCODE markRowsXj(
    {
       xi = sepadata->varbilinvars[j][i];
 
-      val = SCIPgetSolVal(scip, sol, xi);
+      if( SCIPvarGetStatus(xi) != SCIP_VARSTATUS_COLUMN )
+         continue;
+
+         val = SCIPgetSolVal(scip, sol, xi);
       vlb = local ? SCIPvarGetLbLocal(xi) : SCIPvarGetLbGlobal(xi);
       vub = local ? SCIPvarGetUbLocal(xi) : SCIPvarGetUbGlobal(xi);
 
@@ -2699,10 +2703,14 @@ SCIP_RETCODE markRowsXj(
       /* mark the rows */
       for( r = 0; r < ncolrows; ++r )
       {
+         ridx = SCIProwGetIndex(colrows[r]);
+
+         if( !SCIPhashmapExists(row_to_pos, (void*)(size_t)ridx) )
+            continue; /* if row index is not in row_to_pos, it means that storeSuitableRows decided to ignore this row */
+
          a = colvals[r];
          if( a == 0.0 )
             continue;
-         ridx = SCIProwGetIndex(colrows[r]);
 
          SCIPdebugMsg(scip, "Marking row %d\n", ridx);
          addRowMark(ridx, a, prod_viol_below, prod_viol_above, row_idcs, row_marks, nmarked);
@@ -2751,7 +2759,9 @@ SCIP_RETCODE separateRltCuts(
       xj = sepadata->varssorted[j];
 
       /* mark all rows for multiplier xj */
-      SCIP_CALL( markRowsXj(scip, sepadata, conshdlr, sol, j, allowlocal, row_marks, row_idcs, &nmarked) );
+      SCIP_CALL( markRowsXj(scip, sepadata, conshdlr, sol, j, allowlocal, row_to_pos, row_marks, row_idcs, &nmarked) );
+
+      assert(nmarked <= nrows);
 
       /* generate the projected cut and if it is violated, generate the actual cut */
       for( r = 0; r < nmarked; ++r )
@@ -2760,12 +2770,7 @@ SCIP_RETCODE separateRltCuts(
          SCIP_ROW* row;
 
          assert(row_marks[r] != 0);
-
-         if( !SCIPhashmapExists(row_to_pos, (void*)(size_t)row_idcs[r]) )
-         {
-            row_marks[r] = 0;
-            continue; /* if row index is not in row_to_pos, it means that storeSuitableRows decided to ignore this row */
-         }
+         assert( SCIPhashmapExists(row_to_pos, (void*)(size_t)row_idcs[r]) );
 
          pos = SCIPhashmapGetImageInt(row_to_pos, (void*)(size_t)row_idcs[r]);
          row = rows[pos];
@@ -2899,8 +2904,10 @@ SCIP_RETCODE separateRltCuts(
       sepadata->bestoverestimator[j] = -1;
       sepadata->eqlinexpr[j] = -1;
    }
-   SCIPfreeCleanBufferArray(scip, &row_marks);
+
    SCIPfreeBufferArray(scip, &row_idcs);
+   SCIPfreeCleanBufferArray(scip, &row_marks);
+
    return SCIP_OKAY;
 }
 
