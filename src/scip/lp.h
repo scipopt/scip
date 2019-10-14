@@ -234,6 +234,8 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Bool             updatecol,          /**< should col be updated, or should it stay in its current state ? */
+   SCIP_Bool             updatestat,         /**< should stat be updated, or should it stay in its current state ? */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up */
    SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
