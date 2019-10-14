@@ -1960,14 +1960,13 @@ SCIP_RETCODE reduce_extendedEdge2(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
-   const int root = redcostdata->redCostRoot;
    const SCIP_Real* const redcost = redcostdata->redEdgeCost;
 
    DISTDATA distdata;
 
    assert(scip && graph && redcostdata);
    assert(!pcmw || !graph->extended);
-   assert(root >= 0 && root < graph->knots);
+   assert(redcostdata->redCostRoot >= 0 && redcostdata->redCostRoot < graph->knots);
 
    *nelims = 0;
 
@@ -2073,7 +2072,7 @@ SCIP_RETCODE reduce_extendedEdge2(
 
 #ifndef NDEBUG
    for( int k = 0; k < nnodes; k++ )
-      if( graph->grad[k] == 0 && k != root )
+      if( graph->grad[k] == 0 && k != redcostdata->redCostRoot )
          assert(!graph->mark[k]);
 #endif
 
