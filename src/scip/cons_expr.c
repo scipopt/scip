@@ -6882,8 +6882,7 @@ SCIP_RETCODE separateConstraints(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* skip non-violated constraints */
-      if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
+      if( consdata->lhsviol > SCIPfeastol(scip) || consdata->rhsviol > SCIPfeastol(scip) )
          haveviol = TRUE;
    }
 
