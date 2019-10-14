@@ -5946,23 +5946,24 @@ SCIP_RETCODE enforceExprNlhdlr(
 
                /* let the estimator be c'x-b, the auxvar is z (=auxvarvalue), and the expression is f(x) (=auxvalue)
                 * then if we are underestimating and since the cut is violated, we should have z <= c'x-b <= f(x)
-                * cutviol is c'x-b - z
+                * cutviol is c'x-b - z, so estimator value is c'x-b = z + cutviol
                 * if the estimator value (c'x-b) is too close to z (auxvarvalue), when compared to f(x) (auxvalue), then let's call this a weak cut
                 * that is, it's a weak cut if c'x-b <= z + weakcutthreshold * (f(x)-z)
                 *   <->   c'x-b - z <= weakcutthreshold * (f(x)-z)
                 *
-                * if we are overestimating, we have z >= c'x-b >= f(x), cutviol is z - (c'x-b)
-                * it's weak if c'x-b >= z - (1-weakcutthreshold) * (z - f(x))
+                * if we are overestimating, we have z >= c'x-b >= f(x)
+                * cutviol is z - (c'x-b), so estimator value is c'x-b = z - cutviol
+                * it's weak if c'x-b >= f(x) + weakcutthreshold * (z - f(x))
                 *   <->   c'x-b - z >= (1-weakcutthreshold) * (f(x)-z)
                 *
                 * when linearizing convex expressions, then we should have c'x-b = f(x), so they would never be weak
                 */
                auxvarvalue = SCIPgetSolVal(scip, sol, auxvar);
-               if( (!overestimate && (cutviol <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
-                   ( overestimate && (cutviol >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
+               if( (!overestimate && ( cutviol <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
+                   ( overestimate && (-cutviol >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
                {
-                  SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak (auxvalue %g auxvarvalue %g cutviol %g over %d)\n",
-                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvalue, auxvarvalue, cutviol, overestimate);
+                  SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
+                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
                   sepasuccess = FALSE;
                }
             }
@@ -5977,6 +5978,10 @@ SCIP_RETCODE enforceExprNlhdlr(
       /* clean up estimator */
       if( sepasuccess )
       {
+         SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
+            SCIPgetConsExprNlhdlrName(nlhdlr), SCIPgetSolVal(scip, sol, auxvar), SCIPgetSolVal(scip, sol, auxvar) + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
+         /* SCIPdebug( SCIPprintRowprep(scip, rowprep, NULL) ); */
+
          /* if not allowweakcuts, then do not attempt to get cuts more violated by scaling them up,
           * instead, may even scale them down, that is, scale so that max coef is close to 1
           */
@@ -6004,11 +6009,11 @@ SCIP_RETCODE enforceExprNlhdlr(
                   }
 
                if( auxvarcoef == 0.0 ||
-                   (!overestimate && (cutviol / auxvarcoef <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
-                   ( overestimate && (cutviol / auxvarcoef >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
+                   (!overestimate && ( cutviol / auxvarcoef <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
+                   ( overestimate && (-cutviol / auxvarcoef >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
                {
-                  SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak after cleanup (auxvalue %g auxvarvalue %g cutviol %g |auxvarcoef| %g over %d)\n",
-                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvalue, auxvarvalue, cutviol, auxvarcoef, overestimate);
+                  SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
+                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvalue, auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate);
                   sepasuccess = FALSE;
                }
             }
