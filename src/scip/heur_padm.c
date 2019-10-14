@@ -572,6 +572,102 @@ static SCIP_RETCODE assignLinking(
    SCIPsortIntPtr(conslabels, (void **)sortedconss, nconss);
 }
 
+/** compute feasible solution from last stored solution */
+static SCIP_RETCODE reuseSolution(
+   SCIP*                 subscip,            /**< SCIP data structure */
+   BLOCK*                block
+   )
+{
+   SCIP_SOL** sols;
+   SCIP_SOL* sol; /* solution that will be repaired */
+   SCIP_SOL* newsol;
+   SCIP_VAR** vars;
+   SCIP_VAR** blockvars;
+   SCIP_VAR** consvars;
+   double* blockvals;
+   double* vals;
+   int nsols;
+   int nvars;
+   int c;
+   SCIP_Bool success;
+
+   assert(subscip != NULL);
+   assert(block != NULL);
+
+   SCIPdebugMsg(subscip, "try to reuse old solution\n");
+
+   nsols = SCIPgetNSols( subscip );
+
+   /* no solution in solution candidate storage found */
+   if( nsols == 0 )
+      return SCIP_OKAY;
+   
+   SCIP_CALL( SCIPallocBufferArray(subscip, &consvars, COUPLINGSIZE) );
+
+   sols = SCIPgetSols( subscip );
+   sol = sols[nsols - 1];
+
+   /* copy the solution */
+   nvars = SCIPgetNVars(subscip);
+   blockvars = SCIPgetVars(subscip);
+   SCIP_CALL( SCIPallocBufferArray(subscip, &blockvals, nvars) );
+   SCIP_CALL( SCIPgetSolVals(subscip, sol, nvars, blockvars, blockvals) );
+   SCIP_CALL( SCIPcreateOrigSol(subscip, &newsol, NULL) );
+   SCIP_CALL( SCIPsetSolVals(subscip, newsol, nvars, blockvars, blockvals) );
+
+   /* correct each coupling constraint;
+      orig_var + slackpos - slackneg == side
+      adapt slack variables so that constraint is feasible */
+   for( c = 0; c < block->ncoupling; c++ )
+   {
+      double solval; /* old solution values of variables; [0] original variable, [1] slackpos, [2] slackneg */
+      double side; /* current right hand side */
+      double diff;
+
+      SCIP_CALL( SCIPgetConsVars(subscip, block->couplingcons[c], consvars, COUPLINGSIZE, &success) );
+      solval = SCIPgetSolVal(subscip, sol, consvars[0]);
+
+      side = SCIPgetRhsLinear(subscip, block->couplingcons[c]);
+      assert(SCIPgetRhsLinear(subscip, block->couplingcons[c]) == SCIPgetLhsLinear(subscip, block->couplingcons[c]));
+
+      diff = side - solval;
+
+      /* slackpos is strict positiv */
+      if( diff > 0 )
+      {
+         SCIP_CALL( SCIPsetSolVal(subscip, newsol, block->slackspos[c], diff) );
+         SCIP_CALL( SCIPsetSolVal(subscip, newsol, block->slacksneg[c], 0.0) );
+      }
+      /* slackneg is strict positiv */
+      else if( diff < 0 )
+      {
+         SCIP_CALL( SCIPsetSolVal(subscip, newsol, block->slacksneg[c], -diff) );
+         SCIP_CALL( SCIPsetSolVal(subscip, newsol, block->slackspos[c], 0.0) );
+      }
+      /* no slack variable necessary */
+      else
+      {
+         SCIP_CALL( SCIPsetSolVal(subscip, newsol, block->slackspos[c], 0.0) );
+         SCIP_CALL( SCIPsetSolVal(subscip, newsol, block->slacksneg[c], 0.0) );
+      }
+   }
+
+   SCIPdebugMsg(subscip, "Try adding solution with objective value %.2f\n", SCIPgetSolOrigObj(subscip, newsol));
+   SCIP_CALL( SCIPaddSolFree(subscip, &newsol, &success) );
+
+   if( !success )
+      SCIPdebugMsg(subscip, "Correcting solution failed\n"); /* maybe not better than old solutions */
+   else
+   {
+      SCIPdebugMsg(subscip, "Correcting solution successful\n");
+   }
+   
+   SCIPfreeBufferArray(subscip, &blockvals);
+   SCIPfreeBufferArray(subscip, &consvars);
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of primal heuristic
  */
@@ -1175,6 +1271,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                SCIPdebugMsg(scip, "write subscip block %d\n", b);
                SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[b]).subscip, "debug_block_orig.lp", "lp", FALSE) );
 #endif
+               /* reuse old solution if available*/
+               SCIP_CALL( reuseSolution((problem->blocks[b]).subscip, &problem->blocks[b]) );
 
                SCIPsolve((problem->blocks[b]).subscip);
                status = SCIPgetStatus((problem->blocks[b]).subscip);
@@ -1256,6 +1354,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                   goto TERMINATE;
                }
 
+               /* free solving data in order to change problem */
                SCIP_CALL(SCIPfreeTransform((problem->blocks[b]).subscip));
 
             } while (status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_GAPLIMIT);
@@ -1469,22 +1568,15 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
 
+      SCIPdebugMsg(scip, "Objective value %.2f\n", SCIPgetSolOrigObj(scip, newsol));
+
       SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
       if( !success )
          SCIPdebugMsg(scip, "Solution copy failed\n");
       else
       {
-         SCIP_SOL* sol;
-         SCIP_Bool feasible;
-         sol = SCIPgetBestSol(scip);
-         SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
-
-         if( feasible )
-         {
-            SCIPdebugMsg(scip, "Solution copy successful\n");
-            SCIPdebugMsg(scip, "Objective value %.2f\n", SCIPgetSolOrigObj(scip, sol));
-            *result = SCIP_FOUNDSOL;
-         }
+         SCIPdebugMsg(scip, "Solution copy successful\n");
+         *result = SCIP_FOUNDSOL;
       }
 
       SCIPfreeBufferArray(scip, &blocksolvals);
