@@ -5917,6 +5917,7 @@ SCIP_RETCODE enforceExprNlhdlr(
    {
       SCIP_ROWPREP* rowprep;
       SCIP_VAR* auxvar;
+      SCIP_Real auxvarvalue;
       SCIP_Real cutviol;
       SCIP_Bool sepasuccess = FALSE;
       SCIP_Bool branchscoresuccess = FALSE;
@@ -5936,10 +5937,11 @@ SCIP_RETCODE enforceExprNlhdlr(
          cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, NULL);
          if( cutviol > 0.0 )
          {
+            auxvarvalue = SCIPgetSolVal(scip, sol, auxvar);
+
             /* check whether cut is weak (if f(x) not defined, then it's never weak) */
             if( !allowweakcuts && auxvalue != SCIP_INVALID )
             {
-               SCIP_Real auxvarvalue;
                /* SCIP_Real estimateval; */
                /* cutviol is estimator value - auxvar value, so can restore estimator value */
                /* estimateval = cutviol + auxvarval; */
@@ -5958,7 +5960,6 @@ SCIP_RETCODE enforceExprNlhdlr(
                 *
                 * when linearizing convex expressions, then we should have c'x-b = f(x), so they would never be weak
                 */
-               auxvarvalue = SCIPgetSolVal(scip, sol, auxvar);
                if( (!overestimate && ( cutviol <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
                    ( overestimate && (-cutviol >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
                {
@@ -5979,8 +5980,8 @@ SCIP_RETCODE enforceExprNlhdlr(
       if( sepasuccess )
       {
          SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
-            SCIPgetConsExprNlhdlrName(nlhdlr), SCIPgetSolVal(scip, sol, auxvar), SCIPgetSolVal(scip, sol, auxvar) + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
-         /* SCIPdebug( SCIPprintRowprep(scip, rowprep, NULL) ); */
+            SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
+         SCIPdebug( SCIPprintRowprep(scip, rowprep, NULL) );
 
          /* if not allowweakcuts, then do not attempt to get cuts more violated by scaling them up,
           * instead, may even scale them down, that is, scale so that max coef is close to 1
@@ -5989,16 +5990,18 @@ SCIP_RETCODE enforceExprNlhdlr(
          {
             SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
 
+            if( !sepasuccess )
+            {
+               SCIPdebugMsg(scip, "cleanup cut failed, probably no longer violated after scaling down\n");
+            }
+
             if( auxvalue != SCIP_INVALID )
             {
                /* check whether cut is weak now
                 * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when reconstructing estimateval from cutviol
                 */
-               SCIP_Real auxvarvalue;
                SCIP_Real auxvarcoef = 0.0;
                int i;
-
-               auxvarvalue = SCIPgetSolVal(scip, sol, auxvar);
 
                /* get absolute value of coef of auxvar in row - this makes the whole check here more expensive that it should be... */
                for( i = 0; i < rowprep->nvars; ++i )
@@ -6012,8 +6015,8 @@ SCIP_RETCODE enforceExprNlhdlr(
                    (!overestimate && ( cutviol / auxvarcoef <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
                    ( overestimate && (-cutviol / auxvarcoef >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
                {
-                  SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
-                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvalue, auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate);
+                  SCIPdebugMsg(scip, "cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
+                     auxvalue, auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate);
                   sepasuccess = FALSE;
                }
             }
@@ -6029,6 +6032,11 @@ SCIP_RETCODE enforceExprNlhdlr(
                rowprep->recordmodifications = TRUE;
 
             SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
+
+            if( !sepasuccess )
+            {
+               SCIPdebugMsg(scip, "cleanup failed, %d coefs modified\n", rowprep->nmodifiedvars);
+            }
 
             /* if cleanup left us with a useless cut, then consider branching on variables for which coef were changed */
             if( !sepasuccess && !branchscoresuccess && rowprep->nmodifiedvars > 0 )
@@ -6198,7 +6206,7 @@ SCIP_RETCODE enforceExpr(
          continue;
       }
 
-      SCIPdebugMsg(scip, "enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate);
+      SCIPdebugMsg(scip, "enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d weak:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate, allowweakcuts);
 
       /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
       if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > minviolation) )  /*lint !e777*/
@@ -6387,7 +6395,7 @@ SCIP_RETCODE enforceConstraints2(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      /* for satisfied constraints, no branching score has been computed, so no need to propagte from here */
+      /* for satisfied constraints, no branching score has been computed, so no need to propagate from here */
       if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
          continue;
 
