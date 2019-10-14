@@ -5961,7 +5961,8 @@ SCIP_RETCODE enforceExprNlhdlr(
                if( (!overestimate && (cutviol <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
                    ( overestimate && (cutviol >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
                {
-                  SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak\n", SCIPgetConsExprNlhdlrName(nlhdlr));
+                  SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak (auxvalue %g auxvarvalue %g cutviol %g over %d)\n",
+                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvalue, auxvarvalue, cutviol, overestimate);
                   sepasuccess = FALSE;
                }
             }
@@ -5985,13 +5986,29 @@ SCIP_RETCODE enforceExprNlhdlr(
 
             if( auxvalue != SCIP_INVALID )
             {
-               /* check whether cut is weak now */
+               /* check whether cut is weak now
+                * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when reconstructing estimateval from cutviol
+                */
                SCIP_Real auxvarvalue;
+               SCIP_Real auxvarcoef = 0.0;
+               int i;
+
                auxvarvalue = SCIPgetSolVal(scip, sol, auxvar);
-               if( (!overestimate && (cutviol <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
-                   ( overestimate && (cutviol >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
+
+               /* get absolute value of coef of auxvar in row - this makes the whole check here more expensive that it should be... */
+               for( i = 0; i < rowprep->nvars; ++i )
+                  if( rowprep->vars[i] == auxvar )
+                  {
+                     auxvarcoef = REALABS(rowprep->coefs[i]);
+                     break;
+                  }
+
+               if( auxvarcoef == 0.0 ||
+                   (!overestimate && (cutviol / auxvarcoef <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
+                   ( overestimate && (cutviol / auxvarcoef >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
                {
-                  SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak after cleanup\n", SCIPgetConsExprNlhdlrName(nlhdlr));
+                  SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak after cleanup (auxvalue %g auxvarvalue %g cutviol %g |auxvarcoef| %g over %d)\n",
+                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvalue, auxvarvalue, cutviol, auxvarcoef, overestimate);
                   sepasuccess = FALSE;
                }
             }
@@ -6065,7 +6082,7 @@ SCIP_RETCODE enforceExprNlhdlr(
       }
       else
       {
-         SCIPdebugMsg(scip, "separation with estimate of nlhdlr %s failed and not branching candidates (!)\n", SCIPgetConsExprNlhdlrName(nlhdlr));
+         SCIPdebugMsg(scip, "separation with estimate of nlhdlr %s failed and no branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), allowweakcuts ? " (!)" : "");
       }
 
       SCIPfreeRowprep(scip, &rowprep);
