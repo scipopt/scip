@@ -332,7 +332,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
    assert(maxdeg >= 0);
 
-   SCIPfreeBufferArray(scip, &prizeorg);
+   SCIPfreeBufferArrayNull(scip, &prizeorg);
    SCIPfreeBufferArray(scip, &termorg);
    SCIPfreeBufferArray(scip, &nodestatenew);
    SCIPfreeBufferArray(scip, &soledges);

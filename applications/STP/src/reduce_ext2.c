@@ -50,6 +50,7 @@ typedef struct reduction_data
    const SCIP_Real* const redCosts;
    const SCIP_Real* const rootToNodeDist;
    const PATH* const nodeTo3TermsPaths;
+   const int* const nodeTo3TermsBases;
    const STP_Bool* const edgedeleted;
    int* const pseudoancestor_mark;
    const SCIP_Real cutoff;
@@ -900,6 +901,7 @@ SCIP_Real extTreeGetDirectedRedcostProper(
    const SCIP_Real swapcost = extdata->tree_redcostSwap[root];
    const REDDATA* const reddata = extdata->reddata;
    const PATH* const nodeTo3TermsPaths = reddata->nodeTo3TermsPaths;
+   const int* const next3Terms = reddata->nodeTo3TermsBases;
    const SCIP_Bool* const isterm = extdata->node_isterm;
    const int* tree_deg = extdata->tree_deg;
 
@@ -933,16 +935,12 @@ SCIP_Real extTreeGetDirectedRedcostProper(
       /* find closest valid terminal for extension */
       for( i = 0; i < 3; i++ )
       {
-         const int firstedge = nodeTo3TermsPaths[leaf + i * nnodes].edge;
+         term = next3Terms[leaf + i * nnodes];
 
-         if( firstedge == -1 )
-         {
-            term = -1;
+         if( term == UNKNOWN )
             break;
-         }
 
-         assert(firstedge >= 0 && firstedge < graph->edges && leaf == graph->head[firstedge]);
-         term = graph->tail[firstedge];
+         assert(term >= 0 && term < graph->knots);
          assert(tree_deg[term] >= 0 && term != leaf);
 
          /* terminal not in current tree?*/
@@ -950,10 +948,8 @@ SCIP_Real extTreeGetDirectedRedcostProper(
             break;
       }
 
-      assert(term >= -1 && term < graph->knots && term != leaf);
-
       /* no terminal reachable? */
-      if( term == -1 )
+      if( term == UNKNOWN )
       {
          assert(SCIPisGE(scip, nodeTo3TermsPaths[leaf + i * nnodes].dist, FARAWAY));
          return FARAWAY;
@@ -1794,8 +1790,8 @@ SCIP_RETCODE reduce_extendedCheckArc(
 
       {
          REDDATA reddata = { .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
-            .edgedeleted = edgedeleted, .pseudoancestor_mark = pseudoancestor_mark,  .cutoff = cutoff,
-            .equality = equality, .redCostRoot = root };
+            .nodeTo3TermsBases = redcostdata->nodeTo3TermsBases, .edgedeleted = edgedeleted,
+            .pseudoancestor_mark = pseudoancestor_mark, .cutoff = cutoff, .equality = equality, .redCostRoot = root };
          EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
             .extstack_state = extstack_state, .extstack_ncomponents = 0, .tree_leaves = tree_leaves,
             .tree_edges = tree_edges, .tree_deg = tree_deg, .tree_nleaves = 0,
@@ -1897,8 +1893,8 @@ SCIP_RETCODE reduce_extendedCheckEdge(
 
       {
          REDDATA reddata = { .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
-            .edgedeleted = edgedeleted, .pseudoancestor_mark = pseudoancestor_mark,  .cutoff = cutoff,
-            .equality = equality, .redCostRoot = root };
+            .nodeTo3TermsBases = redcostdata->nodeTo3TermsBases, .edgedeleted = edgedeleted,
+            .pseudoancestor_mark = pseudoancestor_mark, .cutoff = cutoff, .equality = equality, .redCostRoot = root };
          EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
             .extstack_state = extstack_state, .extstack_ncomponents = 0, .tree_leaves = tree_leaves,
             .tree_edges = tree_edges, .tree_deg = tree_deg, .tree_nleaves = 0,
@@ -1906,7 +1902,7 @@ SCIP_RETCODE reduce_extendedCheckEdge(
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap, .tree_redcost = 0.0,
             .tree_root = -1, .tree_nedges = 0,  .tree_depth = 0, .extstack_maxsize = nnodes - 1,
             .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = maxdfsdepth,
-            .tree_maxnedges = STP_EXTTREE_MAXNEDGES,  .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
+            .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
          /* can we extend from head? */
          if( extLeafIsExtendable(graph, isterm, head) )
@@ -1945,14 +1941,9 @@ SCIP_RETCODE reduce_extendedCheckEdge(
 /** extended reduction test for edges */
 SCIP_RETCODE reduce_extendedEdge2(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph,              /**< graph data structure */
-   const PATH*           termpaths,          /**< paths to nearest terminals */
-   const SCIP_Real*      redcost,            /**< dual ascent costs */
-   const SCIP_Real*      rootdist,           /**< shortest path distance (w.r.t reduced costs) from root to any node */
+   const REDCOST*        redcostdata,        /**< reduced cost data */
    const int*            result,             /**< solution array */
-   SCIP_Real             minpathcost,        /**< the required reduced path cost to be surpassed */
-   int                   root,               /**< the root */
-   SCIP_Bool             markdirected,       /**< try to also mark edge if anti-parallel is not marked */
+   GRAPH*                graph,              /**< graph data structure */
    STP_Bool*             edgedeletable,      /**< edge array to mark which (directed) edge can be removed */
    int*                  nelims              /**< number of eliminations */
 )
@@ -1963,17 +1954,18 @@ SCIP_RETCODE reduce_extendedEdge2(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
-   REDCOST redcostdata = { .redEdgeCost = redcost, .rootToNodeDist = rootdist,
-         .nodeTo3TermsPaths = termpaths, .cutoff = minpathcost, .redCostRoot = root};
+   const int root = redcostdata->redCostRoot;
+   const SCIP_Real* const redcost = redcostdata->redEdgeCost;
+
    DISTDATA distdata;
 
-   assert(scip && graph && redcost);
+   assert(scip && graph && redcostdata);
    assert(!pcmw || !graph->extended);
    assert(root >= 0 && root < graph->knots);
 
    *nelims = 0;
 
-   if( SCIPisZero(scip, minpathcost) )
+   if( SCIPisZero(scip, redcostdata->cutoff) )
       return SCIP_OKAY;
 
    graph_mark(graph);
@@ -2028,7 +2020,7 @@ SCIP_RETCODE reduce_extendedEdge2(
                edgedeletable[e] = TRUE;
          }
 
-         if( !edgedeletable[erev] && (deletable || markdirected) )
+         if( !edgedeletable[erev] && deletable )
          {
             SCIP_Bool erevdeletable = TRUE;
 
@@ -2041,7 +2033,7 @@ SCIP_RETCODE reduce_extendedEdge2(
             deletable = (deletable && erevdeletable);
          }
 #else
-         SCIP_CALL( reduce_extendedCheckEdge(scip, graph, &redcostdata, edgedeletable,
+         SCIP_CALL( reduce_extendedCheckEdge(scip, graph, redcostdata, edgedeletable,
                isterm, e, allowequality, &distdata, bottleneckDist, tree_deg, &deletable) );
 #endif
 

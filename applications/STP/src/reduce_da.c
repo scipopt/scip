@@ -2213,7 +2213,10 @@ SCIP_RETCODE reduce_da(
          {
             int todo;
             int extfixed;
-            reduce_extendedEdge2(scip, graph, vnoi, cost, pathdist, (havenewsol ? result : NULL), minpathcost, daroot, FALSE, marked, &extfixed);
+            REDCOST redcostdata = { .redEdgeCost = cost, .rootToNodeDist = pathdist, .nodeTo3TermsPaths = vnoi,
+               .nodeTo3TermsBases = vbase, .cutoff = minpathcost, .redCostRoot = daroot};
+
+            reduce_extendedEdge2(scip, &redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed);
             ndeletions += extfixed;
 //#define EXT_WRITE
             graph_printInfo(graph);

@@ -101,7 +101,8 @@ SCIP_RETCODE extArc(
    SCIP_Bool* isterm;
    int* tree_deg;
    SCIP_Real* bottleneckDists;
-   REDCOST redcostdata = {redcost, rootdist, termpaths, cutoff, root};
+   int todo;
+   REDCOST redcostdata = {redcost, rootdist, termpaths, NULL, cutoff, root};
    DISTDATA distdata;
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );

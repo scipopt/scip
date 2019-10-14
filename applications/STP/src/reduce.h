@@ -62,6 +62,7 @@ typedef struct reduce_costs_data
    const SCIP_Real* const redEdgeCost;           /**< reduced costs */
    const SCIP_Real* const rootToNodeDist;        /**< shortest path distances from root  */
    const PATH* const nodeTo3TermsPaths;          /**< paths to three nearest terminals */
+   const int* const nodeTo3TermsBases;           /**< three nearest terminals */
    const SCIP_Real cutoff;                       /**< reduced cost cutoff value or -1.0 if not used */
    const int redCostRoot;                        /**< graph root for reduced cost calculation */
 } REDCOST;
@@ -137,10 +138,9 @@ extern int             reduce_extendedEdge(SCIP*, GRAPH*, const PATH*, const SCI
 
 /* reduce_ext2.c
  */
-extern SCIP_RETCODE    reduce_extendedEdge2(SCIP*, GRAPH*, const PATH*, const SCIP_Real*, const SCIP_Real*, const int*, SCIP_Real, int, SCIP_Bool,  STP_Bool*, int*);
+extern SCIP_RETCODE    reduce_extendedEdge2(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
 extern SCIP_RETCODE    reduce_extendedCheckArc(SCIP*, const GRAPH*, const REDCOST*, STP_Bool*,  const SCIP_Bool*, int, SCIP_Bool, DISTDATA*, SCIP_Real*, int*, SCIP_Bool*);
 extern SCIP_RETCODE    reduce_extendedCheckEdge(SCIP*, const GRAPH*, const REDCOST*, const STP_Bool*,  const SCIP_Bool*, int, SCIP_Bool, DISTDATA*, SCIP_Real*, int*, SCIP_Bool*);
-
 
 /* reduce_test.c
  */
