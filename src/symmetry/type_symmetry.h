@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -44,7 +44,9 @@ enum SYM_Rhssense
    SYM_SENSE_EQUATION   = 2,                 /**< linear equation */
    SYM_SENSE_XOR        = 3,                 /**< XOR constraint */
    SYM_SENSE_AND        = 4,                 /**< AND constraint */
-   SYM_SENSE_OR         = 5                  /**< OR constrant */
+   SYM_SENSE_OR         = 5,                 /**< OR constrant */
+   SYM_SENSE_BOUNDIS_TYPE_1 = 6,             /**< bounddisjunction type 1 */
+   SYM_SENSE_BOUNDIS_TYPE_2 = 7              /**< bounddisjunction type 2 */
 };
 typedef enum SYM_Rhssense SYM_RHSSENSE;
 

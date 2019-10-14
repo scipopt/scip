@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   debug.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for debugging
  * @author Tobias Achterberg
  */
@@ -1277,7 +1278,7 @@ SCIP_RETCODE SCIPdebugCheckAggregation(
    }
 
    /* print debug message if the aggregation violates the debugging solution */
-   if( !SCIPsetIsEQ(set, solval, val) )
+   if( !SCIPsetIsRelEQ(set, solval, val) )
    {
       if( naggrvars == 1 )
       {
@@ -1286,13 +1287,13 @@ SCIP_RETCODE SCIPdebugCheckAggregation(
          /* get solution value of y variable */
          SCIP_CALL( getSolutionValue(set, aggrvars[0], &aggrsolval) );
 
-         SCIPerrorMessage("aggregation <%s>[%g] = %g<%s>[%g] + %g violates debugging solution\n",
-            SCIPvarGetName(var), solval, scalars[0], SCIPvarGetName(aggrvars[0]), aggrsolval, constant);
+         SCIPerrorMessage("aggregation <%s>[%g] = %g<%s>[%g] + %g violates debugging solution (expected %g)\n",
+            SCIPvarGetName(var), solval, scalars[0], SCIPvarGetName(aggrvars[0]), aggrsolval, constant, val);
       }
       else
       {
-         SCIPerrorMessage("multi-aggregation <%s>[%g] = ... %d vars ... + %g violates debugging solution\n",
-            SCIPvarGetName(var), solval, naggrvars, constant);
+         SCIPerrorMessage("multi-aggregation <%s>[%g] = ... %d vars ... + %g violates debugging solution (expected %g)\n",
+            SCIPvarGetName(var), solval, naggrvars, constant, val);
       }
       SCIPABORT();
    }

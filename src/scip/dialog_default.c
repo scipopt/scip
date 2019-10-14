@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dialog_default.c
+ * @ingroup OTHER_CFILES
  * @brief  default user interface dialog
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -1506,6 +1507,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubproblem)
    else
       idx = 0;
 
+   /* coverity[var_deref_model] */
    if ( nactivebenders == 1 || SCIPstrToIntValue(idxstr, &idx, &endstr) )
    {
       int nsubproblems;
@@ -1535,6 +1537,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubproblem)
       else
          subidx = 0;
 
+      /* coverity[var_deref_model] */
       if ( nsubproblems == 1 || SCIPstrToIntValue(idxstr, &subidx, &endstr) )
       {
          SCIP* subproblem;
@@ -1557,9 +1560,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubproblem)
                subidx = i;
 
             subproblem = SCIPbendersSubproblem(benders[idx], subidx);
-            assert(subproblem != NULL);
 
-            if( SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
+            if( subproblem != NULL && SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
             {
                SCIPdialogMessage(scip, NULL, "\n");
                SCIPdialogMessage(scip, NULL, "Subproblem %d\n", subidx);
@@ -1650,6 +1652,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
    else
       idx = 0;
 
+   /* coverity[var_deref_model] */
    if ( nactivebenders == 1 || SCIPstrToIntValue(idxstr, &idx, &endstr) )
    {
       int nsubproblems;
@@ -1681,6 +1684,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
       else
          subidx = 0;
 
+      /* coverity[var_deref_model] */
       if ( nsubproblems == 1 || SCIPstrToIntValue(idxstr, &subidx, &endstr) )
       {
          SCIP* subproblem;
@@ -1707,9 +1711,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
                subidx = i;
 
             subproblem = SCIPbendersSubproblem(benders[idx], subidx);
-            assert(subproblem != NULL);
 
-            if( SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
+            if( subproblem != NULL && SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
             {
                /* setting up the subproblem with the best solution to the master problem */
                SCIP_CALL( SCIPsetupBendersSubproblem(scip, benders[idx], bestsol, subidx) );
@@ -2524,6 +2527,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
+      /* coverity[secure_coding] */
       if( sscanf(valuestr, "%c", &charval) != 1 || !SCIPisCharParamValid(scip, param, charval) )
       {
          SCIPdialogMessage(scip, NULL, "\nInvalid char parameter value <%s>. Must be in set {%s}.\n\n",
@@ -2756,6 +2760,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, prompt, FALSE) );
 
+   /* coverity[secure_coding] */
    if( sscanf(valuestr, "%d", &direction) != 1 )
    {
       SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
@@ -2831,6 +2836,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, prompt, FALSE) );
 
+   /* coverity[secure_coding] */
    if( sscanf(valuestr, "%d", &priority) != 1 )
    {
       SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
@@ -3114,6 +3120,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
+   /* coverity[secure_coding] */
    if( sscanf(valuestr, "%" SCIP_REAL_FORMAT, &objlim) != 1 )
    {
       SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_distributiondiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief Diving heuristic that chooses fixings w.r.t. changes in the solution density after Pryor and Chinneck.
  * @author Gregor Hendel
  */
@@ -44,7 +45,7 @@
 
 #define HEUR_NAME             "distributiondiving"
 #define HEUR_DESC             "Diving heuristic that chooses fixings w.r.t. changes in the solution density"
-#define HEUR_DISPCHAR         'e'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1003300
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          3
@@ -54,6 +55,7 @@
 #define EVENT_DISTRIBUTION    SCIP_EVENTTYPE_BOUNDCHANGED /**< the event type to be handled by this event handler */
 #define EVENTHDLR_NAME        "eventhdlr_distributiondiving"
 #define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
+#define DIVESET_ISPUBLIC      FALSE  /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
 
 #define SQUARED(x) ((x) * (x))
 /*
@@ -1005,7 +1007,7 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving)
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, SCIP_DIVECONTEXT_SINGLE) );
 
    SCIP_CALL( heurdataFreeArrays(scip, heurdata) );
 
@@ -1036,6 +1038,8 @@ SCIP_DECL_EVENTEXEC(eventExecDistribution)
 /*
  * heuristic specific interface methods
  */
+
+#define divesetAvailableDistributiondiving NULL
 
 /** creates the distributiondiving heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurDistributiondiving(
@@ -1089,8 +1093,8 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
          DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT, DEFAULT_MAXDIVEUBQUOT,
          DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL,
          DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
-         DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES,
-         divesetGetScoreDistributiondiving) );
+         DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_ISPUBLIC, DIVESET_DIVETYPES,
+         divesetGetScoreDistributiondiving, divesetAvailableDistributiondiving) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scoreparam",
          "the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p., 'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving",

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -58,13 +58,11 @@ typedef struct DIJKSTRA_Graph DIJKSTRA_GRAPH;
 
 
 /** Check whether the data structures of the graph are valid. */
-extern
 DIJKSTRA_Bool dijkstraGraphIsValid(
    const DIJKSTRA_GRAPH* G                   /**< directed graph to be checked */
    );
 
 /** Dijkstra's algorithm using binary heaps */
-extern
 unsigned int dijkstra(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */
@@ -75,7 +73,6 @@ unsigned int dijkstra(
    );
 
 /** Dijkstra's algorithm for shortest paths between a pair of nodes using binary heaps */
-extern
 unsigned int dijkstraPair(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */
@@ -87,7 +84,6 @@ unsigned int dijkstraPair(
    );
 
 /** Dijkstra's algorithm for shortest paths between a pair of nodes using binary heaps and truncated at cutoff */
-extern
 unsigned int dijkstraPairCutoff(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */
@@ -100,7 +96,6 @@ unsigned int dijkstraPairCutoff(
    );
 
 /** Dijkstra's algorithm for shortest paths between a pair of nodes ignoring nodes, using binary heaps, and truncated at cutoff */
-extern
 unsigned int dijkstraPairCutoffIgnore(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */

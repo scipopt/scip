@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,25 +40,6 @@
 #include "scip/type_timing.h"
 #include "scip/type_var.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -81,7 +62,7 @@ extern "C" {
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of primal heuristic */
@@ -112,7 +93,7 @@ SCIP_RETCODE SCIPincludeHeur(
  *
 *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeHeur() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR**           heur,               /**< pointer to the heuristic */
@@ -131,7 +112,7 @@ SCIP_RETCODE SCIPincludeHeurBasic(
    );
 
 /** sets copy method of primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -139,7 +120,7 @@ SCIP_RETCODE SCIPsetHeurCopy(
    );
 
 /** sets destructor method of primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -147,7 +128,7 @@ SCIP_RETCODE SCIPsetHeurFree(
    );
 
 /** sets initialization method of primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -155,7 +136,7 @@ SCIP_RETCODE SCIPsetHeurInit(
    );
 
 /** sets deinitialization method of primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -163,7 +144,7 @@ SCIP_RETCODE SCIPsetHeurExit(
    );
 
 /** sets solving process initialization method of primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -171,7 +152,7 @@ SCIP_RETCODE SCIPsetHeurInitsol(
    );
 
 /** sets solving process deinitialization method of primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -179,26 +160,26 @@ SCIP_RETCODE SCIPsetHeurExitsol(
    );
 
 /** returns the primal heuristic of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_HEUR* SCIPfindHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of primal heuristic */
    );
 
 /** returns the array of currently available primal heuristics */
-EXTERN
+SCIP_EXPORT
 SCIP_HEUR** SCIPgetHeurs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available primal heuristics */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNHeurs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of a primal heuristic */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeurPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< primal heuristic */
@@ -223,7 +204,7 @@ SCIP_RETCODE SCIPsetHeurPriority(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateDiveset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET**        diveset,            /**< pointer to created diving heuristic settings, or NULL if not needed */
@@ -245,10 +226,19 @@ SCIP_RETCODE SCIPcreateDiveset(
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
+   SCIP_Bool             ispublic,           /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
    SCIP_Bool             specificsos1score,  /**< should SOS1 variables be scored by the diving heuristics specific score function;
                                               *   otherwise use the score function of the SOS1 constraint handler */
-   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
+   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< method for candidate score and rounding direction */
+   SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
+   );
 
+/** check specific preconditions for diving, e.g., if an incumbent solution is available */
+SCIP_EXPORT
+SCIP_RETCODE SCIPisDivesetAvailable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET*         diveset,            /**< diving heuristic settings */
+   SCIP_Bool*            available           /**< pointer to store if the diving can run at the current solving stage */
    );
 
 /* @} */

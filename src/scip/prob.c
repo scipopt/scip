@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prob.c
+ * @ingroup OTHER_CFILES
  * @brief  Methods and datastructures for storing and manipulating the main problem
  * @author Tobias Achterberg
  */
@@ -406,8 +407,10 @@ SCIP_RETCODE SCIPprobFree(
    SCIP_LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    )
 {
-   SCIP_Bool warnreleasevar = TRUE;
    int v;
+#ifndef NDEBUG
+   SCIP_Bool unreleasedvar = FALSE;
+#endif
 
    assert(prob != NULL);
    assert(*prob != NULL);
@@ -459,11 +462,13 @@ SCIP_RETCODE SCIPprobFree(
    {
       assert(SCIPvarGetProbindex((*prob)->vars[v]) >= 0);
 
-      if ( warnreleasevar && SCIPvarGetNUses((*prob)->vars[v]) > 1 )
+      if( SCIPvarGetNUses((*prob)->vars[v]) > 1 )
       {
-         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP. Consider releasing variable first.\n",
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP.\n",
             (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->vars[v]));
-         warnreleasevar = FALSE;
+#ifndef NDEBUG
+         unreleasedvar = TRUE;
+#endif
       }
 
       SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, NULL, set, TRUE) );
@@ -476,16 +481,20 @@ SCIP_RETCODE SCIPprobFree(
    {
       assert(SCIPvarGetProbindex((*prob)->fixedvars[v]) == -1);
 
-      if ( warnreleasevar && SCIPvarGetNUses((*prob)->fixedvars[v]) > 1 )
+      if( SCIPvarGetNUses((*prob)->fixedvars[v]) > 1 )
       {
-         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP. Consider releasing variable first.\n",
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP.\n",
             (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->fixedvars[v]));
-         warnreleasevar = FALSE;
+#ifndef NDEBUG
+         unreleasedvar = TRUE;
+#endif
       }
 
       SCIP_CALL( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, eventqueue, lp) );
    }
    BMSfreeMemoryArrayNull(&(*prob)->fixedvars);
+
+   assert(! unreleasedvar);
 
    /* free deleted problem variables array */
    BMSfreeMemoryArrayNull(&(*prob)->deletedvars);
@@ -1131,7 +1140,10 @@ SCIP_RETCODE SCIPprobChgVarType(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to add */
    SCIP_VARTYPE          vartype             /**< new type of variable */
@@ -1158,7 +1170,7 @@ SCIP_RETCODE SCIPprobChgVarType(
    SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var) );
 
    /* change the type of the variable */
-   SCIP_CALL( SCIPvarChgType(var, vartype) );
+   SCIP_CALL( SCIPvarChgType(var, blkmem, set, primal, lp, eventqueue, vartype) );
 
    /* reinsert variable into problem */
    probInsertVar(prob, var);

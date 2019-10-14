@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_cardinality.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for cardinality constraints
  * @author Tobias Fischer
  *
@@ -2054,7 +2055,7 @@ SCIP_RETCODE generateRowCardinality(
       {
          /* create upper bound inequality if at least two of the bounds are finite and nonzero */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cardub#%s", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)cardval,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, cons, name, -SCIPinfinity(scip), (SCIP_Real)cardval,
               local, TRUE, FALSE) );
          SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
@@ -2097,7 +2098,7 @@ SCIP_RETCODE generateRowCardinality(
       {
          /* create lower bound inequality if at least two of the bounds are finite and nonzero */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cardlb#%s", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)cardval,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, cons, name, -SCIPinfinity(scip), (SCIP_Real)cardval,
               local, TRUE, FALSE) );
          SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, nvars, vars, vals) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );

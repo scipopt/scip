@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_oneopt.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  improvement heuristic that alters single variable values
  * @author Timo Berthold
  */
@@ -50,7 +51,7 @@
 
 #define HEUR_NAME             "oneopt"
 #define HEUR_DESC             "1-opt heuristic which tries to improve setting of single integer variables"
-#define HEUR_DISPCHAR         'b'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ITERATIVE
 #define HEUR_PRIORITY         -20000
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
@@ -82,52 +83,6 @@ struct SCIP_HeurData
 /*
  * Local methods
  */
-
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure                        */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< zeroobj heuristic structure                         */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
-   SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-   )
-{
-   SCIP_VAR** vars;                          /* the original problem's variables                */
-   int        nvars;                         /* the original problem's number of variables      */
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-   SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
-
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-   assert(subsol != NULL);
-
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
-   /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-
-   SCIPfreeBufferArray(scip, &subsolvals);
-
-   return SCIP_OKAY;
-}
 
 /** compute value by which the solution of variable @p var can be shifted */
 static
@@ -289,10 +244,7 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
    )
 {
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_SOL** subsols;
    SCIP_SOL* startsol;
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-   int nsubsols;
    int nvars;                                /* number of original problem's variables          */
    int i;
 
@@ -310,22 +262,18 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
    SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, FALSE, TRUE, valid) );
    SCIP_CALL( SCIPtransformProb(subscip) );
 
-   /* get variable image */
-   for( i = 0; i < nvars; i++ )
-      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-
-   /* copy the solution */
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-   SCIP_CALL( SCIPgetSolVals(scip, bestsol, nvars, vars, subsolvals) );
-
-   /* create start solution for the subproblem */
+   /* get variable image and create start solution for the subproblem  */
    SCIP_CALL( SCIPcreateOrigSol(subscip, &startsol, NULL) );
-   SCIP_CALL( SCIPsetSolVals(subscip, startsol, nvars, subvars, subsolvals) );
+   for( i = 0; i < nvars; i++ )
+   {
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      if( subvars[i] != NULL )
+         SCIP_CALL( SCIPsetSolVal(subscip, startsol, subvars[i], SCIPgetSolVal(scip, bestsol, vars[i])) );
+   }
 
    /* try to add new solution to sub-SCIP and free it immediately */
    *valid = FALSE;
    SCIP_CALL( SCIPtrySolFree(subscip, &startsol, FALSE, FALSE, FALSE, FALSE, FALSE, valid) );
-   SCIPfreeBufferArray(scip, &subsolvals);
    SCIPhashmapFree(&varmapfw);
 
    /* deactivate basically everything except oneopt in the sub-SCIP */
@@ -396,15 +344,9 @@ SCIP_RETCODE setupAndSolveSubscipOneopt(
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
        */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
-      *valid = FALSE;
-      for( i = 0; i < nsubsols && !(*valid); ++i )
-      {
-         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], valid) );
-         if( *valid )
-            *result = SCIP_FOUNDSOL;
-      }
+      SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, valid, NULL) );
+      if( *valid )
+         *result = SCIP_FOUNDSOL;
    }
 
    return SCIP_OKAY;

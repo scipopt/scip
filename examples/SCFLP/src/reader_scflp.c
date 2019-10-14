@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -102,7 +102,7 @@
 #define READER_EXTENSION        "cap"
 
 
-#define DEFAULT_USEBENDERS      FALSE
+#define DEFAULT_USEBENDERS       TRUE
 #define DEFAULT_NUMSCENARIOS      250
 #define DEFAULT_RANDOMSEED          1
 #define DEFAULT_QUADCOSTS       FALSE   /**< should the problem be formulated with quadratic costs */

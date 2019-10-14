@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 /** create a decomposition */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdecompCreate(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -45,20 +45,20 @@ SCIP_RETCODE SCIPdecompCreate(
    );
 
 /** free a decomposition */
-EXTERN
+SCIP_EXPORT
 void SCIPdecompFree(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** returns TRUE if decomposition is in the original space */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPdecompIsOriginal(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
 /** returns TRUE if this constraint contains only linking variables */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPhasConsOnlyLinkVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -69,56 +69,56 @@ SCIP_RETCODE SCIPhasConsOnlyLinkVars(
 /** sets the parameter that indicates whether the variables must be labeled for the application of Benders'
  * decomposition
  */
-EXTERN
+SCIP_EXPORT
 void SCIPdecompSetUseBendersLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_Bool             benderslabels       /**< whether Benders' variable labels should be used */
    );
 
 /** returns TRUE if the variables must be labeled for the application of Benders' decomposition */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPdecompUseBendersLabels(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
 /** gets number of blocks of this decomposition */
-EXTERN
+SCIP_EXPORT
 int SCIPdecompGetNBlocks(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
 /** gets number of edges in the block-decomposition graph of this decomposition */
-EXTERN
+SCIP_EXPORT
 int SCIPdecompGetNBlockGraphEdges(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
 /** gets number of connected components in the block-decomposition graph of this decomposition */
-EXTERN
+SCIP_EXPORT
 int SCIPdecompGetNBlockGraphComponents(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
 /** gets number of articulation points in the block-decomposition graph of this decomposition */
-EXTERN
+SCIP_EXPORT
 int SCIPdecompGetNBlockGraphArticulations(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
 /** gets the maximum degree of the block-decomposition graph of this decomposition */
-EXTERN
+SCIP_EXPORT
 int SCIPdecompGetBlockGraphMaxDegree(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
 /** gets the minimum degree of the block-decomposition graph of this decomposition */
-EXTERN
+SCIP_EXPORT
 int SCIPdecompGetBlockGraphMinDegree(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
 /** set labels for an array of variables */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdecompSetVarsLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_VAR**            vars,               /**< array of variables */
@@ -127,7 +127,7 @@ SCIP_RETCODE SCIPdecompSetVarsLabels(
    );
 
 /** query labels for an array of variables */
-EXTERN
+SCIP_EXPORT
 void SCIPdecompGetVarsLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_VAR**            vars,               /**< array of variables */
@@ -136,7 +136,7 @@ void SCIPdecompGetVarsLabels(
    );
 
 /** set labels for an array of constraints */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdecompSetConsLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_CONS**           conss,              /**< array of constraints */
@@ -145,7 +145,7 @@ SCIP_RETCODE SCIPdecompSetConsLabels(
    );
 
 /** query labels for an array of constraints */
-EXTERN
+SCIP_EXPORT
 void SCIPdecompGetConsLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_CONS**           conss,              /**< array of constraints */
@@ -154,14 +154,14 @@ void SCIPdecompGetConsLabels(
    );
 
 /** clears the corresponding labeling (constraints, variables, or both) of this decomposition */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdecompClear(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_Bool             clearvarlabels,     /**< should the variable labels be cleared? */
    SCIP_Bool             clearconslabels     /**< should the constraint labels be cleared? */
    );
 
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdecompComputeConsLabels(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -184,7 +184,7 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
  *  Now, a variable is considered linking if it is present in at least one linking constraint and an arbitrary
  *  number of constraints from named blocks.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdecompComputeVarsLabels(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -197,7 +197,7 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
  * Each linking constraint is assigned to the most frequent block among its variables.
  * Variables of other blocks are relabeled as linking variables.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdecompAssignLinkConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -206,14 +206,14 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
    );
 
 /** compute decomposition statistics and store them in the decomp object */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeDecompStats(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
 /** print decomposition statistics into string buffer */
-EXTERN
+SCIP_EXPORT
 char* SCIPdecompPrintStats(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    char*                 strbuf              /**< string buffer storage */
@@ -230,7 +230,7 @@ char* SCIPdecompPrintStats(
  */
 
 /** create a decomposition storage */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdecompstoreCreate(
    SCIP_DECOMPSTORE**    decompstore,        /**< pointer to store decomposition storage */
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
@@ -238,57 +238,57 @@ SCIP_RETCODE SCIPdecompstoreCreate(
    );
 
 /** free a decomposition storage */
-EXTERN
+SCIP_EXPORT
 void SCIPdecompstoreFree(
    SCIP_DECOMPSTORE**    decompstore,        /**< pointer to store decomposition storage */
    BMS_BLKMEM*           blkmem              /**< block memory data structure */
    );
 
 /** add decomposition to storage */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdecompstoreAdd(
    SCIP_DECOMPSTORE*     decompstore,        /**< decomposition storage */
    SCIP_DECOMP*          decomp              /**< decomposition to add */
    );
 
 /** get decompositions from this storage */
-EXTERN
+SCIP_EXPORT
 SCIP_DECOMP** SCIPdecompstoreGetDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    );
 
 /** get number of decompositions in this storage */
-EXTERN
+SCIP_EXPORT
 int SCIPdecompstoreGetNDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    );
 
 /** get decompositions in original space from this storage */
-EXTERN
+SCIP_EXPORT
 SCIP_DECOMP** SCIPdecompstoreGetOrigDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    );
 
 /** get number of decompositions in original space in this storage */
-EXTERN
+SCIP_EXPORT
 int SCIPdecompstoreGetNOrigDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    );
 
 /** get decomposition store from SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_DECOMPSTORE* SCIPgetDecompstore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** transform all available original decompositions into transformed space */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtransformDecompstore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** free all decompositions in transformed space */
-EXTERN
+SCIP_EXPORT
 void SCIPexitSolveDecompstore(
    SCIP*                 scip                /**< SCIP data structure */
    );

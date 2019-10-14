@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,13 +36,11 @@ extern "C" {
 #endif
 
 /** creates the local primal heuristic and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPStpIncludeHeurLocal(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** perform local heuristics on a given Steiner tree */
-extern
 SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
@@ -53,7 +51,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
 
 /** greedy extension local heuristic for (R)PC and MW */
-extern
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
