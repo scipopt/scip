@@ -2617,7 +2617,7 @@ SCIP_RETCODE tightenSingleVar(
                eventqueue, cliquetable, var, newbound, boundtype, FALSE) );
 
          /* mark the node in the validdepth to be propagated again */
-         SCIPnodePropagateAgain(tree->path[validdepth], set, stat, tree);
+         SCIPnodePropagateAgain(tree->path[0], set, stat, tree);
       }
    }
 
