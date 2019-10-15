@@ -1497,7 +1497,8 @@ SCIP_RETCODE consdataFree(
 
    /* free eigen decomposition information */
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->eigenvalues, (*consdata)->nquadvars);
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->eigenvectors, (int)((*consdata)->nquadvars*(*consdata)->nquadvars));
+   if( (*consdata)->eigenvectors != NULL )  /* explicit check on NULL to avoid runtime warning if nquadvars^2 > int_max */
+      SCIPfreeBlockMemoryArray(scip, &(*consdata)->eigenvectors, (int)((*consdata)->nquadvars*(*consdata)->nquadvars));
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->bp, (*consdata)->nquadvars);
 
    /* free unique indices of bilinear terms array */
