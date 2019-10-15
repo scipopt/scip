@@ -2536,7 +2536,6 @@ SCIP_RETCODE tightenSingleVar(
    }
    else
    {
-
       newbound = rhs/val;
       boundtype = (val > 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
 
