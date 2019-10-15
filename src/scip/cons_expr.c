@@ -6516,6 +6516,8 @@ SCIP_RETCODE enforceConstraints(
       SCIPdebugMsg(scip, "registered %d unfixed variables as branching candidates\n", nnotify);
       ++conshdlrdata->ndesperatebranch;
 
+      *result = SCIP_INFEASIBLE;  /* enforceConstraints2 may have changed it to SCIP_DIDNOTFIND */
+
       return SCIP_OKAY;
    }
 
