@@ -6702,7 +6702,7 @@ SCIP_Bool checkDualFeasibility(
    return valid;
 }
 
-/** sort local rows by increasing depth */
+/** sort local rows by increasing depth and number of nonzeros as tie-breaker */
 static
 SCIP_RETCODE sortLocalRows(
    SCIP_SET*             set,                /**< global SCIP settings */
