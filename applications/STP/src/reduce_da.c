@@ -2129,16 +2129,17 @@ SCIP_RETCODE reduce_da(
       SCIP_CALL( computeSteinerTreeTM(scip, graph, cost, costrev, result, &upperbound) );
    }
 
+   nruns = MIN(nFixedTerms, DEFAULT_DARUNS);
+   assert(nruns > 0);
+
+   /* select roots for dual ascent */
+   SCIP_CALL( daOrderRoots(scip, graph, terms, nFixedTerms, (prevrounds > 0), randnumgen) );
+
    // todo maybe inside the loop?
    if( prevrounds > 0 )
       damaxdeviation = SCIPrandomGetReal(randnumgen, DAMAXDEVIATION_RANDOM_LOWER, DAMAXDEVIATION_RANDOM_UPPER);
    else
       damaxdeviation = -1.0;
-
-   /* select roots for dual ascent */
-   nruns = MIN(nFixedTerms, DEFAULT_DARUNS);
-   SCIP_CALL( daOrderRoots(scip, graph, terms, nFixedTerms, (prevrounds > 0), randnumgen) );
-   assert(nruns > 0);
 
    if( rpc ) graph_pc_2transcheck(graph);
 
