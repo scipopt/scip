@@ -6480,11 +6480,11 @@ SCIP_RETCODE enforceConstraints(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, becoming desperate now...\n", maxviol);
+   SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, LP feastol=%g, becoming desperate now...\n", maxviol, SCIPgetLPFeastol(scip));
 
-   if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxvarboundviol) && sol == NULL )
+   if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxvarboundviol) && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
    {
-      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), maxvarboundviol / 2.0));
+      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxvarboundviol / 2.0, SCIPgetLPFeastol(scip) / 2.0)));
       SCIPdebugMsg(scip, "variable bounds are violated by more than eps, reduced LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip));
       ++conshdlrdata->ntightenlp;
 
