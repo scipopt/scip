@@ -6808,7 +6808,7 @@ SCIP_RETCODE addLocalRows(
 
    /* break if the proof is valid w.r.t local bounds
     * note: it can happen that the proof contains a variable with an infinite activity delta.
-    *       here, we don't break immediately because we might can fix it by adding local rows
+    *       here, we don't break immediately because we might be able to fix it by adding local rows
     */
    if( !infdelta && !SCIPsetIsInfinity(set, REALABS(*proofact)) && SCIPsetIsGT(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
       return SCIP_OKAY;
