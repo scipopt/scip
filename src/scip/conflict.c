@@ -3069,7 +3069,7 @@ SCIP_RETCODE createAndAddProofcons(
       toolong = (toolong && (nnz > set->conf_maxvarsfac * transprob->nvars));
    }
 
-   /* don't store global dual proofs that are to long / have to much non-zeros */
+   /* don't store global dual proofs that are too long / have too many non-zeros */
    if( toolong )
    {
       if( applyglobal )
