@@ -2771,11 +2771,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       *dval = lpi->parameters->primal_feasibility_tolerance();
-      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_FEASTOL = %f.\n", *dval);
+      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_FEASTOL = %g.\n", *dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
       *dval = lpi->parameters->dual_feasibility_tolerance();
-      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_DUALFEASTOL = %f.\n", *dval);
+      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_DUALFEASTOL = %g.\n", *dval);
       break;
    case SCIP_LPPAR_OBJLIM:
       if (lpi->linear_program->IsMaximizationProblem())
