@@ -65,6 +65,7 @@
 #define DEFAULT_ONLYINITIAL        TRUE /**< default value for parameter onlyinitial */
 #define DEFAULT_USEINSUBSCIP      FALSE /**< default value for parameter useinsubscip */
 #define DEFAULT_USEPROJECTION      TRUE /**< default value for parameter useprojection */
+#define DEFAULT_DETECTHIDDEN       TRUE /**< default value for parameter detecthidden */
 
 #define MAXVARBOUND                1e+5 /**< maximum allowed variable bound for computing an RLT-cut */
 
@@ -122,11 +123,12 @@ struct SCIP_SepaData
    int                   maxncuts;           /**< maximum number of cuts that will be added per round */
    int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
-   SCIP_Bool             onlyeqrows;         /**< indicates wether only equality rows should be used for rlt cuts */
-   SCIP_Bool             onlycontrows;       /**< indicates wether only continuous rows should be used for rlt cuts */
+   SCIP_Bool             onlyeqrows;         /**< indicates whether only equality rows should be used for rlt cuts */
+   SCIP_Bool             onlycontrows;       /**< indicates whether only continuous rows should be used for rlt cuts */
    SCIP_Bool             onlyinitial;        /**< indicates whether only initial rows should be uswed for rlt cuts */
-   SCIP_Bool             useinsubscip;       /**< indicates whether the seperator should also be used in sub-scips */
+   SCIP_Bool             useinsubscip;       /**< indicates whether the separator should also be used in sub-scips */
    SCIP_Bool             useprojection;      /**< indicates whether the separator should first check projected rows */
+   SCIP_Bool             detecthidden;       /**< indicates whether the separator should use implicit products */
 };
 
 /** projected LP data structure */
@@ -1719,15 +1721,19 @@ SCIP_RETCODE createSepaData(
       }
    }
 
-   int oldnterms = sepadata->nbilinterms;
 
-   SCIP_CALL( detectHiddenProducts(scip, sepadata, varmap) );
+   if( sepadata->detecthidden )
+   {
+      int oldnterms = sepadata->nbilinterms;
 
-   if( sepadata->nbilinterms - oldnterms > 0 )
-      SCIPinfoMessage(scip, NULL, "\nFound hidden products");
-   SCIPinfoMessage(scip, NULL, "\nNumber of hidden products: %d", sepadata->nbilinterms - oldnterms);
+      SCIP_CALL( detectHiddenProducts(scip, sepadata, varmap) );
 
-   /* reallocate arrays to fit actually sizes */
+      if( sepadata->nbilinterms - oldnterms > 0 )
+         SCIPinfoMessage(scip, NULL, "\nFound hidden products");
+      SCIPinfoMessage(scip, NULL, "\nNumber of hidden products: %d", sepadata->nbilinterms - oldnterms);
+   }
+
+   /* reallocate arrays to fit actual sizes */
    if( sepadata->nbilinvars < nvars )
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varssorted, nvars, sepadata->nbilinvars) );
@@ -3254,6 +3260,11 @@ SCIP_RETCODE SCIPincludeSepaRlt(
                                "separating/" SEPA_NAME "/useprojection",
       "if set to true, projected rows are checked first",
       &sepadata->useprojection, FALSE, DEFAULT_USEPROJECTION, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+                               "separating/" SEPA_NAME "/detecthidden",
+      "if set to true, projected rows are checked first",
+      &sepadata->detecthidden, FALSE, DEFAULT_DETECTHIDDEN, NULL, NULL) );
 
    return SCIP_OKAY;
 }
