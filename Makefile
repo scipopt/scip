@@ -258,7 +258,7 @@ endif
 LPSOPTIONS	+=	glop
 ifeq ($(LPS),glop)
 LPILIBOBJ	=	lpi/lpi_glop.o scip/bitencode.o scip/rbtree.o scip/message.o
-LPILIBSRC  	=	$(SCIPDIR)/lpi/lpi_glop.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
+LPILIBSRC  	=	$(SRCDIR)/lpi/lpi_glop.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/shared/ortools
 LPIINSTMSG	=	"  -> \"ortools\" is the path to the OR-Tools directory.\n"
 endif
