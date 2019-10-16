@@ -1234,7 +1234,9 @@ void updateScaledLP(
   /* @todo: Avoid doing a copy if there is no scaling. */
   /* @todo: Avoid rescaling if not much changed. */
   if ( lpi->parameters->use_scaling() )
-    lpi->scaler->Scale(lpi->scaled_lp);
+     lpi->scaler->Scale(lpi->scaled_lp);
+  else
+     lpi->scaler->Clear();
 
   lpi->scaled_lp->AddSlackVariablesWhereNecessary(false);
 }
@@ -1262,13 +1264,36 @@ SCIP_RETCODE SolveInternal(
 
    if ( ! lpi->solver->Solve(*(lpi->scaled_lp), time_limit.get()).ok() )
    {
-      lpi->linear_program->DeleteSlackVariables();
+      lpi->scaled_lp->DeleteSlackVariables();
       return SCIP_LPERROR;
    }
    lpi->lp_time_limit_was_reached = time_limit->LimitReached();
 
    SCIPdebugMessage("status=%s  obj=%f  iter=%ld.\n", GetProblemStatusString(lpi->solver->GetProblemStatus()).c_str(),
       lpi->solver->GetObjectiveValue(), lpi->solver->GetNumberOfIterations());
+
+   if ( lpi->parameters->use_scaling() )
+   {
+      const ColIndex num_cols = lpi->linear_program->num_variables();
+
+      /* get unscaled solution */
+      DenseRow unscaledsol(num_cols);
+      for (ColIndex col = ColIndex(0); col < num_cols; ++col)
+         unscaledsol[col] = lpi->scaler->UnscaleVariableValue(col, lpi->solver->GetVariableValue(col));
+
+      /* if the solution is not feasible w.r.t. absolute tolerances, try to fix it in the unscaled problem */
+      const double feastol = lpi->parameters->primal_feasibility_tolerance();
+      if ( ! lpi->linear_program->SolutionIsLPFeasible(unscaledsol, feastol) )
+      {
+         SCIPdebugMessage("Solution not feasible w.r.t. absolute tolerance %f -> reoptimize.\n", feastol);
+
+         /* Re-solve without scaling to try to fix the infeasibility. */
+         lpi->parameters->set_use_scaling(false);
+         lpi->lp_modified_since_last_solve = true;
+         SolveInternal(lpi);
+         lpi->parameters->set_use_scaling(true);
+      }
+   }
 
    lpi->lp_modified_since_last_solve = false;
 
