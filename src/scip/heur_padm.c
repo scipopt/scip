@@ -272,7 +272,6 @@ static SCIP_RETCODE initProblem(
    (*problem)->scip = scip;
    (*problem)->nblocks = 0;
 
-
    return SCIP_OKAY;
 }
 
@@ -564,7 +563,7 @@ static SCIP_RETCODE assignLinking(
 
    SCIP_CALL( SCIPdecompComputeVarsLabels(scip, newdecomp, sortedconss, nconss) );
 
-   //SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp) );
+   SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp) );
 
    SCIPdecompGetConsLabels(newdecomp, sortedconss, conslabels, nconss);
    SCIPdecompGetVarsLabels(newdecomp, vars, varlabels, nvars);
@@ -908,18 +907,22 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    {
       /* create new decomposition; don't change the decompositions in the decompstore */
       SCIP_DECOMP* newdecomp = NULL;
-      SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), nblocks, FALSE, SCIPdecompUseBendersLabels(decomp)) );
+      SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), nblocks, heurdata->original, SCIPdecompUseBendersLabels(decomp)) );
 
       assignLinking(scip, decomp, newdecomp, vars, sortedconss, varlabels, conslabels, nvars, nconss, nblocks);
       decomp = newdecomp;
 
+      /* number of blocks can have changed */
+      nblocks = SCIPdecompGetNBlocks(decomp);
+
+      /* new decomp can already be deleted here because we don't need it anymore */
       SCIPdecompFree(&newdecomp, SCIPblkmem(scip));
    }
 
-   if(conslabels[0] == SCIP_DECOMP_LINKCONS)
+   if( conslabels[0] == SCIP_DECOMP_LINKCONS )
    {
       SCIPdebugMsg(scip, "%s is linking contraint\n", SCIPconsGetName(sortedconss[0]));
-      SCIPprintCons(scip, sortedconss[0], NULL);
+      SCIPdebugPrintCons(scip, sortedconss[0], NULL);
       SCIPdebugMsg(scip, "No support for linking contraints\n");
       goto TERMINATE;
    }
