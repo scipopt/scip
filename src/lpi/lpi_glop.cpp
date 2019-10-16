@@ -844,14 +844,6 @@ SCIP_RETCODE SCIPlpiScaleCol(
    }
 
    return SCIP_OKAY;
-
-
-   assert( lpi != NULL );
-   assert( lpi->linear_program != NULL );
-
-   SCIPerrorMessage("SCIPlpiScaleCol() has not been implemented yet.\n");
-
-   return SCIP_LPERROR;
 }
 
 
