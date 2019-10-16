@@ -2529,7 +2529,7 @@ SCIP_RETCODE SCIPlpiReadState(
 
    SCIPerrorMessage("SCIPlpiReadState - not implemented.\n");
 
-   return SCIP_LPERROR;
+   return SCIP_NOTIMPLEMENTED;
 }
 
 /** writes LPi state (i.e. basis information) to a file */
@@ -2543,7 +2543,7 @@ SCIP_RETCODE SCIPlpiWriteState(
 
    SCIPerrorMessage("SCIPlpiWriteState - not implemented.\n");
 
-   return SCIP_LPERROR;
+   return SCIP_NOTIMPLEMENTED;
 }
 
 /**@} */
