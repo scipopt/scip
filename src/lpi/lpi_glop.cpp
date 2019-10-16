@@ -665,6 +665,8 @@ SCIP_RETCODE SCIPlpiChgCoef(
    SCIPdebugMessage("Set coefficient (%d,%d) to %f.\n", row, col, newval);
    lpi->linear_program->SetCoefficient(RowIndex(row), ColIndex(col), newval);
 
+   lpi->lp_modified_since_last_solve = true;
+
    return SCIP_OKAY;
 }
 
@@ -771,6 +773,8 @@ SCIP_RETCODE SCIPlpiScaleRow(
    {
       SCIP_CALL( SCIPlpiChgSides(lpi, 1, &row, &rhs, &lhs) );
    }
+
+   lpi->lp_modified_since_last_solve = true;
 
    return SCIP_OKAY;
 }
