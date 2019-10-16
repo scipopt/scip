@@ -319,7 +319,7 @@ void checkChgCoef(int row, int col, SCIP_Real newval)
    cr_assert( !SCIPlpiWasSolved(lpi) );
 
    SCIP_CALL( SCIPlpiGetCoef(lpi, row, col, &val) );
-   cr_assert_float_eq(newval, val, EPS);
+   cr_assert_float_eq_inf(newval, val, EPS);
 }
 
 TheoryDataPoints(change, testchgcoef) =
