@@ -11540,7 +11540,7 @@ SCIP_RETCODE proposeFeasibleSolution(
             gap = SCIPvarGetUbGlobal(var) - SCIPgetSolVal(scip, newsol, var);
             delta = MIN(MAX(0.0, gap), delta);
          }
-         if( SCIPisPositive(scip, delta) )
+         if( SCIPisPositive(scip, delta) && !SCIPisInfinity(scip, REALABS(delta)) )
          {
             /* if variable is integral, round delta up so that it will still have an integer value */
             if( SCIPvarIsIntegral(var) )
@@ -11574,7 +11574,7 @@ SCIP_RETCODE proposeFeasibleSolution(
             gap = SCIPgetSolVal(scip, newsol, var) - SCIPvarGetLbGlobal(var);
             delta = MAX(MIN(0.0, gap), delta);
          }
-         if( SCIPisNegative(scip, delta) )
+         if( SCIPisNegative(scip, delta) && !SCIPisInfinity(scip, REALABS(delta)) )
          {
             /* if variable is integral, round delta down so that it will still have an integer value */
             if( SCIPvarIsIntegral(var) )
