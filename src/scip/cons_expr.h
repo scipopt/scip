@@ -1321,13 +1321,13 @@ void SCIPsetConsExprNlhdlrProp(
    SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
 );
 
-/** set the separation callbacks of a nonlinear handler */
+/** set the enforcement callbacks of a nonlinear handler */
 SCIP_EXPORT
 void SCIPsetConsExprNlhdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa)),         /**< separation callback (can be NULL if estimate is not NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRENFO((*enfo)),         /**< enforcement callback (can be NULL if estimate is not NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRESTIMATE((*estimate)), /**< estimation callback (can be NULL if sepa is not NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
 );
@@ -1411,9 +1411,9 @@ SCIP_Bool SCIPhasConsExprNlhdlrExitSepa(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
-/** returns whether nonlinear handler implements the separation callback */
+/** returns whether nonlinear handler implements the enforcement callback */
 SCIP_EXPORT
-SCIP_Bool SCIPhasConsExprNlhdlrSepa(
+SCIP_Bool SCIPhasConsExprNlhdlrEnfo(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
 );
 
@@ -1451,9 +1451,9 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(SCIPinitsepaConsExprNlhdlr);
 SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(SCIPexitsepaConsExprNlhdlr);
 
-/** calls the separation callback of a nonlinear handler */
+/** calls the enforcement callback of a nonlinear handler */
 SCIP_EXPORT
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr);
+SCIP_DECL_CONSEXPR_NLHDLRENFO(SCIPenfoConsExprNlhdlr);
 
 /** calls the estimator callback of a nonlinear handler */
 SCIP_EXPORT

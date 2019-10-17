@@ -823,7 +823,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
       SCIP_CONSEXPR_EXPR* expr, \
       SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata)
 
-/** nonlinear handler separation callback
+/** nonlinear handler enforcement callback
  *
  * The method tries to find an affine hyperplane (a cut) that separates a given point
  * from the set defined by either
@@ -841,6 +841,14 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * and it is sufficient to satisfy lhs <= expr <= rhs. The cons_expr core ensures that
  * lhs <= lowerbound(auxvar) and upperbound(auxvar) <= rhs.
  *
+ * cons_expr core may call this callback first with allowweakcuts=FALSE and repeat later with
+ * allowweakcuts=TRUE, if it didn't succeed to enforce a solution without using weak cuts.
+ * If it cannot enforce by separation and addbranchscores is TRUE, the nlhdlr should register
+ * branching scores for those expressions where branching may help to compute tighter cuts in children.
+ *
+ * The nlhdlr must set result to SCIP_SEPARATED if it added a cut and to SCIP_BRANCHED if it
+ * added branching scores. Otherwise, it may set result to SCIP_DIDNOTRUN or SCIP_DIDNOTFIND.
+ *
  * input:
  *  - scip : SCIP main data structure
  *  - conshdlr : cons expr handler
@@ -851,12 +859,12 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - sol : solution to be separated (NULL for the LP solution)
  *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
  *  - overestimate : whether the expression needs to be over- or underestimated
- *  - mincutviolation :  minimal violation of a cut if it should be added to the LP
+ *  - allowweakcuts : whether we should only look for "strong" cuts, or anything that separates is fine
  *  - separated : whether another nonlinear handler already added a cut for this expression
+ *  - addbranchscores: whether to add branching scores
  *  - result : pointer to store the result
- *  - ncuts : pointer to store the number of added cuts
  */
-#define SCIP_DECL_CONSEXPR_NLHDLRSEPA(x) SCIP_RETCODE x (\
+#define SCIP_DECL_CONSEXPR_NLHDLRENFO(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONS* cons, \
@@ -866,10 +874,10 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_SOL* sol, \
    SCIP_Real auxvalue, \
    SCIP_Bool overestimate, \
-   SCIP_Real mincutviolation, \
+   SCIP_Bool allowweakcuts, \
    SCIP_Bool separated, \
-   SCIP_RESULT* result, \
-   int* ncuts)
+   SCIP_Bool addbranchscores, \
+   SCIP_RESULT* result)
 
 /** nonlinear handler under/overestimation callback
  *

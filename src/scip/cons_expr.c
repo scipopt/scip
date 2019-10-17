@@ -5572,7 +5572,6 @@ SCIP_RETCODE enforceExprNlhdlr(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Real mincutviolation;
-   int ncuts;
 
    assert(result != NULL);
 
@@ -5585,11 +5584,9 @@ SCIP_RETCODE enforceExprNlhdlr(
    else
       mincutviolation = SCIPfeastol(scip);
 
-   /* call separation callback of the nlhdlr
-    * TODO we should change this to an enforcement-callback
-    */
-   SCIP_CALL( SCIPsepaConsExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
-      mincutviolation, separated, result, &ncuts) );
+   /* call enforcement callback of the nlhdlr */
+   SCIP_CALL( SCIPenfoConsExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
+      allowweakcuts, separated, addbranchscores, result) );
 
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
@@ -5771,7 +5768,7 @@ SCIP_RETCODE enforceExprNlhdlr(
          else
          {
             *result = SCIP_SEPARATED;
-            ++nlhdlr->ncutsfound;
+            ++nlhdlr->nseparated;
          }
 
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5787,17 +5784,6 @@ SCIP_RETCODE enforceExprNlhdlr(
       }
 
       SCIPfreeRowprep(scip, &rowprep);
-   }
-   else if( *result == SCIP_DIDNOTFIND && addbranchscores )
-   {
-      /* TODO remove when changing sepa callback into enfo callback */
-      SCIP_Bool branchscoresuccess = FALSE;
-
-      SCIP_CALL( SCIPbranchscoreConsExprNlHdlr(scip, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, conshdlrdata->lastbrscoretag, &branchscoresuccess) );
-      SCIPdebugMsg(scip, "branchscore of nlhdlr %s for expr %p (%s): success = %d\n", nlhdlr->name, expr, expr->exprhdlr->name, branchscoresuccess);
-
-      if( branchscoresuccess )
-         *result = SCIP_BRANCHED;  /* well, not branched, but added a branching candidate */
    }
 
    return SCIP_OKAY;
@@ -6984,7 +6970,7 @@ void printNlhdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "SepaCalls", "#IntEval", "PropCalls", "Detects", "Cuts", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "SepaTime", "PropTime", "IntEvalTi", "ReformTi");
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "EnfoCalls", "#IntEval", "PropCalls", "Detects", "Separated", "Cutoffs", "DomReds", "BranchScor", "Reforms", "DetectTime", "EnfoTime", "PropTime", "IntEvalTi", "ReformTi");
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
@@ -6996,17 +6982,17 @@ void printNlhdlrStatistics(
          continue;
 
       SCIPinfoMessage(scip, file, "  %-17s:", nlhdlr->name);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nsepacalls);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nenfocalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nintevalcalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->npropcalls);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndetections);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutsfound);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nseparated);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutoffs);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndomreds);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nbranchscores);
       SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nreformulates);
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->detecttime));
-      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->sepatime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->enfotime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->proptime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->intevaltime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->reformulatetime));
@@ -7949,7 +7935,7 @@ SCIP_DECL_CONSFREE(consFreeExpr)
 
       /* free clocks */
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->detecttime) );
-      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->sepatime) );
+      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->enfotime) );
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->proptime) );
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->intevaltime) );
       SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->reformulatetime) );
@@ -8043,17 +8029,17 @@ SCIP_DECL_CONSINIT(consInitExpr)
       nlhdlr = conshdlrdata->nlhdlrs[i];
       assert(nlhdlr != NULL);
 
-      nlhdlr->nsepacalls = 0;
+      nlhdlr->nenfocalls = 0;
       nlhdlr->nintevalcalls = 0;
       nlhdlr->npropcalls = 0;
-      nlhdlr->ncutsfound = 0;
+      nlhdlr->nseparated = 0;
       nlhdlr->ncutoffs = 0;
       nlhdlr->ndomreds = 0;
       nlhdlr->nbranchscores = 0;
       nlhdlr->ndetections = 0;
 
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->detecttime) );
-      SCIP_CALL( SCIPresetClock(scip, nlhdlr->sepatime) );
+      SCIP_CALL( SCIPresetClock(scip, nlhdlr->enfotime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->proptime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->intevaltime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->reformulatetime) );
@@ -13427,7 +13413,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    (*nlhdlr)->evalaux = evalaux;
 
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->detecttime) );
-   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->sepatime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->enfotime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->proptime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->intevaltime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->reformulatetime) );
@@ -13531,16 +13517,16 @@ void SCIPsetConsExprNlhdlrSepa(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_NLHDLRSEPA((*sepa)),         /**< separation callback (can be NULL if estimate is not NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRENFO((*enfo)),         /**< enforcement callback (can be NULL if estimate is not NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRESTIMATE((*estimate)), /**< estimation callback (can be NULL if sepa is not NULL) */
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
    )
 {
    assert(nlhdlr != NULL);
-   assert(sepa != NULL || estimate != NULL);
+   assert(enfo != NULL || estimate != NULL);
 
    nlhdlr->initsepa = initsepa;
-   nlhdlr->sepa = sepa;
+   nlhdlr->enfo = enfo;
    nlhdlr->estimate = estimate;
    nlhdlr->exitsepa = exitsepa;
 }
@@ -13679,12 +13665,12 @@ SCIP_Bool SCIPhasConsExprNlhdlrExitSepa(
    return nlhdlr->exitsepa != NULL;
 }
 
-/** returns whether nonlinear handler implements the separation callback */
-SCIP_Bool SCIPhasConsExprNlhdlrSepa(
+/** returns whether nonlinear handler implements the enforcement callback */
+SCIP_Bool SCIPhasConsExprNlhdlrEnfo(
    SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
    )
 {
-   return nlhdlr->sepa != NULL;
+   return nlhdlr->enfo != NULL;
 }
 
 /** returns whether nonlinear handler implements the estimator callback */
@@ -13804,7 +13790,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(SCIPinitsepaConsExprNlhdlr)
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
-   assert(nlhdlr->sepatime != NULL);
+   assert(nlhdlr->enfotime != NULL);
    assert(infeasible != NULL);
 
    if( nlhdlr->initsepa == NULL )
@@ -13813,11 +13799,11 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(SCIPinitsepaConsExprNlhdlr)
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
+   SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
    SCIP_CALL( nlhdlr->initsepa(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, overestimate, underestimate, infeasible) );
-   SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
+   SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
 
-   ++nlhdlr->nsepacalls;
+   ++nlhdlr->nenfocalls;
    if( *infeasible )
       ++nlhdlr->ncutoffs;
 
@@ -13829,29 +13815,27 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(SCIPexitsepaConsExprNlhdlr)
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
-   assert(nlhdlr->sepatime != NULL);
+   assert(nlhdlr->enfotime != NULL);
 
    if( nlhdlr->exitsepa != NULL )
    {
-      SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
+      SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
       SCIP_CALL( nlhdlr->exitsepa(scip, nlhdlr, expr, nlhdlrexprdata) );
-      SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
+      SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
    }
 
    return SCIP_OKAY;
 }
 
-/** calls the separation callback of a nonlinear handler */
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr)
+/** calls the enforcement callback of a nonlinear handler */
+SCIP_DECL_CONSEXPR_NLHDLRENFO(SCIPenfoConsExprNlhdlr)
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
-   assert(nlhdlr->sepatime != NULL);
+   assert(nlhdlr->enfotime != NULL);
    assert(result != NULL);
-   assert(ncuts != NULL);
 
-   *ncuts = 0;
-   if( nlhdlr->sepa == NULL )
+   if( nlhdlr->enfo == NULL )
    {
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -13866,15 +13850,25 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(SCIPsepaConsExprNlhdlr)
    }
 #endif
 
-   SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
-   SCIP_CALL( nlhdlr->sepa(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, mincutviolation, separated, result, ncuts) );
-   SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
+   SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
+   SCIP_CALL( nlhdlr->enfo(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, allowweakcuts, separated, addbranchscores, result) );
+   SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
 
    /* update statistics */
-   ++nlhdlr->nsepacalls;
-   nlhdlr->ncutsfound += *ncuts;
-   if( *result == SCIP_CUTOFF )
-      ++nlhdlr->ncutoffs;
+   ++nlhdlr->nenfocalls;
+   switch( *result )
+   {
+      case SCIP_SEPARATED :
+         ++nlhdlr->nseparated;
+         break;
+      case SCIP_BRANCHED:
+         ++nlhdlr->nbranchscores;
+         break;
+      case SCIP_CUTOFF:
+         ++nlhdlr->ncutoffs;
+         break;
+      default: ;
+   }
 
    return SCIP_OKAY;
 }
@@ -13884,7 +13878,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
-   assert(nlhdlr->sepatime != NULL);
+   assert(nlhdlr->enfotime != NULL);
    assert(success != NULL);
    assert(addedbranchscores != NULL);
 
@@ -13904,12 +13898,12 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
    }
 #endif
 
-   SCIP_CALL( SCIPstartClock(scip, nlhdlr->sepatime) );
+   SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
    SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue, rowprep, success, addbranchscores, brscoretag, addedbranchscores) );
-   SCIP_CALL( SCIPstopClock(scip, nlhdlr->sepatime) );
+   SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
 
    /* update statistics */
-   ++nlhdlr->nsepacalls;
+   ++nlhdlr->nenfocalls;
 
    return SCIP_OKAY;
 }
