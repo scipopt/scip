@@ -13002,6 +13002,13 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          SCIP_CALL( mergeAndCleanQuadVarTerms(scip, conss[c]) );
          SCIP_CALL( mergeAndCleanLinearVars(scip, conss[c]) );
          consdata->initialmerge = TRUE;
+
+         if( SCIPisInfinity(scip, consdata->lhs) || SCIPisInfinity(scip, -consdata->rhs) )
+         {
+            SCIPdebugMsg(scip, "lhs or rhs at wrong side of infinity -> declaring cutoff\n");
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
       }
 
       havechange = FALSE;
