@@ -61,6 +61,8 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
 }
 
 /** expression handler free callback */
@@ -69,6 +71,8 @@ SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
 }
 
 /** simplifies a xyz expression */
@@ -79,6 +83,8 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyXyz)
 
    SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
 }
 
 /** expression compare callback */
@@ -220,6 +226,8 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateXyz)
 
    SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
 }
 
 /** expression reverse propagation callback */
