@@ -43,7 +43,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurTwoopt(
    SCIP*                 scip                /**< SCIP data structure */
    );

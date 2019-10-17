@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_disjunctive.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  disjunctive cut separator
  * @author Tobias Fischer
  * @author Marc Pfetsch

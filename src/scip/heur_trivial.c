@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trivial.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  trivial primal heuristic
  * @author Timo Berthold
  */
@@ -34,7 +35,7 @@
 
 #define HEUR_NAME             "trivial"
 #define HEUR_DESC             "start heuristic which tries some trivial solutions"
-#define HEUR_DISPCHAR         't'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_TRIVIAL
 #define HEUR_PRIORITY         10000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

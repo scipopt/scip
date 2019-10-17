@@ -26,6 +26,11 @@
  *  - \ref scip::ObjConshdlr "C++ wrapper class"
  */
 
+/** @defgroup DEFPLUGINS_CONS Default constraint handlers
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default constraint handlers of SCIP
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_TYPE_CONS_H__

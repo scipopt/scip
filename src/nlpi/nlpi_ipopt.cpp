@@ -2231,7 +2231,7 @@ bool ScipNLP::get_starting_point(
       {
          SCIP_Real lb, ub;
 
-         SCIPdebugMessage("Ipopt started without intial primal values; make up starting guess by projecting 0 onto variable bounds\n");
+         SCIPdebugMessage("Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
 
          for( int i = 0; i < n; ++i )
          {
@@ -2912,7 +2912,7 @@ SCIP_RETCODE SCIPsolveLinearProb3(
 
    if( info != 0 )
    {
-      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      SCIPdebugMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
       *success = FALSE;
    }
    else
@@ -2974,7 +2974,7 @@ SCIP_RETCODE SCIPsolveLinearProb(
 
    if( info != 0 )
    {
-      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      SCIPdebugMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
       *success = FALSE;
    }
    else

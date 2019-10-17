@@ -56,7 +56,6 @@ typedef struct _NBC
 
 /** colors the positive weighted nodes of a given set of nodes V with the lowest possible number of colors and
  *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps */
-extern
 TCLIQUE_WEIGHT tcliqueColoring( 
    TCLIQUE_GETNNODES((*getnnodes)),          /**< user function to get the number of nodes */
    TCLIQUE_GETWEIGHTS((*getweights)),        /**< user function to get the node weights */

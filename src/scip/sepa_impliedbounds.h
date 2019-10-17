@@ -38,7 +38,7 @@ extern "C" {
  *
  * @ingroup SeparatorIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaImpliedbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );

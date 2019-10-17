@@ -56,7 +56,7 @@ extern "C" {
  *
  *  @ingroup BranchingRuleIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
  *
  * @note The variables in the lpcands array must have a fractional value in the current LP solution
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP*                 scip,               /**< original SCIP data structure                        */
    SCIP_VAR**            lpcands,            /**< branching candidates                                */

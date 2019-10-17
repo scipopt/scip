@@ -32,7 +32,6 @@ extern "C" {
 #endif
 
 /** returns maximum of given SCIP_Real values */
-extern
 SCIP_Real misc_stp_maxReal(
    SCIP_Real*            realarr,            /**< array of reals */
    unsigned              nreals              /**< size of array of reals */
@@ -93,7 +92,6 @@ typedef struct PHeap_Node
  */
 
 /** append copy of list pertaining to node2 to node1 */
-extern
 SCIP_RETCODE SCIPintListNodeAppendCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    IDX**                 node1,              /**< pointer to the last node of list to be enlarged */
@@ -102,7 +100,6 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
    );
 
 /** insert a new node */
-extern
 SCIP_RETCODE SCIPintListNodeInsert(
    SCIP*                 scip,               /**< SCIP data structure */
    IDX**                 node,               /**< pointer to the last list node */
@@ -110,14 +107,12 @@ SCIP_RETCODE SCIPintListNodeInsert(
    );
 
 /** free list */
-extern
 void SCIPintListNodeFree(
    SCIP*                 scip,               /**< SCIP data structure */
    IDX**                 node                /**< pointer to the last list node */
    );
 
 /** compares distances of two GNODE structures */
-extern
 int GNODECmpByDist(
    void                  *first_arg,         /**< first argument */
    void                  *second_arg         /**< second argument */
@@ -128,13 +123,11 @@ int GNODECmpByDist(
  */
 
 /** inits a node, setting 'parent' and 'edge' to its default values */
-extern
 void SCIPlinkcuttreeInit(
    NODE*                 v                   /**< pointer to node representing the tree */
    );
 
 /** renders w a child of v; v has to be the root of its tree */
-extern
 void SCIPlinkcuttreeLink(
    NODE*                 v,                  /**< pointer to node representing the tree */
    NODE*                 w,                  /**< pointer to the child */
@@ -142,7 +135,6 @@ void SCIPlinkcuttreeLink(
    );
 
 /** cut tree at given node */
-extern
 void SCIPlinkcuttreeCut(
    NODE*                 v                   /**< node to cut at */
    );
@@ -159,7 +151,6 @@ SCIP_Real SCIPlinkcuttreeFindMinChain(
    );
 
 /** finds the max value between node 'v' and the root of the tree **/
-extern
 NODE* SCIPlinkcuttreeFindMax(
    SCIP*                 scip,               /**< SCIP data structure */
    const SCIP_Real*      cost,               /**< edge cost array */
@@ -167,7 +158,6 @@ NODE* SCIPlinkcuttreeFindMax(
    );
 
 /** makes vertex v the root of the link cut tree */
-extern
 void SCIPlinkcuttreeEvert(
    NODE*                 v                   /**< the vertex to become the root */
    );
@@ -178,14 +168,12 @@ void SCIPlinkcuttreeEvert(
  */
 
 /** links nodes 'root1' and 'root2' together */
-extern
 PHNODE* SCIPpairheapMergeheaps(
    SCIP*                 scip,               /**< SCIP data structure */
    PHNODE                *root1,             /**< pointer to root of first heap */
    PHNODE                *root2              /**< pointer to root of second heap */
    );
 
-extern
 PHNODE* SCIPpairheapAddtoheap(
    SCIP*                 scip,               /**< SCIP data structure */
    PHNODE*               root1,              /**< pointer to root of first heap */
@@ -193,7 +181,6 @@ PHNODE* SCIPpairheapAddtoheap(
    );
 
 /** inserts a new node into the pairing heap */
-extern
 SCIP_RETCODE SCIPpairheapInsert(
    SCIP*                 scip,               /**< SCIP data structure */
    PHNODE**              root,
@@ -203,7 +190,6 @@ SCIP_RETCODE SCIPpairheapInsert(
    );
 
 /** deletes the root of the paring heap, concomitantly storing its data and key in '*element' and '*key' respectively */
-extern
 SCIP_RETCODE SCIPpairheapDeletemin(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  element,            /**< data of the root */
@@ -213,7 +199,6 @@ SCIP_RETCODE SCIPpairheapDeletemin(
    );
 
 /** links nodes 'root1' and 'root2' together, roots the resulting tree at root1 and sets root2 to NULL */
-extern
 void SCIPpairheapMeldheaps(
    SCIP*                 scip,               /**< SCIP data structure */
    PHNODE**              root1,              /**< pointer to root of first heap */
@@ -223,14 +208,12 @@ void SCIPpairheapMeldheaps(
    );
 
 /** frees the paring heap with root 'p' */
-extern
 void SCIPpairheapFree(
    SCIP*                 scip,               /**< SCIP data structure */
    PHNODE**              root                /**< root of heap to be freed */
    );
 
 /** stores all elements of the pairing heap in an array */
-extern
 SCIP_RETCODE SCIPpairheapBuffarr(
    SCIP*                 scip,               /**< SCIP data structure */
    PHNODE*               root,               /**< root of the heap */
@@ -243,7 +226,6 @@ SCIP_RETCODE SCIPpairheapBuffarr(
  */
 
 /** initializes the union-find structure 'uf' with 'length' many components (of size one) */
-extern
 SCIP_RETCODE SCIPStpunionfindInit(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
@@ -251,7 +233,6 @@ SCIP_RETCODE SCIPStpunionfindInit(
    );
 
 /** clears the union-find structure 'uf'*/
-extern
 void SCIPStpunionfindClear(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
@@ -259,14 +240,12 @@ void SCIPStpunionfindClear(
    );
 
 /** finds and returns the component identifier */
-extern
 int SCIPStpunionfindFind(
    UF*                   uf,                 /**< union find data structure */
    int                   element             /**< element to be found */
    );
 
 /** merges the components containing p and q respectively */
-extern
 void SCIPStpunionfindUnion(
    UF*                   uf,                 /**< union find data structure */
    int                   p,                  /**< first component */
@@ -275,7 +254,6 @@ void SCIPStpunionfindUnion(
    );
 
 /** frees the data fields of the union-find structure */
-extern
 void SCIPStpunionfindFree(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf                  /**< union find data structure */

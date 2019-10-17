@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipshell.c
+ * @ingroup OTHER_CFILES
  * @brief  SCIP command line interface
  * @author Tobias Achterberg
  */

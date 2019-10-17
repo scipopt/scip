@@ -53,7 +53,6 @@ typedef struct stp_solution_pool
 } STPSOLPOOL;
 
 /** run REC heuristic */
-extern
 SCIP_RETCODE SCIPStpHeurRecRun(
    SCIP*                 scip,               /**< SCIP data structure */
    STPSOLPOOL*           pool,               /**< solution pool or NULL */
@@ -70,14 +69,12 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
 
 /** get solution from index */
-extern
 STPSOL* SCIPStpHeurRecSolfromIdx(
    STPSOLPOOL*           pool,               /**< the pool */
    const int             soindex             /**< the index */
     );
 
 /** initializes STPSOL pool */
-extern
 SCIP_RETCODE SCIPStpHeurRecInitPool(
    SCIP*                 scip,               /**< SCIP data structure */
    STPSOLPOOL**          pool,               /**< the pool */
@@ -86,7 +83,6 @@ SCIP_RETCODE SCIPStpHeurRecInitPool(
    );
 
 /** tries to add STPSOL to pool */
-extern
 SCIP_RETCODE SCIPStpHeurRecAddToPool(
    SCIP*                 scip,               /**< SCIP data structure */
    const SCIP_Real       obj,                /**< objective of solution to be added */
@@ -96,21 +92,18 @@ SCIP_RETCODE SCIPStpHeurRecAddToPool(
    );
 
 /** frees STPSOL pool */
-extern
 void SCIPStpHeurRecFreePool(
    SCIP*                 scip,               /**< SCIP data structure */
    STPSOLPOOL**          pool                /**< the pool */
    );
 
 /** creates the rec primal heuristic and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPStpIncludeHeurRec(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 
 /** heuristic to exclude vertices or edges from a given solution (and inserting other edges) to improve objective */
-extern
 SCIP_RETCODE SCIPStpHeurRecExclude(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph structure */

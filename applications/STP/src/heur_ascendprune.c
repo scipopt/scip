@@ -56,7 +56,6 @@
 #define ASCENPRUNE_MINLPIMPROVE     0.05          /**< minimum percentual improvement of dual bound (wrt to gap) mandatory to execute heuristic */
 
 #ifdef WITH_UG
-extern
 int getUgRank(void);
 #endif
 

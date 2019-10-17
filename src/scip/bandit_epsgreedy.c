@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   bandit_epsgreedy.c
+ * @ingroup OTHER_CFILES
  * @brief  implementation of epsilon greedy bandit algorithm
  * @author Gregor Hendel
  */

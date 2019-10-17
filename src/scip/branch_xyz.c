@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_xyz.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  xyz branching rule
  * @author Tobias Achterberg
  */

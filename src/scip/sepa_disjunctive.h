@@ -48,7 +48,7 @@ extern "C" {
  *
  * @ingroup SeparatorIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaDisjunctive(
    SCIP*                 scip                /**< SCIP data structure */
    );

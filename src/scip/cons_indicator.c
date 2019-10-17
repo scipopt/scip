@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_indicator.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
@@ -423,7 +424,7 @@ while ( FALSE )
 
 /* ---------------- Callback methods of event handlers ---------------- */
 
-/** exec the event handler for getting variable bound changes
+/** execute the event handler for getting variable bound changes
  *
  *  We update the number of variables fixed to be nonzero.
  */
@@ -3138,6 +3139,11 @@ SCIP_RETCODE consdataCreate(
             return SCIP_ERROR;
          }
 
+         /* the indicator variable must not be multi-aggregated because the constraint handler propagation tries
+          * to tighten its bounds, which is not allowed for multi-aggregated variables
+          */
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
+
          /* catch local bound change events on binary variable */
          if ( linconsactive )
          {
@@ -3529,7 +3535,7 @@ SCIP_RETCODE presolRoundIndicator(
       assert( var != consdata->slackvar );
 
       /* we can replace the slack variable by the active variable if it is also a >= variable */
-      if ( var != consdata->binvar && boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, bound, 0.0) )
+      if ( var != consdata->binvar && boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisEQ(scip, bound, 0.0) )
       {
          assert( SCIPvarIsActive(var) );
          SCIPdebugMsg(scip, "Slack variable <%s> is aggregated or negated and replaced by active variable <%s>.\n", SCIPvarGetName(consdata->slackvar), SCIPvarGetName(var) );

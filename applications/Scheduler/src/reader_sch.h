@@ -37,7 +37,6 @@ extern "C" {
 #endif
 
 /** includes the sch file reader into SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderSch(
    SCIP*                 scip                /**< SCIP data structure */
    );

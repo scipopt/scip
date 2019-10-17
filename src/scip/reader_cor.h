@@ -56,7 +56,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderCor(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -67,7 +67,7 @@ SCIP_RETCODE SCIPincludeReaderCor(
  */
 
 /** reads problem from file */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadCor(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
@@ -79,32 +79,32 @@ SCIP_RETCODE SCIPreadCor(
  */
 
 /** returns whether the COR file has been successfully read. This is used by the TIM and STO readers. */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPcorHasRead(
    SCIP_READER*          reader              /**< the file reader itself */
    );
 
 /** returns the number of variable names in the COR problem */
-EXTERN
+SCIP_EXPORT
 int SCIPcorGetNVarNames(
    SCIP_READER*          reader              /**< the file reader itself */
    );
 
 /** returns the number of constraint names in the COR problem */
-EXTERN
+SCIP_EXPORT
 int SCIPcorGetNConsNames(
    SCIP_READER*          reader              /**< the file reader itself */
    );
 
 /** returns the variable name for the given index */
-EXTERN
+SCIP_EXPORT
 const char* SCIPcorGetVarName(
    SCIP_READER*          reader,             /**< the file reader itself */
    int                   i                   /**< the index of the variable that is requested */
    );
 
 /** returns the constraint name for the given index */
-EXTERN
+SCIP_EXPORT
 const char* SCIPcorGetConsName(
    SCIP_READER*          reader,             /**< the file reader itself */
    int                   i                   /**< the index of the constraint that is requested */

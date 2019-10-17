@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_osil.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  OS instance language (OSiL) format file reader
  * @author Stefan Vigerske
  * @author Ingmar Vierhaus
@@ -1029,14 +1030,21 @@ SCIP_RETCODE readQuadraticCoefs(
    int varidx1;
    int varidx2;
    SCIP_Real coef;
+   int c;
+
+   /* quadratic terms, split up by constraints+objective */
+   SCIP_VAR*** vars1;
+   SCIP_VAR*** vars2;
+   SCIP_Real** coefs;
+   int* nterms;
+   int* termssize;
 
    assert(scip != NULL);
    assert(datanode != NULL);
-   assert(vars != NULL || nvars == 0);
-   assert(conss != NULL || nconss == 0);
-   assert(constypes != NULL || nconss == 0);
    assert(objcons != NULL);
    assert(doingfine != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(constypes != NULL || nconss == 0);
 
    quadcoef = xmlFindNodeMaxdepth(datanode, "quadraticCoefficients", 0, 1);
 
@@ -1061,6 +1069,17 @@ SCIP_RETCODE readQuadraticCoefs(
    }
    assert(nqterms >= 0);
 
+   if( nqterms == 0 )
+      return SCIP_OKAY;
+
+   assert(vars != NULL);
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &vars1, nconss+1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &vars2, nconss+1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &coefs, nconss+1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nterms, nconss+1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &termssize, nconss+1) );
+
    count = 0;
    for( qterm = xmlFirstChild(quadcoef); qterm != NULL; qterm = xmlNextSibl(qterm), ++count )
    {
@@ -1069,13 +1088,13 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Expected <qTerm> node under <quadraticCoefficients> node, but got <%s>\n", xmlGetName(qterm));
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
       if( count >= nqterms )
       {
          SCIPerrorMessage("Too many quadratic terms under <quadraticCoefficients> node, expected %d many, but got at least %d.\n", nqterms, count + 1);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       /* get constraint index, or -1 for objective */
@@ -1084,7 +1103,7 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Missing \"idx\" attribute in %d'th <qTerm> node under <quadraticCoefficients> node.\n", count);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       considx = (int)strtol(attrval, (char**)&attrval, 10);
@@ -1092,7 +1111,7 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Invalid value '%s' in \"idx\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "idx"), count);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       /* get index of first variable */
@@ -1101,7 +1120,7 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Missing \"idxOne\" attribute in %d'th <qTerm> node under <quadraticCoefficients> node.\n", count);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       varidx1 = (int)strtol(attrval, (char**)&attrval, 10);
@@ -1109,7 +1128,7 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Invalid value '%s' in \"idxOne\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "idxOne"), count);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       /* get index of second variable */
@@ -1118,7 +1137,7 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Missing \"idxTwo\" attribute in %d'th <qTerm> node under <quadraticCoefficients> node.\n", count);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       varidx2 = (int)strtol(attrval, (char**)&attrval, 10);
@@ -1126,7 +1145,7 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Invalid value '%s' in \"idxTwo\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "idxTwo"), count);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       /* get (optional) coefficient of quadratic term */
@@ -1138,7 +1157,7 @@ SCIP_RETCODE readQuadraticCoefs(
          {
             SCIPerrorMessage("Invalid value '%s' in \"coef\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "coef"), count);
             *doingfine = FALSE;
-            return SCIP_OKAY;
+            goto TERMINATE;
          }
       }
       else
@@ -1151,70 +1170,100 @@ SCIP_RETCODE readQuadraticCoefs(
       if( coef == 0.0 )
          continue;
 
+      /* put objective at end of array */
       if( considx == -1 )
+         considx = nconss;
+
+      if( nterms[considx] + 1 > termssize[considx] )
       {
-         if( *objcons == NULL )
-         {
-            /* create constraint to hold quadratic part of objective; note that
-             * reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model constraints and
-             * variables, not to an auxiliary objective constraint (otherwise it can happen that an auxiliary objective
-             * variable is loose with infinite best bound, triggering the problem that an LP that is unbounded because
-             * of loose variables with infinite best bound cannot be solved)
-             */
-
-            SCIP_VAR* objvar;
-            SCIP_Real minusone;
-
-            SCIP_CALL( SCIPcreateVar(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-                  SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
-            SCIP_CALL( SCIPaddVar(scip, objvar) );
-
-            minusone = -1.0;
-            SCIP_CALL( SCIPcreateConsQuadratic(scip, objcons, "objcons", 1, &objvar, &minusone, 0, NULL, NULL, NULL,
-                  SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
-                  SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
-                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-            *objconstype = QUADRATIC;
-
-            SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
-         }
-         cons = *objcons;
-         assert(*objconstype == QUADRATIC);
-      }
-      else if( constypes[considx] == LINEAR )  /*lint !e613*/
-      {
-         /* replace linear constraint by quadratic constraint */
-         cons = conss[considx];  /*lint !e613*/
-
-         /* coverity[negative_returns] */
-         SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, SCIPconsGetName(cons),
-            SCIPgetNVarsLinear(scip, cons), SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
-            0, NULL, NULL, NULL,
-            SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons),
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
-
-         SCIP_CALL( SCIPreleaseCons(scip, &conss[considx]) );  /*lint !e613*/
-
-         conss[considx] = cons;  /*lint !e613*/
-         constypes[considx] = QUADRATIC;  /*lint !e613*/
-      }
-      else
-      {
-         cons = conss[considx];  /*lint !e613*/
-         assert(constypes[considx] == QUADRATIC);  /*lint !e613*/
+         termssize[considx] = SCIPcalcMemGrowSize(scip, nterms[considx] + 1);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars1[considx], termssize[considx]) );  /*lint !e866*/
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars2[considx], termssize[considx]) );  /*lint !e866*/
+         SCIP_CALL( SCIPreallocBufferArray(scip, &coefs[considx], termssize[considx]) );  /*lint !e866*/
       }
 
-      SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, vars[varidx1], vars[varidx2], coef) );  /*lint !e613*/
+      vars1[considx][nterms[considx]] = vars[varidx1];
+      vars2[considx][nterms[considx]] = vars[varidx2];
+      coefs[considx][nterms[considx]] = coef;
+      ++nterms[considx];
    }
 
    if( count != nqterms )
    {
       SCIPerrorMessage("Got only %d quadratic terms under <quadraticCoefficients> node, but expected %d many.\n", count, nqterms);
       *doingfine = FALSE;
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
+
+   if( nterms[nconss] > 0 )
+   {
+      /* create constraint to hold quadratic part of objective; note that
+       * reading/{initialconss,dynamicconss,dynamicrows,dynamiccols} apply only to model constraints and
+       * variables, not to an auxiliary objective constraint (otherwise it can happen that an auxiliary objective
+       * variable is loose with infinite best bound, triggering the problem that an LP that is unbounded because
+       * of loose variables with infinite best bound cannot be solved)
+       */
+
+      SCIP_VAR* objvar;
+      SCIP_Real minusone;
+
+      /* we should have only looked at the linear part of the problem before, so there was no need to add a constraint for the objective */
+      assert(*objcons == NULL);
+
+      SCIP_CALL( SCIPcreateVar(scip, &objvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+         SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, objvar) );
+
+      minusone = -1.0;
+      SCIP_CALL( SCIPcreateConsQuadratic(scip, objcons, "quadobj", 1, &objvar, &minusone, nterms[nconss], vars1[nconss], vars2[nconss], coefs[nconss],
+         SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
+         SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+      *objconstype = QUADRATIC;
+
+      SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
+
+      SCIPfreeBufferArray(scip, &coefs[nconss]);
+      SCIPfreeBufferArray(scip, &vars2[nconss]);
+      SCIPfreeBufferArray(scip, &vars1[nconss]);
+   }
+
+   for( c = nconss-1; c >= 0; --c )
+   {
+      if( nterms[c] == 0 )
+         continue;
+
+      /* we should have looked only at the linear part of the problem before, so all constraints should still be linear */
+      assert(constypes[c] == LINEAR);  /*lint !e613*/
+
+      /* replace linear constraint by quadratic constraint */
+      cons = conss[c];  /*lint !e613*/
+
+      /* coverity[negative_returns] */
+      SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, SCIPconsGetName(cons),
+         SCIPgetNVarsLinear(scip, cons), SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
+         nterms[c], vars1[c], vars2[c], coefs[c],
+         SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons),
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[c]) );  /*lint !e613*/
+
+      conss[c] = cons;  /*lint !e613*/
+      constypes[c] = QUADRATIC;  /*lint !e613*/
+
+      SCIPfreeBufferArray(scip, &coefs[c]);
+      SCIPfreeBufferArray(scip, &vars2[c]);
+      SCIPfreeBufferArray(scip, &vars1[c]);
+   }
+
+ TERMINATE:
+   SCIPfreeBufferArray(scip, &termssize);
+   SCIPfreeBufferArray(scip, &nterms);
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars2);
+   SCIPfreeBufferArray(scip, &vars1);
 
    return SCIP_OKAY;
 }
@@ -1432,6 +1481,7 @@ SCIP_RETCODE readExpression(
       strcmp(exprname, "times") == 0 ||
       strcmp(exprname, "divide") == 0 ||
       strcmp(exprname, "power") == 0 ||
+      strcmp(exprname, "signpower") == 0 ||
       strcmp(exprname, "log") == 0
      )
    {
@@ -1544,6 +1594,29 @@ SCIP_RETCODE readExpression(
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &arg2, SCIP_EXPR_MUL, arg1, arg2) );
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_EXP, arg2) );
          }
+      }
+      else if( strcmp(exprname, "signpower") == 0 )
+      {
+         /* signpower(expr,number) with number > 1 is the only one we can handle */
+         if( SCIPexprGetOperator(arg2) != SCIP_EXPR_CONST )
+         {
+            SCIPerrorMessage("Signpower only supported for constant exponents, but got %s.\n", SCIPexpropGetName(SCIPexprGetOperator(arg2)));
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
+            *doingfine = FALSE;
+            return SCIP_OKAY;
+         }
+         if( SCIPexprGetOpReal(arg2) <= 1.0 )
+         {
+            SCIPerrorMessage("Signpower only supported for exponents > 1, but got %g.\n", SCIPexprGetOpReal(arg2));
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg1);
+            SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
+            *doingfine = FALSE;
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), expr, SCIP_EXPR_SIGNPOWER, arg1, SCIPexprGetOpReal(arg2)) );
+         SCIPexprFreeDeep(SCIPblkmem(scip), &arg2);
       }
       else if( strcmp(exprname, "log") == 0 )
       {
@@ -2010,13 +2083,13 @@ SCIP_RETCODE readNonlinearExprs(
          SCIP_Real minusone;
          SCIP_Real one;
 
-         SCIP_CALL( SCIPcreateVar(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+         SCIP_CALL( SCIPcreateVar(scip, &objvar, "nlobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
                SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, objvar) );
 
          minusone = -1.0;
          one = 1.0;
-         SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, objcons, "objcons", 1, &objvar, &minusone, 1, &exprtree, &one,
+         SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, objcons, "nlobj", 1, &objvar, &minusone, 1, &exprtree, &one,
                SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
                SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE), TERMINATE );

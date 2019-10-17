@@ -68,10 +68,10 @@ if(BLISS_INCLUDE_DIR AND BLISS_LIBRARY)
 
    # Check if bliss requires GMP.
 
-   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/check_bliss_uses_gmp.cpp" "#include <bliss/graph.hh>\n\nint main()\n{\n  bliss::Graph graph(0);\n  bliss::Stats stats;\n  graph.find_automorphisms(stats, NULL, NULL);\n  return 0;\n}\n")
-   try_compile(COMPILE_RESULT "${CMAKE_CURRENT_BINARY_DIR}/" "${CMAKE_CURRENT_BINARY_DIR}/check_bliss_uses_gmp.cpp" LINK_LIBRARIES "${BLISS_LIBRARY}" CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${BLISS_INCLUDE_DIR}" OUTPUT_VARIABLE COMPILE_OUTPUT)
+   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/check_bliss_uses_gmp.cpp" "#include <bliss/graph.hh>\n\nint main()\n{\n  bliss::Graph graph(32);\n  bliss::Stats stats;\n  graph.find_automorphisms(stats, NULL, NULL);\n  stats.print(stdout);\n  return 0;\n}\n")
+   try_run(RUN_RESULT COMPILE_RESULT "${CMAKE_CURRENT_BINARY_DIR}/" "${CMAKE_CURRENT_BINARY_DIR}/check_bliss_uses_gmp.cpp" LINK_LIBRARIES "${BLISS_LIBRARY}" CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${BLISS_INCLUDE_DIR}")
 
-   if(NOT COMPILE_RESULT)
+   if(NOT COMPILE_RESULT OR RUN_RESULT MATCHES FAILED_TO_RUN)
       # Bliss requires GMP.
       if(BLISS_FIND_REQUIRED)
          if(BLISS_FIND_QUIETLY)

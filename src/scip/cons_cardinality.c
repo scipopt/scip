@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_cardinality.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for cardinality constraints
  * @author Tobias Fischer
  *

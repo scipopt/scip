@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_convertinttobin.c
- * @ingroup PRESOLVERS
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  presolver that converts integer variables to binaries
  * @author Michael Winkler
  *

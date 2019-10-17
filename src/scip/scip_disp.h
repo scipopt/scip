@@ -37,25 +37,6 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -66,7 +47,7 @@ extern "C" {
  */
 
 /** creates a display column and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeDisp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of display column */
@@ -88,32 +69,32 @@ SCIP_RETCODE SCIPincludeDisp(
    );
 
 /** returns the display column of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_DISP* SCIPfindDisp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of display column */
    );
 
 /** returns the array of currently available display columns */
-EXTERN
+SCIP_EXPORT
 SCIP_DISP** SCIPgetDisps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available display columns */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNDisps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** automatically selects display columns for being shown w.r.t. the display width parameter */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPautoselectDisps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** changes the display column mode */
-EXTERN
+SCIP_EXPORT
 void SCIPchgDispMode(
    SCIP_DISP*            disp,               /**< display column */
    SCIP_DISPMODE         mode                /**< the display column mode */

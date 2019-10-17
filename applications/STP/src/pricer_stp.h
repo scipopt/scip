@@ -32,7 +32,6 @@ extern "C" {
 #endif
 
 /** creates the stp pricer and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludePricerStp(
    SCIP*                 scip                /**< SCIP data structure */
    );

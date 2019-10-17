@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlp.c
+ * @ingroup OTHER_CFILES
  * @brief  NLP management methods and datastructures
  * @author Thorsten Gellermann
  * @author Stefan Vigerske

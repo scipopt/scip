@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 /** creates the xyz tree compression and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeComprXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

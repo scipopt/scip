@@ -42,7 +42,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrBivariate(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -83,7 +83,7 @@ typedef enum
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -127,7 +127,7 @@ SCIP_RETCODE SCIPcreateConsBivariate(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -141,35 +141,35 @@ SCIP_RETCODE SCIPcreateConsBasicBivariate(
    );
 
 /** gets the linear variable of a bivariate constraint, or NULL if no such variable */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR* SCIPgetLinearVarBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the coefficients of the linear variable of a bivariate constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLinearCoefBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the expression tree of a bivariate constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_EXPRTREE* SCIPgetExprtreeBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the left hand side of a bivariate constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets the right hand side of a bivariate constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */

@@ -230,7 +230,8 @@ SCIP_DECL_BENDERSPRESUBSOLVE(bendersPresubsolveObj)
    assert(bendersdata->objbenders != NULL);
 
    /* call virtual method of benders object */
-   SCIP_CALL( bendersdata->objbenders->scip_presubsolve(scip, benders, sol, type, checkint, skipsolve, result) );
+   SCIP_CALL( bendersdata->objbenders->scip_presubsolve(scip, benders, sol, type, checkint, infeasible, auxviol,
+         skipsolve, result) );
 
    return SCIP_OKAY;
 }

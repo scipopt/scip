@@ -40,7 +40,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurProximity(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -56,7 +56,7 @@ SCIP_RETCODE SCIPincludeHeurProximity(
  *        parameter is set to FALSE, the heuristic will keep the subscip data structures. Always set this parameter
  *        to TRUE, or call SCIPdeleteSubproblemProximity() afterwards
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPapplyProximity(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
@@ -70,7 +70,7 @@ SCIP_RETCODE SCIPapplyProximity(
    );
 
 /** frees the sub-MIP created by proximity */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdeleteSubproblemProximity(
    SCIP*                 scip                /** SCIP data structure */
    );

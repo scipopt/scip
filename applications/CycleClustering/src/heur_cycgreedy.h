@@ -31,7 +31,7 @@ extern "C" {
 #endif
 
 /** creates the CycGreedy primal heuristic and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurCycGreedy(
    SCIP*                 scip                /**< SCIP data structure */
    );

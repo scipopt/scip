@@ -59,6 +59,10 @@ void blisshook(
    assert( data->npermvars < (int) n );
    assert( data->maxgenerators >= 0);
 
+   /* make sure we do not generate more that maxgenerators many permutations, if the limit in bliss is not available */
+   if ( data->maxgenerators != 0 && data->nperms >= data->maxgenerators )
+      return;
+
    /* copy first part of automorphism */
    bool isIdentity = true;
    int* p = 0;
@@ -79,10 +83,6 @@ void blisshook(
       SCIPfreeBlockMemoryArray(data->scip, &p, data->npermvars);
       return;
    }
-
-   /* make sure we do not generate more that maxgenerators many permutations, if the limit is bliss is not available */
-   if ( data->maxgenerators != 0 && data->nperms >= data->maxgenerators )
-      return;
 
    /* check whether we should allocate space for perms */
    if ( data->nmaxperms <= 0 )

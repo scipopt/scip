@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_xor.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for "xor" constraints,  \f$rhs = x_1 \oplus x_2 \oplus \dots  \oplus x_n\f$
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -29,6 +30,14 @@
  * where \f$x_i\f$ is a binary variable for all \f$i\f$ and \f$rhs\f$ is bool. The variables \f$x\f$'s are called
  * operators. This constraint is satisfied if \f$rhs\f$ is TRUE and an odd number of the operators are TRUE or if the
  * \f$rhs\f$ is FALSE and a even number of operators are TRUE. Hence, if the sum of \f$rhs\f$ and operators is even.
+ *
+ * @todo reduce code duplication
+ *       - unified treatment of constraint with 0/1/2 binary variables
+ *       - static functions for certain operations that respect deleteintvar flag properly (e.g., deletion of constraints)
+ * @todo add offset for activity which might allow to handle intvar in a more unified way
+ *       (right now, we do not remove fixed variables from the constraint, because we must ensure that the intvar gets
+ *       the correct value in the end)
+ * @todo check if preprocessConstraintPairs can also be executed for non-artificial intvars (after the previous changes)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1132,6 +1141,7 @@ static
 SCIP_RETCODE addExtendedFlowFormulation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
+   int*                  naggrvars,          /**< pointer to add up the number of aggregated variables */
    int*                  naddedconss         /**< number of added constraints */
    )
 {
@@ -1209,6 +1219,7 @@ SCIP_RETCODE addExtendedFlowFormulation(
          assert( ! infeasible );
          assert( redundant );
          assert( aggregated );
+         ++(*naggrvars);
       }
       else
       {
@@ -1234,6 +1245,7 @@ SCIP_RETCODE addExtendedFlowFormulation(
                assert( ! infeasible );
                assert( redundant );
                assert( aggregated );
+               ++(*naggrvars);
             }
             else
             {
@@ -1255,6 +1267,7 @@ SCIP_RETCODE addExtendedFlowFormulation(
                assert( ! infeasible );
                assert( redundant );
                assert( aggregated );
+               ++(*naggrvars);
             }
          }
          else
@@ -1437,6 +1450,7 @@ static
 SCIP_RETCODE addExtendedAsymmetricFormulation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
+   int*                  naggrvars,          /**< pointer to add up the number of aggregated variables */
    int*                  naddedconss         /**< number of added constraints */
    )
 {
@@ -1516,6 +1530,7 @@ SCIP_RETCODE addExtendedAsymmetricFormulation(
          assert( ! infeasible );
          assert( redundant );
          assert( aggregated );
+         ++(*naggrvars);
       }
       else
       {
@@ -2365,7 +2380,7 @@ SCIP_RETCODE checkSystemGF2(
 
          var = consdata->vars[j];
          assert( var != NULL );
-         assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
+         assert( SCIPvarIsBinary(var) );
 
          /* replace negated variables */
          if ( SCIPvarIsNegated(var) )
@@ -3778,6 +3793,10 @@ SCIP_RETCODE detectRedundantConstraints(
 
                SCIP_CALL( SCIPaggregateVars(scip, consdata0->intvar, consdata1->intvar, 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
 
+               if( aggregated )
+               {
+                  ++(*naggrvars);
+               }
                if( infeasible )
                {
                   *cutoff = TRUE;
@@ -4019,20 +4038,44 @@ SCIP_RETCODE preprocessConstraintPairs(
             assert(consdata0->sorted);
          }
 
-         /* we can only fix the intvar if var0 == 1 - var1, because intvar will then always be 0 */
-         if( redundant && (consdata1->intvar == NULL || consdata1->deleteintvar || consdata1->rhs) )
+         if( redundant )
          {
-            /* fix integral variable if present */
+            /* fix or aggregate the intvar, if it exists */
             if( consdata1->intvar != NULL && !consdata1->deleteintvar )
             {
-               SCIP_CALL( SCIPfixVar(scip, consdata1->intvar, 0.0, &infeasible, &fixed) );
-               assert(!infeasible);
-               if( fixed )
-                  ++(*nfixedvars);
+               /* we have var0 + var1 - 2 * intvar = 1, and aggregated var1 = 1 - var0,
+                * thus, intvar is always 0 */
+               if( consdata1->rhs )
+               {
+                  SCIP_CALL( SCIPfixVar(scip, consdata1->intvar, 0.0, &infeasible, &fixed) );
+                  assert(!infeasible);
+                  if( fixed )
+                     ++(*nfixedvars);
+               }
+               /* we have var0 + var1 - 2 * intvar = 0, and aggregated var1 = var0,
+                * i.e., 2 * var0 - 2 * intvar = 0, so intvar = var0 holds and we aggregate */
+               else
+               {
+                  assert(!consdata1->rhs);
+
+                  /* aggregate intvar == var0 */
+                  SCIP_CALL( SCIPaggregateVars(scip, consdata1->vars[0], consdata1->intvar, 1.0, -1.0, 0.0,
+                        &infeasible, &redundant, &aggregated) );
+                  assert(!infeasible);
+                  assert(redundant || SCIPdoNotAggr(scip));
+
+                  if( aggregated )
+                  {
+                     ++(*naggrvars);
+                  }
+               }
             }
 
-            SCIP_CALL( SCIPdelCons(scip, cons1) );
-            ++(*ndelconss);
+            if( redundant )
+            {
+               SCIP_CALL( SCIPdelCons(scip, cons1) );
+               ++(*ndelconss);
+            }
          }
 
          continue;
@@ -5318,11 +5361,11 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
 
          if ( conshdlrdata->addflowextended )
          {
-            SCIP_CALL( addExtendedFlowFormulation(scip, cons, &naddedconss) );
+            SCIP_CALL( addExtendedFlowFormulation(scip, cons, naggrvars, &naddedconss) );
          }
          else
          {
-            SCIP_CALL( addExtendedAsymmetricFormulation(scip, cons, &naddedconss) );
+            SCIP_CALL( addExtendedAsymmetricFormulation(scip, cons, naggrvars, &naddedconss) );
          }
          (*naddconss) += naddedconss;
       }
@@ -5423,9 +5466,12 @@ SCIP_DECL_CONSCOPY(consCopyXor)
          SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &targetintvar, varmap, consmap, global, valid) );
          assert(!(*valid) || targetintvar != NULL);
 
-         SCIPdebugMsg(scip, "Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar),
-            global ? SCIPvarGetLbGlobal(intvar) : SCIPvarGetLbLocal(intvar),
-            global ? SCIPvarGetUbGlobal(intvar) : SCIPvarGetUbLocal(intvar));
+         if( targetintvar != NULL )
+         {
+            SCIPdebugMsg(scip, "Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar),
+               global ? SCIPvarGetLbGlobal(intvar) : SCIPvarGetLbLocal(intvar),
+               global ? SCIPvarGetUbGlobal(intvar) : SCIPvarGetUbLocal(intvar));
+         }
       }
 
       if( *valid )

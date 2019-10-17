@@ -36,21 +36,20 @@ using namespace std;
  * Callback methods of primal heuristic
  */
 
-
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 SCIP_DECL_HEURFREE(HeurFrats::scip_free)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
-} /*lint !e715*/
-   
+}
+
 /** initialization method of primal heuristic (called after problem was transformed) */
 SCIP_DECL_HEURINIT(HeurFrats::scip_init)
 {
-   ProbDataTSP*   probdata;  
+   ProbDataTSP* probdata;
 
    /* create heuristic data */
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
-   
+
    /* load the problem specific data */
    probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
    assert(probdata != NULL);
@@ -62,17 +61,17 @@ SCIP_DECL_HEURINIT(HeurFrats::scip_init)
 
    return SCIP_OKAY;
 }
-   
+
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 SCIP_DECL_HEUREXIT(HeurFrats::scip_exit)
-{
+{  /*lint --e{715}*/
    /* free everything which was created in scip_init */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    release_graph(&graph);
 
    return SCIP_OKAY;
-} /*lint !e715*/
-   
+}
+
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin)
  *
  *  This method is called when the presolving was finished and the branch and bound process is about to begin.
@@ -80,30 +79,29 @@ SCIP_DECL_HEUREXIT(HeurFrats::scip_exit)
  *
  */
 SCIP_DECL_HEURINITSOL(HeurFrats::scip_initsol)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
-} /*lint !e715*/
-   
+}
+
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed)
  *
  *  This method is called before the branch and bound process is freed.
  *  The primal heuristic should use this call to clean up its branch and bound data.
  */
 SCIP_DECL_HEUREXITSOL(HeurFrats::scip_exitsol)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
-} /*lint !e715*/
-   
+}
+
 /** execution method of primal heuristic */
 SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
 {  /*lint --e{715}*/
-
    SCIP_SOL* newsol;
-   GRAPHNODE* currnode;   
-   SCIP_Bool* visited;   
+   GRAPHNODE* currnode;
+   SCIP_Bool* visited;
+   SCIP_Bool success;
    int nnodes;
    int i;
-   SCIP_Bool success;
 
    assert(result != NULL);
    /* since the timing is SCIP_HEURTIMING_AFTERLPNODE, the current node should have an LP */
@@ -127,12 +125,12 @@ SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
    currnode = &graph->nodes[0]; /*lint !e613*/
    nnodes = graph->nnodes; /*lint !e613*/
    success = TRUE;
-   
+
    /* allocate local memory */
-   SCIP_CALL( SCIPcreateSol (scip, &newsol, heur) );      
+   SCIP_CALL( SCIPcreateSol (scip, &newsol, heur) );
    SCIP_CALL( SCIPallocBufferArray(scip, &visited, nnodes) ); /*lint !e530*/
    BMSclearMemoryArray(visited, nnodes);
-   
+
    assert(currnode->id == 0);
    visited[0] = TRUE;
 
@@ -140,7 +138,7 @@ SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
    for( i = 0; i < nnodes; i++ )
    {
       GRAPHEDGE* edge;
-      SCIP_Real bestval; 
+      SCIP_Real bestval;
       GRAPHEDGE* bestedge;
 
       /* initialization */
@@ -148,15 +146,15 @@ SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
       bestval = -1;
 
       /* the graph works with adjacency lists */
-      edge = currnode->first_edge; 
-      
+      edge = currnode->first_edge;
+
       /* the last edge is treated separately */
       if( i != nnodes-1 )
       {
          while( edge != NULL )
          {
             /* update, if an edge has a better LP value AND was not visited yet AND was not globally fixed to zero */
-            if( SCIPgetSolVal(scip, sol, edge->var) > bestval && !visited[edge->adjac->id] 
+            if( SCIPgetSolVal(scip, sol, edge->var) > bestval && !visited[edge->adjac->id]
                && SCIPvarGetUbGlobal(edge->var) == 1.0 )
             {
                bestval = SCIPgetSolVal(scip, sol, edge->var);
@@ -192,6 +190,7 @@ SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
          success = FALSE;
          break;
       }
+
       /* assert that the data is not corrupted */
       assert(bestedge != NULL);
       assert(SCIPisFeasLE(scip, 0.0, bestval) && SCIPisFeasLE(scip, bestval, 1.0));
@@ -206,22 +205,24 @@ SCIP_DECL_HEUREXEC(HeurFrats::scip_exec)
          assert(!visited[currnode->id]);
       visited[currnode->id] = TRUE;
    }
+
    /* if we were able to construct a complete tour, try to add the solution to SCIP */
    if( success )
    {
       for( i = 0; i < nnodes; i++ )
          assert(visited[graph->nodes[i].id]); /*lint !e613*/
-      
+
       success = FALSE;
+
       /* due to construction we already know, that the solution will be feasible */
       SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
-         *result = SCIP_FOUNDSOL;  
+         *result = SCIP_FOUNDSOL;
    }
    /* free all local memory */
-   SCIP_CALL( SCIPfreeSol(scip, &newsol) );      
+   SCIP_CALL( SCIPfreeSol(scip, &newsol) );
    SCIPfreeBufferArray(scip, &visited);
-   
+
    return SCIP_OKAY;
 }
 

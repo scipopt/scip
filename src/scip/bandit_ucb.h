@@ -36,7 +36,6 @@ extern "C" {
 #endif
 
 /** include virtual function table for UCB bandit algorithms */
-extern
 SCIP_RETCODE SCIPincludeBanditvtableUcb(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -46,23 +45,18 @@ SCIP_RETCODE SCIPincludeBanditvtableUcb(
  */
 
 /** callback to free bandit specific data structures */
-extern
 SCIP_DECL_BANDITFREE(SCIPbanditFreeUcb);
 
 /** selection callback for bandit selector */
-extern
 SCIP_DECL_BANDITSELECT(SCIPbanditSelectUcb);
 
 /** update callback for bandit algorithm */
-extern
 SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateUcb);
 
 /** reset callback for bandit algorithm */
-extern
 SCIP_DECL_BANDITRESET(SCIPbanditResetUcb);
 
 /** internal method to create and reset UCB bandit algorithm */
-extern
 SCIP_RETCODE SCIPbanditCreateUcb(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    BMS_BUFMEM*           bufmem,             /**< buffer memory */

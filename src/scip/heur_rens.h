@@ -42,7 +42,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurRens(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -53,7 +53,7 @@ SCIP_RETCODE SCIPincludeHeurRens(
  */
 
 /** main procedure of the RNS heuristic, creates and solves a sub-SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPapplyRens(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */

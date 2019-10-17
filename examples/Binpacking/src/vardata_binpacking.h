@@ -29,7 +29,6 @@
 #include "scip/scip.h"
 
 /** create variable data */
-extern
 SCIP_RETCODE SCIPvardataCreateBinpacking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VARDATA**        vardata,            /**< pointer to vardata */
@@ -38,19 +37,16 @@ SCIP_RETCODE SCIPvardataCreateBinpacking(
    );
 
 /** get number of constraints */
-extern
 int SCIPvardataGetNConsids(
    SCIP_VARDATA*         vardata             /**< variable data */
    );
 
 /** returns sorted constraint id array */
-extern
 int* SCIPvardataGetConsids(
    SCIP_VARDATA*         vardata             /**< variable data */
    );
 
 /** creates variable */
-extern
 SCIP_RETCODE SCIPcreateVarBinpacking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            var,                /**< pointer to variable object */
@@ -62,7 +58,6 @@ SCIP_RETCODE SCIPcreateVarBinpacking(
    );
 
 /** prints vardata to file stream */
-extern
 void SCIPvardataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VARDATA*         vardata,            /**< variable data */

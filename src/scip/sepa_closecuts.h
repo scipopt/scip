@@ -45,7 +45,7 @@ extern "C" {
  *
  * @ingroup SeparatorIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeSepaClosecuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -59,7 +59,7 @@ SCIP_RETCODE SCIPincludeSepaClosecuts(
  *
  *  The point is only stored if separation of relative interior points is used. The solution is copied.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBasePointClosecuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< base point solution */

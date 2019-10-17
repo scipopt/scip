@@ -51,7 +51,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -114,7 +114,7 @@ typedef struct SCIP_LinConsUpgrade SCIP_LINCONSUPGRADE; /**< linear constraint u
       SCIP_Real poscoeffsum, SCIP_Real negcoeffsum, SCIP_Bool integral, SCIP_CONS** upgdcons)
 
 /** includes a linear constraint update method into the linear constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeLinconsUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_LINCONSUPGD((*linconsupgd)),    /**< method to call for upgrading linear constraint */
@@ -126,7 +126,7 @@ SCIP_RETCODE SCIPincludeLinconsUpgrade(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -169,7 +169,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -182,7 +182,7 @@ SCIP_RETCODE SCIPcreateConsBasicLinear(
    );
 
 /** creates by copying and captures a linear constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyConsLinear(
    SCIP*                 scip,               /**< target SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
@@ -213,7 +213,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    );
 
 /** adds coefficient to linear constraint (if it is not zero) */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddCoefLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -228,7 +228,7 @@ SCIP_RETCODE SCIPaddCoefLinear(
  *
  *  @note This method requires linear time to search for occurences of the variable in the constraint data.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgCoefLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -242,7 +242,7 @@ SCIP_RETCODE SCIPchgCoefLinear(
  *
  *  @note This method requires linear time to search for occurences of the variable in the constraint data.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdelCoefLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -250,21 +250,21 @@ SCIP_RETCODE SCIPdelCoefLinear(
    );
 
 /** gets left hand side of linear constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLhsLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets right hand side of linear constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRhsLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** changes left hand side of linear constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgLhsLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -272,7 +272,7 @@ SCIP_RETCODE SCIPchgLhsLinear(
    );
 
 /** changes right hand side of linear constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgRhsLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -280,21 +280,21 @@ SCIP_RETCODE SCIPchgRhsLinear(
    );
 
 /** gets the number of variables in the linear constraint */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNVarsLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the array of variables in the linear constraint; the user must not modify this array! */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR** SCIPgetVarsLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the array of coefficient values in the linear constraint; the user must not modify this array! */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* SCIPgetValsLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -305,7 +305,7 @@ SCIP_Real* SCIPgetValsLinear(
  *  @note if the solution contains values at infinity, this method will return SCIP_INVALID in case the activity
  *        comprises positive and negative infinity contributions
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetActivityLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -313,7 +313,7 @@ SCIP_Real SCIPgetActivityLinear(
    );
 
 /** gets the feasibility of the linear constraint in the given solution */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetFeasibilityLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -321,14 +321,14 @@ SCIP_Real SCIPgetFeasibilityLinear(
    );
 
 /** gets the dual solution of the linear constraint in the current LP */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetDualsolLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual Farkas value of the linear constraint in the current infeasible LP */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetDualfarkasLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -337,14 +337,14 @@ SCIP_Real SCIPgetDualfarkasLinear(
 /** returns the linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
  *  the user must not modify the row!
  */
-EXTERN
+SCIP_EXPORT
 SCIP_ROW* SCIPgetRowLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
@@ -359,7 +359,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
  *  constraints that were upgraded to more special types such as, e.g., varbound constraints, will not be shown correctly anymore.
  *  Similarly, if specialized constraints were created through the API, these are currently not present.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint type classification */

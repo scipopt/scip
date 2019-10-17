@@ -30,7 +30,6 @@
 
 
 /** includes the rpa file reader in SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderRpa(
    SCIP*                 scip                /**< SCIP data structure */
    );

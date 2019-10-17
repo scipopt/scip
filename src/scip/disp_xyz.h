@@ -35,7 +35,7 @@ extern "C" {
  *
  *  @ingroup DisplayIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeDispXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

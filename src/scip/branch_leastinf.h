@@ -51,7 +51,7 @@ extern "C" {
  *
  *  @ingroup BranchingRuleIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleLeastinf(
    SCIP*                 scip                /**< SCIP data structure */
    );

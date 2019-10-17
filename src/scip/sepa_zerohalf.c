@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_zerohalf.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  {0,1/2}-cuts separator
  * @author Robert Lion Gottwald
  * @author Manuel Kutschka

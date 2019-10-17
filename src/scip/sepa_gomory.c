@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_gomory.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  Gomory MIR Cuts
  * @author Tobias Achterberg
  * @author Stefan Heinz

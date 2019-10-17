@@ -71,7 +71,7 @@ extern "C" {
  *
  *  @ingroup BenderscutIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBenderscutOpt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
  * Only computes gradient w.r.t. master problem variables.
  * Computes also the directional derivative, that is, mult times gradient times solution.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
@@ -91,8 +91,8 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_Real             mult,               /**< multiplier */
    SCIP_Real*            dirderiv,           /**< storage to add directional derivative */
-   SCIP_VAR**            vars,               /**< the variables in the generated cut with non-zero coefficient */
-   SCIP_Real*            vals,               /**< the coefficients of the variables in the generated cut */
+   SCIP_VAR***           vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
+   SCIP_Real**           vals,               /**< pointer to array of coefficients of the variables in the generated cut */
    int*                  nvars,              /**< the number of variables in the cut */
    int*                  varssize            /**< the number of variables in the array */
    );

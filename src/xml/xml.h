@@ -54,81 +54,69 @@ struct XML_NODE_struct
 };
 
 /** Parse file */
-extern
 XML_NODE* xmlProcess(
    const char*           filename            /**< XML file name */
    );
 
 /** create new node */
-extern
 XML_NODE* xmlNewNode(
    const char*           name,
    int                   lineno
    );
 
 /** create new attribute */
-extern
 XML_ATTR* xmlNewAttr(
    const char*           name,
    const char*           value
    );
 
 /** add attribute */
-extern
 void xmlAddAttr(
    XML_NODE*             n,
    XML_ATTR*             a
    );
 
 /** append child node */
-extern
 void xmlAppendChild(
    XML_NODE*             parent,
    XML_NODE*             child
    );
 
 /** free node */
-extern
 void xmlFreeNode(
    XML_NODE*             node
    );
 
 /** output node */
-extern
 void xmlShowNode(
    const XML_NODE*       root
    );
 
 /** get attribute value */
-extern
 const char* xmlGetAttrval(
    const XML_NODE*       node,
    const char*           name
    );
 
 /** return first node */
-extern
 const XML_NODE* xmlFirstNode(
    const XML_NODE*       node,
    const char*           name
    );
 
 /** return next node */
-extern
 const XML_NODE* xmlNextNode(
    const XML_NODE*       node,
    const char*           name
    );
 
 /** find node */
-extern
 const XML_NODE* xmlFindNode(
    const XML_NODE*       node,
    const char*           name
    );
 
 /** find node with bound on the depth */
-extern
 const XML_NODE* xmlFindNodeMaxdepth(
    const XML_NODE*       node,               /**< current node - use start node to begin */
    const char*           name,               /**< name of tag to search for */
@@ -137,49 +125,41 @@ const XML_NODE* xmlFindNodeMaxdepth(
    );
 
 /** return next sibling */
-extern
 const XML_NODE* xmlNextSibl(
    const XML_NODE*       node
    );
 
 /** return previous sibling */
-extern
 const XML_NODE* xmlPrevSibl(
    const XML_NODE*       node
    );
 
 /** return first child */
-extern
 const XML_NODE* xmlFirstChild(
    const XML_NODE*       node
    );
 
 /** return last child */
-extern
 const XML_NODE* xmlLastChild(
    const XML_NODE*       node
    );
 
 /** return name of node */
-extern
 const char* xmlGetName(
    const XML_NODE*       node
    );
 
 /** get line number */
-extern
 int xmlGetLine(
    const XML_NODE*       node
    );
 
 /** get data */
-extern
 const char* xmlGetData(
    const XML_NODE*       node
    );
 
 /** find PCDATA */
-extern
 const char* xmlFindPcdata(
    const XML_NODE*       node,
    const char*           name

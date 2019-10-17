@@ -26,7 +26,6 @@
 #include "scip/cons_cumulative.h"
 
 /** solve single cumulative condition using CP Optimizer */
-extern
 SCIP_DECL_SOLVECUMULATIVE(cpoptimizer);
 
 

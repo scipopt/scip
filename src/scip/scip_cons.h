@@ -53,14 +53,7 @@
  */
 #ifdef NDEBUG
 #include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
 #include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
 #endif
 
 #ifdef __cplusplus
@@ -86,7 +79,7 @@ extern "C" {
  *        in future releases; consider using SCIPincludeConshdlrBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of constraint handler */
@@ -157,7 +150,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeConshdlr() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR**       conshdlrptr,        /**< reference to a constraint handler pointer, or NULL */
@@ -184,7 +177,7 @@ SCIP_RETCODE SCIPincludeConshdlrBasic(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -204,7 +197,7 @@ SCIP_RETCODE SCIPsetConshdlrSepa(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrProp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -223,7 +216,7 @@ SCIP_RETCODE SCIPsetConshdlrProp(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrEnforelax(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -239,7 +232,7 @@ SCIP_RETCODE SCIPsetConshdlrEnforelax(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -256,7 +249,7 @@ SCIP_RETCODE SCIPsetConshdlrCopy(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -272,7 +265,7 @@ SCIP_RETCODE SCIPsetConshdlrFree(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -288,7 +281,7 @@ SCIP_RETCODE SCIPsetConshdlrInit(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -304,7 +297,7 @@ SCIP_RETCODE SCIPsetConshdlrExit(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -320,7 +313,7 @@ SCIP_RETCODE SCIPsetConshdlrInitsol(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -336,7 +329,7 @@ SCIP_RETCODE SCIPsetConshdlrExitsol(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrInitpre(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -352,7 +345,7 @@ SCIP_RETCODE SCIPsetConshdlrInitpre(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrExitpre(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -368,7 +361,7 @@ SCIP_RETCODE SCIPsetConshdlrExitpre(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrPresol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -386,7 +379,7 @@ SCIP_RETCODE SCIPsetConshdlrPresol(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrDelete(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -402,7 +395,7 @@ SCIP_RETCODE SCIPsetConshdlrDelete(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrTrans(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -418,7 +411,7 @@ SCIP_RETCODE SCIPsetConshdlrTrans(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrInitlp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -434,7 +427,7 @@ SCIP_RETCODE SCIPsetConshdlrInitlp(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrResprop(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -450,7 +443,7 @@ SCIP_RETCODE SCIPsetConshdlrResprop(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrActive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -466,7 +459,7 @@ SCIP_RETCODE SCIPsetConshdlrActive(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrDeactive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -482,7 +475,7 @@ SCIP_RETCODE SCIPsetConshdlrDeactive(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrEnable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -498,7 +491,7 @@ SCIP_RETCODE SCIPsetConshdlrEnable(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrDisable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -514,7 +507,7 @@ SCIP_RETCODE SCIPsetConshdlrDisable(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrDelvars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -530,7 +523,7 @@ SCIP_RETCODE SCIPsetConshdlrDelvars(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -546,7 +539,7 @@ SCIP_RETCODE SCIPsetConshdlrPrint(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrParse(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -562,7 +555,7 @@ SCIP_RETCODE SCIPsetConshdlrParse(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrGetVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -578,7 +571,7 @@ SCIP_RETCODE SCIPsetConshdlrGetVars(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrGetNVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -594,7 +587,7 @@ SCIP_RETCODE SCIPsetConshdlrGetNVars(
  *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConshdlrGetDiveBdChgs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -602,20 +595,20 @@ SCIP_RETCODE SCIPsetConshdlrGetDiveBdChgs(
    );
 
 /** returns the constraint handler of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSHDLR* SCIPfindConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of constraint handler */
    );
 
 /** returns the array of currently available constraint handlers */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSHDLR** SCIPgetConshdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available constraint handlers */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNConshdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -650,7 +643,7 @@ int SCIPgetNConshdlrs(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to constraint */
@@ -703,7 +696,7 @@ SCIP_RETCODE SCIPcreateCons(
  *           used, if no LP or pseudo solution can violate the constraint -- e.g. if a local constraint is redundant due
  *           to the variable's local bounds.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPparseCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to store constraint */
@@ -751,7 +744,7 @@ SCIP_RETCODE SCIPparseCons(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcaptureCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to capture */
@@ -778,7 +771,7 @@ SCIP_RETCODE SCIPcaptureCons(
  *
  *  @note the pointer of the constraint will be NULLed
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreleaseCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons                /**< pointer to constraint */
@@ -794,7 +787,7 @@ SCIP_RETCODE SCIPreleaseCons(
  *
  *  @note to get the current name of a constraint, use SCIPconsGetName() from pub_cons.h
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgConsName(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -813,7 +806,7 @@ SCIP_RETCODE SCIPchgConsName(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsInitial(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -832,7 +825,7 @@ SCIP_RETCODE SCIPsetConsInitial(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsSeparated(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -851,7 +844,7 @@ SCIP_RETCODE SCIPsetConsSeparated(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsEnforced(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -870,7 +863,7 @@ SCIP_RETCODE SCIPsetConsEnforced(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsChecked(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -889,7 +882,7 @@ SCIP_RETCODE SCIPsetConsChecked(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsPropagated(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -910,7 +903,7 @@ SCIP_RETCODE SCIPsetConsPropagated(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -930,7 +923,7 @@ SCIP_RETCODE SCIPsetConsLocal(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsModifiable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -949,7 +942,7 @@ SCIP_RETCODE SCIPsetConsModifiable(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsDynamic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -968,7 +961,7 @@ SCIP_RETCODE SCIPsetConsDynamic(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsRemovable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -987,7 +980,7 @@ SCIP_RETCODE SCIPsetConsRemovable(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetConsStickingAtNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -1006,7 +999,7 @@ SCIP_RETCODE SCIPsetConsStickingAtNode(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupdateConsFlags(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons0,              /**< constraint that should stay */
@@ -1029,7 +1022,7 @@ SCIP_RETCODE SCIPupdateConsFlags(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtransformCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to get/create transformed constraint for */
@@ -1053,7 +1046,7 @@ SCIP_RETCODE SCIPtransformCons(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtransformConss(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nconss,             /**< number of constraints to get/create transformed constraints for */
@@ -1080,7 +1073,7 @@ SCIP_RETCODE SCIPtransformConss(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetTransformedCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to get the transformed constraint for */
@@ -1108,7 +1101,7 @@ SCIP_RETCODE SCIPgetTransformedCons(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetTransformedConss(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nconss,             /**< number of constraints to get the transformed constraints for */
@@ -1132,7 +1125,7 @@ SCIP_RETCODE SCIPgetTransformedConss(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConsAge(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -1155,7 +1148,7 @@ SCIP_RETCODE SCIPaddConsAge(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincConsAge(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -1177,7 +1170,7 @@ SCIP_RETCODE SCIPincConsAge(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPresetConsAge(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -1196,7 +1189,7 @@ SCIP_RETCODE SCIPresetConsAge(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPenableCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -1224,7 +1217,7 @@ SCIP_RETCODE SCIPenableCons(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdisableCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -1243,7 +1236,7 @@ SCIP_RETCODE SCIPdisableCons(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPenableConsSeparation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -1265,7 +1258,7 @@ SCIP_RETCODE SCIPenableConsSeparation(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdisableConsSeparation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -1286,7 +1279,7 @@ SCIP_RETCODE SCIPdisableConsSeparation(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPenableConsPropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -1310,7 +1303,7 @@ SCIP_RETCODE SCIPenableConsPropagation(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdisableConsPropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -1334,7 +1327,7 @@ SCIP_RETCODE SCIPdisableConsPropagation(
  *
  *  @note if a constraint is marked to be propagated, the age of the constraint will be ignored for propagation
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPmarkConsPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -1354,7 +1347,7 @@ SCIP_RETCODE SCIPmarkConsPropagate(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPunmarkConsPropagate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -1376,7 +1369,7 @@ SCIP_RETCODE SCIPunmarkConsPropagate(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConsLocksType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -1403,7 +1396,7 @@ SCIP_RETCODE SCIPaddConsLocksType(
  *
  *  @note This methods always adds locks of type model
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddConsLocks(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -1426,7 +1419,7 @@ SCIP_RETCODE SCIPaddConsLocks(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcheckCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
@@ -1448,7 +1441,7 @@ SCIP_RETCODE SCIPcheckCons(
  *  @note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
  *        added to SCIP beforehand.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPenfopsCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to enforce */
@@ -1468,7 +1461,7 @@ SCIP_RETCODE SCIPenfopsCons(
  *  @note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
  *        added to SCIP beforehand.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPenfolpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to enforce */
@@ -1506,7 +1499,7 @@ SCIP_RETCODE SCIPenforelaxCons(
  *  @note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
  *        added to SCIP beforehand.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinitlpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to initialize */
@@ -1524,7 +1517,7 @@ SCIP_RETCODE SCIPinitlpCons(
  *
  *  @note This is an advanced method and should be used with caution.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsepalpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to separate */
@@ -1541,7 +1534,7 @@ SCIP_RETCODE SCIPsepalpCons(
  *
  *  @note This is an advanced method and should be used with caution.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsepasolCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to separate */
@@ -1560,7 +1553,7 @@ SCIP_RETCODE SCIPsepasolCons(
  *
  *  @note This is an advanced method and should be used with caution.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPpropCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to propagate */
@@ -1581,7 +1574,7 @@ SCIP_RETCODE SCIPpropCons(
  *  @note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
  *        added to SCIP beforehand.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrespropCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to resolve conflict for */
@@ -1603,7 +1596,7 @@ SCIP_RETCODE SCIPrespropCons(
  *
  *  @note This is an advanced method and should be used with caution.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPpresolCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to presolve */
@@ -1643,7 +1636,7 @@ SCIP_RETCODE SCIPpresolCons(
  *  @note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
  *      added to SCIP beforehand.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to notify */
@@ -1661,7 +1654,7 @@ SCIP_RETCODE SCIPactiveCons(
  *  @note This is an advanced method and should be used with caution. It may only be called for constraints that were not
  *        added to SCIP beforehand.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdeactiveCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to notify */
@@ -1690,7 +1683,7 @@ SCIP_RETCODE SCIPdeactiveCons(
  *  @note The file stream will not be flushed directly, this can be achieved by calling SCIPinfoMessage() printing a
  *        newline character.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -1725,7 +1718,7 @@ SCIP_RETCODE SCIPprintCons(
  *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
  *        set to FALSE.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the variables are wanted */
@@ -1758,7 +1751,7 @@ SCIP_RETCODE SCIPgetConsVars(
  *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
  *        set to FALSE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsNVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the number of variables is wanted */
@@ -1766,12 +1759,10 @@ SCIP_RETCODE SCIPgetConsNVars(
    SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
    );
 
-#ifdef NDEBUG
-
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
-
+#ifdef NDEBUG
 #define SCIPmarkConsPropagate(scip, cons)         SCIPconsMarkPropagate(cons, (scip)->set)
 #endif
 

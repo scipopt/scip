@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_randrounding.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  randomized LP rounding heuristic which also generates conflicts via an auxiliary probing tree
  * @author Gregor Hendel
  *
@@ -51,7 +52,7 @@
 
 #define HEUR_NAME             "randrounding"
 #define HEUR_DESC             "fast LP rounding heuristic"
-#define HEUR_DISPCHAR         'G'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -200
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          0

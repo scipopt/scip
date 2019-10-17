@@ -37,7 +37,6 @@ extern "C" {
 #endif
 
 /** includes the col file reader into SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderCol(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dialog_default.c
+ * @ingroup OTHER_CFILES
  * @brief  default user interface dialog
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -1559,9 +1560,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubproblem)
                subidx = i;
 
             subproblem = SCIPbendersSubproblem(benders[idx], subidx);
-            assert(subproblem != NULL);
 
-            if( SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
+            if( subproblem != NULL && SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
             {
                SCIPdialogMessage(scip, NULL, "\n");
                SCIPdialogMessage(scip, NULL, "Subproblem %d\n", subidx);
@@ -1711,9 +1711,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
                subidx = i;
 
             subproblem = SCIPbendersSubproblem(benders[idx], subidx);
-            assert(subproblem != NULL);
 
-            if( SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
+            if( subproblem != NULL && SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
             {
                /* setting up the subproblem with the best solution to the master problem */
                SCIP_CALL( SCIPsetupBendersSubproblem(scip, benders[idx], bestsol, subidx) );

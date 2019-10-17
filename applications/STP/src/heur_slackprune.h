@@ -37,13 +37,11 @@ extern "C" {
 #endif
 
 /** creates the slack prune primal heuristic and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPStpIncludeHeurSlackPrune(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** execute slack-and-prune heuristic on given graph */
-extern
 SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables or NULL */
@@ -55,7 +53,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    );
 
 /** execute MWCSP slack-and-prune heuristic on given graph */
-extern
 SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables or NULL */

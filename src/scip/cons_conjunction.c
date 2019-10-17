@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_conjunction.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for conjunction constraints
  * @author Tobias Achterberg
  */

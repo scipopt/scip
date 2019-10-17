@@ -191,7 +191,7 @@ SCIP_RETCODE solveLpExact(
       SCIPclockStart(stat->provedfeaslptime, set);
 
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreexApplyCuts(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
    SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
 
    assert(SCIPlpexIsSynced(lpex, set, messagehdlr));
@@ -2134,7 +2134,7 @@ SCIP_RETCODE constructPSData(
    SCIP_CALL( RatCreateBlock(blkmem, &psdata->commonslack) );
 
    /* process the bound changes */
-   SCIP_CALL( SCIPsepastoreexApplyCuts(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
    SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
 
    assert(lpex->nrows > 0);
@@ -2278,7 +2278,7 @@ SCIP_RETCODE getPSdualTwo(
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreexApplyCuts(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
    SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
 
    nextendedrows = psdata->nextendedrows;
@@ -2851,7 +2851,7 @@ SCIP_RETCODE getPSdual(
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreexApplyCuts(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
+   SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
    SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
 
    nextendedrows = psdata->nextendedrows;

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benders_default.c
+ * @ingroup OTHER_CFILES
  * @brief  default Benders' decomposition plugin
  * @author Stephen J. Maher
  *
@@ -457,7 +458,6 @@ SCIP_DECL_BENDERSCREATESUB(bendersCreatesubDefault)
 
    return SCIP_OKAY;
 }
-
 
 
 /*

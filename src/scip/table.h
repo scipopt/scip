@@ -40,14 +40,12 @@ extern "C" {
 #endif
 
 /** copies the given statistics table to a new scip */
-extern
 SCIP_RETCODE SCIPtableCopyInclude(
    SCIP_TABLE*           table,              /**< statistics table */
    SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    );
 
 /** creates a statistics table */
-extern
 SCIP_RETCODE SCIPtableCreate(
    SCIP_TABLE**          table,              /**< pointer to store statistics table */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -69,42 +67,36 @@ SCIP_RETCODE SCIPtableCreate(
    );
 
 /** frees memory of statistics table */
-extern
 SCIP_RETCODE SCIPtableFree(
    SCIP_TABLE**          table,              /**< pointer to statistics table data structure */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes statistics table */
-extern
 SCIP_RETCODE SCIPtableInit(
    SCIP_TABLE*           table,              /**< statistics table */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** deinitializes statistics table */
-extern
 SCIP_RETCODE SCIPtableExit(
    SCIP_TABLE*           table,              /**< statistics table */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs statistics table that the branch and bound process is being started */
-extern
 SCIP_RETCODE SCIPtableInitsol(
    SCIP_TABLE*           table,              /**< statistics table */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs statistics table that the branch and bound process data is being freed */
-extern
 SCIP_RETCODE SCIPtableExitsol(
    SCIP_TABLE*           table,              /**< statistics table */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** output statistics table to screen */
-extern
 SCIP_RETCODE SCIPtableOutput(
    SCIP_TABLE*           table,              /**< statistics table */
    SCIP_SET*             set,                /**< global SCIP settings */

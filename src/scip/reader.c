@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader.c
+ * @ingroup OTHER_CFILES
  * @brief  interface for input file readers
  * @author Tobias Achterberg
  */

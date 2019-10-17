@@ -904,7 +904,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                      SCIP_CALL( SCIPpairheapDeletemin(scip, &edge, &edgecost, &boundpaths[l], &heapsize[l]) );
 
                      node = (vbase[graph->head[edge]] == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(&uf, vbase[graph->head[edge]]);
-                     assert( (vbase[graph->tail[edge]] == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(&uf, vbase[graph->tail[edge]]) == l );
 
                      /* check whether edge 'edge' represents a boundary-path having an endpoint in the kth-component and in the root-component respectively */
                      if( node != UNKNOWN && !nodesmark[node] && graphmark[node] )

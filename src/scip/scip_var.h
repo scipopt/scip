@@ -40,6 +40,7 @@
 #include "scip/type_lp.h"
 #include "scip/type_misc.h"
 #include "scip/type_prop.h"
+#include "scip/type_relax.h"
 #include "scip/type_result.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
@@ -55,15 +56,7 @@
  * available in optimized mode.
  */
 #ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
+#include "scip/pub_var.h"
 #endif
 
 #ifdef __cplusplus
@@ -97,7 +90,7 @@ extern "C" {
  *
  *  @note the variable gets captured, hence at one point you have to release it using the method SCIPreleaseVar()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            var,                /**< pointer to variable object */
@@ -141,7 +134,7 @@ SCIP_RETCODE SCIPcreateVar(
  *
  *  @note the variable gets captured, hence at one point you have to release it using the method SCIPreleaseVar()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateVarBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            var,                /**< pointer to variable object */
@@ -172,7 +165,7 @@ SCIP_RETCODE SCIPcreateVarBasic(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteVarName(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
@@ -205,7 +198,7 @@ SCIP_RETCODE SCIPwriteVarName(
  *
  *  @note The printing process is done via the message handler system.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteVarsList(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
@@ -239,7 +232,7 @@ SCIP_RETCODE SCIPwriteVarsList(
  *
  *  @note The printing process is done via the message handler system.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
@@ -274,7 +267,7 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
  *
  *  @note The printing process is done via the message handler system.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteVarsPolynomial(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */
@@ -302,7 +295,7 @@ SCIP_RETCODE SCIPwriteVarsPolynomial(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPparseVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            var,                /**< pointer to store the problem variable */
@@ -333,7 +326,7 @@ SCIP_RETCODE SCIPparseVar(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPparseVarName(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
@@ -363,7 +356,7 @@ SCIP_RETCODE SCIPparseVarName(
  *        cannot reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP
  *        memory functions).
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPparseVarsList(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
@@ -398,7 +391,7 @@ SCIP_RETCODE SCIPparseVarsList(
  *        cannot reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP
  *        memory functions).
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPparseVarsLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
@@ -435,7 +428,7 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
@@ -462,7 +455,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 void SCIPfreeParseVarsPolynomialData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
@@ -490,7 +483,7 @@ void SCIPfreeParseVarsPolynomialData(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcaptureVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to capture */
@@ -517,7 +510,7 @@ SCIP_RETCODE SCIPcaptureVar(
  *
  *  @note the pointer of the variable will be NULLed
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreleaseVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            var                 /**< pointer to variable */
@@ -532,7 +525,7 @@ SCIP_RETCODE SCIPreleaseVar(
  *
  *  @note to get the current name of a variable, use SCIPvarGetName() from pub_var.h
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarName(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable */
@@ -555,7 +548,7 @@ SCIP_RETCODE SCIPchgVarName(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtransformVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get/create transformed variable for */
@@ -579,7 +572,7 @@ SCIP_RETCODE SCIPtransformVar(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtransformVars(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables to get/create transformed variables for */
@@ -606,7 +599,7 @@ SCIP_RETCODE SCIPtransformVars(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetTransformedVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get transformed variable for */
@@ -634,7 +627,7 @@ SCIP_RETCODE SCIPgetTransformedVar(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetTransformedVars(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables to get transformed variables for */
@@ -661,7 +654,7 @@ SCIP_RETCODE SCIPgetTransformedVars(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNegatedVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get negated variable for */
@@ -688,7 +681,7 @@ SCIP_RETCODE SCIPgetNegatedVar(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNegatedVars(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables to get negated variables for */
@@ -714,7 +707,7 @@ SCIP_RETCODE SCIPgetNegatedVars(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetBinvarRepresentative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< binary variable to get binary representative for */
@@ -740,7 +733,7 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetBinvarRepresentatives(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of binary variables to get representatives for */
@@ -763,7 +756,7 @@ SCIP_RETCODE SCIPgetBinvarRepresentatives(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPflattenVarAggregationGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -800,7 +793,7 @@ SCIP_RETCODE SCIPflattenVarAggregationGraph(
  *  @note That method can be used to convert a single variables into variable space of active variables. Therefore call
  *        the method with the linear sum 1.0*x + 0.0.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array x_1, ..., x_n in the linear sum which will be
@@ -843,7 +836,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetProbvarSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
@@ -869,7 +862,7 @@ SCIP_RETCODE SCIPgetProbvarSum(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetActiveVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
@@ -890,7 +883,7 @@ SCIP_RETCODE SCIPgetActiveVars(
  *
  *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
@@ -906,7 +899,7 @@ SCIP_Real SCIPgetVarRedcost(
  *
  *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarImplRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get reduced costs, should be a column in current node LP */
@@ -921,7 +914,7 @@ SCIP_Real SCIPgetVarImplRedcost(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarFarkasCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
@@ -930,7 +923,7 @@ SCIP_Real SCIPgetVarFarkasCoef(
 /** returns lower bound of variable directly before or after the bound change given by the bound change index
  *  was applied
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarLbAtIndex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -941,7 +934,7 @@ SCIP_Real SCIPgetVarLbAtIndex(
 /** returns upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarUbAtIndex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -952,7 +945,7 @@ SCIP_Real SCIPgetVarUbAtIndex(
 /** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
  *  was applied
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarBdAtIndex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -962,7 +955,7 @@ SCIP_Real SCIPgetVarBdAtIndex(
    );
 
 /** returns whether the binary variable was fixed at the time given by the bound change index */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPgetVarWasFixedAtIndex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -978,7 +971,7 @@ SCIP_Bool SCIPgetVarWasFixedAtIndex(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get solution value for */
@@ -993,7 +986,7 @@ SCIP_Real SCIPgetVarSol(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarSols(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables to get solution value for */
@@ -1010,9 +1003,10 @@ SCIP_RETCODE SCIPgetVarSols(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPclearRelaxSolVals(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax               /**< relaxator data structure */
    );
 
 /** sets the value of the given variable in the global relaxation solution;
@@ -1032,9 +1026,10 @@ SCIP_RETCODE SCIPclearRelaxSolVals(
  *        should be updated, using SCIPsetRelaxSolVals() instead or calling SCIPclearRelaxSolVals() before setting
  *        the first value to reset the solution and the objective value to 0 may help the numerics.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure */
    SCIP_VAR*             var,                /**< variable to set value for */
    SCIP_Real             val                 /**< solution value of variable */
    );
@@ -1051,9 +1046,10 @@ SCIP_RETCODE SCIPsetRelaxSolVal(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxSolVals(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure */
    int                   nvars,              /**< number of variables to set relaxation solution value for */
    SCIP_VAR**            vars,               /**< array with variables to set value for */
    SCIP_Real*            vals,               /**< array with solution values of variables */
@@ -1071,9 +1067,10 @@ SCIP_RETCODE SCIPsetRelaxSolVals(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRelaxSolValsSol(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure */
    SCIP_SOL*             sol,                /**< primal relaxation solution */
    SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
@@ -1086,7 +1083,7 @@ SCIP_RETCODE SCIPsetRelaxSolValsSol(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisRelaxSolValid(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1100,9 +1097,10 @@ SCIP_Bool SCIPisRelaxSolValid(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPmarkRelaxSolValid(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax,              /**< relaxator data structure that set the current relaxation solution */
    SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
    );
 
@@ -1115,7 +1113,7 @@ SCIP_RETCODE SCIPmarkRelaxSolValid(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPmarkRelaxSolInvalid(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1128,7 +1126,7 @@ SCIP_RETCODE SCIPmarkRelaxSolInvalid(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRelaxSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get value for */
@@ -1142,7 +1140,7 @@ SCIP_Real SCIPgetRelaxSolVal(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRelaxSolObj(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1152,7 +1150,7 @@ SCIP_Real SCIPgetRelaxSolObj(
  *  @return TRUE iff strong branching should first evaluate the down child
  *
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisStrongbranchDownFirst(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to determine the branching direction on */
@@ -1170,7 +1168,7 @@ SCIP_Bool SCIPisStrongbranchDownFirst(
  *  @note if propagation is enabled, strong branching is not done directly on the LP, but probing nodes are created
  *        which allow to perform propagation but also creates some overhead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPstartStrongbranch(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             enablepropagation   /**< should propagation be done before solving the strong branching LP? */
@@ -1185,7 +1183,7 @@ SCIP_RETCODE SCIPstartStrongbranch(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPendStrongbranch(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1199,11 +1197,12 @@ SCIP_RETCODE SCIPendStrongbranch(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get strong branching values for */
    int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Bool             idempotent,         /**< should scip's state remain the same after the call (statistics, column states...), or should it be updated ? */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up */
    SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
@@ -1240,7 +1239,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
  *  @warning When using this method, LP banching candidates and solution values must be copied beforehand, because
  *           they are updated w.r.t. the strong branching LP solution.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get strong branching values for */
@@ -1282,11 +1281,12 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
  *  @note If the integral LP solution value is the lower or upper bound of the variable, the corresponding branch will be
  *        marked as infeasible. That is, the valid pointer and the infeasible pointer are set to TRUE.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarStrongbranchInt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get strong branching values for */
    int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Bool             idempotent,         /**< should scip's state remain the same after the call (statistics, column states...), or should it be updated ? */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up */
    SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
@@ -1312,7 +1312,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variables to get strong branching values for */
@@ -1343,7 +1343,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesFrac(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variables to get strong branching values for */
@@ -1366,7 +1366,7 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
    );
 
 /** get LP solution status of last strong branching call (currently only works for strong branching with propagation) */
-EXTERN
+SCIP_EXPORT
 SCIP_LPSOLSTAT SCIPgetLastStrongbranchLPSolStat(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        branchdir           /**< branching direction for which LP solution status is requested */
@@ -1383,7 +1383,7 @@ SCIP_LPSOLSTAT SCIPgetLastStrongbranchLPSolStat(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarStrongbranchLast(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to get last strong branching values for */
@@ -1405,7 +1405,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchLast(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetVarStrongbranchData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to set last strong branching values for */
@@ -1427,7 +1427,7 @@ SCIP_RETCODE SCIPsetVarStrongbranchData(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtryStrongbranchLPSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            foundsol,           /**< stores whether solution was feasible and good enough to keep */
@@ -1452,7 +1452,7 @@ SCIP_RETCODE SCIPtryStrongbranchLPSol(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetVarStrongbranchNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get last strong branching node for */
@@ -1477,7 +1477,7 @@ SCIP_Longint SCIPgetVarStrongbranchNode(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetVarStrongbranchLPAge(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get strong branching LP age for */
@@ -1500,7 +1500,7 @@ SCIP_Longint SCIPgetVarStrongbranchLPAge(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetVarNStrongbranchs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get last strong branching node for */
@@ -1524,7 +1524,7 @@ int SCIPgetVarNStrongbranchs(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarLocksType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -1554,7 +1554,7 @@ SCIP_RETCODE SCIPaddVarLocksType(
  *
  *  @note This method will always add variable locks of type model
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarLocks(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -1582,7 +1582,7 @@ SCIP_RETCODE SCIPaddVarLocks(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPlockVarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -1610,7 +1610,7 @@ SCIP_RETCODE SCIPlockVarCons(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPunlockVarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -1629,7 +1629,7 @@ SCIP_RETCODE SCIPunlockVarCons(
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_PRESOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the objective value for */
@@ -1648,7 +1648,7 @@ SCIP_RETCODE SCIPchgVarObj(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the objective value for */
@@ -1674,7 +1674,7 @@ SCIP_RETCODE SCIPaddVarObj(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPadjustedVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to adjust the bound for */
@@ -1700,7 +1700,7 @@ SCIP_Real SCIPadjustedVarLb(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPadjustedVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to adjust the bound for */
@@ -1725,7 +1725,7 @@ SCIP_Real SCIPadjustedVarUb(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -1750,7 +1750,7 @@ SCIP_RETCODE SCIPchgVarLb(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -1766,7 +1766,7 @@ SCIP_RETCODE SCIPchgVarUb(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarLbNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to change bound at, or NULL for current node */
@@ -1783,7 +1783,7 @@ SCIP_RETCODE SCIPchgVarLbNode(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarUbNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to change bound at, or NULL for current node */
@@ -1808,7 +1808,7 @@ SCIP_RETCODE SCIPchgVarUbNode(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -1832,7 +1832,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -1856,7 +1856,7 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
  *
  *  @note lazy bounds are useful for branch-and-price since the corresponding variable bounds are not part of the LP
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarLbLazy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -1880,7 +1880,7 @@ SCIP_RETCODE SCIPchgVarLbLazy(
  *
  *  @note lazy bounds are useful for branch-and-price since the corresponding variable bounds are not part of the LP
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarUbLazy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -1905,7 +1905,7 @@ SCIP_RETCODE SCIPchgVarUbLazy(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtightenVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -1933,7 +1933,7 @@ SCIP_RETCODE SCIPtightenVarLb(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtightenVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -1956,7 +1956,7 @@ SCIP_RETCODE SCIPtightenVarUb(
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinferVarFixCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -1986,7 +1986,7 @@ SCIP_RETCODE SCIPinferVarFixCons(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinferVarLbCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -2016,7 +2016,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinferVarUbCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -2040,7 +2040,7 @@ SCIP_RETCODE SCIPinferVarUbCons(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinferBinvarCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< binary variable to fix */
@@ -2064,7 +2064,7 @@ SCIP_RETCODE SCIPinferBinvarCons(
  *
  *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinferVarFixProp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -2094,7 +2094,7 @@ SCIP_RETCODE SCIPinferVarFixProp(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinferVarLbProp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -2124,7 +2124,7 @@ SCIP_RETCODE SCIPinferVarLbProp(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinferVarUbProp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -2149,7 +2149,7 @@ SCIP_RETCODE SCIPinferVarUbProp(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinferBinvarProp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< binary variable to fix */
@@ -2178,7 +2178,7 @@ SCIP_RETCODE SCIPinferBinvarProp(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtightenVarLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -2206,7 +2206,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtightenVarUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -2223,7 +2223,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
  *
  *  @return the global lower bound computed by adding the global bounds from all aggregation variables
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPcomputeVarLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to compute the bound for */
@@ -2236,7 +2236,7 @@ SCIP_Real SCIPcomputeVarLbGlobal(
  *
  *  @return the global upper bound computed by adding the global bounds from all aggregation variables
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPcomputeVarUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to compute the bound for */
@@ -2249,7 +2249,7 @@ SCIP_Real SCIPcomputeVarUbGlobal(
  *
  *  @return the local lower bound computed by adding the global bounds from all aggregation variables
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPcomputeVarLbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to compute the bound for */
@@ -2262,7 +2262,7 @@ SCIP_Real SCIPcomputeVarLbLocal(
  *
  *  @return the local upper bound computed by adding the global bounds from all aggregation variables
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPcomputeVarUbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to compute the bound for */
@@ -2274,7 +2274,7 @@ SCIP_Real SCIPcomputeVarUbLocal(
  *
  *  calling this function for a non-multi-aggregated variable is not allowed
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarMultaggrLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to compute the bound for */
@@ -2286,7 +2286,7 @@ SCIP_Real SCIPgetVarMultaggrLbGlobal(
  *
  *  calling this function for a non-multi-aggregated variable is not allowed
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarMultaggrUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to compute the bound for */
@@ -2298,7 +2298,7 @@ SCIP_Real SCIPgetVarMultaggrUbGlobal(
  *
  *  calling this function for a non-multi-aggregated variable is not allowed
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarMultaggrLbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to compute the bound for */
@@ -2310,7 +2310,7 @@ SCIP_Real SCIPgetVarMultaggrLbLocal(
  *
  *  calling this function for a non-multi-aggregated variable is not allowed
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarMultaggrUbLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to compute the bound for */
@@ -2338,7 +2338,7 @@ SCIP_Real SCIPgetVarMultaggrUbLocal(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarClosestVlb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< active problem variable */
@@ -2355,7 +2355,7 @@ SCIP_RETCODE SCIPgetVarClosestVlb(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarClosestVub(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< active problem variable */
@@ -2378,7 +2378,7 @@ SCIP_RETCODE SCIPgetVarClosestVub(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarVlb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -2404,7 +2404,7 @@ SCIP_RETCODE SCIPaddVarVlb(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarVub(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -2430,7 +2430,7 @@ SCIP_RETCODE SCIPaddVarVub(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarImplication(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -2455,7 +2455,7 @@ SCIP_RETCODE SCIPaddVarImplication(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddClique(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
@@ -2489,7 +2489,7 @@ SCIP_RETCODE SCIPaddClique(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
@@ -2515,7 +2515,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcalcNegatedCliquePartition(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
@@ -2540,7 +2540,7 @@ SCIP_RETCODE SCIPcalcNegatedCliquePartition(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcleanupCliques(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            infeasible          /**< pointer to store if cleanup detected infeasibility */
@@ -2561,7 +2561,7 @@ SCIP_RETCODE SCIPcleanupCliques(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNCliques(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -2581,7 +2581,7 @@ int SCIPgetNCliques(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNCliquesCreated(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -2601,7 +2601,7 @@ int SCIPgetNCliquesCreated(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_CLIQUE** SCIPgetCliques(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -2627,7 +2627,7 @@ SCIP_CLIQUE** SCIPgetCliques(
  *  @note a variable with it's negated variable are NOT! in a clique
  *  @note a variable with itself are in a clique
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhaveVarsCommonClique(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var1,               /**< first variable */
@@ -2658,7 +2658,7 @@ SCIP_Bool SCIPhaveVarsCommonClique(
  *  If @p writenodeweights is true, only nodes corresponding to variables that have a fractional value and only edges
  *  between such nodes are written.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteCliqueGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           fname,              /**< name of file */
@@ -2681,7 +2681,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPremoveVarFromGlobalStructures(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to remove from global structures */
@@ -2703,7 +2703,7 @@ SCIP_RETCODE SCIPremoveVarFromGlobalStructures(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarBranchFactor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -2725,7 +2725,7 @@ SCIP_RETCODE SCIPchgVarBranchFactor(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPscaleVarBranchFactor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -2747,7 +2747,7 @@ SCIP_RETCODE SCIPscaleVarBranchFactor(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarBranchFactor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -2772,7 +2772,7 @@ SCIP_RETCODE SCIPaddVarBranchFactor(
  *
  * @note the default branching priority is 0
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarBranchPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -2794,7 +2794,7 @@ SCIP_RETCODE SCIPchgVarBranchPriority(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupdateVarBranchPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -2816,7 +2816,7 @@ SCIP_RETCODE SCIPupdateVarBranchPriority(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarBranchPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -2839,7 +2839,7 @@ SCIP_RETCODE SCIPaddVarBranchPriority(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarBranchDirection(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -2864,7 +2864,7 @@ SCIP_RETCODE SCIPchgVarBranchDirection(
  *  @note If the type changes from a continuous variable to a non-continuous variable the bounds of the variable get
  *        adjusted w.r.t. to integrality information
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -2886,7 +2886,7 @@ SCIP_RETCODE SCIPchgVarType(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfixVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to fix */
@@ -2919,7 +2919,7 @@ SCIP_RETCODE SCIPfixVar(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_PRESOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaggregateVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             varx,               /**< variable x in equality a*x + b*y == c */
@@ -2948,7 +2948,7 @@ SCIP_RETCODE SCIPaggregateVars(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_PRESOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPmultiaggregateVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable x to aggregate */
@@ -2961,19 +2961,19 @@ SCIP_RETCODE SCIPmultiaggregateVar(
    );
 
 /** returns whether aggregation of variables is not allowed */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPdoNotAggr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns whether multi-aggregation is disabled */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPdoNotMultaggr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns whether variable is not allowed to be multi-aggregated */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPdoNotMultaggrVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable x to aggregate */
@@ -2983,7 +2983,7 @@ SCIP_Bool SCIPdoNotMultaggrVar(
  *
  *  @deprecated Please use SCIPallowStrongDualReds()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_DEPRECATED
 SCIP_Bool SCIPallowDualReds(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2995,7 +2995,7 @@ SCIP_Bool SCIPallowDualReds(
  *        optimal solution intact. Often such reductions are based on analyzing the objective function and variable
  *        locks.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPallowStrongDualReds(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -3004,7 +3004,7 @@ SCIP_Bool SCIPallowStrongDualReds(
  *
  *  @deprecated Please use SCIPallowWeakDualReds()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_DEPRECATED
 SCIP_Bool SCIPallowObjProp(
    SCIP*                 scip                /**< SCIP data structure */
@@ -3015,7 +3015,7 @@ SCIP_Bool SCIPallowObjProp(
  *  @note A reduction is called weak dual, if it may discard feasible solutions, but leaves at all optimal solutions
  *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPallowWeakDualReds(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -3037,7 +3037,7 @@ SCIP_Bool SCIPallowWeakDualReds(
  *  @note There exists no "unmark" method since it has to be ensured that if a plugin requires that a variable is not
  *        multi-aggregated that this is will be the case.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPmarkDoNotMultaggrVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to delete */
@@ -3053,7 +3053,7 @@ SCIP_RETCODE SCIPmarkDoNotMultaggrVar(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPenableVarHistory(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -3068,7 +3068,7 @@ void SCIPenableVarHistory(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 void SCIPdisableVarHistory(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -3084,7 +3084,7 @@ void SCIPdisableVarHistory(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupdateVarPseudocost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3106,7 +3106,7 @@ SCIP_RETCODE SCIPupdateVarPseudocost(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarPseudocostVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3128,7 +3128,7 @@ SCIP_Real SCIPgetVarPseudocostVal(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarPseudocostValCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3148,7 +3148,7 @@ SCIP_Real SCIPgetVarPseudocostValCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarPseudocost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3170,7 +3170,7 @@ SCIP_Real SCIPgetVarPseudocost(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarPseudocostCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3190,7 +3190,7 @@ SCIP_Real SCIPgetVarPseudocostCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarPseudocostCount(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3212,7 +3212,7 @@ SCIP_Real SCIPgetVarPseudocostCount(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarPseudocostCountCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3232,7 +3232,7 @@ SCIP_Real SCIPgetVarPseudocostCountCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarPseudocostVariance(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3248,7 +3248,7 @@ SCIP_Real SCIPgetVarPseudocostVariance(
  *
  *  @return value of confidence bound for this variable
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPcalculatePscostConfidenceBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable in question */
@@ -3275,7 +3275,7 @@ SCIP_Real SCIPcalculatePscostConfidenceBound(
  *
  *  @return TRUE if the hypothesis can be safely rejected at the given confidence level
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPsignificantVarPscostDifference(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             varx,               /**< variable x */
@@ -3301,7 +3301,7 @@ SCIP_Bool SCIPsignificantVarPscostDifference(
  *  @return TRUE if the variable pseudo-cost probabilistic model is likely to be smaller than \p threshold
  *          at the given confidence level \p clevel.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPpscostThresholdProbabilityTest(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable x */
@@ -3316,7 +3316,7 @@ SCIP_Bool SCIPpscostThresholdProbabilityTest(
  *
  *  @return TRUE if relative error in variable pseudo costs is smaller than \p threshold
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisVarPscostRelerrorReliable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable in question */
@@ -3337,7 +3337,7 @@ SCIP_Bool SCIPisVarPscostRelerrorReliable(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarPseudocostScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3359,7 +3359,7 @@ SCIP_Real SCIPgetVarPseudocostScore(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarPseudocostScoreCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3379,7 +3379,7 @@ SCIP_Real SCIPgetVarPseudocostScoreCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarVSIDS(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3399,7 +3399,7 @@ SCIP_Real SCIPgetVarVSIDS(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarVSIDSCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3419,7 +3419,7 @@ SCIP_Real SCIPgetVarVSIDSCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarConflictScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -3438,7 +3438,7 @@ SCIP_Real SCIPgetVarConflictScore(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarConflictScoreCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -3457,7 +3457,7 @@ SCIP_Real SCIPgetVarConflictScoreCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarConflictlengthScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -3476,7 +3476,7 @@ SCIP_Real SCIPgetVarConflictlengthScore(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarConflictlengthScoreCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -3495,7 +3495,7 @@ SCIP_Real SCIPgetVarConflictlengthScoreCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarAvgConflictlength(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3515,7 +3515,7 @@ SCIP_Real SCIPgetVarAvgConflictlength(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarAvgConflictlengthCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3537,7 +3537,7 @@ SCIP_Real SCIPgetVarAvgConflictlengthCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarAvgInferences(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3559,7 +3559,7 @@ SCIP_Real SCIPgetVarAvgInferences(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarAvgInferencesCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3579,7 +3579,7 @@ SCIP_Real SCIPgetVarAvgInferencesCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarAvgInferenceScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -3598,7 +3598,7 @@ SCIP_Real SCIPgetVarAvgInferenceScore(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarAvgInferenceScoreCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -3619,7 +3619,7 @@ SCIP_Real SCIPgetVarAvgInferenceScoreCurrentRun(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinitVarBranchStats(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable which should be initialized */
@@ -3650,7 +3650,7 @@ SCIP_RETCODE SCIPinitVarBranchStats(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPinitVarValueBranchStats(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable which should be initialized */
@@ -3680,7 +3680,7 @@ SCIP_RETCODE SCIPinitVarValueBranchStats(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarAvgCutoffs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3702,7 +3702,7 @@ SCIP_Real SCIPgetVarAvgCutoffs(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarAvgCutoffsCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3722,7 +3722,7 @@ SCIP_Real SCIPgetVarAvgCutoffsCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarAvgCutoffScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -3741,7 +3741,7 @@ SCIP_Real SCIPgetVarAvgCutoffScore(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarAvgCutoffScoreCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
@@ -3761,7 +3761,7 @@ SCIP_Real SCIPgetVarAvgCutoffScoreCurrentRun(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarAvgInferenceCutoffScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3782,7 +3782,7 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScore(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -3810,7 +3810,7 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
  *
  *  @note If the message handler is set to a NULL pointer nothing will be printed
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */

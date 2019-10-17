@@ -43,7 +43,7 @@ extern "C" {
  *
  * @ingroup PresolverIncludes
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePresolDualinfer(
    SCIP*                 scip                /**< SCIP data structure */
    );

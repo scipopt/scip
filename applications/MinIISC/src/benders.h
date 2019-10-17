@@ -63,7 +63,6 @@ typedef struct BENDERS_Data BENDERS_DATA;    /**< user defined data to pass to t
 
 
 /** run Benders algorithm using an oracle for the subproblems */
-extern
 SCIP_RETCODE runBenders(
    SCIP*                 masterscip,         /**< master SCIP instance */
    BENDERS_CUTORACLE((*Oracle)),             /**< oracle for the Benders subproblem */

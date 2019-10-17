@@ -40,7 +40,6 @@ extern "C" {
 #endif
 
 /** includes the cyc file reader into SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderCyc(
    SCIP*             scip                 /**< SCIP data structure */
    );

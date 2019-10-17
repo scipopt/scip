@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_multistart.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  multistart heuristic for convex and nonconvex MINLPs
  * @author Benjamin Mueller
  */
@@ -47,7 +48,7 @@
 
 #define HEUR_NAME             "multistart"
 #define HEUR_DESC             "multistart heuristic for convex and nonconvex MINLPs"
-#define HEUR_DISPCHAR         'm'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -2100000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_xyz.c
+ * @ingroup DEFPLUGINS_EVENT
  * @brief  eventhdlr for xyz event
  * @author Stefan Heinz
  */

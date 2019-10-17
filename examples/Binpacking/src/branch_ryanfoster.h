@@ -30,7 +30,6 @@
 #include "scip/scip.h"
 
 /** creates the ryanfoster branching rule and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludeBranchruleRyanFoster(
    SCIP*                 scip                /**< SCIP data structure */
    );

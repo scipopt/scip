@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   relax_xyz.c
+ * @ingroup OTHER_CFILES
  * @brief  xyz relaxator
  * @author Tobias Achterberg
  */

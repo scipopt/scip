@@ -50,67 +50,67 @@ typedef int SCIP_ROUNDMODE;
  */
 
 /** returns whether rounding mode control is available */
-extern
+SCIP_EXPORT
 SCIP_Bool SCIPintervalHasRoundingControl(
    void
    );
 
 /** sets rounding mode of floating point operations */
-extern
+SCIP_EXPORT
 void SCIPintervalSetRoundingMode(
    SCIP_ROUNDMODE        roundmode           /**< rounding mode to activate */
    );
 
 /** gets current rounding mode of floating point operations */
-extern
+SCIP_EXPORT
 SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
    void
    );
 
 /** sets rounding mode of floating point operations to downwards rounding */
-extern
+SCIP_EXPORT
 void SCIPintervalSetRoundingModeDownwards(
    void
    );
 
 /** sets rounding mode of floating point operations to upwards rounding */
-extern
+SCIP_EXPORT
 void SCIPintervalSetRoundingModeUpwards(
    void
    );
 
 /** sets rounding mode of floating point operations to nearest rounding */
-extern
+SCIP_EXPORT
 void SCIPintervalSetRoundingModeToNearest(
    void
    );
 
 /** sets rounding mode of floating point operations to towards zero rounding */
-extern
+SCIP_EXPORT
 void SCIPintervalSetRoundingModeTowardsZero(
    void
    );
 
 /** negates a number in a way that the compiler does not optimize it away */
-extern
+SCIP_EXPORT
 SCIP_Real SCIPintervalNegateReal(
    SCIP_Real             x                   /**< number to negate */
    );
 
 /** returns infimum of interval */
-extern
+SCIP_EXPORT
 SCIP_Real SCIPintervalGetInf(
    SCIP_INTERVAL         interval            /**< interval */
    );
 
 /** returns supremum of interval */
-extern
+SCIP_EXPORT
 SCIP_Real SCIPintervalGetSup(
    SCIP_INTERVAL         interval            /**< interval */
    );
 
 /** stores given value as interval */
-extern
+SCIP_EXPORT
 void SCIPintervalSet(
    SCIP_INTERVAL*        resultant,          /**< interval to store value into */
    SCIP_Real             value               /**< value to store */
@@ -124,7 +124,7 @@ void SCIPintervalSetRational(
    );
 
 /** stores given infimum and supremum as interval */
-extern
+SCIP_EXPORT
 void SCIPintervalSetBounds(
    SCIP_INTERVAL*        resultant,          /**< interval to store value into */
    SCIP_Real             inf,                /**< value to store as infimum */
@@ -132,41 +132,41 @@ void SCIPintervalSetBounds(
    );
 
 /** sets interval to empty interval, which will be [1.0, -1.0] */
-extern
+SCIP_EXPORT
 void SCIPintervalSetEmpty(
    SCIP_INTERVAL*        resultant           /**< resultant interval of operation */
    );
 
 /** indicates whether interval is empty, i.e., whether inf > sup */
-extern
+SCIP_EXPORT
 SCIP_Bool SCIPintervalIsEmpty(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
 /** sets interval to entire [-infinity, +infinity] */
-extern
+SCIP_EXPORT
 void SCIPintervalSetEntire(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant           /**< resultant interval of operation */
    );
 
 /** indicates whether interval is entire, i.e., whether inf <= -infinity and sup >= infinity */
-extern
+SCIP_EXPORT
 SCIP_Bool SCIPintervalIsEntire(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
 /** indicates whether interval is positive infinity, i.e., [infinity, infinity] */
-extern
+SCIP_EXPORT
 SCIP_Bool SCIPintervalIsPositiveInfinity(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
 /** indicates whether interval is negative infinity, i.e., [-infinity, -infinity] */
-extern
+SCIP_EXPORT
 SCIP_Bool SCIPintervalIsNegativeInfinity(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL         operand             /**< operand of operation */
@@ -195,7 +195,7 @@ SCIP_Bool SCIPintervalIsNegativeInfinity(
 #endif
 
 /** indicates whether operand1 is contained in operand2 */
-extern
+SCIP_EXPORT
 SCIP_Bool SCIPintervalIsSubsetEQ(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
@@ -203,14 +203,14 @@ SCIP_Bool SCIPintervalIsSubsetEQ(
    );
 
 /** indicates whether operand1 and operand2 are disjoint */
-extern
+SCIP_EXPORT
 SCIP_Bool SCIPintervalAreDisjoint(
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
 /** intersection of two intervals */
-extern
+SCIP_EXPORT
 void SCIPintervalIntersect(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
@@ -218,7 +218,7 @@ void SCIPintervalIntersect(
    );
 
 /** interval enclosure of the union of two intervals */
-extern
+SCIP_EXPORT
 void SCIPintervalUnify(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
@@ -226,7 +226,7 @@ void SCIPintervalUnify(
    );
 
 /** adds operand1 and operand2 and stores infimum of result in infimum of resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalAddInf(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -235,7 +235,7 @@ void SCIPintervalAddInf(
    );
 
 /** adds operand1 and operand2 and stores supremum of result in supremum of resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalAddSup(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -244,7 +244,7 @@ void SCIPintervalAddSup(
    );
 
 /** adds operand1 and operand2 and stores result in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalAdd(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -253,7 +253,7 @@ void SCIPintervalAdd(
    );
 
 /** adds operand1 and scalar operand2 and stores result in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalAddScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -262,7 +262,7 @@ void SCIPintervalAddScalar(
    );
 
 /** adds vector operand1 and vector operand2 and stores result in vector resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalAddVectors(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< array of resultant intervals of operation */
@@ -272,7 +272,7 @@ void SCIPintervalAddVectors(
    );
 
 /** subtracts operand2 from operand1 and stores result in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalSub(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -281,7 +281,7 @@ void SCIPintervalSub(
    );
 
 /** subtracts scalar operand2 from operand1 and stores result in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalSubScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -290,7 +290,7 @@ void SCIPintervalSubScalar(
    );
 
 /** multiplies operand1 with operand2 and stores infimum of result in infimum of resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalMulInf(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -299,7 +299,7 @@ void SCIPintervalMulInf(
    );
 
 /** multiplies operand1 with operand2 and stores supremum of result in supremum of resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalMulSup(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -308,7 +308,7 @@ void SCIPintervalMulSup(
    );
 
 /** multiplies operand1 with operand2 and stores result in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalMul(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -317,7 +317,7 @@ void SCIPintervalMul(
    );
 
 /** multiplies operand1 with scalar operand2 and stores infimum of result in infimum of resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalMulScalarInf(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -326,7 +326,7 @@ void SCIPintervalMulScalarInf(
    );
 
 /** multiplies operand1 with scalar operand2 and stores supremum of result in supremum of resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalMulScalarSup(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -335,7 +335,7 @@ void SCIPintervalMulScalarSup(
    );
 
 /** multiplies operand1 with scalar operand2 and stores result in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalMulScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -344,7 +344,7 @@ void SCIPintervalMulScalar(
    );
 
 /** divides operand1 by operand2 and stores result in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalDiv(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -353,7 +353,7 @@ void SCIPintervalDiv(
    );
 
 /** divides operand1 by scalar operand2 and stores result in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalDivScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -362,7 +362,7 @@ void SCIPintervalDivScalar(
    );
 
 /** computes the scalar product of two vectors of intervals and stores result in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalScalprod(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -374,7 +374,7 @@ void SCIPintervalScalprod(
 /** computes the scalar product of a vector of intervals and a vector of scalars and stores infimum of result in infimum 
  *  of resultant 
  */
-extern
+SCIP_EXPORT
 void SCIPintervalScalprodScalarsInf(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -386,7 +386,7 @@ void SCIPintervalScalprodScalarsInf(
 /** computes the scalar product of a vector of intervals and a vector of scalars and stores supremum of result in supremum
  *  of resultant 
  */
-extern
+SCIP_EXPORT
 void SCIPintervalScalprodScalarsSup(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -396,7 +396,7 @@ void SCIPintervalScalprodScalarsSup(
    );
 
 /** computes the scalar product of a vector of intervals and a vector of scalars and stores result in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalScalprodScalars(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -406,7 +406,7 @@ void SCIPintervalScalprodScalars(
    );
 
 /** squares operand and stores result in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalSquare(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -416,7 +416,7 @@ void SCIPintervalSquare(
 /** stores (positive part of) square root of operand in resultant
  * @attention we assume a correctly rounded sqrt(double) function when rounding is to nearest
  */
-extern
+SCIP_EXPORT
 void SCIPintervalSquareRoot(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -427,7 +427,7 @@ void SCIPintervalSquareRoot(
  * 
  * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1))
  */
-extern
+SCIP_EXPORT
 void SCIPintervalPower(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -436,7 +436,7 @@ void SCIPintervalPower(
    );
 
 /** stores operand1 to the power of the scalar operand2 in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalPowerScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -449,7 +449,7 @@ void SCIPintervalPowerScalar(
  * need to have operand1 >= 0 or operand2 integer and need to have operand2 >= 0 if operand1 == 0
  * @attention we assume a correctly rounded pow(double) function when rounding is to nearest
  */
-extern
+SCIP_EXPORT
 void SCIPintervalPowerScalarScalar(
    SCIP_INTERVAL*        resultant,          /**< resultant of operation */
    SCIP_Real             operand1,           /**< first operand of operation */
@@ -460,7 +460,7 @@ void SCIPintervalPowerScalarScalar(
  * both operands need to be finite numbers
  * need to have operand1 >= 0 and need to have operand2 >= 0 if operand1 == 0
  */
-extern
+SCIP_EXPORT
 SCIP_Real SCIPintervalPowerScalarIntegerInf(
    SCIP_Real             operand1,           /**< first operand of operation */
    int                   operand2            /**< second operand of operation */
@@ -470,7 +470,7 @@ SCIP_Real SCIPintervalPowerScalarIntegerInf(
  * both operands need to be finite numbers
  * need to have operand1 >= 0 and need to have operand2 >= 0 if operand1 == 0
  */
-extern
+SCIP_EXPORT
 SCIP_Real SCIPintervalPowerScalarIntegerSup(
    SCIP_Real             operand1,           /**< first operand of operation */
    int                   operand2            /**< second operand of operation */
@@ -480,7 +480,7 @@ SCIP_Real SCIPintervalPowerScalarIntegerSup(
  * both operands need to be finite numbers
  * need to have operand1 >= 0 and need to have operand2 >= 0 if operand1 == 0
  */
-extern
+SCIP_EXPORT
 void SCIPintervalPowerScalarInteger(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_Real             operand1,           /**< first operand of operation */
@@ -491,7 +491,7 @@ void SCIPintervalPowerScalarInteger(
  * that is, for y = x^p with p = exponent a given scalar and y = image a given interval,
  * computes a subinterval x of basedomain such that y in x^p and such that for all z in basedomain less x, z^p not in y
  */
-extern
+SCIP_EXPORT
 void SCIPintervalPowerScalarInverse(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -506,7 +506,7 @@ void SCIPintervalPowerScalarInverse(
  *
  * @attention we assume correctly rounded sqrt(double) and pow(double) functions when rounding is to nearest
  */
-extern
+SCIP_EXPORT
 void SCIPintervalSignPowerScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -516,7 +516,7 @@ void SCIPintervalSignPowerScalar(
 
 /** computes the reciprocal of an interval
  */
-extern
+SCIP_EXPORT
 void SCIPintervalReciprocal(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -526,7 +526,7 @@ void SCIPintervalReciprocal(
 /** stores exponential of operand in resultant
  * @attention we assume a correctly rounded exp(double) function when rounding is to nearest
  */
-extern
+SCIP_EXPORT
 void SCIPintervalExp(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -536,7 +536,7 @@ void SCIPintervalExp(
 /** stores natural logarithm of operand in resultant
  * @attention we assume a correctly rounded log(double) function when rounding is to nearest
  */
-extern
+SCIP_EXPORT
 void SCIPintervalLog(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -544,7 +544,7 @@ void SCIPintervalLog(
    );
 
 /** stores minimum of operands in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalMin(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -553,7 +553,7 @@ void SCIPintervalMin(
    );
 
 /** stores maximum of operands in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalMax(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -562,7 +562,7 @@ void SCIPintervalMax(
    );
 
 /** stores absolute value of operand in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalAbs(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -572,7 +572,7 @@ void SCIPintervalAbs(
 /** stores sine value of operand in resultant
  * NOTE: the operations are not applied rounding-safe here
  */
-extern
+SCIP_EXPORT
 void SCIPintervalSin(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -582,7 +582,7 @@ void SCIPintervalSin(
 /** stores cosine value of operand in resultant
  * NOTE: the operations are not applied rounding-safe here
  */
-extern
+SCIP_EXPORT
 void SCIPintervalCos(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -590,7 +590,7 @@ void SCIPintervalCos(
    );
 
 /** stores sign of operand in resultant */
-extern
+SCIP_EXPORT
 void SCIPintervalSign(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -600,7 +600,7 @@ void SCIPintervalSign(
 /** computes exact upper bound on \f$ a x^2 + b x \f$ for x in [xlb, xub], b an interval, and a scalar
  * 
  * Uses Algorithm 2.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008) */
-extern
+SCIP_EXPORT
 SCIP_Real SCIPintervalQuadUpperBound(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_Real             a,                  /**< coefficient of x^2 */
@@ -611,7 +611,7 @@ SCIP_Real SCIPintervalQuadUpperBound(
 /** stores range of quadratic term in resultant
  * 
  * given scalar a and intervals b and x, computes interval for \f$ a x^2 + b x \f$ */
-extern
+SCIP_EXPORT
 void SCIPintervalQuad(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -625,7 +625,7 @@ void SCIPintervalQuad(
  * 
  * Given intervals a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \in c\f$ within xbnds.
  */
-extern
+SCIP_EXPORT
 void SCIPintervalSolveUnivariateQuadExpressionPositive(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -639,7 +639,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
  *
  * Given intervals a, b, and c, this function computes an interval that contains all negative solutions of \f$ a x^2 + b x \in c\f$ within xbnds.
  */
-extern
+SCIP_EXPORT
 void SCIPintervalSolveUnivariateQuadExpressionNegative(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -654,7 +654,7 @@ void SCIPintervalSolveUnivariateQuadExpressionNegative(
  * Given scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$ within xbnds.
  * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008).
  */
-extern
+SCIP_EXPORT
 void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -668,7 +668,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
  *
  * Given intervals a, b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$ within xbnds
  */
-extern
+SCIP_EXPORT
 void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -682,7 +682,7 @@ void SCIPintervalSolveUnivariateQuadExpression(
  * given scalars ax, ay, axy, bx, and by and intervals for x and y, computes interval for \f$ ax x^2 + ay y^2 + axy x y + bx x + by y \f$
  * NOTE: the operations are not applied rounding-safe here
  */
-extern
+SCIP_EXPORT
 void SCIPintervalQuadBivar(
    SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
    SCIP_INTERVAL*        resultant,          /**< buffer where to store result of operation */
@@ -700,7 +700,7 @@ void SCIPintervalQuadBivar(
  * computes \f$ \{ x \in \mathbf{x} : \exists y \in \mathbf{y} : a_x x^2 + a_y y^2 + a_{xy} x y + b_x x + b_y y \in \mathbf{\mbox{rhs}} \} \f$
  * NOTE: the operations are not applied rounding-safe here
  */
-extern
+SCIP_EXPORT
 void SCIPintervalSolveBivariateQuadExpressionAllScalar(
    SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
    SCIP_INTERVAL*        resultant,          /**< buffer where to store result of operation */

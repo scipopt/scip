@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   memory.c
+ * @ingroup OTHER_CFILES
  * @brief  memory allocation routines
  * @author Tobias Achterberg
  * @author Gerald Gamrath
@@ -49,12 +50,26 @@
 #include "blockmemshell/memory.h"
 #include "scip/rbtree.h"
 
+/* uncomment the following to enable the use of a memlist in debug mode
+ * that checks for some memory leaks and allows to add the additional
+ * checks enabled with the defines below.
+ * The maintenance of the memlist, however, is not threadsafe.
+ */
+#ifdef NPARASCIP
+/*#define ENABLE_MEMLIST_CHECKS*/
+#endif
+
+#ifdef ENABLE_MEMLIST_CHECKS
 /* uncomment the following for debugging:
  * - CHECKMEM:      run a thorough test on every memory function call, very slow
  * - CHECKCHKFREE:  check for the presence of a pointer in a chunk block
  */
 /*#define CHECKMEM*/
 /*#define CHECKCHKFREE*/
+#endif
+
+/* Uncomment the following for checks that clean buffer is really clean when being freed. */
+/* #define CHECKCLEANBUFFER */
 
 /* Uncomment the following for a warnings if buffers are not freed in the reverse order of allocation. */
 /* #define CHECKBUFFERORDER */
@@ -70,7 +85,9 @@
 #define printError printf
 #endif
 
+#ifdef ENABLE_MEMLIST_CHECKS
 #define warningMessage printf
+#endif
 #define printInfo printf
 
 /* define some macros (if not already defined) */
@@ -116,7 +133,7 @@
  * allocated memory elements in an allocation list. This can be used as a simple leak
  * detection.
  *************************************************************************************/
-#if !defined(NDEBUG) && defined(NPARASCIP)
+#if !defined(NDEBUG) && defined(ENABLE_MEMLIST_CHECKS)
 
 typedef struct Memlist MEMLIST;         /**< memory list for debugging purposes */
 
@@ -281,6 +298,9 @@ long long BMSgetMemoryUsed_call(
 
 #else
 
+#define addMemlistEntry(ptr, size, filename, line) do { (void) (ptr); (void) (size); (void) (filename); (void) (line); } while(0)
+#define removeMemlistEntry(ptr, filename, line) do { (void) (ptr); (void) (filename); (void) (line); } while(0)
+
 /* these methods are implemented even in optimized mode, such that a program, that includes memory.h in debug mode
  * but links the optimized version compiles
  */
@@ -290,6 +310,7 @@ size_t BMSgetPointerSize_call(
    const void*           ptr                 /**< pointer to allocated memory */
    )
 {
+   (void) ptr;
    return 0;
 }
 
@@ -298,9 +319,7 @@ void BMSdisplayMemory_call(
    void
    )
 {
-#ifdef NPARASCIP
-   printInfo("Optimized version of memory shell linked - no memory diagnostics available.\n");
-#endif
+   printInfo("Optimized, threadsafe version of memory shell linked - no memory diagnostics available.\n");
 }
 
 /** displays a warning message on the screen, if allocated memory exists */
@@ -308,9 +327,6 @@ void BMScheckEmptyMemory_call(
    void
    )
 {
-#ifdef NPARASCIP
-   printInfo("Optimized version of memory shell linked - no memory leakage check available.\n");
-#endif
 }
 
 /** returns total number of allocated bytes */
@@ -356,10 +372,8 @@ void* BMSallocClearMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)(num) * (typesize));
    }
-#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(ptr, num*typesize, filename, line);
-#endif
 
    return ptr;
 }
@@ -392,10 +406,8 @@ void* BMSallocMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)size);
    }
-#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(ptr, size, filename, line);
-#endif
 
    return ptr;
 }
@@ -432,10 +444,8 @@ void* BMSallocMemoryArray_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)size);
    }
-#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(ptr, size, filename, line);
-#endif
 
    return ptr;
 }
@@ -450,10 +460,8 @@ void* BMSreallocMemory_call(
 {
    void* newptr;
 
-#if !defined(NDEBUG) && defined(NPARASCIP)
    if( ptr != NULL )
       removeMemlistEntry(ptr, filename, line);
-#endif
 
 #ifndef NDEBUG
    if ( size > MAXMEMSIZE )
@@ -472,10 +480,8 @@ void* BMSreallocMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for reallocation of %llu bytes.\n", (unsigned long long)size);
    }
-#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(newptr, size, filename, line);
-#endif
 
    return newptr;
 }
@@ -492,10 +498,8 @@ void* BMSreallocMemoryArray_call(
    void* newptr;
    size_t size;
 
-#if !defined(NDEBUG) && defined(NPARASCIP)
    if( ptr != NULL )
       removeMemlistEntry(ptr, filename, line);
-#endif
 
 #ifndef NDEBUG
    if ( num > (MAXMEMSIZE / typesize) )
@@ -515,10 +519,8 @@ void* BMSreallocMemoryArray_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for reallocation of %llu bytes.\n", (unsigned long long)size);
    }
-#if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(newptr, size, filename, line);
-#endif
 
    return newptr;
 }
@@ -617,9 +619,8 @@ void BMSfreeMemory_call(
    assert( ptr != NULL );
    if( *ptr != NULL )
    {
-#if !defined(NDEBUG) && defined(NPARASCIP)
       removeMemlistEntry(*ptr, filename, line);
-#endif
+
       free(*ptr);
       *ptr = NULL;
    }
@@ -640,9 +641,8 @@ void BMSfreeMemoryNull_call(
    assert( ptr != NULL );
    if ( *ptr != NULL )
    {
-#if !defined(NDEBUG) && defined(NPARASCIP)
       removeMemlistEntry(*ptr, filename, line);
-#endif
+
       free(*ptr);
       *ptr = NULL;
    }
@@ -1101,47 +1101,49 @@ int createChunk(
 /** destroys a chunk without updating the chunk lists */
 static
 void destroyChunk(
-   CHUNK*                chunk,              /**< memory chunk */
+   CHUNK**               chunk,              /**< memory chunk */
    long long*            memsize             /**< pointer to total size of allocated memory (or NULL) */
    )
 {
    assert(chunk != NULL);
+   assert(*chunk != NULL);
 
-   debugMessage("destroying chunk %p\n", (void*)chunk);
+   debugMessage("destroying chunk %p\n", (void*)*chunk);
 
    if( memsize != NULL )
-      (*memsize) -= ((long long)sizeof(CHUNK) + (long long)chunk->storesize * chunk->elemsize);
+      (*memsize) -= ((long long)sizeof(CHUNK) + (long long)(*chunk)->storesize * (*chunk)->elemsize);
 
    /* free chunk header and store (allocated in one call) */
-   BMSfreeMemory(&chunk);
+   BMSfreeMemory(chunk);
 }
 
 /** removes a completely unused chunk, i.e. a chunk with all elements in the eager free list */
 static
 void freeChunk(
-   CHUNK*                chunk,              /**< memory chunk */
+   CHUNK**               chunk,              /**< memory chunk */
    long long*            memsize             /**< pointer to total size of allocated memory (or NULL) */
    )
 {
    assert(chunk != NULL);
-   assert(chunk->store != NULL);
-   assert(chunk->eagerfree != NULL);
-   assert(chunk->chkmem != NULL);
-   assert(chunk->chkmem->rootchunk != NULL);
-   assert(chunk->chkmem->firsteager != NULL);
-   assert(chunk->eagerfreesize == chunk->storesize);
+   assert(*chunk != NULL);
+   assert((*chunk)->store != NULL);
+   assert((*chunk)->eagerfree != NULL);
+   assert((*chunk)->chkmem != NULL);
+   assert((*chunk)->chkmem->rootchunk != NULL);
+   assert((*chunk)->chkmem->firsteager != NULL);
+   assert((*chunk)->eagerfreesize == (*chunk)->storesize);
 
-   debugMessage("freeing chunk %p of chunk block %p [elemsize: %d]\n", (void*)chunk, (void*)chunk->chkmem, chunk->chkmem->elemsize);
+   debugMessage("freeing chunk %p of chunk block %p [elemsize: %d]\n", (void*)*chunk, (void*)(*chunk)->chkmem, (*chunk)->chkmem->elemsize);
 
    /* count the deleted eager free slots */
-   chunk->chkmem->eagerfreesize -= chunk->eagerfreesize;
-   assert(chunk->chkmem->eagerfreesize >= 0);
+   (*chunk)->chkmem->eagerfreesize -= (*chunk)->eagerfreesize;
+   assert((*chunk)->chkmem->eagerfreesize >= 0);
 
    /* remove chunk from eager chunk list */
-   unlinkEagerChunk(chunk);
+   unlinkEagerChunk(*chunk);
 
    /* remove chunk from chunk list */
-   unlinkChunk(chunk);
+   unlinkChunk(*chunk);
 
    /* destroy the chunk */
    destroyChunk(chunk, memsize);
@@ -1270,7 +1272,7 @@ void clearChkmem(
    FOR_EACH_NODE(CHUNK*, chunk, chkmem->rootchunk,
    {
       SCIPrbtreeDelete(&chkmem->rootchunk, chunk);
-      destroyChunk(chunk, memsize);
+      destroyChunk(&chunk, memsize);
    })
 
    chkmem->lazyfree = NULL;
@@ -1404,7 +1406,7 @@ void garbagecollectChkmem(
 #ifndef NDEBUG
 	 chkmem->ngarbagefrees++;
 #endif
-	 freeChunk(chunk, memsize);
+	 freeChunk(&chunk, memsize);
       }
       chunk = nexteager;
    }
@@ -2715,7 +2717,7 @@ void* BMSallocBufferMemory_work(
    }
    assert( buffer->size[bufnum] >= size );
 
-#ifdef CHECKMEM
+#ifdef CHECKCLEANBUFFER
    /* check that the memory is cleared */
    if( buffer->clean )
    {
@@ -3022,7 +3024,7 @@ void BMSfreeBufferMemory_work(
    }
 #endif
 
-#ifndef NDEBUG
+#ifdef CHECKCLEANBUFFER
    /* check that the memory is cleared */
    if( buffer->clean )
    {

@@ -34,7 +34,7 @@
  *
  * Here is a brief description of the simplex tableau that we can expect from the SCIP LP interfaces:
  *
- * - Nonbasic columns can be at lower or upper bound, or they can be nonbasic at zero if they are free. Nonbasic columns
+ * - Nonbasic columns can be at the lower or upper bound, or they can be nonbasic at zero if they are free. Nonbasic columns
  *   at the upper bound must be flipped. Nonbasic free variables at zero are currently untested in the cut generator,
  *   but they should be handled properly anyway.
  *
@@ -42,7 +42,7 @@
  *   attained. SCIP always adds slack/surplus variables with a coefficient of +1: the slack variable is nonnegative in
  *   case of a <= constraint, it is nonpositive in case of a >= or ranged constraint. Therefore, slack variables
  *   corresponding to >= or ranged constraints must be flipped if the row is at its lower bound. (Ranged constraints at
- *   the upper bound do not have to - * be flipped because the variable is nonpositive.)
+ *   the upper bound do not have to be flipped, because the variable is nonpositive.)
  *
  * Generated cuts are modified and their numerical properties are checked before being added to the LP relaxation.
  * Default parameters for cut modification and checking procedures are taken from the paper
@@ -75,10 +75,10 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXROUNDS             5 /**< maximal number of Gomory separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        30 /**< maximal number of Gomory separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS          -1 /**< maximal number of Gomory cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT      -1 /**< maximal number of Gomory cuts separated per separation round in root node */
+#define DEFAULT_MAXROUNDS             5 /**< maximal number of GMI separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        30 /**< maximal number of GMI separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXSEPACUTS          -1 /**< maximal number of GMI cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT      -1 /**< maximal number of GMI cuts separated per separation round in root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack? */
 
@@ -95,10 +95,10 @@
 /** separator data */
 struct SCIP_SepaData
 {
-   int                   maxrounds;          /**< maximal number of Gomory separation rounds per node (-1: unlimited) */
-   int                   maxroundsroot;      /**< maximal number of Gomory separation rounds in the root node (-1: unlimited) */
-   int                   maxsepacuts;        /**< maximal number of Gomory cuts separated per separation round */
-   int                   maxsepacutsroot;    /**< maximal number of Gomory cuts separated per separation round in root node */
+   int                   maxrounds;          /**< maximal number of GMI separation rounds per node (-1: unlimited) */
+   int                   maxroundsroot;      /**< maximal number of GMI separation rounds in the root node (-1: unlimited) */
+   int                   maxsepacuts;        /**< maximal number of GMI cuts separated per separation round */
+   int                   maxsepacutsroot;    /**< maximal number of GMI cuts separated per separation round in root node */
    int                   lastncutsfound;     /**< total number of cuts found after last call of separator */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
    SCIP_Bool             separaterows;       /**< separate rows with integral slack? */
@@ -119,7 +119,7 @@ struct SCIP_SepaData
 
 /** Modify the cut to make it numerically safer, and packs it from dense format to sparse format.
  *
- *  See paper "On the safety of Gomory cut generators" by Cornuejols, Margot, Nannicini for more information. Returns
+ *  See paper "On the safety of Gomory cut generators" by Cornuejols, Margot, and Nannicini for more information. Returns
  *  TRUE if cut is accepted, FALSE if it is discarded.
  */
 static
@@ -196,7 +196,7 @@ SCIP_Bool modifyAndPackCut(
 
 /** Check the numerical properties of the cut.
  *
- *  See paper "On the safety of Gomory cut generators" by Cornuejols, Margot, Nannicini for more information. Returns
+ *  See paper "On the safety of Gomory cut generators" by Cornuejols, Margot, and Nannicini for more information. Returns
  *  TRUE if cut is accepted, FALSE if it is discarded.
  */
 static
@@ -316,7 +316,7 @@ SCIP_Bool getGMIFromRow(
 
    /* Generate cut coefficients for the original variables. We first use workcoefs to store the cut in dense form, then
     * we clean and pack the cut to sparse form in cutcoefs. */
-   for( c = 0; c < ncols; ++ c)
+   for( c = 0; c < ncols; ++c)
    {
       col = cols[c];
       assert( col != NULL );
@@ -499,7 +499,7 @@ SCIP_Bool getGMIFromRow(
             *cutrhs -= cutelem * (rlhs - SCIProwGetConstant(row));
          }
       }
-   } /* for( c = 0; c < nrows; ++ c) */
+   } /* for( c = 0; c < nrows; ++c) */
 
    /* Initialize cut activity. */
    *cutact = 0.0;
@@ -614,8 +614,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
    depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
-   /* Only call the Gomory cut separator a given number of times at each node. */
-   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot) || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
+   /* Only call the GMI cut separator a given number of times at each node. */
+   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
    /* get variables data */
@@ -651,7 +652,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
    if( maxsepacuts == -1 )
       maxsepacuts = INT_MAX;
 
-   /* For all basic columns belonging to integer variables, try to generate a Gomory cut. */
+   /* For all basic columns belonging to integer variables, try to generate a GMI cut. */
    ncuts = 0;
    for( i = 0; i < nrows && ncuts < maxsepacuts && ! SCIPisStopped(scip) && *result != SCIP_CUTOFF; ++i )
    {
@@ -662,7 +663,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
       c = basisind[i];
       primsol = SCIP_INVALID;
 
-      SCIPdebugMsg(scip, "Row %d basic variable %d with value %f\n", i, basisind[i], (c >= 0) ? SCIPcolGetPrimsol(cols[c]) : SCIPgetRowActivity(scip, rows[-c-1]));
+      SCIPdebugMsg(scip, "Row %d basic variable %d with value %f\n", i, basisind[i],
+         (c >= 0) ? SCIPcolGetPrimsol(cols[c]) : SCIPgetRowActivity(scip, rows[-c-1]));
+
       if( c >= 0 )
       {
          SCIP_VAR* var;
@@ -676,7 +679,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
 
             if( (SCIPfeasFrac(scip, primsol) >= sepadata->away) && (SCIPfeasFrac(scip, primsol) <= 1.0 - sepadata->away) )
             {
-               SCIPdebugMsg(scip, "trying Gomory cut for col <%s> [%g] row %i\n", SCIPvarGetName(var), primsol, i);
+               SCIPdebugMsg(scip, "trying GMI cut for col <%s> [%g] row %i\n", SCIPvarGetName(var), primsol, i);
                tryrow = TRUE;
             }
          }
@@ -696,7 +699,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
 
             if( (SCIPfeasFrac(scip, primsol) >= sepadata->away) && (SCIPfeasFrac(scip, primsol) <= 1.0 - sepadata->away) )
             {
-               SCIPdebugMsg(scip, "trying Gomory cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
+               SCIPdebugMsg(scip, "trying GMI cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
                tryrow = TRUE;
             }
@@ -749,22 +752,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
             if( SCIProwGetNNonz(cut) == 0 )
             {
                assert(SCIPisFeasNegative(scip, cutrhs));
-               SCIPdebugMsg(scip, " -> Gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
+               SCIPdebugMsg(scip, " -> GMI cut detected infeasibility with cut 0 <= %f.\n", cutrhs);
                *result = SCIP_CUTOFF;
                break;
             }
 
             /* Only take efficacious cuts, except for cuts with one non-zero coefficient (= bound
-               changes); the latter cuts will be handeled internally in sepastore. */
+             * changes); the latter cuts will be handeled internally in sepastore. */
             if( SCIProwGetNNonz(cut) == 1 || SCIPisCutEfficacious(scip, NULL, cut) )
             {
                SCIP_Bool infeasible;
 
-               SCIPdebugMsg(scip, " -> Gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
-                  c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
-                  cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
-
-               SCIPdebugMsg(scip, " -> found Gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+               SCIPdebugMsg(scip, " -> found GMI cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f).\n",
                   cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                   SCIPgetCutEfficacy(scip, NULL, cut),
                   SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
@@ -802,7 +801,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
    SCIPfreeBufferArray(scip, &cutcoefs);
    SCIPfreeBufferArray(scip, &cutind);
 
-   SCIPdebugMsg(scip, "end searching Gomory cuts: found %d cuts.\n", ncuts);
+   SCIPdebugMsg(scip, "end searching GMI cuts: found %d cuts.\n", ncuts);
 
    sepadata->lastncutsfound = SCIPgetNCutsFound(scip);
 
@@ -839,19 +838,19 @@ SCIP_RETCODE SCIPincludeSepaGMI(
    /* add separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gmi/maxrounds",
-         "maximal number of gmi separation rounds per node (-1: unlimited)",
+         "maximal number of GMI separation rounds per node (-1: unlimited)",
          &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gmi/maxroundsroot",
-         "maximal number of gmi separation rounds in the root node (-1: unlimited)",
+         "maximal number of GMI separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gmi/maxsepacuts",
-         "maximal number of gmi cuts separated per separation round (-1: unlimited)",
+         "maximal number of GMI cuts separated per separation round (-1: unlimited)",
          &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gmi/maxsepacutsroot",
-         "maximal number of gmi cuts separated per separation round in the root node (-1: unlimited)",
+         "maximal number of GMI cuts separated per separation round in the root node (-1: unlimited)",
          &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/gmi/dynamiccuts",

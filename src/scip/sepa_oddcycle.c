@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_oddcycle.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  oddcycle separator
  * @author Robert Waniek
  * @author Marc Pfetsch

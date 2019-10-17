@@ -32,7 +32,6 @@ extern "C" {
 #endif
 
 /** includes the cmin file reader into SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderCmin(
    SCIP*                 scip                /**< SCIP data structure */
    );

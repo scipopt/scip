@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_stuffing.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  fix singleton continuous variables
  * @author Dieter Weninger
  *

@@ -3171,7 +3171,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
-extern
 SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
@@ -3301,7 +3300,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3335,7 +3334,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */

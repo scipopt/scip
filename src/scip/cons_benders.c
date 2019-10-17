@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_benders.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for Benders' decomposition
  * @author Stephen J. Maher
  *

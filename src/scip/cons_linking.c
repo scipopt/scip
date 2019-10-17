@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_linking.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for linking constraints
  * @author Stefan Heinz
  * @author Jens Schulz

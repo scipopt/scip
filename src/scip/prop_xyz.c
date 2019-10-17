@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_xyz.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  xyz propagator
  * @author Tobias Achterberg
  */

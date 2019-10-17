@@ -67,7 +67,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
 
    scip->concurrent->concsolver = concsolver;
    scip->concurrent->mainscip = scip;
-   scip->concurrent->solidx = 0;
+   scip->concurrent->solidx = scip->stat->solindex;
    scip->stat->subscipdepth = 0;
 
    if( scip->set->parallel_mode == (int) SCIP_PARA_DETERMINISTIC )

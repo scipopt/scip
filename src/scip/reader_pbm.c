@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_pbm.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  file writer for portable bitmap file format (PBM), open with common graphic viewer programs (e.g. xview)
  * @author Alexandra Kraft
  *

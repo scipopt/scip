@@ -20,7 +20,7 @@
  *
  * We want to solve the vehicle routing problem on a graph G = (V,E) with
  * V = J cup {d}, where d is the depot and the distances are given by the
- * length function l_e: E -> R_{<= 0}.
+ * length function l_e: E -> R_{>= 0}.
  *
  * Consider the MIP formulation
  *
@@ -57,6 +57,7 @@ using namespace scip;
 
 
 /** read VRP problem */
+static
 int read_problem(
    const char*           filename,           /**< filename */
    int&                  num_nodes,          /**< number of nodes in instance */
@@ -225,6 +226,7 @@ int read_problem(
 
 
 //------------------------------------------------------------
+static
 SCIP_RETCODE execmain(int argc, char** argv)
 {
    SCIP* scip = NULL;

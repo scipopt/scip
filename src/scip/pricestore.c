@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricestore.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing priced variables
  * @author Tobias Achterberg
  */

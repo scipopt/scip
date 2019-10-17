@@ -44,7 +44,7 @@ extern "C" {
 /** returns the position of the given variable/value pair in the clique; returns -1 if variable/value pair is not member
  *  of the clique
  */
-EXTERN
+SCIP_EXPORT
 int SCIPcliqueSearchVar(
    SCIP_CLIQUE*          clique,             /**< clique data structure */
    SCIP_VAR*             var,                /**< variable to search for */
@@ -52,7 +52,7 @@ int SCIPcliqueSearchVar(
    );
 
 /** returns whether the given variable/value pair is member of the given clique */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPcliqueHasVar(
    SCIP_CLIQUE*          clique,             /**< clique data structure */
    SCIP_VAR*             var,                /**< variable to remove from the clique */
@@ -60,13 +60,13 @@ SCIP_Bool SCIPcliqueHasVar(
    );
 
 /** gets number of variables in the cliques */
-EXTERN
+SCIP_EXPORT
 int SCIPcliqueGetNVars(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
 /** gets array of active problem variables in the cliques */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR** SCIPcliqueGetVars(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    );
@@ -74,31 +74,31 @@ SCIP_VAR** SCIPcliqueGetVars(
 /** gets array of values of active problem variables in the cliques, i.e. whether the variable is fixed to FALSE or
  *  to TRUE in the clique
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool* SCIPcliqueGetValues(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
 /** gets unique identifier of the clique */
-EXTERN
+SCIP_EXPORT
 unsigned int SCIPcliqueGetId(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
 /** gets index of the clique in the clique table */
-EXTERN
+SCIP_EXPORT
 int SCIPcliqueGetIndex(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
 /** returns whether the given clique is cleaned up */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPcliqueIsCleanedUp(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
 /** return whether the given clique is an equation */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPcliqueIsEquation(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    );

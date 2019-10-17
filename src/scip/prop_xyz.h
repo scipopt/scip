@@ -44,7 +44,7 @@ extern "C" {
  *
  * @ingroup PropagatorIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );

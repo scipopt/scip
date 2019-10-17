@@ -39,82 +39,82 @@ extern "C" {
  */
 
 /** compares two pricers w. r. to their priority */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPpricerComp);
 
 /** comparison method for sorting pricers w.r.t. to their name */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPpricerCompName);
 
 /** gets user data of variable pricer */
-EXTERN
+SCIP_EXPORT
 SCIP_PRICERDATA* SCIPpricerGetData(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** sets user data of variable pricer; user has to free old data in advance! */
-EXTERN
+SCIP_EXPORT
 void SCIPpricerSetData(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_PRICERDATA*      pricerdata          /**< new variable pricer user data */
    );
 
 /** gets name of variable pricer */
-EXTERN
+SCIP_EXPORT
 const char* SCIPpricerGetName(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** gets description of variable pricer */
-EXTERN
+SCIP_EXPORT
 const char* SCIPpricerGetDesc(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** gets priority of variable pricer */
-EXTERN
+SCIP_EXPORT
 int SCIPpricerGetPriority(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** gets the number of times, the pricer was called and tried to find a variable with negative reduced costs */
-EXTERN
+SCIP_EXPORT
 int SCIPpricerGetNCalls(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** gets the number of variables with negative reduced costs found by this pricer */
-EXTERN
+SCIP_EXPORT
 int SCIPpricerGetNVarsFound(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** gets time in seconds used in this pricer for setting up for next stages */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPpricerGetSetupTime(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** gets time in seconds used in this pricer */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPpricerGetTime(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** returns whether the given pricer is in use in the current problem */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPpricerIsActive(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** returns whether the pricer should be delayed until no other pricer finds a new variable */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPpricerIsDelayed(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** is variable pricer initialized? */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPpricerIsInitialized(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );

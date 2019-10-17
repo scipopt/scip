@@ -32,13 +32,13 @@ extern "C" {
 #endif
 
 /** includes the .nl file reader into SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderNl(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** writes AMPL solution file */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteAmplSolReaderNl(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          nlreader            /**< AMPL .nl file reader */

@@ -38,25 +38,6 @@
 #include "scip/type_set.h"
 #include "scip/type_table.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -67,7 +48,7 @@ extern "C" {
  */
 
 /** creates a statistics table and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeTable(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of statistics table */
@@ -86,20 +67,20 @@ SCIP_RETCODE SCIPincludeTable(
    );
 
 /** returns the statistics table of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_TABLE* SCIPfindTable(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of statistics table */
    );
 
 /** returns the array of currently available statistics tables */
-EXTERN
+SCIP_EXPORT
 SCIP_TABLE** SCIPgetTables(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available statistics tables */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNTables(
    SCIP*                 scip                /**< SCIP data structure */
    );

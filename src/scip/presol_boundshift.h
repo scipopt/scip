@@ -44,7 +44,7 @@ extern "C" {
  *
  * @ingroup PresolverIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePresolBoundshift(
    SCIP*                 scip                /**< SCIP data structure */
    );

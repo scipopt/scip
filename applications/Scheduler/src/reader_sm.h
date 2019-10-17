@@ -35,13 +35,11 @@ extern "C" {
 #endif
 
 /** includes the sm file reader into SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderSm(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates a cumulative scheduling problem */
-extern
 SCIP_RETCODE SCIPcreateSchedulingProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           problemname,        /**< problem name */

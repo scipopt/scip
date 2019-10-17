@@ -39,7 +39,7 @@ extern "C" {
 
 
 /** parse constraint name and apply changes to graph or array */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE STPStpBranchruleParseConsname(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  vertexchgs,         /**< array to store changes or NULL */
@@ -49,7 +49,7 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
    );
 
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  vertexchgs,         /**< array to store changes or NULL */
@@ -57,14 +57,14 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
    );
 
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
-EXTERN
+SCIP_EXPORT
 void SCIPStpBranchruleInitNodeState(
    const GRAPH*          g,                  /**< graph data structure */
    int*                  nodestate           /**< node state array */
    );
 
 /** creates the stp branching rule and includes it to SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleStp(
    SCIP*                 scip                /**< SCIP data structure */
    );

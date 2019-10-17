@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   rbtree.c
+ * @ingroup OTHER_CFILES
  * @brief  intrusive red black tree datastructure
  * @author Robert Lion Gottwald
  */

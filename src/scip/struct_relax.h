@@ -68,6 +68,7 @@ struct SCIP_Relaxation
    SCIP_Bool             relaxsolvalid;
    SCIP_Bool             relaxsolincludeslp;
    SCIP_Bool             relaxsolzero;
+   SCIP_RELAX*           lastsolrelax;       /**< relaxator of the most recent relaxation solution */
 };
 
 

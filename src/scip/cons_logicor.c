@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_logicor.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for logic or constraints \f$1^T x \ge 1\f$
  *         (equivalent to set covering, but algorithms are suited for depth first search).
  * @author Tobias Achterberg
@@ -965,13 +966,7 @@ SCIP_RETCODE applyFixings(
             for( v2 = nconsvars - 1; v2 >= 0; --v2 )
             {
                if( !SCIPvarIsBinary(consvars[v2]) )
-               {
                   break;
-#if 0
-                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-binary variable <%s>\n", consvars[v2]);
-                  return SCIP_ERROR;
-#endif
-               }
 
                if( !SCIPisEQ(scip, consvals[v2], 1.0) )
                   break;
@@ -2888,6 +2883,7 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
    int* occurlistsizes;
    SCIP_Bool redundant;
    SCIP_Bool conschanged;
+   int lastnfixedvars;
    int nbinvars;
    int occurlistlength;
    int occurlistsize;
@@ -2916,43 +2912,51 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
    SCIP_CALL( SCIPduplicateBufferArray(scip, &myconss, conss, nconss) );
 
    nmyconss = nconss;
-   for( c = nconss - 1; c >= 0; --c )
+   lastnfixedvars = -1;
+   while( *nfixedvars != lastnfixedvars )
    {
-      cons = myconss[c];
-      assert(cons != NULL);
-
-      if( SCIPconsIsDeleted(cons) || SCIPconsIsModifiable(cons) )
+      lastnfixedvars = *nfixedvars;
+      for( c = nconss - 1; c >= 0; --c )
       {
-         myconss[c] = myconss[nmyconss - 1];
-         --nmyconss;
+         cons = myconss[c];
+         assert(cons != NULL);
 
-         continue;
+         if( SCIPconsIsDeleted(cons) || SCIPconsIsModifiable(cons) )
+         {
+            myconss[c] = myconss[nmyconss - 1];
+            --nmyconss;
+
+            continue;
+         }
+
+         /* prepare constraint by removing fixings and merge it */
+         SCIP_CALL( prepareCons(scip, cons, eventhdlr, entries, nentries, &redundant, nfixedvars, nchgcoefs, ndelconss, cutoff) );
+
+         if( redundant )
+         {
+            assert(SCIPconsIsDeleted(cons));
+            assert(!(*cutoff));
+
+            myconss[c] = myconss[nmyconss - 1];
+            --nmyconss;
+
+            continue;
+         }
+
+         if( *cutoff )
+         {
+            SCIPfreeBufferArray(scip, &myconss);
+
+            return SCIP_OKAY;
+         }
+
+         consdata = SCIPconsGetData(cons);
+
+         /* sort the constraint */
+         consdataSort(consdata);
+
+         assert(consdata->nvars >= 2);
       }
-
-      /* prepare constraint by removing fixings and merge it */
-      SCIP_CALL( prepareCons(scip, cons, eventhdlr, entries, nentries, &redundant, nfixedvars, nchgcoefs, ndelconss, cutoff) );
-
-      if( redundant )
-      {
-         assert(SCIPconsIsDeleted(cons));
-
-         myconss[c] = myconss[nmyconss - 1];
-         --nmyconss;
-      }
-
-      if( *cutoff )
-      {
-         SCIPfreeBufferArray(scip, &myconss);
-
-         return SCIP_OKAY;
-      }
-
-      consdata = SCIPconsGetData(cons);
-
-      /* sort the constraint */
-      consdataSort(consdata);
-
-      assert(consdata->nvars >= 2);
    }
 
    SCIPsortPtr((void**)myconss, conssLogicorComp, nmyconss);

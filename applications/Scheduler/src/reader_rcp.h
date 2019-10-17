@@ -30,7 +30,6 @@ extern "C" {
 #endif
 
 /** includes the rcp file reader into SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderRcp(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -37,7 +37,6 @@ extern "C" {
 #endif
 
 /** includes the csol file reader into SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderCsol(
    SCIP*                 scip                /**< SCIP data structure */
    );
