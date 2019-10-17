@@ -2234,7 +2234,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(r), &solution);
    lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(r)), &solution);
 
-   const ColIndex num_cols = solution.values.size();
+   const ColIndex size = solution.values.size();
+   assert( size.value() == lpi->linear_program->num_constraints() );
 
    /* if we want a sparse vector and sparsity information is available */
    if ( ninds != NULL && inds != NULL && ! solution.non_zeros.empty() )
@@ -2250,7 +2251,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    }
 
    /* dense version */
-   for (ColIndex col(0); col < num_cols; ++col)
+   for (ColIndex col(0); col < size; ++col)
       coef[col.value()] = solution[col];
 
    if ( ninds != NULL )
