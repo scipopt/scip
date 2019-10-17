@@ -6052,7 +6052,6 @@ void SCIPbendersSetSubproblemType(
  *
  *  This type is used to determine whether the duals of the problem can be used to generate cuts
  */
-SCIP_EXPORT
 SCIP_BENDERSSUBTYPE SCIPbendersGetSubproblemType(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
@@ -6158,7 +6157,6 @@ int SCIPbendersGetNNonlinearSubproblems(
 }
 
 /** sets the flag indicating whether the master problem contains non-linear constraints */
-SCIP_EXPORT
 void SCIPbendersSetMasterIsNonlinear(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_Bool             isnonlinear         /**< flag to indicate whether the subproblem contains non-linear constraints */
@@ -6170,7 +6168,6 @@ void SCIPbendersSetMasterIsNonlinear(
 }
 
 /** returns whether the master problem contains non-linear constraints. */
-SCIP_EXPORT
 SCIP_Bool SCIPbendersMasterIsNonlinear(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
