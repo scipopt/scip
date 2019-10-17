@@ -35,12 +35,6 @@
  * Data structures
  */
 
-struct SCIP_ConsExpr_ExprData
-{
-   SCIP_ROW*  rowneg;  /**< left tangent z >= -x */
-   SCIP_ROW*  rowpos;  /**< right tangent z <= x */
-};
-
 /*
  * Local methods
  */
@@ -94,34 +88,6 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrAbs)
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataAbs)
-{  /*lint --e{715}*/
-   assert(targetscip != NULL);
-   assert(targetexprdata != NULL);
-
-   SCIP_CALL( SCIPallocBlockMemory(targetscip, targetexprdata) );
-   BMSclearMemory(*targetexprdata);
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataAbs)
-{  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   assert(expr != NULL);
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   SCIPfreeBlockMemory(scip, &exprdata);
-   SCIPsetConsExprExprData(expr, NULL);
-
-   return SCIP_OKAY;
-}
-
-static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseAbs)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* childexpr;
@@ -165,7 +131,6 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffAbs)
    SCIP_CONSEXPR_EXPR* child;
 
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) != NULL);
    assert(childidx == 0);
    assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
 
@@ -417,32 +382,26 @@ SCIP_RETCODE computeCutsAbs(
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-   SCIP_ROW* secant;
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-   assert(exprdata->rowneg == NULL);
-   assert(exprdata->rowpos == NULL);
+   SCIP_ROW* rowneg = NULL;
+   SCIP_ROW* rowpos = NULL;
+   SCIP_ROW* secant = NULL;
 
    *infeasible = FALSE;
-   secant = NULL;
 
-   /* compute initial cuts; do no store the secant in the expression data */
-   SCIP_CALL( computeCutsAbs(scip, conshdlr, cons, expr, overestimate, underestimate, &exprdata->rowneg, &exprdata->rowpos,
-      &secant) );
-   assert(exprdata->rowneg != NULL || !underestimate);
-   assert(exprdata->rowpos != NULL || !underestimate);
+   /* compute initial cuts */
+   SCIP_CALL( computeCutsAbs(scip, conshdlr, cons, expr, overestimate, underestimate, &rowneg, &rowpos, &secant) );
+   assert(rowneg != NULL || !underestimate);
+   assert(rowpos != NULL || !underestimate);
 
    /* add cuts */
-   if( exprdata->rowneg != NULL )
+   if( rowneg != NULL )
    {
-      SCIP_CALL( SCIPaddRow(scip, exprdata->rowneg, FALSE, infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, rowneg, FALSE, infeasible) );
    }
 
-   if( !*infeasible && exprdata->rowpos != NULL )
+   if( !*infeasible && rowpos != NULL )
    {
-      SCIP_CALL( SCIPaddRow(scip, exprdata->rowpos, FALSE, infeasible) );
+      SCIP_CALL( SCIPaddRow(scip, rowpos, FALSE, infeasible) );
    }
 
    /* it might happen that we could not compute a secant (because of fixed or unbounded variables) */
@@ -451,37 +410,22 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaAbs)
       SCIP_CALL( SCIPaddRow(scip, secant, FALSE, infeasible) );
    }
 
-   /* release secant */
+   /* release rows */
+   if( rowneg != NULL )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &rowneg) );
+   }
+   assert(rowneg == NULL);
+   if( rowpos != NULL )
+   {
+      SCIP_CALL( SCIPreleaseRow(scip, &rowpos) );
+   }
+   assert(rowpos == NULL);
    if( secant != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &secant) );
    }
    assert(secant == NULL);
-
-   return SCIP_OKAY;
-}
-
-/** expression separation deinitialization callback */
-static
-SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaAbs)
-{  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
-   exprdata = SCIPgetConsExprExprData(expr);
-   assert(exprdata != NULL);
-
-   if( exprdata->rowneg != NULL )
-   {
-      SCIP_CALL( SCIPreleaseRow(scip, &exprdata->rowneg) );
-   }
-
-   if( exprdata->rowpos != NULL )
-   {
-      SCIP_CALL( SCIPreleaseRow(scip, &exprdata->rowpos) );
-   }
-
-   assert(exprdata->rowneg == NULL);
-   assert(exprdata->rowpos == NULL);
 
    return SCIP_OKAY;
 }
@@ -637,11 +581,10 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrAbs, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataAbs, freedataAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalAbs) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaAbs, exitSepaAbs, NULL, estimateAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaAbs, NULL, NULL, estimateAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffAbs) );
@@ -660,18 +603,11 @@ SCIP_RETCODE SCIPcreateConsExprExprAbs(
    SCIP_CONSEXPR_EXPR*   child               /**< single child */
    )
 {
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
-
    assert(expr != NULL);
    assert(child != NULL);
    assert(SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME) != NULL);
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, &exprdata) );
-   assert(exprdata != NULL);
-
-   BMSclearMemory(exprdata);
-
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME), exprdata, 1, &child) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME), NULL, 1, &child) );
 
    return SCIP_OKAY;
 }
