@@ -245,7 +245,7 @@ SCIP_RETCODE SCIPoverwriteFPsol(
    return SCIP_OKAY;
 }
 
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */

@@ -44,17 +44,17 @@ extern "C" {
 #endif
 
 /** comparison method for sorting rows by non-decreasing index */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIProwexComp);
 
 /** returns the left hand side of the row */
-EXTERN
+SCIP_EXPORT
 SCIP_Rational* SCIProwexGetLhs(
    SCIP_ROWEX*           row                 /**< LP row */
    );
 
 /** returns the right hand side of the row */
-EXTERN
+SCIP_EXPORT
 SCIP_Rational* SCIProwexGetRhs(
    SCIP_ROWEX*           row                 /**< LP row */
    );

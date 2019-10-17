@@ -125,7 +125,7 @@ SCIP_BOUNDTYPE SCIPvarGetWorstBoundTypeExact(
    );
 
 /** gets objective function value of variable */
-EXTERN
+SCIP_EXPORT
 SCIP_Rational* SCIPvarGetObjExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -133,7 +133,7 @@ SCIP_Rational* SCIPvarGetObjExact(
 /** retransforms given variable, scalar and constant to the corresponding original variable, scalar
  *  and constant, if possible; if the retransformation is impossible, NULL is returned as variable
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPvarGetOrigvarSumExact(
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
    SCIP_Rational*        scalar,             /**< pointer to scalar a in sum a*x + c */

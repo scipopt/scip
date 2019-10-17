@@ -71,7 +71,7 @@ extern "C" {
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEX**          rowex,              /**< pointer to row */
@@ -90,7 +90,7 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreleaseRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEX**          row                 /**< pointer to LP row */
@@ -109,7 +109,7 @@ SCIP_RETCODE SCIPreleaseRowExact(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarsToRowEx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEX*           row,                /**< LP row */
@@ -125,7 +125,7 @@ SCIP_RETCODE SCIPaddVarsToRowEx(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 void SCIPgetRowActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEX*           row,                /**< LP row */
@@ -139,7 +139,7 @@ void SCIPgetRowActivityExact(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 void SCIPgetRowFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEX*           row,                /**< LP row */
@@ -153,7 +153,7 @@ void SCIPgetRowFeasibilityExact(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 void SCIPgetRowSolActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEX*           row,                /**< LP row */
@@ -169,7 +169,7 @@ void SCIPgetRowSolActivityExact(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 void SCIPgetRowSolFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEX*           row,                /**< LP row */
@@ -187,7 +187,7 @@ void SCIPgetRowSolFeasibilityExact(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintRowex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEX*           row,                /**< LP row */

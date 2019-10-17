@@ -78,7 +78,7 @@ extern "C" {
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -93,7 +93,7 @@ SCIP_RETCODE SCIPcreateSolex(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateLPSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPcreateLPSolex(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreatePseudoSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
@@ -134,7 +134,7 @@ SCIP_RETCODE SCIPcreatePseudoSolex(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol                 /**< pointer to the solution */
@@ -156,7 +156,7 @@ SCIP_RETCODE SCIPfreeSolex(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPunlinkSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
@@ -181,7 +181,7 @@ SCIP_RETCODE SCIPunlinkSolex(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSolexVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
@@ -208,7 +208,7 @@ SCIP_RETCODE SCIPsetSolexVal(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSolexVals(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
@@ -237,7 +237,7 @@ SCIP_RETCODE SCIPsetSolexVals(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 void SCIPgetSolexVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -264,7 +264,7 @@ void SCIPgetSolexVal(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 void SCIPgetSolexVals(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -291,7 +291,7 @@ void SCIPgetSolexVals(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 void SCIPgetSolexOrigObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
@@ -315,7 +315,7 @@ void SCIPgetSolexOrigObj(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 void SCIPgetSolexTransObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
@@ -333,7 +333,7 @@ void SCIPgetSolexTransObj(
  *       - \ref SCIP_STAGE_SOLVING
  *
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrecomputeSolexObj(
    SCIP*                 scip,
    SCIP_SOL*             sol
@@ -354,7 +354,7 @@ SCIP_RETCODE SCIPrecomputeSolexObj(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPtransformObjex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Rational*        obj                 /**< original space objective value to transform */
@@ -375,7 +375,7 @@ SCIP_Real SCIPtransformObjex(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPretransformObjex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Rational*        obj                 /**< transformed objective value to retransform in original space */
@@ -409,7 +409,7 @@ SCIP_Real SCIPretransformObjex(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -419,7 +419,7 @@ SCIP_RETCODE SCIPprintSolex(
 
 
 /** returns dual solution value of a constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetDualSolexVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which the dual solution should be returned */
@@ -436,7 +436,7 @@ SCIP_RETCODE SCIPgetDualSolexVal(
  * @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisDualSolexAvailable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             printreason         /**< print warning message if dualsol is not available? */
@@ -453,7 +453,7 @@ SCIP_Bool SCIPisDualSolexAvailable(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintDualSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
@@ -478,7 +478,7 @@ SCIP_RETCODE SCIPprintDualSolex(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintRayEx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution representing ray */
@@ -505,7 +505,7 @@ SCIP_RETCODE SCIPprintRayEx(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNSolexs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -527,7 +527,7 @@ int SCIPgetNSolexs(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_SOL** SCIPgetSolexs(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -550,7 +550,7 @@ SCIP_SOL** SCIPgetSolexs(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_SOL* SCIPgetBestSolex(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -574,7 +574,7 @@ SCIP_SOL* SCIPgetBestSolex(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPretransformSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */
@@ -598,7 +598,7 @@ SCIP_RETCODE SCIPretransformSolex(
  *
  *  @note Do not call during propagation, use heur_trysol instead.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -622,7 +622,7 @@ SCIP_RETCODE SCIPaddSolex(
  *
  *  @note Do not call during propagation, use heur_trysol instead.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddSolexFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
@@ -638,7 +638,7 @@ SCIP_RETCODE SCIPaddSolexFree(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddCurrentSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
@@ -660,7 +660,7 @@ SCIP_RETCODE SCIPaddCurrentSolex(
  *
  *  @note Do not call during propagation, use heur_trysol instead.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtrySolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -687,7 +687,7 @@ SCIP_RETCODE SCIPtrySolex(
  *
  *  @note Do not call during propagation, use heur_trysol instead.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtrySolexFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
@@ -708,7 +708,7 @@ SCIP_RETCODE SCIPtrySolexFree(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtryCurrentSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
@@ -735,7 +735,7 @@ SCIP_RETCODE SCIPtryCurrentSolex(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcheckSolex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -764,7 +764,7 @@ SCIP_RETCODE SCIPcheckSolex(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcheckSolexOrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -774,7 +774,7 @@ SCIP_RETCODE SCIPcheckSolexOrig(
    );
 
 /** update integrality violation of a solution */
-EXTERN
+SCIP_EXPORT
 void SCIPupdateSolexIntegralityViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -782,7 +782,7 @@ void SCIPupdateSolexIntegralityViolation(
    );
 
 /** update bound violation of a solution */
-EXTERN
+SCIP_EXPORT
 void SCIPupdateSolexBoundViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -791,7 +791,7 @@ void SCIPupdateSolexBoundViolation(
    );
 
 /** update LP row violation of a solution */
-EXTERN
+SCIP_EXPORT
 void SCIPupdateSolexLPRowViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -800,7 +800,7 @@ void SCIPupdateSolexLPRowViolation(
    );
 
 /** update constraint violation of a solution */
-EXTERN
+SCIP_EXPORT
 void SCIPupdateSolexConsViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -809,7 +809,7 @@ void SCIPupdateSolexConsViolation(
    );
 
 /** update LP row and constraint violations of a solution */
-EXTERN
+SCIP_EXPORT
 void SCIPupdateSolexLPConsViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -818,13 +818,13 @@ void SCIPupdateSolexLPConsViolation(
    );
 
 /** allow violation updates */
-EXTERN
+SCIP_EXPORT
 void SCIPactivateSolexViolationUpdates(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** disallow violation updates */
-EXTERN
+SCIP_EXPORT
 void SCIPdeactivateSolexViolationUpdates(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -837,7 +837,7 @@ void SCIPdeactivateSolexViolationUpdates(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasPrimalRayEx(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -851,7 +851,7 @@ SCIP_Bool SCIPhasPrimalRayEx(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetPrimalRayExVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get value for */
@@ -870,19 +870,19 @@ SCIP_Real SCIPgetPrimalRayExVal(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupdatePrimalRayEx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             primalray           /**< the new primal ray */
    );
 
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPoverwriteFPsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisExactSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */

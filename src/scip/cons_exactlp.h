@@ -49,7 +49,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrExactLinear(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -112,7 +112,7 @@ typedef struct SCIP_LinConsUpgrade SCIP_EXLINCONSUPGRADE; /**< linear constraint
       SCIP_Real poscoeffsum, SCIP_Real negcoeffsum, SCIP_Bool integral, SCIP_CONS** upgdcons)
 
 /** includes a linear constraint update method into the linear constraint handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExLinconsUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_EXLINCONSUPGD((*linconsupgd)),  /**< method to call for upgrading linear constraint */
@@ -124,7 +124,7 @@ SCIP_RETCODE SCIPincludeExLinconsUpgrade(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -167,7 +167,7 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -180,7 +180,7 @@ SCIP_RETCODE SCIPcreateConsBasicExactLinear(
    );
 
 /** creates by copying and captures a linear constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyConsExactLinear(
    SCIP*                 scip,               /**< target SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
@@ -211,7 +211,7 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
    );
 
 /** adds coefficient to linear constraint (if it is not zero) */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddCoefExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -226,7 +226,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
  *
  *  @note This method requires linear time to search for occurences of the variable in the constraint data.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgCoefExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -240,7 +240,7 @@ SCIP_RETCODE SCIPchgCoefExactLinear(
  *
  *  @note This method requires linear time to search for occurences of the variable in the constraint data.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPdelCoefExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -248,21 +248,21 @@ SCIP_RETCODE SCIPdelCoefExactLinear(
    );
 
 /** gets left hand side of linear constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_Rational* SCIPgetLhsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets right hand side of linear constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_Rational* SCIPgetRhsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** changes left hand side of linear constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgLhsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -270,7 +270,7 @@ SCIP_RETCODE SCIPchgLhsExactLinear(
    );
 
 /** changes right hand side of linear constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgRhsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -278,28 +278,28 @@ SCIP_RETCODE SCIPchgRhsExactLinear(
    );
 
 /** gets the number of variables in the linear constraint */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNVarsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the array of variables in the linear constraint; the user must not modify this array! */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR** SCIPgetVarsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the array of coefficient values in the linear constraint; the user must not modify this array! */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* SCIPgetValsRealExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the array of coefficient values in the linear constraint; the user must not modify this array! */
-EXTERN
+SCIP_EXPORT
 SCIP_Rational** SCIPgetValsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -310,7 +310,7 @@ SCIP_Rational** SCIPgetValsExactLinear(
  *  @note if the solution contains values at infinity, this method will return SCIP_INVALID in case the activity
  *        comprises positive and negative infinity contributions
  */
-EXTERN
+SCIP_EXPORT
 void SCIPgetActivityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -319,7 +319,7 @@ void SCIPgetActivityExactLinear(
    );
 
 /** gets the feasibility of the linear constraint in the given solution */
-EXTERN
+SCIP_EXPORT
 void SCIPgetFeasibilityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -328,7 +328,7 @@ void SCIPgetFeasibilityExactLinear(
    );
 
 /** gets the dual solution of the linear constraint in the current LP */
-EXTERN
+SCIP_EXPORT
 void SCIPgetDualsolExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -336,7 +336,7 @@ void SCIPgetDualsolExactLinear(
    );
 
 /** gets the dual Farkas value of the linear constraint in the current infeasible LP */
-EXTERN
+SCIP_EXPORT
 void SCIPgetDualfarkasExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -346,7 +346,7 @@ void SCIPgetDualfarkasExactLinear(
 /** returns the linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
  *  the user must not modify the row!
  */
-EXTERN
+SCIP_EXPORT
 SCIP_ROW* SCIPgetRowExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -355,14 +355,14 @@ SCIP_ROW* SCIPgetRowExactLinear(
 /** returns the exact linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
  *  the user must not modify the row!
  */
-EXTERN
+SCIP_EXPORT
 SCIP_ROWEX* SCIPgetRowexExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupgradeConsExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
@@ -377,7 +377,7 @@ SCIP_RETCODE SCIPupgradeConsExactLinear(
  *  constraints that were upgraded to more special types such as, e.g., varbound constraints, will not be shown correctly anymore.
  *  Similarly, if specialized constraints were created through the API, these are currently not present.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPclassifyConstraintTypesExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint type classification */

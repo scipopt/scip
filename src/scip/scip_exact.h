@@ -70,7 +70,7 @@ extern "C" {
  *
  *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -123,7 +123,7 @@ char SCIPdualBoundMethod(
  *  @note That method can be used to convert a single variables into variable space of active variables. Therefore call
  *        the method with the linear sum 1.0*x + 0.0.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetProbvarLinearSumExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variable array x_1, ..., x_n in the linear sum which will be

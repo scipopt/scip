@@ -3832,7 +3832,7 @@ SCIP_RETCODE SCIPprintVar(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarObjExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the objective value for */
@@ -3853,7 +3853,7 @@ SCIP_RETCODE SCIPchgVarObjExact(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarExactData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< pointer to variable */
@@ -3886,7 +3886,7 @@ SCIP_RETCODE SCIPaddVarExactData(
  *
  *  @note The printing process is done via the message handler system.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteVarsExactLinearsum(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL for stdout */

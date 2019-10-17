@@ -303,7 +303,7 @@ SCIP_RETCODE SCIPlpiexGetNCols(
    );
 
 /** gets the objective sense of the LP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPlpiexGetObjsen(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
    SCIP_OBJSEN*          objsen              /**< pointer to store objective sense */
@@ -351,7 +351,7 @@ SCIP_RETCODE SCIPlpiexGetRows(
    );
 
 /** gets column names */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPlpiexGetColNames(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get name from LP */
@@ -363,7 +363,7 @@ SCIP_RETCODE SCIPlpiexGetColNames(
    );
 
 /** gets row names */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPlpiexGetRowNames(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get name from LP */
@@ -444,13 +444,13 @@ SCIP_RETCODE SCIPlpiexSolveBarrier(
    );
 
 /** start strong branching - call before any strong branching */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPlpiexStartStrongbranch(
    SCIP_LPIEX*           lpi                 /**< LP interface structure */
    );
 
 /** end strong branching - call after any strong branching */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPlpiexEndStrongbranch(
    SCIP_LPIEX*             lpi                 /**< LP interface structure */
    );

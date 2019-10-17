@@ -967,7 +967,7 @@ SCIP_Bool RatIsLT(
 }
 
 /** check if the first rational is greater or equal than the second*/
-EXTERN
+SCIP_EXPORT
 SCIP_Bool RatIsGE(
    SCIP_Rational*        rat1,               /**< The first rational */
    SCIP_Rational*        rat2                /**< The second rational */
@@ -998,7 +998,7 @@ SCIP_Bool RatIsGE(
 }
 
 /** check if the first rational is less or equal than the second*/
-EXTERN
+SCIP_EXPORT
 SCIP_Bool RatIsLE(
    SCIP_Rational*        rat1,               /**< The first rational */
    SCIP_Rational*        rat2                /**< The second rational */

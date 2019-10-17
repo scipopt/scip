@@ -534,7 +534,7 @@ void SCIPsortIntPtrIntReal(
    );
 
 /** sort of four joint arrays of ints/ints/pointers/pointers/ sorted by first array in non-decreasing order */
-EXTERN
+SCIP_EXPORT
 void SCIPsortIntIntPtrPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be permuted in the same way */
@@ -544,7 +544,7 @@ void SCIPsortIntIntPtrPtr(
    );
 
 /** sort of five joint arrays of ints/ints/pointers/pointers/pointers sorted by first array in non-decreasing order */
-EXTERN
+SCIP_EXPORT
 void SCIPsortIntIntPtrPtrInterval(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be permuted in the same way */
