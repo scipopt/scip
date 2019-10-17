@@ -2260,6 +2260,7 @@ SCIP_RETCODE reduce_da(
 
          if( nreplacings > 0 && userec )
          {
+            /* solutions in pool might not be valid anymore */
             SCIPStpHeurRecFreePool(scip, &pool);
             SCIP_CALL(SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE));
          }

@@ -101,6 +101,7 @@ SCIP_RETCODE extArc(
    SCIP_Bool* isterm;
    int* tree_deg;
    SCIP_Real* bottleneckDists;
+   SCIP_Real* pcSdToNode = NULL;
    int todo;
    REDCOST redcostdata = {redcost, rootdist, termpaths, NULL, cutoff, root};
    DISTDATA distdata;
@@ -111,6 +112,8 @@ SCIP_RETCODE extArc(
    SCIP_CALL( SCIPallocBufferArray(scip, &isterm, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_deg, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bottleneckDists, nnodes) );
+   if( graph_pc_isPcMw(graph) )
+      SCIP_CALL( SCIPallocBufferArray(scip, &pcSdToNode, nnodes) );
 
    for( int i = 0; i < nnodes; i++ )
    {
@@ -130,9 +133,10 @@ SCIP_RETCODE extArc(
 
    /* actual test */
    SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata, edgedeleted,
-         isterm, edge, equality, &distdata, bottleneckDists, tree_deg, deletable) );
+         isterm, edge, equality, &distdata, bottleneckDists, pcSdToNode, tree_deg, deletable) );
 
    /* clean up */
+   SCIPfreeBufferArrayNull(scip, &pcSdToNode);
    SCIPfreeBufferArray(scip, &bottleneckDists);
    SCIPfreeBufferArray(scip, &tree_deg);
    SCIPfreeBufferArray(scip, &isterm);

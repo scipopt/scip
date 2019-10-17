@@ -44,6 +44,7 @@
 #define STP_EXTTREE_MAXNLEAVES 20
 #define STP_EXTTREE_MAXNLEAVES_GUARD (STP_EXTTREE_MAXNLEAVES + STP_EXT_MAXGRAD)
 #define STP_EXT_EDGELIMIT 50000
+#define STP_EXT_SDMAXVISITS 10
 
 /** reduction data */
 typedef struct reduction_data
@@ -65,12 +66,10 @@ typedef struct extension_data
    int* const extstack_data;
    int* const extstack_start;
    int* const extstack_state;
-   int extstack_ncomponents;
    int* const tree_leaves;
    int* const tree_edges;
    int* const tree_deg;                      /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for current tail,
                                                    0 otherwise; in method: position ( > 0) for nodes in tree */
-   int tree_nleaves;
    SCIP_Real* const tree_bottleneckDistNode; /**< needs to be set to -1.0 (for all nodes) */
    int* const tree_parentNode;
    SCIP_Real* const tree_parentEdgeCost;     /**< of size nnodes */
@@ -79,11 +78,14 @@ typedef struct extension_data
    int tree_root;
    int tree_nedges;
    int tree_depth;
+   int tree_nleaves;
+   int extstack_ncomponents;
    const int extstack_maxsize;
    const int extstack_maxedges;
    const int tree_maxnleaves;
    const int tree_maxdepth;
    const int tree_maxnedges;
+   SCIP_Real* const pcSdToNode;                /**< needs to be set to -1.0, only needed of PC */
    const SCIP_Bool* const node_isterm;         /**< marks whether node is a terminal (or proper terminal for PC) */
    REDDATA* const reddata;
    DISTDATA* const distdata;
@@ -198,6 +200,7 @@ SCIP_Bool extTreeIsFlawed(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    int leavescount;
+   const SCIP_Bool isPc = graph_pc_isPcMw(graph);
 
    SCIP_Bool flawed = FALSE;
 
@@ -271,6 +274,20 @@ SCIP_Bool extTreeIsFlawed(
       if( degreecount[leaf] != 1 )
       {
          printf("FLAW wrong leaf %d degree %d != %d \n", leaf, degreecount[leaf], 1);
+         flawed = TRUE;
+      }
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( isPc && extdata->pcSdToNode[i] >= -0.5 )
+      {
+         printf("FLAW wrong pcSdToNode entry[%d]=%f \n", i, extdata->pcSdToNode[i]);
+         flawed = TRUE;
+      }
+      if( extdata->tree_bottleneckDistNode[i] >= -0.5 )
+      {
+         printf("FLAW wrong tree_bottleneckDistNode entry[%d]=%f \n", i, extdata->tree_bottleneckDistNode[i]);
          flawed = TRUE;
       }
    }
@@ -527,6 +544,125 @@ void extRemoveNodeFromLeaves(
 }
 
 
+/** marks single PcSd array entry */
+static inline
+void extPcSdMarkSingle(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   entry,              /**< entry to mark */
+   SCIP_Real             value,              /**< value to mark with */
+   SCIP_Real*            pcSdToNode,         /**< node mark array */
+   int*                  pcSdCands,          /**< marked candidates list */
+   int*                  nPcSdCands          /**< pointer to store number of candidates */
+)
+{
+   /* entry not marked yet? */
+   if( pcSdToNode[entry] < -0.5 )
+   {
+      assert(*nPcSdCands < graph->knots);
+      pcSdCands[(*nPcSdCands)++] = entry;
+      pcSdToNode[entry] = value;
+   }
+   else if( value < pcSdToNode[entry] )
+   {
+      pcSdToNode[entry] = value;
+   }
+}
+
+
+/** marks PcSd array */
+static
+void extPcSdMark(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   startvertex,        /**< vertex to start from */
+   EXTDATA*              extdata,            /**< extension data */
+   int*                  pcSdCands,          /**< marked candidates list */
+   int*                  nPcSdCands          /**< pointer to store number of candidates */
+   )
+{
+   SCIP_Real* const pcSdToNode = extdata->pcSdToNode;
+   const DCSR* const dcsr = graph->dcsr_storage;
+   const RANGE* const range_csr = dcsr->range;
+   const int* const head_csr = dcsr->head;
+   const SCIP_Real* const cost_csr = dcsr->cost;
+   const SCIP_Real* const prize = graph->prize;
+   const int* const tree_deg = extdata->tree_deg;
+   const int start = range_csr[startvertex].start;
+   const int end = range_csr[startvertex].end;
+   int count1 = 0;
+   int count2 = 0;
+
+   assert(graph_pc_isPcMw(graph));
+   assert(pcSdToNode && prize);
+
+   *nPcSdCands = 0;
+
+   for( int i = start; i != end; i++ )
+   {
+      const SCIP_Real edgecost = cost_csr[i];
+      const int head = head_csr[i];
+      assert(tree_deg[head] >= 0);
+
+      if( tree_deg[head] == 0 )
+      {
+         const int start2 = range_csr[head].start;
+         const int end2 = range_csr[head].end;
+
+         for( int i2 = start2; i2 != end2; i2++ )
+         {
+            const int head2 = head_csr[i2];
+            assert(tree_deg[head2] >= 0);
+
+            /* tree reached? */
+            if( tree_deg[head2] > 0 )
+            {
+               const SCIP_Real edgecost2 = cost_csr[i2];
+               const SCIP_Real maxedgecost = MAX(edgecost, edgecost2);
+               SCIP_Real dist2 = MAX(maxedgecost, edgecost + edgecost2 - prize[head]);
+
+               assert(0.0 == prize[head] || Is_term(graph->term[head]));
+
+               extPcSdMarkSingle(graph, head2, dist2, pcSdToNode, pcSdCands, nPcSdCands);
+            }
+
+            if( count2++ > STP_EXT_SDMAXVISITS )
+               break;
+         }
+      }
+      else
+      {
+         extPcSdMarkSingle(graph, head, edgecost, pcSdToNode, pcSdCands, nPcSdCands);
+      }
+
+      if( count1++ > STP_EXT_SDMAXVISITS )
+         break;
+   }
+}
+
+
+/** unmarks PcSd array */
+static
+void extPcSdUnmark(
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            pcSdCands,          /**< marked candidates list */
+   int                   nPcSdCands,         /**< number of candidates */
+   EXTDATA*              extdata             /**< extension data */
+
+   )
+{
+   SCIP_Real* const pcSdToNode = extdata->pcSdToNode;
+
+   assert(graph_pc_isPcMw(graph));
+   assert(pcSdToNode);
+
+   for( int i = 0; i < nPcSdCands; i++ )
+   {
+      const int cand = pcSdCands[i];
+      assert(pcSdToNode[cand] >= 0.0);
+      pcSdToNode[cand] = -1.0;
+   }
+}
+
+
 /** marks bottleneck array on path to tree root */
 static
 void extTreeBottleneckMarkRootPath(
@@ -634,7 +770,7 @@ void extTreeBottleneckUnmarkRootPath(
 /** computes the tree bottleneck between vertices in the current tree,
  * for which vertex_pathmarked root path has been marked already */
 static
-SCIP_Real extTreeGetBottleneckDist_marked(
+SCIP_Real extTreeBottleneckGetDist(
    const GRAPH*          graph,              /**< graph data structure */
    const EXTDATA*        extdata,            /**< extension data */
    int                   vertex_pathmarked,  /**< vertex with marked rootpath */
@@ -698,32 +834,52 @@ SCIP_Real extTreeGetBottleneckDist_marked(
    return bottleneck;
 }
 
-/** does the special distance sd dominate the tree bottleneck distance between vertex1 and vertex2 in the current tree? */
+
+/** does a special distance approximation dominate the tree bottleneck distance between
+ *  vertex_pathmarked and vertex_unmarked in the current tree? */
 static
-SCIP_Bool extTreeSdDominatesBottleneck(
+SCIP_Bool extTreeBottleneckIsDominated(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
-   SCIP_Real             sd,                 /**< special distance */
    int                   vertex_pathmarked,  /**< vertex for which bottleneck path to root has been marked */
    int                   vertex_unmarked,    /**< second vertex */
+   SCIP_Real*            specialDist,        /**< best computed special distance approximation */
    EXTDATA*              extdata             /**< extension data */
    )
 {
-   const SCIP_Real treeBottleneckDist = extTreeGetBottleneckDist_marked(graph, extdata, vertex_pathmarked, vertex_unmarked);
+   SCIP_Real* const pcSdToNode = extdata->pcSdToNode;
+   SCIP_Real sd = reduce_distDataGetSD(scip,  graph, vertex_pathmarked, vertex_unmarked, extdata->distdata);
+   SCIP_Bool success = FALSE;
+   const SCIP_Bool isPc = (STP_PCSPG == graph->stp_type || STP_RPCSPG == graph->stp_type);
 
-   assert(sd >= 0.0);
    assert(vertex_pathmarked >= 0 && vertex_pathmarked < graph->knots && vertex_unmarked >= 0 && vertex_unmarked < graph->knots);
 
-   SCIPdebugMessage("%d %d bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, treeBottleneckDist);
+   if( isPc && pcSdToNode[vertex_unmarked] >= 0.0 )
+   {
+      const SCIP_Real sd2 = pcSdToNode[vertex_unmarked];
+      //printf("sd=%f sd2=%f \n", sd, sd2);
+      sd = (sd < -0.5) ? sd2 : MIN(sd, sd2);
+   }
 
-   if( SCIPisLT(scip, sd, treeBottleneckDist) )
-      return TRUE;
+   if( sd >= -0.5 )
+   {
+      const SCIP_Real bottleneckDist = extTreeBottleneckGetDist(graph, extdata, vertex_pathmarked, vertex_unmarked);
 
-   if( SCIPisLE(scip, sd, treeBottleneckDist) && 0 ) /* todo cover equality */
-      return TRUE;
+      assert(SCIPisGE(scip, sd, 0.0));
 
-   return FALSE;
+      SCIPdebugMessage("%d->%d: sd=%f bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, sd, bottleneckDist);
+
+      if( SCIPisLT(scip, sd, bottleneckDist) )
+         success = TRUE;
+      else if( SCIPisLE(scip, sd, bottleneckDist) && 0 ) /* todo cover equality */
+         success = TRUE;
+   }
+
+   *specialDist = sd;
+
+   return success;
 }
+
 
 /** adds top component of stack to tree */
 static
@@ -1171,59 +1327,84 @@ SCIP_Bool extRuleOutPeriph(
    {
       /* compute special distances and compare with tree bottleneck distances */
       // todo build MST graph
-      DISTDATA* const distdata = extdata->distdata;
       const int stackpos = extdata->extstack_ncomponents - 1;
       const int* const extstack_data = extdata->extstack_data;
       const int* const extstack_start = extdata->extstack_start;
       const int* const leaves = extdata->tree_leaves;
       const int nleaves = extdata->tree_nleaves;
+      const SCIP_Bool isPc = (STP_PCSPG == graph->stp_type || STP_RPCSPG == graph->stp_type);
+      int* pcSdCands = NULL;
+      SCIP_Bool ruledOut = FALSE;
+
+      if( isPc )
+         SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &pcSdCands, graph->knots) );
 
       for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
       {
          const int extleaf = graph->head[extstack_data[i]];
+         int nPcSdCands;
+         SCIP_Real specialDist;
 
          assert(extleaf >= 0 && extleaf < graph->knots);
 
          extTreeBottleneckMarkRootPath(graph, extleaf, extdata);
 
+         if( isPc )
+            extPcSdMark(graph, extleaf, extdata, pcSdCands, &nPcSdCands);
+
          for( int j = 0; j < nleaves; j++ )
          {
-            SCIP_Real specialDist;
             const int leaf = leaves[j];
+            assert(extdata->tree_deg[leaf] == 1);
 
             if( leaf == extleaf )
                continue;
 
-            specialDist = reduce_distDataGetSD(scip,  graph, extleaf, leaf, distdata);
-
-            SCIPdebugMessage("sd %d->%d: %f \n", extleaf, leaf, specialDist);
-
-            /* could a valid special distance be found?  */
-            if( specialDist >= -0.5 )
+            if( extTreeBottleneckIsDominated(scip, graph, extleaf, leaf, &specialDist, extdata) )
             {
-               if( extTreeSdDominatesBottleneck(scip, graph, specialDist, extleaf, leaf, extdata) )
+               SCIPdebugMessage("---bottleneck rule-out---\n");
+               ruledOut = TRUE;
+               break;
+            }
+         }
+
+         if( isPc && !ruledOut )
+         {
+            const int* const tree_deg = extdata->tree_deg;
+            // todo if not successful so far, perhaps try bottleneck distances for inner vertices of STP as well!
+
+            /* also check non-leaves */
+            for( int c = 0; c < nPcSdCands; c++ )
+            {
+               const int cand = pcSdCands[c];
+               if( tree_deg[cand] > 1 && extTreeBottleneckIsDominated(scip, graph, extleaf, cand, &specialDist, extdata) )
                {
-                  SCIPdebugMessage("bottleneck rule-out \n");
-                  extTreeBottleneckUnmarkRootPath(extleaf, extdata);
-                  return TRUE;
+                  SCIPdebugMessage("---non-leaf bottleneck rule-out---\n");
+                  ruledOut = TRUE;
+                  break;
                }
             }
          }
 
          extTreeBottleneckUnmarkRootPath(extleaf, extdata);
+         if( isPc )
+            extPcSdUnmark(graph, pcSdCands, nPcSdCands, extdata);
+
+         if( ruledOut )
+            break;
       }
+
+      SCIPfreeBufferArrayNull(scip, &pcSdCands);
+
+      if( ruledOut )
+         return TRUE;
 
       // todo do MST test
 
-      // todo if not successful so far, try bottleneck distances for inner vertices
 
 #ifndef NDEBUG
       for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
-      {
-         const int edge = extstack_data[i];
-         assert( graph_edge_nPseudoAncestors(graph, edge) == 0 ||
-            graph_pseudoAncestors_edgeIsHashed(graph->pseudoancestors, edge, reddata->pseudoancestor_mark));
-      }
+         assert( graph_edge_nPseudoAncestors(graph, extstack_data[i]) == 0 || graph_pseudoAncestors_edgeIsHashed(graph->pseudoancestors, extstack_data[i], reddata->pseudoancestor_mark));
 #endif
    }
 
@@ -1731,6 +1912,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
    SCIP_Bool             equality,           /**< delete edge also in case of reduced cost equality? */
    DISTDATA*             distdata,           /**< data for distance computations */
    SCIP_Real*            bottleneckDistNode, /**< needs to be set to -1.0 (size nnodes) */
+   SCIP_Real*            pcSdToNode,         /**< needs to be set to -1.0 for all nodes, or NULL if not Pc */
    int*                  tree_deg,           /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for tail, 0 otherwise;
                                                       in method: position ( > 0) for nodes in tree */
    SCIP_Bool*            deletable           /**< is edge deletable? */
@@ -1803,7 +1985,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
             .tree_edges = tree_edges, .tree_deg = tree_deg, .tree_nleaves = 0,
             .tree_bottleneckDistNode = bottleneckDistNode, .tree_parentNode = tree_parentNode,
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap, .tree_redcost = 0.0,
-            .tree_root = -1, .tree_nedges = 0,  .tree_depth = 0, .extstack_maxsize = nnodes - 1,
+            .tree_root = -1, .tree_nedges = 0, .tree_depth = 0, .extstack_maxsize = nnodes - 1, .pcSdToNode = pcSdToNode,
             .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = maxdfsdepth,
             .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
@@ -1849,6 +2031,7 @@ SCIP_RETCODE reduce_extendedCheckEdge(
    SCIP_Bool             equality,           /**< delete edge also in case of reduced cost equality? */
    DISTDATA*             distdata,           /**< data for distance computations */
    SCIP_Real*            bottleneckDistNode, /**< needs to be set to -1.0 (size nnodes) */
+   SCIP_Real*            pcSdToNode,         /**< needs to be set to -1.0 for all nodes, or NULL if not Pc */
    int*                  tree_deg,           /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for tail, 0 otherwise;
                                                       in method: position ( > 0) for nodes in tree */
    SCIP_Bool*            deletable           /**< is edge deletable? */
@@ -1906,7 +2089,7 @@ SCIP_RETCODE reduce_extendedCheckEdge(
             .tree_edges = tree_edges, .tree_deg = tree_deg, .tree_nleaves = 0,
             .tree_bottleneckDistNode = bottleneckDistNode, .tree_parentNode = tree_parentNode,
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap, .tree_redcost = 0.0,
-            .tree_root = -1, .tree_nedges = 0,  .tree_depth = 0, .extstack_maxsize = nnodes - 1,
+            .tree_root = -1, .tree_nedges = 0, .tree_depth = 0, .extstack_maxsize = nnodes - 1, .pcSdToNode = pcSdToNode,
             .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = maxdfsdepth,
             .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
@@ -1948,7 +2131,7 @@ SCIP_RETCODE reduce_extendedCheckEdge(
 SCIP_RETCODE reduce_extendedEdge2(
    SCIP*                 scip,               /**< SCIP data structure */
    const REDCOST*        redcostdata,        /**< reduced cost data */
-   const int*            result,             /**< solution array */
+   const int*            result,             /**< solution array or NULL */
    GRAPH*                graph,              /**< graph data structure */
    STP_Bool*             edgedeletable,      /**< edge array to mark which (directed) edge can be removed */
    int*                  nelims              /**< number of eliminations */
@@ -1957,6 +2140,7 @@ SCIP_RETCODE reduce_extendedEdge2(
    SCIP_Bool* isterm;
    int* tree_deg;
    SCIP_Real* bottleneckDist;
+   SCIP_Real* pcSdToNode = NULL;
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
@@ -1964,7 +2148,7 @@ SCIP_RETCODE reduce_extendedEdge2(
 
    DISTDATA distdata;
 
-   assert(scip && graph && redcostdata);
+   assert(scip && graph && redcostdata && edgedeletable);
    assert(!pcmw || !graph->extended);
    assert(redcostdata->redCostRoot >= 0 && redcostdata->redCostRoot < graph->knots);
 
@@ -1981,12 +2165,16 @@ SCIP_RETCODE reduce_extendedEdge2(
    SCIP_CALL( SCIPallocBufferArray(scip, &isterm, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_deg, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bottleneckDist, nnodes) );
+   if( pcmw )
+      SCIP_CALL( SCIPallocBufferArray(scip, &pcSdToNode, nnodes) );
 
    graph_get_isTerm(graph, isterm);
 
    for( int k = 0; k < nnodes; k++ )
    {
       bottleneckDist[k] = -1.0;
+      pcSdToNode[k] = -1.0;
+
       if( graph->mark[k] )
          tree_deg[k] = 0;
       else
@@ -2011,7 +2199,6 @@ SCIP_RETCODE reduce_extendedEdge2(
          assert(flipedge(e) == erev);
          assert(SCIPisEQ(scip, graph->cost[e], graph->cost[erev]));
 
-
          if( SCIPisZero(scip, redcost[e]) && SCIPisZero(scip, redcost[erev]) )
             continue;
 
@@ -2019,7 +2206,7 @@ SCIP_RETCODE reduce_extendedEdge2(
          if( !edgedeletable[e] )
          {
             SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata, edgedeletable,
-                  isterm, e, allowequality, &distdata, bottleneckDist, tree_deg, &deletable) );
+                  isterm, e, allowequality, &distdata, bottleneckDist, pcSdToNode, tree_deg, &deletable) );
 
             if( deletable )
                edgedeletable[e] = TRUE;
@@ -2030,7 +2217,7 @@ SCIP_RETCODE reduce_extendedEdge2(
             SCIP_Bool erevdeletable = TRUE;
 
             SCIP_CALL( reduce_extendedCheckArc(scip, graph, &redcostdata, edgedeletable,
-                  isterm, erev, allowequality, &distdata, bottleneckDist, tree_deg, &erevdeletable) );
+                  isterm, erev, allowequality, &distdata, bottleneckDist, pcSdToNode, tree_deg, &erevdeletable) );
 
             if( erevdeletable )
                edgedeletable[erev] = TRUE;
@@ -2039,13 +2226,14 @@ SCIP_RETCODE reduce_extendedEdge2(
          }
 #else
          SCIP_CALL( reduce_extendedCheckEdge(scip, graph, redcostdata, edgedeletable,
-               isterm, e, allowequality, &distdata, bottleneckDist, tree_deg, &deletable) );
+               isterm, e, allowequality, &distdata, bottleneckDist, pcSdToNode, tree_deg, &deletable) );
 #endif
 
          if( deletable )
          {
             graph_edge_delFull(scip, graph, e, TRUE);
             reduce_distDataDeleteEdge(scip, graph, e, &distdata);
+
             if( graph->grad[tail] == 0 )
                graph->mark[tail] = FALSE;
 
@@ -2063,6 +2251,7 @@ SCIP_RETCODE reduce_extendedEdge2(
       edgedeletable[e] = FALSE;
 #endif
 
+   SCIPfreeBufferArrayNull(scip, &pcSdToNode);
    SCIPfreeBufferArray(scip, &bottleneckDist);
    SCIPfreeBufferArray(scip, &tree_deg);
    SCIPfreeBufferArray(scip, &isterm);

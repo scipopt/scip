@@ -139,8 +139,8 @@ extern int             reduce_extendedEdge(SCIP*, GRAPH*, const PATH*, const SCI
 /* reduce_ext2.c
  */
 extern SCIP_RETCODE    reduce_extendedEdge2(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
-extern SCIP_RETCODE    reduce_extendedCheckArc(SCIP*, const GRAPH*, const REDCOST*, STP_Bool*,  const SCIP_Bool*, int, SCIP_Bool, DISTDATA*, SCIP_Real*, int*, SCIP_Bool*);
-extern SCIP_RETCODE    reduce_extendedCheckEdge(SCIP*, const GRAPH*, const REDCOST*, const STP_Bool*,  const SCIP_Bool*, int, SCIP_Bool, DISTDATA*, SCIP_Real*, int*, SCIP_Bool*);
+extern SCIP_RETCODE    reduce_extendedCheckArc(SCIP*, const GRAPH*, const REDCOST*, STP_Bool*,  const SCIP_Bool*, int, SCIP_Bool, DISTDATA*, SCIP_Real*, SCIP_Real*, int*, SCIP_Bool*);
+extern SCIP_RETCODE    reduce_extendedCheckEdge(SCIP*, const GRAPH*, const REDCOST*, const STP_Bool*,  const SCIP_Bool*, int, SCIP_Bool, DISTDATA*, SCIP_Real*, SCIP_Real*, int*, SCIP_Bool*);
 
 /* reduce_test.c
  */
