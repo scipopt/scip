@@ -137,6 +137,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
 #include "scip/set.h"
@@ -904,6 +905,7 @@ void lpbdchgsFree(
  * Proof Sets
  */
 
+/** return the char associated with the type of the variable */
 static
 const char* varGetChar(
    SCIP_VAR*             var                 /**< variable */
@@ -2529,18 +2531,12 @@ SCIP_RETCODE tightenSingleVar(
 
    /* if variable and coefficient are integral the rhs can be rounded down */
    if( SCIPvarIsIntegral(var) && SCIPsetIsIntegral(set, val) )
-   {
       newbound = SCIPsetFeasFloor(set, rhs)/val;
-      boundtype = (val > 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
-      SCIPvarAdjustBd(var, set, boundtype, &newbound);
-   }
    else
-   {
       newbound = rhs/val;
-      boundtype = (val > 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
 
-      SCIPvarAdjustBd(var, set, boundtype, &newbound);
-   }
+   boundtype = (val > 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
+   SCIPvarAdjustBd(var, set, boundtype, &newbound);
 
    /* skip numerical unstable bound changes */
    if( applyglobal
@@ -2555,11 +2551,11 @@ SCIP_RETCODE tightenSingleVar(
       && ((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, SCIPvarGetUbGlobal(var)))
        || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, SCIPvarGetLbGlobal(var)))) )
    {
-      SCIPsetDebugMsg(set, "detected %d infeasibility at var <%s>: locdom=[%g,%g] glbdom=[%g,%g] new %s bound=%g\n",
-            applyglobal ? "global" : "local", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+      SCIPsetDebugMsg(set, "detected global infeasibility at var <%s>: locdom=[%g,%g] glbdom=[%g,%g] new %s bound=%g\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var),
             SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
             (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
-      SCIP_CALL( SCIPnodeCutoff(tree->path[validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
    else
    {
@@ -3082,9 +3078,9 @@ SCIP_RETCODE createAndAddProofcons(
    /* check if conflict contains variables that are invalid after a restart to label it appropriately */
    hasrelaxvar = FALSE;
    contonly = TRUE;
-   for( i = 0; i < nnz && !hasrelaxvar; ++i )
+   for( i = 0; i < nnz && (!hasrelaxvar || contonly); ++i )
    {
-      hasrelaxvar = SCIPvarIsRelaxationOnly(vars[inds[i]]);
+      hasrelaxvar |= SCIPvarIsRelaxationOnly(vars[inds[i]]);
 
       if( SCIPvarIsIntegral(vars[inds[i]]) )
          contonly = FALSE;
@@ -6775,18 +6771,18 @@ static
 SCIP_RETCODE addLocalRows(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_LP*              lp,
-   SCIP_AGGRROW*         proofrow,
-   SCIP_ROW**            rows,
-   SCIP_Real*            curvarlbs,
-   SCIP_Real*            curvarubs,
-   SCIP_Real*            dualsols,
-   int*                  localrowinds,
-   int*                  localrowdepth,
-   int                   nlocalrows,
-   SCIP_Real*            proofact,
-   int*                  validdepth,
-   SCIP_Bool*            valid
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_AGGRROW*         proofrow,           /**< aggregated row representing the proof */
+   SCIP_ROW**            rows,               /**< array if locally valid rows */
+   SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
+   SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
+   SCIP_Real*            dualsols,           /**< dual solution vector */
+   int*                  localrowinds,       /**< array of row indecies */
+   int*                  localrowdepth,      /**< array of row depths */
+   int                   nlocalrows,         /**< number of local rows stored in rows array */
+   SCIP_Real*            proofact,           /**< pointer to store the activity of the proof constraint */
+   int*                  validdepth,         /**< pointer to store the depth where the proof constraint is valid */
+   SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
    )
 {
    SCIP_Bool infdelta;
@@ -6805,17 +6801,20 @@ SCIP_RETCODE addLocalRows(
    /* check whether the proof is already valid, e.g., violated within the local bounds */
    *proofact = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
 
-   /* break if the proof is valid w.r.t local bounds
-    * note: it can happen that the proof contains a variable with an infinite activity delta.
-    *       here, we don't break immediately because we might be able to fix it by adding local rows
-    */
-   if( !infdelta && !SCIPsetIsInfinity(set, REALABS(*proofact)) && SCIPsetIsGT(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
-      return SCIP_OKAY;
-
    /* we stop if the minimal activity is infinite but all variables have a finite activity delta (bad numerics) */
    if( !infdelta && SCIPsetIsInfinity(set, REALABS(*proofact)) )
    {
       *valid = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* break if the proof is valid w.r.t local bounds
+    * note: it can happen that the proof contains a variable with an infinite activity delta.
+    *       here, we don't break immediately because we might be able to fix it by adding local rows
+    */
+   if( !infdelta && SCIPsetIsGT(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
+   {
+      *valid = TRUE;
       return SCIP_OKAY;
    }
 
@@ -6841,12 +6840,14 @@ SCIP_RETCODE addLocalRows(
       /* ignore dual solution values of 0.0 (in this case: y_i == 0) */
       if( REALABS(dualsols[r]) > 0.0 )
       {
+#ifndef NDEBUG
          SCIP_Bool zerocontribution;
 
          /* check dual feasibility */
          *valid = checkDualFeasibility(set, row, dualsols[r], &zerocontribution);
          assert(*valid);
          assert(!zerocontribution);
+#endif
 
          if( SCIPsetIsDualfeasZero(set, dualsols[r]) )
             continue;
@@ -6861,28 +6862,46 @@ SCIP_RETCODE addLocalRows(
          /* get the new minimal activity */
          *proofact = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
 
-         /* break if the proof is valid w.r.t local bounds */
-         if( !infdelta && !SCIPsetIsInfinity(set, REALABS(*proofact)) && SCIPsetIsGT(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
+         /* we stop if the minimal activity is infinite but all variables have a finite activity delta (bad numerics) */
+         if( !infdelta && SCIPsetIsInfinity(set, REALABS(*proofact)) )
+         {
+            *valid = FALSE;
             goto TERMINATE;
+         }
+
+         /* break if the proof is valid w.r.t local bounds */
+         if( !infdelta && SCIPsetIsGT(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
+         {
+            *valid = TRUE;
+            break;
+         }
       }
    }
 
-  TERMINATE:
    /* remove all nearly zero coefficients */
    SCIPaggrRowRemoveZeros(set->scip, proofrow, TRUE, valid);
 
+  TERMINATE:
    if( !(*valid) )
    {
       SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g\n", *proofact, SCIPaggrRowGetRhs(proofrow));
       SCIPsetDebugMsg(set, " -> stop due to numerical troubles\n");
    }
-
-   *proofact = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
-
-   if( infdelta || SCIPsetIsInfinity(set, REALABS(*proofact)) || SCIPsetIsLE(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
+   else
    {
-      *valid = FALSE;
-      SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %d]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
+      *proofact = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
+
+      /* we stop if the minimal activity is infinite but all variables have a finite activity delta (bad numerics) */
+      if( !infdelta && SCIPsetIsInfinity(set, REALABS(*proofact)) )
+      {
+         *valid = FALSE;
+         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %d]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
+      }
+      else if( infdelta || SCIPsetIsLE(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
+      {
+         *valid = FALSE;
+         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %d]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
+      }
    }
 
    return SCIP_OKAY;
@@ -7042,13 +7061,10 @@ SCIP_RETCODE getFarkasProof(
       }
    }
 
-TERMINATE:
-   if( nlocalrows > 0 )
-   {
-      SCIPsetFreeBufferArray(set, &localrowdepth);
-      SCIPsetFreeBufferArray(set, &localrowinds);
-   }
+  TERMINATE:
 
+   SCIPfreeBufferArrayNull(set->scip, &localrowdepth);
+   SCIPfreeBufferArrayNull(set->scip, &localrowinds);
    SCIPsetFreeBufferArray(set, &dualfarkas);
 
    return SCIP_OKAY;
@@ -7270,12 +7286,9 @@ SCIP_RETCODE getDualProof(
    }
 
   TERMINATE:
-   if( nlocalrows > 0 )
-   {
-      SCIPsetFreeBufferArray(set, &localrowdepth);
-      SCIPsetFreeBufferArray(set, &localrowinds);
-   }
 
+   SCIPfreeBufferArrayNull(set->scip, &localrowdepth);
+   SCIPfreeBufferArrayNull(set->scip, &localrowinds);
    SCIPsetFreeBufferArray(set, &redcosts);
    SCIPsetFreeBufferArray(set, &dualsols);
    SCIPsetFreeBufferArray(set, &primsols);
