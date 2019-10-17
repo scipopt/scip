@@ -670,6 +670,7 @@ SCIP_RETCODE SCIPmergeBendersSubproblemIntoMaster(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPapplyBendersDecomposition(
    SCIP*                 scip,               /**< the SCIP data structure */
    int                   decompindex         /**< the index of the decomposition that will be applied */

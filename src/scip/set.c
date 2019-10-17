@@ -343,6 +343,7 @@
 
 /* Decomposition */
 #define SCIP_DEFAULT_DECOMP_BENDERSLABELS FALSE /**< should the variables be labelled for the application of Benders' decomposition */
+#define SCIP_DEFAULT_DECOMP_APPLYBENDERS  FALSE /**< if a decomposition exists, should Benders' decomposition be applied? */
 
 /* Benders' decomposition */
 #define SCIP_DEFAULT_BENDERS_SOLTOL        1e-6 /**< the tolerance used to determine optimality in Benders' decomposition */
@@ -2158,8 +2159,6 @@ SCIP_RETCODE SCIPsetCreate(
          "should the variables be labelled for the application of Benders' decomposition?",
          &(*set)->decomp_benderslabels, FALSE, SCIP_DEFAULT_DECOMP_BENDERSLABELS,
          NULL, NULL) );
-
-   /* Decomposition store settings */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "decomposition/applybenders",
          "if a decomposition exists, should Benders' decomposition be applied?",

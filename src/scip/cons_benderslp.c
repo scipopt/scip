@@ -69,8 +69,6 @@ struct SCIP_ConshdlrData
    /* parameters for controlling the two-phase method for Benders' decomposition */
    int                   maxdepth;           /**< the maximum depth at which Benders' cuts are generated from the LP */
    int                   freq;               /**< the depth frequency of generating LP cuts after the max depth is reached */
-   int                   stalllimit;         /**< the number of nodes processed without bound improvement before enforcing the LP relaxation */
-   int                   iterlimit;          /**< the iteration limit for the first phase of the two-phase method at a node lower than the root. */
    SCIP_Bool             active;             /**< is the constraint handler active? */
 
    /* variable used to control the behaviour of the two-phase method for Benders' decomposition */

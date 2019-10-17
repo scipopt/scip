@@ -68,6 +68,7 @@
 #include "scip/pub_var.h"
 #include "scip/relax.h"
 #include "scip/reopt.h"
+#include "scip/scip_benders.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_cons.h"

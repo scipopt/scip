@@ -445,6 +445,7 @@ struct SCIP_Set
    /* Decomposition settings */
    SCIP_Bool             decomp_benderslabels; /**< should the variables be labelled for the application of Benders'
                                                 *   decomposition */
+   SCIP_Bool             decomp_applybenders;  /**< if a decomposition exists, should Benders' decomposition be applied*/
 
    /* Benders' decomposition settings */
    SCIP_Real             benders_soltol;     /**< the tolerance for checking optimality in Benders' decomposition */

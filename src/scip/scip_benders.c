@@ -44,6 +44,7 @@
 #include "scip/scip_benders.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_prob.h"
+#include "scip/scip_message.h"
 #include "scip/set.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
