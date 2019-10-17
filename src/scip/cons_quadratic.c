@@ -11541,7 +11541,7 @@ SCIP_RETCODE proposeFeasibleSolution(
             gap = SCIPvarGetUbGlobal(var) - SCIPgetSolVal(scip, newsol, var);
             delta = MIN(MAX(0.0, gap), delta);
          }
-         if( SCIPisPositive(scip, delta) )
+         if( SCIPisPositive(scip, delta) && !SCIPisInfinity(scip, REALABS(delta)) )
          {
             /* if variable is integral, round delta up so that it will still have an integer value */
             if( SCIPvarIsIntegral(var) )
@@ -11575,7 +11575,7 @@ SCIP_RETCODE proposeFeasibleSolution(
             gap = SCIPgetSolVal(scip, newsol, var) - SCIPvarGetLbGlobal(var);
             delta = MAX(MIN(0.0, gap), delta);
          }
-         if( SCIPisNegative(scip, delta) )
+         if( SCIPisNegative(scip, delta) && !SCIPisInfinity(scip, REALABS(delta)) )
          {
             /* if variable is integral, round delta down so that it will still have an integer value */
             if( SCIPvarIsIntegral(var) )
@@ -13003,6 +13003,13 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          SCIP_CALL( mergeAndCleanQuadVarTerms(scip, conss[c]) );
          SCIP_CALL( mergeAndCleanLinearVars(scip, conss[c]) );
          consdata->initialmerge = TRUE;
+
+         if( SCIPisInfinity(scip, consdata->lhs) || SCIPisInfinity(scip, -consdata->rhs) )
+         {
+            SCIPdebugMsg(scip, "lhs or rhs at wrong side of infinity -> declaring cutoff\n");
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
       }
 
       havechange = FALSE;
