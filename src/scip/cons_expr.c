@@ -9420,7 +9420,6 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa)), /**< separation deinitialization callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa)),     /**< separation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRESTIMATE((*estimate))  /**< estimator callback (can be NULL) */
    )
 {  /*lint --e{715}*/
@@ -9428,7 +9427,6 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
 
    exprhdlr->initsepa = initsepa;
    exprhdlr->exitsepa = exitsepa;
-   exprhdlr->sepa = sepa;
    exprhdlr->estimate = estimate;
 
    return SCIP_OKAY;
@@ -9688,16 +9686,6 @@ SCIP_Bool SCIPhasConsExprExprHdlrExitSepa(
    assert(exprhdlr != NULL);
 
    return exprhdlr->exitsepa != NULL;
-}
-
-/** returns whether expression handler implements the separation callback */
-SCIP_Bool SCIPhasConsExprExprHdlrSepa(
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
-   )
-{
-   assert(exprhdlr != NULL);
-
-   return exprhdlr->sepa != NULL;
 }
 
 /** returns whether expression handler implements the branching score callback */
@@ -10118,33 +10106,6 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(SCIPexitsepaConsExprExprHdlr)
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
       SCIP_CALL( expr->exprhdlr->exitsepa(scip, expr) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** calls separator method of expression handler to separate a given solution */
-SCIP_DECL_CONSEXPR_EXPRSEPA(SCIPsepaConsExprExprHdlr)
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(ncuts != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-   *ncuts = 0;
-
-   if( SCIPhasConsExprExprHdlrSepa(expr->exprhdlr) )
-   {
-      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
-      SCIP_CALL( expr->exprhdlr->sepa(scip, conshdlr, cons, expr, sol, overestimate, mincutviolation, result, ncuts) );
-      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
-
-      /* update statistics */
-      if( *result == SCIP_CUTOFF )
-         ++(expr->exprhdlr->ncutoffs);
-      expr->exprhdlr->ncutsfound += *ncuts;
-      ++(expr->exprhdlr->nsepacalls);
    }
 
    return SCIP_OKAY;

@@ -470,32 +470,6 @@ typedef enum
       SCIP* scip, \
       SCIP_CONSEXPR_EXPR* expr)
 
-/** expression separation callback
- *
- * The method tries to separate a given point by using linearization variables stored at each expression.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - conshdlr : expression constraint handler
- *  - cons : expression constraint
- *  - expr : expression
- *  - sol  : solution to be separated (NULL for the LP solution)
- *  - overestimate : whether the expression needs to be over- or underestimated
- *  - mincutviolation : minimal violation of a cut if it should be added to the LP
- *  - result : pointer to store the result
- *  - ncuts : pointer to store the number of added cuts
- */
-#define SCIP_DECL_CONSEXPR_EXPRSEPA(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONS* cons, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_SOL* sol, \
-   SCIP_Bool overestimate, \
-   SCIP_Real mincutviolation, \
-   SCIP_RESULT* result, \
-   int* ncuts)
-
 /** expression branching score callback
  *
  * The method adds branching scores to its children if it finds that the value of the

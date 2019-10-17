@@ -177,7 +177,6 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
    SCIP_DECL_CONSEXPR_EXPRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa)), /**< separation deinitialization callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_EXPRSEPA((*sepa)),     /**< separation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRESTIMATE((*estimate))  /**< estimator callback (can be NULL) */
 );
 
@@ -329,12 +328,6 @@ SCIP_Bool SCIPhasConsExprExprHdlrExitSepa(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
    );
 
-/** returns whether expression handler implements the separation callback */
-SCIP_EXPORT
-SCIP_Bool SCIPhasConsExprExprHdlrSepa(
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
-   );
-
 /** returns whether expression handler implements the branching score callback */
 SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprExprHdlrBranchingScore(
@@ -411,10 +404,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(SCIPinitsepaConsExprExprHdlr);
 /** calls the separation deinitialization method of an expression handler */
 SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPREXITSEPA(SCIPexitsepaConsExprExprHdlr);
-
-/** calls separator method of expression handler to separate a given solution */
-SCIP_EXPORT
-SCIP_DECL_CONSEXPR_EXPRSEPA(SCIPsepaConsExprExprHdlr);
 
 /** calls the expression branching score callback */
 SCIP_EXPORT

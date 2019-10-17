@@ -108,8 +108,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *success = TRUE;
    }
 
-   /* return sepa possibility if exprhdlr for expr has a sepa or estimate callback and enforcement is not ensured already */
-   if( (SCIPhasConsExprExprHdlrSepa(exprhdlr) || SCIPhasConsExprExprHdlrEstimate(exprhdlr)) && (!*enforcedbelow || !*enforcedabove) )
+   /* return sepa possibility if exprhdlr for expr has an estimate callback and enforcement is not ensured already */
+   if( SCIPhasConsExprExprHdlrEstimate(exprhdlr) && (!*enforcedbelow || !*enforcedabove) )
    {
       /* make sure that an (auxiliary) variable exists for every child */
       for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
@@ -204,42 +204,6 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
 
    /* call the separation initialization callback of the expression handler */
    SCIP_CALL( SCIPinitsepaConsExprExprHdlr(scip, conshdlr, cons, expr, overestimate, underestimate, infeasible) );
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
-{ /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(result != NULL);
-   assert(ncuts != NULL);
-
-   /* if we did not say that we will separate on this side, then stand by it */
-   if( !overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) == 0 )
-   {
-      SCIPdebugMsg(scip, "nlhdlrSepaDefault %p: skip as not sepa on underestimator\n", (void*)expr);
-      return SCIP_OKAY;
-   }
-   if(  overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) == 0 )
-   {
-      SCIPdebugMsg(scip, "nlhdlrSepaDefault %p: skip as not sepa on overestimator\n", (void*)expr);
-      return SCIP_OKAY;
-   }
-
-   if( separated )
-   {
-      /* don't do anything if someone already separated */
-      *result = SCIP_DIDNOTFIND;
-      *ncuts = 0;
-      SCIPdebugMsg(scip, "nlhdlrSepaDefault %p: skip as already separated\n", (void*)expr);
-
-      return SCIP_OKAY;
-   }
-
-   /* call the separation callback of the expression handler */
-   SCIP_CALL( SCIPsepaConsExprExprHdlr(scip, conshdlr, cons, expr, sol, overestimate, mincutviolation, result, ncuts) );
 
    return SCIP_OKAY;
 }
@@ -506,7 +470,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrDefault(
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrDefault);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaDefault, nlhdlrSepaDefault, nlhdlrEstimateDefault, nlhdlrExitSepaDefault);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaDefault, NULL, nlhdlrEstimateDefault, nlhdlrExitSepaDefault);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalDefault, nlhdlrReversepropDefault);
    SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreDefault);
 
