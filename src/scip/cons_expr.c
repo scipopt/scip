@@ -5100,12 +5100,14 @@ SCIP_RETCODE computeBranchingScores(
    SCIP_CONSDATA* consdata;
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSEXPR_EXPR* expr;
+#if 0
    SCIP_Real auxvarvalue;
    SCIP_Bool overestimate;
    SCIP_Bool underestimate;
+#endif
    unsigned int brscoretag;
-   int e;
    int i;
+   int v;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -5134,8 +5136,17 @@ SCIP_RETCODE computeBranchingScores(
       if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
          continue;
 
-      consdata->expr->brscore = 0.0;  /* TODO why do we need this? */
+/* FIXME we were using here the branchscore callback, which has been removed now
+ * one could to see if something better can be done than using the constraint violation as branching score for every variable
+ * also we do not need all this propagation code below
+ */
+      for( v = 0; v < consdata->nvarexprs; ++v )
+      {
+         SCIPaddConsExprExprBranchScore(scip, consdata->varexprs[v], brscoretag, MAX(consdata->lhsviol, consdata->rhsviol));
+      }
 
+#if 0
+      consdata->expr->brscore = 0.0;  /* TODO why do we need this? */
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
          /* if no auxvar, then no need to compute branching score here (nothing can be violated) */
@@ -5203,6 +5214,7 @@ SCIP_RETCODE computeBranchingScores(
           * so there was no need to add branching scores from this expression
           */
       }
+#endif
    }
 
    /* propagate branching score callbacks from expressions with children to variable expressions */
@@ -9418,21 +9430,6 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
    return SCIP_OKAY;
 }
 
-/** set the branching score callback of an expression handler */
-SCIP_RETCODE SCIPsetConsExprExprHdlrBranchscore(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE((*brscore)) /**< branching score callback (can be NULL) */
-   )
-{  /*lint --e{715}*/
-   assert(exprhdlr != NULL);
-
-   exprhdlr->brscore = brscore;
-
-   return SCIP_OKAY;
-}
-
 /** gives expression handlers */
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
@@ -9672,16 +9669,6 @@ SCIP_Bool SCIPhasConsExprExprHdlrExitSepa(
    assert(exprhdlr != NULL);
 
    return exprhdlr->exitsepa != NULL;
-}
-
-/** returns whether expression handler implements the branching score callback */
-SCIP_Bool SCIPhasConsExprExprHdlrBranchingScore(
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
-   )
-{
-   assert(exprhdlr != NULL);
-
-   return exprhdlr->brscore != NULL;
 }
 
 /** calls the print callback of an expression handler */
@@ -10092,26 +10079,6 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(SCIPexitsepaConsExprExprHdlr)
       SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
       SCIP_CALL( expr->exprhdlr->exitsepa(scip, expr) );
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** calls the expression branching score callback */
-SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(SCIPbranchscoreConsExprExprHdlr)
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   if( SCIPhasConsExprExprHdlrBranchingScore(expr->exprhdlr) )
-   {
-      SCIP_CALL( expr->exprhdlr->brscore(scip, expr, sol, auxvalue, brscoretag, success) );
-
-      if( *success )
-         SCIPincrementConsExprExprHdlrNBranchScore(expr->exprhdlr);
    }
 
    return SCIP_OKAY;
@@ -13531,18 +13498,6 @@ void SCIPsetConsExprNlhdlrSepa(
    nlhdlr->exitsepa = exitsepa;
 }
 
-/** set the branching score callback of a nonlinear handler */
-void SCIPsetConsExprNlhdlrBranchscore(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore)) /**< branching score callback */
-   )
-{
-   assert(nlhdlr != NULL);
-
-   nlhdlr->branchscore = branchscore;
-}
-
 /** gives name of nonlinear handler */
 const char* SCIPgetConsExprNlhdlrName(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
@@ -13904,35 +13859,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
 
    /* update statistics */
    ++nlhdlr->nenfocalls;
-
-   return SCIP_OKAY;
-}
-
-/** calls the nonlinear handler branching score callback */
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr)
-{
-   assert(scip != NULL);
-   assert(nlhdlr != NULL);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   if( nlhdlr->branchscore == NULL )
-      return SCIP_OKAY;
-
-#ifndef NDEBUG
-   /* check that auxvalue is correct by reevaluating */
-   {
-      SCIP_Real auxvaluetest;
-      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
-      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */  /*lint !e777*/
-   }
-#endif
-
-   SCIP_CALL( nlhdlr->branchscore(scip, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, brscoretag, success) );
-
-   if( *success )
-      ++nlhdlr->nbranchscores;
 
    return SCIP_OKAY;
 }

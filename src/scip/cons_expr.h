@@ -180,15 +180,6 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrSepa(
    SCIP_DECL_CONSEXPR_EXPRESTIMATE((*estimate))  /**< estimator callback (can be NULL) */
 );
 
-/** set the branching score callback of an expression handler */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetConsExprExprHdlrBranchscore(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE((*brscore)) /**< branching score callback (can be NULL) */
-);
-
 /** gives expression handlers */
 SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
@@ -404,10 +395,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(SCIPinitsepaConsExprExprHdlr);
 /** calls the separation deinitialization method of an expression handler */
 SCIP_EXPORT
 SCIP_DECL_CONSEXPR_EXPREXITSEPA(SCIPexitsepaConsExprExprHdlr);
-
-/** calls the expression branching score callback */
-SCIP_EXPORT
-SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(SCIPbranchscoreConsExprExprHdlr);
 
 /** increments the branching score count of an expression handler */
 SCIP_EXPORT
@@ -1332,14 +1319,6 @@ void SCIPsetConsExprNlhdlrSepa(
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
 );
 
-/** set the branching score callback of a nonlinear handler */
-SCIP_EXPORT
-void SCIPsetConsExprNlhdlrBranchscore(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore)) /**< branching score callback */
-);
-
 /** gives name of nonlinear handler */
 SCIP_EXPORT
 const char* SCIPgetConsExprNlhdlrName(
@@ -1458,10 +1437,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(SCIPenfoConsExprNlhdlr);
 /** calls the estimator callback of a nonlinear handler */
 SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr);
-
-/** calls the nonlinear handler branching score callback */
-SCIP_EXPORT
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(SCIPbranchscoreConsExprNlHdlr);
 
 /** @} */
 

@@ -1277,29 +1277,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
    return SCIP_OKAY;
 }
 
-static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreQuadratic)
-{ /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(nlhdlrexprdata != NULL);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
-    * propagate them; however, we only separate for convex quadratics, so we only provide branchscore in that case
-    * normally, we should not need to branch, but there could be small violations or numerical issues that
-    * prevented separation to succeed; however, we should rely on the fallbacks in cons-expr-core for this case
-    */
-   if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
-      return SCIP_OKAY;
-
-   assert(nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE);
-
-   return SCIP_OKAY;
-}
-
 /** nonlinear handler copy callback
  *
  * the method includes the nonlinear handler into a expression constraint handler
@@ -1337,7 +1314,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataQuadratic);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateQuadratic, NULL);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalQuadratic, nlhdlrReversepropQuadratic);
-   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreQuadratic);
 
    return SCIP_OKAY;
 }

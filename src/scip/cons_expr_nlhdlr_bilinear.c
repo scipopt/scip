@@ -1289,21 +1289,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropBilinear)
 }
 
 
-/** nonlinear handler callback for branching scores */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreBilinear)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of bilinear nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrBranchscoreBilinear NULL
-#endif
-
-
 /*
  * nonlinear handler specific interface methods
  */
@@ -1519,7 +1504,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBilinear(
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitBilinear, nlhdlrExitBilinear);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaBilinear, nlhdlrEnfoBilinear, nlhdlrEstimateBilinear, nlhdlrExitSepaBilinear);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalBilinear, nlhdlrReversepropBilinear);
-   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreBilinear);
 
    /* parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/useinteval",

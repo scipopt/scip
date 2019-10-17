@@ -1135,24 +1135,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropPerspective)
 #endif
 
 
-/** nonlinear handler callback for branching scores */
-static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscorePerspective)
-{ /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   /* we separate only convex functions here, so there is no use for branching
-    * if violations are small or there are numerical issues, then we will not have generated a cut, though
-    * in that case, we will still branch, but can also rely on the fallbacks in consexpr for this
-    */
-
-   return SCIP_OKAY;
-}
-
 /** nonlinear handler callback for reformulation */
 #if 0
 static
@@ -1199,7 +1181,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrEnfoPerspective, NULL, NULL);
-   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscorePerspective);
 
    return SCIP_OKAY;
 }

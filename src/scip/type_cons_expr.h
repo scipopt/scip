@@ -470,31 +470,6 @@ typedef enum
       SCIP* scip, \
       SCIP_CONSEXPR_EXPR* expr)
 
-/** expression branching score callback
- *
- * The method adds branching scores to its children if it finds that the value of the
- * linearization variables does not coincide with the value of the expression in the given solution.
- * It shall use the function SCIPaddConsExprExprBranchScore() to add a branching score to its children.
- * It shall return TRUE in success if no branching is necessary or branching scores have been added.
- * If returning FALSE in success, then other scoring methods will be applied, e.g., a fallback that
- * adds a score to every child.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - expr : expression
- *  - sol  : solution (NULL for the LP solution)
- *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
- *  - brscoretag : value to be passed on to SCIPaddConsExprExprBranchScore()
- *  - success: buffer to store whether the branching score callback was successful
- */
-#define SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_SOL* sol, \
-   SCIP_Real auxvalue, \
-   unsigned int brscoretag, \
-   SCIP_Bool* success)
-
 typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_CONSEXPR_EXPRHDLR;     /**< expression handler */
 typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expression handler data */
 
@@ -573,8 +548,7 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA;  /**< prin
 #define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_SEPAABOVE)  /**< separation for expr == auxvar */
 #define SCIP_CONSEXPR_EXPRENFO_INTEVAL        0x4u /**< interval evaluation */
 #define SCIP_CONSEXPR_EXPRENFO_REVERSEPROP    0x8u /**< reverse propagation */
-#define SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE    0x10u /**< setting branching scores */
-#define SCIP_CONSEXPR_EXPRENFO_ALL            (SCIP_CONSEXPR_EXPRENFO_SEPABOTH | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP | SCIP_CONSEXPR_EXPRENFO_BRANCHSCORE) /**< all enforcement methods */
+#define SCIP_CONSEXPR_EXPRENFO_ALL            (SCIP_CONSEXPR_EXPRENFO_SEPABOTH | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP) /**< all enforcement methods */
 
 typedef unsigned int                  SCIP_CONSEXPR_EXPRENFO_METHOD; /**< exprenfo bitflags */
 typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expression enforcement data */
@@ -921,34 +895,6 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_Bool addbranchscores, \
    unsigned int brscoretag, \
    SCIP_Bool* addedbranchscores)
-
-/** nonlinear handler callback for branching scores
- *
- * The method adds branching scores to successors if it finds that this is how to enforce
- * the relation between the auxiliary variable and the value of the expression in the given solution.
- * It shall use the function SCIPaddConsExprExprBranchScore() to add a branching score to its successors.
- * It shall return TRUE in success if no branching is necessary or branching scores have been added.
- * If returning FALSE in success, then other scoring methods will be applied.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - nlhdlr : nonlinear handler
- *  - expr : expression to be hashed
- *  - nlhdlrexprdata : expression specific data of the nonlinear handler
- *  - sol  : solution (NULL for the LP solution)
- *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
- *  - brscoretag : value to be passed on to SCIPaddConsExprExprBranchScore()
- *  - success: buffer to store whether the branching score callback was successful
- */
-#define SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
-   SCIP_SOL* sol, \
-   SCIP_Real auxvalue, \
-   unsigned int brscoretag, \
-   SCIP_Bool* success)
 
 typedef struct SCIP_ConsExpr_Nlhdlr         SCIP_CONSEXPR_NLHDLR;          /**< nonlinear handler */
 typedef struct SCIP_ConsExpr_NlhdlrData     SCIP_CONSEXPR_NLHDLRDATA;      /**< nonlinear handler data */

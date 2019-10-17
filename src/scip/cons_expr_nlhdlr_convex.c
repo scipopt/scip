@@ -1162,23 +1162,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreConvex)
-{ /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   /* we separate only convex functions here, so there is no use for branching
-    * if violations are small or there are numerical issues, then we will not have generated a cut, though
-    * in that case, we will still branch, but can also rely on the fallbacks in consexpr for this
-    */
-
-   return SCIP_OKAY;
-}
-
-static
 SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConvex)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
@@ -1232,7 +1215,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvex);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateConvex, NULL);
-   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreConvex);
 
    return SCIP_OKAY;
 }

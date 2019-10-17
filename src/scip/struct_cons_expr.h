@@ -72,7 +72,6 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRESTIMATE((*estimate));  /**< estimation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRREVERSEPROP((*reverseprop)); /**< reverse propagation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRHASH((*hash));          /**< hash callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE((*brscore)); /**< branching score callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRCURVATURE((*curvature)); /**< curvature detection callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRMONOTONICITY((*monotonicity)); /**< monotonicity detection callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRINTEGRALITY((*integrality)); /**< integrality detection callback (can be NULL) */
@@ -179,7 +178,6 @@ struct SCIP_ConsExpr_Nlhdlr
    SCIP_DECL_CONSEXPR_NLHDLREXITSEPA((*exitsepa));          /**< separation deinitialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRINTEVAL((*inteval));            /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP((*reverseprop));    /**< reverse propagation callback (can be NULL) */
-   SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE((*branchscore));    /**< branching scoring callback (can be NULL) */
    SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE((*reformulate));    /**< reformulation callback (can be NULL) */
 };
 

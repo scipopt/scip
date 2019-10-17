@@ -239,23 +239,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropXyz)
 #endif
 
 
-/** nonlinear handler callback for branching scores */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreXyz)
-{ /*lint --e{715}*/
-   *success = FALSE;
-
-   SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrBranchscoreXyz NULL
-#endif
-
-
 /** nonlinear handler callback for reformulation */
 #if 0
 static
@@ -300,7 +283,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrXyz(
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitXyz, nlhdlrExitXyz);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaXyz, nlhdlrEnfoXyz, nlhdlrEstimateXyz, nlhdlrExitSepaXyz);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalXyz, nlhdlrReversepropXyz);
-   SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreXyz);
    SCIPsetConsExprNlhdlrReformulate(scip, nlhdlr, nlhdlrReformulateXyz);
 
    return SCIP_OKAY;
