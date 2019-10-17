@@ -1226,6 +1226,7 @@ void updateScaledLP(
      return;
 
   lpi->scaled_lp->PopulateFromLinearProgram(*lpi->linear_program);
+  lpi->scaled_lp->AddSlackVariablesWhereNecessary(false);
 
   /* @todo: Avoid doing a copy if there is no scaling. */
   /* @todo: Avoid rescaling if not much changed. */
@@ -1233,8 +1234,6 @@ void updateScaledLP(
      lpi->scaler->Scale(lpi->scaled_lp);
   else
      lpi->scaler->Clear();
-
-  lpi->scaled_lp->AddSlackVariablesWhereNecessary(false);
 }
 
 /** common function between the two LPI Solve() functions */
