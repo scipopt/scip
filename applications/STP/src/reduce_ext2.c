@@ -693,7 +693,7 @@ void extTreeBottleneckMarkRootPath(
       SCIP_Real bottleneck_local = 0.0;
       int childNode = vertex;
       int currentNode = parentNode[vertex];
-      const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+      const SCIP_Bool isPc = graph_pc_isPc(graph);
 
       assert(currentNode != -1);
       assert(tree_deg[childNode] == 1);
@@ -707,7 +707,7 @@ void extTreeBottleneckMarkRootPath(
          if( tree_deg[childNode] == 2 )
          {
             bottleneck_local += parentEdgeCost[childNode];
-            if( pcmw && Is_term(graph->term[childNode]) )
+            if( isPc && Is_term(graph->term[childNode]) )
             {
                assert(graph_pc_termIsNonLeaf(graph, childNode) && graph->prize[childNode] > 0.0);
                bottleneck_local -= graph->prize[childNode];
@@ -787,7 +787,7 @@ SCIP_Real extTreeBottleneckGetDist(
 
    assert(bottleneckDist_node && parentEdgeCost && parentNode);
    assert(bottleneckDist_node[vertex_pathmarked] == -1.0 || vertex_pathmarked == tree_root);
-   assert(bottleneckDist_node[vertex_unmarked] == -1.0 || vertex_unmarked == tree_root);
+   assert(bottleneckDist_node[vertex_unmarked] == -1.0 || vertex_unmarked == tree_root || tree_deg[vertex_unmarked] > 1);
    assert(bottleneckDist_node[tree_root] >= 0.0);
 
    /* go down from vertex_unmarked up to lowest common ancestor with vertex_pathmarked  */
@@ -800,7 +800,7 @@ SCIP_Real extTreeBottleneckGetDist(
    else
    {
       SCIP_Real bottleneck_local = 0.0;
-      const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+      const SCIP_Bool isPc = graph_pc_isPc(graph);
 
       assert(parentNode[vertex_unmarked] >= 0);
 
@@ -813,7 +813,7 @@ SCIP_Real extTreeBottleneckGetDist(
          if( tree_deg[currentNode] == 2 )
          {
             bottleneck_local += parentEdgeCost[currentNode];
-            if( pcmw && Is_term(graph->term[currentNode]) )
+            if( isPc && Is_term(graph->term[currentNode]) )
             {
                assert(graph_pc_termIsNonLeaf(graph, currentNode) && graph->prize[currentNode] > 0.0);
                bottleneck_local -= graph->prize[currentNode];

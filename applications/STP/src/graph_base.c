@@ -2811,6 +2811,18 @@ SCIP_RETCODE graph_pc_contractEdge(
 }
 
 
+/** is this graph a prize-collecting variant? */
+SCIP_Bool graph_pc_isPc(
+   const GRAPH*          g                   /**< the graph */
+)
+{
+   const int type = g->stp_type;
+   assert(g != NULL);
+
+   return (type == STP_PCSPG || type == STP_RPCSPG);
+}
+
+
 /** is this graph a prize-collecting or maximum-weight variant? */
 SCIP_Bool graph_pc_isPcMw(
    const GRAPH*          g                   /**< the graph */

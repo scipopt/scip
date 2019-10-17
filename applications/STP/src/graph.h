@@ -447,6 +447,7 @@ extern SCIP_Bool graph_pc_termIsNonLeaf(const GRAPH*, int);
 extern SCIP_Bool graph_pc_term2edgeConsistent(const GRAPH*);
 extern SCIP_Bool graph_sol_unreduced(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, const int*);
+extern SCIP_Bool graph_pc_isPc(const GRAPH*);
 extern SCIP_Bool graph_pc_isPcMw(const GRAPH*);
 extern SCIP_Bool graph_nw_knotIsLeaf(const GRAPH*, int);
 extern SCIP_Bool graph_pc_isRootedPcMw(const GRAPH*);
