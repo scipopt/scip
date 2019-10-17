@@ -22,7 +22,14 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/* #define DEBUG_ENFO */
+#ifdef SCIP_DEBUG
+#define ENFO_LOGGING
+#endif
+
+/* enable to get log output for enforcement */
+/* #define ENFO_LOGGING */
+/* define to get enforcement logging into file */
+/* #define ENFOLOGFILE "consexpr_enfo.log" */
 
 /*lint -e528*/
 
@@ -120,6 +127,15 @@
 
 /** translates x to 2^x for non-negative integer x */
 #define POWEROFTWO(x) (0x1u << (x))
+
+#ifdef ENFO_LOGGING
+#define ENFOLOG(x) if( SCIPgetSubscipDepth(scip) == 0 ) { x }
+
+FILE* enfologfile = NULL;
+
+#else
+#define ENFOLOG(x)
+#endif
 
 /*
  * Data structures
@@ -5323,7 +5339,7 @@ SCIP_RETCODE enforceExprNlhdlr(
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
    {
-      SCIPdebugMsg(scip, "sepa of nlhdlr %s succeeded with result %d\n", SCIPgetConsExprNlhdlrName(nlhdlr), *result);
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    sepa of nlhdlr %s succeeded with result %d\n", SCIPgetConsExprNlhdlrName(nlhdlr), *result); )
       return SCIP_OKAY;
    }
 
@@ -5380,8 +5396,8 @@ SCIP_RETCODE enforceExprNlhdlr(
                if( (!overestimate && ( cutviol <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
                    ( overestimate && (-cutviol >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
                {
-                  SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut is too weak: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
-                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
+                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut is too weak: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
+                     SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate); )
                   sepasuccess = FALSE;
                }
             }
@@ -5389,16 +5405,16 @@ SCIP_RETCODE enforceExprNlhdlr(
          else
          {
             sepasuccess = FALSE;
-            SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded, but cut does not separate\n", SCIPgetConsExprNlhdlrName(nlhdlr));
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut does not separate\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
          }
       }
 
       /* clean up estimator */
       if( sepasuccess )
       {
-         SCIPdebugMsg(scip, "estimate of nlhdlr %s succeeded: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n    ",
             SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate);
-         SCIPdebug( SCIPprintRowprep(scip, rowprep, NULL) );
+         SCIPprintRowprep(scip, rowprep, enfologfile); )
 
          /* if not allowweakcuts, then do not attempt to get cuts more violated by scaling them up,
           * instead, may even scale them down, that is, scale so that max coef is close to 1
@@ -5409,7 +5425,7 @@ SCIP_RETCODE enforceExprNlhdlr(
 
             if( !sepasuccess )
             {
-               SCIPdebugMsg(scip, "cleanup cut failed, probably no longer violated after scaling down\n");
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup cut failed, probably no longer violated after scaling down\n"); )
             }
 
             if( auxvalue != SCIP_INVALID )
@@ -5432,8 +5448,8 @@ SCIP_RETCODE enforceExprNlhdlr(
                    (!overestimate && ( cutviol / auxvarcoef <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
                    ( overestimate && (-cutviol / auxvarcoef >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
                {
-                  SCIPdebugMsg(scip, "cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
-                     auxvalue, auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate);
+                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
+                     auxvalue, auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
                   sepasuccess = FALSE;
                }
             }
@@ -5452,7 +5468,7 @@ SCIP_RETCODE enforceExprNlhdlr(
 
             if( !sepasuccess )
             {
-               SCIPdebugMsg(scip, "cleanup failed, %d coefs modified\n", rowprep->nmodifiedvars);
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup failed, %d coefs modified\n", rowprep->nmodifiedvars); )
             }
 
             /* if cleanup left us with a useless cut, then consider branching on variables for which coef were changed */
@@ -5485,10 +5501,8 @@ SCIP_RETCODE enforceExprNlhdlr(
 
          SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
-#ifdef SCIP_DEBUG
-         SCIPdebugMsg(scip, "adding cut ");
-         SCIP_CALL( SCIPprintRow(scip, row, NULL) );
-#endif
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    adding cut ");
+         SCIP_CALL( SCIPprintRow(scip, row, enfologfile) ); )
 
          SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 
@@ -5507,12 +5521,12 @@ SCIP_RETCODE enforceExprNlhdlr(
       }
       else if( branchscoresuccess )
       {
-         SCIPdebugMsg(scip, "separation with estimate of nlhdlr %s failed, but branching candidates added\n", SCIPgetConsExprNlhdlrName(nlhdlr));
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed, but branching candidates added\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
          *result = SCIP_BRANCHED;  /* well, not branched, but added a branching candidate */
       }
       else
       {
-         SCIPdebugMsg(scip, "separation with estimate of nlhdlr %s failed and no branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), allowweakcuts ? " (!)" : "");
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), allowweakcuts ? " (!)" : ""); )
       }
 
       SCIPfreeRowprep(scip, &rowprep);
@@ -5586,8 +5600,11 @@ SCIP_RETCODE enforceExpr(
 
       /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
       SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
-      /* SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-      SCIPinfoMessage(scip, NULL, " (%p): auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> auxvalue: %.15g\n", (void*)expr, auxvarvalue, expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue); */
+      ENFOLOG(
+         SCIPinfoMessage(scip, enfologfile, "  expr ");
+         SCIPprintConsExprExpr(scip, conshdlr, expr, enfologfile);
+         SCIPinfoMessage(scip, enfologfile, " (%p): auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> auxvalue: %.15g\n", (void*)expr, auxvarvalue, expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue);
+      )
 
       /* TODO if expr is root of constraint (consdata->expr == expr),
        * then compare auxvalue with constraint sides instead of auxvarvalue, as the former is what actually matters
@@ -5602,17 +5619,17 @@ SCIP_RETCODE enforceExpr(
        */
       if( expr->enfos[e]->auxvalue != SCIP_INVALID && REALABS(expr->enfos[e]->auxvalue - auxvarvalue) < REALABS(expr->evalvalue - auxvarvalue) / 100.0 )
       {
-         SCIPdebugMsg(scip, "skip enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate);
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate); )
          continue;
       }
 
       if( !allowweakcuts && expr->enfos[e]->auxvalue != SCIP_INVALID && SCIPisFeasZero(scip, expr->enfos[e]->auxvalue - auxvarvalue) )
       {
-         SCIPdebugMsg(scip, "skip enforce using nlhdlr <%s> for expr %p (%s) with tiny auxviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, underestimate, overestimate);
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with tiny auxviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, underestimate, overestimate); )
          continue;
       }
 
-      SCIPdebugMsg(scip, "enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d weak:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate, allowweakcuts);
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g origviolation %g under:%d over:%d weak:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate, allowweakcuts); )
 
       /* if we want overestimation and violation w.r.t. auxiliary variables is also present, then call separation of nlhdlr */
       if( overestimate && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > minviolation) )  /*lint !e777*/
@@ -5624,21 +5641,21 @@ SCIP_RETCODE enforceExpr(
 
          if( hdlrresult == SCIP_CUTOFF )
          {
-            SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   found a cutoff -> stop separation\n"); )
             *result = SCIP_CUTOFF;
             break;
          }
 
          if( hdlrresult == SCIP_SEPARATED )
          {
-            SCIPdebugMsg(scip, "nlhdlr <%s> separating the current solution\n", nlhdlr->name);
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution\n", nlhdlr->name); )
             *result = SCIP_SEPARATED;
             /* TODO or should we always just stop here? */
          }
 
          if( hdlrresult == SCIP_BRANCHED )
          {
-            SCIPdebugMsg(scip, "nlhdlr <%s> added branching candidate\n", nlhdlr->name);
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> added branching candidate\n", nlhdlr->name); )
             assert(addbranchscores);
 
             /* separation takes precedence over branching */
@@ -5657,21 +5674,21 @@ SCIP_RETCODE enforceExpr(
 
          if( hdlrresult == SCIP_CUTOFF )
          {
-            SCIPdebugMsg(scip, "found a cutoff -> stop separation\n");
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   found a cutoff -> stop separation\n"); )
             *result = SCIP_CUTOFF;
             break;
          }
 
          if( hdlrresult == SCIP_SEPARATED )
          {
-            SCIPdebugMsg(scip, "nlhdlr <%s> separating the current solution\n", nlhdlr->name);
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution\n", nlhdlr->name); )
             *result = SCIP_SEPARATED;
             /* TODO or should we always just stop here? */
          }
 
          if( hdlrresult == SCIP_BRANCHED )
          {
-            SCIPdebugMsg(scip, "nlhdlr <%s> added branching candidate\n", nlhdlr->name);
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> added branching candidate\n", nlhdlr->name); )
             assert(addbranchscores);
 
             /* separation takes precedence over branching */
@@ -5740,21 +5757,19 @@ SCIP_RETCODE enforceConstraints2(
       if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
          continue;
 
-#ifdef DEBUG_ENFO
+      ENFOLOG(
       {
          int i;
-         SCIPdebugMsg(scip, "enforcing violation of point\n");
+         SCIPinfoMessage(scip, enfologfile, " constraint ");
+         SCIP_CALL( SCIPprintCons(scip, conss[c], enfologfile) );
+         SCIPinfoMessage(scip, enfologfile, "\n with point\n");
          for( i = 0; i < consdata->nvarexprs; ++i )
          {
             SCIP_VAR* var;
             var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
-            SCIPdebugMsg(scip, "  %s = %g bounds: %g,%g\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+            SCIPinfoMessage(scip, enfologfile, "  %s = %g bounds: %g,%g\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          }
-         SCIPdebugMsg(scip, "in constraint\n");
-         SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
-         SCIPinfoMessage(scip, NULL, ";\n");
-      }
-#endif
+      })
 
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
@@ -5882,16 +5897,17 @@ SCIP_RETCODE enforceConstraints2(
          /* introduce variable if it has not been fixed yet and has a branching score > 0 */
          if( !SCIPisEQ(scip, lb, ub) )
          {
-            SCIPdebugMsg(scip, "add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, brscore);
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, " add variable <%s>[%g,%g] as extern branching candidate with score %g\n", SCIPvarGetName(var), lb, ub, brscore); )
 
             SCIP_CALL( SCIPaddExternBranchCand(scip, var, brscore, SCIP_INVALID) );
             *result = SCIP_BRANCHED;
          }
          else
          {
-            SCIP_Real solval = SCIPgetSolVal(scip, sol, var);
-
-            SCIPdebugMsg(scip, "skip fixed variable <%s>[%.15g,%.15g] = %.15g (out-of-bounds by %g)\n", SCIPvarGetName(var), lb, ub, solval, MAX(lb - solval, solval - ub));
+            ENFOLOG(
+               SCIP_Real solval = SCIPgetSolVal(scip, sol, var);
+               SCIPinfoMessage(scip, enfologfile, " skip fixed variable <%s>[%.15g,%.15g] = %.15g (out-of-bounds by %g)\n", SCIPvarGetName(var), lb, ub, solval, MAX(lb - solval, solval - ub));
+            )
             /* *maxvarboundviol = MAX3(*maxvarboundviol, lb - solval, solval - ub); */
          }
       }
@@ -5984,14 +6000,15 @@ SCIP_RETCODE analyzeViolation(
                   continue;
 
                *maxvarboundviol = MAX(*maxvarboundviol, origviol);
-#ifdef DEBUG_ENFO
-               SCIPinfoMessage(scip, NULL, "var <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(var), auxvarlb, auxvarub, auxvarvalue);
+
+               ENFOLOG(
+               SCIPinfoMessage(scip, enfologfile, "var <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(var), auxvarlb, auxvarub, auxvarvalue);
                if( auxvarlb > auxvarvalue )
-                  SCIPinfoMessage(scip, NULL, " var >= lb violated by %g", auxvarlb - auxvarvalue);
+                  SCIPinfoMessage(scip, enfologfile, " var >= lb violated by %g", auxvarlb - auxvarvalue);
                if( auxvarub < auxvarvalue )
-                  SCIPinfoMessage(scip, NULL, " var <= ub violated by %g", auxvarvalue - auxvarub);
-               SCIPinfoMessage(scip, NULL, "\n");
-#endif
+                  SCIPinfoMessage(scip, enfologfile, " var <= ub violated by %g", auxvarvalue - auxvarub);
+               SCIPinfoMessage(scip, enfologfile, "\n");
+               )
             }
 
             continue;
@@ -6036,22 +6053,22 @@ SCIP_RETCODE analyzeViolation(
          *maxauxviol = MAX(*maxauxviol, REALABS(origviol));  /*lint !e666*/
          *minauxviol = MIN(*minauxviol, REALABS(origviol));  /*lint !e666*/
 
-#ifdef DEBUG_ENFO
-         SCIPinfoMessage(scip, NULL, "expr ");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
-         SCIPinfoMessage(scip, NULL, " (%p)[%.15g,%.15g] = %.15g\n", (void*)expr, expr->activity.inf, expr->activity.sup, expr->evalvalue);
+         ENFOLOG(
+         SCIPinfoMessage(scip, enfologfile, "expr ");
+         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, enfologfile) );
+         SCIPinfoMessage(scip, enfologfile, " (%p)[%.15g,%.15g] = %.15g\n", (void*)expr, expr->activity.inf, expr->activity.sup, expr->evalvalue);
 
-         SCIPinfoMessage(scip, NULL, "  auxvar <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(expr->auxvar), auxvarlb, auxvarub, auxvarvalue);
+         SCIPinfoMessage(scip, enfologfile, "  auxvar <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(expr->auxvar), auxvarlb, auxvarub, auxvarvalue);
          if( violover )
-            SCIPinfoMessage(scip, NULL, " auxvar <= expr violated by %g", origviol);
+            SCIPinfoMessage(scip, enfologfile, " auxvar <= expr violated by %g", origviol);
          if( violunder )
-            SCIPinfoMessage(scip, NULL, " auxvar >= expr violated by %g", -origviol);
+            SCIPinfoMessage(scip, enfologfile, " auxvar >= expr violated by %g", -origviol);
          if( auxvarlb > auxvarvalue )
-            SCIPinfoMessage(scip, NULL, " auxvar >= auxvar's lb violated by %g", auxvarlb - auxvarvalue);
+            SCIPinfoMessage(scip, enfologfile, " auxvar >= auxvar's lb violated by %g", auxvarlb - auxvarvalue);
          if( auxvarub < auxvarvalue )
-            SCIPinfoMessage(scip, NULL, " auxvar <= auxvar's ub violated by %g", auxvarvalue - auxvarub);
-         SCIPinfoMessage(scip, NULL, "\n");
-#endif
+            SCIPinfoMessage(scip, enfologfile, " auxvar <= auxvar's ub violated by %g", auxvarvalue - auxvarub);
+         SCIPinfoMessage(scip, enfologfile, "\n");
+         )
 
          /* compute aux-violation (nonlinear handlers) */
          for( e = 0; e < expr->nenfos; ++e )
@@ -6064,29 +6081,22 @@ SCIP_RETCODE analyzeViolation(
             /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
             SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
 
-#ifdef DEBUG_ENFO
-            SCIPinfoMessage(scip, NULL, "  nlhdlr <%s> = %.15g", nlhdlr->name, expr->enfos[e]->auxvalue);
-#endif
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "  nlhdlr <%s> = %.15g", nlhdlr->name, expr->enfos[e]->auxvalue); )
+
             auxviol = expr->enfos[e]->auxvalue == SCIP_INVALID ? SCIP_INVALID : auxvarvalue - expr->enfos[e]->auxvalue;  /*lint !e777*/
             if( violover && (expr->enfos[e]->auxvalue == SCIP_INVALID || auxvarvalue - expr->enfos[e]->auxvalue > 0.0) )  /*lint !e777*/
             {
-#ifdef DEBUG_ENFO
-               SCIPinfoMessage(scip, NULL, " auxvar <= nlhdlr-expr violated by %g", auxviol);
-#endif
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " auxvar <= nlhdlr-expr violated by %g", auxviol); )
                *maxauxviol = MAX(*maxauxviol, auxviol);
                *minauxviol = MIN(*minauxviol, auxviol);
             }
             if( violunder && (expr->enfos[e]->auxvalue == SCIP_INVALID || expr->enfos[e]->auxvalue - auxvarvalue > 0.0) )  /*lint !e777*/
             {
-#ifdef DEBUG_ENFO
-               SCIPinfoMessage(scip, NULL, " auxvar >= nlhdlr-expr violated by %g", -auxviol);
-#endif
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, " auxvar >= nlhdlr-expr violated by %g", -auxviol); )
                *maxauxviol = MAX(*maxauxviol, -auxviol);
                *minauxviol = MIN(*minauxviol, -auxviol);
             }
-#ifdef DEBUG_ENFO
-            SCIPinfoMessage(scip, NULL, "\n");
-#endif
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "\n"); )
          }
       }
    }
@@ -6136,14 +6146,14 @@ SCIP_RETCODE enforceConstraints(
 
    if( *result == SCIP_FEASIBLE )
    {
-      SCIPdebugMsg(scip, "skip enforcing constraints with maxviol=%e node %lld\n", maxviol, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: skip enforcing constraints with maxviol=%e\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxviol); )
       return SCIP_OKAY;
    }
 
    SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxviol, &minauxviol, &maxauxviol, &maxvarboundviol) );
 
-   SCIPdebugMsg(scip, "node %lld: enforcing constraints with max conssviol=%e, auxviolations in %g..%g, variable bounds violated by at most %g\n",
-      SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxviol, minauxviol, maxauxviol, maxvarboundviol);
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: enforcing constraints with max conssviol=%e, auxviolations in %g..%g, variable bounds violated by at most %g\n",
+      SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxviol, minauxviol, maxauxviol, maxvarboundviol); )
 
    /* try to propagate */
    if( conshdlrdata->propinenforce )
@@ -6168,7 +6178,7 @@ SCIP_RETCODE enforceConstraints(
    if( conshdlrdata->tightenlpfeastol && maxvarboundviol > maxauxviol && sol == NULL )
    {
       SCIPsetLPFeastol(scip, maxvarboundviol / 2.0);
-      SCIPdebugMsg(scip, "variable bound violation %g larger than auxiliary violation %g, reducing LP feastol to %g\n", maxvarboundviol, maxauxviol, SCIPgetLPFeastol(scip));
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " variable bound violation %g larger than auxiliary violation %g, reducing LP feastol to %g\n", maxvarboundviol, maxauxviol, SCIPgetLPFeastol(scip)); )
       ++conshdlrdata->ntightenlp;
 
       *result = SCIP_SOLVELP;
@@ -6198,12 +6208,12 @@ SCIP_RETCODE enforceConstraints(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMsg(scip, "could not enforce violation %g in regular ways, LP feastol=%g, becoming desperate now...\n", maxviol, SCIPgetLPFeastol(scip));
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " could not enforce violation %g in regular ways, LP feastol=%g, becoming desperate now...\n", maxviol, SCIPgetLPFeastol(scip)); )
 
    if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxvarboundviol) && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
    {
       SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxvarboundviol / 2.0, SCIPgetLPFeastol(scip) / 2.0)));
-      SCIPdebugMsg(scip, "variable bounds are violated by more than eps, reduced LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip));
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " variable bounds are violated by more than eps, reduced LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip)); )
       ++conshdlrdata->ntightenlp;
 
       *result = SCIP_SOLVELP;
@@ -6217,7 +6227,7 @@ SCIP_RETCODE enforceConstraints(
        * in the next enforcement round, we would then also allow even weaker cuts, as we want a minimal cut violation of LP's feastol
        */
       SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxauxviol / 2.0, SCIPgetLPFeastol(scip) / 10.0)));
-      SCIPdebugMsg(scip, "reduced LP feasibility tolerance to %g and hope\n", SCIPgetLPFeastol(scip));
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " reduced LP feasibility tolerance to %g and hope\n", SCIPgetLPFeastol(scip)); )
       ++conshdlrdata->ndesperatetightenlp;
 
       *result = SCIP_SOLVELP;
@@ -6231,7 +6241,7 @@ SCIP_RETCODE enforceConstraints(
 
    if( nnotify > 0 )
    {
-      SCIPdebugMsg(scip, "registered %d unfixed variables as branching candidates\n", nnotify);
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " registered %d unfixed variables as branching candidates\n", nnotify); )
       ++conshdlrdata->ndesperatebranch;
 
       *result = SCIP_INFEASIBLE;  /* enforceConstraints2 may have changed it to SCIP_DIDNOTFIND */
@@ -6243,7 +6253,7 @@ SCIP_RETCODE enforceConstraints(
     * either bound tightening failed to identify a possible cutoff due to tolerances
     * or tightenlpfeastol=FALSE and the LP solution that we try to enforce here is not within bounds (see st_e40)
     */
-   SCIPdebugMsg(scip, "enforcement with max. violation %g failed; cutting off node\n", maxviol);
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " enforcement with max. violation %g failed; cutting off node\n", maxviol); )
    *result = SCIP_CUTOFF;
    ++conshdlrdata->ndesperatecutoff;
 
@@ -6296,7 +6306,12 @@ SCIP_RETCODE separateConstraints(
 
    /* if none of our constraints are violated, don't attempt separation */
    if( !haveviol )
+   {
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: skip separation of non-violated constraints\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
       return SCIP_OKAY;
+   }
+
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: separation\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
 
    /* call separation */
    SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, FALSE, FALSE, result) );
@@ -7786,6 +7801,12 @@ SCIP_DECL_CONSINIT(consInitExpr)
    conshdlrdata->nforcelp = 0;
    SCIP_CALL( SCIPresetClock(scip, conshdlrdata->canonicalizetime) );
 
+
+#ifdef ENFOLOGFILE
+   if( SCIPgetSubscipDepth(scip) == 0 )
+      enfologfile = fopen(ENFOLOGFILE, "w");
+#endif
+
    return SCIP_OKAY;
 }
 
@@ -7830,6 +7851,14 @@ SCIP_DECL_CONSEXIT(consExitExpr)
          SCIP_CALL( SCIPlpiFree(&conshdlrdata->vp_lp[i]) );
       }
    }
+
+   ENFOLOG(
+      if( enfologfile != NULL )
+      {
+         fclose(enfologfile);
+         enfologfile = NULL;
+      }
+   )
 
    return SCIP_OKAY;
 }
