@@ -1072,7 +1072,7 @@ SCIP_Real extTreeGetDirectedRedcostProper(
    {
       nearestTerms[i] = -1;
       firstTermDist[i] = -1.0;
-      secondTermDist[i++] = -1.0;
+      secondTermDist[i] = -1.0;
    }
    assert(SCIPisLT(scip, redcost_directed, FARAWAY));
 #endif
@@ -1119,15 +1119,20 @@ SCIP_Real extTreeGetDirectedRedcostProper(
          return FARAWAY;
       }
 
+      /* all terminals in current tree? */
+      if( i == 3 )
+         i = 2;
+
       nearestTerms[leavescount] = term;
       firstTermDist[leavescount] = nodeTo3TermsPaths[leaf + i * nnodes].dist;
       secondTermDist[leavescount] = (i < 2) ? nodeTo3TermsPaths[leaf + (i + 1) * nnodes].dist : firstTermDist[leavescount];
-  //  printf("i %d \n", i);
-  //printf("term=%d, first=%f second=%f def=%f \n", term, firstTermDist[leavescount], secondTermDist[leavescount], nodeTo3TermsPaths[leaf].dist);
+ //   printf("i %d \n", i);
+ // printf("term=%d, first=%f second=%f def=%f \n", term, firstTermDist[leavescount], secondTermDist[leavescount], nodeTo3TermsPaths[leaf].dist);
       leavescount++;
 
 #ifndef NDEBUG
       redcost_debug += nodeTo3TermsPaths[leaf].dist;
+      assert(leavescount <= STP_EXTTREE_MAXNLEAVES_GUARD);
 #endif
    }
 
