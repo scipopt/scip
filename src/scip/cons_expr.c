@@ -6940,7 +6940,7 @@ void printExprHdlrStatistics(
    assert(conshdlrdata != NULL);
 
    SCIPinfoMessage(scip, file, "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
-      "SimplCalls", "Simplified", "SepaCalls", "#IntEval", "PropCalls", "Cuts", "Cutoffs", "DomReds", "BranchScor", "SepaTime", "PropTime", "IntEvalTi", "SimplifyTi");
+      "SimplCalls", "Simplified", "EstimCalls", "#IntEval", "PropCalls", "Cuts", "Cutoffs", "DomReds", "BranchScor", "EstimTime", "PropTime", "IntEvalTi", "SimplifyTi");
 
    for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
    {
@@ -6950,14 +6950,14 @@ void printExprHdlrStatistics(
       SCIPinfoMessage(scip, file, "  %-17s:", exprhdlr->name);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsimplifycalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsimplified);
-      SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nsepacalls);
+      SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nestimatecalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nintevalcalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->npropcalls);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutsfound);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ncutoffs);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->ndomreds);
       SCIPinfoMessage(scip, file, " %10lld", exprhdlr->nbranchscores);
-      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, exprhdlr->sepatime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, exprhdlr->estimatetime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, exprhdlr->proptime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, exprhdlr->intevaltime));
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, exprhdlr->simplifytime));
@@ -7925,7 +7925,7 @@ SCIP_DECL_CONSFREE(consFreeExpr)
       SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->simplifytime) );
       SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->intevaltime) );
       SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->proptime) );
-      SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->sepatime) );
+      SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->estimatetime) );
 
       SCIPfreeMemory(scip, &exprhdlr->name);
       SCIPfreeMemoryNull(scip, &exprhdlr->desc);
@@ -8019,7 +8019,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       exprhdlr = conshdlrdata->exprhdlrs[i];
       assert(exprhdlr != NULL);
 
-      exprhdlr->nsepacalls = 0;
+      exprhdlr->nestimatecalls = 0;
       exprhdlr->nintevalcalls = 0;
       exprhdlr->npropcalls = 0;
       exprhdlr->ncutsfound = 0;
@@ -8029,7 +8029,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       exprhdlr->nsimplifycalls = 0;
       exprhdlr->nsimplified = 0;
 
-      SCIP_CALL( SCIPresetClock(scip, exprhdlr->sepatime) );
+      SCIP_CALL( SCIPresetClock(scip, exprhdlr->estimatetime) );
       SCIP_CALL( SCIPresetClock(scip, exprhdlr->proptime) );
       SCIP_CALL( SCIPresetClock(scip, exprhdlr->intevaltime) );
       SCIP_CALL( SCIPresetClock(scip, exprhdlr->simplifytime) );
@@ -9199,7 +9199,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    (*exprhdlr)->data = data;
 
    /* create clocks */
-   SCIP_CALL( SCIPcreateClock(scip, &(*exprhdlr)->sepatime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*exprhdlr)->estimatetime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*exprhdlr)->proptime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*exprhdlr)->intevaltime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*exprhdlr)->simplifytime) );
@@ -9966,12 +9966,12 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(SCIPestimateConsExprExprHdlr)
 
    if( SCIPhasConsExprExprHdlrEstimate(expr->exprhdlr) )
    {
-      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->estimatetime) );
       SCIP_CALL( expr->exprhdlr->estimate(scip, conshdlr, expr, sol, overestimate, targetvalue, coefs, constant, islocal, success, branchcand) );
-      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->estimatetime) );
 
       /* update statistics */
-      ++expr->exprhdlr->nsepacalls;
+      ++expr->exprhdlr->nestimatecalls;
    }
 
    return SCIP_OKAY;
@@ -10055,14 +10055,14 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(SCIPinitsepaConsExprExprHdlr)
 
    if( SCIPhasConsExprExprHdlrInitSepa(expr->exprhdlr) )
    {
-      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->estimatetime) );
       SCIP_CALL( expr->exprhdlr->initsepa(scip, conshdlr, cons, expr, overestimate, underestimate, infeasible) );
-      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->estimatetime) );
 
       /* update statistics */
       if( *infeasible )
          ++(expr->exprhdlr->ncutoffs);
-      ++(expr->exprhdlr->nsepacalls);
+      ++(expr->exprhdlr->nestimatecalls);
    }
 
    return SCIP_OKAY;
@@ -10076,9 +10076,9 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(SCIPexitsepaConsExprExprHdlr)
 
    if( SCIPhasConsExprExprHdlrExitSepa(expr->exprhdlr) )
    {
-      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->sepatime) );
+      SCIP_CALL( SCIPstartClock(scip, expr->exprhdlr->estimatetime) );
       SCIP_CALL( expr->exprhdlr->exitsepa(scip, expr) );
-      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->sepatime) );
+      SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->estimatetime) );
    }
 
    return SCIP_OKAY;
