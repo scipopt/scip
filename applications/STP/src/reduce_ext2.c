@@ -2165,15 +2165,19 @@ SCIP_RETCODE reduce_extendedEdge2(
    SCIP_CALL( SCIPallocBufferArray(scip, &isterm, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_deg, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bottleneckDist, nnodes) );
+
    if( pcmw )
+   {
       SCIP_CALL( SCIPallocBufferArray(scip, &pcSdToNode, nnodes) );
+      for( int k = 0; k < nnodes; k++ )
+         pcSdToNode[k] = -1.0;
+   }
 
    graph_get_isTerm(graph, isterm);
 
    for( int k = 0; k < nnodes; k++ )
    {
       bottleneckDist[k] = -1.0;
-      pcSdToNode[k] = -1.0;
 
       if( graph->mark[k] )
          tree_deg[k] = 0;
