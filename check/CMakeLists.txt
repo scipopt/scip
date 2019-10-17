@@ -100,7 +100,8 @@ set(settings_MIPEX
     "exlp-auto"
     "exactlp"
     "ps"
-    "ps_exlp")
+    "ps_exlp"
+    "fpsolve")
 set(settings_MINLP
     "minlp"
     "undercover1"
