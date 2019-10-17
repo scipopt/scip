@@ -1507,6 +1507,8 @@ SCIP_RETCODE checkSubproblemConvexity(
    SCIP* subproblem;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS* cons;
+   SCIP_HASHMAP* assumevarfixed;
+   SCIP_VAR** vars;
    int nvars;
    int nbinvars;
    int nintvars;
@@ -1529,7 +1531,10 @@ SCIP_RETCODE checkSubproblemConvexity(
    if( probnumber >= 0 )
       subproblem = SCIPbendersSubproblem(benders, probnumber);
    else
+   {
       subproblem = set->scip;
+      assumevarfixed = NULL;
+   }
    assert(subproblem != NULL);
 
    convexcons = FALSE;
@@ -1537,7 +1542,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    isnonlinear = FALSE;
 
    /* getting the number of integer and binary variables to determine the problem type */
-   SCIP_CALL( SCIPgetVarsData(subproblem, NULL, &nvars, &nbinvars, &nintvars, &nimplintvars, NULL) );
+   SCIP_CALL( SCIPgetVarsData(subproblem, &vars, &nvars, &nbinvars, &nintvars, &nimplintvars, NULL) );
 
    /* if there are any binary, integer or implied integer variables, then the subproblems is marked as non-convex */
    if( nbinvars != 0 || nintvars != 0 || nimplintvars != 0 )
@@ -1564,6 +1569,29 @@ SCIP_RETCODE checkSubproblemConvexity(
       conshdlr_nonlinear = SCIPfindConshdlr(subproblem, "nonlinear");
       conshdlr_quadratic = SCIPfindConshdlr(subproblem, "quadratic");
       conshdlr_abspower = SCIPfindConshdlr(subproblem, "abspower");
+   }
+
+   /* if the quadratic constraint handler exists, then we create a hashmap of variables that can be assumed to be fixed.
+    * These variables correspond to the copies of the master variables in the subproblem
+    */
+   if( probnumber >= 0 && conshdlr_quadratic != NULL )
+   {
+      SCIP_VAR* mappedvar;
+
+      SCIP_CALL( SCIPhashmapCreate(&assumevarfixed, SCIPblkmem(set->scip), SCIPgetNVars(subproblem)) );
+
+      /* finding the subproblem variables that correspond to master variables */
+      for( i = 0; i < nvars; i++ )
+      {
+         /* getting the corresponding master problem variable for the given variable */
+         SCIP_CALL( SCIPbendersGetVar(benders, set, vars[i], &mappedvar, -1) );
+
+         /* if the mapped variable is not NULL, then it must be stored as a possible fixed variable */
+         if( mappedvar != NULL )
+         {
+            SCIP_CALL( SCIPhashmapInsert(assumevarfixed, vars[i], vars[i]) );
+         }
+      }
    }
 
    for( i = 0; i < SCIPgetNOrigConss(subproblem); ++i )
@@ -1614,7 +1642,7 @@ SCIP_RETCODE checkSubproblemConvexity(
       {
          isnonlinear = TRUE;
 
-         SCIP_CALL( SCIPcheckCurvatureQuadratic(subproblem, cons) );
+         SCIP_CALL( SCIPcheckCurvatureQuadratic(subproblem, cons, assumevarfixed) );
 
          if( (SCIPisInfinity(subproblem, -SCIPgetLhsQuadratic(subproblem, cons)) || SCIPisConcaveQuadratic(subproblem, cons)) &&
              (SCIPisInfinity(subproblem,  SCIPgetRhsQuadratic(subproblem, cons)) || SCIPisConvexQuadratic(subproblem, cons)) )
@@ -1700,6 +1728,10 @@ TERMINATE:
       SCIPdebugMsg(subproblem, "subproblem <%s> has been found to be of type %d\n", SCIPgetProbName(subproblem),
          SCIPbendersGetSubproblemType(benders, probnumber));
    }
+
+   /* releasing the fixed variable hashmap */
+   if( assumevarfixed != NULL )
+      SCIPhashmapFree(&assumevarfixed);
 
    return SCIP_OKAY;
 }
@@ -1799,33 +1831,33 @@ SCIP_RETCODE createSubproblems(
           */
          SCIP_CALL( checkSubproblemConvexity(benders, set, i) );
 
-      /* if the problem is has convex constraints but is nonlinear, then slack variables must be added to each of the
-       * constraints
-          */
-      if( benders->execfeasphase ||
-         (SCIPbendersGetSubproblemType(benders, i) <= SCIP_BENDERSSUBTYPE_CONVEXDIS
-          && SCIPbendersSubproblemIsNonlinear(benders, i)) )
-      {
-         /* the slack variables are only added to the subproblem once. If the initialisation methods are called from a
-          * copy, then the slack variables are not re-added. Alternatively, if the copy must be threadsafe, then the
-          * subproblems are created from scratch again, so the slack variables need to be added.
-          */
-         if( !benders->iscopy || benders->threadsafe )
+         /* if the problem is has convex constraints but is nonlinear, then slack variables must be added to each of the
+          * constraints
+             */
+         if( benders->execfeasphase ||
+            (SCIPbendersGetSubproblemType(benders, i) <= SCIP_BENDERSSUBTYPE_CONVEXDIS
+             && SCIPbendersSubproblemIsNonlinear(benders, i)) )
          {
-            SCIP_CALL( addSlackVarsToConstraints(benders, set, i) );
+            /* the slack variables are only added to the subproblem once. If the initialisation methods are called from a
+             * copy, then the slack variables are not re-added. Alternatively, if the copy must be threadsafe, then the
+             * subproblems are created from scratch again, so the slack variables need to be added.
+             */
+            if( !benders->iscopy || benders->threadsafe )
+            {
+               SCIP_CALL( addSlackVarsToConstraints(benders, set, i) );
+            }
+
+            /* setting the flag to indicate that slack variables have been added to the subproblem constraints. This is only
+             * set if the slack variables have been added at the request of the user.
+             */
+            if( benders->execfeasphase )
+               benders->feasibilityphase = TRUE;
          }
 
-         /* setting the flag to indicate that slack variables have been added to the subproblem constraints. This is only
-          * set if the slack variables have been added at the request of the user.
+         /* after checking the subproblem for convexity, if the subproblem has convex constraints and continuous variables,
+          * then the problem is entered into probing mode. Otherwise, it is initialised as a CIP
           */
-         if( benders->execfeasphase )
-            benders->feasibilityphase = TRUE;
-      }
-
-      /* after checking the subproblem for convexity, if the subproblem has convex constraints and continuous variables,
-       * then the problem is entered into probing mode. Otherwise, it is initialised as a CIP
-       */
-      if( SCIPbendersGetSubproblemType(benders, i) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
+         if( SCIPbendersGetSubproblemType(benders, i) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
          {
             /* if the user has not implemented a solve subproblem callback, then the subproblem solves are performed
              * internally. To be more efficient the subproblem is put into probing mode. */
