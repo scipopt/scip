@@ -2346,6 +2346,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    /* get row of basis inverse, loop through columns and muliply with matrix */
    ScatteredRow solution;
    lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(r), &solution);
+   lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(r)), &solution);
    const ColIndex num_cols = lpi->linear_program->num_variables();
 
    /* if we want a sparse vector */
@@ -2397,6 +2398,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 
    ScatteredColumn solution;
    lpi->solver->GetBasisFactorization().RightSolveForProblemColumn(ColIndex(c), &solution);
+   lpi->scaler->UnscaleColumnRightSolve(lpi->solver->GetBasisVector(), ColIndex(c), &solution);
+
    const RowIndex num_rows = solution.values.size();
 
    /* if we want a sparse vector and sparsity information is available */
