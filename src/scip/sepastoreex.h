@@ -59,17 +59,6 @@ SCIP_RETCODE SCIPsepastoreexFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
-/** informs separation storage that the setup of the initial LP starts now */
-extern
-void SCIPsepastoreexStartInitialLP(
-   SCIP_SEPASTOREEX*     sepastoreex           /**< separation storage */
-   );
-
-/** informs separation storage that the setup of the initial LP is now finished */
-extern
-void SCIPsepastoreexEndInitialLP(
-   SCIP_SEPASTOREEX*     sepastoreex           /**< separation storage */
-   );
 
 /** adds cut to separation storage and captures it */
 extern
@@ -87,7 +76,7 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
 
 /** adds cuts to the LP and clears separation storage */
 extern
-SCIP_RETCODE SCIPsepastoreexApplyCuts(
+SCIP_RETCODE SCIPsepastoreexSyncLPs(
    SCIP_SEPASTOREEX*     sepastoreex,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -106,16 +95,6 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LPEX*            lp                  /**< LP data */
-   );
-
-/** indicates whether a cut is applicable
- *
- *  A cut is applicable if it is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon.
- */
-extern
-SCIP_Bool SCIPsepastoreexIsCutApplicable(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_ROW*             cut                 /**< cut to check */
    );
 
 /** get cuts in the separation storage */

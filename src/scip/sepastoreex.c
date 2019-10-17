@@ -76,7 +76,7 @@ SCIP_RETCODE SCIPsepastoreexCreate(
 {
    if( !set->misc_exactsolve )
       return SCIP_OKAY;
-   
+
    assert(sepastoreex != NULL);
 
    SCIP_ALLOC( BMSallocMemory(sepastoreex) );
@@ -168,12 +168,6 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
       sepastoreex->ncutsfoundround++;
    }
 
-   /* check cut for redundancy or infeasibility */
-   /* @todo exip: we will need that probably :redundant = sepastoreIsCutRedundantOrInfeasible(sepastore, set, stat, cut, infeasible); */
-   /* Note that we add infeasible rows in any case, since we cannot be sure whether the return values are handled
-    * correctly. In this way, the LP becomes infeasible. */
-
-
    /* get enough memory to store the cut */
    SCIP_CALL( sepastoreexEnsureCutsMem(sepastoreex, set, sepastoreex->ncuts+1) );
    assert(sepastoreex->ncuts < sepastoreex->cutssize);
@@ -183,22 +177,12 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    /*SCIP_CALL( SCIPprintRow(set->scip, cut, NULL) );*/
 
    /* capture the cut */
-   // todo exip: might need this SCIProwCapture(cut);
    SCIProwexCapture(cut);
 
    pos = sepastoreex->ncuts;
 
    sepastoreex->cuts[pos] = cut;
    sepastoreex->ncuts++;
-
-   /* check, if the row addition to separation storage events are tracked if so, issue ROWADDEDSEPA event */
-   /* @todo exip if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWADDEDSEPA) != 0 )
-   {
-      SCIP_EVENT* event;
-
-      SCIP_CALL( SCIPeventCreateRowAddedSepa(&event, blkmem, cut) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
-   } */
 
    /* If the duals need to be collected, then the infeasible flag is set to FALSE. This ensures that the LP is solved */
    if( set->lp_alwaysgetduals && sepastoreex->initiallp )
@@ -209,7 +193,7 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
 
 /** adds cuts to the LP and clears separation storage */
 extern
-SCIP_RETCODE SCIPsepastoreexApplyCuts(
+SCIP_RETCODE SCIPsepastoreexSyncLPs(
    SCIP_SEPASTOREEX*     sepastoreex,        /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -307,15 +291,6 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
    /* release cuts */
    for( c = 0; c < sepastoreex->ncuts; ++c )
    {
-      /* check, if the row deletions from separation storage events are tracked if so, issue ROWDELETEDSEPA event */
-      /* @todo exip if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDSEPA) != 0 )
-      {
-         SCIP_EVENT* event;
-
-         SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[c]) );
-         SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
-      } */
-
       SCIP_CALL( SCIProwexRelease(&sepastoreex->cuts[c], blkmem, set, lp) );
    }
 
@@ -333,19 +308,6 @@ SCIP_RETCODE SCIPsepastoreexClearCuts(
    return SCIP_OKAY;
 }
 
-
-/** indicates whether a cut is applicable
- *
- *  A cut is applicable if it is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon.
- */
-extern
-SCIP_Bool SCIPsepastoreexIsCutApplicable(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_ROW*             cut                 /**< cut to check */
-   )
-{
-   return TRUE; /* @todo exip still do this SCIProwexIsModifiable(cut) || SCIProwexGetNNonz(cut) != 1 || sepastoreIsBdchgApplicable(set, cut); */
-}
 
 /** get cuts in the separation storage */
 extern
