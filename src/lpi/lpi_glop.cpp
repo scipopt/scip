@@ -1260,7 +1260,8 @@ SCIP_RETCODE SolveInternal(
    SCIPdebugMessage("status=%s  obj=%f  iter=%ld.\n", GetProblemStatusString(lpi->solver->GetProblemStatus()).c_str(),
       lpi->solver->GetObjectiveValue(), lpi->solver->GetNumberOfIterations());
 
-   if ( lpi->parameters->use_scaling() )
+   const ProblemStatus status = lpi->solver->GetProblemStatus();
+   if ( (status == ProblemStatus::PRIMAL_FEASIBLE || status == ProblemStatus::OPTIMAL) && lpi->parameters->use_scaling() )
    {
       const ColIndex num_cols = lpi->linear_program->num_variables();
 
