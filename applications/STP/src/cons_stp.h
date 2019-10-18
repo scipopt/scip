@@ -81,34 +81,6 @@ int* SCIPStpGetPcImplVerts(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** dual ascent heuristic */
-SCIP_RETCODE SCIPStpDualAscent(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
-   SCIP_Real*            objval,             /**< pointer to store objective value */
-   SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
-   SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
-   GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
-   const int*            result,             /**< solution array (solution needs to be provided) */
-   int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
-   int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
-   int                   root,               /**< the root */
-   SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
-   SCIP_Real             damaxdeviation      /**< maximum deviation for dual-ascent ( -1.0 for default) */
-   );
-
-/** dual ascent heuristic for the PCSPG and the MWCSP */
-SCIP_RETCODE SCIPStpDualAscentPcMw(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
-   SCIP_Real*            objval,             /**< pointer to store objective value */
-   SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
-   SCIP_Bool             ascendandprune,     /**< perform ascend-and-prune and add solution? */
-   int                   nruns               /**< number of dual ascent runs */
-   );
-
 
 #ifdef __cplusplus
 }

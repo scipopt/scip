@@ -62,6 +62,7 @@ include $(SCIPDIR)/make/make.project
 MAINNAME	=	stp
 CMAINOBJ	=	cmain.o \
 			cons_stp.o \
+			dualascent.o \
 			graph_history.o \
 			graph_base.o \
 			graph_load.o \

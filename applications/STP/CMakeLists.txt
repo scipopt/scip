@@ -11,6 +11,7 @@ add_executable(scipstp
     src/branch_stp.c
     src/cons_stp.c
     src/dialog_stp.c
+    src/dualascent.c
     src/event_bestsol.c
     src/graph_history.c
     src/graph_base.c
