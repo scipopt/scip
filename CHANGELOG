@@ -76,6 +76,7 @@ Fixed bugs
 - fixed an issue in repair heuristic in the case of loose (noncolumn) variables
 - allow user to correctly set heuristics/alns/(un)fixtol
 - fixed an issue in heur_completesol which is triggered during bound widening of unbounded continuous variables
+- fixed bug in cons_indicator if addopposite is true
 
 
 Miscellaneous
