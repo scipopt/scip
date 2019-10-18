@@ -2813,7 +2813,7 @@ SCIP_RETCODE priceAndCutLoop(
       /* if the LP is a relaxation and we are not solving exactly, then we may analyze an infeasible or bound exceeding
        * LP (not necessary in the root node) and cut off the current node
        */
-      if( !set->misc_exactsolve_old && !root && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp)
+      if( !root && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp)
          && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT) )
       {
          SCIP_CALL( SCIPconflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt,
@@ -3090,7 +3090,7 @@ SCIP_RETCODE solveNodeLP(
    }
 #endif
 
-   if( !(*cutoff) && !(*lperror) && !set->misc_exactsolve_old )
+   if( !(*cutoff) && !(*lperror) )
    {
       SCIP_Longint oldninitconssadded;
       SCIP_Longint oldnboundchgs;
@@ -3965,7 +3965,7 @@ SCIP_RETCODE propAndSolve(
          if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && transprob->ncontvars > 0 )
          {
             SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") could not prove infeasibility of LP %" SCIP_LONGINT_FORMAT " (exactsolve=%u, pricingaborted=%u), all variables are fixed, %d continuous vars\n",
-               stat->nnodes, stat->nlps, set->misc_exactsolve_old, *pricingaborted, transprob->ncontvars);
+               stat->nnodes, stat->nlps, set->misc_exactsolve, *pricingaborted, transprob->ncontvars);
             SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ")  -> have to call PerPlex() (feature not yet implemented)\n", stat->nnodes);
             /**@todo call PerPlex */
             return SCIP_LPERROR;
@@ -3977,7 +3977,7 @@ SCIP_RETCODE propAndSolve(
 
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "(node %" SCIP_LONGINT_FORMAT ") could not prove infeasibility of LP %" SCIP_LONGINT_FORMAT " (exactsolve=%u, pricingaborted=%u) -- using pseudo solution (%d unfixed vars) instead\n",
-               stat->nnodes, stat->nlps, set->misc_exactsolve_old, *pricingaborted, SCIPbranchcandGetNPseudoCands(branchcand));
+               stat->nnodes, stat->nlps, set->misc_exactsolve, *pricingaborted, SCIPbranchcandGetNPseudoCands(branchcand));
          }
       }
 
@@ -4732,7 +4732,7 @@ SCIP_RETCODE addCurrentSolution(
 
       SCIPsetDebugMsg(set, "found relaxation solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
-      if( checksol || set->misc_exactsolve_old )
+      if( checksol || set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
@@ -4815,7 +4815,7 @@ SCIP_RETCODE addCurrentSolution(
 
       SCIPsetDebugMsg(set, "found pseudo solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
-      if( checksol || set->misc_exactsolve_old )
+      if( checksol || set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
