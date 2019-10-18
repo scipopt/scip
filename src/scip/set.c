@@ -273,7 +273,11 @@
 #define SCIP_DEFAULT_MISC_USEVARTABLE      TRUE /**< should a hashtable be used to map from variable names to variables? */
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
+#ifdef SCIP_WITH_EXACTSOLVE
+#define SCIP_DEFAULT_MISC_EXACTSOLVE      TRUE /**< should the problem be solved exactly (with proven dual bounds)? */
+#else
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
+#endif
 #define SCIP_DEFAULT_MISC_USEFPRELAX      FALSE /**< should the fp approximation of the exact problem be a relaxation? */
 #define SCIP_DEFAULT_MISC_DBMETHOD          'a' /**< method for computing truely safe dual bounds
                                                  *   ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift,
