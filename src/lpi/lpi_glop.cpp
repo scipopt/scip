@@ -1259,7 +1259,6 @@ SCIP_RETCODE SolveInternal(
 
    if ( ! lpi->solver->Solve(*(lpi->scaled_lp), time_limit.get()).ok() )
    {
-      lpi->scaled_lp->DeleteSlackVariables();
       return SCIP_LPERROR;
    }
    lpi->lp_time_limit_was_reached = time_limit->LimitReached();
