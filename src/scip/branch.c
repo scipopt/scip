@@ -1324,6 +1324,7 @@ SCIP_RETCODE doBranchruleCreate(
    (*branchrule)->ndomredsfound = 0;
    (*branchrule)->nchildren = 0;
    (*branchrule)->initialized = FALSE;
+   (*branchrule)->isexact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/priority", name);
@@ -1551,7 +1552,8 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
 
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexeclp != NULL
-      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) )
+      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree))
+      && (!set->misc_exactsolve || branchrule->isexact) )
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
@@ -1658,7 +1660,8 @@ SCIP_RETCODE SCIPbranchruleExecExternSol(
 
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexecext != NULL
-      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) )
+      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) 
+      && (!set->misc_exactsolve || branchrule->isexact) )
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
@@ -1763,7 +1766,8 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
 
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexecps != NULL
-      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) )
+      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree))
+      && (!set->misc_exactsolve || branchrule->isexact) )
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
@@ -2178,6 +2182,17 @@ SCIP_Bool SCIPbranchruleIsInitialized(
 
    return branchrule->initialized;
 }
+
+/** flags this branching rule to be safe for use in exact solving mode */
+void SCIPbranchruleSetExact(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   branchrule->isexact = TRUE;
+}
+
 
 
 

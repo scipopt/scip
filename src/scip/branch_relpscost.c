@@ -686,7 +686,7 @@ SCIP_RETCODE execRelpscost(
       initstrongbranching = FALSE;
 
       /* check whether propagation should be performed */
-      propagate = (branchruledata->maxproprounds != 0);
+      propagate = (branchruledata->maxproprounds != 0) && !SCIPisExactSolve(scip);
 
       /* check whether valid bounds should be identified in probing-like fashion */
       probingbounds = propagate && branchruledata->probingbounds;
@@ -1779,6 +1779,9 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
+
+   /* relpcost is safe to use in exact solving mode */
+   SCIPbranchruleSetExact(branchrule);
 
    return SCIP_OKAY;
 }
