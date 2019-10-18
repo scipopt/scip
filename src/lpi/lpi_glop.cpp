@@ -2238,7 +2238,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       for (ScatteredRowIterator iter = solution.begin(); iter != end; ++iter)
       {
          int idx = (*iter).column().value();
-         assert( 0 <= idx && idx < lpi->linear_program->num_variables() );
+         assert( 0 <= idx && idx < lpi->linear_program->num_constraints() );
          coef[idx] = (*iter).coefficient();
          inds[(*ninds)++] = idx;
       }
