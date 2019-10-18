@@ -4030,11 +4030,13 @@ SCIP_Bool restartAllowed(
 
    return (set->nactivepricers == 0 && !set->reopt_enable
          && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
-         && (set->limit_restarts == -1 || stat->nruns <= set->limit_restarts));
+         && (set->limit_restarts == -1 || stat->nruns <= set->limit_restarts)
+         && !(set->misc_exactsolve));
 }
 #else
 #define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && !set->reopt_enable && ((set)->presol_maxrestarts == -1 || (stat)->nruns <= (set)->presol_maxrestarts) \
-                                                && (set->limit_restarts == -1 || stat->nruns <= set->limit_restarts))
+                                                && (set->limit_restarts == -1 || stat->nruns <= set->limit_restarts)
+                                                && !(set->misc_exactsolve))
 #endif
 
 /** solves the focus node */
