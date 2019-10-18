@@ -1270,7 +1270,7 @@ SCIP_RETCODE SCIPheurExec(
 
    delayed = FALSE;
    execute = SCIPheurShouldBeExecuted(heur, depth, lpstateforkdepth, heurtiming, &delayed);
-   execute = !set->misc_exactsolve || SCIPheurIsExact(heur);
+   execute = execute && (!set->misc_exactsolve || SCIPheurIsExact(heur));
 
    if( delayed )
    {
