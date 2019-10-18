@@ -83,8 +83,8 @@
  * TODO debatable: after root node probaby better
  */
 
-#define HEUR_TIMING SCIP_HEURTIMING_BEFORENODE /*SCIP_HEURTIMING_AFTERNODE*/
-#define HEUR_USESSUBSCIP TRUE                  /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_AFTERNODE
+#define HEUR_USESSUBSCIP      TRUE                  /**< does the heuristic use a secondary SCIP instance? */
 
 #define COUPLINGSIZE 3
 
@@ -829,7 +829,16 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    doScaling = FALSE;
    gap = heurdata->gap;
-   SCIPdebugMsg(scip, "Initialize padm heuristic\n");
+   SCIPdebugMsg(scip, "Initialize padm heuristic ");
+   if( heurtiming == SCIP_HEURTIMING_BEFORENODE )
+   {
+      SCIPdebugMsg(scip, "before node\n");
+   }
+   if( heurtiming == SCIP_HEURTIMING_AFTERNODE )
+   {
+      SCIPdebugMsg(scip, "after node\n");
+   }
+   
 #if 0
    SCIP_CALL( SCIPwriteOrigProblem(scip, "debug_padm_orig.lp", "lp", FALSE) );
 #endif
@@ -1151,8 +1160,22 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_coupling_block_%d",
                             SCIPvarGetName(linkvars[linkvaridx]), b2);
                (problem->blocks[b]).couplingcons[j] = NULL;
-               SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
+
+               /* create linking constraint with initial side equal to zero */
+               if( heurtiming == SCIP_HEURTIMING_BEFORENODE )
+               {
+                  SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
                                                    name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, 0.0, 0.0) );
+               }
+
+               /* create linking constraint with initial side equal to LP solution */
+               if( heurtiming == SCIP_HEURTIMING_AFTERNODE )
+               {
+                  SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
+                                                   name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef,
+                                                   SCIPvarGetLPSol(linkvars[linkvaridx]), SCIPvarGetLPSol(linkvars[linkvaridx])) );
+               }
+
                SCIP_CALL( SCIPaddCons((problem->blocks[b]).subscip, (problem->blocks[b]).couplingcons[j]) );
                assert((problem->blocks[b]).couplingcons[j] != NULL);
                binfo->couplingCons = (problem->blocks[b]).couplingcons[j];
@@ -1668,6 +1691,7 @@ TERMINATE:
    if( problem != NULL )
       freeProblem(&problem);
 
+   SCIPdebugMsg(scip, "Leave padm heuristic\n");
    return SCIP_OKAY;
 }
 
