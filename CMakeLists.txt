@@ -200,7 +200,7 @@ set(WITH_SCIPDEF on)
 
 # EXACT_SOLVE
 if(EXSOLVE)
-    add_definitions(-DWITH_EXACTSOLVE)
+    add_definitions(-DSCIP_WITH_EXACTSOLVE)
 endif()
 set(lpiex lpi/lpiex_spx.cpp)
 
