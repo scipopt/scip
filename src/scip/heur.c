@@ -943,6 +943,7 @@ SCIP_RETCODE doHeurCreate(
    (*heur)->initialized = FALSE;
    (*heur)->divesets = NULL;
    (*heur)->ndivesets = 0;
+   (*heur)->isexact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/priority", name);
@@ -1269,6 +1270,7 @@ SCIP_RETCODE SCIPheurExec(
 
    delayed = FALSE;
    execute = SCIPheurShouldBeExecuted(heur, depth, lpstateforkdepth, heurtiming, &delayed);
+   execute = !set->misc_exactsolve || SCIPheurIsExact(heur);
 
    if( delayed )
    {
@@ -2029,4 +2031,14 @@ void SCIPvariableGraphFree(
    SCIPhashtableFree(&(*vargraph)->visitedconss);
 
    SCIPfreeBlockMemory(scip, vargraph);
+}
+
+/** returns TRUE if the heuristic is safe to be executed in exact solving mode */
+SCIP_Bool SCIPheurIsExact(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return heur->isexact;
 }
