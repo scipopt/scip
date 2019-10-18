@@ -185,6 +185,7 @@ SCIP_RETCODE doPropCreate(
    (*prop)->ndomredsfound = 0;
    (*prop)->wasdelayed = FALSE;
    (*prop)->initialized = FALSE;
+   (*prop)->isexact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/priority", name);
@@ -541,7 +542,7 @@ SCIP_RETCODE SCIPpropPresol(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( prop->proppresol == NULL )
+   if( prop->proppresol == NULL || (set->misc_exactsolve && !prop->isexact) )
       return SCIP_OKAY;
 
    /* check number of presolving rounds */
@@ -653,7 +654,8 @@ SCIP_RETCODE SCIPpropExec(
    assert(depth >= 0);
    assert(result != NULL);
 
-   if( (depth == 0 && prop->freq == 0) || (prop->freq > 0 && depth % prop->freq == 0) )
+   if( ((depth == 0 && prop->freq == 0) || (prop->freq > 0 && depth % prop->freq == 0))
+         && (!set->misc_exactsolve || prop->isexact) )
    {
       if( !prop->delay || execdelayed )
       {
