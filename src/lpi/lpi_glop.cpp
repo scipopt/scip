@@ -2237,8 +2237,10 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       ScatteredRowIterator end = solution.end();
       for (ScatteredRowIterator iter = solution.begin(); iter != end; ++iter)
       {
-         coef[(*ninds)] = (*iter).coefficient();
-         inds[(*ninds)++] = (*iter).column().value();
+         int idx = (*iter).column().value();
+         assert( 0 <= idx && idx < lpi->linear_program->num_variables() );
+         coef[idx] = (*iter).coefficient();
+         inds[(*ninds)++] = idx;
       }
       return SCIP_OKAY;
    }
@@ -2295,7 +2297,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
          SCIP_Real val = solution[col];
          if ( fabs(val) >= eps )
          {
-            coef[(*ninds)] = val;
+            coef[row] = val;
             inds[(*ninds)++] = row;
          }
       }
@@ -2354,7 +2356,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
          SCIP_Real val = operations_research::glop::ScalarProduct(solution.values, lpi->linear_program->GetSparseColumn(col));
          if ( fabs(val) >= eps )
          {
-            coef[(*ninds)] = val;
+            coef[col.value()] = val;
             inds[(*ninds)++] = col.value();
          }
       }
@@ -2403,8 +2405,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       ScatteredColumnIterator end = solution.end();
       for (ScatteredColumnIterator iter = solution.begin(); iter != end; ++iter)
       {
-         coef[(*ninds)] = (*iter).coefficient();
-         inds[(*ninds)++] = (*iter).row().value();
+         int idx = (*iter).row().value();
+         assert( 0 <= idx && idx < num_rows );
+         coef[idx] = (*iter).coefficient();
+         inds[(*ninds)++] = idx;
       }
       return SCIP_OKAY;
    }
