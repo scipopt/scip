@@ -152,6 +152,7 @@ SCIP_RETCODE doSepaCreate(
    (*sepa)->lpwasdelayed = FALSE;
    (*sepa)->solwasdelayed = FALSE;
    (*sepa)->initialized = FALSE;
+   (*sepa)->isexact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/priority", name);
@@ -406,7 +407,8 @@ SCIP_RETCODE SCIPsepaExecLP(
        ( (depth == 0 && sepa->freq != -1) ||
          (sepa->freq > 0 && depth % sepa->freq == 0 &&
             (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / sepa->freq)) / LOG2((SCIP_Real)sepa->expbackoff)))) ||
-         sepa->lpwasdelayed )
+         sepa->lpwasdelayed) &&
+         (!set->misc_exactsolve || sepa->isexact)
      )
    {
       if( (!sepa->delay && !sepa->lpwasdelayed) || execdelayed )

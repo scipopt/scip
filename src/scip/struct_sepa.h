@@ -68,6 +68,7 @@ struct SCIP_Sepa
    SCIP_Bool             lpwasdelayed;       /**< was the LP separation delayed at the last call? */
    SCIP_Bool             solwasdelayed;      /**< was the solution separation delayed at the last call? */
    SCIP_Bool             initialized;        /**< is separator initialized? */
+   SCIP_Bool             isexact;            /**< is the separator safe to be used in exact solving mode? */
 };
 
 #ifdef __cplusplus
