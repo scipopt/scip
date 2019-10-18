@@ -1196,7 +1196,9 @@ void RatMessage(
    assert(rational != NULL);
 
    if( SCIP_MAXSTRLEN == RatToString(rational, buf, SCIP_MAXSTRLEN) )
+   {
       SCIPerrorMessage("WARNING: Rational does not fit in line \n.");
+   }
 
    SCIPmessageFPrintInfo(msg, file, "%s", buf);
 }
