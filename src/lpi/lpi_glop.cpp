@@ -1274,7 +1274,7 @@ SCIP_RETCODE SolveInternal(
       const double feastol = lpi->parameters->primal_feasibility_tolerance();
       if ( ! lpi->linear_program->SolutionIsLPFeasible(unscaledsol, feastol) )
       {
-         SCIPdebugMessage("Solution not feasible w.r.t. absolute tolerance %f -> reoptimize.\n", feastol);
+         SCIPdebugMessage("Solution not feasible w.r.t. absolute tolerance %g -> reoptimize.\n", feastol);
 
          /* Re-solve without scaling to try to fix the infeasibility. */
          lpi->parameters->set_use_scaling(false);
@@ -2815,11 +2815,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_FEASTOL -> %f.\n", dval);
+      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_FEASTOL -> %g.\n", dval);
       lpi->parameters->set_primal_feasibility_tolerance(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
-      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_DUALFEASTOL -> %f.\n", dval);
+      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_DUALFEASTOL -> %g.\n", dval);
       lpi->parameters->set_dual_feasibility_tolerance(dval);
       break;
    case SCIP_LPPAR_OBJLIM:
