@@ -107,10 +107,9 @@ set(settings_fastMIP
     "vbcvisualization"
   )
 set(settings_MIPEX
-    "exlp-auto"
+    "exact-auto"
     "exactlp"
-    "ps"
-    "ps_exlp"
+    "projshift"
     "fpsolve")
 set(settings_MINLP
     "minlp"
