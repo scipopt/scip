@@ -92,6 +92,10 @@
 #define DEFAULT_DISJUNCTCUT    FALSE /**< Only disjunct Cuts FALSE */
 #define DEFAULT_NESTEDCUT      FALSE /**< Try Nested-Cuts FALSE*/
 #define DEFAULT_FLOWSEP        TRUE  /**< Try Flow-Cuts */
+#define DEFAULT_INFLOWSEP       TRUE  /**< Try in-flow Cuts */
+#define DEFAULT_INFLOWTERMSEP   TRUE  /**< Try terminal in-flow Cuts */
+#define DEFAULT_OUTFLOWSEP      TRUE
+#define DEFAULT_BALANCEFLOWSEP  TRUE
 
 #define DEFAULT_DAMAXDEVIATION 0.25  /**< max deviation for dual ascent */
 #define DA_MAXDEVIATION_LOWER 0.01  /**< lower bound for max deviation for dual ascent */
@@ -130,6 +134,10 @@ struct SCIP_ConshdlrData
    SCIP_Bool             disjunctcut;        /**< should disjunction cuts be applied? */
    SCIP_Bool             nestedcut;          /**< should nested cuts be applied? */
    SCIP_Bool             flowsep;            /**< should flow separation be applied? */
+   SCIP_Bool             inflowsep;          /**< should unit in-flow separation be applied? */
+   SCIP_Bool             intermflowsep;      /**< should unit terminal in-flow separation be applied? */
+   SCIP_Bool             outflowsep;         /**< should single-edge out-flow separation be applied? */
+   SCIP_Bool             balanceflowsep;     /**< should flow-balance separation be applied? */
    int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
@@ -356,7 +364,6 @@ SCIP_RETCODE cut_add(
 
    return SCIP_OKAY;
 }
-
 
 
 static
@@ -706,6 +713,222 @@ SCIP_RETCODE sep_deg2(
 }
 #endif
 
+
+
+/** separate in-flow cuts:
+ *  input of a non-terminal vertex has to be <= 1.0 */
+static
+SCIP_RETCODE sep_flowIn(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      xval,               /**< LP-solution values */
+   int                   vertex,             /**< vertex */
+   SCIP_VAR**            vars,               /**< variables */
+   int*                  cutcount            /**< counts cuts */
+)
+{
+   SCIP_Real sum = 0.0;
+
+   assert(xval && cutcount && vars);
+   assert(!Is_term(g->term[vertex]));
+
+   for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
+      sum += xval[k];
+
+   if( SCIPisFeasGT(scip, sum, 1.0) )
+   {
+      SCIP_ROW* row = NULL;
+      SCIP_Bool infeasible;
+
+      SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "inflow", -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE));
+      SCIP_CALL(SCIPcacheRowExtensions(scip, row));
+
+      for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
+         SCIP_CALL(SCIPaddVarToRow(scip, row, vars[k], 1.0));
+
+      SCIP_CALL(SCIPflushRowExtensions(scip, row));
+      SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
+
+#if ADDCUTSTOPOOL
+      /* if at root node, add cut to pool */
+      if( !infeasible )
+         SCIP_CALL( SCIPaddPoolCut(scip, row) );
+#endif
+
+      (*cutcount)++;
+
+      SCIP_CALL(SCIPreleaseRow(scip, &row));
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** separate terminal in-flow cuts
+ *  at terminal input sum == 1
+ *  basically a cut (starcut) */
+static
+SCIP_RETCODE sep_flowTermIn(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      xval,               /**< LP-solution values */
+   int                   vertex,             /**< vertex */
+   SCIP_VAR**            vars,               /**< variables */
+   int*                  cutcount            /**< counts cuts */
+)
+{
+   SCIP_Real sum = 0.0;
+
+   assert(Is_term(g->term[vertex]));
+
+   for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
+      sum += xval[k];
+
+   if( !SCIPisFeasEQ(scip, sum, 1.0) )
+   {
+      SCIP_ROW* row = NULL;
+      SCIP_Bool infeasible;
+
+      SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "term", 1.0, 1.0, FALSE, FALSE, TRUE));
+
+      SCIP_CALL(SCIPcacheRowExtensions(scip, row));
+
+      for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
+         SCIP_CALL(SCIPaddVarToRow(scip, row, vars[k], 1.0));
+
+      SCIP_CALL(SCIPflushRowExtensions(scip, row));
+      SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
+
+#if ADDCUTSTOPOOL
+      /* add cut to pool */
+      if( !infeasible )
+         SCIP_CALL( SCIPaddPoolCut(scip, row) );
+#endif
+
+      (*cutcount)++;
+
+      SCIP_CALL(SCIPreleaseRow(scip, &row));
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** separate flow-balance constraints
+ *  incoming flow <= outgoing flow */
+static
+SCIP_RETCODE sep_flowBalance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      xval,               /**< LP-solution values */
+   int                   vertex,             /**< vertex */
+   SCIP_VAR**            vars,               /**< variables */
+   int*                  cutcount            /**< counts cuts */
+)
+{
+   SCIP_ROW* row = NULL;
+   SCIP_Real sum = 0.0;
+
+   assert(!Is_term(g->term[vertex]));
+
+   for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
+      sum -= xval[k];
+
+   for( int k = g->outbeg[vertex]; k != EAT_LAST; k = g->oeat[k] )
+      sum += xval[k];
+
+   if( SCIPisFeasNegative(scip, sum) )
+   {
+      SCIP_Bool infeasible;
+
+      SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "flowbalance", 0.0, (g->terms == 2) ? 0.0 : SCIPinfinity(scip), FALSE, FALSE, TRUE));
+      SCIP_CALL(SCIPcacheRowExtensions(scip, row));
+
+      for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
+         SCIP_CALL(SCIPaddVarToRow(scip, row, vars[k], -1.0));
+
+      for( int k = g->outbeg[vertex]; k != EAT_LAST; k = g->oeat[k] )
+         SCIP_CALL(SCIPaddVarToRow(scip, row, vars[k], 1.0));
+
+      SCIP_CALL(SCIPflushRowExtensions(scip, row));
+      SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
+
+#if ADDCUTSTOPOOL
+      /* if at root node, add cut to pool */
+      if( !infeasible )
+         SCIP_CALL( SCIPaddPoolCut(scip, row) );
+#endif
+
+      (*cutcount)++;
+
+      SCIP_CALL(SCIPreleaseRow(scip, &row));
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** separate
+ * the value of each outgoing edge needs to be smaller than the sum of the in-going edges */
+static
+SCIP_RETCODE sep_flowEdgeOut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      xval,               /**< LP-solution values */
+   int                   vertex,             /**< vertex */
+   SCIP_VAR**            vars,               /**< variables */
+   int*                  cutcount            /**< counts cuts */
+)
+{
+   const int i = vertex;
+
+   for( int ijedge = g->outbeg[i]; ijedge != EAT_LAST; ijedge = g->oeat[ijedge] )
+   {
+      const int j = g->head[ijedge];
+      SCIP_Real sum = -xval[ijedge];
+
+      for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+         if( g->tail[e] != j )
+            sum += xval[e];
+
+      if( SCIPisFeasNegative(scip, sum) )
+      {
+         SCIP_Bool infeasible;
+         SCIP_ROW* row = NULL;
+
+         SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "edgeflow", 0.0, SCIPinfinity(scip), FALSE, FALSE, TRUE));
+         SCIP_CALL(SCIPcacheRowExtensions(scip, row));
+
+         SCIP_CALL(SCIPaddVarToRow(scip, row, vars[ijedge], -1.0));
+
+         for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+         {
+            if( g->tail[e] != j )
+               SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], 1.0));
+         }
+
+         SCIP_CALL(SCIPflushRowExtensions(scip, row));
+         SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
+
+#if ADDCUTSTOPOOL
+         /* add cut to pool */
+         if( !infeasible )
+            SCIP_CALL( SCIPaddPoolCut(scip, row) );
+#endif
+
+         (*cutcount)++;
+         SCIP_CALL(SCIPreleaseRow(scip, &row));
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** separate flow-cuts */
 static
 SCIP_RETCODE sep_flow(
@@ -717,247 +940,69 @@ SCIP_RETCODE sep_flow(
    int*                  ncuts               /**< pointer to store number of cuts */
    )
 {
-   GRAPH*  g;
+   const GRAPH* g = consdata->graph;
    SCIP_VAR** vars;
-   SCIP_ROW* row = NULL;
    SCIP_Real* xval;
-   SCIP_Real sum;
-   int    i;
-   int    k;
-   int    ind;
-   int    layer;
-   int    count = 0;
-   unsigned int    flowsep;
+   int count = 0;
+   const SCIP_Bool flowsep = conshdlrdata->flowsep;
+   const SCIP_Bool inflowsep = conshdlrdata->inflowsep;
+   const SCIP_Bool intermflowsep = conshdlrdata->intermflowsep;
+   const SCIP_Bool outflowsep = conshdlrdata->outflowsep;
+   const SCIP_Bool balanceflowsep = conshdlrdata->balanceflowsep;
 
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(conshdlrdata != NULL);
+   assert(scip && conshdlr && g);
 
    vars = SCIPprobdataGetVars(scip);
-   flowsep = conshdlrdata->flowsep;
-
-   /* get the graph */
-   g = consdata->graph;
-   assert(g != NULL);
-
    xval = SCIPprobdataGetXval(scip, NULL);
-   assert(xval != NULL);
+   assert(xval);
 
-   for(i = 0; i < g->knots; i++)
+   for( int i = 0; i < g->knots; i++ )
    {
-      for(layer = 0; layer < g->layers; layer++)
+      if( i == g->source )
+         continue;
+
+      if( intermflowsep && Is_term(g->term[i]) )
       {
-         /* continue at root */
-         if( i == g->source )
-            continue;
+         SCIP_CALL( sep_flowTermIn(scip, conshdlr, g, xval, i, vars, &count) );
 
-         /* at terminal: input sum == 1
-          * basically a cut (starcut))
-          */
-         if( g->term[i] == layer )
-         {
-            sum = 0.0;
+         if( *ncuts + count >= maxcuts )
+            break;
+      }
 
-            for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
-            {
-               ind  = layer * g->edges + k;
-               sum += (xval != NULL) ? xval[ind] : 0.0;
-            }
+      /* flow cuts disabled? */
+      if( !flowsep )
+         continue;
 
-            if( !SCIPisFeasEQ(scip, sum, 1.0) )
-            {
-               SCIP_Bool infeasible;
+      if( outflowsep )
+      {
+         SCIP_CALL( sep_flowEdgeOut(scip, conshdlr, g, xval, i, vars, &count) );
 
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "term", 1.0,
-                     1.0, FALSE, FALSE, TRUE) );
+         if( *ncuts + count >= maxcuts )
+            break;
+      }
 
-               SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+      /* from here on consider only non terminals */
+      if( Is_term(g->term[i]) )
+         continue;
 
-               for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
-               {
-                  ind  = layer * g->edges + k;
+      if( inflowsep )
+      {
+         SCIP_CALL( sep_flowIn(scip, conshdlr, g, xval, i, vars, &count) );
 
-                  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
-               }
+         if( *ncuts + count >= maxcuts )
+            break;
+      }
 
-               SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+      if( balanceflowsep )
+      {
+         SCIP_CALL( sep_flowBalance(scip, conshdlr, g, xval, i, vars, &count) );
 
-               SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-
-#if ADDCUTSTOPOOL
-               /* add cut to pool */
-               if( !infeasible )
-                  SCIP_CALL( SCIPaddPoolCut(scip, row) );
-#endif
-
-               count++;
-
-               SCIP_CALL( SCIPreleaseRow(scip, &row) );
-
-               if( *ncuts + count >= maxcuts )
-                  goto TERMINATE;
-            }
-         }
-
-         /* flow cuts disabled? */
-         if( !flowsep )
-            continue;
-
-         /* the value of each outgoing edge needs to be smaller than the sum of the ingoing edges */
-         for( int ijedge = g->outbeg[i]; ijedge != EAT_LAST; ijedge = g->oeat[ijedge] )
-         {
-            const int j = g->head[ijedge];
-
-            assert(layer == 0);
-            assert(xval != NULL);
-
-            ind = ijedge;
-            sum = -xval[ind];
-
-            for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
-               if( g->tail[e] != j )
-                  sum += xval[e];
-
-            if( SCIPisFeasNegative(scip, sum) )
-            {
-               SCIP_Bool infeasible;
-
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "flow", 0.0, SCIPinfinity(scip),
-                     FALSE, FALSE, TRUE) );
-
-               SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-
-               ind = ijedge;
-
-               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], -1.0) );
-
-               for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
-               {
-                  if( g->tail[e] != j )
-                     SCIP_CALL( SCIPaddVarToRow(scip, row, vars[e], 1.0) );
-               }
-
-               SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-               SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-
-#if ADDCUTSTOPOOL
-               /* add cut to pool */
-               if( !infeasible )
-                  SCIP_CALL( SCIPaddPoolCut(scip, row) );
-#endif
-
-               count++;
-
-               SCIP_CALL( SCIPreleaseRow(scip, &row) );
-
-               if( *ncuts + count >= maxcuts )
-                  goto TERMINATE;
-            }
-         }
-
-         /* consider only non terminals */
-         if( g->term[i] == layer )
-            continue;
-
-         /* input of a vertex has to be <= 1.0 */
-         sum   = 0.0;
-
-         for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
-         {
-            ind  = layer * g->edges + k;
-            sum += (xval != NULL) ? xval[ind] : 1.0;
-         }
-         if( SCIPisFeasGT(scip, sum, 1.0) )
-         {
-            SCIP_Bool infeasible;
-
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "infl", -SCIPinfinity(scip),
-                  1.0, FALSE, FALSE, TRUE) );
-
-            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-
-            for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
-            {
-               ind  = layer * g->edges + k;
-
-               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
-            }
-
-            SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-
-            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-
-#if ADDCUTSTOPOOL
-            /* if at root node, add cut to pool */
-            if( !infeasible )
-               SCIP_CALL( SCIPaddPoolCut(scip, row) );
-#endif
-
-            count++;
-
-            SCIP_CALL( SCIPreleaseRow(scip, &row) );
-
-            if( *ncuts + count >= maxcuts )
-               goto TERMINATE;
-         }
-
-         /* incoming flow <= outgoing flow */
-         sum   = 0.0;
-
-         for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
-         {
-            ind = layer * g->edges + k;
-            sum -= (xval != NULL) ? xval[ind] : 1.0;
-         }
-         for( k = g->outbeg[i]; k != EAT_LAST; k = g->oeat[k] )
-         {
-            ind = layer * g->edges + k;
-            sum += (xval != NULL) ? xval[ind] : 0.0;
-         }
-         if( SCIPisFeasNegative(scip, sum) )
-         {
-            SCIP_Bool infeasible;
-
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "bala", 0.0,
-                  (g->terms == 2) ? 0.0 : SCIPinfinity(scip), FALSE, FALSE, TRUE) );
-
-            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-
-            for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
-            {
-               ind = layer * g->edges + k;
-
-               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], -1.0) );
-            }
-            for( k = g->outbeg[i]; k != EAT_LAST; k = g->oeat[k] )
-            {
-               ind = layer * g->edges + k;
-
-               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
-            }
-
-            SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-
-            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-
-#if ADDCUTSTOPOOL
-            /* if at root node, add cut to pool */
-            if( !infeasible )
-               SCIP_CALL( SCIPaddPoolCut(scip, row) );
-#endif
-
-            count++;
-
-            SCIP_CALL( SCIPreleaseRow(scip, &row) );
-
-            if( *ncuts + count >= maxcuts )
-               goto TERMINATE;
-         }
+         if( *ncuts + count >= maxcuts )
+            break;
       }
    }
 
- TERMINATE:
-   SCIPdebugMessage("In/Out Separator: %d Inequalities added\n", count);
+   SCIPdebugMessage("Flow Separator: %d Inequalities added\n", count);
 
    *ncuts += count;
 
@@ -1825,28 +1870,44 @@ SCIP_RETCODE SCIPincludeConshdlrStp(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/stp/backcut", "Try Back-Cuts",
          &conshdlrdata->backcut, TRUE, DEFAULT_BACKCUT, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/stp/creepflow", "Use Creep-Flow",
          &conshdlrdata->creepflow, TRUE, DEFAULT_CREEPFLOW, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/stp/disjunctcut", "Only disjunct Cuts",
          &conshdlrdata->disjunctcut, TRUE, DEFAULT_DISJUNCTCUT, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/stp/nestedcut", "Try Nested-Cuts",
          &conshdlrdata->nestedcut, TRUE, DEFAULT_NESTEDCUT, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/stp/flowsep", "Try Flow-Cuts",
          &conshdlrdata->flowsep, TRUE, DEFAULT_FLOWSEP, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxrounds",
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/stp/inflowsep", "Try Unit Inflow-Cuts",
+         &conshdlrdata->inflowsep, TRUE, DEFAULT_INFLOWSEP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/stp/intermflowsep", "Try terminal Unit Inflow-Cuts",
+         &conshdlrdata->intermflowsep, TRUE, DEFAULT_INFLOWTERMSEP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/stp/outflowsep", "Try single edge Outflow-Cuts",
+         &conshdlrdata->outflowsep, TRUE, DEFAULT_OUTFLOWSEP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/stp/balanceflowsep", "Try Flow-balance Cuts",
+         &conshdlrdata->balanceflowsep, TRUE, DEFAULT_BALANCEFLOWSEP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
          &conshdlrdata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxroundsroot",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxroundsroot",
          "maximal number of separation rounds per node in the root node (-1: unlimited)",
          &conshdlrdata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxsepacuts",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxsepacuts",
          "maximal number of cuts separated per separation round",
          &conshdlrdata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxsepacutsroot",
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxsepacutsroot",
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
 
