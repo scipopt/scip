@@ -2657,12 +2657,10 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->pricing;
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_PRICING = %d.\n", *ival);
       break;
-#if 0
    case SCIP_LPPAR_SCALING:
       *ival = lpi->parameters->use_scaling();
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_SCALING = %d.\n", *ival);
       break;
-#endif
    case SCIP_LPPAR_RANDOMSEED:
       *ival = (int) lpi->parameters->random_seed();
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_RANDOMSEED = %d.\n", *ival);
@@ -2734,12 +2732,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          return SCIP_PARAMETERUNKNOWN;
       }
       break;
-#if 0
    case SCIP_LPPAR_SCALING:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_SCALING -> %d.\n", ival);
       lpi->parameters->set_use_scaling(ival);
       break;
-#endif
    case SCIP_LPPAR_RANDOMSEED:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_RANDOMSEED -> %d.\n", ival);
       assert( ival >= 0 );
