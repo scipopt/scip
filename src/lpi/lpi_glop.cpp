@@ -94,18 +94,17 @@ struct SCIP_LPi
    operations_research::glop::GlopParameters*  parameters;         /**< parameters */
    operations_research::glop::LpScalingHelper* scaler;             /**< scaler auxiliary class */
 
-   /* for the time being, store parameters not yet supported by this interface. */
-   bool                  lp_info;
-   SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
-
    /* the following is used by SCIPlpiWasSolved() */
    bool                  lp_modified_since_last_solve;
    bool                  lp_time_limit_was_reached;
 
-   /* other data */
+   /* store the values of some parameters in order to be able to return them */
+   bool                  lp_info;            /**< whether additional output is turned on */
+   SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
    bool                  from_scratch;       /**< store whether basis is ignored for next solving call */
    SCIP_Real             conditionlimit;     /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
    bool                  checkcondition;     /**< should condition number of LP basis be checked for stability? */
+   int                   timing;             /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
 };
 
 /** default values for feasibility tolerances */
@@ -2661,6 +2660,10 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->parameters->use_scaling();
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_SCALING = %d.\n", *ival);
       break;
+   case SCIP_LPPAR_TIMING:
+      *ival = lpi->timing;
+      SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_TIMING = %d.\n", *ival);
+      break;
    case SCIP_LPPAR_RANDOMSEED:
       *ival = (int) lpi->parameters->random_seed();
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_RANDOMSEED = %d.\n", *ival);
@@ -2735,6 +2738,15 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_SCALING:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_SCALING -> %d.\n", ival);
       lpi->parameters->set_use_scaling(ival);
+      break;
+   case SCIP_LPPAR_TIMING:
+      SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_TIMING -> %d.\n", ival);
+      assert( 0 <= ival && ival <= 2 );
+      lpi->timing = ival;
+      if ( ival == 1 )
+         FLAGS_time_limit_use_usertime = true;
+      else
+         FLAGS_time_limit_use_usertime = false;
       break;
    case SCIP_LPPAR_RANDOMSEED:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_RANDOMSEED -> %d.\n", ival);
