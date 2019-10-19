@@ -906,7 +906,7 @@ Test(solve, test6)
 
    /* the objective should be equal to the objective limit */
    SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-   cr_assert_geq(objval, exp_objval, "Objective value not equal to objective limit: %g != %g\n", objval, exp_objval);
+   cr_assert_float_eq(objval, exp_objval, EPS, "Objective value not equal to objective limit: %g != %g\n", objval, exp_objval);
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 12, obj, lb, ub, 8, lhs, rhs, 30, beg, ind, val) );

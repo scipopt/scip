@@ -233,12 +233,6 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->conditionlimit = -1.0;
    (*lpi)->checkcondition = false;
 
-   /* set default tolerances (default in  Glop: 1e-8) */
-#if 0
-   (*lpi)->parameters->set_primal_feasibility_tolerance(DEFAULT_FEASTOL);
-   (*lpi)->parameters->set_dual_feasibility_tolerance(DEFAULT_FEASTOL);
-#endif
-
    return SCIP_OKAY;
 }
 
@@ -665,6 +659,8 @@ SCIP_RETCODE SCIPlpiChgCoef(
    SCIPdebugMessage("Set coefficient (%d,%d) to %f.\n", row, col, newval);
    lpi->linear_program->SetCoefficient(RowIndex(row), ColIndex(col), newval);
 
+   lpi->lp_modified_since_last_solve = true;
+
    return SCIP_OKAY;
 }
 
@@ -772,6 +768,8 @@ SCIP_RETCODE SCIPlpiScaleRow(
       SCIP_CALL( SCIPlpiChgSides(lpi, 1, &row, &rhs, &lhs) );
    }
 
+   lpi->lp_modified_since_last_solve = true;
+
    return SCIP_OKAY;
 }
 
@@ -840,14 +838,6 @@ SCIP_RETCODE SCIPlpiScaleCol(
    }
 
    return SCIP_OKAY;
-
-
-   assert( lpi != NULL );
-   assert( lpi->linear_program != NULL );
-
-   SCIPerrorMessage("SCIPlpiScaleCol() has not been implemented yet.\n");
-
-   return SCIP_LPERROR;
 }
 
 
@@ -1230,13 +1220,14 @@ void updateScaledLP(
      return;
 
   lpi->scaled_lp->PopulateFromLinearProgram(*lpi->linear_program);
+  lpi->scaled_lp->AddSlackVariablesWhereNecessary(false);
 
   /* @todo: Avoid doing a copy if there is no scaling. */
   /* @todo: Avoid rescaling if not much changed. */
   if ( lpi->parameters->use_scaling() )
-    lpi->scaler->Scale(lpi->scaled_lp);
-
-  lpi->scaled_lp->AddSlackVariablesWhereNecessary(false);
+     lpi->scaler->Scale(lpi->scaled_lp);
+  else
+     lpi->scaler->Clear();
 }
 
 /** common function between the two LPI Solve() functions */
@@ -1262,13 +1253,36 @@ SCIP_RETCODE SolveInternal(
 
    if ( ! lpi->solver->Solve(*(lpi->scaled_lp), time_limit.get()).ok() )
    {
-      lpi->linear_program->DeleteSlackVariables();
       return SCIP_LPERROR;
    }
    lpi->lp_time_limit_was_reached = time_limit->LimitReached();
 
    SCIPdebugMessage("status=%s  obj=%f  iter=%ld.\n", GetProblemStatusString(lpi->solver->GetProblemStatus()).c_str(),
       lpi->solver->GetObjectiveValue(), lpi->solver->GetNumberOfIterations());
+
+   const ProblemStatus status = lpi->solver->GetProblemStatus();
+   if ( (status == ProblemStatus::PRIMAL_FEASIBLE || status == ProblemStatus::OPTIMAL) && lpi->parameters->use_scaling() )
+   {
+      const ColIndex num_cols = lpi->linear_program->num_variables();
+
+      /* get unscaled solution */
+      DenseRow unscaledsol(num_cols);
+      for (ColIndex col = ColIndex(0); col < num_cols; ++col)
+         unscaledsol[col] = lpi->scaler->UnscaleVariableValue(col, lpi->solver->GetVariableValue(col));
+
+      /* if the solution is not feasible w.r.t. absolute tolerances, try to fix it in the unscaled problem */
+      const double feastol = lpi->parameters->primal_feasibility_tolerance();
+      if ( ! lpi->linear_program->SolutionIsLPFeasible(unscaledsol, feastol) )
+      {
+         SCIPdebugMessage("Solution not feasible w.r.t. absolute tolerance %g -> reoptimize.\n", feastol);
+
+         /* Re-solve without scaling to try to fix the infeasibility. */
+         lpi->parameters->set_use_scaling(false);
+         lpi->lp_modified_since_last_solve = true;
+         SolveInternal(lpi);
+         lpi->parameters->set_use_scaling(true);
+      }
+   }
 
    lpi->lp_modified_since_last_solve = false;
 
@@ -2214,7 +2228,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(r), &solution);
    lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(r)), &solution);
 
-   const ColIndex num_cols = solution.values.size();
+   const ColIndex size = solution.values.size();
+   assert( size.value() == lpi->linear_program->num_constraints() );
 
    /* if we want a sparse vector and sparsity information is available */
    if ( ninds != NULL && inds != NULL && ! solution.non_zeros.empty() )
@@ -2223,14 +2238,16 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       ScatteredRowIterator end = solution.end();
       for (ScatteredRowIterator iter = solution.begin(); iter != end; ++iter)
       {
-         coef[(*ninds)] = (*iter).coefficient();
-         inds[(*ninds)++] = (*iter).column().value();
+         int idx = (*iter).column().value();
+         assert( 0 <= idx && idx < lpi->linear_program->num_constraints() );
+         coef[idx] = (*iter).coefficient();
+         inds[(*ninds)++] = idx;
       }
       return SCIP_OKAY;
    }
 
    /* dense version */
-   for (ColIndex col(0); col < num_cols; ++col)
+   for (ColIndex col(0); col < size; ++col)
       coef[col.value()] = solution[col];
 
    if ( ninds != NULL )
@@ -2281,7 +2298,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
          SCIP_Real val = solution[col];
          if ( fabs(val) >= eps )
          {
-            coef[(*ninds)] = val;
+            coef[row] = val;
             inds[(*ninds)++] = row;
          }
       }
@@ -2341,7 +2358,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
          SCIP_Real val = operations_research::glop::ScalarProduct(solution.values, lpi->linear_program->GetSparseColumn(col));
          if ( fabs(val) >= eps )
          {
-            coef[(*ninds)] = val;
+            coef[col.value()] = val;
             inds[(*ninds)++] = col.value();
          }
       }
@@ -2390,8 +2407,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       ScatteredColumnIterator end = solution.end();
       for (ScatteredColumnIterator iter = solution.begin(); iter != end; ++iter)
       {
-         coef[(*ninds)] = (*iter).coefficient();
-         inds[(*ninds)++] = (*iter).row().value();
+         int idx = (*iter).row().value();
+         assert( 0 <= idx && idx < num_rows );
+         coef[idx] = (*iter).coefficient();
+         inds[(*ninds)++] = idx;
       }
       return SCIP_OKAY;
    }
@@ -2512,7 +2531,7 @@ SCIP_RETCODE SCIPlpiReadState(
 
    SCIPerrorMessage("SCIPlpiReadState - not implemented.\n");
 
-   return SCIP_LPERROR;
+   return SCIP_NOTIMPLEMENTED;
 }
 
 /** writes LPi state (i.e. basis information) to a file */
@@ -2526,7 +2545,7 @@ SCIP_RETCODE SCIPlpiWriteState(
 
    SCIPerrorMessage("SCIPlpiWriteState - not implemented.\n");
 
-   return SCIP_LPERROR;
+   return SCIP_NOTIMPLEMENTED;
 }
 
 /**@} */
@@ -2750,11 +2769,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       *dval = lpi->parameters->primal_feasibility_tolerance();
-      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_FEASTOL = %f.\n", *dval);
+      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_FEASTOL = %g.\n", *dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
       *dval = lpi->parameters->dual_feasibility_tolerance();
-      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_DUALFEASTOL = %f.\n", *dval);
+      SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_DUALFEASTOL = %g.\n", *dval);
       break;
    case SCIP_LPPAR_OBJLIM:
       if (lpi->linear_program->IsMaximizationProblem())
@@ -2797,11 +2816,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_FEASTOL -> %f.\n", dval);
+      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_FEASTOL -> %g.\n", dval);
       lpi->parameters->set_primal_feasibility_tolerance(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
-      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_DUALFEASTOL -> %f.\n", dval);
+      SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_DUALFEASTOL -> %g.\n", dval);
       lpi->parameters->set_dual_feasibility_tolerance(dval);
       break;
    case SCIP_LPPAR_OBJLIM:

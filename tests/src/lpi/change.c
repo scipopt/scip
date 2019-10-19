@@ -319,7 +319,7 @@ void checkChgCoef(int row, int col, SCIP_Real newval)
    cr_assert( !SCIPlpiWasSolved(lpi) );
 
    SCIP_CALL( SCIPlpiGetCoef(lpi, row, col, &val) );
-   cr_assert_float_eq(newval, val, EPS);
+   cr_assert_float_eq_inf(newval, val, EPS);
 }
 
 TheoryDataPoints(change, testchgcoef) =
@@ -922,13 +922,18 @@ Test(change, testlpiwritestatemethods)
    int cstat[2];
    int rstat[2];
    SCIP_OBJSEN sense;
+   SCIP_RETCODE retcode;
 
    /* 2x2 problem */
    cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
 
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
-   SCIP_CALL( SCIPlpiWriteState(lpi, "testlpiwriteandreadstate.bas") );
+   retcode = SCIPlpiWriteState(lpi, "testlpiwriteandreadstate.bas");
+   if ( retcode != SCIP_OKAY && retcode != SCIP_NOTIMPLEMENTED )
+   {
+      SCIP_CALL( retcode );
+   }
    SCIP_CALL( SCIPlpiGetBase(lpi, cstat, rstat) );
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
