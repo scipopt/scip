@@ -1067,7 +1067,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
 
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
 
-   return SCIP_LPERROR;
+   return SCIP_NOTIMPLEMENTED;
 }
 
 /** gets row names */
@@ -1091,7 +1091,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
 
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
 
-   return SCIP_LPERROR;
+   return SCIP_NOTIMPLEMENTED;
 }
 
 /** gets objective coefficients from LP problem object */
@@ -1137,10 +1137,10 @@ SCIP_RETCODE SCIPlpiGetBounds(
    int index = 0;
    for (ColIndex col(firstcol); col <= ColIndex(lastcol); ++col)
    {
-      if (lbs != NULL)
+      if ( lbs != NULL )
          lbs[index] = lpi->linear_program->variable_lower_bounds()[col];
 
-      if (ubs != NULL)
+      if ( ubs != NULL )
          ubs[index] = lpi->linear_program->variable_upper_bounds()[col];
 
       ++index;
@@ -1167,10 +1167,10 @@ SCIP_RETCODE SCIPlpiGetSides(
    int index = 0;
    for (RowIndex row(firstrow); row <= RowIndex(lastrow); ++row)
    {
-      if (lhss != NULL)
+      if ( lhss != NULL )
          lhss[index] = lpi->linear_program->constraint_lower_bounds()[row];
 
-      if (rhss != NULL)
+      if ( rhss != NULL )
          rhss[index] = lpi->linear_program->constraint_upper_bounds()[row];
 
       ++index;
@@ -1368,9 +1368,7 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
 static
 bool IsDualBoundValid(ProblemStatus status)
 {
-   return status == ProblemStatus::OPTIMAL ||
-      status == ProblemStatus::DUAL_FEASIBLE ||
-      status == ProblemStatus::DUAL_UNBOUNDED;
+   return status == ProblemStatus::OPTIMAL || status == ProblemStatus::DUAL_FEASIBLE || status == ProblemStatus::DUAL_UNBOUNDED;
 }
 
 /** performs strong branching iterations on one @b fractional candidate */
