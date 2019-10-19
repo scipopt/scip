@@ -102,6 +102,7 @@ struct SCIP_LPi
    bool                  lp_info;            /**< whether additional output is turned on */
    SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
    bool                  from_scratch;       /**< store whether basis is ignored for next solving call */
+   int                   numthreads;         /**< number of threads used to solve the LP (0 = automatic) */
    SCIP_Real             conditionlimit;     /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
    bool                  checkcondition;     /**< should condition number of LP basis be checked for stability? */
    int                   timing;             /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
@@ -2633,7 +2634,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    assert( lpi != NULL );
    assert( lpi->parameters != NULL );
 
-   /* Not (yet) supported by Glop: SCIP_LPPAR_FASTMIP, SCIP_LPPAR_THREADS, SCIP_LPPAR_TIMING, SCIP_LPPAR_POLISHING, SCIP_LPPAR_REFACTOR */
+   /* Not (yet) supported by Glop: SCIP_LPPAR_FASTMIP, SCIP_LPPAR_POLISHING, SCIP_LPPAR_REFACTOR */
    switch ( type )
    {
    case SCIP_LPPAR_FROMSCRATCH:
@@ -2659,6 +2660,10 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_SCALING:
       *ival = lpi->parameters->use_scaling();
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_SCALING = %d.\n", *ival);
+      break;
+   case SCIP_LPPAR_THREADS:
+      *ival = lpi->numthreads;
+      SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_THREADS = %d.\n", *ival);
       break;
    case SCIP_LPPAR_TIMING:
       *ival = lpi->timing;
@@ -2738,6 +2743,15 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_SCALING:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_SCALING -> %d.\n", ival);
       lpi->parameters->set_use_scaling(ival);
+      break;
+   case SCIP_LPPAR_THREADS:
+      SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_THREADS -> %d.\n", ival);
+      assert( ival >= 0 );
+      lpi->numthreads = ival;
+      if ( ival == 0 )
+         lpi->parameters->set_num_omp_threads(1);
+      else
+         lpi->parameters->set_num_omp_threads(ival);
       break;
    case SCIP_LPPAR_TIMING:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_TIMING -> %d.\n", ival);
