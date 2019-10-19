@@ -105,7 +105,8 @@ struct SCIP_LPi
    bool                  checkcondition;     /**< should condition number of LP basis be checked for stability? */
    int                   timing;             /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
 
-   int                   numiter;            /**< iterations used in last run */
+   /* other data */
+   SCIP_Longint          niterations;        /**< number of iterations used */
 
    /* Temporary vectors allocated here for speed. This gain is non-negligible
     * because in many situations, only a few entries of these vectors are
@@ -240,7 +241,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->lp_time_limit_was_reached = false;
    (*lpi)->conditionlimit = -1.0;
    (*lpi)->checkcondition = false;
-   (*lpi)->numiter = 0;
+   (*lpi)->niterations = 0LL;
 
    (*lpi)->tmp_row = new ScatteredRow();
    (*lpi)->tmp_column = new ScatteredColumn();
@@ -1329,6 +1330,7 @@ bool checkUnscaledPrimalFeasibility(
 static
 SCIP_RETCODE SolveInternal(
    SCIP_LPI*             lpi,                 /**< LP interface structure */
+   bool                  recursive,           /**< Is this a recursive call? */
    std::unique_ptr<TimeLimit>& time_limit     /**< time limit */
    )
 {
@@ -1350,7 +1352,10 @@ SCIP_RETCODE SolveInternal(
       return SCIP_LPERROR;
    }
    lpi->lp_time_limit_was_reached = time_limit->LimitReached();
-   lpi->numiter += (int) lpi->solver->GetNumberOfIterations();
+   if ( recursive )
+      lpi->niterations += (SCIP_Longint) lpi->solver->GetNumberOfIterations();
+   else
+      lpi->niterations = (SCIP_Longint) lpi->solver->GetNumberOfIterations();
 
    SCIPdebugMessage("status=%s  obj=%f  iter=%ld.\n", GetProblemStatusString(lpi->solver->GetProblemStatus()).c_str(),
       lpi->solver->GetObjectiveValue(), lpi->solver->GetNumberOfIterations());
@@ -1365,7 +1370,7 @@ SCIP_RETCODE SolveInternal(
          /* Re-solve without scaling to try to fix the infeasibility. */
          lpi->parameters->set_use_scaling(false);
          lpi->lp_modified_since_last_solve = true;
-         SolveInternal(lpi, time_limit);   /* inherit time limit, so used time is not reset */
+         SolveInternal(lpi, true, time_limit);   /* inherit time limit, so used time is not reset */
          lpi->parameters->set_use_scaling(true);
 
 #ifdef SCIP_DEBUG
@@ -1392,10 +1397,10 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    SCIPdebugMessage("SCIPlpiSolvePrimal: %d rows, %d cols.\n", lpi->linear_program->num_constraints().value(), lpi->linear_program->num_variables().value());
    std::unique_ptr<TimeLimit> time_limit = TimeLimit::FromParameters(*lpi->parameters);
-   lpi->numiter = 0;
+   lpi->niterations = 0;
 
    lpi->parameters->set_use_dual_simplex(false);
-   return SolveInternal(lpi, time_limit);
+   return SolveInternal(lpi, false, time_limit);
 }
 
 /** calls dual simplex to solve the LP */
@@ -1410,10 +1415,10 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    SCIPdebugMessage("SCIPlpiSolveDual: %d rows, %d cols.\n", lpi->linear_program->num_constraints().value(), lpi->linear_program->num_variables().value());
    std::unique_ptr<TimeLimit> time_limit = TimeLimit::FromParameters(*lpi->parameters);
-   lpi->numiter = 0;
+   lpi->niterations = 0;
 
    lpi->parameters->set_use_dual_simplex(true);
-   return SolveInternal(lpi, time_limit);
+   return SolveInternal(lpi, false, time_limit);
 }
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
@@ -1898,10 +1903,10 @@ SCIP_Bool SCIPlpiIsIterlimExc(
 {
    assert( lpi != NULL );
    assert( lpi->solver != NULL );
-   assert( lpi->numiter >= (int) lpi->solver->GetNumberOfIterations() );
+   assert( lpi->niterations >= (int) lpi->solver->GetNumberOfIterations() );
 
    int maxiter = (int) lpi->parameters->max_number_of_iterations();
-   return maxiter >= 0 && lpi->numiter >= maxiter;
+   return maxiter >= 0 && lpi->niterations >= maxiter;
 }
 
 /** returns TRUE iff the time limit was reached */
@@ -2054,7 +2059,7 @@ SCIP_RETCODE SCIPlpiGetIterations(
    assert( lpi->solver != NULL );
    assert( iterations != NULL );
 
-   *iterations = lpi->numiter;
+   *iterations = (int) lpi->niterations;
 
    return SCIP_OKAY;
 }
