@@ -290,8 +290,8 @@
 #define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
-#define SCIP_DEFAULT_MISC_USESYMMETRY         3 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);
-                                                 *   2: orbital fixing; 3: orbitopes and orbital fixing) */
+#define SCIP_DEFAULT_MISC_USESYMMETRY         4 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);
+                                                 *   2: orbital fixing; 3: orbitopes and orbital fixing, 4: Schreier Sims cuts) */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 
 #ifdef WITH_DEBUG_SOLUTION
@@ -1966,8 +1966,8 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "misc/usesymmetry",
          "bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);" \
-         " 2: orbital fixing; 3: orbitopes and orbital fixing), see type_symmetry.h.",
-         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 3,
+         " 2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts), see type_symmetry.h.",
+         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 4,
          paramChgdUsesymmetry, NULL) );
 
    /* randomization parameters */
