@@ -103,7 +103,9 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolRedvub(scip) );
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
    SCIP_CALL( SCIPincludePresolTworowbnd(scip) );
+   SCIP_CALL( SCIPincludePresolTworowcomb(scip) );
    SCIP_CALL( SCIPincludePresolSparsify(scip) );
+   SCIP_CALL( SCIPincludePresolDualsparsify(scip) );
    SCIP_CALL( SCIPincludePresolStuffing(scip) );
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
    SCIP_CALL( SCIPincludeNodeselBreadthfirst(scip) );

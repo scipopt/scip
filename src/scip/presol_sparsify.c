@@ -48,6 +48,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include "scip/scip_timing.h"
+#include "scip/scip_var.h"
 #include <string.h>
 
 #define PRESOL_NAME            "sparsify"
@@ -57,16 +58,25 @@
 #define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
-#define DEFAULT_ENABLECOPY           TRUE    /**< should sparsify presolver be copied to sub-SCIPs? */
+#define DEFAULT_ENABLECOPY          FALSE    /**< should sparsify presolver be copied to sub-SCIPs? */
 #define DEFAULT_CANCELLINEAR         TRUE    /**< should we cancel nonzeros in constraints of the linear constraint handler? */
 #define DEFAULT_PRESERVEINTCOEFS     TRUE    /**< should we forbid cancellations that destroy integer coefficients? */
+#define DEFAULT_OBJ_PRESERVEINTCOEFS FALSE   /**< should we forbid cancellations that destroy integer coefficients when sparsifying the objective? */
+#define DEFAULT_SPARSIFYOBJ         FALSE    /**< should the objective be sparsified? */
+#define DEFAULT_DENSIFYOBJ          FALSE    /**< should the objective be densified? */
+#define DEFAULT_CONSIDERLOCKS           0    /**< should locks be considered when sparsifying the objective? (+/-1: maximize/minimize locks, 0: ignore locks) */
 #define DEFAULT_MAX_CONT_FILLIN         0    /**< default value for the maximal fillin for continuous variables */
 #define DEFAULT_MAX_BIN_FILLIN          0    /**< default value for the maximal fillin for binary variables */
 #define DEFAULT_MAX_INT_FILLIN          0    /**< default value for the maximal fillin for integer variables (including binary) */
 #define DEFAULT_MAXNONZEROS            -1    /**< maximal support of one equality to be used for cancelling (-1: no limit) */
 #define DEFAULT_MAXCONSIDEREDNONZEROS  70    /**< maximal number of considered non-zeros within one row (-1: no limit) */
+#define DEFAULT_OBJ_MAX_CONT_FILLIN    -1    /**< default value for the maximal fillin for continuous variables in objective sparsification */
+#define DEFAULT_OBJ_MAX_BIN_FILLIN     -1    /**< default value for the maximal fillin for binary variables in objective sparsification */
+#define DEFAULT_OBJ_MAX_INT_FILLIN     -1    /**< default value for the maximal fillin for integer variables in objective sparsification (including binary) */
+#define DEFAULT_OBJ_MAXCONSIDEREDNONZEROS 1200 /**< maximal number of considered non-zeros within one row in objective sparsification (-1: no limit) */
 #define DEFAULT_ROWSORT               'd'    /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
 #define DEFAULT_MAXRETRIEVEFAC      100.0    /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
+#define DEFAULT_OBJ_MAXRETRIEVEFAC    0.0    /**< limit on the number of hashtable retrieves for sparsifying the objective as multiple of objective nonzeros */
 #define DEFAULT_WAITINGFAC            2.0    /**< number of calls to wait until next execution as a multiple of the number of useless calls */
 
 #define MAXSCALE                   1000.0    /**< maximal allowed scale for cancelling non-zeros */
@@ -88,12 +98,22 @@ struct SCIP_PresolData
    int                   maxbinfillin;       /**< maximal fillin for binary variables */
    int                   maxnonzeros;        /**< maximal support of one equality to be used for cancelling (-1: no limit) */
    int                   maxconsiderednonzeros;/**< maximal number of considered non-zeros within one row (-1: no limit) */
+   int                   objmaxcontfillin;      /**< maximal fillin for continuous variables in objective sparsification */
+   int                   objmaxintfillin;       /**< maximal fillin for integer variables in objective sparsification */
+   int                   objmaxbinfillin;       /**< maximal fillin for binary variables in objective sparsification */
+   int                   objmaxconsiderednonzeros;/**< maximal number of considered non-zeros within one row in objective sparsification (-1: no limit) */
+   int                   considerlocks;      /**< should locks be considered while sparsifying the objective? (+/-1: maximize/minimize locks, 0: ignore locks) */
    SCIP_Real             maxretrievefac;     /**< limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints */
+   SCIP_Real             objmaxretrievefac;  /**< limit on the number of hashtable retrieves for sparsifying the objective as multiple of objective nonzeros */
    SCIP_Real             waitingfac;         /**< number of calls to wait until next execution as a multiple of the number of useless calls */
    char                  rowsort;            /**< order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros) */
    SCIP_Bool             enablecopy;         /**< should sparsify presolver be copied to sub-SCIPs? */
    SCIP_Bool             cancellinear;       /**< should we cancel nonzeros in constraints of the linear constraint handler? */
    SCIP_Bool             preserveintcoefs;   /**< should we forbid cancellations that destroy integer coefficients? */
+   SCIP_Bool             objpreserveintcoefs; /**< should we forbid cancellations that destroy integer coefficients when sparsifying the objective? */
+   SCIP_Bool             sparsifyobj;        /**< should the objective be sparsified? */
+   SCIP_Bool             densifyobj;         /**< should the objective be densified? */
+   SCIP_Bool             objlimitretrieves;  /**< should we limit the number of retrieves when sparsifying the objective? */
 };
 
 /** structure representing a pair of variables in a row; used for lookup in a hashtable */
@@ -475,7 +495,7 @@ SCIP_RETCODE cancelRow(
 
             /* we accept the best candidate immediately if it does not create any fill-in or alter coefficients */
             if( bestcand != -1 && bestcancelrate == 1.0 )
-               break;
+	       break;
          }
       }
 
@@ -640,6 +660,603 @@ SCIP_RETCODE cancelRow(
    return SCIP_OKAY;
 }
 
+/** try non-zero cancellation for objective function */
+static
+SCIP_RETCODE cancelObj(
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_MATRIX*          matrix,             /**< the constraint matrix */
+   SCIP_HASHTABLE*       pairtable,          /**< the hashtable containing ROWVARPAIR's of equations */
+   int                   maxcontfillin,      /**< maximal fill-in allowed for continuous variables */
+   int                   maxintfillin,       /**< maximal fill-in allowed for integral variables */
+   int                   maxbinfillin,       /**< maximal fill-in allowed for binary variables */
+   int                   maxconsiderednonzeros, /**< maximal number of non-zeros to consider for cancellation */
+   SCIP_Bool             preserveintcoefs,   /**< only perform non-zero cancellation if integrality of coefficients is preserved? */
+   SCIP_Real             maxretrievefac,     /**< limit on the number of hashtable retrieves as multiple of objective nonzeros */
+   SCIP_Bool             considerlocks,      /**< consider locks while sparsifying the objective? (+/-1: maximize/minimize locks, 0: ignore locks) */
+   int*                  nchgcoefs,          /**< pointer to update number of changed coefficients */
+   int*                  ncanceled,          /**< pointer to update number of canceled nonzeros */
+   int*                  nfillin             /**< pointer to update the produced fill-in */
+   )
+{
+   int* cancelrowinds;
+   SCIP_Real* cancelrowvals;
+   SCIP_Real bestcancelrate;
+   int* tmpinds;
+   int* locks;
+   SCIP_Real* tmpvals;
+   int cancelrowlen;
+   int nchgcoef;
+   SCIP_Longint nretrieves;
+   SCIP_Longint maxretrieves;
+   int bestnfillin;
+   SCIP_Real mincancelrate;
+   int* objcoefinds;
+   int nobjcoefinds;
+   int i;
+   int j;
+
+   /* determine number of nonzeros in objective function */
+   nobjcoefinds = 0;
+   for( i = 0; i < SCIPmatrixGetNColumns(matrix); i++ )
+   {
+      if( !SCIPisZero(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, i))) )
+         nobjcoefinds++;
+   }
+
+   /* no point in trying to sparsify a constant objective function */
+   if( nobjcoefinds == 0 )
+	   return SCIP_OKAY;
+
+   if( SCIPisEQ(scip, maxretrievefac, 0.0) )
+      maxretrieves = SCIP_LONGINT_MAX;
+   else
+      maxretrieves = (SCIP_Longint) (maxretrievefac * nobjcoefinds);
+
+   cancelrowlen = nobjcoefinds;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &objcoefinds, nobjcoefinds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cancelrowinds, nobjcoefinds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cancelrowvals, nobjcoefinds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpinds, nobjcoefinds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvals, nobjcoefinds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &locks, nobjcoefinds) );
+
+   /* copy objective function coefficients and variable indices */
+   j = 0;
+   for( i = 0; i < SCIPmatrixGetNColumns(matrix); i++ )
+   {
+      if( !SCIPisZero(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, i))) )
+         {
+            objcoefinds[j] = i;
+            cancelrowinds[j] = i;
+            cancelrowvals[j] = SCIPvarGetObj(SCIPmatrixGetVar(matrix, i));
+            j++;
+         }
+   }
+
+   SCIPdebugMsg(scip, "objective has %d nonzeros\n", cancelrowlen);
+
+#ifdef SCIP_MORE_DEBUG
+   for( i = 0; i < nobjcoefinds; i++ )
+   {
+      SCIPdebugMsg(scip, "%s - %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[i]), cancelrowvals[i]);
+   }
+#endif
+
+   mincancelrate = 0.0;
+   nchgcoef = 0;
+   nretrieves = 0;
+
+   while( TRUE ) /*lint !e716 */
+   {
+      SCIP_Real bestscale;
+      int bestcand;
+      ROWVARPAIR rowvarpair;
+      int maxlen;
+
+      bestscale = 1.0;
+      bestcand = -1;
+      bestnfillin = 0;
+      bestcancelrate = 0.0;
+
+      if( nretrieves >= maxretrieves )
+	 break;
+
+      // TODO rethink whether sorting this way makes sense
+      for( i = 0; i < cancelrowlen; i++ )
+      {
+         tmpinds[i] = i;
+         locks[i] = SCIPmatrixGetColNDownlocks(matrix, cancelrowinds[i])
+            + SCIPmatrixGetColNUplocks(matrix, cancelrowinds[i]);
+      }
+
+      SCIPsortIntInt(locks, tmpinds, cancelrowlen);
+
+      maxlen = cancelrowlen;
+      if( maxconsiderednonzeros >= 0 )
+         maxlen = MIN(cancelrowlen, maxconsiderednonzeros);
+
+      for( i = 0; i < maxlen; i++ )
+      {
+         for( j = i + 1; j < maxlen; j++ )
+         {
+            int a,b;
+            int ncancel;
+            int ncontfillin;
+            int nintfillin;
+            int nbinfillin;
+            int ntotfillin;
+            int nlockimprovements;
+            int eqrowlen;
+            ROWVARPAIR* eqrowvarpair;
+            SCIP_Real* eqrowvals;
+            int* eqrowinds;
+            SCIP_Real scale;
+            SCIP_Real cancelrate;
+            int i1,i2;
+            SCIP_Bool abortpair;
+
+            i1 = tmpinds[i];
+            i2 = tmpinds[j];
+
+            // TODO was genau prüft dieses assert?
+            assert(cancelrowinds[i] < cancelrowinds[j]);
+
+            if( cancelrowinds[i1] < cancelrowinds[i2] )
+            {
+               rowvarpair.varindex1 = cancelrowinds[i1];
+               rowvarpair.varindex2 = cancelrowinds[i2];
+               rowvarpair.varcoef1 = cancelrowvals[i1];
+               rowvarpair.varcoef2 = cancelrowvals[i2];
+            }
+            else
+            {
+               rowvarpair.varindex1 = cancelrowinds[i2];
+               rowvarpair.varindex2 = cancelrowinds[i1];
+               rowvarpair.varcoef1 = cancelrowvals[i2];
+               rowvarpair.varcoef2 = cancelrowvals[i1];
+            }
+
+            eqrowvarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &rowvarpair);
+            nretrieves++;
+
+            if( eqrowvarpair == NULL)
+               continue;
+
+            /* only cancel with equalities that have fewer non-zeros than the objective function */
+            eqrowlen = SCIPmatrixGetRowNNonzs(matrix, eqrowvarpair->rowindex);
+            if( cancelrowlen < eqrowlen )
+               continue;
+
+            eqrowvals = SCIPmatrixGetRowValPtr(matrix, eqrowvarpair->rowindex);
+            eqrowinds = SCIPmatrixGetRowIdxPtr(matrix, eqrowvarpair->rowindex);
+
+            scale = -rowvarpair.varcoef1 / eqrowvarpair->varcoef1;
+
+            /* check if integrality of objective offset needs to be preserved */
+            if( preserveintcoefs && SCIPisObjIntegral(scip) &&
+                !SCIPisIntegral(scip, scale * SCIPmatrixGetRowRhs(matrix, eqrowvarpair->rowindex)) )
+	      continue;
+
+            if( REALABS(scale) > MAXSCALE )
+               continue;
+
+            a = 0;
+            b = 0;
+            ncancel = 0;
+
+            ncontfillin = 0;
+            nintfillin = 0;
+            nbinfillin = 0;
+            nlockimprovements = 0;
+            abortpair = FALSE;
+            while( a < cancelrowlen && b < eqrowlen )
+            {
+               if( cancelrowinds[a] == eqrowinds[b] )
+               {
+                  SCIP_Real newcoef;
+
+                  newcoef = cancelrowvals[a] + scale * eqrowvals[b];
+
+                  /* check if coefficient is cancelled */
+                  if( SCIPisZero(scip, newcoef) )
+                     ncancel++;
+
+                  /* check if integrality of objective coefficients needs to be preserved */
+                  else if( preserveintcoefs && SCIPisObjIntegral(scip) && !SCIPisIntegral(scip, newcoef) )
+                  {
+                     abortpair = TRUE;
+                     break;
+                  }
+
+                  /* take a look at the number of lockimprovements if objective coefficient changes sign */
+                  if( considerlocks != 0 && ((SCIPisPositive(scip, cancelrowvals[a]) && SCIPisNegative(scip, newcoef)) ||
+                                        (SCIPisNegative(scip, cancelrowvals[a]) && SCIPisPositive(scip, newcoef))) )
+                  {
+                     /* check if variable is maximized */
+                     if( (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && SCIPisNegative(scip, newcoef)) ||
+                         (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPisPositive(scip, newcoef)) )
+                     {
+                        nlockimprovements += SCIPmatrixGetColNDownlocks(matrix, cancelrowinds[a]) - SCIPmatrixGetColNUplocks(matrix, cancelrowinds[a]);
+
+//                        /* cancel pair if variable is maximized, has at least two uplocks and at most one downlock */
+//                        if( SCIPmatrixGetColNUplocks(matrix, cancelrowinds[a]) >= 2 &&
+//                            SCIPmatrixGetColNDownlocks(matrix, cancelrowinds[a]) <= 1 )
+//                        {
+//                           abortpair = TRUE;
+//                           break;
+//                        }
+//                        /* cancel pair if variable is maximized, has one uplock and no downlock */
+//                        else if( SCIPmatrixGetColNUplocks(matrix, cancelrowinds[a]) == 1 &&
+//                                 SCIPmatrixGetColNDownlocks(matrix, cancelrowinds[a]) == 0 )
+//                        {
+//                           abortpair = TRUE;
+//                           break;
+//                        }
+		     }
+                     /* symmetrical case where variable is minimized */
+                     else if( (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && SCIPisPositive(scip, newcoef)) ||
+                              (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPisNegative(scip, newcoef)) )
+                      {
+                         nlockimprovements += SCIPmatrixGetColNUplocks(matrix, cancelrowinds[a]) - SCIPmatrixGetColNDownlocks(matrix, cancelrowinds[a]);
+
+//                         if( SCIPmatrixGetColNUplocks(matrix, cancelrowinds[a]) <= 1 &&
+//                             SCIPmatrixGetColNDownlocks(matrix, cancelrowinds[a]) >= 2 )
+//                         {
+//                            abortpair = TRUE;
+//                            break;
+//                         }
+//                         else if( SCIPmatrixGetColNUplocks(matrix, cancelrowinds[a]) == 0 &&
+//                                  SCIPmatrixGetColNDownlocks(matrix, cancelrowinds[a]) == 1 )
+//                         {
+//                            abortpair = TRUE;
+//                            break;
+//                         }
+                     }
+                  }
+
+                  a++;
+                  b++;
+               }
+               else if( cancelrowinds[a] < eqrowinds[b] )
+               {
+                  a++;
+               }
+               else
+               {
+                  SCIP_Real newcoef;
+                  SCIP_VAR* var;
+
+                  var = SCIPmatrixGetVar(matrix, eqrowinds[b]);
+                  newcoef = scale * eqrowvals[b];
+
+                  /* preserve integrality of objective coefficients if necessary */
+                  if( preserveintcoefs && SCIPisObjIntegral(scip) )
+                     abortpair = TRUE;
+
+                  if( considerlocks != 0)
+                  {
+                     /* check if variable is maximized */
+                     if( (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && SCIPisNegative(scip, newcoef)) ||
+                         (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPisPositive(scip, newcoef)) )
+                     {
+                        nlockimprovements -= SCIPmatrixGetColNUplocks(matrix, eqrowinds[b]);
+//                        /* cancel pair if we introduce a nonzero with uplocks */
+//                        if( SCIPmatrixGetColNUplocks(matrix, eqrowinds[b]) >= 1 )
+//                        {
+//                           abortpair = TRUE;
+//                           b++;
+//                           break;
+//                        }
+                     }
+                     /* symmetrical case where variable is minimized */
+                     else if( (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && SCIPisPositive(scip, newcoef)) ||
+                              (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPisNegative(scip, newcoef)) )
+                     {
+                        nlockimprovements -= SCIPmatrixGetColNDownlocks(matrix, eqrowinds[b]);
+//                        if( SCIPmatrixGetColNDownlocks(matrix, eqrowinds[b]) <= 1 )
+//                        {
+//                           abortpair = TRUE;
+//                           b++;
+//                           break;
+//                        }
+                     }
+                  }
+
+                  b++;
+
+                  if( SCIPvarIsIntegral(var) )
+                  {
+                     if( SCIPvarIsBinary(var) && ++nbinfillin > maxbinfillin )
+                     {
+                        abortpair = TRUE;
+                        break;
+                     }
+
+                     if( ++nintfillin > maxintfillin )
+                     {
+                        abortpair = TRUE;
+                        break;
+                     }
+                  }
+                  else
+                  {
+                     if( ++ncontfillin > maxcontfillin )
+                     {
+                        abortpair = TRUE;
+                        break;
+                     }
+                  }
+               }
+            }
+
+            while( b < eqrowlen )
+            {
+               SCIP_Real newcoef;
+               SCIP_VAR* var;
+
+               var = SCIPmatrixGetVar(matrix, eqrowinds[b]);
+               newcoef = scale * eqrowvals[b];
+
+               /* preserve integrality of objective coefficients if necessary */
+               if( preserveintcoefs && SCIPisObjIntegral(scip) )
+                  abortpair = TRUE;
+
+               if( considerlocks != 0 )
+               {
+                  /* check if variable is maximized */
+                  if( (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && SCIPisNegative(scip, newcoef)) ||
+                      (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPisPositive(scip, newcoef)) )
+                  {
+                     nlockimprovements -= SCIPmatrixGetColNUplocks(matrix, eqrowinds[b]);
+//                     /* cancel pair if we introduce a nonzero with uplocks */
+//                     if( SCIPmatrixGetColNUplocks(matrix, eqrowinds[b]) >= 1 )
+//                     {
+//                        abortpair = TRUE;
+//                        b++;
+//                        break;
+//                     }
+                  }
+                  /* symmetrical case where variable is minimized */
+                  else if( (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && SCIPisPositive(scip, newcoef)) ||
+                           (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPisNegative(scip, newcoef)) )
+                  {
+                     nlockimprovements -= SCIPmatrixGetColNDownlocks(matrix, eqrowinds[b]);
+//                     if( SCIPmatrixGetColNDownlocks(matrix, eqrowinds[b]) <= 1 )
+//                     {
+//                        abortpair = TRUE;
+//                        b++;
+//                        break;
+//                     }
+                  }
+               }
+
+               b++;
+
+	       if( SCIPvarIsIntegral(var) )
+               {
+                  if( SCIPvarIsBinary(var) && ++nbinfillin > maxbinfillin )
+                     break;
+                  if( ++nintfillin > maxintfillin )
+                     break;
+               }
+               else
+               {
+                  if( ++ncontfillin > maxcontfillin )
+                     break;
+               }
+            }
+
+	    if( abortpair || (considerlocks * nlockimprovements) > 0 )
+               continue;
+
+            /* if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin ) */
+            /*    continue; */
+
+            ntotfillin = nintfillin + ncontfillin;
+
+            if( ntotfillin >= ncancel )
+               continue;
+
+            cancelrate = (ncancel - ntotfillin) / (SCIP_Real) eqrowlen;
+
+            if( cancelrate < mincancelrate )
+               continue;
+
+            if( cancelrate > bestcancelrate )
+            {
+               bestnfillin = ntotfillin;
+               bestcand = eqrowvarpair->rowindex;
+               bestscale = scale;
+               bestcancelrate = cancelrate;
+
+               //TODO Check if we actually need to break out of the i-loop as well
+               /* stop looking if the current candidate does not create any fill-in or alter coefficients */
+               if( cancelrate == 1.0 )
+                  break;
+            }
+
+            //TODO Check if we actually need to break out of the i-loop as well
+            /* we accept the best candidate immediately if it does not create any fill-in or alter coefficients */
+            if( bestcand != -1 && bestcancelrate == 1.0 )
+               break;
+         }
+      }
+
+      if( bestcand != -1 )
+      {
+         int a;
+         int b;
+         SCIP_Real* eqrowvals;
+         int* eqrowinds;
+         int eqrowlen;
+         int tmprowlen;
+         SCIP_Real eqrhs;
+
+         eqrowvals = SCIPmatrixGetRowValPtr(matrix, bestcand);
+         eqrowinds = SCIPmatrixGetRowIdxPtr(matrix, bestcand);
+         eqrowlen = SCIPmatrixGetRowNNonzs(matrix, bestcand);
+         eqrhs = SCIPmatrixGetRowRhs(matrix, bestcand);
+
+#ifdef SCIP_MORE_DEBUG
+	 SCIPdebugMsg(scip,"sparsifying with row %s and scale %f, offset changes from %f to %f\n", SCIPmatrixGetRowName(matrix, bestcand), bestscale, SCIPgetTransObjoffset(scip), (SCIPgetTransObjoffset(scip) - bestscale * eqrhs));
+#endif
+
+         a = 0;
+         b = 0;
+         tmprowlen = 0;
+
+         /* adjust objective offset if necessary */
+         if( !SCIPisZero(scip, eqrhs) )
+         {
+            SCIP_CALL( SCIPaddObjoffset(scip, -bestscale * eqrhs) );
+         }
+
+         while( a < cancelrowlen && b < eqrowlen )
+         {
+            if( cancelrowinds[a] == eqrowinds[b] )
+            {
+               SCIP_Real val = cancelrowvals[a] + bestscale * eqrowvals[b];
+
+               if( !SCIPisZero(scip, val) )
+               {
+                  tmpinds[tmprowlen] = cancelrowinds[a];
+                  tmpvals[tmprowlen] = val;
+                  tmprowlen++;
+               }
+               nchgcoef++;
+
+               a++;
+               b++;
+            }
+            else if( cancelrowinds[a] < eqrowinds[b] )
+            {
+               tmpinds[tmprowlen] = cancelrowinds[a];
+               tmpvals[tmprowlen] = cancelrowvals[a];
+               tmprowlen++;
+               a++;
+            }
+            else
+            {
+               tmpinds[tmprowlen] = eqrowinds[b];
+               tmpvals[tmprowlen] = eqrowvals[b] * bestscale;
+               nchgcoef++;
+               tmprowlen++;
+               b++;
+            }
+         }
+
+         while( a < cancelrowlen )
+         {
+            tmpinds[tmprowlen] = cancelrowinds[a];
+            tmpvals[tmprowlen] = cancelrowvals[a];
+            tmprowlen++;
+            a++;
+         }
+
+         while( b < eqrowlen )
+         {
+            tmpinds[tmprowlen] = eqrowinds[b];
+            tmpvals[tmprowlen] = eqrowvals[b] * bestscale;
+            nchgcoef++;
+            tmprowlen++;
+            b++;
+         }
+
+         /* update fill-in counter */
+         *nfillin += bestnfillin;
+
+         /* swap the temporary arrays so that the cancelrowinds and cancelrowvals arrays contain the new
+          * changed row, and the tmpinds and tmpvals arrays can be overwritten in the next iteration
+          */
+         SCIPswapPointers((void**) &tmpinds, (void**) &cancelrowinds);
+         SCIPswapPointers((void**) &tmpvals, (void**) &cancelrowvals);
+         cancelrowlen = tmprowlen;
+
+	 SCIPdebugMsg(scip, "objective has %d nonzeros\n", cancelrowlen);
+
+#ifdef SCIP_MORE_DEBUG
+	 for( i = 0; i < cancelrowlen; i++ )
+	 {
+	   SCIPdebugMsg(scip, "%s - %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[i]), cancelrowvals[i]);
+         }
+#endif
+      }
+      else
+         break;
+   }
+
+   if( nchgcoef != 0 )
+   {
+      i = 0;
+      j = 0;
+
+      while( i < nobjcoefinds && j < cancelrowlen )
+      {
+         if( objcoefinds[i] == cancelrowinds[j] )
+         {
+#ifdef SCIP_MORE_DEBUG
+	    if( !SCIPisEQ(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]) )
+               SCIPdebugMsg(scip, "(case1) change coefficient of variable %s from %f to %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[j]), SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]);
+#endif
+            SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, cancelrowinds[j]), cancelrowvals[j]);
+            i++;
+            j++;
+         }
+         else if( objcoefinds[i] < cancelrowinds[j] )
+         {
+#ifdef SCIP_MORE_DEBUG
+	   SCIPdebugMsg(scip, "(case2) change coefficient of variable %s from %f to 0.0\n", SCIPmatrixGetColName(matrix, objcoefinds[i]), SCIPvarGetObj(SCIPmatrixGetVar(matrix, objcoefinds[i])));
+#endif
+            SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, objcoefinds[i]), 0.0);
+            i++;
+         }
+         else
+         {
+#ifdef SCIP_MORE_DEBUG
+	    if( !SCIPisEQ(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]) )
+	       SCIPdebugMsg(scip, "(case3) change coefficient of variable %s from %f to %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[j]), SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]);
+#endif
+            SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, cancelrowinds[j]), cancelrowvals[j]);
+            j++;
+         }
+      }
+
+      while( i < nobjcoefinds )
+      {
+#ifdef SCIP_MORE_DEBUG
+         if( !SCIPisEQ(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]) )
+            SCIPdebugMsg(scip, "(case1) change coefficient of variable %s from %f to %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[j]), SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]);
+#endif
+         SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, objcoefinds[i]), 0.0);
+         i++;
+      }
+
+      while( j < cancelrowlen )
+      {
+#ifdef SCIP_MORE_DEBUG
+         if( !SCIPisEQ(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]) )
+            SCIPdebugMsg(scip, "(case3) change coefficient of variable %s from %f to %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[j]), SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]);
+#endif
+         SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, cancelrowinds[j]), cancelrowvals[j]);
+         j++;
+      }
+
+      /* update counters */
+      *nchgcoefs += nchgcoef;
+      *ncanceled += nobjcoefinds - cancelrowlen;
+   }
+
+   SCIPfreeBufferArray(scip, &locks);
+   SCIPfreeBufferArray(scip, &tmpvals);
+   SCIPfreeBufferArray(scip, &tmpinds);
+   SCIPfreeBufferArray(scip, &cancelrowvals);
+   SCIPfreeBufferArray(scip, &cancelrowinds);
+   SCIPfreeBufferArray(scip, &objcoefinds);
+
+   return SCIP_OKAY;
+}
+
 /** updates failure counter after one execution */
 static
 void updateFailureStatistic(
@@ -659,6 +1276,48 @@ void updateFailureStatistic(
       presoldata->nfailures++;
       presoldata->nwaitingcalls = (int)(presoldata->waitingfac*(SCIP_Real)presoldata->nfailures);
    }
+}
+
+
+/** densify objective function */
+static
+SCIP_RETCODE densifyObj(
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_MATRIX*          matrix              /**< the constraint matrix */
+   )
+{
+   int i;
+   int j;
+   int* rowinds;
+   SCIP_Real* rowvals;
+   SCIP_VAR* var;
+   SCIP_Bool hasZero;
+
+   for( i = 0; i < SCIPmatrixGetNRows(matrix); i++)
+   {
+      if( SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, i), SCIPmatrixGetRowRhs(matrix, i)) )
+      {
+         hasZero = FALSE;
+         for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++)
+         {
+            rowinds =  SCIPmatrixGetRowIdxPtr(matrix, i);
+            rowvals = SCIPmatrixGetRowValPtr(matrix, i);
+            var = SCIPmatrixGetVar(matrix, rowinds[j]);
+            if( !hasZero && SCIPisZero(scip, SCIPvarGetObj(var)) )
+            {
+               hasZero = TRUE;
+               j = 0;
+               var = SCIPmatrixGetVar(matrix, rowinds[j]);
+               SCIPchgVarObj(scip, var, SCIPvarGetObj(var) + rowvals[j]);
+            }
+	    else if( hasZero )
+               SCIPchgVarObj(scip, var, SCIPvarGetObj(var) + rowvals[j]);
+         }
+         if( hasZero )
+            SCIP_CALL( SCIPaddObjoffset(scip, -SCIPmatrixGetRowRhs(matrix, i)) );
+      }
+   }
+   return SCIP_OKAY;
 }
 
 
@@ -943,6 +1602,20 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
                &nuseless, nchgcoefs, &numcancel, &nfillin) );
       }
 
+      if( presoldata->sparsifyobj )
+      {
+         SCIPdebugMsg(scip, "sparsify objective\n");
+         SCIP_CALL( cancelObj(scip, matrix, pairtable, \
+              presoldata->objmaxcontfillin == -1 ? INT_MAX : presoldata->objmaxcontfillin, \
+              presoldata->objmaxintfillin == -1 ? INT_MAX : presoldata->objmaxintfillin, \
+              presoldata->objmaxbinfillin == -1 ? INT_MAX : presoldata->objmaxbinfillin, \
+              presoldata->objmaxconsiderednonzeros, presoldata->objpreserveintcoefs, \
+              presoldata->objmaxretrievefac, presoldata->considerlocks, nchgcoefs, \
+              &numcancel, &nfillin) );
+      }
+      else if( presoldata->densifyobj )
+         SCIP_CALL( densifyObj(scip, matrix) );
+
       SCIPfreeBufferArrayNull(scip, &rowsparsity);
       SCIPfreeBufferArrayNull(scip, &rowidxsorted);
 
@@ -1054,6 +1727,26 @@ SCIP_RETCODE SCIPincludePresolSparsify(
          "should we forbid cancellations that destroy integer coefficients?",
          &presoldata->preserveintcoefs, TRUE, DEFAULT_PRESERVEINTCOEFS, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/sparsify/objpreserveintcoefs",
+         "should we forbid cancellations that destroy integer coefficients when sparsifying the objective?",
+         &presoldata->objpreserveintcoefs, TRUE, DEFAULT_OBJ_PRESERVEINTCOEFS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/sparsify/sparsifyobjective",
+         "should the objective be sparsified?",
+         &presoldata->sparsifyobj, TRUE, DEFAULT_SPARSIFYOBJ, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/sparsify/densifyobjective",
+         "should the objective be densified?",
+         &presoldata->densifyobj, TRUE, DEFAULT_DENSIFYOBJ, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/sparsify/considerlocks",
+         "should locks be considered while sparsifying the objective? (+/-1: maximize/minimize locks, 0: ignore locks)",
+         &presoldata->considerlocks, TRUE, DEFAULT_CONSIDERLOCKS, -1, 1, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/sparsify/maxcontfillin",
          "maximal fillin for continuous variables (-1: unlimited)",
@@ -1079,6 +1772,26 @@ SCIP_RETCODE SCIPincludePresolSparsify(
          "maximal number of considered non-zeros within one row (-1: no limit)",
          &presoldata->maxconsiderednonzeros, TRUE, DEFAULT_MAXCONSIDEREDNONZEROS, -1, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/sparsify/objmaxcontfillin",
+         "maximal fillin for continuous variables (-1: unlimited)",
+         &presoldata->objmaxcontfillin, FALSE, DEFAULT_OBJ_MAX_CONT_FILLIN, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/sparsify/objmaxbinfillin",
+         "maximal fillin for binary variables (-1: unlimited)",
+         &presoldata->objmaxbinfillin, FALSE, DEFAULT_OBJ_MAX_BIN_FILLIN, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/sparsify/objmaxintfillin",
+         "maximal fillin for integer variables including binaries (-1: unlimited)",
+         &presoldata->objmaxintfillin, FALSE, DEFAULT_OBJ_MAX_INT_FILLIN, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/sparsify/objmaxconsiderednonzeros",
+         "maximal number of considered non-zeros within one row (-1: no limit)",
+         &presoldata->objmaxconsiderednonzeros, TRUE, DEFAULT_OBJ_MAXCONSIDEREDNONZEROS, -1, INT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddCharParam(scip,
          "presolving/sparsify/rowsort",
          "order in which to process inequalities ('n'o sorting, 'i'ncreasing nonzeros, 'd'ecreasing nonzeros)",
@@ -1088,6 +1801,11 @@ SCIP_RETCODE SCIPincludePresolSparsify(
          "presolving/sparsify/maxretrievefac",
          "limit on the number of useless vs. useful hashtable retrieves as a multiple of the number of constraints",
          &presoldata->maxretrievefac, TRUE, DEFAULT_MAXRETRIEVEFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "presolving/sparsify/objmaxretrievefac",
+         "limit on the number of hashtable retrieves for sparsifying the objective as multiple of objective nonzeros",
+         &presoldata->objmaxretrievefac, TRUE, DEFAULT_OBJ_MAXRETRIEVEFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/sparsify/waitingfac",
