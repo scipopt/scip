@@ -2208,7 +2208,7 @@ SCIP_RETCODE reduce_da(
          {
             int extfixed = reduce_extendedEdge(scip, graph, vnoi, cost, pathdist, (havenewsol ? result : NULL), minpathcost, daroot, nodearrint, marked, FALSE);
             ndeletions += extfixed;
-            printf("newly fixedFIRST =%d \n", extfixed);
+       //     printf("newly fixedFIRST =%d \n", extfixed);
          }
 
          if( extended )
