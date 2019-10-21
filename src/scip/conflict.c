@@ -6925,7 +6925,7 @@ SCIP_RETCODE getDualProof(
          else
          {
             SCIPsetDebugMsg(set, " -> ignoring local row <%s> with dual solution value %.10f (lhs=%g, rhs=%g)\n",
-               SCIProwGetName(row), dualfarkas[r], row->lhs - row->constant, row->rhs - row->constant);
+               SCIProwGetName(row), dualsols[r], row->lhs - row->constant, row->rhs - row->constant);
          }
 #endif
       }
