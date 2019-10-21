@@ -242,7 +242,7 @@ SCIP_RETCODE consdataCreate(
 }
 
 
-/** strengthen full orbitopes to packing/partitioning orbitopes if possible  */
+/** strengthen full orbitopes to packing/partitioning orbitopes if possible */
 static
 SCIP_RETCODE strengthenOrbitopeConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -304,7 +304,7 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
             success = FALSE;
             break;
          }
-         assert( SCIPvarGetIndex(vars[i][j]) >= 0 );
+         assert( SCIPvarGetIndex(vars[i][j]) >= 0 && SCIPvarGetIndex(vars[i][j]) < nprobvars );
          rowidxvar[SCIPvarGetIndex(vars[i][j])] = i;
       }
    }
