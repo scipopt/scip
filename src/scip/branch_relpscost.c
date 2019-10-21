@@ -1781,7 +1781,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
 
    /* relpcost is safe to use in exact solving mode */
-   SCIPbranchruleSetExact(branchrule);
+   SCIPsetBranchruleExact(branchrule);
 
    return SCIP_OKAY;
 }
