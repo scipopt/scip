@@ -196,6 +196,9 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateExp)
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
+   assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);
    assert(success != NULL);
 
    /* get expression data */
@@ -217,6 +220,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateExp)
    {
       SCIPaddExpLinearization(scip, SCIPgetSolVal(scip, sol, childvar), SCIPvarIsIntegral(childvar), coefs, constant, success);
       *islocal = FALSE; /* linearization are globally valid */
+      *branchcand = FALSE;
    }
 
    return SCIP_OKAY;

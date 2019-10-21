@@ -30,6 +30,7 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
    SCIP_Real coefs[2];
    SCIP_Real constant;
    SCIP_Bool islocal;
+   SCIP_Bool branchcand = TRUE;
    SCIP_Bool success;
 
    SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 0, NULL, 1.5) );
@@ -44,13 +45,14 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
 
-   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, TRUE, SCIPinfinity(scip), coefs, &constant, &islocal, &success, NULL) );
+   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, TRUE, SCIPinfinity(scip), coefs, &constant, &islocal, &success, &branchcand) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -4.5, SCIPepsilon(scip));
    cr_assert_float_eq(coefs[0], -4.5, SCIPepsilon(scip));
    cr_assert_float_eq(coefs[1], -1.5, SCIPepsilon(scip));
    cr_assert(islocal);
+   cr_assert(branchcand);
 
 
    /*
@@ -61,13 +63,14 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
 
-   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, FALSE, -SCIPinfinity(scip), coefs, &constant, &islocal, &success, NULL) );
+   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, FALSE, -SCIPinfinity(scip), coefs, &constant, &islocal, &success, &branchcand) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -9.0, SCIPepsilon(scip));
    cr_assert_float_eq(coefs[0], -9.0, SCIPepsilon(scip));
    cr_assert_float_eq(coefs[1], -1.5, SCIPepsilon(scip));
    cr_assert(islocal);
+   cr_assert(branchcand);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -118,6 +121,7 @@ Test(separation, quadrilinear,
 {
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_Bool islocal;
+   SCIP_Bool branchcand = TRUE;
    SCIP_Bool success;
    SCIP_Real facetcoefs[4];
    SCIP_Real facetconstant;
@@ -181,10 +185,11 @@ Test(separation, quadrilinear,
 
       SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 4, varexprs, -0.7) );
 
-      SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, round == 0, (round == 0 ? SCIPinfinity(scip) : -SCIPinfinity(scip)), facetcoefs, &facetconstant, &islocal, &success, NULL) );
+      SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, round == 0, (round == 0 ? SCIPinfinity(scip) : -SCIPinfinity(scip)), facetcoefs, &facetconstant, &islocal, &success, &branchcand) );
 
       cr_assert(success);
       cr_assert(islocal);
+      cr_assert(branchcand);
       for( i = 0; i < 4; ++i ) /* index 4 is the constant */
       {
          cr_expect_float_eq(facetcoefs[i], exact_facet[round][i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facetcoefs[i], exact_facet[round][i]);

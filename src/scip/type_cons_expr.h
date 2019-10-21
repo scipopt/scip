@@ -369,10 +369,8 @@ typedef enum
  * Note, that targetvalue can be infinite if any estimator will be accepted.
  * If successful, it shall store the coefficient of the i-th child in entry coefs[i] and
  * the constant part in \par constant.
- * If branchcand is not NULL, then the callback shall set branchcand[i] to FALSE if
- * branching in the i-th child would not improve the estimator.
- * That is, if this callback is called with branchcand != NULL, then branchcand[i]
- * will be initialized to TRUE for all children.
+ * The callback shall set branchcand[i] to FALSE if branching in the i-th child would not
+ * improve the estimator. That is, branchcand[i] will be initialized to TRUE for all children.
  *
  * input:
  *  - scip : SCIP main data structure
@@ -384,7 +382,7 @@ typedef enum
  *  - constant : buffer to store constant part of estimator
  *  - islocal : buffer to store whether estimator is valid locally only
  *  - success : buffer to indicate whether an estimator could be computed
- *  - branchcand: array to indicate which children (not) to consider for branching, if not NULL
+ *  - branchcand: array to indicate which children (not) to consider for branching
  */
 #define SCIP_DECL_CONSEXPR_EXPRESTIMATE(x) SCIP_RETCODE x (\
    SCIP* scip, \

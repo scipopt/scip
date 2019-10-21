@@ -256,6 +256,8 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateLog)
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);
    assert(success != NULL);
 
    /* get expression data */
@@ -282,6 +284,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateLog)
 
       SCIPaddLogLinearization(scip, refpoint, SCIPvarIsIntegral(childvar), coefs, constant, success);
       *islocal = FALSE; /* linearization are globally valid */
+      *branchcand = FALSE;
    }
    else
    {

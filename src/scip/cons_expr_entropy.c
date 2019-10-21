@@ -408,6 +408,9 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
+   assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);
    assert(success != NULL);
 
    *success = FALSE;
@@ -462,6 +465,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
       *constant = refpoint;
 
       *islocal = FALSE;
+      *branchcand = FALSE;
    }
 
    /* give up if the constant or coefficient is too large */

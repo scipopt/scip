@@ -1087,6 +1087,9 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSin)
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
+   assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);
    assert(success != NULL);
 
    /* get expression data */
@@ -1097,7 +1100,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSin)
 
    *success = SCIPcomputeEstimatorsTrig(scip, conshdlr, expr, coefs, constant, SCIPgetSolVal(scip, sol, childvar),
       SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), !overestimate);
-   *islocal = TRUE;
+   *islocal = TRUE;  /* TODO there are cases where cuts would be globally valid */
 
    return SCIP_OKAY;
 }

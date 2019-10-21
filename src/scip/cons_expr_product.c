@@ -1580,6 +1580,8 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateProduct)
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);
    assert(success != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -1727,10 +1729,8 @@ CLEANUP:
       SCIPfreeBufferArray(scip, &box);
    }
 
-   if( branchcand != NULL )
+   /* TODO check once whether we actually have integer vars in children and skip all this if not */
    {
-      /* TODO check once whether we actually have integer vars in children and skip all this if not */
-
       /* Mark only those children for branching that would be fixed after branching on it.
        * As the children may not be actual variables that are branched on, but the branching score might be
        * propagated down the tree first, we consider children with an auxiliary variable (that would be all

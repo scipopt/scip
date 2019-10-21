@@ -952,6 +952,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSum)
    assert(expr != NULL);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(success != NULL);
+   assert(branchcand != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
@@ -960,13 +961,10 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSum)
    *constant = exprdata->constant;
    *success = TRUE;
 
-   if( branchcand != NULL )
-   {
-      /* for none of our children, branching would improve the underestimator, so set branchcand[i]=FALSE everywhere
-       * if we branch for numerical reasons, then cons-expr-core should figure out what the candidates are
-       */
-      memset(branchcand, 0, SCIPgetConsExprExprNChildren(expr) * sizeof(SCIP_Bool));
-   }
+   /* for none of our children, branching would improve the underestimator, so set branchcand[i]=FALSE everywhere
+    * if we branch for numerical reasons, then cons-expr-core should figure out what the candidates are
+    */
+   memset(branchcand, 0, SCIPgetConsExprExprNChildren(expr) * sizeof(SCIP_Bool));
 
    return SCIP_OKAY;
 }

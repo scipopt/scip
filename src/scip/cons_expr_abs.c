@@ -176,6 +176,9 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateAbs)
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
+   assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);
    assert(success != NULL);
 
    /* get expression data */
@@ -196,6 +199,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateAbs)
       *constant = 0.0;
 
       *islocal = FALSE;
+      *branchcand = FALSE;
    }
    else
    {
@@ -212,6 +216,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateAbs)
          *coefs = -1.0;
          *constant = 0.0;
          *islocal = SCIPisPositive(scip, SCIPvarGetUbGlobal(childvar));
+         *branchcand = FALSE;
       }
       else if( !SCIPisNegative(scip, lb) )
       {
@@ -219,6 +224,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateAbs)
          *coefs =  1.0;
          *constant = 0.0;
          *islocal = SCIPisNegative(scip, SCIPvarGetLbGlobal(childvar));
+         *branchcand = FALSE;
       }
       else if( !SCIPisRelEQ(scip, lb, -ub) )
       {

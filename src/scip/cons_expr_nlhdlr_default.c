@@ -213,6 +213,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    SCIP_Real constant;
    SCIP_Bool* branchcand = NULL;
    int nchildren = 0;
+   int c;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -239,13 +240,10 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren) );
    assert(rowprep->varssize >= nchildren);
 
-   if( addbranchscores )
-   {
-      int c;
-      SCIP_CALL( SCIPallocBufferArray(scip, &branchcand, nchildren) );
-      for( c = 0; c < nchildren; ++c )
-         branchcand[c] = TRUE;
-   }
+   /* we need to pass a branchcand array to exprhdlr's estimate also if not asked to add branching scores */
+   SCIP_CALL( SCIPallocBufferArray(scip, &branchcand, nchildren) );
+   for( c = 0; c < nchildren; ++c )
+      branchcand[c] = TRUE;
 
    /* call the estimation callback of the expression handler */
    SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, overestimate, targetvalue, rowprep->coefs, &constant, &rowprep->local, success, branchcand) );
@@ -275,7 +273,6 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    if( addbranchscores )
    {
       SCIP_Real violation;
-      int c;
 
       /* check how much is the violation on the side that we estimate */
       if( auxvalue == SCIP_INVALID ) /*lint !e777*/
@@ -318,9 +315,9 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
           */
          SCIPincrementConsExprExprHdlrNBranchScore(SCIPgetConsExprExprHdlr(expr));
       }
-
-      SCIPfreeBufferArray(scip, &branchcand);
    }
+
+   SCIPfreeBufferArray(scip, &branchcand);
 
    return SCIP_OKAY;
 }
