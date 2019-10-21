@@ -288,7 +288,7 @@ SCIP_RETCODE strenghtenOrbitopeConstraint(
    ncovered = 0;
 
    /* array storing index of orbitope row a variable is contained in */
-   nprobvars = SCIPgetNVars(scip);
+   nprobvars = SCIPgetNTotalVars(scip);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &rowidxvar, nprobvars) );
 
@@ -304,8 +304,7 @@ SCIP_RETCODE strenghtenOrbitopeConstraint(
             success = FALSE;
             break;
          }
-
-         rowidxvar[SCIPvarGetProbindex(vars[i][j])] = i;
+         rowidxvar[SCIPvarGetIndex(vars[i][j])] = i;
       }
    }
 
@@ -354,7 +353,12 @@ SCIP_RETCODE strenghtenOrbitopeConstraint(
             if ( SCIPvarIsNegated(var) )
                break;
 
-            idx = SCIPvarGetProbindex(var);
+            idx = SCIPvarGetIndex(var);
+            assert( idx < nprobvars );
+
+            /* we have to ignore inactive vars */
+            if ( idx < 0 )
+               break;
 
             if ( rowidxvar[idx] == i )
                ++nfound;
@@ -420,7 +424,12 @@ SCIP_RETCODE strenghtenOrbitopeConstraint(
             if ( SCIPvarIsNegated(var) )
                continue;
 
-            idx = SCIPvarGetProbindex(var);
+            idx = SCIPvarGetIndex(var);
+
+            /* we have to ignore inactive variables */
+            if ( idx < 0 )
+               continue;
+            assert( idx < nprobvars );
 
             if ( rowidxvar[idx] == i )
                ++nfound;
