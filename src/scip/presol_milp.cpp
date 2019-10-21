@@ -203,9 +203,13 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    SCIP_Bool initialized;
    SCIP_Bool complete;
    SCIP_MATRIX* matrix;
+   SCIP_PRESOLDATA* data;
 
-   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
    *result = SCIP_DIDNOTRUN;
+   if( SCIPgetNRuns(scip) != 1 )
+      return SCIP_OKAY;
+
+   data = SCIPpresolGetData(presol);
 
    int nvars = SCIPgetNVars(scip);
    int nconss = SCIPgetNConss(scip);
