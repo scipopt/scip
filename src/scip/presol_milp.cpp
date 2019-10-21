@@ -302,44 +302,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    std::vector<SCIP_VAR*> aggrvars;
    std::vector<SCIP_Real> aggrvals;
 
-   // tighten bounds of variables that are still present
-   VariableDomains<SCIP_Real>& varDomains = problem.getVariableDomains();
-   for( int i = 0; i != problem.getNCols(); ++i )
-   {
-      SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
-      if( !varDomains.flags[i].test(ColFlag::LB_INF) )
-      {
-         SCIP_Bool infeas;
-         SCIP_Bool tightened;
-         SCIP_CALL( SCIPtightenVarLb(scip, var, varDomains.lower_bounds[i], TRUE, &infeas, &tightened) );
-
-         if( tightened )
-            *nchgbds += 1;
-
-         if( infeas )
-         {
-            *result = SCIP_CUTOFF;
-            break;
-         }
-      }
-
-      if( !varDomains.flags[i].test(ColFlag::UB_INF) )
-      {
-         SCIP_Bool infeas;
-         SCIP_Bool tightened;
-         SCIP_CALL( SCIPtightenVarUb(scip, var, varDomains.upper_bounds[i], TRUE, &infeas, &tightened) );
-
-         if( tightened )
-            *nchgbds += 1;
-
-         if( infeas )
-         {
-            *result = SCIP_CUTOFF;
-            break;
-         }
-      }
-   }
-
    // loop over res.postsolve and add all fixed variables and aggregations to scip
    for( std::size_t i = 0; i != res.postsolve.types.size(); ++i )
    {
@@ -407,6 +369,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
          if( infeas )
          {
+            puts("infeas after aggregation");
             *result = SCIP_CUTOFF;
             break;
          }
@@ -415,6 +378,49 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       }
       case ReductionType::PARALLEL_COL:
          assert(false);
+      }
+   }
+
+   // tighten bounds of variables that are still present
+   if( *result != SCIP_CUTOFF )
+   {
+      VariableDomains<SCIP_Real>& varDomains = problem.getVariableDomains();
+      for( int i = 0; i != problem.getNCols(); ++i )
+      {
+         SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
+         if( !varDomains.flags[i].test(ColFlag::LB_INF) )
+         {
+            SCIP_Bool infeas;
+            SCIP_Bool tightened;
+            SCIP_CALL( SCIPtightenVarLb(scip, var, varDomains.lower_bounds[i], TRUE, &infeas, &tightened) );
+
+            if( tightened )
+               *nchgbds += 1;
+
+            if( infeas )
+            {
+               puts("infeas after tightening lb");
+               *result = SCIP_CUTOFF;
+               break;
+            }
+         }
+
+         if( !varDomains.flags[i].test(ColFlag::UB_INF) )
+         {
+            SCIP_Bool infeas;
+            SCIP_Bool tightened;
+            SCIP_CALL( SCIPtightenVarUb(scip, var, varDomains.upper_bounds[i], TRUE, &infeas, &tightened) );
+
+            if( tightened )
+               *nchgbds += 1;
+
+            if( infeas )
+            {
+               puts("infeas after tightening ub");
+               *result = SCIP_CUTOFF;
+               break;
+            }
+         }
       }
    }
 
