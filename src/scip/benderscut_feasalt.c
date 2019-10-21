@@ -407,6 +407,7 @@ SCIP_DECL_BENDERSCUTEXIT(benderscutExitFeasalt)
 }
 
 /** destructor of the Benders' decomposition cut to free user data (called when SCIP is exiting) */
+static
 SCIP_DECL_BENDERSCUTFREE(benderscutFreeFeasalt)
 {  /*lint --e{715}*/
    SCIP_BENDERSCUTDATA* benderscutdata;

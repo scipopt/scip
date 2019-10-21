@@ -78,6 +78,7 @@
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar" /** the name for the Benders' auxiliary variables in the master problem */
 #define SLACKVAR_NAME         "##bendersslackvar"     /** the name for the Benders' slack variables added to each
                                                           constraints in the subproblems */
+#define NLINEARCONSHDLRS 5
 
 /* event handler properties */
 #define NODEFOCUS_EVENTHDLR_NAME         "bendersnodefocus"
@@ -1249,11 +1250,10 @@ SCIP_RETCODE addSlackVars(
    SCIP_Bool linearcons;
    SCIP_Bool success;
    char name[SCIP_MAXSTRLEN];
-#define NLINEARCONSHDLRS 5
    SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
-   SCIP_CONSHDLR* conshdlr_nonlinear = NULL;
-   SCIP_CONSHDLR* conshdlr_quadratic = NULL;
-   SCIP_CONSHDLR* conshdlr_abspower = NULL;
+   SCIP_CONSHDLR* conshdlr_nonlinear;
+   SCIP_CONSHDLR* conshdlr_quadratic;
+   SCIP_CONSHDLR* conshdlr_abspower;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -1377,12 +1377,7 @@ SCIP_RETCODE addSlackVarsToConstraints(
 {
    SCIP* subproblem;
    SCIP_CONS* cons;
-   int nvars;
-   int nbinvars;
-   int nintvars;
-   int nimplintvars;
    int i;
-   int j;
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -1518,23 +1513,21 @@ SCIP_RETCODE checkSubproblemConvexity(
    SCIP_Bool convexcons;
    SCIP_Bool discretevar;
    SCIP_Bool isnonlinear;
-#define NLINEARCONSHDLRS 5
    SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
-   SCIP_CONSHDLR* conshdlr_nonlinear = NULL;
-   SCIP_CONSHDLR* conshdlr_quadratic = NULL;
-   SCIP_CONSHDLR* conshdlr_abspower = NULL;
+   SCIP_CONSHDLR* conshdlr_nonlinear;
+   SCIP_CONSHDLR* conshdlr_quadratic;
+   SCIP_CONSHDLR* conshdlr_abspower;
 
    assert(benders != NULL);
    assert(set != NULL);
    assert(probnumber >= -1 && probnumber < SCIPbendersGetNSubproblems(benders));
 
+   assumevarfixed = NULL;
    if( probnumber >= 0 )
       subproblem = SCIPbendersSubproblem(benders, probnumber);
    else
-   {
       subproblem = set->scip;
-      assumevarfixed = NULL;
-   }
+
    assert(subproblem != NULL);
 
    convexcons = FALSE;
@@ -2536,7 +2529,6 @@ SCIP_RETCODE SCIPbendersDeactivate(
    {
 #ifndef NDEBUG
       int nsubproblems;
-      int i;
 
       nsubproblems = SCIPbendersGetNSubproblems(benders);
 
@@ -5330,7 +5322,7 @@ SCIP_RETCODE removeVariablesAndConstraintsFromMaster(
    }
 
    /* removing variables */
-   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM && vars != NULL )
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM && vars != NULL && varslabels != NULL )
    {
       for( i = nvars - 1; i >= 0; i-- )
       {
