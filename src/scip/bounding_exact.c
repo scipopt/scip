@@ -2969,7 +2969,10 @@ SCIP_RETCODE getPSdual(
       if( RatIsAbsInfinity(val) )
          assert(RatIsZero(approxdual[i]));
       else
-         RatAddProd(dualbound, approxdual[i], val);
+      {
+         RatMult(tmp, approxdual[i], val);
+         RatAdd(dualbound, dualbound, tmp);
+      }
    }
 
    printf("   objective value=%.20f (", RgetRealApprox(dualbound));
@@ -2999,7 +3002,8 @@ SCIP_RETCODE getPSdual(
       for( j = 0; j < lpex->rows[i]->len; j++)
       {
          currentrow = lpex->rows[i]->cols_index[j];
-         RatDiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
+         RatMult(tmp, approxdual[i], lpex->rows[i]->vals[j]);
+         RatDiff(violation[currentrow], violation[currentrow], tmp);
       }
    }
 
@@ -3227,9 +3231,11 @@ SCIP_RETCODE getPSdual(
             if( i < nrows && i >= nrowsps )
                continue;
             map = (i < nrowsps) ? i + nrowsps : i + nrowsps + ncols - shift;
-            RatDiffProd(approxdual[i], useinteriorpoint ? psdata->interiorpt[map] : psdata->interiorray[map], lambda2);
+            RatMult(tmp, useinteriorpoint ? psdata->interiorpt[map] : psdata->interiorray[map], lambda2);
+            RatDiff(approxdual[i], approxdual[i], tmp);
             map = (i < nrowsps) ? i : i + nrowsps - shift;
-            RatAddProd(approxdual[i], useinteriorpoint ? psdata->interiorpt[map] : psdata->interiorray[map], lambda2);
+            RatMult(tmp, useinteriorpoint ? psdata->interiorpt[map] : psdata->interiorray[map], lambda2);
+            RatAdd(approxdual[i], approxdual[i], tmp);
          }
       }
       shiftt = clock();
@@ -3263,7 +3269,8 @@ SCIP_RETCODE getPSdual(
       for( j = 0; j < lpex->rows[i]->len; j++ )
       {
          currentrow = lpex->rows[i]->cols_index[j];
-         RatDiffProd(violation[currentrow], approxdual[i], lpex->rows[i]->vals[j]);
+         RatMult(tmp, approxdual[i], lpex->rows[i]->vals[j]);
+         RatDiff(violation[currentrow], violation[currentrow], tmp);
       }
    }
    for( i = 0; i < ncols; i++ )
@@ -3293,7 +3300,8 @@ SCIP_RETCODE getPSdual(
       else
          val = i < nrows ? lpex->rows[i]->rhs : lpex->cols[i - nrows]->ub;
 
-      RatAddProd(dualbound, approxdual[i], val);
+      RatMult(tmp, approxdual[i], val);
+      RatAdd(dualbound, dualbound, tmp);
    }
 
    if( !usefarkas )
