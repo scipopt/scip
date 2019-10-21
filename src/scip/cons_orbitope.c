@@ -357,10 +357,6 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
             idx = SCIPvarGetIndex(var);
             assert( idx < nprobvars );
 
-            /* we have to ignore inactive vars */
-            if ( idx < 0 )
-               break;
-
             if ( rowidxvar[idx] == i )
                ++nfound;
             else
@@ -426,10 +422,6 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
                continue;
 
             idx = SCIPvarGetIndex(var);
-
-            /* we have to ignore inactive variables */
-            if ( idx < 0 )
-               continue;
             assert( idx < nprobvars );
 
             if ( rowidxvar[idx] == i )
