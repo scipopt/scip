@@ -2221,8 +2221,8 @@ SCIP_RETCODE reduce_da(
             reduce_extendedEdge2(scip, &redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed);
             ndeletions += extfixed;
 //#define EXT_WRITE
-            graph_printInfo(graph);
-            printf("newly fixedSECOND =%d \n", extfixed);
+         //   graph_printInfo(graph);
+         //   printf("newly fixedSECOND =%d \n", extfixed);
           //  exit(1);
 #ifdef EXT_WRITE
             {
