@@ -242,9 +242,9 @@ SCIP_RETCODE consdataCreate(
 }
 
 
-/** strenghten full orbitopes to packing/partitioning orbitopes if possible  */
+/** strengthen full orbitopes to packing/partitioning orbitopes if possible  */
 static
-SCIP_RETCODE strenghtenOrbitopeConstraint(
+SCIP_RETCODE strengthenOrbitopeConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< variable matrix of orbitope constraint */
    int*                  nrows,              /**< pointer to number of rows of variable matrix */
@@ -3264,7 +3264,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    if ( conshdlrdata->checkpporbitope && orbitopetype != SCIP_ORBITOPETYPE_PARTITIONING
       && orbitopetype != SCIP_ORBITOPETYPE_PACKING )
    {
-      SCIP_CALL( strenghtenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &orbitopetype) );
+      SCIP_CALL( strengthenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &orbitopetype) );
    }
 
    /* create constraint data */
