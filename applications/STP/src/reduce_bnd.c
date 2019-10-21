@@ -1795,10 +1795,10 @@ SCIP_RETCODE reduce_boundHopRc(
             {
                assert(vars != NULL);
                /* try to fix edge */
-               SCIP_CALL( fixedgevar(scip, vars[e], nelims) );
+               SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[e], nelims) );
 
                /* try to fix reversed edge */
-               SCIP_CALL( fixedgevar(scip, vars[flipedge(e)], nelims) );
+               SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[flipedge(e)], nelims) );
             }
             else
             {
@@ -1826,7 +1826,7 @@ SCIP_RETCODE reduce_boundHopRc(
                   assert(vars != NULL);
 
                   /* try to fix edge */
-                  SCIP_CALL( fixedgevar(scip, vars[e], nelims) );
+                  SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[e], nelims) );
                }
                else
                {

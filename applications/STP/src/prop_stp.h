@@ -45,7 +45,7 @@ SCIP_RETCODE SCIPincludePropStp(
 
 /** fix a variable (corresponding to an edge) to zero */
 SCIP_EXPORT
-SCIP_RETCODE fixedgevar(
+SCIP_RETCODE SCIPStpFixEdgeVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             edgevar,            /**< the variable to be fixed */
    int*                  nfixed              /**< counter that is incriminated if variable could be fixed */
@@ -65,7 +65,7 @@ SCIP_Bool SCIPStpRedcostAvailable(
 
 /** initialize reduced costs */
 EXTERN
-void SCIPStpSetRedcosts(
+void SCIPStpGetRedcosts(
    SCIP*                 scip,               /**< SCIP structure */
    SCIP_VAR**            vars,               /**< variables */
    int                   nedges,             /**< nedges */
