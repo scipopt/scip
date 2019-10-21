@@ -265,11 +265,11 @@ set(instances_MIPEX
     "instances/MIPEX/egout.zpl\;568.1007"
     "instances/MIPEX/enigma.zpl\;0"
     "instances/MIPEX/flugpl.zpl\;1201500"
-    "instances/MIPEX/misc03.zpl\;0"
-    "instances/MIPEX/mod008.zpl\;0"
+    "instances/MIPEX/misc03.zpl\;3360"
+    "instances/MIPEX/mod008.zpl\;307"
     "instances/MIPEX/rgn.zpl\;82.1999974"
     "instances/MIPEX/stein27.zpl\;18"
-    "instances/MIPEX/stein45.zpl\;0"
+    "instances/MIPEX/stein45.zpl\;30"
     )
 #
 # this instance was part of the original coverage tests. However, it causes
