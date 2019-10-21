@@ -180,6 +180,7 @@
 /* macros for getting activeness of symmetry handling methods */
 #define ISSYMRETOPESACTIVE(x)      ((x & SYM_HANDLETYPE_SYMBREAK) != 0)
 #define ISORBITALFIXINGACTIVE(x)   ((x & SYM_HANDLETYPE_ORBITALFIXING) != 0)
+#define ISSCHREIERSIMSACTIVE(x)    ((x & SYM_HANDLETYPE_SCHREIERSIMS) != 0)
 
 
 
@@ -253,6 +254,9 @@ struct SCIP_PropData
    int                   nfixedzero;         /**< number of variables fixed to 0 */
    int                   nfixedone;          /**< number of variables fixed to 1 */
    SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
+
+   /* data necessary for Schreier Sims cuts */
+   SCIP_Bool             schreiersimsenabled; /**< Use Schreier Sims cuts? */
 };
 
 
@@ -3258,10 +3262,15 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
          propdata->ofenabled = TRUE;
       else
          propdata->ofenabled = FALSE;
+
+      if ( ISSCHREIERSIMSACTIVE(propdata->usesymmetry) )
+         propdata->schreiersimsenabled = TRUE;
+      else
+         propdata->schreiersimsenabled = FALSE;
    }
 
    /* add symmetry handling constraints if required  */
-   if ( propdata->symconsenabled && propdata->addconsstiming == 0 )
+   if ( (propdata->symconsenabled || propdata->schreiersimsenabled) && propdata->addconsstiming == 0 )
    {
       SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.");
 
@@ -3290,7 +3299,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
 
    /* guarantee that symmetries are computed (and handled) if the solving process has not been interrupted
     * and even if presolving has been disabled */
-   if ( propdata->symconsenabled && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
+   if ( (propdata->symconsenabled || propdata->schreiersimsenabled) && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
    {
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL) );
    }
@@ -3318,7 +3327,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    assert( propdata->usesymmetry >= 0 );
 
    /* possibly create symmetry handling constraints */
-   if ( propdata->symconsenabled )
+   if ( propdata->symconsenabled || propdata->schreiersimsenabled )
    {
       int noldngenconns;
       SCIP_Bool earlyterm = FALSE;
@@ -3450,6 +3459,11 @@ SCIP_DECL_PROPEXEC(propExecSymmetry)
          propdata->ofenabled = TRUE;
       else
          propdata->ofenabled = FALSE;
+
+      if ( ISSCHREIERSIMSACTIVE(propdata->usesymmetry) )
+         propdata->schreiersimsenabled = TRUE;
+      else
+         propdata->schreiersimsenabled = FALSE;
    }
 
    /* do not propagate if orbital fixing is not enabled */
@@ -3506,6 +3520,7 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
    propdata->nsymresacks = 0;
    propdata->norbitopes = 0;
    propdata->ofenabled = FALSE;
+   propdata->schreiersimsenabled = FALSE;
    propdata->lastrestart = 0;
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
@@ -3615,6 +3630,8 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nfixedzero = 0;
    propdata->nfixedone = 0;
    propdata->nodenumber = -1;
+
+   propdata->schreiersimsenabled = FALSE;
 
    /* create event handler */
    propdata->eventhdlr = NULL;
