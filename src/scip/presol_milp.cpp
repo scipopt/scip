@@ -265,9 +265,11 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    {
       case PresolveStatus::INFEASIBLE:
          *result = SCIP_CUTOFF;
+         SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
       case PresolveStatus::UNBOUNDED:
          *result = SCIP_UNBOUNDED;
+         SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
       case PresolveStatus::UNBND_OR_INFEAS:
          //todo
@@ -276,6 +278,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          data->lastncols = 0;
          data->lastnrows = 0;
          puts("didnotfind");
+         SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
       case PresolveStatus::REDUCED:
          data->lastncols = problem.getNCols();
