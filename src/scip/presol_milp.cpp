@@ -234,24 +234,32 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
    using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
 
-   presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new CoefficientStrengthening<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleProbing<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new ConstraintPropagation<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
    // todo: parallel cols cannot be handled by SCIP currently
    // addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real> ) );
    presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
    // presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
+
+   if( SCIPallowWeakDualReds(scip) )
+   {
+      presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real> ) );
+   }
+
+   if( SCIPallowStrongDualReds(scip) )
+   {
+      presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
+   }
 
    presolve.setEpsilon(SCIPepsilon(scip));
    presolve.setFeasTol(SCIPfeastol(scip));
