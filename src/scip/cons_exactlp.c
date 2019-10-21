@@ -168,7 +168,9 @@ struct SCIP_ConsData
    SCIP_Rational*        lhs;                /**< left hand side of row (for ranged rows) */
    SCIP_Rational*        rhs;                /**< right hand side of row */
    SCIP_Real             lhsreal;            /**< real relaxation of lhs */
-   SCIP_Real             rhsreal;             /**< real relaxation of rhs */
+   SCIP_Real             rhsreal;            /**< real relaxation of rhs */
+   SCIP_Rational*        violation;          /**< used to store violation */
+   SCIP_Rational*        activity;           /**< used to store activity */
    SCIP_Rational*        maxabsval;          /**< maximum absolute value of all coefficients */
    SCIP_Rational*        minabsval;          /**< minimal absolute value of all coefficients */
    SCIP_Rational*        minactivity;        /**< minimal value w.r.t. the variable's local bounds for the constraint's
@@ -1023,6 +1025,9 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->rangedrowpropagated = 0;
    (*consdata)->checkabsolute = FALSE;
 
+   SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*consdata)->activity) );
+   SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*consdata)->violation) );
+
    if( SCIPisTransformed(scip) )
    {
       /* get transformed variables */
@@ -1089,6 +1094,8 @@ SCIP_RETCODE consdataFree(
    RatFreeBlock(SCIPblkmem(scip), &(*consdata)->glbmaxactivity);
    RatFreeBlock(SCIPblkmem(scip), &(*consdata)->lastglbminactivity);
    RatFreeBlock(SCIPblkmem(scip), &(*consdata)->lastglbmaxactivity);
+   RatFreeBlock(SCIPblkmem(scip), &(*consdata)->violation);
+   RatFreeBlock(SCIPblkmem(scip), &(*consdata)->activity);
 
    SCIPfreeBlockMemory(scip, consdata);
    return SCIP_OKAY;
@@ -7067,20 +7074,11 @@ checkCons(
    SCIP_Real activityfp;
    SCIP_Real absviolfp;
    SCIP_Rational* activity;
-   SCIP_Rational* absviol;
-   SCIP_Rational* relviol;
-   SCIP_Rational* lhsviol;
-   SCIP_Rational* rhsviol;
+   SCIP_Rational* violation;
 
    assert(scip != NULL);
    assert(cons != NULL);
    assert(violated != NULL);
-
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &activity) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &absviol) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &relviol) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lhsviol) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &rhsviol) );
 
    SCIPdebugMsg(scip, "checking linear constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug(consPrintConsSol(scip, cons, sol, useexactsol, NULL));
@@ -7089,20 +7087,25 @@ checkCons(
    assert(consdata != NULL);
 
    *violated = FALSE;
+   activity = consdata->activity;
+   violation = consdata->violation;
 
    /* only check exact constraint if fp cons is feasible enough */
    if( consdata->row != NULL && sol != NULL)
    {
       activityfp = SCIPgetRowSolActivity(scip, consdata->row, sol);
       absviolfp = MAX(activityfp - consdata->rhsreal, consdata->lhsreal - activityfp);
-      if( !SCIPisFeasPositive(scip, absviolfp) )
-         goto cleanup;
+      if( SCIPisFeasPositive(scip, absviolfp) )
+      {
+         *violated = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    if( consdata->row != NULL )
    {
       if( !checklprows && SCIProwIsInLP(consdata->row) )
-         goto cleanup;
+         return SCIP_OKAY;
       else if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
          consdataComputePseudoActivity(scip, consdata, activity);
       else
@@ -7116,21 +7119,6 @@ checkCons(
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
       consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
 
-   /* calculate absolute and relative bound violations */
-   RatDiff(lhsviol, consdata->lhs, activity);
-   RatDiff(rhsviol, activity, consdata->rhs);
-
-   if( RatIsPositive(lhsviol) && RatIsGT(lhsviol, rhsviol) )
-   {
-      RatSet(absviol, lhsviol); 
-      RatRelDiff(relviol, consdata->lhs, activity);
-   }
-   else if( RatIsPositive(rhsviol) )
-   {
-      RatSet(absviol, rhsviol);
-      RatRelDiff(relviol, activity, consdata->rhs);
-   }
-
    /* the activity of pseudo solutions may be invalid if it comprises positive and negative infinity contributions; we
     * return infeasible for safety
     * todo exip: do we need to handle this as well? */
@@ -7141,7 +7129,6 @@ checkCons(
 
       /* set violation of invalid pseudo solutions */
       //absviol = SCIP_INVALID;
-      //relviol = SCIP_INVALID;
 
       /* reset constraint age since we are in enforcement */
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -7168,15 +7155,9 @@ checkCons(
    }
 
    /* update absolute and relative violation of the solution */
+   /** @todo exip: check if we need this and if it should be exact */
    if( sol != NULL )
-      SCIPupdateSolLPConsViolation(scip, sol, RatApproxReal(absviol), RatApproxReal(relviol));
-
-cleanup:
-   RatFreeBuffer(SCIPbuffer(scip), &activity);
-   RatFreeBuffer(SCIPbuffer(scip), &absviol);
-   RatFreeBuffer(SCIPbuffer(scip), &relviol);
-   RatFreeBuffer(SCIPbuffer(scip), &lhsviol);
-   RatFreeBuffer(SCIPbuffer(scip), &rhsviol);
+      SCIPupdateSolLPConsViolation(scip, sol, absviolfp, absviolfp);
 
    return SCIP_OKAY;
 }
