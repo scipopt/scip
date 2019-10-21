@@ -304,6 +304,7 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
             success = FALSE;
             break;
          }
+         assert( SCIPvarGetIndex(vars[i][j]) >= 0 );
          rowidxvar[SCIPvarGetIndex(vars[i][j])] = i;
       }
    }
