@@ -17170,7 +17170,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
 /* Cleans up and attempts to improve rowprep
  *
  * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
- * Scales coefficients and side up to have maximal coefficient in [0.5,2].
+ * Scales coefficients and side up to have maximal coefficient in [0.001,1000].
  * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
  * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the cut least.
  *
@@ -17244,7 +17244,7 @@ SCIP_RETCODE SCIPcleanupRowprep2(
 #endif
 
    /* scale up or down to improve numerics, updates myviol (reliability doesn't change) */
-   if( rowprep->nvars > 0 && (REALABS(rowprep->coefs[0]) < 0.5 || REALABS(rowprep->coefs[0]) > 2.0) )
+   if( rowprep->nvars > 0 && (REALABS(rowprep->coefs[0]) < 0.001 || REALABS(rowprep->coefs[0]) > 1000.0) )
    {
       SCIP_Real expon;
       expon = SCIPscaleRowprep(rowprep, 1.0 / REALABS(rowprep->coefs[0]));
