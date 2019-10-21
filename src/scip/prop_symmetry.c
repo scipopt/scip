@@ -2913,8 +2913,7 @@ SCIP_RETCODE computeBranchingVariables(
    SCIP_HASHMAP*         varmap,             /**< map of variables to indices in vars array */
    SCIP_Shortbool*       bg1,                /**< bitset marking the variables globally fixed or branched to 1 */
    int*                  bg1list,            /**< array to store the variable indices globally fixed or branched to 1 */
-   int*                  nbg1,               /**< pointer to store the number of variables in bg1 and bg1list */
-   SCIP_Bool*            success             /**< pointer to store whether branching variables were computed successfully */
+   int*                  nbg1                /**< pointer to store the number of variables in bg1 and bg1list */
    )
 {
    SCIP_NODE* node;
@@ -2924,10 +2923,7 @@ SCIP_RETCODE computeBranchingVariables(
    assert( bg1 != NULL );
    assert( bg1list != NULL );
    assert( nbg1 != NULL );
-   assert( success != NULL );
    assert( *nbg1 >= 0 );
-
-   *success = TRUE;
 
    /* get current node */
    node = SCIPgetCurrentNode(scip);
@@ -3016,7 +3012,6 @@ SCIP_RETCODE propagateOrbitalFixing(
    SCIP_Shortbool* inactiveperms;
    SCIP_Shortbool* bg0;
    SCIP_Shortbool* bg1;
-   SCIP_Bool success = TRUE;
    SCIP_VAR** permvars;
    int* orbitbegins;
    int* orbits;
@@ -3086,17 +3081,8 @@ SCIP_RETCODE propagateOrbitalFixing(
    nbg1 = propdata->nbg1;
 
    /* get branching variables */
-   SCIP_CALL( computeBranchingVariables(scip, npermvars, propdata->permvarmap, bg1, bg1list, &nbg1, &success) );
+   SCIP_CALL( computeBranchingVariables(scip, npermvars, propdata->permvarmap, bg1, bg1list, &nbg1) );
    assert( nbg1 >= propdata->nbg1 );
-
-   if ( ! success )
-   {
-      /* clean bg1 */
-      for (j = propdata->nbg1; j < nbg1; ++j)
-         bg1[bg1list[j]] = FALSE;
-
-      return SCIP_OKAY;
-   }
 
    /* reset inactive permutations */
    nactiveperms = nperms;
