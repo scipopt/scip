@@ -2970,12 +2970,13 @@ SCIP_RETCODE computeBranchingVariables(
             /* we only consider binary variables */
             if ( SCIPvarGetType(branchvar) == SCIP_VARTYPE_BINARY )
             {
-               /* make sure that branching variable is known, since new binary variables may have
-                * been created meanwhile, e.g., by prop_inttobinary */
+               /* if branching variable is not known (may have been created meanwhile,
+                * e.g., by prop_inttobinary; may have been removed from symmetry data
+                * due to compression), continue with parent node */
                if ( ! SCIPhashmapExists(varmap, (void*) branchvar) )
                {
-                  *success = FALSE;
-                  return SCIP_OKAY;
+                  node = SCIPnodeGetParent(node);
+                  continue;
                }
 
                if ( SCIPvarGetLbLocal(branchvar) > 0.5 )
