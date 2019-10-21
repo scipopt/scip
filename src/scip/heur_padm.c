@@ -659,6 +659,25 @@ static SCIP_RETCODE reuseSolution(
    return SCIP_OKAY;
 }
 
+/** returns the available time limit that is left */
+static
+SCIP_Real getTimeLeft(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real timelim;
+
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
+
+   if( !SCIPisInfinity(scip, timelim) )
+      return MAX(0.0, (timelim - SCIPgetSolvingTime(scip)));
+   else
+      return SCIPinfinity(scip);
+}
+
+
 /*
  * Callback methods of primal heuristic
  */
@@ -871,10 +890,10 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    }
    nblocks = SCIPdecompGetNBlocks(decomp);
 
-   /* if problem has no constraints or no variables, return */
-   if( nconss == 0 || nvars == 0 )
+   /* if problem has no constraints, no variables or less than two blocks, return */
+   if( nconss == 0 || nvars == 0 || nblocks <= 1 )
    {
-      SCIPdebugMsg(scip, "problem has no constraints or no variables\n");
+      SCIPdebugMsg(scip, "problem has no constraints, no variables or less than two blocks\n");
       goto TERMINATE;
    }
 
@@ -972,6 +991,16 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_CALL( SCIPallocBufferArray(scip, &linkvartoblocks, numlinkvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &blocktolinkvars, problem->nblocks) );
 
+   /* set pointer to NULL for safe memory release */
+   for( i = 0; i < numlinkvars; i++ )
+   {
+      linkvartoblocks[i].indexes = NULL;
+   }
+   for( i = 0; i < problem->nblocks; i++ )
+   {
+      blocktolinkvars[i].indexes = NULL;
+   }
+
    /* extract linking variables and init linking variable to blocks set */
    SCIP_CALL( SCIPallocBufferArray(scip, &linkvars, numlinkvars) );
    b = 0;
@@ -1004,6 +1033,10 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
    }
+
+   /* check whether there is enough time left */
+   if( getTimeLeft(scip) <= 0)
+      goto TERMINATE;
 
    /* init block to linking variables set */
    for( b = 0; b < problem->nblocks; b++ )
@@ -1206,6 +1239,12 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          slackthreshold = obj;
    }
 
+   /* ------------------------------------------------------------------------------------------------- */
+
+   /* check whether there is enough time left */
+   if( getTimeLeft(scip) <= 0)
+      goto TERMINATE;
+
    SCIPdebugMsg(scip, "Starting iterations\n");
    SCIPdebugMsg(scip, "PIt\tADMIt\tSlacks\tInfo\n");
 
@@ -1283,8 +1322,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
             do
             {
                SCIP_CALL( SCIPsetRealParam((problem->blocks[b]).subscip, "limits/gap", gap) );
-
-               /* solve block */
 #if 0
                SCIPdebugMsg(scip, "write subscip block %d\n", b);
                SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[b]).subscip, "debug_block_orig.lp", "lp", FALSE) );
@@ -1292,10 +1329,22 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                /* reuse old solution if available*/
                SCIP_CALL( reuseSolution((problem->blocks[b]).subscip, &problem->blocks[b]) );
 
+               /* update time limit of subproblem */
+               SCIP_CALL( SCIPsetRealParam((problem->blocks[b]).subscip, "limits/time", getTimeLeft(scip)) );
+
+               /* solve block */
+
                SCIPsolve((problem->blocks[b]).subscip);
                status = SCIPgetStatus((problem->blocks[b]).subscip);
 
-               if( status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_GAPLIMIT )
+               /* check solution if one of the three cases occurs
+                * - solution is optimal
+                * - solution reached gaplimit
+                * - time limit is reached but best solution needs no slack variables (no dual solution avaiable)
+                */
+               if( status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_GAPLIMIT || 
+                   (status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
+                    SCIPisEQ(scip, SCIPsolGetOrigObj(SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) )
                {
                   for( i = 0; i < blocktolinkvars[b].size; i++ )
                   {
@@ -1366,6 +1415,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                      }
                   }
                }
+               else if( status == SCIP_STATUS_TIMELIMIT )
+               {
+                  SCIPdebugMsg(scip, "Block reached time limit. No optimal solution avaiable.\n");
+                  goto TERMINATE;
+               }
                else
                {
                   SCIPdebugMsg(scip, "Block solving status %d not supported\n", status);
@@ -1376,7 +1430,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                SCIP_CALL( SCIPfreeTransform((problem->blocks[b]).subscip) );
 
             }
-            while( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_GAPLIMIT );
+            while( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_GAPLIMIT &&
+                   !(status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
+                    SCIPisEQ(scip, SCIPsolGetOrigObj(SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ));
          }
       }
 
@@ -1591,10 +1647,13 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
       SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
       if( !success )
+      {
          SCIPdebugMsg(scip, "Solution copy failed\n");
+         *result = SCIP_DIDNOTFIND;
+      }
       else
       {
-         SCIPdebugMsg(scip, "Solution copy successful\n");
+         SCIPdebugMsg(scip, "Solution copy successful after %f sec\n", SCIPgetSolvingTime(scip));
          *result = SCIP_FOUNDSOL;
       }
 
@@ -1645,7 +1704,10 @@ TERMINATE:
    if( problem != NULL )
    {
       for( b = problem->nblocks -1; b >= 0; b-- )
-         SCIPfreeBufferArray(scip, &(blocktolinkvars[b].indexes));
+      {
+         if( blocktolinkvars[b].indexes != NULL )
+            SCIPfreeBufferArray(scip, &(blocktolinkvars[b].indexes));
+      }
    }
 
    for( i = numlinkvars - 1; i >= 0; i-- )
