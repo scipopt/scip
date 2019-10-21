@@ -2378,7 +2378,9 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
    newroot = -1;
    maxgrad = -1;
 
+#ifndef WITH_UG
    printf("attempt transformation to rooted problem \n");
+#endif
 
    nfixedterms = 0;
    e = graph->outbeg[root];
@@ -2455,22 +2457,26 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
       if( pc )
       {
          graph->stp_type = STP_RPCSPG;
+#ifndef WITH_UG
          printf("...transformed PC to RPC; fixed %d out of %d terminals \n", nfixedterms, orgnterms - 1);
+#endif
 
       }
       else
       {
          graph->stp_type = STP_RMWCSP;
+#ifndef WITH_UG
          printf("...transformed MW to RMW; fixed %d out of %d terminals \n", nfixedterms, orgnterms - 1);
+#endif
       }
 
       assert(orgnterms - 1 == graph->terms);
    }
 
-
-
+#ifndef WITH_UG
    if( !graph_pc_isRootedPcMw(graph) )
       printf("...failed \n");
+#endif
 
    return SCIP_OKAY;
 }

@@ -240,7 +240,9 @@ SCIP_RETCODE init_pcmwimplications(
    }
    assert(termscount == npterms);
 
+#ifndef WITH_UG
    printf("number of implications %d \n", nimplications);
+#endif
 
    SCIPfreeBufferArray(scip, &termmark);
    SCIPfreeBufferArray(scip, &visitlist);
