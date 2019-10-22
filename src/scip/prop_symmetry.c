@@ -2812,14 +2812,14 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    int*                  orbitbegins,        /**< array storing the begin position of each orbit in orbits */
    int                   norbits,            /**< number of orbits */
    int*                  orbitidx,           /**< pointer to index of selected orbit */
-   int*                  leaderidx           /**< pointer to leader in orbit */
+   int*                  leaderidx,          /**< pointer to leader in orbit */
+   SCIP_Bool             maxorbit,           /**< Should orbit of maximum size be selected? */
+   SCIP_Bool             firstinorbit        /**< Should the first element in the orbit be selected as leader? */
    )
 {
    int i;
    int candorbitsize;
    int cursize;
-   SCIP_Bool maxorbit = TRUE;
-   SCIP_Bool firstinorbit = TRUE;
 
    assert( scip != NULL );
    assert( orbits != NULL );
@@ -2955,7 +2955,8 @@ SCIP_RETCODE addSchreierSimsConss(
             componentblocked, ncomponents, nmovedpermvars) );
 
       /* select orbit and leader */
-      SCIP_CALL( selectOrbitLeaderSchreierSimsConss(scip, orbits, orbitbegins, norbits, &orbitidx, &orbitleaderidx) );
+      SCIP_CALL( selectOrbitLeaderSchreierSimsConss(scip, orbits, orbitbegins, norbits, &orbitidx, &orbitleaderidx,
+            propdata->schreiersimsmaxorbit, propdata->schreiersimsfirstinorbit) );
 
       /* add Schreier Sims cuts */
       SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, propdata, permvars, orbits, orbitbegins, orbitidx, orbitleaderidx) );
