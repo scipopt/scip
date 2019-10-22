@@ -7014,8 +7014,9 @@ SCIP_RETCODE getFarkasProof(
                SCIP_CALL( SCIPsetAllocBufferArray(set, &localrowdepth, nrows-r) );
             }
 
-            if( localrowinds != NULL && lpdepth < SCIPtreeGetFocusDepth(tree) )
+            if( lpdepth < SCIPtreeGetFocusDepth(tree) )
             {
+               assert(localrowinds != NULL);
                assert(localrowdepth != NULL);
 
                localrowinds[nlocalrows] = r;
