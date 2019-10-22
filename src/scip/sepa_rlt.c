@@ -47,7 +47,6 @@
 
 #define DEFAULT_MAXUNKNOWNTERMS       0 /**< default value for parameter maxunknownterms */
 #define DEFAULT_MAXUSEDVARS         100 /**< default value for parameter maxusedvars */
-#define DEFAULT_MAXNONZEROPROP      0.0 /**< default value for parameter maxnonzeroprop */
 #define DEFAULT_MAXNCUTS             -1 /**< default value for parameter maxncuts */
 #define DEFAULT_MAXROUNDS             1 /**< default value for parameter maxrounds */
 #define DEFAULT_MAXROUNDSROOT        10 /**< default value for parameter maxroundsroot */
@@ -78,7 +77,6 @@ struct SCIP_SepaData
    SCIP_Bool             isinitialround;     /**< indicates that this is the first round and initial rows are used */
 
    /* parameters */
-   SCIP_Real             maxnonzeroprop;     /**< maximum acceptable proportion of known bilinear terms to non-zeroes */
    int                   maxunknownterms;    /**< maximum number of unknown bilinear terms a row can have to be used */
    int                   maxusedvars;        /**< maximum number of variables that will be used to compute rlt cuts */
    int                   maxncuts;           /**< maximum number of cuts that will be added per round */
@@ -389,13 +387,6 @@ SCIP_RETCODE isAcceptableRow(
 
    assert(row != NULL);
    assert(var != NULL);
-
-   /* test if the ratio of non-zeroes and known terms of this variable is ok */
-   if( SCIProwGetNNonz(row) * sepadata->maxnonzeroprop > nlocks )
-   {
-      *acceptable = FALSE;
-      return SCIP_OKAY;
-   }
 
    for( i = 0; (i < SCIProwGetNNonz(row)) && (sepadata->maxunknownterms >= 0 || nterms <= sepadata->maxunknownterms); ++i )
    {
@@ -1003,10 +994,6 @@ SCIP_RETCODE SCIPincludeSepaRlt(
          "separating/" SEPA_NAME "/maxusedvars",
          "maximal number of variables used to compute rlt cuts (-1: unlimited)",
          &sepadata->maxusedvars, FALSE, DEFAULT_MAXUSEDVARS, -1, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/maxnonzeroprop",
-         "maximal proportion of known bilinear terms of a variable to non-zeroes of a row that is accepted",
-         &sepadata->maxnonzeroprop, FALSE, DEFAULT_MAXNONZEROPROP, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
       "separating/" SEPA_NAME "/maxrounds",
