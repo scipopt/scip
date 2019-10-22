@@ -524,13 +524,23 @@ SCIP_RETCODE computeRltCuts(
    *cut = NULL;
 
    /* get data for given variable */
-   lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
-   ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+   if( computeEqCut )
+   {
+      lbvar = 0.0;
+      ubvar = 0.0;
+   }
+   else
+   {
+      lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
+      ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+   }
+
    constside = uselhs ? SCIProwGetLhs(row) : SCIProwGetRhs(row);
    refpointvar = MAX(lbvar, MIN(ubvar, SCIPgetSolVal(scip, sol, var))); /*lint !e666*/
 
    /* if the bounds are too large or the respective side is infinity, skip this cut */
-   if( REALABS(lbvar) > MAXVARBOUND || REALABS(ubvar) > MAXVARBOUND || SCIPisInfinity(scip, REALABS(constside)) )
+   if( (uselb && REALABS(lbvar) > MAXVARBOUND) || (!uselb && REALABS(ubvar) > MAXVARBOUND)
+      || SCIPisInfinity(scip, REALABS(constside)) )
    {
       SCIPdebugMsg(scip, "cut generation for row %s, %s and variable %s with its %s %f not possible\n",
          SCIProwGetName(row), uselhs ? "lhs" : "rhs", SCIPvarGetName(var),
@@ -856,7 +866,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
          SCIP_ROW *cut;
 
          /* check whether this row and var fulfill the conditions */
-         SCIP_CALL(isAcceptableRow(scip, sepadata, rows[i], var, sepadata->varpriorities[j], &accepted));
+         SCIP_CALL( isAcceptableRow(scip, sepadata, rows[i], var, sepadata->varpriorities[j], &accepted) );
 
          if( !accepted )
          {
@@ -887,8 +897,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
                uselb[k] ? "lower bound" : "upper bound");
 
             /* compute the rlt cut */
-            SCIP_CALL(computeRltCuts(scip, sepa, sepadata, &cut, rows[i], NULL, var, &success, uselb[k], uselhs[k],
-               allowlocal, buildeqcut));
+            SCIP_CALL( computeRltCuts(scip, sepa, sepadata, &cut, rows[i], NULL, var, &success, uselb[k], uselhs[k],
+               allowlocal, buildeqcut) );
 
             SCIPdebugMsg(scip, "finished cut generation for row %s, %s and variable %s with its %s %s\n",
                SCIProwGetName(rows[i]), uselhs[k] ? "lhs" : "rhs", SCIPvarGetName(var),
@@ -903,7 +913,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
                   SCIP_Bool infeasible;
 
                   /* add the row to SCIP; equality cuts are forced to be added to the LP */
-                  SCIP_CALL(SCIPaddRow(scip, cut, buildeqcut, &infeasible));
+                  SCIP_CALL( SCIPaddRow(scip, cut, buildeqcut, &infeasible) );
                   ++ncuts;
 
                   if( infeasible )
@@ -917,14 +927,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
                   }
                }
                else
-                  SCIPdebugMsg(scip, "the cut was created successfully, but not accepted by scip\n");
+                  SCIPdebugMsg(scip, "the cut was created successfully, but is not violated\n");
             } else
                SCIPdebugMsg(scip, "the generation of the cut failed\n");
 
             /* release the cut */
             if( cut != NULL)
             {
-               SCIP_CALL(SCIPreleaseRow(scip, &cut));
+               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
             }
 
             if( (sepadata->maxncuts >= 0 && ncuts >= sepadata->maxncuts) || *result == SCIP_CUTOFF )
