@@ -560,7 +560,9 @@ static SCIP_RETCODE assignLinking(
    SCIPdecompGetConsLabels(newdecomp, sortedconss, conslabels, nconss);
    SCIPdecompGetVarsLabels(newdecomp, vars, varlabels, nvars);
 
-   SCIPsortIntPtr(conslabels, (void **)sortedconss, nconss);
+   SCIPsortIntPtr(conslabels, (void**)sortedconss, nconss);
+
+   return SCIP_OKAY;
 }
 
 /** compute feasible solution from last stored solution */
@@ -921,7 +923,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 #endif
 
    /* sort constraints by blocks */
-   SCIPsortIntPtr(conslabels, (void **)sortedconss, nconss);
+   SCIPsortIntPtr(conslabels, (void**)sortedconss, nconss);
 
    if( heurdata->assignlinking && conslabels[0] == SCIP_DECOMP_LINKCONS )
    {
@@ -929,7 +931,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIP_DECOMP* newdecomp = NULL;
       SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), nblocks, heurdata->original, SCIPdecompUseBendersLabels(decomp)) );
 
-      assignLinking(scip, decomp, newdecomp, vars, sortedconss, varlabels, conslabels, nvars, nconss, nblocks);
+      SCIP_CALL( assignLinking(scip, decomp, newdecomp, vars, sortedconss, varlabels, conslabels, nvars, nconss, nblocks) );
       decomp = newdecomp;
 
       /* number of blocks can have changed */
@@ -1692,9 +1694,12 @@ TERMINATE:
    {
       for( b = problem->nblocks - 1; b >= 0; b-- )
       {
-         SCIPfreeBufferArray(scip, &problem->blocks[b].couplingcons);
-         SCIPfreeBufferArray(scip, &problem->blocks[b].slacksneg);
-         SCIPfreeBufferArray(scip, &problem->blocks[b].slackspos);
+         if( problem->blocks[b].couplingcons != NULL )
+         {
+            SCIPfreeBufferArray(scip, &problem->blocks[b].couplingcons);
+            SCIPfreeBufferArray(scip, &problem->blocks[b].slacksneg);
+            SCIPfreeBufferArray(scip, &problem->blocks[b].slackspos);
+         }
       }
    }
 
