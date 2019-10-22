@@ -257,6 +257,8 @@ struct SCIP_PropData
 
    /* data necessary for Schreier Sims cuts */
    SCIP_Bool             schreiersimsenabled; /**< Use Schreier Sims cuts? */
+   SCIP_CONS**           schreiersimsconss;  /**< list of generated schreier sims conss */
+   int                   nschreiersimsconss; /**< number of generated schreier sims conss */
 };
 
 
@@ -540,6 +542,7 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->nbg0 == 0 );
    assert( propdata->nbg1 == 0 );
    assert( propdata->genconss == NULL );
+   assert( propdata->schreiersimsconss == NULL );
 
    assert( propdata->permvars == NULL );
    assert( propdata->permvarsobj == NULL );
@@ -662,6 +665,21 @@ SCIP_RETCODE freeSymmetryData(
       SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
       propdata->ngenconss = 0;
    }
+   if ( propdata->schreiersimsconss != NULL )
+   {
+      assert( propdata->nschreiersimsconss > 0 );
+
+      /* release constraints */
+      for (i = 0; i < propdata->nschreiersimsconss; ++i)
+      {
+         assert( propdata->schreiersimsconss[i] != NULL );
+         SCIP_CALL( SCIPreleaseCons(scip, &propdata->schreiersimsconss[i]) );
+      }
+
+      /* free pointers to symmetry group and binary variables */
+      SCIPfreeBlockMemoryArray(scip, &propdata->schreiersimsconss, propdata->nschreiersimsconss);
+      propdata->nschreiersimsconss = 0;
+   }
 
    /* free components */
    if ( propdata->ncomponents > 0 )
@@ -729,30 +747,46 @@ SCIP_RETCODE delSymConss(
    assert( scip != NULL );
    assert( propdata != NULL );
 
+   /* free Schreier Sims data */
+   if ( propdata->nschreiersimsconss > 0 )
+   {
+      for (i = 0; i < propdata->nschreiersimsconss; ++i)
+      {
+         assert( propdata->schreiersimsconss[i] != NULL );
+
+         SCIP_CALL( SCIPdelCons(scip, propdata->schreiersimsconss[i]) );
+         SCIP_CALL( SCIPreleaseCons(scip, &propdata->schreiersimsconss[i]) );
+      }
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &propdata->schreiersimsconss, propdata->nschreiersimsconss);
+   propdata->nschreiersimsconss = 0;
+
    if ( propdata->ngenconss == 0 )
    {
       if ( propdata->genconss != NULL )
          SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
       propdata->triedaddconss = FALSE;
-
-      return SCIP_OKAY;
    }
-   assert( propdata->genconss != NULL );
-   assert( propdata->nperms > 0 );
-   assert( propdata->nperms >= propdata->ngenconss );
-
-   for (i = 0; i < propdata->ngenconss; ++i)
+   else
    {
-      assert( propdata->genconss[i] != NULL );
+      assert( propdata->genconss != NULL );
+      assert( propdata->nperms > 0 );
+      assert( propdata->nperms >= propdata->ngenconss );
 
-      SCIP_CALL( SCIPdelCons(scip, propdata->genconss[i]) );
-      SCIP_CALL( SCIPreleaseCons(scip, &propdata->genconss[i]) );
+      for (i = 0; i < propdata->ngenconss; ++i)
+      {
+         assert( propdata->genconss[i] != NULL );
+
+         SCIP_CALL( SCIPdelCons(scip, propdata->genconss[i]) );
+         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genconss[i]) );
+      }
+
+      /* free pointers to symmetry group and binary variables */
+      SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
+      propdata->ngenconss = 0;
+      propdata->triedaddconss = FALSE;
    }
-
-   /* free pointers to symmetry group and binary variables */
-   SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
-   propdata->ngenconss = 0;
-   propdata->triedaddconss = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1950,13 +1984,14 @@ SCIP_RETCODE determineSymmetry(
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
-   assert( propdata->ofenabled || propdata->symconsenabled );
+   assert( propdata->ofenabled || propdata->symconsenabled || propdata->schreiersimsenabled );
 
    /* skip symmetry computation if no graph automorphism code was linked */
    if ( ! SYMcanComputeSymmetry() )
    {
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
+      propdata->schreiersimsenabled = FALSE;
 
       nconss = SCIPgetNActiveConss(scip);
       nhandleconss = getNSymhandableConss(scip);
@@ -1977,6 +2012,7 @@ SCIP_RETCODE determineSymmetry(
    {
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
+      propdata->schreiersimsenabled = FALSE;
       return SCIP_OKAY;
    }
 
@@ -1985,6 +2021,7 @@ SCIP_RETCODE determineSymmetry(
    {
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
+      propdata->schreiersimsenabled = FALSE;
       return SCIP_OKAY;
    }
 
@@ -1994,6 +2031,7 @@ SCIP_RETCODE determineSymmetry(
    {
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
+      propdata->schreiersimsenabled = FALSE;
 
       return SCIP_OKAY;
    }
@@ -2022,6 +2060,7 @@ SCIP_RETCODE determineSymmetry(
 
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
+      propdata->schreiersimsenabled = FALSE;
 
       return SCIP_OKAY;
    }
@@ -2054,6 +2093,7 @@ SCIP_RETCODE determineSymmetry(
 
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
+      propdata->schreiersimsenabled = FALSE;
 
       return SCIP_OKAY;
    }
@@ -2105,6 +2145,7 @@ SCIP_RETCODE determineSymmetry(
 
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
+      propdata->schreiersimsenabled = FALSE;
 
       return SCIP_OKAY;
    }
@@ -2117,6 +2158,7 @@ SCIP_RETCODE determineSymmetry(
 
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
+      propdata->schreiersimsenabled = FALSE;
 
       return SCIP_OKAY;
    }
@@ -2148,7 +2190,7 @@ SCIP_RETCODE determineSymmetry(
       if ( nbinvarsaffected > 0 )
          propdata->binvaraffected = TRUE;
    }
-   else if ( propdata->symconsenabled || propdata->ofenabled )
+   else if ( propdata->symconsenabled || propdata->ofenabled || propdata->schreiersimsenabled )
    {
       SCIP_CALL( SCIPdetermineBinvarAffectedSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
             propdata->npermvars, &propdata->binvaraffected) );
@@ -2166,6 +2208,7 @@ SCIP_RETCODE determineSymmetry(
       /* disable OF and symmetry handling constraints */
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
+      propdata->schreiersimsenabled = FALSE;
 
       return SCIP_OKAY;
    }
@@ -2182,8 +2225,8 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
 #endif
 
-   /* we only need the components for orbital fixing and orbitope detection */
-   if ( propdata->ofenabled || ( propdata->symconsenabled && propdata->detectorbitopes ) )
+   /* we only need the components for orbital fixing, orbitope detection, and Schreier Sims cuts */
+   if ( propdata->ofenabled || ( propdata->symconsenabled && propdata->detectorbitopes ) || propdata->schreiersimsenabled )
    {
       SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
             propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
@@ -2208,7 +2251,7 @@ SCIP_RETCODE determineSymmetry(
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->permstrans[v]), propdata->nmaxperms) );
          for (p = 0; p < propdata->nperms; ++p)
          {
-            if ( SCIPvarIsBinary(propdata->permvars[v]) )
+            if ( SCIPvarIsBinary(propdata->permvars[v]) || propdata->schreiersimsenabled )
                propdata->permstrans[v][p] = propdata->perms[p][v];
             else
                propdata->permstrans[v][p] = v; /* ignore symmetry information on non-binary variables */
@@ -2265,6 +2308,23 @@ SCIP_RETCODE determineSymmetry(
          }
       }
       assert( propdata->nbg1 == 0 );
+   }
+
+   /* set up data for Schreier Sims cuts */
+   if ( propdata->schreiersimsenabled && ! propdata->ofenabled )
+   {
+      int v;
+      int p;
+
+      /* transpose symmetries matrix here if necessary */
+      assert( propdata->permstrans == NULL );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permstrans, propdata->npermvars) );
+      for (v = 0; v < propdata->npermvars; ++v)
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->permstrans[v]), propdata->nmaxperms) );
+         for (p = 0; p < propdata->nperms; ++p)
+            propdata->permstrans[v][p] = propdata->perms[p][v];
+      }
    }
 
    /* handle several general aspects */
@@ -2652,6 +2712,181 @@ SCIP_RETCODE addSymresackConss(
 }
 
 
+/* add Schreier Sims cuts for a specific orbit */
+static
+SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
+   SCIP*                 scip,
+   SCIP_PROPDATA*        propdata,
+   SCIP_VAR**            permvars,
+   int*                  orbits,
+   int*                  orbitbegins,
+   int                   orbitidx,
+   int                   orbitleaderidx
+   )
+{
+   SCIP_CONS* cons;
+   char name[SCIP_MAXSTRLEN];
+   SCIP_VAR* vars[2];
+   SCIP_Real vals[2];
+   int posleader;
+   int poscur;
+   int ncuts;
+   int i;
+
+   assert( scip != NULL );
+   assert( orbits != NULL );
+   assert( orbitidx >= 0 );
+   assert( orbitleaderidx >= 0 );
+
+   ncuts = orbitbegins[orbitidx + 1] - orbitbegins[orbitidx] - 1;
+   if ( propdata->nschreiersimsconss == 0 )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->schreiersimsconss), ncuts) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->schreiersimsconss),
+            propdata->nschreiersimsconss, propdata->nschreiersimsconss + ncuts) );
+   }
+
+   /* add Schreier Sims cuts */
+   posleader = orbitbegins[orbitidx] + orbitleaderidx;
+   poscur = orbitbegins[orbitidx] - 1;
+   vars[0] = permvars[posleader];
+   vals[0] = -1.0;
+   vals[1] = 1.0;
+   for (i = 0; i < ncuts + 1; ++i)
+   {
+      ++poscur;
+
+      if ( i == orbitleaderidx )
+         continue;
+
+      vars[1] = permvars[poscur];
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SchreierSimscut_%d_%d", posleader, poscur);
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, - SCIPinfinity(scip), 0.0,
+            propdata->conssaddlp, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+
+      propdata->schreiersimsconss[propdata->nschreiersimsconss++] = cons;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** add Schreier Sims cuts to the problem */
+static
+SCIP_RETCODE addSchreierSimsConss(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata            /**< datas of symmetry propagator */
+   )
+{
+   SCIP_VAR** permvars;
+   int npermvars;
+   int** perms;
+   int** permstrans;
+   int nperms;
+   int* components;
+   int* componentbegins;
+   int* vartocomponent;
+   int ncomponents;
+   SCIP_Shortbool* componentblocked;
+   SCIP_Shortbool* inactiveperms;
+   int ninactiveperms = 0;
+   int nmovedpermvars;
+   int* orbits;
+   int* orbitbegins;
+   int norbits;
+   int orbitidx;
+   int orbitleaderidx;
+   int v;
+   int p;
+
+   assert( scip != NULL );
+   assert( propdata != NULL );
+
+   permvars = propdata->permvars;
+   npermvars = propdata->npermvars;
+   perms = propdata->perms;
+   permstrans = propdata->permstrans;
+   nperms = propdata->nperms;
+   components = propdata->components;
+   componentbegins = propdata->componentbegins;
+   vartocomponent = propdata->vartocomponent;
+   ncomponents = propdata->ncomponents;
+   nmovedpermvars = propdata->nmovedpermvars;
+
+   assert( permvars != NULL );
+   assert( npermvars > 0 );
+   assert( perms != NULL);
+   assert( permstrans != NULL );
+   assert( nperms > 0 );
+   assert( components != NULL );
+   assert( componentbegins != NULL );
+   assert( vartocomponent != NULL );
+   assert( ncomponents > 0 );
+   assert( nmovedpermvars > 0 || ! propdata->ofenabled );
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &inactiveperms, nperms) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &componentblocked, ncomponents) );
+
+   /* get number of affected vars */
+   if ( nmovedpermvars == 0 )
+   {
+      for (v = 0; v < npermvars; ++v)
+      {
+         for (p = 0; p < nperms; ++p)
+         {
+            if ( permstrans[v][p] != v )
+            {
+               ++nmovedpermvars;
+               break;
+            }
+         }
+      }
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
+
+   while ( ninactiveperms < nperms )
+   {
+      /* compute orbits w.r.t. active perms */
+      /* @todo adapt the routine such that component blocked is not necessary */
+      SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, npermvars, permstrans, nperms, inactiveperms,
+            orbits, orbitbegins, &norbits, components, componentbegins, vartocomponent,
+            componentblocked, ncomponents, nmovedpermvars) );
+
+      /* select orbit */
+      /* @todo use orbit and leader selection rule */
+      orbitidx = 0;
+      orbitleaderidx = 0;
+
+      /* add Schreier Sims cuts */
+      SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, propdata, permvars, orbits, orbitbegins, orbitidx, orbitleaderidx) );
+
+      /* deactivate permutations that move the orbit leader */
+      for (p = 0; p < nperms; ++p)
+      {
+         if ( permstrans[orbitleaderidx][p] != orbitleaderidx )
+         {
+            inactiveperms[p] = TRUE;
+            ++ninactiveperms;
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &orbits);
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &componentblocked);
+   SCIPfreeBufferArray(scip, &inactiveperms);
+
+   return SCIP_OKAY;
+}
+
+
 /** finds problem symmetries */
 static
 SCIP_RETCODE tryAddSymmetryHandlingConss(
@@ -2667,7 +2902,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
-   assert( propdata->symconsenabled );
+   assert( propdata->symconsenabled || propdata->schreiersimsenabled );
 
    /* possibly compute symmetry */
    SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
@@ -2684,12 +2919,20 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
    }
 
-   if ( propdata->nperms <= 0 || ! propdata->symconsenabled )
+   if ( propdata->nperms <= 0 || (! propdata->symconsenabled && ! propdata->schreiersimsenabled) )
       return SCIP_OKAY;
 
    assert( propdata->nperms > 0 );
    assert( propdata->binvaraffected );
    propdata->triedaddconss = TRUE;
+
+   if ( propdata->schreiersimsenabled )
+   {
+      SCIP_CALL( addSchreierSimsConss(scip, propdata) );
+   }
+
+   if ( ! propdata->symconsenabled )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genconss, propdata->nperms) );
 
@@ -3341,7 +3584,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       if ( SCIPisStopped(scip) )
          return SCIP_OKAY;
 
-      noldngenconns = propdata->ngenconss;
+      noldngenconns = propdata->ngenconss + propdata->nschreiersimsconss;
 
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, &earlyterm) );
 
@@ -3351,7 +3594,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
          *result = SCIP_DIDNOTFIND;
 
          /* if symmetry handling constraints have been added, presolve each */
-         if ( propdata->ngenconss > 0 )
+         if ( propdata->ngenconss > 0 || propdata->nschreiersimsconss > 0 )
          {
             /* at this point, the symmetry group should be computed and nontrivial */
             assert( propdata->nperms > 0 );
@@ -3360,8 +3603,8 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
             /* we have added at least one symmetry handling constraints, i.e., we were successful */
             *result = SCIP_SUCCESS;
 
-            *naddconss += propdata->ngenconss - noldngenconns;
-            SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", propdata->ngenconss - noldngenconns);
+            *naddconss += propdata->ngenconss + propdata->nschreiersimsconss - noldngenconns;
+            SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", propdata->ngenconss + propdata->nschreiersimsconss - noldngenconns);
 
             /* if constraints have been added, loop through generated constraints and presolve each */
             for (i = 0; i < propdata->ngenconss; ++i)
@@ -3377,7 +3620,20 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
                   return SCIP_OKAY;
                }
             }
-            SCIPdebugMsg(scip, "Presolved %d generated constraints.\n", propdata->ngenconss);
+            for (i = 0; i < propdata->nschreiersimsconss; ++i)
+            {
+               SCIP_CALL( SCIPpresolCons(scip, propdata->schreiersimsconss[i], nrounds, SCIP_PROPTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
+                     nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
+                     nchgvartypes, nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
+
+               /* exit if cutoff or unboundedness has been detected */
+               if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
+               {
+                  SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(propdata->schreiersimsconss[i]));
+                  return SCIP_OKAY;
+               }
+            }
+            SCIPdebugMsg(scip, "Presolved %d generated Schreier Sims constraints.\n", propdata->ngenconss);
          }
       }
    }
@@ -3632,6 +3888,8 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nodenumber = -1;
 
    propdata->schreiersimsenabled = FALSE;
+   propdata->schreiersimsconss = NULL;
+   propdata->nschreiersimsconss = 0;
 
    /* create event handler */
    propdata->eventhdlr = NULL;
