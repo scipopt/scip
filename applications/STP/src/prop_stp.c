@@ -156,7 +156,7 @@ void getRedCostDistances(
    if( graph_pc_isPcMw(g) )
    {
       assert(g->extended);
-      graph_pc_2org(g);
+      SCIP_CALL_ABORT( graph_pc_2org(scip, g) );
 
       for( int i = 0; i < nnodes; i++ )
       {
@@ -441,7 +441,7 @@ SCIP_RETCODE fixVarsExtendedRed(
    getRedCostDistances(scip, redcost, propgraph, vnoi, redcostrev, pathdist, pathedge, vbase, state);
 
    if( graph_pc_isPcMw(propgraph) )
-      graph_pc_2org(propgraph);
+      SCIP_CALL( graph_pc_2org(scip, propgraph) );
 
    /* reduce graph */
    extnfixed = reduce_extendedEdge(scip, propgraph, vnoi, redcost, pathdist, NULL, minpathcost, propgraph->source, nodearr, marked, TRUE);

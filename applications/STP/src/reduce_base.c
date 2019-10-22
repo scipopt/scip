@@ -1247,12 +1247,10 @@ SCIP_RETCODE redLoopMw(
 
    tryrmw = tryrmw && userec;
 
-   /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
-
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
-   graph_pc_2org(g);
+   SCIP_CALL( graph_pc_2org(scip, g) );
 
    degelims = 0;
 
@@ -1487,7 +1485,7 @@ SCIP_RETCODE redLoopPc(
    assert(!rpc || g->prize[g->source] == FARAWAY);
 
    fix = 0.0;
-   graph_pc_2org(g);
+   SCIP_CALL( graph_pc_2org(scip, g) );
    assert(graph_pc_term2edgeConsistent(g));
 
    SCIP_CALL( graph_pc_presolInit(scip, g) );
@@ -1678,7 +1676,7 @@ SCIP_RETCODE redLoopPc(
             rounds = 1;
          }
 
-         graph_pc_2org(g);
+         SCIP_CALL( graph_pc_2org(scip, g) );
       }
    } /* main reduction loop */
 

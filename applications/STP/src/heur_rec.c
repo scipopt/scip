@@ -450,12 +450,6 @@ SCIP_RETCODE computeReducedProbSolution(
       assert(orgprize != NULL);
       assert(solgraph->extended);
 
-#ifndef NDEBUG
-      graph_pc_2org(solgraph);
-      assert(graph_pc_term2edgeConsistent(solgraph));
-      graph_pc_2trans(solgraph);
-#endif
-
       for( int k = 0; k < nsolnodes; k++ )
       {
          if( Is_pseudoTerm(solgraph->term[k]) )

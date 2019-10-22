@@ -2130,7 +2130,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
    const int nnodes = graph->knots;
    SCIP_Bool extensions = FALSE;
    int maxnode;
-   const SCIP_Bool isexended = graph->extended;
 
 #ifndef NDEBUG
    const SCIP_Real initialobj = graph_sol_getObj(graph->cost, stedge, 0.0, nedges);
@@ -2138,7 +2137,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
 
    assert(scip && graph && stedge && stvertex);
 
-   graph_pc_2orgcheck(graph);
+   SCIP_CALL( graph_pc_2orgcheck(scip, graph) );
 
    graph_sol_setVertexFromEdge(graph, stedge, stvertex);
 
@@ -2229,12 +2228,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
 #ifndef NDEBUG
    assert(SCIPisLE(scip, graph_sol_getObj(graph->cost, stedge, 0.0, nedges), initialobj));
 #endif
-
-   if( isexended && !graph->extended )
-      graph_pc_2trans(graph);
-
-   if( !isexended && graph->extended )
-      graph_pc_2org(graph);
 
    return SCIP_OKAY;
 }

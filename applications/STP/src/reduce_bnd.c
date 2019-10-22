@@ -347,15 +347,13 @@ SCIP_RETCODE reduce_bound(
       assert(stnode != NULL);
       assert(result != NULL);
 
-      /* PC or RPC? Then restore transformed graph */
       if( pcmw )
          graph_pc_2trans(graph);
 
       SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, starts, NULL, result, runs, root, cost, costrev, &obj, NULL, maxcost, &success, FALSE) );
 
-      /* PC or RPC? Then restore original graph */
       if( pcmw )
-         graph_pc_2org(graph);
+         SCIP_CALL( graph_pc_2org(scip, graph) );
 
       /* no feasible solution found? */
       if( !success )

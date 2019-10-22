@@ -338,7 +338,7 @@ void daInitializeDistances(
       }
 #endif
       if( rpc )
-         graph_pc_2org(g);
+         SCIP_CALL_ABORT( graph_pc_2org(scip, g) );
    }
 
    assert(!rpc || !g->extended);
@@ -989,7 +989,7 @@ SCIP_RETCODE daPcFindRoots(
    assert(transgraph->extended);
 
    if( graphextended )
-      graph_pc_2org(graph);
+      SCIP_CALL( graph_pc_2org(scip, graph) );
 
    graph_pc_termMarkProper(graph, termmark);
 
@@ -1120,7 +1120,7 @@ void daPcMarkRoots(
    const SCIP_Bool graphextended = graph->extended;
 
    if( graphextended )
-      graph_pc_2org(graph);
+      SCIP_CALL_ABORT( graph_pc_2org(scip, graph) );
 
    if( *userec && *solpool != NULL )
    {
@@ -1882,7 +1882,7 @@ int reducePcMw(
    nfixed = 0;
    nnodes = graph->knots;
 
-   graph_pc_2orgcheck(graph);
+   SCIP_CALL( graph_pc_2orgcheck(scip, graph) );
 
    if( solgiven )
    {
@@ -2184,7 +2184,7 @@ SCIP_RETCODE reduce_da(
          SCIPdebugMessage("upper: %f lower: %f \n", upperbound, lpobjval);
 
          if( rpc )
-            graph_pc_2org(graph);
+            SCIP_CALL( graph_pc_2org(scip, graph) );
          else
             graph_mark(graph);
 
@@ -2280,7 +2280,7 @@ TERMINATE:
    *nelims = ndeletions;
 
    if( rpc )
-      graph_pc_2orgcheck(graph);
+      SCIP_CALL( graph_pc_2orgcheck(scip, graph) );
 
    if( SCIPisLT(scip, upperbound, *ub) || SCIPisLT(scip, *ub, 0.0) )
       *ub = upperbound;
@@ -2608,7 +2608,7 @@ SCIP_RETCODE reduce_daSlackPrune(
    /* RPC? If yes, restore original graph */
    if( rpc )
    {
-      graph_pc_2org(graph);
+      SCIP_CALL( graph_pc_2org(scip, graph) );
       graph->mark[root] = FALSE;
    }
 
@@ -2962,7 +2962,7 @@ SCIP_RETCODE reduce_daPcMw(
     */
 
    /* restore original graph */
-   graph_pc_2org(graph);
+   SCIP_CALL( graph_pc_2org(scip, graph) );
 
    for( int e = 0; e < extnedges; e++ )
       marked[e] = FALSE;
@@ -3008,7 +3008,7 @@ SCIP_RETCODE reduce_daPcMw(
       assert(graph_sol_valid(scip, graph, result));
       assert(!apsol || SCIPisEQ(scip, graph_sol_getObj(graph->cost, result, 0.0, nedges), upperbound));
 
-      graph_pc_2orgcheck(graph);
+      SCIP_CALL( graph_pc_2orgcheck(scip, graph) );
 
       assert(daRedCostIsValid(scip, transgraph, cost, state, nodearrchar));
       computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
@@ -3206,7 +3206,7 @@ SCIP_RETCODE reduce_daPcMw(
       graph_get2next(scip, transgraph, costrev, costrev, vnoi, vbase, transgraph->path_heap, state);
 
       /* restore original graph */
-      graph_pc_2org(graph);
+      SCIP_CALL( graph_pc_2org(scip, graph) );
 
       assert(graph->mark[tmproot]);
       graph->mark[tmproot] = FALSE;

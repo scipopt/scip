@@ -205,7 +205,7 @@ SCIP_RETCODE checkSdWalk(
 
    graph_mark(graph);
 
-   graph_pc_2org(graph);
+   SCIP_CALL( graph_pc_2org(scip, graph) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal1, nedges) );

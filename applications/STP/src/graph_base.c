@@ -1291,7 +1291,8 @@ void graph_pc_markOrgGraph(
 }
 
 /** mark terminals and switch terminal property to original terminals */
-void graph_pc_2org(
+SCIP_RETCODE graph_pc_2org(
+   SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph               /**< the graph */
    )
 {
@@ -1320,6 +1321,18 @@ void graph_pc_2org(
       }
    }
 
+   // todo adapt edge costs
+
+   // add prizes extra method? Assert that eq to anti
+
+
+   if( graph_pc_isPc(graph) && !graph->cost_org_pc )
+   {
+      const int nedges = graph->edges;
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->cost_org_pc), nedges) );
+      BMScopyMemoryArray(graph->cost_org_pc, graph->cost, nedges);
+   }
+
    if( graph->stp_type == STP_RPCSPG || graph->stp_type == STP_RMWCSP )
       graph->mark[root] = TRUE;
    else
@@ -1327,7 +1340,7 @@ void graph_pc_2org(
 
    graph->extended = FALSE;
 
-   return;
+   return SCIP_OKAY;
 }
 
 /** unmark terminals and switch terminal property to transformed terminals */
@@ -1354,22 +1367,33 @@ void graph_pc_2trans(
       }
    }
 
+   if( graph_pc_isPc(graph) )
+   {
+      assert(graph->cost_org_pc);
+      BMScopyMemoryArray(graph->cost_org_pc, graph->cost, graph->edges);
+      // subtract prizes extra method?
+   }
+
+
    graph->extended = TRUE;
 
    return;
 }
 
 /** graph_pc_2org if extended */
-void graph_pc_2orgcheck(
+SCIP_RETCODE graph_pc_2orgcheck(
+   SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph               /**< the graph */
    )
 {
    assert(graph != NULL);
 
    if( !graph->extended )
-      return;
+      return SCIP_OKAY;
 
-   graph_pc_2org(graph);
+   SCIP_CALL_ABORT( graph_pc_2org(scip, graph) );
+
+   return SCIP_OKAY;
 }
 
 /** graph_pc_2trans if not extended */
@@ -2057,8 +2081,12 @@ SCIP_RETCODE graph_pc_2pc(
    graph->source = root;
    graph->extended = TRUE;
    assert((nterms + 1) == graph->terms);
+
    if( graph->stp_type != STP_MWCSP )
+   {
+      // todo: mark NONLEAFS and change graph....
       graph->stp_type = STP_PCSPG;
+   }
 
    assert(graph->orgsource == -1);
    SCIPdebugMessage("Transformed to PC \n");
@@ -2169,6 +2197,8 @@ SCIP_RETCODE graph_pc_2rpc(
          assert(graph->prize[k] == FARAWAY || graph->prize[k] == 0.0);
       }
    }
+
+   // todo adapt for small prizes...
 
    graph->extended = TRUE;
    assert(nterms == npotterms);
@@ -2346,7 +2376,6 @@ SCIP_RETCODE graph_pc_2rmw(
    graph->extended = TRUE;
    graph->stp_type = STP_RMWCSP;
    graph->orgsource = graph->source;
-
 
    SCIPdebugMessage("Transformed to RMW \n");
 
