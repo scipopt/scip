@@ -160,6 +160,10 @@
 #define DEFAULT_PERFORMPRESOLVING   FALSE    /**< Run orbital fixing during presolving? */
 #define DEFAULT_RECOMPUTERESTART    FALSE    /**< Recompute symmetries after a restart has occurred? */
 
+/* default parameters for Schreier Sims cuts */
+#define DEFAULT_SCHREIERSIMSMAXORBIT TRUE    /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
+#define DEFAULT_SCHREIERSIMSFIRSTINORBIT FALSE /**< Should the first element in the orbit be selected as leader? */
+
 
 /* event handler properties */
 #define EVENTHDLR_SYMMETRY_NAME    "symmetry"
@@ -257,8 +261,10 @@ struct SCIP_PropData
 
    /* data necessary for Schreier Sims cuts */
    SCIP_Bool             schreiersimsenabled; /**< Use Schreier Sims cuts? */
-   SCIP_CONS**           schreiersimsconss;  /**< list of generated schreier sims conss */
-   int                   nschreiersimsconss; /**< number of generated schreier sims conss */
+   SCIP_CONS**           schreiersimsconss;   /**< list of generated schreier sims conss */
+   int                   nschreiersimsconss;  /**< number of generated schreier sims conss */
+   SCIP_Bool             schreiersimsmaxorbit; /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
+   SCIP_Bool             schreiersimsfirstinorbit; /**< Should the first element in the orbit be selected as leader? */
 };
 
 
@@ -4042,6 +4048,16 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/usecolumnsparsity",
          "Should the number of conss a variable is contained in be exploited in symmetry detection?",
          &propdata->usecolumnsparsity, TRUE, DEFAULT_USECOLUMNSPARSITY, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/schreiersimsmaxorbit",
+         "Should an orbit of maximum size be used for Schreier Sims cuts?",
+         &propdata->schreiersimsmaxorbit, TRUE, DEFAULT_SCHREIERSIMSMAXORBIT, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/schreiersimsfirstinorbit",
+         "Should the first element in the orbit be selected as leader?",
+         &propdata->schreiersimsfirstinorbit, TRUE, DEFAULT_SCHREIERSIMSFIRSTINORBIT, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
