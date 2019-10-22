@@ -2635,6 +2635,78 @@ SCIP_RETCODE detectOrbitopes(
 }
 
 
+/* temporarily adapt symmetry data to new variable order given by Schreier Sims */
+static
+SCIP_RETCODE adaptSymmetryDataSchreierSims(
+   SCIP*                 scip,               /**< SCIP instance */
+   int**                 origperms,          /**< permutation matrix w.r.t. original variable ordering */
+   int**                 modifiedperms,      /**< permutation matrix w.r.t. new variable ordering */
+   int                   nperms,             /**< number of permutations */
+   SCIP_VAR**            modifiedpermvars,   /**< array of permutation vars w.r.t. new variable ordering */
+   int                   npermvars,          /**< length or modifiedpermvars array */
+   int*                  leaders,            /**< leaders of Schreier Sims cuts */
+   int                   nleaders            /**< number of leaders */
+   )
+{
+   int* reorderingpermvars;
+   int* posinpermvars;
+   int leader;
+   SCIP_VAR* tmpvar;
+   int tmp;
+   int l;
+   int p;
+   int i;
+
+   assert( scip != NULL );
+   assert( origperms != NULL );
+   assert( modifiedperms != NULL );
+   assert( modifiedpermvars != NULL );
+   assert( npermvars > 0 );
+   assert( leaders != NULL );
+   assert( nleaders > 0 );
+
+   /* initialize map from variable lable to its position in permvars */
+   SCIP_CALL( SCIPallocBufferArray(scip, &posinpermvars, npermvars) );
+   for (i = 0; i < npermvars; ++i)
+      posinpermvars[i] = i;
+
+   /* initialize reodering of variables indices in new permvars array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &reorderingpermvars, npermvars) );
+   for (i = 0; i < npermvars; ++i)
+      reorderingpermvars[i] = i;
+
+   for (l = 0; l < nleaders; ++l)
+   {
+      leader = leaders[l];
+
+      /* change position l and the leader in permvars */
+      tmpvar = modifiedpermvars[l];
+      modifiedpermvars[l] = modifiedpermvars[leader];
+      modifiedpermvars[leader] = tmpvar;
+
+      /* update maps */
+      posinpermvars[reorderingpermvars[l]] = leader;
+      posinpermvars[leader] = l;
+
+      tmp = reorderingpermvars[l];
+      reorderingpermvars[l] = reorderingpermvars[leader];
+      reorderingpermvars[leader] = tmp;
+   }
+
+   /* adapt change of permvar order to permutations */
+   for (p = 0; p < nperms; ++p)
+   {
+      for (i = 0; i < npermvars; ++i)
+         modifiedperms[p][i] = posinpermvars[origperms[p][reorderingpermvars[i]]];
+   }
+
+   SCIPfreeBufferArray(scip, &reorderingpermvars);
+   SCIPfreeBufferArray(scip, &posinpermvars);
+
+   return SCIP_OKAY;
+}
+
+
 /** adds symresack constraints */
 static
 SCIP_RETCODE addSymresackConss(
@@ -2648,10 +2720,12 @@ SCIP_RETCODE addSymresackConss(
    SCIP_PROPDATA* propdata;
    SCIP_VAR** permvars;
    SCIP_Bool conssaddlp;
-   int* modifiedperm;
+   int** modifiedperms;
+   SCIP_VAR** modifiedpermvars;
    int** perms;
    int nsymresackcons = 0;
    int npermvars;
+   int nperms;
    int i;
    int p;
 
@@ -2662,17 +2736,29 @@ SCIP_RETCODE addSymresackConss(
    assert( propdata != NULL );
 
    perms = propdata->perms;
+   nperms = propdata->nperms;
    permvars = propdata->permvars;
    npermvars = propdata->npermvars;
    conssaddlp = propdata->conssaddlp;
 
-   assert( propdata->nperms <= 0 || perms != NULL );
+   assert( nperms <= 0 || perms != NULL );
    assert( permvars != NULL );
    assert( npermvars > 0 );
 
    if ( propdata->nschreiersimsconss > 0 )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &modifiedperm, npermvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &modifiedperms, nperms) );
+      for (p = 0; p < nperms; ++p)
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &modifiedperms[p], npermvars) );
+      }
+      SCIP_CALL( SCIPallocBufferArray(scip, &modifiedpermvars, npermvars) );
+
+      for (i = 0; i < npermvars; ++i)
+         modifiedpermvars[i] = permvars[i];
+
+      SCIP_CALL( adaptSymmetryDataSchreierSims(scip, perms, modifiedperms, nperms, modifiedpermvars, npermvars,
+            propdata->leaders, propdata->nleaders) );
    }
 
    /* if components have not been computed */
@@ -2687,15 +2773,19 @@ SCIP_RETCODE addSymresackConss(
          SCIP_CONS* cons;
          char name[SCIP_MAXSTRLEN];
 
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_perm%d", p);
+
          /* adapt permutation to leader */
          if ( propdata->nschreiersimsconss > 0 )
          {
-            SCIP_CALL( adapt
+            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[p], modifiedpermvars, npermvars, FALSE,
+                  conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          }
-
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_perm%d", p);
-         SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[p], permvars, npermvars, FALSE,
-               conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         else
+         {
+            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[p], permvars, npermvars, FALSE,
+                  conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         }
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
@@ -2724,8 +2814,18 @@ SCIP_RETCODE addSymresackConss(
             permidx = components[p];
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_component%d_perm%d", i, permidx);
-            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[permidx], permvars, npermvars, FALSE,
-                  conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+            /* adapt permutation to leader */
+            if ( propdata->nschreiersimsconss > 0 )
+            {
+               SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[permidx], modifiedpermvars, npermvars, FALSE,
+                     conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[permidx], permvars, npermvars, FALSE,
+                     conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            }
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
@@ -2735,6 +2835,16 @@ SCIP_RETCODE addSymresackConss(
             ++nsymresackcons;
          }
       }
+   }
+
+   if ( propdata->nschreiersimsconss > 0 )
+   {
+      SCIPfreeBufferArray(scip, &modifiedpermvars);
+      for (p = nperms - 1; p >= 0; --p)
+      {
+         SCIPfreeBufferArray(scip, &modifiedperms[p]);
+      }
+      SCIPfreeBufferArray(scip, &modifiedperms);
    }
 
    SCIPdebugMsg(scip, "Added %d symresack constraints.\n", nsymresackcons);
@@ -3063,24 +3173,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
       if ( propdata->addsymresacks )
       {
-         /* @todo Rearrange permutations to be compatible with Schreier Sims */
-         /* if Schreier Sims cuts are used, modify symmetry data */
-         if ( propdata->nschreiersimsconss > 0 )
-         {
-            int i;
-            int leader;
-
-            /* if the i-th leader is not the i-th element in the order of permvars, swap the i-th leader and the i-th element */
-            for (i = 0; i < propdata->nleaders; ++i)
-            {
-               leader = propdata->leaders[i];
-
-               if ( leader == i )
-                  continue;
-
-               
-            }
-         }
          SCIP_CALL( addSymresackConss(scip, prop, propdata->components, propdata->componentbegins, propdata->ncomponents) );
       }
    }
