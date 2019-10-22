@@ -2642,6 +2642,7 @@ SCIP_RETCODE adaptSymmetryDataSchreierSims(
    int**                 origperms,          /**< permutation matrix w.r.t. original variable ordering */
    int**                 modifiedperms,      /**< permutation matrix w.r.t. new variable ordering */
    int                   nperms,             /**< number of permutations */
+   SCIP_VAR**            origpermvars,       /**< array of permutation vars w.r.t. original variable ordering */
    SCIP_VAR**            modifiedpermvars,   /**< array of permutation vars w.r.t. new variable ordering */
    int                   npermvars,          /**< length or modifiedpermvars array */
    int*                  leaders,            /**< leaders of Schreier Sims cuts */
@@ -2651,8 +2652,6 @@ SCIP_RETCODE adaptSymmetryDataSchreierSims(
    int* reorderingpermvars;
    int* posinpermvars;
    int leader;
-   SCIP_VAR* tmpvar;
-   int tmp;
    int l;
    int p;
    int i;
@@ -2675,29 +2674,30 @@ SCIP_RETCODE adaptSymmetryDataSchreierSims(
    for (i = 0; i < npermvars; ++i)
       reorderingpermvars[i] = i;
 
+   /* update posinpermvars map */
    for (l = 0; l < nleaders; ++l)
    {
       leader = leaders[l];
 
-      /* change position l and the leader in permvars */
-      tmpvar = modifiedpermvars[l];
-      modifiedpermvars[l] = modifiedpermvars[leader];
-      modifiedpermvars[leader] = tmpvar;
-
-      /* update maps */
-      posinpermvars[reorderingpermvars[l]] = leader;
+      posinpermvars[posinpermvars[l]] = posinpermvars[leader];
       posinpermvars[leader] = l;
 
-      tmp = reorderingpermvars[l];
-      reorderingpermvars[l] = reorderingpermvars[leader];
-      reorderingpermvars[leader] = tmp;
+   }
+
+   /* update permvars array and reorderingpermvars map */
+   for (i = 0; i < npermvars; ++i)
+   {
+      reorderingpermvars[posinpermvars[i]] = i;
+      modifiedpermvars[posinpermvars[i]] = origpermvars[i];
    }
 
    /* adapt change of permvar order to permutations */
    for (p = 0; p < nperms; ++p)
    {
       for (i = 0; i < npermvars; ++i)
+      {
          modifiedperms[p][i] = posinpermvars[origperms[p][reorderingpermvars[i]]];
+      }
    }
 
    SCIPfreeBufferArray(scip, &reorderingpermvars);
@@ -2757,7 +2757,7 @@ SCIP_RETCODE addSymresackConss(
       for (i = 0; i < npermvars; ++i)
          modifiedpermvars[i] = permvars[i];
 
-      SCIP_CALL( adaptSymmetryDataSchreierSims(scip, perms, modifiedperms, nperms, modifiedpermvars, npermvars,
+      SCIP_CALL( adaptSymmetryDataSchreierSims(scip, perms, modifiedperms, nperms, permvars, modifiedpermvars, npermvars,
             propdata->leaders, propdata->nleaders) );
    }
 
