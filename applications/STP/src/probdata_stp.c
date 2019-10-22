@@ -3954,7 +3954,7 @@ void initReceivedSubproblem(
          if( Is_pterm(graph->term[k]) )
          {
             const int twinterm = graph_pc_getTwinTerm(graph, k);
-            const int root2twin = graph_pc_getRoot2PtermEdge(graph, k);
+            const int root2twin = graph_pc_getRoot2PtermEdge(graph, twinterm);
             const int k2twin = graph->term2edge[k];
 
             assert(graph_pc_isPcMw(graph));
@@ -3962,10 +3962,15 @@ void initReceivedSubproblem(
             assert(root2twin >= 0 && graph->head[root2twin] == twinterm);
             assert(SCIPisEQ(scip, graph->cost[root2twin], graph->prize[k]));
 
-            graph->cost[root2twin] = 1.0;
-            graph->prize[k] = 1.0;
-
             graph->cost[k2twin] = 0.0;
+
+            if( !graph_pc_isRootedPcMw(graph) )
+            {
+               const int root2k = graph_pc_getRoot2PtermEdge(graph, twinterm);
+               assert(graph->tail[root2k] == graph->source && graph->head[root2k] == k);
+
+               graph->cost[root2k] = 0.0;
+            }
          }
       }
    } /* for k = 0 : nnnodes */
