@@ -265,6 +265,9 @@ struct SCIP_PropData
    int                   nschreiersimsconss;  /**< number of generated schreier sims conss */
    SCIP_Bool             schreiersimsmaxorbit; /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
    SCIP_Bool             schreiersimsfirstinorbit; /**< Should the first element in the orbit be selected as leader? */
+   int*                  leaders;            /**< index of orbit leaders in permvars */
+   int                   nleaders;           /**< number of orbit leaders in leaders array */
+   int                   maxnleaders;        /**< maximum number of leaders in leaders array */
 };
 
 
@@ -549,6 +552,7 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->nbg1 == 0 );
    assert( propdata->genconss == NULL );
    assert( propdata->schreiersimsconss == NULL );
+   assert( propdata->leaders == NULL );
 
    assert( propdata->permvars == NULL );
    assert( propdata->permvarsobj == NULL );
@@ -685,6 +689,15 @@ SCIP_RETCODE freeSymmetryData(
       /* free pointers to symmetry group and binary variables */
       SCIPfreeBlockMemoryArray(scip, &propdata->schreiersimsconss, propdata->nschreiersimsconss);
       propdata->nschreiersimsconss = 0;
+   }
+   if ( propdata->leaders != NULL )
+   {
+      assert( propdata->maxnleaders > 0 );
+
+      SCIPfreeBlockMemoryArray(scip, &propdata->leaders, propdata->maxnleaders);
+      propdata->maxnleaders = 0;
+      propdata->leaders = NULL;
+      propdata->nleaders = 0;
    }
 
    /* free components */
@@ -2748,11 +2761,19 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    if ( propdata->nschreiersimsconss == 0 )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->schreiersimsconss), ncuts) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->leaders), 10) );
+      propdata->maxnleaders = 10;
    }
    else
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->schreiersimsconss),
             propdata->nschreiersimsconss, propdata->nschreiersimsconss + ncuts) );
+   }
+   if ( propdata->nleaders == propdata->maxnleaders )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->leaders),
+            propdata->maxnleaders, propdata->maxnleaders + 10) );
+      propdata->maxnleaders += 10;
    }
 
    /* add Schreier Sims cuts */
@@ -2761,6 +2782,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    vars[0] = permvars[posleader];
    vals[0] = -1.0;
    vals[1] = 1.0;
+   propdata->leaders[propdata->nleaders++] = orbits[posleader];
    for (i = 0; i < ncuts + 1; ++i)
    {
       ++poscur;
@@ -3960,6 +3982,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->schreiersimsenabled = FALSE;
    propdata->schreiersimsconss = NULL;
    propdata->nschreiersimsconss = 0;
+   propdata->leaders = NULL;
+   propdata->nleaders = 0;
+   propdata->maxnleaders = 0;
 
    /* create event handler */
    propdata->eventhdlr = NULL;
