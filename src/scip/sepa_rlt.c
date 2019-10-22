@@ -377,7 +377,6 @@ SCIP_RETCODE isAcceptableRow(
    SCIP_SEPADATA*        sepadata,           /**< separation data */
    SCIP_ROW*             row,                /**< the row to be tested */
    SCIP_VAR*             var,                /**< the variable that is to be multiplied with row */
-   int                   nlocks,             /**< the number of locks of the variable */
    SCIP_Bool*            acceptable          /**< buffer to store the result */
    )
 {
@@ -388,7 +387,7 @@ SCIP_RETCODE isAcceptableRow(
    assert(row != NULL);
    assert(var != NULL);
 
-   for( i = 0; (i < SCIProwGetNNonz(row)) && (sepadata->maxunknownterms >= 0 || nterms <= sepadata->maxunknownterms); ++i )
+   for( i = 0; (i < SCIProwGetNNonz(row)) && (sepadata->maxunknownterms < 0 || nterms <= sepadata->maxunknownterms); ++i )
    {
       linvar = getBilinVar(scip, sepadata, var, SCIPcolGetVar(SCIProwGetCols(row)[i]) );
 
@@ -398,7 +397,10 @@ SCIP_RETCODE isAcceptableRow(
 
    sepadata->currentnunknown = nterms;
 
-   *acceptable = nterms <= sepadata->maxunknownterms;
+   if( sepadata->maxunknownterms < 0 )
+      *acceptable = TRUE;
+   else
+      *acceptable = nterms <= sepadata->maxunknownterms;
 
    return SCIP_OKAY;
 }
@@ -857,7 +859,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
          SCIP_ROW *cut;
 
          /* check whether this row and var fulfill the conditions */
-         SCIP_CALL( isAcceptableRow(scip, sepadata, rows[i], var, sepadata->varpriorities[j], &accepted) );
+         SCIP_CALL( isAcceptableRow(scip, sepadata, rows[i], var, &accepted) );
 
          if( !accepted )
          {
