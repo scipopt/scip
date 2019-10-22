@@ -2648,6 +2648,7 @@ SCIP_RETCODE addSymresackConss(
    SCIP_PROPDATA* propdata;
    SCIP_VAR** permvars;
    SCIP_Bool conssaddlp;
+   int* modifiedperm;
    int** perms;
    int nsymresackcons = 0;
    int npermvars;
@@ -2669,6 +2670,11 @@ SCIP_RETCODE addSymresackConss(
    assert( permvars != NULL );
    assert( npermvars > 0 );
 
+   if ( propdata->nschreiersimsconss > 0 )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &modifiedperm, npermvars) );
+   }
+
    /* if components have not been computed */
    if ( ncomponents == -1 )
    {
@@ -2680,6 +2686,12 @@ SCIP_RETCODE addSymresackConss(
       {
          SCIP_CONS* cons;
          char name[SCIP_MAXSTRLEN];
+
+         /* adapt permutation to leader */
+         if ( propdata->nschreiersimsconss > 0 )
+         {
+            SCIP_CALL( adapt
+         }
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_perm%d", p);
          SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[p], permvars, npermvars, FALSE,
@@ -2983,6 +2995,7 @@ SCIP_RETCODE addSchreierSimsConss(
 
 
 /** finds problem symmetries */
+/* @todo check whether it is worth it to check for orbitopes when using Schreier Sims cuts */
 static
 SCIP_RETCODE tryAddSymmetryHandlingConss(
    SCIP*                 scip,               /**< SCIP instance */
@@ -3031,7 +3044,8 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genconss, propdata->nperms) );
 
-   if ( propdata->detectorbitopes )
+   /* orbitopes are not compatible with Schreier Sims cuts */
+   if ( propdata->detectorbitopes && ! propdata->schreiersimsenabled )
    {
       SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
    }
@@ -3049,6 +3063,24 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
       if ( propdata->addsymresacks )
       {
+         /* @todo Rearrange permutations to be compatible with Schreier Sims */
+         /* if Schreier Sims cuts are used, modify symmetry data */
+         if ( propdata->nschreiersimsconss > 0 )
+         {
+            int i;
+            int leader;
+
+            /* if the i-th leader is not the i-th element in the order of permvars, swap the i-th leader and the i-th element */
+            for (i = 0; i < propdata->nleaders; ++i)
+            {
+               leader = propdata->leaders[i];
+
+               if ( leader == i )
+                  continue;
+
+               
+            }
+         }
          SCIP_CALL( addSymresackConss(scip, prop, propdata->components, propdata->componentbegins, propdata->ncomponents) );
       }
    }
