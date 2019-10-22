@@ -622,6 +622,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    SCIP_CONSEXPR_EXPR** children;
    SCIP_VAR** vars;
    SCIP_VAR* rhsvar;
+   SCIP_VAR* lhsvar;
    SCIP_Real* childcoefs;
    SCIP_Real* coefs;
    SCIP_Real* offsets;
@@ -630,8 +631,15 @@ SCIP_RETCODE detectSocQuadraticSimple(
    int* termbegins;
    int* nnonzeroes;
    SCIP_Real constant;
-   SCIP_Real lhsconstant;
+   SCIP_Real sideconstant;
+   SCIP_Real signfactor;
+   int nposquadterms;
+   int nnegquadterms;
+   int nposbilinterms;
+   int nnegbilinterms;
    int rhsidx;
+   int lhsidx;
+   int specialtermidx;
    int nchildren;
    int ntranscoefs;
    int nterms;
@@ -645,10 +653,6 @@ SCIP_RETCODE detectSocQuadraticSimple(
    assert(success != NULL);
 
    *success = FALSE;
-
-   /* relation is not "<=" -> skip */
-   if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
-      return SCIP_OKAY;
 
    /* check whether expression is a sum with at least 3 quadratic children */
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr)
@@ -665,70 +669,130 @@ SCIP_RETCODE detectSocQuadraticSimple(
    rhsvar = NULL;
    rhsidx = -1;
    ishyperbolic = FALSE;
+   nposquadterms = 0;
+   nnegquadterms = 0;
+   nposbilinterms = 0;
+   nnegbilinterms = 0;
 
-   /* check if all children are squares or binary linear terms */
+   /* check if all children are quadratic or binary linear and count number of positive and negative terms */
    for( i = 0; i < nchildren; ++i )
    {
       if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr)
          && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
       {
          if( childcoefs[i] > 0.0 )
-            continue;
-
-         /* second variable with negative coefficient or bilinear term -> no SOC */
-         if( rhsidx != -1 )
-            return SCIP_OKAY;
-
-         /* rhs variable is not non-negative -> no SOC */
-         if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[i])[0]).inf < 0.0 )
-            return SCIP_OKAY;
-
+         {
+            ++nposquadterms;
+            lhsidx = i;
+         }
+         else
+         {
+            ++nnegquadterms;
+            rhsidx = i;
+         }
       }
       else if( SCIPisConsExprExprVar(children[i])
          && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
       {
          if( childcoefs[i] > 0.0 )
-            continue;
-
-         /* second variable with negative coefficient or bilinear term -> no SOC */
-         if( rhsidx != -1 )
-            return SCIP_OKAY;
+         {
+            ++nposquadterms;
+            lhsidx = i;
+         }
+         else
+         {
+            ++nnegquadterms;
+            rhsidx = i;
+         }
       }
       else if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrProduct(conshdlr)
          && SCIPgetConsExprExprNChildren(children[i]) == 2 )
       {
          if( childcoefs[i] > 0.0 )
-            return SCIP_OKAY;
-
-         /* second variable with negative coefficient or bilinear term -> no SOC */
-         if( rhsidx != -1)
-            return SCIP_OKAY;
-
-         /* one of the expressions in the bilinear term is not non-negative -> no SOC */
-         if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[i])[0]).inf < 0.0
-            || SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[i])[1]).inf < 0.0 )
-            return SCIP_OKAY;
-
-         ishyperbolic = TRUE;
+         {
+            ++nposbilinterms;
+            lhsidx = i;
+         }
+         else
+         {
+            ++nnegbilinterms;
+            rhsidx = i;
+         }
       }
       else
       {
          return SCIP_OKAY;
       }
 
-      rhsidx = i;
+      if( nposquadterms > 1 && nnegquadterms > 1 )
+         return SCIP_OKAY;
+
+      if( nposbilinterms + nnegbilinterms > 1 )
+         return SCIP_OKAY;
+
+      if( nposbilinterms > 0 && nposquadterms > 0 )
+         return SCIP_OKAY;
+
+      if( nnegbilinterms > 0 && nnegquadterms > 0 )
+         return SCIP_OKAY;
    }
 
-   /* all terms have positive coefficients adn no bilinear term -> no SOC */
-   if( rhsidx == -1 )
+   if( nposquadterms == nchildren || nnegquadterms == nchildren )
       return SCIP_OKAY;
 
-   lhsconstant = constant - SCIPvarGetUbGlobal(auxvar);
+   assert(nposquadterms <= 1 || nnegquadterms <= 1);
+   assert(nposbilinterms + nnegbilinterms <= 1);
+   assert(nposbilinterms == 0 || nposquadterms == 0);
+   assert(nnegbilinterms == 0 || nnegquadterms == 0);
+
+   /* if a bilinear term is involved, it is a hyperbolic expression */
+   ishyperbolic = (nposbilinterms + nnegbilinterms > 0);
+
+   /* detect case and store lhs/rhs information */
+   if( nposquadterms > 1)
+   {
+      /* if rhs is infinity, it can't be soc */
+      if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
+         return SCIP_OKAY;
+
+      signfactor = 1.0;
+      specialtermidx = rhsidx;
+   }
+   else
+   {
+      /* if lhs is infinity, it can't be soc */
+      if( SCIPgetConsExprExprNLocksNeg(expr) == 0 )
+         return SCIP_OKAY;
+
+      signfactor = -1.0;
+      specialtermidx = lhsidx;
+   }
+
    if( ishyperbolic )
-      lhsconstant *= 4.0 / -childcoefs[rhsidx];
+   {
+      /* one of the expressions in the bilinear term is not non-negative -> no SOC */
+      if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]).inf < 0.0
+         || SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[1]).inf < 0.0 )
+         return SCIP_OKAY;
+   }
+   else
+   {
+         /* rhs variable is not non-negative -> no SOC */
+         if( SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(children[specialtermidx])[0]).inf < 0.0 )
+            return SCIP_OKAY;
+   }
 
-   if( lhsconstant < 0.0 )
+   sideconstant = (signfactor == 1.0 ? constant - SCIPvarGetUbGlobal(auxvar) : constant - SCIPvarGetLbGlobal(auxvar));
+
+   if( ishyperbolic )
+      sideconstant *= 4.0 / -childcoefs[specialtermidx] * signfactor;
+
+   if( sideconstant * signfactor < 0.0 )
       return SCIP_OKAY;
+
+   /**
+    *  we have found an soc-representable expression
+    */
 
    nterms = ishyperbolic ? nchildren + 1 : nchildren;
    ntranscoefs = ishyperbolic ? nchildren + 3 : nchildren;
@@ -747,15 +811,15 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    for( i = 0; i < nchildren; ++i )
    {
-      assert(childcoefs[rhsidx] != 0.0);
+      assert(childcoefs[specialtermidx] != 0.0);
 
-      transcoefs[i] = ishyperbolic ? 4.0 / -childcoefs[rhsidx] : 1.0;
+      transcoefs[i] = ishyperbolic ? 4.0 / -childcoefs[specialtermidx] * signfactor : 1.0;
       transcoefsidx[i] = i;
       termbegins[i] = i;
       nnonzeroes[i] = 1;
 
       /* variable and coef for rhs has to be set to the last entry */
-      if( i == rhsidx )
+      if( i == specialtermidx )
          continue;
 
       if( SCIPisConsExprExprVar(children[i]) )
@@ -772,7 +836,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
                SCIPgetConsExprExprChildren(children[i])[0], &vars[nextentry]) );
       }
 
-      coefs[nextentry] = childcoefs[i];
+      coefs[nextentry] = childcoefs[i] * signfactor;
 
       assert(vars[nextentry] != NULL);
       assert(coefs[nextentry] > 0.0);
@@ -786,21 +850,21 @@ SCIP_RETCODE detectSocQuadraticSimple(
    {
       /* add data for the rhs variable */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
-            SCIPgetConsExprExprChildren(children[rhsidx])[0], &vars[nchildren-1]) );
+            SCIPgetConsExprExprChildren(children[specialtermidx])[0], &vars[nchildren-1]) );
       assert(vars[nchildren-1] != NULL);
 
-      assert(childcoefs[rhsidx] < 0.0);
-      coefs[nchildren-1] = SQRT(-childcoefs[rhsidx]);
+      assert(childcoefs[specialtermidx] * signfactor < 0.0);
+      coefs[nchildren-1] = SQRT(-childcoefs[specialtermidx] * signfactor);
    }
    else
    {
       /* add data for variables coming from bilinear term */
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
-            SCIPgetConsExprExprChildren(children[rhsidx])[0], &vars[nchildren-1]) );
+            SCIPgetConsExprExprChildren(children[specialtermidx])[0], &vars[nchildren-1]) );
       assert(vars[nchildren-1] != NULL);
 
       SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr,
-            SCIPgetConsExprExprChildren(children[rhsidx])[1], &vars[nchildren]) );
+            SCIPgetConsExprExprChildren(children[specialtermidx])[1], &vars[nchildren]) );
       assert(vars[nchildren] != NULL);
 
       termbegins[nterms-1] = ntranscoefs-2;
@@ -824,7 +888,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    /* create and store nonlinear handler expression data */
    SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx, termbegins, nnonzeroes,
-         lhsconstant, nterms, nterms, ntranscoefs, nlhdlrexprdata) );
+         sideconstant * signfactor, nterms, nterms, ntranscoefs, nlhdlrexprdata) );
    assert(*nlhdlrexprdata != NULL);
 
 #ifdef SCIP_DEBUG
