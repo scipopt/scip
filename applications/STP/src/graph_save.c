@@ -50,7 +50,7 @@ void SCIPwriteStp(
    assert(fp != NULL);
 
    fprintf(fp, "%8x STP File, STP Format Version %2d.%02d\n",
-      STP_MAGIC, VERSION_MAJOR, VERSION_MINOR);
+      STP_FILE_MAGIC, STP_FILE_VERSION_MAJOR, STP_FILE_VERSION_MINOR);
 
    fprintf(fp, "Section Comment\n");
    fprintf(fp, "Problem ");
@@ -166,7 +166,7 @@ void SCIPwriteStp(
          if( i == g->source )
             continue;
 
-         if( Is_pterm(g->term[i]) )
+         if( Is_pseudoTerm(g->term[i]) )
             fprintf(fp, "TP %d %f\n", i + 1, g->prize[i]);
 
          if( Is_term(g->term[i]) && !graph_pc_knotIsFixedTerm(g, i) )
@@ -229,7 +229,7 @@ static void stp_save(
    assert(fp != NULL);
 
    fprintf(fp, "%8x STP File, STP Format Version %2d.%02d\n",
-      STP_MAGIC, VERSION_MAJOR, VERSION_MINOR);
+      STP_FILE_MAGIC, STP_FILE_VERSION_MAJOR, STP_FILE_VERSION_MINOR);
 
    fprintf(fp, "Section Comment\n");
    fprintf(fp, "Name \"%s\"\n", "noname");
@@ -261,17 +261,7 @@ static void stp_save(
          fprintf(fp, "T %d\n", i + 1);
    }
    fprintf(fp, "End\n\n");
-/*
-   if (g->flags & GRAPH_HAS_COORDINATES)
-   {
-      fprintf(fp, "Section Coordinates\n");
 
-      for(i = 0; i < g->knots; i++)
-         fprintf(fp, "DD %d %d %d\n", i + 1, g->xpos[i], g->ypos[i]);
-
-      fprintf(fp, "End\n\n");
-   }
-*/
    fprintf(fp, "EOF\n");
 }
 

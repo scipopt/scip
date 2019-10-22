@@ -572,10 +572,10 @@ SCIP_RETCODE fixVarsRedbased(
 
          if( pcmw )
          {
-            if( Is_pterm(propgraph->term[tail]) )
+            if( Is_pseudoTerm(propgraph->term[tail]) )
                graph_pc_enforcePterm(propgraph, tail);
 
-            if( Is_pterm(propgraph->term[head]) )
+            if( Is_pseudoTerm(propgraph->term[head]) )
                graph_pc_enforcePterm(propgraph, head);
 
             if( propgraph->stp_type == STP_PCSPG )
@@ -584,12 +584,12 @@ SCIP_RETCODE fixVarsRedbased(
 
          if( propgraph->stp_type == STP_RPCSPG )
          {
-            if( !Is_pterm(propgraph->term[tail]) )
+            if( !Is_pseudoTerm(propgraph->term[tail]) )
             {
                propgraph->prize[tail] = FARAWAY;
                graph_knot_chg(propgraph, tail, 0);
             }
-            if( !Is_pterm(propgraph->term[head]) )
+            if( !Is_pseudoTerm(propgraph->term[head]) )
             {
                propgraph->prize[head] = FARAWAY;
                graph_knot_chg(propgraph, head, 0);
@@ -669,7 +669,7 @@ SCIP_RETCODE fixVarsRedbased(
 
          for( int i = 0; i < propgraph->knots && !(*probisinfeas); i++ )
          {
-            if( !Is_pterm(g->term[i]) )
+            if( !Is_pseudoTerm(g->term[i]) )
                continue;
 
             assert(!graph_pc_knotIsFixedTerm(g, i));
@@ -694,13 +694,13 @@ SCIP_RETCODE fixVarsRedbased(
 
                   assert(!Is_term(propgraph->term[vert]) && !Is_term(g->term[vert]));
 
-                  if( Is_pterm(propgraph->term[vert]) )
+                  if( Is_pseudoTerm(propgraph->term[vert]) )
                      graph_pc_deleteTerm(scip, propgraph, graph_pc_getTwinTerm(propgraph, vert));
                   else
                      graph_knot_del(scip, propgraph, vert, TRUE);
                }
             }
-            else if( SCIPisLT(scip, propgraph->prize[i], BLOCKED - 1.0) && Is_pterm(propgraph->term[i]) )
+            else if( SCIPisLT(scip, propgraph->prize[i], BLOCKED - 1.0) && Is_pseudoTerm(propgraph->term[i]) )
             {
                for( int j = start[ptermcount - 1]; j < start[ptermcount]; j++ )
                {
@@ -714,7 +714,7 @@ SCIP_RETCODE fixVarsRedbased(
                      const int rootedge = graph_pc_getRoot2PtermEdge(g, twin);
                      SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[rootedge], nfixed ) );
 
-                     assert(Is_pterm(propgraph->term[vert]) || graph_pc_knotIsFixedTerm(propgraph, vert));
+                     assert(Is_pseudoTerm(propgraph->term[vert]) || graph_pc_knotIsFixedTerm(propgraph, vert));
 
                      graph_pc_enforcePterm(propgraph, i);
                      break;

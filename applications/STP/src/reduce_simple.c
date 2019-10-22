@@ -256,7 +256,7 @@ SCIP_RETCODE trydg1edgepc(
             for (e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e])
             {
                i1 = g->head[e];
-               if( Is_pterm(g->term[i1]) && g->source != i1 )
+               if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
                   t = i1;
                else if( g->source == i1 )
                   e2 = e;
@@ -324,7 +324,7 @@ SCIP_RETCODE trydg1edgepc(
                      g->cost[e] = 0.0;
                   }
                }
-               else if( Is_pterm(g->term[i1]) && g->source != i1 )
+               else if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
                {
                   t = i1;
                }
@@ -466,7 +466,7 @@ void adjust0term(
    for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
    {
       const int i1 = g->head[e];
-      if( Is_pterm(g->term[i1]) && g->source != i1 )
+      if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
          t = i1;
       else if( g->source == i1 )
          e2 = e;
@@ -1186,7 +1186,7 @@ SCIP_RETCODE reduce_simple_mw(
          if( !g->mark[i] || g->grad[i] == 0 )
             continue;
 
-         assert(!Is_pterm(g->term[i]));
+         assert(!Is_pseudoTerm(g->term[i]));
 
          /* non-positive vertex? */
          if( !Is_term(g->term[i]) )
@@ -1459,12 +1459,12 @@ SCIP_RETCODE reduce_simple_pc(
       for( int i = 0; i < nnodes; i++ )
       {
          assert(g->grad[i] >= 0);
-         assert(!(g->mark[i] && Is_pterm(g->term[i])));
+         assert(!(g->mark[i] && Is_pseudoTerm(g->term[i])));
 
          if( !g->mark[i] || g->grad[i] == 0 )
             continue;
 
-         assert(!Is_pterm(g->term[i]) &&  i != g->source);
+         assert(!Is_pseudoTerm(g->term[i]) &&  i != g->source);
 
          if( !Is_term(g->term[i]) )
          {

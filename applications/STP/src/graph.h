@@ -27,13 +27,7 @@
 #ifndef APPLICATIONS_STP_GRAPH_H_
 #define APPLICATIONS_STP_GRAPH_H_
 
-#define EAT_FREE     -1
-#define EAT_LAST     -2
-#define EAT_HIDE     -3
-
-#define GRAPH_HAS_COORDINATES     1
-#define GRAPH_IS_GRIDGRAPH        2
-#define GRAPH_IS_DIRECTED         4
+#define VERSION_SCIPJACK "1.3"
 
 #define STP_SPG                      0
 #define STP_SAP                      1
@@ -50,9 +44,14 @@
 #define STP_RMWCSP                   12
 #define STP_BRMWCSP                  13
 
-#define PC_TERM_PROPER 2
-#define PC_TERM_SIMPLE 1
-#define PC_TERM_NONE 0
+#define EAT_FREE     -1
+#define EAT_LAST     -2
+#define EAT_HIDE     -3
+
+#define STP_TERM           0        /**< terminal */
+#define STP_TERM_NONE     -1        /**< non-terminal */
+#define STP_TERM_PSEUDO   -2        /**< pseudo-terminal (for PC/MW variants) */
+#define STP_TERM_NONLEAF  -3        /**< non-leaf pseudo-terminal (for PC/MW variants) */
 
 #define SDSTAR_BASE_UNSET  -1
 #define SDSTAR_BASE_KILLED -2
@@ -62,10 +61,12 @@ typedef unsigned char STP_Bool;
 #include "scip/scip.h"
 #include "misc_stp.h"
 
-extern SCIP_Bool show;
+extern SCIP_Bool show; // todo delete
+
 
 /** fixed graph components */
 typedef struct fixed_graph_components FIXED;
+
 
 /** node ancestors resulting from pseudo-elimination */
 typedef struct pseudo_ancestors PSEUDOANS;
@@ -153,7 +154,8 @@ typedef struct
    int                   esize;              /**< Count of allocated edge slots                                             */
    int                   edges;              /**< Count of edges in the graph                                               */
    int                   orgedges;
-   SCIP_Real*            cost;               /**< Array [0..edges-1] of positive edge costs                                  */
+   SCIP_Real*            cost;               /**< Array [0..edges-1] of positive edge costs                                 */
+   SCIP_Real*            cost_org_pc;        /**< Array [0..edges-1] of positive edge costs for non-transformed PC/MW variants   */
    int* RESTRICT         tail;               /**< Array [0..edges-1] of node-number of tail of edge [i]                     */
    int* RESTRICT         head;               /**< Array [0..edges-1] of node-number of head of edge [i]                     */
    int* RESTRICT         orgtail;            /**< Array [0..edges-1] of node-number of tail of edge [i] prior to reduction  */
@@ -247,32 +249,28 @@ typedef struct dijkstra_data
 #define flipedge(edge) ( ((edge) + 1) - 2 * ((edge) % 2) )
 #define flipedge_Uint(edge) ( (((unsigned int) edge) + 1) - 2 * (((unsigned int) edge) % 2) )
 
-#define PATH_NIL    ((PATH*)0)
 #define CONNECT      0
 #define UNKNOWN    (-1)
 #define FARAWAY      1e15
 #define BLOCKED      1e10
 
-#define EDGE_BLOCKED      0
+#define EDGE_BLOCKED       0
 #define EDGE_MODIFIABLE    1
 
 #define MST_MODE   0
 #define FSP_MODE   1
 #define BSP_MODE   2
 
-#define NO_CHANGE    -10
-
-#define Is_term(a)   ((a) >= 0)
-#define Is_pterm(a)  ((a) == -2)
-#define Is_gterm(a)  ((a) == -2 || (a) >= 0 )
+#define Is_term(a)         ((a) >= 0)
+#define Is_pseudoTerm(a)   ((a) == STP_TERM_PSEUDO)
+#define Is_nonleafTerm     ((a) == STP_TERM_NONLEAF)
+#define Is_anyTerm(a)      ((a) >= 0 || (a) == STP_TERM_PSEUDO || (a) == STP_TERM_NONLEAF )
 #define Edge_anti(a) ((((a) % 2) > 0) ? (a) - 1 : (a) + 1)
 
-#define VERSION_SCIPJACK "1.3"
-
 /* stp file format */
-#define STP_MAGIC       0x33d32945
-#define VERSION_MAJOR   1
-#define VERSION_MINOR   0
+#define STP_FILE_MAGIC       0x33d32945
+#define STP_FILE_VERSION_MAJOR   1
+#define STP_FILE_VERSION_MINOR   0
 
 typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 

@@ -1014,19 +1014,19 @@ SCIP_Bool graph_pc_term2edgeConsistent(
 
    for( int i = 0; i < g->knots; i++ )
    {
-      if( Is_gterm(g->term[i]) && !graph_pc_knotIsFixedTerm(g, i) && i != root && g->term2edge[i] < 0 )
+      if( Is_anyTerm(g->term[i]) && !graph_pc_knotIsFixedTerm(g, i) && i != root && g->term2edge[i] < 0 )
       {
          SCIPdebugMessage("term2edge consistency fail1 %d \n", i);
          return FALSE;
       }
 
-      if( !Is_gterm(g->term[i]) && g->term2edge[i] != -1 )
+      if( !Is_anyTerm(g->term[i]) && g->term2edge[i] != -1 )
       {
          SCIPdebugMessage("term2edge consistency fail2 %d \n", i);
          return FALSE;
       }
 
-      if( Is_pterm(g->term[i]) && i != root )
+      if( Is_pseudoTerm(g->term[i]) && i != root )
       {
          int k = -1;
          int e;
@@ -1123,7 +1123,7 @@ SCIP_Bool graph_pc_knotIsDummyTerm(
    }
    else
    {
-      if( Is_pterm(g->term[node]) )
+      if( Is_pseudoTerm(g->term[node]) )
       {
          assert(g->grad[node] == 2 );
          assert(!graph_pc_knotIsFixedTerm(g, node));
@@ -1181,7 +1181,7 @@ SCIP_Bool graph_pc_termIsNonLeaf(
       return FALSE;
 
    if( g->extended )
-      assert(Is_pterm(g->term[term]));
+      assert(Is_pseudoTerm(g->term[term]));
    else
       assert(Is_term(g->term[term]));
 
@@ -1208,7 +1208,7 @@ void graph_pc_enforcePterm(
    const int term = graph->head[graph->term2edge[pterm]];
    const int root2term = graph_pc_getRoot2PtermEdge(graph, term);
 
-   assert(graph != NULL && Is_pterm(graph->term[pterm]));
+   assert(graph != NULL && Is_pseudoTerm(graph->term[pterm]));
    assert(graph->term2edge[pterm] >= 0 && Is_term(graph->term[term]));
    assert(graph->cost[root2term] == graph->prize[pterm]);
 
@@ -1244,8 +1244,8 @@ void graph_pc_updateTerm2edge(
    assert(newgraph->term2edge != NULL);
    if( oldgraph->term2edge[oldtail] >= 0 && oldgraph->term2edge[oldhead] >= 0 && oldgraph->term[oldtail] != oldgraph->term[oldhead] )
    {
-      assert(Is_gterm(newgraph->term[newtail]) && Is_gterm(newgraph->term[newhead]));
-      assert(Is_gterm(oldgraph->term[oldtail]) && Is_gterm(oldgraph->term[oldhead]));
+      assert(Is_anyTerm(newgraph->term[newtail]) && Is_anyTerm(newgraph->term[newhead]));
+      assert(Is_anyTerm(oldgraph->term[oldtail]) && Is_anyTerm(oldgraph->term[oldhead]));
       assert(oldgraph->source != oldtail && oldgraph->source != oldhead);
       assert(flipedge(newgraph->edges) == newgraph->edges + 1);
 
@@ -1307,7 +1307,7 @@ void graph_pc_2org(
    {
       graph->mark[k] = (graph->grad[k] > 0);
 
-      if( Is_pterm(graph->term[k]) )
+      if( Is_pseudoTerm(graph->term[k]) )
       {
          graph_knot_chg(graph, k, 0);
       }
@@ -1345,7 +1345,7 @@ void graph_pc_2trans(
    {
       graph->mark[k] = (graph->grad[k] > 0);
 
-      if( Is_pterm(graph->term[k]) )
+      if( Is_pseudoTerm(graph->term[k]) )
          graph_knot_chg(graph, k, 0);
       else if( Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) )
       {
@@ -1419,7 +1419,7 @@ int graph_pc_realDegree(
 
    assert(g != NULL);
    assert(!g->extended);
-   assert(!Is_pterm(g->term[i]));
+   assert(!Is_pseudoTerm(g->term[i]));
    assert(i != g->source);
    assert(rpc || g->stp_type == STP_PCSPG);
 
@@ -1484,12 +1484,12 @@ SCIP_RETCODE graph_pc_getSap(
    maxpvert = -1;
 
    for( k = 0; k < nnodes; k++ )
-      if( Is_pterm(graph->term[k]) && (maxpvert == -1 || graph->prize[k] > graph->prize[maxpvert]) )
+      if( Is_pseudoTerm(graph->term[k]) && (maxpvert == -1 || graph->prize[k] > graph->prize[maxpvert]) )
          maxpvert = k;
 
    for( k = 0; k < nnodes; k++ )
    {
-      if( Is_pterm(graph->term[k]) )
+      if( Is_pseudoTerm(graph->term[k]) )
       {
          prizesum += graph->prize[k];
 
@@ -1541,7 +1541,7 @@ SCIP_RETCODE graph_pc_getSap(
    for( k = 0; k < nnodes; k++ )
    {
       /* is the kth node a terminal other than the root? */
-      if( Is_pterm((*newgraph)->term[k]) )
+      if( Is_pseudoTerm((*newgraph)->term[k]) )
       {
          graph_edge_add(scip, (*newgraph), k, pseudoroot, 0.0, FARAWAY);
       }
@@ -1617,7 +1617,7 @@ SCIP_RETCODE graph_pc_getSapShift(
    maxvert = -1;
    maxp = -1.0;
    for( int k = 0; k < nnodes; k++ )
-      if( Is_pterm(graph->term[k]) && SCIPisGT(scip, graph->prize[k], maxp) )
+      if( Is_pseudoTerm(graph->term[k]) && SCIPisGT(scip, graph->prize[k], maxp) )
       {
          assert(graph->grad[k] > 0);
          maxp = graph->prize[k];
@@ -1630,7 +1630,7 @@ SCIP_RETCODE graph_pc_getSapShift(
    for( int k = 0; k < nnodes; k++ )
    {
       newg->mark[k] = (newg->grad[k] > 0);
-      if( Is_pterm(graph->term[k]) && k != maxvert )
+      if( Is_pseudoTerm(graph->term[k]) && k != maxvert )
       {
          SCIP_Real p;
 
@@ -1697,7 +1697,7 @@ SCIP_RETCODE graph_pc_getSapShift(
 
    prizesum = 0.0;
    for( int k = 0; k < nnodes; k++ )
-      if( Is_pterm(graph->term[k]) )
+      if( Is_pseudoTerm(graph->term[k]) )
          prizesum += graph->prize[k];
 
    prizesum += 1;
@@ -1730,7 +1730,7 @@ SCIP_RETCODE graph_pc_getSapShift(
    for( int k = 0; k < nnodes; k++ )
    {
       /* is the kth node a terminal other than the root? */
-      if( Is_pterm(newg->term[k]) )
+      if( Is_pseudoTerm(newg->term[k]) )
       {
          assert(newg->mark[k]);
          graph_edge_add(scip, newg, k, pseudoroot, 0.0, FARAWAY);
@@ -1763,7 +1763,7 @@ void graph_pc_getBiased(
    BMScopyMemoryArray(costbiased, graph->cost, nedges);
    for( int k = 0; k < nnodes; k++ )
    {
-      if( Is_pterm(graph->term[k]) && graph->grad[k] != 0 )
+      if( Is_pseudoTerm(graph->term[k]) && graph->grad[k] != 0 )
       {
          SCIP_Real mincost = FARAWAY;
 
@@ -1873,7 +1873,7 @@ SCIP_RETCODE graph_pc_getRsap(
 
    graph->stp_type = stp_type;
 
-   assert(Is_pterm(graph->term[root]));
+   assert(Is_pseudoTerm(graph->term[root]));
 
    for( e = p->outbeg[root]; e != EAT_LAST; e = p->oeat[e] )
    {
@@ -2403,7 +2403,7 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
 
          p = graph->head[e2];
          assert(e2 == graph->term2edge[k]);
-         assert(Is_pterm(graph->term[p]));
+         assert(Is_pseudoTerm(graph->term[p]));
          assert(SCIPisGE(scip, graph->prize[p], prizesum));
 
          graph->prize[p] = FARAWAY;
@@ -2510,7 +2510,7 @@ void graph_pc_deleteTermExtension(
    {
       int e2;
       for( e2 = g->outbeg[i]; e2 != EAT_LAST; e2 = g->oeat[e2] )
-         if( Is_pterm(g->term[g->head[e2]]) )
+         if( Is_pseudoTerm(g->term[g->head[e2]]) )
             break;
       assert(e2 == e);
    }
@@ -2576,7 +2576,7 @@ int graph_pc_deleteTerm(
    {
       const int i1 = g->head[e];
 
-      if( Is_pterm(g->term[i1]) && g->source != i1 )
+      if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
          t = g->head[e];
       graph_edge_del(scip, g, e, TRUE);
    }
@@ -2617,7 +2617,7 @@ void graph_pc_subtractPrize(
 
    g->prize[i] -= cost;
    for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-      if( Is_pterm(g->term[g->head[e]]) )
+      if( Is_pseudoTerm(g->term[g->head[e]]) )
          break;
 
    assert(e != EAT_LAST);
@@ -2661,7 +2661,7 @@ void graph_pc_chgPrize(
 
    g->prize[i] = newprize;
    for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-      if( Is_pterm(g->term[g->head[e]]) )
+      if( Is_pseudoTerm(g->term[g->head[e]]) )
          break;
 
    assert(e != EAT_LAST);
@@ -2901,7 +2901,7 @@ int graph_pc_getTwinTerm(
    assert(g != NULL);
    assert(graph_pc_isPcMw(g));
    assert(g->term2edge != NULL && g->term2edge[vertex] > 0);
-   assert(Is_gterm(g->term[vertex]));
+   assert(Is_anyTerm(g->term[vertex]));
 
    return g->head[g->term2edge[vertex]];
 }
@@ -4105,7 +4105,7 @@ SCIP_Bool graph_sol_valid(
 
             if( usepterms)
             {
-               if( Is_pterm(graph->term[i]) || graph_pc_knotIsFixedTerm(graph, i) )
+               if( Is_pseudoTerm(graph->term[i]) || graph_pc_knotIsFixedTerm(graph, i) )
                   termcount++;
             }
             else
@@ -4642,7 +4642,6 @@ SCIP_RETCODE graph_init(
    p = *g;
    assert(p != NULL);
 
-   /* ancestor data for retransformation after reductions */
    p->ancestors = NULL;
    p->pcancestors = NULL;
    p->fixedcomponents = NULL;
@@ -4663,6 +4662,7 @@ SCIP_RETCODE graph_init(
    p->extended = FALSE;
    p->source = -1;
    p->is_packed = FALSE;
+   p->cost_org_pc = NULL;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->term), ksize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mark), ksize) );
@@ -4912,6 +4912,7 @@ void graph_free(
    SCIPfreeMemoryArray(scip, &(p->mark));
    SCIPfreeMemoryArray(scip, &(p->term));
    SCIPfreeMemoryArrayNull(scip, &(p->rootedgeprevs));
+   SCIPfreeMemoryArrayNull(scip, &(p->cost_org_pc));
 
    SCIPfreeMemory(scip, graph);
 }
@@ -5152,7 +5153,7 @@ void graph_mark(
 
       for( int k = 0; k < nnodes; k++ )
       {
-         if( (Is_pterm(g->term[k]) || k == root) )
+         if( (Is_pseudoTerm(g->term[k]) || k == root) )
             g->mark[k] = FALSE;
       }
 
@@ -5179,7 +5180,7 @@ SCIP_Bool graph_isMarked(
 
       for( int k = 0; k < nnodes; k++ )
       {
-         if( Is_pterm(g->term[k]) || (!rooted && k == root) )
+         if( Is_pseudoTerm(g->term[k]) || (!rooted && k == root) )
          {
             assert(g->grad[k] == 2 || k == root);
 
@@ -5718,7 +5719,7 @@ SCIP_Bool graph_valid(
 
       for( int k = 0; k < nnodes; k++ )
       {
-         if( rooted && g->term2edge[k] < 0 && Is_pterm(g->term[k]) )
+         if( rooted && g->term2edge[k] < 0 && Is_pseudoTerm(g->term[k]) )
          {
             assert(k != root);
 
@@ -5737,7 +5738,7 @@ SCIP_Bool graph_valid(
          if( k == root || (rooted && g->term2edge[k] < 0) )
             continue;
 
-         if( (extended ? Is_term(g->term[k]) : Is_pterm(g->term[k])) )
+         if( (extended ? Is_term(g->term[k]) : Is_pseudoTerm(g->term[k])) )
          {
             int e;
             int e2;
@@ -5766,7 +5767,7 @@ SCIP_Bool graph_valid(
             for( e2 = g->outbeg[term]; e2 != EAT_LAST; e2 = g->oeat[e2] )
             {
                pterm = g->head[e2];
-               if( (extended ? Is_pterm(g->term[pterm]) : Is_term(g->term[pterm])) && pterm != root  )
+               if( (extended ? Is_pseudoTerm(g->term[pterm]) : Is_term(g->term[pterm])) && pterm != root  )
                   break;
             }
 
@@ -5793,7 +5794,7 @@ SCIP_Bool graph_valid(
                goto EXIT;
             }
          }
-         else if( (extended ? Is_pterm(g->term[k]) : Is_term(g->term[k])) )
+         else if( (extended ? Is_pseudoTerm(g->term[k]) : Is_term(g->term[k])) )
          {
             npterms++;
          }

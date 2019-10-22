@@ -802,7 +802,7 @@ SCIP_RETCODE reduce_deleteConflictEdges(
 
          if( conflict )
          {
-            assert(!graph_pc_isPcMw(g) || (!Is_pterm(g->term[g->head[e]]) && !Is_pterm(g->term[g->tail[e]])));
+            assert(!graph_pc_isPcMw(g) || (!Is_pseudoTerm(g->term[g->head[e]]) && !Is_pseudoTerm(g->term[g->tail[e]])));
             graph_edge_del(scip, g, e, TRUE);
          }
       }

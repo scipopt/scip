@@ -458,7 +458,7 @@ SCIP_RETCODE computeReducedProbSolution(
 
       for( int k = 0; k < nsolnodes; k++ )
       {
-         if( Is_pterm(solgraph->term[k]) )
+         if( Is_pseudoTerm(solgraph->term[k]) )
          {
             int e;
             const int term = solgraph->head[solgraph->term2edge[k]];
@@ -515,7 +515,7 @@ SCIP_RETCODE computeReducedProbSolution(
       assert(orgprize != NULL);
 
       for( int k = 0; k < nsolnodes; k++ )
-         if( Is_pterm(solgraph->term[k]) )
+         if( Is_pseudoTerm(solgraph->term[k]) )
          {
             assert(k != solgraph->source);
             prize[k] = orgprize[k];
@@ -1061,7 +1061,7 @@ void solgraphAdaptForPcMw(
          const int edge2pterm = graph->term2edge[k];
          const int pterm = graph->head[edge2pterm];
 
-         assert(graph->grad[k] == 2 && edge2pterm >= 0 && Is_pterm(graph->term[pterm]));
+         assert(graph->grad[k] == 2 && edge2pterm >= 0 && Is_pseudoTerm(graph->term[pterm]));
 
          if( !solnode[pterm] )
          {
@@ -1081,7 +1081,7 @@ void solgraphAdaptForPcMw(
       }
 
       /* pseudo terminal? */
-      if( solnode[k] && Is_pterm(graph->term[k]) )
+      if( solnode[k] && Is_pseudoTerm(graph->term[k]) )
       {
          const int edge2term = graph->term2edge[k];
          const int term = graph->head[edge2term];
@@ -1875,7 +1875,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          if( tail == root )
          {
             /* there might be only one node */
-            if( Is_pterm(graph->term[head]) )
+            if( Is_pseudoTerm(graph->term[head]) )
             {
                stvertex[head] = 1;
                nsolterms++;
@@ -1888,7 +1888,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          assert(!stvertex[head] );
          stvertex[head] = 1;
 
-         if( Is_pterm(graph->term[head]) )
+         if( Is_pseudoTerm(graph->term[head]) )
             nsolterms++;
          nsolnodes++;
       }

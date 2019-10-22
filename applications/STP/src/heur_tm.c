@@ -222,7 +222,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
          for( int k = 0; k < nnodes; k++ )
             if( termsorder[k] < min && connected[k] )
             {
-               assert(Is_pterm(g->term[k]));
+               assert(Is_pseudoTerm(g->term[k]));
 
                min = termsorder[k];
                proot = k;
@@ -351,7 +351,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
          {
             /* there has to be exactly one incoming edge
              */
-            assert(!Is_gterm(g->term[i]));
+            assert(!Is_anyTerm(g->term[i]));
 
             for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
             {
@@ -446,7 +446,7 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
          i = g->head[a];
          if( g->mark[i] )
          {
-            assert(Is_pterm(g->term[i]) && connected[i] == CONNECT);
+            assert(Is_pseudoTerm(g->term[i]) && connected[i] == CONNECT);
             break;
          }
       }
@@ -561,7 +561,7 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
 
          if( j == EAT_LAST )
          {
-            assert(!Is_pterm(g->term[i]));
+            assert(!Is_pseudoTerm(g->term[i]));
             mst[i].edge = UNKNOWN;
             g->mark[i] = FALSE;
             connected[i] = UNKNOWN;
@@ -2112,7 +2112,7 @@ void initCostsAndPrioLP(
 
       for( int k = 0; k < nnodes; k++ )
       {
-         if( Is_pterm(graph->term[k]) )
+         if( Is_pseudoTerm(graph->term[k]) )
          {
             const int term = graph_pc_getTwinTerm(graph, k);
             const int rootedge = graph_pc_getRoot2PtermEdge(graph, term);
@@ -2145,7 +2145,7 @@ void initOrderedPrizesPcMw(
    termcount = 0;
    for( int k = 0; k < nnodes; k++ )
    {
-      if( Is_pterm(graph->term[k]) )
+      if( Is_pseudoTerm(graph->term[k]) )
       {
          orderedprizes[termcount] = prizes[k];
 
@@ -2201,7 +2201,7 @@ void initTerminalPrioPcMw(
    if( nodepriority == NULL )
    {
       for( int k = 0; k < nnodes; k++ )
-         if( Is_pterm(graph->term[k]) && graph->grad[k] != 0 )
+         if( Is_pseudoTerm(graph->term[k]) && graph->grad[k] != 0 )
          {
             assert(graph->term2edge[k] < 0 || SCIPisGT(scip, graph->prize[k], 0.0));
             terminalperm[t] = k;
@@ -2211,7 +2211,7 @@ void initTerminalPrioPcMw(
    else
    {
       for( int k = 0; k < nnodes; k++ )
-         if( Is_pterm(graph->term[k]) && graph->grad[k] != 0 )
+         if( Is_pseudoTerm(graph->term[k]) && graph->grad[k] != 0 )
          {
             assert(nodepriority[k] >= 0.0);
             assert(graph->term2edge[k] < 0 || SCIPisGT(scip, graph->prize[k], 0.0));
@@ -2332,7 +2332,7 @@ SCIP_RETCODE runPcMW(
 
    initTerminalPrioPcMw(scip, heurdata, nodepriority, graph, terminalperm, terminalprio);
 
-   if( maxruns > 0 && bestincstart >= 0 && bestincstart < nnodes && Is_pterm(graph->term[bestincstart]) && SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 1 )
+   if( maxruns > 0 && bestincstart >= 0 && bestincstart < nnodes && Is_pseudoTerm(graph->term[bestincstart]) && SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 1 )
    {
       int r;
 

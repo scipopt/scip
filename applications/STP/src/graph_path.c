@@ -2584,7 +2584,7 @@ void graph_path_st_pcmw(
       pathedge[k] = -1;
       connected[k] = FALSE;
 
-      if( Is_pterm(g->term[k]) )
+      if( Is_pseudoTerm(g->term[k]) )
          ntermspos++;
    }
 
@@ -2600,7 +2600,7 @@ void graph_path_st_pcmw(
 
       int nterms = 0;
 
-      if( Is_pterm(g->term[start]) )
+      if( Is_pseudoTerm(g->term[start]) )
       {
          nterms++;
          updatmaxprize(g, orderedprizes, orderedprizes_id, connected, start, &maxprizeidx, &maxprizeval);
@@ -2619,7 +2619,7 @@ void graph_path_st_pcmw(
          state[k] = UNKNOWN;
 
          /* if k is positive vertex and close enough, connect k to current subtree */
-         if( !connected[k] && Is_pterm(g->term[k]) && (prize[k] >= pathdist[k]) )
+         if( !connected[k] && Is_pseudoTerm(g->term[k]) && (prize[k] >= pathdist[k]) )
          {
             connected[k] = TRUE;
             pathdist[k] = 0.0;
@@ -2635,7 +2635,7 @@ void graph_path_st_pcmw(
                connected[node] = TRUE;
                resetX(scip, pathdist, heap, state, &count, node, 0.0);
 
-               if( Is_pterm(g->term[node]) )
+               if( Is_pseudoTerm(g->term[node]) )
                {
                   updatmaxprize(g, orderedprizes, orderedprizes_id, connected, node, &maxprizeidx, &maxprizeval);
                   nterms++;
@@ -2773,7 +2773,7 @@ void graph_path_st_pcmw_full(
       heap[count] = start;
       state[start] = count;
 
-      if( Is_pterm(g->term[start]) )
+      if( Is_pseudoTerm(g->term[start]) )
          nterms++;
 
       /* repeat until heap is empty */
@@ -2784,7 +2784,7 @@ void graph_path_st_pcmw_full(
          state[k] = UNKNOWN;
 
          /* if k is unconnected positive vertex, connect its path to current subtree */
-         if( !connected[k] && Is_pterm(g->term[k]) )
+         if( !connected[k] && Is_pseudoTerm(g->term[k]) )
          {
             connected[k] = TRUE;
             pathdist[k] = 0.0;
@@ -2794,7 +2794,7 @@ void graph_path_st_pcmw_full(
 
             for( int node = g->tail[pathedge[k]]; !connected[node]; node = g->tail[pathedge[node]] )
             {
-               assert(!Is_gterm(g->term[node]));
+               assert(!Is_anyTerm(g->term[node]));
 
                connected[node] = TRUE;
                resetX(scip, pathdist, heap, state, &count, node, 0.0);
@@ -2876,7 +2876,7 @@ void graph_path_st_pcmw_extend(
          state[k]     = UNKNOWN;
          path[k].dist = FARAWAY;
 
-         if( Is_pterm(g->term[k]) && g->mark[k] )
+         if( Is_pseudoTerm(g->term[k]) && g->mark[k] )
          {
             outerterms++;
             if( g->prize[k] > maxprize )
@@ -2906,7 +2906,7 @@ void graph_path_st_pcmw_extend(
          state[k] = UNKNOWN;
 
          /* if k is positive vertex and close enough (or fixnode), connect its path to current subtree */
-         if( !connected[k] && Is_pterm(g->term[k]) && SCIPisGE(scip, g->prize[k], path[k].dist) )
+         if( !connected[k] && Is_pseudoTerm(g->term[k]) && SCIPisGE(scip, g->prize[k], path[k].dist) )
          {
             int node;
 
@@ -2925,7 +2925,7 @@ void graph_path_st_pcmw_extend(
                reset(scip, path, heap, state, &count, node);
                assert(state[node]);
 
-               if( Is_pterm(g->term[node]) )
+               if( Is_pseudoTerm(g->term[node]) )
                   nterms++;
 
                node = g->tail[path[node].edge];
@@ -3017,7 +3017,7 @@ void graph_path_st_pcmw_extendBiased(
          path[k].dist = 0.0;
          assert(path[k].edge != UNKNOWN || k == g->source);
       }
-      else if( Is_pterm(g->term[k]) )
+      else if( Is_pseudoTerm(g->term[k]) )
       {
          assert(g->mark[k]);
          outermscount++;
@@ -3043,7 +3043,7 @@ void graph_path_st_pcmw_extendBiased(
          assert(g->mark[k]);
 
          /* if k is positive vertex and close enough (or fixnode), connect its path to current subtree */
-         if( !connected[k] && Is_pterm(g->term[k]) && SCIPisGE(scip, prize[k], path[k].dist) )
+         if( !connected[k] && Is_pseudoTerm(g->term[k]) && SCIPisGE(scip, prize[k], path[k].dist) )
          {
             int node;
 
@@ -3063,7 +3063,7 @@ void graph_path_st_pcmw_extendBiased(
                reset(scip, path, heap, state, &count, node);
                assert(state[node]);
 
-               if( Is_pterm(g->term[node]) )
+               if( Is_pseudoTerm(g->term[node]) )
                   nterms++;
 
                node = g->tail[path[node].edge];
@@ -3145,7 +3145,7 @@ void graph_path_st_rpcmw(
       {
          assert(g->mark[k]);
          nrterms++;
-         assert(!Is_pterm(g->term[k]));
+         assert(!Is_pseudoTerm(g->term[k]));
       }
    }
 
@@ -3166,7 +3166,7 @@ void graph_path_st_rpcmw(
       heap[count] = start;
       state[start] = count;
 
-      if( Is_gterm(g->term[start]) )
+      if( Is_anyTerm(g->term[start]) )
          termscount++;
 
       if( Is_term(g->term[start]) )
@@ -3185,7 +3185,7 @@ void graph_path_st_rpcmw(
          state[k] = UNKNOWN;
 
          /* if k is fixed terminal positive vertex and close enough, connect its path to current subtree */
-         if( Is_gterm(g->term[k]) && (Is_term(g->term[k]) || SCIPisGE(scip, prize[k], pathdist[k]))
+         if( Is_anyTerm(g->term[k]) && (Is_term(g->term[k]) || SCIPisGE(scip, prize[k], pathdist[k]))
                && !connected[k] )
          {
             int node;
@@ -3198,7 +3198,7 @@ void graph_path_st_rpcmw(
                assert(graph_pc_knotIsFixedTerm(g, k));
                rtermscount++;
             }
-            else if( Is_pterm(g->term[k]) )
+            else if( Is_pseudoTerm(g->term[k]) )
             {
                updatmaxprize(g, orderedprizes, orderedprizes_id, connected, k, &maxprizeidx, &maxprizeval);
             }
@@ -3219,7 +3219,7 @@ void graph_path_st_rpcmw(
                connected[node] = TRUE;
                resetX(scip, pathdist, heap, state, &count, node, 0.0);
 
-               if( Is_pterm(g->term[node]) )
+               if( Is_pseudoTerm(g->term[node]) )
                {
                   termscount++;
                   updatmaxprize(g, orderedprizes, orderedprizes_id, connected, node, &maxprizeidx, &maxprizeval);

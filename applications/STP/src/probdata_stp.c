@@ -1165,7 +1165,7 @@ SCIP_RETCODE createVariables(
             t = 0;
             for( int v = 0; v < nnodes; v++ )
             {
-               if( Is_pterm(graph->term[v]) )
+               if( Is_pseudoTerm(graph->term[v]) )
                   probdata->pctermsorder[v] = t++;
                else
                   probdata->pctermsorder[v] = nnodes;
@@ -1251,7 +1251,7 @@ SCIP_RETCODE createVariables(
                for( int s = 0; s < probdata->realnterms; s++ )
                {
                   const int pterm = pseudoterms[s];
-                  assert(Is_pterm(graph->term[pterm]));
+                  assert(Is_pseudoTerm(graph->term[pterm]));
                   assert(graph->prize[pterm] > 0.0);
 
                   termprizes[s] = graph->prize[pterm];
@@ -3923,7 +3923,7 @@ void initReceivedSubproblem(
 
          if( graph_pc_isPcMw(graph) )
          {
-            if( Is_pterm(graph->term[k]) )
+            if( Is_pseudoTerm(graph->term[k]) )
             {
                graph_pc_enforcePterm(graph, k);
             }
@@ -3951,7 +3951,7 @@ void initReceivedSubproblem(
                graph->cost[flipedge(e)] = BLOCKED;
          }
 
-         if( Is_pterm(graph->term[k]) )
+         if( Is_pseudoTerm(graph->term[k]) )
          {
             const int twinterm = graph_pc_getTwinTerm(graph, k);
             const int root2twin = graph_pc_getRoot2PtermEdge(graph, twinterm);

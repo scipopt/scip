@@ -586,7 +586,7 @@ static int open_file(
 
    /* Test Magic...
     */
-   else if (magic != STP_MAGIC)
+   else if (magic != STP_FILE_MAGIC)
       message(MSG_FATAL, curf, err_nomagic_d, magic);
 
    /* Did we get the right type of file ?
@@ -598,7 +598,7 @@ static int open_file(
       /* Succeeded. Just give a warning if the file has a different
        * version number than the reader and hope it will be ok.
        */
-      if ((version_major != VERSION_MAJOR) || (version_minor != VERSION_MINOR))
+      if ((version_major != STP_FILE_VERSION_MAJOR) || (version_minor != STP_FILE_VERSION_MINOR))
          message(MSG_WARN, curf, msg_version_dd, version_minor, version_major);
 
       result = SUCCESS;

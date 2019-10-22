@@ -476,8 +476,8 @@ SCIP_RETCODE reduce_bound(
             (*nelims)++;
             assert(!pc || graph->tail[e] != root);
             assert(!pc || graph->mark[graph->head[e]]);
-            assert(!Is_pterm(graph->term[graph->head[e]]));
-            assert(!Is_pterm(graph->term[graph->tail[e]]));
+            assert(!Is_pseudoTerm(graph->term[graph->head[e]]));
+            assert(!Is_pseudoTerm(graph->term[graph->tail[e]]));
 
             graph_edge_del(scip, graph, e, TRUE);
          }
@@ -515,8 +515,8 @@ SCIP_RETCODE reduce_bound(
                }
                else
                {
-                  assert(!Is_pterm(graph->term[head]));
-                  assert(!Is_pterm(graph->term[tail]));
+                  assert(!Is_pseudoTerm(graph->term[head]));
+                  assert(!Is_pseudoTerm(graph->term[tail]));
                   graph_edge_del(scip, graph, e, TRUE);
                   (*nelims)++;
                }
@@ -1055,7 +1055,7 @@ SCIP_RETCODE reduce_boundPrune(
             if( root == k )
                continue;
 
-            if( !graph->mark[k] || graph->grad[k] == 0 || Is_gterm(graph->term[k] ) )
+            if( !graph->mark[k] || graph->grad[k] == 0 || Is_anyTerm(graph->term[k] ) )
                continue;
 
             tmpcost = -vnoi[k].dist - vnoi[k + nnodes].dist + graph->prize[k];
@@ -1115,8 +1115,8 @@ SCIP_RETCODE reduce_boundPrune(
                   if( (!eliminate || SCIPisLT(scip, tmpcost, obj))
                      && SCIPisLT(scip, graph->cost[e], FARAWAY) && (graph->mark[head]) )
                   {
-                     assert(!Is_pterm(graph->term[head]));
-                     assert(!Is_pterm(graph->term[tail]));
+                     assert(!Is_pseudoTerm(graph->term[head]));
+                     assert(!Is_pseudoTerm(graph->term[tail]));
 
                      if( eliminate )
                      {
@@ -1164,8 +1164,8 @@ SCIP_RETCODE reduce_boundPrune(
 
                      assert(!pc || graph->tail[e] != graph->source);
                      assert(!pc || graph->mark[graph->head[e]]);
-                     assert(!Is_pterm(graph->term[graph->head[e]]));
-                     assert(!Is_pterm(graph->term[graph->tail[e]]));
+                     assert(!Is_pseudoTerm(graph->term[graph->head[e]]));
+                     assert(!Is_pseudoTerm(graph->term[graph->tail[e]]));
 
                      graph_edge_del(scip, graph, e, TRUE);
                   }
@@ -1222,8 +1222,8 @@ SCIP_RETCODE reduce_boundPrune(
                   if( (!eliminate || SCIPisGT(scip, tmpcost, obj))
                      && SCIPisLT(scip, graph->cost[e], FARAWAY) && (!(pc) || graph->mark[head]) )
                   {
-                     assert(!Is_pterm(graph->term[head]));
-                     assert(!Is_pterm(graph->term[tail]));
+                     assert(!Is_pseudoTerm(graph->term[head]));
+                     assert(!Is_pseudoTerm(graph->term[tail]));
 
                      if( eliminate )
                      {

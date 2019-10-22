@@ -1107,7 +1107,7 @@ SCIP_Real extTreeGetDirectedRedcostProper(
          if( tree_deg[term] < 0 )
          {
             assert(graph_pc_isPcMw(graph) && tree_deg[term] == -1);
-            assert(Is_pterm(graph->term[term]));
+            assert(Is_pseudoTerm(graph->term[term]));
             break;
          }
       }

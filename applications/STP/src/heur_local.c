@@ -122,7 +122,7 @@ SCIP_Real getNewPrizeNode(
    SCIP_Real prizesum = 0.0;
    assert(graph_pc_isPcMw(graph));
 
-   if( graphmark[node] && !steinertree[node] && Is_pterm(graph->term[node]) && !prizemark[node] )
+   if( graphmark[node] && !steinertree[node] && Is_pseudoTerm(graph->term[node]) && !prizemark[node] )
    {
       prizesum += graph->prize[node];
       prizemark[node] = TRUE;
@@ -518,7 +518,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                }
             }
 
-            if( pc && Is_pterm(graph->term[i]) )
+            if( pc && Is_pseudoTerm(graph->term[i]) )
                diff -= graph->prize[i];
 
             /* if the new tree is more expensive than the old one, restore the latter */
@@ -797,7 +797,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
                   {
                      graphmark[k] = FALSE;
                      pterm = graph->head[graph->term2edge[k]];
-                     assert(Is_pterm(graph->term[pterm]));
+                     assert(Is_pseudoTerm(graph->term[pterm]));
 
                      pinned[pterm] = TRUE;
                   }
@@ -1854,7 +1854,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwImp(
 
       for( int i = 0; i < nnodes; i++ )
       {
-         if( !Is_pterm(graph->term[i]) )
+         if( !Is_pseudoTerm(graph->term[i]) )
             continue;
 
          assert(!graph_pc_knotIsFixedTerm(graph, i));
@@ -1992,10 +1992,10 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
          bestsolval += graph->cost[orgpath[i].edge];
 
-         if( Is_pterm(graph->term[i]) )
+         if( Is_pseudoTerm(graph->term[i]) )
             bestsolval -= graph->prize[i];
       }
-      else if( orgpath[i].edge != UNKNOWN && Is_pterm(graph->term[i]) )
+      else if( orgpath[i].edge != UNKNOWN && Is_pseudoTerm(graph->term[i]) )
       {
          SCIP_CALL( addToCandidates(scip, graph, path, i, greedyextensions, &nextensions, candidates, pqueue) );
       }
@@ -2058,7 +2058,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 
                   newsolval += graph->cost[path[j].edge];
 
-                  if( Is_pterm(graph->term[j]) )
+                  if( Is_pseudoTerm(graph->term[j]) )
                      newsolval -= graph->prize[j];
                }
             }
@@ -2075,7 +2075,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
                nextensions = 0;
 
                for( int j = 0; j < nnodes; j++ )
-                  if( !stvertex[j] && Is_pterm(graph->term[j]) && path[j].edge != UNKNOWN )
+                  if( !stvertex[j] && Is_pseudoTerm(graph->term[j]) && path[j].edge != UNKNOWN )
                      SCIP_CALL( addToCandidates(scip, graph, path, j, greedyextensions, &nextensions, candidates, pqueue) );
 
                break;

@@ -542,7 +542,7 @@ SCIP_RETCODE sep_implicationsPcMw(
       SCIP_Real maxflow;
       const SCIP_Real inflow = nodeinflow[i];
 
-      if( !Is_pterm(g->term[i]) )
+      if( !Is_pseudoTerm(g->term[i]) )
          continue;
 
       ptermcount++;

@@ -553,7 +553,7 @@ void ansProcessCandidate(
 
    assert(g->mark[candvertex]);
    assert(candvertex != g->source);
-   assert(!Is_pterm(g->term[candvertex]));
+   assert(!Is_pseudoTerm(g->term[candvertex]));
 
    for( e2 = g->outbeg[candvertex]; e2 != EAT_LAST; e2 = g->oeat[e2] )
    {
@@ -4164,7 +4164,7 @@ SCIP_RETCODE reduce_sl(
 
             *fixed += g->cost[minedge];
             assert(g->mark[tail] && g->mark[head]);
-            assert(!Is_pterm(g->term[tail]) && !Is_pterm(g->term[head]));
+            assert(!Is_pseudoTerm(g->term[tail]) && !Is_pseudoTerm(g->term[head]));
 
             if( Is_term(g->term[head]) )
             {
@@ -4185,7 +4185,7 @@ SCIP_RETCODE reduce_sl(
                assert(g->grad[j] > 0);
                if( graph_pc_knotIsFixedTerm(g, i) && !Is_term(g->term[j]) )
                {
-                  assert(!Is_gterm(g->term[j]));
+                  assert(!Is_anyTerm(g->term[j]));
                   newterm[j] = TRUE;
                   foundterms = TRUE;
                }
@@ -4218,7 +4218,7 @@ SCIP_RETCODE reduce_sl(
          {
             if( pc )
             {
-               assert(g->prize[i] == 0.0 && !Is_gterm(g->term[i]));
+               assert(g->prize[i] == 0.0 && !Is_anyTerm(g->term[i]));
                g->prize[i] = FARAWAY;
             }
             graph_knot_chg(g, i, 0);

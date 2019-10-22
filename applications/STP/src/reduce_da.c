@@ -370,7 +370,7 @@ void updateNodeFixingBounds(
       if( !graph->mark[k] )
          continue;
 
-      assert(!Is_pterm(graph->term[k]));
+      assert(!Is_pseudoTerm(graph->term[k]));
 
       fixbnd = pathdist[k] + vnoi[k].dist + lpobjval;
 
@@ -421,7 +421,7 @@ SCIP_RETCODE updateNodeReplaceBounds(
    {
       const int degree = graph->grad[node];
 
-      if( degree >= 3 && !Is_gterm(graph->term[node]) )
+      if( degree >= 3 && !Is_anyTerm(graph->term[node]) )
       {
          SCIP_Real fixbnd;
 
@@ -431,7 +431,7 @@ SCIP_RETCODE updateNodeReplaceBounds(
 
          fixbnd = pathdist[node] + vnoi[node].dist + vnoi[node + nnodes].dist + lpobjval;
 
-         assert(!Is_pterm(graph->term[node]));
+         assert(!Is_pseudoTerm(graph->term[node]));
 
          /* Y-test for small degrees */
          if( degree <= STP_DABD_MAXDEGREE && !SCIPisLT(scip, upperbound, fixbnd) )
@@ -577,7 +577,7 @@ void updateEdgeFixingBounds(
       if( !graph->mark[k] )
          continue;
 
-      assert(!Is_pterm(graph->term[k]));
+      assert(!Is_pseudoTerm(graph->term[k]));
 
       if( undirected )
       {
@@ -640,7 +640,7 @@ int reduceWithNodeFixingBounds(
       if( !graph->mark[k] || Is_term(graph->term[k]) )
          continue;
 
-      assert(!Is_pterm(graph->term[k]));
+      assert(!Is_pseudoTerm(graph->term[k]));
 
       if( SCIPisLT(scip, upperbound, fixingbounds[k]) )
       {
@@ -686,13 +686,13 @@ int reduceWithNodeReplaceBounds(
       {
          SCIP_Bool rpc3term = FALSE;
 
-         if( rpc && degree == 3 && Is_pterm(graph->term[k]) && graph_pc_termIsNonLeaf(graph, k)
+         if( rpc && degree == 3 && Is_pseudoTerm(graph->term[k]) && graph_pc_termIsNonLeaf(graph, k)
                && graph->grad[k] == 4 )
          {
             assert(!graph_pc_knotIsFixedTerm(graph, k));
             rpc3term = TRUE;
          }
-         else if( (degree != graph->grad[k] || Is_gterm(graph->term[k])) )
+         else if( (degree != graph->grad[k] || Is_anyTerm(graph->term[k])) )
             continue;
 
          if( SCIPisLT(scip, upperbound, replacebounds[k]) && nodetouched[k] == 0 )
@@ -785,7 +785,7 @@ int reduceWithEdgeFixingBounds(
       if( !graph->mark[k] )
          continue;
 
-      assert(!Is_pterm(graph->term[k]));
+      assert(!Is_pseudoTerm(graph->term[k]));
 
       e = graph->outbeg[k];
       while( e != EAT_LAST )
@@ -871,7 +871,7 @@ void findRootsMark(
    }
    assert(realterm >= 0 && graph->mark[realterm]);
    assert(realterm != graph->source && realterm != transgraph->source);
-   assert(Is_pterm(transgraph->term[realterm]) && Is_term(graph->term[realterm]));
+   assert(Is_pseudoTerm(transgraph->term[realterm]) && Is_term(graph->term[realterm]));
 
    if( rerun && isfixedterm[realterm] )
       return;
@@ -1031,7 +1031,7 @@ SCIP_RETCODE daPcFindRoots(
       {
          const int pseudoterm = graph->head[e];
 
-         if( Is_pterm(graph->term[pseudoterm]) )
+         if( Is_pseudoTerm(graph->term[pseudoterm]) )
             findRootsMark(scip, graph, transgraph, termmark, cost, bestcost, lpobjval, bestlpobjval, upperbound, rerun, probrooted, pseudoterm, e,
                   isfixedterm, roots, &nroots, state, pathedge, visited, dist);
       }
@@ -1143,7 +1143,7 @@ void daPcMarkRoots(
       assert(Is_term(graph->term[term]));
       assert(SCIPisPositive(scip, graph->prize[term]));
       assert(pterm >= 0);
-      assert(Is_pterm(graph->term[pterm]));
+      assert(Is_pseudoTerm(graph->term[pterm]));
 
       for( e = graph->inpbeg[pterm]; e != EAT_LAST; e = graph->ieat[e] )
          if( root == graph->tail[e] )
@@ -1246,7 +1246,7 @@ void daPcPertubateEdgeCosts(
 
       for( int k = 0; k < nnodes; k++ )
       {
-         assert(Is_gterm(graph->term[k]) == Is_gterm(transgraph->term[k]) || transgraph->grad[k] == 0);
+         assert(Is_anyTerm(graph->term[k]) == Is_anyTerm(transgraph->term[k]) || transgraph->grad[k] == 0);
 
          if( randomize > 8 )
             pratio = ((SCIP_Real)(rand() % 10)) / (100.0) - 1.0 / 100.0;
@@ -1262,7 +1262,7 @@ void daPcPertubateEdgeCosts(
          assert(SCIPisPositive(scip, 1.0 - pratio));
          assert(SCIPisPositive(scip, 1.0 + pratio));
 
-         if( !Is_gterm(graph->term[k]) )
+         if( !Is_anyTerm(graph->term[k]) )
          {
             for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
             {
@@ -1281,7 +1281,7 @@ void daPcPertubateEdgeCosts(
             for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
                if( SCIPisPositive(scip, transgraph->cost[e]) )
                {
-                  assert(!Is_pterm(transgraph->term[transgraph->tail[e]]));
+                  assert(!Is_pseudoTerm(transgraph->term[transgraph->tail[e]]));
                   assert(transgraph->tail[e] != root);
                   assert(result[flipedge(e)] != CONNECT);
 
@@ -1302,7 +1302,7 @@ void daPcPertubateEdgeCosts(
    {
       SCIP_Real pratio = PERTUBATION_RATIO;
 
-      assert(Is_gterm(graph->term[k]) == Is_gterm(transgraph->term[k]));
+      assert(Is_anyTerm(graph->term[k]) == Is_anyTerm(transgraph->term[k]));
 
       if( randomize > 8 )
          pratio = ((SCIP_Real)(rand() % 10)) / (50.0) - 1.0 / 10.0;
@@ -1315,7 +1315,7 @@ void daPcPertubateEdgeCosts(
       else
          pratio = PERTUBATION_RATIO + ((SCIP_Real)(rand() % 10)) / 200.0;
 
-      if( !Is_gterm(graph->term[k]) )
+      if( !Is_anyTerm(graph->term[k]) )
       {
          if( nodearrchar[k] )
          {
@@ -1337,7 +1337,7 @@ void daPcPertubateEdgeCosts(
             for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
                if( SCIPisPositive(scip, transgraph->cost[e]) )
                {
-                  assert(!Is_pterm(transgraph->term[transgraph->tail[e]]));
+                  assert(!Is_pseudoTerm(transgraph->term[transgraph->tail[e]]));
 
                   transgraph->cost[e] *= 1.0 + pratio;
                }
@@ -1347,7 +1347,7 @@ void daPcPertubateEdgeCosts(
             for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
                if( SCIPisPositive(scip, transgraph->cost[e]) )
                {
-                  assert(!Is_pterm(transgraph->term[transgraph->tail[e]]));
+                  assert(!Is_pseudoTerm(transgraph->term[transgraph->tail[e]]));
                   transgraph->cost[e] *= 1.0 - pratio;
                }
          }
@@ -1732,7 +1732,7 @@ SCIP_RETCODE reduceRootedProb(
 #ifndef NDEBUG
       assert(!graph->extended);
       for( int k = 0; k < nnodes; k++ )
-         if( Is_pterm(graph->term[k]) )
+         if( Is_pseudoTerm(graph->term[k]) )
             assert(!graph->mark[k] && graph->grad[k] == 2);
 #endif
    }
@@ -1760,7 +1760,7 @@ SCIP_RETCODE reduceRootedProb(
       if( !graph->mark[k] )
          continue;
 
-      assert(!Is_pterm(graph->term[k]));
+      assert(!Is_pseudoTerm(graph->term[k]));
 
       redcost = pathdist[k] + vnoi[k].dist;
 
@@ -1770,7 +1770,7 @@ SCIP_RETCODE reduceRootedProb(
          int incidcount = 0;
 #ifndef NDEBUG
          const int termedge = graph->term2edge[k];
-         assert(Is_pterm(graph->term[twinterm]) && graph->cost[termedge] == 0.0);
+         assert(Is_pseudoTerm(graph->term[twinterm]) && graph->cost[termedge] == 0.0);
          assert(vnoi[twinterm].dist == 0.0);
 #endif
          for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
@@ -1911,7 +1911,7 @@ int reducePcMw(
       if( !graph->mark[k] )
          continue;
 
-      assert(!Is_pterm(graph->term[k]));
+      assert(!Is_pseudoTerm(graph->term[k]));
 
       if( Is_term(graph->term[k]) )
       {
@@ -1927,7 +1927,7 @@ int reducePcMw(
             {
                if( marked[flipedge(e)] )
                {
-                  assert(!Is_pterm(graph->term[graph->head[e]]));
+                  assert(!Is_pseudoTerm(graph->term[graph->head[e]]));
 
                   graph_edge_del(scip, graph, e, TRUE);
                   graph_edge_del(scip, transgraph, e, FALSE);
@@ -3154,7 +3154,7 @@ SCIP_RETCODE reduce_daPcMw(
 
       for( int k = 0; k < nnodes; k++ )
       {
-         if( Is_pterm(graph->term[k]) && graph->prize[k] >= prizesum )
+         if( Is_pseudoTerm(graph->term[k]) && graph->prize[k] >= prizesum )
          {
             for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
             {

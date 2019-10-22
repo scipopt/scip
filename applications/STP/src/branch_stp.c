@@ -118,14 +118,14 @@ SCIP_RETCODE selectBranchingVertexByDegree(
          assert(!ptermselected || graph_pc_isPcMw(g));
 
          /* first pterm? Then update */
-         if( !ptermselected && Is_pterm(g->term[k]) )
+         if( !ptermselected && Is_pseudoTerm(g->term[k]) )
          {
             assert(graph_pc_isPcMw(g));
             maxdegree = g->grad[k];
             *vertex = k;
             ptermselected = TRUE;
          }
-         else if( g->grad[k] > maxdegree && (!ptermselected || Is_pterm(g->term[k])) )
+         else if( g->grad[k] > maxdegree && (!ptermselected || Is_pseudoTerm(g->term[k])) )
          {
             maxdegree = g->grad[k];
             *vertex = k;
@@ -224,7 +224,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
       {
          assert(graph->grad[k] > 0);
 
-         if( pcmw && Is_pterm(graph->term[k]) )
+         if( pcmw && Is_pseudoTerm(graph->term[k]) )
          {
             graph_pc_enforcePterm(graph, k);
          }
@@ -249,7 +249,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
          {
             if( pcmw && graph->term2edge[k] == e ) /* do not change edge going to pseudo-terminal */
             {
-               assert(Is_pterm(graph->term[k]));
+               assert(Is_pseudoTerm(graph->term[k]));
                assert(Is_term(graph->term[graph->head[e]]));
                continue;
             }
@@ -315,14 +315,14 @@ SCIP_RETCODE selectBranchingVertexBySol(
                soldeg++;
 
          /* first pterm? Then update */
-         if( !ptermselected && Is_pterm(graph->term[i]) )
+         if( !ptermselected && Is_pseudoTerm(graph->term[i]) )
          {
             assert(pcmw);
             maxdeg = soldeg;
             *vertex = i;
             ptermselected = TRUE;
          }
-         else if( soldeg > maxdeg && (!ptermselected || Is_pterm(graph->term[i])) )
+         else if( soldeg > maxdeg && (!ptermselected || Is_pseudoTerm(graph->term[i])) )
          {
             maxdeg = soldeg;
             *vertex = i;
@@ -737,7 +737,7 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
       {
          if( graph_pc_isPcMw(graph) )
          {
-            if( Is_pterm(graph->term[term]) )
+            if( Is_pseudoTerm(graph->term[term]) )
             {
                graph_pc_enforcePterm(graph, term);
             }
@@ -769,7 +769,7 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
       {
          assert(!Is_term(graph->term[vert]));
 
-         if( Is_pterm(graph->term[vert]) )
+         if( Is_pseudoTerm(graph->term[vert]) )
          {
             assert(graph_pc_isPcMw(graph));
             graph_pc_deleteTerm(scip, graph, graph_pc_getTwinTerm(graph, vert));
