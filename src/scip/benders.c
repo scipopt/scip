@@ -67,7 +67,6 @@
 #define SCIP_DEFAULT_STRENGTHENINTPOINT     'r'  /** where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros) */
 #define SCIP_DEFAULT_EXECFEASPHASE        FALSE  /** should a feasibility phase be executed during the root node processing */
 #define SCIP_DEFAULT_SLACKVARCOEF          1e+6  /** the objective coefficient of the slack variables in the subproblem */
-#define SCIP_DEFAULT_SLACKVARCHECKCOEF     1e+6  /** the objective coefficient of the slack variables in the subproblem */
 #define SCIP_DEFAULT_CHECKCONSCONVEXITY    TRUE  /** should the constraints of the subproblem be checked for convexity? */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
@@ -1514,9 +1513,9 @@ SCIP_RETCODE checkSubproblemConvexity(
    SCIP_Bool discretevar;
    SCIP_Bool isnonlinear;
    SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
-   SCIP_CONSHDLR* conshdlr_nonlinear;
-   SCIP_CONSHDLR* conshdlr_quadratic;
-   SCIP_CONSHDLR* conshdlr_abspower;
+   SCIP_CONSHDLR* conshdlr_nonlinear = NULL;
+   SCIP_CONSHDLR* conshdlr_quadratic = NULL;
+   SCIP_CONSHDLR* conshdlr_abspower = NULL;
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -3833,7 +3832,7 @@ TERMINATE:
    {
       SCIP_Bool activeslack;
 
-      activeslack = SCIPbendersSolSlackVarsActive(benders);
+      SCIP_CALL( SCIPbendersSolSlackVarsActive(benders, &activeslack) );
       SCIPsetDebugMsg(set, "Type: %d Active slack: %d Feasibility Phase: %d\n", type, activeslack,
          benders->feasibilityphase);
       if( activeslack )
@@ -5212,6 +5211,10 @@ SCIP_RETCODE SCIPbendersMergeSubproblemIntoMaster(
    return SCIP_OKAY;
 }
 
+/** when applying a decomposition from a supplied format, constraints must be transferred from the master problem to the
+ *  subproblem. This is achieved by adding new constraints to the subproblem
+ */
+static
 SCIP_RETCODE addConstraintToBendersSubproblem(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP*                 subproblem,         /**< the SCIP instance for the subproblem */
@@ -5297,6 +5300,7 @@ SCIP_RETCODE addConstraintToBendersSubproblem(
 /** removes the variables and constraints from the master problem that have been transferred to a subproblem when the
  *  decomposition was applied.
  */
+static
 SCIP_RETCODE removeVariablesAndConstraintsFromMaster(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_CONS**           conss,              /**< the master problem constraints */
@@ -5343,7 +5347,6 @@ SCIP_RETCODE removeVariablesAndConstraintsFromMaster(
 SCIP_RETCODE SCIPbendersApplyDecomposition(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_DECOMP*          decomp              /**< the decomposition to apply to the problem */
    )
 {
@@ -5358,7 +5361,6 @@ SCIP_RETCODE SCIPbendersApplyDecomposition(
    int nblocks;
    int i;
    char subprobname[SCIP_MAXSTRLEN];
-   SCIP_Bool success;
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -5938,8 +5940,9 @@ SCIP_Real SCIPbendersGetSubproblemObjval(
 }
 
 /** returns whether the solution has non-zero slack variables */
-SCIP_Bool SCIPbendersSolSlackVarsActive(
-   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+SCIP_RETCODE SCIPbendersSolSlackVarsActive(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_Bool*            activeslack         /**< flag to indicate whether a slack variable is active */
    )
 {
    SCIP* subproblem;
@@ -5950,20 +5953,24 @@ SCIP_Bool SCIPbendersSolSlackVarsActive(
    int ncontvars;
    int i;
    int j;
-   SCIP_Bool activeslack;
    SCIP_Bool freesol = FALSE;
 
    assert(benders != NULL);
+   assert(activeslack != NULL);
+
+   (*activeslack) = FALSE;
 
    /* if the slack variables have not been added, then we can immediately state that no slack variables are active */
    if( !benders->feasibilityphase )
-      return FALSE;
+   {
+      (*activeslack) = FALSE;
+      return SCIP_OKAY;
+   }
 
    nsubproblems = SCIPbendersGetNSubproblems(benders);
 
    /* checking all subproblems for active slack variables */
-   activeslack = FALSE;
-   for( i = 0; i < nsubproblems && !activeslack; i++ )
+   for( i = 0; i < nsubproblems && !(*activeslack); i++ )
    {
       subproblem = SCIPbendersSubproblem(benders, i);
 
@@ -5995,7 +6002,7 @@ SCIP_Bool SCIPbendersSolSlackVarsActive(
          {
             if( !SCIPisZero(subproblem, SCIPgetSolVal(subproblem, sol, vars[j])) )
             {
-               activeslack = TRUE;
+               (*activeslack) = TRUE;
                break;
             }
          }
@@ -6008,7 +6015,7 @@ SCIP_Bool SCIPbendersSolSlackVarsActive(
       }
    }
 
-   return activeslack;
+   return SCIP_OKAY;
 }
 
 /** sets the subproblem type

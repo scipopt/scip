@@ -410,12 +410,19 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
    assert(SCIPisNLPConstructed(subproblem));
    assert(SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_FEASIBLE || consdualvals != NULL);
    assert(SCIPhasNLPSolution(subproblem) || consdualvals != NULL);
-   assert((primalvals == NULL && consdualvals == NULL && varlbdualvals == NULL && varubdualvals == NULL
-         && row2idx == NULL && var2idx == NULL)
-      || (primalvals != NULL && consdualvals != NULL && varlbdualvals != NULL && varubdualvals != NULL
-         && row2idx != NULL && var2idx != NULL));
 
    (*success) = FALSE;
+
+   if( !(primalvals == NULL && consdualvals == NULL && varlbdualvals == NULL && varubdualvals == NULL
+         && row2idx == NULL && var2idx == NULL)
+      && !(primalvals != NULL && consdualvals != NULL && varlbdualvals != NULL && varubdualvals != NULL
+         && row2idx != NULL && var2idx != NULL) )
+   {
+      SCIPerrorMessage("The optimality cut must generated from either a SCIP instance or all of the dual solutions and indices must be supplied");
+      (*success) = FALSE;
+
+      return SCIP_ERROR;
+   }
 
    nsubvars = SCIPgetNNLPVars(subproblem);
    subvars = SCIPgetNLPVars(subproblem);
@@ -979,7 +986,6 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP_VAR* var;
    SCIP_VAR* mastervar;
    SCIP_Real coef;
-   SCIP_Real valsol;
    int i;
 
    assert(masterprob != NULL);

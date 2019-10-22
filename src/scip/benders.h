@@ -261,7 +261,6 @@ extern
 SCIP_RETCODE SCIPbendersApplyDecomposition(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_DECOMP*          decomp              /**< the decomposition to apply to the problem */
    );
 
