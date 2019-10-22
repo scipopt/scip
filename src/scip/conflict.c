@@ -7231,6 +7231,7 @@ SCIP_RETCODE getDualProof(
             if( lpdepth < SCIPtreeGetFocusDepth(tree) )
             {
                assert(localrowinds != NULL);
+               assert(localrowdepth != NULL);
 
                localrowinds[nlocalrows] = r;
                localrowdepth[nlocalrows++] = lpdepth;
