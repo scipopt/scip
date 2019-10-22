@@ -2779,7 +2779,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    /* add Schreier Sims cuts */
    posleader = orbitbegins[orbitidx] + orbitleaderidx;
    poscur = orbitbegins[orbitidx] - 1;
-   vars[0] = permvars[posleader];
+   vars[0] = permvars[orbits[posleader]];
    vals[0] = -1.0;
    vals[1] = 1.0;
    propdata->leaders[propdata->nleaders++] = orbits[posleader];
@@ -2790,8 +2790,8 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
       if ( i == orbitleaderidx )
          continue;
 
-      vars[1] = permvars[poscur];
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SchreierSimscut_%d_%d", posleader, poscur);
+      vars[1] = permvars[orbits[poscur]];
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SchreierSimscut_%d_%d", orbits[posleader], orbits[poscur]);
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, - SCIPinfinity(scip), 0.0,
             propdata->conssaddlp, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -2897,6 +2897,7 @@ SCIP_RETCODE addSchreierSimsConss(
    int orbitleaderidx;
    int v;
    int p;
+   int posleader;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -2960,9 +2961,10 @@ SCIP_RETCODE addSchreierSimsConss(
       SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, propdata, permvars, orbits, orbitbegins, orbitidx, orbitleaderidx) );
 
       /* deactivate permutations that move the orbit leader */
+      posleader = orbits[orbitbegins[orbitidx] + orbitleaderidx];
       for (p = 0; p < nperms; ++p)
       {
-         if ( permstrans[orbitleaderidx][p] != orbitleaderidx )
+         if ( permstrans[posleader][p] != posleader )
          {
             inactiveperms[p] = TRUE;
             ++ninactiveperms;
