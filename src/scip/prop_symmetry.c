@@ -2844,7 +2844,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
 
    for (i = 0; i < norbits; ++i)
    {
-      cursize = orbitbegins[i +1 ] - orbitbegins[i];
+      cursize = orbitbegins[i + 1] - orbitbegins[i];
 
       if ( (maxorbit && cursize > candorbitsize)
          || (! maxorbit && cursize < candorbitsize) )
