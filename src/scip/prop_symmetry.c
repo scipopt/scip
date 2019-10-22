@@ -2715,13 +2715,13 @@ SCIP_RETCODE addSymresackConss(
 /* add Schreier Sims cuts for a specific orbit */
 static
 SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
-   SCIP*                 scip,
-   SCIP_PROPDATA*        propdata,
-   SCIP_VAR**            permvars,
-   int*                  orbits,
-   int*                  orbitbegins,
-   int                   orbitidx,
-   int                   orbitleaderidx
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
+   SCIP_VAR**            permvars,           /**< permvars array */
+   int*                  orbits,             /**< symmetry orbits */
+   int*                  orbitbegins,        /**< array storing begin position for each orbit */
+   int                   orbitidx,           /**< index of orbit for Schreier Sims cuts */
+   int                   orbitleaderidx      /**< index of leader variable for Schreier Sims cuts */
    )
 {
    SCIP_CONS* cons;
