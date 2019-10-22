@@ -124,75 +124,9 @@ SCIP_RETCODE fixedgevarTo1(
 }
 #endif
 
-/** update */
+/** initialize reduced cost distances */
 static
-void updateFixedEdges(
-   const GRAPH*          graph,              /**< graph structure */
-   IDX*                  curr,               /**< current ancestor */
-   int*                  remain              /**< remain array */
-)
-{
-   while( curr != NULL )
-   {
-      const int i = curr->index;
-      assert(i < graph->edges);
-      assert(remain[i] != PROP_STP_EDGE_KILLED && remain[flipedge(i)] != PROP_STP_EDGE_KILLED);
-
-      if( remain[i] == PROP_STP_EDGE_UNSET )
-      {
-         remain[i] = PROP_STP_EDGE_SET;
-         remain[flipedge(i)] = PROP_STP_EDGE_SET;
-      }
-      curr = curr->parent;
-   }
-}
-
-/** try to make global fixings */
-static
-SCIP_RETCODE globalfixing(
-   SCIP*                 scip,               /**< SCIP structure */
-   const SCIP_PROPDATA*  propdata,           /**< propagator data */
-   const GRAPH*          graph,              /**< graph structure */
-   SCIP_Real             cutoffbound,        /**> cutoff bound  */
-   SCIP_VAR**            vars,               /**< variables */
-   int*                  nfixededges         /**< points to number of fixed edges */
-)
-{
-   const SCIP_Real* fixingbounds = propdata->fixingbounds;
-   const SCIP_Real* deg2bounds = propdata->deg2bounds;
-   SCIP_Bool* deg2bounded = propdata->deg2bounded;
-   const int nedges = graph->edges;
-   const int nnodes = graph->knots;
-
-   assert(fixingbounds != NULL && deg2bounds != NULL && deg2bounded != NULL);
-
-   for( int e = 0; e < nedges; e++ )
-   {
-      if( SCIPisLT(scip, cutoffbound, fixingbounds[e]) )
-      {
-         SCIP_VAR* const edgevar = vars[e];
-
-         if( SCIPvarGetLbGlobal(edgevar) < 0.5 && SCIPvarGetUbGlobal(edgevar) > 0.5 )
-         {
-            assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(edgevar), 1.0));
-
-            SCIPchgVarUbGlobal(scip, edgevar, 0.0);
-            (*nfixededges)++;
-         }
-      }
-   }
-
-   for( int i = 0; i < nnodes; i++ )
-      if( SCIPisLT(scip, cutoffbound, deg2bounds[i]) && !Is_term(graph->term[i]) )
-         deg2bounded[i] = TRUE;
-
-   return SCIP_OKAY;
-}
-
-
-/** initialize (Voronoi) distances */
-static
-void setVnoiDistances(
+void getRedCostDistances(
    SCIP*                 scip,               /**< SCIP structure */
    const SCIP_Real*      cost,               /**< reduced costs */
    GRAPH*                g,                  /**< graph data structure */
@@ -243,9 +177,33 @@ void setVnoiDistances(
    graph_get3nextTerms(scip, g, costrev, costrev, vnoi, vbase, g->path_heap, state);
 }
 
+
+/** update method for redBased variable fixings */
+static
+void updateFixedEdges(
+   const GRAPH*          graph,              /**< graph structure */
+   IDX*                  curr,               /**< current ancestor */
+   int*                  remain              /**< remain array */
+)
+{
+   while( curr != NULL )
+   {
+      const int i = curr->index;
+      assert(i < graph->edges);
+      assert(remain[i] != PROP_STP_EDGE_KILLED && remain[flipedge(i)] != PROP_STP_EDGE_KILLED);
+
+      if( remain[i] == PROP_STP_EDGE_UNSET )
+      {
+         remain[i] = PROP_STP_EDGE_SET;
+         remain[flipedge(i)] = PROP_STP_EDGE_SET;
+      }
+      curr = curr->parent;
+   }
+}
+
 /** updates fixing bounds for reduced cost fixings */
 static
-void updateFixingBounds(
+void updateEdgeLurkingBounds(
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< reduced costs */
    const SCIP_Real*      pathdist,           /**> shortest path distances  */
@@ -272,7 +230,7 @@ void updateFixingBounds(
 
 /* updates fixing bounds for reduced cost based constraints */
 static
-void updateDeg2Bounds(
+void updateDeg2LurkingBounds(
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< reduced costs */
    const SCIP_Real*      pathdist,           /**> shortest path distances  */
@@ -294,9 +252,53 @@ void updateDeg2Bounds(
    }
 }
 
+
+/** try to make global fixings based on lurking bounds */
+static
+SCIP_RETCODE fixVarsDualcostLurking(
+   SCIP*                 scip,               /**< SCIP structure */
+   const SCIP_PROPDATA*  propdata,           /**< propagator data */
+   const GRAPH*          graph,              /**< graph structure */
+   SCIP_Real             cutoffbound,        /**> cutoff bound  */
+   SCIP_VAR**            vars,               /**< variables */
+   int*                  nfixededges         /**< points to number of fixed edges */
+)
+{
+   const SCIP_Real* fixingbounds = propdata->fixingbounds;
+   const SCIP_Real* deg2bounds = propdata->deg2bounds;
+   SCIP_Bool* deg2bounded = propdata->deg2bounded;
+   const int nedges = graph->edges;
+   const int nnodes = graph->knots;
+
+   assert(fixingbounds != NULL && deg2bounds != NULL && deg2bounded != NULL);
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( SCIPisLT(scip, cutoffbound, fixingbounds[e]) )
+      {
+         SCIP_VAR* const edgevar = vars[e];
+
+         if( SCIPvarGetLbGlobal(edgevar) < 0.5 && SCIPvarGetUbGlobal(edgevar) > 0.5 )
+         {
+            assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(edgevar), 1.0));
+
+            SCIPchgVarUbGlobal(scip, edgevar, 0.0);
+            (*nfixededges)++;
+         }
+      }
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+      if( SCIPisLT(scip, cutoffbound, deg2bounds[i]) && !Is_term(graph->term[i]) )
+         deg2bounded[i] = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /** dual cost based fixing of variables */
 static
-SCIP_RETCODE dualcostVarfixing(
+SCIP_RETCODE fixVarsDualcost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             lpobjval,           /**< LP value */
    SCIP_VAR**            vars,               /**< variables */
@@ -350,11 +352,8 @@ SCIP_RETCODE dualcostVarfixing(
    SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
 
-   /* initialize reduced costs*/
    SCIPStpGetRedcosts(scip, vars, nedges, cost);
-
-   /* initialize Voronoi structures */
-   setVnoiDistances(scip, cost, graph, vnoi, costrev, pathdist, pathedge, vbase, state);
+   getRedCostDistances(scip, cost, graph, vnoi, costrev, pathdist, pathedge, vbase, state);
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -378,11 +377,11 @@ SCIP_RETCODE dualcostVarfixing(
    /* at root? */
    if( SCIPgetDepth(scip) == 0 )
    {
-      updateFixingBounds(graph, cost, pathdist, vnoi, lpobjval, propdata->fixingbounds);
-      updateDeg2Bounds(graph, cost, pathdist, vnoi, lpobjval, propdata->deg2bounds);
+      updateEdgeLurkingBounds(graph, cost, pathdist, vnoi, lpobjval, propdata->fixingbounds);
+      updateDeg2LurkingBounds(graph, cost, pathdist, vnoi, lpobjval, propdata->deg2bounds);
    }
 
-   SCIP_CALL( globalfixing(scip, propdata, graph, cutoffbound, vars, nfixed) );
+   SCIP_CALL( fixVarsDualcostLurking(scip, propdata, graph, cutoffbound, vars, nfixed) );
 
    SCIPfreeBufferArray(scip, &pathedge);
    SCIPfreeBufferArray(scip, &pathdist);
@@ -398,7 +397,7 @@ SCIP_RETCODE dualcostVarfixing(
 
 /** extended reduced cost reduction */
 static
-SCIP_RETCODE extendedVarfixing(
+SCIP_RETCODE fixVarsExtendedRed(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             lpobjval,           /**< LP value */
    SCIP_VAR**            vars,               /**< variables */
@@ -438,11 +437,8 @@ SCIP_RETCODE extendedVarfixing(
        else
           marked[e] = FALSE;
 
-   /* initialize reduced costs*/
    SCIPStpGetRedcosts(scip, vars, nedges, redcost);
-
-   /* initialize Voronoi structures */
-   setVnoiDistances(scip, redcost, propgraph, vnoi, redcostrev, pathdist, pathedge, vbase, state);
+   getRedCostDistances(scip, redcost, propgraph, vnoi, redcostrev, pathdist, pathedge, vbase, state);
 
    if( graph_pc_isPcMw(propgraph) )
       graph_pc_2org(propgraph);
@@ -485,7 +481,7 @@ SCIP_RETCODE extendedVarfixing(
 /** This methods tries to fix edges by performing reductions on the current graph.
  *  To this end, the already 0-fixed edges are (temporarily) removed from the underlying graph to strengthen the reduction methods. */
 static
-SCIP_RETCODE redbasedVarfixing(
+SCIP_RETCODE fixVarsRedbased(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             lpobjval,           /**< LP value */
    SCIP_VAR**            vars,               /**< variables */
@@ -752,13 +748,13 @@ SCIP_RETCODE redbasedVarfixing(
 #if 1
    if( pc )
    {
-      SCIP_CALL( extendedVarfixing(scip, lpobjval, vars, propgraph) );
+      SCIP_CALL( fixVarsExtendedRed(scip, lpobjval, vars, propgraph) );
 
       SCIP_CALL( reducePc(scip, NULL, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    }
    else
    {
-      SCIP_CALL( extendedVarfixing(scip, lpobjval, vars, propgraph) );
+      SCIP_CALL( fixVarsExtendedRed(scip, lpobjval, vars, propgraph) );
       SCIP_CALL( level0(scip, propgraph) );
       SCIP_CALL( reduceStp(scip, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    }
@@ -959,7 +955,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    lpobjval = SCIPgetLPObjval(scip);
 
    /* call dual cost based variable fixing */
-   SCIP_CALL( dualcostVarfixing(scip, lpobjval, vars, propdata, &nfixed, graph) );
+   SCIP_CALL( fixVarsDualcost(scip, lpobjval, vars, propdata, &nfixed, graph) );
 
    callreduce = FALSE;
 
@@ -1011,7 +1007,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
       SCIPdebugMessage("use reduction techniques \n");
 
       /* call reduced cost based based variable fixing */
-      SCIP_CALL( redbasedVarfixing(scip, lpobjval, vars, propdata, &nfixed, &probisinfeas, graph) );
+      SCIP_CALL( fixVarsRedbased(scip, lpobjval, vars, propdata, &nfixed, &probisinfeas, graph) );
 
       propdata->postrednfixededges = 0;
 
