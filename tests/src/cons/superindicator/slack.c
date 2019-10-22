@@ -40,6 +40,7 @@ enum SCIP_SlackType
 };
 typedef enum SCIP_SlackType SCIP_SLACKTYPE;
 
+#ifndef NDEBUG
 /** find the position of a variable in an array of variables; returns -1 if not found */
 static
 int findvarpos(
@@ -61,6 +62,7 @@ int findvarpos(
 
    return -1;
 }
+#endif
 
 /** copies an array of variables and objective values */
 static
