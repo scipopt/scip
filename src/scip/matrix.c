@@ -904,7 +904,6 @@ SCIP_RETCODE SCIPmatrixCreate(
    }
    else
    {
-      *matrixptr = NULL;
       SCIPfreeBufferArray(scip, &matrix->maxactivityposinf);
       SCIPfreeBufferArray(scip, &matrix->maxactivityneginf);
       SCIPfreeBufferArray(scip, &matrix->minactivityposinf);
@@ -932,7 +931,7 @@ SCIP_RETCODE SCIPmatrixCreate(
       SCIPfreeBufferArray(scip, &matrix->colmatval);
       SCIPfreeBufferArrayNull(scip, &matrix->vars);
 
-      SCIPfreeBuffer(scip, matrix);
+      SCIPfreeBuffer(scip, matrixptr);
    }
 
    return SCIP_OKAY;
