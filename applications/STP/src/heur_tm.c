@@ -3006,7 +3006,6 @@ SCIP_DECL_HEURFREE(heurFreeTM)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* free random number generator */
    SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    /* free heuristic data */
@@ -3044,10 +3043,6 @@ SCIP_DECL_HEURINIT(heurInitTM)
    heurdata->ncalls = 0;
    heurdata->nlpiterations = -1;
    heurdata->nexecs = 0;
-
-#ifdef WITH_UG
-   heurdata->randseed += getUgRank();
-#endif
 
    return SCIP_OKAY;
 }
@@ -3237,10 +3232,6 @@ SCIP_RETCODE SCIPStpIncludeHeurTM(
          &heurdata->pcmwbias, FALSE, DEFAULT_BIAS, 0, 4, NULL, NULL) );
 
    heurdata->hopfactor = DEFAULT_HOPFACTOR;
-
-#ifdef WITH_UG
-   heurdata->randseed += getUgRank();
-#endif
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, heurdata->randseed, TRUE) );
