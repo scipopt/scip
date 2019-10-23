@@ -360,7 +360,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          SCIP_Bool infeas;
          SCIP_Bool aggregated;
          SCIP_CALL( SCIPmultiaggregateVar(scip, SCIPmatrixGetVar(matrix, col), aggrvars.size(),
-            aggrvars.data(), aggrvals.data(),side / colCoef, &infeas, &aggregated) );
+            aggrvars.data(), aggrvals.data(), side / colCoef, &infeas, &aggregated) );
 
          if( aggregated )
          {
@@ -377,6 +377,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          break;
       }
       case ReductionType::PARALLEL_COL:
+         assert(false);
+      default:
          assert(false);
       }
    }
