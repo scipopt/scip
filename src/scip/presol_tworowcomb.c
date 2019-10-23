@@ -653,9 +653,9 @@ SCIP_RETCODE combineRows
       }
    }
    ncliques -= shift;
-   nbinvars -= shift;
 
 #ifdef SCIP_DEBUG_CLIQUE
+   nbinvars -= shift;
    SCIPdebugMsg(scip, "after clearing single variable cliques: ncliques = %d, nbinvars = %d, nbreakpoints = %d\n", ncliques, nbinvars, nbreakpoints);
    for( i = 0; i < nbinvars; i++ )
       SCIPdebugMsg(scip, "%s (%d) is in clique %d with breakpoint %g\n", SCIPmatrixGetColName(matrix, varinds[binvarpos[i]]), varinds[binvarpos[i]], cliquepartition[i], breakpoints[binvarpos[i]]);
@@ -1585,8 +1585,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
          ROWPAIR rowpair;
 
          finished = FALSE;
-         i = 0;
-         j = 0;
          block1start = 0;
          block1end = 0;
          block2start = 0;
@@ -1706,8 +1704,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
          ROWPAIR rowpair;
 
          finished = FALSE;
-         i = 0;
-         j = 0;
          block1start = 0;
          block1end = 0;
          block2start = 0;

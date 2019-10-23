@@ -1961,8 +1961,6 @@ SCIP_RETCODE dualBoundStrengthening(
          COLPAIR colpair;
 
          finished = FALSE;
-         i = 0;
-         j = 0;
          block1start = 0;
          block1end = 0;
          block2start = 0;
@@ -2059,8 +2057,6 @@ SCIP_RETCODE dualBoundStrengthening(
          COLPAIR colpair;
 
          finished = FALSE;
-         i = 0;
-         j = 0;
          block1start = 0;
          block1end = 0;
          block2start = 0;

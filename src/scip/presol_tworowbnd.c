@@ -1433,8 +1433,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
          ROWPAIR rowpair;
 
          finished = FALSE;
-         i = 0;
-         j = 0;
          block1start = 0;
          block1end = 0;
          block2start = 0;
@@ -1526,8 +1524,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
          ROWPAIR rowpair;
 
          finished = FALSE;
-         i = 0;
-         j = 0;
          block1start = 0;
          block1end = 0;
          block2start = 0;
