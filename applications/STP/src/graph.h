@@ -263,7 +263,7 @@ typedef struct dijkstra_data
 
 #define Is_term(a)         ((a) >= 0)
 #define Is_pseudoTerm(a)   ((a) == STP_TERM_PSEUDO)
-#define Is_nonleafTerm     ((a) == STP_TERM_NONLEAF)
+#define Is_nonleafTerm(a)  ((a) == STP_TERM_NONLEAF)
 #define Is_anyTerm(a)      ((a) >= 0 || (a) == STP_TERM_PSEUDO || (a) == STP_TERM_NONLEAF )
 #define Edge_anti(a) ((((a) % 2) > 0) ? (a) - 1 : (a) + 1)
 
