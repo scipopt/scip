@@ -791,6 +791,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    int b;
    int k;
    int* blockstartsconss;
+   int* allLinkVarToBlocks; /* for efficient memory allocation */
    int numlinkvars;
    SCIP_VAR** linkvars;
    SET* linkvartoblocks;
@@ -843,15 +844,15 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    doScaling = FALSE;
    gap = heurdata->gap;
    SCIPdebugMsg(scip, "Initialize padm heuristic ");
-   if( heurtiming == SCIP_HEURTIMING_BEFORENODE )
+   if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
    {
       SCIPdebugMsg(scip, "before node\n");
    }
-   if( heurtiming == SCIP_HEURTIMING_AFTERNODE )
+   if( heurtiming & SCIP_HEURTIMING_AFTERNODE )
    {
       SCIPdebugMsg(scip, "after node\n");
    }
-   
+
 #if 0
    SCIP_CALL( SCIPwriteOrigProblem(scip, "debug_padm_orig.lp", "lp", FALSE) );
 #endif
@@ -1004,6 +1005,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    }
 
    /* extract linking variables and init linking variable to blocks set */
+   SCIP_CALL( SCIPallocBufferArray(scip, &allLinkVarToBlocks, problem->nblocks * numlinkvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &linkvars, numlinkvars) );
    b = 0;
    for( i = 0; i < nvars; i++ )
@@ -1011,7 +1013,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       if( varlabels[i] == SCIP_DECOMP_LINKVAR )
       {
          linkvars[b] = vars[i];
-         SCIP_CALL( SCIPallocBufferArray(scip, &(linkvartoblocks[b].indexes), problem->nblocks) );
+         linkvartoblocks[b].indexes = &allLinkVarToBlocks[b * problem->nblocks];
          linkvartoblocks[b].size = 0;
          b++;
       }
@@ -1189,14 +1191,14 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                (problem->blocks[b]).couplingcons[j] = NULL;
 
                /* create linking constraint with initial side equal to zero */
-               if( heurtiming == SCIP_HEURTIMING_BEFORENODE )
+               if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
                {
                   SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
                                                    name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, 0.0, 0.0) );
                }
 
                /* create linking constraint with initial side equal to LP solution */
-               if( heurtiming == SCIP_HEURTIMING_AFTERNODE )
+               if( heurtiming & SCIP_HEURTIMING_AFTERNODE )
                {
                   SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
                                                    name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef,
@@ -1715,12 +1717,11 @@ TERMINATE:
       }
    }
 
-   for( i = numlinkvars - 1; i >= 0; i-- )
-      if( linkvartoblocks[i].indexes != NULL )
-         SCIPfreeBufferArray(scip, &(linkvartoblocks[i].indexes));
-
    if( linkvars != NULL )
       SCIPfreeBufferArray(scip, &linkvars);
+
+   if( allLinkVarToBlocks != NULL )
+      SCIPfreeBufferArray(scip, &allLinkVarToBlocks);
 
    if( blocktolinkvars != NULL )
       SCIPfreeBufferArray(scip, &blocktolinkvars);
