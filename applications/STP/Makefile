@@ -68,6 +68,7 @@ CMAINOBJ	=	cmain.o \
 			graph_load.o \
 			graph_mcut.o \
 			graph_path.o \
+			graph_pcbase.o \
 			graph_save.o \
 			graph_util.o \
 			heur_ascendprune.o \

@@ -353,7 +353,7 @@ extern void          graph_dijkLimited_reset(const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_clean(const GRAPH*, DIJK*);
 extern void          graph_dijkLimited_freeMembers(SCIP*, DIJK*);
 
-/* graph_base.c
+/* graph_base.c / graph_pcbase.c
  */
 extern void   graph_pc_knot2nonTerm(GRAPH*, int);
 extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
