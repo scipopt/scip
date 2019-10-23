@@ -955,7 +955,7 @@ void getMinMaxActivityResiduals(
             *minresactivity = minactivity - val * lbs[col];
       }
    }
-   else if( val < 0.0 )
+   else
    {
       if( SCIPisInfinity(scip, -lbs[col]) )
       {
