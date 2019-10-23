@@ -297,7 +297,7 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
 
 /** returns whether the solution has non-zero slack variables */
 SCIP_EXPORT
-SCIP_Bool SCIPbendersSolSlackVarsActive(
+SCIP_RETCODE SCIPbendersSolSlackVarsActive(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_Bool*            activeslack         /**< flag to indicate whether a slack variable is active */
    );
