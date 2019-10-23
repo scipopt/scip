@@ -1,5 +1,7 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+#TODO do this properly
+set(PRESOLVELIB_DIR /nfs/OPTI/bzfgottw/projects/presolve/opt)
 find_package(PRESOLVELIB REQUIRED)
 
 #
