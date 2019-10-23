@@ -101,31 +101,26 @@ typedef struct RowPair ROWPAIR;
  * Local methods
  */
 
-/** returns TRUE iff both keys are equal */
+/** encode contents of a rowpair as void* pointer */
 static
-SCIP_DECL_HASHKEYEQ(rowPairsEqual)
-{  /*lint --e{715}*/
-   ROWPAIR* rowpair1;
-   ROWPAIR* rowpair2;
-
-   rowpair1 = (ROWPAIR*) key1;
-   rowpair2 = (ROWPAIR*) key2;
-
-   if( rowpair1->row1idx == rowpair2->row1idx && rowpair1->row2idx == rowpair2->row2idx )
-      return TRUE;
-   else
-      return FALSE;
+void*
+encodeRowPair(
+   ROWPAIR*              rowpair             /**< pointer to rowpair */
+   )
+{
+   return (void*)SCIPcombineTwoInt(rowpair->row1idx, rowpair->row2idx);
 }
 
-/** returns the hash value of the key */
+/** compute single int hashvalue for two ints */
 static
-SCIP_DECL_HASHKEYVAL(rowPairHashval)
-{  /*lint --e{715}*/
-   ROWPAIR* rowpair;
-
-   rowpair = (ROWPAIR*) key;
-
-   return SCIPhashTwo(rowpair->row1idx, rowpair->row2idx);
+int
+hashIndexPair(
+   int                   idx1,               /**< first integer index */
+   int                   idx2                /**< second integer index */
+   )
+{
+   uint32_t hash = SCIPhashOne(SCIPcombineTwoInt(idx1, idx2));
+   return *((int*) &hash);
 }
 
 static SCIP_RETCODE addEntry
@@ -1285,7 +1280,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       int block2start;
       int block2end;
 
-      SCIP_HASHTABLE* pairtable;
+      SCIP_HASHSET* pairhashset;
 
       nrows = SCIPmatrixGetNRows(matrix);
       ncols = SCIPmatrixGetNColumns(matrix);
@@ -1334,18 +1329,18 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                   if(SCIPisPositive(scip, rowvalptr[k]) )
                   {
                      addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
-                        (int) SCIPhashTwo(rowidxptr[j],rowidxptr[k])>>1, i);
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
                      if( finiterhs )
                         addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
-                           (int) SCIPhashTwo(rowidxptr[j],rowidxptr[k])>>1, i);
+                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
                   }
                   else
                   {
                      addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
-                        (int) SCIPhashTwo(rowidxptr[j],rowidxptr[k])>>1, i);
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
                      if( finiterhs )
                         addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
-                           (int) SCIPhashTwo(rowidxptr[j],rowidxptr[k])>>1, i);
+                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
                   }
                }
                else
@@ -1353,18 +1348,18 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                   if(SCIPisPositive(scip, rowvalptr[k]) )
                   {
                      addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
-                        (int) SCIPhashTwo(rowidxptr[j],rowidxptr[k])>>1, i);
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
                      if( finiterhs )
                         addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
-                           (int) SCIPhashTwo(rowidxptr[j],rowidxptr[k])>>1, i);
+                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
                   }
                   else
                   {
                      addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
-                        (int) SCIPhashTwo(rowidxptr[j],rowidxptr[k])>>1, i);
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
                      if( finiterhs )
                         addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
-                           (int) SCIPhashTwo(rowidxptr[j],rowidxptr[k])>>1, i);
+                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
                   }
                }
             }
@@ -1422,7 +1417,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
          newubs[i] = oldubs[i];
       }
 
-      SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, rowPairsEqual, rowPairHashval, (void*) scip) );
+      SCIP_CALL( SCIPhashsetCreate(&pairhashset, SCIPblkmem(scip), 1) );
 
       /* Process pp and mm lists */
       if( pospp > 0 && posmm > 0 )
@@ -1464,7 +1459,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                      {
                         rowpair.row1idx = MIN(rowidxlistpp[i], rowidxlistmm[j]);
                         rowpair.row2idx = MAX(rowidxlistpp[i], rowidxlistmm[j]);
-                        if( SCIPhashtableRetrieve(pairtable, (void*) &rowpair) == NULL )
+                        if( ! SCIPhashsetExists(pairhashset, encodeRowPair(&rowpair)) )
                         {
                            assert(!SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, rowpair.row1idx)));
                            assert(!SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, rowpair.row2idx)));
@@ -1481,7 +1476,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                            else
                               combinefails++;
 
-                           SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &rowpair) );
+                           SCIP_CALL( SCIPhashsetInsert(pairhashset, SCIPblkmem(scip), encodeRowPair(&rowpair)) );
                            ncombines++;
                            if( ncombines >= maxcombines || combinefails >= presoldata->maxcombinefails )
                               finished = TRUE;
@@ -1556,7 +1551,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                      {
                         rowpair.row1idx = MIN(rowidxlistpm[i], rowidxlistmp[j]);
                         rowpair.row2idx = MAX(rowidxlistpm[i], rowidxlistmp[j]);
-                        if( SCIPhashtableRetrieve(pairtable, (void*) &rowpair) == NULL )
+                        if( ! SCIPhashsetExists(pairhashset, encodeRowPair(&rowpair)) )
                         {
                            assert(!SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, rowpair.row1idx)));
                            assert(!SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, rowpair.row2idx)));
@@ -1573,7 +1568,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                            else
                               combinefails++;
 
-                           SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &rowpair) );
+                           SCIP_CALL( SCIPhashsetInsert(pairhashset, SCIPblkmem(scip), encodeRowPair(&rowpair)) );
                            ncombines++;
                            if( ncombines >= maxcombines || combinefails >= presoldata->maxcombinefails )
                               finished = TRUE;
@@ -1782,7 +1777,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       {
          *result = SCIP_SUCCESS;
          presoldata->nuselessruns = 0;
-         SCIPinfoMessage(scip, NULL, "tworowbnd evaluated %d pairs to tighten %d bounds, fix %d variables and delete %d redundant constraints\n", SCIPhashtableGetNElements(pairtable), *nchgbds - oldnchgbds, *nfixedvars - oldnfixedvars, ndelcons);
+         SCIPinfoMessage(scip, NULL, "tworowbnd evaluated %d pairs to tighten %d bounds, fix %d variables and delete %d redundant constraints\n", SCIPhashsetGetNElements(pairhashset), *nchgbds - oldnchgbds, *nfixedvars - oldnfixedvars, ndelcons);
       }
       else if( infeasible )
       {
@@ -1792,10 +1787,10 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       else
       {
          presoldata->nuselessruns++;
-         SCIPinfoMessage(scip, NULL, "tworowbnd evaluated %d pairs without success\n", SCIPhashtableGetNElements(pairtable));
+         SCIPinfoMessage(scip, NULL, "tworowbnd evaluated %d pairs without success\n", SCIPhashsetGetNElements(pairhashset));
       }
 
-      SCIPhashtableFree(&pairtable);
+      SCIPhashsetFree(&pairhashset, SCIPblkmem(scip));
       SCIPfreeBufferArray(scip, &newubs);
       SCIPfreeBufferArray(scip, &newlbs);
       SCIPfreeBufferArray(scip, &oldubs);

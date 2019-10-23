@@ -487,13 +487,16 @@ void** SCIPpqueueElems(
  *@{
  */
 
-/* fast 2-universal hash functions for two and four elements */
+/* fast 2-universal hash functions for one, two, and four 64bit elements with 32bit output */
 
 #define SCIPhashSignature64(a)              (UINT64_C(0x8000000000000000)>>((UINT32_C(0x9e3779b9) * ((uint32_t)(a)))>>26))
-#define SCIPhashTwo(a, b)                   ((uint32_t)((((uint64_t)(a) + 0xd37e9a1ce2148403ULL) * ((uint64_t)(b) + 0xe5fcc163aef32782ULL) )>>32))
 
-#define SCIPhashFour(a, b, c, d)            ((uint32_t)((((uint64_t)(a) + 0xbd5c89185f082658ULL) * ((uint64_t)(b) + 0xe5fcc163aef32782ULL) + \
-                                                         ((uint64_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint64_t)(d) + 0x926f2d4dc4a67218ULL))>>32 ))
+#define SCIPhashOne(a)                      ((uint32_t)((((uint64_t)(a) * 0x9e3779b97f4a7c15ULL))>>32))
+
+#define SCIPhashTwo(a, b)                   ((uint32_t)((((uint64_t)(a) + 0xd37e9a1ce2148403ULL) * ((uint64_t)(b) + 0xe5fcc163aef32783ULL) )>>32))
+
+#define SCIPhashFour(a, b, c, d)            ((uint32_t)((((uint64_t)(a) + 0xbd5c89185f082659ULL) * ((uint64_t)(b) + 0xe5fcc163aef32783ULL) + \
+                                                         ((uint64_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint64_t)(d) + 0x926f2d4dc4a67219ULL))>>32 ))
 
 /* helpers to use above hashfuncions */
 #define SCIPcombineTwoInt(a, b)             (((uint64_t) (a) << 32) | (uint64_t) (b) )
