@@ -16,7 +16,7 @@
 /**@file   heur_sync.h
  * @ingroup PRIMALHEURISTICS
  * @brief  primal heuristic that adds given solutions
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  * This heuristic takes solutions from somewhere else via the function SCIPheurSyncPassSol(). It
  * then tries to commit this solution. It is used by the concurrent solvers, when solutions are

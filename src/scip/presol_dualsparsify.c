@@ -16,7 +16,7 @@
 /**@file   presol_dualsparsify.c
  * @brief  cancel nonzeros of the constraint matrix based on the columns
  * @author Dieter Weninger
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Ambros Gleixner
  * @author Weikun Chen
  *
