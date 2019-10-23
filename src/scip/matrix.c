@@ -902,6 +902,38 @@ SCIP_RETCODE SCIPmatrixCreate(
 
       *initialized = TRUE;
    }
+   else
+   {
+      *matrixptr = NULL;
+      SCIPfreeBufferArray(scip, &matrix->maxactivityposinf);
+      SCIPfreeBufferArray(scip, &matrix->maxactivityneginf);
+      SCIPfreeBufferArray(scip, &matrix->minactivityposinf);
+      SCIPfreeBufferArray(scip, &matrix->minactivityneginf);
+      SCIPfreeBufferArray(scip, &matrix->maxactivity);
+      SCIPfreeBufferArray(scip, &matrix->minactivity);
+
+      SCIPfreeMemoryArray(scip, &matrix->isrhsinfinite);
+      SCIPfreeBufferArray(scip, &matrix->cons);
+
+      SCIPfreeBufferArray(scip, &matrix->rhs);
+      SCIPfreeBufferArray(scip, &matrix->lhs);
+      SCIPfreeBufferArray(scip, &matrix->rowmatcnt);
+      SCIPfreeBufferArray(scip, &matrix->rowmatbeg);
+      SCIPfreeBufferArray(scip, &matrix->rowmatind);
+      SCIPfreeBufferArray(scip, &matrix->rowmatval);
+
+      SCIPfreeBufferArray(scip, &matrix->ndownlocks);
+      SCIPfreeBufferArray(scip, &matrix->nuplocks);
+      SCIPfreeBufferArray(scip, &matrix->ub);
+      SCIPfreeBufferArray(scip, &matrix->lb);
+      SCIPfreeBufferArray(scip, &matrix->colmatcnt);
+      SCIPfreeBufferArray(scip, &matrix->colmatbeg);
+      SCIPfreeBufferArray(scip, &matrix->colmatind);
+      SCIPfreeBufferArray(scip, &matrix->colmatval);
+      SCIPfreeBufferArrayNull(scip, &matrix->vars);
+
+      SCIPfreeBuffer(scip, matrix);
+   }
 
    return SCIP_OKAY;
 }
