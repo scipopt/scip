@@ -91,6 +91,25 @@ Features
   6) integralcands (optional): consider integral candidates for branching,
      i.e., get candidates from SCIPgetPseudoBranchCands() instead of SCIPgetLPBranchCands().
 
+- The Benders' decomposition framework can handle MINLPs. If a convex relaxation of the MINLP exists, then this is
+  solved to generate convex cuts. The extensions to the framework are:
+  - New generic solving methods to solve convex NLP subproblems.
+  - Modification to benderscut_opt and benderscut_feas to enable the generation of cuts from convex NLPs.
+  - Addition of benderscut_feasalt to generate feasibility cuts from an alternative subproblem that minimises the
+    violation of infeasible problems.
+  - Better handling of subproblem solution results
+
+- Adds a feasibility phase to the Benders' decomposition subproblem solving methods. The feasibility phase adds slack
+  variables to each of the constraints to ensure feasibility of the subproblem. A large coefficient is given to these
+  slack variables in the objective function to penalise constraint violations. The coefficients are progressively
+  increased until all slack variables take the value 0.0.
+
+- Improved convexity check for Benders' decomposition subproblems. The constraints of the subproblem are now checked for
+  convexity in the initialisation of the Benders' decomposition algorithm. This enables the solving of convex NLPs as
+  Benders' decomposition subproblems.
+
+- Benders' decomposition can be applied using decomposition supplied in the DEC format. To apply Benders' decomposition
+  the parameters decomposition/benderslabels and decomposition/applybenders must be set to TRUE.
 
 Performance improvements
 ------------------------
@@ -187,6 +206,10 @@ Interface changes
   SCIPcopy, SCIPcopyConsCompression, and SCIPcopyConss can now return *valid=TRUE if some non-checked and non-enforced constraints were not copied, e.g.,
   because they involved relaxation-only variables. Thus, a copy is already regarded as valid if all checked or enforced constraints were copied successfully.
 
+- SCIPsetupBendersSubproblem takes a parameter of the enforcement type.
+
+- SCIPcreateNlpiProb takes a hashmap to store the map between the nlrows and the index in the nlrow array.
+
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
@@ -211,7 +234,26 @@ Interface changes
 - new API function SCIPgetNConflictDualproofsApplied()
 - new API functions SCIPeventGetOldtype() and SCIPeventGetNewtype() for the new event when changing the variable type
 - new API function SCIPisConvexConsQuadratic() to check whether a quadratic constraint is convex when a given set of variables would be fixed
-
+- new API function SCIPgenerateAndApplyBendersOptCut is used to generate a Benders' optimality cut using the dual
+  solutions. This function can be supplied vectors for the primal and dual solution for generating an optimality cut.
+  This avoids the need to using SCIP instance for solving the Benders' decomposition subproblem and generating cuts.
+- new API function SCIPconsAddCoef used for adding a coefficient to a linear-type constraint.
+- new API functions SCIPconsNonlinearGetRhs, SCIPconsNonlinearGetLhs and SCIPconsNonlinearAddLinearCoef for getting the
+  RHS and LHS from a nonlinear-type constraint and adding a linear coefficient to the constraint.
+- new API function SCIPbendersSolSlackVarsActive for checking whether any slack variables from the feasibility phase are
+  active in the subproblem solution.
+- new API functions SCIPbendersSetSubproblemType and SCIPbendersGetSubproblemType sets and gets the subproblem type.
+  This is either:
+  - Convex constraints with continuous variables
+  - Convex constraints with discrete variables
+  - Non-convex constraints with continuous variables
+  - Non-convex constraints with discrete variables
+- new API functions SCIPbendersSetSubproblemIsNonlinear() and SCIPbendersSubproblemIsNonlinear() for setting and
+  identifying whether the Benders' decomposition subproblems contain nonlinear constraints. Similarly, the functions
+  SCIPbendersSetMasterIsNonlinear() and SCIPbendersMasterIsNonlinear() sets and identifies whether the Benders'
+  decomposition master problem contains nonlinear constraints.
+- new API function SCIPapplyBendersDecomposition for applying Benders' decomposition given a decomposition in the DEC
+  format
 
 ### Command line interface
 
@@ -306,6 +348,13 @@ Interface changes
   - new parameter "propagating/symmetry/performpresolving"
   - new parameter "propagating/symmetry/recomputerestart"
   - new parameter "constraints/symresack/checkmonotonicity"
+
+- new parameters to control enhancements for solving MINLPs by Benders' decomposition
+  - benders/<bendersname>/execfeasphase: enables the feasibility phase for solving the Benders' decomposition
+    subproblems
+  - benders/<bendersname>/slackvarcoef: the initial coefficient of the slack variable for the feasibility phase
+  - benders/<bendersname>/checkconsconvexity: should the constraints be checked for convexity. This can be set to FALSE
+    if you are certain that the NLP subproblem is convex.
 
 ### Data structures
 
