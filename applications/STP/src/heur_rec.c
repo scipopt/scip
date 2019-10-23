@@ -74,10 +74,6 @@
 #define COST_MAX_POLY_x0 500
 #define COST_MIN_POLY_x0 100
 
-#ifdef WITH_UG
-int getUgRank(void);
-#endif
-
 
 /*
  * Data structures
@@ -2371,10 +2367,6 @@ SCIP_RETCODE SCIPStpIncludeHeurRec(
 
    heurdata->nusedsols = DEFAULT_NUSEDSOLS;
    heurdata->randseed = DEFAULT_RANDSEED;
-
-#ifdef WITH_UG
-   heurdata->randseed += getUgRank();
-#endif
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, heurdata->randseed, TRUE) );

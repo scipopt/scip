@@ -63,10 +63,6 @@
 #define MAXNEDGES     10000
 #define SLACK_MAXTOTNEDGES 5000
 
-#ifdef WITH_UG
-int getUgRank(void);
-#endif
-
 /*
  * Data structures
  */

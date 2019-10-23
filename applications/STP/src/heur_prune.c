@@ -60,9 +60,6 @@
 #define MAXNTERMINALS 500
 #define MAXNEDGES     10000
 
-#ifdef WITH_UG
-int getUgRank(void);
-#endif
 
 /*
  * Data structures
