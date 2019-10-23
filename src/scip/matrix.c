@@ -611,7 +611,7 @@ SCIP_RETCODE SCIPmatrixCreate(
       int nconshdlrconss;
       SCIP_Bool rowadded;
 
-      if( SCIPisStopped(scip) )
+      if( SCIPisStopped(scip) || (onlyifcomplete && !(*complete)) )
       {
          stopped = TRUE;
          break;
@@ -627,6 +627,13 @@ SCIP_RETCODE SCIPmatrixCreate(
          {
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
+
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *complete = FALSE;
+               if( onlyifcomplete )
+                  break;
+            }
 
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLinear(scip, cons),
                   SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
@@ -649,6 +656,13 @@ SCIP_RETCODE SCIPmatrixCreate(
 
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
+
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *complete = FALSE;
+               if( onlyifcomplete )
+                  break;
+            }
 
             switch( SCIPgetTypeSetppc(scip, cons) )
             {
@@ -686,6 +700,13 @@ SCIP_RETCODE SCIPmatrixCreate(
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
 
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *complete = FALSE;
+               if( onlyifcomplete )
+                  break;
+            }
+
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLogicor(scip, cons),
                   NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip), nnonzstmp, &rowadded) );
 
@@ -713,6 +734,13 @@ SCIP_RETCODE SCIPmatrixCreate(
 
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
+
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *complete = FALSE;
+                  if( onlyifcomplete )
+                     break;
+               }
 
                weights = SCIPgetWeightsKnapsack(scip, cons);
                nvars = SCIPgetNVarsKnapsack(scip, cons);
@@ -756,6 +784,13 @@ SCIP_RETCODE SCIPmatrixCreate(
             {
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
+
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *complete = FALSE;
+                  if( onlyifcomplete )
+                     break;
+               }
 
                consvars[0] = SCIPgetVarVarbound(scip, cons);
                consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
@@ -802,6 +837,13 @@ SCIP_RETCODE SCIPmatrixCreate(
             {
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
+
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *complete = FALSE;
+                  if( onlyifcomplete )
+                     break;
+               }
 
                /* get constraint variables and their amount */
                SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
