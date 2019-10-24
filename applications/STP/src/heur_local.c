@@ -1938,7 +1938,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    assert(stvertex != NULL);
    assert(graph->extended);
 
-   graph_pc_2transcheck(graph);
+   graph_pc_2transcheck(scip, graph);
    SCIP_CALL( SCIPallocBufferArray(scip, &stvertextmp, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orgpath, nnodes) );
 
@@ -2137,7 +2137,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
 
    assert(scip && graph && stedge && stvertex);
 
-   SCIP_CALL( graph_pc_2orgcheck(scip, graph) );
+   graph_pc_2orgcheck(scip, graph);
 
    graph_sol_setVertexFromEdge(graph, stedge, stvertex);
 
@@ -2208,7 +2208,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
    /* have vertices been added? */
    if( extensions )
    {
-      graph_pc_2trans(graph);
+      graph_pc_2trans(scip, graph);
 
       for( int e = 0; e < nedges; e++ )
          stedge[e] = UNKNOWN;

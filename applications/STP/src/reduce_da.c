@@ -312,7 +312,7 @@ void daInitializeDistances(
          }
       }
 
-      graph_pc_2trans(g);
+      graph_pc_2trans(scip, g);
    }
 
    /* build Voronoi diagram */
@@ -338,7 +338,7 @@ void daInitializeDistances(
       }
 #endif
       if( rpc )
-         SCIP_CALL_ABORT( graph_pc_2org(scip, g) );
+         graph_pc_2org(scip, g);
    }
 
    assert(!rpc || !g->extended);
@@ -989,7 +989,7 @@ SCIP_RETCODE daPcFindRoots(
    assert(transgraph->extended);
 
    if( graphextended )
-      SCIP_CALL( graph_pc_2org(scip, graph) );
+      graph_pc_2org(scip, graph);
 
    graph_pc_termMarkProper(graph, termmark);
 
@@ -1093,7 +1093,7 @@ SCIP_RETCODE daPcFindRoots(
    *rootscount = nroots;
 
    if( graphextended )
-      graph_pc_2trans(graph);
+      graph_pc_2trans(scip, graph);
 
    SCIPfreeBufferArray(scip, &termmark);
    SCIPfreeBufferArray(scip, &visited);
@@ -1120,7 +1120,7 @@ void daPcMarkRoots(
    const SCIP_Bool graphextended = graph->extended;
 
    if( graphextended )
-      SCIP_CALL_ABORT( graph_pc_2org(scip, graph) );
+      graph_pc_2org(scip, graph);
 
    if( *userec && *solpool != NULL )
    {
@@ -1157,7 +1157,7 @@ void daPcMarkRoots(
    }
 
    if( graphextended )
-      graph_pc_2trans(graph);
+      graph_pc_2trans(scip, graph);
 }
 
 /** are the reduced costs still valid, i.e. are there zero cost paths from the root to all terminals? */
@@ -1553,7 +1553,7 @@ SCIP_RETCODE computePertubedSol(
    const int nedges = graph->edges;
    const int transnedges = transgraph->edges;
 
-   graph_pc_2transcheck(graph);
+   graph_pc_2transcheck(scip, graph);
 
    /* pertubate the reduced cost? */
    if( graph->stp_type == STP_MWCSP )
@@ -1882,7 +1882,7 @@ int reducePcMw(
    nfixed = 0;
    nnodes = graph->knots;
 
-   SCIP_CALL( graph_pc_2orgcheck(scip, graph) );
+   graph_pc_2orgcheck(scip, graph);
 
    if( solgiven )
    {
@@ -2142,7 +2142,7 @@ SCIP_RETCODE reduce_da(
    else
       damaxdeviation = -1.0;
 
-   if( rpc ) graph_pc_2transcheck(graph);
+   if( rpc ) graph_pc_2transcheck(scip, graph);
 
    for( int outerrounds = 0; outerrounds < 2; outerrounds++ )
    {
@@ -2184,7 +2184,7 @@ SCIP_RETCODE reduce_da(
          SCIPdebugMessage("upper: %f lower: %f \n", upperbound, lpobjval);
 
          if( rpc )
-            SCIP_CALL( graph_pc_2org(scip, graph) );
+            graph_pc_2org(scip, graph);
          else
             graph_mark(graph);
 
@@ -2250,7 +2250,7 @@ SCIP_RETCODE reduce_da(
          if( !rpc )
             graph_mark(graph);
          else
-            graph_pc_2trans(graph);
+            graph_pc_2trans(scip, graph);
 
       } /* root loop */
 
@@ -2280,7 +2280,7 @@ TERMINATE:
    *nelims = ndeletions;
 
    if( rpc )
-      SCIP_CALL( graph_pc_2orgcheck(scip, graph) );
+      graph_pc_2orgcheck(scip, graph);
 
    if( SCIPisLT(scip, upperbound, *ub) || SCIPisLT(scip, *ub, 0.0) )
       *ub = upperbound;
@@ -2428,7 +2428,7 @@ SCIP_RETCODE reduce_daSlackPrune(
 
    if( rpc )
    {
-      graph_pc_2trans(graph);
+      graph_pc_2trans(scip, graph);
    }
 
 
@@ -2608,7 +2608,7 @@ SCIP_RETCODE reduce_daSlackPrune(
    /* RPC? If yes, restore original graph */
    if( rpc )
    {
-      SCIP_CALL( graph_pc_2org(scip, graph) );
+      graph_pc_2org(scip, graph);
       graph->mark[root] = FALSE;
    }
 
@@ -2795,7 +2795,7 @@ SCIP_RETCODE reduce_daSlackPrune(
    SCIPdebugMessage("deleted by da: %d \n", nfixed );
 
    if( rpc )
-      graph_pc_2trans(graph);
+      graph_pc_2trans(scip, graph);
    assert(graph->mark[root]);
 
  TERMINATE:
@@ -2922,7 +2922,7 @@ SCIP_RETCODE reduce_daPcMw(
     * 1. step: compute lower bound and reduced costs
     */
 
-   graph_pc_2trans(graph);
+   graph_pc_2trans(scip, graph);
    offset = 0.0;
 
    /* transform the problem to a real SAP */
@@ -2962,7 +2962,7 @@ SCIP_RETCODE reduce_daPcMw(
     */
 
    /* restore original graph */
-   SCIP_CALL( graph_pc_2org(scip, graph) );
+   graph_pc_2org(scip, graph);
 
    for( int e = 0; e < extnedges; e++ )
       marked[e] = FALSE;
@@ -3008,7 +3008,7 @@ SCIP_RETCODE reduce_daPcMw(
       assert(graph_sol_valid(scip, graph, result));
       assert(!apsol || SCIPisEQ(scip, graph_sol_getObj(graph->cost, result, 0.0, nedges), upperbound));
 
-      SCIP_CALL( graph_pc_2orgcheck(scip, graph) );
+      graph_pc_2orgcheck(scip, graph);
 
       assert(daRedCostIsValid(scip, transgraph, cost, state, nodearrchar));
       computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
@@ -3034,7 +3034,7 @@ SCIP_RETCODE reduce_daPcMw(
       {
          SCIP_Real oldupperbound = upperbound;
 
-         graph_pc_2trans(graph);
+         graph_pc_2trans(scip, graph);
 
          apsol = apsol && graph_sol_unreduced(scip, graph, result);
          assert(!apsol || graph_sol_valid(scip, graph, result));
@@ -3206,7 +3206,7 @@ SCIP_RETCODE reduce_daPcMw(
       graph_get2next(scip, transgraph, costrev, costrev, vnoi, vbase, transgraph->path_heap, state);
 
       /* restore original graph */
-      SCIP_CALL( graph_pc_2org(scip, graph) );
+      graph_pc_2org(scip, graph);
 
       assert(graph->mark[tmproot]);
       graph->mark[tmproot] = FALSE;

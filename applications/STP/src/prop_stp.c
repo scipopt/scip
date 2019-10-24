@@ -156,7 +156,7 @@ void getRedCostDistances(
    if( graph_pc_isPcMw(g) )
    {
       assert(g->extended);
-      SCIP_CALL_ABORT( graph_pc_2org(scip, g) );
+      graph_pc_2org(scip, g);
 
       for( int i = 0; i < nnodes; i++ )
       {
@@ -171,7 +171,7 @@ void getRedCostDistances(
          }
       }
 
-      graph_pc_2trans(g);
+      graph_pc_2trans(scip, g);
    }
 
    graph_get3nextTerms(scip, g, costrev, costrev, vnoi, vbase, g->path_heap, state);
@@ -441,13 +441,13 @@ SCIP_RETCODE fixVarsExtendedRed(
    getRedCostDistances(scip, redcost, propgraph, vnoi, redcostrev, pathdist, pathedge, vbase, state);
 
    if( graph_pc_isPcMw(propgraph) )
-      SCIP_CALL( graph_pc_2org(scip, propgraph) );
+      graph_pc_2org(scip, propgraph);
 
    /* reduce graph */
    extnfixed = reduce_extendedEdge(scip, propgraph, vnoi, redcost, pathdist, NULL, minpathcost, propgraph->source, nodearr, marked, TRUE);
 
    if( graph_pc_isPcMw(propgraph) )
-      graph_pc_2trans(propgraph);
+      graph_pc_2trans(scip, propgraph);
 
    for( int e = 0; e < nedges; e++ )
        if( SCIPvarGetUbLocal(vars[e]) > 0.5 && marked[e] )

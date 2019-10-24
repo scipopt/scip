@@ -518,9 +518,9 @@ SCIP_RETCODE sep_implicationsPcMw(
    if( conshdlrdata->pcimplstart == NULL )
    {
       assert(conshdlrdata->pcimplverts == NULL);
-      SCIP_CALL( graph_pc_2org(scip, g) );
+      graph_pc_2org(scip, g);
       SCIP_CALL( init_pcmwimplications(scip, g, conshdlrdata) );
-      graph_pc_2trans(g);
+      graph_pc_2trans(scip, g);
    }
 
    verts = conshdlrdata->pcimplverts;

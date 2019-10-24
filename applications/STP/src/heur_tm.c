@@ -2493,7 +2493,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
       return SCIP_OKAY;
 
    if( graph_pc_isPcMw(graph) )
-      graph_pc_2transcheck(graph);
+      graph_pc_2transcheck(scip, graph);
 
    mode = getMode(heurdata, graph);
 

@@ -41,7 +41,7 @@
  */
 
 
-/** is vertex a non-leaf (call before transformation was performed)  */
+/** is vertex a non-leaf (call before graph transformation was performed)  */
 static inline
 SCIP_Bool isNonLeaf_pretrans(
    SCIP*                 scip,               /**< SCIP */
@@ -62,9 +62,10 @@ SCIP_Bool isNonLeaf_pretrans(
 }
 
 
-/** remove non-leaf terminals by edge weight shifting (call before transformation was performed)  */
+/** remove non-leaf terminals by edge weight shifting (call before graph transformation was performed,
+ *  call only from graph transformation method!) */
 static
-void removeNonLeafTerms_pretrans(
+void markNonLeafTerms_pretrans(
    SCIP*                 scip,               /**< SCIP */
    GRAPH*                g                   /**< the graph */
 )
@@ -84,20 +85,54 @@ void removeNonLeafTerms_pretrans(
 }
 
 
-/** shift costs of non-leaf terminals (call before transformation was performed)  */
+/** remove non-leaf terminals by edge weight shifting (call before graph transformation was performed)  */
 static
-SCIP_RETCODE shiftNonLeafCosts(
+void markNonLeafTerms_2trans(
    SCIP*                 scip,               /**< SCIP */
    GRAPH*                g                   /**< the graph */
 )
 {
    const int nnodes = g->knots;
-   const int nedges = g->edges;
+
+   assert(!g->extended);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !Is_term(g->term[k]) )
+         continue;
+
+      if( graph_pc_termIsNonLeaf(g, k) )
+      {
+         graph_knot_chg(g, k, STP_TERM_NONLEAF);
+      }
+   }
+}
+
+
+/** shift costs of non-leaf terminals (call right after transformation to extended has been performed)  */
+static
+void shiftNonLeafCosts_2trans(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   const int nnodes = g->knots;
    SCIP_Real* const cost = g->cost;
 
-   assert(!g->cost_org_pc);
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(g->cost_org_pc), nedges) );
-   BMScopyMemoryArray(g->cost_org_pc, cost, nedges);
+#ifndef NDEBUG
+   assert(g->cost_org_pc);
+   assert(graph_pc_isPc(g));
+   assert(g->extended);
+
+   for( int e = 0; e < g->edges; e++ )
+   {
+      if( g->oeat[e] == EAT_LAST )
+         continue;
+
+      assert(SCIPisEQ(scip, cost[e], cost[flipedge(e)]) || SCIPisGE(scip, cost[e], FARAWAY)
+               || SCIPisGE(scip, cost[flipedge(e)], FARAWAY));
+   }
+#endif
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -120,8 +155,28 @@ SCIP_RETCODE shiftNonLeafCosts(
          }
       }
    }
+}
+
+
+/** initializes cost_org_pc array (call right after transformation to extended has been performed)  */
+static
+SCIP_RETCODE initCostOrgPc(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   const int nedges = g->edges;
+   SCIP_Real* const cost = g->cost;
+
+   assert(!g->cost_org_pc);
+   assert(graph_pc_isPc(g));
+   assert(g->extended);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g->cost_org_pc), nedges) );
+   BMScopyMemoryArray(g->cost_org_pc, cost, nedges);
 
    return SCIP_OKAY;
+
 }
 
 
@@ -355,7 +410,7 @@ void graph_pc_presolExit(
 }
 
 /** checks consistency of term2edge array ONLY for non-extended graphs! */
-SCIP_Bool graph_pc_term2edgeConsistent(
+SCIP_Bool graph_pc_term2edgeIsConsistent(
    const GRAPH*          g                   /**< the graph */
 )
 {
@@ -411,6 +466,64 @@ SCIP_Bool graph_pc_term2edgeConsistent(
    }
    return TRUE;
 }
+
+
+/** transformed problem consistent to original one? Call only for extended graph */
+SCIP_Bool graph_pc_transOrgAreConistent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< the graph */
+   SCIP_Bool             verbose             /**< be verbose? */
+   )
+{
+   const int nedges = graph->edges;
+   const SCIP_Real* const cost = graph->cost;
+   const SCIP_Real* const cost_org = graph->cost_org_pc;
+
+   assert(graph->cost_org_pc && graph->prize);
+   assert(graph->extended);
+   assert(graph_pc_isPcMw(graph));
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( graph->oeat[e] != EAT_FREE )
+      {
+         const int head = graph->head[e];
+
+         if( Is_nonleafTerm(graph->term[head]) )
+         {
+            const SCIP_Real prize = graph->prize[head];
+            assert(prize > 0.0);
+
+            if( !SCIPisEQ(scip, cost_org[e], cost[e] + prize) )
+            {
+               if( verbose )
+               {
+                  graph_edge_printInfo(graph, e);
+                  printf("cost_org=%f cost=%f prize=%f \n", cost_org[e], cost[e], prize);
+               }
+
+               return FALSE;
+            }
+         }
+         else
+         {
+            if( !SCIPisEQ(scip, cost_org[e], cost[e]) )
+            {
+               if( verbose )
+               {
+                  graph_edge_printInfo(graph, e);
+                  printf("cost_org=%f cost=%f \n", cost_org[e], cost[e]);
+               }
+
+               return FALSE;
+            }
+         }
+      }
+   }
+
+   return TRUE;
+}
+
 
 /** change property of node to non-terminal */
 void graph_pc_knot2nonTerm(
@@ -519,6 +632,7 @@ void graph_pc_termMarkProper(
    }
 }
 
+
 /** check whether terminal is not a leaf (or not contained) in at least one optimal tree */
 SCIP_Bool graph_pc_termIsNonLeaf(
    const GRAPH*          g,                  /**< the graph */
@@ -527,19 +641,18 @@ SCIP_Bool graph_pc_termIsNonLeaf(
 {
    int e;
 
-   assert(g      != NULL);
-   assert(term   >= 0);
-   assert(term   < g->knots);
-   assert(graph_pc_isPcMw(g));
-   assert(g->term2edge);
+   assert(g && g->term2edge);
+   assert(term >= 0 && term < g->knots);
+   assert(Is_anyTerm(g->term[term]));
+   assert(graph_pc_isPc(g));
 
    if( graph_pc_knotIsFixedTerm(g, term) )
       return FALSE;
 
    if( g->extended )
-      assert(Is_pseudoTerm(g->term[term]));
-   else
-      assert(Is_term(g->term[term]));
+      return (Is_nonleafTerm(g->term[term]));
+
+   assert(Is_term(g->term[term]));
 
    for( e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
    {
@@ -646,8 +759,9 @@ void graph_pc_markOrgGraph(
       g->mark[root] = FALSE;
 }
 
+
 /** mark terminals and switch terminal property to original terminals */
-SCIP_RETCODE graph_pc_2org(
+void graph_pc_2org(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph               /**< the graph */
    )
@@ -655,16 +769,23 @@ SCIP_RETCODE graph_pc_2org(
    const int root = graph->source;
    const int nnodes = graph->knots;
 
-   assert(graph != NULL);
-   assert(graph->term2edge != NULL);
-   assert(graph->extended);
-   assert(graph_pc_isPcMw(graph));
+   assert(scip && graph && graph->term2edge);
+   assert(graph->extended && graph_pc_isPcMw(graph));
 
+   /* restore original edge weights */
+   if( graph_pc_isPc(graph) )
+   {
+      assert(graph_pc_transOrgAreConistent(scip, graph, FALSE));
+
+      BMScopyMemoryArray(graph->cost, graph->cost_org_pc, graph->edges);
+   }
+
+   /* swap terminal properties and mark original graph */
    for( int k = 0; k < nnodes; k++ )
    {
       graph->mark[k] = (graph->grad[k] > 0);
 
-      if( Is_pseudoTerm(graph->term[k]) )
+      if( Is_pseudoTerm(graph->term[k]) || Is_nonleafTerm(graph->term[k]) )
       {
          graph_knot_chg(graph, k, 0);
       }
@@ -677,48 +798,39 @@ SCIP_RETCODE graph_pc_2org(
       }
    }
 
-   // todo adapt edge costs
-
-   // add prizes extra method? Assert that eq to anti
-
-
-   if( graph_pc_isPc(graph) )
-   {
-      const int nedges = graph->edges;
-      assert(graph->cost_org_pc);
-
-
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->cost_org_pc), nedges) );
-      BMScopyMemoryArray(graph->cost_org_pc, graph->cost, nedges);
-   }
-
    if( graph->stp_type == STP_RPCSPG || graph->stp_type == STP_RMWCSP )
       graph->mark[root] = TRUE;
    else
       graph->mark[root] = FALSE;
 
    graph->extended = FALSE;
-
-   return SCIP_OKAY;
 }
 
-/** unmark terminals and switch terminal property to transformed terminals */
+/** mark transformed graph and adapt terminal properties to transformed graph */
 void graph_pc_2trans(
+   SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph               /**< the graph */
    )
 {
    const int nnodes = graph->knots;;
 
-   assert(graph != NULL);
-   assert(!(graph->extended));
+   assert(scip);
+   assert(!graph->extended);
    assert(graph_pc_isPcMw(graph));
 
+   /* adapt terminal properties for non-leaf terminals (so far not explicitly marked) */
+   if( graph_pc_isPc(graph) )
+      markNonLeafTerms_2trans(scip, graph);
+
+   /* adapt terminal properties and mark transformed graph */
    for( int k = 0; k < nnodes; k++ )
    {
       graph->mark[k] = (graph->grad[k] > 0);
 
       if( Is_pseudoTerm(graph->term[k]) )
+      {
          graph_knot_chg(graph, k, 0);
+      }
       else if( Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) )
       {
          assert(k != graph->source);
@@ -726,46 +838,44 @@ void graph_pc_2trans(
       }
    }
 
+   graph->extended = TRUE;
+
+   /* restore transformed edge weights (shift) and store original ones */
    if( graph_pc_isPc(graph) )
    {
       assert(graph->cost_org_pc);
       BMScopyMemoryArray(graph->cost_org_pc, graph->cost, graph->edges);
-      // subtract prizes extra method?
+
+      shiftNonLeafCosts_2trans(scip, graph);
    }
-
-
-   graph->extended = TRUE;
-
-   return;
 }
 
 /** graph_pc_2org if extended */
-SCIP_RETCODE graph_pc_2orgcheck(
+void graph_pc_2orgcheck(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph               /**< the graph */
    )
 {
-   assert(graph != NULL);
+   assert(graph && scip);
 
    if( !graph->extended )
-      return SCIP_OKAY;
+      return;
 
-   SCIP_CALL_ABORT( graph_pc_2org(scip, graph) );
-
-   return SCIP_OKAY;
+   graph_pc_2org(scip, graph);
 }
 
 /** graph_pc_2trans if not extended */
 void graph_pc_2transcheck(
+   SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph               /**< the graph */
    )
 {
-   assert(graph != NULL);
+   assert(graph && scip);
 
    if( graph->extended )
       return;
 
-   graph_pc_2trans(graph);
+   graph_pc_2trans(scip, graph);
 }
 
 /* returns sum of positive vertex weights */
@@ -1242,7 +1352,7 @@ SCIP_RETCODE graph_pc_getRsap(
    assert(graph->knots == graph->ksize);
    assert(graph->edges == graph->esize);
 
-   graph_pc_2transcheck(graph);
+   graph_pc_2transcheck(scip, graph);
 
    aterm = -1;
    proot = graph->source;
@@ -1385,7 +1495,7 @@ SCIP_RETCODE graph_pc_2pc(
 
    /* for PC remove terminal property from non-leaves and reduce terminal count */
    if( graph->stp_type != STP_MWCSP )
-      removeNonLeafTerms_pretrans(scip, graph);
+      markNonLeafTerms_pretrans(scip, graph);
 
    /* for each proper terminal, except for the root, one node and three edges (i.e. six arcs) are to be added */
    SCIP_CALL( graph_resize(scip, graph, (graph->ksize + graph->terms + 1), (graph->esize + graph->terms * 6) , -1) );
@@ -1442,14 +1552,15 @@ SCIP_RETCODE graph_pc_2pc(
 
    graph->source = root;
    graph->extended = TRUE;
-   assert((termscount + 1) == graph->terms);
 
    if( graph->stp_type != STP_MWCSP )
    {
-      SCIP_CALL( shiftNonLeafCosts(scip, graph) );
+      SCIP_CALL( initCostOrgPc(scip, graph) );
+      shiftNonLeafCosts_2trans(scip, graph);
       graph->stp_type = STP_PCSPG;
    }
 
+   assert((termscount + 1) == graph->terms);
    assert(graph->orgsource == -1);
    SCIPdebugMessage("Transformed to PC \n");
 
@@ -1480,7 +1591,7 @@ SCIP_RETCODE graph_pc_2rpc(
    nfixterms = 0;
    npotterms = 0;
 
-   removeNonLeafTerms_pretrans(scip, graph);
+   markNonLeafTerms_pretrans(scip, graph);
 
    /* count number of fixed and potential terminals and adapt prizes */
    for( int i = 0; i < nnodes; i++ )
@@ -1562,14 +1673,15 @@ SCIP_RETCODE graph_pc_2rpc(
       }
    }
 
-   SCIP_CALL( shiftNonLeafCosts(scip, graph) );
-
    graph->extended = TRUE;
-   assert(nterms == npotterms);
-   assert(graph->prize[graph->source] == FARAWAY);
    graph->stp_type = STP_RPCSPG;
    graph->orgsource = graph->source;
 
+   SCIP_CALL( initCostOrgPc(scip, graph) );
+   shiftNonLeafCosts_2trans(scip, graph);
+
+   assert(nterms == npotterms);
+   assert(graph->prize[graph->source] == FARAWAY);
    SCIPdebugMessage("Transformed problem to (RPC) SAP \n");
 
    return SCIP_OKAY;
@@ -2205,6 +2317,101 @@ SCIP_RETCODE graph_pc_contractEdge(
    SCIP_CALL( graph_knot_contract(scip, g, solnode, t, s) );
    assert(g->grad[s] == 0);
    SCIPdebugMessage("PcMw contract: %d into %d \n", s, t);
+
+   return SCIP_OKAY;
+}
+
+
+/** mark original solution */
+SCIP_RETCODE graph_sol_markPcancestors(
+   SCIP*           scip,               /**< SCIP data structure */
+   IDX**           pcancestors,        /**< the ancestors */
+   const int*      tails,              /**< tails array */
+   const int*      heads,              /**< heads array */
+   int             orgnnodes,          /**< original number of nodes */
+   STP_Bool*       solnodemark,        /**< solution nodes mark array */
+   STP_Bool*       soledgemark,        /**< solution edges mark array or NULL */
+   int*            solnodequeue,       /**< solution nodes queue or NULL  */
+   int*            nsolnodes,          /**< number of solution nodes or NULL */
+   int*            nsoledges           /**< number of solution edges or NULL */
+)
+{
+   int* queue;
+   int nnodes;
+   int nedges = (nsoledges != NULL)? *nsoledges : 0;
+   int qstart;
+   int qend;
+
+   assert(scip != NULL && tails != NULL && heads != NULL && pcancestors != NULL && solnodemark != NULL);
+
+   if( solnodequeue != NULL )
+      queue = solnodequeue;
+   else
+      SCIP_CALL( SCIPallocBufferArray(scip, &queue, orgnnodes) );
+
+   if( nsolnodes == NULL )
+   {
+      assert(solnodequeue == NULL);
+      nnodes = 0;
+      for( int k = 0; k < orgnnodes; k++ )
+         if( solnodemark[k] )
+            queue[nnodes++] = k;
+   }
+   else
+   {
+      nnodes = *nsolnodes;
+      assert(solnodequeue != NULL);
+   }
+
+   qstart = 0;
+   qend = nnodes;
+
+   while( qend != qstart )
+   {
+      int k = qstart;
+
+      assert(qstart < qend);
+      qstart = qend;
+
+      for( ; k < qend; k++ )
+      {
+         const int ancestornode = queue[k];
+
+         assert(solnodemark[ancestornode]);
+
+         for( IDX* curr = pcancestors[ancestornode]; curr != NULL; curr = curr->parent )
+         {
+            const int ancestoredge = curr->index;
+            assert(tails[ancestoredge] < orgnnodes && heads[ancestoredge] < orgnnodes);
+
+            if( soledgemark != NULL && !soledgemark[ancestoredge] )
+            {
+               soledgemark[ancestoredge] = TRUE;
+               nedges++;
+            }
+            if( !solnodemark[tails[ancestoredge]] )
+            {
+               solnodemark[tails[ancestoredge]] = TRUE;
+               queue[nnodes++] = tails[ancestoredge];
+            }
+            if( !solnodemark[heads[ancestoredge]] )
+            {
+               solnodemark[heads[ancestoredge]] = TRUE;
+               queue[nnodes++] = heads[ancestoredge];
+            }
+         }
+      }
+      qend = nnodes;
+   }
+
+   if( nsolnodes != NULL )
+      *nsolnodes = nnodes;
+
+   if( nsoledges != NULL )
+      *nsoledges = nedges;
+
+   if( solnodequeue == NULL )
+      SCIPfreeBufferArray(scip, &queue);
 
    return SCIP_OKAY;
 }

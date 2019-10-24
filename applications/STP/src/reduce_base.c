@@ -1250,12 +1250,12 @@ SCIP_RETCODE redLoopMw(
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
-   SCIP_CALL( graph_pc_2org(scip, g) );
+   graph_pc_2org(scip, g);
 
    degelims = 0;
 
    SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
-   assert(graph_pc_term2edgeConsistent(g));
+   assert(graph_pc_term2edgeIsConsistent(g));
 
    prizesum = graph_pc_getPosPrizeSum(scip, g);
 
@@ -1414,7 +1414,7 @@ SCIP_RETCODE redLoopMw(
    SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
    /* go back to the extended graph */
-   graph_pc_2trans(g);
+   graph_pc_2trans(scip, g);
 
    SCIP_CALL( level0(scip, g) );
 
@@ -1485,15 +1485,15 @@ SCIP_RETCODE redLoopPc(
    assert(!rpc || g->prize[g->source] == FARAWAY);
 
    fix = 0.0;
-   SCIP_CALL( graph_pc_2org(scip, g) );
-   assert(graph_pc_term2edgeConsistent(g));
+   graph_pc_2org(scip, g);
+   assert(graph_pc_term2edgeIsConsistent(g));
 
    SCIP_CALL( graph_pc_presolInit(scip, g) );
 
    SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &ntotalelims, NULL, solnode) );
    if( verbose ) printf("initial degnelims: %d \n", ntotalelims);
 
-   assert(graph_pc_term2edgeConsistent(g));
+   assert(graph_pc_term2edgeIsConsistent(g));
 
    prizesum = graph_pc_getPosPrizeSum(scip, g);
    assert(prizesum < FARAWAY);
@@ -1655,8 +1655,8 @@ SCIP_RETCODE redLoopPc(
 
       if( (!rerun || rounds == (STP_RED_MAXNROUNDS - 1)) && !rpc && tryrpc && g->terms > 2 )
       {
-         assert(graph_pc_term2edgeConsistent(g));
-         graph_pc_2trans(g);
+         assert(graph_pc_term2edgeIsConsistent(g));
+         graph_pc_2trans(scip, g);
 
          SCIP_CALL(graph_pc_pcmw2rooted(scip, g, prizesum));
 
@@ -1676,7 +1676,7 @@ SCIP_RETCODE redLoopPc(
             rounds = 1;
          }
 
-         SCIP_CALL( graph_pc_2org(scip, g) );
+         graph_pc_2org(scip, g);
       }
    } /* main reduction loop */
 
@@ -1688,8 +1688,8 @@ SCIP_RETCODE redLoopPc(
 
    assert(!rpc || g->prize[g->source] == FARAWAY);
 
-   assert(graph_pc_term2edgeConsistent(g));
-   graph_pc_2trans(g);
+   assert(graph_pc_term2edgeIsConsistent(g));
+   graph_pc_2trans(scip, g);
    graph_pc_presolExit(scip, g);
 
    graph_heap_free(scip, TRUE, TRUE, &dheap);

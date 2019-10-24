@@ -348,12 +348,12 @@ SCIP_RETCODE reduce_bound(
       assert(result != NULL);
 
       if( pcmw )
-         graph_pc_2trans(graph);
+         graph_pc_2trans(scip, graph);
 
       SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, graph, starts, NULL, result, runs, root, cost, costrev, &obj, NULL, maxcost, &success, FALSE) );
 
       if( pcmw )
-         SCIP_CALL( graph_pc_2org(scip, graph) );
+         graph_pc_2org(scip, graph);
 
       /* no feasible solution found? */
       if( !success )
