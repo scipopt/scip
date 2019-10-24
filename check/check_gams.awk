@@ -312,7 +312,7 @@ END {
          else
          {
             # gap not closed, but no timeout
-            status = "fail (gap)";
+            status = sprintf("fail (gap=%e)", gap);
             failtime += tottime;
             fail++;
          }
@@ -364,7 +364,7 @@ END {
          else
          {
             # gap not closed, but also no timeout
-            status = "fail (gap)";
+            status = sprintf("fail (gap=%e)", gap);
             failtime += tottime;
             fail++;
          }
