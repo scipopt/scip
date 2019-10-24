@@ -5800,6 +5800,8 @@ SCIP_RETCODE enforceConstraints2(
 
    SCIPexpriteratorFree(&it);
 
+   ENFOLOG( if( enfologfile != NULL ) fflush( enfologfile); )
+
    if( *result != SCIP_BRANCHED )
       return SCIP_OKAY;
 
@@ -5913,6 +5915,8 @@ SCIP_RETCODE enforceConstraints2(
       }
    }
 
+   ENFOLOG( if( enfologfile != NULL ) fflush( enfologfile); )
+
    return SCIP_OKAY;
 }
 
@@ -5995,7 +5999,11 @@ SCIP_RETCODE analyzeViolation(
                auxvarlb = SCIPvarGetLbLocal(var);
                auxvarub = SCIPvarGetUbLocal(var);
 
-               origviol = MAX(auxvarlb - auxvarvalue, auxvarvalue - auxvarub);
+               origviol = 0.0;
+               if( auxvarlb > auxvarvalue && !SCIPisInfinity(scip, -auxvarlb) )
+                  origviol = auxvarlb - auxvarvalue;
+               else if( auxvarub < auxvarvalue && !SCIPisInfinity(scip, auxvarub) )
+                  origviol = auxvarvalue - auxvarub;
                if( origviol <= 0.0 )
                   continue;
 
@@ -6003,9 +6011,9 @@ SCIP_RETCODE analyzeViolation(
 
                ENFOLOG(
                SCIPinfoMessage(scip, enfologfile, "var <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(var), auxvarlb, auxvarub, auxvarvalue);
-               if( auxvarlb > auxvarvalue )
+               if( auxvarlb > auxvarvalue && !SCIPisInfinity(scip, -auxvarlb) )
                   SCIPinfoMessage(scip, enfologfile, " var >= lb violated by %g", auxvarlb - auxvarvalue);
-               if( auxvarub < auxvarvalue )
+               if( auxvarub < auxvarvalue && !SCIPisInfinity(scip,  auxvarub) )
                   SCIPinfoMessage(scip, enfologfile, " var <= ub violated by %g", auxvarvalue - auxvarub);
                SCIPinfoMessage(scip, enfologfile, "\n");
                )
@@ -6018,9 +6026,9 @@ SCIP_RETCODE analyzeViolation(
          auxvarlb = SCIPvarGetLbLocal(expr->auxvar);
          auxvarub = SCIPvarGetUbLocal(expr->auxvar);
 
-         if( auxvarlb - auxvarvalue > *maxvarboundviol )
+         if( auxvarlb - auxvarvalue > *maxvarboundviol && !SCIPisInfinity(scip, -auxvarlb) )
             *maxvarboundviol = auxvarlb - auxvarvalue;
-         else if( auxvarvalue - auxvarub > *maxvarboundviol )
+         else if( auxvarvalue - auxvarub > *maxvarboundviol && !SCIPisInfinity(scip,  auxvarub) )
             *maxvarboundviol = auxvarvalue - auxvarub;
 
          /* make sure that this expression has been evaluated - so far we assume that this happened */
@@ -6046,29 +6054,32 @@ SCIP_RETCODE analyzeViolation(
             violunder = SCIPgetConsExprExprNLocksPos(expr) > 0;
          }
 
+         ENFOLOG(
+         if( violover || violunder || auxvarlb > auxvarvalue || auxvarub < auxvarvalue )
+         {
+            SCIPinfoMessage(scip, enfologfile, "expr ");
+            SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, enfologfile) );
+            SCIPinfoMessage(scip, enfologfile, " (%p)[%.15g,%.15g] = %.15g\n", (void*)expr, expr->activity.inf, expr->activity.sup, expr->evalvalue);
+
+            SCIPinfoMessage(scip, enfologfile, "  auxvar <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(expr->auxvar), auxvarlb, auxvarub, auxvarvalue);
+            if( violover )
+               SCIPinfoMessage(scip, enfologfile, " auxvar <= expr violated by %g", origviol);
+            if( violunder )
+               SCIPinfoMessage(scip, enfologfile, " auxvar >= expr violated by %g", -origviol);
+            if( auxvarlb > auxvarvalue && !SCIPisInfinity(scip, -auxvarlb) )
+               SCIPinfoMessage(scip, enfologfile, " auxvar >= auxvar's lb violated by %g", auxvarlb - auxvarvalue);
+            if( auxvarub < auxvarvalue && !SCIPisInfinity(scip,  auxvarub) )
+               SCIPinfoMessage(scip, enfologfile, " auxvar <= auxvar's ub violated by %g", auxvarvalue - auxvarub);
+            SCIPinfoMessage(scip, enfologfile, "\n");
+         }
+         )
+
          /* no violation w.r.t. the original variables -> skip expression */
          if( !violover && !violunder )
             continue;
 
          *maxauxviol = MAX(*maxauxviol, REALABS(origviol));  /*lint !e666*/
          *minauxviol = MIN(*minauxviol, REALABS(origviol));  /*lint !e666*/
-
-         ENFOLOG(
-         SCIPinfoMessage(scip, enfologfile, "expr ");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, enfologfile) );
-         SCIPinfoMessage(scip, enfologfile, " (%p)[%.15g,%.15g] = %.15g\n", (void*)expr, expr->activity.inf, expr->activity.sup, expr->evalvalue);
-
-         SCIPinfoMessage(scip, enfologfile, "  auxvar <%s>[%.15g,%.15g] = %.15g", SCIPvarGetName(expr->auxvar), auxvarlb, auxvarub, auxvarvalue);
-         if( violover )
-            SCIPinfoMessage(scip, enfologfile, " auxvar <= expr violated by %g", origviol);
-         if( violunder )
-            SCIPinfoMessage(scip, enfologfile, " auxvar >= expr violated by %g", -origviol);
-         if( auxvarlb > auxvarvalue )
-            SCIPinfoMessage(scip, enfologfile, " auxvar >= auxvar's lb violated by %g", auxvarlb - auxvarvalue);
-         if( auxvarub < auxvarvalue )
-            SCIPinfoMessage(scip, enfologfile, " auxvar <= auxvar's ub violated by %g", auxvarvalue - auxvarub);
-         SCIPinfoMessage(scip, enfologfile, "\n");
-         )
 
          /* compute aux-violation (nonlinear handlers) */
          for( e = 0; e < expr->nenfos; ++e )
@@ -6155,6 +6166,8 @@ SCIP_RETCODE enforceConstraints(
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: enforcing constraints with max conssviol=%e, auxviolations in %g..%g, variable bounds violated by at most %g\n",
       SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxviol, minauxviol, maxauxviol, maxvarboundviol); )
 
+   assert(maxvarboundviol <= SCIPgetLPFeastol(scip));
+
    /* try to propagate */
    if( conshdlrdata->propinenforce )
    {
@@ -6175,9 +6188,9 @@ SCIP_RETCODE enforceConstraints(
       }
    }
 
-   if( conshdlrdata->tightenlpfeastol && maxvarboundviol > maxauxviol && sol == NULL )
+   if( conshdlrdata->tightenlpfeastol && maxvarboundviol > maxauxviol && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
    {
-      SCIPsetLPFeastol(scip, maxvarboundviol / 2.0);
+      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxvarboundviol / 2.0, SCIPgetLPFeastol(scip) / 2.0)));
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " variable bound violation %g larger than auxiliary violation %g, reducing LP feastol to %g\n", maxvarboundviol, maxauxviol, SCIPgetLPFeastol(scip)); )
       ++conshdlrdata->ntightenlp;
 
