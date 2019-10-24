@@ -16889,7 +16889,7 @@ static
 SCIP_RETCODE rowprepCleanupIntegralCoefs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be improve */
-   SCIP_Real*            viol                /**< violation of cut in sol (input), set to SCIP_INVALID if some coef changed */
+   SCIP_Real*            viol                /**< NULL or violation of cut in sol (input), set to SCIP_INVALID if some coef changed */
    )
 {
    SCIP_Real coef;
@@ -16898,7 +16898,6 @@ SCIP_RETCODE rowprepCleanupIntegralCoefs(
 
    assert(scip != NULL);
    assert(rowprep != NULL);
-   assert(viol != NULL);
 
    /* Coefficients smaller than epsilon are rounded to 0.0 when added to row and
     * coefficients very close to integral values are rounded to integers when added to LP.
@@ -16949,7 +16948,8 @@ SCIP_RETCODE rowprepCleanupIntegralCoefs(
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef);
          }
          rowprep->coefs[i] = roundcoef;
-         *viol = SCIP_INVALID;
+         if( viol != NULL )
+            *viol = SCIP_INVALID;
 
          /* (potentially) remember the variable which coef has been modified here */
          SCIP_CALL( rowprepRecordModifiedVar(scip, rowprep, var) );
@@ -16968,7 +16968,7 @@ static
 void rowprepCleanupSide(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be improve */
-   SCIP_Real*            viol                /**< violation of cut in sol (input), set to SCIP_INVALID if some coef changed */
+   SCIP_Real*            viol                /**< NULL or violation of cut in sol (input), set to SCIP_INVALID if some coef changed */
    )
 {
    /* SCIP_ROW handling will replace a side close to 0 by 0.0, even if that makes the row more restrictive
@@ -16987,7 +16987,8 @@ void rowprepCleanupSide(
    if( rowprep->recordmodifications )
       rowprep->modifiedside = TRUE;
 
-   *viol = SCIP_INVALID;
+   if( viol != NULL )
+      *viol = SCIP_INVALID;
 }
 
 /* Cleans up and attempts to improve rowprep
@@ -17170,7 +17171,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
 /* Cleans up and attempts to improve rowprep
  *
  * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
- * Scales coefficients and side up to have maximal coefficient in [0.001,1000].
+ * Scales coefficients and side to have maximal coefficient in [1/maxcoefbound,maxcoefbound].
  * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
  * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the cut least.
  *
@@ -17179,8 +17180,6 @@ SCIP_RETCODE SCIPcleanupRowprep(
  *
  * success is set to TRUE if and only if the rowprep satisfies the following:
  * - the coef.range is below maxcoefrange
- * - the violation is at least minviol
- * - the violation is reliable or minviol == 0
  * - the absolute value of coefficients are below SCIPs value of infinity
  * - the absolute value of the side is below SCIPs value of infinity
  */
@@ -17189,20 +17188,17 @@ SCIP_RETCODE SCIPcleanupRowprep2(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
    SCIP_Real             maxcoefrange,       /**< maximal allowed coefficients range */
-   SCIP_Real             minviol,            /**< minimal absolute violation the row should achieve (w.r.t. sol) */
-   SCIP_Real*            viol,               /**< buffer to store absolute violation of cleaned up cut in sol, or NULL if not of interest */
+   SCIP_Real             maxcoefbound,       /**< bound on absolute value of largest coefficient */
    SCIP_Bool*            success             /**< buffer to store whether cut cleanup was successful, or NULL if not of interest */
    )
 {
-   /* TODO can I omit viol, minviol in this function? */
-   SCIP_Real myviol;
-   SCIP_Bool violreliable = TRUE;
 #ifdef SCIP_DEBUG
    SCIP_Real mincoef = 1.0;
    SCIP_Real maxcoef = 1.0;
 #endif
 
    assert(maxcoefrange > 1.0);   /* not much interesting otherwise */
+   assert(maxcoefbound >= 1.0);
 
    if( rowprep->recordmodifications )
    {
@@ -17228,10 +17224,6 @@ SCIP_RETCODE SCIPcleanupRowprep2(
    /* improve coefficient range by aggregating out variables */
    SCIP_CALL( rowprepCleanupImproveCoefrange(scip, rowprep, sol, maxcoefrange) );
 
-   /* get current violation in sol (reliability info only needed if success is not NULL) */
-   myviol = SCIPgetRowprepViolation(scip, rowprep, sol, success != NULL ? &violreliable : NULL);  /*lint !e826*/
-   assert(myviol >= 0.0);
-
 #ifdef SCIP_DEBUG
    if( rowprep->nvars > 0 )
    {
@@ -17239,46 +17231,33 @@ SCIP_RETCODE SCIPcleanupRowprep2(
       mincoef = REALABS(rowprep->coefs[rowprep->nvars-1]);
    }
 
-   SCIPinfoMessage(scip, NULL, "improved coefrange to %g, viol %g: ", maxcoef / mincoef, myviol);
+   SCIPinfoMessage(scip, NULL, "improved coefrange to %g: ", maxcoef / mincoef);
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
    /* scale up or down to improve numerics, updates myviol (reliability doesn't change) */
-   if( rowprep->nvars > 0 && (REALABS(rowprep->coefs[0]) < 0.001 || REALABS(rowprep->coefs[0]) > 1000.0) )
+   if( rowprep->nvars > 0 && (REALABS(rowprep->coefs[0]) < 1.0/maxcoefbound || REALABS(rowprep->coefs[0]) > maxcoefbound) )
    {
       SCIP_Real expon;
       expon = SCIPscaleRowprep(rowprep, 1.0 / REALABS(rowprep->coefs[0]));
 
-      /* multiply myviol by 2^expon */
-      if( !SCIPisInfinity(scip, myviol) )
-         myviol = ldexp(myviol, expon);
+#ifdef SCIP_DEBUG
+      SCIPinfoMessage(scip, NULL, "applied scaling by %g: ", pow(2.0, expon));
+      SCIPprintRowprep(scip, rowprep, NULL);
+#else
+      (void) expon;
+#endif
    }
 
-#ifdef SCIP_DEBUG
-   SCIPinfoMessage(scip, NULL, "applied scaling, viol %g: ", myviol);
-   SCIPprintRowprep(scip, rowprep, NULL);
-#endif
+   /* turn almost-integral coefs to integral values */
+   SCIP_CALL( rowprepCleanupIntegralCoefs(scip, rowprep, NULL) );
 
-   /* turn almost-integral coefs to integral values, may set myviol to SCIP_INVALID */
-   SCIP_CALL( rowprepCleanupIntegralCoefs(scip, rowprep, &myviol) );
-
-   /* relax almost-zero side, may set myviol to SCIP_INVALID */
-   rowprepCleanupSide(scip, rowprep, &myviol);
+   /* relax almost-zero side */
+   rowprepCleanupSide(scip, rowprep, NULL);
 
 #ifdef SCIP_DEBUG
-   SCIPinfoMessage(scip, NULL, "adjusted almost-integral coefs and sides, viol %g: ", myviol);
+   SCIPinfoMessage(scip, NULL, "adjusted almost-integral coefs and sides: ");
    SCIPprintRowprep(scip, rowprep, NULL);
-#endif
-
-#if 0
-   /* compute final coefrange, if requested by caller */
-   if( coefrange != NULL )
-   {
-      if( rowprep->nvars > 0 )
-         *coefrange = REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1]);
-      else
-         *coefrange = 1.0;
-   }
 #endif
 
    /* check whether rowprep could be turned into a reasonable row */
@@ -17306,35 +17285,7 @@ SCIP_RETCODE SCIPcleanupRowprep2(
          SCIPdebugMsg(scip, "rowprep side %g is beyond value for infinity\n", rowprep->side);
          *success = FALSE;
       }
-
-      /* check if violation is at least minviol and reliable, if minviol > 0 */
-      if( *success && minviol > 0.0 )
-      {
-         /* may need to recompute violation if coefs or side was modified above */
-         if( myviol == SCIP_INVALID )  /*lint !e777 */
-            myviol = SCIPgetRowprepViolation(scip, rowprep, sol, &violreliable);
-
-         if( !violreliable )
-         {
-            SCIPdebugMsg(scip, "rowprep violation %g is not reliable\n", myviol);
-            *success = FALSE;
-         }
-         else if( myviol < minviol )
-         {
-            SCIPdebugMsg(scip, "rowprep violation %g is below minimal violation %g\n", myviol, minviol);
-            *success = FALSE;
-         }
-      }
    }
-
-   /* If we updated myviol correctly, then it should coincide with freshly computed violation.
-    * I leave this assert off for now, since getting the tolerance in the EQ correctly is not trivial. We recompute viol below anyway.
-    */
-   /* assert(myviol == SCIP_INVALID || SCIPisEQ(scip, myviol, SCIPgetRowprepViolation(scip, rowprep, sol, NULL))); */
-
-   /* compute final violation, if requested by caller */
-   if( viol != NULL )  /*lint --e{777} */
-      *viol = myviol == SCIP_INVALID ? SCIPgetRowprepViolation(scip, rowprep, sol, NULL) : myviol;
 
    return SCIP_OKAY;
 }

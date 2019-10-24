@@ -5421,14 +5421,22 @@ SCIP_RETCODE enforceExprNlhdlr(
           */
          if( !allowweakcuts )
          {
-            SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, mincutviolation, &cutviol, &sepasuccess) );
+            /* TODO parameter or at least define for 1000 */
+            SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, 1000.0, &sepasuccess) );
 
             if( !sepasuccess )
             {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup cut failed, probably no longer violated after scaling down\n"); )
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup cut failed due to bad numerics\n"); )
+            }
+            else
+            {
+               cutviol = SCIPgetRowprepViolation(scip, rowprep, sol, &sepasuccess);
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup succeeded, violation = %g and %sreliable, min requ viol = %g\n", cutviol, sepasuccess ? "" : "not ", mincutviolation); )
+               if( sepasuccess )
+                  sepasuccess = cutviol > mincutviolation;
             }
 
-            if( auxvalue != SCIP_INVALID )
+            if( sepasuccess && auxvalue != SCIP_INVALID )
             {
                /* check whether cut is weak now
                 * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when reconstructing estimateval from cutviol
