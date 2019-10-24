@@ -453,7 +453,7 @@ SCIP_RETCODE copyProb(
    /* create conflict store to store conflict constraints */
    SCIP_CALL( SCIPconflictstoreCreate(&targetscip->conflictstore, targetscip->set) );
 
-   SCIP_CALL( SCIPdecompstoreCreate(&targetscip->decompstore, SCIPblkmem(targetscip), 10) );
+   SCIP_CALL( SCIPdecompstoreCreate(&targetscip->decompstore, SCIPblkmem(targetscip), SCIP_DECOMPSTORE_CAPA) );
 
    if( uselocalvarmap )
    {

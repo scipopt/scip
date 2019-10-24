@@ -272,6 +272,7 @@ set(scipsources
     scip/scip_cut.c
     scip/scip_datastructures.c
     scip/scip_debug.c
+    scip/scip_decomp.c
     scip/scip_dialog.c
     scip/scip_disp.c
     scip/scip_event.c
@@ -633,6 +634,7 @@ set(scipheaders
     scip/pub_conflict.h
     scip/pub_cons.h
     scip/pub_cutpool.h
+    scip/pub_decomp.h
     scip/pub_dialog.h
     scip/pub_disp.h
     scip/pub_event.h
@@ -707,6 +709,7 @@ set(scipheaders
     scip/scip_cut.h
     scip/scip_datastructures.h
     scip/scip_debug.h
+    scip/scip_decomp.h
     scip/scip_dialog.h
     scip/scip_disp.h
     scip/scip_event.h
