@@ -242,6 +242,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool                tightenlpfeastol;/**< whether to tighten LP feasibility tolerance during enforcement, if it seems useful */
    SCIP_Bool                propinenforce;   /**< whether to (re)run propagation in enforcement */
    SCIP_Real                weakcutthreshold;/**< threshold for when to regard a cut from an estimator as weak */
+   SCIP_Real                strongcutmaxcoef;/**< "strong" cuts will be scaled to have their maximal coef in [1/strongcutmaxcoef,strongcutmaxcoef] */
+   SCIP_Real                enfoauxviolfactor;/**< an expression will be enforced if the "auxiliary" violation is at least enfoauxviolfactor times the "original" violation */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -5421,8 +5423,7 @@ SCIP_RETCODE enforceExprNlhdlr(
           */
          if( !allowweakcuts )
          {
-            /* TODO parameter or at least define for 1000 */
-            SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, 1000.0, &sepasuccess) );
+            SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, conshdlrdata->strongcutmaxcoef, &sepasuccess) );
 
             if( !sepasuccess )
             {
@@ -5557,6 +5558,8 @@ SCIP_RETCODE enforceExpr(
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
    SCIP_Real auxvarvalue;
    SCIP_Bool underestimate;
    SCIP_Bool overestimate;
@@ -5598,6 +5601,9 @@ SCIP_RETCODE enforceExpr(
    if( !overestimate && !underestimate )
       return SCIP_OKAY;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    /* call the separation and branchscore callbacks of the nonlinear handlers */
    for( e = 0; e < expr->nenfos; ++e )
    {
@@ -5622,10 +5628,8 @@ SCIP_RETCODE enforceExpr(
        * if changing this here, we must also adapt analyzeViolation
        */
 
-      /* if aux-violation is much smaller than orig-violation, then better enforce further down in the expression first
-       * TODO make factor a parameter
-       */
-      if( expr->enfos[e]->auxvalue != SCIP_INVALID && REALABS(expr->enfos[e]->auxvalue - auxvarvalue) < REALABS(expr->evalvalue - auxvarvalue) / 100.0 )
+      /* if aux-violation is much smaller than orig-violation, then better enforce further down in the expression first */
+      if( expr->enfos[e]->auxvalue != SCIP_INVALID && REALABS(expr->enfos[e]->auxvalue - auxvarvalue) < conshdlrdata->enfoauxviolfactor * REALABS(expr->evalvalue - auxvarvalue) )
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate); )
          continue;
@@ -12573,6 +12577,14 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/weakcutthreshold",
          "threshold for when to regard a cut from an estimator as weak (lower values allow more weak cuts)",
          &conshdlrdata->weakcutthreshold, TRUE, 0.5, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/strongcutmaxcoef",
+         "\"strong\" cuts will be scaled to have their maximal coef in [1/strongcutmaxcoef,strongcutmaxcoef]",
+         &conshdlrdata->strongcutmaxcoef, TRUE, 1000.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/enfoauxviolfactor",
+         "an expression will be enforced if the \"auxiliary\" violation is at least this factor times the \"original\" violation",
+         &conshdlrdata->enfoauxviolfactor, TRUE, 0.01, 0.0, 1.0, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
