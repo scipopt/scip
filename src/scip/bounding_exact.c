@@ -3409,7 +3409,7 @@ char chooseBoundingMethod(
    if( dualfarkas )
    {
       /* check if neumair-scher is possible */
-      if( SCIPlpexBSpossible(lpex) && !SCIPisCertificateActive(set->scip) )
+      if( SCIPlpexBSpossible(lpex) )
          dualboundmethod = 'n';
       /* check if project and shift is possible */
       else if( SCIPlpexPSpossible(lpex) )
@@ -3702,6 +3702,41 @@ SCIP_RETCODE boundShift(
 
    /* add y^Tb */
    SCIPintervalAdd(SCIPsetInfinity(set), &minprod, minprod, ytb);
+
+   /* if certificate is active print the corrected dual solution into the lpex data */
+   if( SCIPisCertificateActive(set->scip) )
+   {
+      SCIP_INTERVAL tmp, tmp2;
+      int cand1, cand2;
+      SCIP_Real value;
+      /* set up the exact lpi for the current node */
+      SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
+      SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
+      for( j = 0; j < lpex->nrows; j++ )
+      {
+         if( usefarkas )
+            RatSetReal(lpex->rows[j]->dualfarkas, y[j]);
+         else
+            RatSetReal(lpex->rows[j]->dualsol, y[j]);
+      }
+      for( j = 0; j < lpex->ncols; j++ )
+      {
+         cand1 = atyinter[j].inf;
+         cand2 = atyinter[j].sup;
+         SCIPintervalMulScalar(SCIPsetInfinity(set), &tmp, xinter[j], cand1);
+         SCIPintervalMulScalar(SCIPsetInfinity(set), &tmp2, xinter[j], cand2);
+         if( tmp.inf < tmp2.inf )
+            value = cand1;
+         else
+            value = cand2;
+
+         if( usefarkas )
+            RatSetReal(lpex->cols[j]->farkascoef, value);
+         else
+            RatSetReal(lpex->cols[j]->redcost, value);
+      }
+      RatSetReal(lpex->lpobjval, SCIPintervalGetInf(minprod));
+   }
 
    /* free buffer for storing y in interval arithmetic */
    SCIPsetFreeBufferArray(set, &xinter);
