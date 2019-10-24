@@ -278,11 +278,10 @@ SCIP_RETCODE readDecomposition(
       /* retrieving the Benders' variable labels setting */
       SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/benderslabels", &benderslabels) );
 
-
       SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), nblocks, TRUE, benderslabels) );
 
       SCIP_CALL( SCIPdecompSetConsLabels(decomp, conss, labels, consptr) );
-      SCIPdebugMsg(scip, "Setting labels for %d constraints.\n", consptr);
+      SCIPdebugMsg(scip, "Setting labels for %d constraints.\n", nconss);
 
       scip_conss = SCIPgetConss(scip);
 

@@ -695,7 +695,7 @@ void computeAreaScore(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    )
 {
-   SCIP_Real score = 1.0;
+   SCIP_Real areascore = 1.0;
    int nvars = SCIPgetNVars(scip);
    int nconss = SCIPgetNConss(scip);
 
@@ -710,13 +710,13 @@ void computeAreaScore(
       /* compute diagonal contributions to the area score */
       for( i = 1; i < decomp->nblocks + 1; ++i )
       {
-         score -= (factor * decomp->consssize[i]) * decomp->varssize[i];
+         areascore -= (factor * decomp->consssize[i]) * decomp->varssize[i];
       }
 
-      score -= ((SCIP_Real)nlinkconss * nvars + (SCIP_Real)nconss * nlinkvars - (SCIP_Real)nlinkconss * nlinkvars) * factor;
+      areascore -= ((SCIP_Real)nlinkconss * nvars + (SCIP_Real)nconss * nlinkvars - (SCIP_Real)nlinkconss * nlinkvars) * factor;
    }
 
-   decomp->areascore = score;
+   decomp->areascore = areascore;
 }
 
 /** build the block decomposition graph */
@@ -853,9 +853,8 @@ SCIP_RETCODE buildBlockGraph(
       nsucc = (int) SCIPdigraphGetNSuccessors(blockgraph, n);
       if( nsucc < tempmin )
          tempmin = nsucc;
-      else
-         if( nsucc > tempmax )
-            tempmax = nsucc;
+      else if( nsucc > tempmax )
+         tempmax = nsucc;
    }
 
    decomp->mindegree = tempmin;

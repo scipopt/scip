@@ -28,6 +28,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_var.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_decomp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_var.h"
@@ -67,11 +68,9 @@ SCIP_RETCODE SCIPdecompCreate(
 
    (*decomp)->memsize = memsize;
    (*decomp)->nblocks = nblocks;
-   (*decomp)->score = -1.0;
    (*decomp)->modularity = -1.0;
-   (*decomp)->idxsmallestblock = 0;
-   (*decomp)->idxlargestblock = 0;
-   (*decomp)->haschanges = FALSE;
+   (*decomp)->idxsmallestblock = -1;
+   (*decomp)->idxlargestblock = -1;
    (*decomp)->original = original;
    (*decomp)->benderslabels = benderslabels;
    (*decomp)->areascore = -1.0;
@@ -272,6 +271,26 @@ int SCIPdecompGetNBlocks(
    assert(decomp != NULL);
 
    return decomp->nblocks;
+}
+
+/** gets area score of this decomposition */
+SCIP_Real SCIPdecompGetAreascore(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->areascore;
+}
+
+/** gets modularity of this decomposition */
+SCIP_Real SCIPdecompGetModularity(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->modularity;
 }
 
 /** gets number of edges in the block-decomposition graph of this decomposition */
