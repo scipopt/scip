@@ -206,8 +206,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    SCIP_PRESOLDATA* data;
 
    *result = SCIP_DIDNOTRUN;
-   if( SCIPgetNRuns(scip) != 1 )
-      return SCIP_OKAY;
+   // TODO if( SCIPgetNRuns(scip) != 1 )
+   //    return SCIP_OKAY;
 
    data = SCIPpresolGetData(presol);
 
