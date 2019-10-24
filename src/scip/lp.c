@@ -14385,8 +14385,8 @@ SCIP_RETCODE SCIPlpGetSol(
       if( stillprimalfeasible )
       {
          stillprimalfeasible =
-            (SCIPsetIsInfinity(set, -lpicols[c]->lb) || !SCIPsetIsFeasNegative(set, lpicols[c]->primsol - lpicols[c]->lb))
-            && (SCIPsetIsInfinity(set, lpicols[c]->ub) || !SCIPsetIsFeasPositive(set, lpicols[c]->primsol - lpicols[c]->ub));
+            (SCIPsetIsInfinity(set, -lpicols[c]->lb) || lpicols[c]->primsol - lpicols[c]->lb > -lp->feastol)
+            && (SCIPsetIsInfinity(set, lpicols[c]->ub) || lpicols[c]->primsol - lpicols[c]->ub < lp->feastol);
          primalbound += (lpicols[c]->primsol * lpicols[c]->obj);
       }
       if( lp->lastlpalgo == SCIP_LPALGO_BARRIER )
@@ -14472,8 +14472,8 @@ SCIP_RETCODE SCIPlpGetSol(
       if( stillprimalfeasible )
       {
          stillprimalfeasible =
-            (SCIPsetIsInfinity(set, -lpirows[r]->lhs) || !SCIPsetIsFeasNegative(set, lpirows[r]->activity - lpirows[r]->lhs))
-            && (SCIPsetIsInfinity(set, lpirows[r]->rhs) || !SCIPsetIsFeasPositive(set, lpirows[r]->activity - lpirows[r]->rhs));
+            (SCIPsetIsInfinity(set, -lpirows[r]->lhs) || lpirows[r]->activity - lpirows[r]->lhs > -lp->feastol)
+            && (SCIPsetIsInfinity(set, lpirows[r]->rhs) || lpirows[r]->activity - lpirows[r]->rhs < lp->feastol);
       }
       if( lp->lastlpalgo == SCIP_LPALGO_BARRIER )
       {
@@ -14721,8 +14721,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       }
 
       /* check feasibility */
-      if( (! SCIPsetIsInfinity(set, -row->lhs) && SCIPsetIsFeasNegative(set, act - row->lhs) ) ||
-          (! SCIPsetIsInfinity(set,  row->rhs) && SCIPsetIsFeasPositive(set, act - row->rhs) ) )
+      if( (! SCIPsetIsInfinity(set, -row->lhs) && act - row->lhs < -lp->feastol ) ||
+          (! SCIPsetIsInfinity(set,  row->rhs) && act - row->rhs >  lp->feastol ) )
          break;
 
       activity[r] = act;
@@ -14746,8 +14746,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
              * solution is within SCIP's infinity bounds; otherwise the rayscale below is not well-defined
              */
             *primalfeasible = *primalfeasible
-               && !SCIPsetIsFeasNegative(set, primsol[c] - lpicols[c]->lb)
-               && !SCIPsetIsFeasPositive(set, primsol[c] - lpicols[c]->ub);
+               && primsol[c] - lpicols[c]->lb > -lp->feastol
+               && primsol[c] - lpicols[c]->ub <  lp->feastol;
          }
       }
 
@@ -14838,8 +14838,8 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       /* check for feasibility of the rows */
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
-            && (SCIPsetIsInfinity(set, -lpirows[r]->lhs) || !SCIPsetIsFeasNegative(set, lpirows[r]->activity - lpirows[r]->lhs))
-            && (SCIPsetIsInfinity(set,  lpirows[r]->rhs) || !SCIPsetIsFeasPositive(set, lpirows[r]->activity - lpirows[r]->rhs));
+            && (SCIPsetIsInfinity(set, -lpirows[r]->lhs) || lpirows[r]->activity - lpirows[r]->lhs > -lp->feastol)
+            && (SCIPsetIsInfinity(set,  lpirows[r]->rhs) || lpirows[r]->activity - lpirows[r]->rhs <  lp->feastol);
    }
 
    /* free temporary memory */
