@@ -176,7 +176,6 @@ SCIP_RETCODE initCostOrgPc(
    BMScopyMemoryArray(g->cost_org_pc, cost, nedges);
 
    return SCIP_OKAY;
-
 }
 
 
@@ -1555,9 +1554,10 @@ SCIP_RETCODE graph_pc_2pc(
 
    if( graph->stp_type != STP_MWCSP )
    {
+      graph->stp_type = STP_PCSPG;
+
       SCIP_CALL( initCostOrgPc(scip, graph) );
       shiftNonLeafCosts_2trans(scip, graph);
-      graph->stp_type = STP_PCSPG;
    }
 
    assert((termscount + 1) == graph->terms);
