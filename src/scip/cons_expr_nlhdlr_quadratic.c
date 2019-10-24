@@ -816,7 +816,10 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
     * propagate them, but it does not separate these
     */
    if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
+   {
+      SCIPdebugMsg(scip, "not estimating due to unknown curvature\n");
       return SCIP_OKAY;
+   }
 
    /* if estimating on non-convex side, then do nothing */
    if( ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) ||

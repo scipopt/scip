@@ -5410,6 +5410,10 @@ SCIP_RETCODE enforceExprNlhdlr(
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut does not separate\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
          }
       }
+      else
+      {
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s failed\n", SCIPgetConsExprNlhdlrName(nlhdlr)); )
+      }
 
       /* clean up estimator */
       if( sepasuccess )
@@ -5477,7 +5481,7 @@ SCIP_RETCODE enforceExprNlhdlr(
 
             if( !sepasuccess )
             {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup failed, %d coefs modified\n", rowprep->nmodifiedvars); )
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cleanup failed, %d coefs modified, cutviol %g\n", rowprep->nmodifiedvars, cutviol); )
             }
 
             /* if cleanup left us with a useless cut, then consider branching on variables for which coef were changed */
@@ -5535,7 +5539,7 @@ SCIP_RETCODE enforceExprNlhdlr(
       }
       else
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), (allowweakcuts && !addbranchscores) ? " (!)" : ""); )
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), (allowweakcuts && addbranchscores) ? " (!)" : ""); )
       }
 
       SCIPfreeRowprep(scip, &rowprep);
@@ -5617,7 +5621,7 @@ SCIP_RETCODE enforceExpr(
       ENFOLOG(
          SCIPinfoMessage(scip, enfologfile, "  expr ");
          SCIPprintConsExprExpr(scip, conshdlr, expr, enfologfile);
-         SCIPinfoMessage(scip, enfologfile, " (%p): auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> auxvalue: %.15g\n", (void*)expr, auxvarvalue, expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue);
+         SCIPinfoMessage(scip, enfologfile, " (%p): evalvalue %.15g auxvarvalue %.15g [%.15g,%.15g], nlhdlr <%s> auxvalue: %.15g\n", (void*)expr, expr->evalvalue, auxvarvalue, expr->activity.inf, expr->activity.sup, nlhdlr->name, expr->enfos[e]->auxvalue);
       )
 
       /* TODO if expr is root of constraint (consdata->expr == expr),
@@ -5774,7 +5778,7 @@ SCIP_RETCODE enforceConstraints2(
          int i;
          SCIPinfoMessage(scip, enfologfile, " constraint ");
          SCIP_CALL( SCIPprintCons(scip, conss[c], enfologfile) );
-         SCIPinfoMessage(scip, enfologfile, "\n with point\n");
+         SCIPinfoMessage(scip, enfologfile, "\n with viol %g and point\n", MAX(consdata->lhsviol, consdata->rhsviol));
          for( i = 0; i < consdata->nvarexprs; ++i )
          {
             SCIP_VAR* var;
@@ -6250,6 +6254,8 @@ SCIP_RETCODE enforceConstraints(
       /* try whether tighten the LP feasibility tolerance could help
        * maybe it is just some cut that hasn't been taken into account sufficiently
        * in the next enforcement round, we would then also allow even weaker cuts, as we want a minimal cut violation of LP's feastol
+       * unfortunately, we do not know the current LP solution primal infeasibility, so sometimes this just repeats without effect
+       * until the LP feastol reaches epsilon
        */
       SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxauxviol / 2.0, SCIPgetLPFeastol(scip) / 10.0)));
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " reduced LP feasibility tolerance to %g and hope\n", SCIPgetLPFeastol(scip)); )
@@ -6257,6 +6263,22 @@ SCIP_RETCODE enforceConstraints(
 
       *result = SCIP_SOLVELP;
       return SCIP_OKAY;
+   }
+
+   /* try to propagate, if not tried above TODO(?) allow to disable this as well */
+   if( !conshdlrdata->propinenforce )
+   {
+      SCIP_RESULT propresult;
+      int nchgbds = 0;
+      int ndelconss = 0;
+
+      SCIP_CALL( propConss(scip, conshdlr, conss, nconss, TRUE, &propresult, &nchgbds, &ndelconss) );
+
+      if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
+      {
+         *result = propresult;
+         return SCIP_OKAY;
+      }
    }
 
    /* could not find branching candidates even when looking at minimal violated (>eps) expressions
@@ -6275,12 +6297,17 @@ SCIP_RETCODE enforceConstraints(
    }
 
    /* if everything is fixed in violated constraints, then let's cut off the node
-    * either bound tightening failed to identify a possible cutoff due to tolerances
-    * or tightenlpfeastol=FALSE and the LP solution that we try to enforce here is not within bounds (see st_e40)
+    * - bound tightening with all vars fixed should prove cutoff, but interval arithmetic overestimates and
+    *   so the result may not be conclusive (when constraint violations are small)
+    * - if tightenlpfeastol=FALSE, then the LP solution that we try to enforce here may just not be within bounds sufficiently (see st_e40)
+    * - but if the LP solution is really within bounds and since variables are fixed, cutting off the node is
+    *   actually not "desperate", but a pretty obvious thing to do
     */
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, " enforcement with max. violation %g failed; cutting off node\n", maxviol); )
    *result = SCIP_CUTOFF;
-   ++conshdlrdata->ndesperatecutoff;
+   /* it's only "desperate" if the LP solution does not coincide with variable fixings (should we use something tighter than epsilon here?) */
+   if( !SCIPisZero(scip, maxvarboundviol) )
+      ++conshdlrdata->ndesperatecutoff;
 
    return SCIP_OKAY;
 }
@@ -6788,7 +6815,7 @@ void printConshdlrStatistics(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "ConsExpr Enforce   : %10s %10s %10s %10s %10s %10s\n", "WeakSepa", "TightenLP", "DespBranch", "DespCutoff", "DespTghtLP", "ForceLP");
+   SCIPinfoMessage(scip, file, "ConsExpr Enforce   : %10s %10s %10s %10s %10s %10s\n", "WeakSepa", "TightenLP", "DespTghtLP", "DespBranch", "DespCutoff", "ForceLP");
    SCIPinfoMessage(scip, file, "  %-18s", "");
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nweaksepa);
    SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ntightenlp);
