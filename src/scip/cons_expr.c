@@ -8032,10 +8032,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 
       consdata = SCIPconsGetData(conss[c]);
       if( consdata->lhsviol > SCIPfeastol(scip) || consdata->rhsviol > SCIPfeastol(scip) )
-      {
          *result = SCIP_INFEASIBLE;
-         break;
-      }
    }
 
    if( *result == SCIP_FEASIBLE )
