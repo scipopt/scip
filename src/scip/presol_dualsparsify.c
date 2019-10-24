@@ -1012,10 +1012,7 @@ SCIP_RETCODE cancelCol(
                ++b;
 
                if( ++ntotfillin > maxfillin )
-               {
-                  abortpair = TRUE;
                   break;
-               }
             }
 
             if( ntotfillin > maxfillin || ntotfillin >= ncancel )
@@ -1026,8 +1023,6 @@ SCIP_RETCODE cancelCol(
             /* if a linear constraint is needed to keep the validity, we require a large nonzero cancellation */
             if( isaddedcons && (ncancel - ntotfillin < presoldata->mineliminatednonzeros) )
                continue;
-
-
 
             if( cancelrate < mincancelrate )
                continue;
