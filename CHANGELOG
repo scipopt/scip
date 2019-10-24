@@ -91,6 +91,7 @@ Features
   6) integralcands (optional): consider integral candidates for branching,
      i.e., get candidates from SCIPgetPseudoBranchCands() instead of SCIPgetLPBranchCands().
 
+- If a reference value (misc/referencevalue) is given, the primal-reference and reference-dual integrals are calculated automatically and printed within the SCIP statistics.
 
 Performance improvements
 ------------------------
