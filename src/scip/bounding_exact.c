@@ -385,7 +385,7 @@ SCIP_RETCODE psChooseS(
 
    nextendedrows = psdata->nextendedrows;
 
-   /* build includedrows vector based on psdualcolselection, this determines the matrix D */
+   /* build includedrows vector based on psfpdualcolwiseselection, this determines the matrix D */
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &psdata->includedrows, nextendedrows) );
    for( i = 0; i < nextendedrows; i++ )
       psdata->includedrows[i] = 0;
@@ -470,7 +470,7 @@ SCIP_RETCODE psChooseS(
    }
    else
    {
-      SCIPerrorMessage("Invald value for parameter psdualcolselection \n");
+      SCIPerrorMessage("Invald value for parameter psfpdualcolwiseselection \n");
    }
    return SCIP_OKAY;
 }
@@ -2458,7 +2458,7 @@ SCIP_RETCODE getPSdualTwo(
    /* isfeas is equal to one only if approximate dual solution is already feasible for the dual */
    if( !isfeas )
    {
-      /* compute [z] with Dz=r (D depends on psdata->psdualcolselection) */
+      /* compute [z] with Dz=r (D depends on psdata->psfpdualcolwiseselection) */
       SCIP_CALL( SCIPsetAllocBufferArray(set, &violationgmp, ncols) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &correctiongmp, nextendedrows) );
 
@@ -3032,7 +3032,7 @@ SCIP_RETCODE getPSdual(
    /* isfeas is equal to one only if approximate dual solution is already feasible for the dual */
    if( !isfeas )
    {
-      /* compute [z] with Dz=r (D depends on psdata->psdualcolselection) */
+      /* compute [z] with Dz=r (D depends on psdata->psfpdualcolwiseselection) */
       SCIP_CALL( SCIPsetAllocBufferArray(set, &violationgmp, ncols) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &correctiongmp, nextendedrows) );
       RatSetGMPArray(violationgmp, violation, ncols);
@@ -3462,15 +3462,12 @@ char chooseBoundingMethod(
    return dualboundmethod;
 }
 
-/** calculates y*b + min{(c - y*A)*x | lb <= x <= ub} for given vectors y and c;
- *  the vector b is defined with b[i] = lhs[i] if y[i] >= 0, b[i] = rhs[i] if y[i] < 0
- *  Calculating this value in interval arithmetics gives a proved lower LP bound for the following reason (assuming,
- *  we have only left hand sides):
- *           min{cx       |  b <=  Ax, lb <= x <= ub}
- *   >=      min{cx       | yb <= yAx, lb <= x <= ub}   (restriction in minimum is relaxed)
- *   == yb + min{cx - yb  | yb <= yAx, lb <= x <= ub}   (added yb - yb == 0)
- *   >= yb + min{cx - yAx | yb <= yAx, lb <= x <= ub}   (because yAx >= yb inside minimum)
- *   >= yb + min{cx - yAx |            lb <= x <= ub}   (restriction in minimum is relaxed)
+/** calculates a valid dual bound/farkas proof if all variables have lower and upper bounds 
+ * Let (y,z) be the dual variables, y corresponding to primal rows, z to variable bounds. 
+ * An exactly feasible dual solution is computed with y' = max{0,y}, z'=max{0,(c-A^Ty')}.
+ * The bound is then computed as b^Ty'+s^Tz', with b being the lhs/rhs and s the lb/ub depending on the
+ * sign of the dual value.
+ * To avoid rational computations everything is done in interval arithmetic.
  */
 static
 SCIP_RETCODE boundShift(
@@ -3488,18 +3485,18 @@ SCIP_RETCODE boundShift(
    )
 {
    SCIP_ROUNDMODE roundmode;
-   SCIP_INTERVAL* rhsinter;
-   SCIP_INTERVAL* constantinter;
-   SCIP_INTERVAL* xinter;
-   SCIP_INTERVAL* ainter;
-   SCIP_INTERVAL* atyinter;
-   SCIP_INTERVAL* cinter;
-   SCIP_INTERVAL ytb;
-   SCIP_INTERVAL minprod;
+   SCIP_INTERVAL* rhslhsrow; // the rhs or lhs of row depending on sign of dual solution
+   SCIP_INTERVAL* ublbcol; // the ub or lb of col depending on sign of dual solution
+   SCIP_INTERVAL* constantinter; 
+   SCIP_INTERVAL* lpcolvals; // values in a column of the constraint matrix
+   SCIP_INTERVAL* productcoldualval; // scalar product of lp column with dual solution vector
+   SCIP_INTERVAL* obj; // objective (or 0 in farkas proof)
+   SCIP_INTERVAL productsidedualval; //scalar product of sides with dual solution vector
+   SCIP_INTERVAL safeboundinterval;
    SCIP_ROW* row;
    SCIP_COL* col;
-   SCIP_Real* y;
-   SCIP_Real* ycol;
+   SCIP_Real* fpdual;
+   SCIP_Real* fpdualcolwise;
    SCIP_Real c;
    int i;
    int j;
@@ -3515,15 +3512,15 @@ SCIP_RETCODE boundShift(
    else
       SCIPclockStart(stat->provedfeasbstime, set);
 
-   /* allocate temporary memory */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &y, lp->nrows) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &rhsinter, lp->nrows) );
+   /* allocate temporarfpdual memory */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &fpdual, lp->nrows) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rhslhsrow, lp->nrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &constantinter, lp->nrows) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &ycol, lp->nrows) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &ainter, lp->nrows) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &atyinter, lp->ncols) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &cinter, lp->ncols) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &xinter, lp->ncols) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &fpdualcolwise, lp->nrows) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &lpcolvals, lp->nrows) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &productcoldualval, lp->ncols) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &obj, lp->ncols) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &ublbcol, lp->ncols) );
 
    SCIPdebugMessage("calling proved bound for %s LP\n", usefarkas ? "infeasible" : "feasible");
 
@@ -3531,58 +3528,58 @@ SCIP_RETCODE boundShift(
    lp->hasprovedbound = FALSE;
 
    /* calculate y^Tb */
-   SCIPintervalSet(&ytb, 0.0);
-   SCIPdebugMessage("ytb intervall computation with vectors:\n");
+   SCIPintervalSet(&productsidedualval, 0.0);
+   SCIPdebugMessage("productsidedualval intervall computation with vectors:\n");
 
-   /* create y, rhs and constant vector in interval arithmetic */
+   /* create dual vector, sides and constant vector in interval arithmetic */
    for( j = 0; j < lp->nrows; ++j )
    {
       row = lp->rows[j];
       assert(row != NULL);
 
-      /* create y vector in interval arithmetic, setting near zeros to zero */
-      y[j] = (usefarkas ? row->dualfarkas : row->dualsol);
+      /* create dual vector in interval arithmetic, setting near zeros to zero */
+      fpdual[j] = (usefarkas ? row->dualfarkas : row->dualsol);
 
-      if( SCIPlpiIsInfinity(lp->lpi, y[j]) )
-	      y[j] = SCIPsetInfinity(set);
+      if( SCIPlpiIsInfinity(lp->lpi, fpdual[j]) )
+	      fpdual[j] = SCIPsetInfinity(set);
 
-      if( SCIPlpiIsInfinity(lp->lpi, -y[j]) )
-	      y[j] = -SCIPsetInfinity(set);
+      if( SCIPlpiIsInfinity(lp->lpi, -fpdual[j]) )
+	      fpdual[j] = -SCIPsetInfinity(set);
 
       /** @todo exiptodo: dual bounding improvement
        *  - should we also set nonzero values of y to zero if corresponding lhs/rhs is not finite (to improve dual bound)?
        *  - do such situations come up?
        */
-      /* create rhs and constant vectors in interval arithmetic */
-      if( SCIPsetIsFeasPositive(set, y[j]) )
+      /* create sides and constant vectors in interval arithmetic */
+      if( SCIPsetIsFeasPositive(set, fpdual[j]) )
       {
-         SCIPintervalSet(&rhsinter[j], row->lhs);
+         SCIPintervalSet(&rhslhsrow[j], row->lhs);
          SCIPintervalSet(&constantinter[j], -1.0 * row->constant);
       }
-      else if( SCIPsetIsFeasNegative(set, y[j]) )
+      else if( SCIPsetIsFeasNegative(set, fpdual[j]) )
       {
-         SCIPintervalSet(&rhsinter[j], row->rhs);
+         SCIPintervalSet(&rhslhsrow[j], row->rhs);
          SCIPintervalSet(&constantinter[j], -1.0 * row->constant);
       }
       else
       {
-         y[j] = 0.0;
-         SCIPintervalSet(&rhsinter[j], 0.0);
+         fpdual[j] = 0.0;
+         SCIPintervalSet(&rhslhsrow[j], 0.0);
          SCIPintervalSet(&constantinter[j], 0.0);
       }
 
-      SCIPdebugMessage("   j=%d: b=[%g,%g] (lhs=%g, rhs=%g, const=%g, y=%g)\n", j, rhsinter[j].inf, rhsinter[j].sup, row->lhs,
-            row->rhs, row->constant, y[j]);
+      SCIPdebugMessage("   j=%d: b=[%g,%g] (lhs=%g, rhs=%g, const=%g, fpdual=%g)\n", j, rhslhsrow[j].inf, rhslhsrow[j].sup, row->lhs,
+            row->rhs, row->constant, fpdual[j]);
    }
-   /* substract constant from rhs in interval arithmetic and calculate y^Tb */
-   SCIPintervalAddVectors(SCIPsetInfinity(set), rhsinter, lp->nrows, rhsinter, constantinter);
-   SCIPintervalScalprodScalars(SCIPsetInfinity(set), &ytb, lp->nrows, rhsinter, y);
+   /* substract constant from sides in interval arithmetic and calculate fpdual * side */
+   SCIPintervalAddVectors(SCIPsetInfinity(set), rhslhsrow, lp->nrows, rhslhsrow, constantinter);
+   SCIPintervalScalprodScalars(SCIPsetInfinity(set), &productsidedualval, lp->nrows, rhslhsrow, fpdual);
 
-   SCIPdebugMessage("   resulting ytb=[%g,%g]\n", SCIPintervalGetInf(ytb), SCIPintervalGetSup(ytb));
+   SCIPdebugMessage("   resulting scalar product=[%g,%g]\n", SCIPintervalGetInf(productsidedualval), SCIPintervalGetSup(productsidedualval));
 
-   /* calculate min{(c^T - y^TA)x} */
+   /* calculate min{(obj - dual^TMatrix)redcost} */
 
-   /* compute infimums of -A^Ty */
+   /* compute infimums of -dual^TMatrix */
    roundmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeDownwards();
    for( j = 0; j < lp->ncols; ++j )
@@ -3591,7 +3588,7 @@ SCIP_RETCODE boundShift(
       assert(col != NULL);
       assert(col->nunlinked == 0);
 
-      /* create -a.j vector in interval arithmetic and corresponding y vector and compute infimum of vector -a.j^Ty */
+      /* create -Matrix.j vector in interval arithmetic and corresponding dual vector and compute infimum of vector -Matrix.j^Tdual */
       for( i = 0; i < col->nlprows; ++i )
       {
          SCIP_INTERVAL val;
@@ -3606,11 +3603,11 @@ SCIP_RETCODE boundShift(
          val = rowex->valsinterval[col->linkpos[i]];
          assert(val.inf <= col->vals[i] && col->vals[i] <= val.sup);
 
-         SCIPintervalSetBounds(&ainter[i], -val.sup, -val.inf);
-         ycol[i] = y[col->rows[i]->lppos];
+         SCIPintervalSetBounds(&lpcolvals[i], -val.sup, -val.inf);
+         fpdualcolwise[i] = fpdual[col->rows[i]->lppos];
       }
-      atyinter[j].inf = 0.0;
-      SCIPintervalScalprodScalarsInf(SCIPsetInfinity(set), &atyinter[j], col->nlprows, ainter, ycol);
+      productcoldualval[j].inf = 0.0;
+      SCIPintervalScalprodScalarsInf(SCIPsetInfinity(set), &productcoldualval[j], col->nlprows, lpcolvals, fpdualcolwise);
 
 #ifndef NDEBUG
       for( i = col->nlprows; i < col->len; ++i )
@@ -3624,7 +3621,7 @@ SCIP_RETCODE boundShift(
 #endif
    }
 
-   /* compute supremums of -A^Ty */
+   /* compute supremums of -dual^TMatrix */
    SCIPintervalSetRoundingModeUpwards();
    for( j = 0; j < lp->ncols; ++j )
    {
@@ -3632,7 +3629,7 @@ SCIP_RETCODE boundShift(
       assert(col != NULL);
       assert(col->nunlinked == 0);
 
-      /* create -a.j vector in interval arithmetic and corresponding y vector and compute supremums of vector -a.j^Ty */
+      /* create -Matrix.j vector in interval arithmetic and corresponding dual vector and compute supremums of vector -a.j^Ty */
       for( i = 0; i < col->nlprows; ++i )
       {
          SCIP_INTERVAL val;
@@ -3648,11 +3645,11 @@ SCIP_RETCODE boundShift(
 
          assert(val.inf <= col->vals[i] && col->vals[i] <= val.sup);
 
-         SCIPintervalSetBounds(&ainter[i], -val.sup, -val.inf);
-         ycol[i] = y[col->rows[i]->lppos];
+         SCIPintervalSetBounds(&lpcolvals[i], -val.sup, -val.inf);
+         fpdualcolwise[i] = fpdual[col->rows[i]->lppos];
       }
-      atyinter[j].sup = 0.0;
-      SCIPintervalScalprodScalarsSup(SCIPsetInfinity(set), &atyinter[j], col->nlprows, ainter, ycol);
+      productcoldualval[j].sup = 0.0;
+      SCIPintervalScalprodScalarsSup(SCIPsetInfinity(set), &productcoldualval[j], col->nlprows, lpcolvals, fpdualcolwise);
 
 #ifndef NDEBUG
       for( i = col->nlprows; i < col->len; ++i )
@@ -3667,7 +3664,7 @@ SCIP_RETCODE boundShift(
    }
    SCIPintervalSetRoundingMode(roundmode);
 
-   /* create c vector and x vector in interval arithmetic and compute min{(c^T - y^TA)x} */
+   /* create objective vector and lb/ub vector in interval arithmetic and compute min{(obj^T - dual^TMatrix)lb/ub} */
    for( j = 0; j < lp->ncols; ++j )
    {
       //assert(!SCIPsetIsInfinity(set, -SCIPcolGetLb(col)));
@@ -3677,78 +3674,33 @@ SCIP_RETCODE boundShift(
       assert(col->nunlinked == 0);
 
       if( usefarkas )
-         SCIPintervalSet(&cinter[j], 0);
+         SCIPintervalSet(&obj[j], 0);
       else
       {
          if( RatIsFpRepresentable(SCIPvarGetObjExact(SCIPcolGetVar(col))) )
-            SCIPintervalSet(&cinter[j], col->obj);
+            SCIPintervalSet(&obj[j], col->obj);
          else
          {
-            SCIPintervalSetRational(&cinter[j], SCIPvarGetObjExact(SCIPcolGetVar(col)));
+            SCIPintervalSetRational(&obj[j], SCIPvarGetObjExact(SCIPcolGetVar(col)));
          }
       }
       /** @todo exip: get exact column bounds ? */
-      SCIPintervalSetBounds(&xinter[j], SCIPcolGetLb(col), SCIPcolGetUb(col));
+      SCIPintervalSetBounds(&ublbcol[j], SCIPcolGetLb(col), SCIPcolGetUb(col));
       if( (SCIPsetIsInfinity(set, -SCIPcolGetLb(col)) || SCIPsetIsInfinity(set, SCIPcolGetUb(col))) )
       {
          SCIPmessagePrintWarning(messagehdlr, "warning: trying bound shift with unbounded column variable. Column %d, lb: %e, ub %e \n",
                SCIPcolGetIndex(col), SCIPcolGetLb(col) ,SCIPcolGetUb(col) );
          SCIPmessagePrintWarning(messagehdlr, "Multiplied with interval: min %e,  max %e \n",
-               atyinter[j].inf + cinter[j].inf, atyinter[j].sup + cinter[j].sup);
+               productcoldualval[j].inf + obj[j].inf, productcoldualval[j].sup + obj[j].sup);
       }
    }
-   SCIPintervalAddVectors(SCIPsetInfinity(set), atyinter, lp->ncols, atyinter, cinter);
-   SCIPintervalScalprod(SCIPsetInfinity(set), &minprod, lp->ncols, atyinter, xinter);
+   SCIPintervalAddVectors(SCIPsetInfinity(set), productcoldualval, lp->ncols, productcoldualval, obj);
+   SCIPintervalScalprod(SCIPsetInfinity(set), &safeboundinterval, lp->ncols, productcoldualval, ublbcol);
 
-   /* add y^Tb */
-   SCIPintervalAdd(SCIPsetInfinity(set), &minprod, minprod, ytb);
+   /* add dualsol * rhs/lhs (or farkas * rhs/lhs) */
+   SCIPintervalAdd(SCIPsetInfinity(set), &safeboundinterval, safeboundinterval, productsidedualval);
 
-   /* if certificate is active print the corrected dual solution into the lpex data */
-   if( SCIPisCertificateActive(set->scip) )
-   {
-      SCIP_INTERVAL tmp, tmp2;
-      int cand1, cand2;
-      SCIP_Real value;
-      /* set up the exact lpi for the current node */
-      SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
-      SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
-      for( j = 0; j < lpex->nrows; j++ )
-      {
-         if( usefarkas )
-            RatSetReal(lpex->rows[j]->dualfarkas, y[j]);
-         else
-            RatSetReal(lpex->rows[j]->dualsol, y[j]);
-      }
-      for( j = 0; j < lpex->ncols; j++ )
-      {
-         cand1 = atyinter[j].inf;
-         cand2 = atyinter[j].sup;
-         SCIPintervalMulScalar(SCIPsetInfinity(set), &tmp, xinter[j], cand1);
-         SCIPintervalMulScalar(SCIPsetInfinity(set), &tmp2, xinter[j], cand2);
-         if( tmp.inf < tmp2.inf )
-            value = cand1;
-         else
-            value = cand2;
-
-         if( usefarkas )
-            RatSetReal(lpex->cols[j]->farkascoef, value);
-         else
-            RatSetReal(lpex->cols[j]->redcost, value);
-      }
-      RatSetReal(lpex->lpobjval, SCIPintervalGetInf(minprod));
-   }
-
-   /* free buffer for storing y in interval arithmetic */
-   SCIPsetFreeBufferArray(set, &xinter);
-   SCIPsetFreeBufferArray(set, &cinter);
-   SCIPsetFreeBufferArray(set, &atyinter);
-   SCIPsetFreeBufferArray(set, &ainter);
-   SCIPsetFreeBufferArray(set, &ycol);
-   SCIPsetFreeBufferArray(set, &constantinter);
-   SCIPsetFreeBufferArray(set, &rhsinter);
-   SCIPsetFreeBufferArray(set, &y);
-
-   *safebound = SCIPintervalGetInf(minprod);
+   *safebound = SCIPintervalGetInf(safeboundinterval);
    SCIPdebugMessage("safebound computed: %e, previous fp-bound: %e.17, difference %e.17 \n", *safebound, lp->lpobjval, *safebound - lp->lpobjval);
 
    /* stop timing and update number of calls and fails, and proved bound status */
@@ -3780,6 +3732,51 @@ SCIP_RETCODE boundShift(
          assert(!lp->hasprovedbound);
       }
    }
+
+   /* if certificate is active, save the corrected dual solution into the lpex data */
+   if( SCIPisCertificateActive(set->scip) && lp->hasprovedbound )
+   {
+      SCIP_INTERVAL tmp, tmp2;
+      int cand1, cand2;
+      SCIP_Real value;
+      /* set up the exact lpi for the current node */
+      SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
+      SCIP_CALL( SCIPlpexFlush(lp->lpex, blkmem, set, eventqueue) );
+      for( j = 0; j < lpex->nrows; j++ )
+      {
+         if( usefarkas )
+            RatSetReal(lpex->rows[j]->dualfarkas, fpdual[j]);
+         else
+            RatSetReal(lpex->rows[j]->dualsol, fpdual[j]);
+      }
+      for( j = 0; j < lpex->ncols; j++ )
+      {
+         cand1 = productcoldualval[j].inf;
+         cand2 = productcoldualval[j].sup;
+         SCIPintervalMulScalar(SCIPsetInfinity(set), &tmp, ublbcol[j], cand1);
+         SCIPintervalMulScalar(SCIPsetInfinity(set), &tmp2, ublbcol[j], cand2);
+         if( tmp.inf < tmp2.inf )
+            value = cand1;
+         else
+            value = cand2;
+
+         if( usefarkas )
+            RatSetReal(lpex->cols[j]->farkascoef, value);
+         else
+            RatSetReal(lpex->cols[j]->redcost, value);
+      }
+      RatSetReal(lpex->lpobjval, SCIPintervalGetInf(safeboundinterval));
+   }
+
+   /* free buffer for storing y in interval arithmetic */
+   SCIPsetFreeBufferArray(set, &ublbcol);
+   SCIPsetFreeBufferArray(set, &obj);
+   SCIPsetFreeBufferArray(set, &productcoldualval);
+   SCIPsetFreeBufferArray(set, &lpcolvals);
+   SCIPsetFreeBufferArray(set, &fpdualcolwise);
+   SCIPsetFreeBufferArray(set, &constantinter);
+   SCIPsetFreeBufferArray(set, &rhslhsrow);
+   SCIPsetFreeBufferArray(set, &fpdual);
 
    return SCIP_OKAY;
 }
