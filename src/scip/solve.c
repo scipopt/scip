@@ -2874,7 +2874,14 @@ SCIP_RETCODE applyBounding(
       /* update lower bound w.r.t. the pseudo solution */
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set, transprob);
 
-      SCIP_CALL( SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex, focusnode, set, transprob, pseudoobjval) );
+      /** @todo exip: currently if you print the pseudosol for the root node, it will mess up indexing in the
+       * certificate and we assume that the lp gets solved anyways so we do not print the pseudoobj bound in the 
+       * root node */
+      if( pseudoobjval > SCIPnodeGetLowerbound(focusnode) && (focusnode->parent !=  NULL) )
+      {
+         SCIP_CALL( SCIPcertificatePrintDualPseudoObj(stat->certificate, lp->lpex, focusnode, set,
+            transprob, pseudoobjval) );
+      }
 
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, pseudoobjval);
       SCIPsetDebugMsg(set, " -> lower bound: %g [%g] (pseudoobj: %g [%g]), cutoff bound: %g [%g]\n",
@@ -2895,7 +2902,8 @@ SCIP_RETCODE applyBounding(
             SCIP_CALL( RatCreateBuffer(set->buffer, &bound) );
             SCIPlpexGetObjval(lp->lpex, set, transprob, bound);
 
-            if( !RatIsGE(bound, primal->cutoffboundex) && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
+            if( !RatIsGE(bound, primal->cutoffboundex) &&
+               SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
             {
                RatFreeBuffer(set->buffer, &bound);
                return SCIP_OKAY;

@@ -3500,6 +3500,7 @@ SCIP_RETCODE SCIPlpexCreate(
    (*lp)->colssize = 0;
    (*lp)->soldirectionsize = 0;
    (*lp)->ncols = 0;
+   (*lp)->nloosevars = 0;
    //(*lp)->lazycolssize = 0;
    //(*lp)->nlazycols = 0;
    (*lp)->rowssize = 0;
