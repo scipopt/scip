@@ -5245,7 +5245,7 @@ SCIP_RETCODE SCIPsolveCIP(
    /* update the primal-dual integral if node or time limits were hit or an interruption signal was called */
    if( SCIPsolveIsStopped(set, stat, TRUE) )
    {
-      SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), -SCIPsetInfinity(set));
+      SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), -SCIPsetInfinity(set));
    }
 
    assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
