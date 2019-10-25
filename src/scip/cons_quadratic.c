@@ -17235,11 +17235,17 @@ SCIP_RETCODE SCIPcleanupRowprep2(
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-   /* scale up or down to improve numerics, updates myviol (reliability doesn't change) */
-   if( rowprep->nvars > 0 && (REALABS(rowprep->coefs[0]) < 1.0/maxcoefbound || REALABS(rowprep->coefs[0]) > maxcoefbound) )
+   /* scale up or down to improve numerics
+    * if maximal coef is below 1.0/maxcoefbound, scale up to reach ~ 1.0/maxcoefbound
+    * if maximal coef is above maxcoefbound, scale down to ~ maxcoefbound
+    */
+   if( rowprep->nvars > 0 && !SCIPisInfinity(scip, maxcoefbound) )
    {
-      SCIP_Real expon;
-      expon = SCIPscaleRowprep(rowprep, 1.0 / REALABS(rowprep->coefs[0]));
+      SCIP_Real expon = 0.0;
+      if( REALABS(rowprep->coefs[0]) < 1.0/maxcoefbound )
+         expon = SCIPscaleRowprep(rowprep, (1.0/maxcoefbound) / REALABS(rowprep->coefs[0]));
+      else if( REALABS(rowprep->coefs[0]) > maxcoefbound )
+         expon = SCIPscaleRowprep(rowprep, maxcoefbound / REALABS(rowprep->coefs[0]));
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "applied scaling by %g: ", pow(2.0, expon));
