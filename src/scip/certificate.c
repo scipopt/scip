@@ -178,12 +178,13 @@ SCIP_Longint printBoundAssumption(
       RatSet(insertbound->boundval, boundval);
 
       /* ensure size and insert boundval in array to be able to free it at the end */
-      if( SCIPhashtableGetNElements(certificate->varboundtable) >= certificate->boundvalsize )
+      if( certificate->nboundvals >= certificate->boundvalsize )
       {
          BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize, certificate->boundvalsize + 100);
          certificate->boundvalsize += 100;
       }
-      certificate->boundvals[SCIPhashtableGetNElements(certificate->varboundtable)] = insertbound;
+      certificate->boundvals[certificate->nboundvals] = insertbound;
+      certificate->nboundvals++;
 
       SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, insertbound) );
 
@@ -300,6 +301,7 @@ SCIP_RETCODE SCIPcertificateCreate(
    (*certificate)->rowdatahash = NULL;
    (*certificate)->boundvals = NULL;
    (*certificate)->boundvalsize = 0;
+   (*certificate)->nboundvals = 0;
    (*certificate)->nodedatahash = NULL;
    (*certificate)->rootbound = NULL;
    (*certificate)->derindex_root = -1;
@@ -573,7 +575,7 @@ void SCIPcertificateExit(
       BMSfreeMemoryArray(&certificate->derivationfilename);
       if( certificate->varboundtable != NULL )
       {
-         for( i = 0; i < SCIPhashtableGetNElements(certificate->varboundtable); i++ )
+         for( i = 0; i < certificate->nboundvals; i++ )
          {
             RatFreeBlock(certificate->blkmem, &certificate->boundvals[i]->boundval);
             BMSfreeBlockMemory(certificate->blkmem, &certificate->boundvals[i]);
@@ -1030,6 +1032,7 @@ void SCIPcertificatePrintCons(
    certificate->conscounter++;
 }
 
+/** @todo exip: refactor this so duplicates and redundant bounds do not get printed */
 /** prints a variable bound to the problem section of the certificate file and returns line index */
 SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
@@ -1054,30 +1057,34 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIPdebugMessage("Printing bound at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
       certificate->indexcounter, varindex, (isupper ? "<=" : ">="), RatApproxReal(boundval));
 
-   /* bounds in the problem should be created only once */
+   /* bounds in the problem should be created only once, but row singletons get handled as bounds, as well */
    image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
-   if( image == NULL )
+
+   if( image != NULL )
+   {
+      SCIPdebugMessage("Duplicate bound in certificate hashtable. Ignoring \n");
+      assert(RatIsEqual(boundval, ((SCIP_CERTIFICATEBOUND*) image)->boundval));
+
+      //return SCIP_OKAY;
+   }
+   /* add the new bound */
    {
       SCIP_CERTIFICATEBOUND* insertbound;
 
       SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
       SCIP_CALL( RatCopy(certificate->blkmem, &insertbound->boundval, boundval) );
       /* ensure size and insert boundval in array to be able to free it at the end */
-      if( SCIPhashtableGetNElements(certificate->varboundtable) >= certificate->boundvalsize )
+      if( certificate->nboundvals >= certificate->boundvalsize )
       {
          BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize, certificate->boundvalsize + 100);
          certificate->boundvalsize += 100;
       }
-      certificate->boundvals[SCIPhashtableGetNElements(certificate->varboundtable)] = insertbound;
+      certificate->boundvals[certificate->nboundvals] = insertbound;
+      certificate->nboundvals++;
 
       SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, (void*)insertbound) );
       certificate->indexcounter++;
       certificate->conscounter++;
-   }
-   else
-   {
-      SCIPerrorMessage("Duplicate bound in certificate hashtable.\n");
-      return SCIP_ERROR;
    }
 
    if( boundname == NULL )
@@ -1139,12 +1146,13 @@ SCIP_Longint SCIPcertificatePrintBoundAssumption(
       SCIP_CALL( RatCopy(certificate->blkmem, &insertbound->boundval, boundval) );
       
       /* ensure size and insert boundval in array to be able to free it at the end */
-      if( SCIPhashtableGetNElements(certificate->varboundtable) >= certificate->boundvalsize )
+      if( certificate->nboundvals >= certificate->boundvalsize )
       {
          BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize, certificate->boundvalsize + 100);
          certificate->boundvalsize += 100;
       }
-      certificate->boundvals[SCIPhashtableGetNElements(certificate->varboundtable)] = insertbound;
+      certificate->boundvals[certificate->nboundvals] = insertbound;
+      certificate->nboundvals++;
       
       SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, (void*)insertbound) );
 

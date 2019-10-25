@@ -64,7 +64,8 @@ struct SCIP_Certificate
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler to use */
    SCIP_HASHTABLE*       varboundtable;      /**< hash table for mapping variable bounds to line index in file */
    SCIP_CERTIFICATEBOUND** boundvals;        /**< array to store rationals in varboundtable to avoid memory leak */
-   int                   boundvalsize;       /**< size of boundvals array */
+   SCIP_Longint          boundvalsize;       /**< size of boundvals array */
+   SCIP_Longint          nboundvals;         /**< number of elements in boundvals array */
    SCIP_HASHMAP*         nodedatahash;       /**< Hashmap storing pointer to data of each node */
    SCIP_CERTIFICATEBOUND* workbound;         /**< temporary memory for hashing bound information */
    BMS_BLKMEM*           blkmem;             /**< SCIP block memory */
