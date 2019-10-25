@@ -3742,7 +3742,7 @@ SCIP_RETCODE boundShift(
    if( SCIPisCertificateActive(set->scip) && lp->hasprovedbound )
    {
       SCIP_INTERVAL tmp, tmp2;
-      int cand1, cand2;
+      SCIP_Real cand1, cand2;
       SCIP_Real value;
       /* set up the exact lpi for the current node */
       SCIP_CALL( SCIPsepastoreexSyncLPs(set->scip->sepastoreex, blkmem, set, stat, lpex, eventqueue, eventfilter) );
@@ -3760,7 +3760,7 @@ SCIP_RETCODE boundShift(
          cand2 = productcoldualval[j].sup;
          SCIPintervalMulScalar(SCIPsetInfinity(set), &tmp, ublbcol[j], cand1);
          SCIPintervalMulScalar(SCIPsetInfinity(set), &tmp2, ublbcol[j], cand2);
-         if( tmp.inf < tmp2.inf )
+         if( ((tmp.inf) < (tmp2.inf)) == RatIsPositive(lpex->cols[j]->obj))
             value = cand1;
          else
             value = cand2;

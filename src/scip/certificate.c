@@ -1290,7 +1290,9 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
       else
          val = col->redcost;
 
-      /* this should not need to be recomputed */
+      /* this should not need to be recomputed. However, since vipr does only detect
+         that a constraint cTx>=b dominates some other constraint c'Tx>=b' if c==c'
+         we need to recompute the exact coefficients here. */
       SCIPcolexCalcFarkasRedcostCoef(col, set, val, NULL, usefarkas);
 
       assert(!RatIsAbsInfinity(val));
