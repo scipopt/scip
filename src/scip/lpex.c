@@ -3226,8 +3226,6 @@ SCIP_RETCODE SCIProwCreateExact(
    (*row)->nlocks = 0;
    (*row)->removable = FALSE;
 
-   //SCIPhashtableInsert(lp->exrowhash, (void*) (*row));
-
    /* capture the row */
    SCIProwexCapture(*row);
 
@@ -3535,12 +3533,6 @@ SCIP_RETCODE SCIPlpexCreate(
    //(*lp)->validsoldirlp = -1;
 
 
-   SCIPhashtableCreate(&(*lp)->exrowhash, blkmem, (set->misc_usesmalltables ? SCIP_HASHSIZE_CUTPOOLS_SMALL : SCIP_HASHSIZE_CUTPOOLS),
-                     hashKeyExRow, hashEqExRow, hashValExRow, (void*) set );
-
-   SCIPhashtableCreate(&(*lp)->excolhash, blkmem, (set->misc_usesmalltables ? SCIP_HASHSIZE_CUTPOOLS_SMALL : SCIP_HASHSIZE_CUTPOOLS),
-                     hashKeyExCol, hashEqExCol, hashValExCol, (void*) set );
-
    /** todo: exip: set the right defaults in lp solver */
    return SCIP_OKAY;
 }
@@ -3562,8 +3554,6 @@ SCIP_RETCODE SCIPlpexFree(
    SCIP_CALL( SCIPlpPsdataFree(*lp, set, blkmem) );
    SCIP_CALL( SCIPlpexClear(*lp, blkmem, set, eventqueue, eventfilter) );
 
-   SCIPhashtableFree(&(*lp)->exrowhash);
-   SCIPhashtableFree(&(*lp)->excolhash);
    //freeDiveChgSideArrays(*lp);
 
    /* release LPI rows */
@@ -3828,7 +3818,7 @@ SCIP_Bool SCIProwHasExRow(
    assert(lpex != NULL);
    assert(lpex->exrowhash != NULL);
 
-   return (NULL != SCIPhashtableRetrieve(lpex->exrowhash, row));
+   return (NULL != row->rowex);
 }
 
 /** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
@@ -3841,7 +3831,7 @@ SCIP_ROWEX* SCIProwGetExRow(
    assert(lpex != NULL);
    assert(lpex->exrowhash != NULL);
 
-   return SCIPhashtableRetrieve(lpex->exrowhash, row);
+   return row->rowex;
 }
 
 /** returns exact col corresponding to fpcol, if it exists. Otherwise returns NULL */

@@ -192,6 +192,7 @@ struct SCIP_Col
  */
 struct SCIP_Row
 {
+   SCIP_ROWEX*           rowex;              /**< pointer to exact row if it exists, or NULL in fp-scip */
    SCIP_Real             constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
    SCIP_Real             lhs;                /**< left hand side of row */
    SCIP_Real             rhs;                /**< right hand side of row */

@@ -5246,6 +5246,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->removable = removable;
    (*row)->inglobalcutpool = FALSE;
    (*row)->storedsolvals = NULL;
+   (*row)->rowex = NULL;
 
    /* calculate row norms and min/maxidx, and check if row is sorted */
    rowCalcNorms(*row, set);

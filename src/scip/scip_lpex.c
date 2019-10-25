@@ -286,7 +286,7 @@ SCIP_RETCODE SCIPaddVarsToRowEx(
 
    /* force the row sorting */
    SCIProwexForceSort(row, scip->set);
-   SCIPhashtableInsert(scip->lpex->exrowhash, (void*) row);
+   row->fprow->rowex = row;
 
    return SCIP_OKAY;
 }
