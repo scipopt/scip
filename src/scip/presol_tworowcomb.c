@@ -53,8 +53,6 @@
 #define DEFAULT_MAXHASHFAC             10
 #define DEFAULT_MAXPAIRFAC             1
 
-#define MIN_DENOM 1.e-10
-
 /*
  * Data structures
  */
@@ -64,8 +62,8 @@ enum signum {UP, DN, POS, NEG, CLQ};
 /** presolver data */
 struct SCIP_PresolData
 {
-   SCIP_Real maxpairfac;
-   SCIP_Real maxhashfac;
+   int maxpairfac;
+   int maxhashfac;
    int maxretrievefails;
    int maxcombinefails;
    int maxconsiderednonzeros;
@@ -110,7 +108,7 @@ hashIndexPair(
    return *((int*) &hash);
 }
 
-static SCIP_RETCODE addEntry
+static void addEntry
 (
  SCIP* scip,                   /**< SCIP datastructure */
  int* pos,
@@ -132,11 +130,9 @@ static SCIP_RETCODE addEntry
    (*hashlist)[(*pos)] = hash;
    (*rowidxlist)[(*pos)] = rowidx;
    (*pos)++;
-
-   return SCIP_OKAY;
 }
 
-static SCIP_RETCODE findNextBlock
+static void findNextBlock
 (
    int*                 list,
    int                  len,
@@ -151,8 +147,6 @@ static SCIP_RETCODE findNextBlock
       i++;
 
    (*end) = i;
-
-   return SCIP_OKAY;
 }
 
 static int calcCliqueMaximums(
@@ -324,7 +318,7 @@ static int calcCliqueMaximums(
 
 /** try two-row combine for given rows */
 static
-SCIP_RETCODE combineRows
+void combineRows
 (
    SCIP*                scip,                /**< SCIP datastructure */
    SCIP_MATRIX*         matrix,              /**< the constraint matrix */
@@ -596,7 +590,7 @@ SCIP_RETCODE combineRows
    }
 #endif
 
-   SCIPcalcCliquePartition(scip, binvars, nbinvars, cliquepartition, &ncliques);
+   SCIP_CALL( SCIPcalcCliquePartition(scip, binvars, nbinvars, cliquepartition, &ncliques) );
    SCIPsortIntInt(cliquepartition, binvarpos, nbinvars);
 
 #ifdef SCIP_DEBUG_CLIQUE
@@ -1222,8 +1216,6 @@ SCIP_RETCODE combineRows
    SCIPfreeBufferArray(scip, &signs);
    SCIPfreeBufferArray(scip, &row2coefs);
    SCIPfreeBufferArray(scip, &row1coefs);
-
-   return SCIP_OKAY;
 }
 
 /*
@@ -1231,22 +1223,6 @@ SCIP_RETCODE combineRows
  */
 
 /* TODO: Implement all necessary presolver methods. The methods with an #if 0 ... #else #define ... are optional */
-
-
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_PRESOLCOPY(presolCopyTworowcomb)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of tworowcomb presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define presolCopyTworowcomb NULL
-#endif
-
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
@@ -1264,6 +1240,7 @@ SCIP_DECL_PRESOLFREE(presolFreeTworowcomb)
    return SCIP_OKAY;
 }
 
+
 /** initialization method of presolver (called after problem was transformed) */
 static
 SCIP_DECL_PRESOLINIT(presolInitTworowcomb)
@@ -1276,50 +1253,6 @@ SCIP_DECL_PRESOLINIT(presolInitTworowcomb)
 
    return SCIP_OKAY;
 }
-
-/** deinitialization method of presolver (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_PRESOLEXIT(presolExitTworowcomb)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of tworowcomb presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define presolExitTworowcomb NULL
-#endif
-
-
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-#if 0
-static
-SCIP_DECL_PRESOLINITPRE(presolInitpreTworowcomb)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of tworowcomb presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define presolInitpreTworowbound NULL
-#endif
-
-
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-#if 0
-static
-SCIP_DECL_PRESOLEXITPRE(presolExitpreTworowcomb)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of tworowcomb presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define presolExitpreTworowcomb NULL
-#endif
 
 
 /** execution method of presolver */
@@ -2100,12 +2033,8 @@ SCIP_RETCODE SCIPincludePresolTworowcomb(
 
    assert(presol != NULL);
 
-   //SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyTworowcomb) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeTworowcomb) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitTworowcomb) );
-   //SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitTworowcomb) );
-   //SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreTworowcomb) );
-   //SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreTworowcomb) );
 
    /* add tworowcomb presolver parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
@@ -2123,12 +2052,12 @@ SCIP_RETCODE SCIPincludePresolTworowcomb(
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/tworowcomb/maxhashfac",
          "Maximum number of hashlist entries as multiple of number of rows in the problem (-1: no limit)",
-         &presoldata->maxhashfac, FALSE, DEFAULT_MAXHASHFAC, -1, SCIP_REAL_MAX, NULL, NULL) );
+         &presoldata->maxhashfac, FALSE, DEFAULT_MAXHASHFAC, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/tworowcomb/maxpairfac",
          "Maximum number of processed row pairs as multiple of the number of rows in the problem (-1: no limit)",
-         &presoldata->maxpairfac, FALSE, DEFAULT_MAXPAIRFAC, -1, SCIP_REAL_MAX, NULL, NULL) );
+         &presoldata->maxpairfac, FALSE, DEFAULT_MAXPAIRFAC, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
