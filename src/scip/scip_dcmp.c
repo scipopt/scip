@@ -163,14 +163,12 @@ SCIP_RETCODE SCIPaddDecomposition(
    SCIP_DECOMP*          decomp              /**< decomposition to add */
    )
 {
-   SCIP_Bool isoriginal;
-
    assert(scip != NULL);
    assert(decomp != NULL);
 
-   isoriginal = SCIPdecompIsOriginal(decomp);
-
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddDecomposition", FALSE, isoriginal, isoriginal, isoriginal, isoriginal, TRUE, TRUE, TRUE, !isoriginal, !isoriginal, !isoriginal, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddDecomposition", FALSE, SCIPdecompIsOriginal(decomp), SCIPdecompIsOriginal(decomp),
+      SCIPdecompIsOriginal(decomp), SCIPdecompIsOriginal(decomp), TRUE, TRUE, TRUE, !SCIPdecompIsOriginal(decomp),
+      !SCIPdecompIsOriginal(decomp), !SCIPdecompIsOriginal(decomp), FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPdecompstoreAdd(scip->decompstore, decomp) );
 
@@ -575,6 +573,20 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
    return SCIP_OKAY;
 }
 
+/** return position of a label in decomp array */
+static
+int findLabelIdx(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   int                   label               /**< the label */
+   )
+{
+   int pos;
+
+   (void)SCIPsortedvecFindInt(decomp->labels, label, decomp->nblocks + 1, &pos);
+
+   return pos;
+}
+
 /** compute decomposition modularity */
 static
 SCIP_RETCODE computeModularity(
@@ -621,15 +633,13 @@ SCIP_RETCODE computeModularity(
       int varblockstart;
       int requiredsize;
       SCIP_Bool success;
-      SCIP_Bool found;
 
       /* linking constraints do not contribute to the modularity */
       if( conslabel == SCIP_DECOMP_LINKCONS )
          continue;
 
       /* find the position of the constraint label. Constraints of the border always belong to the first block at index 0 */
-      found = SCIPsortedvecFindInt(decomp->labels, conslabel, decomp->nblocks + 1, &blockpos);
-      assert(found);
+      blockpos = findLabelIdx(decomp, conslabel);
 
       SCIP_CALL( decompGetConsVarsAndLabels(scip, decomp, conss[c], varbuf, varslabels,
                nvars, &nconsvars, &requiredsize, &success) );
@@ -644,8 +654,7 @@ SCIP_RETCODE computeModularity(
          int varblockpos;
          int nblockvars = countLabelFromPos(varslabels, varblockstart, nconsvars);
 
-         found = SCIPsortedvecFindInt(decomp->labels, varslabels[varblockstart], decomp->nblocks + 1, &varblockpos);
-         assert(found);
+         varblockpos = findLabelIdx(decomp, varslabels[varblockstart]);
 
          /* don't consider linking variables for modularity statistics */
          if( varslabels[varblockstart] != SCIP_DECOMP_LINKVAR )
@@ -744,7 +753,7 @@ SCIP_RETCODE buildBlockGraph(
    int* conslabels;
    int* linkvaridx;
    int* succnodes;
-   SCIP_Bool success, found;
+   SCIP_Bool success;
    int nvars;
    int nconss;
    int nblocks;
@@ -822,8 +831,7 @@ SCIP_RETCODE buildBlockGraph(
 
             assert(linkingvarnodeidx >= 0);
             /* find the position of the constraint label. Subtract later by 1 to get the node index as the 1st block is reserved for linking constraints */
-            found = SCIPsortedvecFindInt(decomp->labels, conslabels[i], decomp->nblocks + 1, &blocknodeidx); /* assuming labels are sorted */
-            assert(found);
+            blocknodeidx = findLabelIdx(decomp, conslabels[i]);
 
             SCIP_CALL( SCIPdigraphAddArcSafe(blocklinkingvargraph, nblocks + linkingvarnodeidx, blocknodeidx - 1, NULL) );
             SCIP_CALL( SCIPdigraphAddArcSafe(blocklinkingvargraph, blocknodeidx - 1, nblocks + linkingvarnodeidx, NULL) );
