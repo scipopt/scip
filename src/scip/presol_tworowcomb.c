@@ -108,11 +108,11 @@ hashIndexPair(
    return *((int*) &hash);
 }
 
-static void addEntry
-(
+static
+SCIP_RETCODE addEntry(
  SCIP* scip,                   /**< SCIP datastructure */
- int* pos,
- int* listsize,
+ SCIP_Longint* pos,
+ SCIP_Longint* listsize,
  int** hashlist,
  int** rowidxlist,
  int hash,
@@ -130,10 +130,12 @@ static void addEntry
    (*hashlist)[(*pos)] = hash;
    (*rowidxlist)[(*pos)] = rowidx;
    (*pos)++;
+
+   return SCIP_OKAY;
 }
 
-static void findNextBlock
-(
+static
+void findNextBlock(
    int*                 list,
    int                  len,
    int*                 start,
@@ -149,14 +151,14 @@ static void findNextBlock
    (*end) = i;
 }
 
-static int calcCliqueMaximums(
+static
+int calcCliqueMaximums(
    SCIP*                scip,
    int*                 varinds,             /**< variable index array */
    int*                 cliquevarpos,        /**< positions of clique variables in index array */
    int                  cliquesize,          /**< size of current clique */
    SCIP_Real*           row1coefs,           /**< coefficients of first row */
    SCIP_Real*           row2coefs,           /**< coefficients of second row */
-   enum signum*         signs,               /**< sign behaviour of variables */
    int*                 nbreakpoints,        /**< number of breakpoints between 0 and 1 */
    SCIP_Real*           breakpoints,         /**< variable breakpoints */
    int*                 cliquemaxinds        /**< array containing in which clique this variable has a maximum */
@@ -318,7 +320,7 @@ static int calcCliqueMaximums(
 
 /** try two-row combine for given rows */
 static
-void combineRows
+SCIP_RETCODE combineRows
 (
    SCIP*                scip,                /**< SCIP datastructure */
    SCIP_MATRIX*         matrix,              /**< the constraint matrix */
@@ -633,7 +635,7 @@ void combineRows
          // size of current clique equals j - i
          assert((shift + j) <= ncols);
          idx = cliquepartition[i-shift]; // we enumerated the relevant cliques only
-         currentmaxinds[idx] = calcCliqueMaximums(scip, varinds, &binvarpos[i-shift], j - i, row1coefs, row2coefs, signs, &nbreakpoints, breakpoints, cliquemaxinds);
+         currentmaxinds[idx] = calcCliqueMaximums(scip, varinds, &binvarpos[i-shift], j - i, row1coefs, row2coefs, &nbreakpoints, breakpoints, cliquemaxinds);
 #ifdef SCIP_DEBUG_CLIQUE
          SCIPdebugMsg(scip, "breakpoints after checking maximums of clique %d: %d, firstmaxidx = %d\n", idx, nbreakpoints, currentmaxinds[idx]);
 #endif
@@ -1216,6 +1218,8 @@ void combineRows
    SCIPfreeBufferArray(scip, &signs);
    SCIPfreeBufferArray(scip, &row2coefs);
    SCIPfreeBufferArray(scip, &row1coefs);
+
+   return SCIP_OKAY;
 }
 
 /*
@@ -1299,8 +1303,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
       int oldnchgbds;
       int oldnfixedvars;
       int ndelcons;
-      SCIP_Longint nrows;
-      SCIP_Longint ncols;
+      int nrows;
+      int ncols;
       SCIP_Real* oldlbs;
       SCIP_Real* oldubs;
       SCIP_Real* newlbs;
@@ -1312,14 +1316,14 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
       SCIP_Longint maxhashes;
 
       int maxlen;
-      int pospp;
-      int listsizepp;
-      int posmm;
-      int listsizemm;
-      int pospm;
-      int listsizepm;
-      int posmp;
-      int listsizemp;
+      SCIP_Longint pospp;
+      SCIP_Longint listsizepp;
+      SCIP_Longint posmm;
+      SCIP_Longint listsizemm;
+      SCIP_Longint pospm;
+      SCIP_Longint listsizepm;
+      SCIP_Longint posmp;
+      SCIP_Longint listsizemp;
 
       int* hashlistpp;
       int* hashlistmm;
@@ -1416,38 +1420,38 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
                {
                   if(SCIPisPositive(scip, rowvalptr[k]) )
                   {
-                     addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                     SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                      if( finiterhs )
-                        addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
-                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                        SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
+                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                   }
                   else
                   {
-                     addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                     SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                      if( finiterhs )
-                        addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
-                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                        SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
+                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                   }
                }
                else
                {
                   if(SCIPisPositive(scip, rowvalptr[k]) )
                   {
-                     addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                     SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                      if( finiterhs )
-                        addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
-                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                        SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
+                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                   }
                   else
                   {
-                     addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                     SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                      if( finiterhs )
-                        addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
-                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                        SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
+                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                   }
                }
             }
@@ -1556,18 +1560,18 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
 
                            success = FALSE;
 
-                           combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                       FALSE, FALSE, newlbs, newubs, &success);
+                           SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                              FALSE, FALSE, newlbs, newubs, &success) );
                            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx)) )
-                              combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                          TRUE, FALSE, newlbs, newubs, &success);
+                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                 TRUE, FALSE, newlbs, newubs, &success) );
                            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
-                              combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                          FALSE, TRUE, newlbs, newubs, &success);
+                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                 FALSE, TRUE, newlbs, newubs, &success) );
                            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx))
                                 && !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
-                              combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                          TRUE, TRUE, newlbs, newubs, &success);
+                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                 TRUE, TRUE, newlbs, newubs, &success) );
                            if( success )
                               combinefails = 0;
                            else
@@ -1674,18 +1678,18 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
 
                            success = FALSE;
 
-                           combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                       FALSE, FALSE, newlbs, newubs, &success);
+                           SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                              FALSE, FALSE, newlbs, newubs, &success) );
                            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx)) )
-                              combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                          TRUE, FALSE, newlbs, newubs, &success);
+                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                 TRUE, FALSE, newlbs, newubs, &success) );
                            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
-                              combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                          FALSE, TRUE, newlbs, newubs, &success);
+                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                 FALSE, TRUE, newlbs, newubs, &success) );
                            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx))
                                 && !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
-                              combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                          TRUE, TRUE, newlbs, newubs, &success);
+                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                 TRUE, TRUE, newlbs, newubs, &success) );
                            if( success )
                               combinefails = 0;
                            else
@@ -2049,12 +2053,12 @@ SCIP_RETCODE SCIPincludePresolTworowcomb(
          "presolving/tworowcomb/maxcombinefails",
          "maximal number of consecutive useless row combines",
          &presoldata->maxcombinefails, FALSE, DEFAULT_MAXCOMBINEFAILS, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/tworowcomb/maxhashfac",
          "Maximum number of hashlist entries as multiple of number of rows in the problem (-1: no limit)",
          &presoldata->maxhashfac, FALSE, DEFAULT_MAXHASHFAC, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/tworowcomb/maxpairfac",
          "Maximum number of processed row pairs as multiple of the number of rows in the problem (-1: no limit)",
          &presoldata->maxpairfac, FALSE, DEFAULT_MAXPAIRFAC, -1, INT_MAX, NULL, NULL) );
