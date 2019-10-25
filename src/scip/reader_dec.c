@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -64,12 +64,14 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/pub_dcmp.h"
 #include "scip/pub_fileio.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_dec.h"
+#include "scip/scip_dcmp.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -78,9 +80,8 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_solve.h"
 #include "scip/scip_var.h"
-#include "scip/decomp.h"
 #include "scip/scip_mem.h"
-#include "scip/type_decomp.h"
+#include "scip/type_dcmp.h"
 #include <string.h>
 
 #define READER_NAME             "decreader"
@@ -122,7 +123,6 @@ SCIP_RETCODE readDecomposition(
    DEC_SECTION section;
 
    SCIP_DECOMP* decomp;
-   SCIP_DECOMPSTORE* decompstore;
 
    assert(scip != NULL);
    assert(filename != NULL);
@@ -143,9 +143,6 @@ SCIP_RETCODE readDecomposition(
       SCIPprintSysError(filename);
       return SCIP_NOFILE;
    }
-
-   decompstore = SCIPgetDecompstore(scip);
-   assert(decompstore != NULL);
 
    /* read the file */
    error = FALSE;
@@ -281,11 +278,10 @@ SCIP_RETCODE readDecomposition(
       /* retrieving the Benders' variable labels setting */
       SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/benderslabels", &benderslabels) );
 
-
       SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), nblocks, TRUE, benderslabels) );
 
       SCIP_CALL( SCIPdecompSetConsLabels(decomp, conss, labels, consptr) );
-      SCIPdebugMsg(scip, "Setting labels for %d constraints.\n", consptr);
+      SCIPdebugMsg(scip, "Setting labels for %d constraints.\n", nconss);
 
       scip_conss = SCIPgetConss(scip);
 
@@ -294,8 +290,7 @@ SCIP_RETCODE readDecomposition(
 
       SCIP_CALL( SCIPcomputeDecompStats(scip, decomp) );
 
-      SCIP_CALL( SCIPdecompstoreAdd(decompstore, decomp) );
-
+      SCIP_CALL( SCIPaddDecomposition(scip, decomp) );
 
       /* display result */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Added decomposition <%s> with %d blocks to SCIP\n", filename, nblocks);

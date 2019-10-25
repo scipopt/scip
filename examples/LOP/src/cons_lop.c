@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -98,7 +98,7 @@ SCIP_RETCODE LOPseparate(
 
 	    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 
-	    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
+	    SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
 	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
@@ -131,7 +131,7 @@ SCIP_RETCODE LOPseparate(
 
 	       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "triangle#%d#%d#%d", i, j, k);
 
-	       SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
+	       SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
 	       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][k], 1.0) );
@@ -380,7 +380,7 @@ SCIP_DECL_CONSINITLP(consInitlpLOP)
 	    SCIP_ROW* row;
 
 	    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
-	    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, 1.0, 1.0, FALSE, FALSE, FALSE) );
+	    SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, s, 1.0, 1.0, FALSE, FALSE, FALSE) );
 	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
@@ -546,7 +546,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 
 	       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 
-	       SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
+	       SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
 	       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][i], 1.0) );
@@ -583,7 +583,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 
 		  (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "triangle#%d#%d#%d", i, j, k);
 
-		  SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
+		  SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
 		  SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 		  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i][j], 1.0) );
 		  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[j][k], 1.0) );

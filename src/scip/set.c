@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   set.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for global SCIP settings
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -165,12 +166,16 @@
 /* Display */
 
 #define SCIP_DEFAULT_DISP_VERBLEVEL SCIP_VERBLEVEL_HIGH /**< verbosity level of output */
-#define SCIP_DEFAULT_DISP_WIDTH             139 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISP_WIDTH             143 /**< maximal number of characters in a node information line */
 #define SCIP_DEFAULT_DISP_FREQ              100 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISP_HEADERFREQ         15 /**< frequency for displaying header lines (every n'th node info line) */
 #define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the LP solver display status messages? */
 #define SCIP_DEFAULT_DISP_ALLVIOLS        FALSE /**< display all violations of the best solution after the solving process finished? */
 #define SCIP_DEFAULT_DISP_RELEVANTSTATS    TRUE /**< should the relevant statistics be displayed at the end of solving? */
+
+/* Heuristics */
+
+#define SCIP_DEFAULT_HEUR_USEUCTSUBSCIP  FALSE  /**< should setting of common subscip parameters include the activation of the UCT node selector? */
 
 /* History */
 
@@ -224,6 +229,7 @@
 #define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root LP solving? */
 #define SCIP_DEFAULT_LP_CHECKSTABILITY     TRUE /**< should LP solver's return status be checked for stability? */
 #define SCIP_DEFAULT_LP_CONDITIONLIMIT     -1.0 /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
+#define SCIP_DEFAULT_LP_MARKOWITZ          0.01 /**< minimal Markowitz threshold to control sparsity/stability in LU factorization */
 #define SCIP_DEFAULT_LP_CHECKPRIMFEAS      TRUE /**< should LP solutions be checked for primal feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKDUALFEAS      TRUE /**< should LP solutions be checked for dual feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKFARKAS        TRUE /**< should infeasibility proofs from the LP be checked? */
@@ -284,7 +290,8 @@
 #define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
-#define SCIP_DEFAULT_MISC_USESYMMETRY         2 /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
+#define SCIP_DEFAULT_MISC_USESYMMETRY         3 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);
+                                                 *   2: orbital fixing; 3: orbitopes and orbital fixing) */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 
 #ifdef WITH_DEBUG_SOLUTION
@@ -1518,6 +1525,12 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->disp_relevantstats, FALSE, SCIP_DEFAULT_DISP_RELEVANTSTATS,
          NULL, NULL) );
 
+   /* heuristic parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "heuristics/useuctsubscip",
+         "should setting of common subscip parameters include the activation of the UCT node selector?",
+         &(*set)->heur_useuctsubscip, TRUE, SCIP_DEFAULT_HEUR_USEUCTSUBSCIP, NULL, NULL) );
+
    /* history parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "history/valuebased",
@@ -1563,7 +1576,7 @@ SCIP_RETCODE SCIPsetCreate(
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/gap",
-         "solving stops, if the relative gap = |primal - dual|/MIN(|dual|,|primal|) is below the given value",
+         "solving stops, if the relative gap = |primal - dual|/MIN(|dual|,|primal|) is below the given value, the gap is 'Infinity', if primal and dual bound have opposite signs",
          &(*set)->limit_gap, FALSE, SCIP_DEFAULT_LIMIT_GAP, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -1693,6 +1706,11 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/conditionlimit",
          "maximum condition number of LP basis counted as stable (-1.0: no limit)",
          &(*set)->lp_conditionlimit, TRUE, SCIP_DEFAULT_LP_CONDITIONLIMIT, -1.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "lp/minmarkowitz",
+         "minimal Markowitz threshold to control sparsity/stability in LU factorization",
+         &(*set)->lp_markowitz, TRUE, SCIP_DEFAULT_LP_MARKOWITZ, 1e-4, 0.9999,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "lp/checkprimfeas",
@@ -1950,8 +1968,9 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "misc/usesymmetry",
-         "used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing)",
-         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 2,
+         "bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);" \
+         " 2: orbital fixing; 3: orbitopes and orbital fixing), see type_symmetry.h.",
+         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 3,
          paramChgdUsesymmetry, NULL) );
 
    /* randomization parameters */
@@ -6728,8 +6747,6 @@ SCIP_Bool SCIPsetIsLbBetter(
    SCIP_Real             oldub               /**< old upper bound */
    )
 {
-   SCIP_Real eps;
-
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
 
@@ -6737,9 +6754,7 @@ SCIP_Bool SCIPsetIsLbBetter(
    if( oldlb < 0.0 && newlb >= 0.0 )
       return TRUE;
 
-   eps = REALABS(oldlb);
-   eps = MIN(oldub - oldlb, eps);
-   return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(eps, 1e-3));
+   return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(MIN(oldub - oldlb, REALABS(oldlb)), 1e-3));  /*lint !e666*/
 }
 
 /** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
@@ -6753,8 +6768,6 @@ SCIP_Bool SCIPsetIsUbBetter(
    SCIP_Real             oldub               /**< old upper bound */
    )
 {
-   SCIP_Real eps;
-
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
 
@@ -6762,9 +6775,7 @@ SCIP_Bool SCIPsetIsUbBetter(
    if( oldub > 0.0 && newub <= 0.0 )
       return TRUE;
 
-   eps = REALABS(oldub);
-   eps = MIN(oldub - oldlb, eps);
-   return EPSLT(newub, oldub, set->num_boundstreps * MAX(eps, 1e-3));
+   return EPSLT(newub, oldub, set->num_boundstreps * MAX(MIN(oldub - oldlb, REALABS(oldub)), 1e-3));  /*lint !e666*/
 }
 
 /** checks, if the given cut's efficacy is larger than the minimal cut efficacy */

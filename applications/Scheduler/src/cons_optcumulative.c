@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -387,6 +387,8 @@ SCIP_RETCODE consdataPrint(
 
    assert(consdata != NULL);
 
+   SCIPinfoMessage( scip, file, "optcumulative(");
+
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(consdata->vars[v] != NULL);
@@ -395,13 +397,13 @@ SCIP_RETCODE consdataPrint(
 
       SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[v], FALSE) );
 
-      SCIPinfoMessage(scip, file, "[%g,%g](%d,%d)", SCIPvarGetLbLocal(consdata->vars[v]),
+      SCIPinfoMessage(scip, file, "[%g,%g](%d)[%d]", SCIPvarGetLbLocal(consdata->vars[v]),
          SCIPvarGetUbLocal(consdata->vars[v]), consdata->durations[v], consdata->demands[v]);
 
       SCIP_CALL( SCIPwriteVarName(scip, file, consdata->binvars[v], FALSE) );
 
    }
-   SCIPinfoMessage(scip, file, " [%d,%d]<= %d", consdata->hmin, consdata->hmax, consdata->capacity);
+   SCIPinfoMessage(scip, file, ")[%d,%d)<= %d", consdata->hmin, consdata->hmax, consdata->capacity);
 
    return SCIP_OKAY;
 }
@@ -876,7 +878,7 @@ SCIP_RETCODE createRow(
       int v;
 
       /* create empty row */
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)capacity, local, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)capacity, local, FALSE, FALSE) );
 
       /* w.r.t. performance we cache the row extension and flush them in the end */
       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -3896,7 +3898,108 @@ SCIP_DECL_CONSCOPY(consCopyOptcumulative)
 }
 
 /** constraint parsing method of constraint handler */
-#define consParseOptcumulative NULL
+static
+SCIP_DECL_CONSPARSE(consParseOptcumulative)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   SCIP_VAR** binvars;
+   SCIP_VAR* var;
+   SCIP_VAR* binvar;
+   SCIP_Real value;
+   char strvalue[SCIP_MAXSTRLEN];
+   char* endptr;
+   int* demands;
+   int* durations;
+   int capacity;
+   int duration;
+   int demand;
+   int hmin;
+   int hmax;
+   int varssize;
+   int nvars;
+
+   SCIPdebugMsg(scip, "parse <%s> as optcumulative constraint\n", str);
+
+   /* cutoff "cumulative" form the constraint string */
+   SCIPstrCopySection(str, 'o', '(', strvalue, SCIP_MAXSTRLEN, &endptr);
+   str = endptr;
+
+   varssize = 100;
+   nvars = 0;
+
+   /* allocate buffer array for variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &binvars, varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &demands, varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &durations, varssize) );
+
+   do
+   {
+      SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
+
+      if( var != NULL )
+      {
+         str = endptr;
+
+         SCIPstrCopySection(str, '(', ')', strvalue, SCIP_MAXSTRLEN, &endptr);
+         duration = atoi(strvalue);
+         str = endptr;
+
+         SCIPstrCopySection(str, '[', ']', strvalue, SCIP_MAXSTRLEN, &endptr);
+         demand = atoi(strvalue);
+         str = endptr;
+
+         SCIP_CALL( SCIPparseVarName(scip, str, &binvar, &endptr) );
+         str = endptr;
+
+         SCIPdebugMsg(scip, "parse job <%s><%s>, duration %d, demand %d\n", SCIPvarGetName(var), SCIPvarGetName(binvar), duration, demand);
+
+         assert(nvars < varssize);
+         vars[nvars] = var;
+         binvars[nvars] = binvar;
+         demands[nvars] = demand;
+         durations[nvars] = duration;
+         nvars++;
+      }
+   }
+   while( var != NULL );
+
+   /* parse effective time window */
+   SCIPstrCopySection(str, '[', ',', strvalue, SCIP_MAXSTRLEN, &endptr);
+   hmin = atoi(strvalue);
+   str = endptr;
+
+   if( SCIPstrToRealValue(str, &value, &endptr) )
+   {
+      hmax = (int)(value);
+      str = endptr;
+
+      /* parse capacity */
+      SCIPstrCopySection(str, ')', '=', strvalue, SCIP_MAXSTRLEN, &endptr);
+      str = endptr;
+      if( SCIPstrToRealValue(str, &value, &endptr) )
+      {
+         capacity = (int)value;
+
+         /* create cumulative constraint */
+         SCIP_CALL( SCIPcreateConsOptcumulative(scip, cons, name, nvars, vars, binvars, durations, demands, capacity,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+         (*success) = TRUE;
+
+         SCIPwarningMessage(scip, "ignoring hmin = %d and hmax = %d (not supported for the optional cumulative constraint, yet\n", hmin, hmax);
+      }
+   }
+
+   /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &durations);
+   SCIPfreeBufferArray(scip, &demands);
+   SCIPfreeBufferArray(scip, &binvars);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 
 
 /*

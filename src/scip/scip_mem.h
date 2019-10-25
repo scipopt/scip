@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,25 +36,6 @@
 #include "scip/def.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -162,7 +143,7 @@ extern "C" {
  *
  *  @return the block memory to use at the current time.
  */
-EXTERN
+SCIP_EXPORT
 BMS_BLKMEM* SCIPblkmem(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -171,7 +152,7 @@ BMS_BLKMEM* SCIPblkmem(
  *
  *  @return the buffer memory for short living temporary objects
  */
-EXTERN
+SCIP_EXPORT
 BMS_BUFMEM* SCIPbuffer(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -180,7 +161,7 @@ BMS_BUFMEM* SCIPbuffer(
  *
  *  @return the buffer memory for short living temporary objects initialized to all zero
  */
-EXTERN
+SCIP_EXPORT
 BMS_BUFMEM* SCIPcleanbuffer(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -189,7 +170,7 @@ BMS_BUFMEM* SCIPcleanbuffer(
  *
  *  @return the total number of bytes used in block and buffer memory.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetMemUsed(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -198,7 +179,7 @@ SCIP_Longint SCIPgetMemUsed(
  *
  *  @return the total number of bytes in block and buffer memory.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetMemTotal(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -207,7 +188,7 @@ SCIP_Longint SCIPgetMemTotal(
  *
  *  @return the estimated number of bytes used by external software, e.g., the LP solver.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetMemExternEstim(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -216,7 +197,7 @@ SCIP_Longint SCIPgetMemExternEstim(
  *
  *  @return the memory size for dynamically allocated arrays.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPcalcMemGrowSize(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   num                 /**< minimum number of entries to store */
@@ -228,7 +209,7 @@ int SCIPcalcMemGrowSize(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPensureBlockMemoryArray_call(
    SCIP*                 scip,               /**< SCIP data structure */
    void**                arrayptr,           /**< pointer to dynamically sized array */
@@ -238,7 +219,7 @@ SCIP_RETCODE SCIPensureBlockMemoryArray_call(
    );
 
 /** prints output about used memory */
-EXTERN
+SCIP_EXPORT
 void SCIPprintMemoryDiagnostic(
    SCIP*                 scip                /**< SCIP data structure */
    );

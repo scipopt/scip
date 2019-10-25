@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_sparsify.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  cancel non-zeros of the constraint matrix
  * @author Dieter Weninger
  * @author Robert Lion Gottwald
@@ -183,6 +184,7 @@ SCIP_RETCODE cancelRow(
    int bestnfillin;
    SCIP_Real mincancelrate;
    SCIP_Bool rowiseq;
+   SCIP_Bool swapped = FALSE;
    SCIP_CONS* cancelcons;
 
    rowiseq = SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, rowidx), SCIPmatrixGetRowRhs(matrix, rowidx));
@@ -564,6 +566,7 @@ SCIP_RETCODE cancelRow(
          SCIPswapPointers((void**) &tmpinds, (void**) &cancelrowinds);
          SCIPswapPointers((void**) &tmpvals, (void**) &cancelrowvals);
          cancelrowlen = tmprowlen;
+         swapped = !swapped;
       }
       else
          break;
@@ -619,10 +622,20 @@ SCIP_RETCODE cancelRow(
    }
 
    SCIPfreeBufferArray(scip, &locks);
-   SCIPfreeBufferArray(scip, &tmpvals);
-   SCIPfreeBufferArray(scip, &tmpinds);
-   SCIPfreeBufferArray(scip, &cancelrowvals);
-   SCIPfreeBufferArray(scip, &cancelrowinds);
+   if( !swapped )
+   {
+      SCIPfreeBufferArray(scip, &tmpvals);
+      SCIPfreeBufferArray(scip, &tmpinds);
+      SCIPfreeBufferArray(scip, &cancelrowvals);
+      SCIPfreeBufferArray(scip, &cancelrowinds);
+   }
+   else
+   {
+      SCIPfreeBufferArray(scip, &cancelrowvals);
+      SCIPfreeBufferArray(scip, &cancelrowinds);
+      SCIPfreeBufferArray(scip, &tmpvals);
+      SCIPfreeBufferArray(scip, &tmpinds);
+   }
 
    return SCIP_OKAY;
 }

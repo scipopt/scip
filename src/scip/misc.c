@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc.c
+ * @ingroup OTHER_CFILES
  * @brief  miscellaneous methods
  * @author Tobias Achterberg
  * @author Gerald Gamrath
@@ -2714,7 +2715,6 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 /* computes the distance from it's desired position for the element stored at pos */
 #define ELEM_DISTANCE(pos) (((pos) + hashmap->mask + 1 - (hashmap->hashes[(pos)]>>(hashmap->shift))) & hashmap->mask)
 
-
 /** inserts element in hash table */
 static
 SCIP_RETCODE hashmapInsert(
@@ -2914,6 +2914,7 @@ SCIP_RETCODE SCIPhashmapCreate(
    (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
    (*hashmap)->nelements = 0;
+   (*hashmap)->hashmaptype = SCIP_HASHMAPTYPE_UNKNOWN;
 
    SCIP_ALLOC( BMSallocBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->slots, nslots) );
    SCIP_ALLOC( BMSallocClearBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->hashes, nslots) );
@@ -2954,9 +2955,9 @@ void SCIPhashmapFree(
                        (unsigned int)(*hashmap)->nelements, (unsigned int)(*hashmap)->nelements, (unsigned int)nslots,
                        100.0*(SCIP_Real)(*hashmap)->nelements/(SCIP_Real)(nslots));
       if( (*hashmap)->nelements > 0 )
-         SCIPdebugMessage(", avg. probe length is %.1f, max. probe length is %u",
+         SCIPdebugPrintf(", avg. probe length is %.1f, max. probe length is %u",
                           (SCIP_Real)(probelensum)/(SCIP_Real)(*hashmap)->nelements, (unsigned int)maxprobelen);
-      SCIPdebugMessage("\n");
+      SCIPdebugPrintf("\n");
    }
 #endif
 
@@ -2983,6 +2984,12 @@ SCIP_RETCODE SCIPhashmapInsert(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_POINTER);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_POINTER;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3013,6 +3020,12 @@ SCIP_RETCODE SCIPhashmapInsertInt(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_INT);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_INT;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3043,6 +3056,12 @@ SCIP_RETCODE SCIPhashmapInsertReal(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_REAL);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_REAL;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3068,6 +3087,7 @@ void* SCIPhashmapGetImage(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_POINTER);
 
    if( hashmapLookup(hashmap, origin, &pos) )
       return hashmap->slots[pos].image.ptr;
@@ -3087,6 +3107,7 @@ int SCIPhashmapGetImageInt(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_INT);
 
    if( hashmapLookup(hashmap, origin, &pos) )
       return hashmap->slots[pos].image.integer;
@@ -3106,6 +3127,7 @@ SCIP_Real SCIPhashmapGetImageReal(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_REAL);
 
    if( hashmapLookup(hashmap, origin, &pos) )
       return hashmap->slots[pos].image.real;
@@ -3128,6 +3150,12 @@ SCIP_RETCODE SCIPhashmapSetImage(
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_POINTER);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_POINTER;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3156,6 +3184,12 @@ SCIP_RETCODE SCIPhashmapSetImageInt(
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_INT);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_INT;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3184,6 +3218,12 @@ SCIP_RETCODE SCIPhashmapSetImageReal(
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_REAL);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_REAL;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3549,8 +3589,8 @@ SCIP_RETCODE SCIPhashsetCreate(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, hashset) );
 
-   /* dont create too small hashtables, i.e. at least size 32, and increase
-    * the given size by divinding it by 0.9, since then no rebuilding will
+   /* do not create too small hashtables, i.e. at least size 32, and increase
+    * the given size by dividing it by 0.9, since then no rebuilding will
     * be necessary if the given number of elements are inserted. Finally round
     * to the next power of two.
     */
@@ -5363,6 +5403,16 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
+/* SCIPsortPtrRealRealIntBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrRealRealIntBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c" /*lint !e451*/
 
@@ -9458,6 +9508,14 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    return SCIP_OKAY;
 }
 
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
+ */
+#ifndef __clang__
+#pragma STD FENV_ACCESS ON
+#endif
+
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
  *  number inside the interval was found
@@ -9498,6 +9556,8 @@ SCIP_Bool SCIPfindSimpleRational(
 
    return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
 }
+
+#pragma STD FENV_ACCESS OFF
 
 /** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number
  *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);
@@ -10311,7 +10371,7 @@ void SCIPprintSysError(
    if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
       SCIPmessagePrintError("Unknown error number %d or error message too long.\n", errno);
    SCIPmessagePrintError("%s: %s\n", message, buf);
-#elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
+#elif (_POSIX_C_SOURCE >= 200112L || __DARWIN_C_LEVEL > 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
    /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
    if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
       SCIPmessagePrintError("Unknown error number %d.\n", errno);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_sos2.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for SOS type 2 constraints
  * @author Marc Pfetsch
  *
@@ -1306,7 +1307,7 @@ SCIP_RETCODE generateRowSOS2(
    if ( ! SCIPisInfinity(scip, REALABS(lhs)) || ! SCIPisInfinity(scip, REALABS(rhs)) )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sos2bnd#%s", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, lhs, rhs, local, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, lhs, rhs, local, FALSE, FALSE) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, row, nvars, vars, 1.0) );
       consdata->row = row;
 
@@ -2100,8 +2101,8 @@ SCIP_DECL_CONSCOPY(consCopySOS2)
    }
 
    /* free buffer array */
-   SCIPfreeBufferArrayNull(sourcescip, &targetweights);
    SCIPfreeBufferArray(sourcescip, &targetvars);
+   SCIPfreeBufferArrayNull(sourcescip, &targetweights);
 
    return SCIP_OKAY;
 }

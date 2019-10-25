@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -45,7 +45,6 @@ extern "C" {
 #endif
 
 /** creates separation storage */
-extern
 SCIP_RETCODE SCIPsepastoreCreate(
    SCIP_SEPASTORE**      sepastore,          /**< pointer to store separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -53,38 +52,32 @@ SCIP_RETCODE SCIPsepastoreCreate(
    );
 
 /** frees separation storage */
-extern
 SCIP_RETCODE SCIPsepastoreFree(
    SCIP_SEPASTORE**      sepastore,          /**< pointer to store separation storage */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** informs separation storage that the setup of the initial LP starts now */
-extern
 void SCIPsepastoreStartInitialLP(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** informs separation storage that the setup of the initial LP is now finished */
-extern
 void SCIPsepastoreEndInitialLP(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** informs separation storage that the following cuts should be used in any case */
-extern
 void SCIPsepastoreStartForceCuts(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** informs separation storage that the following cuts should no longer be used in any case */
-extern
 void SCIPsepastoreEndForceCuts(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** adds cut to separation storage and captures it */
-extern
 SCIP_RETCODE SCIPsepastoreAddCut(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -100,7 +93,6 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    );
 
 /** adds cuts to the LP and clears separation storage */
-extern
 SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -121,7 +113,6 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    );
 
 /** clears the separation storage without adding the cuts to the LP */
-extern
 SCIP_RETCODE SCIPsepastoreClearCuts(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -132,7 +123,6 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
    );
 
 /** removes cuts that are inefficacious w.r.t. the current LP solution from separation storage without adding the cuts to the LP */
-extern
 SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -149,38 +139,32 @@ SCIP_RETCODE SCIPsepastoreRemoveInefficaciousCuts(
  *
  *  A cut is applicable if it is modifiable, not a bound change, or a bound change that changes bounds by at least epsilon.
  */
-extern
 SCIP_Bool SCIPsepastoreIsCutApplicable(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             cut                 /**< cut to check */
    );
 
 /** get cuts in the separation storage */
-extern
 SCIP_ROW** SCIPsepastoreGetCuts(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** get number of cuts in the separation storage */
-extern
 int SCIPsepastoreGetNCuts(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** get total number of cuts found so far */
-extern
 int SCIPsepastoreGetNCutsFound(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** get number of cuts found so far in current separation round */
-extern
 int SCIPsepastoreGetNCutsFoundRound(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );
 
 /** get total number of cuts applied to the LPs */
-extern
 int SCIPsepastoreGetNCutsApplied(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    );

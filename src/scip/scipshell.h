@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** evaluates command line parameters and runs SCIP appropriately in the given SCIP instance */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprocessShellArguments(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   argc,               /**< number of shell parameters */
@@ -43,7 +43,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
  *  and frees the SCIP instance
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrunShell(
    int                   argc,               /**< number of shell parameters */
    char**                argv,               /**< array with shell parameters */

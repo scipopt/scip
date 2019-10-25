@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1070,6 +1070,11 @@ SCIP_RETCODE SCIPlpiCreate(
    (void) (*lpi)->spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_ONLYREAL);
    (void) (*lpi)->spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_REAL);
    (void) (*lpi)->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_AUTO);
+
+   /* disable time-measurement for statistics */
+#if SOPLEX_APIVERSION >= 10
+   (void) (*lpi)->spx->setIntParam(SoPlex::STATTIMER, 0);
+#endif
 
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
@@ -3000,21 +3005,12 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SPxBasis::SPxStatus basestatus;
-
    SCIPdebugMessage("calling SCIPlpiIsPrimalFeasible()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   basestatus = lpi->spx->basisStatus();
-
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
-    * still return true as long as perturbation plus violation is within tolerances
-    */
-   assert(basestatus == SPxBasis::OPTIMAL || lpi->spx->status() != SPxSolver::OPTIMAL);
-
-   return basestatus == SPxBasis::OPTIMAL || basestatus == SPxBasis::PRIMAL;
+   return lpi->spx->basisStatus() == SPxBasis::OPTIMAL || lpi->spx->basisStatus() == SPxBasis::PRIMAL;
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3083,11 +3079,6 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
-    * still return true as long as perturbation plus violation is within tolerances
-    */
-   assert(lpi->spx->basisStatus() == SPxBasis::OPTIMAL || lpi->spx->status() != SPxSolver::OPTIMAL);
-
    return (lpi->spx->basisStatus() == SPxBasis::OPTIMAL) || lpi->spx->basisStatus() == SPxBasis::DUAL;
 }
 
@@ -3103,10 +3094,7 @@ SCIP_Bool SCIPlpiIsOptimal(
    assert((lpi->spx->basisStatus() == SPxBasis::OPTIMAL)
       == (SCIPlpiIsPrimalFeasible(lpi) && SCIPlpiIsDualFeasible(lpi)));
 
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
-    * still return true as long as perturbation plus violation is within tolerances
-    */
-   return (lpi->spx->basisStatus() == SPxBasis::OPTIMAL);
+   return (lpi->spx->status() == SPxSolver::OPTIMAL);
 }
 
 /** returns TRUE iff current LP solution is stable
@@ -3707,7 +3695,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3780,7 +3768,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -4397,6 +4385,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_CONDITIONLIMIT:
       *dval = lpi->conditionlimit;
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+#if (SOPLEX_APIVERSION >= 9)
+      *dval = lpi->spx->realParam(SoPlex::MIN_MARKOWITZ);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4452,6 +4445,17 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->conditionlimit = dval;
       lpi->checkcondition = (dval >= 0.0);
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+#if (SOPLEX_APIVERSION >= 9)
+      /* 1e-4 <= dval <= 0.999 */
+      if( dval < 1e-4 )
+         dval = 1e-4;
+      else if( dval > 0.9999 )
+         dval = 0.9999;
+
+      (void) lpi->spx->setRealParam(SoPlex::MIN_MARKOWITZ, dval);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

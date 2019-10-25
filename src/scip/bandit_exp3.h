@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,7 +36,6 @@ extern "C" {
 #endif
 
 /** include virtual function table for Exp.3 bandit algorithms */
-extern
 SCIP_RETCODE SCIPincludeBanditvtableExp3(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -46,23 +45,18 @@ SCIP_RETCODE SCIPincludeBanditvtableExp3(
  */
 
 /** callback to free bandit specific data structures */
-extern
 SCIP_DECL_BANDITFREE(SCIPbanditFreeExp3);
 
 /** selection callback for bandit selector */
-extern
 SCIP_DECL_BANDITSELECT(SCIPbanditSelectExp3);
 
 /** update callback for bandit algorithm */
-extern
 SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateExp3);
 
 /** reset callback for bandit algorithm */
-extern
 SCIP_DECL_BANDITRESET(SCIPbanditResetExp3);
 
 /** direct bandit creation method for the core where no SCIP pointer is available */
-extern
 SCIP_RETCODE SCIPbanditCreateExp3(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    BMS_BUFMEM*           bufmem,             /**< buffer memory */

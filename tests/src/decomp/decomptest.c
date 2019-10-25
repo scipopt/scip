@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,8 +20,6 @@
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
-#include "scip/decomp.h"
-
 #include "include/scip_test.h"
 
 static const char* testfilename = "../check/instances/Tests/decomp/decomptest.cip";
@@ -220,19 +218,20 @@ Test(decomptest, test_benders_var_labeling, .description="check variable labelli
 
 Test(decomptest, test_dec_reader, .description="test decomposition reader")
 {
-   SCIP_DECOMPSTORE* decompstore = SCIPgetDecompstore(scip);
    SCIP_DECOMP* scip_decomp;
+   SCIP_DECOMP** scip_decomps;
+   int n_decomps;
    SCIP_VAR* transvars[NVARS];
    int returnedlabels[NVARS];
    int v;
-
-   assert(decompstore != NULL);
+   SCIP_Bool original = TRUE;
 
    SCIP_CALL( SCIPreadProb(scip, testdecname, "dec") );
 
-   cr_assert_eq(SCIPdecompstoreGetNOrigDecomps(decompstore), 1);
+   SCIPgetDecomps(scip, &scip_decomps, &n_decomps, original);
+   cr_assert_eq(n_decomps, 1);
 
-   scip_decomp = SCIPdecompstoreGetOrigDecomps(decompstore)[0];
+   scip_decomp = scip_decomps[0];
    cr_assert_not_null(scip_decomp);
 
    checkConsLabels(scip_decomp);
@@ -250,8 +249,10 @@ Test(decomptest, test_dec_reader, .description="test decomposition reader")
       cr_assert_not_null(transvars[v]);
    }
 
-   cr_assert_eq(SCIPdecompstoreGetNDecomps(decompstore), 1, "Number of transformed decompositions should be 1.\n");
-   scip_decomp = SCIPdecompstoreGetDecomps(decompstore)[0];
+   /* now get the transformed decomposition and compare its variable labels */
+   SCIPgetDecomps(scip, &scip_decomps, &n_decomps, !original);
+   cr_assert_eq(n_decomps, 1, "Number of transformed decompositions should be 1.\n");
+   scip_decomp = scip_decomps[0];
 
    SCIPdecompGetVarsLabels(scip_decomp, transvars, returnedlabels, NVARS);
 

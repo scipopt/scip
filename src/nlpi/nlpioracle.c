@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpioracle.c
+ * @ingroup OTHER_CFILES
  * @brief   implementation of NLPI oracle interface
  * @author  Stefan Vigerske
  *
@@ -1870,6 +1871,10 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       {
          /* constraint should not be deleted and is kept on position c */
          delstats[c] = c;
+
+         if( c == lastgood )
+            break;
+
          continue;
       }
       assert(delstats[c] == 1); /* constraint should be deleted */

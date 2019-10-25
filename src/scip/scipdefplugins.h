@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -80,6 +80,7 @@
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
 #include "scip/heur_actconsdiving.h"
+#include "scip/heur_adaptivediving.h"
 #include "scip/heur_bound.h"
 #include "scip/heur_clique.h"
 #include "scip/heur_coefdiving.h"
@@ -126,6 +127,7 @@
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trivial.h"
 #include "scip/heur_trivialnegation.h"
+#include "scip/heur_trustregion.h"
 #include "scip/heur_trysol.h"
 #include "scip/heur_twoopt.h"
 #include "scip/heur_undercover.h"
@@ -150,22 +152,20 @@
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
 #include "scip/presol_redvub.h"
-#include "scip/presol_symbreak.h"
 #include "scip/presol_qpkktref.h"
 #include "scip/presol_trivial.h"
 #include "scip/presol_tworowbnd.h"
 #include "scip/presol_sparsify.h"
 #include "scip/presol_stuffing.h"
-#include "scip/presol_symmetry.h"
 #include "scip/prop_dualfix.h"
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_nlobbt.h"
 #include "scip/prop_obbt.h"
-#include "scip/prop_orbitalfixing.h"
 #include "scip/prop_probing.h"
 #include "scip/prop_pseudoobj.h"
 #include "scip/prop_redcost.h"
 #include "scip/prop_rootredcost.h"
+#include "scip/prop_symmetry.h"
 #include "scip/prop_vbounds.h"
 #include "scip/reader_bnd.h"
 #include "scip/reader_ccg.h"
@@ -223,7 +223,7 @@ extern "C" {
 #endif
 
 /** includes default SCIP plugins into SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    );

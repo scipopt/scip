@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cuts.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for aggregation of rows
  * @author Jakob Witzig
  * @author Robert Lion Gottwald
@@ -2169,10 +2170,13 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    {
       for( k = 0; k < nrows; ++k )
       {
-         SCIP_CALL( addOneRow(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
+         if( weights[k] != 0.0 )
+         {
+            SCIP_CALL( addOneRow(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
 
-         if( rowtoolong )
-            return SCIP_OKAY;
+            if( rowtoolong )
+               return SCIP_OKAY;
+         }
       }
    }
 
