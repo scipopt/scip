@@ -153,6 +153,7 @@
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
 #define DEFAULT_DETECTORBITOPES      TRUE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
+#define DEFAULT_DETECTSUBGROUPS      TRUE    /**< Should we try to detect symmetric subgroups of the symmetry group? */
 #define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 
 /* default parameters for orbital fixing */
@@ -232,6 +233,7 @@ struct SCIP_PropData
    int                   ngenconss;          /**< number of generated constraints */
    int                   nsymresacks;        /**< number of symresack constraints */
    SCIP_Bool             detectorbitopes;    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
+   SCIP_Bool             detectsubgroups;    /**< Should we try to detect symmetric subgroups of the symmetry group? */
    int                   norbitopes;         /**< number of orbitope constraints */
 
    /* data necessary for orbital fixing */
@@ -2295,6 +2297,36 @@ SCIP_RETCODE determineSymmetry(
 
 /** checks whether components of the symmetry group can be completely handled by orbitopes */
 static
+SCIP_RETCODE detectAndHandleSubgroups(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
+   int*                  components,         /**< array containing components of symmetry group */
+   int*                  componentbegins,    /**< array containing begin positions of components in components array */
+   int                   ncomponents         /**< number of components */
+   )
+{
+   assert( scip != NULL );
+   assert( propdata != NULL );
+   assert( components != NULL );
+   assert( componentbegins != NULL );
+   assert( ncomponents > 0 );
+   assert( propdata->nperms >= 0 );
+
+   /* exit if no symmetry is present */
+   if ( propdata->nperms == 0 )
+      return SCIP_OKAY;
+
+   assert( propdata->nperms > 0 );
+   assert( propdata->perms != NULL );
+   assert( propdata->npermvars > 0 );
+   assert( propdata->permvars != NULL );
+
+   return SCIP_OKAY;
+}
+
+
+/** checks whether components of the symmetry group can be completely handled by orbitopes */
+static
 SCIP_RETCODE detectOrbitopes(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
@@ -2692,6 +2724,15 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( propdata->detectorbitopes )
    {
       SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
+   }
+
+   /* possibly stop */
+   if ( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   if ( !propdata->ofenabled && propdata->detectsubgroups )
+   {
+      SCIP_CALL( detectAndHandleSubgroups(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
    }
 
    /* possibly stop */
@@ -3677,6 +3718,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/detectorbitopes",
          "Should we check whether the components of the symmetry group can be handled by orbitopes?",
          &propdata->detectorbitopes, TRUE, DEFAULT_DETECTORBITOPES, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/detectsubgroups",
+         "Should we try to detect symmetric subgroups of the symmetry group?",
+         &propdata->detectsubgroups, TRUE, DEFAULT_DETECTSUBGROUPS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/addconsstiming",
