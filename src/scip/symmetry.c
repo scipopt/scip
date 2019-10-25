@@ -291,14 +291,15 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
 }
 
 
-/** check whether a permutation is a composition of 2-cycles of binary variables and in this case determine the number of 2-cycles */
+/** check whether a permutation is a composition of 2-cycles and this case determine the number of 2-cycles
+ *  @p allvarsbinary can be used to restrict to permutations that swap binary variables
+ */
 SCIP_RETCODE SCIPgetPropertiesPerm(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< array of variables perm is acting on */
    int                   nvars,              /**< number of variables */
-   SCIP_Bool*            iscompoftwocycles,  /**< pointer to store whether permutation is a composition of 2-cycles */
    int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles */
-   SCIP_Bool*            allvarsbinary       /**< pointer to store whether perm is acting on binary variables only */
+   SCIP_Bool             allvarsbinary       /**< whether perm is also required to act on binary variables only */
    )
 {
    int ntwocycles = 0;
@@ -306,13 +307,10 @@ SCIP_RETCODE SCIPgetPropertiesPerm(
 
    assert( perm != NULL );
    assert( vars != NULL );
-   assert( iscompoftwocycles != NULL );
    assert( ntwocyclesperm != NULL );
-   assert( allvarsbinary != NULL );
 
-   *iscompoftwocycles = FALSE;
    *ntwocyclesperm = 0;
-   *allvarsbinary = TRUE;
+
    for (i = 0; i < nvars; ++i)
    {
       /* skip fixed points and avoid treating the same 2-cycle twice */
@@ -321,12 +319,11 @@ SCIP_RETCODE SCIPgetPropertiesPerm(
 
       if ( perm[perm[i]] == i )
       {
-         if ( SCIPvarIsBinary(vars[i]) && SCIPvarIsBinary(vars[perm[i]]) )
+         if ( !allvarsbinary || (SCIPvarIsBinary(vars[i]) && SCIPvarIsBinary(vars[perm[i]])) )
             ++ntwocycles;
          else
          {
             /* at least one variable is not binary */
-            *allvarsbinary = FALSE;
             return SCIP_OKAY;
          }
       }
@@ -338,7 +335,6 @@ SCIP_RETCODE SCIPgetPropertiesPerm(
    }
 
    /* at this point the permutation is a composition of 2-cycles on binary variables */
-   *iscompoftwocycles = TRUE;
    *ntwocyclesperm = ntwocycles;
 
    return SCIP_OKAY;

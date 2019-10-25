@@ -2289,37 +2289,181 @@ SCIP_RETCODE determineSymmetry(
 }
 
 
-
 /*
  * Functions for symmetry constraints
  */
 
 
-/** checks whether components of the symmetry group can be completely handled by orbitopes */
+/** choose an order in which the generators should be added for subgroup detection */
+static
+int* chooseOrderOfGenerators(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
+   int                   compidx             /**< index of component */
+   )
+{
+   assert(scip != NULL);
+   assert(propdata != NULL);
+   assert(compidx >= 0);
+   assert(compidx < propdata->ncomponents);
+
+   /* @TODO: implement */
+   return NULL;
+}
+
+/** checks whether a given graph is acyclic */
+static
+SCIP_Bool isAcyclicGraph(
+   SCIP_DIGRAPH*         graph               /**< the graph to be checked */
+   )
+{
+   assert(graph != NULL);
+
+   /* @TODO: implement */
+   return TRUE;
+}
+
+/** builds the graph for symmetric subgroup detection from the given permutation of generators */
+static
+SCIP_RETCODE buildSubgroupGraph(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
+   SCIP_DIGRAPH*         graph,              /**< the initialized graph with no edges */
+   int*                  genorder,     /**< order in which the generators should be considered (or NULL) */
+   int                   compidx             /**< index of the component */
+   )
+{
+   SCIP_VAR** permvars;
+   int** perms;
+   int* components;
+   int* componentbegins;
+   int ncomponents;
+   int npermvars;
+   int npermsincomp;
+   int j;
+   int k;
+
+   assert(scip != NULL);
+   assert(propdata != NULL);
+   assert(graph != NULL);
+   assert(compidx >= 0);
+   assert(compidx < propdata->ncomponents);
+   assert(!propdata->componentblocked[compidx]);
+
+   perms = propdata->perms;
+   permvars = propdata->permvars;
+   npermvars = propdata->npermvars;
+   components = propdata->components;
+   componentbegins = propdata->componentbegins;
+   ncomponents = propdata->ncomponents;
+   npermsincomp = componentbegins[compidx + 1] - componentbegins[compidx];
+
+   assert(npermsincomp > 0);
+
+   for( j = 0; j < npermsincomp; ++j )
+   {
+      int* perm;
+      int genidx;
+      int k;
+      int ntwocyclesperm;
+
+      /* use given order of generators, if specified */
+      genidx = genorder == NULL ? j : genorder[j];
+
+      perm = perms[components[componentbegins[compidx] + genidx]];
+
+      SCIP_CALL( SCIPgetPropertiesPerm(perm, permvars, npermvars, &ntwocyclesperm, FALSE) );
+
+      /* we skip permutations which do not purely consist of 2-cycles */
+      if( ntwocyclesperm == 0 )
+         continue;
+
+      assert(ntwocyclesperm > 0);
+
+      for( k = 0; k < permvars; ++k )
+      {
+         int img = perm[k];
+
+         if( img == k )
+            continue;
+
+         assert(perm[img] == k);
+
+         /* both directions for each pair will be added, since perm consists of 2-cycles */
+         SCIP_CALL( SCIPdigraphAddArc(graph, k, img, NULL) );
+      }
+
+      /* if the new graph is not acyclic, delete the edges again and go to next generator */
+      if( !isAcyclicGraph(graph) )
+      {
+         for( k = 0; k < permvars; ++k )
+         {
+            int img = perm[k];
+
+            if( img == k )
+               continue;
+
+            SCIP_CALL( SCIPdigraphSetNSuccessors(graph, k, SCIPdigraphGetNSuccessors(graph, k) - 1) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether subgroups of the components are symmetric groups and adds SBCs for them */
 static
 SCIP_RETCODE detectAndHandleSubgroups(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
-   int*                  components,         /**< array containing components of symmetry group */
-   int*                  componentbegins,    /**< array containing begin positions of components in components array */
-   int                   ncomponents         /**< number of components */
+   SCIP_PROPDATA*        propdata            /**< pointer to data of symmetry propagator */
    )
 {
-   assert( scip != NULL );
-   assert( propdata != NULL );
-   assert( components != NULL );
-   assert( componentbegins != NULL );
-   assert( ncomponents > 0 );
-   assert( propdata->nperms >= 0 );
+   int i;
+
+   assert(scip != NULL);
+   assert(propdata != NULL);
+   assert(propdata->components != NULL);
+   assert(propdata->componentbegins != NULL);
+   assert(propdata->ncomponents > 0);
+   assert(propdata->nperms >= 0);
 
    /* exit if no symmetry is present */
-   if ( propdata->nperms == 0 )
+   if( propdata->nperms == 0 )
       return SCIP_OKAY;
 
-   assert( propdata->nperms > 0 );
-   assert( propdata->perms != NULL );
-   assert( propdata->npermvars > 0 );
-   assert( propdata->permvars != NULL );
+   assert(propdata->nperms > 0);
+   assert(propdata->perms != NULL);
+   assert(propdata->npermvars > 0);
+   assert(propdata->permvars != NULL);
+
+   /* iterate over components */
+   for( i = 0; i < propdata->ncomponents; ++i )
+   {
+      SCIP_DIGRAPH* graph;
+      int* genorder;
+      int j;
+
+      /* if component is blocked, skip it */
+      if( propdata->componentblocked[i] )
+         continue;
+
+      SCIP_CALL( SCIPcreateDigraph(scip, &graph, propdata->npermvars) );
+
+      /* set color of each node to -1 */
+      for( j = 0; j < propdata->npermvars; ++j )
+      {
+         SYM_NODEDATA nodedata;
+
+         nodedata.color = -1;
+         SCIPdigraphSetNodeData(graph, (void*) &nodedata, j);
+      }
+
+      genorder = chooseOrderOfGenerators(scip, propdata, i);
+
+      SCIP_CALL( buildSubgroupGraph(scip, propdata, graph, genorder, i) );
+
+      SCIPdigraphFree(&graph);
+   }
 
    return SCIP_OKAY;
 }
@@ -2380,23 +2524,24 @@ SCIP_RETCODE detectOrbitopes(
       int j;
       int row;
 
+      /* orbitopes are detected first, so no component should be blocked */
+      assert( ! propdata->componentblocked[i] );
+
       /* get properties of permutations */
       npermsincomponent = componentbegins[i + 1] - componentbegins[i];
       assert( npermsincomponent > 0 );
       for (j = componentbegins[i]; j < componentbegins[i + 1]; ++j)
       {
-         SCIP_Bool iscompoftwocycles = FALSE;
-         SCIP_Bool allvarsbinary = TRUE;
          int ntwocyclesperm = 0;
 
-         SCIP_CALL( SCIPgetPropertiesPerm(perms[components[j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
+         SCIP_CALL( SCIPgetPropertiesPerm(perms[components[j]], permvars, npermvars, &ntwocyclesperm, TRUE) );
 
          /* if we are checking the first permutation */
          if ( ntwocyclescomp == INT_MAX )
             ntwocyclescomp = ntwocyclesperm;
 
          /* no or different number of 2-cycles or not all vars binary: permutations cannot generate orbitope */
-         if ( ntwocyclescomp == 0 || ntwocyclescomp != ntwocyclesperm || ! allvarsbinary )
+         if ( ntwocyclescomp == 0 || ntwocyclescomp != ntwocyclesperm )
          {
             isorbitope = FALSE;
             break;
@@ -2732,7 +2877,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    if ( !propdata->ofenabled && propdata->detectsubgroups )
    {
-      SCIP_CALL( detectAndHandleSubgroups(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
+      SCIP_CALL( detectAndHandleSubgroups(scip, propdata) );
    }
 
    /* possibly stop */

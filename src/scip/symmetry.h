@@ -96,15 +96,16 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
    );
 
 
-/** check whether a permutation is a composition of 2-cycles of binary variables and in this case determine the number of 2-cycles */
+/** check whether a permutation is a composition of 2-cycles and this case determine the number of 2-cycles
+ *  @p allvarsbinary can be used to restrict to permutations that swap binary variables
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetPropertiesPerm(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< array of variables perm is acting on */
    int                   nvars,              /**< number of variables */
-   SCIP_Bool*            iscompoftwocycles,  /**< pointer to store whether permutation is a composition of 2-cycles */
    int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles */
-   SCIP_Bool*            allvarsbinary       /**< pointer to store whether perm is acting on binary variables only */
+   SCIP_Bool             allvarsbinary       /**< whether perm is also required to act on binary variables only */
    );
 
 
