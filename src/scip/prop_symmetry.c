@@ -122,6 +122,7 @@
 #include <scip/cons_linking.h>
 #include <scip/cons_bounddisjunction.h>
 #include <scip/misc.h>
+#include "scip/scip_datastructures.h"
 
 #include <scip/prop_symmetry.h>
 #include <symmetry/compute_symmetry.h>
@@ -270,6 +271,14 @@ struct SCIP_PropData
    int                   maxnleaders;        /**< maximum number of leaders in leaders array */
 };
 
+/** node data of a given node in the conflict graph */
+struct SCIP_NodeData
+{
+   SCIP_VAR*             var;                /**< variable belonging to node */
+   int                   orbitidx;           /**< orbit of variable w.r.t. current stabilizer subgroup
+                                              *   or -1 if not affected by symmetry */
+};
+typedef struct SCIP_NodeData SCIP_NODEDATA;
 
 
 /*
@@ -2635,6 +2644,265 @@ SCIP_RETCODE detectOrbitopes(
 }
 
 
+/* create conflict graph for symmetric or all variables */
+static
+SCIP_RETCODE createConflictGraphSchreierSims(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_HASHMAP*         permvarmap,         /**< map of variables to indices in permvars array or NULL (if conflict
+                                              *   graph for all active variables should be created) */
+   int                   nvars,              /**< number of permvars or (if permvarmap == NULL) active problem vars */
+   SCIP_DIGRAPH**        conflictgraph,      /**< pointer to store conflict graph */
+   SCIP_Bool*            success             /**< pointer to store whether conflict graph could be created successfully */
+   )
+{
+   SCIP_CONSHDLR* setppcconshdlr;
+   SCIP_CONS** setppcconss;
+   SCIP_VAR** setppcvars;
+   SCIP_CONS* cons;
+   int nsetppcconss;
+   int nsetppcvars;
+   int nodei;
+   int nodej;
+   int c;
+   int i;
+   int j;
+   SCIP_Bool onlypermvars;
+   int nedges = 0;
+
+   assert( scip != NULL );
+   assert( nvars > 0 );
+   assert( conflictgraph != NULL );
+
+   *success = TRUE;
+
+   if ( permvarmap == NULL )
+      onlypermvars = FALSE;
+   else
+      onlypermvars = TRUE;
+
+   setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
+   if ( setppcconshdlr == NULL )
+   {
+      SCIPdebugMsg(scip, "Could not find setppc conshdlr --> construction of conflict graph aborted.\n");
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   assert( setppcconshdlr != NULL );
+
+   setppcconss = SCIPconshdlrGetConss(setppcconshdlr);
+   nsetppcconss = SCIPconshdlrGetNConss(setppcconshdlr);
+   if ( setppcconshdlr == NULL )
+   {
+      SCIPdebugMsg(scip, "No setppc constraints present --> construction of conflict graph aborted.\n");
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   assert( setppcconshdlr != NULL );
+
+   /* construct conflict graph */
+   SCIP_CALL( SCIPcreateDigraph(scip, conflictgraph, nvars) );
+   SCIPdebugMsg(scip, "Construction of conflict graph:\n");
+
+   for (c = 0; c < nsetppcconss; ++c)
+   {
+      cons = setppcconss[c];
+      assert( cons != NULL );
+
+      /* skip covering constraints */
+      if ( SCIPgetTypeSetppc(scip, cons) == SCIP_SETPPCTYPE_COVERING )
+         continue;
+
+      setppcvars = SCIPgetVarsSetppc(scip, cons);
+      nsetppcvars = SCIPgetNVarsSetppc(scip, cons);
+      assert( setppcvars != NULL );
+      assert( nsetppcvars > 0 );
+
+      SCIPdebugMsg(scip, "\tAdd edges for constraint %s.\n", SCIPconsGetName(cons));
+
+      /* iterate over pairs of variables in constraint and add bidirected arc
+       * if both are affected by a symmetry or active
+       */
+      for (i = 0; i < nsetppcvars; ++i)
+      {
+         if ( onlypermvars )
+         {
+            nodei = SCIPhashmapGetImageInt(permvarmap, setppcvars[i]);
+
+            /* skip variables that are not affected by symmetry */
+            if ( nodei == INT_MAX )
+               continue;
+         }
+         else
+         {
+            nodei = SCIPvarGetProbindex(setppcvars[i]);
+
+            /* skip inactive variables */
+            if ( nodei < 0 )
+               continue;
+         }
+
+         for (j = 0; j < nsetppcvars; ++j)
+         {
+            if ( onlypermvars )
+            {
+               nodej = SCIPhashmapGetImageInt(permvarmap, setppcvars[j]);
+
+               /* skip variables that are not affected by symmetyr */
+               if ( nodej == INT_MAX )
+                  continue;
+            }
+            else
+            {
+               nodei = SCIPvarGetProbindex(setppcvars[j]);
+
+               /* skip inactive variables */
+               if ( nodej < 0 )
+                  continue;
+            }
+
+            SCIP_CALL( SCIPdigraphAddArcSafe(*conflictgraph, nodei, nodej, NULL) );
+            SCIP_CALL( SCIPdigraphAddArcSafe(*conflictgraph, nodej, nodei, NULL) );
+            ++nedges;
+         }
+      }
+   }
+   SCIPdebugMsg(scip, "Construction of conflict graph terminated; %d conflicts detected.\n", nedges);
+
+   return SCIP_OKAY;
+}
+
+
+/* frees conflict graph */
+static
+SCIP_RETCODE freeConflictGraphSchreierSims(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   int                   nnodes              /**< number of nodes in conflict graph */
+   )
+{
+   int i;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( nnodes > 0 );
+
+   /* free node data */
+   for (i = 0; i < nnodes; ++i)
+   {
+      SCIP_NODEDATA* nodedata;
+
+      /* get node data */
+      nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, i);
+      assert( nodedata != NULL );
+
+      /* free node data */
+      SCIPfreeBlockMemory(scip, &nodedata);
+      SCIPdigraphSetNodeData(conflictgraph, NULL, i);
+   }
+
+   /* free conflict graph */
+   SCIPdigraphFree(&conflictgraph);
+
+   return SCIP_OKAY;
+}
+
+
+/* add symmetry information to conflict graph */
+static
+SCIP_RETCODE addSymInfoConflictGraphSchreierSims(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_VAR**            graphvars,          /**< variables encoded in conflict graph */
+   int                   ngraphvars,         /**< number of nodes/vars in conflict graph */
+   SCIP_VAR**            permvars,           /**< variables considered in permutations */\
+   int                   npermvars,          /**< number of permvars */
+   SCIP_Bool             onlypermvars,       /**< whether conflict graph contains only permvars */
+   int*                  orbits,             /**< array of non-trivial orbits */
+   int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
+   int                   norbits             /**< number of non-trivial orbits */
+   )
+{
+   SCIP_HASHMAP* varmap;
+   int i;
+   int j;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( graphvars != NULL );
+   assert( ngraphvars > 0 );
+   assert( permvars != NULL );
+   assert( npermvars > 0 );
+   assert( orbits != NULL );
+   assert( orbitbegins != NULL );
+   assert( norbits >= 0 );
+
+   /* if conflict graph contains all active variables, */
+   if ( ! onlypermvars )
+   {
+      SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), ngraphvars) );
+   }
+
+   /* add variable information to nodes of conflict graph */
+   for (i = 0; i < ngraphvars; ++i)
+   {
+      SCIP_NODEDATA* nodedata = NULL;
+
+      /* create node data */
+      SCIP_CALL( SCIPallocBlockMemory(scip, &nodedata) );
+      nodedata->var = graphvars[i];
+      nodedata->orbitidx = -1;
+
+      if ( ! onlypermvars )
+      {
+         assert( ! SCIPhashmapExists(varmap, graphvars[i]) );
+         SCIP_CALL( SCIPhashmapInsertInt(varmap, graphvars[i], i) );
+      }
+
+      /* set node data */
+      SCIPdigraphSetNodeData(conflictgraph, (void*) nodedata, i);
+   }
+
+   /* add orbit information to nodes of conflict graph */
+   for (j = 0; j < norbits; ++j)
+   {
+      for (i = orbitbegins[j]; i < orbitbegins[j + 1]; ++j)
+      {
+         SCIP_NODEDATA* nodedata;
+         SCIP_VAR* var;
+         int pos;
+
+         /* get variable and position in conflict graph */
+         if ( onlypermvars )
+         {
+            pos = orbits[i];
+            var = permvars[pos];
+         }
+         else
+         {
+            var = permvars[orbits[i]];
+            assert( var != NULL );
+
+            /* get position of var in conflict graph */
+            assert( SCIPhashmapExists(varmap, var) );
+            pos = SCIPhashmapGetImageInt(varmap, var);
+         }
+
+         /* get node data */
+         nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, pos);
+         assert( nodedata->var == var );
+
+         nodedata->orbitidx = j;
+         SCIPdigraphSetNodeData(conflictgraph, (void*) nodedata, pos);
+      }
+   }
+
+   if ( ! onlypermvars )
+      SCIPhashmapFree(&varmap);
+
+   return SCIP_OKAY;
+}
+
+
 /* temporarily adapt symmetry data to new variable order given by Schreier Sims */
 static
 SCIP_RETCODE adaptSymmetryDataSchreierSims(
@@ -3001,7 +3269,6 @@ SCIP_RETCODE addSchreierSimsConss(
 {
    SCIP_VAR** permvars;
    int npermvars;
-   int** perms;
    int** permstrans;
    int nperms;
    int* components;
@@ -3026,7 +3293,6 @@ SCIP_RETCODE addSchreierSimsConss(
 
    permvars = propdata->permvars;
    npermvars = propdata->npermvars;
-   perms = propdata->perms;
    permstrans = propdata->permstrans;
    nperms = propdata->nperms;
    components = propdata->components;
@@ -3037,7 +3303,6 @@ SCIP_RETCODE addSchreierSimsConss(
 
    assert( permvars != NULL );
    assert( npermvars > 0 );
-   assert( perms != NULL);
    assert( permstrans != NULL );
    assert( nperms > 0 );
    assert( components != NULL );
