@@ -819,7 +819,7 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
  *  The subproblem that has been called the least is prioritised
  */
 static
-SCIP_DECL_SORTPTRCOMP(solvestatcomp)
+SCIP_DECL_SORTPTRCOMP(benderssubcompdefault)
 {
    SCIP_SUBPROBLEMSOLVESTAT* solvestat1;
    SCIP_SUBPROBLEMSOLVESTAT* solvestat2;
@@ -832,7 +832,10 @@ SCIP_DECL_SORTPTRCOMP(solvestatcomp)
 
    if( solvestat1->ncalls == 0 )
       if( solvestat2->ncalls == 0 )
-         return solvestat1->idx - solvestat2->idx;
+         if( solvestat1->idx < solvestat2->idx )
+            return -1;
+         else
+            return 1;
       else
          return -1;
    else if( solvestat2->ncalls == 0 )
@@ -2476,7 +2479,8 @@ SCIP_RETCODE SCIPbendersActivate(
       SCIP_ALLOC( BMSallocMemoryArray(&benders->mastervarscont, benders->nsubproblems) );
 
       /* creating the priority queue for the subproblem solving status */
-      SCIP_CALL( SCIPpqueueCreate(&benders->subprobqueue, benders->nsubproblems, 1.1, solvestatcomp) );
+      SCIP_CALL( SCIPpqueueCreate(&benders->subprobqueue, benders->nsubproblems, 1.1,
+            benders->benderssubcomp == NULL ? benderssubcompdefault : benders->benderssubcomp) );
 
 
       for( i = 0; i < benders->nsubproblems; i++ )
@@ -3311,6 +3315,7 @@ SCIP_RETCODE generateBendersCuts(
 
    /* It is only possible to add cuts to the problem if it has not already been solved */
    if( SCIPsetGetStage(set) < SCIP_STAGE_SOLVED
+      && SCIPsetGetStage(set) != SCIP_STAGE_TRANSFORMED && SCIPsetGetStage(set) != SCIP_STAGE_PRESOLVED
       && (benders->cutcheck || type != SCIP_BENDERSENFOTYPE_CHECK) )
    {
       /* This is done in two loops. The first is by subproblem and the second is by cut type. */
@@ -3546,7 +3551,7 @@ SCIP_RETCODE SCIPbendersExec(
     * the Benders' decomposition subproblems.
     * TODO: Add a parameter to control this behaviour.
     */
-   if( checkint && SCIPsetIsFeasLE(set, SCIPgetPrimalbound(set->scip)*(int)SCIPgetObjsense(set->scip),
+   if( checkint && SCIPsetIsLE(set, SCIPgetPrimalbound(set->scip)*(int)SCIPgetObjsense(set->scip),
          SCIPgetSolOrigObj(set->scip, sol)*(int)SCIPgetObjsense(set->scip)) )
    {
       (*result) = SCIP_DIDNOTRUN;
@@ -3679,7 +3684,7 @@ SCIP_RETCODE SCIPbendersExec(
 
          /* if the solving has been stopped, then the subproblem solving and cut generation must terminate */
          if( stopped )
-            goto TERMINATE;
+            break;
 
          /* Generating cuts for the subproblems. Cuts are only generated when the solution is from primal heuristics,
           * relaxations or the LP
@@ -3716,6 +3721,9 @@ SCIP_RETCODE SCIPbendersExec(
 
    /* inserting the subproblems into the priority queue for the next solve call */
    SCIP_CALL( updateSubproblemStatQueue(benders, executedidx, nexecutedidx, TRUE) );
+
+   if( stopped )
+      goto TERMINATE;
 
    allverified = (nverified == nsubproblems);
 
@@ -3790,8 +3798,12 @@ SCIP_RETCODE SCIPbendersExec(
 
       /* since no other cuts are generated, then this error will result in a crash. It is possible to avoid the error,
        * by merging the affected subproblem into the master problem.
+       *
+       * NOTE: If the error occurs while checking solutions, i.e. SCIP_BENDERSENFOTYPE_CHECK, then it is valid to set
+       * the result to SCIP_INFEASIBLE and the success flag to TRUE
        */
-      success = FALSE;
+      if( type != SCIP_BENDERSENFOTYPE_CHECK )
+         success = FALSE;
 
       goto POSTSOLVE;
    }
@@ -3908,7 +3920,7 @@ TERMINATE:
    /* if there was an error in generating cuts and merging was not performed, then the solution is perturbed in an
     * attempt to generate a cut and correct the infeasibility
     */
-   if( !success )
+   if( !success && !stopped )
    {
       SCIP_Bool skipsolve;
       SCIP_RESULT perturbresult;
@@ -3926,6 +3938,12 @@ TERMINATE:
 
       success = skipsolve;
    }
+
+   /* if the Benders' decomposition subproblem check stopped, then we don't have a valid result. In this case, the
+    * safest thing to do is report INFEASIBLE.
+    */
+   if( stopped )
+      (*result) = SCIP_INFEASIBLE;
 
    if( !success )
       return SCIP_ERROR;
@@ -5351,6 +5369,17 @@ void SCIPbendersSetPostsolve(
    benders->benderspostsolve = benderspostsolve;
 }
 
+/** sets post-solve callback of Benders' decomposition */
+void SCIPbendersSetSubproblemComp(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_SORTPTRCOMP((*benderssubcomp))  /**< a comparator for defining the solving order of the subproblems */
+   )
+{
+   assert(benders != NULL);
+
+   benders->benderssubcomp = benderssubcomp;
+}
+
 /** sets free subproblem callback of Benders' decomposition */
 void SCIPbendersSetFreesub(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -5956,7 +5985,7 @@ void SCIPbendersUpdateSubproblemLowerbound(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
-   if( lowerbound > benders->subproblowerbound[probnumber] )
+   if( EPSGE(lowerbound, benders->subproblowerbound[probnumber], 1e-06) )
       benders->subproblowerbound[probnumber] = lowerbound;
    else
    {

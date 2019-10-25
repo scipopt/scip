@@ -332,6 +332,12 @@ void SCIPbendersSetPostsolve(
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization callback of Benders' decomposition */
    );
 
+/** sets post-solve callback of Benders' decomposition */
+void SCIPbendersSetSubproblemComp(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_SORTPTRCOMP((*benderssubcomp))  /**< a comparator for defining the solving order of the subproblems */
+   );
+
 /** sets free subproblem callback of Benders' decomposition */
 void SCIPbendersSetFreesub(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
