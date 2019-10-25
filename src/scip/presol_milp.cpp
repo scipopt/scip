@@ -347,6 +347,18 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          }
 
          assert(colCoef != 0.0);
+         SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
+         if( SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_AGGREGATED )
+         {
+            SCIP_Real scalar = SCIPvarGetAggrScalar(aggrvar);
+            SCIP_Real constant = SCIPvarGetAggrConstant(aggrvar);
+            aggrvar = SCIPvarGetAggrVar(aggrvar);
+
+            side -= colCoef * constant;
+            colCoef *= scalar;
+         }
+
+         assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
 
          for( int j = first + 1; j < last; ++j )
          {
@@ -359,17 +371,14 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
          SCIP_Bool infeas;
          SCIP_Bool aggregated;
-         SCIP_CALL( SCIPmultiaggregateVar(scip, SCIPmatrixGetVar(matrix, col), aggrvars.size(),
+         SCIP_CALL( SCIPmultiaggregateVar(scip, aggrvar, aggrvars.size(),
             aggrvars.data(), aggrvals.data(), side / colCoef, &infeas, &aggregated) );
 
          if( aggregated )
-         {
             *naggrvars += 1;
-         }
 
          if( infeas )
          {
-            puts("infeas after aggregation");
             *result = SCIP_CUTOFF;
             break;
          }
