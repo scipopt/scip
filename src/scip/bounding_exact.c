@@ -3685,6 +3685,11 @@ SCIP_RETCODE boundShift(
          }
       }
       /** @todo exip: get exact column bounds ? */
+      //SCIPintervalSetBounds(&ublbcol[j],
+      //   RatRoundReal(SCIPvarGetLbLocalExact(col->var), SCIP_ROUND_DOWNWARDS), 
+      //   RatRoundReal(SCIPvarGetUbLocalExact(col->var), SCIP_ROUND_UPWARDS));
+      assert(SCIPcolGetLb(col) <= RatRoundReal(SCIPvarGetLbLocalExact(col->var), SCIP_ROUND_DOWNWARDS));
+      assert(SCIPcolGetUb(col) >= RatRoundReal(SCIPvarGetUbLocalExact(col->var), SCIP_ROUND_UPWARDS));
       SCIPintervalSetBounds(&ublbcol[j], SCIPcolGetLb(col), SCIPcolGetUb(col));
       if( (SCIPsetIsInfinity(set, -SCIPcolGetLb(col)) || SCIPsetIsInfinity(set, SCIPcolGetUb(col))) )
       {
