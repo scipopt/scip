@@ -93,7 +93,6 @@ SCIP_RETCODE SCIPvarColumnExact(
 
    /* create column of variable */
    SCIP_CALL( SCIPcolexCreate(&(var->exactdata->excol), SCIPvarGetCol(var), blkmem, set, stat, var, 0, NULL, NULL, var->removable) );
-   SCIPhashtableInsert(lp->excolhash, (void*) var->exactdata->excol);
 
    if( var->probindex != -1 )
    {

@@ -1291,7 +1291,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          val = col->redcost;
 
       /* this should not need to be recomputed */
-      // SCIPcolexCalcFarkasRedcostCoef(col, set, val, NULL, usefarkas);
+      SCIPcolexCalcFarkasRedcostCoef(col, set, val, NULL, usefarkas);
 
       assert(!RatIsAbsInfinity(val));
 

@@ -3816,7 +3816,6 @@ SCIP_Bool SCIProwHasExRow(
 {
    assert(row != NULL);
    assert(lpex != NULL);
-   assert(lpex->exrowhash != NULL);
 
    return (NULL != row->rowex);
 }
@@ -3829,7 +3828,6 @@ SCIP_ROWEX* SCIProwGetExRow(
 {
    assert(row != NULL);
    assert(lpex != NULL);
-   assert(lpex->exrowhash != NULL);
 
    return row->rowex;
 }
