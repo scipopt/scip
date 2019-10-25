@@ -211,7 +211,7 @@ SCIP_Real getNlpVarSol(
    assert(var != NULL);
    assert((primalvals == NULL && var2idx == NULL) || (primalvals != NULL && var2idx != NULL));
 
-   if( var2idx != NULL )
+   if( var2idx != NULL && primalvals != NULL )
    {
       assert(SCIPhashmapExists(var2idx, (void*)var) );
       idx = SCIPhashmapGetImageInt(var2idx, (void*)var);
@@ -456,7 +456,7 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
       nlrow = SCIPgetNLPNlRows(subproblem)[i];
       assert(nlrow != NULL);
 
-      if( row2idx != NULL )
+      if( row2idx != NULL && consdualvals != NULL )
       {
          assert(SCIPhashmapExists(row2idx, (void*)nlrow) );
          idx = SCIPhashmapGetImageInt(row2idx, (void*)nlrow);
@@ -489,7 +489,7 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
       /* retrieving the master problem variable for the given subproblem variable. */
       SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
 
-      if( var2idx != NULL )
+      if( var2idx != NULL && varubdualvals != NULL && varlbdualvals != NULL )
       {
          assert(SCIPhashmapExists(var2idx, (void*)var) );
          idx = SCIPhashmapGetImageInt(var2idx, (void*)var);
