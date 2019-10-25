@@ -307,6 +307,8 @@ SCIP_RETCODE SCIPcertificateCreate(
    (*certificate)->derindex_root = -1;
    (*certificate)->rootinfeas = FALSE;
    (*certificate)->objintegral = FALSE;
+   (*certificate)->vals = NULL;
+   (*certificate)->valssize = 0;
 
    return SCIP_OKAY;
 }
@@ -517,6 +519,8 @@ SCIP_RETCODE SCIPcertificateInit(
    }
 
    SCIP_CALL( RatCreateBlock(blkmem, &certificate->rootbound) );
+   certificate->valssize = SCIPgetNVars(scip) + SCIPgetNConss(scip);
+   SCIP_CALL( RatCreateBlockArray(SCIPblkmem(scip), &(certificate->vals), certificate->valssize) );
 
    return SCIP_OKAY;
 }
@@ -602,6 +606,7 @@ void SCIPcertificateExit(
       }
 
    RatFreeBlock(certificate->blkmem, &certificate->rootbound);
+   RatFreeBlockArray(certificate->blkmem, &certificate->vals, certificate->valssize);
    }
 }
 
@@ -1258,7 +1263,19 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    assert(lpex!= NULL);
    assert(certificate->file != NULL);
 
-   SCIP_CALL( RatCreateBufferArray(set->buffer, &vals, lpex->nrows + lpex->ncols) );
+   vals = certificate->vals;
+   /* if needed extend vals array */
+   if( lpex->ncols + lpex->nrows > certificate->valssize )
+   {
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->vals,
+         certificate->valssize, lpex->ncols + lpex->nrows) );
+      for( i = certificate->valssize; i < lpex->ncols + lpex->nrows; i++ )
+      {
+         SCIP_CALL( RatCreateBlock(certificate->blkmem, &(certificate->vals[i])) );
+      }
+      certificate->valssize =  lpex->ncols + lpex->nrows;
+   }
+   
    SCIP_CALL( RatCreateBuffer(set->buffer, &farkasrhs) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
@@ -1273,7 +1290,8 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
       else
          val = col->redcost;
 
-      SCIPcolexCalcFarkasRedcostCoef(col, set, val, NULL, usefarkas);
+      /* this should not need to be recomputed */
+      // SCIPcolexCalcFarkasRedcostCoef(col, set, val, NULL, usefarkas);
 
       assert(!RatIsAbsInfinity(val));
 
@@ -1371,7 +1389,6 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIPsetFreeBufferArray(set, &ind);
    RatFreeBuffer(set->buffer, &tmp);
    RatFreeBuffer(set->buffer, &farkasrhs);
-   RatFreeBufferArray(set->buffer, &vals, lpex->nrows + lpex->ncols);
 
    return SCIP_OKAY;
 }

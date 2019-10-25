@@ -81,6 +81,8 @@ struct SCIP_Certificate
    SCIP_Longint          derindex_root;      /**< index of root bound in certificate */
    SCIP_Bool             rootinfeas;         /**< is the root node infeasible */
    SCIP_Bool             objintegral;        /**< is the objective always integral? copy this so we don't need the prob everywhere */
+   SCIP_Rational**       vals;               /**< we maintain an array for solvals so we don't have to reallocate at every bounding call */
+   int                   valssize;           /**< the size of the vals array */
 };
 
 #ifdef __cplusplus
