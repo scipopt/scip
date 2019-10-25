@@ -15495,6 +15495,8 @@ SCIP_RETCODE printCertificateConsLinear(
    SCIP_Rational** vals;
    SCIP_Rational* lhs;
    SCIP_Rational* rhs;
+   SCIP_Rational* quotient;
+   SCIP_Rational* bound;
    SCIP_Bool isupper;
    int* varsindex;
    int i;
@@ -15525,19 +15527,27 @@ SCIP_RETCODE printCertificateConsLinear(
          lhs = consdata->lhs;
          rhs = consdata->rhs;
 
+         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &quotient) );
+
          /* coefficient is positive -> lhs corresponds to lower bound, if negative to upper bound */
          if( !RatIsAbsInfinity(lhs) )
          {
             isupper = RatIsPositive(vals[0]) ? FALSE : TRUE;
-            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), lhs, isupper) );
+            RatDiv(quotient, lhs, vals[0]);
+            bound = isupper ? SCIPvarGetUbGlobalExact(var) : SCIPvarGetLbGlobalExact(var);
+            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), quotient, isupper) );
          }
 
          /* coefficient is positive -> rhs corresponds to upper bound, if negative to lower bound */
          if( !RatIsAbsInfinity(rhs) )
          {
             isupper = RatIsPositive(vals[0]) ? TRUE : FALSE;
-            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), rhs, isupper) );
+            RatDiv(quotient, rhs, vals[0]);
+            bound = isupper ? SCIPvarGetUbGlobalExact(var) : SCIPvarGetLbGlobalExact(var);
+            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetIndex(var) - SCIPgetNVars(scip), quotient, isupper) );
          }
+
+         RatFreeBuffer(SCIPbuffer(scip), &quotient);
       }
       else
       {
