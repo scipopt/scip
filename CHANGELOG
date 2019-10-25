@@ -93,6 +93,11 @@ Features
 
 - If a reference value (misc/referencevalue) is given, the primal-reference and reference-dual integrals are calculated automatically and printed within the SCIP statistics.
 
+- Parallelisation can be used when applying Benders' decomposition. There are two different forms of parallelisation
+  available. The first is applying Benders' decomposition within a parallel branch-and-bound. This is achieved through
+  the integration with the UG framework. The second is the use of shared memory parallelisation for solving the Benders'
+  decomposition subproblems. A priority queue has been added to help with load balancing.
+
 Performance improvements
 ------------------------
 
@@ -188,6 +193,10 @@ Interface changes
   SCIPcopy, SCIPcopyConsCompression, and SCIPcopyConss can now return *valid=TRUE if some non-checked and non-enforced constraints were not copied, e.g.,
   because they involved relaxation-only variables. Thus, a copy is already regarded as valid if all checked or enforced constraints were copied successfully.
 
+- SCIPbendersCheckSubproblemOptimality() now returns a boolean indicating whether the subproblem is optimal or not.
+  Previously this result was returned through a parameter. The change was required to facilitate the integration with
+  the UG framework.
+
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
@@ -212,7 +221,8 @@ Interface changes
 - new API function SCIPgetNConflictDualproofsApplied()
 - new API functions SCIPeventGetOldtype() and SCIPeventGetNewtype() for the new event when changing the variable type
 - new API function SCIPisConvexConsQuadratic() to check whether a quadratic constraint is convex when a given set of variables would be fixed
-
+- new API function SCIPsetBendersSubproblemComp() used to add a custom comparison method for ordering the Benders'
+  decomposition subproblem solves. The comparison method is used to help with load balancing.
 
 ### Command line interface
 
@@ -307,6 +317,9 @@ Interface changes
   - new parameter "propagating/symmetry/performpresolving"
   - new parameter "propagating/symmetry/recomputerestart"
   - new parameter "constraints/symresack/checkmonotonicity"
+
+- new parameter for enabling shared memory parallelisation for solving Benders' decomposition subproblems. The parameter
+  benders/<bendersname>/numthreads sets the number of threads used for parallel subproblem solving.
 
 ### Data structures
 
