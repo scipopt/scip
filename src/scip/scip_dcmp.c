@@ -461,6 +461,8 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
  *
  * Each linking constraint is assigned to the most frequent block among its variables.
  * Variables of other blocks are relabeled as linking variables.
+ *
+ * @note: In contrast to SCIPdecompComputeConsLabels(), this method potentially relabels variables.
  */
 SCIP_RETCODE SCIPdecompAssignLinkConss(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -516,6 +518,7 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
          int v;
          int p;
 
+         /* count linking variables */
          if( varslabels[0] == SCIP_DECOMP_LINKVAR )
          {
             nlinkvars = countLabelFromPos(varslabels, 0, nconsvars);
@@ -528,6 +531,7 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
          assert(nlinkvars < nconsvars);
 
          curr = nlinkvars;
+         /* find the most frequent block label among the nonlinking variables */
          maxnblockvars = 0;
          do
          {
@@ -541,19 +545,21 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
          }
          while (curr < nconsvars);
 
-         varslabels[block];
-
+         /* reassign all variables from other blocks as linking variables */
          startposs[0] = nlinkvars;
          endposs[0] = block;
          startposs[1] = block + maxnblockvars;
          endposs[1] = nconsvars;
 
          p = 0;
+         /* loop over all variables before (p==0) and after (p==1) the most frequent block label */
          for( p = 0; p < 2; ++p )
          {
+            /* relabel */
             for( v = startposs[p]; v < endposs[p]; ++v)
                varslabels[v] = SCIP_DECOMP_LINKVAR;
 
+            /* set labels in the decomposition */
             SCIP_CALL( SCIPdecompSetVarsLabels(decomp, &vars[startposs[p]], &varslabels[startposs[p]], endposs[p] - startposs[p]) );
          }
 
