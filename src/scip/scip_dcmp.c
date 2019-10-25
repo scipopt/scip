@@ -489,7 +489,8 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
    for( c = 0; c < nconss; c++ )
    {
       SCIP_Bool success;
-      SCIPgetConsNVars(scip, conss[c], &nconsvars, &success);
+
+      SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
       SCIP_CALL( SCIPgetConsVars(scip, conss[c], vars, nvars, &success) );
 
       if( ! SCIPdecompIsOriginal(decomp) )
@@ -533,6 +534,7 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
          curr = nlinkvars;
          /* find the most frequent block label among the nonlinking variables */
          maxnblockvars = 0;
+         block = -1;
          do
          {
             int nblockvars = countLabelFromPos(varslabels, curr, nconsvars);
@@ -677,6 +679,7 @@ SCIP_RETCODE computeModularity(
 
    /* compute modularity */
    *modularity = 0.0;
+   nnonzeroes = MAX(nnonzeroes, 1);
    for( b = 1; b < decomp->nblocks + 1; ++b )
    {
       SCIP_Real expectedval;
@@ -1067,10 +1070,12 @@ SCIP_RETCODE SCIPcomputeDecompStats(
         decomp->idxlargestblock = i;
   }
 
+  /* compute more involved statistics such as the area score, the modularity, and the block graph statistics */
   SCIP_CALL( computeModularity(scip, decomp, &decomp->modularity) );
 
   computeAreaScore(scip, decomp);
-  buildBlockGraph(scip, decomp);
+
+  SCIP_CALL( buildBlockGraph(scip, decomp) );
 
   SCIPfreeBufferArray(scip, &varslabels);
   SCIPfreeBufferArray(scip, &varsarray);
