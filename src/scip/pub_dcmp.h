@@ -27,7 +27,7 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/type_cons.h"
-#include "scip/type_decomp.h"
+#include "scip/type_dcmp.h"
 
 #ifdef __cplusplus
 extern "C" {

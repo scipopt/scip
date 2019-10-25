@@ -39,7 +39,7 @@
 #include "scip/concurrent.h"
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
-#include "scip/decomp.h"
+#include "scip/dcmp.h"
 #include "scip/debug.h"
 #include "scip/lp.h"
 #include "scip/pricer.h"

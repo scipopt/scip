@@ -24,7 +24,7 @@
 #ifndef SRC_SCIP_DECOMP_H_
 #define SRC_SCIP_DECOMP_H_
 
-#include "scip/type_decomp.h"
+#include "scip/type_dcmp.h"
 #include "scip/type_var.h"
 #include "scip/type_cons.h"
 #include "blockmemshell/memory.h"

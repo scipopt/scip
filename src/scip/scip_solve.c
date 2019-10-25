@@ -44,7 +44,7 @@
 #include "scip/cons.h"
 #include "scip/cutpool.h"
 #include "scip/cuts.h"
-#include "scip/decomp.h"
+#include "scip/dcmp.h"
 #include "scip/debug.h"
 #include "scip/event.h"
 #include "scip/implics.h"

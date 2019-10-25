@@ -64,14 +64,14 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/pub_decomp.h"
+#include "scip/pub_dcmp.h"
 #include "scip/pub_fileio.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_dec.h"
-#include "scip/scip_decomp.h"
+#include "scip/scip_dcmp.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -81,7 +81,7 @@
 #include "scip/scip_solve.h"
 #include "scip/scip_var.h"
 #include "scip/scip_mem.h"
-#include "scip/type_decomp.h"
+#include "scip/type_dcmp.h"
 #include <string.h>
 
 #define READER_NAME             "decreader"

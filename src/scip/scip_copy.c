@@ -39,7 +39,7 @@
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
 #include "scip/cons_linear.h"
-#include "scip/decomp.h"
+#include "scip/dcmp.h"
 #include "scip/debug.h"
 #include "scip/primal.h"
 #include "scip/prob.h"

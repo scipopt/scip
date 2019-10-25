@@ -25,7 +25,7 @@
 #define SRC_SCIP_STRUCT_DECOMP_H_
 
 #include "scip/type_misc.h"
-#include "scip/type_decomp.h"
+#include "scip/type_dcmp.h"
 
 #ifdef __cplusplus
 extern "C" {

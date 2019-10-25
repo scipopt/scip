@@ -21,14 +21,14 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include "scip/decomp.h"
+#include "scip/dcmp.h"
 #include "scip/mem.h"
 #include "scip/pub_cons.h"
-#include "scip/pub_decomp.h"
+#include "scip/pub_dcmp.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_var.h"
 #include "scip/scip_cons.h"
-#include "scip/scip_decomp.h"
+#include "scip/scip_dcmp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_var.h"
@@ -36,7 +36,7 @@
 #include "scip/scip_var.h"
 #include "scip/scip_datastructures.h"
 #include "scip/scip_message.h"
-#include "scip/struct_decomp.h"
+#include "scip/struct_dcmp.h"
 #include "scip/struct_scip.h"
 
 /* create and free a decomposition */
