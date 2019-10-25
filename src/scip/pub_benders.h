@@ -183,6 +183,21 @@ SCIP_Bool SCIPbendersShareAuxVars(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
+/** sets the subproblem setup flag */
+SCIP_EXPORT
+void SCIPbendersSetSubproblemIsSetup(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool             issetup             /**< flag to indicate whether the subproblem has been setup */
+   );
+
+/** returns the subproblem setup flag */
+SCIP_EXPORT
+SCIP_Bool SCIPbendersSubproblemIsSetup(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
 /** returns the auxiliary variable for the given subproblem */
 SCIP_EXPORT
 SCIP_VAR* SCIPbendersGetAuxiliaryVar(

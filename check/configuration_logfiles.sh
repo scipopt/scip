@@ -81,7 +81,7 @@ then
     fname=$SCIPPATH/$OUTPUTDIR/`basename $EVALFILE .eval`.meta
     if ! test -e $fname
     then
-        echo @Permutation $p > $fname
+        echo @Permutation $PERM > $fname
         echo @Seed $SEED >> $fname
         echo @Settings $SETNAME >> $fname
         echo @TstName $TSTNAME >> $fname
@@ -195,4 +195,4 @@ TMPFILE=$BASENAME.tmp
 SETFILE=$BASENAME.set
 
 # even if we decide to skip this instance, we write the basename to the eval file
-echo $BASENAME >> $EVALFILE
+echo ${OUTPUTDIR}/${FILENAME} >> $EVALFILE

@@ -50,6 +50,7 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
+
     #constraints
     "indicatorlogicorsepa"
     "indicatoralterlp"
@@ -57,17 +58,20 @@ set(settings_MIP
     #presolving and branching
     "convertinttobin_mostinf"
     "setppclifting_leastinf"
-    #branching and propagation
 
+    #branching and propagation
     "pscost_proporbitope"
+
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
 
     #separation and heuristics
     "oddcycleliftheur_feaspump20"
+
+    #heuristics and branching
     "heurlprows"
-    "lns_epsgreedy"
+    "lns_epsgreedy_vanilla"
     "lns_exp3"
 #    "dynamic"
     "intobj"
@@ -77,7 +81,7 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
-)
+    )
 #
 # settings for the componentshandler test
 #
@@ -88,19 +92,19 @@ set(settings_compHandlerTest
 # settings to run a reduced MIP test
 #
 set(settings_fastMIP
-    "vbcvisualization"
-    "bakvisualization"
-    "alldisp"
-    "fullstrongbfs"
-    "allfull"
     "all_aggressive"
+    "alldisp"
+    "allfull"
+    "bakvisualization"
+    "fullstrongbfs"
     "cgmip"
     "cgmipstrong"
     "cgmipviol"
-    "presolving_off"
-    "separating_off"
     "lookahead-abbrev-bincons"
     "lookahead-addclique-scaledcutoffscore"
+    "presolving_off"
+    "separating_off"
+    "vbcvisualization"
   )
 set(settings_MINLP
     "minlp"
@@ -158,6 +162,14 @@ set(settings_Indicator
     "indicatorupgrade"
    )
 
+set(settings_reopt
+    "reopt-test-settings-usesplitcons-TRUE"
+    "reopt-test-settings-varorderinterdiction-d"
+    "reopt-test-settings-varorderinterdiction-i"
+    "reopt-test-settings-varorderinterdiction-r"
+    )
+
+   
 #
 # Indicator instances
 #
@@ -629,6 +641,31 @@ set_tests_properties(write_and_read_settings
                         FAIL_REGULAR_EXPRESSION "ERROR"
                         DEPENDS scip-build
                     )
+
+#
+# reopt test.
+# We substitute first path placeholders in the .in file, which creates a new file under the binary directory
+# Then run SCIP to execute the list of commands defined there.
+#
+
+set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
+file(MAKE_DIRECTORY ${shell_tmp_dir})
+
+# disabled reopt on FullIns_3 until #2758 is dealt with
+# foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
+foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl)
+    foreach(setting ${settings_reopt})
+        configure_file(interactiveshell/${testname}.bat.in interactiveshell/${testname}-${setting}.bat)
+        add_test(NAME ${testname}-${setting}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/${testname}-${setting}.bat
+                )
+        set_tests_properties(${testname}-${setting} PROPERTIES
+                                            PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                            FAIL_REGULAR_EXPRESSION "Validation         : Fail")
+        endforeach()
+
+endforeach()
+
 
 #
 # define sets of linear classification results

@@ -1478,6 +1478,8 @@ SCIP_RETCODE graph_pc_getRsap(
          if( aterm == root )
             continue;
 
+         head = -1;
+
          for( e = p->outbeg[aterm]; e != EAT_LAST; e = p->oeat[e] )
          {
             head = p->head[e];
@@ -1494,6 +1496,8 @@ SCIP_RETCODE graph_pc_getRsap(
                break;
             }
          }
+
+         assert(head >= 0);
 
          p->term2edge[head] = -1;
          p->term2edge[aterm] = -1;

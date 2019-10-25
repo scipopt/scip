@@ -154,7 +154,9 @@ typedef struct SCIP_SubproblemSolveStat SCIP_SUBPROBLEMSOLVESTAT; /**< the solvi
  *  created within a reader or probdata and then registered with the Benders' decomposition core during the call of this
  *  callback. If there are any settings required for solving the subproblems, then they should be set here. However,
  *  some settings will be overridden by the standard solving method included in the Benders' decomposition framework.
- *  If a special solving method is desired, the user can implement the bendersSolvesubXyz callback.
+ *  If a special solving method is desired, the user can implement the bendersSolvesubXyz callback. In this latter case,
+ *  it is possible to provide a NULL pointer to SCIPaddBendersSubproblem. This will ensure that no internal solving
+ *  methods available within the Benders' decomposition core are invoked during the solving process.
  *
  *  If the user defines a subproblem solving method, then in BENDERSCREATESUB, the user must specify whether the
  *  subproblem is convex. This is necessary because the dual solutions from convex problems can be used to generate cuts.

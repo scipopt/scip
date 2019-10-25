@@ -60,7 +60,7 @@
 #define SCIP_DEFAULT_NOIMPROVELIMIT           5  /** the maximum number of cut strengthening without improvement */
 #define SCIP_DEFAULT_STRENGTHENPERTURB    1e-06  /** the amount by which the cut strengthening solution is perturbed */
 #define SCIP_DEFAULT_STRENGTHENENABLED    FALSE  /** enable the core point cut strengthening approach */
-#define SCIP_DEFAULT_STRENGTHENINTPOINT     'l'  /** where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros) */
+#define SCIP_DEFAULT_STRENGTHENINTPOINT     'r'  /** where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros) */
 #define SCIP_DEFAULT_NUMTHREADS               1  /** the number of parallel threads to use when solving the subproblems */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
@@ -4314,7 +4314,8 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    /* the subproblem must be set up before this function is called. */
-   if( !SCIPbendersSubproblemIsSetup(benders, probnumber) && !SCIPbendersSubproblemIsIndependent(benders, probnumber) )
+   if( SCIPbendersSubproblem(benders, probnumber) != NULL && !SCIPbendersSubproblemIsSetup(benders, probnumber)
+      && !SCIPbendersSubproblemIsIndependent(benders, probnumber) )
    {
       SCIPerrorMessage("Benders' decomposition subproblem %d must be set up before calling SCIPbendersSolveSubproblem(). Call SCIPsetupSubproblem() first.\n", probnumber);
       return SCIP_ERROR;

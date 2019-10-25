@@ -722,7 +722,9 @@ int SCIPgetBendersNSubproblems(
 /** registers the Benders' decomposition subproblem with the Benders' decomposition struct.
  *
  *  If a custom subproblem solving method is used and no internal cut generation methods will be employed, then the
- *  subproblem parameter can be set to NULL.
+ *  subproblem parameter can be set to NULL. By setting subproblem to NULL will inform the Benders' decomposition core
+ *  that a custom solving method is used. This will ensure that no internal solving methods are invoked during the
+ *  solution process.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
