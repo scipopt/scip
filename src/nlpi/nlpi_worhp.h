@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,7 +37,7 @@ extern "C" {
  */
 
 /** create solver interface for Worhp solver */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
@@ -45,19 +45,19 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    );
 
 /** gets string that identifies Worhp (version number) */
-extern
+SCIP_EXPORT
 const char* SCIPgetSolverNameWorhp(
    void
    );
 
 /** gets string that describes Worhp (version number) */
-extern
+SCIP_EXPORT
 const char* SCIPgetSolverDescWorhp(
    void
    );
 
 /** returns whether Worhp is available, i.e., whether it has been linked in */
-extern
+SCIP_EXPORT
 SCIP_Bool SCIPisWorhpAvailableWorhp(
    void
    );

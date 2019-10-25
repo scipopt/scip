@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -102,7 +102,6 @@ extern "C" {
 #endif
 
 /** includes default SCIP plugins into SCIP */
-extern
 SCIP_RETCODE SCIPincludeColoringPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    );

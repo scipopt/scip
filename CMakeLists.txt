@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.3)
 
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
@@ -13,9 +13,9 @@ endif()
 
 set(SCIP_VERSION_MAJOR 6)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 0)
-set(SCIP_VERSION_SUB 2)
-set(SCIP_VERSION_API 38)
+set(SCIP_VERSION_PATCH 2)
+set(SCIP_VERSION_SUB 4)
+set(SCIP_VERSION_API 52)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
@@ -53,6 +53,7 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 option(ZLIB "should zlib be linked" ON)
 option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
+option(STATIC_GMP "prefer static gmp library" OFF)
 option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
@@ -197,6 +198,11 @@ set(WITH_SCIPDEF on)
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
 
+# set function visibility default to hidden
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
+
 # ZLIB
 if(ZLIB)
     find_package(ZLIB)
@@ -331,12 +337,12 @@ endif()
 #search the selected symmetry computation program
 if(SYM STREQUAL "bliss")
     find_package(BLISS)
-    if(BLISS_FOUND AND GMP_FOUND)
+    if(BLISS_FOUND)
         include_directories(${BLISS_INCLUDE_DIRS})
         set(sym symmetry/compute_symmetry_bliss.cpp)
         set(SYM_LIBRARIES ${BLISS_LIBRARIES})
         set(SYM_PIC_LIBRARIES ${BLISS_LIBRARIES})
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BLISS_CXX_FLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BLISS_DEFINITIONS}")
     else()
         set(sym symmetry/compute_symmetry_none.cpp)
     endif()
@@ -461,6 +467,7 @@ add_subdirectory(check)
 #
 add_custom_target(unittests)
 add_subdirectory(tests EXCLUDE_FROM_ALL)
+add_subdirectory(doc EXCLUDE_FROM_ALL)
 add_custom_target(all_executables DEPENDS scip unittests examples applications)
 #
 # add examples

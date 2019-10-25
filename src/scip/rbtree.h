@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -116,25 +116,25 @@ struct SCIP_RBTreeNode
 
 
 /** get first element in tree with respect to sorting key */
-EXTERN
+SCIP_EXPORT
 SCIP_RBTREENODE* SCIPrbtreeFirst_call(
    SCIP_RBTREENODE*      root                /**< root of the tree */
    );
 
 /** get last element in tree with respect to sorting key */
-EXTERN
+SCIP_EXPORT
 SCIP_RBTREENODE* SCIPrbtreeLast_call(
    SCIP_RBTREENODE*      root                /**< root of the tree */
    );
 
 /** get successor of given element in the tree */
-EXTERN
+SCIP_EXPORT
 SCIP_RBTREENODE* SCIPrbtreeSuccessor_call(
    SCIP_RBTREENODE*      x                   /**< element to get successor for */
    );
 
 /** get predecessor of given element in the tree */
-EXTERN
+SCIP_EXPORT
 SCIP_RBTREENODE* SCIPrbtreePredecessor_call(
    SCIP_RBTREENODE*      x                   /**< element to get predecessor for */
    );
@@ -142,7 +142,7 @@ SCIP_RBTREENODE* SCIPrbtreePredecessor_call(
 /** delete the given node from the tree given by it's root node.
  *  The node must be contained in the tree rooted at root.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPrbtreeDelete_call(
    SCIP_RBTREENODE**     root,               /**< root of the tree */
    SCIP_RBTREENODE*      node                /**< node to delete from tree */
@@ -153,7 +153,7 @@ void SCIPrbtreeDelete_call(
  *  the tree's find function defined using the SCIP_DEF_RBTREE_FIND
  *  macro.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPrbtreeInsert_call(
    SCIP_RBTREENODE**     root,               /**< root of the tree */
    SCIP_RBTREENODE*      parent,             /**< future parent of node to be inserted */

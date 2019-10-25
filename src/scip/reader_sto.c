@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_sto.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  STO file reader - the stochastic information of an instance in SMPS format
  * @author Stephen J. Maher
  */
@@ -226,7 +227,7 @@ SCIP_RETCODE freeScenarioTree(
       SCIP_CALL( SCIPfree(&(*scenariotree)->subproblems[i]) );
 
    /* freeing the array that stores the subproblems */
-   if( nchildren > 0 )
+   if( nchildren > 0 && (*scenariotree)->subproblems != NULL )
       SCIPfreeBlockMemoryArray(scip, &(*scenariotree)->subproblems, nchildren);
 
    SCIPfreeBlockMemory(scip, scenariotree);

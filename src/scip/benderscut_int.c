@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_int.c
+ * @ingroup OTHER_CFILES
  * @brief  Generates a Laporte and Louveaux Benders' decomposition integer cut
  * @author Stephen J. Maher
  */
@@ -153,7 +154,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    subprobobj = SCIPbendersGetSubproblemObjval(benders, probnumber);
 
    SCIPdebugMsg(masterprob, "Subproblem %d - Objective Value: Stored - %g Orig Obj - %g Cut constant - %g\n",
-      probnumber, SCIPbendersGetSubproblemObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, subprobsol),
+      probnumber, SCIPbendersGetSubproblemObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, subprobsol)*(int)SCIPgetObjsense(subproblem),
       cutconstant);
 
    nvars = SCIPgetNVars(masterprob);
@@ -330,7 +331,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    {
       (*result) = SCIP_FEASIBLE;
       SCIPdebugMsg(masterprob, "No <%s> cut added. Current Master Problem Obj: %g\n", BENDERSCUT_NAME,
-         SCIPgetSolOrigObj(masterprob, NULL));
+         SCIPgetSolOrigObj(masterprob, NULL)*(int)SCIPgetObjsense(masterprob));
       return SCIP_OKAY;
    }
 
@@ -359,7 +360,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    /* creating an empty row or constraint for the Benders' cut */
    if( addcut )
    {
-      SCIP_CALL( SCIPcreateEmptyRowCons(masterprob, &row, consbenders, cutname, 0.0, SCIPinfinity(masterprob), FALSE,
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(masterprob, &row, consbenders, cutname, 0.0, SCIPinfinity(masterprob), FALSE,
             FALSE, TRUE) );
    }
    else
@@ -532,10 +533,23 @@ SCIP_DECL_BENDERSCUTEXIT(benderscutExitInt)
 static
 SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
 {  /*lint --e{715}*/
+   SCIP* subproblem;
+
    assert(scip != NULL);
    assert(benders != NULL);
    assert(benderscut != NULL);
    assert(result != NULL);
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   if( subproblem == NULL )
+   {
+      SCIPdebugMsg(scip, "The subproblem %d is set to NULL. The <%s> Benders' decomposition cut can not be executed.\n",
+         probnumber, BENDERSCUT_NAME);
+
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /* it is only possible to generate the Laporte and Louveaux cuts for pure binary master problems */
    if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders)) )
@@ -550,7 +564,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
 
    /* the integer subproblem could terminate early if the auxiliary variable value is much greater than the optimal
     * solution. As such, it is only necessary to generate a cut if the subproblem is OPTIMAL */
-   if( SCIPgetStatus(SCIPbendersSubproblem(benders, probnumber)) == SCIP_STATUS_OPTIMAL )
+   if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersIntegerCuts(scip, benders, benderscut, sol, probnumber, type, result, FALSE) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -44,7 +44,6 @@ extern "C" {
 
 
 /** copies the given Benders' decomposition to a new scip */
-extern
 SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             sourceset,          /**< SCIP_SET of SCIP to copy from */
@@ -56,7 +55,6 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    );
 
 /** creates a Benders' decomposition */
-extern
 SCIP_RETCODE SCIPbendersCreate(
    SCIP_BENDERS**        benders,            /**< pointer to Benders' decomposition data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -88,28 +86,24 @@ SCIP_RETCODE SCIPbendersCreate(
    );
 
 /** calls destructor and frees memory of Benders' decomposition */
-extern
 SCIP_RETCODE SCIPbendersFree(
    SCIP_BENDERS**        benders,            /**< pointer to Benders' decomposition data structure */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes Benders' decomposition */
-extern
 SCIP_RETCODE SCIPbendersInit(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of Benders' decomposition */
-extern
 SCIP_RETCODE SCIPbendersExit(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs the Benders' decomposition that the presolving process is being started */
-extern
 SCIP_RETCODE SCIPbendersInitpre(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -117,7 +111,6 @@ SCIP_RETCODE SCIPbendersInitpre(
    );
 
 /** informs the Benders' decomposition that the presolving process has completed */
-extern
 SCIP_RETCODE SCIPbendersExitpre(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -125,14 +118,12 @@ SCIP_RETCODE SCIPbendersExitpre(
    );
 
 /** informs Benders' decomposition that the branch and bound process is being started */
-extern
 SCIP_RETCODE SCIPbendersInitsol(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs Benders' decomposition that the branch and bound process data is being freed */
-extern
 SCIP_RETCODE SCIPbendersExitsol(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -152,7 +143,6 @@ void SCIPbendersDeactivate(
    );
 
 /** enables or disables all clocks of Benders' decomposition depending on the value of the flag */
-extern
 void SCIPbendersEnableOrDisableClocks(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition for which all clocks should be enabled or disabled */
    SCIP_Bool             enable              /**< should the clocks of the Benders' decomposition be enabled? */
@@ -165,7 +155,6 @@ void SCIPbendersEnableOrDisableClocks(
  *  checkint == TRUE, then the convex relaxations and the full CIP are solved to generate Benders' cuts and check
  *  solution feasibility.
  */
-extern
 SCIP_RETCODE SCIPbendersExec(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -178,7 +167,6 @@ SCIP_RETCODE SCIPbendersExec(
    );
 
 /** Executes the subproblem solving process. */
-extern
 SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -192,7 +180,6 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    );
 
 /** sets up the subproblem using the solution to the master problem  */
-extern
 SCIP_RETCODE SCIPbendersSetupSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -202,7 +189,6 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
 
 /** Solve a Benders' decomposition subproblems. This will either call the user defined method or the generic solving
  *  methods. If the generic method is called, then the subproblem must be set up before calling this method. */
-extern
 SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -214,7 +200,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    );
 
 /** frees the subproblems */
-extern
 SCIP_RETCODE SCIPbendersFreeSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -222,7 +207,6 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
    );
 
 /** compares the subproblem objective value with the auxiliary variable value for optimality */
-extern
 SCIP_RETCODE SCIPbendersCheckSubproblemOptimality(
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -232,7 +216,6 @@ SCIP_RETCODE SCIPbendersCheckSubproblemOptimality(
    );
 
 /** returns the value of the auxiliary variable value in a master problem solution */
-extern
 SCIP_Real SCIPbendersGetAuxiliaryVarVal(
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -243,7 +226,6 @@ SCIP_Real SCIPbendersGetAuxiliaryVarVal(
 /** Solves an independent subproblem to identify its lower bound. The lower bound is then used to update the bound on
  *  the auxiliary variable.
  */
-extern
 SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -262,7 +244,6 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
  *  The associated auxiliary variables are kept in the master problem. The objective function of the merged subproblem
  *  is added as an underestimator constraint.
  */
-extern
 SCIP_RETCODE SCIPbendersMergeSubproblemIntoMaster(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -274,7 +255,6 @@ SCIP_RETCODE SCIPbendersMergeSubproblemIntoMaster(
    );
 
 /** sets priority of Benders' decomposition */
-extern
 void SCIPbendersSetPriority(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -282,28 +262,24 @@ void SCIPbendersSetPriority(
    );
 
 /** sets copy callback of Benders' decomposition */
-extern
 void SCIPbendersSetCopy(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSCOPY ((*benderscopy))    /**< copy callback of Benders' decomposition */
    );
 
 /** sets destructor callback of Benders' decomposition */
-extern
 void SCIPbendersSetFree(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSFREE ((*bendersfree))    /**< destructor of Benders' decomposition */
    );
 
 /** sets initialization callback of Benders' decomposition */
-extern
 void SCIPbendersSetInit(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSINIT((*bendersinit))     /**< initialize Benders' decomposition */
    );
 
 /** sets deinitialization callback of Benders' decomposition */
-extern
 void SCIPbendersSetExit(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSEXIT((*bendersexit))     /**< deinitialize Benders' decomposition */
@@ -322,49 +298,42 @@ void SCIPbendersSetExitpre(
    );
 
 /** sets solving process initialization callback of Benders' decomposition */
-extern
 void SCIPbendersSetInitsol(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSINITSOL((*bendersinitsol))/**< solving process initialization callback of Benders' decomposition */
    );
 
 /** sets solving process deinitialization callback of Benders' decomposition */
-extern
 void SCIPbendersSetExitsol(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSEXITSOL((*bendersexitsol))/**< solving process deinitialization callback of Benders' decomposition */
    );
 
 /** sets the pre subproblem solve callback of Benders' decomposition */
-extern
 void SCIPbendersSetPresubsolve(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSPRESUBSOLVE((*benderspresubsolve))/**< called prior to the subproblem solving loop */
    );
 
 /** sets convex solve callback of Benders' decomposition */
-extern
 void SCIPbendersSetSolvesubconvex(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSSOLVESUBCONVEX((*benderssolvesubconvex))/**< solving method for the convex Benders' decomposition subproblem */
    );
 
 /** sets solve callback of Benders' decomposition */
-extern
 void SCIPbendersSetSolvesub(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub))/**< solving method for a Benders' decomposition subproblem */
    );
 
 /** sets post-solve callback of Benders' decomposition */
-extern
 void SCIPbendersSetPostsolve(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization callback of Benders' decomposition */
    );
 
 /** sets free subproblem callback of Benders' decomposition */
-extern
 void SCIPbendersSetFreesub(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub))/**< the freeing callback for the subproblem */
@@ -372,7 +341,6 @@ void SCIPbendersSetFreesub(
 
 /** Returns the corresponding master or subproblem variable for the given variable.
  *  This provides a call back for the variable mapping between the master and subproblems. */
-extern
 SCIP_RETCODE SCIPbendersGetVar(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -382,7 +350,6 @@ SCIP_RETCODE SCIPbendersGetVar(
    );
 
 /** adds a subproblem to the Benders' decomposition data */
-extern
 SCIP_RETCODE SCIPbendersAddSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP*                 subproblem          /**< subproblem to be added to the data storage */
@@ -393,25 +360,9 @@ void SCIPbendersRemoveSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
-/** sets the subproblem setup flag */
-extern
-void SCIPbendersSetSubproblemIsSetup(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber,         /**< the subproblem number */
-   SCIP_Bool             issetup             /**< flag to indicate whether the subproblem has been setup */
-   );
-
-/** returns the subproblem setup flag */
-extern
-SCIP_Bool SCIPbendersSubproblemIsSetup(
-   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   int                   probnumber          /**< the subproblem number */
-   );
-
 /** Sets whether the subproblem is enabled or disabled. A subproblem is disabled if it has been merged into the master
  *  problem.
  */
-extern
 void SCIPbendersSetSubproblemEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
@@ -419,7 +370,6 @@ void SCIPbendersSetSubproblemEnabled(
    );
 
 /** changes all of the master problem variables in the given subproblem to continuous */
-extern
 SCIP_RETCODE SCIPbendersChgMastervarsToCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -427,7 +377,6 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
    );
 
 /** sets a flag to indicate whether the master variables are all set to continuous */
-extern
 SCIP_RETCODE SCIPbendersSetMastervarsCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
@@ -435,14 +384,12 @@ SCIP_RETCODE SCIPbendersSetMastervarsCont(
    );
 
 /** returns whether the master variables are all set to continuous */
-extern
 SCIP_Bool SCIPbendersGetMastervarsCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
 
 /** adds the data for the generated cuts to the Benders' cut storage */
-extern
 SCIP_RETCODE SCIPbendersStoreCut(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition cut */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -454,7 +401,6 @@ SCIP_RETCODE SCIPbendersStoreCut(
    );
 
 /** inserts a Benders' cut algorithm plugin into the Benders' cuts plugin list */
-extern
 SCIP_RETCODE SCIPbendersIncludeBenderscut(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -462,20 +408,17 @@ SCIP_RETCODE SCIPbendersIncludeBenderscut(
    );
 
 /** sets the Benders' cuts sorted flags in the Benders' decomposition */
-extern
 void SCIPbendersSetBenderscutsSorted(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
    SCIP_Bool             sorted              /**< the value to set the sorted flag to */
    );
 
 /** sorts Benders' decomposition cuts by priorities */
-extern
 void SCIPbendersSortBenderscuts(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** sorts Benders' decomposition cuts by name */
-extern
 void SCIPbendersSortBenderscutsName(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );

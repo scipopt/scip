@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,25 +43,6 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -80,7 +61,7 @@ extern "C" {
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasCurrentNodeLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -94,7 +75,7 @@ SCIP_Bool SCIPhasCurrentNodeLP(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisLPConstructed(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -113,7 +94,7 @@ SCIP_Bool SCIPisLPConstructed(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPconstructLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
@@ -129,7 +110,7 @@ SCIP_RETCODE SCIPconstructLP(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPflushLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -143,7 +124,7 @@ SCIP_RETCODE SCIPflushLP(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_LPSOLSTAT SCIPgetLPSolstat(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -157,7 +138,7 @@ SCIP_LPSOLSTAT SCIPgetLPSolstat(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisLPPrimalReliable(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -171,7 +152,7 @@ SCIP_Bool SCIPisLPPrimalReliable(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisLPDualReliable(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -185,7 +166,7 @@ SCIP_Bool SCIPisLPDualReliable(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisLPRelax(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -203,7 +184,7 @@ SCIP_Bool SCIPisLPRelax(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLPObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -217,7 +198,7 @@ SCIP_Real SCIPgetLPObjval(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLPColumnObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -231,7 +212,7 @@ SCIP_Real SCIPgetLPColumnObjval(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLPLooseObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -252,7 +233,7 @@ SCIP_Real SCIPgetLPLooseObjval(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetGlobalPseudoObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -273,7 +254,7 @@ SCIP_Real SCIPgetGlobalPseudoObjval(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetPseudoObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -287,7 +268,7 @@ SCIP_Real SCIPgetPseudoObjval(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisRootLPRelax(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -304,7 +285,7 @@ SCIP_Bool SCIPisRootLPRelax(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLPRootObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -323,7 +304,7 @@ SCIP_Real SCIPgetLPRootObjval(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLPRootColumnObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -342,7 +323,7 @@ SCIP_Real SCIPgetLPRootColumnObjval(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetLPRootLooseObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -357,7 +338,7 @@ SCIP_Real SCIPgetLPRootLooseObjval(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLPColsData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL***           cols,               /**< pointer to store the array of LP columns, or NULL */
@@ -373,7 +354,7 @@ SCIP_RETCODE SCIPgetLPColsData(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_COL** SCIPgetLPCols(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -387,7 +368,7 @@ SCIP_COL** SCIPgetLPCols(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNLPCols(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -402,7 +383,7 @@ int SCIPgetNLPCols(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLPRowsData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW***           rows,               /**< pointer to store the array of LP rows, or NULL */
@@ -418,7 +399,7 @@ SCIP_RETCODE SCIPgetLPRowsData(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_ROW** SCIPgetLPRows(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -432,7 +413,7 @@ SCIP_ROW** SCIPgetLPRows(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNLPRows(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -448,7 +429,7 @@ int SCIPgetNLPRows(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPallColsInLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -462,7 +443,7 @@ SCIP_Bool SCIPallColsInLP(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisLPSolBasic(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -477,7 +458,7 @@ SCIP_Bool SCIPisLPSolBasic(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLPBasisInd(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  basisind            /**< pointer to store basis indices ready to keep number of rows entries */
@@ -493,7 +474,7 @@ SCIP_RETCODE SCIPgetLPBasisInd(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLPBInvRow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   r,                  /**< row number */
@@ -513,7 +494,7 @@ SCIP_RETCODE SCIPgetLPBInvRow(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLPBInvCol(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP
@@ -537,7 +518,7 @@ SCIP_RETCODE SCIPgetLPBInvCol(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLPBInvARow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   r,                  /**< row number */
@@ -559,7 +540,7 @@ SCIP_RETCODE SCIPgetLPBInvARow(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLPBInvACol(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   c,                  /**< column number which can be accessed by SCIPcolGetLPPos() */
@@ -580,7 +561,7 @@ SCIP_RETCODE SCIPgetLPBInvACol(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsumLPRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            weights,            /**< row weights in row summation */
@@ -599,7 +580,7 @@ SCIP_RETCODE SCIPsumLPRows(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteLP(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name */
@@ -615,7 +596,7 @@ SCIP_RETCODE SCIPwriteLP(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteMIP(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< file name */
@@ -655,7 +636,7 @@ SCIP_RETCODE SCIPwriteMIP(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLPI(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LPI**            lpi                 /**< pointer to store the LP interface */
@@ -683,7 +664,7 @@ SCIP_RETCODE SCIPgetLPI(
  *
  *  @note The printing process is done via the message handler system.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintLPSolutionQuality(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -706,7 +687,7 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeLPRelIntPoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             relaxrows,          /**< should the rows be relaxed */
@@ -736,7 +717,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
  *
  *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetColRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL*             col                 /**< LP column */
@@ -749,7 +730,7 @@ SCIP_Real SCIPgetColRedcost(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetColFarkasCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL*             col                 /**< LP column */
@@ -760,7 +741,7 @@ SCIP_Real SCIPgetColFarkasCoef(
  *  @pre this method can be called in the following stage of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 void SCIPmarkColNotRemovableLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL*             col                 /**< LP column */
@@ -782,11 +763,36 @@ void SCIPmarkColNotRemovableLocal(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
-SCIP_RETCODE SCIPcreateRowCons(
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateRowConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler that creates the row */
+   const char*           name,               /**< name of row */
+   int                   len,                /**< number of nonzeros in the row */
+   SCIP_COL**            cols,               /**< array with columns of row entries */
+   SCIP_Real*            vals,               /**< array with coefficients of row entries */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   );
+
+/** creates and captures an LP row from a constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   SCIP_CONS*            cons,               /**< constraint that creates the row */
    const char*           name,               /**< name of row */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COL**            cols,               /**< array with columns of row entries */
@@ -807,7 +813,7 @@ SCIP_RETCODE SCIPcreateRowCons(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateRowSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
@@ -832,7 +838,7 @@ SCIP_RETCODE SCIPcreateRowSepa(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateRowUnspec(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
@@ -856,10 +862,10 @@ SCIP_RETCODE SCIPcreateRowUnspec(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @deprecated Please use SCIPcreateRowCons() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
+ *  @deprecated Please use SCIPcreateRowConshdlr() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
  *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateRowUnspec().
  */
-EXTERN
+SCIP_EXPORT
 SCIP_DEPRECATED
 SCIP_RETCODE SCIPcreateRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -884,11 +890,33 @@ SCIP_RETCODE SCIPcreateRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
-SCIP_RETCODE SCIPcreateEmptyRowCons(
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateEmptyRowConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler that creates the row */
+   const char*           name,               /**< name of row */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   );
+
+/** creates and captures an LP row without any coefficients from a constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateEmptyRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   SCIP_CONS*            cons,               /**< constraint that creates the row */
    const char*           name,               /**< name of row */
    SCIP_Real             lhs,                /**< left hand side of row */
    SCIP_Real             rhs,                /**< right hand side of row */
@@ -906,7 +934,7 @@ SCIP_RETCODE SCIPcreateEmptyRowCons(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateEmptyRowSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
@@ -928,7 +956,7 @@ SCIP_RETCODE SCIPcreateEmptyRowSepa(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateEmptyRowUnspec(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
@@ -949,10 +977,10 @@ SCIP_RETCODE SCIPcreateEmptyRowUnspec(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @deprecated Please use SCIPcreateEmptyRowCons() or SCIPcreateEmptyRowSepa() when calling from a constraint handler or separator in order
+ *  @deprecated Please use SCIPcreateEmptyRowConshdlr() or SCIPcreateEmptyRowSepa() when calling from a constraint handler or separator in order
  *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateEmptyRowUnspec().
  */
-EXTERN
+SCIP_EXPORT
 SCIP_DEPRECATED
 SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -974,7 +1002,7 @@ SCIP_RETCODE SCIPcreateEmptyRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcaptureRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< row to capture */
@@ -990,7 +1018,7 @@ SCIP_RETCODE SCIPcaptureRow(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreleaseRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row                 /**< pointer to LP row */
@@ -1005,7 +1033,7 @@ SCIP_RETCODE SCIPreleaseRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgRowLhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */
@@ -1021,7 +1049,7 @@ SCIP_RETCODE SCIPchgRowLhs(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgRowRhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */
@@ -1041,7 +1069,7 @@ SCIP_RETCODE SCIPchgRowRhs(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcacheRowExtensions(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1057,7 +1085,7 @@ SCIP_RETCODE SCIPcacheRowExtensions(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPflushRowExtensions(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1082,7 +1110,7 @@ SCIP_RETCODE SCIPflushRowExtensions(
  *        initialization sets the lp solution value) to 0.0. (This leads to the conclusion that, if a constraint was
  *        violated, the linear relaxation might not be violated anymore.)
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarToRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */
@@ -1102,7 +1130,7 @@ SCIP_RETCODE SCIPaddVarToRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarsToRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */
@@ -1123,7 +1151,7 @@ SCIP_RETCODE SCIPaddVarsToRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddVarsToRowSameCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */
@@ -1141,7 +1169,7 @@ SCIP_RETCODE SCIPaddVarsToRowSameCoef(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcalcRowIntegralScalar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */
@@ -1163,7 +1191,7 @@ SCIP_RETCODE SCIPcalcRowIntegralScalar(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPmakeRowIntegral(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */
@@ -1180,7 +1208,7 @@ SCIP_RETCODE SCIPmakeRowIntegral(
  *  @pre this method can be called in the following stage of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 void SCIPmarkRowNotRemovableLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1194,7 +1222,7 @@ void SCIPmarkRowNotRemovableLocal(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetRowNumIntCols(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1208,7 +1236,7 @@ int SCIPgetRowNumIntCols(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRowMinCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1222,7 +1250,7 @@ SCIP_Real SCIPgetRowMinCoef(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRowMaxCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1235,7 +1263,7 @@ SCIP_Real SCIPgetRowMaxCoef(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRowMinActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1248,7 +1276,7 @@ SCIP_Real SCIPgetRowMinActivity(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRowMaxActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1262,7 +1290,7 @@ SCIP_Real SCIPgetRowMaxActivity(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrecalcRowLPActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1275,7 +1303,7 @@ SCIP_RETCODE SCIPrecalcRowLPActivity(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRowLPActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1288,7 +1316,7 @@ SCIP_Real SCIPgetRowLPActivity(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRowLPFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1302,7 +1330,7 @@ SCIP_Real SCIPgetRowLPFeasibility(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrecalcRowPseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1315,7 +1343,7 @@ SCIP_RETCODE SCIPrecalcRowPseudoActivity(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRowPseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1328,7 +1356,7 @@ SCIP_Real SCIPgetRowPseudoActivity(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRowPseudoFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1342,7 +1370,7 @@ SCIP_Real SCIPgetRowPseudoFeasibility(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrecalcRowActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1355,7 +1383,7 @@ SCIP_RETCODE SCIPrecalcRowActivity(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRowActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1368,7 +1396,7 @@ SCIP_Real SCIPgetRowActivity(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRowFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
@@ -1381,7 +1409,7 @@ SCIP_Real SCIPgetRowFeasibility(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRowSolActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */
@@ -1395,7 +1423,7 @@ SCIP_Real SCIPgetRowSolActivity(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetRowSolFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */
@@ -1413,7 +1441,7 @@ SCIP_Real SCIPgetRowSolFeasibility(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< LP row */
@@ -1442,7 +1470,7 @@ SCIP_RETCODE SCIPprintRow(
  *  numerical troubles during the last LP solve; because of this, most users will want to call this method only if
  *  SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPstartDive(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1457,7 +1485,7 @@ SCIP_RETCODE SCIPstartDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPendDive(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1472,7 +1500,7 @@ SCIP_RETCODE SCIPendDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgCutoffboundDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             newcutoffbound      /**< new cutoffbound */
@@ -1488,7 +1516,7 @@ SCIP_RETCODE SCIPchgCutoffboundDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarObjDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the objective value for */
@@ -1505,7 +1533,7 @@ SCIP_RETCODE SCIPchgVarObjDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarLbDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -1522,7 +1550,7 @@ SCIP_RETCODE SCIPchgVarLbDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarUbDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -1539,7 +1567,7 @@ SCIP_RETCODE SCIPchgVarUbDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddRowDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< row to be added */
@@ -1555,7 +1583,7 @@ SCIP_RETCODE SCIPaddRowDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgRowLhsDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< row to change the lhs for */
@@ -1572,7 +1600,7 @@ SCIP_RETCODE SCIPchgRowLhsDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgRowRhsDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row,                /**< row to change the lhs for */
@@ -1588,7 +1616,7 @@ SCIP_RETCODE SCIPchgRowRhsDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarObjDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get the bound for */
@@ -1603,7 +1631,7 @@ SCIP_Real SCIPgetVarObjDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarLbDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get the bound for */
@@ -1618,7 +1646,7 @@ SCIP_Real SCIPgetVarLbDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetVarUbDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get the bound for */
@@ -1636,7 +1664,7 @@ SCIP_Real SCIPgetVarUbDive(
  *  @note be aware that the LP solve may take longer than expected if SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL,
  *  compare the explanation of SCIPstartDive()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveDiveLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
@@ -1666,7 +1694,7 @@ SCIP_RETCODE SCIPsolveDiveLP(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetLastDivenode(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -1690,9 +1718,21 @@ SCIP_Longint SCIPgetLastDivenode(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPinDive(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** computes the changes to the problem when fixing to the optimal face
+ *
+ *  returns the degeneracy rate, i.e., the number of nonbasic variables with reduced cost 0
+ *  and the variable constraint ratio, i.e., the number of unfixed variables in relation to the basis size
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetLPDegeneracy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            degeneracy,         /**< pointer to store degeneracy share */
+   SCIP_Real*            varconsratio        /**< pointer to store variable constraint ratio */
    );
 
 /**@} */

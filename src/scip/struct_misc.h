@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -132,6 +132,7 @@ struct SCIP_HashMap
    uint32_t              shift;              /**< power such that 2^(32-shift) == nslots */
    uint32_t              mask;               /**< mask used for fast modulo, i.e. nslots - 1 */
    uint32_t              nelements;          /**< number of elements in the hashtable */
+   SCIP_HASHMAPTYPE      hashmaptype;        /**< type of entries */
 };
 
 /** lightweight hash set data structure to map pointers on pointers */
@@ -215,9 +216,11 @@ struct SCIP_Digraph
    int*                  nsuccessors;        /**< number of successors stored in the adjacency lists of the nodes */
    int*                  components;         /**< array to store the node indices of the components, one component after the other */
    int*                  componentstarts;    /**< array to store the start indices of the components in the components array */
+   int*                  articulations;      /**< array  of size narticulations to store the node indices of the articulation points */
    int                   ncomponents;        /**< number of undirected components stored */
    int                   componentstartsize; /**< size of array componentstarts */
    int                   nnodes;             /**< number of nodes, nodes should be numbered from 0 to nnodes-1 */
+   int                   narticulations;     /**< number of articulation points among the graph nodes */
 };
 
 /** binary node data structure for binary tree */

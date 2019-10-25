@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,7 +51,7 @@ extern "C" {
 
 
 /** create and reset UCB bandit algorithm */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateBanditUcb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         ucb,                /**< pointer to store bandit algorithm */
@@ -62,14 +62,14 @@ SCIP_RETCODE SCIPcreateBanditUcb(
    );
 
 /** returns the upper confidence bound of a selected action */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetConfidenceBoundUcb(
    SCIP_BANDIT*          ucb,                /**< UCB bandit algorithm */
    int                   action              /**< index of the queried action */
    );
 
 /** return start permutation of the UCB bandit algorithm */
-EXTERN
+SCIP_EXPORT
 int* SCIPgetStartPermutationUcb(
    SCIP_BANDIT*          ucb                 /**< UCB bandit algorithm */
    );

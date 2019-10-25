@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpi_qso.c
+ * @ingroup OTHER_CFILES
  * @brief  LP interface for QSopt version >= 070303
  * @author Daniel Espinoza
  * @author Marc Pfetsch
@@ -2980,7 +2981,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3027,7 +3028,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */

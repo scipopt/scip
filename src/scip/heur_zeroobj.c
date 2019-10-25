@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_zeroobj.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  heuristic that tries to solve the problem without objective. In Gurobi, this heuristic is known as "Hail Mary"
  * @author Timo Berthold
  */
@@ -50,7 +51,7 @@
 
 #define HEUR_NAME             "zeroobj"
 #define HEUR_DESC             "heuristic trying to solve the problem without objective"
-#define HEUR_DISPCHAR         'Z'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         100
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
@@ -96,52 +97,6 @@ struct SCIP_HeurData
 /*
  * Local methods
  */
-
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure                        */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< zeroobj heuristic structure                            */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
-   SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-   )
-{
-   SCIP_VAR** vars;                          /* the original problem's variables                */
-   int        nvars;                         /* the original problem's number of variables      */
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-   SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
-
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-   assert(subsol != NULL);
-
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
-   /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-
-   SCIPfreeBufferArray(scip, &subsolvals);
-
-   return SCIP_OKAY;
-}
 
 /* ---------------- Callback methods of event handler ---------------- */
 
@@ -348,6 +303,9 @@ SCIP_RETCODE setupAndSolveSubscip(
       SCIP_Real inf;
 
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      if( subvars[i] == NULL )
+         continue;
+
       SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
 
       lb = SCIPvarGetLbGlobal(subvars[i]);
@@ -485,6 +443,7 @@ SCIP_RETCODE setupAndSolveSubscip(
       {
          if( !SCIPisFeasZero(subscip, SCIPvarGetObj(vars[i])) )
          {
+            assert(subvars[i] != NULL);  /* subvars[i] can be NULL for relax-only vars, but they cannot appear in the objective */
             SCIP_CALL( SCIPaddCoefLinear(subscip, origobjcons, subvars[i], SCIPvarGetObj(vars[i])) );
 #ifndef NDEBUG
             nobjvars++;
@@ -518,7 +477,11 @@ SCIP_RETCODE setupAndSolveSubscip(
    success = FALSE;
    for( i = 0; i < nsubsols && (!success || heurdata->addallsols); ++i )
    {
-      SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
+      SCIP_SOL* newsol;
+
+      SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], heur, subvars, &newsol) );
+
+      SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;
    }

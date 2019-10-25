@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -67,7 +67,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
 
    scip->concurrent->concsolver = concsolver;
    scip->concurrent->mainscip = scip;
-   scip->concurrent->solidx = 0;
+   scip->concurrent->solidx = scip->stat->solindex;
    scip->stat->subscipdepth = 0;
 
    if( scip->set->parallel_mode == (int) SCIP_PARA_DETERMINISTIC )
