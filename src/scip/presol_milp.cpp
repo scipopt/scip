@@ -348,7 +348,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
          assert(colCoef != 0.0);
          SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
-         if( SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_AGGREGATED )
+         while( SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_AGGREGATED )
          {
             SCIP_Real scalar = SCIPvarGetAggrScalar(aggrvar);
             SCIP_Real constant = SCIPvarGetAggrConstant(aggrvar);
