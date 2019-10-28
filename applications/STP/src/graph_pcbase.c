@@ -750,6 +750,22 @@ void graph_pc_knotToFixedTerm(
 }
 
 
+/** change property of (non-fixed) terminal to be a non-leaf terminal */
+void graph_pc_termToNonLeafTerm(
+   GRAPH*                g,                  /**< the graph */
+   int                   term                /**< terminal to be changed */
+   )
+{
+   assert(g && g->term2edge);
+   assert(!g->extended);
+   assert(Is_term(g->term[term]));
+   assert(!graph_pc_knotIsFixedTerm(g, term) && !graph_pc_knotIsNonLeafTerm(g, term));
+
+   graph_pc_deleteTermExtension(scip, g, term);
+   g->term2edge[term] = TERM2EDGE_NONLEAFTERM;
+}
+
+
 /** check whether node is fixed terminal */
 SCIP_Bool graph_pc_knotIsFixedTerm(
    const GRAPH*          g,                  /**< the graph */
@@ -1148,6 +1164,37 @@ void graph_pc_2transcheck(
 
    graph_pc_2trans(scip, graph);
 }
+
+
+/** update non-leaf terminals */
+void graph_pc_updateNonLeafTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< the graph */
+   )
+{
+   const int nnodes = graph_get_nNodes(graph);
+   int* const term2edge = graph->term2edge;
+
+   assert(scip && term2edge);
+   assert(graph_pc_isPcMw(graph));
+   assert(graph_pc_term2edgeIsConsistent(scip, graph));
+   assert(!graph->extended);
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      if( Is_term(graph->term[i])
+            && !graph_pc_termIsNonLeafTerm(graph, i)
+            && termIsNonLeafTerm_evaluate(scip, graph, i) )
+      {
+         graph_pc_termToNonLeafTerm(graph, i);
+
+         assert(graph_pc_termIsNonLeafTerm(graph, i));
+      }
+   }
+
+   assert(graph_pc_term2edgeIsConsistent(scip, graph));
+}
+
 
 /* returns sum of positive vertex weights */
 SCIP_Real graph_pc_getPosPrizeSum(

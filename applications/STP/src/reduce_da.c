@@ -2068,7 +2068,7 @@ SCIP_RETCODE reduce_da(
    SCIP_Bool             nodereplacing       /**< should node replacement (by edges) be performed? */
 )
 {
-   STPSOLPOOL* pool;
+   STPSOLPOOL* pool = NULL;
    SCIP_Real* edgefixingbounds;
    SCIP_Real* nodefixingbounds;
    SCIP_Real* nodereplacebounds;
@@ -2102,8 +2102,9 @@ SCIP_RETCODE reduce_da(
 
    if( userec )
       SCIP_CALL( SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE) );
-   else
-      pool = NULL;
+
+   if( rpc )
+      graph_pc_updateNonLeafTerms(scip, graph);
 
    ndeletions = 0;
    upperbound = SCIPisGE(scip, *ub, 0.0) ? (*ub) : FARAWAY;
@@ -2111,11 +2112,7 @@ SCIP_RETCODE reduce_da(
 
    collectFixedTerminals(graph, terms, &nFixedTerms);
 
-   if( nFixedTerms <= 2 )
-   {
-      assert(graph_pc_isPcMw(graph));
-      goto TERMINATE;
-   }
+   assert(nFixedTerms >= 1);
 
    for( int e = 0; e < nedges; e++ )
    {
@@ -2847,7 +2844,7 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_Bool             nodereplacing       /**< should node replacement (by edges) be performed? */
 )
 {
-   STPSOLPOOL* pool;
+   STPSOLPOOL* pool = NULL;
    GRAPH* transgraph;
    SCIP_Real* bestcost;
    SCIP_Real* edgefixingbounds;
@@ -2902,8 +2899,9 @@ SCIP_RETCODE reduce_daPcMw(
 
    if( userec )
       SCIP_CALL( SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE) );
-   else
-      pool = NULL;
+
+   if( graph_pc_isPc(graph) )
+      graph_pc_updateNonLeafTerms(scip, graph);
 
 #ifndef NDEBUG
    {

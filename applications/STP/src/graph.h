@@ -423,6 +423,7 @@ extern SCIP_Real graph_get_avgDeg(const GRAPH*);
  */
 extern void   graph_pc_knotToNonTerm(GRAPH*, int);
 extern void   graph_pc_knotToFixedTerm(GRAPH*, int);
+extern void   graph_pc_termToNonLeafTerm(GRAPH*, int);
 extern void   graph_pc_knotChg(GRAPH*, int, int);
 extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
 extern void   graph_pc_enforcePseudoTerm(GRAPH*, int);
