@@ -243,6 +243,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool                propinenforce;   /**< whether to (re)run propagation in enforcement */
    SCIP_Real                weakcutthreshold;/**< threshold for when to regard a cut from an estimator as weak */
    SCIP_Real                strongcutmaxcoef;/**< "strong" cuts will be scaled to have their maximal coef in [1/strongcutmaxcoef,strongcutmaxcoef] */
+   SCIP_Bool                strongcutefficacy; /**< consider efficacy requirement when deciding whether a cut is "strong" */
    SCIP_Real                enfoauxviolfactor;/**< an expression will be enforced if the "auxiliary" violation is at least enfoauxviolfactor times the "original" violation */
 
    /* statistics */
@@ -5444,18 +5445,22 @@ SCIP_RETCODE enforceExprNlhdlr(
             if( sepasuccess && auxvalue != SCIP_INVALID )
             {
                /* check whether cut is weak now
-                * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when reconstructing estimateval from cutviol
+                * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when reconstructing estimateval from cutviol (TODO improve or remove?)
+                * TODO this assumes that efficacynorm='e', maybe integrate rowprep efficacy computation into SCIPgetRowprepViolation or use the row row-efficacy computation later on
                 */
                SCIP_Real auxvarcoef = 0.0;
+               SCIP_Real norm = 0.0;
                int i;
 
-               /* get absolute value of coef of auxvar in row - this makes the whole check here more expensive that it should be... */
+               /* get absolute value of coef of auxvar in row - this makes the whole check here more expensive that it should be...
+                * but also compute (square of) euclidean norm of coefficient vector
+                */
                for( i = 0; i < rowprep->nvars; ++i )
+               {
+                  norm += rowprep->coefs[i] * rowprep->coefs[i];
                   if( rowprep->vars[i] == auxvar )
-                  {
                      auxvarcoef = REALABS(rowprep->coefs[i]);
-                     break;
-                  }
+               }
 
                if( auxvarcoef == 0.0 ||
                    (!overestimate && ( cutviol / auxvarcoef <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
@@ -5464,6 +5469,14 @@ SCIP_RETCODE enforceExprNlhdlr(
                   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
                      auxvalue, auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
                   sepasuccess = FALSE;
+               }
+
+               norm = sqrt(norm);
+               if( sepasuccess && conshdlrdata->strongcutefficacy && cutviol < SCIPgetSepaMinEfficacy(scip) * norm )
+               {
+                  sepasuccess = FALSE;
+                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy is too low: violation %g coefnorm %g minefficacy %g\n",
+                     cutviol, norm, SCIPgetSepaMinEfficacy(scip)); )
                }
             }
          }
@@ -12608,6 +12621,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/strongcutmaxcoef",
          "\"strong\" cuts will be scaled to have their maximal coef in [1/strongcutmaxcoef,strongcutmaxcoef]",
          &conshdlrdata->strongcutmaxcoef, TRUE, 1000.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/strongcutefficacy",
+         "consider efficacy requirement when deciding whether a cut is \"strong\"",
+         &conshdlrdata->strongcutefficacy, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/enfoauxviolfactor",
          "an expression will be enforced if the \"auxiliary\" violation is at least this factor times the \"original\" violation",
