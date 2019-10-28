@@ -1926,16 +1926,16 @@ SCIP_RETCODE dualBoundStrengthening(
                {
                   if(SCIPisPositive(scip, colvalptr[k]) )
                      // right-shift is required because we want to sort the hashes later on
-                     SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &colidxlistpp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) );
+                     SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &colidxlistpp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
                   else
-                     SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &colidxlistpm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) );
+                     SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &colidxlistpm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
                }
                else
                {
                   if(SCIPisPositive(scip, colvalptr[k]) )
-                     SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &colidxlistmp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) );
+                     SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &colidxlistmp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
                   else
-                     SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &colidxlistmm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) );
+                     SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &colidxlistmm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
                }
             }
          }
