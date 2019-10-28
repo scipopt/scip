@@ -77,7 +77,7 @@ Fixed bugs
 - allow user to correctly set heuristics/alns/(un)fixtol
 - fixed an issue in heur_completesol which is triggered during bound widening of unbounded continuous variables
 - fixed bug in cons_indicator if addopposite is true
-
+- fixed bug in sepa_disjunctive: treat case that conflictgraph is empty
 
 Miscellaneous
 -------------
