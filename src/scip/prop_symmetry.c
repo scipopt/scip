@@ -2720,6 +2720,7 @@ SCIP_RETCODE addSymInfoConflictGraphSchreierSims(
    /* add orbit information to nodes of conflict graph */
    for (j = 0; j < norbits; ++j)
    {
+      int posinorbit = 0;
       orbitsize = orbitbegins[j + 1] - orbitbegins[j];
 
       for (i = orbitbegins[j]; i < orbitbegins[j + 1]; ++j)
