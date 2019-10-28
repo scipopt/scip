@@ -164,7 +164,10 @@ extern SCIP_RETCODE    reduce_simple_pc(SCIP*, const int*, GRAPH*, SCIP_Real*, i
 extern SCIP_RETCODE    reduce_simple_aritculations(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_simple_fixedConflict(SCIP*, const int*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_simple_sap(SCIP*, GRAPH*, SCIP_Real*, int*);
-extern SCIP_RETCODE    reduce_simple_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
+extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
+extern void    reduce_nonLeafTermsDeg0(SCIP*, GRAPH*, SCIP_Real*);
+
+
 
 /* reduce_util.c
  */

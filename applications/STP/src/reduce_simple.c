@@ -1778,7 +1778,7 @@ SCIP_RETCODE reduce_simple_fixedConflict(
 
 
 /** root proximity terminal test (SAP) */
-SCIP_RETCODE reduce_simple_rpt(
+SCIP_RETCODE reduce_rpt(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to offset value */
@@ -1787,10 +1787,8 @@ SCIP_RETCODE reduce_simple_rpt(
 {
    SCIP_Real pathcost;
    SCIP_Real* dijkdist;
-   int i;
    int e;
    int i1;
-   int e1;
    int old;
    int nnodes;
    int* dijkedge;
@@ -1799,6 +1797,7 @@ SCIP_RETCODE reduce_simple_rpt(
    assert(g != NULL);
    assert(fixed != NULL);
    assert(count != NULL);
+   assert(g->stp_type == STP_SAP);
 
    nnodes = g->knots;
    *count = 0;
@@ -1808,11 +1807,11 @@ SCIP_RETCODE reduce_simple_rpt(
 
    graph_path_execX(scip, g, g->source, g->cost, dijkdist, dijkedge);
 
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       if( Is_term(g->term[i]) && i != g->source && g->grad[i] > 0 )
       {
-         e1 = dijkedge[i];
+         const int e1 = dijkedge[i];
          pathcost = dijkdist[i];
 
          for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
@@ -1844,4 +1843,34 @@ SCIP_RETCODE reduce_simple_rpt(
    SCIPfreeBufferArray(scip, &dijkdist);
 
    return SCIP_OKAY;
+}
+
+
+/** remove non-leaf terminals of degree 0 */
+void reduce_nonLeafTermsDeg0(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            fixed               /**< pointer to offset value */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(scip && g && fixed);
+   assert(graph_pc_isPc(g));
+   assert(!g->extended);
+   assert(g->prize && g->term2edge);
+
+   for( int k = 0; k < nnodes; ++k )
+   {
+      if( g->grad[k] == 0 && graph_pc_knotIsNonLeafTerm(g, k) )
+      {
+         assert(SCIPisGT(scip, g->prize[k], 0.0));
+
+         (*fixed) += g->prize[k];
+         g->prize[k] = 0.0;
+         graph_knot_chg(g, k, STP_TERM_NONE);
+         g->term2edge[k] = TERM2EDGE_NOTERM;
+      }
+   }
+
 }

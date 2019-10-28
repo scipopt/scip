@@ -1075,7 +1075,7 @@ SCIP_RETCODE reduceSap(
 
       if( rpt )
       {
-         SCIP_CALL( reduce_simple_rpt(scip, g, fixed, &rptnelims) );
+         SCIP_CALL( reduce_rpt(scip, g, fixed, &rptnelims) );
          if( rptnelims <= redbound )
             rpt = FALSE;
       }
@@ -1538,13 +1538,15 @@ SCIP_RETCODE redLoopPc(
             sdstar = FALSE;
       }
 
+      SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
+
       if( sd || extensive )
       {
          SCIP_CALL( execPc_SD(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims,
                reductbound, verbose, &sd) );
       }
 
-      if( sdstar || sd )
+      if( sd )
          SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
 
       if( sdw || extensive )

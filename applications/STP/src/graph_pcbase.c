@@ -1236,11 +1236,23 @@ int graph_pc_realDegree(
    assert(rpc || g->stp_type == STP_PCSPG);
 
    if( !Is_term(g->term[i]) || fixedterm )
+   {
       newgrad = ggrad;
+   }
+   else if( graph_pc_knotIsNonLeafTerm(g, i) )
+   {
+      newgrad = ggrad;
+   }
    else if( rpc )
+   {
+      assert(Is_term(g->term[i]));
       newgrad = ggrad - 1;
+   }
    else
+   {
+      assert(Is_term(g->term[i]));
       newgrad = ggrad - 2;
+   }
 
    return newgrad;
 }
@@ -2225,6 +2237,7 @@ int graph_pc_deleteTerm(
 
    if( !g->extended && graph_pc_termIsNonLeafTerm(g, term) )
    {
+      graph_pc_knotToNonTerm(g, term);
       graph_knot_del(scip, g, term, TRUE);
    }
    else
