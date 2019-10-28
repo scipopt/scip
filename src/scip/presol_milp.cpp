@@ -254,14 +254,14 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
    if( SCIPallowWeakDualReds(scip) )
    {
-      //presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
       presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
       presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real> ) );
    }
 
    if( SCIPallowStrongDualReds(scip) )
    {
-      //presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
+      presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
       presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
    }
 
