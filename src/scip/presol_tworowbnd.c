@@ -78,8 +78,8 @@
 /** presolver data */
 struct SCIP_PresolData
 {
-   SCIP_Real maxpairfac;
-   SCIP_Real maxhashfac;
+   int maxpairfac;
+   int maxhashfac;
    int maxretrievefails;
    int maxcombinefails;
    int maxconsiderednonzeros;
@@ -123,7 +123,8 @@ hashIndexPair(
    return *((int*) &hash);
 }
 
-static SCIP_RETCODE addEntry
+static
+SCIP_RETCODE addEntry
 (
  SCIP* scip,                   /**< SCIP datastructure */
  int* pos,
@@ -149,7 +150,8 @@ static SCIP_RETCODE addEntry
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE findNextBlock
+static
+void findNextBlock
 (
    int*                 list,
    int                  len,
@@ -164,8 +166,6 @@ static SCIP_RETCODE findNextBlock
       i++;
 
    (*end) = i;
-
-   return SCIP_OKAY;
 }
 
 /** Solve single-row LP of the form
@@ -712,7 +712,7 @@ SCIP_RETCODE transformAndSolve(
          newlbsmax[i] = newlbsmin[i];
          newubsmax[i] = newubsmin[i];
       }
-      solveSingleRowLP(scip, amax, SCIPmatrixGetRowLhs(matrix, row2idx), cmax, newlbsmax, newubsmax, nvars, &maxobj, &maxsolvable);
+      SCIP_CALL( solveSingleRowLP(scip, amax, SCIPmatrixGetRowLhs(matrix, row2idx), cmax, newlbsmax, newubsmax, nvars, &maxobj, &maxsolvable) );
 #ifdef SCIP_DEBUG_2RB
       SCIPdebugMsg(scip, "max-LP solved: obj = %g\n", maxobj);
 #endif
@@ -1073,7 +1073,7 @@ SCIP_RETCODE twoRowBound(
 
    // Use row2 to strengthen row1
    infeasible = FALSE;
-   transformAndSolve(scip, matrix, row1, row2, swaprow1, swaprow2, amin, amax, cmin, cmax, cangetbnd, lbs, ubs, newlbsmin, newlbsmax, newubsmin, newubsmax, success, &row1redundant, &infeasible);
+   SCIP_CALL( transformAndSolve(scip, matrix, row1, row2, swaprow1, swaprow2, amin, amax, cmin, cmax, cangetbnd, lbs, ubs, newlbsmin, newlbsmax, newubsmin, newubsmax, success, &row1redundant, &infeasible) );
 
    if( row1redundant )
    {
@@ -1081,7 +1081,7 @@ SCIP_RETCODE twoRowBound(
    }
 
    // Switch roles and use row1 to strengthen row2
-   transformAndSolve(scip, matrix, row2, row1, swaprow2, swaprow1, amin, amax, cmin, cmax, cangetbnd, lbs, ubs, newlbsmin, newlbsmax, newubsmin, newubsmax, success, &row2redundant, &infeasible);
+   SCIP_CALL( transformAndSolve(scip, matrix, row2, row1, swaprow2, swaprow1, amin, amax, cmin, cmax, cangetbnd, lbs, ubs, newlbsmin, newlbsmax, newubsmin, newubsmax, success, &row2redundant, &infeasible) );
 
    if( row2redundant && !row1redundant )
    {
@@ -1106,22 +1106,6 @@ SCIP_RETCODE twoRowBound(
  */
 
 /* TODO: Implement all necessary presolver methods. The methods with an #if 0 ... #else #define ... are optional */
-
-
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_PRESOLCOPY(presolCopyTworowbnd)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of tworowbnd presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define presolCopyTworowcbnd NULL
-#endif
-
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
@@ -1151,51 +1135,6 @@ SCIP_DECL_PRESOLINIT(presolInitTworowbnd)
 
    return SCIP_OKAY;
 }
-
-/** deinitialization method of presolver (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_PRESOLEXIT(presolExitTworowbnd)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of tworowcomb presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define presolExitTworowbnd NULL
-#endif
-
-
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-#if 0
-static
-SCIP_DECL_PRESOLINITPRE(presolInitpreTworowbnd)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of tworowbnd presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define presolInitpreTworowbnd NULL
-#endif
-
-
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-#if 0
-static
-SCIP_DECL_PRESOLEXITPRE(presolExitpreTworowbnd)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of tworowbnd presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define presolExitpreTworowbnd NULL
-#endif
-
 
 /** execution method of presolver */
 static
@@ -1241,8 +1180,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       int oldnchgbds;
       int oldnfixedvars;
       int ndelcons;
-      SCIP_Longint nrows;
-      SCIP_Longint ncols;
+      int nrows;
+      int ncols;
       SCIP_Real* oldlbs;
       SCIP_Real* oldubs;
       SCIP_Real* newlbs;
@@ -1252,7 +1191,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       SCIP_Real* rowvalptr;
       SCIP_VAR* var;
 
-      SCIP_Longint maxhashes;
+      int maxhashes;
 
       int maxlen;
       int pospp;
@@ -1311,6 +1250,12 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       listsizepm = nrows;
       listsizemp = nrows;
       maxhashes = nrows * presoldata->maxhashfac;
+      // prevent overflow issues
+      if( nrows != 0 && maxhashes / nrows != presoldata->maxhashfac )
+      {
+         maxhashes = INT_MAX;
+      }
+
       for( i = 0; i < nrows; i++)
       {
          if( pospp + posmm + pospm + posmp > maxhashes )
@@ -1328,38 +1273,38 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                {
                   if(SCIPisPositive(scip, rowvalptr[k]) )
                   {
-                     addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                     SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                      if( finiterhs )
-                        addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
-                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                        SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
+                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                   }
                   else
                   {
-                     addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                     SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                      if( finiterhs )
-                        addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
-                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                        SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
+                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                   }
                }
                else
                {
                   if(SCIPisPositive(scip, rowvalptr[k]) )
                   {
-                     addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                     SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                      if( finiterhs )
-                        addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
-                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                        SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
+                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                   }
                   else
                   {
-                     addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                     SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                      if( finiterhs )
-                        addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
-                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i);
+                        SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
+                           hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                   }
                }
             }
@@ -1422,8 +1367,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       /* Process pp and mm lists */
       if( pospp > 0 && posmm > 0 )
       {
-         SCIP_Longint ncombines;
-         SCIP_Longint maxcombines;
+         int ncombines;
+         int maxcombines;
          SCIP_Bool finished;
          SCIP_Bool success;
          SCIP_Bool swaprow1;
@@ -1438,6 +1383,11 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
          block2start = 0;
          block2end = 0;
          maxcombines = nrows * presoldata->maxpairfac;
+         // prevent overflow issues
+         if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
+         {
+            maxcombines = INT_MAX;
+         }
          ncombines = 0;
          combinefails = 0;
          retrievefails = 0;
@@ -1467,7 +1417,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                            swaprow1 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx));
                            swaprow2 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx));
 
-                           twoRowBound(scip, matrix, rowpair.row1idx, rowpair.row2idx, swaprow1, swaprow2, newlbs, newubs, delcons, &success);
+                           SCIP_CALL( twoRowBound(scip, matrix, rowpair.row1idx, rowpair.row2idx, swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
 
                            if( success )
                               combinefails = 0;
@@ -1513,8 +1463,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       /* Process pm and mp lists */
       if( pospm > 0 && posmp > 0 )
       {
-         SCIP_Longint ncombines;
-         SCIP_Longint maxcombines;
+         int ncombines;
+         int maxcombines;
          SCIP_Bool finished;
          SCIP_Bool success;
          SCIP_Bool swaprow1;
@@ -1529,6 +1479,11 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
          block2start = 0;
          block2end = 0;
          maxcombines = nrows * presoldata->maxpairfac;
+         // prevent overflow issues
+         if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
+         {
+            maxcombines = INT_MAX;
+         }
          ncombines = 0;
          combinefails = 0;
          retrievefails = 0;
@@ -1557,7 +1512,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                            swaprow1 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx));
                            swaprow2 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx));
 
-                           twoRowBound(scip, matrix, rowpair.row1idx, rowpair.row2idx, swaprow1, swaprow2, newlbs, newubs, delcons, &success);
+                           SCIP_CALL( twoRowBound(scip, matrix, rowpair.row1idx, rowpair.row2idx, swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
 
                            if( success )
                               combinefails = 0;
@@ -1833,12 +1788,8 @@ SCIP_RETCODE SCIPincludePresolTworowbnd(
 
    assert(presol != NULL);
 
-   //SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyTworowbnd) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeTworowbnd) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitTworowbnd) );
-   //SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitTworowbnd) );
-   //SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreTworowbnd) );
-   //SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreTworowbnd) );
 
    /* add tworowbnd presolver parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
@@ -1853,14 +1804,14 @@ SCIP_RETCODE SCIPincludePresolTworowbnd(
          "presolving/tworowbnd/maxcombinefails",
          "maximal number of consecutive useless row combines",
          &presoldata->maxcombinefails, FALSE, DEFAULT_MAXCOMBINEFAILS, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/tworowbnd/maxhashfac",
          "Maximum number of hashlist entries as multiple of number of rows in the problem (-1: no limit)",
-         &presoldata->maxhashfac, FALSE, DEFAULT_MAXHASHFAC, -1, SCIP_REAL_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
+         &presoldata->maxhashfac, FALSE, DEFAULT_MAXHASHFAC, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/tworowbnd/maxpairfac",
          "Maximum number of processed row pairs as multiple of the number of rows in the problem (-1: no limit)",
-         &presoldata->maxpairfac, FALSE, DEFAULT_MAXPAIRFAC, -1, SCIP_REAL_MAX, NULL, NULL) );
+         &presoldata->maxpairfac, FALSE, DEFAULT_MAXPAIRFAC, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

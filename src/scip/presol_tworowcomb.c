@@ -111,8 +111,8 @@ hashIndexPair(
 static
 SCIP_RETCODE addEntry(
  SCIP* scip,                   /**< SCIP datastructure */
- SCIP_Longint* pos,
- SCIP_Longint* listsize,
+ int* pos,
+ int* listsize,
  int** hashlist,
  int** rowidxlist,
  int hash,
@@ -917,7 +917,8 @@ SCIP_RETCODE combineRows
          l1update = 0.0;
          l2update = 0.0;
          updated = FALSE;
-         for( j = i; !updated; j++ )
+         j = i;
+         while( !updated )
          {
             idx = varinds[j];
             assert(signs[idx] == UP || signs[idx] == DN || signs[idx] == CLQ);
@@ -988,6 +989,7 @@ SCIP_RETCODE combineRows
                updated = TRUE;
 
             shift++;
+            j++;
          }
 
 #ifdef SCIP_DEBUG_BREAKPOINTS
@@ -1010,7 +1012,7 @@ SCIP_RETCODE combineRows
                if( j == i )
                   j += shift;
 
-               /* catches the special case where the entire remaining constraint is cancelled */
+               /* catch the special case where the entire remaining constraint is cancelled */
                if( j >= nvars )
                   break;
 
@@ -1313,17 +1315,17 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
       SCIP_Real* rowvalptr;
       SCIP_VAR* var;
 
-      SCIP_Longint maxhashes;
+      int maxhashes;
 
       int maxlen;
-      SCIP_Longint pospp;
-      SCIP_Longint listsizepp;
-      SCIP_Longint posmm;
-      SCIP_Longint listsizemm;
-      SCIP_Longint pospm;
-      SCIP_Longint listsizepm;
-      SCIP_Longint posmp;
-      SCIP_Longint listsizemp;
+      int pospp;
+      int listsizepp;
+      int posmm;
+      int listsizemm;
+      int pospm;
+      int listsizepm;
+      int posmp;
+      int listsizemp;
 
       int* hashlistpp;
       int* hashlistmm;
@@ -1403,6 +1405,12 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
       listsizepm = nrows;
       listsizemp = nrows;
       maxhashes = nrows * presoldata->maxhashfac;
+      // prevent overflow issues
+      if( nrows != 0 && maxhashes / nrows != presoldata->maxhashfac )
+      {
+         maxhashes = INT_MAX;
+      }
+
       for( i = 0; i < nrows; i++)
       {
          if( pospp + posmm + pospm + posmp > maxhashes )
@@ -1513,8 +1521,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
       /* Process pp and mm lists */
       if( pospp > 0 && posmm > 0 )
       {
-         SCIP_Longint ncombines;
-         SCIP_Longint maxcombines;
+         int ncombines;
+         int maxcombines;
          SCIP_Bool finished;
          SCIP_Bool success;
          int combinefails;
@@ -1527,6 +1535,11 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
          block2start = 0;
          block2end = 0;
          maxcombines = nrows * presoldata->maxpairfac;
+         // prevent overflow issues
+         if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
+         {
+            maxcombines = INT_MAX;
+         }
          ncombines = 0;
          combinefails = 0;
          retrievefails = 0;
@@ -1632,8 +1645,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
       /* Process pm and mp lists */
       if( pospm > 0 && posmp > 0 )
       {
-         SCIP_Longint ncombines;
-         SCIP_Longint maxcombines;
+         int ncombines;
+         int maxcombines;
          SCIP_Bool finished;
          SCIP_Bool success;
          int combinefails;
@@ -1646,6 +1659,11 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
          block2start = 0;
          block2end = 0;
          maxcombines = nrows * presoldata->maxpairfac;
+         // prevent overflow issues
+         if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
+         {
+            maxcombines = INT_MAX;
+         }
          ncombines = 0;
          combinefails = 0;
          retrievefails = 0;
