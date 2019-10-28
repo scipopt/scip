@@ -351,9 +351,6 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
             int idx;
 
             var = setppcvars[j];
-            if ( SCIPvarIsNegated(var) )
-               break;
-
             idx = SCIPvarGetIndex(var);
             assert( idx < nprobvars );
             assert( idx >= 0 );
@@ -419,9 +416,6 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
             int idx;
 
             var = setppcvars[j];
-            if ( SCIPvarIsNegated(var) )
-               continue;
-
             idx = SCIPvarGetIndex(var);
             assert( idx < nprobvars );
             assert( idx >= 0 );
