@@ -629,7 +629,6 @@ SCIP_RETCODE combineRows
          SCIPdebugMsg(scip, "breakpoints before checking maximums of clique %d: %d\n", cliquepartition[binvarpos[i]], nbreakpoints);
 #endif
          // size of current clique equals j - i
-         assert((shift + j) <= ncols);
          idx = cliquepartition[i-shift]; // we enumerated the relevant cliques only
          currentmaxinds[idx] = calcCliqueMaximums(scip, varinds, &binvarpos[i-shift], j - i, row1coefs, row2coefs, &nbreakpoints, breakpoints, cliquemaxinds, gradients);
 #ifdef SCIP_DEBUG_CLIQUE
