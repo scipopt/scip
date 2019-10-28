@@ -568,9 +568,6 @@ SCIP_RETCODE combineCols
                SCIP_Real oldlb;
                SCIP_Real oldub;
 #endif
-               /* skip the next variables as they are cancelled anyway */
-               if( j == i )
-                  j += shift;
 
                /* catch the special case where the entire remaining constraint is cancelled */
                if( j >= nvars )
@@ -1773,7 +1770,6 @@ SCIP_RETCODE dualBoundStrengthening(
    SCIP_Bool* islbimplied;
    SCIP_Real* tmplbs;
    SCIP_Real* tmpubs;
-   int numberconvars;
    SCIP_VAR* var;
    int* implubvars;
    int nimplubvars;
@@ -1818,7 +1814,6 @@ SCIP_RETCODE dualBoundStrengthening(
    nrows = SCIPmatrixGetNRows(matrix);
    ncols = SCIPmatrixGetNColumns(matrix);
 
-   numberconvars = 0;
    SCIP_CALL( SCIPallocBufferArray(scip, &tmplbs, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpubs, ncols) );
    for( i = 0; i < ncols; i++ )
@@ -1826,9 +1821,6 @@ SCIP_RETCODE dualBoundStrengthening(
       var = SCIPmatrixGetVar(matrix, i);
       tmplbs[i] = SCIPvarGetLbLocal(var);
       tmpubs[i] = SCIPvarGetUbLocal(var);
-
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-         numberconvars++;
    }
 
    /* verify which bounds of continuous variables are implied */
@@ -1933,16 +1925,16 @@ SCIP_RETCODE dualBoundStrengthening(
                if( SCIPisPositive(scip, colvalptr[j]) )
                {
                   if(SCIPisPositive(scip, colvalptr[k]) )
-                     SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &colidxlistpp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) );
+                     SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &colidxlistpp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k]), implubvars[i]) );
                   else
-                     SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &colidxlistpm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) );
+                     SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &colidxlistpm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k]), implubvars[i]) );
                }
                else
                {
                   if(SCIPisPositive(scip, colvalptr[k]) )
-                     SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &colidxlistmp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) );
+                     SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &colidxlistmp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k]), implubvars[i]) );
                   else
-                     SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &colidxlistmm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) );
+                     SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &colidxlistmm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k]), implubvars[i]) );
                }
             }
          }
@@ -2061,8 +2053,8 @@ SCIP_RETCODE dualBoundStrengthening(
       /* Process pm and mp lists */
       if( pospm > 0 && posmp > 0 )
       {
-         SCIP_Longint ncombines;
-         SCIP_Longint maxcombines;
+         int ncombines;
+         int maxcombines;
          SCIP_Bool finished;
          SCIP_Bool success;
          int combinefails;

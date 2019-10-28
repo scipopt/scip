@@ -671,7 +671,7 @@ SCIP_RETCODE cancelObj(
    int                   maxconsiderednonzeros, /**< maximal number of non-zeros to consider for cancellation */
    SCIP_Bool             preserveintcoefs,   /**< only perform non-zero cancellation if integrality of coefficients is preserved? */
    SCIP_Real             maxretrievefac,     /**< limit on the number of hashtable retrieves as multiple of objective nonzeros */
-   SCIP_Bool             considerlocks,      /**< consider locks while sparsifying the objective? (+/-1: maximize/minimize locks, 0: ignore locks) */
+   int                   considerlocks,      /**< consider locks while sparsifying the objective? (+/-1: maximize/minimize locks, 0: ignore locks) */
    int*                  nchgcoefs,          /**< pointer to update number of changed coefficients */
    int*                  ncanceled,          /**< pointer to update number of canceled nonzeros */
    int*                  nfillin             /**< pointer to update the produced fill-in */
@@ -1297,23 +1297,27 @@ SCIP_RETCODE densifyObj(
       if( SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, i), SCIPmatrixGetRowRhs(matrix, i)) )
       {
          hasZero = FALSE;
+         rowinds = SCIPmatrixGetRowIdxPtr(matrix, i);
+         rowvals = SCIPmatrixGetRowValPtr(matrix, i);
+
+         /* check if constraint can add a nonzero to the objective */
          for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++)
          {
-            rowinds =  SCIPmatrixGetRowIdxPtr(matrix, i);
-            rowvals = SCIPmatrixGetRowValPtr(matrix, i);
             var = SCIPmatrixGetVar(matrix, rowinds[j]);
             if( !hasZero && SCIPisZero(scip, SCIPvarGetObj(var)) )
-            {
                hasZero = TRUE;
-               j = 0;
+         }
+
+         /* update ojective if nonzero can be added */
+         if( hasZero )
+         {
+            SCIP_CALL( SCIPaddObjoffset(scip, -SCIPmatrixGetRowRhs(matrix, i)) );
+            for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++)
+            {
                var = SCIPmatrixGetVar(matrix, rowinds[j]);
                SCIP_CALL( SCIPchgVarObj(scip, var, SCIPvarGetObj(var) + rowvals[j]) );
             }
-            else if( hasZero )
-               SCIP_CALL( SCIPchgVarObj(scip, var, SCIPvarGetObj(var) + rowvals[j]) );
          }
-         if( hasZero )
-            SCIP_CALL( SCIPaddObjoffset(scip, -SCIPmatrixGetRowRhs(matrix, i)) );
       }
    }
    return SCIP_OKAY;

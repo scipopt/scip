@@ -773,7 +773,7 @@ SCIP_RETCODE transformAndSolve(
       SCIP_Real activity;
 
       if( maxsolvable && maxswapsolvable )
-         activity = MAX(maxobj, maxswapobj) + SCIPmatrixGetRowLhs(matrix, row1idx) + maxact;
+         activity = MAX(maxobj, maxswapobj) + SCIPmatrixGetRowLhs(matrix, row1idx) + maxact; /*lint !e644*/
       else if( maxsolvable )
          activity = maxobj + SCIPmatrixGetRowLhs(matrix, row1idx) + maxact; /*lint !e644*/
       else
