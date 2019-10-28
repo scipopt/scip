@@ -162,8 +162,8 @@
 #define DEFAULT_RECOMPUTERESTART    FALSE    /**< Recompute symmetries after a restart has occurred? */
 
 /* default parameters for Schreier Sims cuts */
-#define DEFAULT_SCHREIERSIMSMAXORBIT TRUE    /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
-#define DEFAULT_SCHREIERSIMSFIRSTINORBIT FALSE /**< Should the first element in the orbit be selected as leader? */
+#define DEFAULT_SCHREIERSIMSORBITRULE   1   /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
+#define DEFAULT_SCHREIERSIMSLEADERRULE  1   /**< Should the first element in the orbit be selected as leader? */
 
 
 /* event handler properties */
@@ -264,8 +264,8 @@ struct SCIP_PropData
    SCIP_Bool             schreiersimsenabled; /**< Use Schreier Sims cuts? */
    SCIP_CONS**           schreiersimsconss;   /**< list of generated schreier sims conss */
    int                   nschreiersimsconss;  /**< number of generated schreier sims conss */
-   SCIP_Bool             schreiersimsmaxorbit; /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
-   SCIP_Bool             schreiersimsfirstinorbit; /**< Should the first element in the orbit be selected as leader? */
+   int                   schreiersimsorbitrule; /**< rule to select an orbit for Schreier Sims cuts */
+   int                   schreiersimsleaderrule; /**< rule to select leader within selected orbit */
    int*                  leaders;            /**< index of orbit leaders in permvars */
    int                   nleaders;           /**< number of orbit leaders in leaders array */
    int                   maxnleaders;        /**< maximum number of leaders in leaders array */
@@ -3489,8 +3489,8 @@ SCIP_RETCODE addSchreierSimsConss(
    int v;
    int p;
    int posleader;
-   int orbitrule = 6;
-   int leaderrule = 1;
+   int orbitrule;
+   int leaderrule;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -3514,6 +3514,9 @@ SCIP_RETCODE addSchreierSimsConss(
    assert( vartocomponent != NULL );
    assert( ncomponents > 0 );
    assert( nmovedpermvars > 0 || ! propdata->ofenabled );
+
+   orbitrule = propdata->schreiersimsorbitrule;
+   leaderrule = propdata->schreiersimsleaderrule;
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &inactiveperms, nperms) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &componentblocked, ncomponents) );
@@ -4670,15 +4673,15 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "Should the number of conss a variable is contained in be exploited in symmetry detection?",
          &propdata->usecolumnsparsity, TRUE, DEFAULT_USECOLUMNSPARSITY, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/schreiersimsmaxorbit",
-         "Should an orbit of maximum size be used for Schreier Sims cuts?",
-         &propdata->schreiersimsmaxorbit, TRUE, DEFAULT_SCHREIERSIMSMAXORBIT, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "propagating/" PROP_NAME "/schreiersimsorbitrule",
+         "rule to select the orbit in Schreier Sims inequalities",
+         &propdata->schreiersimsorbitrule, TRUE, DEFAULT_SCHREIERSIMSORBITRULE, 1, 6, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/schreiersimsfirstinorbit",
-         "Should the first element in the orbit be selected as leader?",
-         &propdata->schreiersimsfirstinorbit, TRUE, DEFAULT_SCHREIERSIMSFIRSTINORBIT, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "propagating/" PROP_NAME "/schreiersimsleaderrule",
+         "rule to select the leader in an orbit",
+         &propdata->schreiersimsleaderrule, TRUE, DEFAULT_SCHREIERSIMSLEADERRULE, 1, 2, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
