@@ -2280,7 +2280,7 @@ int graph_get_nEdges(
 {
    assert(graph);
 
-   return graph->knots;
+   return graph->edges;
 }
 
 
