@@ -279,6 +279,7 @@ struct SCIP_NodeData
                                               *   or -1 if not affected by symmetry */
    int                   nconflictinorbit;   /**< number of variables the node's var is in conflict with */
    int                   orbitsize;          /**< size of the variable's orbit */
+   int                   posinorbit;         /**< position of variable in its orbit */
 };
 typedef struct SCIP_NodeData SCIP_NODEDATA;
 
@@ -2703,6 +2704,7 @@ SCIP_RETCODE addSymInfoConflictGraphSchreierSims(
       nodedata->orbitidx = -1;
       nodedata->nconflictinorbit = 0;
       nodedata->orbitsize = -1;
+      nodedata->posinorbit = -1;
 
       if ( ! onlypermvars )
       {
@@ -2747,6 +2749,7 @@ SCIP_RETCODE addSymInfoConflictGraphSchreierSims(
 
          nodedata->orbitidx = j;
          nodedata->orbitsize = orbitsize;
+         nodedata->posinorbit = posinorbit++;
          SCIPdigraphSetNodeData(conflictgraph, (void*) nodedata, pos);
       }
    }
@@ -3382,7 +3385,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
                   candtiebreak = curtiebreak;
 
                   *orbitidx = nodedata->orbitidx;
-                  *leaderidx = i;
+                  *leaderidx = nodedata->posinorbit;
                }
             }
             else
@@ -3441,7 +3444,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
                candtiebreak = curtiebreak;
 
                *orbitidx = nodedata->orbitidx;
-               *leaderidx = i;
+               *leaderidx = nodedata->posinorbit;
             }
          }
 
