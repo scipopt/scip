@@ -314,7 +314,7 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
    SCIP_CALL( SCIPallocClearBufferArray(scip, &rowcoveragesetppc, *nrows) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &rowsinsetppc, *nrows) );
 
-   /* iterate of set packing and partitioning constraints and check whether the constraint's
+   /* iterate over set packing and partitioning constraints and check whether the constraint's
     * support is a row r of the orbitope (covered[r] = 2) or contains row r (covered[r] = 1)
     */
    for (c = 0; c < nsetppcconss && ncoveredpart < ncols; ++c)
@@ -333,7 +333,7 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
       nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
       assert( nsetppcvars > 0 || ! SCIPconsIsActive(setppcconss[c]) );
 
-      /* constraint contains not enough variables */
+      /* constraint does not contain enough variables */
       if ( nsetppcvars < ncols )
          continue;
 
