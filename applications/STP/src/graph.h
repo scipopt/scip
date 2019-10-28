@@ -423,7 +423,7 @@ extern SCIP_Real graph_get_avgDeg(const GRAPH*);
  */
 extern void   graph_pc_knotToNonTerm(GRAPH*, int);
 extern void   graph_pc_knotToFixedTerm(GRAPH*, int);
-extern void   graph_pc_termToNonLeafTerm(GRAPH*, int);
+extern void   graph_pc_termToNonLeafTerm(SCIP*, GRAPH*, int);
 extern void   graph_pc_knotChg(GRAPH*, int, int);
 extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
 extern void   graph_pc_enforcePseudoTerm(GRAPH*, int);
@@ -434,6 +434,7 @@ extern void   graph_pc_2org(SCIP*, GRAPH*);
 extern void   graph_pc_2trans(SCIP*, GRAPH*);
 extern void   graph_pc_2orgcheck(SCIP*, GRAPH*);
 extern void   graph_pc_2transcheck(SCIP*, GRAPH*);
+extern void   graph_pc_updateNonLeafTerms(SCIP*, GRAPH*);
 extern void   graph_pc_markOrgGraph(SCIP*, GRAPH*);
 extern void   graph_pc_adaptSap(SCIP*, SCIP_Real, GRAPH*, SCIP_Real*);
 extern void   graph_pc_presolExit(SCIP*, GRAPH*);

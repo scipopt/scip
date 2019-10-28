@@ -2272,7 +2272,6 @@ SCIP_RETCODE reduce_da(
          damaxdeviation = SCIPrandomGetReal(randnumgen, DAMAXDEVIATION_RANDOM_LOWER, DAMAXDEVIATION_RANDOM_UPPER);
    } /* outerrounds */
 
-TERMINATE:
    *nelims = ndeletions;
 
    if( rpc )

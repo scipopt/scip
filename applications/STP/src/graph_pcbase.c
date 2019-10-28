@@ -752,6 +752,7 @@ void graph_pc_knotToFixedTerm(
 
 /** change property of (non-fixed) terminal to be a non-leaf terminal */
 void graph_pc_termToNonLeafTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
    int                   term                /**< terminal to be changed */
    )
@@ -1186,7 +1187,7 @@ void graph_pc_updateNonLeafTerms(
             && !graph_pc_termIsNonLeafTerm(graph, i)
             && termIsNonLeafTerm_evaluate(scip, graph, i) )
       {
-         graph_pc_termToNonLeafTerm(graph, i);
+         graph_pc_termToNonLeafTerm(scip, graph, i);
 
          assert(graph_pc_termIsNonLeafTerm(graph, i));
       }
