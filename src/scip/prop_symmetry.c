@@ -700,6 +700,7 @@ SCIP_RETCODE freeSymmetryData(
 
       /* free pointers to symmetry group and binary variables */
       SCIPfreeBlockMemoryArray(scip, &propdata->schreiersimsconss, propdata->nschreiersimsconss);
+      propdata->schreiersimsconss = NULL;
       propdata->nschreiersimsconss = 0;
    }
    if ( propdata->leaders != NULL )
