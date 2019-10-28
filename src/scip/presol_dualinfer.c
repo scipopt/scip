@@ -78,8 +78,8 @@ struct SCIP_PresolData
 {
    SCIP_Bool usetwocolcombine;              /**< use convex combination of two columns */
    int maxdualbndloops;                     /**< default number of dual bound strengthening loops */
-   SCIP_Real maxpairfac;
-   SCIP_Real maxhashfac;
+   int maxpairfac;
+   int maxhashfac;
    int maxretrievefails;
    int maxcombinefails;
    int maxconsiderednonzeros;
@@ -146,7 +146,8 @@ SCIP_DECL_HASHKEYVAL(colPairHashval)
    return SCIPhashTwo(colpair->col1idx, colpair->col2idx);
 }
 
-static SCIP_RETCODE addEntry
+static
+SCIP_RETCODE addEntry
 (
    SCIP* scip,                   /**< SCIP datastructure */
    int* pos,
@@ -172,7 +173,8 @@ static SCIP_RETCODE addEntry
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE findNextBlock
+static
+void findNextBlock
 (
    int*                 list,
    int                  len,
@@ -187,8 +189,6 @@ static SCIP_RETCODE findNextBlock
       i++;
 
    (*end) = i;
-
-   return SCIP_OKAY;
 }
 
 /**
@@ -504,7 +504,8 @@ SCIP_RETCODE combineCols
          l1update = 0.0;
          l2update = 0.0;
          updated = FALSE;
-         for( j = i; !updated; j++ )
+         j = i;
+         while( !updated )
          {
             idx = varinds[j];
             assert(signs[idx] == UP || signs[idx] == DN);
@@ -548,6 +549,7 @@ SCIP_RETCODE combineCols
                updated = TRUE;
 
             shift++;
+            j++;
          }
 
 #ifdef SCIP_MORE_DEBUG
@@ -570,7 +572,7 @@ SCIP_RETCODE combineCols
                if( j == i )
                   j += shift;
 
-               /* catches the special case where the entire remaining constraint is cancelled */
+               /* catch the special case where the entire remaining constraint is cancelled */
                if( j >= nvars )
                   break;
 
@@ -1776,7 +1778,7 @@ SCIP_RETCODE dualBoundStrengthening(
    int* implubvars;
    int nimplubvars;
 
-   SCIP_Longint maxhashes;
+   int maxhashes;
    int maxlen;
    int pospp;
    int listsizepp;
@@ -1909,6 +1911,12 @@ SCIP_RETCODE dualBoundStrengthening(
       listsizepm = ncols;
       listsizemp = ncols;
       maxhashes = ncols * presoldata->maxhashfac;
+      // prevent overflow issues
+      if( nrows != 0 && maxhashes / nrows != presoldata->maxhashfac )
+      {
+         maxhashes = INT_MAX;
+      }
+
       for( i = 0; i < nimplubvars; i++)
       {
 
@@ -1925,16 +1933,16 @@ SCIP_RETCODE dualBoundStrengthening(
                if( SCIPisPositive(scip, colvalptr[j]) )
                {
                   if(SCIPisPositive(scip, colvalptr[k]) )
-                     addEntry(scip, &pospp, &listsizepp, &hashlistpp, &colidxlistpp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]);
+                     SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &colidxlistpp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) );
                   else
-                     addEntry(scip, &pospm, &listsizepm, &hashlistpm, &colidxlistpm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]);
+                     SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &colidxlistpm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) );
                }
                else
                {
                   if(SCIPisPositive(scip, colvalptr[k]) )
-                     addEntry(scip, &posmp, &listsizemp, &hashlistmp, &colidxlistmp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]);
+                     SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &colidxlistmp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) );
                   else
-                     addEntry(scip, &posmm, &listsizemm, &hashlistmm, &colidxlistmm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]);
+                     SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &colidxlistmm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) );
                }
             }
          }
@@ -1952,8 +1960,8 @@ SCIP_RETCODE dualBoundStrengthening(
       /* Process pp and mm lists */
       if( pospp > 0 && posmm > 0 )
       {
-         SCIP_Longint ncombines;
-         SCIP_Longint maxcombines;
+         int ncombines;
+         int maxcombines;
          SCIP_Bool finished;
          SCIP_Bool success;
          int combinefails;
@@ -1966,6 +1974,11 @@ SCIP_RETCODE dualBoundStrengthening(
          block2start = 0;
          block2end = 0;
          maxcombines = ncols * presoldata->maxpairfac;
+         // prevent overflow issues
+         if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
+         {
+            maxcombines = INT_MAX;
+         }
          ncombines = 0;
          combinefails = 0;
          retrievefails = 0;
@@ -2062,6 +2075,11 @@ SCIP_RETCODE dualBoundStrengthening(
          block2start = 0;
          block2end = 0;
          maxcombines = ncols * presoldata->maxpairfac;
+         // prevent overflow issues
+         if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
+         {
+            maxcombines = INT_MAX;
+         }
          ncombines = 0;
          combinefails = 0;
          retrievefails = 0;
@@ -2627,15 +2645,15 @@ SCIP_RETCODE SCIPincludePresolDualinfer(
          "maximal number of consecutive useless column combines",
          &presoldata->maxcombinefails, FALSE, DEFAULT_MAXCOMBINEFAILS, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/dualinfer/maxhashfac",
          "Maximum number of hashlist entries as multiple of number of columns in the problem (-1: no limit)",
-         &presoldata->maxhashfac, FALSE, DEFAULT_MAXHASHFAC, -1, SCIP_REAL_MAX, NULL, NULL) );
+         &presoldata->maxhashfac, FALSE, DEFAULT_MAXHASHFAC, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/dualinfer/maxpairfac",
          "Maximum number of processed column pairs as multiple of the number of columns in the problem (-1: no limit)",
-         &presoldata->maxpairfac, FALSE, DEFAULT_MAXPAIRFAC, -1, SCIP_REAL_MAX, NULL, NULL) );
+         &presoldata->maxpairfac, FALSE, DEFAULT_MAXPAIRFAC, -1, INT_MAX, NULL, NULL) );
 
     SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/dualinfer/maxrowsupport",

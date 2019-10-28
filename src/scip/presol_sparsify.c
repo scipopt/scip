@@ -113,7 +113,6 @@ struct SCIP_PresolData
    SCIP_Bool             objpreserveintcoefs; /**< should we forbid cancellations that destroy integer coefficients when sparsifying the objective? */
    SCIP_Bool             sparsifyobj;        /**< should the objective be sparsified? */
    SCIP_Bool             densifyobj;         /**< should the objective be densified? */
-   SCIP_Bool             objlimitretrieves;  /**< should we limit the number of retrieves when sparsifying the objective? */
 };
 
 /** structure representing a pair of variables in a row; used for lookup in a hashtable */
@@ -495,7 +494,7 @@ SCIP_RETCODE cancelRow(
 
             /* we accept the best candidate immediately if it does not create any fill-in or alter coefficients */
             if( bestcand != -1 && bestcancelrate == 1.0 )
-	       break;
+               break;
          }
       }
 
@@ -705,7 +704,7 @@ SCIP_RETCODE cancelObj(
 
    /* no point in trying to sparsify a constant objective function */
    if( nobjcoefinds == 0 )
-	   return SCIP_OKAY;
+           return SCIP_OKAY;
 
    if( SCIPisEQ(scip, maxretrievefac, 0.0) )
       maxretrieves = SCIP_LONGINT_MAX;
@@ -760,7 +759,7 @@ SCIP_RETCODE cancelObj(
       bestcancelrate = 0.0;
 
       if( nretrieves >= maxretrieves )
-	 break;
+         break;
 
       // TODO rethink whether sorting this way makes sense
       for( i = 0; i < cancelrowlen; i++ )
@@ -836,7 +835,7 @@ SCIP_RETCODE cancelObj(
             /* check if integrality of objective offset needs to be preserved */
             if( preserveintcoefs && SCIPisObjIntegral(scip) &&
                 !SCIPisIntegral(scip, scale * SCIPmatrixGetRowRhs(matrix, eqrowvarpair->rowindex)) )
-	      continue;
+              continue;
 
             if( REALABS(scale) > MAXSCALE )
                continue;
@@ -893,7 +892,7 @@ SCIP_RETCODE cancelObj(
 //                           abortpair = TRUE;
 //                           break;
 //                        }
-		     }
+                     }
                      /* symmetrical case where variable is minimized */
                      else if( (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && SCIPisPositive(scip, newcoef)) ||
                               (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPisNegative(scip, newcoef)) )
@@ -1033,7 +1032,7 @@ SCIP_RETCODE cancelObj(
 
                b++;
 
-	       if( SCIPvarIsIntegral(var) )
+               if( SCIPvarIsIntegral(var) )
                {
                   if( SCIPvarIsBinary(var) && ++nbinfillin > maxbinfillin )
                      break;
@@ -1047,7 +1046,7 @@ SCIP_RETCODE cancelObj(
                }
             }
 
-	    if( abortpair || (considerlocks * nlockimprovements) > 0 )
+            if( abortpair || (considerlocks * nlockimprovements) > 0 )
                continue;
 
             /* if( ncontfillin > maxcontfillin || nbinfillin > maxbinfillin || nintfillin > maxintfillin ) */
@@ -1099,7 +1098,7 @@ SCIP_RETCODE cancelObj(
          eqrhs = SCIPmatrixGetRowRhs(matrix, bestcand);
 
 #ifdef SCIP_MORE_DEBUG
-	 SCIPdebugMsg(scip,"sparsifying with row %s and scale %f, offset changes from %f to %f\n", SCIPmatrixGetRowName(matrix, bestcand), bestscale, SCIPgetTransObjoffset(scip), (SCIPgetTransObjoffset(scip) - bestscale * eqrhs));
+         SCIPdebugMsg(scip,"sparsifying with row %s and scale %f, offset changes from %f to %f\n", SCIPmatrixGetRowName(matrix, bestcand), bestscale, SCIPgetTransObjoffset(scip), (SCIPgetTransObjoffset(scip) - bestscale * eqrhs));
 #endif
 
          a = 0;
@@ -1173,12 +1172,12 @@ SCIP_RETCODE cancelObj(
          SCIPswapPointers((void**) &tmpvals, (void**) &cancelrowvals);
          cancelrowlen = tmprowlen;
 
-	 SCIPdebugMsg(scip, "objective has %d nonzeros\n", cancelrowlen);
+         SCIPdebugMsg(scip, "objective has %d nonzeros\n", cancelrowlen);
 
 #ifdef SCIP_MORE_DEBUG
-	 for( i = 0; i < cancelrowlen; i++ )
-	 {
-	   SCIPdebugMsg(scip, "%s - %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[i]), cancelrowvals[i]);
+         for( i = 0; i < cancelrowlen; i++ )
+         {
+           SCIPdebugMsg(scip, "%s - %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[i]), cancelrowvals[i]);
          }
 #endif
       }
@@ -1196,28 +1195,28 @@ SCIP_RETCODE cancelObj(
          if( objcoefinds[i] == cancelrowinds[j] )
          {
 #ifdef SCIP_MORE_DEBUG
-	    if( !SCIPisEQ(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]) )
+            if( !SCIPisEQ(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]) )
                SCIPdebugMsg(scip, "(case1) change coefficient of variable %s from %f to %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[j]), SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]);
 #endif
-            SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, cancelrowinds[j]), cancelrowvals[j]);
+            SCIP_CALL( SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, cancelrowinds[j]), cancelrowvals[j]) );
             i++;
             j++;
          }
          else if( objcoefinds[i] < cancelrowinds[j] )
          {
 #ifdef SCIP_MORE_DEBUG
-	   SCIPdebugMsg(scip, "(case2) change coefficient of variable %s from %f to 0.0\n", SCIPmatrixGetColName(matrix, objcoefinds[i]), SCIPvarGetObj(SCIPmatrixGetVar(matrix, objcoefinds[i])));
+           SCIPdebugMsg(scip, "(case2) change coefficient of variable %s from %f to 0.0\n", SCIPmatrixGetColName(matrix, objcoefinds[i]), SCIPvarGetObj(SCIPmatrixGetVar(matrix, objcoefinds[i])));
 #endif
-            SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, objcoefinds[i]), 0.0);
+           SCIP_CALL( SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, objcoefinds[i]), 0.0) );
             i++;
          }
          else
          {
 #ifdef SCIP_MORE_DEBUG
-	    if( !SCIPisEQ(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]) )
-	       SCIPdebugMsg(scip, "(case3) change coefficient of variable %s from %f to %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[j]), SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]);
+            if( !SCIPisEQ(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]) )
+               SCIPdebugMsg(scip, "(case3) change coefficient of variable %s from %f to %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[j]), SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]);
 #endif
-            SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, cancelrowinds[j]), cancelrowvals[j]);
+            SCIP_CALL( SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, cancelrowinds[j]), cancelrowvals[j]) );
             j++;
          }
       }
@@ -1228,7 +1227,7 @@ SCIP_RETCODE cancelObj(
          if( !SCIPisEQ(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]) )
             SCIPdebugMsg(scip, "(case1) change coefficient of variable %s from %f to %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[j]), SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]);
 #endif
-         SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, objcoefinds[i]), 0.0);
+         SCIP_CALL( SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, objcoefinds[i]), 0.0) );
          i++;
       }
 
@@ -1238,7 +1237,7 @@ SCIP_RETCODE cancelObj(
          if( !SCIPisEQ(scip, SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]) )
             SCIPdebugMsg(scip, "(case3) change coefficient of variable %s from %f to %f\n", SCIPmatrixGetColName(matrix, cancelrowinds[j]), SCIPvarGetObj(SCIPmatrixGetVar(matrix, cancelrowinds[j])), cancelrowvals[j]);
 #endif
-         SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, cancelrowinds[j]), cancelrowvals[j]);
+         SCIP_CALL( SCIPchgVarObj(scip, SCIPmatrixGetVar(matrix, cancelrowinds[j]), cancelrowvals[j]) );
          j++;
       }
 
@@ -1308,10 +1307,10 @@ SCIP_RETCODE densifyObj(
                hasZero = TRUE;
                j = 0;
                var = SCIPmatrixGetVar(matrix, rowinds[j]);
-               SCIPchgVarObj(scip, var, SCIPvarGetObj(var) + rowvals[j]);
+               SCIP_CALL( SCIPchgVarObj(scip, var, SCIPvarGetObj(var) + rowvals[j]) );
             }
-	    else if( hasZero )
-               SCIPchgVarObj(scip, var, SCIPvarGetObj(var) + rowvals[j]);
+            else if( hasZero )
+               SCIP_CALL( SCIPchgVarObj(scip, var, SCIPvarGetObj(var) + rowvals[j]) );
          }
          if( hasZero )
             SCIP_CALL( SCIPaddObjoffset(scip, -SCIPmatrixGetRowRhs(matrix, i)) );
