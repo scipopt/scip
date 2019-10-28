@@ -2970,10 +2970,7 @@ SCIP_RETCODE computeBranchingVariables(
                 * e.g., by prop_inttobinary; may have been removed from symmetry data
                 * due to compression), continue with parent node */
                if ( ! SCIPhashmapExists(varmap, (void*) branchvar) )
-               {
-                  node = SCIPnodeGetParent(node);
-                  continue;
-               }
+                  break;
 
                if ( SCIPvarGetLbLocal(branchvar) > 0.5 )
                {
