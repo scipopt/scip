@@ -277,6 +277,8 @@ struct SCIP_NodeData
    SCIP_VAR*             var;                /**< variable belonging to node */
    int                   orbitidx;           /**< orbit of variable w.r.t. current stabilizer subgroup
                                               *   or -1 if not affected by symmetry */
+   int                   nconflictinorbit;   /**< number of variables the node's var is in conflict with */
+   int                   orbitsize;          /**< size of the variable's orbit */
 };
 typedef struct SCIP_NodeData SCIP_NODEDATA;
 
@@ -2825,6 +2827,7 @@ SCIP_RETCODE addSymInfoConflictGraphSchreierSims(
    SCIP_HASHMAP* varmap;
    int i;
    int j;
+   int orbitsize;
 
    assert( scip != NULL );
    assert( conflictgraph != NULL );
@@ -2851,6 +2854,8 @@ SCIP_RETCODE addSymInfoConflictGraphSchreierSims(
       SCIP_CALL( SCIPallocBlockMemory(scip, &nodedata) );
       nodedata->var = graphvars[i];
       nodedata->orbitidx = -1;
+      nodedata->nconflictinorbit = -1;
+      nodedata->orbitsize = -1;
 
       if ( ! onlypermvars )
       {
@@ -2865,11 +2870,17 @@ SCIP_RETCODE addSymInfoConflictGraphSchreierSims(
    /* add orbit information to nodes of conflict graph */
    for (j = 0; j < norbits; ++j)
    {
+      orbitsize = orbitbegins[j + 1] - orbitbegins[j];
+
       for (i = orbitbegins[j]; i < orbitbegins[j + 1]; ++j)
       {
          SCIP_NODEDATA* nodedata;
          SCIP_VAR* var;
          int pos;
+
+         assert( nodedata->var != NULL );
+         assert( nodedata->orbitidx == -1 );
+         assert( nodedata->orbitsize == -1 );
 
          /* get variable and position in conflict graph */
          if ( onlypermvars )
@@ -2892,8 +2903,44 @@ SCIP_RETCODE addSymInfoConflictGraphSchreierSims(
          assert( nodedata->var == var );
 
          nodedata->orbitidx = j;
+         nodedata->orbitsize = orbitsize;
          SCIPdigraphSetNodeData(conflictgraph, (void*) nodedata, pos);
       }
+   }
+
+   /* add information on number of conflicts within orbit to conflict graph */
+   for (i = 0; i < ngraphvars; ++i)
+   {
+      SCIP_NODEDATA* nodedata;
+      SCIP_NODEDATA* nodedataconflict;
+      int* conflictvars;
+      int nconflictinorbit = 0;
+      int curorbit;
+
+      nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, i);
+      conflictvars = SCIPdigraphGetSuccessors(conflictgraph, i);
+
+      assert( nodedata != NULL );
+      assert( nodedata->nconflictinorbit == -1 );
+      assert( conflictvars != NULL );
+
+      curorbit = nodedata->orbitidx;
+
+      assert( curorbit >= 0 );
+
+      for (j = 0; j < SCIPdigraphGetNSuccessors(conflictgraph, i); ++j)
+      {
+         nodedataconflict = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, conflictvars[j]);
+
+         assert( nodedataconflict != NULL );
+         assert( nodedataconflict->orbitidx >= 0 );
+
+         if ( nodedataconflict->orbitidx == curorbit )
+            ++nconflictinorbit;
+      }
+
+      nodedata->nconflictinorbit = nconflictinorbit;
+      SCIPdigraphSetNodeData(conflictgraph, (void*) nodedata, pos);
    }
 
    if ( ! onlypermvars )
