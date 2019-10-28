@@ -161,7 +161,8 @@ int calcCliqueMaximums(
    SCIP_Real*           row2coefs,           /**< coefficients of second row */
    int*                 nbreakpoints,        /**< number of breakpoints between 0 and 1 */
    SCIP_Real*           breakpoints,         /**< variable breakpoints */
-   int*                 cliquemaxinds        /**< array containing in which clique this variable has a maximum */
+   int*                 cliquemaxinds,       /**< array containing in which clique this variable has a maximum */
+   SCIP_Real*           gradients            /**< buffer array the function can use for handling the gradients */
    )
 {
    int i;
@@ -172,14 +173,11 @@ int calcCliqueMaximums(
    int firstmaxpos;
    SCIP_Real lambda;
    SCIP_Real minlambda;
-   SCIP_Real* gradients;
    SCIP_Real breakpointval;
 
 #ifdef SCIP_DEBUG_CLIQUE
    SCIPdebugMsg(scip, "calculating maximums for clique %d\n", -cliquemaxinds[cliquevarpos[0]]);
 #endif
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &gradients, cliquesize) );
 
    // calculate gradients
    for( i = 0; i < cliquesize; i++ )
@@ -308,8 +306,6 @@ int calcCliqueMaximums(
       }
    }
 
-   SCIPfreeBufferArray(scip, &gradients);
-
    if( firstmaxpos == -1 )
       return -1;
    else
@@ -371,6 +367,7 @@ SCIP_RETCODE combineRows
    int ncliques;
    int* currentmaxinds;
    int cliqueidx;
+   SCIP_Real* gradients;
 
 #ifdef SCIP_DEBUG_SUBSCIP
    SCIP* subscip;
@@ -580,6 +577,7 @@ SCIP_RETCODE combineRows
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquepartition, nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &gradients, nbinvars) );
 
 #ifdef SCIP_TEST_CLIQUE
    if( nbinvars > 0 )
@@ -633,7 +631,7 @@ SCIP_RETCODE combineRows
          // size of current clique equals j - i
          assert((shift + j) <= ncols);
          idx = cliquepartition[i-shift]; // we enumerated the relevant cliques only
-         currentmaxinds[idx] = calcCliqueMaximums(scip, varinds, &binvarpos[i-shift], j - i, row1coefs, row2coefs, &nbreakpoints, breakpoints, cliquemaxinds);
+         currentmaxinds[idx] = calcCliqueMaximums(scip, varinds, &binvarpos[i-shift], j - i, row1coefs, row2coefs, &nbreakpoints, breakpoints, cliquemaxinds, gradients);
 #ifdef SCIP_DEBUG_CLIQUE
          SCIPdebugMsg(scip, "breakpoints after checking maximums of clique %d: %d, firstmaxidx = %d\n", idx, nbreakpoints, currentmaxinds[idx]);
 #endif
@@ -1205,6 +1203,7 @@ SCIP_RETCODE combineRows
    }
 
    SCIPfreeBufferArray(scip, &currentmaxinds);
+   SCIPfreeBufferArray(scip, &gradients);
    SCIPfreeBufferArray(scip, &cliquepartition);
    SCIPfreeBufferArray(scip, &binvarpos);
    SCIPfreeBufferArray(scip, &binvars);
