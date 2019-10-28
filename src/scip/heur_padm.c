@@ -831,6 +831,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    varlabels = NULL;
    conslabels = NULL;
    blockstartsconss = NULL;
+   allLinkVarToBlocks = NULL;
    linkvars = NULL;
    linkvartoblocks = NULL;
    numlinkvars = 0;
