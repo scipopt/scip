@@ -83,17 +83,6 @@
 #define NODESOLVED_EVENTHDLR_NAME        "bendersnodesolved"
 #define NODESOLVED_EVENTHDLR_DESC        "node solved event handler for the Benders' integer cuts"
 
-/* fundamental constraint handler properties */
-#define CONSHDLR_NAME          "delaybenders"
-#define CONSHDLR_DESC          "constraint handler used to delay Benders' decomposition subproblem solve"
-#define CONSHDLR_ENFOPRIORITY        -1 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY -5000000 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-#define CONSHDLR_MAXPREROUNDS         0 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FAST /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
-#define CONSHDLR_NEEDSCONS        TRUE /**< should the constraint handler be skipped, if no constraints are available? */
-
 
 /** event handler data */
 struct SCIP_EventhdlrData
@@ -635,8 +624,6 @@ SCIP_DECL_SORTPTRCOMP(benderssubcompdefault)
             return -1;
       }
    }
-
-   return 0;
 }
 
 /* Local methods */
@@ -2265,6 +2252,8 @@ SCIP_RETCODE SCIPbendersActivate(
 
       for( i = 0; i < benders->nsubproblems; i++ )
       {
+         SCIP_SUBPROBLEMSOLVESTAT* solvestat;
+
          benders->subproblems[i] = NULL;
          benders->auxiliaryvars[i] = NULL;
          benders->subprobobjval[i] = SCIPsetInfinity(set);
@@ -2277,10 +2266,11 @@ SCIP_RETCODE SCIPbendersActivate(
          benders->mastervarscont[i] = FALSE;
 
          /* initialising the subproblem solving status */
-         SCIP_ALLOC( BMSallocMemory(&benders->solvestat[i]) );
-         benders->solvestat[i]->idx = i;
-         benders->solvestat[i]->ncalls = 0;
-         benders->solvestat[i]->avgiter = 0;
+         SCIP_ALLOC( BMSallocMemory(&solvestat) );
+         solvestat->idx = i;
+         solvestat->ncalls = 0;
+         solvestat->avgiter = 0;
+         benders->solvestat[i] = solvestat;
 
          /* inserting the initial elements into the priority queue */
          SCIP_CALL( SCIPpqueueInsert(benders->subprobqueue, benders->solvestat[i]) );
@@ -2802,8 +2792,10 @@ SCIP_RETCODE solveBendersSubproblems(
    )
 {
    SCIP_Bool onlyconvexcheck;
+#ifdef _OPENMP
    int numthreads;
    int maxnthreads;
+#endif
    int i;
    int j;
 
@@ -2818,15 +2810,15 @@ SCIP_RETCODE solveBendersSubproblems(
    assert(benders != NULL);
    assert(set != NULL);
 
-   locstopped = FALSE;
-
    /* getting the number of threads to use when solving the subproblems. This will be either be
     * min(numthreads, maxnthreads).
     * NOTE: This may not be correct. The Benders' decomposition parallelisation should not take all minimum threads if
     * they are specified. The number of threads should be specified with the Benders' decomposition parameters.
     */
+#ifdef _OPENMP
    SCIP_CALL( SCIPsetGetIntParam(set, "parallel/maxnthreads", &maxnthreads) );
    numthreads = MIN(benders->numthreads, maxnthreads);
+#endif
 
    /* in the case of an LNS check, only the convex relaxations of the subproblems will be solved. This is a performance
     * feature, since solving the convex relaxation is typically much faster than solving the corresponding CIP. While
