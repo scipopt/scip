@@ -2213,45 +2213,50 @@ void graph_pc_deleteTermExtension(
 int graph_pc_deleteTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   int                   i                   /**< index of the terminal */
+   int                   term                /**< terminal to be deleted */
    )
 {
-   int e;
-   int t;
-   int grad = g->grad[i];
+   int grad = g->grad[term];
 
-   assert(g != NULL && scip != NULL && g->term2edge != NULL);
+   assert(g && scip && g->term2edge);
    assert(graph_pc_isPcMw(g));
-   assert(Is_term(g->term[i]));
-   assert(g->term2edge[i] >= 0);
-   assert(i != g->source);
+   assert(Is_term(g->term[term]));
+   assert(term != g->source);
 
-   t = UNKNOWN;
-
-   /* delete terminal */
-
-   graph_pc_knotToNonTerm(g, i);
-   g->mark[i] = FALSE;
-
-   while( (e = g->outbeg[i]) != EAT_LAST )
+   if( !g->extended && graph_pc_termIsNonLeafTerm(g, term) )
    {
-      const int i1 = g->head[e];
-
-      if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
-         t = g->head[e];
-      graph_edge_del(scip, g, e, TRUE);
+      graph_knot_del(scip, g, term, TRUE);
    }
+   else
+   {
+      int e;
+      int twin = UNKNOWN;
 
-   assert(g->grad[i] == 0);
-   assert(t != UNKNOWN);
+      /* delete terminal */
 
-   /* delete artificial terminal */
+      graph_pc_knotToNonTerm(g, term);
+      g->mark[term] = FALSE;
 
-   graph_pc_knotToNonTerm(g, t);
-   g->mark[t] = FALSE;
-   grad += g->grad[t] - 1;
+      while( (e = g->outbeg[term]) != EAT_LAST )
+      {
+         const int i1 = g->head[e];
 
-   graph_knot_del(scip, g, t, TRUE);
+         if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
+            twin = g->head[e];
+         graph_edge_del(scip, g, e, TRUE);
+      }
+
+      assert(g->grad[term] == 0);
+      assert(twin != UNKNOWN);
+
+      /* delete artificial terminal */
+
+      graph_pc_knotToNonTerm(g, twin);
+      g->mark[twin] = FALSE;
+      grad += g->grad[twin] - 1;
+
+      graph_knot_del(scip, g, twin, TRUE);
+   }
 
    return grad;
 }

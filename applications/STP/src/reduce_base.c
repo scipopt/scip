@@ -463,6 +463,7 @@ SCIP_RETCODE level0RpcRmwInfeas(
          }
          else if( graph_pc_termIsNonLeafTerm(g, k) )
          {
+            /* offset is not necessary, because graph is in extended mode */
             graph_knot_del(scip, g, k, TRUE);
          }
          else
