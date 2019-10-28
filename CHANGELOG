@@ -78,6 +78,7 @@ Fixed bugs
 - fixed an issue in heur_completesol which is triggered during bound widening of unbounded continuous variables
 - fixed bug in cons_indicator if addopposite is true
 - fixed bug in sepa_disjunctive: treat case that conflictgraph is empty
+- added safety check in conversion to rational number to avoid overflow
 
 Miscellaneous
 -------------
