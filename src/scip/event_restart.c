@@ -2358,6 +2358,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    TREEDATA* treedata;
+   SCIP_Real completed;
 
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME) == 0);
@@ -2367,8 +2368,41 @@ SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    treedata = eventhdlrdata->treedata;
 
+/* the random forest is a huge c-file and should only be included if requested explicitly */
+#ifdef SCIP_ESTIM_RF
+#define MAKE_STR(x) _MAKE_STR(x)
+#define _MAKE_STR(x) #x
+      SCIP_Real values[9];
+#define GAPVALUE values[0]
+#define GAPTREND values[1]
+#define SSGVALUE values[2]
+#define SSGTREND values[3]
+#define PROGRESSVALUE values[4]
+#define PROGRESSTREND values[5]
+#define LEAFFREQVALUE values[6]
+#define LEAFFREQTREND values[7]
+#define OPENTREND values[8]
+#define __value__ completed
+      GAPVALUE = timeseriesGet(eventhdlrdata->timeseries[0]);
+      GAPTREND = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[0]->des);
+      SSGVALUE = timeseriesGet(eventhdlrdata->timeseries[3]);
+      SSGTREND = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[3]->des);
+      PROGRESSVALUE = timeseriesGet(eventhdlrdata->timeseries[1]);
+      PROGRESSTREND = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[1]->des);
+      LEAFFREQVALUE = timeseriesGet(eventhdlrdata->timeseries[2]);
+      LEAFFREQTREND = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[2]->des);
+      OPENTREND = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[4]->des) < 0 ? 1.0 : 0.0;
+#include MAKE_STR(SCIP_ESTIM_RF)
+#else
+   completed = 0.5828 + 0.3667 * treedata->progress - 0.6101 * timeseriesGet(eventhdlrdata->timeseries[3]);
+#endif
+   completed = MIN(completed, 1.0);
+
    /* interpolate between ssg and progress */
-   SCIPinfoMessage(scip, file, "%7.2f%%", ((1.0 - treedata->ssg->value) + treedata->progress) * 50.0);
+   if( treedata->progress >= 0.005 && completed > 0 )
+      SCIPinfoMessage(scip, file, "%7.2f%%", 100 * completed);
+   else
+      SCIPinfoMessage(scip, file, " unknown");
 
    return SCIP_OKAY;
 }
