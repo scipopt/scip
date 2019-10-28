@@ -461,6 +461,10 @@ SCIP_RETCODE level0RpcRmwInfeas(
             SCIPfreeBufferArray(scip, &gmark);
             return SCIP_OKAY;
          }
+         else if( graph_pc_termIsNonLeafTerm(g, k) )
+         {
+            graph_knot_del(scip, g, k, TRUE);
+         }
          else
          {
             const int pterm = graph_pc_getTwinTerm(g, k);
@@ -1255,7 +1259,7 @@ SCIP_RETCODE redLoopMw(
    degelims = 0;
 
    SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
-   assert(graph_pc_term2edgeIsConsistent(g));
+   assert(graph_pc_term2edgeIsConsistent(scip, g));
 
    prizesum = graph_pc_getPosPrizeSum(scip, g);
 
@@ -1486,7 +1490,7 @@ SCIP_RETCODE redLoopPc(
 
    fix = 0.0;
    graph_pc_2org(scip, g);
-   assert(graph_pc_term2edgeIsConsistent(g));
+   assert(graph_pc_term2edgeIsConsistent(scip, g));
 
    assert(0);
 
@@ -1496,7 +1500,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &ntotalelims, NULL, solnode) );
    if( verbose ) printf("initial degnelims: %d \n", ntotalelims);
 
-   assert(graph_pc_term2edgeIsConsistent(g));
+   assert(graph_pc_term2edgeIsConsistent(scip, g));
 
    prizesum = graph_pc_getPosPrizeSum(scip, g);
    assert(prizesum < FARAWAY);
@@ -1658,7 +1662,7 @@ SCIP_RETCODE redLoopPc(
 
       if( (!rerun || rounds == (STP_RED_MAXNROUNDS - 1)) && !rpc && tryrpc && g->terms > 2 )
       {
-         assert(graph_pc_term2edgeIsConsistent(g));
+         assert(graph_pc_term2edgeIsConsistent(scip, g));
          graph_pc_2trans(scip, g);
 
          SCIP_CALL(graph_pc_pcmw2rooted(scip, g, prizesum));
@@ -1691,7 +1695,7 @@ SCIP_RETCODE redLoopPc(
 
    assert(!rpc || g->prize[g->source] == FARAWAY);
 
-   assert(graph_pc_term2edgeIsConsistent(g));
+   assert(graph_pc_term2edgeIsConsistent(scip, g));
    graph_pc_2trans(scip, g);
    graph_pc_presolExit(scip, g);
 

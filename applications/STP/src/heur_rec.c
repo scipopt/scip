@@ -450,22 +450,16 @@ SCIP_RETCODE computeReducedProbSolution(
       {
          if( Is_pseudoTerm(solgraph->term[k]) )
          {
-            int e;
-            const int term = solgraph->head[solgraph->term2edge[k]];
-            orgprize[k] = prize[k];
+            const int term = graph_pc_getTwinTerm(solgraph, k);
+            const int root2termedge = graph_pc_getRoot2PtermEdge(solgraph, term);
 
-            assert(term >= 0);
+            assert(term >= 0 && root2termedge >= 0);
             assert(solgraphroot != k);
             assert(Is_term(solgraph->term[term]));
 
-            for( e = solgraph->inpbeg[term]; e != EAT_LAST; e = solgraph->ieat[e] )
-               if( solgraph->tail[e] == solgraphroot )
-                  break;
-
-            assert(e != EAT_LAST);
-
-            prize[k] = cost[e];
-            assert(solgraph->cost[e] > 0);
+            orgprize[k] = prize[k];
+            prize[k] = cost[root2termedge];
+            assert(solgraph->cost[root2termedge] > 0.0);
          }
       }
    }
@@ -1402,7 +1396,6 @@ SCIP_RETCODE buildsolgraph(
 
             if( pcmw )
             {
-               assert(newgraph->term2edge != NULL);
                graph_pc_updateTerm2edge(newgraph, graph, dnodemap[orgtail], dnodemap[orghead], orgtail, orghead);
             }
 

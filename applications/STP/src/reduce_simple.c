@@ -266,7 +266,7 @@ SCIP_RETCODE trydg1edgepc(
             assert(e2 != UNKNOWN);
 
             /* delete artificial terminal */
-            graph_pc_knot2nonTerm(g, t);
+            graph_pc_knotToNonTerm(g, t);
             while (g->outbeg[t] != EAT_LAST)
             {
                e = g->outbeg[t];
@@ -279,7 +279,7 @@ SCIP_RETCODE trydg1edgepc(
             assert(g->grad[t] == 0);
 
             /* i is not a terminal anymore */
-            graph_pc_knot2nonTerm(g, i);
+            graph_pc_knotToNonTerm(g, i);
             graph_edge_del(scip, g, e2, TRUE);
 
             for (e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])
@@ -476,7 +476,7 @@ void adjust0term(
    assert(g->head[g->term2edge[i]] == t);
 
    /* i is not a terminal anymore */
-   graph_pc_knot2nonTerm(g, i);
+   graph_pc_knotToNonTerm(g, i);
 
    if( g->stp_type != STP_RPCSPG )
    {
@@ -485,7 +485,7 @@ void adjust0term(
    }
 
    /* delete artificial terminal */
-   graph_pc_knot2nonTerm(g, t);
+   graph_pc_knotToNonTerm(g, t);
 
    while( g->outbeg[t] != EAT_LAST )
       graph_edge_del(scip, g, g->outbeg[t], TRUE);

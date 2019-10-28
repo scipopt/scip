@@ -301,7 +301,7 @@ void daInitializeDistances(
 
       for( int i = 0; i < nnodes; i++ )
       {
-         if( Is_term(g->term[i]) && graph_pc_termIsNonLeaf(g, i) )
+         if( Is_term(g->term[i]) && graph_pc_termIsNonLeafTerm(g, i) )
          {
             const int twin = graph_pc_getTwinTerm(g, i);
             assert(!graph_pc_knotIsFixedTerm(g, i));
@@ -686,7 +686,7 @@ int reduceWithNodeReplaceBounds(
       {
          SCIP_Bool rpc3term = FALSE;
 
-         if( rpc && degree == 3 && Is_pseudoTerm(graph->term[k]) && graph_pc_termIsNonLeaf(graph, k)
+         if( rpc && degree == 3 && Is_pseudoTerm(graph->term[k]) && graph_pc_termIsNonLeafTerm(graph, k)
                && graph->grad[k] == 4 )
          {
             assert(!graph_pc_knotIsFixedTerm(graph, k));
@@ -851,6 +851,7 @@ void findRootsMark(
    int realterm = -1;
    SCIP_Bool mark = FALSE;
 
+   assert(!graph->extended && transgraph->extended);
    assert(graph->grad[pseudoterm] == 2);
 
    if( probrooted )
@@ -893,11 +894,7 @@ void findRootsMark(
 
 #ifndef NDEBUG
       for( int k = 0; k < graph->knots; k++ )
-      {
-         assert(state[k] == UNKNOWN);
-         assert(visited[k] == FALSE);
-         assert(dist[k] == FARAWAY);
-      }
+         assert(state[k] == UNKNOWN && visited[k] == FALSE && dist[k] == FARAWAY);
 #endif
 
       if( !mark )
@@ -906,18 +903,17 @@ void findRootsMark(
          {
             const int node = pathedge[k];
 
+            if( graph_pc_termIsNonLeafTerm(graph, node) )
+               continue;
+
             if( Is_term(graph->term[node]) && node != realterm )
             {
-               int nodepterm;
-               int rootedge;
+               const int nodepterm = graph_pc_getTwinTerm(graph, node);
+               const int rootedge = graph_pc_getRoot2PtermEdge(graph, nodepterm);
+
                assert(graph->mark[node]);
                assert(!graph_pc_knotIsFixedTerm(graph, node));
-
-               nodepterm = graph->head[graph->term2edge[node]];
                assert(graph->grad[nodepterm] == 2);
-
-               rootedge = graph_pc_getRoot2PtermEdge(graph, nodepterm);
-
                assert(rootedge >= 0);
                assert(graph->cost[rootedge] == transgraph->cost[rootedge]);
                assert(graph->cost[rootedge] == graph->prize[node]);
@@ -1138,7 +1134,7 @@ void daPcMarkRoots(
    {
       int e;
       const int term = roots[i];
-      const int pterm = graph->head[graph->term2edge[term]];
+      const int pterm = graph_pc_getTwinTerm(graph, term);
 
       assert(Is_term(graph->term[term]));
       assert(SCIPisPositive(scip, graph->prize[term]));
@@ -1703,7 +1699,7 @@ void computeTransVoronoi(
 }
 
 
-/** reduce graph with non-articial root (SPG, RPC ...) based on information from dual ascent and given upper bound  */
+/** reduce graph with non-artificial root (SPG, RPC ...) based on information from dual ascent and given upper bound  */
 static
 SCIP_RETCODE reduceRootedProb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1764,15 +1760,18 @@ SCIP_RETCODE reduceRootedProb(
 
       redcost = pathdist[k] + vnoi[k].dist;
 
-      if( rpc && Is_term(graph->term[k]) && SCIPisGT(scip, redcost, minpathcost) && !graph_pc_knotIsFixedTerm(graph, k) )
+      if( rpc && Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) && !graph_pc_termIsNonLeafTerm(graph, k)
+         && SCIPisGT(scip, redcost, minpathcost) )
       {
          const int twinterm = graph_pc_getTwinTerm(graph, k);
          int incidcount = 0;
+
 #ifndef NDEBUG
          const int termedge = graph->term2edge[k];
-         assert(Is_pseudoTerm(graph->term[twinterm]) && graph->cost[termedge] == 0.0);
+         assert(termedge >= 0 && Is_pseudoTerm(graph->term[twinterm]) && graph->cost[termedge] == 0.0);
          assert(vnoi[twinterm].dist == 0.0);
 #endif
+
          for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
             incidents[incidcount++] = e;
 
@@ -3111,7 +3110,7 @@ SCIP_RETCODE reduce_daPcMw(
 
       SCIP_CALL( graph_pc_getRsap(scip, graph, &transgraph, roots, nroots, tmproot) );
 
-      assert(graph_valid(scip, transgraph));
+      assert(graph_valid(scip, transgraph) && STP_SAP == transgraph->stp_type);
 
       transnnodes = transgraph->knots;
       transnedges = transgraph->edges;
@@ -3122,8 +3121,6 @@ SCIP_RETCODE reduce_daPcMw(
       /* init data structures for shortest paths and history */
       SCIP_CALL( graph_path_init(scip, transgraph) );
       SCIP_CALL( graph_init_history(scip, transgraph ) );
-
-      transgraph->stp_type = STP_SAP;
 
       if( apsol && run > 1 )
       {

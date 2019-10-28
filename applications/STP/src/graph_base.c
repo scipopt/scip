@@ -327,6 +327,139 @@ void compEdges(
    }
 }
 
+/** is the PC/MW part of the given graph valid? */
+static
+SCIP_Bool graphisValidPcMw(
+   SCIP*                 scip,               /**< scip struct */
+   const GRAPH*          g,                  /**< the graph */
+   SCIP_Bool*            nodevisited         /**< array */
+   )
+{
+
+   int npterms = 0;
+   const int nnodes = g->knots;
+   const int root = g->source;
+   const SCIP_Bool extended = g->extended;
+   const SCIP_Bool rooted = graph_pc_isRootedPcMw(g);
+   int nterms = 0;
+
+   assert(graph_pc_isPcMw(g));
+   assert(g->prize != NULL);
+   assert(g->term2edge != NULL);
+
+   if( !graph_pc_term2edgeIsConsistent(scip, g) )
+   {
+      return FALSE;
+   }
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( rooted && g->term2edge[k] < 0 && Is_pseudoTerm(g->term[k]) )
+      {
+         assert(k != root);
+
+         SCIPdebugMessage("inconsistent term2edge for %d (pseudo terminal) \n", k);
+         return FALSE;
+      }
+
+      if( extended && Is_nonleafTerm(g->term[k]) && g->term2edge[k] != TERM2EDGE_NONLEAFTERM )
+      {
+         SCIPdebugMessage("inconsistent term2edge for %d (non-leaf) \n", k);
+         return FALSE;
+      }
+
+      if( rooted && graph_pc_knotIsFixedTerm(g, k) && !SCIPisEQ(scip, g->prize[k], FARAWAY) )
+      {
+         SCIPdebugMessage("inconsistent prize for %d \n", k);
+         return FALSE;
+      }
+
+      if( k == root || (rooted && g->term2edge[k] < 0) )
+         continue;
+
+      if( (extended ? Is_term(g->term[k]) : Is_pseudoTerm(g->term[k])) )
+      {
+         int e;
+         int e2;
+         int pterm;
+         const int term = k;
+         nterms++;
+
+         if( g->grad[k] != 2 )
+         {
+            SCIPdebugMessage("terminal degree != 2 for %d \n", k);
+            return FALSE;
+         }
+
+         for( e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
+            if( g->tail[e] == root )
+               break;
+
+         if( e == EAT_LAST )
+         {
+            SCIPdebugMessage("no edge to root for term %d \n", term);
+            return FALSE;
+         }
+
+         for( e2 = g->outbeg[term]; e2 != EAT_LAST; e2 = g->oeat[e2] )
+         {
+            pterm = g->head[e2];
+            if( (extended ? Is_pseudoTerm(g->term[pterm]) : Is_term(g->term[pterm])) && pterm != root  )
+               break;
+         }
+
+         if( e2 == EAT_LAST)
+         {
+            SCIPdebugMessage("no terminal for dummy %d \n", g->head[e2]);
+            return FALSE;
+         }
+
+         assert(pterm != root);
+
+         if( e2 != g->term2edge[term] )
+         {
+            SCIPdebugMessage("term2edge for node %d faulty \n", term);
+            return FALSE;
+         }
+
+         if( g->cost[e] != g->prize[pterm] )
+         {
+            SCIPdebugMessage("prize mismatch for node %d: \n", k);
+            return FALSE;
+         }
+      }
+      else if( (extended ? Is_pseudoTerm(g->term[k]) : Is_term(g->term[k])) )
+      {
+         npterms++;
+      }
+   }
+
+   if( nterms != npterms || nterms != g->terms - 1 )
+   {
+      if( !rooted )
+      {
+         SCIPdebugMessage("wrong terminal count \n");
+         return FALSE;
+      }
+   }
+
+   if( rooted )
+   {
+      SCIP_CALL_ABORT( graph_trail_costAware(scip, g, g->source, nodevisited) );
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( graph_pc_knotIsFixedTerm(g, k) && !nodevisited[k] )
+         {
+            SCIPdebugMessage("disconnected fixed terminal %d \n", k);
+            return FALSE;
+         }
+      }
+   }
+
+   return TRUE;
+}
+
 /** gets replacement edge; helper function for pseudo-elimination */
 static
 SCIP_RETCODE delPseudoGetReplaceEdges(
@@ -818,7 +951,7 @@ void graph_knot_chg(
    assert(p      != NULL);
    assert(node   >= 0);
    assert(node   < p->knots);
-   assert(term   < p->layers);
+   assert(term == STP_TERM || term == STP_TERM_NONE || term == STP_TERM_NONLEAF || term == STP_TERM_PSEUDO);
 
    if( term != p->term[node] )
    {
@@ -1763,7 +1896,7 @@ void graph_knot_printInfo(
    if( graph_pc_isPcMw(g) && (g->term2edge[k] < 0 || !Is_term(g->term[k])) )
    {
       assert(g->prize != NULL);
-      printf("Xnode %d: term=%d grad=%d prize=%f \n", k, g->term[k], g->grad[k], g->prize[k]);
+      printf("node %d: term=%d grad=%d prize=%f \n", k, g->term[k], g->grad[k], g->prize[k]);
    }
    else
       printf("node %d: term=%d grad=%d  \n", k, g->term[k], g->grad[k]);
@@ -2247,7 +2380,7 @@ void graph_get_isTerm(
 
       if( Is_term(g->term[i]) )
       {
-         if( pcmw && graph_pc_termIsNonLeaf(g, i) )
+         if( pcmw && graph_pc_termIsNonLeafTerm(g, i) )
            continue;
 
          isterm[i] = TRUE;
@@ -2628,14 +2761,9 @@ void graph_free(
    if( final )
       graph_free_historyDeep(scip, p);
 
-   if( p->prize != NULL )
-      SCIPfreeMemoryArray(scip, &(p->prize));
-
-   if( p->costbudget != NULL )
-      SCIPfreeMemoryArray(scip, &(p->costbudget));
-
-   if( p->term2edge != NULL )
-      SCIPfreeMemoryArray(scip, &(p->term2edge));
+   SCIPfreeMemoryArrayNull(scip, &(p->prize));
+   SCIPfreeMemoryArrayNull(scip, &(p->costbudget));
+   SCIPfreeMemoryArrayNull(scip, &(p->term2edge));
 
    if( p->csr_storage != NULL )
       graph_free_csr(scip, p);
@@ -2816,8 +2944,7 @@ SCIP_RETCODE graph_copy_data(
       const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
       const SCIP_Bool brpcmw = (g->stp_type == STP_BRMWCSP);
 
-      if( g->prize != NULL )
-         SCIPfreeMemoryArray(scip, &(g->prize));
+      SCIPfreeMemoryArrayNull(scip, &(g->prize));
 
       if( g->costbudget != NULL )
       {
@@ -2825,8 +2952,7 @@ SCIP_RETCODE graph_copy_data(
          SCIPfreeMemoryArray(scip, &(g->costbudget));
       }
 
-      if( g->term2edge != NULL )
-         SCIPfreeMemoryArray(scip, &(g->term2edge));
+      SCIPfreeMemoryArrayNull(scip, &(g->term2edge));
 
       SCIP_CALL(SCIPallocMemoryArray(scip, &(g->prize), g->knots));
       SCIP_CALL(SCIPallocMemoryArray(scip, &(g->term2edge), g->knots));
@@ -2873,6 +2999,7 @@ SCIP_RETCODE graph_copy_data(
 
       BMScopyMemoryArray(g->grid_ncoords, p->grid_ncoords, p->grid_dim);
    }
+
    assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
@@ -3076,7 +3203,6 @@ SCIP_RETCODE graph_pack(
    GRAPH* g;
    GRAPH* q;
    int*   new;
-   int    e;
    int    oldnnodes;
    int    oldnedges;
    int    nnodes;
@@ -3187,7 +3313,7 @@ SCIP_RETCODE graph_pack(
       for( int i = 0; i < oldnnodes; i++ )
          g->mark[i] = (g->grad[i] > 0);
 
-      for( e = g->outbeg[g->source]; e != EAT_LAST; e = g->oeat[e] )
+      for( int e = g->outbeg[g->source]; e != EAT_LAST; e = g->oeat[e] )
       {
          const int i = g->head[e];
 
@@ -3233,6 +3359,8 @@ SCIP_RETCODE graph_pack(
    /* add edges */
    for( int i = 0; i < oldnedges; i += 2 )
    {
+      int e;
+
       if( g->ieat[i] == EAT_FREE )
       {
          assert(g->oeat[i]     == EAT_FREE);
@@ -3442,6 +3570,7 @@ SCIP_Bool graph_valid(
          goto EXIT;
       }
    }
+
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &nodevisited, nnodes) );
    SCIP_CALL_ABORT( graph_trail_arr(scip, g, g->source, nodevisited) );
 
@@ -3450,8 +3579,7 @@ SCIP_Bool graph_valid(
       if( (g->grad[k] == 0) && ((g->inpbeg[k] != EAT_LAST) || (g->outbeg[k] != EAT_LAST)) )
       {
          isValid = FALSE;
-         SCIPdebugMessage("*** Graph invalid: Knot %d with Grad 0 has Edges\n",
-               k);
+         SCIPdebugMessage("*** Graph invalid: Knot %d with Grad 0 has Edges\n", k);
 
          goto EXIT;
       }
@@ -3460,132 +3588,16 @@ SCIP_Bool graph_valid(
          && g->stp_type != STP_PCSPG && g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP )
       {
          isValid = FALSE;
-         SCIPdebugMessage("*** Graph invalid: Knot %d not connected\n",
-               k);
+         SCIPdebugMessage("*** Graph invalid: Knot %d not connected\n", k);
 
          goto EXIT;
       }
    }
 
-   if( graph_pc_isPcMw(g) )
+   if( isValid && graph_pc_isPcMw(g) )
    {
-      int npterms = 0;
-      const int root = g->source;
-      const SCIP_Bool extended = g->extended;
-      const SCIP_Bool rooted = graph_pc_isRootedPcMw(g);
-      nterms = 0;
-
-      assert(g->prize != NULL);
-      assert(g->term2edge != NULL);
-
-      for( int k = 0; k < nnodes; k++ )
-      {
-         if( rooted && g->term2edge[k] < 0 && Is_pseudoTerm(g->term[k]) )
-         {
-            assert(k != root);
-
-            SCIPdebugMessage("inconsistent term2edge for %d \n", k);
-            isValid = FALSE;
-            goto EXIT;
-         }
-
-         if( rooted && graph_pc_knotIsFixedTerm(g, k) && g->prize[k] != FARAWAY )
-         {
-            SCIPdebugMessage("inconsistent prize for %d \n", k);
-            isValid = FALSE;
-            goto EXIT;
-         }
-
-         if( k == root || (rooted && g->term2edge[k] < 0) )
-            continue;
-
-         if( (extended ? Is_term(g->term[k]) : Is_pseudoTerm(g->term[k])) )
-         {
-            int e;
-            int e2;
-            int pterm;
-            const int term = k;
-            nterms++;
-
-            if( g->grad[k] != 2 )
-            {
-               SCIPdebugMessage("terminal degree != 2 for %d \n", k);
-               isValid = FALSE;
-               goto EXIT;
-            }
-
-            for( e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
-               if( g->tail[e] == root )
-                  break;
-
-            if( e == EAT_LAST )
-            {
-               SCIPdebugMessage("no edge to root for term %d \n", term);
-               isValid = FALSE;
-               goto EXIT;
-            }
-
-            for( e2 = g->outbeg[term]; e2 != EAT_LAST; e2 = g->oeat[e2] )
-            {
-               pterm = g->head[e2];
-               if( (extended ? Is_pseudoTerm(g->term[pterm]) : Is_term(g->term[pterm])) && pterm != root  )
-                  break;
-            }
-
-            if( e2 == EAT_LAST)
-            {
-               SCIPdebugMessage("no terminal for dummy %d \n", g->head[e2]);
-               isValid = FALSE;
-               goto EXIT;
-            }
-
-            assert(pterm != root);
-
-            if( e2 != g->term2edge[term] )
-            {
-               SCIPdebugMessage("term2edge for node %d faulty \n", term);
-               isValid = FALSE;
-               goto EXIT;
-            }
-
-            if( g->cost[e] != g->prize[pterm] )
-            {
-               SCIPdebugMessage("prize mismatch for node %d: \n", k);
-               isValid = FALSE;
-               goto EXIT;
-            }
-         }
-         else if( (extended ? Is_pseudoTerm(g->term[k]) : Is_term(g->term[k])) )
-         {
-            npterms++;
-         }
-      }
-
-      if( nterms != npterms || nterms != g->terms - 1 )
-      {
-         if( !rooted )
-         {
-            SCIPdebugMessage("wrong terminal count \n");
-            isValid = FALSE;
-            goto EXIT;
-         }
-      }
-
-      if( rooted )
-      {
-         SCIP_CALL_ABORT( graph_trail_costAware(scip, g, g->source, nodevisited) );
-
-         for( int k = 0; k < nnodes; k++ )
-         {
-            if( graph_pc_knotIsFixedTerm(g, k) && !nodevisited[k] )
-            {
-               SCIPdebugMessage("disconnected fixed terminal %d \n", k);
-               isValid = FALSE;
-               goto EXIT;
-            }
-         }
-      }
-   } /* is PC/MW */
+      isValid = graphisValidPcMw(scip, g, nodevisited);
+   }
 
 
    EXIT:

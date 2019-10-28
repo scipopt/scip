@@ -2198,26 +2198,19 @@ void initTerminalPrioPcMw(
 
    assert(scip && heurdata && graph && terminalperm && terminalprio);
 
-   if( nodepriority == NULL )
+   for( int k = 0; k < nnodes; k++ )
    {
-      for( int k = 0; k < nnodes; k++ )
-         if( Is_pseudoTerm(graph->term[k]) && graph->grad[k] != 0 )
-         {
-            assert(graph->term2edge[k] < 0 || SCIPisGT(scip, graph->prize[k], 0.0));
-            terminalperm[t] = k;
+      if( Is_pseudoTerm(graph->term[k]) && graph->grad[k] != 0 )
+      {
+         assert(nodepriority[k] >= 0.0);
+         assert(graph->term2edge[k] < 0 || SCIPisGT(scip, graph->prize[k], 0.0));
+         terminalperm[t] = k;
+
+         if( nodepriority == NULL )
             terminalprio[t++] = -SCIPrandomGetReal(heurdata->randnumgen, 0.0, graph->prize[k]);
-         }
-   }
-   else
-   {
-      for( int k = 0; k < nnodes; k++ )
-         if( Is_pseudoTerm(graph->term[k]) && graph->grad[k] != 0 )
-         {
-            assert(nodepriority[k] >= 0.0);
-            assert(graph->term2edge[k] < 0 || SCIPisGT(scip, graph->prize[k], 0.0));
-            terminalperm[t] = k;
+         else
             terminalprio[t++] = -SCIPrandomGetReal(heurdata->randnumgen, nodepriority[k] / 2.0, nodepriority[k]);
-         }
+      }
    }
 
    if( graph_pc_isRootedPcMw(graph) )

@@ -432,7 +432,9 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       {
          if( pcmw )
          {
-            if( !Is_term(g->term[k]) || g->term2edge[k] < 0 )
+            assert(g->extended);
+
+            if( !Is_term(g->term[k]) || graph_pc_knotIsFixedTerm(g, k) )
                newgraph->prize[newgraph->knots] = g->prize[k];
             else
                newgraph->prize[newgraph->knots] = 0.0;
@@ -491,7 +493,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    nnewedges = newgraph->edges;
    newgraph->norgmodeledges = nnewedges;
 
-   assert(!pcmw || -1 == newgraph->term2edge[newgraph->source]);
+   assert(!pcmw || TERM2EDGE_NOTERM == newgraph->term2edge[newgraph->source]);
 
    /* initialize ancestors of new graph edges */
    SCIP_CALL( graph_init_history(scip, newgraph) );
@@ -505,8 +507,8 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    if( graph_pc_isRootedPcMw(g) )
    {
       for( int k = 0; k < nnodes; k++ )
-         if( Is_term(g->term[k]) && graph_pc_knotIsFixedTerm(g, k) )
-            if( nodechild[k] < 0 || newgraph->term2edge[nodechild[k]] >= 0 )
+         if( graph_pc_knotIsFixedTerm(g, k) )
+            if( nodechild[k] < 0 || !graph_pc_knotIsFixedTerm(newgraph, nodechild[k]) )
             {
                printf("RPCMW child FAIL in AP \n\n\n");
                return SCIP_ERROR;

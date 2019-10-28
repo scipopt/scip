@@ -2147,7 +2147,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
    ncandidates = 0;
 
    for( int k = 0; k < nnodes; k++ )
-      if( graph->mark[k] && !stvertex[k] && Is_term(graph->term[k]) && !graph_pc_termIsNonLeaf(graph, k) )
+      if( graph->mark[k] && !stvertex[k] && Is_term(graph->term[k]) && !graph_pc_termIsNonLeafTerm(graph, k) )
       {
          assert(graph->mark[k]);
 
@@ -2177,7 +2177,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
       {
          const int node = (k + shift) % nnodes;
          if( graph->mark[k] && !stvertex[node] && Is_term(graph->term[node])
-            && !graph_pc_termIsNonLeaf(graph, node) && node != maxnode )
+            && !graph_pc_termIsNonLeafTerm(graph, node) && node != maxnode )
          {
             assert(graph->mark[node]);
             candidates[ncandidates++] = node;

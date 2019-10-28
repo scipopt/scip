@@ -160,7 +160,7 @@ void getRedCostDistances(
 
       for( int i = 0; i < nnodes; i++ )
       {
-         if( Is_term(g->term[i]) && graph_pc_termIsNonLeaf(g, i) && i != g->source )
+         if( Is_term(g->term[i]) && graph_pc_termIsNonLeafTerm(g, i) && i != g->source )
          {
             const int twin = graph_pc_getTwinTerm(g, i);
             assert(!graph_pc_knotIsFixedTerm(g, i));
@@ -573,10 +573,10 @@ SCIP_RETCODE fixVarsRedbased(
          if( pcmw )
          {
             if( Is_pseudoTerm(propgraph->term[tail]) )
-               graph_pc_enforcePterm(propgraph, tail);
+               graph_pc_enforcePseudoTerm(propgraph, tail);
 
             if( Is_pseudoTerm(propgraph->term[head]) )
-               graph_pc_enforcePterm(propgraph, head);
+               graph_pc_enforcePseudoTerm(propgraph, head);
 
             if( propgraph->stp_type == STP_PCSPG )
                continue;
@@ -633,7 +633,7 @@ SCIP_RETCODE fixVarsRedbased(
             /* fixed to 0? Then take terminal */
             if( SCIPvarGetUbLocal(vars[rootedge]) < 0.5 )
             {
-               graph_pc_enforcePterm(propgraph, graph_pc_getTwinTerm(propgraph, k));
+               graph_pc_enforcePseudoTerm(propgraph, graph_pc_getTwinTerm(propgraph, k));
             }
             /* fixed to 1? Then delete terminal */
             else if( SCIPvarGetLbLocal(vars[rootedge]) > 0.5 )
@@ -716,7 +716,7 @@ SCIP_RETCODE fixVarsRedbased(
 
                      assert(Is_pseudoTerm(propgraph->term[vert]) || graph_pc_knotIsFixedTerm(propgraph, vert));
 
-                     graph_pc_enforcePterm(propgraph, i);
+                     graph_pc_enforcePseudoTerm(propgraph, i);
                      break;
                   }
                }

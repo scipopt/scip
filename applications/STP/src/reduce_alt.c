@@ -3561,7 +3561,7 @@ SCIP_RETCODE reduce_bd34(
             if( !g->mark[i] || graph_pc_knotIsFixedTerm(g, i) )
                continue;
 
-            if( Is_term(g->term[i]) && !graph_pc_termIsNonLeaf(g, i) )
+            if( Is_term(g->term[i]) && !graph_pc_termIsNonLeafTerm(g, i) )
                continue;
 
             pcdegree = graph_pc_realDegree(g, i, FALSE);

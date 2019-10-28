@@ -589,7 +589,6 @@ SCIP_RETCODE sep_implicationsPcMw(
             for( int e = g->inpbeg[maxnode]; e != EAT_LAST; e = g->ieat[e] )
                SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], 1.0));
 
-            assert(g->term2edge[i] >= 0);
             SCIP_CALL(SCIPaddVarToRow(scip, row, vars[rootedge], 1.0));
          }
 #endif

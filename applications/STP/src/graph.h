@@ -51,7 +51,11 @@
 #define STP_TERM           0        /**< terminal */
 #define STP_TERM_NONE     -1        /**< non-terminal */
 #define STP_TERM_PSEUDO   -2        /**< pseudo-terminal (for PC/MW variants) */
-#define STP_TERM_NONLEAF  -3        /**< non-leaf pseudo-terminal (for PC/MW variants) */
+#define STP_TERM_NONLEAF  -3        /**< non-leaf (pseudo-) terminal (for PC/MW variants) */
+
+#define TERM2EDGE_NOTERM      -1    /**< for PC/MW: vertex is no terminal */
+#define TERM2EDGE_FIXEDTERM   -2    /**< for PC/MW: vertex is fixed terminal; artificial root is also considered a fixed terminal */
+#define TERM2EDGE_NONLEAFTERM -3    /**< for PC/MW: vertex is non-leaf terminal */
 
 #define SDSTAR_BASE_UNSET  -1
 #define SDSTAR_BASE_KILLED -2
@@ -414,9 +418,12 @@ extern SCIP_Real graph_get_avgDeg(const GRAPH*);
 
 /* graph_pcbase.c
  */
-extern void   graph_pc_knot2nonTerm(GRAPH*, int);
+extern void   graph_pc_knotToNonTerm(GRAPH*, int);
+extern void   graph_pc_knotToFixedTerm(GRAPH*, int);
+extern void   graph_pc_knotChg(GRAPH*, int, int);
 extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
-extern void   graph_pc_enforcePterm(GRAPH*, int);
+extern void   graph_pc_enforcePseudoTerm(GRAPH*, int);
+extern void   graph_pc_enforceNonLeafTerm(GRAPH*, int);
 extern void   graph_pc_subtractPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_pc_chgPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_pc_2org(SCIP*, GRAPH*);
@@ -437,8 +444,7 @@ extern SCIP_RETCODE   graph_pc_2mw(SCIP*, GRAPH*, SCIP_Real*);
 extern SCIP_RETCODE   graph_pc_2rmw(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_pcmw2rooted(SCIP*, GRAPH*, SCIP_Real);
 extern SCIP_RETCODE   graph_pc_getSap(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
-extern SCIP_RETCODE   graph_pc_getSapShift(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
-extern SCIP_RETCODE   graph_pc_getRsap(SCIP*, GRAPH*, GRAPH**, int*, int, int);
+extern SCIP_RETCODE   graph_pc_getRsap(SCIP*, GRAPH*, GRAPH**, const int*, int, int);
 extern SCIP_RETCODE   graph_pc_contractNodeAncestors(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_pc_contractEdge(SCIP*, GRAPH*, int*, int, int, int);
 extern SCIP_RETCODE   graph_sol_markPcancestors(SCIP*, IDX**, const int*, const int*, int, STP_Bool*, STP_Bool*, int*, int*, int*);
@@ -450,8 +456,9 @@ extern int    graph_pc_nPotentialTerms(const GRAPH*);
 extern int    graph_pc_getTwinTerm(const GRAPH*, int);
 extern SCIP_Bool graph_pc_knotIsFixedTerm(const GRAPH*, int);
 extern SCIP_Bool graph_pc_knotIsDummyTerm(const GRAPH*, int);
-extern SCIP_Bool graph_pc_termIsNonLeaf(const GRAPH*, int);
-extern SCIP_Bool graph_pc_term2edgeIsConsistent(const GRAPH*);
+extern SCIP_Bool graph_pc_termIsNonLeafTerm(const GRAPH*, int);
+extern SCIP_Bool graph_pc_knotIsNonLeafTerm(const GRAPH*, int);
+extern SCIP_Bool graph_pc_term2edgeIsConsistent(SCIP*, const GRAPH*);
 extern SCIP_Bool graph_pc_transOrgAreConistent(SCIP*, const GRAPH*, SCIP_Bool);
 extern SCIP_Real graph_pc_getPosPrizeSum(SCIP*, const GRAPH*);
 extern SCIP_Bool graph_pc_isPc(const GRAPH*);

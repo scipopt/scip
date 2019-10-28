@@ -709,7 +709,7 @@ void extTreeBottleneckMarkRootPath(
             bottleneck_local += parentEdgeCost[childNode];
             if( isPc && Is_term(graph->term[childNode]) )
             {
-               assert(graph_pc_termIsNonLeaf(graph, childNode) && graph->prize[childNode] > 0.0);
+               assert(graph_pc_termIsNonLeafTerm(graph, childNode) && graph->prize[childNode] > 0.0);
                bottleneck_local -= graph->prize[childNode];
             }
          }
@@ -815,7 +815,7 @@ SCIP_Real extTreeBottleneckGetDist(
             bottleneck_local += parentEdgeCost[currentNode];
             if( isPc && Is_term(graph->term[currentNode]) )
             {
-               assert(graph_pc_termIsNonLeaf(graph, currentNode) && graph->prize[currentNode] > 0.0);
+               assert(graph_pc_termIsNonLeafTerm(graph, currentNode) && graph->prize[currentNode] > 0.0);
                bottleneck_local -= graph->prize[currentNode];
             }
          }
