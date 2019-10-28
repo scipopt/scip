@@ -590,7 +590,7 @@ SCIP_Bool graph_pc_term2edgeIsConsistent(
 
       if( Is_anyTerm(g->term[i])
             && !graph_pc_knotIsFixedTerm(g, i)
-            && !graph_pc_termIsNonLeafTerm(g, i)
+            && !graph_pc_knotIsNonLeafTerm(g, i)
             && g->term2edge[i] < 0 )
       {
          SCIPdebugMessage("term2edge consistency fail1 %d \n", i);
@@ -868,10 +868,11 @@ SCIP_Bool graph_pc_termIsNonLeafTerm(
    else
    {
       /* original graph: */
-
-      assert(Is_term(g->term[term]));
+      assert(Is_term(g->term[term]) || Is_pseudoTerm(g->term[term]));
 
       isNonLeafTerm = (g->term2edge[term] == TERM2EDGE_NONLEAFTERM);
+
+      assert(!(Is_pseudoTerm(g->term[term]) && isNonLeafTerm));
    }
 
    assert(!isNonLeafTerm || g->term2edge[term] == TERM2EDGE_NONLEAFTERM);
@@ -1586,10 +1587,11 @@ SCIP_RETCODE graph_pc_2pc(
    root = graph->knots;
    graph_knot_add(graph, 0);
    graph->prize[root] = 0.0;
-   graph->term2edge[root] = TERM2EDGE_FIXEDTERM;
 
    graph_pc_init(scip, graph, -1, graph->knots);
    assert(graph->term2edge);
+
+   graph->term2edge[root] = TERM2EDGE_FIXEDTERM;
 
    termscount = 0;
    for( int k = 0; k < nnodes; ++k )
