@@ -3394,7 +3394,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
             }
          }
 
-         SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, nvars) );
+         SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, npermvars) );
       }
       else
       {
