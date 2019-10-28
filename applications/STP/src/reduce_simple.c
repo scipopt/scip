@@ -37,7 +37,7 @@
 #ifndef NDEBUG
 /** check whether problem has adjacent terminals */
 static
-SCIP_Bool adjterms(
+SCIP_Bool hasAdjacentTerminals(
    const GRAPH*          g                   /**< graph data structure */
 )
 {
@@ -105,27 +105,130 @@ void getArticulationPoints(
 
 /** count numbers of chains */
 static
-unsigned nchains(
+int nChains(
    const GRAPH*          g                   /**< graph data structure */
    )
 {
-   unsigned ccount = 0;
+   int ccount = 0;
+
+   assert(graph_pc_isMw(g));
+
    for( int e = 0; e < g->edges; e++ )
    {
       if( g->oeat[e] != EAT_FREE )
       {
          const int tail = g->tail[e];
          const int head = g->head[e];
+
          if( !Is_term(g->term[tail]) && !Is_term(g->term[head]) && g->grad[head] == 2 && g->grad[tail] == 2 )
             ccount++;
       }
    }
+
    return ccount;
 }
 
+
+/** traverse one side of a chain (MWCSP) */
+static
+SCIP_RETCODE traverseChain(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  length,             /**< pointer to store length of chain */
+   int*                  final,              /**< pointer to store final vertex */
+   int                   i,                  /**< start vertex */
+   int                   i1,                 /**< first vertex */
+   int                   i2,                 /**< last vertex */
+   int                   e1                  /**< first edge */
+   )
+{
+   IDX* ancestors = NULL;
+   IDX* revancestors = NULL;
+   SCIP_Real sum;
+   int k;
+   int e;
+
+   assert(g != NULL);
+   assert(scip != NULL);
+   assert(length != NULL);
+   assert(graph_pc_isMw(g));
+
+   k = i1;
+   e = e1;
+   sum = 0.0;
+
+   while( g->grad[k] == 2 && !Is_term(g->term[k]) && k != i2 )
+   {
+      assert(g->mark[k]);
+
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[e], NULL) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[flipedge(e)], NULL) );
+
+      if( e != e1 )
+         graph_edge_del(scip, g, e, TRUE);
+
+      e = g->outbeg[k];
+      sum += g->prize[k];
+      (*length)++;
+
+      if( e == flipedge(e1) )
+         e = g->oeat[e];
+
+      assert(e != EAT_LAST);
+      assert(SCIPisLE(scip, g->prize[k], 0.0));
+
+      k = g->head[e];
+   }
+   if( k != i1 )
+   {
+      int ne;
+
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[e], NULL) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[flipedge(e)], NULL) );
+
+      graph_edge_del(scip, g, e, TRUE);
+
+      g->prize[i] += sum;
+      ne = graph_edge_redirect(scip, g, e1, i, k, 1.0, TRUE, TRUE);
+
+      if( ne != -1 )
+      {
+         e1 = ne;
+
+         graph_edge_delHistory(scip, g, e1);
+
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), ancestors, NULL) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), revancestors, NULL) );
+
+      }
+      else
+      {
+         for( e1 = g->outbeg[i]; e1 != EAT_LAST; e1 = g->oeat[e1] )
+            if( g->head[e1] == k )
+               break;
+         assert(e1 != EAT_LAST);
+      }
+
+      SCIPintListNodeFree(scip, &(ancestors));
+      SCIPintListNodeFree(scip, &(revancestors));
+
+      if( SCIPisGE(scip, g->prize[k], 0.0) )
+         g->cost[e1] = 0.0;
+      else
+         g->cost[e1] = -g->prize[k];
+
+      assert(SCIPisLE(scip, g->prize[i], 0.0));
+   }
+
+   *final = k;
+
+   return SCIP_OKAY;
+}
+
+
 /** is there no vertex of higher prize? */
 static
-SCIP_Bool is_maxprize(
+SCIP_Bool isMaxprizeTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    int                   i,                  /**< the terminal to be checked */
@@ -172,9 +275,121 @@ SCIP_Bool is_maxprize(
    return (t == i);
 }
 
+
+/** reduces non-terminal of degree 1 for a (rooted) PC problem */
+static
+void pcReduceKnotDeg1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int                   i,                  /**< index of the terminal */
+   SCIP_Bool*            rerun               /**< further eliminations possible? */
+   )
+{
+   const int e1 = g->inpbeg[i];
+   const int i1 = g->tail[e1];
+
+   assert(!Is_term(g->term[i]));
+   assert(e1 >= 0);
+   assert(e1 == Edge_anti(g->outbeg[i]));
+   assert(g->ieat[e1] == EAT_LAST);
+   assert(g->oeat[g->outbeg[i]] == EAT_LAST);
+
+   graph_edge_del(scip, g, e1, TRUE);
+   SCIPdebugMessage("delete non-terminal of degree 1 %d\n ",  i);
+
+   assert(g->grad[i] == 0);
+
+   /* no more reductions possible from i1? */
+   if( g->grad[i1] == 0 )
+      *rerun = FALSE;
+   else if( (i1 < i) && (g->grad[i1] < 3 || Is_term(g->term[i1])) )
+      *rerun = TRUE;
+}
+
+
+/** reduces non-terminal of degree 2 for a (rooted) PC problem (by replacement) */
+static
+SCIP_RETCODE pcReduceKnotDeg2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int                   i,                  /**< index of the terminal */
+   int*                  solnode,            /**< solution nodes or NULL */
+   SCIP_Bool*            rerun               /**< further eliminations possible? */
+   )
+{
+   const int e1 = g->outbeg[i];
+   const int e2 = g->oeat[e1];
+   const int i1 = g->head[e1];
+   const int i2 = g->head[e2];
+
+   assert(!Is_term(g->term[i]));
+
+   SCIPdebugMessage("replace degree 2 non-terminal %d \n ", i);
+
+   SCIP_CALL( graph_knot_replaceDeg2(scip, i, g, solnode) );
+
+   if( (Is_term(g->term[i2]) && (i2 < i)) || (Is_term(g->term[i1]) && (i1 < i)) )
+      *rerun = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** adjust for a (rooted) PC or MW problem */
+static
+void pcmwReduceTermDeg0(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int                   i                   /**< index of the terminal */
+   )
+{
+   int t;
+   int e2;
+
+   assert(Is_term(g->term[i]));
+   assert(g->source != i);
+   assert(SCIPisZero(scip, g->prize[i]));
+   assert(!graph_pc_knotIsFixedTerm(g, i));
+
+   t = UNKNOWN;
+   e2 = UNKNOWN;
+
+   if( !Is_term(g->term[i]) || SCIPisGT(scip, g->prize[i], 0.0) )
+      return;
+
+   for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      const int i1 = g->head[e];
+      if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
+         t = i1;
+      else if( g->source == i1 )
+         e2 = e;
+   }
+
+   assert(t != UNKNOWN);
+   assert(g->head[g->term2edge[i]] == t);
+
+   /* i is not a terminal anymore */
+   graph_pc_knotToNonTerm(g, i);
+
+   if( g->stp_type != STP_RPCSPG )
+   {
+      assert(e2 != UNKNOWN);
+      graph_edge_del(scip, g, e2, TRUE);
+   }
+
+   /* delete artificial terminal */
+   graph_pc_knotToNonTerm(g, t);
+
+   while( g->outbeg[t] != EAT_LAST )
+      graph_edge_del(scip, g, g->outbeg[t], TRUE);
+
+   assert(g->grad[t] == 0);
+}
+
+
 /** try to eliminate a terminal of degree one */
 static
-SCIP_RETCODE trydg1edgepc(
+SCIP_RETCODE pcmwReduceTermDeg1(
    SCIP*                 scip,               /**< SCIP data structure */
    const int*            edgestate,          /**< for propagation or NULL */
    GRAPH*                g,                  /**< graph data structure */
@@ -195,7 +410,7 @@ SCIP_RETCODE trydg1edgepc(
    assert(count  != NULL);
    assert(Is_term(g->term[i]));
 
-   if( is_maxprize(scip, g, i, maxprize) )
+   if( isMaxprizeTerm(scip, g, i, maxprize) )
       return SCIP_OKAY;
 
    i1 = g->head[iout];
@@ -344,251 +559,6 @@ SCIP_RETCODE trydg1edgepc(
    return SCIP_OKAY;
 }
 
-
-/** traverse one side of a chain (MWCSP) */
-static
-SCIP_RETCODE traverseChain(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   int*                  length,             /**< pointer to store length of chain */
-   int*                  final,              /**< pointer to store final vertex */
-   int                   i,                  /**< start vertex */
-   int                   i1,                 /**< first vertex */
-   int                   i2,                 /**< last vertex */
-   int                   e1                  /**< first edge */
-   )
-{
-   IDX* ancestors = NULL;
-   IDX* revancestors = NULL;
-   SCIP_Real sum;
-   int k;
-   int e;
-
-   assert(g != NULL);
-   assert(scip != NULL);
-   assert(length != NULL);
-
-   k = i1;
-   e = e1;
-   sum = 0.0;
-
-   while( g->grad[k] == 2 && !Is_term(g->term[k]) && k != i2 )
-   {
-      assert(g->mark[k]);
-
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[e], NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[flipedge(e)], NULL) );
-
-      if( e != e1 )
-         graph_edge_del(scip, g, e, TRUE);
-
-      e = g->outbeg[k];
-      sum += g->prize[k];
-      (*length)++;
-
-      if( e == flipedge(e1) )
-         e = g->oeat[e];
-
-      assert(e != EAT_LAST);
-      assert(SCIPisLE(scip, g->prize[k], 0.0));
-
-      k = g->head[e];
-   }
-   if( k != i1 )
-   {
-      int ne;
-
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[e], NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[flipedge(e)], NULL) );
-
-      graph_edge_del(scip, g, e, TRUE);
-
-      g->prize[i] += sum;
-      ne = graph_edge_redirect(scip, g, e1, i, k, 1.0, TRUE, TRUE);
-
-      if( ne != -1 )
-      {
-         e1 = ne;
-
-         graph_edge_delHistory(scip, g, e1);
-
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), ancestors, NULL) );
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), revancestors, NULL) );
-
-      }
-      else
-      {
-         for( e1 = g->outbeg[i]; e1 != EAT_LAST; e1 = g->oeat[e1] )
-            if( g->head[e1] == k )
-               break;
-         assert(e1 != EAT_LAST);
-      }
-
-      SCIPintListNodeFree(scip, &(ancestors));
-      SCIPintListNodeFree(scip, &(revancestors));
-
-      if( SCIPisGE(scip, g->prize[k], 0.0) )
-         g->cost[e1] = 0.0;
-      else
-         g->cost[e1] = -g->prize[k];
-
-      assert(SCIPisLE(scip, g->prize[i], 0.0));
-   }
-
-   *final = k;
-
-   return SCIP_OKAY;
-}
-
-
-/** adjust for a (rooted) PC or MW problem */
-static
-void adjust0term(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   int                   i                   /**< index of the terminal */
-   )
-{
-   int t;
-   int e2;
-
-   assert(Is_term(g->term[i]));
-   assert(g->source != i);
-   assert(SCIPisZero(scip, g->prize[i]));
-   assert(!graph_pc_knotIsFixedTerm(g, i));
-
-   t = UNKNOWN;
-   e2 = UNKNOWN;
-
-   if( !Is_term(g->term[i]) || SCIPisGT(scip, g->prize[i], 0.0) )
-      return;
-
-   for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-   {
-      const int i1 = g->head[e];
-      if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
-         t = i1;
-      else if( g->source == i1 )
-         e2 = e;
-   }
-
-   assert(t != UNKNOWN);
-   assert(g->head[g->term2edge[i]] == t);
-
-   /* i is not a terminal anymore */
-   graph_pc_knotToNonTerm(g, i);
-
-   if( g->stp_type != STP_RPCSPG )
-   {
-      assert(e2 != UNKNOWN);
-      graph_edge_del(scip, g, e2, TRUE);
-   }
-
-   /* delete artificial terminal */
-   graph_pc_knotToNonTerm(g, t);
-
-   while( g->outbeg[t] != EAT_LAST )
-      graph_edge_del(scip, g, g->outbeg[t], TRUE);
-
-   assert(g->grad[t] == 0);
-}
-
-
-/** contract edges of weight zero */
-SCIP_RETCODE reduce_simple_contract0Edges(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Bool             savehistory         /**< save the history? */
-   )
-{
-   int count;
-   int nedges;
-
-   assert(g != NULL);
-   assert(scip != NULL);
-
-   nedges = g->edges;
-
-   do
-   {
-      count = 0;
-      for( int e = 0; e < nedges; e += 2 )
-      {
-         if( g->oeat[e] != EAT_FREE && SCIPisZero(scip, g->cost[e]) && SCIPisZero(scip, g->cost[flipedge(e)]) )
-         {
-            if( savehistory )
-            {
-               if( graph_pc_isPcMw(g) )
-               {
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[g->head[e]]), g->ancestors[e], NULL) );
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[g->tail[e]]), g->ancestors[e], NULL) );
-                  assert(0 && "currently not implemented");
-               }
-               else
-               {
-                  SCIP_CALL( graph_fixed_addEdge(scip, e, g) );
-               }
-
-            }
-
-            SCIP_CALL( graph_knot_contract(scip, g, NULL, g->tail[e], g->head[e]) );
-            count++;
-         }
-      }
-   } while( count > 0 );
-
-   return SCIP_OKAY;
-}
-
-
-/* removes parallel edges */
-SCIP_RETCODE reduce_simple_deleteMultiedges(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g                   /**< graph data structure */
-)
-{
-   const int nnodes = g->knots;
-   int* count;
-
-   assert(scip != NULL);
-   assert(g != NULL);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &count, nnodes) );
-
-   for( int k = 0; k < nnodes; k++ )
-      count[k] = 0;
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      int enext;
-      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-      {
-         const int head = g->head[e];
-         count[head]++;
-      }
-
-      for( int e = g->outbeg[k]; e != EAT_LAST; e = enext )
-      {
-         const int head = g->head[e];
-         enext = g->oeat[e];
-
-         if( count[head] > 1 )
-         {
-            graph_edge_del(scip, g, e, TRUE);
-            return SCIP_ERROR;
-         }
-         count[head]--;
-
-      }
-
-      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-         assert(count[g->head[e]] == 0);
-   }
-
-   SCIPfreeBufferArray(scip, &count);
-
-   return SCIP_OKAY;
-}
 
 /** basic reduction tests for the STP */
 SCIP_RETCODE reduce_simple(
@@ -972,75 +942,6 @@ SCIP_RETCODE reduce_simple_sap(
 }
 
 
-/** root proximity terminal test (SAP) */
-SCIP_RETCODE reduce_simple_rpt(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            fixed,              /**< pointer to offset value */
-   int*                  count               /**< pointer to number of reductions */
-   )
-{
-   SCIP_Real pathcost;
-   SCIP_Real* dijkdist;
-   int i;
-   int e;
-   int i1;
-   int e1;
-   int old;
-   int nnodes;
-   int* dijkedge;
-
-   assert(scip != NULL);
-   assert(g != NULL);
-   assert(fixed != NULL);
-   assert(count != NULL);
-
-   nnodes = g->knots;
-   *count = 0;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &dijkdist, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &dijkedge, nnodes) );
-
-   graph_path_execX(scip, g, g->source, g->cost, dijkdist, dijkedge);
-
-   for( i = 0; i < nnodes; i++ )
-   {
-      if( Is_term(g->term[i]) && i != g->source && g->grad[i] > 0 )
-      {
-         e1 = dijkedge[i];
-         pathcost = dijkdist[i];
-
-         for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
-         {
-            if( e == e1 )
-               continue;
-
-            if( SCIPisGT(scip, pathcost, g->cost[e]) )
-               break;
-         }
-         if( e == EAT_LAST )
-         {
-            i1 = g->tail[e1];
-            old = g->grad[i] + g->grad[i1] - 1;
-
-            *fixed += g->cost[e1];
-
-            SCIP_CALL( graph_knot_contractFixed(scip, g, NULL, e1, i1, i) );
-
-            assert(old - g->grad[i1] > 0);
-            *count += old - g->grad[i1];
-            SCIPdebugMessage("contract %d\n", old - g->grad[i] - g->grad[i1]);
-         }
-
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &dijkedge);
-   SCIPfreeBufferArray(scip, &dijkdist);
-
-   return SCIP_OKAY;
-}
-
 /** basic reduction tests for the MWCS problem */
 SCIP_RETCODE reduce_simple_mw(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1170,7 +1071,7 @@ SCIP_RETCODE reduce_simple_mw(
       }
    }
 
-   SCIPdebugMessage("chains before: %d \n", nchains(g));
+   SCIPdebugMessage("chains before: %d \n", nChains(g));
 
    rerun = TRUE;
 
@@ -1257,7 +1158,7 @@ SCIP_RETCODE reduce_simple_mw(
          /* terminal of 0-prize? */
          if( SCIPisLE(scip, g->prize[i], 0.0) )
          {
-            adjust0term(scip, g, i);
+            pcmwReduceTermDeg0(scip, g, i);
             localcount += 2;
             continue;
          }
@@ -1266,7 +1167,7 @@ SCIP_RETCODE reduce_simple_mw(
          if( g->grad[i] == 2 )
          {
             /* if terminal node i is not the one with the highest prize, delete */
-            if( !is_maxprize(scip, g, i, &maxprize) )
+            if( !isMaxprizeTerm(scip, g, i, &maxprize) )
             {
                SCIPdebugMessage("delete degree 0 term %d prize: %f count:%d\n ", i, g->prize[i], localcount);
                (*fixed) += g->prize[i];
@@ -1286,7 +1187,7 @@ SCIP_RETCODE reduce_simple_mw(
 
             if( !Is_term(g->term[g->head[e]]) )
             {
-               SCIP_CALL( trydg1edgepc(scip, NULL, g, fixed, NULL, count, i, e, &rerun, &maxprize) );
+               SCIP_CALL( pcmwReduceTermDeg1(scip, NULL, g, fixed, NULL, count, i, e, &rerun, &maxprize) );
                continue;
             }
          }
@@ -1330,89 +1231,12 @@ SCIP_RETCODE reduce_simple_mw(
    (*count) += localcount;
    SCIPdebugMessage("MW basic reduction package has deleted %d edges\n", *count);
 
-   SCIPdebugMessage("chains after: %d \n", nchains(g));
-   assert(!adjterms(g));
+   SCIPdebugMessage("chains after: %d \n", nChains(g));
+   assert(!hasAdjacentTerminals(g));
 
    assert(graph_valid(scip, g));
 
    SCIP_CALL( level0(scip, g) );
-
-   return SCIP_OKAY;
-}
-
-/** basic reduction tests for the HCDSTP */
-SCIP_RETCODE reduce_simple_hc(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            fixed,              /**< pointer to offfset value */
-   int*                  count               /**< pointer to number of reductions */
-   )
-{
-   int i;
-   int e;
-   int e2;
-   int nnodes;
-   SCIP_Bool rerun = TRUE;
-
-   assert(g      != NULL);
-   assert(fixed  != NULL);
-   assert(count  != NULL);
-   assert(g->stp_type == STP_DHCSTP);
-
-   nnodes = g->knots;
-
-   SCIPdebugMessage("basic HC test: \n");
-
-   /* main loop */
-   while( rerun )
-   {
-      rerun = FALSE;
-
-      /* delete incoming arcs of the root */
-      e = g->inpbeg[g->source];
-      while( e != EAT_LAST )
-      {
-         e2 = g->ieat[e];
-
-         if( SCIPisGE(scip, g->cost[flipedge(e)], FARAWAY) )
-         {
-            SCIPdebugMessage("delete incoming root arc \n");
-            (*count)++;
-            graph_edge_del(scip, g, e, TRUE);
-         }
-         else if( SCIPisLT(scip, g->cost[e], FARAWAY) )
-         {
-            SCIPdebugMessage("delete anti-parallel root arcs \n");
-            g->cost[e] = FARAWAY;
-         }
-
-         e = e2;
-      }
-
-      /* delete outgoing arcs of the terminals (other than the root) */
-      for( i = 0; i < nnodes; i++ )
-      {
-         if( Is_term(g->term[i]) && i != g->source )
-         {
-            e = g->outbeg[i];
-            while( e != EAT_LAST )
-            {
-               e2 = g->oeat[e];
-
-               if( SCIPisGE(scip, g->cost[flipedge(e)], FARAWAY) )
-               {
-                  SCIPdebugMessage("delete anti-parallel terminal arcs \n");
-                  (*count)++;
-                  graph_edge_del(scip, g, e, TRUE);
-               }
-
-               e = e2;
-            }
-         }
-      }
-   }
-
-   SCIPdebugMessage("HC basic reduction package has deleted %d edges\n", *count);
 
    return SCIP_OKAY;
 }
@@ -1425,22 +1249,20 @@ SCIP_RETCODE reduce_simple_pc(
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to offset value */
    int*                  countnew,           /**< pointer to number of new reductions (will be initially set to 0) */
-   int*                  countall,           /**< pointer to number of all reductions */
+   int*                  countall,           /**< pointer to number of all reductions or NULL */
    int*                  solnode             /**< solution nodes */
    )
 {
    int edges2[2];
    int nodes2[2];
    SCIP_Real maxprize = -1.0;
-   const int nnodes = g->knots;
+   const int nnodes = graph_get_nNodes(g);
    const SCIP_Bool pc = (g->stp_type == STP_PCSPG);
    const SCIP_Bool checkstate = (edgestate != NULL);
    SCIP_Bool rerun = TRUE;
 
-   assert(g      != NULL);
-   assert(fixed  != NULL);
-   assert(countnew  != NULL);
-   assert(g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG);
+   assert(scip && fixed && countnew);
+   assert(graph_pc_isPc(g));
    assert(!g->extended);
 
    *countnew = 0;
@@ -1458,13 +1280,12 @@ SCIP_RETCODE reduce_simple_pc(
 
       for( int i = 0; i < nnodes; i++ )
       {
-         assert(g->grad[i] >= 0);
          assert(!(g->mark[i] && Is_pseudoTerm(g->term[i])));
 
          if( !g->mark[i] || g->grad[i] == 0 )
             continue;
 
-         assert(!Is_pseudoTerm(g->term[i]) &&  i != g->source);
+         assert(!Is_pseudoTerm(g->term[i]) && i != g->source);
 
          if( !Is_term(g->term[i]) )
          {
@@ -1472,49 +1293,18 @@ SCIP_RETCODE reduce_simple_pc(
 
             if( g->grad[i] == 1 )
             {
-               const int e1 = g->inpbeg[i];
-               const int i1 = g->tail[e1];
-
-               assert(e1 >= 0);
-               assert(e1 == Edge_anti(g->outbeg[i]));
-               assert(g->ieat[e1] == EAT_LAST);
-               assert(g->oeat[g->outbeg[i]] == EAT_LAST);
-
-               graph_edge_del(scip, g, e1, TRUE);
-               SCIPdebugMessage("delete non-terminal of degree 1 %d\n ",  i);
+               pcReduceKnotDeg1(scip, g, i, &rerun);
                (*countnew)++;
-
-               assert(g->grad[i] == 0);
-
-               /* the last node? */
-               if( g->grad[i1] == 0 )
-               {
-                  rerun = FALSE;
-                  break;
-               }
-               if( (i1 < i) && (g->grad[i1] < 3 || Is_term(g->term[i1])) )
-                  rerun = TRUE;
 
                continue;
             }
 
-            /* contract non terminals of degree 2 */
             if( g->grad[i] == 2 )
             {
-               const int e1 = g->outbeg[i];
-               const int e2 = g->oeat[e1];
-               const int i1 = g->head[e1];
-               const int i2 = g->head[e2];
-
-               SCIPdebugMessage("contract non-terminals %d %d \n ", i2, i);
-
-               SCIP_CALL( graph_knot_replaceDeg2(scip, i, g, solnode) );
-
+               SCIP_CALL( pcReduceKnotDeg2(scip, g, i, solnode, &rerun) );
                (*countnew)++;
-
-               if( (Is_term(g->term[i2]) && (i2 < i)) || (Is_term(g->term[i1]) && (i1 < i)) )
-                  rerun = TRUE;
             }
+
             continue;
          }
 
@@ -1528,8 +1318,9 @@ SCIP_RETCODE reduce_simple_pc(
          /* terminal of 0-prize? */
          if( SCIPisLE(scip, g->prize[i], 0.0) && i != g->source )
          {
-            adjust0term(scip, g, i);
+            pcmwReduceTermDeg0(scip, g, i);
             (*countnew) += 2;
+
             continue;
          }
 
@@ -1538,8 +1329,8 @@ SCIP_RETCODE reduce_simple_pc(
          {
             assert(!fixedterm);
 
-            /* if terminal node i is node the one with the highest prize, delete */
-            if( !is_maxprize(scip, g, i, &maxprize) )
+            /* if terminal node i is not the one with the highest prize, delete */
+            if( !isMaxprizeTerm(scip, g, i, &maxprize) )
             {
                SCIPdebugMessage("delete 0 term %d prize: %f countnew:%d\n ", i, g->prize[i], *countnew);
                (*fixed) += g->prize[i];
@@ -1557,12 +1348,12 @@ SCIP_RETCODE reduce_simple_pc(
             assert(e != EAT_LAST);
             assert(g->head[e] != g->source || !pc);
 
-            SCIP_CALL( trydg1edgepc(scip, edgestate, g, fixed, solnode, countnew, i, e, &rerun, &maxprize) );
+            SCIP_CALL( pcmwReduceTermDeg1(scip, edgestate, g, fixed, solnode, countnew, i, e, &rerun, &maxprize) );
          }
          /* terminal of (real) degree 2? */
          else if( graph_pc_realDegree(g, i, fixedterm) == 2 )
          {
-            if( !is_maxprize(scip, g, i, &maxprize) )
+            if( !isMaxprizeTerm(scip, g, i, &maxprize) )
             {
                int edgecount = 0;
                for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
@@ -1675,6 +1466,181 @@ SCIP_RETCODE reduce_simple_pc(
    assert(graph_valid(scip, g));
 
    SCIP_CALL( level0(scip, g) );
+
+   return SCIP_OKAY;
+}
+
+
+/** basic reduction tests for the HCDSTP */
+SCIP_RETCODE reduce_simple_hc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            fixed,              /**< pointer to offfset value */
+   int*                  count               /**< pointer to number of reductions */
+   )
+{
+   int i;
+   int e;
+   int e2;
+   int nnodes;
+   SCIP_Bool rerun = TRUE;
+
+   assert(g      != NULL);
+   assert(fixed  != NULL);
+   assert(count  != NULL);
+   assert(g->stp_type == STP_DHCSTP);
+
+   nnodes = g->knots;
+
+   SCIPdebugMessage("basic HC test: \n");
+
+   /* main loop */
+   while( rerun )
+   {
+      rerun = FALSE;
+
+      /* delete incoming arcs of the root */
+      e = g->inpbeg[g->source];
+      while( e != EAT_LAST )
+      {
+         e2 = g->ieat[e];
+
+         if( SCIPisGE(scip, g->cost[flipedge(e)], FARAWAY) )
+         {
+            SCIPdebugMessage("delete incoming root arc \n");
+            (*count)++;
+            graph_edge_del(scip, g, e, TRUE);
+         }
+         else if( SCIPisLT(scip, g->cost[e], FARAWAY) )
+         {
+            SCIPdebugMessage("delete anti-parallel root arcs \n");
+            g->cost[e] = FARAWAY;
+         }
+
+         e = e2;
+      }
+
+      /* delete outgoing arcs of the terminals (other than the root) */
+      for( i = 0; i < nnodes; i++ )
+      {
+         if( Is_term(g->term[i]) && i != g->source )
+         {
+            e = g->outbeg[i];
+            while( e != EAT_LAST )
+            {
+               e2 = g->oeat[e];
+
+               if( SCIPisGE(scip, g->cost[flipedge(e)], FARAWAY) )
+               {
+                  SCIPdebugMessage("delete anti-parallel terminal arcs \n");
+                  (*count)++;
+                  graph_edge_del(scip, g, e, TRUE);
+               }
+
+               e = e2;
+            }
+         }
+      }
+   }
+
+   SCIPdebugMessage("HC basic reduction package has deleted %d edges\n", *count);
+
+   return SCIP_OKAY;
+}
+
+
+/** contract edges of weight zero */
+SCIP_RETCODE reduce_simple_contract0Edges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Bool             savehistory         /**< save the history? */
+   )
+{
+   int count;
+   int nedges;
+
+   assert(g != NULL);
+   assert(scip != NULL);
+
+   nedges = g->edges;
+
+   do
+   {
+      count = 0;
+      for( int e = 0; e < nedges; e += 2 )
+      {
+         if( g->oeat[e] != EAT_FREE && SCIPisZero(scip, g->cost[e]) && SCIPisZero(scip, g->cost[flipedge(e)]) )
+         {
+            if( savehistory )
+            {
+               if( graph_pc_isPcMw(g) )
+               {
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[g->head[e]]), g->ancestors[e], NULL) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[g->tail[e]]), g->ancestors[e], NULL) );
+                  assert(0 && "currently not implemented");
+               }
+               else
+               {
+                  SCIP_CALL( graph_fixed_addEdge(scip, e, g) );
+               }
+
+            }
+
+            SCIP_CALL( graph_knot_contract(scip, g, NULL, g->tail[e], g->head[e]) );
+            count++;
+         }
+      }
+   } while( count > 0 );
+
+   return SCIP_OKAY;
+}
+
+
+/* removes parallel edges */
+SCIP_RETCODE reduce_simple_deleteMultiedges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+)
+{
+   const int nnodes = g->knots;
+   int* count;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &count, nnodes) );
+
+   for( int k = 0; k < nnodes; k++ )
+      count[k] = 0;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      int enext;
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+         count[head]++;
+      }
+
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = enext )
+      {
+         const int head = g->head[e];
+         enext = g->oeat[e];
+
+         if( count[head] > 1 )
+         {
+            graph_edge_del(scip, g, e, TRUE);
+            return SCIP_ERROR;
+         }
+         count[head]--;
+
+      }
+
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         assert(count[g->head[e]] == 0);
+   }
+
+   SCIPfreeBufferArray(scip, &count);
 
    return SCIP_OKAY;
 }
@@ -1807,6 +1773,76 @@ SCIP_RETCODE reduce_simple_fixedConflict(
 
    SCIPfreeCleanBufferArray(scip, &hasharr);
 
+
+   return SCIP_OKAY;
+}
+
+
+/** root proximity terminal test (SAP) */
+SCIP_RETCODE reduce_simple_rpt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            fixed,              /**< pointer to offset value */
+   int*                  count               /**< pointer to number of reductions */
+   )
+{
+   SCIP_Real pathcost;
+   SCIP_Real* dijkdist;
+   int i;
+   int e;
+   int i1;
+   int e1;
+   int old;
+   int nnodes;
+   int* dijkedge;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+   assert(fixed != NULL);
+   assert(count != NULL);
+
+   nnodes = g->knots;
+   *count = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &dijkdist, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &dijkedge, nnodes) );
+
+   graph_path_execX(scip, g, g->source, g->cost, dijkdist, dijkedge);
+
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) && i != g->source && g->grad[i] > 0 )
+      {
+         e1 = dijkedge[i];
+         pathcost = dijkdist[i];
+
+         for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+         {
+            if( e == e1 )
+               continue;
+
+            if( SCIPisGT(scip, pathcost, g->cost[e]) )
+               break;
+         }
+         if( e == EAT_LAST )
+         {
+            i1 = g->tail[e1];
+            old = g->grad[i] + g->grad[i1] - 1;
+
+            *fixed += g->cost[e1];
+
+            SCIP_CALL( graph_knot_contractFixed(scip, g, NULL, e1, i1, i) );
+
+            assert(old - g->grad[i1] > 0);
+            *count += old - g->grad[i1];
+            SCIPdebugMessage("contract %d\n", old - g->grad[i] - g->grad[i1]);
+         }
+
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &dijkedge);
+   SCIPfreeBufferArray(scip, &dijkdist);
 
    return SCIP_OKAY;
 }

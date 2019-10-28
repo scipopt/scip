@@ -2476,6 +2476,18 @@ SCIP_Bool graph_pc_isPc(
 }
 
 
+/** is this graph a maximum-weight variant? */
+SCIP_Bool graph_pc_isMw(
+   const GRAPH*          g                   /**< the graph */
+)
+{
+   const int type = g->stp_type;
+   assert(g != NULL);
+
+   return (type == STP_MWCSP || type == STP_RMWCSP ||type == STP_BRMWCSP);
+}
+
+
 /** is this graph a prize-collecting or maximum-weight variant? */
 SCIP_Bool graph_pc_isPcMw(
    const GRAPH*          g                   /**< the graph */

@@ -1492,13 +1492,13 @@ SCIP_RETCODE redLoopPc(
    graph_pc_2org(scip, g);
    assert(graph_pc_term2edgeIsConsistent(scip, g));
 
-   assert(0);
-
-
    SCIP_CALL( graph_pc_presolInit(scip, g) );
 
    SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &ntotalelims, NULL, solnode) );
    if( verbose ) printf("initial degnelims: %d \n", ntotalelims);
+
+   assert(0);
+
 
    assert(graph_pc_term2edgeIsConsistent(scip, g));
 

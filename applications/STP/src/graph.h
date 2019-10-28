@@ -378,6 +378,8 @@ extern void   graph_uncover(GRAPH*);
 extern void   graph_free(SCIP*, GRAPH**, SCIP_Bool);
 extern void   graph_free_history(SCIP*, GRAPH*);
 extern void   graph_free_historyDeep(SCIP*, GRAPH*);
+extern int    graph_get_nNodes(const GRAPH*);
+extern int    graph_get_nEdges(const GRAPH*);
 extern void   graph_get_NVET(const GRAPH*, int*, int*, int*);
 extern void   graph_sol_setNodeList(const GRAPH*, STP_Bool*, IDX*);
 extern void   graph_sol_setVertexFromEdge(const GRAPH*, const int*, STP_Bool*);
@@ -462,6 +464,7 @@ extern SCIP_Bool graph_pc_term2edgeIsConsistent(SCIP*, const GRAPH*);
 extern SCIP_Bool graph_pc_transOrgAreConistent(SCIP*, const GRAPH*, SCIP_Bool);
 extern SCIP_Real graph_pc_getPosPrizeSum(SCIP*, const GRAPH*);
 extern SCIP_Bool graph_pc_isPc(const GRAPH*);
+extern SCIP_Bool graph_pc_isMw(const GRAPH*);
 extern SCIP_Bool graph_pc_isPcMw(const GRAPH*);
 extern SCIP_Bool graph_pc_isRootedPcMw(const GRAPH*);
 

@@ -2262,6 +2262,28 @@ SCIP_RETCODE graph_sol_getOrg(
 }
 
 
+/** get number of nodes */
+int graph_get_nNodes(
+   const GRAPH*    graph               /**< the graph */
+)
+{
+   assert(graph);
+
+   return graph->knots;
+}
+
+
+/** get number of edges */
+int graph_get_nEdges(
+   const GRAPH*    graph               /**< the graph */
+)
+{
+   assert(graph);
+
+   return graph->knots;
+}
+
+
 /** get (real) number of nodes , edges, terminals */
 void graph_get_NVET(
    const GRAPH*    graph,              /**< the graph */
