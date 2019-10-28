@@ -1925,7 +1925,7 @@ SCIP_RETCODE dualBoundStrengthening(
 
          colvalptr = SCIPmatrixGetColValPtr(matrix, implubvars[i]);
          colidxptr = SCIPmatrixGetColIdxPtr(matrix, implubvars[i]);
-         maxlen = MIN(presoldata->maxconsiderednonzeros, SCIPmatrixGetColNNonzs(matrix, implubvars[i]));
+         maxlen = MIN(presoldata->maxconsiderednonzeros, SCIPmatrixGetColNNonzs(matrix, implubvars[i])); /*lint !e666*/
          for( j = 0; j < maxlen; j++)
          {
             for( k = j+1; k < maxlen; k++)
@@ -2013,7 +2013,7 @@ SCIP_RETCODE dualBoundStrengthening(
 
                            success = FALSE;
 
-                           combineCols(scip, colpnt1, colpnt2, valpnt1, valpnt2, obj1, obj2, collen1, collen2, nrows, TRUE, TRUE, lbdual, ubdual, &success);
+                           SCIP_CALL( combineCols(scip, colpnt1, colpnt2, valpnt1, valpnt2, obj1, obj2, collen1, collen2, nrows, TRUE, TRUE, lbdual, ubdual, &success) );
 
                            if( success )
                               combinefails = 0;
@@ -2115,7 +2115,7 @@ SCIP_RETCODE dualBoundStrengthening(
 
                            success = FALSE;
 
-                           combineCols(scip, colpnt1, colpnt2, valpnt1, valpnt2, obj1, obj2, collen1, collen2, nrows, TRUE, TRUE, lbdual, ubdual, &success);
+                           SCIP_CALL( combineCols(scip, colpnt1, colpnt2, valpnt1, valpnt2, obj1, obj2, collen1, collen2, nrows, TRUE, TRUE, lbdual, ubdual, &success) );
 
                            if( success )
                               combinefails = 0;

@@ -179,8 +179,6 @@ int calcCliqueMaximums(
    SCIPdebugMsg(scip, "calculating maximums for clique %d\n", -cliquemaxinds[cliquevarpos[0]]);
 #endif
 
-   //TODO Should I add safeguards for out of bounds stuff?
-
    SCIP_CALL( SCIPallocBufferArray(scip, &gradients, cliquesize) );
 
    // calculate gradients
@@ -1008,10 +1006,6 @@ SCIP_RETCODE combineRows
                SCIP_Real oldlb;
                SCIP_Real oldub;
 #endif
-               /* skip the next variables as they are cancelled anyway */
-               if( j == i )
-                  j += shift;
-
                /* catch the special case where the entire remaining constraint is cancelled */
                if( j >= nvars )
                   break;
@@ -1419,7 +1413,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowcomb)
          rowvalptr = SCIPmatrixGetRowValPtr(matrix, i);
          rowidxptr = SCIPmatrixGetRowIdxPtr(matrix, i);
          finiterhs = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i));
-         maxlen = MIN(presoldata->maxconsiderednonzeros, SCIPmatrixGetRowNNonzs(matrix, i));
+         maxlen = MIN(presoldata->maxconsiderednonzeros, SCIPmatrixGetRowNNonzs(matrix, i)); /*lint !e666*/
          for( j = 0; j < maxlen; j++)
          {
             for( k = j+1; k < maxlen; k++)

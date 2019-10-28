@@ -69,8 +69,6 @@
 #define DEFAULT_MAXHASHFAC             10
 #define DEFAULT_MAXPAIRFAC             1
 
-#define MIN_DENOM 1.e-10
-
 /*
  * Data structures
  */
@@ -728,7 +726,7 @@ SCIP_RETCODE transformAndSolve(
          newlbsmax[i] = newlbsmin[i];
          newubsmax[i] = newubsmin[i];
       }
-      solveSingleRowLP(scip, amax, SCIPmatrixGetRowLhs(matrix, row2idx), cmax, newlbsmax, newubsmax, nvars, &minobj, &minsolvable);
+      SCIP_CALL( solveSingleRowLP(scip, amax, SCIPmatrixGetRowLhs(matrix, row2idx), cmax, newlbsmax, newubsmax, nvars, &minobj, &minsolvable) );
 #ifdef SCIP_DEBUG_2RB
       SCIPdebugMsg(scip, "min-LP solved: obj = %g\n", minobj);
 #endif
@@ -746,7 +744,7 @@ SCIP_RETCODE transformAndSolve(
             newlbsmax[i] = newlbsmin[i];
             newubsmax[i] = newubsmin[i];
          }
-         solveSingleRowLP(scip, amax, -SCIPmatrixGetRowRhs(matrix, row2idx), cmax, newlbsmax, newubsmax, nvars, &maxswapobj, &maxswapsolvable);
+         SCIP_CALL( solveSingleRowLP(scip, amax, -SCIPmatrixGetRowRhs(matrix, row2idx), cmax, newlbsmax, newubsmax, nvars, &maxswapobj, &maxswapsolvable) );
 #ifdef SCIP_DEBUG_2RB
          SCIPdebugMsg(scip, "maxswap-LP solved: obj = %g\n", maxswapobj);
 #endif
@@ -762,7 +760,7 @@ SCIP_RETCODE transformAndSolve(
             newlbsmax[i] = newlbsmin[i];
             newubsmax[i] = newubsmin[i];
          }
-         solveSingleRowLP(scip, amax, -SCIPmatrixGetRowRhs(matrix, row2idx), cmax, newlbsmax, newubsmax, nvars, &minswapobj, &minswapsolvable);
+         SCIP_CALL( solveSingleRowLP(scip, amax, -SCIPmatrixGetRowRhs(matrix, row2idx), cmax, newlbsmax, newubsmax, nvars, &minswapobj, &minswapsolvable) );
 #ifdef SCIP_DEBUG_2RB
          SCIPdebugMsg(scip, "minswap-LP solved: obj = %g\n", minswapobj);
 #endif
@@ -777,9 +775,9 @@ SCIP_RETCODE transformAndSolve(
       if( maxsolvable && maxswapsolvable )
          activity = MAX(maxobj, maxswapobj) + SCIPmatrixGetRowLhs(matrix, row1idx) + maxact;
       else if( maxsolvable )
-         activity = maxobj + SCIPmatrixGetRowLhs(matrix, row1idx) + maxact;
+         activity = maxobj + SCIPmatrixGetRowLhs(matrix, row1idx) + maxact; /*lint !e644*/
       else
-         activity = maxswapobj + SCIPmatrixGetRowLhs(matrix, row1idx) + maxact;
+         activity = maxswapobj + SCIPmatrixGetRowLhs(matrix, row1idx) + maxact; /*lint !e644*/
 
       // infeasibility check
       if( maxinfs == 0 && SCIPisPositive(scip, activity) )
@@ -892,7 +890,7 @@ SCIP_RETCODE transformAndSolve(
    if( mininfs == 0 && !swaprow1 )
    {
       if( (minsolvable && SCIPisGT(scip, minobj, SCIPmatrixGetRowLhs(matrix, row1idx) + minact))
-          || (minswapsolvable && SCIPisGT(scip, minswapobj, SCIPmatrixGetRowLhs(matrix, row1idx) + minact)) )
+          || (minswapsolvable && SCIPisGT(scip, minswapobj, SCIPmatrixGetRowLhs(matrix, row1idx) + minact)) ) /*lint !e644*/
          (*redundant) = TRUE;
       else
          (*redundant) = FALSE;
@@ -1264,7 +1262,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
          rowvalptr = SCIPmatrixGetRowValPtr(matrix, i);
          rowidxptr = SCIPmatrixGetRowIdxPtr(matrix, i);
          finiterhs = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i));
-         maxlen = MIN(presoldata->maxconsiderednonzeros, SCIPmatrixGetRowNNonzs(matrix, i));
+         maxlen = MIN(presoldata->maxconsiderednonzeros, SCIPmatrixGetRowNNonzs(matrix, i)); /*lint !e666*/
          for( j = 0; j < maxlen; j++)
          {
             for( k = j+1; k < maxlen; k++)
