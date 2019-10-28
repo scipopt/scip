@@ -1238,7 +1238,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rowidxlistpm, nrows) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rowidxlistmp, nrows) );
 
-      //TODO What about collisions?
       pospp = 0;
       posmm = 0;
       pospm = 0;
@@ -1248,7 +1247,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       listsizepm = nrows;
       listsizemp = nrows;
       maxhashes = nrows * presoldata->maxhashfac;
-      // prevent overflow issues
+      // prevent integer overflow issues
       if( nrows != 0 && maxhashes / nrows != presoldata->maxhashfac )
       {
          maxhashes = INT_MAX;
@@ -1396,7 +1395,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
          SCIPdebugMsg(scip, "processing pp and mm\n");
          while( !finished )
          {
-            //SCIPdebugMsg(scip, "block1: %d -> %d, block2: %d -> %d, hashes: %d, %d\n", block1start, block1end, block2start, block2end, hashlistpp[block1start], hashlistmm[block2start]);
             if( hashlistpp[block1start] == hashlistmm[block2start] )
             {
                for( i = block1start; i < block1end; i++ )
@@ -1631,97 +1629,98 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
             SCIPdebugMsg(scip, "removing redundant constraint %s\n", SCIPmatrixGetRowName(matrix, i));
             SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) );
          }
+         else
+         {
+            SCIP_Real rowinf;
+            SCIP_Real rowsup;
+
+            rowidxptr = SCIPmatrixGetRowIdxPtr(matrix, i);
+            rowvalptr = SCIPmatrixGetRowValPtr(matrix, i);
+
+            rowinf = 0;
+            for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++ )
+            {
+               k = rowidxptr[j];
+               if( SCIPisPositive(scip, rowvalptr[j]) )
+               {
+                  if( !SCIPisInfinity(scip, -newlbs[k]) )
+                     rowinf += rowvalptr[j] * newlbs[k];
+                  else
+                  {
+                     rowinf = -SCIPinfinity(scip);
+                     break;
+                  }
+               }
+               else if( SCIPisNegative(scip, rowvalptr[j]) )
+               {
+                  if( !SCIPisInfinity(scip, newubs[k]) )
+                     rowinf += rowvalptr[j] * newubs[k];
+                  else
+                  {
+                     rowinf = -SCIPinfinity(scip);
+                     break;
+                  }
+               }
+            }
+
+            rowsup = 0;
+            for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++ )
+            {
+               k = rowidxptr[j];
+               if( SCIPisPositive(scip, rowvalptr[j]) )
+               {
+                  if( !SCIPisInfinity(scip, newubs[k]) )
+                     rowsup += rowvalptr[j] * newubs[k];
+                  else
+                  {
+                     rowsup = SCIPinfinity(scip);
+                     break;
+                  }
+               }
+               else if( SCIPisNegative(scip, rowvalptr[j]) )
+               {
+                  if( !SCIPisInfinity(scip, -newlbs[k]) )
+                     rowsup += rowvalptr[j] * newlbs[k];
+                  else
+                  {
+                     rowsup = SCIPinfinity(scip);
+                     break;
+                  }
+               }
+            }
+
+            if( !SCIPisInfinity(scip, -rowinf) )
+            {
+               if( SCIPisLE(scip, SCIPmatrixGetRowLhs(matrix, i), rowinf) )
+               {
+                  ndelcons++;
+                  SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) );
+                  SCIPdebugMsg(scip, "removing redundant cxonstraint %s\n", SCIPmatrixGetRowName(matrix, i));
+               }
+               if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i)) && SCIPisGT(scip, rowinf, SCIPmatrixGetRowRhs(matrix, i)) )
+               {
+                  SCIPdebugMsg(scip, "infeasibility detected in %s, rowinf = %g\n", SCIPmatrixGetRowName(matrix, i), rowinf);
+                  infeasible = TRUE;
+               }
+            }
+            if( !SCIPisInfinity(scip, rowsup) )
+            {
+               if( SCIPisGT(scip, SCIPmatrixGetRowLhs(matrix, i), rowsup) )
+               {
+                  SCIPdebugMsg(scip, "infeasibility detected in %s, rowsup = %g\n", SCIPmatrixGetRowName(matrix, i), rowsup);
+                  infeasible = TRUE;
+               }
+               // TODO we currently can't do this for ranged rows or equality constraints
+               /* if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i)) && SCIPisGE(scip, SCIPmatrixGetRowRhs(matrix, i), rowsup) ) */
+               /* { */
+               /*    ndelcons++; */
+               /*    SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) ); */
+               /*    SCIPdebugMsg(scip, "removing redundant cxonstraint %s\n", SCIPmatrixGetRowName(matrix, i)); */
+               /* } */
+            }
+         }
       }
       (*ndelconss) += ndelcons;
-
-      /* check for redundant constraints */
-      for( i = 0; i < nrows; i++ )
-      {
-         SCIP_Real rowinf;
-         SCIP_Real rowsup;
-
-         rowidxptr = SCIPmatrixGetRowIdxPtr(matrix, i);
-         rowvalptr = SCIPmatrixGetRowValPtr(matrix, i);
-
-         rowinf = 0;
-         for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++ )
-         {
-            k = rowidxptr[j];
-            if( SCIPisPositive(scip, rowvalptr[j]) )
-            {
-               if( !SCIPisInfinity(scip, -newlbs[k]) )
-                  rowinf += rowvalptr[j] * newlbs[k];
-               else
-               {
-                  rowinf = -SCIPinfinity(scip);
-                  break;
-               }
-            }
-            else if( SCIPisNegative(scip, rowvalptr[j]) )
-            {
-               if( !SCIPisInfinity(scip, newubs[k]) )
-                  rowinf += rowvalptr[j] * newubs[k];
-               else
-               {
-                  rowinf = -SCIPinfinity(scip);
-                  break;
-               }
-            }
-         }
-
-         rowsup = 0;
-         for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++ )
-         {
-            k = rowidxptr[j];
-            if( SCIPisPositive(scip, rowvalptr[j]) )
-            {
-               if( !SCIPisInfinity(scip, newubs[k]) )
-                  rowsup += rowvalptr[j] * newubs[k];
-               else
-               {
-                  rowsup = SCIPinfinity(scip);
-                  break;
-               }
-            }
-            else if( SCIPisNegative(scip, rowvalptr[j]) )
-            {
-               if( !SCIPisInfinity(scip, -newlbs[k]) )
-                  rowsup += rowvalptr[j] * newlbs[k];
-               else
-               {
-                  rowsup = SCIPinfinity(scip);
-                  break;
-               }
-            }
-         }
-
-         if( !SCIPisInfinity(scip, -rowinf) )
-         {
-            if( SCIPisLE(scip, SCIPmatrixGetRowLhs(matrix, i), rowinf) )
-            {
-               //TODO remove constraint
-               //SCIPdebugMsg(scip, "%s is redundant\n", SCIPmatrixGetRowName(matrix, i));
-            }
-            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i)) && SCIPisGT(scip, rowinf, SCIPmatrixGetRowRhs(matrix, i)) )
-            {
-               SCIPdebugMsg(scip, "infeasibility detected in %s, rowinf = %g\n", SCIPmatrixGetRowName(matrix, i), rowinf);
-               infeasible = TRUE;
-            }
-         }
-         if( !SCIPisInfinity(scip, rowsup) )
-         {
-            if( SCIPisGT(scip, SCIPmatrixGetRowLhs(matrix, i), rowsup) )
-            {
-               SCIPdebugMsg(scip, "infeasibility detected in %s, rowsup = %g\n", SCIPmatrixGetRowName(matrix, i), rowsup);
-               infeasible = TRUE;
-            }
-            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i)) && SCIPisGE(scip, SCIPmatrixGetRowRhs(matrix, i), rowsup) )
-            {
-               //TODO remove constraint
-               //SCIPdebugMsg(scip, "%s is redundant\n", SCIPmatrixGetRowName(matrix, i));
-            }
-         }
-      }
 
       /* set result */
       if( *nchgbds > oldnchgbds || *nfixedvars > oldnfixedvars || ndelcons > 0 )
