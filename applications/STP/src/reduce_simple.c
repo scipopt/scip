@@ -1462,7 +1462,6 @@ SCIP_RETCODE reduce_simple_pc(
    if( countall != NULL )
       (*countall) += (*countnew);
 
-
    assert(graph_valid(scip, g));
 
    SCIP_CALL( level0(scip, g) );

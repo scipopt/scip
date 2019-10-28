@@ -270,7 +270,6 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
    assert(g->tail[ets] == t && g->head[ets] == s);
    assert(Is_term(g->term[term4offset]));
    assert(!graph_pc_knotIsFixedTerm(g, s) && !graph_pc_knotIsFixedTerm(g, t));
-   assert(!(g->term[s] && !g->term[t])); // todo might lead to issues with term2edge
 
    SCIP_CALL( graph_pc_contractNodeAncestors(scip, g, t, s, ets) );
 
@@ -560,6 +559,7 @@ SCIP_Bool graph_pc_term2edgeIsConsistent(
 )
 {
    const int root = g->source;
+   const SCIP_Bool rooted = graph_pc_isRootedPcMw(g);
    const SCIP_Bool isExtended = g->extended;
 
    assert(scip && g && g->term2edge);
@@ -573,6 +573,12 @@ SCIP_Bool graph_pc_term2edgeIsConsistent(
 
    for( int i = 0; i < g->knots; i++ )
    {
+      if( rooted && graph_pc_knotIsFixedTerm(g, i) && !SCIPisEQ(scip, g->prize[i], FARAWAY) )
+      {
+         SCIPdebugMessage("inconsistent prize for fixed terminal %d \n", i);
+         return FALSE;
+      }
+
       if( i == root )
          continue;
 
@@ -583,7 +589,7 @@ SCIP_Bool graph_pc_term2edgeIsConsistent(
 
           if( isNonLeaf != isNonLeaf_evaluate )
           {
-             SCIPdebugMessage("erm2edge consistency fail0 %d \n", i);
+             SCIPdebugMessage("term2edge consistency fail0 %d \n", i);
              return FALSE;
           }
       }
@@ -1044,14 +1050,16 @@ void graph_pc_2org(
 
       if( Is_pseudoTerm(graph->term[k]) || Is_nonleafTerm(graph->term[k]) )
       {
-         graph_knot_chg(graph, k, 0);
+         assert(!Is_term(graph->term[k]));
+
+         graph_knot_chg(graph, k, STP_TERM);
       }
       else if( Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) )
       {
          assert(k != root);
 
          graph->mark[k] = FALSE;
-         graph_knot_chg(graph, k, -2);
+         graph_knot_chg(graph, k, STP_TERM_PSEUDO);
       }
    }
 

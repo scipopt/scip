@@ -29,7 +29,7 @@
 
 /*lint -esym(766,stdlib.h) -esym(766,malloc.h)         */
 /*lint -esym(766,string.h)                             */
-//#define SCIP_DEBUG
+#define SCIP_DEBUG
 #include "scip/misc.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -330,60 +330,57 @@ void compEdges(
 /** is the PC/MW part of the given graph valid? */
 static
 SCIP_Bool graphisValidPcMw(
-   SCIP*                 scip,               /**< scip struct */
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< the graph */
    SCIP_Bool*            nodevisited         /**< array */
    )
 {
-
-   int npterms = 0;
+   int nFixedTerms = 0;
+   int nProperTerms = 0;
+   int nPseudoTerms = 0;
+   int nNonLeafTerms = 0;
    const int nnodes = g->knots;
    const int root = g->source;
-   const SCIP_Bool extended = g->extended;
-   const SCIP_Bool rooted = graph_pc_isRootedPcMw(g);
-   int nterms = 0;
+   const SCIP_Bool isExtended = g->extended;
+   const SCIP_Bool isRooted = graph_pc_isRootedPcMw(g);
 
    assert(graph_pc_isPcMw(g));
    assert(g->prize != NULL);
    assert(g->term2edge != NULL);
 
-   if( !graph_pc_term2edgeIsConsistent(scip, g) )
-   {
-      return FALSE;
-   }
+   assert(graph_pc_term2edgeIsConsistent(scip, g));
 
    for( int k = 0; k < nnodes; k++ )
    {
-      if( rooted && g->term2edge[k] < 0 && Is_pseudoTerm(g->term[k]) )
+      if( graph_pc_knotIsFixedTerm(g, k) )
       {
-         assert(k != root);
+         assert(isRooted || k == root);
 
-         SCIPdebugMessage("inconsistent term2edge for %d (pseudo terminal) \n", k);
-         return FALSE;
-      }
+         nFixedTerms++;
 
-      if( extended && Is_nonleafTerm(g->term[k]) && g->term2edge[k] != TERM2EDGE_NONLEAFTERM )
-      {
-         SCIPdebugMessage("inconsistent term2edge for %d (non-leaf) \n", k);
-         return FALSE;
-      }
-
-      if( rooted && graph_pc_knotIsFixedTerm(g, k) && !SCIPisEQ(scip, g->prize[k], FARAWAY) )
-      {
-         SCIPdebugMessage("inconsistent prize for %d \n", k);
-         return FALSE;
-      }
-
-      if( k == root || (rooted && g->term2edge[k] < 0) )
          continue;
+      }
 
-      if( (extended ? Is_term(g->term[k]) : Is_pseudoTerm(g->term[k])) )
+      assert(k != root);
+
+      if( graph_pc_knotIsNonLeafTerm(g, k) )
+      {
+         nNonLeafTerms++;
+      }
+      /* is k a terminal in the original graph? */
+      else if( (isExtended ? Is_pseudoTerm(g->term[k]) : Is_term(g->term[k])) )
+      {
+         nPseudoTerms++;
+      }
+      /* is k an artificial (newly added) terminal? */
+      else if( (isExtended ? Is_term(g->term[k]) : Is_pseudoTerm(g->term[k])) )
       {
          int e;
          int e2;
          int pterm;
          const int term = k;
-         nterms++;
+
+         nProperTerms++;
 
          if( g->grad[k] != 2 )
          {
@@ -404,7 +401,7 @@ SCIP_Bool graphisValidPcMw(
          for( e2 = g->outbeg[term]; e2 != EAT_LAST; e2 = g->oeat[e2] )
          {
             pterm = g->head[e2];
-            if( (extended ? Is_pseudoTerm(g->term[pterm]) : Is_term(g->term[pterm])) && pterm != root  )
+            if( (isExtended ? Is_pseudoTerm(g->term[pterm]) : Is_term(g->term[pterm])) && pterm != root  )
                break;
          }
 
@@ -428,22 +425,37 @@ SCIP_Bool graphisValidPcMw(
             return FALSE;
          }
       }
-      else if( (extended ? Is_pseudoTerm(g->term[k]) : Is_term(g->term[k])) )
-      {
-         npterms++;
-      }
+   } /* for k = 0; k < nnodes; k++ */
+
+   if( nProperTerms != nPseudoTerms )
+   {
+      SCIPdebugMessage("wrong nPseudoTerms terminal count: %d != %d \n", nProperTerms, nPseudoTerms);
+
+      return FALSE;
    }
 
-   if( nterms != npterms || nterms != g->terms - 1 )
+   if( isExtended )
    {
-      if( !rooted )
+      /* non-leaf terms are not part of g->terms */
+      if( (nProperTerms + nFixedTerms) != g->terms )
       {
-         SCIPdebugMessage("wrong terminal count \n");
+         SCIPdebugMessage("wrong overall terminal count(1): %d != %d \n", nProperTerms + nFixedTerms, g->terms);
+
+         return FALSE;
+      }
+   }
+   else
+   {
+      if( (nProperTerms + nNonLeafTerms + nFixedTerms) != g->terms )
+      {
+         SCIPdebugMessage("wrong overall terminal count(2): %d != %d \n", nProperTerms + nNonLeafTerms + nFixedTerms - 1, g->terms);
+
          return FALSE;
       }
    }
 
-   if( rooted )
+
+   if( isRooted )
    {
       SCIP_CALL_ABORT( graph_trail_costAware(scip, g, g->source, nodevisited) );
 
