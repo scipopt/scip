@@ -2413,7 +2413,7 @@ SCIP_RETCODE runPcMW(
 /** execute shortest paths heuristic to obtain a Steiner tree */
 SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< SCIP heuristic data or NULL for taking TM */
    GRAPH*                graph,              /**< graph data structure */
    int*                  starts,             /**< array containing start vertices (NULL to not provide any) */
    SCIP_Real*            prize,              /**< prizes (for PCMW) or NULL */

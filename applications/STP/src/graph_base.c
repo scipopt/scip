@@ -2296,6 +2296,17 @@ int graph_get_nEdges(
 }
 
 
+/** get number of terminals */
+int graph_get_nTerms(
+   const GRAPH*    graph               /**< the graph */
+)
+{
+   assert(graph);
+
+   return graph->terms;
+}
+
+
 /** get (real) number of nodes , edges, terminals */
 void graph_get_NVET(
    const GRAPH*    graph,              /**< the graph */

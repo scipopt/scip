@@ -41,7 +41,7 @@
 #include "probdata_stp.h"
 #include "heur_rec.h"
 
-#define DEFAULT_HEURRUNS 100                  /**< number of runs of constructive heuristic */
+#define BND_TMHEUR_NRUNS 100                  /**< number of runs of constructive heuristic */
 #define DEFAULT_DARUNS     7                  /**< number of runs for dual ascent heuristic */
 #define DEFAULT_NMAXROOTS  8                  /**< max number of roots to use for new graph in dual ascent heuristic */
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
@@ -132,7 +132,7 @@ SCIP_RETCODE computeSteinerTreeTM(
    SCIP_Real obj;
 
    /* number of runs should not exceed number of connected vertices */
-   int runstm = DEFAULT_HEURRUNS / (directed ? 1 : 5);
+   int runstm = BND_TMHEUR_NRUNS / (directed ? 1 : 5);
    int* startstm = NULL;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &startstm, nnodes) );
@@ -2990,7 +2990,7 @@ SCIP_RETCODE reduce_daPcMw(
       if( userec && graph->stp_type != STP_MWCSP )
       {
          /* compute second solution and add to pool */
-         SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, NULL, NULL, result2, DEFAULT_HEURRUNS / 5, root, graph->cost, graph->cost, NULL, NULL, 0.0, &success, FALSE) );
+         SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, NULL, NULL, result2, BND_TMHEUR_NRUNS / 5, root, graph->cost, graph->cost, NULL, NULL, 0.0, &success, FALSE) );
          assert(success);
 
          SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, result2) );

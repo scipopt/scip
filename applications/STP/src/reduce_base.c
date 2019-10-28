@@ -347,7 +347,7 @@ SCIP_RETCODE execPc_BND(
 {
    SCIP_Real ub = -1.0;
 
-   SCIP_CALL( reduce_bound(scip, graph, vnoi, cost, graph->prize, radius,
+   SCIP_CALL( reduce_bound(scip, graph, vnoi, cost, radius,
          costrev, offset, &ub, heap, state, vbase, nelims) );
 
    if( verbose )
@@ -960,7 +960,7 @@ SCIP_RETCODE reduceHc(
 
       if( bred )
       {
-         SCIP_CALL( reduce_bound(scip, g, vnoi, cost, NULL, radius, costrev, fixed, &upperbound, heap, state, vbase, &brednelims) );
+         SCIP_CALL( reduce_bound(scip, g, vnoi, cost, radius, costrev, fixed, &upperbound, heap, state, vbase, &brednelims) );
          if( brednelims <= redbound )
             bred = FALSE;
       }
@@ -1881,7 +1881,7 @@ SCIP_RETCODE redLoopStp(
 
          if( bred && nodereplacing )
          {
-            SCIP_CALL(reduce_bound(scip, g, vnoi, edgearrreal, NULL, nodearrreal, edgearrreal2, &fix, &ub, heap, state, vbase, &brednelims));
+            SCIP_CALL(reduce_bound(scip, g, vnoi, edgearrreal, nodearrreal, edgearrreal2, &fix, &ub, heap, state, vbase, &brednelims));
 
             SCIP_CALL(level0(scip, g));
 
