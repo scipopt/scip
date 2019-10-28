@@ -3354,7 +3354,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
          assert( nvars > 0 );
 
          /* create conflict graph */
-         SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, vars, nvars, TRUE,
+         SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, permvars, npermvars, TRUE,
                permvars, npermvars, permvarmap, orbits, orbitbegins, norbits, &success) );
 
          if ( ! success )
@@ -3398,12 +3398,12 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
                   candtiebreak = curtiebreak;
 
                   *orbitidx = nodedata->orbitidx;
-                  *leaderidx = i;
+                  *leaderidx = nodedata->posinorbit;
                }
             }
          }
 
-         SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, npermvars) );
+         SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, nvars) );
       }
       else
       {
