@@ -2202,7 +2202,7 @@ void initTerminalPrioPcMw(
    {
       if( Is_pseudoTerm(graph->term[k]) && graph->grad[k] != 0 )
       {
-         assert(nodepriority[k] >= 0.0);
+         assert(!nodepriority || nodepriority[k] >= 0.0);
          assert(graph->term2edge[k] < 0 || SCIPisGT(scip, graph->prize[k], 0.0));
          terminalperm[t] = k;
 

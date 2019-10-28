@@ -1497,9 +1497,6 @@ SCIP_RETCODE redLoopPc(
    SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &ntotalelims, NULL, solnode) );
    if( verbose ) printf("initial degnelims: %d \n", ntotalelims);
 
-   assert(0);
-
-
    assert(graph_pc_term2edgeIsConsistent(scip, g));
 
    prizesum = graph_pc_getPosPrizeSum(scip, g);
@@ -1595,6 +1592,9 @@ SCIP_RETCODE redLoopPc(
          SCIP_CALL( execPc_BND(scip, g, vnoi, exedgearrreal, g->prize, nodearrreal, exedgearrreal2,
                &fix, heap, state, vbase, &brednelims, reductbound, verbose, &bred) );
       }
+
+      assert(0);
+
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
