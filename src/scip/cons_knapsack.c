@@ -7231,7 +7231,7 @@ SCIP_RETCODE applyFixings(
 
                if( !SCIPvarIsBinary(aggrvars[i]) )
                {
-                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-binary %svariable <%s> with bound [%g,%g]\n",
+                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-binary %svariable <%s> with bounds [%g,%g]\n",
                      SCIPvarIsIntegral(aggrvars[i]) ? "integral " : "", SCIPvarGetName(aggrvars[i]),  SCIPvarGetLbGlobal(aggrvars[i]), SCIPvarGetUbGlobal(aggrvars[i]));
                   return SCIP_ERROR;
                }
