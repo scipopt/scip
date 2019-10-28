@@ -3344,15 +3344,6 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    {
       if ( orbitrule <= 5 )
       {
-         SCIP_VAR** vars;
-         int nvars;
-
-         vars = SCIPgetVars(scip);
-         nvars = SCIPgetNVars(scip);
-
-         assert( vars != NULL );
-         assert( nvars > 0 );
-
          /* create conflict graph */
          SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, permvars, npermvars, TRUE,
                permvars, npermvars, permvarmap, orbits, orbitbegins, norbits, &success) );
