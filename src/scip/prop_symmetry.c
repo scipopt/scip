@@ -2723,7 +2723,7 @@ SCIP_RETCODE addSymInfoConflictGraphSchreierSims(
       int posinorbit = 0;
       orbitsize = orbitbegins[j + 1] - orbitbegins[j];
 
-      for (i = orbitbegins[j]; i < orbitbegins[j + 1]; ++j)
+      for (i = orbitbegins[j]; i < orbitbegins[j + 1]; ++i)
       {
          SCIP_NODEDATA* nodedata;
          SCIP_VAR* var;
