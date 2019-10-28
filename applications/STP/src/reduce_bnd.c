@@ -173,7 +173,6 @@ SCIP_RETCODE reduce_bound(
    int nterms;
    const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
-   const int root = graph->source;
    STP_Bool* stnode = NULL;
    SCIP_Bool ub;
    const SCIP_Bool pc = graph_pc_isPc(graph);
@@ -435,7 +434,7 @@ SCIP_RETCODE reduce_bound(
          {
             e = graph->outbeg[k];
             (*nelims)++;
-            assert(!pc || graph->tail[e] != root);
+            assert(!pc || graph->tail[e] != graph->source);
             assert(!pc || graph->mark[graph->head[e]]);
             assert(!Is_pseudoTerm(graph->term[graph->head[e]]));
             assert(!Is_pseudoTerm(graph->term[graph->tail[e]]));

@@ -93,7 +93,6 @@ int getHighSolDegVertex(
 )
 {
    const int nnodes = graph->knots;
-   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    int maxdeg = -1;
    int vertex = -1;
    SCIP_Bool ptermselected = FALSE;
@@ -106,7 +105,7 @@ int getHighSolDegVertex(
       {
          int soldeg = 0;
          assert(!Is_term(graph->term[i]));
-         assert(!ptermselected || pcmw);
+         assert(!ptermselected || graph_pc_isPcMw(graph));
 
          for( int e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
             if( soledges[e] == CONNECT || soledges[flipedge(e)] == CONNECT )
@@ -115,7 +114,7 @@ int getHighSolDegVertex(
          /* first pterm? Then update */
          if( !ptermselected && Is_pseudoTerm(graph->term[i]) )
          {
-            assert(pcmw);
+            assert(graph_pc_isPcMw(graph));
             maxdeg = soldeg;
             vertex = i;
             ptermselected = TRUE;

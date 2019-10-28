@@ -439,7 +439,6 @@ SCIP_RETCODE computeReducedProbSolution(
    /* adapted prizes */
    if( pcmw )
    {
-      const int solgraphroot = solgraph->source;
       SCIP_Real* const prize = solgraph->prize;
 
       assert(prize != NULL);
@@ -454,7 +453,7 @@ SCIP_RETCODE computeReducedProbSolution(
             const int root2termedge = graph_pc_getRoot2PtermEdge(solgraph, term);
 
             assert(term >= 0 && root2termedge >= 0);
-            assert(solgraphroot != k);
+            assert(solgraph->source != k);
             assert(Is_term(solgraph->term[term]));
 
             orgprize[k] = prize[k];

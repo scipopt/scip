@@ -929,7 +929,7 @@ SCIP_RETCODE SCIPStpHeurTMpruneEdgeSol(
 
 /** returns mode */
 static
-int getMode(
+int getTmMode(
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    const GRAPH*          graph              /**< graph data structure */
 )
@@ -1156,7 +1156,7 @@ SCIP_RETCODE computeStarts(
 }
 
 static
-SCIP_RETCODE prune(
+SCIP_RETCODE pruneSteinerTree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    const SCIP_Real*      cost,               /**< edge costs for DHCSTP */
@@ -1203,7 +1203,7 @@ SCIP_RETCODE computeSteinerTreeDijk(
 
    graph_path_st(scip, g, cost, dijkdist, dijkedge, start, connected);
 
-   SCIP_CALL(prune(scip, g, cost, result, connected));
+   SCIP_CALL(pruneSteinerTree(scip, g, cost, result, connected));
 
    return SCIP_OKAY;
 }
@@ -1229,7 +1229,7 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    else
       graph_path_st_pcmw(scip, g, orderedprizes, orderedprizes_id, cost, prize, dijkdist, dijkedge, start, connected);
 
-   SCIP_CALL(prune(scip, g, NULL, result, connected));
+   SCIP_CALL(pruneSteinerTree(scip, g, NULL, result, connected));
 
    return SCIP_OKAY;
 }
@@ -1252,7 +1252,7 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
 {
    graph_path_st_pcmw_full(scip, g, cost, dijkdist, dijkedge, start, connected);
 
-   SCIP_CALL(prune(scip, g, cost, result, connected));
+   SCIP_CALL(pruneSteinerTree(scip, g, cost, result, connected));
 
    return SCIP_OKAY;
 }
@@ -1392,7 +1392,7 @@ SCIP_RETCODE computeSteinerTree(
    }
 
    /* prune the tree */
-   SCIP_CALL( prune(scip, g, cost, result, connected) );
+   SCIP_CALL( pruneSteinerTree(scip, g, cost, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -1970,7 +1970,7 @@ SCIP_RETCODE computeSteinerTreeVnoi(
    }
 
    /* prune the ST, so that all leaves are terminals */
-   SCIP_CALL( prune(scip, g, cost, result, connected) );
+   SCIP_CALL( pruneSteinerTree(scip, g, cost, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -2410,6 +2410,209 @@ SCIP_RETCODE runPcMW(
    return SCIP_OKAY;
 }
 
+
+/*
+ * Callback methods of primal heuristic
+ */
+
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyTM)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPStpIncludeHeurTM(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_HEURFREE(heurFreeTM)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
+
+   /* free heuristic data */
+   SCIPfreeMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitTM)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+   SCIP_PROBDATA* probdata;
+   GRAPH* graph;
+
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   graph = SCIPprobdataGetGraph(probdata);
+   if( graph == NULL )
+   {
+      heurdata->stp_type = STP_SPG;
+      return SCIP_OKAY;
+   }
+   heurdata->stp_type = graph->stp_type;
+   heurdata->beststartnode = -1;
+   heurdata->ncalls = 0;
+   heurdata->nlpiterations = -1;
+   heurdata->nexecs = 0;
+
+   return SCIP_OKAY;
+}
+
+/** execution method of primal heuristic */
+static
+SCIP_DECL_HEUREXEC(heurExecTM)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   SCIP_PROBDATA* probdata;
+   SCIP_HEURDATA* heurdata;
+   GRAPH* graph;
+   SCIP_Real* cost;
+   SCIP_Real* costrev;
+   int* soledges;
+   int runs;
+   int nedges;
+   SCIP_Bool success = FALSE;
+
+   assert(scip != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   graph = SCIPprobdataGetGraph(probdata);
+   assert(graph != NULL);
+
+   if( graph->stp_type == STP_BRMWCSP )
+      return SCIP_OKAY;
+
+   runs = 0;
+
+   /* set the runs, i.e. number of different starting points for the heuristic */
+   if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
+   {
+      if( SCIPgetDepth(scip) > 0 )
+         return SCIP_OKAY;
+
+      runs = heurdata->initruns;
+   }
+   else if( ((heurtiming & SCIP_HEURTIMING_DURINGLPLOOP) && (heurdata->ncalls % heurdata->duringlpfreq == 0)) || (heurtiming & SCIP_HEURTIMING_AFTERLPLOOP) )
+   {
+      runs = heurdata->evalruns;
+
+      if( graph_pc_isPcMw(graph) )
+         runs *= 2;
+   }
+   else if( heurtiming & SCIP_HEURTIMING_AFTERNODE )
+   {
+      if( SCIPgetDepth(scip) == 0 )
+         runs = heurdata->rootruns;
+      else
+         runs = heurdata->leafruns;
+   }
+
+   /* increase counter for number of (TM) calls */
+   heurdata->ncalls++;
+
+   if( runs == 0 )
+      return SCIP_OKAY;
+
+   heurdata->nexecs++;
+
+   SCIPdebugMessage("Heuristic Start\n");
+
+   /* get all variables (corresponding to the edges) */
+   vars = SCIPprobdataGetVars(scip);
+   if( vars == NULL )
+      return SCIP_OKAY;
+
+   assert(vars[0] != NULL);
+
+   nedges = graph->edges;
+
+   /* allocate memory */
+   SCIP_CALL(SCIPallocBufferArray(scip, &cost, nedges));
+   SCIP_CALL(SCIPallocBufferArray(scip, &costrev, nedges));
+   SCIP_CALL(SCIPallocBufferArray(scip, &soledges, nedges));
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* call the actual heuristic */
+   SCIP_CALL( SCIPStpHeurTMRunLP(scip, graph, heur, soledges, runs, cost, costrev, &success) );
+
+   if( success )
+   {
+      SCIP_Real* nval;
+      const int nvars = SCIPprobdataGetNVars(scip);
+
+      SCIP_CALL(SCIPallocBufferArray(scip, &nval, nvars));
+
+      for( int v = 0; v < nvars; v++ )
+         nval[v] = (soledges[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
+
+      SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, &success) );
+      if( success )
+      {
+         SCIP_SOL* sol = NULL;
+         SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
+
+         if( success )
+         {
+            SCIPdebugMessage("TM solution added, value %f \n",
+                  graph_sol_getObj(graph->cost, soledges, SCIPprobdataGetOffset(scip), nedges));
+
+            *result = SCIP_FOUNDSOL;
+         }
+      }
+      SCIPfreeBufferArray(scip, &nval);
+   }
+
+   heurdata->nlpiterations = SCIPgetNLPIterations(scip);
+   SCIPfreeBufferArray(scip, &soledges);
+   SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &cost);
+
+   return SCIP_OKAY;
+}
+
+/*
+ * primal heuristic specific interface methods
+ */
+
+
 /** execute shortest paths heuristic to obtain a Steiner tree */
 SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2488,7 +2691,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    if( graph_pc_isPcMw(graph) )
       graph_pc_2transcheck(scip, graph);
 
-   mode = getMode(heurdata, graph);
+   mode = getTmMode(heurdata, graph);
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &start, MIN(runs, nnodes)) );
@@ -2966,207 +3169,6 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    return SCIP_OKAY;
 }
 
-
-/*
- * Callback methods of primal heuristic
- */
-
-
-/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_HEURCOPY(heurCopyTM)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPStpIncludeHeurTM(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_HEURFREE(heurFreeTM)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(scip != NULL);
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   SCIPfreeRandom(scip, &heurdata->randnumgen);
-
-   /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);
-
-   return SCIP_OKAY;
-}
-
-
-/** initialization method of primal heuristic (called after problem was transformed) */
-static
-SCIP_DECL_HEURINIT(heurInitTM)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-   SCIP_PROBDATA* probdata;
-   GRAPH* graph;
-
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   probdata = SCIPgetProbData(scip);
-   assert(probdata != NULL);
-
-   graph = SCIPprobdataGetGraph(probdata);
-   if( graph == NULL )
-   {
-      heurdata->stp_type = STP_SPG;
-      return SCIP_OKAY;
-   }
-   heurdata->stp_type = graph->stp_type;
-   heurdata->beststartnode = -1;
-   heurdata->ncalls = 0;
-   heurdata->nlpiterations = -1;
-   heurdata->nexecs = 0;
-
-   return SCIP_OKAY;
-}
-
-/** execution method of primal heuristic */
-static
-SCIP_DECL_HEUREXEC(heurExecTM)
-{  /*lint --e{715}*/
-   SCIP_VAR** vars;
-   SCIP_PROBDATA* probdata;
-   SCIP_HEURDATA* heurdata;
-   GRAPH* graph;
-   SCIP_Real* cost;
-   SCIP_Real* costrev;
-   int* soledges;
-   int runs;
-   int nedges;
-   SCIP_Bool success = FALSE;
-
-   assert(scip != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(scip != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   probdata = SCIPgetProbData(scip);
-   assert(probdata != NULL);
-
-   graph = SCIPprobdataGetGraph(probdata);
-   assert(graph != NULL);
-
-   if( graph->stp_type == STP_BRMWCSP )
-      return SCIP_OKAY;
-
-   runs = 0;
-
-   /* set the runs, i.e. number of different starting points for the heuristic */
-   if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
-   {
-      if( SCIPgetDepth(scip) > 0 )
-         return SCIP_OKAY;
-
-      runs = heurdata->initruns;
-   }
-   else if( ((heurtiming & SCIP_HEURTIMING_DURINGLPLOOP) && (heurdata->ncalls % heurdata->duringlpfreq == 0)) || (heurtiming & SCIP_HEURTIMING_AFTERLPLOOP) )
-   {
-      runs = heurdata->evalruns;
-
-      if( graph_pc_isPcMw(graph) )
-         runs *= 2;
-   }
-   else if( heurtiming & SCIP_HEURTIMING_AFTERNODE )
-   {
-      if( SCIPgetDepth(scip) == 0 )
-         runs = heurdata->rootruns;
-      else
-         runs = heurdata->leafruns;
-   }
-
-   /* increase counter for number of (TM) calls */
-   heurdata->ncalls++;
-
-   if( runs == 0 )
-      return SCIP_OKAY;
-
-   heurdata->nexecs++;
-
-   SCIPdebugMessage("Heuristic Start\n");
-
-   /* get all variables (corresponding to the edges) */
-   vars = SCIPprobdataGetVars(scip);
-   if( vars == NULL )
-      return SCIP_OKAY;
-
-   assert(vars[0] != NULL);
-
-   nedges = graph->edges;
-
-   /* allocate memory */
-   SCIP_CALL(SCIPallocBufferArray(scip, &cost, nedges));
-   SCIP_CALL(SCIPallocBufferArray(scip, &costrev, nedges));
-   SCIP_CALL(SCIPallocBufferArray(scip, &soledges, nedges));
-
-   *result = SCIP_DIDNOTFIND;
-
-   /* call the actual heuristic */
-   SCIP_CALL( SCIPStpHeurTMRunLP(scip, graph, heur, soledges, runs, cost, costrev, &success) );
-
-   if( success )
-   {
-      SCIP_Real* nval;
-      const int nvars = SCIPprobdataGetNVars(scip);
-
-      SCIP_CALL(SCIPallocBufferArray(scip, &nval, nvars));
-
-      for( int v = 0; v < nvars; v++ )
-         nval[v] = (soledges[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
-
-      SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, &success) );
-      if( success )
-      {
-         SCIP_SOL* sol = NULL;
-         SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
-
-         if( success )
-         {
-            SCIPdebugMessage("TM solution added, value %f \n",
-                  graph_sol_getObj(graph->cost, soledges, SCIPprobdataGetOffset(scip), nedges));
-
-            *result = SCIP_FOUNDSOL;
-         }
-      }
-      SCIPfreeBufferArray(scip, &nval);
-   }
-
-   heurdata->nlpiterations = SCIPgetNLPIterations(scip);
-   SCIPfreeBufferArray(scip, &soledges);
-   SCIPfreeBufferArray(scip, &costrev);
-   SCIPfreeBufferArray(scip, &cost);
-
-   return SCIP_OKAY;
-}
-
-/*
- * primal heuristic specific interface methods
- */
 
 /** creates the TM primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPStpIncludeHeurTM(
