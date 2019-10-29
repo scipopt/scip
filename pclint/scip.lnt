@@ -101,6 +101,8 @@
 -emacro(681,SCIPstatisticPrintf)
 -emacro(681,SCIPsetDebugMsgPrint)
 
+-emacro(746,isfinite)       // turn off all messages for isfinite
+
 // generally turn off warnings about unused parameters (possibly too strong)
 -emacro(715,SCIP_DECL_*)
 -emacro(715,TCLIQUE_*)
