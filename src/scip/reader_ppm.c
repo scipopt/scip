@@ -183,7 +183,7 @@ void appendLine(
    assert( linecnt != NULL );
    assert( extension != NULL );
 
-   if( *linecnt + strlen(extension) > PPM_MAX_LINELEN - 1 )
+   if( *linecnt + (int)strlen(extension) > PPM_MAX_LINELEN - 1 )
       endLine(scip, file, readerdata, linebuffer, linecnt);
 
    /* append extension to linebuffer */

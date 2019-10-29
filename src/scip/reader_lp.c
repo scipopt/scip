@@ -1442,7 +1442,7 @@ SCIP_RETCODE createIndicatorConstraint(
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
-   assert(linsense == LP_SENSE_GE || linsense == LP_SENSE_LE || linsense == LP_SENSE_EQ); /*lint !e530*/
+   assert(linsense == LP_SENSE_GE || linsense == LP_SENSE_LE || linsense == LP_SENSE_EQ);
 
    /* read the right hand side */
    linsidesign = +1;
@@ -1468,7 +1468,7 @@ SCIP_RETCODE createIndicatorConstraint(
 
    /* assign the left and right hand side, depending on the constraint sense */
    linConsEQ = FALSE;
-   switch( linsense ) /*lint !e530*/
+   switch( linsense )
    {
    case LP_SENSE_GE:
       linrhs = -linsidevalue;
