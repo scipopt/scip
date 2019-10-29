@@ -1441,10 +1441,7 @@ SCIP_RETCODE reduce_simple_pc(
                *fixed += g->cost[ett];
                (*countnew)++;
 
-               if( (g->grad[i] >= g->grad[i1] || i == g->source) && i1 != g->source )
-                  SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i, i1, i) );
-               else
-                  SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, i1, i, i1) );
+               SCIP_CALL( graph_pc_contractEdgeUnordered(scip, g, solnode, i, i1) );
 
                rerun = TRUE;
             }

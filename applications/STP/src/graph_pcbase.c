@@ -2443,6 +2443,30 @@ SCIP_RETCODE graph_pc_contractEdge(
 }
 
 
+/** contract an edge of (rooted) prize-collecting Steiner tree problem or maximum-weight connected subgraph problem;
+ *  method decides whether to contract s into t or vice-versa. Offset is added to surviving node */
+SCIP_RETCODE graph_pc_contractEdgeUnordered(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   int*                  solnode,            /**< solution nodes or NULL */
+   int                   t,                  /**< tail node to be contracted */
+   int                   s                   /**< head node to be contracted */
+   )
+{
+   assert(g);
+
+   if( graph_pc_termIsNonLeafTerm(g, t) )
+      SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, s, t, s) );
+   else if( graph_pc_termIsNonLeafTerm(g, s) )
+      SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, t, s, t) );
+   else if( (g->grad[s] >= g->grad[t] || s == g->source) && t != g->source )
+      SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, s, t, s) );
+   else
+      SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, t, s, t) );
+
+   return SCIP_OKAY;
+}
+
 /** mark original solution */
 SCIP_RETCODE graph_sol_markPcancestors(
    SCIP*           scip,               /**< SCIP data structure */
