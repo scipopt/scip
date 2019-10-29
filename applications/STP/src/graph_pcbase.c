@@ -170,7 +170,7 @@ void shiftNonLeafCosts_2trans(
       {
          const SCIP_Real prize = g->prize[k];
 
-         assert(SCIPisPositive(scip, prize));
+         assert(SCIPisGE(scip, prize, 0.0));
 
          for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
          {
@@ -683,7 +683,7 @@ SCIP_Bool graph_pc_transOrgAreConistent(
          if( Is_nonleafTerm(graph->term[head]) )
          {
             const SCIP_Real prize = graph->prize[head];
-            assert(prize > 0.0);
+            assert(SCIPisGE(scip, prize, 0.0));
 
             if( !SCIPisEQ(scip, cost_org[e], cost[e] + prize) )
             {
