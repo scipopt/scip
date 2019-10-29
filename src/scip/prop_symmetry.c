@@ -3294,7 +3294,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    assert( orbitrule > 0 );
    assert( orbitrule < 7 );
    assert( leaderrule > 0 );
-   assert( leaderrule < 2 );
+   assert( leaderrule < 3 );
 
    *orbitidx = 0;
    *leaderidx = 0;
