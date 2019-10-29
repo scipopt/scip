@@ -1093,13 +1093,14 @@ SCIP_RETCODE graph_knot_delPseudo(
    {
       assert(graph_pc_isPcMw(g));
 
-      graph_pc_deleteTermExtension(scip, g, vertex);
+      if( !graph_pc_termIsNonLeafTerm(g, vertex) )
+         graph_pc_deleteTermExtension(scip, g, vertex);
 
       degree = g->grad[vertex];
       vertexprize = g->prize[vertex];
       ancestorsnode = vertex;
+      graph_pc_knotToNonTerm(g, vertex);
       g->prize[vertex] = 0.0;
-      graph_knot_chg(g, vertex, -1);
 
       assert(vertexprize > 0.0);
       assert(degree == 3);

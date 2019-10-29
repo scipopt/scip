@@ -336,54 +336,56 @@ SCIP_RETCODE pcReduceKnotDeg2(
 
 /** adjust for a (rooted) PC or MW problem */
 static
-void pcmwReduceTermDeg0(
+void pcmwReduceTerm0Prize(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    int                   i                   /**< index of the terminal */
    )
 {
-   int t;
-   int e2;
-
+   assert(!g->extended);
    assert(Is_term(g->term[i]));
    assert(g->source != i);
    assert(SCIPisZero(scip, g->prize[i]));
    assert(!graph_pc_knotIsFixedTerm(g, i));
 
-   t = UNKNOWN;
-   e2 = UNKNOWN;
-
-   if( !Is_term(g->term[i]) || SCIPisGT(scip, g->prize[i], 0.0) )
-      return;
-
-   for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+   if( graph_pc_termIsNonLeafTerm(g, i) )
    {
-      const int i1 = g->head[e];
-      if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
-         t = i1;
-      else if( g->source == i1 )
-         e2 = e;
+      assert(graph_pc_isPcMw(g));
+
+      graph_pc_knotToNonTerm(g, i);
+   }
+   else
+   {
+      int t = UNKNOWN;
+      int e2 = UNKNOWN;
+
+      for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int i1 = g->head[e];
+         if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
+            t = i1;
+         else if( g->source == i1 )
+            e2 = e;
+      }
+
+      assert(t != UNKNOWN);
+      assert(g->head[g->term2edge[i]] == t);
+
+      /* i is not a terminal anymore */
+      graph_pc_knotToNonTerm(g, i);
+
+      if( g->stp_type != STP_RPCSPG )
+      {
+         assert(e2 != UNKNOWN);
+         graph_edge_del(scip, g, e2, TRUE);
+      }
+
+      /* delete artificial terminal */
+      graph_pc_knotToNonTerm(g, t);
+      graph_knot_del(scip, g, t, TRUE);
    }
 
-   assert(t != UNKNOWN);
-   assert(g->head[g->term2edge[i]] == t);
-
-   /* i is not a terminal anymore */
-   graph_pc_knotToNonTerm(g, i);
-
-   if( g->stp_type != STP_RPCSPG )
-   {
-      assert(e2 != UNKNOWN);
-      graph_edge_del(scip, g, e2, TRUE);
-   }
-
-   /* delete artificial terminal */
-   graph_pc_knotToNonTerm(g, t);
-
-   while( g->outbeg[t] != EAT_LAST )
-      graph_edge_del(scip, g, g->outbeg[t], TRUE);
-
-   assert(g->grad[t] == 0);
+   assert(!Is_term(g->term[i]));
 }
 
 
@@ -1156,7 +1158,7 @@ SCIP_RETCODE reduce_simple_mw(
          /* terminal of 0-prize? */
          if( SCIPisLE(scip, g->prize[i], 0.0) )
          {
-            pcmwReduceTermDeg0(scip, g, i);
+            pcmwReduceTerm0Prize(scip, g, i);
             localcount += 2;
             continue;
          }
@@ -1316,7 +1318,7 @@ SCIP_RETCODE reduce_simple_pc(
          /* terminal of 0-prize? */
          if( SCIPisLE(scip, g->prize[i], 0.0) && i != g->source )
          {
-            pcmwReduceTermDeg0(scip, g, i);
+            pcmwReduceTerm0Prize(scip, g, i);
             (*countnew) += 2;
 
             continue;
