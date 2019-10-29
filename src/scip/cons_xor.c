@@ -227,7 +227,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
 /** frees constraint handler data */
 static
-SCIP_RETCODE conshdlrdataFree(
+void conshdlrdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
    )
@@ -236,8 +236,6 @@ SCIP_RETCODE conshdlrdataFree(
    assert(*conshdlrdata != NULL);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
-
-   return SCIP_OKAY;
 }
 
 /** stores the given variable numbers as watched variables, and updates the event processing */
@@ -4744,7 +4742,7 @@ SCIP_DECL_CONSFREE(consFreeXor)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( conshdlrdataFree(scip, &conshdlrdata) );
+   conshdlrdataFree(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
 

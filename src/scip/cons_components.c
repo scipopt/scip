@@ -2492,8 +2492,6 @@ SCIP_DECL_CONSDELETE(consDeleteComponents)
 
    SCIP_CALL( freeProblem(&problem) );
 
-   *consdata = NULL;
-
    return SCIP_OKAY;
 }
 

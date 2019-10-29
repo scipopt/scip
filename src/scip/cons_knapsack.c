@@ -1690,7 +1690,7 @@ SCIP_RETCODE GUBconsCreate(
 
 /** frees GUB constraint */
 static
-SCIP_RETCODE GUBconsFree(
+void GUBconsFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_GUBCONS**        gubcons             /**< pointer to GUB constraint data structure */
    )
@@ -1704,8 +1704,6 @@ SCIP_RETCODE GUBconsFree(
    SCIPfreeBufferArray(scip, &(*gubcons)->gubvarsstatus);
    SCIPfreeBufferArray(scip, &(*gubcons)->gubvars);
    SCIPfreeBuffer(scip, gubcons);
-
-   return SCIP_OKAY;
 }
 
 /** adds variable to given GUB constraint */
@@ -1836,7 +1834,7 @@ SCIP_RETCODE GUBsetMoveVar(
 #endif
 
       /* free old GUB constraint */
-      SCIP_CALL( GUBconsFree(scip, &gubset->gubconss[oldgubcons]) );
+      GUBconsFree(scip, &gubset->gubconss[oldgubcons]);
 
       /* if empty GUB was not the last one in GUB set data structure, replace it by last GUB constraint */
       if( oldgubcons != gubset->ngubconss-1 )
@@ -1962,7 +1960,7 @@ SCIP_RETCODE GUBsetCreate(
 
 /** frees GUB set data structure */
 static
-SCIP_RETCODE GUBsetFree(
+void GUBsetFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_GUBSET**         gubset              /**< pointer to GUB set data structure */
    )
@@ -1980,7 +1978,7 @@ SCIP_RETCODE GUBsetFree(
    for( i = (*gubset)->ngubconss-1; i >= 0; --i )
    {
       assert((*gubset)->gubconss[i] != NULL);
-      SCIP_CALL( GUBconsFree(scip, &(*gubset)->gubconss[i]) );
+      GUBconsFree(scip, &(*gubset)->gubconss[i]);
    }
 
    /* free allocated memory */
@@ -1989,8 +1987,6 @@ SCIP_RETCODE GUBsetFree(
    SCIPfreeBufferArray( scip, &(*gubset)->gubconsstatus );
    SCIPfreeBufferArray( scip, &(*gubset)->gubconss );
    SCIPfreeBuffer(scip, gubset);
-
-   return SCIP_OKAY;
 }
 
 #ifndef NDEBUG
@@ -5596,7 +5592,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
          SCIPdebugMsg(scip, "   LMCI1-GUB terminated by no variable with fractional LP value.\n");
 
          /* frees memory for GUB set data structure */
-         SCIP_CALL( GUBsetFree(scip, &gubset) );
+         GUBsetFree(scip, &gubset);
 
          goto TERMINATE;
       }
@@ -5628,7 +5624,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
       }
 
       /* frees memory for GUB set data structure */
-      SCIP_CALL( GUBsetFree(scip, &gubset) );
+      GUBsetFree(scip, &gubset);
    }
    else
    {

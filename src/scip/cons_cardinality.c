@@ -792,7 +792,7 @@ SCIP_RETCODE polishPrimalSolution(
 
 /** unmark variables that are marked for propagation */
 static
-SCIP_RETCODE consdataUnmarkEventdataVars(
+void consdataUnmarkEventdataVars(
    SCIP_CONSDATA*        consdata            /**< constraint data */
    )
 {
@@ -812,8 +812,6 @@ SCIP_RETCODE consdataUnmarkEventdataVars(
       eventdata->varmarked = FALSE;
       eventdata->indvarmarked = FALSE;
    }
-
-   return SCIP_OKAY;
 }
 
 /** perform one presolving round
@@ -866,7 +864,7 @@ SCIP_RETCODE presolRoundCardinality(
    /* reset number of events stored for propagation, since presolving already performs a
     * complete propagation of all variables */
    consdata->neventdatascurrent = 0;
-   SCIP_CALL( consdataUnmarkEventdataVars(consdata) );
+   consdataUnmarkEventdataVars(consdata);
 
    j = 0;
    allvarsbinary = TRUE;

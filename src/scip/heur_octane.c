@@ -505,7 +505,7 @@ SCIP_RETCODE generateAverageNBRay(
 
 /** generates the starting point for the shooting ray in original coordinates */
 static
-SCIP_RETCODE generateStartingPoint(
+void generateStartingPoint(
    SCIP*                 scip,               /**< SCIP data structure                   */
    SCIP_Real*            rayorigin,          /**< origin of the shooting ray            */
    SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
@@ -520,8 +520,6 @@ SCIP_RETCODE generateStartingPoint(
 
    for( v = nsubspacevars - 1; v >= 0; --v )
       rayorigin[v] = SCIPvarGetLPSol(subspacevars[v]);
-
-   return SCIP_OKAY;
 }
 
 /** translates the inner point of the LP to an inner point rayorigin of the unit hyper octahedron and
@@ -932,7 +930,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       usefracspace ? "fractional" : "all", nsubspacevars, f_max, (heurdata->lastrule+1)%5);
 
    /* generate starting point in original coordinates */
-   SCIP_CALL( generateStartingPoint(scip, rayorigin, subspacevars, nsubspacevars) );
+   generateStartingPoint(scip, rayorigin, subspacevars, nsubspacevars);
    for( i = nsubspacevars - 1; i >= 0; --i )
       rayorigin[i] -= 0.5;
 

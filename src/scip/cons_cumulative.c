@@ -4267,7 +4267,7 @@ SCIP_RETCODE coretimesUpdateUb(
  *  points
  */
 static
-SCIP_RETCODE computeCoreEngeryAfter(
+void computeCoreEnergyAfter(
    SCIP_PROFILE*         profile,            /**< core profile */
    int                   nvars,              /**< number of start time variables (activities) */
    int*                  ests,               /**< array of sorted earliest start times */
@@ -4331,8 +4331,6 @@ SCIP_RETCODE computeCoreEngeryAfter(
       else
          coreEnergyAfterLct[v] = energy;
    }
-
-   return SCIP_OKAY;
 }
 
 /** collect earliest start times, latest completion time, and free energy contributions */
@@ -5402,7 +5400,7 @@ SCIP_RETCODE propagateTTEF(
    /* compute for the different earliest start and latest completion time the core energy of the corresponding time
     * points
     */
-   SCIP_CALL( computeCoreEngeryAfter(profile, nvars, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct) );
+   computeCoreEnergyAfter(profile, nvars, ests, lcts, coreEnergyAfterEst, coreEnergyAfterLct);
 
    /* propagate the upper bounds and "opportunistically" the lower bounds */
    SCIP_CALL( propagateUbTTEF(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
@@ -5714,9 +5712,9 @@ void freeNodedata(
    }
 }
 
-/** update node data structure strating form the given node along the path to the root node */
+/** update node data structure starting from the given node along the path to the root node */
 static
-SCIP_RETCODE updateEnvelop(
+void updateEnvelope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BTNODE*          node                /**< search node which inserted */
    )
@@ -5800,8 +5798,6 @@ SCIP_RETCODE updateEnvelop(
    }
 
    SCIPdebugMsg(scip, "updating done\n");
-
-   return SCIP_OKAY;
 }
 
 /** updates the key of the first parent on the trace which comes from left */
@@ -5895,7 +5891,7 @@ SCIP_RETCODE deleteLambdaLeaf(
          updateKeyOnTrace(grandparent, nodedata->key);
       }
 
-      SCIP_CALL( updateEnvelop(scip, grandparent) );
+      updateEnvelope(scip, grandparent);
    }
    else
    {
@@ -5940,7 +5936,7 @@ SCIP_RETCODE moveNodeToLambda(
    nodedata->intheta = FALSE;
 
    /* update the energy and envelop values on trace */
-   SCIP_CALL( updateEnvelop(scip, node) );
+   updateEnvelope(scip, node);
 
    return SCIP_OKAY;
 }
@@ -6044,7 +6040,7 @@ SCIP_RETCODE insertThetanode(
    }
 
    /* update envelop */
-   SCIP_CALL( updateEnvelop(scip, node) );
+   updateEnvelope(scip, node);
 
    return SCIP_OKAY;
 }
@@ -9512,7 +9508,7 @@ SCIP_RETCODE fixIntegerVariableLb(
 
 /** normalize cumulative condition */
 static
-SCIP_RETCODE normalizeCumulativeCondition(
+void normalizeCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of start time variables (activities) */
    int*                  demands,            /**< array of demands */
@@ -9527,7 +9523,7 @@ SCIP_RETCODE normalizeCumulativeCondition(
    int v;
 
    if( *capacity == 1 || nvars <= 1 )
-      return SCIP_OKAY;
+      return;
 
    assert(demands[nvars-1] <= *capacity);
    assert(demands[nvars-2] <= *capacity);
@@ -9576,8 +9572,6 @@ SCIP_RETCODE normalizeCumulativeCondition(
       (*nchgcoefs) += nvars;
       (*nchgsides)++;
    }
-
-   return SCIP_OKAY;
 }
 
 /** divides demands by their greatest common divisor and divides capacity by the same value, rounding down the result;
@@ -9585,7 +9579,7 @@ SCIP_RETCODE normalizeCumulativeCondition(
  *  capacity since in that case none of the jobs can run in parallel
  */
 static
-SCIP_RETCODE normalizeDemands(
+void normalizeDemands(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< cumulative constraint */
    int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
@@ -9603,20 +9597,18 @@ SCIP_RETCODE normalizeDemands(
    assert(consdata != NULL);
 
    if( consdata->normalized )
-      return SCIP_OKAY;
+      return;
 
    capacity = consdata->capacity;
 
    /**@todo sort items w.r.t. the demands, because we can stop earlier if the smaller weights are evaluated first */
 
-   SCIP_CALL( normalizeCumulativeCondition(scip, consdata->nvars, consdata->demands, &consdata->capacity, nchgcoefs, nchgsides) );
+   normalizeCumulativeCondition(scip, consdata->nvars, consdata->demands, &consdata->capacity, nchgcoefs, nchgsides);
 
    consdata->normalized = TRUE;
 
    if( capacity > consdata->capacity )
       consdata->varbounds = FALSE;
-
-   return SCIP_OKAY;
 }
 
 /** computes for the given cumulative condition the effective horizon */
@@ -10477,7 +10469,7 @@ SCIP_RETCODE presolveConsEffectiveHorizon(
 
 /** stores all demands which are smaller than the capacity of those jobs that are running at 'curtime' */
 static
-SCIP_RETCODE collectDemands(
+void collectDemands(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    int*                  startindices,       /**< permutation with rspect to the start times */
@@ -10528,8 +10520,6 @@ SCIP_RETCODE collectDemands(
 
       startindex--;
    }
-
-   return SCIP_OKAY;
 }
 
 /** this method creates a row for time point curtime which insures the capacity restriction of the cumulative
@@ -10565,7 +10555,7 @@ SCIP_RETCODE getHighestCapacityUsage(
    ndemands = 0;
 
    /* get demand array to initialize knapsack problem */
-   SCIP_CALL( collectDemands(scip, consdata, startindices, curtime, nstarted, nfinished, &demands, &ndemands) );
+   collectDemands(scip, consdata, startindices, curtime, nstarted, nfinished, &demands, &ndemands);
 
    /* create array for profits */
    SCIP_CALL( SCIPallocBufferArray(scip, &profits, ndemands) );
@@ -11083,7 +11073,7 @@ SCIP_RETCODE presolveCons(
    if( conshdlrdata->normalize )
    {
       /* divide demands by their greatest common divisor */
-      SCIP_CALL( normalizeDemands(scip, cons, nchgcoefs, nchgsides) );
+      normalizeDemands(scip, cons, nchgcoefs, nchgsides);
    }
 
    /* delete constraint with one job */
@@ -14032,7 +14022,7 @@ SCIP_RETCODE SCIPnormalizeCumulativeCondition(
    int*                  nchgsides           /**< pointer to count number of side changes */
    )
 {  /*lint --e{715}*/
-   SCIP_CALL( normalizeCumulativeCondition(scip, nvars, demands, capacity, nchgcoefs, nchgsides) );
+   normalizeCumulativeCondition(scip, nvars, demands, capacity, nchgcoefs, nchgsides);
 
    return SCIP_OKAY;
 }

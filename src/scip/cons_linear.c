@@ -2412,7 +2412,7 @@ void getMinActivity(
       *issettoinfinity = TRUE;
       *isrelax = TRUE;
    }
-   /* we do not need a good relaxation and we have positve huge contributions, so we just return -infty as activity */
+   /* we do not need a good relaxation and we have positive huge contributions, so we just return -infty as activity */
    else if( !goodrelax && poshuge > 0 )
    {
       *minactivity = -SCIPinfinity(scip);
@@ -16692,7 +16692,7 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
  * except for ranged rows for which exactly two operators '<=' must be present
  */
 static
-SCIP_RETCODE findOperators(
+void findOperators(
    const char*           str,                /**< null terminated input string */
    char**                firstoperator,      /**< pointer to store the string starting at the first operator */
    char**                secondoperator,     /**< pointer to store the string starting at the second operator */
@@ -16787,8 +16787,6 @@ SCIP_RETCODE findOperators(
          *success = FALSE;
       }
    }
-
-   return SCIP_OKAY;
 }
 
 /** constraint parsing method of constraint handler */
@@ -16833,7 +16831,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    /* find operators in the line first, all other remaining parsing depends on occurence of the operators '<=', '>=', '==',
     * and the special word [free]
     */
-   SCIP_CALL( findOperators(str, &firstop, &secondop, &operatorsuccess) );
+   findOperators(str, &firstop, &secondop, &operatorsuccess);
 
    /* if the grammar is not valid for parsing a linear constraint, return */
    if( ! operatorsuccess )

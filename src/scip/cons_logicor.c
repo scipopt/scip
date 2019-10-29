@@ -212,7 +212,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
 /** frees constraint handler data for logic or constraint handler */
 static
-SCIP_RETCODE conshdlrdataFree(
+void conshdlrdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
    )
@@ -221,8 +221,6 @@ SCIP_RETCODE conshdlrdataFree(
    assert(*conshdlrdata != NULL);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
-
-   return SCIP_OKAY;
 }
 
 /** ensures, that the vars array can store at least num entries */
@@ -1524,11 +1522,10 @@ SCIP_RETCODE processWatchedVars(
 
 /** checks constraint for violation, returns TRUE iff constraint is feasible */
 static
-SCIP_RETCODE checkCons(
+SCIP_Bool isConsViolated(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< logic or constraint to be checked */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool*            violated            /**< pointer to store whether the given solution violates the constraint */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1538,9 +1535,6 @@ SCIP_RETCODE checkCons(
    int nvars;
    int v;
 
-   assert(violated != NULL);
-
-   *violated = FALSE;
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -1559,8 +1553,6 @@ SCIP_RETCODE checkCons(
       sum += solval;
    }
 
-   *violated = SCIPisFeasLT(scip, sum, 1.0);
-
    /* calculate constraint violation and update it in solution */
    if( sol != NULL ){
       SCIP_Real absviol = 1.0 - sum;
@@ -1568,7 +1560,7 @@ SCIP_RETCODE checkCons(
       SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
    }
 
-   return SCIP_OKAY;
+   return SCIPisFeasLT(scip, sum, 1.0);
 }
 
 /** creates an LP row in a logic or constraint data object */
@@ -1687,7 +1679,7 @@ SCIP_RETCODE separateCons(
       }
       else
       {
-         SCIP_CALL( checkCons(scip, cons, sol, &addcut) );
+         addcut = isConsViolated(scip, cons, sol);
       }
    }
 
@@ -1739,12 +1731,9 @@ SCIP_RETCODE enforcePseudo(
 
    if( mustcheck )
    {
-      SCIP_Bool violated;
-
       assert(!addcut);
 
-      SCIP_CALL( checkCons(scip, cons, NULL, &violated) );
-      if( violated )
+      if( isConsViolated(scip, cons, NULL) )
       {
          /* constraint was infeasible -> reset age */
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -3956,7 +3945,7 @@ SCIP_DECL_CONSFREE(consFreeLogicor)
    assert(conshdlrdata != NULL);
 
    /* free constraint handler data */
-   SCIP_CALL( conshdlrdataFree(scip, &conshdlrdata) );
+   conshdlrdataFree(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -4324,10 +4313,7 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
       assert(consdata != NULL);
       if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
       {
-         SCIP_Bool violated;
-
-         SCIP_CALL( checkCons(scip, cons, sol, &violated) );
-         if( violated )
+         if( isConsViolated(scip, cons, sol) )
          {
             /* constraint is violated */
             *result = SCIP_INFEASIBLE;

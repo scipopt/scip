@@ -197,7 +197,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
 /** frees constraint handler data for linking constraint handler */
 static
-SCIP_RETCODE conshdlrdataFree(
+void conshdlrdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
    )
@@ -211,8 +211,6 @@ SCIP_RETCODE conshdlrdataFree(
 
    /* free memory of constraint handler data */
    SCIPfreeBlockMemory(scip, conshdlrdata);
-
-   return SCIP_OKAY;
 }
 
 /** prints linking constraint to file stream */
@@ -1937,7 +1935,7 @@ SCIP_DECL_CONSFREE(consFreeLinking)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( conshdlrdataFree(scip, &conshdlrdata) );
+   conshdlrdataFree(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
