@@ -236,6 +236,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    Problem<SCIP_Real> problem = buildProblem(scip, matrix);
    Presolve<SCIP_Real> presolve;
 
+   presolve.getPresolveOptions().substitutebinarieswithints = false;
    using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
 
    presolve.addPresolveMethod( uptr( new CoefficientStrengthening<SCIP_Real>() ) );
