@@ -2984,6 +2984,7 @@ SCIP_RETCODE adaptSymmetryDataSchreierSims(
 {
    int* reorderingpermvars;
    int* posinpermvars;
+   int* permvarfrompos;
    int leader;
    int l;
    int p;
@@ -2997,10 +2998,19 @@ SCIP_RETCODE adaptSymmetryDataSchreierSims(
    assert( leaders != NULL );
    assert( nleaders > 0 );
 
-   /* initialize map from variable lable to its position in permvars */
+   /* initialize map from variable label to its position in permvars
+    * permvar label -> position in reordering
+    */
    SCIP_CALL( SCIPallocBufferArray(scip, &posinpermvars, npermvars) );
    for (i = 0; i < npermvars; ++i)
       posinpermvars[i] = i;
+
+   /* initialize map from position in lexicographic order to the variable at this position
+    * position in reordering -> permvar label
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &permvarfrompos, npermvars) );
+   for (i = 0; i < npermvars; ++i)
+      permvarfrompos[i] = i;
 
    /* initialize reodering of variables indices in new permvars array */
    SCIP_CALL( SCIPallocBufferArray(scip, &reorderingpermvars, npermvars) );
@@ -3012,9 +3022,10 @@ SCIP_RETCODE adaptSymmetryDataSchreierSims(
    {
       leader = leaders[l];
 
-      posinpermvars[posinpermvars[l]] = posinpermvars[leader];
+      posinpermvars[permvarfrompos[l]] = posinpermvars[leader];
+      permvarfrompos[leader] = permvarfrompos[l];
       posinpermvars[leader] = l;
-
+      permvarfrompos[l] = leader;
    }
 
    /* update permvars array and reorderingpermvars map */
@@ -3028,12 +3039,11 @@ SCIP_RETCODE adaptSymmetryDataSchreierSims(
    for (p = 0; p < nperms; ++p)
    {
       for (i = 0; i < npermvars; ++i)
-      {
          modifiedperms[p][i] = posinpermvars[origperms[p][reorderingpermvars[i]]];
-      }
    }
 
    SCIPfreeBufferArray(scip, &reorderingpermvars);
+   SCIPfreeBufferArray(scip, &permvarfrompos);
    SCIPfreeBufferArray(scip, &posinpermvars);
 
    return SCIP_OKAY;
