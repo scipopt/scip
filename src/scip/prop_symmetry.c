@@ -2333,6 +2333,8 @@ SCIP_RETCODE buildSubgroupGraph(
    int                   compidx             /**< index of the component */
    )
 {
+   SCIP_DISJOINTSET* vartocomponent;
+   SCIP_DISJOINTSET* comptocolor;
    SCIP_VAR** permvars;
    int** perms;
    int* components;
@@ -2340,6 +2342,7 @@ SCIP_RETCODE buildSubgroupGraph(
    int ncomponents;
    int npermvars;
    int npermsincomp;
+   int nextcolor;
    int j;
    int k;
 
@@ -2357,8 +2360,12 @@ SCIP_RETCODE buildSubgroupGraph(
    componentbegins = propdata->componentbegins;
    ncomponents = propdata->ncomponents;
    npermsincomp = componentbegins[compidx + 1] - componentbegins[compidx];
+   nextcolor = 0;
 
    assert(npermsincomp > 0);
+
+   SCIP_CALL( SCIPdisjointsetCreate(&vartocomponent, SCIPblkmem(scip), npermvars) );
+   SCIP_CALL( SCIPdisjointsetCreate(&comptocolor, SCIPblkmem(scip), npermvars) );
 
    for( j = 0; j < npermsincomp; ++j )
    {
@@ -2366,6 +2373,8 @@ SCIP_RETCODE buildSubgroupGraph(
       int genidx;
       int k;
       int ntwocyclesperm;
+      int firstcolor = -1;
+      SCIP_Bool isvalidperm = TRUE;
 
       /* use given order of generators, if specified */
       genidx = genorder == NULL ? j : genorder[j];
@@ -2380,33 +2389,71 @@ SCIP_RETCODE buildSubgroupGraph(
 
       assert(ntwocyclesperm > 0);
 
-      for( k = 0; k < permvars; ++k )
+      for( k = 0; k < npermvars; ++k )
       {
+         int comp1;
+         int comp2;
+         int color1;
+         int color2;
          int img = perm[k];
+         assert(perm[img] == k);
 
          if( img == k )
             continue;
 
-         assert(perm[img] == k);
+         comp1 = SCIPdisjointsetFind(vartocomponent, k);
+         comp2 = SCIPdisjointsetFind(vartocomponent, img);
+
+         /* if both variables are in the same component, this generator would create a cycle */
+         if( comp1 == comp2 )
+         {
+            isvalidperm = FALSE;
+            break;
+         }
+
+         color1 = SCIPdisjointsetFind(comptocolor, comp1);
+         color2 = SCIPdisjointsetFind(comptocolor, comp2);
+
+         /* a generator is not allows to connect two components of the same color, since they depend on each other */
+         if( color1 == color2 )
+         {
+            isvalidperm = FALSE;
+            break;
+         }
+
+         if( firstcolor == -1 )
+            firstcolor = color1;
+
+         SCIPdisjointsetUnion(comptocolor, firstcolor, color1, TRUE);
+         SCIPdisjointsetUnion(comptocolor, firstcolor, color2, TRUE);
+         SCIPdisjointsetUnion(vartocomponent, comp1, comp2, FALSE);
+
+         assert(SCIPdisjointsetFind(vartocomponent, k) == SCIPdisjointsetFind(vartocomponent, img));
+         assert(SCIPdisjointsetFind(comptocolor, SCIPdisjointsetFind(vartocomponent, k)) == firstcolor);
 
          /* both directions for each pair will be added, since perm consists of 2-cycles */
          SCIP_CALL( SCIPdigraphAddArc(graph, k, img, NULL) );
       }
 
-      /* if the new graph is not acyclic, delete the edges again and go to next generator */
-      if( !isAcyclicGraph(graph) )
+      /* if the new graph is not acyclic, delete the newly added edges and go to next generator */
+      if( !isvalidperm )
       {
-         for( k = 0; k < permvars; ++k )
-         {
-            int img = perm[k];
+         int l;
 
-            if( img == k )
+         for( l = 0; l < k; ++l )
+         {
+            int img = perm[l];
+
+            if( img == l )
                continue;
 
-            SCIP_CALL( SCIPdigraphSetNSuccessors(graph, k, SCIPdigraphGetNSuccessors(graph, k) - 1) );
+            SCIP_CALL( SCIPdigraphSetNSuccessors(graph, l, SCIPdigraphGetNSuccessors(graph, l) - 1) );
          }
       }
    }
+
+   SCIPdisjointsetFree(&comptocolor, SCIPblkmem(scip));
+   SCIPdisjointsetFree(&vartocomponent, SCIPblkmem(scip));
 
    return SCIP_OKAY;
 }
