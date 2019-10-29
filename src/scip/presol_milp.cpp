@@ -305,9 +305,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          data->lastncols = problem.getNCols();
          data->lastnrows = problem.getNRows();
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   (%.1fs) MILP presolving (%d rounds): %d boundchanges, %d deleted columns, \n",
-               SCIPgetSolvingTime(scip), presolve.getStatistics().nrounds, presolve.getStatistics().nboundchgs,
-               presolve.getStatistics().ndeletedcols);
+               "   (%.1fs) MILP presolving (%d rounds): %d deleted columns\n",
+               SCIPgetSolvingTime(scip), presolve.getStatistics().nrounds, presolve.getStatistics().ndeletedcols);
          *result = SCIP_SUCCESS;
    }
 
