@@ -25,6 +25,7 @@
 #include "scip/presol_milp.h"
 #include "core/Presolve.hpp"
 #include "core/ProblemBuilder.hpp"
+#include "tbb/task_scheduler_init.h"
 
 
 #define PRESOL_NAME            "milp"
@@ -232,6 +233,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       return SCIP_OKAY;
    }
 
+   tbb::task_scheduler_init init(1);
+
    /* we only work on pure MIPs */
    Problem<SCIP_Real> problem = buildProblem(scip, matrix);
    Presolve<SCIP_Real> presolve;
@@ -270,6 +273,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    presolve.setFeasTol(SCIPfeastol(scip));
    presolve.setVerbosityLevel(VerbosityLevel::QUIET);
 
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   (%.1fs) running MILP specific presolving\n", SCIPgetSolvingTime(scip));
+
    PresolveResult<SCIP_Real> res = presolve.apply(problem);
    data->lastncols = problem.getNCols();
    data->lastnrows = problem.getNRows();
@@ -290,13 +296,18 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          *result = SCIP_DIDNOTFIND;
          data->lastncols = 0;
          data->lastnrows = 0;
-         puts("didnotfind");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   (%.1fs) MILP presolving found nothing\n",
+               SCIPgetSolvingTime(scip));
          SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
       case PresolveStatus::REDUCED:
          data->lastncols = problem.getNCols();
          data->lastnrows = problem.getNRows();
-         puts("success");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   (%.1fs) MILP presolving (%d rounds): %d boundchanges, %d deleted columns, \n",
+               SCIPgetSolvingTime(scip), presolve.getStatistics().nrounds, presolve.getStatistics().nboundchgs,
+               presolve.getStatistics().ndeletedcols);
          *result = SCIP_SUCCESS;
    }
 
@@ -411,7 +422,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
             if( infeas )
             {
-               puts("infeas after tightening lb");
                *result = SCIP_CUTOFF;
                break;
             }
@@ -428,7 +438,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
             if( infeas )
             {
-               puts("infeas after tightening ub");
                *result = SCIP_CUTOFF;
                break;
             }
