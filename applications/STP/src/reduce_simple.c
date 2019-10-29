@@ -405,9 +405,7 @@ SCIP_RETCODE pcmwReduceTermDeg1(
    int i1;
    int degsum;
 
-   assert(scip   != NULL);
-   assert(g      != NULL);
-   assert(count  != NULL);
+   assert(scip && g && count);
    assert(Is_term(g->term[i]));
 
    if( isMaxprizeTerm(scip, g, i, maxprize) )
@@ -448,7 +446,7 @@ SCIP_RETCODE pcmwReduceTermDeg1(
 
       degsum = g->grad[i] + g->grad[i1];
 
-      if( Is_term(g->term[i1]) )
+      if( Is_term(g->term[i1]) && !graph_pc_termIsNonLeafTerm(g, i1) )
       {
          SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, i1, i, i1));
          degsum -= g->grad[i1];

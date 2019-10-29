@@ -291,7 +291,6 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
          else
             graph_pc_subtractPrize(scip, g, -(g->prize[s]), term4offset);
       }
-      g->term2edge[s] = TERM2EDGE_NOTERM;
    }
 
    /* contract s into t */
@@ -319,6 +318,8 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
    {
       assert(g->term2edge[t] == TERM2EDGE_NOTERM);
    }
+
+   g->term2edge[s] = TERM2EDGE_NOTERM;
 
    return SCIP_OKAY;
 }
@@ -2283,39 +2284,32 @@ void graph_pc_subtractPrize(
    int                   i                   /**< the terminal */
    )
 {
-   int e;
-   int j;
-
-   assert(scip != NULL);
-   assert(g != NULL);
+   assert(scip && g);
    assert(!g->extended);
-   assert(!graph_pc_knotIsFixedTerm(g, i));
-   assert(i != g->source);
+   assert(Is_term(g->term[i]));
+   assert(!graph_pc_knotIsFixedTerm(g, i) && i != g->source);
 
    g->prize[i] -= cost;
-   for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-      if( Is_pseudoTerm(g->term[g->head[e]]) )
-         break;
 
-   assert(e != EAT_LAST);
+   assert(SCIPisGE(scip, g->prize[i], 0.0) || graph_pc_isPcMw(g));
 
-   j = g->head[e];
+   /* do we need to adapt edge cost as well? */
+   if( !graph_pc_termIsNonLeafTerm(g, i) )
+   {
+      const int twinterm = graph_pc_getTwinTerm(g, i);
+      const int root2twin = graph_pc_getRoot2PtermEdge(g, twinterm);
 
-   assert(j != g->source);
-   assert(!g->mark[j]);
+      assert(!g->mark[twinterm]);
+      assert(g->tail[root2twin] == g->source && g->head[root2twin] == twinterm);
 
-   for( e = g->inpbeg[j]; e != EAT_LAST; e = g->ieat[e] )
-      if( g->source == g->tail[e] )
-         break;
+      g->cost[root2twin] -= cost;
 
-   assert(e != EAT_LAST);
-   assert(!g->mark[g->tail[e]] || g->stp_type == STP_RPCSPG);
-
-   g->cost[e] -= cost;
-
-   assert(g->stp_type == STP_MWCSP  || g->stp_type == STP_RMWCSP || SCIPisGE(scip, g->prize[i], 0.0));
-   assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
-   assert(SCIPisGE(scip, g->prize[i], 0.0) || g->stp_type == STP_MWCSP);
+      assert(SCIPisEQ(scip, g->prize[i], g->cost[root2twin]));
+   }
+   else
+   {
+      assert(graph_pc_isPc(g));
+   }
 }
 
 /** change prize of a terminal */
