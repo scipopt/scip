@@ -2568,23 +2568,26 @@ void consdataGetActivityBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint */
    SCIP_Bool             goodrelax,          /**< if we have huge contributions, do we need a good relaxation or are
-                                              *   relaxed acticities ignored, anyway? */
+                                              *   relaxed activities ignored, anyway? */
    SCIP_Real*            minactivity,        /**< pointer to store the minimal activity */
    SCIP_Real*            maxactivity,        /**< pointer to store the maximal activity */
    SCIP_Bool*            minisrelax,         /**< pointer to store whether the returned minactivity is just a relaxation,
                                               *   i.e. <= the exact minactivity (in case of huge contributions),
                                               *   or equal to the exact minimal activity */
-   SCIP_Bool*            maxisrelax          /**< pointer to store whether the returned maxactivity is just a relaxation,
+   SCIP_Bool*            maxisrelax,         /**< pointer to store whether the returned maxactivity is just a relaxation,
                                               *   i.e. >= the exact maxactivity (in case of huge contributions),
                                               *   or equal to the exact maximal activity */
+   SCIP_Bool*            isminsettoinfinity, /**< pointer to store whether minactivity was set to infinity or calculated */
+   SCIP_Bool*            ismaxsettoinfinity  /**< pointer to store whether maxactivity was set to infinity or calculated */
+
    )
 {
-   SCIP_Bool issettoinfinity;
-
    assert(scip != NULL);
    assert(consdata != NULL);
    assert(minactivity != NULL);
    assert(maxactivity != NULL);
+   assert(isminsettoinfinity != NULL);
+   assert(ismaxsettoinfinity != NULL);
 
    if( !consdata->validactivities )
    {
@@ -2601,11 +2604,11 @@ void consdataGetActivityBounds(
 
    getMinActivity(scip, consdata, consdata->minactivityposinf, consdata->minactivityneginf,
       consdata->minactivityposhuge, consdata->minactivityneghuge, 0.0, FALSE, goodrelax,
-      minactivity, minisrelax, &issettoinfinity);
+      minactivity, minisrelax, isminsettoinfinity);
 
    getMaxActivity(scip, consdata, consdata->maxactivityposinf, consdata->maxactivityneginf,
       consdata->maxactivityposhuge, consdata->maxactivityneghuge, 0.0, FALSE, goodrelax,
-      maxactivity, maxisrelax, &issettoinfinity);
+      maxactivity, maxisrelax, ismaxsettoinfinity);
 }
 
 /** calculates activity bounds for constraint after setting variable to zero */
@@ -7085,14 +7088,17 @@ SCIP_RETCODE tightenBounds(
       SCIP_Real maxactivity;
       SCIP_Bool minisrelax;
       SCIP_Bool maxisrelax;
+      SCIP_Bool isminsettoinfinity;
+      SCIP_Bool ismaxsettoinfinity;
 
       /* use maximal activity delta to skip propagation (cannot deduce anything) */
-      consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minisrelax, &maxisrelax);
+      consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minisrelax, &maxisrelax,
+         &isminsettoinfinity, &ismaxsettoinfinity);
       assert(!SCIPisInfinity(scip, minactivity));
       assert(!SCIPisInfinity(scip, -maxactivity));
 
-      slack = (SCIPisInfinity(scip, consdata->rhs) || SCIPisInfinity(scip, -minactivity)) ? SCIPinfinity(scip) : (consdata->rhs - minactivity);
-      surplus = (SCIPisInfinity(scip, -consdata->lhs) || SCIPisInfinity(scip, maxactivity)) ? SCIPinfinity(scip) : (maxactivity - consdata->lhs);
+      slack = (SCIPisInfinity(scip, consdata->rhs) || isminsettoinfinity) ? SCIPinfinity(scip) : (consdata->rhs - minactivity);
+      surplus = (SCIPisInfinity(scip, -consdata->lhs) || ismaxsettoinfinity) ? SCIPinfinity(scip) : (maxactivity - consdata->lhs);
 
       /* check if the constraint will propagate */
       if( SCIPisLE(scip, consdata->maxactdelta, MIN(slack, surplus)) )
@@ -7625,6 +7631,8 @@ SCIP_RETCODE propagateCons(
    SCIP_Real maxactivity;
    SCIP_Bool minactisrelax;
    SCIP_Bool maxactisrelax;
+   SCIP_Bool isminsettoinfinity;
+   SCIP_Bool ismaxsettoinfinity;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -7708,7 +7716,8 @@ SCIP_RETCODE propagateCons(
       /* check constraint for infeasibility and redundancy */
       if( !(*cutoff) )
       {
-         consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+         consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax,
+            &isminsettoinfinity, &ismaxsettoinfinity);
 
          if( SCIPisFeasGT(scip, minactivity, consdata->rhs) )
          {
@@ -8997,6 +9006,8 @@ SCIP_RETCODE consdataTightenCoefs(
                            * activity, ignoring the coefficients contributing with infinite value */
    SCIP_Bool minactisrelax; /* do huge finite values contribute to the minactivity? */
    SCIP_Bool maxactisrelax; /* do huge finite values contribute to the maxactivity? */
+   SCIP_Bool isminsettoinfinity;
+   SCIP_Bool ismaxsettoinfinity;
    SCIP_Real minleftactivity; /* minimal activity without surely non-redundant variables. */
    SCIP_Real maxleftactivity; /* maximal activity without surely non-redundant variables. */
    SCIP_Real aggrlhs; /* lhs without minimal activity of surely non-redundant variables. */
@@ -9029,7 +9040,8 @@ SCIP_RETCODE consdataTightenCoefs(
    }
 
    /* get the minimal and maximal activity of the constraint */
-   consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+   consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax,
+      &isminsettoinfinity, &ismaxsettoinfinity);
 
    minleftactivity = 0.0;
    maxleftactivity = 0.0;
@@ -9068,13 +9080,13 @@ SCIP_RETCODE consdataTightenCoefs(
                SCIP_Real otherval;
                otherval = consdata->vals[1-i];
 
-               if( !SCIPisInfinity(scip, -consdata->lhs) && consdata->minactivityneginf + consdata->minactivityneginf == 0 )
+               if( !SCIPisInfinity(scip, -consdata->lhs) && !isminsettoinfinity )
                {
                   lval = consdata->lhs - val*lb;
                   lval -= otherval > 0.0 ? otherval * SCIPvarGetLbLocal(consdata->vars[1-i]) : otherval * SCIPvarGetUbLocal(consdata->vars[1-i]);
                }
 
-               if( !SCIPisInfinity(scip,consdata->rhs) && consdata->maxactivityneginf + consdata->maxactivityneginf == 0 )
+               if( !SCIPisInfinity(scip, consdata->rhs) && !ismaxsettoinfinity )
                {
                   rval = val*ub - consdata->rhs;
                   rval += otherval > 0.0 ? otherval * SCIPvarGetUbLocal(consdata->vars[1-i]) : otherval * SCIPvarGetLbLocal(consdata->vars[1-i]);
@@ -9109,7 +9121,8 @@ SCIP_RETCODE consdataTightenCoefs(
                (*nchgcoefs)++;
 
                /* get the new minimal and maximal activity of the constraint */
-               consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+               consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax,
+                  &isminsettoinfinity, &ismaxsettoinfinity);
 
                if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
                {
@@ -9174,13 +9187,13 @@ SCIP_RETCODE consdataTightenCoefs(
                SCIP_Real otherval;
                otherval = consdata->vals[1-i];
 
-               if( !SCIPisInfinity(scip,-consdata->lhs) && consdata->minactivityneginf + consdata->minactivityneginf == 0 )
+               if( !SCIPisInfinity(scip, -consdata->lhs) && !isminsettoinfinity )
                {
                   lval = val*ub - consdata->lhs;
                   lval += otherval > 0.0 ? otherval * SCIPvarGetLbLocal(consdata->vars[1-i]) : otherval * SCIPvarGetUbLocal(consdata->vars[1-i]);
                }
 
-               if( !SCIPisInfinity(scip,consdata->rhs) && consdata->maxactivityneginf + consdata->maxactivityneginf == 0 )
+               if( !SCIPisInfinity(scip, consdata->rhs) && !ismaxsettoinfinity )
                {
                   rval = consdata->rhs - val*lb;
                   rval -= otherval > 0.0 ? otherval * SCIPvarGetUbLocal(consdata->vars[1-i]) : otherval * SCIPvarGetLbLocal(consdata->vars[1-i]);
@@ -9215,7 +9228,8 @@ SCIP_RETCODE consdataTightenCoefs(
                (*nchgcoefs)++;
 
                /* get the new minimal and maximal activity of the constraint */
-               consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+               consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax,
+                  &isminsettoinfinity, &ismaxsettoinfinity);
 
                if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
                {
@@ -9342,7 +9356,8 @@ SCIP_RETCODE consdataTightenCoefs(
                i--;
 
                /* get the new minimal and maximal activity of the constraint */
-               consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+               consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax,
+                  &isminsettoinfinity, &ismaxsettoinfinity);
 
                /* we return above if the condition does not hold and deleting a variable cannot increase the number of
                 * huge contributions
@@ -9367,7 +9382,8 @@ SCIP_RETCODE consdataTightenCoefs(
                i--;
 
                /* get the new minimal and maximal activity of the constraint */
-               consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+               consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax,
+                  &isminsettoinfinity, &ismaxsettoinfinity);
 
                /* we return above if the condition does not hold and deleting a variable cannot increase the number of
                 * huge contributions
@@ -13918,6 +13934,8 @@ SCIP_RETCODE presolStuffing(
    SCIP_Real factor;
    SCIP_Bool minactisrelax;
    SCIP_Bool maxactisrelax;
+   SCIP_Bool isminsettoinfinity;
+   SCIP_Bool ismaxsettoinfinity;
    SCIP_Bool tryfixing;
    int nsingletons;
    int idx;
@@ -13936,12 +13954,15 @@ SCIP_RETCODE presolStuffing(
 
    if( singlevarstuffing )
    {
-      consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+      consdataGetActivityBounds(scip, consdata, FALSE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax,
+         &isminsettoinfinity, &ismaxsettoinfinity);
    }
    else
    {
       minactivity = SCIP_INVALID;
       maxactivity = SCIP_INVALID;
+      isminsettoinfinity = FALSE;
+      ismaxsettoinfinity = FALSE;
    }
 
    /* we want to have a <= constraint, if the rhs is infinite, we implicitly multiply the constraint by -1,
@@ -13949,12 +13970,10 @@ SCIP_RETCODE presolStuffing(
     */
    if( SCIPisInfinity(scip, consdata->rhs) )
    {
-      SCIP_Real tmp;
       rhs = -consdata->lhs;
       factor = -1.0;
-      tmp = maxactivity;
       maxactivity = -minactivity;
-      minactivity = -tmp;
+      ismaxsettoinfinity = isminsettoinfinity;
    }
    else
    {
@@ -14239,7 +14258,7 @@ SCIP_RETCODE presolStuffing(
     * If there are variables with a_i < 0 and c_i > 0, they are negated to obtain the above form, variables with same
     * sign of coefficients in constraint and objective prevent the use of this method.
     */
-   if( singlevarstuffing && !SCIPisInfinity(scip, -minactivity) )
+   if( singlevarstuffing && !ismaxsettoinfinity )
    {
       SCIP_Real bestratio = -SCIPinfinity(scip);
       SCIP_Real secondbestratio = -SCIPinfinity(scip);
@@ -16073,6 +16092,8 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
    SCIP_Real maxactivity;
    SCIP_Bool minactisrelax;
    SCIP_Bool maxactisrelax;
+   SCIP_Bool isminsettoinfinity;
+   SCIP_Bool ismaxsettoinfinity;
    SCIP_Bool cutoff;
    int oldnfixedvars;
    int oldnaggrvars;
@@ -16220,7 +16241,8 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             break;
 
          /* check constraint for infeasibility and redundancy */
-         consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax);
+         consdataGetActivityBounds(scip, consdata, TRUE, &minactivity, &maxactivity, &minactisrelax, &maxactisrelax,
+            &isminsettoinfinity, &ismaxsettoinfinity);
          if( SCIPisFeasGT(scip, minactivity, consdata->rhs) || SCIPisFeasLT(scip, maxactivity, consdata->lhs) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s> is infeasible: activitybounds=[%.15g,%.15g], sides=[%.15g,%.15g]\n",
