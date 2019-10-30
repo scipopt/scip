@@ -628,7 +628,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
       if( nfixededges > reductbound && reducegraph )
       {
-         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
          reductbound = getRedBound(0, anedges);
       }
    }
@@ -643,7 +643,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    }
 
    /* get number of remaining vertices, edges and terminals */
-   graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
+   graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
 
    /* main reduction loop */
    for( i = 0; i < SLACKPRUNE_MAXREDROUNDS && anterms > 2; i++ )
@@ -668,7 +668,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
       assert(graph_valid(scip, prunegraph));
 
-      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
 
       if( anterms <= 2 )
          break;
@@ -706,7 +706,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       }
 
       /* get number of remaining edges */
-      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
 
       reductbound = getRedBound(i, anedges);
 
@@ -719,7 +719,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          break;
 
       /* get number of remaining edges */
-      graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
+      graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
 
    } /* reduction loop */
 

@@ -606,7 +606,7 @@ void distDataInitSizes(
    int nnodes_undeleted;
    int closenodes_totalsize;
 
-   graph_get_NVET(g, &nnodes_undeleted, NULL, NULL);
+   graph_get_nVET(g, &nnodes_undeleted, NULL, NULL);
    assert(nnodes_undeleted >= 1 && maxnclosenodes >= 1);
 
    closenodes_totalsize = nnodes_undeleted * maxnclosenodes;

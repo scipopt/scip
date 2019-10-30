@@ -472,6 +472,111 @@ SCIP_Bool graphisValidPcMw(
    return TRUE;
 }
 
+/** add nodes to new graph during graph packing */
+static
+void packNodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g_old,              /**< the old graph */
+   GRAPH*                g_new               /**< the new graph */
+   )
+{
+   const int oldnnodes = graph_get_nNodes(g_old);
+   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g_old);
+   const SCIP_Bool pcmw = graph_pc_isPcMw(g_old);
+
+   if( rpcmw )
+   {
+      for( int i = 0; i < oldnnodes; i++ )
+         g_old->mark[i] = (g_old->grad[i] > 0);
+
+      for( int e = g_old->outbeg[g_old->source]; e != EAT_LAST; e =
+            g_old->oeat[e] )
+      {
+         const int i = g_old->head[e];
+
+         if( SCIPisGT(scip, g_old->cost[e], 0.0) && Is_term(g_old->term[i])
+               && g_old->term2edge[i] >= 0 )
+         {
+            g_old->mark[i] = FALSE;
+            assert(g_old->grad[i] == 2);
+         }
+      }
+   }
+
+   for( int i = 0; i < oldnnodes; i++ )
+   {
+      if( g_old->grad[i] > 0 )
+      {
+         if( pcmw )
+         {
+            if( !Is_term(g_old->term[i]) || (rpcmw && g_old->mark[i]) )
+               g_new->prize[g_new->knots] = g_old->prize[i];
+            else
+               g_new->prize[g_new->knots] = 0.0;
+         }
+
+         if( g_old->stp_type == STP_BRMWCSP )
+         {
+            if( !Is_term(g_old->term[i]) || (g_old->mark[i]) )
+               g_new->costbudget[g_new->knots] = g_old->costbudget[i];
+            else
+               g_new->costbudget[g_new->knots] = 0.0;
+         }
+         graph_knot_add(g_new, g_old->term[i]);
+      }
+   }
+}
+
+
+/** add edges to new graph during graph packing */
+static
+SCIP_RETCODE packEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int*            old2newNode,        /**< node mapping */
+   GRAPH*                g_old,              /**< the old graph */
+   int                   nnodes,             /**< number of nodes for new graph */
+   GRAPH*                g_new               /**< the new graph */
+   )
+{
+   const int oldnedges = graph_get_nEdges(g_old);
+
+   /* add edges */
+   for( int i = 0; i < oldnedges; i += 2 )
+   {
+      int e;
+
+      if( g_old->ieat[i] == EAT_FREE )
+      {
+         assert(g_old->oeat[i]     == EAT_FREE);
+         assert(g_old->ieat[i + 1] == EAT_FREE);
+         assert(g_old->oeat[i + 1] == EAT_FREE);
+
+         graph_edge_delHistory(scip, g_old, i);
+         continue;
+      }
+
+      assert(g_old->oeat[i]      != EAT_FREE);
+      assert(g_old->ieat[i + 1]  != EAT_FREE);
+      assert(g_old->oeat[i + 1]  != EAT_FREE);
+      assert(old2newNode[g_old->tail[i]] >= 0);
+      assert(old2newNode[g_old->head[i]] >= 0);
+
+      e = g_new->edges;
+
+      g_new->ancestors[e] = NULL;
+      g_new->ancestors[e + 1] = NULL;
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g_new->ancestors[e]), g_old->ancestors[i], NULL) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g_new->ancestors[e + 1]), g_old->ancestors[i + 1], NULL) );
+
+      assert(old2newNode[g_old->tail[i]] < nnodes && old2newNode[g_old->head[i]] < nnodes);
+
+      graph_edge_addSubgraph(scip, g_old, old2newNode, i, g_new);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** gets replacement edge; helper function for pseudo-elimination */
 static
 SCIP_RETCODE delPseudoGetReplaceEdges(
@@ -1679,6 +1784,32 @@ void graph_edge_add(
    g->edges += 2;
 }
 
+
+/** add a new edge to a subgraph */
+void graph_edge_addSubgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orggraph,           /**< original graph */
+   const int*            nodemapOrg2sub,     /**< node mapping from original to subgraph */
+   int                   orgedge,            /**< original edge */
+   GRAPH*                subgraph            /**< the subgraph */
+   )
+{
+   const int e = orgedge;
+   const int orgtail = orggraph->tail[e];
+   const int orghead = orggraph->head[e];
+   const int newtail = nodemapOrg2sub[orgtail];
+   const int newhead = nodemapOrg2sub[orghead];
+
+   assert(e >= 0 && e < orggraph->edges);
+   assert(orggraph->extended);
+
+   if( graph_pc_isPcMw(orggraph) )
+      graph_pc_updateTerm2edge(subgraph, orggraph, newtail, newhead, orgtail, orghead);
+
+   graph_edge_add(scip, subgraph, newtail, newhead, orggraph->cost[e], orggraph->cost[flipedge(e)]);
+}
+
+
 /** delete an edge from standard data structure */
 void graph_edge_del(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2318,8 +2449,8 @@ int graph_get_nTerms(
 }
 
 
-/** get (real) number of nodes , edges, terminals */
-void graph_get_NVET(
+/** get (real) number of nodes, edges, terminals */
+void graph_get_nVET(
    const GRAPH*    graph,              /**< the graph */
    int*            nnodes,             /**< number of nodes */
    int*            nedges,             /**< number of edges */
@@ -2956,107 +3087,111 @@ SCIP_RETCODE graph_copy_data(
    GRAPH*                copygraph           /**< graph to be copied to */
    )
 {
-   GRAPH* g = copygraph;
-   const GRAPH* p = orgraph;
-   const int ksize = p->ksize;
-   const int esize = p->esize;
+   GRAPH* g_copy = copygraph;
+   const GRAPH* g_org = orgraph;
+   const int ksize = g_org->ksize;
+   const int esize = g_org->esize;
 
    assert(scip != NULL);
    assert(orgraph != NULL);
    assert(copygraph != NULL);
-   assert(ksize == g->ksize && ksize > 0);
-   assert(esize == g->esize && esize >= 0);
-   assert(p->dcsr_storage == NULL && p->csr_storage == NULL);
+   assert(ksize == g_copy->ksize && ksize > 0);
+   assert(esize == g_copy->esize && esize >= 0);
+   assert(g_org->dcsr_storage == NULL && g_org->csr_storage == NULL);
 
-   g->norgmodeledges = p->norgmodeledges;
-   g->norgmodelknots = p->norgmodelknots;
-   g->knots = p->knots;
-   g->terms = p->terms;
-   g->edges = p->edges;
-   g->source = p->source;
-   g->orgsource = p->orgsource;
-   g->orgedges = p->orgedges;
-   g->orgknots = p->orgknots;
-   g->grid_dim = p->grid_dim;
-   g->stp_type = p->stp_type;
-   g->hoplimit = p->hoplimit;
-   g->extended = p->extended;
-   g->budget = p->budget;
-   g->is_packed = p->is_packed;
+   g_copy->norgmodeledges = g_org->norgmodeledges;
+   g_copy->norgmodelknots = g_org->norgmodelknots;
+   g_copy->knots = g_org->knots;
+   g_copy->terms = g_org->terms;
+   g_copy->edges = g_org->edges;
+   g_copy->source = g_org->source;
+   g_copy->orgsource = g_org->orgsource;
+   g_copy->orgedges = g_org->orgedges;
+   g_copy->orgknots = g_org->orgknots;
+   g_copy->grid_dim = g_org->grid_dim;
+   g_copy->stp_type = g_org->stp_type;
+   g_copy->hoplimit = g_org->hoplimit;
+   g_copy->extended = g_org->extended;
+   g_copy->budget = g_org->budget;
+   g_copy->is_packed = g_org->is_packed;
 
-   BMScopyMemoryArray(g->term, p->term, ksize);
-   BMScopyMemoryArray(g->mark, p->mark, ksize);
-   BMScopyMemoryArray(g->grad, p->grad, ksize);
-   BMScopyMemoryArray(g->inpbeg, p->inpbeg, ksize);
-   BMScopyMemoryArray(g->outbeg, p->outbeg, ksize);
-   BMScopyMemoryArray(g->cost, p->cost, esize);
-   BMScopyMemoryArray(g->tail, p->tail, esize);
-   BMScopyMemoryArray(g->head, p->head, esize);
-   BMScopyMemoryArray(g->ieat, p->ieat, esize);
-   BMScopyMemoryArray(g->oeat, p->oeat, esize);
+   BMScopyMemoryArray(g_copy->term, g_org->term, ksize);
+   BMScopyMemoryArray(g_copy->mark, g_org->mark, ksize);
+   BMScopyMemoryArray(g_copy->grad, g_org->grad, ksize);
+   BMScopyMemoryArray(g_copy->inpbeg, g_org->inpbeg, ksize);
+   BMScopyMemoryArray(g_copy->outbeg, g_org->outbeg, ksize);
+   BMScopyMemoryArray(g_copy->cost, g_org->cost, esize);
+   BMScopyMemoryArray(g_copy->tail, g_org->tail, esize);
+   BMScopyMemoryArray(g_copy->head, g_org->head, esize);
+   BMScopyMemoryArray(g_copy->ieat, g_org->ieat, esize);
+   BMScopyMemoryArray(g_copy->oeat, g_org->oeat, esize);
 
-   if( graph_pc_isPcMw(g) )
+   if( graph_pc_isPcMw(g_copy) )
    {
-      const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
-      const SCIP_Bool brpcmw = (g->stp_type == STP_BRMWCSP);
+      const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g_copy);
+      const SCIP_Bool brpcmw = (g_copy->stp_type == STP_BRMWCSP);
 
-      SCIPfreeMemoryArrayNull(scip, &(g->prize));
+      assert(g_copy->extended && g_org->extended);
 
-      if( g->costbudget != NULL )
+      if( g_copy->costbudget != NULL )
       {
          assert(brpcmw);
-         SCIPfreeMemoryArray(scip, &(g->costbudget));
+         SCIPfreeMemoryArray(scip, &(g_copy->costbudget));
       }
-
-      SCIPfreeMemoryArrayNull(scip, &(g->term2edge));
-
-      SCIP_CALL(SCIPallocMemoryArray(scip, &(g->prize), g->knots));
-      SCIP_CALL(SCIPallocMemoryArray(scip, &(g->term2edge), g->knots));
 
       if( brpcmw )
       {
-         SCIP_CALL(SCIPallocMemoryArray(scip, &(g->costbudget), g->knots));
-         BMScopyMemoryArray(g->costbudget, p->costbudget, g->knots);
+         SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->costbudget), g_copy->knots));
+         BMScopyMemoryArray(g_copy->costbudget, g_org->costbudget, g_copy->knots);
       }
 
-      for( int k = 0; k < g->knots; k++ )
-         if( Is_term(p->term[k]) && (!rpcmw || !graph_pc_knotIsFixedTerm(p, k)) )
-            g->prize[k] = 0.0;
+      SCIPfreeMemoryArrayNull(scip, &(g_copy->prize));
+      SCIPfreeMemoryArrayNull(scip, &(g_copy->term2edge));
+      SCIPfreeMemoryArrayNull(scip, &(g_copy->cost_org_pc));
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->prize), g_copy->knots));
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->term2edge), g_copy->knots));
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->cost_org_pc), g_copy->edges));
+
+      for( int k = 0; k < g_copy->knots; k++ )
+         if( Is_term(g_org->term[k]) && (!rpcmw || !graph_pc_knotIsFixedTerm(g_org, k)) )
+            g_copy->prize[k] = 0.0;
          else
-            g->prize[k] = p->prize[k];
+            g_copy->prize[k] = g_org->prize[k];
 
-      assert(p->term2edge != NULL);
+      assert(g_org->term2edge != NULL);
+      BMScopyMemoryArray(g_copy->term2edge, g_org->term2edge, g_copy->knots);
 
-      BMScopyMemoryArray(g->term2edge, p->term2edge, g->knots);
+      assert(g_org->cost_org_pc != NULL);
+      BMScopyMemoryArray(g_copy->cost_org_pc, g_org->cost_org_pc, g_copy->edges);
    }
-   else if( g->stp_type == STP_DCSTP )
+   else if( g_copy->stp_type == STP_DCSTP )
    {
-      assert(p->maxdeg != NULL);
+      assert(g_org->maxdeg != NULL);
 
-      SCIP_CALL(SCIPallocMemoryArray(scip, &(g->maxdeg), g->knots));
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->maxdeg), g_copy->knots));
 
-      for( int k = 0; k < g->knots; k++ )
-         g->maxdeg[k] = p->maxdeg[k];
+      for( int k = 0; k < g_copy->knots; k++ )
+         g_copy->maxdeg[k] = g_org->maxdeg[k];
    }
-   else if( p->stp_type == STP_RSMT )
+   else if( g_org->stp_type == STP_RSMT )
    {
-      assert(p->grid_ncoords != NULL);
-      assert(p->grid_coordinates != NULL);
+      assert(g_org->grid_ncoords != NULL);
+      assert(g_org->grid_coordinates != NULL);
 
-      SCIP_CALL(SCIPallocMemoryArray(scip, &(g->grid_coordinates), p->grid_dim));
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->grid_coordinates), g_org->grid_dim));
 
-      BMScopyMemoryArray(g->grid_coordinates, p->grid_coordinates, p->grid_dim);
-      for( int k = 0; k < p->grid_dim; k++ )
+      BMScopyMemoryArray(g_copy->grid_coordinates, g_org->grid_coordinates, g_org->grid_dim);
+      for( int k = 0; k < g_org->grid_dim; k++ )
       {
-         SCIP_CALL(SCIPallocMemoryArray(scip, &(g->grid_coordinates[k]), p->terms)); /*lint !e866*/
-         BMScopyMemoryArray(g->grid_coordinates[k], p->grid_coordinates[k], p->terms); /*lint !e866*/
+         SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->grid_coordinates[k]), g_org->terms)); /*lint !e866*/
+         BMScopyMemoryArray(g_copy->grid_coordinates[k], g_org->grid_coordinates[k], g_org->terms); /*lint !e866*/
       }
-      SCIP_CALL(SCIPallocMemoryArray(scip, &(g->grid_ncoords), p->grid_dim));
+      SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->grid_ncoords), g_org->grid_dim));
 
-      BMScopyMemoryArray(g->grid_ncoords, p->grid_ncoords, p->grid_dim);
+      BMScopyMemoryArray(g_copy->grid_ncoords, g_org->grid_ncoords, g_org->grid_dim);
    }
 
-   assert(graph_valid(scip, g));
+   assert(graph_valid(scip, g_copy));
 
    return SCIP_OKAY;
 }
@@ -3248,7 +3383,8 @@ void graph_uncover(
 }
 
 
-/** pack the graph, i.e. build a new graph that discards deleted edges and nodes */
+/** Packs the graph, i.e. builds a new graph that discards deleted edges and nodes.
+ *  The original graph is deleted. */
 SCIP_RETCODE graph_pack(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
@@ -3256,210 +3392,138 @@ SCIP_RETCODE graph_pack(
    SCIP_Bool             verbose             /**< verbose? */
    )
 {
-   GRAPH* g;
-   GRAPH* q;
-   int*   new;
-   int    oldnnodes;
-   int    oldnedges;
-   int    nnodes;
-   int    nedges;
-   SCIP_Bool rpcmw;
-   SCIP_Bool pcmw;
+   GRAPH *g_old;
+   GRAPH *g_new;
+   int* old2newNode;
+   const int oldnnodes = graph_get_nNodes(graph);
+   const int oldnedges = graph_get_nEdges(graph);
+   int nnodes = 0;
+   int nedges = 0;
+   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(graph);
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+   SCIP_Bool graphHasVanished = FALSE;
 
-   assert(scip      != NULL);
-   assert(graph     != NULL);
+   assert(scip && newgraph);
    assert(graph_valid(scip, graph));
    assert(!graph->is_packed);
 
-   g = graph;
-   nnodes = 0;
-   nedges = 0;
-   oldnnodes = g->knots;
-   oldnedges = g->edges;
-   SCIP_CALL( SCIPallocBufferArray(scip, &new, oldnnodes) );
+   g_old = graph;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &old2newNode, oldnnodes) );
 
    if( verbose )
       printf("Reduced graph: ");
 
-   /* count nodes */
+   /* build node mapping */
    for( int i = 0; i < oldnnodes; i++ )
    {
-      /* are there incident edges to current node? */
-      if( g->grad[i] > 0 )
-         new[i] = nnodes++;
+      if( g_old->grad[i] > 0 )
+         old2newNode[i] = nnodes++;
       else
-         new[i] = -1;
+         old2newNode[i] = -1;
    }
 
    /* graph vanished? */
    if( nnodes == 0 )
    {
-      SCIPfreeBufferArray(scip, &new);
-      new = NULL;
+      SCIPfreeBufferArray(scip, &old2newNode);
+      old2newNode = NULL;
       if( verbose )
          printf(" graph vanished!\n");
 
       nnodes = 1;
+      graphHasVanished = TRUE;
    }
 
-   /* count edges */
+   /* count surviving edges */
    for( int i = 0; i < oldnedges; i++ )
    {
-      if( g->oeat[i] != EAT_FREE )
+      if( g_old->oeat[i] != EAT_FREE )
       {
-         assert(g->ieat[i] != EAT_FREE);
+         assert(g_old->ieat[i] != EAT_FREE);
          nedges++;
       }
    }
 
    assert(nnodes > 1 || nedges == 0);
-   SCIP_CALL( graph_init(scip, newgraph, nnodes, nedges, g->layers) );
-   q = *newgraph;
-   q->norgmodelknots = g->norgmodelknots;
-   q->norgmodeledges = g->norgmodeledges;
-   q->orgsource = g->orgsource;
-   q->orgtail = g->orgtail;
-   q->orghead = g->orghead;
-   q->orgknots = g->knots;
-   q->orgedges = g->edges;
-   q->stp_type = g->stp_type;
-   q->maxdeg = g->maxdeg;
-   q->grid_dim = g->grid_dim;
-   q->grid_ncoords = g->grid_ncoords;
-   q->grid_coordinates = g->grid_coordinates;
-   q->pcancestors = g->pcancestors;
-   q->fixedcomponents = g->fixedcomponents;
-   q->hoplimit = g->hoplimit;
-   q->extended = g->extended;
-   q->budget = g->budget;
-   q->is_packed = TRUE;
+   SCIP_CALL( graph_init(scip, newgraph, nnodes, nedges, g_old->layers) );
+   g_new = *newgraph;
+   g_new->norgmodelknots = g_old->norgmodelknots;
+   g_new->norgmodeledges = g_old->norgmodeledges;
+   g_new->orgsource = g_old->orgsource;
+   g_new->orgtail = g_old->orgtail;
+   g_new->orghead = g_old->orghead;
+   g_new->orgknots = g_old->knots;
+   g_new->orgedges = g_old->edges;
+   g_new->stp_type = g_old->stp_type;
+   g_new->maxdeg = g_old->maxdeg;
+   g_new->grid_dim = g_old->grid_dim;
+   g_new->grid_ncoords = g_old->grid_ncoords;
+   g_new->grid_coordinates = g_old->grid_coordinates;
+   g_new->pcancestors = g_old->pcancestors;
+   g_new->fixedcomponents = g_old->fixedcomponents;
+   g_new->hoplimit = g_old->hoplimit;
+   g_new->extended = g_old->extended;
+   g_new->budget = g_old->budget;
+   g_new->is_packed = TRUE;
 
-   if( new == NULL )
+   if( graphHasVanished )
    {
-      q->ancestors = NULL;
-      graph_free(scip, &g, FALSE);
+      assert(!old2newNode);
 
-      if( q->stp_type == STP_RSMT )
+      g_new->ancestors = NULL;
+      graph_free(scip, &g_old, FALSE);
+
+      if( g_new->stp_type == STP_RSMT )
       {
-         q->grid_ncoords = NULL;
-         q->grid_coordinates = NULL;
+         g_new->grid_ncoords = NULL;
+         g_new->grid_coordinates = NULL;
       }
 
-      graph_knot_add(q, 0);
-      q->source = 0;
+      graph_knot_add(g_new, 0);
+      g_new->source = 0;
+
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(q->ancestors), nedges) );
-
-   rpcmw = graph_pc_isRootedPcMw(g);
-   pcmw = (rpcmw || g->stp_type == STP_MWCSP || g->stp_type == STP_PCSPG);
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_new->ancestors), nedges) );
 
    if( pcmw )
    {
-      SCIP_CALL( graph_pc_init(scip, q, nnodes, nnodes) );
-      if( g->stp_type == STP_BRMWCSP )
-         SCIP_CALL( SCIPallocMemoryArray(scip, &(q->costbudget), nnodes) );
+      assert(g_new->ksize == nnodes);
+
+      SCIP_CALL( graph_pc_initSubgraph(scip, g_new) );
+
+      if( g_old->stp_type == STP_BRMWCSP )
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(g_new->costbudget), nnodes) );
    }
 
-   /* add nodes (of positive degree) */
-
-   if( rpcmw )
-   {
-      for( int i = 0; i < oldnnodes; i++ )
-         g->mark[i] = (g->grad[i] > 0);
-
-      for( int e = g->outbeg[g->source]; e != EAT_LAST; e = g->oeat[e] )
-      {
-         const int i = g->head[e];
-
-         if( SCIPisGT(scip, g->cost[e], 0.0) && Is_term(g->term[i]) && g->term2edge[i] >= 0 )
-         {
-            g->mark[i] = FALSE;
-            assert(g->grad[i] == 2);
-         }
-      }
-   }
-
-   for( int i = 0; i < oldnnodes; i++ )
-   {
-      assert(g->term[i] < g->layers);
-      if( g->grad[i] > 0 )
-      {
-         if( pcmw )
-         {
-            if( !Is_term(g->term[i]) || (rpcmw && g->mark[i]) )
-               q->prize[q->knots] = g->prize[i];
-            else
-               q->prize[q->knots] = 0.0;
-         }
-         if( g->stp_type == STP_BRMWCSP )
-         {
-            if( !Is_term(g->term[i]) || (g->mark[i]) )
-               q->costbudget[q->knots] = g->costbudget[i];
-            else
-               q->costbudget[q->knots] = 0.0;
-         }
-         graph_knot_add(q, g->term[i]);
-      }
-   }
+   /* add nodes (of positive degree) to new graph */
+   packNodes(scip, g_old, g_new);
 
    /* add root */
-   assert(q->term[new[g->source]] == 0);
+   assert(Is_term(g_new->term[old2newNode[g_old->source]]));
 
-   q->source = new[g->source];
+   g_new->source = old2newNode[g_old->source];
 
-   if( rpcmw )
-      assert(FARAWAY == q->prize[q->source]);
+   assert(!rpcmw || FARAWAY == g_new->prize[g_new->source]);
 
-   /* add edges */
-   for( int i = 0; i < oldnedges; i += 2 )
-   {
-      int e;
+   SCIP_CALL( packEdges(scip, old2newNode, g_old, nnodes, g_new) );
 
-      if( g->ieat[i] == EAT_FREE )
-      {
-         assert(g->oeat[i]     == EAT_FREE);
-         assert(g->ieat[i + 1] == EAT_FREE);
-         assert(g->oeat[i + 1] == EAT_FREE);
+   SCIPfreeBufferArray(scip, &old2newNode);
 
-         graph_edge_delHistory(scip, g, i);
-         continue;
-      }
+   SCIP_CALL( graph_pc_finalizeSubgraph(scip, g_new) );
 
-      assert(g->oeat[i]      != EAT_FREE);
-      assert(g->ieat[i + 1]  != EAT_FREE);
-      assert(g->oeat[i + 1]  != EAT_FREE);
-      assert(new[g->tail[i]] >= 0);
-      assert(new[g->head[i]] >= 0);
+   if( g_old->path_heap != NULL )
+      graph_path_exit(scip, g_old);
 
-      e = q->edges;
+   g_old->stp_type = UNKNOWN;
+   graph_free(scip, &g_old, FALSE);
 
-      q->ancestors[e] = NULL;
-      q->ancestors[e + 1] = NULL;
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(q->ancestors[e]), g->ancestors[i], NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(q->ancestors[e + 1]), g->ancestors[i + 1], NULL) );
-
-      assert(new[g->tail[i]] < nnodes && new[g->head[i]] < nnodes);
-
-      if( pcmw )
-         graph_pc_updateTerm2edge(q, g, new[g->tail[i]], new[g->head[i]], g->tail[i], g->head[i]);
-
-      graph_edge_add(scip, q, new[g->tail[i]], new[g->head[i]], g->cost[i], g->cost[Edge_anti(i)]);
-   }
-
-   SCIPfreeBufferArray(scip, &new);
-
-   if( g->path_heap != NULL )
-      graph_path_exit(scip, g);
-
-   g->stp_type = UNKNOWN;
-   graph_free(scip, &g, FALSE);
-
-   assert(graph_valid(scip, q));
+   assert(graph_valid(scip, g_new));
 
    if( verbose )
-      printf("Nodes: %d  Edges: %d  Terminals: %d\n", q->knots, q->edges, q->terms);
+      printf("Nodes: %d  Edges: %d  Terminals: %d\n", g_new->knots, g_new->edges, g_new->terms);
 
    return SCIP_OKAY;
 }

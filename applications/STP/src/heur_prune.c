@@ -726,7 +726,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
       if( nfixededges >= reductbound )
       {
-         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
          reductbound = getRedBound(0, anedges);
       }
    }
@@ -748,7 +748,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    }
 
    /* get number of remaining nodes, edges and terminals */
-   graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
+   graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
 
    if( solgiven )
    {
@@ -777,7 +777,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          int lminnelims = 0;
 
          /* get number of remaining edges */
-         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
 
          if( anterms <= 2 )
          {
@@ -803,7 +803,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             graph_pc_2trans(scip, prunegraph);
 
 #ifdef SCIP_DEBUG
-         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
          printf("PRUNE round: %d edges %d  nodes: %d \n", i, anedges / 2, annodes);
          printf("PRUNE round: %d minelims %d  really reduced: %d \n", i, minnelims, brednelims);
 #endif
@@ -829,7 +829,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             break;
 
          /* get number of remaining edges */
-         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
 
          reductbound = getRedBound(i + 1, anedges);
 
@@ -850,7 +850,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          else
             SCIP_CALL(level0(scip, prunegraph));
 
-         graph_get_NVET(prunegraph, &annodes, &anedges, &anterms);
+         graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
 
          if( anterms <= 2 )
          {

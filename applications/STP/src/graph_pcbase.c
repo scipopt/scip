@@ -324,6 +324,28 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
    return SCIP_OKAY;
 }
 
+
+/** initializes term2edge array */
+static
+SCIP_RETCODE initTerm2Edge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   int                   size                /**< the size */
+   )
+{
+   assert(scip && g);
+   assert(!g->term2edge);
+   assert(size > 0);
+
+   SCIP_CALL(SCIPallocMemoryArray(scip, &(g->term2edge), size));
+
+   for( int i = 0; i < size; i++ )
+      g->term2edge[i] = TERM2EDGE_NOTERM;
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * global functions
  */
@@ -466,33 +488,76 @@ SCIP_RETCODE graph_PcToSap(
 #endif
 
 
-/** allocates (first and second) and initializes (only second) arrays for PC and MW problems */
-SCIP_RETCODE graph_pc_init(
+/** allocates prizes array for PC and MW problems */
+SCIP_RETCODE graph_pc_initPrizes(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
-   int                   sizeprize,          /**< size of prize array to allocate (or -1) */
-   int                   sizeterm2edge       /**< size of term2edge array to allocate and initialize to -1 (or -1) */
+   int                   sizeprize          /**< size of prize array to allocate (or -1) */
    )
 {
    assert(scip != NULL);
    assert(g != NULL);
+   assert(NULL == g->prize);
+   assert(sizeprize > 0);
 
-   if( sizeprize > 0 )
-   {
-      assert(NULL == g->prize);
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), sizeprize) );
-   }
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), sizeprize) );
 
-   if( sizeterm2edge > 0 )
-   {
-      assert(NULL == g->term2edge);
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->term2edge), sizeterm2edge) );
-      for( int i = 0; i < sizeterm2edge; i++ )
-         g->term2edge[i] = TERM2EDGE_NOTERM;
-   }
+   for( int i = 0; i < sizeprize; i++ )
+      g->prize[i] = -FARAWAY;
 
    return SCIP_OKAY;
 }
+
+
+// todo this method should be static once subgraph method is finished
+/** allocates and initializes arrays for subgraph PC/MW */
+SCIP_RETCODE graph_pc_initSubgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   int ksize;
+   assert(scip && g);
+
+   ksize = g->ksize;
+
+   assert(ksize > 0 && ksize >= g->knots);
+
+   SCIP_CALL( graph_pc_initPrizes(scip, g, ksize) );
+   SCIP_CALL( initTerm2Edge(scip, g, ksize) );
+
+   return SCIP_OKAY;
+}
+
+// todo this method should be static once subgraph method is finished
+/** allocates and initializes arrays for subgraph PC/MW */
+SCIP_RETCODE graph_pc_finalizeSubgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                subgraph            /**< the subgraph */
+   )
+{
+   const int nnodes = graph_get_nNodes(subgraph);
+
+   assert(scip);
+   assert(subgraph->term2edge && subgraph->prize);
+   assert(subgraph->extended);
+
+   SCIP_CALL( initCostOrgPc(scip, subgraph) );
+
+   assert(subgraph->source >= 0);
+   assert(!graph_pc_isPcMw(subgraph) || Is_term(subgraph->term[subgraph->source]));
+
+#if 0
+   /* update non-leaf properties */
+   for( int i = 0; i < nnodes; ++i )
+   {
+      if( subgraph )
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
 
 /** changes graph of PC and MW problems needed for presolving routines */
 SCIP_RETCODE graph_pc_presolInit(
@@ -1451,7 +1516,8 @@ SCIP_RETCODE graph_pc_getRsap(
    for( int k = 0; k < nnodes; k++ )
       p->mark[k] = (p->grad[k] > 0);
 
-   SCIP_CALL( graph_pc_init(scip, p, nnodes, nnodes) );
+   SCIP_CALL( graph_pc_initPrizes(scip, p, nnodes) );
+   SCIP_CALL( initTerm2Edge(scip, p, nnodes) );
 
    for( int k = 0; k < nnodes; k++)
    {
@@ -1663,8 +1729,7 @@ SCIP_RETCODE graph_pc_2pc(
    graph_knot_add(graph, 0);
    graph->prize[root] = 0.0;
 
-   graph_pc_init(scip, graph, -1, graph->knots);
-   assert(graph->term2edge);
+   SCIP_CALL( initTerm2Edge(scip, graph, graph->knots) );
 
    graph->term2edge[root] = TERM2EDGE_FIXEDTERM;
 
@@ -1800,9 +1865,7 @@ SCIP_RETCODE graph_pc_2rpc(
    for( int k = 0; k < npotterms; ++k )
       graph_knot_add(graph, STP_TERM_NONE);
 
-   /* allocate and default initialize term2edge array */
-   graph_pc_init(scip, graph, -1, graph->knots);
-   assert(graph->term2edge);
+   SCIP_CALL( initTerm2Edge(scip, graph, graph->knots) );
 
    nterms = 0;
 
@@ -1984,13 +2047,11 @@ SCIP_RETCODE graph_pc_2rmw(
    SCIP_CALL( graph_resize(scip, graph, (graph->ksize + npterms), (graph->esize + npterms * 4) , -1) );
    maxweights = graph->prize;
 
-   /* create a new nodes */
+   /* create new nodes */
    for( int k = 0; k < npterms; k++ )
       graph_knot_add(graph, -1);
 
-   /* allocate and initialize term2edge array */
-   graph_pc_init(scip, graph, -1, graph->knots);
-   assert(graph->term2edge);
+   SCIP_CALL( initTerm2Edge(scip, graph, graph->knots) );
 
    i = 0;
    for( int k = 0; k < nnodes; ++k )

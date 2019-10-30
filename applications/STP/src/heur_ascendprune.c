@@ -424,7 +424,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       newgraph->stp_type = probtype;
 
    if( pcmw )
-      SCIP_CALL( graph_pc_init(scip, newgraph, nnewnodes, nnewnodes) );
+      SCIP_CALL( graph_pc_initSubgraph(scip, newgraph) );
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -483,10 +483,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
          edgeancestor[newgraph->edges] = e;
          edgeancestor[newgraph->edges + 1] = flipedge(e);
 
-         if( pcmw )
-            graph_pc_updateTerm2edge(newgraph, g, tail, head, g->tail[e], g->head[e]);
-
-         graph_edge_add(scip, newgraph, tail, head, g->cost[e], g->cost[flipedge(e)]);
+         graph_edge_addSubgraph(scip, g, nodechild, e, newgraph);
       }
    }
 
@@ -494,6 +491,8 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    newgraph->norgmodeledges = nnewedges;
 
    assert(!pcmw || TERM2EDGE_NOTERM == newgraph->term2edge[newgraph->source]);
+
+   SCIP_CALL( graph_pc_finalizeSubgraph(scip, newgraph) );
 
    /* initialize ancestors of new graph edges */
    SCIP_CALL( graph_init_history(scip, newgraph) );

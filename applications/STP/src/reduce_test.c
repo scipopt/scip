@@ -64,7 +64,7 @@ SCIP_RETCODE graphBuildV5E5(
 
    if( pc )
    {
-      graph_pc_init(scip, graph, nnodes, -1);
+      SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
 
       for( int i = 0; i < nnodes; i++ )
          graph->prize[i] = 0.0;
@@ -1277,7 +1277,7 @@ SCIP_RETCODE sdPcMwTest1(
    graph_edge_add(scip, graph, 0, 2, 1.0, 1.0);
    graph_edge_add(scip, graph, 1, 2, 1.0, 1.0);
 
-   graph_pc_init(scip, graph, nnodes, -1);
+   SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
 
    for( int i = 0; i < nnodes; i++ )
       graph->prize[i] = 0.0;
@@ -1318,7 +1318,7 @@ SCIP_RETCODE sdPcMwTest2(
    graph_edge_add(scip, graph, 1, 2, 1.0, 1.0);
    graph_edge_add(scip, graph, 2, 3, 1.0, 1.0);
 
-   graph_pc_init(scip, graph, nnodes, -1);
+   SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
 
    for( int i = 0; i < nnodes; i++ )
       graph->prize[i] = 0.0;
@@ -1370,8 +1370,7 @@ SCIP_RETCODE sdPcMwTest4(
    graph_edge_add(scip, graph, 0, 4, 0.5, 0.5);
    graph_edge_add(scip, graph, 1, 4, 0.5, 0.5);
 
-
-   graph_pc_init(scip, graph, nnodes, -1);
+   SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
 
    for( int i = 0; i < nnodes; i++ )
       graph->prize[i] = 0.0;
@@ -1619,8 +1618,7 @@ SCIP_RETCODE heur_extendPcMwOuterTest(
    graph_edge_add(scip, graph, 2, 3, 1.0, 1.0);
    graph_edge_add(scip, graph, 3, 4, 1.0, 1.0);
 
-
-   graph_pc_init(scip, graph, nnodes, -1);
+   SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
 
    for( int i = 0; i < nnodes; i++ )
       graph->prize[i] = 0.0;

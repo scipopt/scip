@@ -1315,8 +1315,9 @@ SCIP_RETCODE graph_load(
                   {
                      assert(terms == nodes);
                      assert(g != NULL);
+
                      if( g->prize == NULL )
-                        SCIP_CALL( graph_pc_init(scip, g, terms, -1) );
+                        SCIP_CALL( graph_pc_initPrizes(scip, g, terms) );
                   }
                   break;
                case KEY_TERMINALS_GROUPS :
@@ -1346,11 +1347,13 @@ SCIP_RETCODE graph_load(
                case KEY_TERMINALS_ROOTP :
                   assert(g != NULL);
                   assert(terms > 0);
+
                   g->source = (int)para[0].n - 1;
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
                   stp_type = STP_RPCSPG;
+
                   if( g->prize == NULL )
-                     SCIP_CALL( graph_pc_init(scip, g, nodes, -1) );
+                     SCIP_CALL( graph_pc_initPrizes(scip, g, nodes) );
 
                   g->prize[(int)para[0].n - 1] = FARAWAY;
                   break;
@@ -1373,7 +1376,7 @@ SCIP_RETCODE graph_load(
                   if( g->prize == NULL )
                   {
                      stp_type = STP_RPCSPG;
-                     SCIP_CALL( graph_pc_init(scip, g, nodes, -1) );
+                     SCIP_CALL( graph_pc_initPrizes(scip, g, nodes) );
                   }
                   else
                      assert(stp_type == STP_RPCSPG);
@@ -1407,7 +1410,7 @@ SCIP_RETCODE graph_load(
                   {
                      assert(stp_type != STP_RPCSPG);
                      stp_type = STP_PCSPG;
-                     SCIP_CALL( graph_pc_init(scip, g, nodes, -1) );
+                     SCIP_CALL( graph_pc_initPrizes(scip, g, nodes) );
                   }
                   g->prize[(int)para[0].n - 1] = (double)para[1].n;
                   termcount++;

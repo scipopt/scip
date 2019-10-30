@@ -1326,7 +1326,7 @@ SCIP_RETCODE buildsolgraph(
 
       if( pcmw )
       {
-         SCIP_CALL( graph_pc_init(scip, newgraph, nsolnodes, nsolnodes) );
+         SCIP_CALL( graph_pc_initSubgraph(scip, newgraph) );
       }
 
       newgraph->hoplimit = graph->hoplimit;
@@ -1387,18 +1387,10 @@ SCIP_RETCODE buildsolgraph(
       {
          if( soledge[i / 2] )
          {
-            const int orgtail = graph->tail[i];
-            const int orghead = graph->head[i];
-
             (*edgeancestor)[j++] = i;
             (*edgeancestor)[j++] = i + 1;
 
-            if( pcmw )
-            {
-               graph_pc_updateTerm2edge(newgraph, graph, dnodemap[orgtail], dnodemap[orghead], orgtail, orghead);
-            }
-
-            graph_edge_add(scip, newgraph, dnodemap[orgtail], dnodemap[orghead], graph->cost[i], graph->cost[i + 1]);
+            graph_edge_addSubgraph(scip, graph, dnodemap, i, newgraph);
 
             /* (*edgeweight)[e]: number of solutions containing edge e */
             for( int k = 0; k < selectedsols; k++ )
@@ -1428,6 +1420,9 @@ SCIP_RETCODE buildsolgraph(
       }
 
       assert(j == 2 * nsoledges);
+
+      SCIP_CALL( graph_pc_finalizeSubgraph(scip, newgraph) );
+
       SCIPfreeBufferArray(scip, &soledge);
       SCIPfreeBufferArray(scip, &dnodemap);
       SCIPfreeBufferArray(scip, &solnode);
@@ -1894,7 +1889,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    newgraph->extended = TRUE;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &unodemap, nsolnodes) );
-   SCIP_CALL( graph_pc_init(scip, newgraph, nsolnodes, nsolnodes) );
+   SCIP_CALL( graph_pc_initSubgraph(scip, newgraph) );
 
    j = 0;
    for( int i = 0; i < nnodes; i++ )
@@ -1925,17 +1920,11 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    /* add edges */
    for( int i = 0; i < nedges; i += 2 )
       if( stvertex[graph->tail[i]] && stvertex[graph->head[i]] && graph->oeat[i] != EAT_FREE )
-      {
-         const int tail = graph->tail[i];
-         const int head = graph->head[i];
-         const int dtail = dnodemap[tail];
-         const int dhead = dnodemap[head];
-
-         graph_pc_updateTerm2edge(newgraph, graph, dtail, dhead, tail, head);
-         graph_edge_add(scip, newgraph, dtail, dhead, graph->cost[i], graph->cost[i + 1]);
-      }
+         graph_edge_addSubgraph(scip, graph, dnodemap, i, newgraph);
 
    assert(newgraph->edges == nsoledges);
+
+   SCIP_CALL( graph_pc_finalizeSubgraph(scip, newgraph) );
 
 
    /*** step 2: presolve ***/
