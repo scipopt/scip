@@ -3282,12 +3282,15 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    int*                  orbitidx,           /**< pointer to index of selected orbit */
    int*                  leaderidx,          /**< pointer to leader in orbit */
    int                   orbitrule,          /**< rule to select orbit */
-   int                   leaderrule          /**< rule to select leader in orbit */
+   int                   leaderrule,         /**< rule to select leader in orbit */
+   SCIP_Bool             symretopesactive,   /**< whether inequalities based on symretopes are combined with
+                                              *   Schreier Sims cuts */
+   SCIP_Bool*            success             /**< pointer to store whether orbit cut be selected successfully */
    )
 {
    SCIP_DIGRAPH* conflictgraph;
    SCIP_NODEDATA* nodedata;
-   SCIP_Bool success;
+   SCIP_Bool conflictgraphsuccess;
    int i;
    int candcriterion;
    int curcriterion;
@@ -3308,6 +3311,12 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
 
    *orbitidx = 0;
    *leaderidx = 0;
+
+   /* if not inequalities based on symretopes shall be added, Schreier Sims cuts are always valid */
+   if ( symretopesactive )
+      *success = FALSE;
+   else
+      *success = TRUE;
 
    /* select orbit
     *
@@ -3334,6 +3343,10 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    {
       for (i = 0; i < norbits; ++i)
       {
+         /* if symretopes shall be applied, the leading variables have to be binary */
+         if ( symretopesactive && SCIPvarGetType(permvars[orbits[orbitbegins[i]]]) != SCIP_VARTYPE_BINARY )
+            continue;
+
          curcriterion = orbitbegins[i + 1] - orbitbegins[i];
 
          if ( (orbitrule == 1 && curcriterion < candcriterion)
@@ -3341,6 +3354,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
          {
             candcriterion = curcriterion;
             *orbitidx = i;
+            *success = TRUE;
          }
       }
 
@@ -3356,13 +3370,17 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
       {
          /* create conflict graph */
          SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, permvars, npermvars, TRUE,
-               permvars, npermvars, permvarmap, orbits, orbitbegins, norbits, &success) );
+               permvars, npermvars, permvarmap, orbits, orbitbegins, norbits, &conflictgraphsuccess) );
 
-         if ( ! success )
+         if ( ! conflictgraphsuccess )
             return SCIP_OKAY;
 
          for (i = 0; i < npermvars; ++i)
          {
+            /* if symretopes shall be applied, the leading variables have to be binary */
+            if ( symretopesactive && SCIPvarGetType(permvars[i]) != SCIP_VARTYPE_BINARY )
+               continue;
+
             nodedata = SCIPdigraphGetNodeData(conflictgraph, i);
             assert( nodedata != NULL );
 
@@ -3389,6 +3407,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
 
                   *orbitidx = nodedata->orbitidx;
                   *leaderidx = nodedata->posinorbit;
+                  *success = TRUE;
                }
             }
             else
@@ -3400,6 +3419,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
 
                   *orbitidx = nodedata->orbitidx;
                   *leaderidx = nodedata->posinorbit;
+                  *success = TRUE;
                }
             }
          }
@@ -3421,13 +3441,17 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
 
          /* create conflict graph */
          SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, vars, nvars, FALSE,
-               permvars, 0, NULL, orbits, orbitbegins, norbits, &success) );
+               permvars, 0, NULL, orbits, orbitbegins, norbits, &conflictgraphsuccess) );
 
-         if ( ! success )
+         if ( ! conflictgraphsuccess )
             return SCIP_OKAY;
 
          for (i = 0; i < nvars; ++i)
          {
+            /* if symretopes shall be applied, the leading variables have to be binary */
+            if ( symretopesactive && SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
+               continue;
+
             nodedata = SCIPdigraphGetNodeData(conflictgraph, i);
             assert( nodedata != NULL );
 
@@ -3448,6 +3472,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
 
                *orbitidx = nodedata->orbitidx;
                *leaderidx = nodedata->posinorbit;
+               *success = TRUE;
             }
          }
 
@@ -3492,6 +3517,8 @@ SCIP_RETCODE addSchreierSimsConss(
    int posleader;
    int orbitrule;
    int leaderrule;
+   SCIP_Bool symretopesactive;
+   SCIP_Bool success;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -3518,6 +3545,7 @@ SCIP_RETCODE addSchreierSimsConss(
 
    orbitrule = propdata->schreiersimsorbitrule;
    leaderrule = propdata->schreiersimsleaderrule;
+   symretopesactive = ISSYMRETOPESACTIVE(propdata->usesymmetry);
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &inactiveperms, nperms) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &componentblocked, ncomponents) );
@@ -3551,7 +3579,10 @@ SCIP_RETCODE addSchreierSimsConss(
 
       /* select orbit and leader */
       SCIP_CALL( selectOrbitLeaderSchreierSimsConss(scip, permvars, npermvars, propdata->permvarmap, orbits, orbitbegins, norbits, &orbitidx, &orbitleaderidx,
-            orbitrule, leaderrule) );
+            orbitrule, leaderrule, symretopesactive, &success) );
+
+      if ( ! success )
+         break;
 
       /* add Schreier Sims cuts */
       SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, propdata, permvars, orbits, orbitbegins, orbitidx, orbitleaderidx) );
