@@ -11261,7 +11261,7 @@ void exprgraphNodePropagateBounds(
          }
 
          SCIPintervalPowerScalarInverse(infinity, &childbounds, node->children[i]->bounds, n, tmp);
-         SCIPdebugPrintf(" -> c%d = [%10g, %10g]\n", i, childbounds.inf, childbounds.sup);
+         SCIPdebugPrintf(" with c%d = [%10g, %10g] -> c%d = [%10g, %10g]\n", i, node->children[i]->bounds.inf, node->children[i]->bounds.sup, i, childbounds.inf, childbounds.sup);
          if( SCIPintervalIsEmpty(infinity, childbounds) )
          {
             SCIPdebugMessage(" -> cutoff\n");
