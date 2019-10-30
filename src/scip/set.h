@@ -960,14 +960,8 @@ SCIP_RETCODE SCIPsetSetVerbLevel(
 /** sets feasibility tolerance */
 SCIP_RETCODE SCIPsetSetFeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< LP data, or NULL */
    SCIP_Real             feastol             /**< new feasibility tolerance */
-   );
-
-/** sets primal feasibility tolerance of LP solver */
-SCIP_RETCODE SCIPsetSetLpfeastol(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */
-   SCIP_Bool             printnewvalue       /**< should "numerics/lpfeastol = ..." be printed? */
    );
 
 /** sets feasibility tolerance for reduced costs in LP solution */
@@ -1070,8 +1064,8 @@ SCIP_Real SCIPsetFeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** returns primal feasibility tolerance of LP solver given as minimum of lpfeastol option and relaxfeastol */
-SCIP_Real SCIPsetLpfeastol(
+/** returns factor w.r.t. primal feasibility tolerance that determines default (and maximal) feasibility tolerance */
+SCIP_Real SCIPsetLPFeastolFactor(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -1590,7 +1584,7 @@ SCIP_Bool SCIPsetGetSubscipsOff(
 #define SCIPsetEpsilon(set)                ( (set)->num_epsilon )
 #define SCIPsetSumepsilon(set)             ( (set)->num_sumepsilon )
 #define SCIPsetFeastol(set)                ( (set)->num_feastol )
-#define SCIPsetLpfeastol(set)              ( (set)->num_relaxfeastol == SCIP_INVALID ? (set)->num_lpfeastol : MIN((set)->num_lpfeastol, (set)->num_relaxfeastol) )
+#define SCIPsetLPFeastolFactor(set)        ( (set)->num_lpfeastolfactor )
 #define SCIPsetDualfeastol(set)            ( (set)->num_dualfeastol )
 #define SCIPsetBarrierconvtol(set)         ( (set)->num_barrierconvtol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )

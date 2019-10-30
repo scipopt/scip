@@ -406,7 +406,7 @@ struct SCIP_Set
    SCIP_Real             num_feastol;        /**< feasibility tolerance for constraints */
    SCIP_Real             num_checkfeastolfac;/**< factor to change the feasibility tolerance when testing the best
                                               *   solution for feasibility (after solving process) */
-   SCIP_Real             num_lpfeastol;      /**< primal feasibility tolerance of LP solver (user parameter, see also num_relaxfeastol) */
+   SCIP_Real             num_lpfeastolfactor;/**< factor w.r.t. primal feasibility tolerance that determines default (and maximal) primal feasibility tolerance of LP solver (user parameter, see also num_relaxfeastol) */
    SCIP_Real             num_dualfeastol;    /**< feasibility tolerance for reduced costs */
    SCIP_Real             num_barrierconvtol; /**< convergence tolerance used in barrier algorithm */
    SCIP_Real             num_boundstreps;    /**< minimal improve for strengthening bounds */

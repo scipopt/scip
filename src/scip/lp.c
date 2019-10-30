@@ -9108,6 +9108,8 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->rootlpobjval = SCIP_INVALID;
    (*lp)->rootlooseobjval = SCIP_INVALID;
    (*lp)->cutoffbound = SCIPsetInfinity(set);
+   (*lp)->feastol = SCIP_INVALID; /* to have it initialized */
+   SCIPlpResetFeastol(*lp, set);
    (*lp)->validdegeneracylp = -1;
    (*lp)->objsqrnorm = 0.0;
    (*lp)->objsumnorm = 0.0;
@@ -9174,7 +9176,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->divenolddomchgs = 0;
    (*lp)->adjustlpval = FALSE;
    (*lp)->lpiobjlim = SCIPlpiInfinity((*lp)->lpi);
-   (*lp)->lpifeastol = SCIPsetLpfeastol(set);
+   (*lp)->lpifeastol = (*lp)->feastol;
    (*lp)->lpidualfeastol = SCIPsetDualfeastol(set);
    (*lp)->lpibarrierconvtol = SCIPsetBarrierconvtol(set);
    (*lp)->lpifromscratch = FALSE;
@@ -10207,6 +10209,57 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
    lp->cutoffbound = cutoffbound;
 
    return SCIP_OKAY;
+}
+
+/** gets current primal feasibility tolerance of LP solver */
+SCIP_Real SCIPlpGetFeastol(
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->feastol;
+}
+
+/** sets primal feasibility tolerance of LP solver */
+void SCIPlpSetFeastol(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             newfeastol          /**< new primal feasibility tolerance for LP */
+   )
+{
+   assert(lp != NULL);
+   assert(newfeastol > 0.0);
+
+   SCIPsetDebugMsg(set, "setting LP primal feasibility tolerance from %g to %g\n", lp->feastol, newfeastol);
+
+   /* mark the LP unsolved, if the primal feasibility tolerance is tightened */
+   if( newfeastol < lp->feastol )
+   {
+      lp->solved = FALSE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
+
+   lp->feastol = newfeastol;
+}
+
+/** resets primal feasibility tolerance of LP solver
+ *
+ * Sets primal feasibility tolerance to min of numerics/lpfeastolfactor * numerics/feastol and relaxfeastol.
+ */
+void SCIPlpResetFeastol(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(lp != NULL);
+
+   SCIPsetDebugMsg(set, "reset LP primal feasibility tolerance\n");
+
+   if( SCIPsetRelaxfeastol(set) != SCIP_INVALID ) /*lint !e777*/
+      SCIPlpSetFeastol(lp, set, MIN(SCIPsetRelaxfeastol(set), SCIPsetLPFeastolFactor(set) * SCIPsetFeastol(set))); /*lint !e666*/
+   else
+      SCIPlpSetFeastol(lp, set, SCIPsetLPFeastolFactor(set) * SCIPsetFeastol(set));
 }
 
 /** returns the name of the given LP algorithm */
@@ -11567,7 +11620,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetObjlim(lp, set, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob), &success) );
    }
    SCIP_CALL( lpSetIterationLimit(lp, itlim) );
-   SCIP_CALL( lpSetFeastol(lp, tightprimfeastol ? FEASTOLTIGHTFAC * SCIPsetLpfeastol(set) : SCIPsetLpfeastol(set), &success) );
+   SCIP_CALL( lpSetFeastol(lp, tightprimfeastol ? FEASTOLTIGHTFAC * lp->feastol : lp->feastol, &success) );
    SCIP_CALL( lpSetDualfeastol(lp, tightdualfeastol ? FEASTOLTIGHTFAC * SCIPsetDualfeastol(set) : SCIPsetDualfeastol(set),
          &success) );
    SCIP_CALL( lpSetBarrierconvtol(lp, (tightprimfeastol || tightdualfeastol) ? FEASTOLTIGHTFAC * SCIPsetBarrierconvtol(set)
@@ -11704,7 +11757,7 @@ SCIP_RETCODE lpSolveStable(
       success = FALSE;
       if( !tightprimfeastol )
       {
-         SCIP_CALL( lpSetFeastol(lp, FEASTOLTIGHTFAC * SCIPsetLpfeastol(set), &success) );
+         SCIP_CALL( lpSetFeastol(lp, FEASTOLTIGHTFAC * lp->feastol, &success) );
       }
 
       success2 = FALSE;
@@ -11741,7 +11794,7 @@ SCIP_RETCODE lpSolveStable(
          /* reset feasibility tolerance */
          if( !tightprimfeastol )
          {
-            SCIP_CALL( lpSetFeastol(lp, SCIPsetLpfeastol(set), &success) );
+            SCIP_CALL( lpSetFeastol(lp, lp->feastol, &success) );
          }
          if( !tightdualfeastol )
          {
@@ -11856,7 +11909,7 @@ SCIP_RETCODE lpSolveStable(
          success = FALSE;
          if( !tightprimfeastol )
          {
-            SCIP_CALL( lpSetFeastol(lp, FEASTOLTIGHTFAC * SCIPsetLpfeastol(set), &success) );
+            SCIP_CALL( lpSetFeastol(lp, FEASTOLTIGHTFAC * lp->feastol, &success) );
          }
 
          success2 = FALSE;
@@ -11887,7 +11940,7 @@ SCIP_RETCODE lpSolveStable(
             /* reset feasibility tolerance */
             if( !tightprimfeastol )
             {
-               SCIP_CALL( lpSetFeastol(lp, SCIPsetLpfeastol(set), &success) );
+               SCIP_CALL( lpSetFeastol(lp, lp->feastol, &success) );
             }
             if( !tightdualfeastol )
             {
@@ -17676,7 +17729,7 @@ SCIP_RETCODE computeRelIntPoint(
 
    assert(lpi != NULL);
 
-   retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, SCIPsetLpfeastol(set));
+   retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, lp->feastol);
    if( retcode != SCIP_OKAY )
    {
       /* stop execution on error, since result is likely to be unsuable */
