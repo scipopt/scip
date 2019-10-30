@@ -106,9 +106,6 @@ struct SCIP_LPi
    int                   timing;             /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
 };
 
-/** default values for feasibility tolerances */
-#define DEFAULT_FEASTOL  1e-6
-
 /*
  * LP Interface Methods
  */
