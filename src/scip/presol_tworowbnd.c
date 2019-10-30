@@ -61,12 +61,21 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/*
+ * Additional debug defines in this presolver
+ * SCIP_DEBUG_HASHING
+ * SCIP_DEBUG_BREAKPOINTS
+ * SCIP_DEBUG_CLIQUE
+ * SCIP_DEBUG_BOUNDS
+ */
+
 #include <assert.h>
 
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 #include "scip/pub_matrix.h"
 #include "presol_tworowbnd.h"
+#include <string.h>
 
 // TODO Fix aligning
 #define PRESOL_NAME            "tworowbnd"
@@ -1347,8 +1356,16 @@ SCIP_RETCODE combineRows
 #endif
 
    //TODO Check if I can ask row if its variable bounds are tightened with standard bound tightening
-#ifdef SCIP_MORE_DEBUG
+
+#ifdef SCIP_DEBUG
+   // swap = 0 means that lhs <= cons is used for bound tightening
    SCIPdebugMsg(scip, "combining rows %d (%s) and %d (%s) with swaps %d/%d\n", row1, SCIPmatrixGetRowName(matrix, row1), row2, SCIPmatrixGetRowName(matrix, row2), swaprow1, swaprow2);
+   SCIPinfoMessage(scip, NULL, "Cons1: \n");
+   SCIPprintCons(scip, SCIPmatrixGetCons(matrix, row1), NULL);
+   SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "Cons2: \n");
+   SCIPprintCons(scip, SCIPmatrixGetCons(matrix, row2), NULL);
+   SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
    ncols = SCIPmatrixGetNColumns(matrix);
@@ -1515,6 +1532,22 @@ SCIP_RETCODE combineRows
       j++;
    }
 
+#ifdef SCIP_DEBUG_BREAKPOINTS
+   SCIPdebugMsg(scip, "breakpoints and signs before considering cliques:\n");
+   for( i = 0; i < nvars; i++ )
+   {
+      idx = varinds[i];
+      if( signs[idx] == UP )
+         SCIPdebugMsg(scip, "%g <= %s <= %g, UP: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+      else if( signs[idx] == DN )
+         SCIPdebugMsg(scip, "%g <= %s <= %g, DN: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+      else if( signs[idx] == POS )
+         SCIPdebugMsg(scip, "%g <= %s <= %g, POS: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+      else if( signs[idx] == NEG )
+         SCIPdebugMsg(scip, "%g <= %s <= %g, NEG: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+   }
+#endif
+
    /* calculate clique breakpoints */
    SCIP_CALL( SCIPallocBufferArray(scip, &binvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvarpos, nvars) );
@@ -1529,7 +1562,7 @@ SCIP_RETCODE combineRows
          binvarpos[nbinvars] = i;
          nbinvars++;
       }
-#ifdef SCIP_DEBUG_SIGNS
+#ifdef SCIP_DEBUG
       idx = varinds[i];
       if( signs[idx] == UP )
          assert(SCIPisGT(scip, row1coefs[idx], 0.0) && SCIPisLT(scip, row2coefs[idx], 0.0));
@@ -1544,15 +1577,6 @@ SCIP_RETCODE combineRows
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquepartition, nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &gradients, nbinvars) );
-
-#ifdef SCIP_TEST_CLIQUE
-   if( nbinvars > 0 )
-   {
-      SCIP_Bool infeasible;
-      int nbdchgs;
-      SCIPaddClique(scip, binvars, NULL, nbinvars, FALSE, &infeasible, &nbdchgs);
-   }
-#endif
 
    SCIP_CALL( SCIPcalcCliquePartition(scip, binvars, nbinvars, cliquepartition, &ncliques) );
    SCIPsortIntInt(cliquepartition, binvarpos, nbinvars);
@@ -1618,6 +1642,26 @@ SCIP_RETCODE combineRows
       SCIPdebugMsg(scip, "%s (%d) is in clique %d with breakpoint %g\n", SCIPmatrixGetColName(matrix, varinds[binvarpos[i]]), varinds[binvarpos[i]], cliquepartition[i], breakpoints[binvarpos[i]]);
 #endif
 
+#ifdef SCIP_DEBUG_BREAKPOINTS
+   SCIPdebugMsg(scip, "breakpoints and signs after considering cliques\n");
+   SCIPdebugMsg(scip, "b1 = %g, b2 = %g, nbreakpoints = %d\n", b1, b2, nbreakpoints);
+   for( i = 0; i < nvars; i++ )
+   {
+      idx = varinds[i];
+      if( signs[idx] == UP )
+         SCIPdebugMsg(scip, "%g <= %s <= %g, UP: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+      else if( signs[idx] == DN )
+         SCIPdebugMsg(scip, "%g <= %s <= %g, DN: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+      else if( signs[idx] == POS )
+         SCIPdebugMsg(scip, "%g <= %s <= %g, POS: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+      else if( signs[idx] == NEG )
+         SCIPdebugMsg(scip, "%g <= %s <= %g, NEG: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+      else if( signs[idx] == CLQ )
+         SCIPdebugMsg(scip, "%g <= %s <= %g, CLQ: %g to %g, breakpoint at %g, cliquemaxind = %d\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i], cliquemaxinds[i]);
+   }
+#endif
+
+
    /* The obvious preconditions for bound tightenings are met, so we try to calculate new bounds. */
    if( nbreakpoints >= 1 )
    {
@@ -1636,33 +1680,6 @@ SCIP_RETCODE combineRows
          newlbs[i] = lbs[idx];
          newubs[i] = ubs[idx];
       }
-
-#ifdef SCIP_DEBUG_SIGNS
-      SCIPdebugMsg(scip, "b1 = %g, b2 = %g, nbreakpoints = %d\n", b1, b2, nbreakpoints);
-      for( i = 0; i < nvars; i++ )
-      {
-         idx = varinds[i];
-         if( signs[idx] == UP )
-            SCIPdebugMsg(scip, "%g <= %s <= %g, UP: %g to %g, breakpoint at %g\n", newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
-         else if( signs[idx] == DN )
-            SCIPdebugMsg(scip, "%g <= %s <= %g, DN: %g to %g, breakpoint at %g\n", newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
-         else if( signs[idx] == POS )
-            SCIPdebugMsg(scip, "%g <= %s <= %g, POS: %g to %g, breakpoint at %g\n", newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
-         else if( signs[idx] == NEG )
-            SCIPdebugMsg(scip, "%g <= %s <= %g, NEG: %g to %g, breakpoint at %g\n", newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
-         else if( signs[idx] == CLQ )
-            SCIPdebugMsg(scip, "%g <= %s <= %g, CLQ: %g to %g, breakpoint at %g, cliquemaxind = %d\n", newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i], cliquemaxinds[i]);
-      }
-#endif
-
-#ifdef SCIP_DEBUG_CLIQUE
-      SCIPdebugMsg(scip, "currentmaxinds[0] = dummy\n");
-      for( i = 1; i < ncliques+1; i++ )
-         if( currentmaxinds[i] >= 0 )
-            SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (%s)\n", i, currentmaxinds[i], SCIPmatrixGetColName(matrix, currentmaxinds[i]));
-         else
-            SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (no maximal variable)\n", i, currentmaxinds[i]);
-#endif
 
       /* calculate activity contributions of each row */
       l1 = b1;
@@ -1725,7 +1742,7 @@ SCIP_RETCODE combineRows
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &subrow1coefs, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &subrow2coefs, nvars) );
-      SCIP_CALL( SCIPsetIntParam(subscip, "presolving/tworowcomb/maxrounds", 0) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "presolving/tworowbnd/maxrounds", 0) );
 
       for( i = 0; i < nvars; i++ )
       {
@@ -1786,6 +1803,15 @@ SCIP_RETCODE combineRows
       SCIPdebugMsg(scip, "lambda = 0, l1 = %g, l2 = %g, ninfs = %d\n", l1, l2, ninfs);
 #endif
 
+#ifdef SCIP_DEBUG_CLIQUE
+      SCIPdebugMsg(scip, "currentmaxinds[0] = dummy\n");
+      for( i = 1; i < ncliques+1; i++ )
+         if( currentmaxinds[i] >= 0 )
+            SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (%s)\n", i, currentmaxinds[i], SCIPmatrixGetColName(matrix, currentmaxinds[i]));
+         else
+            SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (no maximal variable)\n", i, currentmaxinds[i]);
+#endif
+
       /* try strengthening the bound of the one variable which adds the infinity */
       if( ninfs == 1 )
       {
@@ -1841,14 +1867,10 @@ SCIP_RETCODE combineRows
                   else
                      cliqueidx = -cliquemaxinds[i];
 
-                  if(currentmaxinds[cliqueidx] == -1)
+                  if( currentmaxinds[cliqueidx] == -1 )
                      newubs[i] = MIN(newubs[i], l2 / row2coefs[idx]);
-                  else
-                  {
-                     // never leads to division by zero as negative coefficients can never be equal to the cliquemaximum
-                     assert(!SCIPisZero(scip, row2coefs[idx] - row2coefs[currentmaxinds[cliqueidx]]));
-                     newubs[i] = MIN(newubs[i], l2 / (row2coefs[idx] - row2coefs[currentmaxinds[cliqueidx]]));
-                  }
+                  else if( SCIPisLT(scip, (l2 + row2coefs[currentmaxinds[cliqueidx]]) / row2coefs[idx], 1.0) )
+                     newubs[i] = 0.0;
                }
                else
                   newubs[i] = MIN(newubs[i], (l2 + row2coefs[idx] * lbs[idx]) / row2coefs[idx]);
@@ -1957,6 +1979,15 @@ SCIP_RETCODE combineRows
          SCIPdebugMsg(scip, "lambda_%d = %g, l1 = %g, l2 = %g, ninfs = %d\n", i, breakpoints[i], l1, l2, ninfs);
 #endif
 
+#ifdef SCIP_DEBUG_CLIQUE
+      SCIPdebugMsg(scip, "currentmaxinds[0] = dummy\n");
+      for( j = 1; j < ncliques+1; j++ )
+         if( currentmaxinds[j] >= 0 )
+            SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (%s)\n", j, currentmaxinds[j], SCIPmatrixGetColName(matrix, currentmaxinds[j]));
+         else
+            SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (no maximal variable)\n", j, currentmaxinds[j]);
+#endif
+
          assert(ninfs >= 0);
 
          /* if more than one infinity destroys our bounds we cannot tighten anything */
@@ -2012,8 +2043,8 @@ SCIP_RETCODE combineRows
 
                      if(currentmaxinds[cliqueidx] == -1)
                         newubs[j] = MIN(newubs[j], (breakpoints[i] * l1 + (1 - breakpoints[i]) * l2) / coef);
-                     else
-                        newubs[j] = MIN(newubs[j], (breakpoints[i] * (l1 + row1coefs[currentmaxinds[cliqueidx]]) + (1 - breakpoints[i]) * (l2 + row2coefs[currentmaxinds[cliqueidx]])) / coef);
+                     else if(SCIPisLT(scip, (breakpoints[i] * (l1 + row1coefs[currentmaxinds[cliqueidx]]) + (1 - breakpoints[i]) * (l2 + row2coefs[currentmaxinds[cliqueidx]])) / coef, 1.0) )
+                        newubs[j] = 0.0;
                   }
                   else
                      newlbs[j] = MAX(newlbs[j], (breakpoints[i] * l1 + (1 - breakpoints[i]) * l2) / coef);
@@ -2025,15 +2056,6 @@ SCIP_RETCODE combineRows
 #endif
             }
          }
-
-#ifdef SCIP_DEBUG_CLIQUE
-      SCIPdebugMsg(scip, "currentmaxinds[0] = dummy\n");
-      for( j = 1; j < ncliques+1; j++ )
-         if( currentmaxinds[j] >= 0 )
-            SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (%s)\n", j, currentmaxinds[j], SCIPmatrixGetColName(matrix, currentmaxinds[j]));
-         else
-            SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (no maximal variable)\n", j, currentmaxinds[j]);
-#endif
 
          i += shift;
          ninfs += nnewinfs;
@@ -2129,18 +2151,23 @@ SCIP_RETCODE combineRows
          }
       }
 
+#ifdef SCIP_DEBUG_BOUNDS
+      SCIPdebugMsg(scip, "Updating bounds:\n");
+#endif
       /* update bound arrays and determine success */
       for( i = 0; i < nvars; i++ )
       {
          idx = varinds[i];
          var = SCIPmatrixGetVar(matrix, idx);
 
+         SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n", lbs[idx], newlbs[i], SCIPvarGetName(var), newubs[i], ubs[idx]);
          assert(SCIPisLE(scip, lbs[idx], newlbs[i]));
          assert(SCIPisGE(scip, ubs[idx], newubs[i]));
 
 #ifdef SCIP_DEBUG_SUBSCIP
-         assert(SCIPisEQ(scip, newlbs[i], subsciplbs[i]));
-         assert(SCIPisEQ(scip, newubs[i], subscipubs[i]));
+         // TODO Adjust the subscip solve to consider the clique extension
+         //assert(SCIPisEQ(scip, newlbs[i], subsciplbs[i]));
+         //assert(SCIPisEQ(scip, newubs[i], subscipubs[i]));
 #endif
          if( SCIPisGT(scip, newlbs[i], lbs[idx]) || SCIPisLT(scip, newubs[i], ubs[idx]) )
          {
@@ -2187,6 +2214,25 @@ SCIP_RETCODE combineRows
  */
 
 /* TODO: Implement all necessary presolver methods. The methods with an #if 0 ... #else #define ... are optional */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyTworowbnd)
+{
+   SCIP_PRESOLDATA* presoldata;
+
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver if copying is enabled */
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   SCIP_CALL( SCIPincludePresolTworowbnd(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
@@ -2712,7 +2758,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
 
             if( infeasible )
             {
-               SCIPdebugMessage(" -> infeasible lower bound tightening of variable %s\n", SCIPvarGetName(var));
+               SCIPdebugMessage(" -> infeasible lower bound tightening: %s >= %g\n", SCIPvarGetName(var), newlbs[i]);
                break;
             }
 
@@ -2729,7 +2775,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
 
             if( infeasible )
             {
-               SCIPdebugMessage(" -> infeasible upper bound tightening\n");
+               SCIPdebugMessage(" -> infeasible upper bound tightening: %s <= %g\n", SCIPvarGetName(var), newubs[i]);
                break;
             }
 
@@ -2910,6 +2956,7 @@ SCIP_RETCODE SCIPincludePresolTworowbnd(
 
    assert(presol != NULL);
 
+   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyTworowbnd) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeTworowbnd) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitTworowbnd) );
 
