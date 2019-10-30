@@ -1969,7 +1969,10 @@ SCIP_RETCODE computeSymmetryGroup(
          SCIPfreeBlockMemoryArray(scip, &vars, nvars);
       }
 
-      SCIPfreeBlockMemoryArray(scip, &labelmovedvars, matrixdata.npermvars);
+      if ( compresssymetries )
+      {
+         SCIPfreeBlockMemoryArray(scip, &labelmovedvars, matrixdata.npermvars);
+      }
    }
    else
    {
