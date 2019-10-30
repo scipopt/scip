@@ -3535,7 +3535,7 @@ SCIP_RETCODE presolRoundIndicator(
       assert( var != consdata->slackvar );
 
       /* we can replace the slack variable by the active variable if it is also a >= variable */
-      if ( var != consdata->binvar && boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, bound, 0.0) )
+      if ( var != consdata->binvar && boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisEQ(scip, bound, 0.0) )
       {
          assert( SCIPvarIsActive(var) );
          SCIPdebugMsg(scip, "Slack variable <%s> is aggregated or negated and replaced by active variable <%s>.\n", SCIPvarGetName(consdata->slackvar), SCIPvarGetName(var) );
@@ -3747,7 +3747,7 @@ SCIP_RETCODE propIndicator(
             lhs = SCIPgetRhsLinear(scip, consdata->lincons);
             if ( SCIPisInfinity(scip, lhs) )
                lhs = -SCIPinfinity(scip);
-            rhs = SCIPgetRhsLinear(scip, consdata->lincons);
+            rhs = SCIPgetLhsLinear(scip, consdata->lincons);
             if ( SCIPisInfinity(scip, -rhs) )
                rhs = SCIPinfinity(scip);
 

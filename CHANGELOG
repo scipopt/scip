@@ -77,6 +77,22 @@ Features
   methods are defined. A NULL pointer can be supplied to SCIPaddBendersSubproblem. In this case, no internal Benders'
   cut generation methods can be used.
 
+- Using the parameter "constraints/symresack/checkmonotonicity" one can now decide to upgrade to packing/partitioning
+  symresacks even if the underlying permutation is not monotone.
+
+- New branching rule `vanillastrongbranch`, mostly for scientific purpose, with the following features:
+  1) no cutoff or domain reduction: only branching;
+  2) idempotent (optional): leave SCIP, as much as possible, in the same state before / after the strong branching calls
+     - basically, do not update any statistic;
+  3) donotbranch (optional): do no perform branching. So that the brancher can be called as an oracle only
+     (on which variable would you branch ? But do not branch please);
+  4) scoreall (optional): keep scoring variables, even if infeasibility is detected;
+  5) collectscores (optional): store the candidate scores from the last call, which can then be retrieved by calling SCIPgetVanillafullstrongData();
+  6) integralcands (optional): consider integral candidates for branching,
+     i.e., get candidates from SCIPgetPseudoBranchCands() instead of SCIPgetLPBranchCands().
+
+- If a reference value (misc/referencevalue) is given, the primal-reference and reference-dual integrals are calculated automatically and printed within the SCIP statistics.
+
 Performance improvements
 ------------------------
 
@@ -102,6 +118,8 @@ Performance improvements
 
 - allow rapid learning at local nodes
 
+- variable fixings of LP face heuristic are now computed earlier; subproblem creation is skipped if not enough variables are fixed.
+
 Examples and applications
 -------------------------
 
@@ -114,6 +132,9 @@ Interface changes
     which is passed as new argument to SCIPcreateDiveset(). SCIPcreateDiveset() has another new parameter "ispublic".
 
 - new callback `SCIP_DECL_CONSHDLRCOPY` and `SCIP_DECL_CONSCOPY` in cons_orbisack and cons_symresack
+
+- new `idempotent` argument to SCIPgetVarStrongbranchInt() and SCIPgetVarStrongbranchFrac(),
+  so that statistics are not updated during the call. Likewise, new `updatecol` and `updatestat` arguments to SCIPcolGetStrongbranch().
 
 ### Deleted and changed API methods
 
@@ -285,6 +306,7 @@ Interface changes
   - new parameter "propagating/symmetry/ofsymcomptiming"
   - new parameter "propagating/symmetry/performpresolving"
   - new parameter "propagating/symmetry/recomputerestart"
+  - new parameter "constraints/symresack/checkmonotonicity"
 
 ### Data structures
 
@@ -367,6 +389,10 @@ Interface changes
 - enabling aggressive presolving now activates all available presolving plugins,
   and decreases the presolving/restartfac parameter correctly with respect to default.
 
+- change default value of heuristics/rins/nodesquot to 0.3 (was 0.1), to compensate
+  the removal of a hard coded factor of 3.0 in the code without affecting the default behavior
+  of the RINS heuristic.
+
 ### New parameters
 
 ### Data structures
@@ -387,10 +413,12 @@ Build system
 
 ### Makefile
 
+- added support for building against Ipopt >= 3.13
+
 Fixed bugs
 ----------
 
-- fixed issue in SCIPtightenVarLb and SCIPtightenVarUb that occurs for small bound changes
+- fixed issue in SCIPtightenVar* and SCIPinferVar* that occurs for small bound changes
 - fixed rejecting minimal boundchange that changed sign of variable, even though SCIPisLb/UbBetter approved it
 - fixed issue in generateCutNonConvex() which is triggered when adding quadratic constraints during the solving process
 - fixed bug in freeing the reoptimization data if no problem exists
@@ -402,6 +430,10 @@ Fixed bugs
 - fixed update of LP size information when an LP error occured during probing
 - handle special case of variable bound constraints during aggregating variables
 - tighten sides of linear constraints before trying to upgrade them to more specialized constraints (knapsack, logic-or etc.) when calling SCIPupgradeConsLinear()
+- fixed an issue in repair heuristic in the case of loose (noncolumn) variables
+- allow user to correctly set heuristics/alns/(un)fixtol
+- fixed an issue in heur_completesol which is triggered during bound widening of unbounded continuous variables
+- fixed bug in cons_indicator if addopposite is true
 
 
 Miscellaneous
