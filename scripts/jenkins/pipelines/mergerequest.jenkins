@@ -1,7 +1,7 @@
 #!groovy
 
 gitlabCommitStatus(name: 'cmake compilation') {
-    node ('nightly') {
+    node ('ubuntu18') {
         timeout(1) {
             stage('Clean') {
                 cleanWs() // clean workspace

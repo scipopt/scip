@@ -91,6 +91,7 @@ Features
   6) integralcands (optional): consider integral candidates for branching,
      i.e., get candidates from SCIPgetPseudoBranchCands() instead of SCIPgetLPBranchCands().
 
+- If a reference value (misc/referencevalue) is given, the primal-reference and reference-dual integrals are calculated automatically and printed within the SCIP statistics.
 
 Performance improvements
 ------------------------
@@ -116,6 +117,8 @@ Performance improvements
   use only permutations that can contribute to a variable's orbit;
 
 - allow rapid learning at local nodes
+
+- restrict the number of the clique table nonzeros relative to the number of problem nonzeros, which could be a performance bottleneck.
 
 - variable fixings of LP face heuristic are now computed earlier; subproblem creation is skipped if not enough variables are fixed.
 
@@ -306,6 +309,8 @@ Interface changes
   - new parameter "propagating/symmetry/performpresolving"
   - new parameter "propagating/symmetry/recomputerestart"
   - new parameter "constraints/symresack/checkmonotonicity"
+
+- new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
 
 ### Data structures
 
