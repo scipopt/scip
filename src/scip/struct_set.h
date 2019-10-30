@@ -422,6 +422,7 @@ struct SCIP_Set
    SCIP_Real             presol_abortfac;    /**< abort presolve, if l.t. this frac of the problem was changed in last round */
    int                   presol_maxrounds;   /**< maximal number of presolving rounds (-1: unlimited) */
    int                   presol_maxrestarts; /**< maximal number of restarts (-1: unlimited) */
+   SCIP_Real             presol_clqtablefac; /**< limit on number of entries in clique table relative to number of problem nonzeros */
    SCIP_Real             presol_restartfac;  /**< fraction of integer variables that were fixed in the root node
                                               *   triggering a restart with preprocessing after root node evaluation */
    SCIP_Real             presol_immrestartfac;/**< fraction of integer variables that were fixed in the root node triggering an

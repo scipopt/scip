@@ -138,6 +138,8 @@ Performance improvements
 
 - allow rapid learning at local nodes
 
+- restrict the number of the clique table nonzeros relative to the number of problem nonzeros, which could be a performance bottleneck.
+
 - variable fixings of LP face heuristic are now computed earlier; subproblem creation is skipped if not enough variables are fixed.
 
 Examples and applications
@@ -358,6 +360,8 @@ Interface changes
   - benders/<bendersname>/checkconsconvexity: should the constraints be checked for convexity. This can be set to FALSE
     if you are certain that the NLP subproblem is convex.
 
+- new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
+
 ### Data structures
 
 ### Build system
@@ -483,7 +487,8 @@ Fixed bugs
 - allow user to correctly set heuristics/alns/(un)fixtol
 - fixed an issue in heur_completesol which is triggered during bound widening of unbounded continuous variables
 - fixed bug in cons_indicator if addopposite is true
-
+- fixed bug in sepa_disjunctive: treat case that conflictgraph is empty
+- added safety check in conversion to rational number to avoid overflow
 
 Miscellaneous
 -------------
