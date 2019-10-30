@@ -417,6 +417,11 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
       else
          *type = SCIP_ORBITOPETYPE_PACKING;
    }
+   /* If only some rows are contained in set packing/partitioning constraints, it may still be worth it
+    * to exploit the packing/partitioning structure on these rows, because packing/partitioning orbitopes
+    * or more restrictive than full orbitopes. If at least three rows have this property, we discard
+    * all rows not contained in set packing/partitioning constraints and add the smaller sub packing orbitope.
+    */
    else if ( ncovered >= 3 )
    {
       int r = *nrows - 1;
