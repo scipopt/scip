@@ -297,15 +297,9 @@ END {
             timeouttime += tottime;
             timeouts++;
          }
-         else if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
+         else if( abs(pb - db) <= abstol || abs(pb - db) <= max(reltol, 1.05*gaplimit) * max(abs(pb),abs(db)) )
          {
-            # found and proven optimal value
-            status = "ok";
-            pass++;
-         }
-         else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
-         {
-            # found and proven optimal value w.r.t. gaplimit
+            # found and proven optimal value (w.r.t. tolerances/gaplimit)
             status = "ok";
             pass++;
          }
@@ -349,15 +343,9 @@ END {
                timeouts++;
             }
          }
-         else if( abs(pb - db) <= max(abstol, reltol) )
+         else if( abs(pb - db) <= abstol || abs(pb - db) <= max(reltol, 1.05*gaplimit) * max(abs(pb),abs(db)) )
          {
-            # proven optimal
-            status = "solved not verified";
-            pass++;
-         }
-         else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
-         {
-            # proven optimal w.r.t. gap
+            # proven optimal (w.r.t. tolerances/gaplimit)
             status = "solved not verified";
             pass++;
          }
