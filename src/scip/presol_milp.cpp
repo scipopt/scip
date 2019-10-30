@@ -46,6 +46,7 @@ struct SCIP_PresolData
 {
    int lastncols;
    int lastnrows;
+   tbb::task_scheduler_init schedulerinit;
 };
 
 
@@ -89,7 +90,6 @@ SCIP_DECL_PRESOLFREE(presolFreeMILP)
 #endif
 
 /** initialization method of presolver (called after problem was transformed) */
-#if 1
 static
 SCIP_DECL_PRESOLINIT(presolInitMILP)
 {  /*lint --e{715}*/
@@ -99,27 +99,22 @@ SCIP_DECL_PRESOLINIT(presolInitMILP)
    data->lastncols = -1;
    data->lastnrows = -1;
 
+   new (&data->schedulerinit) tbb::task_scheduler_init(1);
+
    return SCIP_OKAY;
 }
-#else
-#define presolInitMILP NULL
-#endif
-
 
 /** deinitialization method of presolver (called before transformed problem is freed) */
-#if 0
 static
 SCIP_DECL_PRESOLEXIT(presolExitMILP)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
+   assert(data != NULL);
+
+   data->schedulerinit.~task_scheduler_init();
 
    return SCIP_OKAY;
 }
-#else
-#define presolExitMILP NULL
-#endif
-
 
 /** presolving initialization method of presolver (called when presolving is about to begin) */
 #if 0
@@ -232,8 +227,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
       return SCIP_OKAY;
    }
-
-   tbb::task_scheduler_init init(1);
 
    /* we only work on pure MIPs */
    Problem<SCIP_Real> problem = buildProblem(scip, matrix);
