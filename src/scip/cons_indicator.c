@@ -3747,7 +3747,7 @@ SCIP_RETCODE propIndicator(
             lhs = SCIPgetRhsLinear(scip, consdata->lincons);
             if ( SCIPisInfinity(scip, lhs) )
                lhs = -SCIPinfinity(scip);
-            rhs = SCIPgetRhsLinear(scip, consdata->lincons);
+            rhs = SCIPgetLhsLinear(scip, consdata->lincons);
             if ( SCIPisInfinity(scip, -rhs) )
                rhs = SCIPinfinity(scip);
 

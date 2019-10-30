@@ -91,6 +91,7 @@ Features
   6) integralcands (optional): consider integral candidates for branching,
      i.e., get candidates from SCIPgetPseudoBranchCands() instead of SCIPgetLPBranchCands().
 
+- If a reference value (misc/referencevalue) is given, the primal-reference and reference-dual integrals are calculated automatically and printed within the SCIP statistics.
 
 Performance improvements
 ------------------------
@@ -387,6 +388,10 @@ Interface changes
 - enabling aggressive presolving now activates all available presolving plugins,
   and decreases the presolving/restartfac parameter correctly with respect to default.
 
+- change default value of heuristics/rins/nodesquot to 0.3 (was 0.1), to compensate
+  the removal of a hard coded factor of 3.0 in the code without affecting the default behavior
+  of the RINS heuristic.
+
 ### New parameters
 
 ### Data structures
@@ -426,6 +431,8 @@ Fixed bugs
 - tighten sides of linear constraints before trying to upgrade them to more specialized constraints (knapsack, logic-or etc.) when calling SCIPupgradeConsLinear()
 - fixed an issue in repair heuristic in the case of loose (noncolumn) variables
 - allow user to correctly set heuristics/alns/(un)fixtol
+- fixed an issue in heur_completesol which is triggered during bound widening of unbounded continuous variables
+- fixed bug in cons_indicator if addopposite is true
 
 
 Miscellaneous
