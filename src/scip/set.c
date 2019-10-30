@@ -318,6 +318,7 @@
                                                  *   in last presolve round */
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited, 0: off) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
+#define SCIP_DEFAULT_PRESOL_CLQTABLEFAC     2.0 /**< limit on number of entries in clique table relative to number of problem nonzeros */
 #define SCIP_DEFAULT_PRESOL_RESTARTFAC    0.025 /**< fraction of integer variables that were fixed in the root node
                                                  *   triggering a restart with preprocessing after root node evaluation */
 #define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.10 /**< fraction of integer variables that were fixed in the root node triggering an
@@ -2095,6 +2096,11 @@ SCIP_RETCODE SCIPsetCreate(
          "presolving/restartfac",
          "fraction of integer variables that were fixed in the root node triggering a restart with preprocessing after root node evaluation",
          &(*set)->presol_restartfac, TRUE, SCIP_DEFAULT_PRESOL_RESTARTFAC, 0.0, 1.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "presolving/clqtablefac",
+         "limit on number of entries in clique table relative to number of problem nonzeros",
+         &(*set)->presol_clqtablefac, TRUE, SCIP_DEFAULT_PRESOL_CLQTABLEFAC, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "presolving/immrestartfac",
