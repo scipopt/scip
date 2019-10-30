@@ -159,8 +159,7 @@ void shiftNonLeafCosts_2trans(
       if( g->oeat[e] == EAT_LAST )
          continue;
 
-      assert(SCIPisEQ(scip, cost[e], cost[flipedge(e)]) || SCIPisGE(scip, cost[e], FARAWAY)
-               || SCIPisGE(scip, cost[flipedge(e)], FARAWAY));
+      assert(SCIPisEQ(scip, cost[e], cost[flipedge(e)]) || SCIPisGE(scip, cost[e], FARAWAY) || SCIPisGE(scip, cost[flipedge(e)], FARAWAY));
    }
 #endif
 
@@ -176,6 +175,9 @@ void shiftNonLeafCosts_2trans(
          {
             assert(SCIPisLT(scip, cost[e], FARAWAY));
             assert(SCIPisLT(scip, cost[flipedge(e)], FARAWAY));
+
+            if( graph_edge_isBlocked(scip, g, e) )
+               continue;
 
             cost[e] -= prize;
             assert(SCIPisGE(scip, cost[e], 0.0));
@@ -536,8 +538,6 @@ SCIP_RETCODE graph_pc_finalizeSubgraph(
    GRAPH*                subgraph            /**< the subgraph */
    )
 {
-   const int nnodes = graph_get_nNodes(subgraph);
-
    assert(scip);
    assert(subgraph->term2edge && subgraph->prize);
    assert(subgraph->extended);
@@ -546,14 +546,6 @@ SCIP_RETCODE graph_pc_finalizeSubgraph(
 
    assert(subgraph->source >= 0);
    assert(!graph_pc_isPcMw(subgraph) || Is_term(subgraph->term[subgraph->source]));
-
-#if 0
-   /* update non-leaf properties */
-   for( int i = 0; i < nnodes; ++i )
-   {
-      if( subgraph )
-   }
-#endif
 
    return SCIP_OKAY;
 }
@@ -741,38 +733,45 @@ SCIP_Bool graph_pc_transOrgAreConistent(
 
    for( int e = 0; e < nedges; e++ )
    {
-      if( graph->oeat[e] != EAT_FREE )
+      int head;
+
+      if( graph->oeat[e] == EAT_FREE )
+         continue;
+
+      if( graph_edge_isBlocked(scip, graph, e) )
+         continue;
+
+      head = graph->head[e];
+
+      if( Is_nonleafTerm(graph->term[head]) )
       {
-         const int head = graph->head[e];
+         const SCIP_Real prize = graph->prize[head];
+         assert(SCIPisGE(scip, prize, 0.0));
+         assert(SCIPisLT(scip, cost_org[e], FARAWAY));
 
-         if( Is_nonleafTerm(graph->term[head]) )
+         if( !SCIPisEQ(scip, cost_org[e], cost[e] + prize) )
          {
-            const SCIP_Real prize = graph->prize[head];
-            assert(SCIPisGE(scip, prize, 0.0));
-
-            if( !SCIPisEQ(scip, cost_org[e], cost[e] + prize) )
+            if( verbose )
             {
-               if( verbose )
-               {
-                  graph_edge_printInfo(graph, e);
-                  printf("cost_org=%f cost=%f prize=%f \n", cost_org[e], cost[e], prize);
-               }
-
-               return FALSE;
+               graph_edge_printInfo(graph, e);
+               printf("cost_org=%f cost=%f prize=%f \n", cost_org[e], cost[e],
+                     prize);
             }
+
+            return FALSE;
          }
-         else
+      }
+      else
+      {
+         if( !SCIPisEQ(scip, cost_org[e], cost[e]) )
          {
-            if( !SCIPisEQ(scip, cost_org[e], cost[e]) )
+            if( verbose )
             {
-               if( verbose )
-               {
-                  graph_edge_printInfo(graph, e);
-                  printf("cost_org=%f cost=%f \n", cost_org[e], cost[e]);
-               }
-
-               return FALSE;
+               graph_edge_printInfo(graph, e);
+               printf("cost_org=%f cost=%f \n", cost_org[e], cost[e]);
             }
+
+            return FALSE;
          }
       }
    }
@@ -978,6 +977,7 @@ SCIP_Bool graph_pc_termIsNonLeafTerm(
 
 /** set high costs for not including given pseudo-terminal */
 void graph_pc_enforcePseudoTerm(
+   SCIP*           scip,               /**< SCIP data */
    GRAPH*          graph,              /**< graph */
    int             pterm               /**< the pseudo-terminal */
 )
@@ -985,15 +985,15 @@ void graph_pc_enforcePseudoTerm(
    const int term = graph_pc_getTwinTerm(graph, pterm);
    const int root2term = graph_pc_getRoot2PtermEdge(graph, term);
 
-   assert(graph != NULL && Is_pseudoTerm(graph->term[pterm]));
+   assert(scip && graph && Is_pseudoTerm(graph->term[pterm]));
    assert(Is_term(graph->term[term]));
-   assert(graph->cost[root2term] == graph->prize[pterm]);
+   assert(SCIPisEQ(scip, graph->cost[root2term], graph->prize[pterm]));
 
    /* don't change because of weird prize sum in reduce.c */
-   if( graph->prize[pterm] < BLOCKED )
+   if( SCIPisLT(scip, graph->prize[pterm], BLOCKED_MINOR) )
    {
-      graph->prize[pterm] = BLOCKED - 1.0;
-      graph->cost[root2term] = BLOCKED - 1.0;
+      graph->prize[pterm] = BLOCKED_MINOR;
+      graph->cost[root2term] = BLOCKED_MINOR;
    }
 }
 
@@ -1023,7 +1023,7 @@ void graph_pc_enforceNonLeafTerm(
    else if( graph->prize[nonleafterm] < BLOCKED )
    {
       /* don't change because of weird prize sum in reduce.c */
-      graph->prize[nonleafterm] = BLOCKED - 1.0; // todo quite hacky, because it destroys the invariant of non-leaf terms!
+      graph->prize[nonleafterm] = BLOCKED_MINOR; // todo quite hacky, because it destroys the invariant of non-leaf terms!
    }
 }
 
@@ -1118,18 +1118,24 @@ void graph_pc_2org(
    GRAPH*                graph               /**< the graph */
    )
 {
+   const int nnodes = graph_get_nNodes(graph);
    const int root = graph->source;
-   const int nnodes = graph->knots;
 
-   assert(scip && graph);
+   assert(scip);
    assert(graph->extended && graph_pc_isPcMw(graph));
 
    /* restore original edge weights */
    if( graph_pc_isPc(graph) )
    {
-      assert(graph_pc_transOrgAreConistent(scip, graph, FALSE));
+      const int nedges = graph->edges;
+      SCIP_Real* RESTRICT const cost = graph->cost;
+      const SCIP_Real* const cost_org = graph->cost_org_pc;
 
-      BMScopyMemoryArray(graph->cost, graph->cost_org_pc, graph->edges);
+      assert(graph_pc_transOrgAreConistent(scip, graph, TRUE));
+
+      for( int e = 0; e < nedges; ++e )
+         if( !graph_edge_isBlocked(scip, graph, e) )
+            cost[e] = cost_org[e];
    }
 
    /* swap terminal properties and mark original graph */

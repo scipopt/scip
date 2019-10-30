@@ -573,10 +573,10 @@ SCIP_RETCODE fixVarsRedbased(
          if( pcmw )
          {
             if( Is_pseudoTerm(propgraph->term[tail]) )
-               graph_pc_enforcePseudoTerm(propgraph, tail);
+               graph_pc_enforcePseudoTerm(scip, propgraph, tail);
 
             if( Is_pseudoTerm(propgraph->term[head]) )
-               graph_pc_enforcePseudoTerm(propgraph, head);
+               graph_pc_enforcePseudoTerm(scip, propgraph, head);
 
             if( propgraph->stp_type == STP_PCSPG )
                continue;
@@ -633,7 +633,7 @@ SCIP_RETCODE fixVarsRedbased(
             /* fixed to 0? Then take terminal */
             if( SCIPvarGetUbLocal(vars[rootedge]) < 0.5 )
             {
-               graph_pc_enforcePseudoTerm(propgraph, graph_pc_getTwinTerm(propgraph, k));
+               graph_pc_enforcePseudoTerm(scip, propgraph, graph_pc_getTwinTerm(propgraph, k));
             }
             /* fixed to 1? Then delete terminal */
             else if( SCIPvarGetLbLocal(vars[rootedge]) > 0.5 )
@@ -700,7 +700,7 @@ SCIP_RETCODE fixVarsRedbased(
                      graph_knot_del(scip, propgraph, vert, TRUE);
                }
             }
-            else if( SCIPisLT(scip, propgraph->prize[i], BLOCKED - 1.0) && Is_pseudoTerm(propgraph->term[i]) )
+            else if( SCIPisLT(scip, propgraph->prize[i], BLOCKED_MINOR) && Is_pseudoTerm(propgraph->term[i]) )
             {
                for( int j = start[ptermcount - 1]; j < start[ptermcount]; j++ )
                {
@@ -708,7 +708,7 @@ SCIP_RETCODE fixVarsRedbased(
                   assert(graph_pc_knotIsFixedTerm(propgraph, vert) || !Is_term(propgraph->term[vert]));
 
                   /* is vert fixed? */
-                  if( SCIPisGE(scip, propgraph->prize[vert], BLOCKED - 1.0))
+                  if( SCIPisGE(scip, propgraph->prize[vert], BLOCKED_MINOR))
                   {
                      const int twin = graph_pc_getTwinTerm(propgraph, i);
                      const int rootedge = graph_pc_getRoot2PtermEdge(g, twin);
@@ -716,7 +716,7 @@ SCIP_RETCODE fixVarsRedbased(
 
                      assert(Is_pseudoTerm(propgraph->term[vert]) || graph_pc_knotIsFixedTerm(propgraph, vert));
 
-                     graph_pc_enforcePseudoTerm(propgraph, i);
+                     graph_pc_enforcePseudoTerm(scip, propgraph, i);
                      break;
                   }
                }

@@ -171,7 +171,7 @@ void applyBranchHistoryToGraph(
          }
          else if( Is_pseudoTerm(graph->term[k]) )
          {
-            graph_pc_enforcePseudoTerm(graph, k);
+            graph_pc_enforcePseudoTerm(scip, graph, k);
          }
          else if( graph_pc_isRootedPcMw(graph) )
          {
@@ -207,8 +207,11 @@ void applyBranchHistoryToGraph(
 
             assert(SCIPisLT(scip, graph->cost[e], FARAWAY) && SCIPisLT(scip, graph->cost[flipedge(e)], FARAWAY));
 
-            graph->cost[e] += BLOCKED;
-            graph->cost[flipedge(e)] += BLOCKED;
+            if( graph->cost[e] < BLOCKED )
+               graph->cost[e] = BLOCKED;
+
+            if( graph->cost[e] < BLOCKED )
+               graph->cost[flipedge(e)] = BLOCKED;
          }
       }
    }
@@ -796,7 +799,7 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
          {
             if( Is_pseudoTerm(graph->term[term]) )
             {
-               graph_pc_enforcePseudoTerm(graph, term);
+               graph_pc_enforcePseudoTerm(scip, graph, term);
             }
             else if( graph_pc_isRootedPcMw(graph) )
             {

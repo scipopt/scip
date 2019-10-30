@@ -1950,6 +1950,67 @@ void graph_edge_hide(
 }
 
 
+/** is the edge blocked? */
+SCIP_Bool graph_edge_isBlocked(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   int                   e                   /**< the edge */
+   )
+{
+   assert(scip && g);
+   assert(e >= 0 && e < g->edges);
+
+   if( SCIPisEQ(scip, g->cost[e], BLOCKED_MINOR) || SCIPisEQ(scip, g->cost[e], BLOCKED) )
+      return TRUE;
+
+   return FALSE;
+}
+
+
+/** print information on edge */
+void graph_edge_printInfo(
+   const GRAPH*          g,                  /**< the graph */
+   int                   e                   /**< the edge */
+   )
+{
+   const int t = g->tail[e];
+   const int h = g->head[e];
+
+   if( graph_pc_isPcMw(g) )
+      printf("e: %d   %d->%d (%d->%d) cost:=%f costrev=%f \n", e, t, h, g->term[t], g->term[h], g->cost[e], g->cost[flipedge(e)]);
+   else
+      printf("e: %d   %d->%d (%d->%d) cost:=%f \n", e, t, h, g->term[t], g->term[h], g->cost[e]);
+}
+
+
+/** print information on node */
+void graph_knot_printInfo(
+   const GRAPH*          g,                  /**< the graph */
+   int                   k                   /**< the node */
+   )
+{
+   assert(!graph_pc_isPcMw(g) || g->term2edge != NULL);
+
+   if( graph_pc_isPcMw(g) )
+   {
+      assert(g->prize);
+
+      if( graph_pc_knotIsNonLeafTerm(g, k) )
+         printf("node %d: term=%d grad=%d prize=%f (non-leaf terminal) \n", k, g->term[k], g->grad[k], g->prize[k]);
+      else if( graph_pc_knotIsFixedTerm(g, k) )
+         printf("node %d: term=%d grad=%d prize=%f (fixed terminal) \n", k, g->term[k], g->grad[k], g->prize[k]);
+      else if( Is_term(g->term[k]) )
+         printf("node %d: term=%d grad=%d prize=%f (standard terminal) \n", k, g->term[k], g->grad[k], g->prize[k]);
+      else
+         printf("node %d: term=%d grad=%d prize=%f \n", k, g->term[k], g->grad[k], g->prize[k]);
+   }
+   else
+   {
+      printf("node %d: term=%d grad=%d  \n", k, g->term[k], g->grad[k]);
+   }
+}
+
+
 /** print information on graph  */
 void graph_printInfo(
    const GRAPH*          g                   /**< the graph */
@@ -2015,46 +2076,6 @@ void graph_printInfo(
       printf("budget=%f \n", g->budget);
 }
 
-/** print information on edge */
-void graph_edge_printInfo(
-   const GRAPH*          g,                  /**< the graph */
-   int                   e                   /**< the edge */
-   )
-{
-   const int t = g->tail[e];
-   const int h = g->head[e];
-   if( graph_pc_isPcMw(g) )
-      printf("e: %d   %d->%d (%d->%d) cost:=%f costrev=%f \n", e, t, h, g->term[t], g->term[h], g->cost[e], g->cost[flipedge(e)]);
-   else
-      printf("e: %d   %d->%d (%d->%d) cost:=%f \n", e, t, h, g->term[t], g->term[h], g->cost[e]);
-}
-
-/** print information on node */
-void graph_knot_printInfo(
-   const GRAPH*          g,                  /**< the graph */
-   int                   k                   /**< the node */
-   )
-{
-   assert(!graph_pc_isPcMw(g) || g->term2edge != NULL);
-
-   if( graph_pc_isPcMw(g) )
-   {
-      assert(g->prize);
-
-      if( graph_pc_knotIsNonLeafTerm(g, k) )
-         printf("node %d: term=%d grad=%d prize=%f (non-leaf terminal) \n", k, g->term[k], g->grad[k], g->prize[k]);
-      else if( graph_pc_knotIsFixedTerm(g, k) )
-         printf("node %d: term=%d grad=%d prize=%f (fixed terminal) \n", k, g->term[k], g->grad[k], g->prize[k]);
-      else if( Is_term(g->term[k]) )
-         printf("node %d: term=%d grad=%d prize=%f (standard terminal) \n", k, g->term[k], g->grad[k], g->prize[k]);
-      else
-         printf("node %d: term=%d grad=%d prize=%f \n", k, g->term[k], g->grad[k], g->prize[k]);
-   }
-   else
-   {
-      printf("node %d: term=%d grad=%d  \n", k, g->term[k], g->grad[k]);
-   }
-}
 
 /** changes solution according to given root */
 SCIP_RETCODE graph_sol_reroot(

@@ -255,8 +255,9 @@ typedef struct dijkstra_data
 
 #define CONNECT      0
 #define UNKNOWN    (-1)
-#define FARAWAY      1e15
-#define BLOCKED      1e10
+#define FARAWAY            1e15
+#define BLOCKED            1e10              /**< used for temporarily blocking an edge */
+#define BLOCKED_MINOR      (BLOCKED - 1.0)   /**< used for permanently blocking an edge */
 
 #define EDGE_BLOCKED       0
 #define EDGE_MODIFIABLE    1
@@ -412,6 +413,7 @@ extern SCIP_RETCODE   graph_termsReachable(SCIP*, const GRAPH*, SCIP_Bool*);
 extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_Bool, SCIP_Bool);
 extern SCIP_Bool graph_valid(SCIP*, const GRAPH*);
 extern SCIP_Bool graph_isMarked(const GRAPH*);
+extern SCIP_Bool graph_edge_isBlocked(SCIP*, const GRAPH*, int);
 extern SCIP_Bool graph_typeIsUndirected(const GRAPH*);
 extern SCIP_Bool graph_sol_unreduced(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, const int*);
@@ -427,7 +429,7 @@ extern void   graph_pc_knotToFixedTerm(GRAPH*, int);
 extern void   graph_pc_termToNonLeafTerm(SCIP*, GRAPH*, int);
 extern void   graph_pc_knotChg(GRAPH*, int, int);
 extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
-extern void   graph_pc_enforcePseudoTerm(GRAPH*, int);
+extern void   graph_pc_enforcePseudoTerm(SCIP*, GRAPH*, int);
 extern void   graph_pc_enforceNonLeafTerm(GRAPH*, int);
 extern void   graph_pc_subtractPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_pc_chgPrize(SCIP*, GRAPH*, SCIP_Real, int);
