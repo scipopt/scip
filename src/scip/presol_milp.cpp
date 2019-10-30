@@ -74,7 +74,6 @@ SCIP_DECL_PRESOLCOPY(presolCopyMILP)
 }
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
-#if 1
 static
 SCIP_DECL_PRESOLFREE(presolFreeMILP)
 {  /*lint --e{715}*/
@@ -85,9 +84,6 @@ SCIP_DECL_PRESOLFREE(presolFreeMILP)
    SCIPfreeBlockMemory(scip, &data);
    return SCIP_OKAY;
 }
-#else
-#define presolFreeMILP NULL
-#endif
 
 /** initialization method of presolver (called after problem was transformed) */
 static
@@ -115,35 +111,6 @@ SCIP_DECL_PRESOLEXIT(presolExitMILP)
 
    return SCIP_OKAY;
 }
-
-/** presolving initialization method of presolver (called when presolving is about to begin) */
-#if 0
-static
-SCIP_DECL_PRESOLINITPRE(presolInitpreMILP)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define presolInitpreMILP NULL
-#endif
-
-
-/** presolving deinitialization method of presolver (called after presolving has been finished) */
-#if 0
-static
-SCIP_DECL_PRESOLEXITPRE(presolExitpreMILP)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define presolExitpreMILP NULL
-#endif
 
 static
 Problem<SCIP_Real>
@@ -464,17 +431,6 @@ SCIP_RETCODE SCIPincludePresolMILP(
    presol = NULL;
 
    /* include presolver */
-#if 0
-   /* use SCIPincludePresol() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
-    * new callbacks are added in future SCIP versions
-    */
-   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
-         presolCopyXyz, presolFreeXyz, presolInitXyz, presolExitXyz, presolInitpreXyz, presolExitpreXyz, presolExecXyz,
-         presoldata) );
-#else
-   /* use SCIPincludePresolBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
          presolExecMILP,
          presoldata) );
@@ -486,9 +442,6 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeMILP) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitMILP) );
    SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitMILP) );
-   SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreMILP) );
-   SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreMILP) );
-#endif
 
    /* add MILP presolver parameters */
    /* TODO: (optional) add presolver specific parameters with SCIPaddTypeParam() here */
