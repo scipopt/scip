@@ -2829,12 +2829,11 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
    int*                  vbase,              /**< Voronoi base array */
    int*                  pathedge,           /**< shortest path incoming edge array for shortest path calculations */
-   int*                  edgearrint,         /**< int edges array for internal computations or NULL */
    int*                  state,              /**< int 4 * vertices array  */
    STP_Bool*             nodearrchar,        /**< STP_Bool node array for internal computations */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    SCIP_Bool             solbasedda,         /**< rerun Da based on best primal solution */
-   SCIP_Bool             varyroot,           /**< vary root for DA if possible */
+   SCIP_Bool             useDifferentRoots,  /**< vary root for DA if possible */
    SCIP_Bool             markroots,          /**< should terminals proven to be part of an opt. sol. be marked as such? */
    SCIP_Bool             userec,             /**< use recombination heuristic? */
    SCIP_Bool             fastmode,           /**< run heuristic in fast mode? */
@@ -2854,41 +2853,32 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_Real bestlpobjval;
    SCIP_Real upperbound;
    SCIP_Real minpathcost;
-   SCIP_Real damaxdeviation;
+   const SCIP_Real damaxdeviation = fastmode ? DAMAXDEVIATION_FAST : -1.0;
    int* roots;
    int* result;
    int* result2;
    int* transresult;
    STP_Bool* marked;
-   int nroots;
-   int nfixed;
+   int nroots = 0;
+   int nfixed = 0;
    int nusedroots;
-   const int root = graph->source;
-   const int nedges = graph->edges;
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
    const int extnedges = nedges + 2 * (graph->terms - 1);
-   const int nnodes = graph->knots;
+   const int root = graph->source;
+   SCIP_Bool varyroot = useDifferentRoots && userec;
    SCIP_Bool apsol;
    SCIP_Bool success;
 
-   assert(scip != NULL);
-   assert(graph != NULL);
-   assert(nelims != NULL);
-   assert(nodearrchar != NULL);
+   int todo; // remove
+      return SCIP_OKAY;
 
-   /* not more than one terminal? */
+   assert(scip && nelims && nodearrchar);
+
    if( graph->terms <= 1 )
       return SCIP_OKAY;
 
-   nroots = 0;
-   nfixed = 0;
-   varyroot = varyroot && userec;
-
-   /* allocate memory */
-   if( edgearrint == NULL )
-      SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
-   else
-      result = edgearrint;
-
+   SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &transresult, extnedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, extnedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &result2, nedges) );
@@ -2902,18 +2892,6 @@ SCIP_RETCODE reduce_daPcMw(
    if( graph_pc_isPc(graph) )
       graph_pc_updateNonLeafTerms(scip, graph);
 
-#ifndef NDEBUG
-   {
-   int nterms = 0;
-   for( int i = 0; i < nnodes; i++ )
-      if( graph->mark[i] )
-         if( Is_term(graph->term[i]) )
-            nterms++;
-
-   assert(nterms == (graph->terms - ((graph->stp_type != STP_RPCSPG)? 1 : 0)));
-   }
-#endif
-
    /*
     * 1. step: compute lower bound and reduced costs
     */
@@ -2926,8 +2904,6 @@ SCIP_RETCODE reduce_daPcMw(
 
    /* initialize data structures for shortest paths */
    SCIP_CALL( graph_path_init(scip, transgraph) );
-
-   damaxdeviation = fastmode ? DAMAXDEVIATION_FAST : -1.0;
 
    SCIP_CALL( SCIPStpDualAscent(scip, transgraph, cost, &lpobjval, FALSE, FALSE,
          gnodearr, NULL, transresult, state, root, TRUE, damaxdeviation) );
@@ -3234,8 +3210,6 @@ SCIP_RETCODE reduce_daPcMw(
 
    *nelims = nfixed;
 
-
-   /* free memory */
    if( pool != NULL )
       SCIPStpHeurRecFreePool(scip, &pool);
    SCIPfreeBufferArrayNull(scip, &roots);
@@ -3245,9 +3219,7 @@ SCIP_RETCODE reduce_daPcMw(
    SCIPfreeBufferArray(scip, &result2);
    SCIPfreeBufferArray(scip, &marked);
    SCIPfreeBufferArray(scip, &transresult);
-
-   if( edgearrint == NULL )
-      SCIPfreeBufferArray(scip, &result);
+   SCIPfreeBufferArray(scip, &result);
 
    assert(graph_valid(scip, graph));
 

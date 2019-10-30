@@ -2537,8 +2537,9 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPwriteOrigProblem(scip, presolvefilename, NULL, FALSE) );
 #endif
 
-   if( graph != NULL && probdata->mode == MODE_CUT )
+   if( graph != NULL && probdata->mode == MODE_CUT && 0)
    {
+      int todo; // && 0
       SCIP_Real lpobjval;
 
       if( pc || mw )

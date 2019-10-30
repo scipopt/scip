@@ -1304,7 +1304,7 @@ SCIP_RETCODE redLoopMw(
 
       if( (da || (advanced && extensive)) )
       {
-         SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint,
+         SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint,
                state, nodearrchar, &daelims, TRUE, FALSE, FALSE, userec, (rounds == 0), randnumgen, prizesum, TRUE) );
 
          if( daelims <= 2 * redbound )
@@ -1392,7 +1392,7 @@ SCIP_RETCODE redLoopMw(
 
          SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
-         SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint,
+         SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint,
                state, nodearrchar, &daelims, TRUE, (g->terms > STP_RED_MWTERMBOUND), tryrmw, userec, FALSE, randnumgen, prizesum, TRUE) );
 
          userec = FALSE;
@@ -1596,9 +1596,6 @@ SCIP_RETCODE redLoopPc(
                &fix, heap, state, vbase, &brednelims, reductbound, verbose, &bred) );
       }
 
-      assert(0);
-
-
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
@@ -1611,7 +1608,7 @@ SCIP_RETCODE redLoopPc(
             SCIP_CALL( reduce_da(scip, g, vnoi, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
                   nodearrint, nodearrchar, &danelims, 0, randnumgen, FALSE, FALSE, nodereplacing) );
          else
-            SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint,
+            SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap,
                   state, nodearrchar, &danelims, TRUE, FALSE, FALSE, userec, (rounds == 0), randnumgen, prizesum, nodereplacing) );
 
          if( danelims <= reductbound )
@@ -1640,7 +1637,7 @@ SCIP_RETCODE redLoopPc(
          }
          else
          {
-            SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint,
+            SCIP_CALL( reduce_daPcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap,
                   state, nodearrchar, &danelims, TRUE, TRUE, TRUE, userec, FALSE, randnumgen, prizesum, nodereplacing) );
          }
 
