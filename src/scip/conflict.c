@@ -2624,25 +2624,25 @@ SCIP_RETCODE tightenSingleVar(
 
    if( prooftype == SCIP_CONFTYPE_INFEASLP || prooftype == SCIP_CONFTYPE_ALTINFPROOF )
    {
-      ++conflict->dualrayinfnnonzeros; /* we count a global bound reduction as size 1 */
-      ++conflict->ndualrayinfsuccess;
+      ++conflict->dualproofsinfnnonzeros; /* we count a global bound reduction as size 1 */
+      ++conflict->ndualproofsinfsuccess;
       ++conflict->ninflpsuccess;
 
       if( applyglobal )
-         ++conflict->ndualrayinfglobal;
+         ++conflict->ndualproofsinfglobal;
       else
-         ++conflict->ndualrayinflocal;
+         ++conflict->ndualproofsinflocal;
    }
    else
    {
-      ++conflict->dualraybndnnonzeros; /* we count a global bound reduction as size 1 */
-      ++conflict->ndualraybndsuccess;
+      ++conflict->dualproofsbndnnonzeros; /* we count a global bound reduction as size 1 */
+      ++conflict->ndualproofsbndsuccess;
       ++conflict->nboundlpsuccess;
 
       if( applyglobal )
-         ++conflict->ndualraybndglobal;
+         ++conflict->ndualproofsbndglobal;
       else
-         ++conflict->ndualraybndlocal;
+         ++conflict->ndualproofsbndlocal;
    }
 
    return SCIP_OKAY;
@@ -3087,9 +3087,9 @@ SCIP_RETCODE createAndAddProofcons(
       return SCIP_OKAY;
 
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%d", conflict->ndualrayinfsuccess);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%d", conflict->ndualproofsinfsuccess);
    else if( conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || conflicttype == SCIP_CONFTYPE_ALTBNDPROOF )
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%d", conflict->ndualraybndsuccess);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%d", conflict->ndualproofsbndsuccess);
    else
       return SCIP_INVALIDCALL;
 
@@ -3127,7 +3127,7 @@ SCIP_RETCODE createAndAddProofcons(
    /* add constraint to storage */
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
    {
-      /* add constraint based on dual ray to storage */
+      /* add dual proof to storage */
       SCIP_CALL( SCIPconflictstoreAddDualraycons(conflictstore, cons, blkmem, set, stat, transprob, reopt, hasrelaxvar) );
    }
    else
@@ -3181,7 +3181,7 @@ SCIP_RETCODE createAndAddProofcons(
          updateside = TRUE;
       }
 
-      /* add constraint based on dual solution to storage */
+      /* add dual proof to storage */
       SCIP_CALL( SCIPconflictstoreAddDualsolcons(conflictstore, cons, blkmem, set, stat, transprob, reopt, scale, updateside, hasrelaxvar) );
    }
 
@@ -3208,23 +3208,23 @@ SCIP_RETCODE createAndAddProofcons(
    /* update statistics */
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
    {
-      conflict->dualrayinfnnonzeros += nnz;
+      conflict->dualproofsinfnnonzeros += nnz;
       if( applyglobal )
-         ++conflict->ndualrayinfglobal;
+         ++conflict->ndualproofsinfglobal;
       else
-         ++conflict->ndualrayinflocal;
-      ++conflict->ndualrayinfsuccess;
+         ++conflict->ndualproofsinflocal;
+      ++conflict->ndualproofsinfsuccess;
    }
    else
    {
       assert(conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || conflicttype == SCIP_CONFTYPE_ALTBNDPROOF);
-      conflict->dualraybndnnonzeros += nnz;
+      conflict->dualproofsbndnnonzeros += nnz;
       if( applyglobal )
-         ++conflict->ndualraybndglobal;
+         ++conflict->ndualproofsbndglobal;
       else
-         ++conflict->ndualraybndlocal;
+         ++conflict->ndualproofsbndlocal;
 
-      ++conflict->ndualraybndsuccess;
+      ++conflict->ndualproofsbndsuccess;
    }
    return SCIP_OKAY;
 }
@@ -3933,14 +3933,14 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->npseudoconfliterals = 0;
    (*conflict)->npseudoreconvconss = 0;
    (*conflict)->npseudoreconvliterals = 0;
-   (*conflict)->ndualrayinfglobal = 0;
-   (*conflict)->ndualrayinflocal = 0;
-   (*conflict)->ndualrayinfsuccess = 0;
-   (*conflict)->dualrayinfnnonzeros = 0;
-   (*conflict)->ndualraybndglobal = 0;
-   (*conflict)->ndualraybndlocal = 0;
-   (*conflict)->ndualraybndsuccess = 0;
-   (*conflict)->dualraybndnnonzeros = 0;
+   (*conflict)->ndualproofsinfglobal = 0;
+   (*conflict)->ndualproofsinflocal = 0;
+   (*conflict)->ndualproofsinfsuccess = 0;
+   (*conflict)->dualproofsinfnnonzeros = 0;
+   (*conflict)->ndualproofsbndglobal = 0;
+   (*conflict)->ndualproofsbndlocal = 0;
+   (*conflict)->ndualproofsbndsuccess = 0;
+   (*conflict)->dualproofsbndnnonzeros = 0;
 
    SCIP_CALL( conflictInitProofset((*conflict), blkmem) );
 
@@ -7523,8 +7523,8 @@ SCIP_RETCODE tightenDualproof(
          ++ncontvars;
    }
 
-   SCIPsetDebugMsg(set, "start dualray tightening:\n");
-   SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)\n",
+   SCIPsetDebugMsg(set, "start dual proof tightening:\n");
+   SCIPsetDebugMsg(set, "-> tighten dual proof: nvars=%d (bin=%d, int=%d, cont=%d)\n",
          nnz, nbinvars, nintvars, ncontvars);
    debugPrintViolationInfo(set, aggrRowGetMinActivity(set, transprob, proofrow, TRUE, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
 
@@ -7717,12 +7717,12 @@ SCIP_RETCODE conflictAnalyzeDualProof(
       *globalinfeasible = TRUE;
       *success = TRUE;
 
-      ++conflict->ndualrayinfsuccess;
+      ++conflict->ndualproofsinfsuccess;
 
       return SCIP_OKAY;
    }
 
-   /* try to enforce the constraint based on a dual ray */
+   /* try to enforce the constraint based on a dual proof */
    SCIP_CALL( tightenDualproof(conflict, set, stat, blkmem, transprob, tree, proofrow, validdepth, initialproof) );
 
    if( *globalinfeasible )
@@ -7731,7 +7731,7 @@ SCIP_RETCODE conflictAnalyzeDualProof(
       SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
       *success = TRUE;
 
-      ++conflict->ndualrayinfsuccess;
+      ++conflict->ndualproofsinfsuccess;
    }
 
    return SCIP_OKAY;
@@ -7771,7 +7771,7 @@ SCIP_RETCODE runBoundHeuristic(
    int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
    int*                  iterations,         /**< pointer to store the total number of LP iterations used */
    SCIP_Bool             marklpunsolved,     /**< whether LP should be marked unsolved after analysis (needed for strong branching) */
-   SCIP_Bool*            dualraysuccess,     /**< pointer to store success result of dualray analysis */
+   SCIP_Bool*            dualproofsuccess,   /**< pointer to store success result of dual proof analysis */
    SCIP_Bool*            valid               /**< pointer to store whether the result is still a valid proof */
    )
 {
@@ -7974,16 +7974,16 @@ SCIP_RETCODE runBoundHeuristic(
                   break;
                }
 
-               /* start dual ray analysis */
+               /* start dual proof analysis */
                if( set->conf_useinflp == 'd' || set->conf_useinflp == 'b' )
                {
                   /* change the conflict type */
                   SCIP_CONFTYPE oldconftype = conflict->conflictset->conflicttype;
                   conflict->conflictset->conflicttype = SCIP_CONFTYPE_INFEASLP;
 
-                  /* start dual ray analysis */
+                  /* start dual proof analysis */
                   SCIP_CALL( conflictAnalyzeDualProof(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, \
-                        farkasrow, validdepth, FALSE, &globalinfeasible, dualraysuccess) );
+                        farkasrow, validdepth, FALSE, &globalinfeasible, dualproofsuccess) );
 
                   conflict->conflictset->conflicttype = oldconftype;
                }
@@ -8142,7 +8142,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
-   SCIP_Bool*            dualraysuccess,     /**< pointer to store success result of dualray analysis */
+   SCIP_Bool*            dualproofsuccess,   /**< pointer to store success result of dual proof analysis */
    int*                  iterations,         /**< pointer to store the total number of LP iterations used */
    int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
    int*                  nliterals,          /**< pointer to store the number of literals in generated conflict constraints */
@@ -8354,9 +8354,9 @@ SCIP_RETCODE conflictAnalyzeLP(
    if( ((set->conf_useinflp == 'b' || set->conf_useinflp == 'd') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP)
       || ((set->conf_useboundlp == 'b' || set->conf_useboundlp == 'd') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING) )
    {
-      /* start dual ray analysis */
+      /* start dual proof analysis */
       SCIP_CALL( conflictAnalyzeDualProof(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, farkasrow, \
-         validdepth, TRUE, &globalinfeasible, dualraysuccess) );
+         validdepth, TRUE, &globalinfeasible, dualproofsuccess) );
    }
 
    assert(valid);
@@ -8402,7 +8402,7 @@ SCIP_RETCODE conflictAnalyzeLP(
 
       SCIP_CALL( runBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, blkmem, farkascoefs,
             &farkaslhs, &farkasactivity, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, iterations, marklpunsolved,
-            dualraysuccess, &valid) );
+            dualproofsuccess, &valid) );
 
       SCIPsetFreeBufferArray(set, &farkascoefs);
 
@@ -8491,19 +8491,19 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
 
    conflict->conflictset->conflicttype = SCIP_CONFTYPE_INFEASLP;
 
-   olddualproofsuccess = conflict->ndualrayinfsuccess;
+   olddualproofsuccess = conflict->ndualproofsinfsuccess;
 
    /* perform conflict analysis */
    SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, \
          cliquetable, SCIPlpDiving(lp), &dualraysuccess, &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
-   conflict->ninflpsuccess += ((nconss > 0 || conflict->ndualrayinfsuccess > olddualproofsuccess) ? 1 : 0);
+   conflict->ninflpsuccess += ((nconss > 0 || conflict->ndualproofsinfsuccess > olddualproofsuccess) ? 1 : 0);
    conflict->ninflpiterations += iterations;
    conflict->ninflpconfconss += nconss;
    conflict->ninflpconfliterals += nliterals;
    conflict->ninflpreconvconss += nreconvconss;
    conflict->ninflpreconvliterals += nreconvliterals;
    if( success != NULL )
-      *success = (nconss > 0 || conflict->ndualrayinfsuccess > olddualproofsuccess);
+      *success = (nconss > 0 || conflict->ndualproofsinfsuccess > olddualproofsuccess);
 
    /* stop timing */
    SCIPclockStop(conflict->inflpanalyzetime, set);
@@ -8570,19 +8570,19 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    conflict->conflictset->conflicttype = SCIP_CONFTYPE_BNDEXCEEDING;
    conflict->conflictset->usescutoffbound = TRUE;
 
-   oldnsuccess = conflict->ndualraybndsuccess + conflict->ndualrayinfsuccess;
+   oldnsuccess = conflict->ndualproofsbndsuccess + conflict->ndualproofsinfsuccess;
 
    /* perform conflict analysis */
    SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, \
          cliquetable, SCIPlpDiving(lp), &dualraysuccess, &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
-   conflict->nboundlpsuccess += ((nconss > 0 || conflict->ndualraybndsuccess + conflict->ndualrayinfsuccess > oldnsuccess) ? 1 : 0);
+   conflict->nboundlpsuccess += ((nconss > 0 || conflict->ndualproofsbndsuccess + conflict->ndualproofsinfsuccess > oldnsuccess) ? 1 : 0);
    conflict->nboundlpiterations += iterations;
    conflict->nboundlpconfconss += nconss;
    conflict->nboundlpconfliterals += nliterals;
    conflict->nboundlpreconvconss += nreconvconss;
    conflict->nboundlpreconvliterals += nreconvliterals;
    if( success != NULL )
-      *success = (nconss > 0 || conflict->ndualraybndsuccess + conflict->ndualrayinfsuccess > oldnsuccess);
+      *success = (nconss > 0 || conflict->ndualproofsbndsuccess + conflict->ndualproofsinfsuccess > oldnsuccess);
 
    /* stop timing */
    SCIPclockStop(conflict->boundlpanalyzetime, set);
@@ -9157,84 +9157,84 @@ SCIP_Real SCIPconflictGetStrongbranchTime(
    return SCIPclockGetTime(conflict->sbanalyzetime);
 }
 
-/** gets number of successful calls to infeasible dualray analysis */
-SCIP_Longint SCIPconflictGetNDualrayInfSuccess(
+/** gets number of successful calls to dual proof analysis derived from infeasible LPs */
+SCIP_Longint SCIPconflictGetNDualproofsInfSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->ndualrayinfsuccess;
+   return conflict->ndualproofsinfsuccess;
 }
 
-/** gets number of globally valid dualray constraints */
-SCIP_Longint SCIPconflictGetNDualrayInfGlobal(
+/** gets number of globally valid dual proof constraints derived from infeasible LPs */
+SCIP_Longint SCIPconflictGetNDualproofsInfGlobal(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->ndualrayinfglobal;
+   return conflict->ndualproofsinfglobal;
 }
 
-/** gets number of locally valid dualray constraints */
-SCIP_Longint SCIPconflictGetNDualrayInfLocal(
+/** gets number of locally valid dual proof constraints derived from infeasible LPs */
+SCIP_Longint SCIPconflictGetNDualproofsInfLocal(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->ndualrayinflocal;
+   return conflict->ndualproofsinflocal;
 }
 
-/** gets average length of infeasible dualrays */
-SCIP_Longint SCIPconflictGetNDualrayInfNonzeros(
+/** gets average length of dual proof constraints derived from infeasible LPs */
+SCIP_Longint SCIPconflictGetNDualproofsInfNonzeros(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->dualrayinfnnonzeros;
+   return conflict->dualproofsinfnnonzeros;
 }
 
-/** gets number of successfully analyzed dual proofs of boundexceeding LPs */
-SCIP_Longint SCIPconflictGetNDualrayBndSuccess(
+/** gets number of successfully analyzed dual proofs derived from bound exceeding LPs */
+SCIP_Longint SCIPconflictGetNDualproofsBndSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->ndualraybndsuccess;
+   return conflict->ndualproofsbndsuccess;
 }
 
-/** gets number of globally applied dual proofs of boundexceeding LPs */
-SCIP_Longint SCIPconflictGetNDualrayBndGlobal(
+/** gets number of globally applied dual proofs derived from bound exceeding LPs */
+SCIP_Longint SCIPconflictGetNDualproofsBndGlobal(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->ndualraybndglobal;
+   return conflict->ndualproofsbndglobal;
 }
 
-/** gets number of locally applied dual proofs of boundexceeding LPs */
-SCIP_Longint SCIPconflictGetNDualrayBndLocal(
+/** gets number of locally applied dual proofs derived from bound exceeding LPs */
+SCIP_Longint SCIPconflictGetNDualproofsBndLocal(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->ndualraybndlocal;
+   return conflict->ndualproofsbndlocal;
 }
 
-/** gets average length of dual proofs of boundexceeding LPs */
-SCIP_Longint SCIPconflictGetNDualrayBndNonzeros(
+/** gets average length of dual proofs derived from bound exceeding LPs */
+SCIP_Longint SCIPconflictGetNDualproofsBndNonzeros(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->dualraybndnnonzeros;
+   return conflict->dualproofsbndnnonzeros;
 }
 
 /** gets number of calls to infeasible strong branching conflict analysis */
