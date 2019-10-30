@@ -378,7 +378,7 @@ char* SCIPdecompPrintStats(
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
             "Modularity: %.3f, Area Score: %.3f\n",
             decomp->modularity, decomp->areascore);
-   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
+   (void) SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
             "Constraint Block Graph: %d edges, %d articulation nodes, %d connected components, %d min., %d max. degree\n",
             decomp->nedges, decomp->narticulations, decomp->ncomponents, decomp->mindegree, decomp->maxdegree);
 
