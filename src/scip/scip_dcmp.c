@@ -551,7 +551,6 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
          startposs[1] = block + maxnblockvars;
          endposs[1] = nconsvars;
 
-         p = 0;
          /* loop over all variables before (p==0) and after (p==1) the most frequent block label */
          for( p = 0; p < 2; ++p )
          {
