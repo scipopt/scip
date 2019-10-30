@@ -43,6 +43,7 @@
 #include "scip/debug.h"
 #include "scip/disp.h"
 #include "scip/history.h"
+#include "scip/implics.h"
 #include "scip/pricestore.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
@@ -2449,6 +2450,8 @@ void SCIPprintTransProblemStatistics(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
    SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Nonzeros         : %d constraint, %d clique table\n",
+         scip->stat->nnz, SCIPcliquetableGetNEntries(scip->cliquetable));
 }
 
 /** outputs presolver statistics
@@ -3534,33 +3537,59 @@ void SCIPprintSolutionStatistics(
 
    if( scip->set->misc_calcintegral )
    {
+      int s;
+      const char* names[] = {
+         "primal-dual",
+         "primal-ref",
+         "dual-ref"
+      };
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Integrals          :      Total       Avg%%\n");
       if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE && ! objlimitreached )
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (problem infeasible)\n");
+      {
+        for( s = 0; s < 3; ++s )
+        {
+           SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s: %10s %10s (problem infeasible)\n",
+              names[s], "-", "-");
+        }
+      }
       else
       {
-         SCIP_Real avggap;
-         SCIP_Real primaldualintegral;
+         SCIP_Real integrals[3];
+         SCIP_Real solvingtime = SCIPgetSolvingTime(scip);
 
-         if( !SCIPisFeasZero(scip, SCIPgetSolvingTime(scip)) )
+         if( !SCIPisFeasZero(scip, solvingtime) )
          {
-            primaldualintegral = SCIPstatGetPrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob);
-            avggap = primaldualintegral/SCIPgetSolvingTime(scip);
+            integrals[0] =  SCIPstatGetPrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, TRUE);
+
+            if( scip->set->misc_referencevalue != SCIP_INVALID ) /*lint !e777*/
+            {
+               integrals[1] = SCIPstatGetPrimalReferenceIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, FALSE);
+               integrals[2] = SCIPstatGetDualReferenceIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, FALSE);
+            }
+            else
+               integrals[1] = integrals[2] = SCIP_INVALID;
          }
          else
          {
-            avggap = 0.0;
-            primaldualintegral = 0.0;
+            BMSclearMemoryArray(integrals, 3);
          }
 
-         /* caution: this assert is non-deterministic since it depends on the solving time */
-         assert(0.0 <= avggap && SCIPisLE(scip, avggap, 100.0));
+         /* print integrals, if computed */
+         for( s = 0; s < 3; ++s )
+         {
+            if( integrals[s] == SCIP_INVALID ) /*lint !e777*/
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s:          -          - (not evaluated)\n", names[s]);
+            else
+            {
+               SCIP_Real avg = integrals[s] / MAX(solvingtime,1e-6);
 
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         : %10.2f %% (%.2f primal-dual integral)\n",
-            avggap, primaldualintegral);
+               /* caution: this assert is non-deterministic since it depends on the solving time */
+               assert(0.0 <= avg && SCIPisLE(scip, avg, 100.0));
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s: %10.2f %10.2f\n", names[s], integrals[s], avg);
+            }
+         }
       }
    }
-   else
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (not evaluated)\n");
 }
 
 /** outputs concurrent solver statistics
@@ -4131,6 +4160,6 @@ void SCIPstoreSolutionGap(
 
    if( scip->set->stage == SCIP_STAGE_SOLVING && scip->set->misc_calcintegral )
    {
-      SCIPstatUpdatePrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
+      SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
    }
 }
