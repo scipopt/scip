@@ -454,6 +454,14 @@ struct SYM_Sortrhstype
 };
 typedef struct SYM_Sortrhstype SYM_SORTRHSTYPE;
 
+/** data struct to store arrays used for sorting rhs types */
+struct SYM_Sortgraphcompvars
+{
+   int*                  components;         /**< array of components */
+   int*                  colors;             /**< array of colors */
+};
+typedef struct SYM_Sortgraphcompvars SYM_SORTGRAPHCOMPVARS;
+
 /** sorts rhs types - first by sense, then by value
  *
  *  Due to numerical issues, we first sort by sense, then by value.
@@ -514,6 +522,33 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
    return 0;
 }
 
+
+/** sorts variable indices according to their colored component in the graph
+ *
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+static
+SCIP_DECL_SORTINDCOMP(SYMsortGraphCompVars)
+{
+   SYM_SORTGRAPHCOMPVARS* data;
+
+   data = (SYM_SORTGRAPHCOMPVARS*) dataptr;
+
+   if( data->colors[ind1] < data->colors[ind2] )
+      return -1;
+   else if( data->colors[ind1] > data->colors[ind2] )
+      return 1;
+
+   if( data->components[ind1] < data->components[ind2] )
+      return -1;
+   if( data->components[ind1] > data->components[ind2] )
+      return 1;
+
+   return 0;
+}
 
 
 
@@ -2328,27 +2363,38 @@ static
 SCIP_RETCODE buildSubgroupGraph(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
-   SCIP_DIGRAPH*         graph,              /**< the initialized graph with no edges */
-   int*                  genorder,     /**< order in which the generators should be considered (or NULL) */
-   int                   compidx             /**< index of the component */
+   int*                  genorder,           /**< order in which the generators should be considered (or NULL) */
+   int                   compidx,            /**< index of the component */
+   int**                 graphcomponents,    /**< buffer to store the components of the graph (ordered var indices) */
+   int**                 graphcompbegins,    /**< buffer to store the indices of each new graph component */
+   int**                 compcolorbegins,    /**< buffer to store at which indices a new color begins */
+   int*                  ngraphcomponents,   /**< buffer to store the number of graph components */
+   int*                  ncompcolors         /**< buffer to store the number of different colors */
    )
 {
    SCIP_DISJOINTSET* vartocomponent;
    SCIP_DISJOINTSET* comptocolor;
+   SCIP_DIGRAPH* graph;
    SCIP_VAR** permvars;
    int** perms;
    int* components;
    int* componentbegins;
+   SYM_SORTGRAPHCOMPVARS graphcompvartype;
    int ncomponents;
    int npermvars;
    int npermsincomp;
    int nextcolor;
+   int nextcomp;
    int j;
    int k;
 
    assert(scip != NULL);
    assert(propdata != NULL);
-   assert(graph != NULL);
+   assert(graphcomponents != NULL);
+   assert(graphcompbegins != NULL);
+   assert(compcolorbegins != NULL);
+   assert(ngraphcomponents != NULL);
+   assert(ncompcolors != NULL);
    assert(compidx >= 0);
    assert(compidx < propdata->ncomponents);
    assert(!propdata->componentblocked[compidx]);
@@ -2366,6 +2412,7 @@ SCIP_RETCODE buildSubgroupGraph(
 
    SCIP_CALL( SCIPdisjointsetCreate(&vartocomponent, SCIPblkmem(scip), npermvars) );
    SCIP_CALL( SCIPdisjointsetCreate(&comptocolor, SCIPblkmem(scip), npermvars) );
+   SCIP_CALL( SCIPdigraphCreate(&graph, SCIPblkmem(scip), npermvars) );
 
    for( j = 0; j < npermsincomp; ++j )
    {
@@ -2377,7 +2424,7 @@ SCIP_RETCODE buildSubgroupGraph(
       SCIP_Bool isvalidperm = TRUE;
 
       /* use given order of generators, if specified */
-      genidx = genorder == NULL ? j : genorder[j];
+      genidx = (genorder == NULL ? j : genorder[j]);
 
       perm = perms[components[componentbegins[compidx] + genidx]];
 
@@ -2404,7 +2451,7 @@ SCIP_RETCODE buildSubgroupGraph(
          comp1 = SCIPdisjointsetFind(vartocomponent, k);
          comp2 = SCIPdisjointsetFind(vartocomponent, img);
 
-         /* if both variables are in the same component, this generator would create a cycle */
+         /* if both variables are in the same component, this generator would create a cycle, so skip it */
          if( comp1 == comp2 )
          {
             isvalidperm = FALSE;
@@ -2414,7 +2461,7 @@ SCIP_RETCODE buildSubgroupGraph(
          color1 = SCIPdisjointsetFind(comptocolor, comp1);
          color2 = SCIPdisjointsetFind(comptocolor, comp2);
 
-         /* a generator is not allows to connect two components of the same color, since they depend on each other */
+         /* a generator is not allowed to connect two components of the same color, since they depend on each other */
          if( color1 == color2 )
          {
             isvalidperm = FALSE;
@@ -2424,34 +2471,110 @@ SCIP_RETCODE buildSubgroupGraph(
          if( firstcolor == -1 )
             firstcolor = color1;
 
+         /* in case of success, both directions for each pair will be added, since perm consists of 2-cycles */
+         SCIP_CALL( SCIPdigraphAddArc(graph, k, img, NULL) );
+      }
+
+      /* if the new graph is not acyclic, delete the newly added edges and go to next generator */
+      if( k < npermvars || isAcyclicGraph(graph) )
+      {
+         int l;
+
+         for( l = 0; l < k; ++l )
+         {
+            if( perm[l] != l )
+            {
+               SCIP_CALL( SCIPdigraphSetNSuccessors(graph, l, SCIPdigraphGetNSuccessors(graph, l) - 1) );
+            }
+         }
+
+         continue;
+      }
+
+      assert(firstcolor != -1);
+
+      /* if generator can be added, update the datastructures for graph components and colors */
+      for( k = 0; k < npermvars; ++k )
+      {
+         int comp1;
+         int comp2;
+         int color1;
+         int color2;
+         int img = perm[k];
+         assert(perm[img] == k);
+
+         if( img == k )
+            continue;
+
+         comp1 = SCIPdisjointsetFind(vartocomponent, k);
+         comp2 = SCIPdisjointsetFind(vartocomponent, img);
+         color1 = SCIPdisjointsetFind(comptocolor, comp1);
+         color2 = SCIPdisjointsetFind(comptocolor, comp2);
+
+         assert(comp1 != comp2);
+         assert(color1 != color2);
+
          SCIPdisjointsetUnion(comptocolor, firstcolor, color1, TRUE);
          SCIPdisjointsetUnion(comptocolor, firstcolor, color2, TRUE);
          SCIPdisjointsetUnion(vartocomponent, comp1, comp2, FALSE);
 
          assert(SCIPdisjointsetFind(vartocomponent, k) == SCIPdisjointsetFind(vartocomponent, img));
          assert(SCIPdisjointsetFind(comptocolor, SCIPdisjointsetFind(vartocomponent, k)) == firstcolor);
-
-         /* both directions for each pair will be added, since perm consists of 2-cycles */
-         SCIP_CALL( SCIPdigraphAddArc(graph, k, img, NULL) );
-      }
-
-      /* if the new graph is not acyclic, delete the newly added edges and go to next generator */
-      if( !isvalidperm )
-      {
-         int l;
-
-         for( l = 0; l < k; ++l )
-         {
-            int img = perm[l];
-
-            if( img == l )
-               continue;
-
-            SCIP_CALL( SCIPdigraphSetNSuccessors(graph, l, SCIPdigraphGetNSuccessors(graph, l) - 1) );
-         }
       }
    }
 
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, graphcomponents, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(graphcompvartype.components), npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(graphcompvartype.colors), npermvars) );
+
+   for( j = 0; j < npermvars; ++j )
+   {
+      int comp = SCIPdisjointsetFind(vartocomponent, j);
+
+      graphcompvartype.components[j] = comp;
+      graphcompvartype.colors[j] = SCIPdisjointsetFind(comptocolor, comp);
+
+      (*graphcomponents)[j] = j;
+   }
+
+   SCIPsort(*graphcomponents, SYMsortGraphCompVars, (void*) &graphcompvartype, npermvars);
+
+   *ngraphcomponents = SCIPdisjointsetGetComponentCount(vartocomponent);
+   *ncompcolors = SCIPdisjointsetGetComponentCount(comptocolor);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, graphcompbegins, *ngraphcomponents + 1) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, compcolorbegins, *ncompcolors + 1) );
+
+   nextcolor = 1;
+   nextcomp = 1;
+   (graphcompbegins)[0] = 0;
+   (graphcompbegins)[0] = 0;
+
+   for( j = 1; j < npermvars; ++j )
+   {
+      int idx1 = (*graphcomponents)[j];
+      int idx2 = (*graphcomponents)[j-1];
+
+      assert(graphcompvartype.components[idx1] >= graphcompvartype.components[idx2]);
+      assert(graphcompvartype.colors[idx1] >= graphcompvartype.colors[idx2]);
+
+      if( graphcompvartype.components[idx1] > graphcompvartype.components[idx2] )
+      {
+         (*graphcompbegins)[nextcomp] = j;
+         ++nextcomp;
+
+         if( graphcompvartype.colors[idx1] > graphcompvartype.colors[idx2] )
+         {
+            (*compcolorbegins)[nextcolor] = j;
+            ++nextcolor;
+         }
+      }
+   }
+   assert(nextcomp == *ngraphcomponents);
+   assert(nextcolor == *ncompcolors);
+
+   SCIPfreeBufferArray(scip, &(graphcompvartype.colors));
+   SCIPfreeBufferArray(scip, &(graphcompvartype.components));
+   SCIPdigraphFree(&graph);
    SCIPdisjointsetFree(&comptocolor, SCIPblkmem(scip));
    SCIPdisjointsetFree(&vartocomponent, SCIPblkmem(scip));
 
@@ -2465,6 +2588,11 @@ SCIP_RETCODE detectAndHandleSubgroups(
    SCIP_PROPDATA*        propdata            /**< pointer to data of symmetry propagator */
    )
 {
+   int* graphcomponents;
+   int* graphcompbegins;
+   int* compcolorbegins;
+   int ngraphcomponents;
+   int ncompcolors;
    int i;
 
    assert(scip != NULL);
@@ -2486,7 +2614,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
    /* iterate over components */
    for( i = 0; i < propdata->ncomponents; ++i )
    {
-      SCIP_DIGRAPH* graph;
       int* genorder;
       int j;
 
@@ -2494,22 +2621,10 @@ SCIP_RETCODE detectAndHandleSubgroups(
       if( propdata->componentblocked[i] )
          continue;
 
-      SCIP_CALL( SCIPcreateDigraph(scip, &graph, propdata->npermvars) );
-
-      /* set color of each node to -1 */
-      for( j = 0; j < propdata->npermvars; ++j )
-      {
-         SYM_NODEDATA nodedata;
-
-         nodedata.color = -1;
-         SCIPdigraphSetNodeData(graph, (void*) &nodedata, j);
-      }
-
       genorder = chooseOrderOfGenerators(scip, propdata, i);
 
-      SCIP_CALL( buildSubgroupGraph(scip, propdata, graph, genorder, i) );
-
-      SCIPdigraphFree(&graph);
+      SCIP_CALL( buildSubgroupGraph(scip, propdata, genorder, i, &graphcomponents, &graphcompbegins,
+            &compcolorbegins, &ngraphcomponents, &ncompcolors) );
    }
 
    return SCIP_OKAY;

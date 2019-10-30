@@ -64,12 +64,6 @@ struct SYM_Matrixdata
    int                   nuniquemat;         /**< number of unique matrix coefficients */
 };
 
-/** node data for graph procedure to detect symmetric subgroups */
-struct SYM_Nodedata
-{
-   int                   color;          /**< last color that was given to the node */
-};
-
 #ifdef __cplusplus
 }
 #endif

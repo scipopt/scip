@@ -59,7 +59,6 @@ typedef uint32_t SYM_HANDLETYPE;        /**< type of symmetry handling */
 
 typedef struct SYM_Vartype SYM_VARTYPE;      /**< data of variables that are considered to be equivalent */
 typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation */
-typedef struct SYM_Nodedata SYM_NODEDATA;    /** node data for graph procedure to detect symmetric subgroups */
 
 #ifdef __cplusplus
 }
