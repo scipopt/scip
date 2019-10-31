@@ -243,7 +243,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool                propinenforce;   /**< whether to (re)run propagation in enforcement */
    SCIP_Real                weakcutthreshold;/**< threshold for when to regard a cut from an estimator as weak */
    SCIP_Real                strongcutmaxcoef;/**< "strong" cuts will be scaled to have their maximal coef in [1/strongcutmaxcoef,strongcutmaxcoef] */
-   SCIP_Bool                strongcutefficacy; /**< consider efficacy requirement when deciding whether a cut is "strong" */
+   SCIP_Bool                strongcutefficacy;/**< consider efficacy requirement when deciding whether a cut is "strong" */
+   SCIP_Bool                forcestrongcut;  /**< whether to force "strong" cuts in enforcement */
    SCIP_Real                enfoauxviolfactor;/**< an expression will be enforced if the "auxiliary" violation is at least enfoauxviolfactor times the "original" violation */
 
    /* statistics */
@@ -5530,7 +5531,10 @@ SCIP_RETCODE enforceExprNlhdlr(
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    adding cut ");
          SCIP_CALL( SCIPprintRow(scip, row, enfologfile) ); )
 
-         SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+         /* I take addbranchscores here as a proxy for in-enforcement
+          * and !allowweakcuts as equivalent for having a strong cut (we usually have allowweakcuts=TRUE only if we haven't found strong cuts before)
+          */
+         SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && addbranchscores, &infeasible) );
 
          if( infeasible )
          {
@@ -12625,6 +12629,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/strongcutefficacy",
          "consider efficacy requirement when deciding whether a cut is \"strong\"",
          &conshdlrdata->strongcutefficacy, TRUE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/forcestrongcut",
+         "whether to force \"strong\" cuts in enforcement",
+         &conshdlrdata->forcestrongcut, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/enfoauxviolfactor",
          "an expression will be enforced if the \"auxiliary\" violation is at least this factor times the \"original\" violation",
