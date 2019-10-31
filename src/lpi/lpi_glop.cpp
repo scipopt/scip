@@ -2279,7 +2279,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    /* if we want a sparse vector */
    if ( ninds != NULL && inds != NULL )
    {
-      const SCIP_Real eps = 1e-06;
+      const Fractional eps = lpi->parameters->primal_feasibility_tolerance();
 
       *ninds = 0;
       for (int row = 0; row < num_rows; ++row)
@@ -2343,7 +2343,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    /* if we want a sparse vector */
    if ( ninds != NULL && inds != NULL )
    {
-      const SCIP_Real eps = 1e-06;
+      const Fractional eps = lpi->parameters->primal_feasibility_tolerance();
 
       *ninds = 0;
       for (ColIndex col(0); col < num_cols; ++col)
