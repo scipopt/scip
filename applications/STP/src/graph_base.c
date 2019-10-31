@@ -814,7 +814,7 @@ SCIP_RETCODE graph_obstgrid_create(
       graph_knot_chg(g, k, 0);
    }
 
-   SCIP_CALL( graph_pack(scip, g, &gp, TRUE) );
+   SCIP_CALL( graph_pack(scip, g, &gp, NULL, TRUE) );
    g = gp;
    g->stp_type = STP_OARSMT;
 
@@ -3416,6 +3416,7 @@ SCIP_RETCODE graph_pack(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
    GRAPH**               newgraph,           /**< the new graph */
+   SCIP_Real*            offset,             /**< pointer to store offset from non-leaf terminals (only PC) */
    SCIP_Bool             verbose             /**< verbose? */
    )
 {
@@ -3540,6 +3541,12 @@ SCIP_RETCODE graph_pack(
    SCIPfreeBufferArray(scip, &old2newNode);
 
    SCIP_CALL( graph_pc_finalizeSubgraph(scip, g_new) );
+
+   if( graph_pc_isPc(g_new) )
+   {
+      assert(offset);
+      *offset += graph_pc_getNonLeafTermOffset(scip, g_new);
+   }
 
    if( g_old->path_heap != NULL )
       graph_path_exit(scip, g_old);

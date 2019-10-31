@@ -2346,9 +2346,9 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( reduce(scip, graph, &offset, reduction, probdata->minelims, TRUE) );
 
 #ifdef WITH_UG
-   SCIP_CALL( graph_pack(scip, graph, &packedgraph, FALSE) );
+   SCIP_CALL( graph_pack(scip, graph, &packedgraph, &offset, FALSE) );
 #else
-   SCIP_CALL( graph_pack(scip, graph, &packedgraph, TRUE) );
+   SCIP_CALL( graph_pack(scip, graph, &packedgraph, &offset, TRUE) );
 #endif
 
    graph = packedgraph;

@@ -402,7 +402,7 @@ extern SCIP_RETCODE   graph_obstgrid_create(SCIP*, GRAPH**, int**, int**, int, i
 extern SCIP_RETCODE   graph_grid_coordinates(SCIP*, int**, int**, int*, int, int);
 extern SCIP_RETCODE   graph_copy_data(SCIP*, const GRAPH*, GRAPH*);
 extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
-extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Bool);
+extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Real*, SCIP_Bool);
 extern SCIP_RETCODE   graph_trail_arr(SCIP*, const GRAPH*, int, SCIP_Bool*);
 extern SCIP_RETCODE   graph_trail_costAware(SCIP*, const GRAPH*, int, SCIP_Bool*);
 extern SCIP_RETCODE   graph_get_edgeConflicts(SCIP*, const GRAPH*);
@@ -443,6 +443,7 @@ extern void   graph_pc_presolExit(SCIP*, GRAPH*);
 extern void   graph_pc_deleteTermExtension(SCIP*, GRAPH*, int);
 extern void   graph_pc_getBiased(SCIP*, const GRAPH*, SCIP_Bool, SCIP_Real*, SCIP_Real*);
 extern void   graph_pc_termMarkProper(const GRAPH*, int*);
+extern SCIP_Real graph_pc_getNonLeafTermOffset(SCIP*, const GRAPH*);
 extern SCIP_RETCODE   graph_pc_presolInit(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_initSubgraph(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_finalizeSubgraph(SCIP*, GRAPH*);

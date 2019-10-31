@@ -1702,7 +1702,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          else
             SCIP_CALL( reduce(scip, solgraph, &offsetdummy, 2, 5, FALSE) );
 
-         SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, FALSE) );
+         SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, &offsetdummy, FALSE) );
 
          solgraph = psolgraph;
          ancestors = solgraph->ancestors;
