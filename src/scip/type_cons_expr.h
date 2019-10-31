@@ -875,7 +875,6 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - rowprep : a rowprep where to store the estimator
  *  - success : buffer to indicate whether an estimator could be computed
  *  - addbranchscores: indicates whether to register branching scores
- *  - brscoretag: value to be passed on to SCIPaddConsExprExprBranchScore()
  *  - addedbranchscores: buffer to store whether the branching score callback was successful
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(x) SCIP_RETCODE x (\
@@ -891,7 +890,6 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_ROWPREP* rowprep, \
    SCIP_Bool* success, \
    SCIP_Bool addbranchscores, \
-   unsigned int brscoretag, \
    SCIP_Bool* addedbranchscores)
 
 typedef struct SCIP_ConsExpr_Nlhdlr         SCIP_CONSEXPR_NLHDLR;          /**< nonlinear handler */
