@@ -103,6 +103,7 @@ struct SCIP_ConsExpr_Expr
    /* enforcement of expr == auxvar (or expr <= auxvar, or expr >= auxvar) */
    SCIP_CONSEXPR_EXPRENFO** enfos;        /**< enforcements */
    int                     nenfos;        /**< number of enforcements */
+   unsigned int            lastenforced;  /**< last enforcement round where expression was enforced successfully */
 
    /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */

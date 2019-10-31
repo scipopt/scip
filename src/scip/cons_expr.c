@@ -5618,12 +5618,12 @@ SCIP_RETCODE enforceExpr(
       underestimate = SCIPgetConsExprExprNLocksPos(expr) > 0;
    }
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    /* no sufficient violation w.r.t. the original variables -> skip expression */
    if( !overestimate && !underestimate )
       return SCIP_OKAY;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* call the separation and branchscore callbacks of the nonlinear handlers */
    for( e = 0; e < expr->nenfos; ++e )
@@ -5653,12 +5653,14 @@ SCIP_RETCODE enforceExpr(
       if( expr->enfos[e]->auxvalue != SCIP_INVALID && REALABS(expr->enfos[e]->auxvalue - auxvarvalue) < conshdlrdata->enfoauxviolfactor * REALABS(expr->evalvalue - auxvarvalue) )
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate); )
+         /* TODO expr->lastenforced = conshdlrdata->enforound;  ??? */
          continue;
       }
 
       if( !allowweakcuts && expr->enfos[e]->auxvalue != SCIP_INVALID && SCIPisFeasZero(scip, expr->enfos[e]->auxvalue - auxvarvalue) )
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with tiny auxviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, underestimate, overestimate); )
+         /* TODO expr->lastenforced = conshdlrdata->enforound;  ??? */
          continue;
       }
 
@@ -5676,6 +5678,7 @@ SCIP_RETCODE enforceExpr(
          {
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   found a cutoff -> stop separation\n"); )
             *result = SCIP_CUTOFF;
+            expr->lastenforced = conshdlrdata->enforound;
             break;
          }
 
@@ -5683,6 +5686,7 @@ SCIP_RETCODE enforceExpr(
          {
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution\n", nlhdlr->name); )
             *result = SCIP_SEPARATED;
+            expr->lastenforced = conshdlrdata->enforound;
             /* TODO or should we always just stop here? */
          }
 
@@ -5695,6 +5699,7 @@ SCIP_RETCODE enforceExpr(
             assert(*result == SCIP_DIDNOTFIND || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED);
             if( *result == SCIP_DIDNOTFIND )
                *result = SCIP_BRANCHED;
+            expr->lastenforced = conshdlrdata->enforound;
          }
       }
 
@@ -5709,6 +5714,7 @@ SCIP_RETCODE enforceExpr(
          {
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   found a cutoff -> stop separation\n"); )
             *result = SCIP_CUTOFF;
+            expr->lastenforced = conshdlrdata->enforound;
             break;
          }
 
@@ -5716,6 +5722,7 @@ SCIP_RETCODE enforceExpr(
          {
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> separating the current solution\n", nlhdlr->name); )
             *result = SCIP_SEPARATED;
+            expr->lastenforced = conshdlrdata->enforound;
             /* TODO or should we always just stop here? */
          }
 
@@ -5728,6 +5735,7 @@ SCIP_RETCODE enforceExpr(
             assert(*result == SCIP_DIDNOTFIND || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED);
             if( *result == SCIP_DIDNOTFIND )
                *result = SCIP_BRANCHED;
+            expr->lastenforced = conshdlrdata->enforound;
          }
       }
    }
@@ -5771,7 +5779,7 @@ SCIP_RETCODE enforceConstraints2(
       ++(conshdlrdata->enforound);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5813,8 +5821,12 @@ SCIP_RETCODE enforceConstraints2(
       {
          SCIP_Bool resultexpr;
 
-         /* it only makes sense to call the separation callback if there is a variable attached to the expression */
+         /* we can only enforce if there is an auxvar to compare with */
          if( expr->auxvar == NULL )
+            continue;
+
+         assert(expr->lastenforced <= conshdlrdata->enforound);
+         if( expr->lastenforced == conshdlrdata->enforound )
             continue;
 
          SCIP_CALL( enforceExpr(scip, conshdlr, conss[c], expr, sol, soltag, allowweakcuts, addbranchscores, &resultexpr) );
