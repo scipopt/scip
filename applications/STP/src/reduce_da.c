@@ -34,10 +34,8 @@
 #include "reduce.h"
 #include "heur_tm.h"
 #include "heur_ascendprune.h"
-#include "cons_stp.h"
 #include "dualascent.h"
 #include "heur_local.h"
-#include "misc_stp.h"
 #include "probdata_stp.h"
 #include "heur_rec.h"
 

@@ -31,7 +31,6 @@
 #include <string.h>
 #include <assert.h>
 #include "portab.h"
-#include "misc_stp.h"
 #include "graph.h"
 
 

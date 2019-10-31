@@ -48,7 +48,9 @@
 #include "scip/cons_setppc.h"
 #include "scip/misc.h"
 #include "scip/struct_misc.h"
+#ifdef WITH_UG
 #include "branch_stp.h"
+#endif
 
 #define STP_SYM_PRIZE
 #define STP_AGG_SYM

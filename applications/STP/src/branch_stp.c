@@ -26,14 +26,11 @@
 
 #include <assert.h>
 #include <string.h>
-#include "scip/branch_fullstrong.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/var.h"
 #include "scip/set.h"
-#include "scip/pub_tree.h"
 #include "scip/struct_scip.h"
-#include "scip/clock.h"
 #include "graph.h"
 #include "heur_tm.h"
 #include "heur_local.h"
