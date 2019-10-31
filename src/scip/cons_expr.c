@@ -5743,6 +5743,77 @@ SCIP_RETCODE enforceExpr(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce a single constraint */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS*            cons,               /**< constraint to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   unsigned int          soltag,             /**< tag of solution */
+   SCIP_CONSEXPR_ITERATOR* it,               /**< expression iterator that we can just use here */
+   SCIP_Bool             allowweakcuts,      /**< whether to allow weak cuts in this round */
+   SCIP_Bool             addbranchscores,    /**< whether to add branching scores */
+   SCIP_RESULT*          result,             /**< pointer to update with result of the enforcing call */
+   SCIP_Bool*            success             /**< buffer to store whether some enforcement took place */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_EXPR* expr;
+
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(it != NULL);
+   assert(result != NULL);
+   assert(success != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   *success = FALSE;
+
+   for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      SCIP_Bool resultexpr;
+
+      /* we can only enforce if there is an auxvar to compare with */
+      if( expr->auxvar == NULL )
+         continue;
+
+      assert(expr->lastenforced <= conshdlrdata->enforound);
+      if( expr->lastenforced == conshdlrdata->enforound )
+      {
+         *success = TRUE;
+         continue;
+      }
+
+      SCIP_CALL( enforceExpr(scip, conshdlr, cons, expr, sol, soltag, allowweakcuts, addbranchscores, &resultexpr) );
+
+      /* if not enforced, then we must not have found a cutoff, cut, or branchscore */
+      assert((expr->lastenforced == conshdlrdata->enforound) == (resultexpr != SCIP_DIDNOTFIND));
+      if( expr->lastenforced == conshdlrdata->enforound )
+         *success = TRUE;
+
+      if( resultexpr == SCIP_CUTOFF )
+      {
+         *result = SCIP_CUTOFF;
+         break;
+      }
+
+      if( resultexpr == SCIP_SEPARATED )
+         *result = SCIP_SEPARATED;
+
+      if( resultexpr == SCIP_BRANCHED && *result != SCIP_SEPARATED )
+         *result = SCIP_BRANCHED;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** helper function to enforce constraints */
 static
 SCIP_RETCODE enforceConstraints2(
@@ -5761,8 +5832,10 @@ SCIP_RETCODE enforceConstraints2(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool consenforced;  /* whether any expression in constraint could be enforced */
    int c;
 
+   assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
    assert(result != NULL);
 
@@ -5785,9 +5858,6 @@ SCIP_RETCODE enforceConstraints2(
    {
       assert(conss != NULL && conss[c] != NULL);
 
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
       /* skip constraints that are not enabled or deleted */
       if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
          continue;
@@ -5798,6 +5868,9 @@ SCIP_RETCODE enforceConstraints2(
        */
       if( !addbranchscores && !SCIPconsIsSeparationEnabled(conss[c]) )
          continue;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
 
       /* skip non-violated constraints */
       if( consdata->lhsviol <= SCIPfeastol(scip) && consdata->rhsviol <= SCIPfeastol(scip) )
@@ -5817,35 +5890,22 @@ SCIP_RETCODE enforceConstraints2(
          }
       })
 
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-      {
-         SCIP_Bool resultexpr;
-
-         /* we can only enforce if there is an auxvar to compare with */
-         if( expr->auxvar == NULL )
-            continue;
-
-         assert(expr->lastenforced <= conshdlrdata->enforound);
-         if( expr->lastenforced == conshdlrdata->enforound )
-            continue;
-
-         SCIP_CALL( enforceExpr(scip, conshdlr, conss[c], expr, sol, soltag, allowweakcuts, addbranchscores, &resultexpr) );
-
-         if( resultexpr == SCIP_CUTOFF )
-         {
-            *result = SCIP_CUTOFF;
-            break;
-         }
-
-         if( resultexpr == SCIP_SEPARATED )
-            *result = SCIP_SEPARATED;
-
-         if( resultexpr == SCIP_BRANCHED && *result != SCIP_SEPARATED )
-            *result = SCIP_BRANCHED;
-      }
+      SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, allowweakcuts, addbranchscores, result, &consenforced) );
 
       if( *result == SCIP_CUTOFF )
          break;
+
+#if 0
+      if( !consenforced && !allowweakcuts && addbranchscores )
+      {
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, try again with weak cuts allowed\n", SCIPconsGetName(conss[c])); )
+
+         SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, TRUE, addbranchscores, result, &consenforced) );
+
+         if( *result == SCIP_CUTOFF )
+            break;
+      }
+#endif
    }
 
    SCIPexpriteratorFree(&it);
