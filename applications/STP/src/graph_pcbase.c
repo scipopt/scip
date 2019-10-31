@@ -484,18 +484,24 @@ SCIP_RETCODE graph_pc_initPrizes(
 /** allocates and initializes arrays for subgraph PC/MW */
 SCIP_RETCODE graph_pc_initSubgraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g                   /**< the graph */
+   GRAPH*                subgraph            /**< the subgraph */
    )
 {
    int ksize;
-   assert(scip && g);
+   int esize;
+   assert(scip && subgraph);
 
-   ksize = g->ksize;
+   ksize = subgraph->ksize;
+   esize = subgraph->esize;
 
-   assert(ksize > 0 && ksize >= g->knots);
+   assert(ksize > 0 && ksize >= subgraph->knots);
+   assert(esize > 0 && esize >= subgraph->edges);
 
-   SCIP_CALL( graph_pc_initPrizes(scip, g, ksize) );
-   SCIP_CALL( initTerm2Edge(scip, g, ksize) );
+   SCIP_CALL( graph_pc_initPrizes(scip, subgraph, ksize) );
+   SCIP_CALL( initTerm2Edge(scip, subgraph, ksize) );
+
+   assert(!subgraph->cost_org_pc);
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(subgraph->cost_org_pc), esize) );
 
    return SCIP_OKAY;
 }
@@ -510,9 +516,7 @@ SCIP_RETCODE graph_pc_finalizeSubgraph(
    assert(scip);
    assert(subgraph->term2edge && subgraph->prize);
    assert(subgraph->extended);
-
-   SCIP_CALL( initCostOrgPc(scip, subgraph) );
-
+   assert(subgraph->cost_org_pc);
    assert(subgraph->source >= 0);
    assert(!graph_pc_isPcMw(subgraph) || Is_term(subgraph->term[subgraph->source]));
 
@@ -1027,54 +1031,64 @@ void graph_pc_enforceNonLeafTerm(
 }
 
 
-/** updates term2edge array for new graph that is a subgraph of an old graph
- *  needs to be called right before corresponding edge is added */
-void graph_pc_updateTerm2edge(
-   GRAPH*                newgraph,           /**< the new graph */
-   const GRAPH*          oldgraph,           /**< the old graph */
-   int                   newtail,            /**< tail in new graph */
-   int                   newhead,            /**< head in new graph */
-   int                   oldtail,            /**< tail in old graph */
-   int                   oldhead             /**< head in old graph */
+/** Updates prize-collecting data for an edge added to subgraph of given graph 'orggraph'.
+ *  Needs to be called right before corresponding edge is added */
+void graph_pc_updateSubgraphEdge(
+   const GRAPH*          orggraph,           /**< original graph */
+   const int*            nodemapOrg2sub,     /**< node mapping from original to subgraph */
+   int                   orgedge,            /**< original edge */
+   GRAPH*                subgraph            /**< the subgraph */
 )
 {
-   assert(newgraph != NULL);
-   assert(oldgraph != NULL);
-   assert(newgraph->term2edge != NULL);
-   assert(oldgraph->term2edge != NULL);
+   const int orgtail = orggraph->tail[orgedge];
+   const int orghead = orggraph->head[orgedge];
+   const int newtail = nodemapOrg2sub[orgtail];
+   const int newhead = nodemapOrg2sub[orghead];
+
+   assert(subgraph);
+   assert(subgraph->term2edge);
+   assert(orggraph->term2edge);
    assert(newtail >= 0);
    assert(newhead >= 0);
-   assert(oldtail >= 0);
-   assert(oldhead >= 0);
-   assert(oldgraph->extended);
-   assert(newgraph->extended);
+   assert(orggraph->extended);
+   assert(subgraph->extended);
 
-   if( oldgraph->term2edge[oldtail] >= 0 && oldgraph->term2edge[oldhead] >= 0 && oldgraph->term[oldtail] != oldgraph->term[oldhead] )
+   if( orggraph->term2edge[orgtail] >= 0 && orggraph->term2edge[orghead] >= 0 && orggraph->term[orgtail] != orggraph->term[orghead] )
    {
-      assert(Is_anyTerm(newgraph->term[newtail]) && Is_anyTerm(newgraph->term[newhead]));
-      assert(Is_anyTerm(oldgraph->term[oldtail]) && Is_anyTerm(oldgraph->term[oldhead]));
-      assert(oldgraph->source != oldtail && oldgraph->source != oldhead);
-      assert(flipedge(newgraph->edges) == newgraph->edges + 1);
+      assert(Is_anyTerm(subgraph->term[newtail]) && Is_anyTerm(subgraph->term[newhead]));
+      assert(Is_anyTerm(orggraph->term[orgtail]) && Is_anyTerm(orggraph->term[orghead]));
+      assert(orggraph->source != orgtail && orggraph->source != orghead);
+      assert(flipedge(subgraph->edges) == subgraph->edges + 1);
 
-      newgraph->term2edge[newtail] = newgraph->edges;
-      newgraph->term2edge[newhead] = newgraph->edges + 1;
+      subgraph->term2edge[newtail] = subgraph->edges;
+      subgraph->term2edge[newhead] = subgraph->edges + 1;
    }
 
 #ifndef NDEBUG
-   if( TERM2EDGE_NOTERM == oldgraph->term2edge[oldtail] )
-      assert(TERM2EDGE_NOTERM == newgraph->term2edge[newtail]);
+   if( TERM2EDGE_NOTERM == orggraph->term2edge[orgtail] )
+      assert(TERM2EDGE_NOTERM == subgraph->term2edge[newtail]);
 
-   if( TERM2EDGE_NOTERM == oldgraph->term2edge[oldhead] )
-      assert(TERM2EDGE_NOTERM == newgraph->term2edge[newhead]);
+   if( TERM2EDGE_NOTERM == orggraph->term2edge[orghead] )
+      assert(TERM2EDGE_NOTERM == subgraph->term2edge[newhead]);
 #endif
 
    /* now save the terminal states if there are any */
 
-   if( oldgraph->term2edge[oldtail] < 0 )
-      newgraph->term2edge[newtail] = oldgraph->term2edge[oldtail];
+   if( orggraph->term2edge[orgtail] < 0 )
+      subgraph->term2edge[newtail] = orggraph->term2edge[orgtail];
 
-   if( oldgraph->term2edge[oldhead] < 0 )
-      newgraph->term2edge[newhead] = oldgraph->term2edge[oldhead];
+   if( orggraph->term2edge[orghead] < 0 )
+      subgraph->term2edge[newhead] = orggraph->term2edge[orghead];
+
+
+   /* now save the original costs */
+
+   assert(subgraph->edges + 1 < subgraph->esize);
+   assert(subgraph->edges + 1 < orggraph->edges);
+   assert(subgraph->cost_org_pc);
+
+   subgraph->cost_org_pc[subgraph->edges] = orggraph->cost_org_pc[orgedge];
+   subgraph->cost_org_pc[subgraph->edges + 1] = orggraph->cost_org_pc[flipedge(orgedge)];
 }
 
 
@@ -2701,9 +2715,9 @@ int graph_pc_getTwinTerm(
    int                   vertex              /**< the vertex  */
 )
 {
-   assert(g != NULL);
+   assert(g && g->term2edge);
    assert(graph_pc_isPcMw(g));
-   assert(g->term2edge != NULL && g->term2edge[vertex] >= 0);
+   assert(g->term2edge[vertex] >= 0);
    assert(Is_anyTerm(g->term[vertex]));
 
    return g->head[g->term2edge[vertex]];

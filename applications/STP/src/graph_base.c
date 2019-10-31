@@ -1804,7 +1804,9 @@ void graph_edge_addSubgraph(
    assert(orggraph->extended);
 
    if( graph_pc_isPcMw(orggraph) )
-      graph_pc_updateTerm2edge(subgraph, orggraph, newtail, newhead, orgtail, orghead);
+   {
+      graph_pc_updateSubgraphEdge(orggraph, nodemapOrg2sub, e, subgraph);
+   }
 
    graph_edge_add(scip, subgraph, newtail, newhead, orggraph->cost[e], orggraph->cost[flipedge(e)]);
 }

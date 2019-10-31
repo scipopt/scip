@@ -428,7 +428,7 @@ extern void   graph_pc_knotToNonTerm(GRAPH*, int);
 extern void   graph_pc_knotToFixedTerm(GRAPH*, int);
 extern void   graph_pc_termToNonLeafTerm(SCIP*, GRAPH*, int);
 extern void   graph_pc_knotChg(GRAPH*, int, int);
-extern void   graph_pc_updateTerm2edge(GRAPH*, const GRAPH*, int, int, int, int);
+extern void   graph_pc_updateSubgraphEdge(const GRAPH*, const int*, int, GRAPH*);
 extern void   graph_pc_enforcePseudoTerm(SCIP*, GRAPH*, int);
 extern void   graph_pc_enforceNonLeafTerm(GRAPH*, int);
 extern void   graph_pc_subtractPrize(SCIP*, GRAPH*, SCIP_Real, int);

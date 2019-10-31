@@ -160,7 +160,7 @@ void getRedCostDistances(
 
       for( int i = 0; i < nnodes; i++ )
       {
-         if( Is_term(g->term[i]) && graph_pc_termIsNonLeafTerm(g, i) && i != g->source )
+         if( Is_term(g->term[i]) && !graph_pc_termIsNonLeafTerm(g, i) && i != g->source )
          {
             const int twin = graph_pc_getTwinTerm(g, i);
             assert(!graph_pc_knotIsFixedTerm(g, i));
