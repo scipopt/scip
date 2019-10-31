@@ -41,6 +41,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
+#include "scip/scip_pricer.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_var.h"
 #include "scip/struct_matrix.h"
@@ -478,6 +479,10 @@ SCIP_RETCODE SCIPmatrixCreate(
    if( SCIPgetNVars(scip) == 0 || SCIPgetNConss(scip) == 0 )
       return SCIP_OKAY;
 
+   /* return if pricers are present and the matrix should only be built when complete */
+   if( onlyifcomplete && SCIPgetNActivePricers(scip) != 0 )
+      return SCIP_OKAY;
+
    /* loop over all constraint handlers and collect the number of checked constraints */
    nconshdlrs = SCIPgetNConshdlrs(scip);
    conshdlrs = SCIPgetConshdlrs(scip);
@@ -611,7 +616,7 @@ SCIP_RETCODE SCIPmatrixCreate(
       int nconshdlrconss;
       SCIP_Bool rowadded;
 
-      if( SCIPisStopped(scip) )
+      if( SCIPisStopped(scip) || (onlyifcomplete && !(*complete)) )
       {
          stopped = TRUE;
          break;
@@ -632,6 +637,10 @@ SCIP_RETCODE SCIPmatrixCreate(
             if( SCIPconsIsModifiable(cons) )
             {
                *complete = FALSE;
+
+               if( onlyifcomplete )
+                  break;
+
                continue;
             }
 
@@ -661,6 +670,10 @@ SCIP_RETCODE SCIPmatrixCreate(
             if( SCIPconsIsModifiable(cons) )
             {
                *complete = FALSE;
+
+               if( onlyifcomplete )
+                  break;
+
                continue;
             }
 
@@ -704,6 +717,10 @@ SCIP_RETCODE SCIPmatrixCreate(
             if( SCIPconsIsModifiable(cons) )
             {
                *complete = FALSE;
+
+               if( onlyifcomplete )
+                  break;
+
                continue;
             }
 
@@ -739,6 +756,10 @@ SCIP_RETCODE SCIPmatrixCreate(
                if( SCIPconsIsModifiable(cons) )
                {
                   *complete = FALSE;
+
+                  if( onlyifcomplete )
+                     break;
+
                   continue;
                }
 
@@ -789,6 +810,10 @@ SCIP_RETCODE SCIPmatrixCreate(
                if( SCIPconsIsModifiable(cons) )
                {
                   *complete = FALSE;
+
+                  if( onlyifcomplete )
+                     break;
+
                   continue;
                }
 
@@ -842,6 +867,10 @@ SCIP_RETCODE SCIPmatrixCreate(
                if( SCIPconsIsModifiable(cons) )
                {
                   *complete = FALSE;
+
+                  if( onlyifcomplete )
+                     break;
+
                   continue;
                }
 
