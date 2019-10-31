@@ -106,6 +106,10 @@ struct SCIP_LPi
    int                   timing;             /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
 };
 
+/** define whether/which feasibility check is performed */
+#define UNSCALEDFEAS_CHECK 2  /**< 0: no check, 1: completely new check, 2: check unscaled variable and activity values */
+
+
 /*
  * LP Interface Methods
  */
@@ -1225,6 +1229,60 @@ void updateScaledLP(
      lpi->scaler->Clear();
 }
 
+/** check primal feasibility */
+static
+bool checkUnscaledPrimalFeasibility(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert( lpi != NULL );
+   assert( lpi->solver != NULL );
+   assert( lpi->linear_program != NULL );
+
+#if UNSCALEDFEAS_CHECK == 1
+   /* get unscaled solution */
+   const ColIndex num_cols = lpi->linear_program->num_variables();
+   DenseRow unscaledsol(num_cols);
+   for (ColIndex col = ColIndex(0); col < num_cols; ++col)
+      unscaledsol[col] = lpi->scaler->UnscaleVariableValue(col, lpi->solver->GetVariableValue(col));
+
+   /* if the solution is not feasible w.r.t. absolute tolerances, try to fix it in the unscaled problem */
+   const double feastol = lpi->parameters->primal_feasibility_tolerance();
+   return lpi->linear_program->SolutionIsLPFeasible(unscaledsol, feastol);
+
+#elif UNSCALEDFEAS_CHECK == 2
+   const double feastol = lpi->parameters->primal_feasibility_tolerance();
+
+   /* check bounds of unscaled solution */
+   const ColIndex num_cols = lpi->linear_program->num_variables();
+   for (ColIndex col = ColIndex(0); col < num_cols; ++col)
+   {
+      const Fractional val = lpi->scaler->UnscaleVariableValue(col, lpi->solver->GetVariableValue(col));
+      const Fractional lb = lpi->linear_program->variable_lower_bounds()[col];
+      if ( val < lb - feastol )
+         return false;
+      const Fractional ub = lpi->linear_program->variable_upper_bounds()[col];
+      if ( val > ub + feastol )
+         return false;
+   }
+
+   /* check activities of unscaled solution */
+   const RowIndex num_rows = lpi->linear_program->num_constraints();
+   for (RowIndex row(0); row < num_rows; ++row)
+   {
+      const Fractional val = lpi->scaler->UnscaleConstraintActivity(row, lpi->solver->GetConstraintActivity(row));
+      const Fractional lhs = lpi->linear_program->constraint_lower_bounds()[row];
+      if ( val < lhs - feastol )
+         return false;
+      const Fractional rhs = lpi->linear_program->constraint_upper_bounds()[row];
+      if ( val > rhs + feastol )
+         return false;
+   }
+#endif
+
+   return true;
+}
+
 /** common function between the two LPI Solve() functions */
 static
 SCIP_RETCODE SolveInternal(
@@ -1258,24 +1316,20 @@ SCIP_RETCODE SolveInternal(
    const ProblemStatus status = lpi->solver->GetProblemStatus();
    if ( (status == ProblemStatus::PRIMAL_FEASIBLE || status == ProblemStatus::OPTIMAL) && lpi->parameters->use_scaling() )
    {
-      const ColIndex num_cols = lpi->linear_program->num_variables();
-
-      /* get unscaled solution */
-      DenseRow unscaledsol(num_cols);
-      for (ColIndex col = ColIndex(0); col < num_cols; ++col)
-         unscaledsol[col] = lpi->scaler->UnscaleVariableValue(col, lpi->solver->GetVariableValue(col));
-
-      /* if the solution is not feasible w.r.t. absolute tolerances, try to fix it in the unscaled problem */
-      const double feastol = lpi->parameters->primal_feasibility_tolerance();
-      if ( ! lpi->linear_program->SolutionIsLPFeasible(unscaledsol, feastol) )
+      if ( ! checkUnscaledPrimalFeasibility(lpi) )
       {
-         SCIPdebugMessage("Solution not feasible w.r.t. absolute tolerance %g -> reoptimize.\n", feastol);
+         SCIPdebugMessage("Solution not feasible w.r.t. absolute tolerance %g -> reoptimize.\n", lpi->parameters->primal_feasibility_tolerance());
 
          /* Re-solve without scaling to try to fix the infeasibility. */
          lpi->parameters->set_use_scaling(false);
          lpi->lp_modified_since_last_solve = true;
          SolveInternal(lpi);
          lpi->parameters->set_use_scaling(true);
+
+#ifdef SCIP_DEBUG
+         if ( ! checkUnscaledPrimalFeasibility(lpi) )
+            SCIPdebugMessage("Solution still not feasible after turning off scaling.\n");
+#endif
       }
    }
 
