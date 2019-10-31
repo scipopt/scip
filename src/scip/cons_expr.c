@@ -246,6 +246,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool                strongcutefficacy;/**< consider efficacy requirement when deciding whether a cut is "strong" */
    SCIP_Bool                forcestrongcut;  /**< whether to force "strong" cuts in enforcement */
    SCIP_Real                enfoauxviolfactor;/**< an expression will be enforced if the "auxiliary" violation is at least enfoauxviolfactor times the "original" violation */
+   SCIP_Real                weakcutminviolfactor; /**< retry with weak cuts for constraints with violation at least this factor of maximal violated constraints */
 
    /* statistics */
    SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
@@ -5822,8 +5823,8 @@ SCIP_RETCODE enforceConstraints2(
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    unsigned int          soltag,             /**< tag of solution */
-   SCIP_Bool             allowweakcuts,      /**< whether to allow weak cuts in this round */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement, and not just separation */
+   SCIP_Real             maxviol,            /**< largest violation among all expr-constraints, only used if in enforcement */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
@@ -5887,22 +5888,23 @@ SCIP_RETCODE enforceConstraints2(
          }
       })
 
-      SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, allowweakcuts, inenforcement, result, &consenforced) );
+      SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, FALSE, inenforcement, result, &consenforced) );
 
       if( *result == SCIP_CUTOFF )
          break;
 
-#if 0
-      if( !consenforced && !allowweakcuts && inenforcement )
+      if( !consenforced && inenforcement && MAX(consdata->lhsviol, consdata->rhsviol) > conshdlrdata->weakcutminviolfactor * maxviol )
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, try again with weak cuts allowed\n", SCIPconsGetName(conss[c])); )
 
          SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, TRUE, inenforcement, result, &consenforced) );
 
+         if( consenforced )
+            ++conshdlrdata->nweaksepa;  /* TODO maybe this should not be counted per constraint, but per enforcement round? */
+
          if( *result == SCIP_CUTOFF )
             break;
       }
-#endif
    }
 
    SCIPexpriteratorFree(&it);
@@ -6305,26 +6307,12 @@ SCIP_RETCODE enforceConstraints(
       return SCIP_OKAY;
    }
 
-   /* try without weak cuts */
-   SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, FALSE, TRUE, result) );
+   SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, TRUE, maxviol, result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED )
    {
       if( *result == SCIP_BRANCHED )
          *result = SCIP_INFEASIBLE;
-      return SCIP_OKAY;
-   }
-
-   /* retry with weak cuts */
-   SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, TRUE, TRUE, result) );
-
-   if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED )
-   {
-      if( *result == SCIP_BRANCHED )
-         *result = SCIP_INFEASIBLE;
-      else if( *result == SCIP_SEPARATED )
-         ++conshdlrdata->nweaksepa;
-
       return SCIP_OKAY;
    }
 
@@ -6457,7 +6445,7 @@ SCIP_RETCODE separateConstraints(
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: separation\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
 
    /* call separation */
-   SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, FALSE, FALSE, result) );
+   SCIP_CALL( enforceConstraints2(scip, conshdlr, conss, nconss, sol, soltag, FALSE, SCIP_INVALID, result) );
 
    return SCIP_OKAY;
 }
@@ -12714,6 +12702,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/enfoauxviolfactor",
          "an expression will be enforced if the \"auxiliary\" violation is at least this factor times the \"original\" violation",
          &conshdlrdata->enfoauxviolfactor, TRUE, 0.01, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/weakcutminviolfactor",
+         "retry enfo of constraint with weak cuts if violation is least this factor of maximal violated constraints",
+         &conshdlrdata->weakcutminviolfactor, TRUE, 0.5, 0.0, 2.0, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
