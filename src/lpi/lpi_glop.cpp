@@ -1286,7 +1286,8 @@ bool checkUnscaledPrimalFeasibility(
 /** common function between the two LPI Solve() functions */
 static
 SCIP_RETCODE SolveInternal(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
+   SCIP_LPI*             lpi,                 /**< LP interface structure */
+   std::unique_ptr<TimeLimit>& time_limit     /**< time limit */
    )
 {
    assert( lpi != NULL );
@@ -1297,8 +1298,6 @@ SCIP_RETCODE SolveInternal(
 
    lpi->solver->SetParameters(*(lpi->parameters));
    lpi->lp_time_limit_was_reached = false;
-
-   std::unique_ptr<TimeLimit> time_limit = TimeLimit::FromParameters(*lpi->parameters);
 
    /* possibly ignore warm start information for next solve */
    if ( lpi->from_scratch )
@@ -1323,7 +1322,7 @@ SCIP_RETCODE SolveInternal(
          /* Re-solve without scaling to try to fix the infeasibility. */
          lpi->parameters->set_use_scaling(false);
          lpi->lp_modified_since_last_solve = true;
-         SolveInternal(lpi);
+         SolveInternal(lpi, time_limit);   /* inherit time limit, so used time is not reset */
          lpi->parameters->set_use_scaling(true);
 
 #ifdef SCIP_DEBUG
@@ -1349,8 +1348,10 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    assert( lpi->parameters != NULL );
 
    SCIPdebugMessage("SCIPlpiSolvePrimal: %d rows, %d cols.\n", lpi->linear_program->num_constraints().value(), lpi->linear_program->num_variables().value());
+   std::unique_ptr<TimeLimit> time_limit = TimeLimit::FromParameters(*lpi->parameters);
+
    lpi->parameters->set_use_dual_simplex(false);
-   return SolveInternal(lpi);
+   return SolveInternal(lpi, time_limit);
 }
 
 /** calls dual simplex to solve the LP */
@@ -1364,8 +1365,10 @@ SCIP_RETCODE SCIPlpiSolveDual(
    assert( lpi->parameters != NULL );
 
    SCIPdebugMessage("SCIPlpiSolveDual: %d rows, %d cols.\n", lpi->linear_program->num_constraints().value(), lpi->linear_program->num_variables().value());
+   std::unique_ptr<TimeLimit> time_limit = TimeLimit::FromParameters(*lpi->parameters);
+
    lpi->parameters->set_use_dual_simplex(true);
-   return SolveInternal(lpi);
+   return SolveInternal(lpi, time_limit);
 }
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
@@ -2852,7 +2855,10 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_OBJLIM = %f.\n", *dval);
       break;
    case SCIP_LPPAR_LPTILIM:
-      *dval = lpi->parameters->max_time_in_seconds();
+      if ( FLAGS_time_limit_use_usertime )
+         *dval = lpi->parameters->max_time_in_seconds();
+      else
+         *dval = lpi->parameters->max_deterministic_time();
       SCIPdebugMessage("SCIPlpiGetRealpar: SCIP_LPPAR_LPTILIM = %f.\n", *dval);
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
@@ -2901,7 +2907,10 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       SCIPdebugMessage("SCIPlpiSetRealpar: SCIP_LPPAR_LPTILIM -> %f.\n", dval);
-      lpi->parameters->set_max_time_in_seconds(dval);
+      if ( FLAGS_time_limit_use_usertime )
+         lpi->parameters->set_max_time_in_seconds(dval);
+      else
+         lpi->parameters->set_max_deterministic_time(dval);
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
       lpi->conditionlimit = dval;
