@@ -162,8 +162,8 @@
 #define DEFAULT_RECOMPUTERESTART    FALSE    /**< Recompute symmetries after a restart has occurred? */
 
 /* default parameters for Schreier Sims cuts */
-#define DEFAULT_SCHREIERSIMSORBITRULE   1   /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
-#define DEFAULT_SCHREIERSIMSLEADERRULE  1   /**< Should the first element in the orbit be selected as leader? */
+#define DEFAULT_SCHREIERSIMSTIEBREAKRULE 1   /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
+#define DEFAULT_SCHREIERSIMSLEADERRULE  1    /**< Should the first element in the orbit be selected as leader? */
 
 
 /* event handler properties */
@@ -2770,7 +2770,7 @@ SCIP_RETCODE addSymInfoConflictGraphSchreierSims(
 
       assert( nodedata != NULL );
       assert( nodedata->nconflictinorbit == 0 );
-      assert( conflictvars != NULL );
+      assert( conflictvars != NULL || SCIPdigraphGetNSuccessors(conflictgraph, i) == 0 );
 
       curorbit = nodedata->orbitidx;
 
@@ -3281,8 +3281,8 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    int                   norbits,            /**< number of orbits */
    int*                  orbitidx,           /**< pointer to index of selected orbit */
    int*                  leaderidx,          /**< pointer to leader in orbit */
-   int                   orbitrule,          /**< rule to select orbit */
-   int                   leaderrule,         /**< rule to select leader in orbit */
+   SCIP_LEADERRULE       leaderrule,         /**< rule to select leader */
+   SCIP_LEADERTIEBREAKRULE tiebreakrule,     /**< tie break rule to select leader */
    SCIP_Bool             symretopesactive,   /**< whether inequalities based on symretopes are combined with
                                               *   Schreier Sims cuts */
    SCIP_Bool*            success             /**< pointer to store whether orbit cut be selected successfully */
@@ -3291,11 +3291,13 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    SCIP_DIGRAPH* conflictgraph;
    SCIP_NODEDATA* nodedata;
    SCIP_Bool conflictgraphsuccess;
-   int i;
+   SCIP_VAR** vars;
+   int nvars;
+   int varidx;
+   int orbitcriterion = INT_MIN;
    int candcriterion;
    int curcriterion;
-   int candtiebreak;
-   int curtiebreak;
+   int i;
 
    assert( scip != NULL );
    assert( orbits != NULL );
@@ -3304,13 +3306,11 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    assert( orbitidx != NULL );
    assert( leaderidx != NULL );
 
-   assert( orbitrule > 0 );
-   assert( orbitrule < 7 );
-   assert( leaderrule > 0 );
-   assert( leaderrule < 3 );
-
    *orbitidx = 0;
    *leaderidx = 0;
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
 
    /* if not inequalities based on symretopes shall be added, Schreier Sims cuts are always valid */
    if ( symretopesactive )
@@ -3318,169 +3318,93 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    else
       *success = TRUE;
 
-   /* select orbit
-    *
-    * current possibilities:
-    * - minimum size (orbitrule: 1, leader rule required);
-    * - maximum size (orbitrule: 2, leader rule required);
-    * - maximum number of conflicts with an orbit var, tie-break: largest orbit (orbitrule: 3);
-    * - maximum number of conflicts with an orbit var, tie-break: largest conflict set (orbitrule: 4);
-    * - maximum number of conflicts with an orbit var, tie-break: smallest orbit (orbitrule: 5);
-    * - maximum number of conflicts with a variable, tie-break: largest orbit (orbitrule: 6).
-    */
-   if ( orbitrule == 1 )
-      candcriterion = INT_MAX;
-   else
-      candcriterion = -1;
-
-   if ( orbitrule == 5 )
-      candtiebreak = INT_MAX;
-   else
-      candtiebreak = -1;
-
-   /* rules based on orbit criterion */
-   if ( orbitrule < 3 )
+   /* select the leader and its orbit */
+   if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT || leaderrule == SCIP_LEADERRULE_LASTINORBIT )
    {
+      /* Iterate over orbits and select the first one that meets the tiebreak rule.
+       * If symretopes are active, ensure to select an orbit of binary variables.
+       */
       for (i = 0; i < norbits; ++i)
       {
-         /* if symretopes shall be applied, the leading variables have to be binary */
          if ( symretopesactive && SCIPvarGetType(permvars[orbits[orbitbegins[i]]]) != SCIP_VARTYPE_BINARY )
             continue;
 
-         curcriterion = orbitbegins[i + 1] - orbitbegins[i];
-
-         if ( (orbitrule == 1 && curcriterion < candcriterion)
-            || (orbitrule == 2 && curcriterion > candcriterion) )
+         if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MINORBIT )
+            curcriterion = orbitbegins[i] - orbitbegins[i + 1];
+         else if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXORBIT )
+            curcriterion = orbitbegins[i + 1] - orbitbegins[i];
+         else
          {
-            candcriterion = curcriterion;
+            SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, vars, nvars, FALSE,
+                  permvars, npermvars, permvarmap, orbits, orbitbegins, norbits, &conflictgraphsuccess) );
+
+            /* terminate if conflict graph could not be created*/
+            if ( ! conflictgraphsuccess )
+               return SCIP_OKAY;
+
+            if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT )
+               varidx = orbits[orbitbegins[i]];
+            else
+               varidx = orbits[orbitbegins[i + 1] - 1];
+
+            nodedata = SCIPdigraphGetNodeData(conflictgraph, varidx);
+            assert( nodedata != NULL );
+            assert( nodedata->orbitidx == i );
+
+            curcriterion = nodedata->nconflictinorbit;
+
+            SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, npermvars) );
+         }
+
+         if ( curcriterion > orbitcriterion )
+         {
+            orbitcriterion = curcriterion;
             *orbitidx = i;
+            *success = TRUE;
+
+            if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT )
+               *leaderidx = 0;
+            else
+               *leaderidx = orbitbegins[i + 1] - orbitbegins[i] - 1;
+         }
+      }
+   }
+   else
+   {
+      SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, vars, nvars, FALSE,
+            permvars, npermvars, permvarmap, orbits, orbitbegins, norbits, &conflictgraphsuccess) );
+
+      /* Iterate over orbits and select the first one that meets the tiebreak rule.
+       * If symretopes are active, ensure to select an orbit of binary variables.
+       */
+      for (i = 0; i < nvars; ++i)
+      {
+         if ( symretopesactive && SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
+            continue;
+
+         nodedata = SCIPdigraphGetNodeData(conflictgraph, i);
+         assert( nodedata != NULL );
+
+         /* skip variables not affected by symmetry */
+         if ( nodedata->orbitidx == -1 )
+            continue;
+
+         if ( leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT )
+            curcriterion = nodedata->nconflictinorbit;
+         else
+            curcriterion = SCIPdigraphGetNSuccessors(conflictgraph, i);
+
+         if ( curcriterion > orbitcriterion )
+         {
+            orbitcriterion = curcriterion;
+            *orbitidx = nodedata->orbitidx;
+            *leaderidx = nodedata->posinorbit;
             *success = TRUE;
          }
       }
 
-      if ( leaderrule == 1 )
-         *leaderidx = 0;
-      else
-         *leaderidx = candcriterion - 1;
+      SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, nvars) );
    }
-   /* rules based on variables within orbit */
-   else
-   {
-      if ( orbitrule <= 5 )
-      {
-         /* create conflict graph */
-         SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, permvars, npermvars, TRUE,
-               permvars, npermvars, permvarmap, orbits, orbitbegins, norbits, &conflictgraphsuccess) );
-
-         if ( ! conflictgraphsuccess )
-            return SCIP_OKAY;
-
-         for (i = 0; i < npermvars; ++i)
-         {
-            /* if symretopes shall be applied, the leading variables have to be binary */
-            if ( symretopesactive && SCIPvarGetType(permvars[i]) != SCIP_VARTYPE_BINARY )
-               continue;
-
-            nodedata = SCIPdigraphGetNodeData(conflictgraph, i);
-            assert( nodedata != NULL );
-
-            curcriterion = nodedata->nconflictinorbit;
-            assert( curcriterion >= 0 );
-
-            if ( nodedata->orbitidx == -1 )
-               continue;
-
-            if ( curcriterion <= candcriterion )
-               continue;
-
-            if ( orbitrule == 4  )
-               curtiebreak = SCIPdigraphGetNSuccessors(conflictgraph, i);
-            else
-               curtiebreak = nodedata->orbitsize;
-
-            if ( orbitrule < 5 )
-            {
-               if ( curcriterion > candcriterion || (curcriterion == candcriterion && curtiebreak > candtiebreak) )
-               {
-                  candcriterion = curcriterion;
-                  candtiebreak = curtiebreak;
-
-                  *orbitidx = nodedata->orbitidx;
-                  *leaderidx = nodedata->posinorbit;
-                  *success = TRUE;
-               }
-            }
-            else
-            {
-               if ( curcriterion > candcriterion || (curcriterion == candcriterion && curtiebreak < candtiebreak) )
-               {
-                  candcriterion = curcriterion;
-                  candtiebreak = curtiebreak;
-
-                  *orbitidx = nodedata->orbitidx;
-                  *leaderidx = nodedata->posinorbit;
-                  *success = TRUE;
-               }
-            }
-         }
-
-         SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, npermvars) );
-      }
-      else
-      {
-         SCIP_VAR** vars;
-         int nvars;
-
-         vars = SCIPgetVars(scip);
-         nvars = SCIPgetNVars(scip);
-
-         assert( vars != NULL );
-
-         if ( nvars == 0 )
-            return SCIP_OKAY;
-
-         /* create conflict graph */
-         SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, vars, nvars, FALSE,
-               permvars, 0, NULL, orbits, orbitbegins, norbits, &conflictgraphsuccess) );
-
-         if ( ! conflictgraphsuccess )
-            return SCIP_OKAY;
-
-         for (i = 0; i < nvars; ++i)
-         {
-            /* if symretopes shall be applied, the leading variables have to be binary */
-            if ( symretopesactive && SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
-               continue;
-
-            nodedata = SCIPdigraphGetNodeData(conflictgraph, i);
-            assert( nodedata != NULL );
-
-            if ( nodedata->orbitidx == -1 )
-               continue;
-
-            curcriterion = SCIPdigraphGetNSuccessors(conflictgraph, i);
-
-            if ( curcriterion <= candcriterion )
-               continue;
-
-            curtiebreak = nodedata->orbitsize;
-
-            if ( curcriterion > candcriterion || (curcriterion == candcriterion && curtiebreak > candtiebreak) )
-            {
-               candcriterion = curcriterion;
-               candtiebreak = curtiebreak;
-
-               *orbitidx = nodedata->orbitidx;
-               *leaderidx = nodedata->posinorbit;
-               *success = TRUE;
-            }
-         }
-
-         SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, nvars) );
-      }
-   }
-   assert( *orbitidx != -1 );
-   assert( *leaderidx >= 0 );
 
    printf("Orbitidx: %d\tLeaderidx: %d\tCriterion: %d\n", *orbitidx, *leaderidx, candcriterion);
 
@@ -4706,14 +4630,14 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          &propdata->usecolumnsparsity, TRUE, DEFAULT_USECOLUMNSPARSITY, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/" PROP_NAME "/schreiersimsorbitrule",
+         "propagating/" PROP_NAME "/schreiersimstiebreakrule",
          "rule to select the orbit in Schreier Sims inequalities",
-         &propdata->schreiersimsorbitrule, TRUE, DEFAULT_SCHREIERSIMSORBITRULE, 1, 6, NULL, NULL) );
+         &propdata->schreiersimsorbitrule, TRUE, DEFAULT_SCHREIERSIMSTIEBREAKRULE, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/schreiersimsleaderrule",
          "rule to select the leader in an orbit",
-         &propdata->schreiersimsleaderrule, TRUE, DEFAULT_SCHREIERSIMSLEADERRULE, 1, 2, NULL, NULL) );
+         &propdata->schreiersimsleaderrule, TRUE, DEFAULT_SCHREIERSIMSLEADERRULE, 0, 3, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
