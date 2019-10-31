@@ -156,22 +156,18 @@ void getRedCostDistances(
    if( graph_pc_isPcMw(g) )
    {
       assert(g->extended);
-      graph_pc_2org(scip, g);
 
       for( int i = 0; i < nnodes; i++ )
       {
-         if( Is_term(g->term[i]) && !graph_pc_termIsNonLeafTerm(g, i) && i != g->source )
+         if( Is_term(g->term[i]) && !graph_pc_knotIsFixedTerm(g, i) )
          {
-            const int twin = graph_pc_getTwinTerm(g, i);
-            assert(!graph_pc_knotIsFixedTerm(g, i));
-            assert(g->grad[twin] == 2);
+            assert(i != g->source);
+            assert(g->grad[i] == 2);
 
-            for( int e = g->outbeg[twin]; e != EAT_LAST; e = g->oeat[e] )
+            for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
                costrev[e] = FARAWAY;
          }
       }
-
-      graph_pc_2trans(scip, g);
    }
 
    graph_get3nextTerms(scip, g, costrev, costrev, vnoi, vbase, g->path_heap, state);
