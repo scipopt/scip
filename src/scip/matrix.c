@@ -41,6 +41,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
+#include "scip/scip_pricer.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_var.h"
 #include "scip/struct_matrix.h"
@@ -478,6 +479,10 @@ SCIP_RETCODE SCIPmatrixCreate(
    if( SCIPgetNVars(scip) == 0 || SCIPgetNConss(scip) == 0 )
       return SCIP_OKAY;
 
+   /* return if pricers are present and the matrix should only be built when complete */
+   if( onlyifcomplete && SCIPgetNActivePricers(scip) != 0 )
+      return SCIP_OKAY;
+
    /* loop over all constraint handlers and collect the number of checked constraints */
    nconshdlrs = SCIPgetNConshdlrs(scip);
    conshdlrs = SCIPgetConshdlrs(scip);
@@ -628,11 +633,15 @@ SCIP_RETCODE SCIPmatrixCreate(
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
 
+            /* do not include constraints that can be altered due to column generation */
             if( SCIPconsIsModifiable(cons) )
             {
                *complete = FALSE;
+
                if( onlyifcomplete )
                   break;
+
+               continue;
             }
 
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLinear(scip, cons),
@@ -657,11 +666,15 @@ SCIP_RETCODE SCIPmatrixCreate(
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
 
+            /* do not include constraints that can be altered due to column generation */
             if( SCIPconsIsModifiable(cons) )
             {
                *complete = FALSE;
+
                if( onlyifcomplete )
                   break;
+
+               continue;
             }
 
             switch( SCIPgetTypeSetppc(scip, cons) )
@@ -700,11 +713,15 @@ SCIP_RETCODE SCIPmatrixCreate(
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
 
+            /* do not include constraints that can be altered due to column generation */
             if( SCIPconsIsModifiable(cons) )
             {
                *complete = FALSE;
+
                if( onlyifcomplete )
                   break;
+
+               continue;
             }
 
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLogicor(scip, cons),
@@ -735,11 +752,15 @@ SCIP_RETCODE SCIPmatrixCreate(
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
 
+               /* do not include constraints that can be altered due to column generation */
                if( SCIPconsIsModifiable(cons) )
                {
                   *complete = FALSE;
+
                   if( onlyifcomplete )
                      break;
+
+                  continue;
                }
 
                weights = SCIPgetWeightsKnapsack(scip, cons);
@@ -747,7 +768,6 @@ SCIP_RETCODE SCIPmatrixCreate(
 
                if( nvars > valssize )
                {
-                  valssize = (int) (1.5 * nvars);
                   SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, valssize) );
                }
 
@@ -785,11 +805,15 @@ SCIP_RETCODE SCIPmatrixCreate(
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
 
+               /* do not include constraints that can be altered due to column generation */
                if( SCIPconsIsModifiable(cons) )
                {
                   *complete = FALSE;
+
                   if( onlyifcomplete )
                      break;
+
+                  continue;
                }
 
                consvars[0] = SCIPgetVarVarbound(scip, cons);
@@ -838,11 +862,15 @@ SCIP_RETCODE SCIPmatrixCreate(
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
 
+               /* do not include constraints that can be altered due to column generation */
                if( SCIPconsIsModifiable(cons) )
                {
                   *complete = FALSE;
+
                   if( onlyifcomplete )
                      break;
+
+                  continue;
                }
 
                /* get constraint variables and their amount */
