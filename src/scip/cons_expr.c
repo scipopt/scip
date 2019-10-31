@@ -5447,20 +5447,19 @@ SCIP_RETCODE enforceExprNlhdlr(
             {
                /* check whether cut is weak now
                 * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when reconstructing estimateval from cutviol (TODO improve or remove?)
-                * TODO this assumes that efficacynorm='e', maybe integrate rowprep efficacy computation into SCIPgetRowprepViolation or use the row row-efficacy computation later on
                 */
                SCIP_Real auxvarcoef = 0.0;
-               SCIP_Real norm = 0.0;
                int i;
 
                /* get absolute value of coef of auxvar in row - this makes the whole check here more expensive that it should be...
-                * but also compute (square of) euclidean norm of coefficient vector
                 */
                for( i = 0; i < rowprep->nvars; ++i )
                {
-                  norm += rowprep->coefs[i] * rowprep->coefs[i];
                   if( rowprep->vars[i] == auxvar )
+                  {
                      auxvarcoef = REALABS(rowprep->coefs[i]);
+                     break;
+                  }
                }
 
                if( auxvarcoef == 0.0 ||
@@ -5470,14 +5469,6 @@ SCIP_RETCODE enforceExprNlhdlr(
                   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
                      auxvalue, auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
                   sepasuccess = FALSE;
-               }
-
-               norm = sqrt(norm);
-               if( sepasuccess && conshdlrdata->strongcutefficacy && cutviol < SCIPgetSepaMinEfficacy(scip) * norm )
-               {
-                  sepasuccess = FALSE;
-                  ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy is too low: violation %g coefnorm %g minefficacy %g\n",
-                     cutviol, norm, SCIPgetSepaMinEfficacy(scip)); )
                }
             }
          }
@@ -5524,27 +5515,36 @@ SCIP_RETCODE enforceExprNlhdlr(
       if( sepasuccess )
       {
          SCIP_ROW* row;
-         SCIP_Bool infeasible;
 
          SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    adding cut ");
-         SCIP_CALL( SCIPprintRow(scip, row, enfologfile) ); )
-
-         /* I take addbranchscores here as a proxy for in-enforcement
-          * and !allowweakcuts as equivalent for having a strong cut (we usually have allowweakcuts=TRUE only if we haven't found strong cuts before)
-          */
-         SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && addbranchscores, &infeasible) );
-
-         if( infeasible )
+         if( !allowweakcuts && conshdlrdata->strongcutefficacy && !SCIPisCutEfficacious(scip, sol, row) )
          {
-            *result = SCIP_CUTOFF;
-            ++nlhdlr->ncutoffs;
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy %g is too low (minefficacy=%g)\n",
+               SCIPgetCutEfficacy(scip, sol, row), SCIPgetSepaMinEfficacy(scip)); )
          }
          else
          {
-            *result = SCIP_SEPARATED;
-            ++nlhdlr->nseparated;
+            SCIP_Bool infeasible;
+
+            ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    adding cut ");
+            SCIP_CALL( SCIPprintRow(scip, row, enfologfile) ); )
+
+            /* I take addbranchscores here as a proxy for in-enforcement
+             * and !allowweakcuts as equivalent for having a strong cut (we usually have allowweakcuts=TRUE only if we haven't found strong cuts before)
+             */
+            SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && addbranchscores, &infeasible) );
+
+            if( infeasible )
+            {
+               *result = SCIP_CUTOFF;
+               ++nlhdlr->ncutoffs;
+            }
+            else
+            {
+               *result = SCIP_SEPARATED;
+               ++nlhdlr->nseparated;
+            }
          }
 
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
