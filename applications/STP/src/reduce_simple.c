@@ -1459,6 +1459,8 @@ SCIP_RETCODE reduce_simple_pc(
 
    SCIPdebugMessage("degree test pc: %d nodes deleted\n", *countnew);
 
+   reduce_identifyNonLeafTerms(scip, g);
+
    if( countall != NULL )
       (*countall) += (*countnew);
 
@@ -1549,7 +1551,7 @@ SCIP_RETCODE reduce_simple_hc(
 
 
 /** contract edges of weight zero */
-SCIP_RETCODE reduce_simple_contract0Edges(
+SCIP_RETCODE reduce_contract0Edges(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Bool             savehistory         /**< save the history? */
@@ -1596,7 +1598,7 @@ SCIP_RETCODE reduce_simple_contract0Edges(
 
 
 /* removes parallel edges */
-SCIP_RETCODE reduce_simple_deleteMultiedges(
+SCIP_RETCODE reduce_deleteMultiedges(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g                   /**< graph data structure */
 )
@@ -1646,7 +1648,7 @@ SCIP_RETCODE reduce_simple_deleteMultiedges(
 
 
 /** articulation points based reduction */
-SCIP_RETCODE reduce_simple_aritculations(
+SCIP_RETCODE reduce_aritculations(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixedp,             /**< pointer to offset value */
@@ -1693,7 +1695,7 @@ SCIP_RETCODE reduce_simple_aritculations(
 
 
 /** basic reductions */
-SCIP_RETCODE reduce_simple_fixedConflict(
+SCIP_RETCODE reduce_fixedConflicts(
    SCIP*                 scip,               /**< SCIP data structure */
    const int*            edgestate,          /**< for propagation or NULL */
    GRAPH*                g,                  /**< graph data structure */
@@ -1846,31 +1848,44 @@ SCIP_RETCODE reduce_rpt(
 }
 
 
-/** remove non-leaf terminals of degree 0 */
-void reduce_nonLeafTermsDeg0(
+/** identify non-leaf terminals and remove extensions */
+void reduce_identifyNonLeafTerms(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            fixed               /**< pointer to offset value */
+   GRAPH*                g                   /**< graph data structure */
 )
 {
    const int nnodes = graph_get_nNodes(g);
 
-   assert(scip && g && fixed);
+   assert(scip && g);
    assert(graph_pc_isPc(g));
    assert(!g->extended);
    assert(g->prize && g->term2edge);
+   assert(graph_pc_term2edgeIsConsistent(scip, g));
+
+   /* make sure to not delete the last terminal connected to the root */
+   if( g->stp_type == STP_PCSPG && g->grad[g->source] <= 2 )
+   {
+      return;
+   }
 
    for( int k = 0; k < nnodes; ++k )
    {
-      if( g->grad[k] == 0 && graph_pc_knotIsNonLeafTerm(g, k) )
+      if( Is_term(g->term[k]) && !graph_pc_knotIsFixedTerm(g, k) && !graph_pc_termIsNonLeafTerm(g, k) )
       {
-         assert(SCIPisGT(scip, g->prize[k], 0.0));
+         assert(SCIPisGE(scip, g->prize[k], 0.0));
+         assert(k != g->source);
 
-         (*fixed) += g->prize[k];
-         g->prize[k] = 0.0;
-         graph_knot_chg(g, k, STP_TERM_NONE);
-         g->term2edge[k] = TERM2EDGE_NOTERM;
+         if( graph_pc_evalTermIsNonLeaf(scip, g, k) )
+         {
+            SCIPdebugMessage("transform term %d to non-leaf term \n", k);
+
+            graph_pc_termToNonLeafTerm(scip, g, k);
+
+            assert(Is_term(g->term[k]));
+            assert(graph_pc_knotIsNonLeafTerm(g, k));
+         }
       }
    }
 
+   assert(graph_pc_term2edgeIsConsistent(scip, g));
 }

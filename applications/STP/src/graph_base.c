@@ -2008,6 +2008,10 @@ void graph_knot_printInfo(
    {
       printf("node %d: term=%d grad=%d  \n", k, g->term[k], g->grad[k]);
    }
+
+   if( k == g->source )
+      printf("...%d is the root! \n", k);
+
 }
 
 

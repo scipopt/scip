@@ -41,36 +41,6 @@
  */
 
 
-/** is terminal a non-leaf? Checked by evaluation of the current graph */
-static
-SCIP_Bool termIsNonLeafTerm_evaluate(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          g,                  /**< the graph */
-   int                   term                /**< terminal to be checked */
-   )
-{
-   SCIP_Bool isNonLeaf = TRUE;
-
-   assert(graph_pc_isPcMw(g));
-   assert(!g->extended);
-   assert(Is_term(g->term[term]));
-
-   for( int e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
-   {
-      const int neighbor = g->tail[e];
-
-      if( !graph_pc_knotIsDummyTerm(g, neighbor) && SCIPisLT(scip, g->cost[e], g->prize[term]) )
-      {
-         assert(neighbor != g->source || graph_pc_isRootedPcMw(g));
-         isNonLeaf = FALSE;
-         break;
-      }
-   }
-
-   return isNonLeaf;
-}
-
-
 /** is vertex a non-leaf (call before graph transformation was performed)  */
 static inline
 SCIP_Bool isNonLeaf_pretrans(
@@ -300,7 +270,7 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
 
    if( Is_term(g->term[t]) )
    {
-      if( termIsNonLeafTerm_evaluate(scip, g, t) )
+      if( graph_pc_evalTermIsNonLeaf(scip, g, t) )
       {
          if( g->term2edge[t] != TERM2EDGE_NONLEAFTERM )
          {
@@ -646,7 +616,7 @@ SCIP_Bool graph_pc_term2edgeIsConsistent(
 
          if( isNonLeaf )
          {
-            const SCIP_Bool isNonLeaf_evaluate = termIsNonLeafTerm_evaluate(scip, g, i);
+            const SCIP_Bool isNonLeaf_evaluate = graph_pc_evalTermIsNonLeaf(scip, g, i);
             if( !isNonLeaf_evaluate )
             {
                SCIPdebugMessage("term2edge consistency fail0 %d \n", i);
@@ -975,6 +945,36 @@ SCIP_Bool graph_pc_termIsNonLeafTerm(
 }
 
 
+/** is terminal a non-leaf? Checked by evaluation of the current graph */
+SCIP_Bool graph_pc_evalTermIsNonLeaf(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< the graph */
+   int                   term                /**< terminal to be checked */
+   )
+{
+   SCIP_Bool isNonLeaf = TRUE;
+
+   assert(graph_pc_isPcMw(g));
+   assert(!g->extended);
+   assert(Is_term(g->term[term]));
+   assert(!graph_pc_knotIsFixedTerm(g, term));
+
+   for( int e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
+   {
+      const int neighbor = g->tail[e];
+
+      if( !graph_pc_knotIsDummyTerm(g, neighbor) && SCIPisLT(scip, g->cost[e], g->prize[term]) )
+      {
+         assert(neighbor != g->source || graph_pc_isRootedPcMw(g));
+         isNonLeaf = FALSE;
+         break;
+      }
+   }
+
+   return isNonLeaf;
+}
+
+
 /** set high costs for not including given pseudo-terminal */
 void graph_pc_enforcePseudoTerm(
    SCIP*           scip,               /**< SCIP data */
@@ -1236,36 +1236,6 @@ void graph_pc_2transcheck(
       return;
 
    graph_pc_2trans(scip, graph);
-}
-
-
-/** update non-leaf terminals */
-void graph_pc_updateNonLeafTerms(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph               /**< the graph */
-   )
-{
-   const int nnodes = graph_get_nNodes(graph);
-   int* const term2edge = graph->term2edge;
-
-   assert(scip && term2edge);
-   assert(graph_pc_isPcMw(graph));
-   assert(graph_pc_term2edgeIsConsistent(scip, graph));
-   assert(!graph->extended);
-
-   for( int i = 0; i < nnodes; ++i )
-   {
-      if( Is_term(graph->term[i])
-            && !graph_pc_termIsNonLeafTerm(graph, i)
-            && termIsNonLeafTerm_evaluate(scip, graph, i) )
-      {
-         graph_pc_termToNonLeafTerm(scip, graph, i);
-
-         assert(graph_pc_termIsNonLeafTerm(graph, i));
-      }
-   }
-
-   assert(graph_pc_term2edgeIsConsistent(scip, graph));
 }
 
 

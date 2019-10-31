@@ -155,17 +155,17 @@ extern SCIP_RETCODE    heur_extendPcMwOuterTest(SCIP*);
 
 /* reduce_simple.c
  */
-extern SCIP_RETCODE    reduce_simple_deleteMultiedges(SCIP*, GRAPH*);
-extern SCIP_RETCODE    reduce_simple_contract0Edges(SCIP*, GRAPH*, SCIP_Bool);
 extern SCIP_RETCODE    reduce_simple(SCIP*, GRAPH*, SCIP_Real*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_simple_hc(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_simple_mw(SCIP*, GRAPH*, int*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_simple_pc(SCIP*, const int*, GRAPH*, SCIP_Real*, int*, int*, int*);
-extern SCIP_RETCODE    reduce_simple_aritculations(SCIP*, GRAPH*, SCIP_Real*, int*);
-extern SCIP_RETCODE    reduce_simple_fixedConflict(SCIP*, const int*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_simple_sap(SCIP*, GRAPH*, SCIP_Real*, int*);
+extern SCIP_RETCODE    reduce_deleteMultiedges(SCIP*, GRAPH*);
+extern SCIP_RETCODE    reduce_contract0Edges(SCIP*, GRAPH*, SCIP_Bool);
+extern SCIP_RETCODE    reduce_aritculations(SCIP*, GRAPH*, SCIP_Real*, int*);
+extern SCIP_RETCODE    reduce_fixedConflicts(SCIP*, const int*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
-extern void    reduce_nonLeafTermsDeg0(SCIP*, GRAPH*, SCIP_Real*);
+extern void            reduce_identifyNonLeafTerms(SCIP*, GRAPH*);
 
 
 

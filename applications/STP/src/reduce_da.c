@@ -2104,7 +2104,7 @@ SCIP_RETCODE reduce_da(
       SCIP_CALL( SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE) );
 
    if( rpc )
-      graph_pc_updateNonLeafTerms(scip, graph);
+      reduce_identifyNonLeafTerms(scip, graph);
 
    ndeletions = 0;
    upperbound = SCIPisGE(scip, *ub, 0.0) ? (*ub) : FARAWAY;
@@ -2890,7 +2890,7 @@ SCIP_RETCODE reduce_daPcMw(
       SCIP_CALL( SCIPStpHeurRecInitPool(scip, &pool, nedges, SOLPOOL_SIZE) );
 
    if( graph_pc_isPc(graph) )
-      graph_pc_updateNonLeafTerms(scip, graph);
+      reduce_identifyNonLeafTerms(scip, graph);
 
    /*
     * 1. step: compute lower bound and reduced costs

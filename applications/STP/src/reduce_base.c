@@ -1761,7 +1761,7 @@ SCIP_RETCODE redLoopStp(
    ub = upperbound;
    fix = 0.0;
 
-   SCIP_CALL( reduce_simple_contract0Edges(scip, g, TRUE) );
+   SCIP_CALL( reduce_contract0Edges(scip, g, TRUE) );
    SCIP_CALL( reduce_simple(scip, g, &fix, solnode, &i, NULL) );
 
    /* get timelimit parameter */
@@ -1944,7 +1944,7 @@ SCIP_RETCODE redLoopStp(
          {
             int conflictnelims = 0;
 
-            SCIP_CALL( reduce_simple_fixedConflict(scip, NULL, g, &conflictnelims) );
+            SCIP_CALL( reduce_fixedConflicts(scip, NULL, g, &conflictnelims) );
 
             reduceStatsPrint(fullreduce, "fixedconflict", conflictnelims);
             extendedelims += conflictnelims;
