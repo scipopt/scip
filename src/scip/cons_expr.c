@@ -5318,7 +5318,7 @@ SCIP_RETCODE enforceExprNlhdlr(
    SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
    SCIP_Bool             separated,          /**< whether another nonlinear handler already added a cut for this expression */
    SCIP_Bool             allowweakcuts,      /**< whether we allow for weak cuts */
-   SCIP_Bool             addbranchscores,    /**< whether to add branching scores */
+   SCIP_Bool             inenforcement,      /**< whether we are in enforcement (and not just separation) */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -5338,7 +5338,7 @@ SCIP_RETCODE enforceExprNlhdlr(
 
    /* call enforcement callback of the nlhdlr */
    SCIP_CALL( SCIPenfoConsExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
-      allowweakcuts, separated, addbranchscores, result) );
+      allowweakcuts, separated, inenforcement, result) );
 
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
@@ -5364,7 +5364,7 @@ SCIP_RETCODE enforceExprNlhdlr(
       auxvar = SCIPgetConsExprExprAuxVar(expr);
       assert(auxvar != NULL);
 
-      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &sepasuccess, addbranchscores, &branchscoresuccess) );
+      SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, SCIPgetSolVal(scip, sol, auxvar), rowprep, &sepasuccess, inenforcement, &branchscoresuccess) );
 
       if( sepasuccess )
       {
@@ -5530,10 +5530,9 @@ SCIP_RETCODE enforceExprNlhdlr(
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    adding cut ");
             SCIP_CALL( SCIPprintRow(scip, row, enfologfile) ); )
 
-            /* I take addbranchscores here as a proxy for in-enforcement
-             * and !allowweakcuts as equivalent for having a strong cut (we usually have allowweakcuts=TRUE only if we haven't found strong cuts before)
+            /* I take !allowweakcuts as equivalent for having a strong cut (we usually have allowweakcuts=TRUE only if we haven't found strong cuts before)
              */
-            SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && addbranchscores, &infeasible) );
+            SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && inenforcement, &infeasible) );
 
             if( infeasible )
             {
@@ -5556,7 +5555,7 @@ SCIP_RETCODE enforceExprNlhdlr(
       }
       else
       {
-         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), (allowweakcuts && addbranchscores) ? " (!)" : ""); )
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    separation with estimate of nlhdlr %s failed and no branching candidates%s\n", SCIPgetConsExprNlhdlrName(nlhdlr), (allowweakcuts && inenforcement) ? " (!)" : ""); )
       }
 
       SCIPfreeRowprep(scip, &rowprep);
@@ -5575,7 +5574,7 @@ SCIP_RETCODE enforceExpr(
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    unsigned int          soltag,             /**< tag of solution */
    SCIP_Bool             allowweakcuts,      /**< whether we allow weak cuts */
-   SCIP_Bool             addbranchscores,    /**< whether to add branching scores */
+   SCIP_Bool             inenforcement,      /**< whether we are in enforcement (and not just separation) */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
@@ -5672,7 +5671,7 @@ SCIP_RETCODE enforceExpr(
          /* call the separation or estimation callback of the nonlinear handler for overestimation */
          hdlrresult = SCIP_DIDNOTFIND;
          SCIP_CALL( enforceExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol,
-            expr->enfos[e]->auxvalue, TRUE, *result == SCIP_SEPARATED, allowweakcuts, addbranchscores, &hdlrresult) );
+            expr->enfos[e]->auxvalue, TRUE, *result == SCIP_SEPARATED, allowweakcuts, inenforcement, &hdlrresult) );
 
          if( hdlrresult == SCIP_CUTOFF )
          {
@@ -5693,7 +5692,7 @@ SCIP_RETCODE enforceExpr(
          if( hdlrresult == SCIP_BRANCHED )
          {
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> added branching candidate\n", nlhdlr->name); )
-            assert(addbranchscores);
+            assert(inenforcement);
 
             /* separation takes precedence over branching */
             assert(*result == SCIP_DIDNOTFIND || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED);
@@ -5708,7 +5707,7 @@ SCIP_RETCODE enforceExpr(
          /* call the separation or estimation callback of the nonlinear handler for underestimation */
          hdlrresult = SCIP_DIDNOTFIND;
          SCIP_CALL( enforceExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, sol,
-            expr->enfos[e]->auxvalue, FALSE, *result == SCIP_SEPARATED, allowweakcuts, addbranchscores, &hdlrresult) );
+            expr->enfos[e]->auxvalue, FALSE, *result == SCIP_SEPARATED, allowweakcuts, inenforcement, &hdlrresult) );
 
          if( hdlrresult == SCIP_CUTOFF )
          {
@@ -5729,7 +5728,7 @@ SCIP_RETCODE enforceExpr(
          if( hdlrresult == SCIP_BRANCHED )
          {
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   nlhdlr <%s> added branching candidate\n", nlhdlr->name); )
-            assert(addbranchscores);
+            assert(inenforcement);
 
             /* separation takes precedence over branching */
             assert(*result == SCIP_DIDNOTFIND || *result == SCIP_SEPARATED || *result == SCIP_BRANCHED);
@@ -5753,7 +5752,7 @@ SCIP_RETCODE enforceConstraint(
    unsigned int          soltag,             /**< tag of solution */
    SCIP_CONSEXPR_ITERATOR* it,               /**< expression iterator that we can just use here */
    SCIP_Bool             allowweakcuts,      /**< whether to allow weak cuts in this round */
-   SCIP_Bool             addbranchscores,    /**< whether to add branching scores */
+   SCIP_Bool             inenforcement,      /**< whether to we are in enforcement, and not just separation */
    SCIP_RESULT*          result,             /**< pointer to update with result of the enforcing call */
    SCIP_Bool*            success             /**< buffer to store whether some enforcement took place */
    )
@@ -5791,7 +5790,7 @@ SCIP_RETCODE enforceConstraint(
          continue;
       }
 
-      SCIP_CALL( enforceExpr(scip, conshdlr, cons, expr, sol, soltag, allowweakcuts, addbranchscores, &resultexpr) );
+      SCIP_CALL( enforceExpr(scip, conshdlr, cons, expr, sol, soltag, allowweakcuts, inenforcement, &resultexpr) );
 
       /* if not enforced, then we must not have found a cutoff, cut, or branchscore */
       assert((expr->lastenforced == conshdlrdata->enforound) == (resultexpr != SCIP_DIDNOTFIND));
@@ -5824,7 +5823,7 @@ SCIP_RETCODE enforceConstraints2(
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    unsigned int          soltag,             /**< tag of solution */
    SCIP_Bool             allowweakcuts,      /**< whether to allow weak cuts in this round */
-   SCIP_Bool             addbranchscores,    /**< whether to add branching scores */
+   SCIP_Bool             inenforcement,      /**< whether we are in enforcement, and not just separation */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
@@ -5848,7 +5847,7 @@ SCIP_RETCODE enforceConstraints2(
     *  could not register branching candidates, but at the moment we can register branching scores
     *  but if they all point to fixed variables, we wouldn't add branching candidates)
     */
-   if( addbranchscores )
+   if( inenforcement )
       ++(conshdlrdata->enforound);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
@@ -5863,10 +5862,8 @@ SCIP_RETCODE enforceConstraints2(
          continue;
       assert(SCIPconsIsActive(conss[c]));
 
-      /* skip constraints that have separation disabled if also branchscoring is disabled
-       * I take addbranchscores as proxy for we-are-in-separation, thus ignore separation-enabled in enforcement
-       */
-      if( !addbranchscores && !SCIPconsIsSeparationEnabled(conss[c]) )
+      /* skip constraints that have separation disabled if we are only in separation */
+      if( !inenforcement && !SCIPconsIsSeparationEnabled(conss[c]) )
          continue;
 
       consdata = SCIPconsGetData(conss[c]);
@@ -5890,17 +5887,17 @@ SCIP_RETCODE enforceConstraints2(
          }
       })
 
-      SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, allowweakcuts, addbranchscores, result, &consenforced) );
+      SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, allowweakcuts, inenforcement, result, &consenforced) );
 
       if( *result == SCIP_CUTOFF )
          break;
 
 #if 0
-      if( !consenforced && !allowweakcuts && addbranchscores )
+      if( !consenforced && !allowweakcuts && inenforcement )
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, try again with weak cuts allowed\n", SCIPconsGetName(conss[c])); )
 
-         SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, TRUE, addbranchscores, result, &consenforced) );
+         SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, TRUE, inenforcement, result, &consenforced) );
 
          if( *result == SCIP_CUTOFF )
             break;
