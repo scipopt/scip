@@ -2043,7 +2043,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
          {
             /* there has to be exactly one incoming edge
              */
-            assert(!Is_anyTerm(g->term[i]));
+            assert(!Is_term(g->term[i]) && !Is_pseudoTerm(g->term[i]));
 
             for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
             {
