@@ -125,6 +125,8 @@ Performance improvements
 Examples and applications
 -------------------------
 
+- added methods to set and get hmin and hmax for optcumulative constraints
+
 Interface changes
 -----------------
 
