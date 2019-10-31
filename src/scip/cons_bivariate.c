@@ -6048,8 +6048,8 @@ SCIP_RETCODE enforceConstraint(
     * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
     * but in any case we need an efficacy that is at least lpfeastol
     */
-   minefficacy = MIN(0.75*maxviol, 2.0 * SCIPlpfeastol(scip));  /*lint !e666*/
-   minefficacy = MAX(minefficacy, SCIPlpfeastol(scip));  /*lint !e666*/
+   minefficacy = MIN(0.75*maxviol, 2.0 * SCIPgetLPFeastol(scip));  /*lint !e666*/
+   minefficacy = MAX(minefficacy, SCIPgetLPFeastol(scip));  /*lint !e666*/
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minefficacy, TRUE, &separateresult,
          &sepaefficacy) );
    if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
@@ -6070,7 +6070,7 @@ SCIP_RETCODE enforceConstraint(
    /* find branching candidates */
    SCIP_CALL( registerBranchingVariables(scip, conss, nconss, &nnotify) );
 
-   leastpossibleefficacy = SCIPlpfeastol(scip);
+   leastpossibleefficacy = SCIPgetLPFeastol(scip);
    if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */

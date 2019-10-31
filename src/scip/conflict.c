@@ -2664,7 +2664,7 @@ SCIP_Real aggrRowGetMinActivity(
    }
 
   TERMINATE:
-   /* check whether the minmal activity is infinite */
+   /* check whether the minimal activity is infinite */
    if( SCIPsetIsInfinity(set, QUAD_TO_DBL(minact)) )
       return SCIPsetInfinity(set);
    if( SCIPsetIsInfinity(set, -QUAD_TO_DBL(minact)) )
@@ -6633,6 +6633,15 @@ SCIP_RETCODE getFarkasProof(
    int nrows;
    int r;
 
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(curvarlbs != NULL);
+   assert(curvarubs != NULL);
+   assert(valid != NULL);
+
    assert(SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsDualFeasible(lpi));
    assert(SCIPlpiIsPrimalInfeasible(lpi) || !SCIPlpDivingObjChanged(lp));
 
@@ -6925,7 +6934,7 @@ SCIP_RETCODE getDualProof(
          else
          {
             SCIPsetDebugMsg(set, " -> ignoring local row <%s> with dual solution value %.10f (lhs=%g, rhs=%g)\n",
-               SCIProwGetName(row), dualfarkas[r], row->lhs - row->constant, row->rhs - row->constant);
+               SCIProwGetName(row), dualsols[r], row->lhs - row->constant, row->rhs - row->constant);
          }
 #endif
       }
@@ -7188,6 +7197,8 @@ SCIP_RETCODE tightenDualproof(
    int i;
 
    assert(conflict->proofset != NULL);
+   assert(curvarlbs != NULL);
+   assert(curvarubs != NULL);
 
    vars = SCIPprobGetVars(transprob);
    nbinvars = 0;
@@ -7243,9 +7254,9 @@ SCIP_RETCODE tightenDualproof(
    {
       int idx = inds[i];
       if( vals[i] > 0.0 )
-         assert(!SCIPsetIsInfinity(set, curvarlbs != NULL ? -curvarlbs[idx] : -SCIPvarGetLbLocal(vars[idx])));
+         assert(!SCIPsetIsInfinity(set, -curvarlbs[idx]));
       if( vals[i] < 0.0 )
-         assert(!SCIPsetIsInfinity(set, curvarubs != NULL ? curvarubs[idx] : SCIPvarGetUbLocal(vars[idx])));
+         assert(!SCIPsetIsInfinity(set, curvarubs[idx]));
    }
 #endif
 
@@ -7283,8 +7294,7 @@ SCIP_RETCODE tightenDualproof(
 
             /* get appropriate global and local bounds */
             glbbd = (val < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
-            locbd = (val < 0.0 ? (curvarubs != NULL ? curvarubs[idx] : SCIPvarGetUbLocal(vars[idx]))
-               : (curvarlbs != NULL ? curvarlbs[idx] : SCIPvarGetLbLocal(vars[idx])));
+            locbd = (val < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
 
             if( !SCIPsetIsEQ(set, glbbd, locbd) )
             {
@@ -7294,7 +7304,7 @@ SCIP_RETCODE tightenDualproof(
 
             SCIPsetDebugMsg(set, "-> remove continuous variable <%s>: glb=[%g,%g], loc=[%g,%g], val=%g\n",
                   SCIPvarGetName(vars[idx]), SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]),
-                  SCIPvarGetLbLocal(vars[idx]), SCIPvarGetUbLocal(vars[idx]), val);
+                  curvarlbs[idx], curvarubs[idx], val);
 
             proofsetCancelVarWithBound(proofset, set, vars[idx], i, &valid);
             assert(valid); /* this should be always fulfilled at this place */

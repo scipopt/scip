@@ -2363,7 +2363,7 @@ SCIP_RETCODE determineSymmetry(
       if ( nbinvarsaffected > 0 )
          propdata->binvaraffected = TRUE;
    }
-   else if ( propdata->islinearproblem && propdata->symconsenabled )
+   else if ( propdata->islinearproblem && (propdata->symconsenabled || propdata->ofenabled) )
    {
       SCIP_CALL( SCIPdetermineBinvarAffectedSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
             propdata->npermvars, &propdata->binvaraffected) );
