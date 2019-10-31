@@ -84,6 +84,7 @@
 #define PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
+#define DEFAULT_ENABLECOPY             FALSE    /**< should tworowbnd presolver be copied to sub-SCIPs? */
 #define DEFAULT_MAXCONSIDEREDNONZEROS  100
 #define DEFAULT_MAXRETRIEVEFAILS       1000
 #define DEFAULT_MAXCOMBINEFAILS        1000
@@ -110,6 +111,7 @@ struct SCIP_PresolData
    int nuselessruns;
    SCIP_Bool lpbound;
    SCIP_Bool convcomb;
+   SCIP_Bool enablecopy;
 };
 
 /** structure representing a pair of row indices; used for lookup in a hashtable */
@@ -2228,8 +2230,10 @@ SCIP_DECL_PRESOLCOPY(presolCopyTworowbnd)
    /* call inclusion method of presolver if copying is enabled */
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
-
-   SCIP_CALL( SCIPincludePresolTworowbnd(scip) );
+   if( presoldata->enablecopy )
+   {
+      SCIP_CALL( SCIPincludePresolSparsify(scip) );
+   }
 
    return SCIP_OKAY;
 }
@@ -2961,6 +2965,11 @@ SCIP_RETCODE SCIPincludePresolTworowbnd(
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitTworowbnd) );
 
    /* add tworowbnd presolver parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/tworowbnd/enablecopy",
+         "should tworowbnd presolver be copied to sub-SCIPs?",
+         &presoldata->enablecopy, TRUE, DEFAULT_ENABLECOPY, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/tworowbnd/maxconsiderednonzeros",
          "maximal number of considered non-zeros within one row (-1: no limit)",
