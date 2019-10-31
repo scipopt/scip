@@ -448,6 +448,7 @@ Fixed bugs
 - fixed bug in cons_indicator if addopposite is true
 - fixed bug in sepa_disjunctive: treat case that conflictgraph is empty
 - added safety check in conversion to rational number to avoid overflow
+- fixed bug in interval evaluation with power-operator in certain situations
 
 Miscellaneous
 -------------

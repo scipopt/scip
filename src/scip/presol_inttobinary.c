@@ -22,6 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
+#include "scip/debug.h"
 #include "scip/presol_inttobinary.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -121,6 +122,24 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
          SCIP_CALL( SCIPcreateVar(scip, &binvar, binvarname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
                SCIPvarIsInitial(vars[v]), SCIPvarIsRemovable(vars[v]), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, binvar) );
+
+                     /* set up debug solution */
+#ifdef WITH_DEBUG_SOLUTION
+         if( SCIPdebugSolIsEnabled(scip) )
+         {
+            SCIP_SOL* debugsol;
+
+            SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
+
+            /* set solution value in the debug solution if it is available */
+            if( debugsol != NULL )
+            {
+               SCIP_Real val;
+               SCIP_CALL( SCIPdebugGetSolVal(scip, vars[v], &val) );
+               SCIP_CALL( SCIPdebugAddSolVal(scip, binvar, val - lb) );
+            }
+         }
+#endif
 
          /* aggregate integer and binary variable */
          SCIP_CALL( SCIPaggregateVars(scip, vars[v], binvar, 1.0, -1.0, lb, &infeasible, &redundant, &aggregated) );
