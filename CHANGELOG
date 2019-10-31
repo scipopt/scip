@@ -48,6 +48,8 @@ Fixed bugs
 Miscellaneous
 -------------
 
+- in LP, use absolute instead of relative tolerances to check whether solutions from LP solver are primal feasible
+
 Known bugs
 ----------
 
