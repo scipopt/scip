@@ -473,7 +473,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
 #ifdef SCIP_DEBUG
-   consdata->debugcnt = 0;
+   (*consdata)->debugcnt = 0;
 #endif
 
    (*consdata)->ndescentpoints = 0;

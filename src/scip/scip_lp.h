@@ -328,6 +328,28 @@ SCIP_Real SCIPgetLPRootLooseObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets current primal feasibility tolerance of LP */
+SCIP_EXPORT
+SCIP_Real SCIPgetLPFeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** sets primal feasibility tolerance of LP */
+SCIP_EXPORT
+void SCIPsetLPFeastol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newfeastol          /**< new primal feasibility tolerance for LP */
+   );
+
+/** resets primal feasibility tolerance of LP
+ *
+ * Sets primal feasibility tolerance to min of numerics/lpfeastolfactor * numerics/feastol and relaxfeastol.
+ */
+SCIP_EXPORT
+void SCIPresetLPFeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets current LP columns along with the current number of LP columns
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

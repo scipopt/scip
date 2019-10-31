@@ -86,8 +86,11 @@ SCIP_Real SCIPfeastol(
 
 /** returns primal feasibility tolerance of LP solver
  *
+ *  @deprecated Please use SCIPgetLPFeastol().
+ *
  *  @return primal feasibility tolerance of LP solver
  */
+SCIP_DEPRECATED
 SCIP_EXPORT
 SCIP_Real SCIPlpfeastol(
    SCIP*                 scip                /**< SCIP data structure */
@@ -143,10 +146,13 @@ SCIP_RETCODE SCIPchgFeastol(
 
 /** sets the primal feasibility tolerance of LP solver
  *
+ *  @deprecated Please use SCIPsetLPFeastol().
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
 SCIP_EXPORT
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPchgLpfeastol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */

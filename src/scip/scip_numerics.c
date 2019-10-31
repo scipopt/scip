@@ -41,6 +41,8 @@
 #include "scip/set.h"
 #include "scip/struct_lp.h"
 #include "scip/struct_scip.h"
+#include "scip/scip_lp.h"
+#include "scip/scip_message.h"
 #include <string.h>
 
 
@@ -165,6 +167,8 @@ SCIP_Real SCIPfeastol(
 
 /** returns primal feasibility tolerance of LP solver
  *
+ *  @deprecated Please use SCIPgetLPFeastol().
+ *
  *  @return primal feasibility tolerance of LP solver
  */
 SCIP_Real SCIPlpfeastol(
@@ -174,7 +178,7 @@ SCIP_Real SCIPlpfeastol(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetLpfeastol(scip->set);
+   return SCIPgetLPFeastol(scip);
 }
 
 /** returns feasibility tolerance for reduced costs
@@ -247,12 +251,14 @@ SCIP_RETCODE SCIPchgFeastol(
    assert(scip != NULL);
 
    /* change the settings */
-   SCIP_CALL( SCIPsetSetFeastol(scip->set, feastol) );
+   SCIP_CALL( SCIPsetSetFeastol(scip->set, scip->lp, feastol) );
 
    return SCIP_OKAY;
 }
 
 /** sets the primal feasibility tolerance of LP solver
+ *
+ *  @deprecated Please use SCIPsetLPFeastol().
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -263,17 +269,12 @@ SCIP_RETCODE SCIPchgLpfeastol(
    SCIP_Bool             printnewvalue       /**< should "numerics/lpfeastol = ..." be printed? */
    )
 {
-   assert(scip != NULL);
+   SCIPsetLPFeastol(scip, lpfeastol);
 
-   /* mark the LP unsolved, if the primal feasibility tolerance was tightened */
-   if( scip->lp != NULL && lpfeastol < SCIPsetLpfeastol(scip->set) )
+   if( printnewvalue )
    {
-      scip->lp->solved = FALSE;
-      scip->lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "numerics/lpfeastol = %.15g\n", lpfeastol);
    }
-
-   /* change the settings */
-   SCIP_CALL( SCIPsetSetLpfeastol(scip->set, lpfeastol, printnewvalue) );
 
    return SCIP_OKAY;
 }
