@@ -415,6 +415,40 @@ SCIP_Real SCIPgetLPRootLooseObjval(
    return SCIPlpGetRootLooseObjval(scip->lp);
 }
 
+/** gets current primal feasibility tolerance of LP */
+SCIP_Real SCIPgetLPFeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLPFeastol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpGetFeastol(scip->lp);
+}
+
+/** sets primal feasibility tolerance of LP */
+void SCIPsetLPFeastol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newfeastol          /**< new primal feasibility tolerance for LP */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPsetLPFeastol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPlpSetFeastol(scip->lp, scip->set, newfeastol);
+}
+
+/** resets primal feasibility tolerance of LP
+ *
+ * Sets primal feasibility tolerance to min of numerics/lpfeastolfactor * numerics/feastol and relaxfeastol.
+ */
+void SCIPresetLPFeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPresetLPFeastol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPlpResetFeastol(scip->lp, scip->set);
+}
+
 /** gets current LP columns along with the current number of LP columns
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

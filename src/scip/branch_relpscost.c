@@ -1113,7 +1113,7 @@ SCIP_RETCODE execRelpscost(
          else
          {
             /* apply strong branching */
-            SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, branchcands[c], inititer,
+            SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, branchcands[c], inititer, FALSE,
                   &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
 
             ndomredsdown = ndomredsup = 0;

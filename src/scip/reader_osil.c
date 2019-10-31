@@ -1210,12 +1210,12 @@ SCIP_RETCODE readQuadraticCoefs(
       /* we should have only looked at the linear part of the problem before, so there was no need to add a constraint for the objective */
       assert(*objcons == NULL);
 
-      SCIP_CALL( SCIPcreateVar(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+      SCIP_CALL( SCIPcreateVar(scip, &objvar, "quadobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
          SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, objvar) );
 
       minusone = -1.0;
-      SCIP_CALL( SCIPcreateConsQuadratic(scip, objcons, "objcons", 1, &objvar, &minusone, nterms[nconss], vars1[nconss], vars2[nconss], coefs[nconss],
+      SCIP_CALL( SCIPcreateConsQuadratic(scip, objcons, "quadobj", 1, &objvar, &minusone, nterms[nconss], vars1[nconss], vars2[nconss], coefs[nconss],
          SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
          SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -2083,13 +2083,13 @@ SCIP_RETCODE readNonlinearExprs(
          SCIP_Real minusone;
          SCIP_Real one;
 
-         SCIP_CALL( SCIPcreateVar(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+         SCIP_CALL( SCIPcreateVar(scip, &objvar, "nlobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
                SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, objvar) );
 
          minusone = -1.0;
          one = 1.0;
-         SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, objcons, "objcons", 1, &objvar, &minusone, 1, &exprtree, &one,
+         SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, objcons, "nlobj", 1, &objvar, &minusone, 1, &exprtree, &one,
                SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
                SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE), TERMINATE );

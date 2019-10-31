@@ -18541,7 +18541,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_Real negcoeffsum;
    SCIP_Bool infeasible;
    SCIP_Bool integral;
-   int nchgsides;
+   int nchgsides = 0;
    int nposbin;
    int nnegbin;
    int nposint;

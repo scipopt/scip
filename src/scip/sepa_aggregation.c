@@ -633,9 +633,8 @@ SCIP_RETCODE aggregateNextRow(
       probvaridx = badvarinds[i];
 
       if( !getRowAggregationCandidates(aggrdata, probvaridx, &candrows, &candrowcoefs, &nrows, &ngoodrows) )
-      {
-         SCIPABORT();
-      }
+         return SCIP_ERROR;
+
       assert(ngoodrows > 0); /* bounddistance was negative for this variable, so it should have good rows */
       assert(ngoodrows <= nrows);
 
@@ -704,9 +703,7 @@ SCIP_RETCODE aggregateNextRow(
       probvaridx = badvarinds[i];
 
       if( !getRowAggregationCandidates(aggrdata, probvaridx, &candrows, &candrowcoefs, &nrows, &ngoodrows) )
-      {
-         SCIPABORT();
-      }
+         return SCIP_ERROR;
 
       /* bounddistance was positive for this variable, so it should not have good rows */
       assert(ngoodrows == 0);
@@ -872,6 +869,10 @@ SCIP_RETCODE aggregation(
          flowcoversuccess = FALSE;
       }
 
+      /* initialize the cutefficacy variable with the flowcoverefficacy, so that only CMIR cuts
+       * that have a higher efficacy than that of a flowcover cut possibly found in the call above
+       * are returned since the flowcover cut is overwritten in that case.
+       */
       cutefficacy = flowcoverefficacy;
 
       if( sepadata->sepcmir )

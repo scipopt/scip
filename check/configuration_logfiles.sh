@@ -195,4 +195,4 @@ TMPFILE=$BASENAME.tmp
 SETFILE=$BASENAME.set
 
 # even if we decide to skip this instance, we write the basename to the eval file
-echo $BASENAME >> $EVALFILE
+echo ${OUTPUTDIR}/${FILENAME} >> $EVALFILE

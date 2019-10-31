@@ -6145,7 +6145,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
             }
             else
             {
-               assert(SCIP_LPSOLSTAT_OBJLIMIT || SCIP_LPSOLSTAT_OPTIMAL || SCIP_LPSOLSTAT_NOTSOLVED);
+               assert( lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_OPTIMAL || lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
 
                /* delete strong branching information if some exists */
                deleteLastDualBndchgs(reopt);
