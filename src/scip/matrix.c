@@ -768,6 +768,7 @@ SCIP_RETCODE SCIPmatrixCreate(
 
                if( nvars > valssize )
                {
+                  valssize = (int) (1.5 * nvars);
                   SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, valssize) );
                }
 
