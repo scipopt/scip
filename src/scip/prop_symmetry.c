@@ -264,8 +264,8 @@ struct SCIP_PropData
    SCIP_Bool             schreiersimsenabled; /**< Use Schreier Sims cuts? */
    SCIP_CONS**           schreiersimsconss;   /**< list of generated schreier sims conss */
    int                   nschreiersimsconss;  /**< number of generated schreier sims conss */
-   int                   schreiersimsorbitrule; /**< rule to select an orbit for Schreier Sims cuts */
-   int                   schreiersimsleaderrule; /**< rule to select leader within selected orbit */
+   int                   schreiersimsleaderrule; /**< rule to select leader  */
+   int                   schreiersimstiebreakrule; /**< tie break rule for leader selection */
    int                   schreiersimsleadervartype; /**< variable type of leader in orbit */
    int*                  leaders;            /**< index of orbit leaders in permvars */
    int                   nleaders;           /**< number of orbit leaders in leaders array */
@@ -3449,8 +3449,8 @@ SCIP_RETCODE addSchreierSimsConss(
    int v;
    int p;
    int posleader;
-   int orbitrule;
    int leaderrule;
+   int tiebreakrule;
    int leadervartype;
    SCIP_Bool symretopesactive;
    SCIP_Bool success;
@@ -3478,8 +3478,8 @@ SCIP_RETCODE addSchreierSimsConss(
    assert( ncomponents > 0 );
    assert( nmovedpermvars > 0 || ! propdata->ofenabled );
 
-   orbitrule = propdata->schreiersimsorbitrule;
    leaderrule = propdata->schreiersimsleaderrule;
+   tiebreakrule = propdata->schreiersimstiebreakrule;
    leadervartype = propdata->schreiersimsleadervartype;
    symretopesactive = ISSYMRETOPESACTIVE(propdata->usesymmetry);
 
@@ -3515,7 +3515,7 @@ SCIP_RETCODE addSchreierSimsConss(
 
       /* select orbit and leader */
       SCIP_CALL( selectOrbitLeaderSchreierSimsConss(scip, permvars, npermvars, propdata->permvarmap, orbits, orbitbegins, norbits, &orbitidx, &orbitleaderidx,
-            orbitrule, leaderrule, leadervartype, symretopesactive, &success) );
+            leaderrule, tiebreakrule, leadervartype, orbitvarinconflict, &norbitvarinconflict, symretopesactive, &success) );
 
       if ( ! success )
          break;
@@ -4647,7 +4647,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/schreiersimstiebreakrule",
          "rule to select the orbit in Schreier Sims inequalities",
-         &propdata->schreiersimsorbitrule, TRUE, DEFAULT_SCHREIERSIMSTIEBREAKRULE, 0, 2, NULL, NULL) );
+         &propdata->schreiersimstiebreakrule, TRUE, DEFAULT_SCHREIERSIMSTIEBREAKRULE, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/schreiersimsleaderrule",
