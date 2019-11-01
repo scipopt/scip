@@ -3365,6 +3365,17 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    /* select the leader and its orbit */
    if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT || leaderrule == SCIP_LEADERRULE_LASTINORBIT )
    {
+      /* create conflict graph if necessary */
+      if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT )
+      {
+         SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, vars, nvars, FALSE,
+               permvars, npermvars, permvarmap, orbits, orbitbegins, norbits, &conflictgraphsuccess) );
+
+         /* terminate if conflict graph could not be created*/
+         if ( ! conflictgraphsuccess )
+            return SCIP_OKAY;
+      }
+
       /* Iterate over orbits and select the first one that meets the tiebreak rule.
        * If symretopes are active, ensure to select an orbit of binary variables.
        */
@@ -3383,13 +3394,6 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
             curcriterion = orbitbegins[i + 1] - orbitbegins[i];
          else
          {
-            SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, vars, nvars, FALSE,
-                  permvars, npermvars, permvarmap, orbits, orbitbegins, norbits, &conflictgraphsuccess) );
-
-            /* terminate if conflict graph could not be created*/
-            if ( ! conflictgraphsuccess )
-               return SCIP_OKAY;
-
             if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT )
                varidx = orbits[orbitbegins[i]];
             else
@@ -3400,8 +3404,6 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
             assert( nodedata->orbitidx == i );
 
             curcriterion = nodedata->nconflictinorbit;
-
-            SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, npermvars) );
          }
 
          if ( curcriterion > orbitcriterion )
