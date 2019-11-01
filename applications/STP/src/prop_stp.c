@@ -126,51 +126,39 @@ SCIP_RETCODE fixedgevarTo1(
 
 /** initialize reduced cost distances */
 static
-void getRedCostDistances(
+SCIP_RETCODE getRedCostDistances(
    SCIP*                 scip,               /**< SCIP structure */
-   const SCIP_Real*      cost,               /**< reduced costs */
+   const SCIP_Real*      redcost,            /**< reduced costs */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**> Voronoi paths  */
-   SCIP_Real*            costrev,            /**< reversed reduced costs */
    SCIP_Real*            pathdist,           /**< path distance */
    int*                  pathedge,           /**< path edge */
    int*                  vbase,              /**< Voronoi base */
    int*                  state               /**< state  */
 )
 {
-   const int nnodes = g->knots;
+   SCIP_Real* redcostrev;
    const int nedges = g->edges;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &redcostrev, nedges) );
 
    graph_mark(g);
 
    /* distance from root to all nodes */
-   graph_path_execX(scip, g, g->source, cost, pathdist, pathedge);
+   graph_path_execX(scip, g, g->source, redcost, pathdist, pathedge);
 
    for( unsigned int e = 0; e < (unsigned) nedges; e++ )
-      costrev[e] = cost[flipedge(e)];
+      redcostrev[e] = redcost[flipedge(e)];
 
    /* no paths should go back to the root */
    for( int e = g->outbeg[g->source]; e != EAT_LAST; e = g->oeat[e] )
-      costrev[e] = FARAWAY;
+      redcostrev[e] = FARAWAY;
 
-   if( graph_pc_isPcMw(g) )
-   {
-      assert(g->extended);
+   graph_get3nextTerms(scip, g, redcostrev, redcostrev, vnoi, vbase, g->path_heap, state);
 
-      for( int i = 0; i < nnodes; i++ )
-      {
-         if( Is_term(g->term[i]) && !graph_pc_knotIsFixedTerm(g, i) )
-         {
-            assert(i != g->source);
-            assert(g->grad[i] == 2);
+   SCIPfreeBufferArray(scip, &redcostrev);
 
-            for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-               costrev[e] = FARAWAY;
-         }
-      }
-   }
-
-   graph_get3nextTerms(scip, g, costrev, costrev, vnoi, vbase, g->path_heap, state);
+   return SCIP_OKAY;
 }
 
 
@@ -301,11 +289,10 @@ SCIP_RETCODE fixVarsDualcost(
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    int*                  nfixed,             /**< pointer to number of fixed edges */
    GRAPH*                graph               /**< graph data structure */
-      )
+)
 {
    PATH* vnoi;
-   SCIP_Real* cost;
-   SCIP_Real* costrev;
+   SCIP_Real* redcost;
    SCIP_Real* pathdist;
    const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
    const SCIP_Real minpathcost = cutoffbound - lpobjval;
@@ -343,13 +330,12 @@ SCIP_RETCODE fixVarsDualcost(
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 3 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 3 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redcost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
 
-   SCIPStpGetRedcosts(scip, vars, nedges, cost);
-   getRedCostDistances(scip, cost, graph, vnoi, costrev, pathdist, pathedge, vbase, state);
+   SCIPStpGetRedcosts(scip, vars, nedges, redcost);
+   getRedCostDistances(scip, redcost, graph, vnoi, pathdist, pathedge, vbase, state);
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -365,7 +351,7 @@ SCIP_RETCODE fixVarsDualcost(
       else
       {
          for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-            if( SCIPisGT(scip, pathdist[k] + cost[e] + vnoi[graph->head[e]].dist, minpathcost) )
+            if( SCIPisGT(scip, pathdist[k] + redcost[e] + vnoi[graph->head[e]].dist, minpathcost) )
                SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[e], nfixed) );
       }
    }
@@ -373,16 +359,15 @@ SCIP_RETCODE fixVarsDualcost(
    /* at root? */
    if( SCIPgetDepth(scip) == 0 )
    {
-      updateEdgeLurkingBounds(graph, cost, pathdist, vnoi, lpobjval, propdata->fixingbounds);
-      updateDeg2LurkingBounds(graph, cost, pathdist, vnoi, lpobjval, propdata->deg2bounds);
+      updateEdgeLurkingBounds(graph, redcost, pathdist, vnoi, lpobjval, propdata->fixingbounds);
+      updateDeg2LurkingBounds(graph, redcost, pathdist, vnoi, lpobjval, propdata->deg2bounds);
    }
 
    SCIP_CALL( fixVarsDualcostLurking(scip, propdata, graph, cutoffbound, vars, nfixed) );
 
    SCIPfreeBufferArray(scip, &pathedge);
    SCIPfreeBufferArray(scip, &pathdist);
-   SCIPfreeBufferArray(scip, &costrev);
-   SCIPfreeBufferArray(scip, &cost);
+   SCIPfreeBufferArray(scip, &redcost);
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &state);
    SCIPfreeBufferArray(scip, &vbase);
@@ -402,7 +387,6 @@ SCIP_RETCODE fixVarsExtendedRed(
 {
    PATH* vnoi;
    SCIP_Real* redcost;
-   SCIP_Real* redcostrev;
    SCIP_Real* pathdist;
    STP_Bool* marked;
    int* nodearr;
@@ -419,7 +403,6 @@ SCIP_RETCODE fixVarsExtendedRed(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &redcost, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &redcostrev, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 3 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 3 * nnodes) );
@@ -434,7 +417,7 @@ SCIP_RETCODE fixVarsExtendedRed(
           marked[e] = FALSE;
 
    SCIPStpGetRedcosts(scip, vars, nedges, redcost);
-   getRedCostDistances(scip, redcost, propgraph, vnoi, redcostrev, pathdist, pathedge, vbase, state);
+   getRedCostDistances(scip, redcost, propgraph, vnoi, pathdist, pathedge, vbase, state);
 
    if( graph_pc_isPcMw(propgraph) )
       graph_pc_2org(scip, propgraph);
@@ -465,7 +448,6 @@ SCIP_RETCODE fixVarsExtendedRed(
    SCIPfreeBufferArray(scip, &vbase);
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &pathdist);
-   SCIPfreeBufferArray(scip, &redcostrev);
    SCIPfreeBufferArray(scip, &redcost);
    SCIPfreeBufferArray(scip, &state);
 
@@ -555,7 +537,7 @@ SCIP_RETCODE fixVarsRedbased(
 
          if( pcmw && (SCIPisGE(scip, propgraph->cost[e], FARAWAY) || SCIPisGE(scip, propgraph->cost[erev], FARAWAY)) )
          {
-            assert(propgraph->cost[e] != propgraph->cost[erev]);
+            assert(!SCIPisEQ(scip, propgraph->cost[e], propgraph->cost[erev]));
             continue;
          }
 
@@ -602,11 +584,18 @@ SCIP_RETCODE fixVarsRedbased(
       if( SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 )
       {
          assert(SCIPvarGetLbLocal(vars[e]) < 0.5 && SCIPvarGetLbLocal(vars[erev]) < 0.5);
-         if( propgraph->cost[e] != propgraph->cost[erev] )
+         if( !SCIPisEQ(scip, propgraph->cost[e], propgraph->cost[erev]) )
          {
-            assert(graph_pc_isPcMw(g));
-            assert(Is_term(g->term[tail]) || Is_term(g->term[head]));
-            continue;
+            assert(graph_pc_isPcMw(g) && graph_pc_isPcMw(propgraph));
+            assert(propgraph->extended);
+            assert(Is_anyTerm(g->term[tail]) || Is_anyTerm(g->term[head]));
+
+            if( !graph_pc_knotIsNonLeafTerm(propgraph, tail) && !!graph_pc_knotIsNonLeafTerm(propgraph, tail) )
+            {
+               assert(Is_term(propgraph->term[tail]) || Is_term(propgraph->term[head]));
+
+               continue;
+            }
          }
 
          graph_edge_del(scip, propgraph, e, TRUE);
