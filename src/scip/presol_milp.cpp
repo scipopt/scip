@@ -39,6 +39,8 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 #include "scip/pub_matrix.h"
 #include "scip/pub_presol.h"
+#include "scip/pub_var.h"
+#include "scip/pub_message.h"
 #include "scip/scip_presol.h"
 #include "scip/scip_var.h"
 #include "scip/scip_mem.h"
@@ -46,7 +48,6 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "scip/scip_numerics.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_message.h"
-#include "scip/pub_message.h"
 #include "core/Presolve.hpp"
 #include "core/ProblemBuilder.hpp"
 #include "tbb/task_scheduler_init.h"
