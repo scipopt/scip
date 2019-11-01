@@ -20,10 +20,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
 #include "scip/presol_milp.h"
-#include "scip/config.h"
 
 #ifndef SCIP_WITH_PRESOLVELIB
 
@@ -37,6 +34,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 #else
 
+#include <assert.h>
 #include "scip/pub_matrix.h"
 #include "scip/pub_presol.h"
 #include "scip/pub_var.h"
