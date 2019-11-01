@@ -20,10 +20,21 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/presol_milp.h"
+
+#ifndef SCIP_WITH_PRESOLVELIB
+
+/** creates the xyz presolver and includes it in SCIP */
+SCIP_RETCODE SCIPincludePresolMILP(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   return SCIP_OKAY;
+}
+
+#else
 
 #include <assert.h>
-
-#include "scip/presol_milp.h"
 #include "scip/pub_matrix.h"
 #include "scip/pub_presol.h"
 #include "scip/pub_var.h"
@@ -454,3 +465,5 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
    return SCIP_OKAY;
 }
+
+#endif
