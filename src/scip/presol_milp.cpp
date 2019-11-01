@@ -23,6 +23,20 @@
 #include <assert.h>
 
 #include "scip/presol_milp.h"
+#include "scip/config.h"
+
+#ifndef SCIP_WITH_PRESOLVELIB
+
+/** creates the xyz presolver and includes it in SCIP */
+SCIP_RETCODE SCIPincludePresolMILP(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   return SCIP_OKAY;
+}
+
+#else
+
 #include "scip/pub_matrix.h"
 #include "scip/pub_presol.h"
 #include "scip/scip_presol.h"
@@ -49,8 +63,6 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary presolver data */
-
 /** presolver data */
 struct SCIP_PresolData
 {
@@ -64,15 +76,56 @@ struct SCIP_PresolData
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
+static
+Problem<SCIP_Real>
+buildProblem(SCIP* scip, SCIP_MATRIX* matrix)
+{
+   ProblemBuilder<SCIP_Real> builder;
 
+   // build problem from matrix
+   int nnz = SCIPmatrixGetNNonzs(matrix);
+   int ncols = SCIPmatrixGetNColumns(matrix);
+   int nrows = SCIPmatrixGetNRows(matrix);
+   builder.reserve(nnz, nrows, ncols);
+   builder.setNumCols(ncols);
+
+   for(int i = 0; i != ncols; ++i)
+   {
+      SCIP_VAR* var = SCIPmatrixGetVar(matrix, i);
+      SCIP_Real lb = SCIPvarGetLbGlobal(var);
+      SCIP_Real ub = SCIPvarGetUbGlobal(var);
+      builder.setColLb(i, lb);
+      builder.setColUb(i, ub);
+      builder.setColLbInf(i, SCIPisInfinity(scip, -lb));
+      builder.setColUbInf(i, SCIPisInfinity(scip, ub));
+
+      builder.setColIntegral(i, SCIPvarIsIntegral(var));
+      builder.setObj(i, SCIPvarGetObj(var));
+   }
+
+   builder.setNumRows(nrows);
+
+   for(int i = 0; i != nrows; ++i)
+   {
+      int* rowcols = SCIPmatrixGetRowIdxPtr(matrix, i);
+      SCIP_Real* rowvals = SCIPmatrixGetRowValPtr(matrix, i);
+      int rowlen = SCIPmatrixGetRowNNonzs(matrix, i);
+      builder.addRowEntries(i, rowlen, rowcols, rowvals);
+
+      SCIP_Real lhs = SCIPmatrixGetRowLhs(matrix, i);
+      SCIP_Real rhs = SCIPmatrixGetRowRhs(matrix, i);
+      builder.setRowLhs(i, lhs);
+      builder.setRowRhs(i, rhs);
+      builder.setRowLhsInf(i, SCIPisInfinity( scip, -lhs ));
+      builder.setRowRhsInf(i, SCIPisInfinity( scip, rhs ));
+   }
+
+   return builder.build();
+}
 
 /*
  * Callback methods of presolver
  */
-
-/* TODO: Implement all necessary presolver methods. The methods with an #if 0 ... #else #define ... are optional */
-
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
@@ -122,52 +175,6 @@ SCIP_DECL_PRESOLEXIT(presolExitMILP)
    return SCIP_OKAY;
 }
 
-static
-Problem<SCIP_Real>
-buildProblem(SCIP* scip, SCIP_MATRIX* matrix)
-{
-   ProblemBuilder<SCIP_Real> builder;
-
-   // build problem from matrix
-   int nnz = SCIPmatrixGetNNonzs(matrix);
-   int ncols = SCIPmatrixGetNColumns(matrix);
-   int nrows = SCIPmatrixGetNRows(matrix);
-   builder.reserve(nnz, nrows, ncols);
-   builder.setNumCols(ncols);
-
-   for(int i = 0; i != ncols; ++i)
-   {
-      SCIP_VAR* var = SCIPmatrixGetVar(matrix, i);
-      SCIP_Real lb = SCIPvarGetLbGlobal(var);
-      SCIP_Real ub = SCIPvarGetUbGlobal(var);
-      builder.setColLb(i, lb);
-      builder.setColUb(i, ub);
-      builder.setColLbInf(i, SCIPisInfinity(scip, -lb));
-      builder.setColUbInf(i, SCIPisInfinity(scip, ub));
-
-      builder.setColIntegral(i, SCIPvarIsIntegral(var));
-      builder.setObj(i, SCIPvarGetObj(var));
-   }
-
-   builder.setNumRows(nrows);
-   
-   for(int i = 0; i != nrows; ++i)
-   {
-      int* rowcols = SCIPmatrixGetRowIdxPtr(matrix, i);
-      SCIP_Real* rowvals = SCIPmatrixGetRowValPtr(matrix, i);
-      int rowlen = SCIPmatrixGetRowNNonzs(matrix, i);
-      builder.addRowEntries(i, rowlen, rowcols, rowvals);
-      
-      SCIP_Real lhs = SCIPmatrixGetRowLhs(matrix, i);
-      SCIP_Real rhs = SCIPmatrixGetRowRhs(matrix, i);
-      builder.setRowLhs(i, lhs);
-      builder.setRowRhs(i, rhs);
-      builder.setRowLhsInf(i, SCIPisInfinity( scip, -lhs ));
-      builder.setRowRhsInf(i, SCIPisInfinity( scip, rhs ));
-   }
-
-   return builder.build();
-}
 
 /** execution method of presolver */
 static
@@ -244,7 +251,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    presolve.setVerbosityLevel(VerbosityLevel::QUIET);
 
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   (%.1fs) running MILP specific presolving\n", SCIPgetSolvingTime(scip));
+               "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
 
    PresolveResult<SCIP_Real> res = presolve.apply(problem);
    data->lastncols = problem.getNCols();
@@ -267,7 +274,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          data->lastncols = 0;
          data->lastnrows = 0;
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   (%.1fs) MILP presolving found nothing\n",
+               "   (%.1fs) MILP presolver found nothing\n",
                SCIPgetSolvingTime(scip));
          SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
@@ -275,8 +282,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          data->lastncols = problem.getNCols();
          data->lastnrows = problem.getNRows();
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   (%.1fs) MILP presolving (%d rounds): %d deleted columns\n",
-               SCIPgetSolvingTime(scip), presolve.getStatistics().nrounds, presolve.getStatistics().ndeletedcols);
+               "   (%.1fs) MILP presolver (%d rounds): %d deleted columns, %d changed bounds\n",
+               SCIPgetSolvingTime(scip), presolve.getStatistics().nrounds, presolve.getStatistics().ndeletedcols,
+               presolve.getStatistics().nboundchgs);
          *result = SCIP_SUCCESS;
    }
 
@@ -458,3 +466,5 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
    return SCIP_OKAY;
 }
+
+#endif
