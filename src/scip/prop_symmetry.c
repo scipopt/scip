@@ -3210,13 +3210,16 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    int*                  orbits,             /**< symmetry orbits */
    int*                  orbitbegins,        /**< array storing begin position for each orbit */
    int                   orbitidx,           /**< index of orbit for Schreier Sims cuts */
-   int                   orbitleaderidx      /**< index of leader variable for Schreier Sims cuts */
+   int                   orbitleaderidx,     /**< index of leader variable for Schreier Sims cuts */
+   SCIP_Shortbool*       orbitvarinconflict, /**< indicator whether orbitvar is in conflict with orbit leader */
+   int                   norbitvarinconflict /**< number of variables in conflict with orbit leader */
    )
 {
    SCIP_CONS* cons;
    char name[SCIP_MAXSTRLEN];
    SCIP_VAR* vars[2];
    SCIP_Real vals[2];
+   int orbitsize;
    int posleader;
    int poscur;
    int ncuts;
@@ -3226,15 +3229,17 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    assert( orbits != NULL );
    assert( orbitidx >= 0 );
    assert( orbitleaderidx >= 0 );
+   assert( orbitvarinconflict != NULL );
 
-   ncuts = orbitbegins[orbitidx + 1] - orbitbegins[orbitidx] - 1;
-   if ( propdata->nschreiersimsconss == 0 )
+   orbitsize = orbitbegins[orbitidx + 1] - orbitbegins[orbitidx];
+   ncuts = orbitsize - norbitvarinconflict - 1; /* final -1 to no count the leader */
+   if ( propdata->nschreiersimsconss == 0 && ncuts > 0 )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->schreiersimsconss), ncuts) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->leaders), 10) );
       propdata->maxnleaders = 10;
    }
-   else
+   else if ( ncuts > 0 )
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->schreiersimsconss),
             propdata->nschreiersimsconss, propdata->nschreiersimsconss + ncuts) );
@@ -3253,21 +3258,43 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    vals[0] = -1.0;
    vals[1] = 1.0;
    propdata->leaders[propdata->nleaders++] = orbits[posleader];
-   for (i = 0; i < ncuts + 1; ++i)
+   for (i = 0; i < orbitsize; ++i)
    {
       ++poscur;
 
       if ( i == orbitleaderidx )
+      {
+         assert( ! orbitvarinconflict[i] );
          continue;
+      }
 
       vars[1] = permvars[orbits[poscur]];
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SchreierSimscut_%d_%d", orbits[posleader], orbits[poscur]);
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, - SCIPinfinity(scip), 0.0,
-            propdata->conssaddlp, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-      SCIP_CALL( SCIPaddCons(scip, cons) );
+      /* if the i-th variable in the orbit is in a conflict with the leader, fix it to 0 */
+      if ( orbitvarinconflict[i] )
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool fixed;
 
-      propdata->schreiersimsconss[propdata->nschreiersimsconss++] = cons;
+         assert( SCIPvarIsBinary(vars[1]) );
+
+         SCIP_CALL( SCIPfixVar(scip, vars[1], 0.0, &infeasible, &fixed) );
+
+         assert( ! infeasible );
+         assert( fixed );
+
+         orbitvarinconflict[i] = FALSE;
+      }
+      else
+      {
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SchreierSimscut_%d_%d", orbits[posleader], orbits[poscur]);
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, - SCIPinfinity(scip), 0.0,
+               propdata->conssaddlp, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+
+         propdata->schreiersimsconss[propdata->nschreiersimsconss++] = cons;
+      }
    }
 
    return SCIP_OKAY;
@@ -3289,6 +3316,8 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    SCIP_LEADERRULE       leaderrule,         /**< rule to select leader */
    SCIP_LEADERTIEBREAKRULE tiebreakrule,     /**< tie break rule to select leader */
    SCIP_VARTYPE          leadervartype,      /**< variable type of leader */
+   SCIP_Shortbool*       orbitvarinconflict, /**< array to store whether a var in the orbit is conflicting with leader */
+   int*                  norbitvarinconflict, /**< pointer to store number of vars in the orbit in conflict with leader */
    SCIP_Bool             symretopesactive,   /**< whether inequalities based on symretopes are combined with
                                               *   Schreier Sims cuts */
    SCIP_Bool*            success             /**< pointer to store whether orbit cut be selected successfully */
@@ -3298,12 +3327,18 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    SCIP_NODEDATA* nodedata;
    SCIP_Bool conflictgraphsuccess;
    SCIP_VAR** vars;
+   int* conflictvars;
+   int nconflictvars;
    int nvars;
    int varidx;
    int orbitcriterion = INT_MIN;
-   int candcriterion;
    int curcriterion;
+   int orbitsize;
    int i;
+   SCIP_NODEDATA* neighbordata;
+   SCIP_VAR* var;
+   int leader;
+   int j;
 
    assert( scip != NULL );
    assert( orbits != NULL );
@@ -3311,9 +3346,12 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    assert( norbits > 0 );
    assert( orbitidx != NULL );
    assert( leaderidx != NULL );
+   assert( orbitvarinconflict != NULL );
+   assert( norbitvarinconflict != NULL );
 
    *orbitidx = 0;
    *leaderidx = 0;
+   *norbitvarinconflict = 0;
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
@@ -3378,6 +3416,45 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
                *leaderidx = orbitbegins[i + 1] - orbitbegins[i] - 1;
          }
       }
+
+      /* free the conflict graph if it has been created and store variables in conflict with leader */
+      if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT )
+      {
+         /* check which variables in orbit are in conflict with the orbit leader */
+         orbitsize = orbitbegins[*orbitidx + 1] - orbitbegins[*orbitidx];
+         leader = orbits[orbitbegins[*orbitidx] + *leaderidx];
+         conflictvars = SCIPdigraphGetSuccessors(conflictgraph, leader);
+         nconflictvars = SCIPdigraphGetNSuccessors(conflictgraph, leader);
+
+         assert( conflictvars != NULL || nconflictvars == 0 );
+
+         if  ( nconflictvars > 0 )
+         {
+            for (i = 0; i < orbitsize; ++i)
+            {
+               /* skip the leader */
+               if ( i == *leaderidx )
+                  continue;
+
+               var = permvars[orbits[orbitbegins[*orbitidx] + i]];
+
+               for (j = 0; j < nconflictvars; ++j)
+               {
+                  neighbordata = SCIPdigraphGetNodeData(conflictgraph, conflictvars[j]);
+
+                  assert( neighbordata != NULL );
+
+                  if ( neighbordata->var == var )
+                  {
+                     orbitvarinconflict[i] = TRUE;
+                     *norbitvarinconflict += 1;
+                  }
+               }
+            }
+         }
+
+         SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, nvars) );
+      }
    }
    else
    {
@@ -3417,6 +3494,42 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
          }
       }
 
+      /* check which vars in the orbit are in conflict with the orbit leader */
+      orbitsize = orbitbegins[*orbitidx + 1] - orbitbegins[*orbitidx];
+      leader = SCIPvarGetProbindex(permvars[orbits[orbitbegins[*orbitidx] + *leaderidx]]);
+
+      assert( leader >= 0 );
+
+      conflictvars = SCIPdigraphGetSuccessors(conflictgraph, leader);
+      nconflictvars = SCIPdigraphGetNSuccessors(conflictgraph, leader);
+
+      assert( conflictvars != NULL || nconflictvars == 0 );
+
+      if ( nconflictvars > 0 )
+      {
+         for (i = 0; i < orbitsize; ++i)
+         {
+            /* skip the leader */
+            if ( i == *leaderidx )
+               continue;
+
+            var = permvars[orbits[orbitbegins[*orbitidx] + i]];
+
+            for (j = 0; j < nconflictvars; ++j)
+            {
+               neighbordata = SCIPdigraphGetNodeData(conflictgraph, conflictvars[j]);
+
+               assert( neighbordata != NULL );
+
+               if ( neighbordata->var == var )
+               {
+                  orbitvarinconflict[i] = TRUE;
+                  *norbitvarinconflict += 1;
+               }
+            }
+         }
+      }
+
       SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, nvars) );
    }
 
@@ -3450,6 +3563,8 @@ SCIP_RETCODE addSchreierSimsConss(
    int norbits;
    int orbitidx;
    int orbitleaderidx;
+   SCIP_Shortbool* orbitvarinconflict;
+   int norbitvarinconflict;
    int v;
    int p;
    int posleader;
@@ -3508,6 +3623,7 @@ SCIP_RETCODE addSchreierSimsConss(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &orbitvarinconflict, npermvars) );
 
    while ( ninactiveperms < nperms )
    {
@@ -3525,7 +3641,8 @@ SCIP_RETCODE addSchreierSimsConss(
          break;
 
       /* add Schreier Sims cuts */
-      SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, propdata, permvars, orbits, orbitbegins, orbitidx, orbitleaderidx) );
+      SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, propdata, permvars,
+            orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict) );
 
       /* deactivate permutations that move the orbit leader */
       posleader = orbits[orbitbegins[orbitidx] + orbitleaderidx];
@@ -3539,8 +3656,9 @@ SCIP_RETCODE addSchreierSimsConss(
       }
    }
 
-   SCIPfreeBufferArray(scip, &orbits);
+   SCIPfreeBufferArray(scip, &orbitvarinconflict);
    SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
    SCIPfreeBufferArray(scip, &componentblocked);
    SCIPfreeBufferArray(scip, &inactiveperms);
 
