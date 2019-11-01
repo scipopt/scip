@@ -2741,6 +2741,10 @@ SCIP_RETCODE addSymInfoConflictGraphSchreierSims(
             var = permvars[orbits[i]];
             assert( var != NULL );
 
+            /* inactive vars are not contained in var array and thus not in conflict graph */
+            if ( ! SCIPvarIsActive(var) )
+               continue;
+
             /* get position of var in conflict graph */
             assert( SCIPhashmapExists(varmap, var) );
             pos = SCIPhashmapGetImageInt(varmap, var);
