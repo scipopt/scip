@@ -853,7 +853,8 @@ OBJSCIPLIBOBJ	=	objscip/objbenders.o \
 			objscip/objrelax.o \
 			objscip/objsepa.o \
 			objscip/objtable.o \
-			objscip/objvardata.o
+			objscip/objvardata.o \
+			scip/presol_milp.o
 
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
 OBJSCIPLIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(OBJSCIPLIB).$(LIBEXT)
