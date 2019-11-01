@@ -239,7 +239,7 @@ endif()
 
 # look for presolvelib
 if(PRESOLVELIB)
-   find_package(PRESOLVELIB HINTS /nfs/OPTI/bzfgottw/projects/presolve/opt)
+   find_package(PRESOLVELIB)
 endif()
 if(PRESOLVELIB_FOUND)
    set(SCIP_WITH_PRESOLVELIB on)
