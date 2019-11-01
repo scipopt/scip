@@ -24,14 +24,15 @@
 #ifndef __SCIP_PRESOL_MILP_H__
 #define __SCIP_PRESOL_MILP_H__
 
-
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates the MILP presolver and includes it in SCIP
+/** creates the MILP presolver and includes it in SCIP if the presolve library is available
  *
  * @ingroup PresolverIncludes
  */
@@ -43,14 +44,5 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #ifdef __cplusplus
 }
 #endif
-
-/**@addtogroup PRESOLVERS
- *
- * @{
- */
-
-/* TODO place other public methods in this group to facilitate navigation through the documentation */
-
-/* @} */
 
 #endif
