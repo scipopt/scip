@@ -3471,8 +3471,8 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
          if ( symretopesactive && SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
             continue;
 
-         /* skip orbits containing vars different to the leader's vartype */
-         if ( SCIPvarGetType(permvars[orbits[orbitbegins[i]]]) != leadervartype )
+         /* skip vars different to the leader's vartype */
+         if ( SCIPvarGetType(vars[i]) != leadervartype )
             continue;
 
          nodedata = SCIPdigraphGetNodeData(conflictgraph, i);
