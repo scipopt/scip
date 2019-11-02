@@ -257,7 +257,8 @@ typedef struct dijkstra_data
 #define UNKNOWN    (-1)
 #define FARAWAY            1e15
 #define BLOCKED            1e10              /**< used for temporarily blocking an edge */
-#define BLOCKED_MINOR      (BLOCKED - 1.0)   /**< used for permanently blocking an edge */
+#define BLOCKED_MINOR      (BLOCKED - 1.0)   /**< used for permanently blocking an edge;
+                                              * different from BLOCKED because of weird prize sum in reduce_base.c */
 
 #define EDGE_BLOCKED       0
 #define EDGE_MODIFIABLE    1
@@ -431,6 +432,7 @@ extern void   graph_pc_knotChg(GRAPH*, int, int);
 extern void   graph_pc_updateSubgraphEdge(const GRAPH*, const int*, int, GRAPH*);
 extern void   graph_pc_enforcePseudoTerm(SCIP*, GRAPH*, int);
 extern void   graph_pc_enforceNonLeafTerm(GRAPH*, int);
+extern void   graph_pc_enforceNode(SCIP*, GRAPH*, int);
 extern void   graph_pc_subtractPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_pc_chgPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_pc_2org(SCIP*, GRAPH*);

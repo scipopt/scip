@@ -978,7 +978,8 @@ SCIP_Bool graph_pc_evalTermIsNonLeaf(
 }
 
 
-/** set high costs for not including given pseudo-terminal */
+/** Enforces given pseudo-terminal without deleting edges.
+ *  I.e. the terminal is part of any optimal solution. */
 void graph_pc_enforcePseudoTerm(
    SCIP*           scip,               /**< SCIP data */
    GRAPH*          graph,              /**< graph */
@@ -1001,7 +1002,8 @@ void graph_pc_enforcePseudoTerm(
 }
 
 
-/** enforces non-leaf terminal */
+/** Enforces non-leaf terminal without deleting edges.
+ *  I.e. the terminal is part of any optimal solution.  */
 void graph_pc_enforceNonLeafTerm(
    GRAPH*          graph,              /**< graph */
    int             nonleafterm         /**< the terminal */
@@ -1013,10 +1015,13 @@ void graph_pc_enforceNonLeafTerm(
    assert(graph_pc_knotIsNonLeafTerm(graph, nonleafterm));
    assert(prize > 0.0 && prize < FARAWAY);
 
+#if 0
+   // todo that actually increases the optimal solution value!
    for( int e = graph->inpbeg[nonleafterm]; e != EAT_LAST; e = graph->ieat[e] )
    {
       graph->cost[e] += prize;
    }
+#endif
 
    if( graph_pc_isRootedPcMw(graph) )
    {
@@ -1025,9 +1030,33 @@ void graph_pc_enforceNonLeafTerm(
    }
    else if( graph->prize[nonleafterm] < BLOCKED )
    {
-      /* don't change because of weird prize sum in reduce.c */
+      /* don't change because of weird prize sum in reduce_base.c */
       graph->prize[nonleafterm] = BLOCKED_MINOR; // todo quite hacky, because it destroys the invariant of non-leaf terms!
    }
+}
+
+
+/** Tires to enforce node without deleting or adding edges.
+ *  I.e. the terminal is part of any optimal solution.
+ *  Is not always possible!  */
+void graph_pc_enforceNode(
+   SCIP*           scip,               /**< SCIP data */
+   GRAPH*          graph,              /**< graph */
+   int             term                /**< the terminal */
+)
+{
+   assert(graph_pc_isPcMw(graph));
+   assert(graph->extended);
+
+   /* nothing to enforce? */
+   if( Is_term(graph->term[term]) )
+      return;
+
+   if( Is_pseudoTerm(graph->term[term]) )
+      graph_pc_enforcePseudoTerm(scip, graph, term);
+
+   if( graph_pc_isRootedPcMw(graph) )
+      graph_pc_knotToFixedTerm(graph, term);
 }
 
 

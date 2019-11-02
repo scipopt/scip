@@ -237,6 +237,214 @@ void updateDeg2LurkingBounds(
 }
 
 
+/** apply current bound changes to propgraph */
+static
+SCIP_RETCODE propgraphApplyBoundchanges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables */
+   const GRAPH*          g,                  /**< graph data structure */
+   int*                  remain,             /**< edge remain */
+   int*                  edgestate,          /**< edge state */
+   GRAPH*                propgraph,          /**< propagator graph */
+   int*                  nfixed,             /**< pointer to number of fixed edges */
+   SCIP_Bool*            probisinfeas        /**< is problem infeasible? */
+   )
+{
+   const int nedges = g->edges;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
+   const SCIP_Bool pc = graph_pc_isPc(g);
+
+   assert(g->stp_type == propgraph->stp_type);
+   assert(!pcmw || propgraph->extended);
+
+   for( int e = 0; e < nedges; e++ )
+       remain[e] = PROP_STP_EDGE_UNSET;
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      const int erev = flipedge(e);
+
+      if( (SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) > 0.5)
+            || (SCIPvarGetUbLocal(vars[e]) > 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5) )
+         edgestate[e] = EDGE_BLOCKED;
+      else
+         edgestate[e] = EDGE_MODIFIABLE;
+   }
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      const int erev = e + 1;
+      const int tail = propgraph->tail[e];
+      const int head = propgraph->head[e];
+
+      /* e OR its anti-parallel edge fixed to 1? */
+      if( SCIPvarGetLbLocal(vars[e]) > 0.5 || SCIPvarGetLbLocal(vars[erev]) > 0.5 )
+      {
+         remain[e] = PROP_STP_EDGE_FIXED;
+         remain[erev] = PROP_STP_EDGE_FIXED;
+
+         if( pcmw && (SCIPisGE(scip, propgraph->cost[e], FARAWAY) || SCIPisGE(scip, propgraph->cost[erev], FARAWAY)) )
+         {
+            assert(!SCIPisEQ(scip, propgraph->cost[e], propgraph->cost[erev]));
+            continue;
+         }
+
+         assert(!pcmw || !(Is_term(propgraph->term[tail]) && !graph_pc_knotIsFixedTerm(propgraph, tail)));
+         assert(!pcmw || !(Is_term(propgraph->term[head]) && !graph_pc_knotIsFixedTerm(propgraph, head)));
+         assert(propgraph->cost[e] == propgraph->cost[erev]);
+
+         propgraph->cost[e] = 0.0;
+         propgraph->cost[erev] = 0.0;
+
+         if( pcmw )
+         {
+            graph_pc_enforceNode(scip, propgraph, tail);
+            graph_pc_enforceNode(scip, propgraph, head);
+         }
+         else
+         {
+            graph_knot_chg(propgraph, tail, STP_TERM);
+            graph_knot_chg(propgraph, head, STP_TERM);
+         }
+      }
+
+      /* both e AND its anti-parallel edge fixed to 0? */
+      if( SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 )
+      {
+         assert(SCIPvarGetLbLocal(vars[e]) < 0.5 && SCIPvarGetLbLocal(vars[erev]) < 0.5);
+
+         if( pcmw )
+         {
+            assert(propgraph->extended);
+
+            if( SCIPisGE(scip, propgraph->cost[e], FARAWAY) || SCIPisGE(scip, propgraph->cost[erev], FARAWAY) )
+            {
+               assert(Is_term(propgraph->term[tail]) || Is_term(propgraph->term[head]));
+
+               continue;
+            }
+         }
+
+         graph_edge_del(scip, propgraph, e, TRUE);
+         remain[e] = PROP_STP_EDGE_KILLED;
+         remain[erev] = PROP_STP_EDGE_KILLED;
+      }
+   }
+
+   if( pcmw )
+   {
+      assert(propgraph->extended);
+      assert(propgraph->knots == g->knots);
+
+      for( int k = 0; k < propgraph->knots; k++ )
+      {
+         if( Is_pseudoTerm(propgraph->term[k]) )
+         {
+            const int twinterm = graph_pc_getTwinTerm(propgraph, k);
+            const int root2term = graph_pc_getRoot2PtermEdge(g, twinterm);
+            assert(root2term >= 0);
+
+            /* fixed to 0? Then take terminal */
+            if( SCIPvarGetUbLocal(vars[root2term]) < 0.5 )
+            {
+               graph_pc_enforcePseudoTerm(scip, propgraph, k);
+            }
+            /* fixed to 1? Then delete terminal */
+            else if( SCIPvarGetLbLocal(vars[root2term]) > 0.5 )
+            {
+               graph_pc_deleteTerm(scip, propgraph, twinterm);
+            }
+         }
+      }
+   }
+
+   /* not at root? */
+   if( SCIPgetDepth(scip) > 0 )
+   {
+      /* ... then modify the graph according to vertex kills/fixes during branch-and-bound
+         MIGHT CHANGE OFFSET FOR PCSPG/RPCSPG! */
+      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, NULL, propgraph) );
+   }
+
+   SCIP_CALL( graph_path_init(scip, propgraph) );
+
+   *probisinfeas = FALSE;
+
+   if( pc )
+   {
+      int* verts = SCIPStpGetPcImplVerts(scip);
+      int* start = SCIPStpGetPcImplStarts(scip);
+
+      if( verts != NULL )
+      {
+         int ptermcount = 0;
+         assert(start != NULL);
+         assert(propgraph->extended);
+
+         for( int i = 0; i < propgraph->knots && !(*probisinfeas); i++ )
+         {
+            if( !Is_pseudoTerm(g->term[i]) )
+               continue;
+
+            assert(!graph_pc_knotIsFixedTerm(g, i));
+
+            ptermcount++;
+
+            if( propgraph->grad[i] == 0 )
+            {
+               assert(g->grad[i] > 0);
+               for( int j = start[ptermcount - 1]; j < start[ptermcount]; j++ )
+               {
+                  const int vert = verts[j];
+
+                  if( propgraph->grad[vert] == 0 )
+                     continue;
+
+                  if( graph_pc_knotIsFixedTerm(propgraph, vert) )
+                  {
+                     *probisinfeas = TRUE;
+                     break;
+                  }
+
+                  assert(!Is_term(propgraph->term[vert]) && !Is_term(g->term[vert]));
+
+                  if( Is_pseudoTerm(propgraph->term[vert]) )
+                     graph_pc_deleteTerm(scip, propgraph, graph_pc_getTwinTerm(propgraph, vert));
+                  else
+                     graph_knot_del(scip, propgraph, vert, TRUE);
+               }
+            }
+            else if( SCIPisLT(scip, propgraph->prize[i], BLOCKED_MINOR) && Is_pseudoTerm(propgraph->term[i]) )
+            {
+               for( int j = start[ptermcount - 1]; j < start[ptermcount]; j++ )
+               {
+                  const int vert = verts[j];
+                  assert(graph_pc_knotIsFixedTerm(propgraph, vert) || !Is_term(propgraph->term[vert]));
+
+                  /* is vert fixed? */
+                  if( SCIPisGE(scip, propgraph->prize[vert], BLOCKED_MINOR))
+                  {
+                     const int twin = graph_pc_getTwinTerm(propgraph, i);
+                     const int rootedge = graph_pc_getRoot2PtermEdge(g, twin);
+                     SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[rootedge], nfixed ) );
+
+                     assert(Is_pseudoTerm(propgraph->term[vert]) || graph_pc_knotIsFixedTerm(propgraph, vert));
+
+                     graph_pc_enforcePseudoTerm(scip, propgraph, i);
+                     break;
+                  }
+               }
+            }
+         }
+
+         assert(ptermcount == graph_pc_nPotentialTerms(g));
+      } /* verts != NULL */
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** try to make global fixings based on lurking bounds */
 static
 SCIP_RETCODE fixVarsDualcostLurking(
@@ -479,13 +687,12 @@ SCIP_RETCODE fixVarsRedbased(
    const SCIP_Bool pcmw = graph_pc_isPcMw(g);
 
    assert(g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP); // not implemented yet!
-   assert(propdata != NULL);
-   assert(scip != NULL);
-   assert(g != NULL);
-   assert(vars != NULL);
+   assert(propdata && scip && vars && probisinfeas && nfixed);
    assert(!pcmw || g->extended);
 
    SCIPdebugMessage("start redbasedVarfixing, fixings: %d \n", *nfixed);
+
+   *probisinfeas = FALSE;
 
    /* don't use it for pcmw! */
    offset = -1.0;
@@ -509,211 +716,10 @@ SCIP_RETCODE fixVarsRedbased(
 
    SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
 
-   for( int e = 0; e < nedges; e++ )
-      remain[e] = PROP_STP_EDGE_UNSET;
+   SCIP_CALL( propgraphApplyBoundchanges(scip, vars, g, remain, edgestate, propgraph, nfixed, probisinfeas) );
 
-   for( int e = 0; e < nedges; e++ )
-   {
-      const int erev = flipedge(e);
-
-      if( (SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) > 0.5)
-            || (SCIPvarGetUbLocal(vars[e]) > 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5) )
-         edgestate[e] = EDGE_BLOCKED;
-      else
-         edgestate[e] = EDGE_MODIFIABLE;
-   }
-
-   for( int e = 0; e < nedges; e += 2 )
-   {
-      const int erev = e + 1;
-      const int tail = propgraph->tail[e];
-      const int head = propgraph->head[e];
-
-      /* e OR its anti-parallel edge fixed to 1? */
-      if( SCIPvarGetLbLocal(vars[e]) > 0.5 || SCIPvarGetLbLocal(vars[erev]) > 0.5 )
-      {
-         remain[e] = PROP_STP_EDGE_FIXED;
-         remain[erev] = PROP_STP_EDGE_FIXED;
-
-         if( pcmw && (SCIPisGE(scip, propgraph->cost[e], FARAWAY) || SCIPisGE(scip, propgraph->cost[erev], FARAWAY)) )
-         {
-            assert(!SCIPisEQ(scip, propgraph->cost[e], propgraph->cost[erev]));
-            continue;
-         }
-
-         assert(!pcmw || !(Is_term(propgraph->term[tail]) && !graph_pc_knotIsFixedTerm(propgraph, tail)));
-         assert(!pcmw || !(Is_term(propgraph->term[head]) && !graph_pc_knotIsFixedTerm(propgraph, head)));
-         assert(propgraph->cost[e] == propgraph->cost[erev]);
-
-         propgraph->cost[e] = 0.0;
-         propgraph->cost[erev] = 0.0;
-
-         if( pcmw )
-         {
-            if( Is_pseudoTerm(propgraph->term[tail]) )
-               graph_pc_enforcePseudoTerm(scip, propgraph, tail);
-
-            if( Is_pseudoTerm(propgraph->term[head]) )
-               graph_pc_enforcePseudoTerm(scip, propgraph, head);
-
-            if( propgraph->stp_type == STP_PCSPG )
-               continue;
-         }
-
-         if( propgraph->stp_type == STP_RPCSPG )
-         {
-            if( !Is_pseudoTerm(propgraph->term[tail]) )
-            {
-               propgraph->prize[tail] = FARAWAY;
-               graph_knot_chg(propgraph, tail, 0);
-            }
-            if( !Is_pseudoTerm(propgraph->term[head]) )
-            {
-               propgraph->prize[head] = FARAWAY;
-               graph_knot_chg(propgraph, head, 0);
-            }
-         }
-         else
-         {
-            graph_knot_chg(propgraph, tail, 0);
-            graph_knot_chg(propgraph, head, 0);
-         }
-      }
-
-      /* both e AND its anti-parallel edge fixed to 0? */
-      if( SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 )
-      {
-         assert(SCIPvarGetLbLocal(vars[e]) < 0.5 && SCIPvarGetLbLocal(vars[erev]) < 0.5);
-         if( !SCIPisEQ(scip, propgraph->cost[e], propgraph->cost[erev]) )
-         {
-            assert(graph_pc_isPcMw(g) && graph_pc_isPcMw(propgraph));
-            assert(propgraph->extended);
-            assert(Is_anyTerm(g->term[tail]) || Is_anyTerm(g->term[head]));
-
-            if( !graph_pc_knotIsNonLeafTerm(propgraph, tail) && !!graph_pc_knotIsNonLeafTerm(propgraph, tail) )
-            {
-               assert(Is_term(propgraph->term[tail]) || Is_term(propgraph->term[head]));
-
-               continue;
-            }
-         }
-
-         graph_edge_del(scip, propgraph, e, TRUE);
-         remain[e] = PROP_STP_EDGE_KILLED;
-         remain[erev] = PROP_STP_EDGE_KILLED;
-      }
-   }
-
-   if( pcmw )
-   {
-      assert(propgraph->knots == g->knots);
-
-      for( int k = 0; k < propgraph->knots; k++ )
-      {
-         if( Is_term(propgraph->term[k]) && !graph_pc_knotIsFixedTerm(propgraph, k) )
-         {
-            const int rootedge = graph_pc_getRoot2PtermEdge(g, k);
-            assert(rootedge >= 0);
-
-            /* fixed to 0? Then take terminal */
-            if( SCIPvarGetUbLocal(vars[rootedge]) < 0.5 )
-            {
-               graph_pc_enforcePseudoTerm(scip, propgraph, graph_pc_getTwinTerm(propgraph, k));
-            }
-            /* fixed to 1? Then delete terminal */
-            else if( SCIPvarGetLbLocal(vars[rootedge]) > 0.5 )
-            {
-               graph_pc_deleteTerm(scip, propgraph, k);
-            }
-         }
-      }
-   }
-
-   /* not at root? */
-   if( SCIPgetDepth(scip) > 0 )
-   {
-      /* ... then modify the graph according to vertex kills/fixes during branch-and-bound
-         MIGHT CHANGE OFFSET FOR PCSPG/RPCSPG! */
-      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, NULL, propgraph) );
-   }
-
-   SCIP_CALL( graph_path_init(scip, propgraph) );
-
-   *probisinfeas = FALSE;
-
-   if( pc )
-   {
-      int* verts = SCIPStpGetPcImplVerts(scip);
-      int* start = SCIPStpGetPcImplStarts(scip);
-
-      if( verts != NULL )
-      {
-         int ptermcount = 0;
-         assert(start != NULL);
-         assert(propgraph->extended);
-
-         for( int i = 0; i < propgraph->knots && !(*probisinfeas); i++ )
-         {
-            if( !Is_pseudoTerm(g->term[i]) )
-               continue;
-
-            assert(!graph_pc_knotIsFixedTerm(g, i));
-
-            ptermcount++;
-
-            if( propgraph->grad[i] == 0 )
-            {
-               assert(g->grad[i] > 0);
-               for( int j = start[ptermcount - 1]; j < start[ptermcount]; j++ )
-               {
-                  const int vert = verts[j];
-
-                  if( propgraph->grad[vert] == 0 )
-                     continue;
-
-                  if( graph_pc_knotIsFixedTerm(propgraph, vert) )
-                  {
-                     *probisinfeas = TRUE;
-                     break;
-                  }
-
-                  assert(!Is_term(propgraph->term[vert]) && !Is_term(g->term[vert]));
-
-                  if( Is_pseudoTerm(propgraph->term[vert]) )
-                     graph_pc_deleteTerm(scip, propgraph, graph_pc_getTwinTerm(propgraph, vert));
-                  else
-                     graph_knot_del(scip, propgraph, vert, TRUE);
-               }
-            }
-            else if( SCIPisLT(scip, propgraph->prize[i], BLOCKED_MINOR) && Is_pseudoTerm(propgraph->term[i]) )
-            {
-               for( int j = start[ptermcount - 1]; j < start[ptermcount]; j++ )
-               {
-                  const int vert = verts[j];
-                  assert(graph_pc_knotIsFixedTerm(propgraph, vert) || !Is_term(propgraph->term[vert]));
-
-                  /* is vert fixed? */
-                  if( SCIPisGE(scip, propgraph->prize[vert], BLOCKED_MINOR))
-                  {
-                     const int twin = graph_pc_getTwinTerm(propgraph, i);
-                     const int rootedge = graph_pc_getRoot2PtermEdge(g, twin);
-                     SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[rootedge], nfixed ) );
-
-                     assert(Is_pseudoTerm(propgraph->term[vert]) || graph_pc_knotIsFixedTerm(propgraph, vert));
-
-                     graph_pc_enforcePseudoTerm(scip, propgraph, i);
-                     break;
-                  }
-               }
-            }
-         }
-
-         assert(ptermcount == graph_pc_nPotentialTerms(g));
-
-         if( *probisinfeas )
-            goto TERMINATE;
-      } /* verts != NULL */
-   }
+   if( *probisinfeas )
+       goto TERMINATE;
 
    if( propgraph->stp_type == STP_RPCSPG )
       SCIP_CALL( level0RpcRmwInfeas(scip, propgraph, &offset, probisinfeas) );
