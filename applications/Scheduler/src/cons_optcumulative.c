@@ -4277,7 +4277,6 @@ SCIP_RETCODE SCIPsetHmaxOptcumulative(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a cumulative constraint with optional activities\n");
-      SCIPABORT();
       return SCIP_INVALIDCALL; /*lint !e527*/
    }
 
