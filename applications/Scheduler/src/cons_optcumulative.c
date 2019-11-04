@@ -3987,8 +3987,8 @@ SCIP_DECL_CONSPARSE(consParseOptcumulative)
 
          (*success) = TRUE;
 
-         SCIP_CALL( SCIPsetHminOptcumulative(scip, cons, hmin) );
-         SCIP_CALL( SCIPsetHmaxOptcumulative(scip, cons, hmax) );
+         SCIP_CALL( SCIPsetHminOptcumulative(scip, *cons, hmin) );
+         SCIP_CALL( SCIPsetHmaxOptcumulative(scip, *cons, hmax) );
       }
    }
 
