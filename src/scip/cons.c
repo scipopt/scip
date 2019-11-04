@@ -3491,6 +3491,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
             && *result != SCIP_CONSADDED
             && *result != SCIP_REDUCEDDOM
             && *result != SCIP_SEPARATED
+            && *result != SCIP_SOLVELP
             && *result != SCIP_BRANCHED
             && *result != SCIP_INFEASIBLE
             && *result != SCIP_FEASIBLE )

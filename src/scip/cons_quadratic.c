@@ -11808,10 +11808,10 @@ SCIP_RETCODE enforceConstraint(
    /* find branching candidates */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
 
-   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPlpfeastol(scip) )
+   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPgetLPFeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPlpfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPgetLPFeastol(scip), TRUE, &separateresult, &sepaefficacy) );
       if( separateresult == SCIP_CUTOFF )
       {
          SCIPdebugMsg(scip, "separation found cutoff\n");

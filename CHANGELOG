@@ -93,6 +93,8 @@ Features
 
 - If a reference value (misc/referencevalue) is given, the primal-reference and reference-dual integrals are calculated automatically and printed within the SCIP statistics.
 
+- Locally valid cuts / rows are now considered for dual proof analysis when `conflict/uselocalrows` is set to TRUE.
+
 - Parallelisation can be used when applying Benders' decomposition. There are two different forms of parallelisation
   available. The first is applying Benders' decomposition within a parallel branch-and-bound. This is achieved through
   the integration with the UG framework. The second is the use of shared memory parallelisation for solving the Benders'
@@ -143,6 +145,9 @@ Interface changes
 - new `idempotent` argument to SCIPgetVarStrongbranchInt() and SCIPgetVarStrongbranchFrac(),
   so that statistics are not updated during the call. Likewise, new `updatecol` and `updatestat` arguments to SCIPcolGetStrongbranch().
 
+- callback `SCIP_DECL_CONSHDLRENFOLP` can now also return SCIP_SOLVELP as *result, which indicates to the SCIP core that the LP relaxation
+  should be solved again because the primal feasibility tolerance of the LP has been tightened (using SCIPsetLPFeastol())
+
 ### Deleted and changed API methods
 
 - LPI:
@@ -185,6 +190,7 @@ Interface changes
   - SCIProwGetOriginCons() now returns a SCIP_CONS* instead of a SCIP_CONSHDLR*, use SCIProwGetOriginConshdlr() for the previous behavior
   - SCIPcreateRowCons() and SCIPcreateEmptyRowCons() now expect a SCIP_CONS* instead of a SCIP_CONSHDLR*,
     use SCIPcreateRowConshdlr() and SCIPcreateEmptyRowConshdlr(), respectively, for the previous behavior
+  - deprecated SCIPlpfeastol() and SCIPchgLpfeastol(), use SCIPgetLPFeastol() and SCIPsetLPFeastol()
 
 - new parameter "divecontext" for every method that queries statistics for a diveset. The context can be used to distinguish between the dive set
   as single (standalone) heuristic or within Adaptive Diving.
@@ -223,6 +229,8 @@ Interface changes
 - new API function SCIPgetNConflictDualproofsApplied()
 - new API functions SCIPeventGetOldtype() and SCIPeventGetNewtype() for the new event when changing the variable type
 - new API function SCIPisConvexConsQuadratic() to check whether a quadratic constraint is convex when a given set of variables would be fixed
+- new API functions SCIPgetLPFeastol(), SCIPsetLPFeastol(), and SCIPresetLPFeastol() to get, set, and reset (to the default), respectively, the primal
+  feasibility tolerance for the LP relaxation
 - new API function SCIPsetBendersSubproblemComp() used to add a custom comparison method for ordering the Benders'
   decomposition subproblem solves. The comparison method is used to help with load balancing.
 
@@ -257,6 +265,8 @@ Interface changes
 - changed default value of "heur/coefdiving/freq" (old: 10, new: -1)
 - changed default value of "heur/conflictdiving/freq" (old: -1, new: 10)
 - changed default value of "heur/conflictdiving/lockweight" (old: 1.0, new: 0.75)
+- replaced parameter "numerics/lpfeastol" by "numerics/lpfeastolfactor" to specify which factor should be applied to the SCIP feasibility
+  tolerance to initialize the primal feasibility tolerance of the LP solver
 
 ### New parameters
 
@@ -325,6 +335,8 @@ Interface changes
 
 - new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
 
+- new parameter conflict/uselocalrows (default: TRUE) to incorporate locally valid cuts / rows for dual proof analysis
+
 ### Data structures
 
 ### Build system
@@ -359,6 +371,7 @@ Fixed bugs
 
 - fix and improve memory handling in symmetry computation
 - fix shown number of applied conflicts in solving statistics
+- fix wrongly skipping strong branching call and using old information if LP was solved with 0 iterations
 
 Miscellaneous
 -------------
@@ -452,6 +465,9 @@ Fixed bugs
 - fixed bug in cons_indicator if addopposite is true
 - fixed bug in sepa_disjunctive: treat case that conflictgraph is empty
 - added safety check in conversion to rational number to avoid overflow
+- fixed bug in interval evaluation with power-operator in certain situations
+- fixed behavior of SCIPmatrixCreate() regarding memory management and column generation
+- SCIPmatrixCreate() returns complete=FALSE when locks do not add up
 
 Miscellaneous
 -------------
