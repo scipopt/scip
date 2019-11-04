@@ -153,6 +153,7 @@
 /* Conflict Analysis (dual ray) */
 
 #define SCIP_DEFAULT_CONF_SEPAALTPROOFS   FALSE /**< apply cut generating functions to construct alternative proofs */
+#define SCIP_DEFAULT_CONF_USELOCALROWS    TRUE  /**< use local rows to construct infeasibility proofs */
 
 /* Constraints */
 
@@ -558,24 +559,27 @@ SCIP_DECL_PARAMCHGD(paramChgdFeastol)
 
    newfeastol = SCIPparamGetReal(param);
 
-   /* change the feastol through the SCIP call in order to adjust lpfeastol if necessary */
+   /* change the feastol through the SCIP call in order to adjust LP's feastol if necessary */
    SCIP_CALL( SCIPchgFeastol(scip, newfeastol) );
 
    return SCIP_OKAY;
 }
 
-/** information method for a parameter change of lpfeastol */
+/** information method for a parameter change of lpfeastolfactor */
 static
-SCIP_DECL_PARAMCHGD(paramChgdLpfeastol)
+SCIP_DECL_PARAMCHGD(paramChgdLPFeastolFactor)
 {  /*lint --e{715}*/
-   SCIP_Real newlpfeastol;
+   SCIP_Real newlpfeastolfactor;
 
-   newlpfeastol = SCIPparamGetReal(param);
+   newlpfeastolfactor = SCIPparamGetReal(param);
 
-   /* change the lpfeastol through the SCIP call in order to mark the LP unsolved and control that it does not exceed
-    * SCIP's feastol
-    */
-   SCIP_CALL( SCIPchgLpfeastol(scip, newlpfeastol, FALSE) );
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetLPFeastol(scip) > newlpfeastolfactor * SCIPfeastol(scip) )
+   {
+      /* reset the LP feastol to ensure that it does not exceed newlpfeastolfactor * SCIP's feastol
+       * this also marks the LP unsolved
+       */
+      SCIPresetLPFeastol(scip);
+   }
 
    return SCIP_OKAY;
 }
@@ -1273,6 +1277,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/cleanboundexceedings",
          "should conflicts based on an old cutoff bound be removed from the conflict pool after improving the primal bound?",
          &(*set)->conf_cleanbnddepend, TRUE, SCIP_DEFAULT_CONF_CLEANBNDDEPEND,
+         NULL, NULL) );
+      SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/uselocalrows",
+         "use local rows to construct infeasibility proofs",
+         &(*set)->conf_uselocalrows, TRUE, SCIP_DEFAULT_CONF_USELOCALROWS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/useprop",
@@ -2040,10 +2049,10 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->num_checkfeastolfac, FALSE, SCIP_DEFAULT_CHECKFEASTOLFAC, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "numerics/lpfeastol",
-         "primal feasibility tolerance of LP solver",
-         &(*set)->num_lpfeastol, FALSE, SCIP_DEFAULT_LPFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
-         paramChgdLpfeastol, NULL) );
+         "numerics/lpfeastolfactor",
+         "factor w.r.t. primal feasibility tolerance that determines default (and maximal) primal feasibility tolerance of LP solver",
+         &(*set)->num_lpfeastolfactor, FALSE, SCIP_DEFAULT_LPFEASTOLFACTOR, 1e-6, 1.0,
+         paramChgdLPFeastolFactor, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "numerics/dualfeastol",
          "feasibility tolerance for reduced costs in LP solution",
@@ -5526,6 +5535,7 @@ SCIP_RETCODE SCIPsetSetVerbLevel(
 /** sets feasibility tolerance */
 SCIP_RETCODE SCIPsetSetFeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< LP data, or NULL */
    SCIP_Real             feastol             /**< new feasibility tolerance */
    )
 {
@@ -5533,54 +5543,14 @@ SCIP_RETCODE SCIPsetSetFeastol(
 
    set->num_feastol = feastol;
 
-   /* the feasibility tolerance of the LP solver should never be larger than SCIP's feasibility tolerance; if necessary,
-    * decrease it; use the SCIP change method in order to mark the LP unsolved
+   /* the feasibility tolerance of the LP solver should never be larger than
+    * numerics/lpfeastolfactor times SCIP's feasibility tolerance
+    * if necessary, reset LP feastol
     */
-   if( SCIPsetFeastol(set) < SCIPsetLpfeastol(set) )
-   {
-      SCIPsetDebugMsg(set, "decreasing lpfeastol along with feastol to %g\n", SCIPsetFeastol(set));
-      SCIP_CALL( SCIPchgLpfeastol(set->scip, SCIPsetFeastol(set), TRUE) );
-   }
+   if( lp != NULL && SCIPlpGetFeastol(lp) > set->num_lpfeastolfactor * SCIPsetFeastol(set) )
+      SCIPlpResetFeastol(lp, set);
 
    return SCIP_OKAY;
-}
-
-/** sets primal feasibility tolerance of LP solver */
-SCIP_RETCODE SCIPsetSetLpfeastol(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             lpfeastol,          /**< new primal feasibility tolerance of LP solver */
-   SCIP_Bool             printnewvalue       /**< should "numerics/lpfeastol = ..." be printed? */
-   )
-{
-   SCIP_RETCODE retcode;
-
-   assert(set != NULL);
-
-   retcode = SCIP_OKAY;
-
-   /* the feasibility tolerance of the LP solver should never be larger than SCIP's feasibility tolerance; if this is
-    * tried, we correct it to feastol; note that when we are called, e.g., by paramChgdLpfeastol, lpfeastol has already
-    * been modified and so we cannot leave the lpfeastol value unchanged; if we would not return SCIP_PARAMETERWRONGVAL
-    * in this case, the interactive shell would print the incorrect value to be set
-    */
-   if( lpfeastol > SCIPsetFeastol(set) )
-   {
-      SCIPerrorMessage("LP feasibility tolerance must be at least as tight as SCIP's feasibility tolerance\n");
-
-      retcode = SCIP_PARAMETERWRONGVAL;
-      printnewvalue = TRUE;
-
-      set->num_lpfeastol = SCIPsetFeastol(set);
-   }
-   else
-      set->num_lpfeastol = lpfeastol;
-
-   if( printnewvalue )
-   {
-      SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "numerics/lpfeastol = %.15g\n", SCIPsetLpfeastol(set));
-   }
-
-   return retcode;
 }
 
 /** sets feasibility tolerance for reduced costs in LP solution */
@@ -5705,12 +5675,12 @@ SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
 #undef SCIPsetEpsilon
 #undef SCIPsetSumepsilon
 #undef SCIPsetFeastol
-#undef SCIPsetLpfeastol
 #undef SCIPsetDualfeastol
 #undef SCIPsetBarrierconvtol
 #undef SCIPsetPseudocosteps
 #undef SCIPsetPseudocostdelta
 #undef SCIPsetCutoffbounddelta
+#undef SCIPsetLPFeastolFactor
 #undef SCIPsetRelaxfeastol
 #undef SCIPsetRecompfac
 #undef SCIPsetIsEQ
@@ -5850,17 +5820,12 @@ SCIP_Real SCIPsetDualfeastol(
    return set->num_dualfeastol;
 }
 
-/** returns primal feasibility tolerance of LP solver given as minimum of lpfeastol option and relaxfeastol */
-SCIP_Real SCIPsetLpfeastol(
+/** returns factor w.r.t. primal feasibility tolerance that determines default (and maximal) feasibility tolerance */
+SCIP_Real SCIPsetLPFeastolFactor(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   assert(set != NULL);
-
-   if( set->num_relaxfeastol != SCIP_INVALID ) /*lint !e777*/
-      return MIN(set->num_relaxfeastol, set->num_lpfeastol);
-
-   return set->num_lpfeastol;
+   return set->num_lpfeastolfactor;
 }
 
 /** returns convergence tolerance used in barrier algorithm */
