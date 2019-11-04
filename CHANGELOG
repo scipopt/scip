@@ -93,6 +93,8 @@ Features
 
 - If a reference value (misc/referencevalue) is given, the primal-reference and reference-dual integrals are calculated automatically and printed within the SCIP statistics.
 
+- Locally valid cuts / rows are now considered for dual proof analysis when `conflict/uselocalrows` is set to TRUE.
+
 Performance improvements
 ------------------------
 
@@ -319,6 +321,8 @@ Interface changes
   - new parameter "constraints/symresack/checkmonotonicity"
 
 - new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
+
+- new parameter conflict/uselocalrows (default: TRUE) to incorporate locally valid cuts / rows for dual proof analysis
 
 ### Data structures
 

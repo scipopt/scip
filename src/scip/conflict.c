@@ -137,6 +137,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_mem.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
 #include "scip/set.h"
@@ -904,6 +905,19 @@ void lpbdchgsFree(
  * Proof Sets
  */
 
+/** return the char associated with the type of the variable */
+static
+const char* varGetChar(
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   SCIP_VARTYPE vartype = SCIPvarGetType(var);
+
+   return (!SCIPvarIsIntegral(var) ? "C" :
+          (vartype == SCIP_VARTYPE_BINARY ? "B" :
+          (vartype == SCIP_VARTYPE_INTEGER ? "I" : "M")));
+}
+
 /** resets the data structure of a proofset */
 static
 void proofsetClear(
@@ -914,6 +928,7 @@ void proofsetClear(
 
    proofset->nnz = 0;
    proofset->rhs = 0.0;
+   proofset->validdepth = 0;
    proofset->conflicttype = SCIP_CONFTYPE_UNKNOWN;
 }
 
@@ -932,6 +947,7 @@ SCIP_RETCODE proofsetCreate(
    (*proofset)->rhs = 0.0;
    (*proofset)->nnz = 0;
    (*proofset)->size = 0;
+   (*proofset)->validdepth = 0;
    (*proofset)->conflicttype = SCIP_CONFTYPE_UNKNOWN;
 
    return SCIP_OKAY;
@@ -2500,104 +2516,133 @@ SCIP_RETCODE tightenSingleVar(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             val,                /**< coefficient of the variable */
    SCIP_Real             rhs,                /**< rhs of the constraint */
-   SCIP_CONFTYPE         prooftype            /**< type of the proof */
+   SCIP_CONFTYPE         prooftype,          /**< type of the proof */
+   int                   validdepth          /**< depth where the bound change is valid */
    )
 {
    SCIP_Real newbound;
+   SCIP_Bool applyglobal;
    SCIP_BOUNDTYPE boundtype;
 
    assert(tree != NULL);
+   assert(validdepth >= 0);
+
+   applyglobal = (validdepth <= SCIPtreeGetEffectiveRootDepth(tree));
 
    /* if variable and coefficient are integral the rhs can be rounded down */
    if( SCIPvarIsIntegral(var) && SCIPsetIsIntegral(set, val) )
-   {
       newbound = SCIPsetFeasFloor(set, rhs)/val;
-      boundtype = (val > 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
-      SCIPvarAdjustBd(var, set, boundtype, &newbound);
-   }
    else
-   {
       newbound = rhs/val;
-      boundtype = (val > 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
-      SCIPvarAdjustBd(var, set, boundtype, &newbound);
-   }
+
+   boundtype = (val > 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
+   SCIPvarAdjustBd(var, set, boundtype, &newbound);
 
    /* skip numerical unstable bound changes */
-   if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLE(set, newbound, SCIPvarGetLbGlobal(var)))
-      || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGE(set, newbound, SCIPvarGetUbGlobal(var))) )
+   if( applyglobal
+      && ((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLE(set, newbound, SCIPvarGetLbGlobal(var)))
+       || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGE(set, newbound, SCIPvarGetUbGlobal(var)))) )
    {
       return SCIP_OKAY;
    }
 
    /* the new bound contradicts a global bound, we can cutoff the root node immediately */
-   if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, SCIPvarGetUbGlobal(var)))
-      || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, SCIPvarGetLbGlobal(var))) )
+   if( applyglobal
+      && ((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, SCIPvarGetUbGlobal(var)))
+       || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, SCIPvarGetLbGlobal(var)))) )
    {
-      SCIPsetDebugMsg(set, "detect global infeasibility at var <%s>: locdom=[%g,%g] glbdom=[%g,%g] new %s bound=%g\n",
-            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var),
-            SCIPvarGetUbGlobal(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
-
+      SCIPsetDebugMsg(set, "detected global infeasibility at var <%s>: locdom=[%g,%g] glbdom=[%g,%g] new %s bound=%g\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+            SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
+            (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
       SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
    else
    {
-      SCIPsetDebugMsg(set, "change %s bound of <%s>: %g -> %g\n", (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"),
-            SCIPvarGetName(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var)),
-            newbound);
-
-      if( lp->strongbranching )
+      if( lp->strongbranching || !applyglobal )
       {
          SCIP_CONS* cons;
          SCIP_Real conslhs;
          SCIP_Real consrhs;
          char name[SCIP_MAXSTRLEN];
 
+         SCIPsetDebugMsg(set, "add constraint <%s>[%s] %s %g to node #%lld in depth %d\n",
+               SCIPvarGetName(var), varGetChar(var), boundtype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", newbound,
+               SCIPnodeGetNumber(tree->path[validdepth]), validdepth);
+
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "pc_fix_%s", SCIPvarGetName(var));
 
          if( boundtype == SCIP_BOUNDTYPE_UPPER )
          {
-	    conslhs = -SCIPsetInfinity(set);
+            conslhs = -SCIPsetInfinity(set);
             consrhs = newbound;
          }
-	 else
+         else
          {
-	    conslhs = newbound;
+            conslhs = newbound;
             consrhs = SCIPsetInfinity(set);
-	 }
+         }
 
          SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, conslhs, consrhs,
                FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
          SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, var, 1.0) );
 
-         SCIP_CALL( SCIPprobAddCons(transprob, set, stat, cons) );
+         if( applyglobal )
+         {
+            SCIP_CALL( SCIPprobAddCons(transprob, set, stat, cons) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPnodeAddCons(tree->path[validdepth], blkmem, set, stat, tree, cons) );
+         }
+
          SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
       }
       else
       {
-         SCIP_CALL( SCIPnodeAddBoundchg(tree->root, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
+         assert(applyglobal);
+
+         SCIPsetDebugMsg(set, "change global %s bound of <%s>[%s]: %g -> %g\n",
+               (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"),
+               SCIPvarGetName(var), varGetChar(var),
+               (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var)),
+               newbound);
+
+         SCIP_CALL( SCIPnodeAddBoundchg(tree->path[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, \
                eventqueue, cliquetable, var, newbound, boundtype, FALSE) );
 
-         /* mark the node in the repropdepth to be propagated again */
+         /* mark the node in the validdepth to be propagated again */
          SCIPnodePropagateAgain(tree->path[0], set, stat, tree);
       }
    }
 
-   ++conflict->nglbchgbds;
+   if( applyglobal )
+      ++conflict->nglbchgbds;
+   else
+      ++conflict->nlocchgbds;
 
    if( prooftype == SCIP_CONFTYPE_INFEASLP || prooftype == SCIP_CONFTYPE_ALTINFPROOF )
    {
-      ++conflict->dualrayinfnnonzeros; /* we count a global bound reduction as size 1 */
-      ++conflict->ndualrayinfsuccess;
-      ++conflict->ndualrayinfglobal;
+      ++conflict->dualproofsinfnnonzeros; /* we count a global bound reduction as size 1 */
+      ++conflict->ndualproofsinfsuccess;
       ++conflict->ninflpsuccess;
+
+      if( applyglobal )
+         ++conflict->ndualproofsinfglobal;
+      else
+         ++conflict->ndualproofsinflocal;
    }
    else
    {
-      ++conflict->dualraybndnnonzeros; /* we count a global bound reduction as size 1 */
-      ++conflict->ndualraybndsuccess;
-      ++conflict->ndualraybndglobal;
+      ++conflict->dualproofsbndnnonzeros; /* we count a global bound reduction as size 1 */
+      ++conflict->ndualproofsbndsuccess;
       ++conflict->nboundlpsuccess;
+
+      if( applyglobal )
+         ++conflict->ndualproofsbndglobal;
+      else
+         ++conflict->ndualproofsbndlocal;
    }
 
    return SCIP_OKAY;
@@ -2823,7 +2868,8 @@ SCIP_RETCODE propagateLongProof(
    int*                  inds,               /**< non-zero indices */
    int                   nnz,                /**< number of non-zero indices */
    SCIP_Real             rhs,                /**< right-hand side */
-   SCIP_CONFTYPE         conflicttype        /**< type of the conflict */
+   SCIP_CONFTYPE         conflicttype,       /**< type of the conflict */
+   int                   validdepth          /**< depth where the proof is valid */
    )
 {
    SCIP_VAR** vars;
@@ -2876,7 +2922,7 @@ SCIP_RETCODE propagateLongProof(
             continue;
 
          SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand, \
-               eventqueue, cliquetable, var, val, rhs-resminact, conflicttype) );
+               eventqueue, cliquetable, var, val, rhs-resminact, conflicttype, validdepth) );
       }
       /* we got a potential new lower bound */
       else
@@ -2894,7 +2940,7 @@ SCIP_RETCODE propagateLongProof(
             continue;
 
          SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, branchcand, \
-               eventqueue, cliquetable, var, val, rhs-resminact, conflicttype) );
+               eventqueue, cliquetable, var, val, rhs-resminact, conflicttype, validdepth) );
       }
 
       /* the minimal activity should stay unchanged because we tightened the bound that doesn't contribute to the
@@ -2934,7 +2980,9 @@ SCIP_RETCODE createAndAddProofcons(
    SCIP_Real rhs;
    SCIP_Real fillin;
    SCIP_Real globalminactivity;
+   SCIP_Bool applyglobal;
    SCIP_Bool toolong;
+   SCIP_Bool contonly;
    SCIP_Bool hasrelaxvar;
    SCIP_CONFTYPE conflicttype;
    char name[SCIP_MAXSTRLEN];
@@ -2944,6 +2992,7 @@ SCIP_RETCODE createAndAddProofcons(
    assert(conflict != NULL);
    assert(conflictstore != NULL);
    assert(proofset != NULL);
+   assert(proofset->validdepth == 0 || proofset->validdepth < SCIPtreeGetFocusDepth(tree));
 
    nnz = proofsetGetNVars(proofset);
 
@@ -2963,24 +3012,26 @@ SCIP_RETCODE createAndAddProofcons(
 
    conflicttype = proofsetGetConftype(proofset);
 
-   if( conflicttype == SCIP_CONFTYPE_ALTINFPROOF || conflicttype == SCIP_CONFTYPE_ALTBNDPROOF )
+   applyglobal = (proofset->validdepth <= SCIPtreeGetEffectiveRootDepth(tree));
+
+   if( applyglobal )
    {
       SCIP_Real globalmaxactivity = getMaxActivity(set, transprob, coefs, inds, nnz, NULL, NULL);
 
       /* check whether the alternative proof is redundant */
       if( SCIPsetIsLE(set, globalmaxactivity, rhs) )
          return SCIP_OKAY;
-   }
 
-   /* check whether the constraint proves global infeasibility */
-   globalminactivity = getMinActivity(set, transprob, coefs, inds, nnz, NULL, NULL);
-   if( SCIPsetIsGT(set, globalminactivity, rhs) )
-   {
-      SCIPsetDebugMsg(set, "detect global infeasibility: minactivity=%g, rhs=%g\n", globalminactivity, rhs);
+      /* check whether the constraint proves global infeasibility */
+      globalminactivity = getMinActivity(set, transprob, coefs, inds, nnz, NULL, NULL);
+      if( SCIPsetIsGT(set, globalminactivity, rhs) )
+      {
+         SCIPsetDebugMsg(set, "detect global infeasibility: minactivity=%g, rhs=%g\n", globalminactivity, rhs);
 
-      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+         SCIP_CALL( SCIPnodeCutoff(tree->path[proofset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
-      goto UPDATESTATISTICS;
+         goto UPDATESTATISTICS;
+      }
    }
 
    if( set->conf_minmaxvars >= nnz  )
@@ -3013,28 +3064,41 @@ SCIP_RETCODE createAndAddProofcons(
       toolong = (toolong && (nnz > set->conf_maxvarsfac * transprob->nvars));
    }
 
-   /* don't store global dual proofs that are to long / have to much non-zeros */
+   /* don't store global dual proofs that are too long / have too many non-zeros */
    if( toolong )
    {
-      SCIP_CALL( propagateLongProof(conflict, set, stat, reopt, tree, blkmem, origprob, transprob, lp, branchcand,
-            eventqueue, cliquetable, coefs, inds, nnz, rhs, conflicttype) );
+      if( applyglobal )
+      {
+         SCIP_CALL( propagateLongProof(conflict, set, stat, reopt, tree, blkmem, origprob, transprob, lp, branchcand,
+               eventqueue, cliquetable, coefs, inds, nnz, rhs, conflicttype, proofset->validdepth) );
+      }
       return SCIP_OKAY;
    }
 
    /* check if conflict contains variables that are invalid after a restart to label it appropriately */
    hasrelaxvar = FALSE;
-   for( i = 0; i < nnz && !hasrelaxvar; ++i )
-      hasrelaxvar = SCIPvarIsRelaxationOnly(vars[inds[i]]);
+   contonly = TRUE;
+   for( i = 0; i < nnz && (!hasrelaxvar || contonly); ++i )
+   {
+      hasrelaxvar |= SCIPvarIsRelaxationOnly(vars[inds[i]]);
+
+      if( SCIPvarIsIntegral(vars[inds[i]]) )
+         contonly = FALSE;
+   }
+
+   if( !applyglobal && contonly )
+      return SCIP_OKAY;
 
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%d", conflict->ndualrayinfsuccess);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%d", conflict->ndualproofsinfsuccess);
    else if( conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || conflicttype == SCIP_CONFTYPE_ALTBNDPROOF )
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%d", conflict->ndualraybndsuccess);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%d", conflict->ndualproofsbndsuccess);
    else
       return SCIP_INVALIDCALL;
 
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, -SCIPsetInfinity(set), rhs,
-         FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+         FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
+         FALSE, TRUE, TRUE, FALSE) );
 
    for( i = 0; i < nnz; i++ )
    {
@@ -3066,7 +3130,7 @@ SCIP_RETCODE createAndAddProofcons(
    /* add constraint to storage */
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
    {
-      /* add constraint based on dual ray to storage */
+      /* add dual proof to storage */
       SCIP_CALL( SCIPconflictstoreAddDualraycons(conflictstore, cons, blkmem, set, stat, transprob, reopt, hasrelaxvar) );
    }
    else
@@ -3120,15 +3184,25 @@ SCIP_RETCODE createAndAddProofcons(
          updateside = TRUE;
       }
 
-      /* add constraint based on dual solution to storage */
+      /* add dual proof to storage */
       SCIP_CALL( SCIPconflictstoreAddDualsolcons(conflictstore, cons, blkmem, set, stat, transprob, reopt, scale, updateside, hasrelaxvar) );
    }
 
-   /* add the constraint to the global problem */
-   SCIP_CALL( SCIPprobAddCons(transprob, set, stat, cons) );
+   if( applyglobal )
+   {
+      /* add the constraint to the global problem */
+      SCIP_CALL( SCIPprobAddCons(transprob, set, stat, cons) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPnodeAddCons(tree->path[proofset->validdepth], blkmem, set, stat, tree, cons) );
+   }
 
-   SCIPsetDebugMsg(set, "added proof-constraint to node %p in depth 0 (nproofconss %d)\n", (void*)tree->path[0],
-         SCIPconflictstoreGetNDualInfProofs(conflictstore));
+   SCIPsetDebugMsg(set, "added proof-constraint to node %p (#%lld) in depth %d (nproofconss %d)\n",
+         (void*)tree->path[proofset->validdepth], SCIPnodeGetNumber(tree->path[proofset->validdepth]),
+         proofset->validdepth,
+         (conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF)
+            ? SCIPconflictstoreGetNDualInfProofs(conflictstore) : SCIPconflictstoreGetNDualBndProofs(conflictstore));
 
    /* release the constraint */
    SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
@@ -3137,16 +3211,23 @@ SCIP_RETCODE createAndAddProofcons(
    /* update statistics */
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
    {
-      conflict->dualrayinfnnonzeros += nnz;
-      ++conflict->ndualrayinfglobal;
-      ++conflict->ndualrayinfsuccess;
+      conflict->dualproofsinfnnonzeros += nnz;
+      if( applyglobal )
+         ++conflict->ndualproofsinfglobal;
+      else
+         ++conflict->ndualproofsinflocal;
+      ++conflict->ndualproofsinfsuccess;
    }
    else
    {
       assert(conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || conflicttype == SCIP_CONFTYPE_ALTBNDPROOF);
-      conflict->dualraybndnnonzeros += nnz;
-      ++conflict->ndualraybndglobal;
-      ++conflict->ndualraybndsuccess;
+      conflict->dualproofsbndnnonzeros += nnz;
+      if( applyglobal )
+         ++conflict->ndualproofsbndglobal;
+      else
+         ++conflict->ndualproofsbndlocal;
+
+      ++conflict->ndualproofsbndsuccess;
    }
    return SCIP_OKAY;
 }
@@ -3188,7 +3269,8 @@ SCIP_RETCODE conflictFlushProofset(
          rhs = proofsetGetRhs(conflict->proofset);
 
          SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp, \
-               branchcand, eventqueue, cliquetable, vars[inds[0]], coefs[0], rhs, conflict->proofset->conflicttype) );
+               branchcand, eventqueue, cliquetable, vars[inds[0]], coefs[0], rhs, conflict->proofset->conflicttype,
+               conflict->proofset->validdepth) );
       }
       else
       {
@@ -3249,7 +3331,7 @@ SCIP_RETCODE conflictFlushProofset(
 
             SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
                   branchcand, eventqueue, cliquetable, vars[inds[0]], coefs[0], rhs,
-                  conflict->proofsets[i]->conflicttype) );
+                  conflict->proofsets[i]->conflicttype, conflict->proofsets[i]->validdepth) );
          }
          else
          {
@@ -3854,12 +3936,14 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->npseudoconfliterals = 0;
    (*conflict)->npseudoreconvconss = 0;
    (*conflict)->npseudoreconvliterals = 0;
-   (*conflict)->ndualrayinfglobal = 0;
-   (*conflict)->ndualrayinfsuccess = 0;
-   (*conflict)->dualrayinfnnonzeros = 0;
-   (*conflict)->ndualraybndglobal = 0;
-   (*conflict)->ndualraybndsuccess = 0;
-   (*conflict)->dualraybndnnonzeros = 0;
+   (*conflict)->ndualproofsinfglobal = 0;
+   (*conflict)->ndualproofsinflocal = 0;
+   (*conflict)->ndualproofsinfsuccess = 0;
+   (*conflict)->dualproofsinfnnonzeros = 0;
+   (*conflict)->ndualproofsbndglobal = 0;
+   (*conflict)->ndualproofsbndlocal = 0;
+   (*conflict)->ndualproofsbndsuccess = 0;
+   (*conflict)->dualproofsbndnnonzeros = 0;
 
    SCIP_CALL( conflictInitProofset((*conflict), blkmem) );
 
@@ -6534,7 +6618,7 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
    return SCIP_OKAY;
 }
 
-/** adds an weigthed LP row to an aggregation row */
+/** adds a weighted LP row to an aggregation row */
 static
 SCIP_RETCODE addRowToAggrRow(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -6558,13 +6642,15 @@ SCIP_RETCODE addRowToAggrRow(
       assert(!SCIPsetIsInfinity(set, row->rhs));
       SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight, +1) );
    }
-   SCIPsetDebugMsg(set, " -> add row <%s>[%g,%g]: dual=%g -> dualrhs=%g\n",
-      SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, weight, SCIPaggrRowGetRhs(aggrrow));
+   SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",
+      row->local ? "local" : "global",
+      SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant,
+      row->lpdepth, weight, SCIPaggrRowGetRhs(aggrrow));
 
    return SCIP_OKAY;
 }
 
-/** check validity of LP row and a corresponding weight */
+/** checks validity of an LP row and a corresponding weight */
 static
 SCIP_Bool checkDualFeasibility(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -6612,6 +6698,215 @@ SCIP_Bool checkDualFeasibility(
    return valid;
 }
 
+/** sort local rows by increasing depth and number of nonzeros as tie-breaker */
+static
+SCIP_RETCODE sortLocalRows(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_ROW**            rows,               /**< array of local rows */
+   int*                  rowinds,            /**< array of row indices */
+   int*                  rowdepth,           /**< array of LP depths */
+   int                   nrows               /**< number of local rows */
+   )
+{
+   int* rownnz;
+   int i;
+
+   assert(aggrrow != NULL);
+   assert(rows != NULL);
+   assert(nrows > 0);
+   assert(rowinds != NULL);
+   assert(rowdepth != NULL);
+
+   /* sort row indices by increasing depth */
+   SCIPsortIntInt(rowdepth, rowinds, nrows);
+   assert(rowdepth[0] <= rowdepth[nrows-1]);
+
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rownnz, nrows) );
+
+   /* get number of nonzero entries for every row */
+   for( i = 0; i < nrows; i++ )
+   {
+      SCIP_ROW* row = rows[rowinds[i]];
+      assert(row != NULL);
+
+      rownnz[i] = row->len;
+   }
+
+   /* since SCIP has no stable sorting function we sort each bucket separately */
+   for( i = 0; i < nrows; i++ )
+   {
+      int j = i;
+      int d = rowdepth[i];
+
+      /* search for the next row with a greater depth */
+      while( j+1 < nrows && rowdepth[j+1] == d )
+         j++;
+
+      /* the bucket has size one */
+      if( j == i )
+         continue;
+
+      assert(j-i+1 <= nrows);
+
+      /* sort row indices by increasing number of nonzero elements */
+      SCIPsortIntIntInt(&rownnz[i], &rowdepth[i], &rowinds[i], j-i+1);
+      assert(rownnz[i] <= rownnz[j]);
+
+      i = j;
+   } /*lint --e{850} i is modified in the body of the for loop */
+
+#ifndef NDEBUG
+   for( i = 0; i < nrows-1; i++ )
+      assert(rowdepth[i] < rowdepth[i+1] || (rowdepth[i] == rowdepth[i+1] && rownnz[i] <= rownnz[i+1]));
+#endif
+
+   SCIPsetFreeBufferArray(set, &rownnz);
+
+   return SCIP_OKAY;
+}
+
+/** adds locally valid rows to the proof constraint */
+static
+SCIP_RETCODE addLocalRows(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_AGGRROW*         proofrow,           /**< aggregated row representing the proof */
+   SCIP_ROW**            rows,               /**< array if locally valid rows */
+   SCIP_Real*            dualsols,           /**< dual solution vector */
+   int*                  localrowinds,       /**< array of row indecies */
+   int*                  localrowdepth,      /**< array of row depths */
+   int                   nlocalrows,         /**< number of local rows stored in rows array */
+   SCIP_Real*            proofact,           /**< pointer to store the activity of the proof constraint */
+   int*                  validdepth,         /**< pointer to store the depth where the proof constraint is valid */
+   SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
+   SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
+   SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
+   )
+{
+   SCIP_Bool infdelta;
+   int i;
+
+   assert(set != NULL);
+   assert(lp != NULL);
+
+   *validdepth = 0;
+
+   if( !set->conf_uselocalrows )
+      return SCIP_OKAY;
+
+   SCIPsetDebugMsg(set, "add local rows to dual proof:\n");
+
+   /* check whether the proof is already valid, e.g., violated within the local bounds */
+   *proofact = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
+
+   /* we stop if the minimal activity is infinite but all variables have a finite activity delta (bad numerics) */
+   if( !infdelta && SCIPsetIsInfinity(set, REALABS(*proofact)) )
+   {
+      *valid = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* break if the proof is valid w.r.t local bounds
+    * note: it can happen that the proof contains a variable with an infinite activity delta.
+    *       here, we don't break immediately because we might be able to fix it by adding local rows
+    */
+   if( !infdelta && SCIPsetIsGT(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
+   {
+      *valid = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* sort local rows by depth */
+   SCIP_CALL( sortLocalRows(set, proofrow, rows, localrowinds, localrowdepth, nlocalrows) );
+
+   /* add successively local rows */
+   for( i = 0; i < nlocalrows; ++i )
+   {
+      SCIP_ROW* row;
+      int r;
+
+      r = localrowinds[i];
+      row = rows[r];
+
+      assert(row != NULL);
+      assert(row->len == 0 || row->cols != NULL);
+      assert(row->len == 0 || row->vals != NULL);
+      assert(row == lp->lpirows[r]);
+      assert(row->local);
+      assert(row->lpdepth == localrowdepth[i]);
+
+      /* ignore dual solution values of 0.0 (in this case: y_i == 0) */
+      if( REALABS(dualsols[r]) > 0.0 )
+      {
+#ifndef NDEBUG
+         SCIP_Bool zerocontribution;
+
+         /* check dual feasibility */
+         *valid = checkDualFeasibility(set, row, dualsols[r], &zerocontribution);
+         assert(*valid);
+         assert(!zerocontribution);
+#endif
+
+         if( SCIPsetIsDualfeasZero(set, dualsols[r]) )
+            continue;
+
+         /* add row to dual proof */
+         SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], proofrow) );
+
+         /* update depth where the proof is valid */
+         if( *validdepth < localrowdepth[i] )
+            *validdepth = localrowdepth[i];
+
+         /* get the new minimal activity */
+         *proofact = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
+
+         /* we stop if the minimal activity is infinite but all variables have a finite activity delta (bad numerics) */
+         if( !infdelta && SCIPsetIsInfinity(set, REALABS(*proofact)) )
+         {
+            *valid = FALSE;
+            goto TERMINATE;
+         }
+
+         /* break if the proof is valid w.r.t local bounds */
+         if( !infdelta && SCIPsetIsGT(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
+         {
+            *valid = TRUE;
+            break;
+         }
+      }
+   }
+
+   /* remove all nearly zero coefficients */
+   SCIPaggrRowRemoveZeros(set->scip, proofrow, TRUE, valid);
+
+  TERMINATE:
+   if( !(*valid) )
+   {
+      SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g\n", *proofact, SCIPaggrRowGetRhs(proofrow));
+      SCIPsetDebugMsg(set, " -> stop due to numerical troubles\n");
+   }
+   else
+   {
+      *proofact = aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
+
+      /* we stop if the minimal activity is infinite but all variables have a finite activity delta (bad numerics) */
+      if( !infdelta && SCIPsetIsInfinity(set, REALABS(*proofact)) )
+      {
+         *valid = FALSE;
+         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %d]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
+      }
+      else if( infdelta || SCIPsetIsLE(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
+      {
+         *valid = FALSE;
+         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %d]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** calculates a Farkas proof from the current dual LP solution */
 static
 SCIP_RETCODE getFarkasProof(
@@ -6619,8 +6914,10 @@ SCIP_RETCODE getFarkasProof(
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPI*             lpi,                /**< LPI data */
+   SCIP_TREE*            tree,               /**< tree data */
    SCIP_AGGRROW*         farkasrow,          /**< aggregated row representing the proof */
    SCIP_Real*            farkasact,          /**< maximal activity of the proof constraint */
+   int*                  validdepth,         /**< pointer to store the valid depth of the proof constraint */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
    SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
@@ -6629,7 +6926,10 @@ SCIP_RETCODE getFarkasProof(
    SCIP_ROW** rows;
    SCIP_Real* dualfarkas;
    SCIP_ROW* row;
+   int* localrowinds;
+   int* localrowdepth;
    SCIP_Bool infdelta;
+   int nlocalrows;
    int nrows;
    int r;
 
@@ -6669,8 +6969,14 @@ SCIP_RETCODE getFarkasProof(
    /* get dual Farkas values of rows */
    SCIP_CALL( SCIPlpiGetDualfarkas(lpi, dualfarkas) );
 
+   localrowinds = NULL;
+   localrowdepth = NULL;
+   nlocalrows = 0;
+
    /* calculate the Farkas row */
    (*valid) = TRUE;
+   (*validdepth) = 0;
+
    for( r = 0; r < nrows; ++r )
    {
       row = rows[r];
@@ -6698,18 +7004,6 @@ SCIP_RETCODE getFarkasProof(
 
          if( !row->local )
          {
-#ifndef NDEBUG
-            {
-               SCIP_Real lpilhs;
-               SCIP_Real lpirhs;
-
-               SCIP_CALL( SCIPlpiGetSides(lpi, r, r, &lpilhs, &lpirhs) );
-               assert((SCIPsetIsInfinity(set, -lpilhs) && SCIPsetIsInfinity(set, -row->lhs))
-                  || SCIPsetIsRelEQ(set, lpilhs, row->lhs - row->constant));
-               assert((SCIPsetIsInfinity(set, lpirhs) && SCIPsetIsInfinity(set, row->rhs))
-                  || SCIPsetIsRelEQ(set, lpirhs, row->rhs - row->constant));
-            }
-#endif
             SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow) );
 
             /* due to numerical reasons we want to stop */
@@ -6719,18 +7013,30 @@ SCIP_RETCODE getFarkasProof(
                goto TERMINATE;
             }
          }
-#ifdef SCIP_DEBUG
          else
          {
-            SCIPsetDebugMsg(set, " -> ignoring local row <%s> with dual Farkas value %.10f (lhs=%g, rhs=%g)\n",
-               SCIProwGetName(row), dualfarkas[r], row->lhs - row->constant, row->rhs - row->constant);
+            int lpdepth = SCIProwGetLPDepth(row);
+
+            if( nlocalrows == 0 && lpdepth < SCIPtreeGetFocusDepth(tree) )
+            {
+               SCIP_CALL( SCIPsetAllocBufferArray(set, &localrowinds, nrows-r) );
+               SCIP_CALL( SCIPsetAllocBufferArray(set, &localrowdepth, nrows-r) );
+            }
+
+            if( lpdepth < SCIPtreeGetFocusDepth(tree) )
+            {
+               assert(localrowinds != NULL);
+               assert(localrowdepth != NULL);
+
+               localrowinds[nlocalrows] = r;
+               localrowdepth[nlocalrows++] = lpdepth;
+            }
          }
-#endif
       }
    }
 
    /* remove all coefficients that are too close to zero */
-   SCIPaggrRowRemoveZeros(set->scip, farkasrow, valid);
+   SCIPaggrRowRemoveZeros(set->scip, farkasrow, TRUE, valid);
 
    if( !(*valid) )
       goto TERMINATE;
@@ -6743,28 +7049,32 @@ SCIP_RETCODE getFarkasProof(
    SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %d], \n",
       (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
 
-   /* at least one variable contributes with an infinite value to the activity,
-    * this might be caused by igoring locally valid rows
-    *
-    * see: https://git.zib.de/integer/scip/issues/2743
+   /* The constructed proof is not valid, this can happen due to numerical reasons,
+    * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r]),
+    * or because of local rows were ignored so far.
+    * Due to the latter case, it might happen at least one variable contributes
+    * with an infinite value to the activity (see: https://git.zib.de/integer/scip/issues/2743)
     */
-   if( infdelta )
+   if( infdelta || SCIPsetIsFeasLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)))
    {
-      (*valid) = FALSE;
-      SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
-         *farkasact, SCIPaggrRowGetRhs(farkasrow));
+      /* add contribution of local rows */
+      if( nlocalrows > 0 && set->conf_uselocalrows > 0 )
+      {
+         SCIP_CALL( addLocalRows(set, prob, lp, farkasrow, rows, dualfarkas, localrowinds, localrowdepth,
+               nlocalrows, farkasact, validdepth, curvarlbs, curvarubs, valid) );
+      }
+      else
+      {
+         (*valid) = FALSE;
+         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
+            *farkasact, SCIPaggrRowGetRhs(farkasrow));
+      }
    }
 
-   /* the constructed proof is not valid, this can happen due to numerical reasons,
-    * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r])
-    */
-   if( SCIPsetIsFeasLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)) )
-   {
-      (*valid) = FALSE;
-      SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g\n", *farkasact, SCIPaggrRowGetRhs(farkasrow));
-   }
+  TERMINATE:
 
-TERMINATE:
+   SCIPfreeBufferArrayNull(set->scip, &localrowdepth);
+   SCIPfreeBufferArrayNull(set->scip, &localrowinds);
    SCIPsetFreeBufferArray(set, &dualfarkas);
 
    return SCIP_OKAY;
@@ -6774,11 +7084,13 @@ TERMINATE:
 static
 SCIP_RETCODE getDualProof(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPI*             lpi,                /**< LPI data */
+   SCIP_TREE*            tree,               /**< tree data */
    SCIP_AGGRROW*         farkasrow,          /**< aggregated row representing the proof */
    SCIP_Real*            farkasact,          /**< maximal activity of the proof constraint */
+   int*                  validdepth,         /**< pointer to store the valid depth of the proof constraint */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
    SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
@@ -6790,14 +7102,17 @@ SCIP_RETCODE getDualProof(
    SCIP_Real* primsols;
    SCIP_Real* dualsols;
    SCIP_Real* redcosts;
+   int* localrowinds;
+   int* localrowdepth;
    SCIP_Real maxabsdualsol;
    SCIP_Bool infdelta;
+   int nlocalrows;
    int nrows;
    int ncols;
    int r;
 
    assert(set != NULL);
-   assert(prob != NULL);
+   assert(transprob != NULL);
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
@@ -6805,7 +7120,12 @@ SCIP_RETCODE getDualProof(
    assert(curvarubs != NULL);
    assert(valid != NULL);
 
+   *validdepth = 0;
    *valid = TRUE;
+
+   localrowinds = NULL;
+   localrowdepth = NULL;
+   nlocalrows = 0;
 
    /* get LP rows and problem variables */
    rows = SCIPlpGetRows(lp);
@@ -6909,18 +7229,6 @@ SCIP_RETCODE getDualProof(
          /* skip local row */
          if( !row->local )
          {
-#ifndef NDEBUG
-            {
-               SCIP_Real lpilhs;
-               SCIP_Real lpirhs;
-
-               SCIP_CALL( SCIPlpiGetSides(lpi, r, r, &lpilhs, &lpirhs) );
-               assert((SCIPsetIsInfinity(set, -lpilhs) && SCIPsetIsInfinity(set, -row->lhs))
-                  || SCIPsetIsRelEQ(set, lpilhs, row->lhs - row->constant));
-               assert((SCIPsetIsInfinity(set, lpirhs) && SCIPsetIsInfinity(set, row->rhs))
-                  || SCIPsetIsRelEQ(set, lpirhs, row->rhs - row->constant));
-            }
-#endif
             SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], farkasrow) );
 
             /* due to numerical reasons we want to stop */
@@ -6930,18 +7238,30 @@ SCIP_RETCODE getDualProof(
                goto TERMINATE;
             }
          }
-#ifdef SCIP_DEBUG
          else
          {
-            SCIPsetDebugMsg(set, " -> ignoring local row <%s> with dual solution value %.10f (lhs=%g, rhs=%g)\n",
-               SCIProwGetName(row), dualsols[r], row->lhs - row->constant, row->rhs - row->constant);
+            int lpdepth = SCIProwGetLPDepth(row);
+
+            if( nlocalrows == 0 && lpdepth < SCIPtreeGetFocusDepth(tree) )
+            {
+               SCIP_CALL( SCIPsetAllocBufferArray(set, &localrowinds, nrows-r) );
+               SCIP_CALL( SCIPsetAllocBufferArray(set, &localrowdepth, nrows-r) );
+            }
+
+            if( lpdepth < SCIPtreeGetFocusDepth(tree) )
+            {
+               assert(localrowinds != NULL);
+               assert(localrowdepth != NULL);
+
+               localrowinds[nlocalrows] = r;
+               localrowdepth[nlocalrows++] = lpdepth;
+            }
          }
-#endif
       }
    }
 
    /* remove all nearly zero coefficients */
-   SCIPaggrRowRemoveZeros(set->scip, farkasrow, valid);
+   SCIPaggrRowRemoveZeros(set->scip, farkasrow, TRUE, valid);
 
    if( !(*valid) )
       goto TERMINATE;
@@ -6949,30 +7269,37 @@ SCIP_RETCODE getDualProof(
    infdelta = FALSE;
 
    /* check validity of the proof */
-   *farkasact = aggrRowGetMinActivity(set, prob, farkasrow, curvarlbs, curvarubs, &infdelta);
+   *farkasact = aggrRowGetMinActivity(set, transprob, farkasrow, curvarlbs, curvarubs, &infdelta);
 
-   /* at least one variable contributes with an infinite value to the activity,
-    * this might be caused by igoring locally valid rows
-    *
-    * see: https://git.zib.de/integer/scip/issues/2743
-    */
-   if( infdelta )
-   {
-      (*valid) = FALSE;
-      SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
-         *farkasact, SCIPaggrRowGetRhs(farkasrow));
-   }
+   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %d], \n",
+      (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
 
-   /* the constructed proof is not valid, this can happen due to numerical reasons,
-    * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r])
+   /* The constructed proof is not valid, this can happen due to numerical reasons,
+    * e.g., we only consider rows r with !SCIPsetIsZero(set, dualsol[r]),
+    * or because of local rows were ignored so far.
+    * Due to the latter case, it might happen at least one variable contributes
+    * with an infinite value to the activity (see: https://git.zib.de/integer/scip/issues/2743)
     */
-   if( SCIPsetIsLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)) )
+   if( infdelta || SCIPsetIsFeasLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)))
    {
-      *valid = FALSE;
-      SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g\n", *farkasact, SCIPaggrRowGetRhs(farkasrow));
+      /* add contribution of local rows */
+      if( nlocalrows > 0 && set->conf_uselocalrows > 0 )
+      {
+         SCIP_CALL( addLocalRows(set, transprob, lp, farkasrow, rows, dualsols, localrowinds, localrowdepth,
+               nlocalrows, farkasact, validdepth, curvarlbs, curvarubs, valid) );
+      }
+      else
+      {
+         (*valid) = FALSE;
+         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
+            *farkasact, SCIPaggrRowGetRhs(farkasrow));
+      }
    }
 
   TERMINATE:
+
+   SCIPfreeBufferArrayNull(set->scip, &localrowdepth);
+   SCIPfreeBufferArrayNull(set->scip, &localrowinds);
    SCIPsetFreeBufferArray(set, &redcosts);
    SCIPsetFreeBufferArray(set, &dualsols);
    SCIPsetFreeBufferArray(set, &primsols);
@@ -7178,6 +7505,7 @@ SCIP_RETCODE tightenDualproof(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_TREE*            tree,               /**< tree data */
    SCIP_AGGRROW*         proofrow,           /**< aggregated row representing the proof */
+   int                   validdepth,         /**< depth where the proof is valid */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
    SCIP_Bool             initialproof        /**< do we analyze the initial reason of infeasibility? */
@@ -7221,8 +7549,8 @@ SCIP_RETCODE tightenDualproof(
          ++ncontvars;
    }
 
-   SCIPsetDebugMsg(set, "start dualray tightening:\n");
-   SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)\n",
+   SCIPsetDebugMsg(set, "start dual proof tightening:\n");
+   SCIPsetDebugMsg(set, "-> tighten dual proof: nvars=%d (bin=%d, int=%d, cont=%d)\n",
          nnz, nbinvars, nintvars, ncontvars);
    debugPrintViolationInfo(set, aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
 
@@ -7243,6 +7571,7 @@ SCIP_RETCODE tightenDualproof(
    /* start with a proofset containing all variables with a non-zero coefficient in the dual proof */
    SCIP_CALL( proofsetAddAggrrow(proofset, set, blkmem, proofrow) );
    proofset->conflicttype = conflict->conflictset->conflicttype;
+   proofset->validdepth = validdepth;
 
    /* get proof data */
    vals = proofsetGetVals(proofset);
@@ -7371,6 +7700,7 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_AGGRROW*         proofrow,           /**< aggregated row representing the proof */
+   int                   validdepth,         /**< valid depth of the dual proof */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
    SCIP_Bool             initialproof,       /**< do we analyze the initial reason of infeasibility? */
@@ -7385,6 +7715,8 @@ SCIP_RETCODE conflictAnalyzeDualProof(
 
    assert(set != NULL);
    assert(transprob != NULL);
+   assert(validdepth >= 0);
+   assert(validdepth == 0 || validdepth < SCIPtreeGetFocusDepth(tree));
 
    /* get sparse data */
    nnz = SCIPaggrRowGetNNz(proofrow);
@@ -7406,20 +7738,21 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    /* if the farkas-proof is empty, the node and its sub tree can be cut off completely */
    if( nnz == 0 )
    {
-      SCIPsetDebugMsg(set, " -> empty farkas-proof in depth %d cuts off sub tree at depth 0\n", SCIPtreeGetFocusDepth(tree));
+      SCIPsetDebugMsg(set, " -> empty farkas-proof in depth %d cuts off sub tree at depth %d\n", SCIPtreeGetFocusDepth(tree), validdepth);
 
-      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
       *globalinfeasible = TRUE;
       *success = TRUE;
 
-      ++conflict->ndualrayinfsuccess;
+      ++conflict->ndualproofsinfsuccess;
 
       return SCIP_OKAY;
    }
 
    /* try to enforce the constraint based on a dual ray */
-   SCIP_CALL( tightenDualproof(conflict, set, stat, blkmem, transprob, tree, proofrow, curvarlbs, curvarubs, initialproof) );
+   SCIP_CALL( tightenDualproof(conflict, set, stat, blkmem, transprob, tree, proofrow, validdepth,
+      curvarlbs, curvarubs, initialproof) );
 
    if( *globalinfeasible )
    {
@@ -7427,7 +7760,7 @@ SCIP_RETCODE conflictAnalyzeDualProof(
       SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
       *success = TRUE;
 
-      ++conflict->ndualrayinfsuccess;
+      ++conflict->ndualproofsinfsuccess;
    }
 
    return SCIP_OKAY;
@@ -7467,7 +7800,7 @@ SCIP_RETCODE runBoundHeuristic(
    int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
    int*                  iterations,         /**< pointer to store the total number of LP iterations used */
    SCIP_Bool             marklpunsolved,     /**< whether LP should be marked unsolved after analysis (needed for strong branching) */
-   SCIP_Bool*            dualraysuccess,     /**< pointer to store success result of dualray analysis */
+   SCIP_Bool*            dualproofsuccess,   /**< pointer to store success result of dual proof analysis */
    SCIP_Bool*            valid               /**< pointer to store whether the result is still a valid proof */
    )
 {
@@ -7649,6 +7982,7 @@ SCIP_RETCODE runBoundHeuristic(
             {
                SCIP_AGGRROW* farkasrow;
                int* inds;
+               int validdepth;
                int nnz;
                int v;
 
@@ -7659,7 +7993,8 @@ SCIP_RETCODE runBoundHeuristic(
                SCIP_CALL( SCIPaggrRowCreate(set->scip, &farkasrow) );
 
                /* the original LP exceeds the current cutoff bound, thus, we have not constructed the Farkas proof */
-               SCIP_CALL( getFarkasProof(set, transprob, lp, lpi, farkasrow, proofactivity, curvarlbs, curvarubs, valid) );
+               SCIP_CALL( getFarkasProof(set, transprob, lp, lpi, tree, farkasrow, proofactivity, &validdepth,
+                  curvarlbs, curvarubs, valid) );
 
                /* the constructed Farkas proof is not valid, we need to break here */
                if( !(*valid) )
@@ -7668,21 +8003,22 @@ SCIP_RETCODE runBoundHeuristic(
                   break;
                }
 
-               /* start dual ray analysis */
+               /* start dual proof analysis */
                if( set->conf_useinflp == 'd' || set->conf_useinflp == 'b' )
                {
                   /* change the conflict type */
                   SCIP_CONFTYPE oldconftype = conflict->conflictset->conflicttype;
                   conflict->conflictset->conflicttype = SCIP_CONFTYPE_INFEASLP;
 
-                  /* start dual ray analysis */
+                  /* start dual proof analysis */
                   SCIP_CALL( conflictAnalyzeDualProof(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, \
-                        farkasrow, curvarlbs, curvarubs, FALSE, &globalinfeasible, dualraysuccess) );
+                        farkasrow, validdepth, curvarlbs, curvarubs, FALSE, &globalinfeasible, dualproofsuccess) );
 
                   conflict->conflictset->conflicttype = oldconftype;
                }
 
-               if( globalinfeasible )
+               /* todo: in theory, we could apply conflict graph analysis for locally valid proofs, too, but this needs to be implemented */
+               if( globalinfeasible || validdepth > SCIPtreeGetEffectiveRootDepth(tree) )
                {
                   SCIPaggrRowFree(set->scip, &farkasrow);
                   goto TERMINATE;
@@ -7714,6 +8050,7 @@ SCIP_RETCODE runBoundHeuristic(
             {
                SCIP_AGGRROW* proofrow;
                int* inds;
+               int validdepth;
                int nnz;
                int v;
 
@@ -7725,10 +8062,11 @@ SCIP_RETCODE runBoundHeuristic(
 
                SCIP_CALL( SCIPaggrRowCreate(set->scip, &proofrow) );
 
-               SCIP_CALL( getDualProof(set, transprob, lp, lpi, proofrow, proofactivity, curvarlbs, curvarubs, valid) );
+               SCIP_CALL( getDualProof(set, transprob, lp, lpi, tree, proofrow, proofactivity, &validdepth,
+                  curvarlbs, curvarubs, valid) );
 
                /* the constructed dual proof is not valid, we need to break here */
-               if( !(*valid) )
+               if( !(*valid) || validdepth > SCIPtreeGetEffectiveRootDepth(tree) )
                {
                   SCIPaggrRowFree(set->scip, &proofrow);
                   break;
@@ -7834,7 +8172,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
-   SCIP_Bool*            dualraysuccess,     /**< pointer to store success result of dualray analysis */
+   SCIP_Bool*            dualproofsuccess,   /**< pointer to store success result of dual proof analysis */
    int*                  iterations,         /**< pointer to store the total number of LP iterations used */
    int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
    int*                  nliterals,          /**< pointer to store the number of literals in generated conflict constraints */
@@ -7850,6 +8188,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    SCIP_Bool globalinfeasible;
    int* lbchginfoposs;
    int* ubchginfoposs;
+   int validdepth;
    int nvars;
    int v;
    SCIP_Real* curvarlbs;
@@ -7881,6 +8220,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    nvars = transprob->nvars;
 
    valid = TRUE;
+   validdepth = 0;
 
    /* get LP solver interface */
    lpi = SCIPlpGetLPI(lp);
@@ -8026,16 +8366,18 @@ SCIP_RETCODE conflictAnalyzeLP(
    /* the LP is prooven to be infeasible */
    if( SCIPlpiIsPrimalInfeasible(lpi) )
    {
-      SCIP_CALL( getFarkasProof(set, transprob, lp, lpi, farkasrow, &farkasactivity, curvarlbs, curvarubs, &valid) );
+      SCIP_CALL( getFarkasProof(set, transprob, lp, lpi, tree, farkasrow, &farkasactivity, &validdepth,
+         curvarlbs, curvarubs, &valid) );
    }
    /* the LP is dual feasible and/or exceeds the current incumbant solution */
    else
    {
       assert(SCIPlpiIsDualFeasible(lpi) || SCIPlpiIsObjlimExc(lpi));
-      SCIP_CALL( getDualProof(set, transprob, lp, lpi, farkasrow, &farkasactivity, curvarlbs, curvarubs, &valid) );
+      SCIP_CALL( getDualProof(set, transprob, lp, lpi, tree, farkasrow, &farkasactivity, &validdepth,
+         curvarlbs, curvarubs, &valid) );
    }
 
-   if( !valid )
+   if( !valid || validdepth >= SCIPtreeGetCurrentDepth(tree) )
       goto TERMINATE;
 
    globalinfeasible = FALSE;
@@ -8044,14 +8386,16 @@ SCIP_RETCODE conflictAnalyzeLP(
    if( ((set->conf_useinflp == 'b' || set->conf_useinflp == 'd') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP)
       || ((set->conf_useboundlp == 'b' || set->conf_useboundlp == 'd') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING) )
    {
-      /* start dual ray analysis */
+      /* start dual proof analysis */
       SCIP_CALL( conflictAnalyzeDualProof(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, farkasrow, \
-            curvarlbs, curvarubs, TRUE, &globalinfeasible, dualraysuccess) );
+         validdepth, curvarlbs, curvarubs, TRUE, &globalinfeasible, dualproofsuccess) );
    }
 
    assert(valid);
 
-   if( !globalinfeasible && (((set->conf_useinflp == 'b' || set->conf_useinflp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP)
+   /* todo: in theory, we could apply conflict graph analysis for locally valid proofs, too, but this needs to be implemented */
+   if( !globalinfeasible && validdepth <= SCIPtreeGetEffectiveRootDepth(tree)
+      && (((set->conf_useinflp == 'b' || set->conf_useinflp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP)
       || ((set->conf_useboundlp == 'b' || set->conf_useboundlp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING)) )
    {
       SCIP_Real* farkascoefs;
@@ -8090,7 +8434,7 @@ SCIP_RETCODE conflictAnalyzeLP(
 
       SCIP_CALL( runBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, blkmem, farkascoefs,
             &farkaslhs, &farkasactivity, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, iterations, marklpunsolved,
-            dualraysuccess, &valid) );
+            dualproofsuccess, &valid) );
 
       SCIPsetFreeBufferArray(set, &farkascoefs);
 
@@ -8179,19 +8523,19 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
 
    conflict->conflictset->conflicttype = SCIP_CONFTYPE_INFEASLP;
 
-   olddualproofsuccess = conflict->ndualrayinfsuccess;
+   olddualproofsuccess = conflict->ndualproofsinfsuccess;
 
    /* perform conflict analysis */
    SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, \
          cliquetable, SCIPlpDiving(lp), &dualraysuccess, &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
-   conflict->ninflpsuccess += ((nconss > 0 || conflict->ndualrayinfsuccess > olddualproofsuccess) ? 1 : 0);
+   conflict->ninflpsuccess += ((nconss > 0 || conflict->ndualproofsinfsuccess > olddualproofsuccess) ? 1 : 0);
    conflict->ninflpiterations += iterations;
    conflict->ninflpconfconss += nconss;
    conflict->ninflpconfliterals += nliterals;
    conflict->ninflpreconvconss += nreconvconss;
    conflict->ninflpreconvliterals += nreconvliterals;
    if( success != NULL )
-      *success = (nconss > 0 || conflict->ndualrayinfsuccess > olddualproofsuccess);
+      *success = (nconss > 0 || conflict->ndualproofsinfsuccess > olddualproofsuccess);
 
    /* stop timing */
    SCIPclockStop(conflict->inflpanalyzetime, set);
@@ -8258,19 +8602,19 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    conflict->conflictset->conflicttype = SCIP_CONFTYPE_BNDEXCEEDING;
    conflict->conflictset->usescutoffbound = TRUE;
 
-   oldnsuccess = conflict->ndualraybndsuccess + conflict->ndualrayinfsuccess;
+   oldnsuccess = conflict->ndualproofsbndsuccess + conflict->ndualproofsinfsuccess;
 
    /* perform conflict analysis */
    SCIP_CALL( conflictAnalyzeLP(conflict, conflictstore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, \
          cliquetable, SCIPlpDiving(lp), &dualraysuccess, &iterations, &nconss, &nliterals, &nreconvconss, &nreconvliterals, TRUE) );
-   conflict->nboundlpsuccess += ((nconss > 0 || conflict->ndualraybndsuccess + conflict->ndualrayinfsuccess > oldnsuccess) ? 1 : 0);
+   conflict->nboundlpsuccess += ((nconss > 0 || conflict->ndualproofsbndsuccess + conflict->ndualproofsinfsuccess > oldnsuccess) ? 1 : 0);
    conflict->nboundlpiterations += iterations;
    conflict->nboundlpconfconss += nconss;
    conflict->nboundlpconfliterals += nliterals;
    conflict->nboundlpreconvconss += nreconvconss;
    conflict->nboundlpreconvliterals += nreconvliterals;
    if( success != NULL )
-      *success = (nconss > 0 || conflict->ndualraybndsuccess + conflict->ndualrayinfsuccess > oldnsuccess);
+      *success = (nconss > 0 || conflict->ndualproofsbndsuccess + conflict->ndualproofsinfsuccess > oldnsuccess);
 
    /* stop timing */
    SCIPclockStop(conflict->boundlpanalyzetime, set);
@@ -8845,64 +9189,84 @@ SCIP_Real SCIPconflictGetStrongbranchTime(
    return SCIPclockGetTime(conflict->sbanalyzetime);
 }
 
-/** gets number of successful calls to infeasible dualray analysis */
-SCIP_Longint SCIPconflictGetNDualrayInfSuccess(
+/** gets number of successful calls to dual proof analysis derived from infeasible LPs */
+SCIP_Longint SCIPconflictGetNDualproofsInfSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->ndualrayinfsuccess;
+   return conflict->ndualproofsinfsuccess;
 }
 
-/** gets number of globally valid dualray constraints */
-SCIP_Longint SCIPconflictGetNDualrayInfGlobal(
+/** gets number of globally valid dual proof constraints derived from infeasible LPs */
+SCIP_Longint SCIPconflictGetNDualproofsInfGlobal(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->ndualrayinfglobal;
+   return conflict->ndualproofsinfglobal;
 }
 
-/** gets average length of infeasible dualrays */
-SCIP_Longint SCIPconflictGetNDualrayInfNonzeros(
+/** gets number of locally valid dual proof constraints derived from infeasible LPs */
+SCIP_Longint SCIPconflictGetNDualproofsInfLocal(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->dualrayinfnnonzeros;
+   return conflict->ndualproofsinflocal;
 }
 
-/** gets number of successfully analyzed dual proofs of boundexceeding LPs */
-SCIP_Longint SCIPconflictGetNDualrayBndSuccess(
+/** gets average length of dual proof constraints derived from infeasible LPs */
+SCIP_Longint SCIPconflictGetNDualproofsInfNonzeros(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->ndualraybndsuccess;
+   return conflict->dualproofsinfnnonzeros;
 }
 
-/** gets number of globally applied dual proofs of boundexceeding LPs */
-SCIP_Longint SCIPconflictGetNDualrayBndGlobal(
+/** gets number of successfully analyzed dual proofs derived from bound exceeding LPs */
+SCIP_Longint SCIPconflictGetNDualproofsBndSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->ndualraybndglobal;
+   return conflict->ndualproofsbndsuccess;
 }
 
-/** gets average length of dual proofs of boundexceeding LPs */
-SCIP_Longint SCIPconflictGetNDualrayBndNonzeros(
+/** gets number of globally applied dual proofs derived from bound exceeding LPs */
+SCIP_Longint SCIPconflictGetNDualproofsBndGlobal(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->dualraybndnnonzeros;
+   return conflict->ndualproofsbndglobal;
+}
+
+/** gets number of locally applied dual proofs derived from bound exceeding LPs */
+SCIP_Longint SCIPconflictGetNDualproofsBndLocal(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->ndualproofsbndlocal;
+}
+
+/** gets average length of dual proofs derived from bound exceeding LPs */
+SCIP_Longint SCIPconflictGetNDualproofsBndNonzeros(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->dualproofsbndnnonzeros;
 }
 
 /** gets number of calls to infeasible strong branching conflict analysis */
