@@ -891,7 +891,7 @@ SCIP_RETCODE SCIPmatrixCreate(
    {
       SCIP_Bool lockmismatch = FALSE;
 
-      for( i = 0; i != matrix->ncols; ++i )
+      for( i = 0; i < matrix->ncols; ++i )
       {
          if( SCIPmatrixUplockConflict(matrix, i) || SCIPmatrixDownlockConflict(matrix, i) )
          {
