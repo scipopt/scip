@@ -921,6 +921,27 @@ SCIP_RETCODE SCIPmatrixCreate(
    assert(matrix->nrows <= nconss);
    assert(matrix->nnonzs <= nnonzstmp);
 
+   if( *complete )
+   {
+      SCIP_Bool lockmismatch = FALSE;
+
+      for( i = 0; i < matrix->ncols; ++i )
+      {
+         if( SCIPmatrixUplockConflict(matrix, i) || SCIPmatrixDownlockConflict(matrix, i) )
+         {
+            lockmismatch = TRUE;
+            break;
+         }
+      }
+
+      if( lockmismatch )
+      {
+         *complete = FALSE;
+         if( onlyifcomplete )
+            stopped = TRUE;
+      }
+   }
+
    if( !stopped )
    {
       /* calculate row activity bounds */
