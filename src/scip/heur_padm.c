@@ -23,11 +23,12 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
 
-#include "scip/debug.h"
+#include <assert.h>
 #include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
+#include "scip/dcmp.h"
+#include "scip/debug.h"
 #include "scip/heur_padm.h"
 #include "scip/heuristics.h"
 #include "scip/pub_cons.h"
@@ -42,6 +43,8 @@
 #include "scip/scipdefplugins.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
+#include "scip/scip_dcmp.h"
 #include "scip/scip_event.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
@@ -60,8 +63,6 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/scip_copy.h"
-#include "scip/decomp.h"
 #include <string.h>
 
 #define HEUR_NAME             "padm"
@@ -137,11 +138,9 @@ typedef struct blockinfo
 /** returns TRUE iff both keys are equal */
 static SCIP_DECL_HASHKEYEQ(indexesEqual)
 {
-   SCIP* scip;
    BLOCKINFO* binfo1;
    BLOCKINFO* binfo2;
 
-   scip = (SCIP *)userptr;
    binfo1 = (BLOCKINFO *)key1;
    binfo2 = (BLOCKINFO *)key2;
 
@@ -405,7 +404,6 @@ static SCIP_RETCODE blockCreateSubscip(
    char name[SCIP_MAXSTRLEN];
    PROBLEM* problem;
    SCIP* scip;
-   int minsize;
    int nsubscipvars;
    SCIP_VAR** subscipvars;
    int i;
@@ -574,11 +572,9 @@ static SCIP_RETCODE reuseSolution(
    SCIP_SOL** sols;
    SCIP_SOL* sol; /* solution that will be repaired */
    SCIP_SOL* newsol;
-   SCIP_VAR** vars;
    SCIP_VAR** blockvars;
    SCIP_VAR** consvars;
    double* blockvals;
-   double* vals;
    int nsols;
    int nvars;
    int c;
@@ -776,8 +772,9 @@ SCIP_DECL_HEUREXITSOL(heurExitsolXyz)
 static SCIP_DECL_HEUREXEC(heurExecPADM)
 { /*lint --e{715}*/
    PROBLEM* problem;
-   SCIP_DECOMPSTORE* decompstore;
+   SCIP_DECOMP** alldecomps;
    SCIP_DECOMP* decomp;
+   int ndecomps;
    int nconss;
    int nvars;
    SCIP_VAR** vars;
@@ -787,7 +784,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    int* conslabels;
    int i;
    int nblocks;
-   int block;
    int b;
    int k;
    int* blockstartsconss;
@@ -861,15 +857,13 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_CALL( SCIPwriteTransProblem(scip, "debug_padm_trans.cip", "cip", FALSE) );
 #endif
 
-   decompstore = SCIPgetDecompstore(scip);
-   SCIPdebugMsg(scip, "Decompstore has %d decompositions\n", SCIPdecompstoreGetNDecomps(decompstore) );
-   if( SCIPdecompstoreGetNDecomps(decompstore) == 0)
-      return SCIP_OKAY;
-
    if( heurdata->original )
    {
+      SCIPgetDecomps(scip, &alldecomps, &ndecomps, TRUE); /* TRUE: original decomps */
+      if( ndecomps == 0)
+         return SCIP_OKAY;
       /* currently it takes the first decomposition */
-      decomp = SCIPdecompstoreGetOrigDecomps(decompstore)[0];
+      decomp = alldecomps[0];
       SCIPdebugMsg(scip, "First original decomposition is selected\n");
       assert(decomp != NULL);
 
@@ -881,8 +875,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    }
    else
    {
+      SCIPgetDecomps(scip, &alldecomps, &ndecomps, FALSE); /* FALSE: transformed decomps */
+      if( ndecomps == 0)
+         return SCIP_OKAY;
       /* currently it takes the first decomposition */
-      decomp = SCIPdecompstoreGetDecomps(decompstore)[0];
+      decomp = alldecomps[0];
       SCIPdebugMsg(scip, "First transformed decomposition is selected\n");
       assert(decomp != NULL);
 
@@ -1294,7 +1291,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                      BLOCKINFO *binfo2out;
 
                      SCIP_CONS *couplingcons;
-                     SCIP_Real oldRhs;
                      SCIP_Real newRhs;
 
                      binfo.block = b;
@@ -1303,7 +1299,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
                      binfoout = (BLOCKINFO *)SCIPhashtableRetrieve(htable, (void *)&binfo);
                      couplingcons = binfoout->couplingCons;
-                     oldRhs = SCIPgetRhsLinear(scip, couplingcons);
 
                      /* interchange blocks b and b2 for getting new right hand side */
                      binfo2.block = b2;
@@ -1402,9 +1397,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                         {
                            BLOCKINFO binfo;
                            BLOCKINFO *binfoout;
-                           SCIP_VAR *slackPosVar;
-                           SCIP_VAR *slackNegVar;
-                           SCIP_VARDATA *vardata;
 
                            binfo.block = b;
                            binfo.otherblock = b2;
@@ -1591,7 +1583,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIP_SOL *newsol;
       SCIP_Bool success;
       SCIP_Real *blocksolvals;
-      SCIP_VAR *origobjconstvar;
 
       assert(increasedslacks == 0);
 
