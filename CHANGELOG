@@ -81,6 +81,7 @@ Fixed bugs
 - added safety check in conversion to rational number to avoid overflow
 - fixed bug in interval evaluation with power-operator in certain situations
 - fixed behavior of SCIPmatrixCreate() regarding memory management and column generation
+- SCIPmatrixCreate() returns complete=FALSE when locks do not add up
 
 Miscellaneous
 -------------
