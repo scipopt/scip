@@ -935,7 +935,11 @@ SCIP_RETCODE SCIPmatrixCreate(
       }
 
       if( lockmismatch )
+      {
          *complete = FALSE;
+         if( onlyifcomplete )
+            stopped = TRUE;
+      }
    }
 
    if( !stopped )
