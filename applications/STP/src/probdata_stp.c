@@ -1123,7 +1123,7 @@ SCIP_RETCODE createVariables(
                assert(kbudget >= 0.0);
                assert(graph->extended);
 
-               if( Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) )
+               if( graph_pc_knotIsDummyTerm(graph, k)  )
                   continue;
 
                if( SCIPisZero(scip, kbudget) )

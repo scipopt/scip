@@ -1386,9 +1386,10 @@ void initTerminalPrioPcMw(
    const int root = graph->source;
    const int nnodes = graph->knots;
    const int nterms = graph->terms;
-   int t = 0;
+   int termcount = 0;
 
-   assert(scip && heurdata && graph && terminalperm && terminalprio);
+   assert(scip && heurdata && terminalperm && terminalprio);
+   assert(graph->extended);
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1396,12 +1397,12 @@ void initTerminalPrioPcMw(
       {
          assert(!nodepriority || nodepriority[k] >= 0.0);
          assert(graph->term2edge[k] < 0 || SCIPisGT(scip, graph->prize[k], 0.0));
-         terminalperm[t] = k;
+         terminalperm[termcount] = k;
 
          if( nodepriority == NULL )
-            terminalprio[t++] = -SCIPrandomGetReal(heurdata->randnumgen, 0.0, graph->prize[k]);
+            terminalprio[termcount++] = -SCIPrandomGetReal(heurdata->randnumgen, 0.0, graph->prize[k]);
          else
-            terminalprio[t++] = -SCIPrandomGetReal(heurdata->randnumgen, nodepriority[k] / 2.0, nodepriority[k]);
+            terminalprio[termcount++] = -SCIPrandomGetReal(heurdata->randnumgen, nodepriority[k] / 2.0, nodepriority[k]);
       }
    }
 
@@ -1409,23 +1410,13 @@ void initTerminalPrioPcMw(
    {
       SCIP_Real minprio = 0.0;
 
-      for( int k = 0; k < t; k++ )
+      for( int k = 0; k < termcount; k++ )
          minprio = MIN(terminalprio[k], minprio);
 
-      for( int k = 0; k < nnodes; k++ )
-         graph->mark[k] = (graph->grad[k] > 0);
+      // todo why only marking for this case???
+      graph_pc_markOrgGraph(scip, graph);
 
       graph->mark[graph->source] = TRUE;
-
-      for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
-      {
-         const int head = graph->head[e];
-         if( SCIPisGT(scip, graph->cost[e], 0.0) && Is_term(graph->term[head]) && !graph_pc_knotIsFixedTerm(graph, head) )
-         {
-            graph->mark[head] = FALSE;
-            assert(graph->grad[head] == 2);
-         }
-      }
 
       for( int k = 0; k < nnodes; k++ )
       {
@@ -1434,18 +1425,18 @@ void initTerminalPrioPcMw(
             assert(graph->mark[k]);
 
             if( k == root )
-               terminalprio[t] = -FARAWAY;
+               terminalprio[termcount] = -FARAWAY;
 
-            terminalperm[t] = k;
-            terminalprio[t++] = -SCIPrandomGetReal(heurdata->randnumgen, 0.0,
+            terminalperm[termcount] = k;
+            terminalprio[termcount++] = -SCIPrandomGetReal(heurdata->randnumgen, 0.0,
                   fabs(minprio) * (1.0 + (SCIP_Real) graph->grad[k] / (SCIP_Real) nnodes));
          }
          /* isolated vertex? */
          else if( Is_term(graph->term[k]) && graph->grad[k] == 1 )
-            terminalprio[t] = FARAWAY;
+            terminalprio[termcount] = FARAWAY;
       }
 
-      assert(nterms == t);
+      assert(nterms == termcount);
       SCIPsortRealInt(terminalprio, terminalperm, nterms);
    }
    else
@@ -1880,7 +1871,7 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    {
       for( int i = 0; i < nnodes; i++ )
       {
-         if( connected[i] && (!Is_term(g->term[i]) || graph_pc_knotIsFixedTerm(g, i)) )
+         if( connected[i] && !graph_pc_knotIsDummyTerm(g, i) )
             g->mark[i] = TRUE;
          else
             g->mark[i] = FALSE;
@@ -2171,10 +2162,12 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
 
    graph_path_exec(scip, g, MST_MODE, mstroot, cost, mst);
 
+   assert(g->extended);
+
    /* connect all potential terminals */
    for( int i = nnodes - 1; i >= 0; --i )
    {
-      if( Is_term(g->term[i]) && i != orgroot && !graph_pc_knotIsFixedTerm(g, i) )
+      if( graph_pc_knotIsDummyTerm(g, i) && i != orgroot )
       {
          int k1;
          int k2;

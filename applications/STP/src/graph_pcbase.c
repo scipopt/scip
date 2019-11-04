@@ -1141,7 +1141,7 @@ void graph_pc_markOrgGraph(
    {
       const int head = g->head[e];
 
-      if( Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head) )
+      if( graph_pc_knotIsDummyTerm(g, head) )
       {
          g->mark[head] = FALSE;
          assert(g->grad[head] == 2);
@@ -1231,18 +1231,18 @@ void graph_pc_2trans(
 
       if( Is_pseudoTerm(graph->term[k]) )
       {
-         graph_knot_chg(graph, k, 0);
+         graph_knot_chg(graph, k, STP_TERM);
       }
       else if( Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) )
       {
          assert(k != graph->source);
-         graph_knot_chg(graph, k, -2);
+         graph_knot_chg(graph, k, STP_TERM_PSEUDO);
       }
    }
 
    graph->extended = TRUE;
 
-   /* restore transformed edge weights (shift) and store original ones */
+   /* restore transformed edge weights (shift) after storing original ones */
    if( graph_pc_isPc(graph) )
    {
       assert(graph->cost_org_pc);
@@ -1295,7 +1295,7 @@ SCIP_Real graph_pc_getPosPrizeSum(
    assert(!graph->extended);
 
    for( int i = 0; i < graph->knots; i++ )
-      if( Is_term(graph->term[i]) && i != graph->source && graph->prize[i] < BLOCKED )
+      if( Is_term(graph->term[i]) && i != graph->source && SCIPisLT(scip, graph->prize[i], BLOCKED) )
          prizesum += graph->prize[i];
 
    return prizesum;
@@ -1637,7 +1637,7 @@ void graph_pc_getBiased(
 
    assert(scip && graph && costbiased && prizebiased);
    assert(graph->extended);
-   assert(!rpcmw || graph_pc_knotIsFixedTerm(graph, root));
+   assert(graph_pc_knotIsFixedTerm(graph, root));
 
    BMScopyMemoryArray(costbiased, graph->cost, nedges);
    for( int k = 0; k < nnodes; k++ )
@@ -1655,23 +1655,6 @@ void graph_pc_getBiased(
             if( graph->cost[e] < mincost )
                mincost = graph->cost[e];
          }
-
-#ifndef NDEBUG
-         {
-            SCIP_Real mincostt = FARAWAY;
-
-            for( int e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
-            {
-               if( !rpcmw && graph->tail[e] == root )
-                  continue;
-
-               if( graph->cost[e] < mincostt )
-                  mincostt = graph->cost[e];
-            }
-            assert((graph->stp_type != STP_PCSPG && graph->stp_type != STP_RPCSPG )
-                  || SCIPisEQ(scip, mincostt, mincost) || graph->grad[k] <= 2 );
-         }
-#endif
 
          if( fullbias )
          {
@@ -2730,7 +2713,7 @@ int graph_pc_getRoot2PtermEdge(
 }
 
 
-/** get number of fixed terminals */
+/** get number of fixed terminals (not counting the aritificial root) */
 int graph_pc_nFixedTerms(
    const GRAPH*          graph                /**< the graph */
 )

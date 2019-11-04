@@ -133,7 +133,9 @@ void SCIPwriteStp(
             const int tail = g->tail[i];
             const int head = g->head[i];
 
-            if( (Is_term(g->term[tail]) && !graph_pc_knotIsFixedTerm(g, tail)) || (Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head)) )
+            assert(g->extended);
+
+            if( graph_pc_knotIsDummyTerm(g, tail) || graph_pc_knotIsDummyTerm(g, head) )
                continue;
          }
 
@@ -152,6 +154,7 @@ void SCIPwriteStp(
             fprintf(fp, "%f %f\n", g->cost[i], g->cost[Edge_anti(i)]);
       }
    }
+
    fprintf(fp, "End\n\n");
    fprintf(fp, "Section Terminals\n");
    fprintf(fp, "Terminals %d\n", g->terms);

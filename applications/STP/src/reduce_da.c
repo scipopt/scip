@@ -249,6 +249,9 @@ void collectFixedTerminals(
    const int nnodes = graph->knots;
    const SCIP_Bool rpc = graph_pc_isRootedPcMw(graph);
 
+   assert(graph->stp_type != STP_PCSPG && graph->stp_type != STP_MWCSP);
+   assert(!rpc || !graph->extended);
+
    for( int i = 0; i < nnodes; i++ )
    {
       if( Is_term(graph->term[i]) )
@@ -294,28 +297,14 @@ void daInitializeDistances(
       costrev[e] = FARAWAY;
 
    if( rpc )
-   {
-      assert(!g->extended);
-
-      for( int i = 0; i < nnodes; i++ )
-      {
-         if( Is_term(g->term[i]) && graph_pc_termIsNonLeafTerm(g, i) )
-         {
-            const int twin = graph_pc_getTwinTerm(g, i);
-            assert(!graph_pc_knotIsFixedTerm(g, i));
-            assert(g->grad[twin] == 2);
-
-            for( int e = g->outbeg[twin]; e != EAT_LAST; e = g->oeat[e] )
-               costrev[e] = FARAWAY;
-         }
-      }
-
       graph_pc_2trans(scip, g);
-   }
 
    /* build Voronoi diagram */
    if( directed )
+   {
+      assert(!rpc);
       graph_voronoiTerms(scip, g, costrev, vnoi, vbase, g->path_heap, state);
+   }
    else
    {
       graph_get4nextTerms(scip, g, costrev, costrev, vnoi, vbase, g->path_heap, state);
@@ -335,11 +324,11 @@ void daInitializeDistances(
             assert(vbase[i] == i);
       }
 #endif
-      if( rpc )
-         graph_pc_2org(scip, g);
+
    }
 
-   assert(!rpc || !g->extended);
+   if( rpc )
+      graph_pc_2org(scip, g);
 }
 
 /** updates node bounds for reduced cost fixings */
@@ -684,10 +673,8 @@ int reduceWithNodeReplaceBounds(
       {
          SCIP_Bool rpc3term = FALSE;
 
-         if( rpc && degree == 3 && Is_pseudoTerm(graph->term[k]) && graph_pc_termIsNonLeafTerm(graph, k)
-               && graph->grad[k] == 4 )
+         if( rpc && degree == 3 && graph_pc_knotIsNonLeafTerm(graph, k) && graph->grad[k] == 3 )
          {
-            assert(!graph_pc_knotIsFixedTerm(graph, k));
             rpc3term = TRUE;
          }
          else if( (degree != graph->grad[k] || Is_anyTerm(graph->term[k])) )

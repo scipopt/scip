@@ -1037,8 +1037,8 @@ void solgraphAdaptForPcMw(
    /* remove unnecessary dummy edges and add necessary ones */
    for( int k = 0; k < nnodes; k++ )
    {
-      /* dummy terminal? */
-      if( solnode[k] && Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) && k != oldroot )
+      /* dummy terminal other than the root? */
+      if( solnode[k] && graph_pc_knotIsDummyTerm(graph, k) && k != oldroot )
       {
          const int edgeroot = graph_pc_getRoot2PtermEdge(graph, k);
          const int edge2pterm = graph->term2edge[k];
@@ -1337,10 +1337,13 @@ SCIP_RETCODE buildsolgraph(
          {
             if( pcmw )
             {
-               if( (!Is_term(graph->term[i]) || graph_pc_knotIsFixedTerm(graph, i)) )
-                  newgraph->prize[j] = graph->prize[i];
-               else
-                  newgraph->prize[j] = 0.0;
+               assert(graph->extended);
+
+               newgraph->prize[j] = graph->prize[i];
+#ifndef NDEBUG
+               if( graph_pc_knotIsDummyTerm(graph, i) && i != graph->source )
+                  assert(0.0 == newgraph->prize[j]);
+#endif
             }
 
             graph_knot_add(newgraph, graph->term[i]);

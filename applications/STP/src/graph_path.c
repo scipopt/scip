@@ -3136,7 +3136,7 @@ void graph_path_st_rpcmw(
 
    for( int k = 0; k < nnodes; k++ )
    {
-      state[k]     = UNKNOWN;
+      state[k] = UNKNOWN;
       pathdist[k] = FARAWAY;
       pathedge[k] = -1;
       connected[k] = FALSE;
@@ -3186,11 +3186,13 @@ void graph_path_st_rpcmw(
 
          /* if k is fixed terminal positive vertex and close enough, connect its path to current subtree */
          if( Is_anyTerm(g->term[k]) && (Is_term(g->term[k]) || SCIPisGE(scip, prize[k], pathdist[k]))
-               && !connected[k] )
+            && !connected[k] )
          {
             int node;
+
             assert(k != start);
             assert(pathedge[k] != -1);
+            assert(!graph_pc_knotIsDummyTerm(g, k));
 
             termscount++;
             if( Is_term(g->term[k]) )

@@ -371,7 +371,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
             if( SCIPisZero(scip, redcosts[a]) )
             {
-               if( pcmw && k == g->source && Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head) )
+               if( pcmw && k == g->source && graph_pc_knotIsDummyTerm(g, head) )
                   continue;
 
                /* vertex not labeled yet? */
@@ -434,10 +434,9 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
          {
             assert(g->extended);
 
-            if( !Is_term(g->term[k]) || graph_pc_knotIsFixedTerm(g, k) )
-               newgraph->prize[newgraph->knots] = g->prize[k];
-            else
-               newgraph->prize[newgraph->knots] = 0.0;
+            newgraph->prize[newgraph->knots] = g->prize[k];
+
+            assert(!graph_pc_knotIsDummyTerm(g, k) || 0.0 == newgraph->prize[newgraph->knots]);
          }
 
          nodechild[k] = newgraph->knots;
@@ -540,22 +539,15 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    /* get solution on new graph by PRUNE heuristic */
    SCIP_CALL( SCIPStpHeurPruneRun(scip, NULL, newgraph, newedges, &success, FALSE, TRUE) );
 
-#ifdef DEBUG_ASCENDPRUNE
+#ifndef NDEBUG
    for( int k = 0; k < newgraph->knots; ++k )
    {
-      if( Is_term(newgraph->term[k]) && newgraph->grad[k] == 0 && k != newgraph->source )
-      {
-         printf("after i %d r %d \n", k, root);
-         return SCIP_ERROR;
-      }
+      assert( !(Is_term(newgraph->term[k]) && newgraph->grad[k] == 0 && k != newgraph->source) );
    }
 
-   if( !graph_sol_valid(scip, newgraph, newedges) )
-   {
-      printf("not valid %d \n", 0);
-      return SCIP_ERROR;
-   }
+   assert(graph_sol_valid(scip, newgraph, newedges));
 #endif
+
    if( !success )
    {
       SCIPdebugMessage("failed to build tree in ascend-prune (by prune) \n");
@@ -614,6 +606,8 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    }
 
    success = graph_sol_valid(scip, g, newedges);
+
+   assert(success);
 
    if( success && addsol )
    {

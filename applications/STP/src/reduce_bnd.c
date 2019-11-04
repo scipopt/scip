@@ -518,6 +518,8 @@ SCIP_RETCODE reduce_bound(
    /* for(R)PC: try to eliminate terminals */
    if( pc )
    {
+      assert(!graph->extended);
+
       SCIP_CALL( graph_get4nextTTerms(scip, graph, cost, vnoi, vbase, heap, state) );
 
       for( int k = 0; k < nnodes; k++ )

@@ -2216,31 +2216,26 @@ SCIP_Bool graph_sol_valid(
    )
 {
    int* queue;
-   STP_Bool* reached;
-   int root;
+   STP_Bool* reached = NULL;
    int size;
-   int nnodes;
+   const int nnodes = graph_get_nNodes(graph);
+   const int root = graph->source;
    int termcount;
    SCIP_Bool usepterms;
 
-   assert(scip != NULL);
-   assert(graph != NULL);
-   assert(result != NULL);
-
-   reached = NULL;
-   nnodes = graph->knots;
-   root = graph->source;
+   assert(scip && result);
    assert(root >= 0);
 
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &reached, nnodes) );
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &queue, nnodes) );
 
    if( graph_pc_isPcMw(graph) && !graph->extended )
+   {
+      assert(0); // todo would need some adaptation because of non-leaf terminals...and is weird anyway
       usepterms = TRUE;
+   }
    else
       usepterms = FALSE;
-
-   assert(reached != NULL);
 
    for( int i = 0; i < nnodes; i++ )
       reached[i] = FALSE;
@@ -2287,8 +2282,8 @@ SCIP_Bool graph_sol_valid(
       }
    }
 
-#if 0
-   if(termcount != graph->terms)
+#ifdef SCIP_DEBUG
+   if( termcount != graph->terms )
    {
       printf("termcount %d graph->terms %d \n", termcount, graph->terms);
       printf("root %d \n", root);
@@ -2306,6 +2301,7 @@ SCIP_Bool graph_sol_valid(
       }
    }
 #endif
+
    SCIPfreeBufferArray(scip, &queue);
    SCIPfreeBufferArray(scip, &reached);
 
@@ -3180,10 +3176,13 @@ SCIP_RETCODE graph_copy_data(
       SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->cost_org_pc), g_copy->edges));
 
       for( int k = 0; k < g_copy->knots; k++ )
+         g_copy->prize[k] = g_org->prize[k];
+
+#ifndef NDEBUG
+      for( int k = 0; k < g_copy->knots; k++ )
          if( Is_term(g_org->term[k]) && (!rpcmw || !graph_pc_knotIsFixedTerm(g_org, k)) )
-            g_copy->prize[k] = 0.0;
-         else
-            g_copy->prize[k] = g_org->prize[k];
+            assert(g_copy->prize[k] == 0.0);
+#endif
 
       assert(g_org->term2edge != NULL);
       BMScopyMemoryArray(g_copy->term2edge, g_org->term2edge, g_copy->knots);

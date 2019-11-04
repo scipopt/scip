@@ -208,12 +208,13 @@ SCIP_RETCODE init_pcmwimplications(
    {
       int nvisits;
       int nadded;
+
       if( !Is_term(g->term[i]) || graph_pc_knotIsFixedTerm(g, i) )
          continue;
 
       assert(i != g->source);
-      assert(g->path_heap != NULL);
-      assert(g->path_state != NULL);
+      assert(g->path_heap && g->path_state);
+
       (void) graph_sdWalksConnected(scip, g, termmark, g->cost, NULL, i, 1000, dist, g->path_heap, g->path_state, visitlist, &nvisits, visited, TRUE);
 
       assert(nvisits >= 1 && visitlist[0] == i);
