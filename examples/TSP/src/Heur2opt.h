@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,10 +31,10 @@ namespace tsp
 /** C++ wrapper */
 class Heur2opt : public scip::ObjHeur
 {
-   GRAPH*             graph_;             /**< the underlying graph of the TSP */
-   int                ncalls_;            /**< number of calls of the heuristic since the last solution was found */
-   SCIP_SOL*          sol_;               /**< current solution */
-   GRAPHEDGE**        tour_;              /**< tour induced by sol */
+   GRAPH*                graph_;             /**< the underlying graph of the TSP */
+   int                   ncalls_;            /**< number of calls of the heuristic since the last solution was found */
+   SCIP_SOL*             sol_;               /**< current solution */
+   GRAPHEDGE**           tour_;              /**< tour induced by sol */
 
 public:
 

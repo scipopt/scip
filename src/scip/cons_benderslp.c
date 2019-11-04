@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_benderslp.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for benderslp decomposition
  * @author Stephen J. Maher
  *
@@ -53,6 +54,9 @@
 
 #define DEFAULT_CONSBENDERSLP_MAXDEPTH 0/**< depth at which Benders' decomposition cuts are generated from the LP
                                          *   solution (-1: always, 0: only at root) */
+#define DEFAULT_CONSBENDERSLP_FREQ     0/**< the depth frequency for generating LP cuts after the max depth is reached (0: never, 1: all nodes, ...) */
+#define DEFAULT_CONSBENDERSLP_STALLLIMIT 100/**< the number of nodes processed without a dual bound improvement before enforcing the LP relaxation, 0: no stall count applied */
+#define DEFAULT_CONSBENDERSLP_ITERLIMIT 100 /**< after the root node, only iterlimit fractional LP solutions are used at each node to generate Benders' decomposition cuts. */
 #define DEFAULT_ACTIVE            FALSE /**< is the constraint handler active? */
 
 /*
@@ -62,8 +66,18 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
+   /* parameters for controlling the two-phase method for Benders' decomposition */
    int                   maxdepth;           /**< the maximum depth at which Benders' cuts are generated from the LP */
+   int                   freq;               /**< the depth frequency of generating LP cuts after the max depth is reached */
+   int                   stalllimit;         /**< the number of nodes processed without bound improvement before enforcing the LP relaxation */
+   int                   iterlimit;          /**< the iteration limit for the first phase of the two-phase method at a node lower than the root. */
    SCIP_Bool             active;             /**< is the constraint handler active? */
+
+   /* variable used to control the behaviour of the two-phase method for Benders' decomposition */
+   SCIP_Longint          ncallsnode;         /**< the number of calls at the current node */
+   SCIP_NODE*            currnode;           /**< the current node */
+   SCIP_Real             prevbound;          /**< the previous dual bound */
+   int                   stallcount;         /**< the number of nodes processed since the last lower bound increase */
 };
 
 
@@ -120,10 +134,55 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   if( !conshdlrdata->active || (conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth) )
-      (*result) = SCIP_FEASIBLE;
-   else
-      SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_LP, FALSE) );
+   /* updating the stall count. If the bound has improved since the last call, then the stall count is set to zero */
+   conshdlrdata->stallcount++;
+   if( SCIPisLT(scip, conshdlrdata->prevbound, SCIPgetLowerbound(scip)) )
+      conshdlrdata->stallcount = 0;
+
+   conshdlrdata->prevbound = SCIPgetLowerbound(scip);
+   conshdlrdata->ncallsnode++;
+
+   /* if a new node is being processed, then the iteration counts are reset. */
+   if( conshdlrdata->currnode != SCIPgetCurrentNode(scip) )
+   {
+      conshdlrdata->currnode = SCIPgetCurrentNode(scip);
+      conshdlrdata->ncallsnode = 0;
+   }
+
+   /* the result is initially set to FEASIBLE. If the two-phase method is not executed, then the result will remain as
+    * FEASIBLE. The actual feasibility of the Benders' decomposition subproblems is checked in cons_benders.
+   */
+   (*result) = SCIP_FEASIBLE;
+
+   /* only check the Benders' decomposition subproblems for fractional LP solutions if the two-phase method is activated */
+   if( !conshdlrdata->active )
+      return SCIP_OKAY;
+
+   /* checking whether the two-phase method is performed.
+    * - If a maxdepth is specified
+    *   - current depth is checked
+    *   - the frequency is checked, if a frequency is specified
+    *   - the stalllimit is checked if a stalllimit is specified.
+    */
+   if( conshdlrdata->maxdepth >= 0 && SCIPgetDepth(scip) > conshdlrdata->maxdepth
+         && (conshdlrdata->freq == 0 || SCIPgetDepth(scip) % conshdlrdata->freq != 0)
+         && (conshdlrdata->stalllimit == 0 || conshdlrdata->stallcount < conshdlrdata->stalllimit) )
+      return SCIP_OKAY;
+
+   /* if an iteration limit is specified, then this is imposed at nodes after the root node */
+   if( SCIPgetDepth(scip) > 0 && conshdlrdata->ncallsnode >= conshdlrdata->iterlimit )
+      return SCIP_OKAY;
+
+   /* the two phase method is only performed at the root node for sub-SCIPs */
+   if( SCIPgetSubscipDepth(scip) > 0 && SCIPgetDepth(scip) > 0 )
+      return SCIP_OKAY;
+
+   /* checking the Benders' decomposition subproblems for feasibility. */
+   SCIP_CALL( SCIPconsBendersEnforceSolution(scip, NULL, conshdlr, result, SCIP_BENDERSENFOTYPE_LP, FALSE) );
+
+   /* if the stalllimit is exceeded and the subproblem were checked, then the stall count is reset to zero */
+   if( conshdlrdata->stallcount >= conshdlrdata->stalllimit )
+      conshdlrdata->stallcount = 0;
 
    return SCIP_OKAY;
 }
@@ -205,6 +264,8 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
 
    /* create benderslp constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   BMSclearMemory(conshdlrdata);
+   conshdlrdata->prevbound = -SCIPinfinity(scip);
 
    conshdlr = NULL;
 
@@ -225,6 +286,21 @@ SCIP_RETCODE SCIPincludeConshdlrBenderslp(
          "constraints/" CONSHDLR_NAME "/maxdepth",
          "depth at which Benders' decomposition cuts are generated from the LP solution (-1: always, 0: only at root)",
          &conshdlrdata->maxdepth, TRUE, DEFAULT_CONSBENDERSLP_MAXDEPTH, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/" CONSHDLR_NAME "/depthfreq",
+         "the depth frequency for generating LP cuts after the max depth is reached (0: never, 1: all nodes, ...)",
+         &conshdlrdata->freq, TRUE, DEFAULT_CONSBENDERSLP_FREQ, 0, SCIP_MAXTREEDEPTH, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/" CONSHDLR_NAME "/stalllimit",
+         "the number of nodes processed without a dual bound improvement before enforcing the LP relaxation, 0: no stall count applied",
+         &conshdlrdata->stalllimit, TRUE, DEFAULT_CONSBENDERSLP_STALLLIMIT, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/" CONSHDLR_NAME "/iterlimit",
+         "after the root node, only iterlimit fractional LP solutions are used at each node to generate Benders' decomposition cuts.",
+         &conshdlrdata->iterlimit, TRUE, DEFAULT_CONSBENDERSLP_ITERLIMIT, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/active", "is the Benders' decomposition LP cut constraint handler active?",

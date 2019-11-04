@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   implics.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for implications, variable bounds, and clique tables
  * @author Tobias Achterberg
  */
@@ -2941,8 +2942,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       cliquetableSwapCliques(cliquetable, 0, cliquetable->ndirtycliques);
       cliqueCheck(clique);
 
-      /* @todo check if we can aggregate variables if( clique->equation && clique->nvars == 2 && SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING */
-#if 0
+      /* @todo check if we can/want to aggregate variables with the following code */
+#ifdef SCIP_DISABLED_CODE
       if( clique->nvars == 2 && clique->equation && SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING )
       {
          SCIP_VAR* var0;

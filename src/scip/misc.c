@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc.c
+ * @ingroup OTHER_CFILES
  * @brief  miscellaneous methods
  * @author Tobias Achterberg
  * @author Gerald Gamrath
@@ -2714,7 +2715,6 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 /* computes the distance from it's desired position for the element stored at pos */
 #define ELEM_DISTANCE(pos) (((pos) + hashmap->mask + 1 - (hashmap->hashes[(pos)]>>(hashmap->shift))) & hashmap->mask)
 
-
 /** inserts element in hash table */
 static
 SCIP_RETCODE hashmapInsert(
@@ -2914,6 +2914,7 @@ SCIP_RETCODE SCIPhashmapCreate(
    (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
    (*hashmap)->nelements = 0;
+   (*hashmap)->hashmaptype = SCIP_HASHMAPTYPE_UNKNOWN;
 
    SCIP_ALLOC( BMSallocBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->slots, nslots) );
    SCIP_ALLOC( BMSallocClearBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->hashes, nslots) );
@@ -2954,9 +2955,9 @@ void SCIPhashmapFree(
                        (unsigned int)(*hashmap)->nelements, (unsigned int)(*hashmap)->nelements, (unsigned int)nslots,
                        100.0*(SCIP_Real)(*hashmap)->nelements/(SCIP_Real)(nslots));
       if( (*hashmap)->nelements > 0 )
-         SCIPdebugMessage(", avg. probe length is %.1f, max. probe length is %u",
+         SCIPdebugPrintf(", avg. probe length is %.1f, max. probe length is %u",
                           (SCIP_Real)(probelensum)/(SCIP_Real)(*hashmap)->nelements, (unsigned int)maxprobelen);
-      SCIPdebugMessage("\n");
+      SCIPdebugPrintf("\n");
    }
 #endif
 
@@ -2983,6 +2984,12 @@ SCIP_RETCODE SCIPhashmapInsert(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_POINTER);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_POINTER;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3013,6 +3020,12 @@ SCIP_RETCODE SCIPhashmapInsertInt(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_INT);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_INT;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3043,6 +3056,12 @@ SCIP_RETCODE SCIPhashmapInsertReal(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_REAL);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_REAL;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3068,6 +3087,7 @@ void* SCIPhashmapGetImage(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_POINTER);
 
    if( hashmapLookup(hashmap, origin, &pos) )
       return hashmap->slots[pos].image.ptr;
@@ -3087,6 +3107,7 @@ int SCIPhashmapGetImageInt(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_INT);
 
    if( hashmapLookup(hashmap, origin, &pos) )
       return hashmap->slots[pos].image.integer;
@@ -3106,6 +3127,7 @@ SCIP_Real SCIPhashmapGetImageReal(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_REAL);
 
    if( hashmapLookup(hashmap, origin, &pos) )
       return hashmap->slots[pos].image.real;
@@ -3128,6 +3150,12 @@ SCIP_RETCODE SCIPhashmapSetImage(
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_POINTER);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_POINTER;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3156,6 +3184,12 @@ SCIP_RETCODE SCIPhashmapSetImageInt(
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_INT);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_INT;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3184,6 +3218,12 @@ SCIP_RETCODE SCIPhashmapSetImageReal(
    assert(hashmap != NULL);
    assert(hashmap->slots != NULL);
    assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_REAL);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_REAL;
+#endif
 
    SCIP_CALL( hashmapCheckLoad(hashmap) );
 
@@ -3549,8 +3589,8 @@ SCIP_RETCODE SCIPhashsetCreate(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, hashset) );
 
-   /* dont create too small hashtables, i.e. at least size 32, and increase
-    * the given size by divinding it by 0.9, since then no rebuilding will
+   /* do not create too small hashtables, i.e. at least size 32, and increase
+    * the given size by dividing it by 0.9, since then no rebuilding will
     * be necessary if the given number of elements are inserted. Finally round
     * to the next power of two.
     */
@@ -5366,6 +5406,16 @@ void SCIPsort(
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortPtrRealRealIntBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrRealRealIntBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
 /* SCIPsortPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     PtrRealBool
 #define SORTTPL_KEYTYPE     void*
@@ -7122,6 +7172,11 @@ SCIP_RETCODE SCIPdigraphCreate(
    (*digraph)->components = NULL;
    (*digraph)->componentstarts = NULL;
 
+   /* all nodes are initially considered as non-articulation points */
+   (*digraph)->narticulations = -1;
+   (*digraph)->articulations = NULL;
+   (*digraph)->articulationscheck = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -7176,6 +7231,7 @@ SCIP_RETCODE SCIPdigraphCopy(
    int ncomponents;
    int nnodes;
    int i;
+   SCIP_Bool articulationscheck;
 
    assert(sourcedigraph != NULL);
    assert(targetdigraph != NULL);
@@ -7190,6 +7246,7 @@ SCIP_RETCODE SCIPdigraphCopy(
 
    nnodes = sourcedigraph->nnodes;
    ncomponents = sourcedigraph->ncomponents;
+   articulationscheck = sourcedigraph->articulationscheck;
    (*targetdigraph)->nnodes = nnodes;
    (*targetdigraph)->ncomponents = ncomponents;
    (*targetdigraph)->blkmem = targetblkmem;
@@ -7234,6 +7291,20 @@ SCIP_RETCODE SCIPdigraphCopy(
       (*targetdigraph)->components = NULL;
       (*targetdigraph)->componentstarts = NULL;
       (*targetdigraph)->componentstartsize = 0;
+   }
+
+   /* copy the articulation point information if it has been computed and is up-to-date */
+   if( articulationscheck )
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->articulations, sourcedigraph->articulations, sourcedigraph->narticulations) );
+      (*targetdigraph)->narticulations = sourcedigraph->narticulations;
+      (*targetdigraph)->articulationscheck = TRUE;
+   }
+   else
+   {
+      (*targetdigraph)->narticulations = -1;
+      (*targetdigraph)->articulations = NULL;
+      (*targetdigraph)->articulationscheck = FALSE;
    }
 
    return SCIP_OKAY;
@@ -7292,6 +7363,10 @@ void SCIPdigraphFree(
    assert(digraphptr->componentstartsize == 0);
    assert(digraphptr->components == NULL);
    assert(digraphptr->componentstarts == NULL);
+
+   /* free the articulation nodes structure if it has been computed*/
+   if( digraphptr->articulationscheck )
+      BMSfreeBlockMemoryArray(blkmem, &digraphptr->articulations, digraphptr->narticulations);
 
    /* free directed graph data structure */
    BMSfreeBlockMemoryArray(blkmem, &digraphptr->nodedata, digraphptr->nnodes);
@@ -7374,6 +7449,9 @@ SCIP_RETCODE SCIPdigraphAddArc(
    digraph->arcdata[startnode][digraph->nsuccessors[startnode]] = data;
    digraph->nsuccessors[startnode]++;
 
+   /* the articulation nodes are not up-to-date */
+   digraph->articulationscheck = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -7411,6 +7489,9 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
    digraph->successors[startnode][nsuccessors] = endnode;
    digraph->arcdata[startnode][nsuccessors] = data;
    ++(digraph->nsuccessors[startnode]);
+
+   /* the articulation nodes are not up-to-date */
+   digraph->articulationscheck = FALSE;
 
    return SCIP_OKAY;
 }
@@ -7610,6 +7691,163 @@ void depthFirstSearch(
          assert( stackidx < digraph->nnodes );
       }
    }
+}
+
+/** checks for articulation points in a given directed graph through a recursive depth-first-search.
+ *  starts from a given start node and keeps track of the nodes' discovery time in search for back edges.
+ *
+ *  @note an articulation point is a node whose removal disconnects a connected graph or increases
+ *  the number of connected components in a disconnected graph
+ */
+static
+void findArticulationPointsUtil(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   startnode,          /**< node to start the depth-first-search */
+   SCIP_Bool*            visited,            /**< array to store for each node, whether it was already visited */
+   int*                  tdisc,              /**< array of size number of nodes to store each node's discovery time */
+   int*                  mindisc,            /**< array of size number of nodes to store the discovery time of the earliest discovered vertex
+                                              *   to which startnode (or any node in the subtree rooted at it) is having a back edge */
+   int*                  parent,             /**< array to store the parent of each node in the DFS tree */
+   SCIP_Bool*            articulationflag,   /**< array to mark whether a node is identified as an articulation point */
+   int                   time                /**< current discovery time in the DFS */
+   )
+{
+   int n;
+   int nchildren = 0;
+   int nsucc;
+   int* succnodes;
+
+   assert(digraph != NULL);
+   assert(startnode >= 0);
+   assert(startnode < digraph->nnodes);
+   assert(visited != NULL);
+   assert(visited[startnode] == FALSE);
+   assert(tdisc != NULL);
+   assert(mindisc != NULL);
+   assert(parent != NULL);
+   assert(articulationflag != NULL);
+   assert(time >= 0);
+
+   nsucc = (int) SCIPdigraphGetNSuccessors(digraph, startnode);
+   succnodes = (int*) SCIPdigraphGetSuccessors(digraph, startnode);
+   visited[startnode] = TRUE;
+   tdisc[startnode] = time + 1;
+   mindisc[startnode] = time + 1;
+
+   /* process all the adjacent nodes to startnode */
+   for( n = 0; n < nsucc; ++n)
+   {
+      if( visited[succnodes[n]] == FALSE )
+      {
+         parent[succnodes[n]] = startnode;
+         ++nchildren;
+         findArticulationPointsUtil(digraph, succnodes[n], visited, tdisc, mindisc, parent, articulationflag, time + 1);
+         /* updated the mindisc of startnode when the DFS concludes for node n*/
+         mindisc[startnode] = MIN(mindisc[startnode], mindisc[succnodes[n]]);
+
+         /* the root is an articulation point if it has more than 2 children*/
+         if( parent[startnode] == -1 && nchildren > 1 )
+            articulationflag[startnode] = TRUE;
+         /* a vertex startnode is an articulation point if it is not the root and
+          * there is no back edge from the subtree rooted at child n to any of the ancestors of startnode */
+         if( parent[startnode] > -1 && mindisc[succnodes[n]] >= tdisc[startnode] )
+            articulationflag[startnode] = TRUE;
+      }
+      else
+      {
+         if( parent[startnode] != succnodes[n] )
+            mindisc[startnode] = MIN(mindisc[startnode], tdisc[succnodes[n]]);
+      }
+   }
+
+   if( articulationflag[startnode] == TRUE )
+      ++digraph->narticulations;
+}
+
+/** identifies the articulation points in a given directed graph
+ *  uses the helper recursive function findArticulationPointsUtil
+ */
+SCIP_RETCODE SCIPdigraphGetArticulationPoints(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int**                 articulations,      /**< array to store the sorted node indices of the computed articulation points,
+                                              *   NULL if not needed */
+   int*                  narticulations      /**< number of the computed articulation points */
+)
+{
+
+   BMS_BLKMEM* blkmem;
+   SCIP_Bool* visited;
+   SCIP_Bool* articulationflag;
+   int* tdisc;
+   int* mindisc;
+   int* parent;
+   int n;
+   int articulationidx = 0;
+   int time = 0;
+
+   assert(digraph != NULL);
+   assert(digraph->nnodes > 0);
+
+   /* Only perform the computation if the articulation nodes are NOT up-to-date */
+   if( !digraph->articulationscheck )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&visited, digraph->nnodes) );
+      SCIP_ALLOC( BMSallocMemoryArray(&tdisc, digraph->nnodes) );
+      SCIP_ALLOC( BMSallocMemoryArray(&mindisc, digraph->nnodes) );
+      SCIP_ALLOC( BMSallocMemoryArray(&parent, digraph->nnodes) );
+      SCIP_ALLOC( BMSallocMemoryArray(&articulationflag, digraph->nnodes) );
+
+      assert(digraph->blkmem != NULL);
+      blkmem = digraph->blkmem;
+
+      if( digraph->narticulations >= 0 ) /* case: articulations have already been computed but not up-to-date */
+         BMSfreeBlockMemoryArray(blkmem, &digraph->articulations, digraph->narticulations);
+
+      /* Initialize the no. of articulation nodes ahead of the recursive computation */
+      digraph->narticulations = 0;
+
+      for( n = 0; n < digraph->nnodes; ++n )
+      {
+         visited[n] = FALSE;
+         parent[n] = -1;
+         articulationflag[n] = FALSE;
+      }
+
+      /* the function is called on every unvisited node in the graph to cover the disconnected graph case */
+      for( n = 0; n < digraph->nnodes; ++n )
+      {
+         if( visited[n] == FALSE )
+            findArticulationPointsUtil(digraph, n, visited, tdisc, mindisc, parent, articulationflag, time);
+      }
+
+      /* allocation of the block memory for the node indices of the articulation points*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->articulations, digraph->narticulations) );
+
+      for( n = 0; n < digraph->nnodes; ++n )
+      {
+         if ( articulationflag[n] == TRUE )
+         {
+            digraph->articulations[articulationidx] = n;
+            ++articulationidx;
+         }
+      }
+
+      BMSfreeMemoryArrayNull(&articulationflag);
+      BMSfreeMemoryArrayNull(&parent);
+      BMSfreeMemoryArrayNull(&mindisc);
+      BMSfreeMemoryArrayNull(&tdisc);
+      BMSfreeMemoryArrayNull(&visited);
+   }
+
+   if( articulations != NULL )
+      (*articulations) = digraph->articulations;
+   if( narticulations != NULL )
+      (*narticulations) = digraph->narticulations;
+
+   /* the articulation nodes are now up-to-date */
+   digraph->articulationscheck = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** Compute undirected connected components on the given graph.
@@ -9281,6 +9519,14 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    return SCIP_OKAY;
 }
 
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
+ */
+#ifndef __clang__
+#pragma STD FENV_ACCESS ON
+#endif
+
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
  *  number inside the interval was found
@@ -9321,6 +9567,8 @@ SCIP_Bool SCIPfindSimpleRational(
 
    return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
 }
+
+#pragma STD FENV_ACCESS OFF
 
 /** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number
  *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);
@@ -10134,7 +10382,7 @@ void SCIPprintSysError(
    if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
       SCIPmessagePrintError("Unknown error number %d or error message too long.\n", errno);
    SCIPmessagePrintError("%s: %s\n", message, buf);
-#elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
+#elif (_POSIX_C_SOURCE >= 200112L || __DARWIN_C_LEVEL > 200112L || _XOPEN_SOURCE >= 600) && ! defined(_GNU_SOURCE)
    /* We are in the POSIX/XSI case, where strerror_r returns 0 on success; \0 termination is unclear. */
    if ( strerror_r(errno, buf, SCIP_MAXSTRLEN) != 0 )
       SCIPmessagePrintError("Unknown error number %d.\n", errno);

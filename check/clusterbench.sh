@@ -109,4 +109,4 @@ JOBIDSSTR=$(printf ",%s" "${JOBIDS[@]}")
 JOBIDSSTR=${JOBIDSSTR:1}
 
 # execute script to glue and upload after all eval jobs completed
-sbatch --dependency=afterany:${JOBIDSSTR} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=500 --partition=mip-dbg --account=mip jenkins_collect_benchmark.sh
+sbatch --dependency=afterany:${JOBIDSSTR} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=500 --partition=opt --account=scip jenkins_collect_benchmark.sh

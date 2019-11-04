@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,6 +23,11 @@
  * - \ref TABLE "Instructions for implementing a statistics table"
  * - \ref TABLES "List of available statistics tables"
  * - \ref scip::ObjTable "C++ wrapper class
+ */
+
+/** @defgroup DEFPLUGINS_TABLE Default Tables
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default statistics tables of SCIP
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

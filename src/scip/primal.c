@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   primal.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for collecting primal CIP solutions and primal informations
  * @author Tobias Achterberg
  */
@@ -35,6 +36,7 @@
 #include "scip/tree.h"
 #include "scip/reopt.h"
 #include "scip/disp.h"
+#include "scip/struct_event.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -568,7 +568,7 @@ SCIP_RETCODE setupGradients(
 
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, a, nvars + nnz) );
 
-#if 0  /* enable for debugging Jacobian */
+#ifdef SCIP_MORE_DEBUG   /* enable for debugging Jacobian */
    for( i = 0; i < 1 + (nvars+nnz) + 1+ncons + 1; ++i )
       printf("la[%2d] = %2d\n", i, (*la)[i]);
 #endif
@@ -630,7 +630,7 @@ SCIP_RETCODE setupHessian(
 
    F77_FUNC(hessc,HESSC).phl = 1;
 
-#if 0 /* enable for debugging Hessian */
+#ifdef SCIP_MORE_DEBUG /* enable for debugging Hessian */
    for( i = 0; i < 1 + nnz + nvars + 1; ++i )
       printf("lw[%2d] = %2d\n", i, (*la)[i]);
 #endif

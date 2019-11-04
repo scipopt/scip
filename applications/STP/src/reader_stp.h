@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,13 +36,11 @@ extern "C" {
 #endif
 
 /** include user parameters */
-extern
 SCIP_RETCODE SCIPStpReaderIncludeParams(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** includes the stp file reader in SCIP */
-extern
 SCIP_RETCODE SCIPincludeReaderStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
