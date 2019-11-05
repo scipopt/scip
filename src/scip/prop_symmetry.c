@@ -3554,7 +3554,9 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
       SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, nvars) );
    }
 
-   printf("Orbitidx: %d\tLeaderidx: %d\tCriterion: %d\n", *orbitidx, *leaderidx, orbitcriterion);
+   if ( *success )
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "Orbitidx: %d\tLeaderidx: %d\tCriterion: %d\n", *orbitidx, *leaderidx, orbitcriterion);
 
    return SCIP_OKAY;
 }
