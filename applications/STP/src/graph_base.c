@@ -3245,25 +3245,28 @@ void graph_mark(
    GRAPH*                g                   /**< the graph */
    )
 {
-   const int nnodes = g->knots;
-
-   assert(g);
+   const int nnodes = graph_get_nNodes(g);
+   const int root = g->source;
 
    for( int k = 0; k < nnodes; k++ )
       g->mark[k] = (g->grad[k] > 0);
 
+   g->mark[root] = TRUE;
+
    if( graph_pc_isPcMw(g) && !g->extended )
    {
-      const int root = g->source;
-
       for( int k = 0; k < nnodes; k++ )
       {
-         if( (Is_pseudoTerm(g->term[k]) || k == root) )
+         if( Is_pseudoTerm(g->term[k]) )
             g->mark[k] = FALSE;
+         else if( Is_term(g->term[k]) )
+            g->mark[k] = TRUE;
       }
 
       if( graph_pc_isRootedPcMw(g) )
          g->mark[root] = TRUE;
+      else
+         g->mark[root] = FALSE;
    }
 
    assert(graph_isMarked(g));
@@ -3303,6 +3306,9 @@ SCIP_Bool graph_isMarked(
                if( k == root && g->mark[k] )
                   continue;
 
+               if( Is_term(g->term[k]) && g->mark[k] )
+                  continue;
+
                graph_knot_printInfo(g, k);
                printf("node %d: mark=%d grad=%d \n", k, g->mark[k], g->grad[k]);
                return FALSE;
@@ -3327,6 +3333,9 @@ SCIP_Bool graph_isMarked(
       {
          if( g->mark[k] != (g->grad[k] > 0) )
          {
+            if( k == g->source && g->mark[k] )
+               continue;
+
             graph_knot_printInfo(g, k);
             printf("node %d: mark=%d grad=%d \n", k, g->mark[k], g->grad[k]);
             return FALSE;

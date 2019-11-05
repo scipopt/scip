@@ -237,6 +237,7 @@ SCIP_Bool isMaxprizeTerm(
 {
    int t = -1;
    SCIP_Real max;
+   const int nnodes = graph_get_nNodes(g);
 
    assert(i >= 0 && Is_term(g->term[i]) && g->prize[i] > 0.0);
 
@@ -252,11 +253,13 @@ SCIP_Bool isMaxprizeTerm(
 
    max = -1.0;
 
-   for( int k = 0; k < g->knots; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
-      if( Is_term(g->term[k]) && g->mark[k] && g->grad[k] > 0 )
+      if( Is_term(g->term[k]) )
       {
+         assert(g->mark[k]);
          assert(k != g->source);
+
          if( g->prize[k] > max )
          {
             max = g->prize[k];

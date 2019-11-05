@@ -1183,8 +1183,6 @@ void graph_pc_2org(
    /* swap terminal properties and mark original graph */
    for( int k = 0; k < nnodes; k++ )
    {
-      graph->mark[k] = (graph->grad[k] > 0);
-
       if( Is_pseudoTerm(graph->term[k]) || Is_nonleafTerm(graph->term[k]) )
       {
          assert(!Is_term(graph->term[k]));
@@ -1195,17 +1193,13 @@ void graph_pc_2org(
       {
          assert(k != root);
 
-         graph->mark[k] = FALSE;
          graph_knot_chg(graph, k, STP_TERM_PSEUDO);
       }
    }
 
-   if( graph->stp_type == STP_RPCSPG || graph->stp_type == STP_RMWCSP )
-      graph->mark[root] = TRUE;
-   else
-      graph->mark[root] = FALSE;
-
    graph->extended = FALSE;
+
+   graph_mark(graph);
 }
 
 /** mark transformed graph and adapt terminal properties to transformed graph */
@@ -1227,8 +1221,6 @@ void graph_pc_2trans(
    /* adapt terminal properties and mark transformed graph */
    for( int k = 0; k < nnodes; k++ )
    {
-      graph->mark[k] = (graph->grad[k] > 0);
-
       if( Is_pseudoTerm(graph->term[k]) )
       {
          graph_knot_chg(graph, k, STP_TERM);
@@ -1241,6 +1233,8 @@ void graph_pc_2trans(
    }
 
    graph->extended = TRUE;
+
+   graph_mark(graph);
 
    /* restore transformed edge weights (shift) after storing original ones */
    if( graph_pc_isPc(graph) )
