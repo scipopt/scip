@@ -3273,15 +3273,13 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
       /* if the i-th variable in the orbit is in a conflict with the leader, fix it to 0 */
       if ( orbitvarinconflict[i] )
       {
-         SCIP_Bool infeasible;
-         SCIP_Bool fixed;
-
          assert( SCIPvarIsBinary(vars[1]) );
+         assert( SCIPvarGetLbLocal(vars[1]) < 0.5 );
 
-         SCIP_CALL( SCIPfixVar(scip, vars[1], 0.0, &infeasible, &fixed) );
-
-         assert( ! infeasible );
-         assert( fixed );
+         if ( SCIPvarGetUbLocal(vars[1]) > 0.5 )
+         {
+            SCIP_CALL( SCIPchgVarUb(scip, vars[1], 0.0) );
+         }
 
          orbitvarinconflict[i] = FALSE;
       }
