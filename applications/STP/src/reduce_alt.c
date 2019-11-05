@@ -1398,7 +1398,6 @@ SCIP_RETCODE reduce_sdPc(
    {
       if( Is_term(g->term[k]) )
       {
-         assert(g->grad[k] > 0);
          graph_knot_add(netgraph, -1);
          nodesid[k] = j;
          nodesorg[j++] = k;
@@ -2631,7 +2630,7 @@ SCIP_RETCODE reduce_sdStarPc(
 
       if( !g->mark[i] )
       {
-         assert(g->mark[i] == 2 || g->mark[i] == 0 || i == g->source);
+         assert(g->grad[i] == 2 || g->grad[i] == 0 || i == g->source);
          continue;
       }
 

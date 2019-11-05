@@ -453,6 +453,8 @@ SCIP_RETCODE graph_init_dcsr(
    dcsr->cost2 = NULL;
    dcsr->cost3 = NULL;
 
+   graph_mark(g);
+
    /* now fill the data in */
 
    for( int e = 0; e < nedges; e++ )
