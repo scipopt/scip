@@ -127,8 +127,9 @@ struct SCIP_ConsData
 /** @brief Constraint handler data for \ref cons_stp.c "Stp" constraint handler */
 struct SCIP_ConshdlrData
 {
-   int*                  pcimplstart;        /**< start for each terminal */
+   int*                  pcimplstart;        /**< start for each proper potential terminal */
    int*                  pcimplverts;        /**< all vertices */
+   int                   pcimplnppterms;     /**< number of poper potential terminals used */
    SCIP_Bool             backcut;            /**< should backcuts be applied? */
    SCIP_Bool             creepflow;          /**< should creepflow cuts be applied? */
    SCIP_Bool             disjunctcut;        /**< should disjunction cuts be applied? */
@@ -160,7 +161,7 @@ SCIP_RETCODE init_pcmwimplications(
 )
 {
    const int nnodes = g->knots;
-   const int npterms = graph_pc_nPotentialTerms(g);
+   const int nppterms = graph_pc_nProperPotentialTerms(g);
    int* start;
    int* verts;
    int* termmark;
@@ -171,23 +172,26 @@ SCIP_RETCODE init_pcmwimplications(
    int termscount;
    int nimplications;
    const int maxnimplications = PCIMPLICATIONS_ALLOC_FACTOR * g->edges;
-   const int slotsize = ((npterms == 0) ? 0 : maxnimplications / npterms);
+   const int slotsize = ((nppterms == 0) ? 0 : maxnimplications / nppterms);
 
    assert(g != NULL && conshdlrdata != NULL);
    assert(graph_pc_isPcMw(g) && !g->extended);
-   assert(conshdlrdata->pcimplstart == NULL );
-   assert(conshdlrdata->pcimplverts == NULL);
-   assert(slotsize >= 1 && slotsize * npterms <= maxnimplications);
+   assert(!conshdlrdata->pcimplstart);
+   assert(!conshdlrdata->pcimplverts);
+   assert(0 == conshdlrdata->pcimplnppterms);
+
+   assert(slotsize >= 1 && slotsize * nppterms <= maxnimplications);
 
    SCIP_CALL(SCIPallocBufferArray(scip, &dist, nnodes));
    SCIP_CALL(SCIPallocBufferArray(scip, &visited, nnodes));
    SCIP_CALL(SCIPallocBufferArray(scip, &visitlist, nnodes));
    SCIP_CALL(SCIPallocBufferArray(scip, &termmark, nnodes));
-   SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplstart), npterms + 1));
+   SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplstart), nppterms + 1));
    SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplverts), maxnimplications));
 
    start = conshdlrdata->pcimplstart;
    verts = conshdlrdata->pcimplverts;
+   conshdlrdata->pcimplnppterms = nppterms;
 
    for( int i = 0; i < nnodes; i++ )
    {
@@ -209,7 +213,7 @@ SCIP_RETCODE init_pcmwimplications(
       int nvisits;
       int nadded;
 
-      if( !Is_term(g->term[i]) || graph_pc_knotIsFixedTerm(g, i) )
+      if( !Is_term(g->term[i]) || graph_pc_knotIsFixedTerm(g, i) || graph_pc_termIsNonLeafTerm(g, i) )
          continue;
 
       assert(i != g->source);
@@ -236,10 +240,10 @@ SCIP_RETCODE init_pcmwimplications(
       else
          nspares += slotsize - nadded;
 
-      assert(termscount < npterms);
+      assert(termscount < nppterms);
       start[++termscount] = nimplications;
    }
-   assert(termscount == npterms);
+   assert(termscount == nppterms);
 
 #ifndef WITH_UG
    printf("number of implications %d \n", nimplications);
@@ -512,7 +516,7 @@ SCIP_RETCODE sep_implicationsPcMw(
    assert(xval != NULL);
 
    /* nothing to separate? */
-   if( graph_pc_nPotentialTerms(g) == 0 )
+   if( graph_pc_nNonFixedTerms(g) == 0 )
       return SCIP_OKAY;
 
    /* initialize? */
@@ -535,6 +539,8 @@ SCIP_RETCODE sep_implicationsPcMw(
 
    cutscount = 0;
    ptermcount = 0;
+
+   assert(g->extended);
 
    /* main separation loop */
    for( int i = 0; i < nnodes; i++ )
@@ -608,10 +614,11 @@ SCIP_RETCODE sep_implicationsPcMw(
 
          if( *ncuts + cutscount++ >= maxcuts )
             break;
-
       }
    }
-   assert((*ncuts + cutscount > maxcuts) || ptermcount == graph_pc_nPotentialTerms(g));
+   assert((*ncuts + cutscount > maxcuts) || ptermcount == graph_pc_nProperPotentialTerms(g));
+   assert((*ncuts + cutscount > maxcuts) || ptermcount == conshdlrdata->pcimplnppterms);
+
 
    *ncuts += cutscount;
    SCIPdebugMessage("PcImplication Separator: %d Inequalities added\n", cutscount);
@@ -1915,6 +1922,7 @@ SCIP_RETCODE SCIPincludeConshdlrStp(
 
    conshdlrdata->pcimplstart = NULL;
    conshdlrdata->pcimplverts = NULL;
+   conshdlrdata->pcimplnppterms = 0;
 
    return SCIP_OKAY;
 }

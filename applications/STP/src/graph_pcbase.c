@@ -2730,8 +2730,11 @@ int graph_pc_nFixedTerms(
    return nfixterms;
 }
 
-/** get number of potential terminals */
-int graph_pc_nPotentialTerms(
+
+/** Returns number of non-fixed terminals.
+ *  Note that it is equal to the number of the proper potential terminals
+ *  if g->extended, because in this case the non-leaf terminals are not marked explicitly. */
+int graph_pc_nNonFixedTerms(
    const GRAPH*          graph                /**< the graph */
 )
 {
@@ -2743,6 +2746,46 @@ int graph_pc_nPotentialTerms(
 
    return (graph->terms - graph_pc_nFixedTerms(graph));
 }
+
+
+/** returns number of non-leaf terminals */
+int graph_pc_nNonLeafTerms(
+   const GRAPH*          graph                /**< the graph */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+   int nnonleafs = 0;
+
+   assert(graph_pc_isPcMw(graph));
+
+   for( int i = 0; i < nnodes; ++i )
+      if( graph_pc_knotIsNonLeafTerm(graph, i) )
+         nnonleafs++;
+
+   return nnonleafs;
+}
+
+
+/** returns number of proper potential terminals (potential terminals excluding non-leaf terminals) */
+int graph_pc_nProperPotentialTerms(
+   const GRAPH*          graph                /**< the graph */
+)
+{
+   int nppterms;
+
+   assert(graph != NULL);
+   assert(graph_pc_isPcMw(graph));
+
+   if( graph->extended )
+      nppterms = graph_pc_nNonFixedTerms(graph);
+   else
+      nppterms = graph_pc_nNonFixedTerms(graph) - graph_pc_nNonLeafTerms(graph);
+
+   assert(nppterms >= 0);
+
+   return nppterms;
+}
+
 
 /** get twin-terminal */
 int graph_pc_getTwinTerm(

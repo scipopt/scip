@@ -1878,7 +1878,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwImp(
          }
       }
 
-      assert(ptermcount == graph_pc_nPotentialTerms(graph));
+      assert(ptermcount == graph_pc_nNonFixedTerms(graph));
 
       if( nfound > 0 )
       {

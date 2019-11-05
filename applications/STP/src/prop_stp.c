@@ -437,7 +437,7 @@ SCIP_RETCODE propgraphApplyBoundchanges(
             }
          }
 
-         assert(ptermcount == graph_pc_nPotentialTerms(g));
+         assert(ptermcount == graph_pc_nNonFixedTerms(g));
       } /* verts != NULL */
    }
 
