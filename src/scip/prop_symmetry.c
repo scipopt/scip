@@ -3281,6 +3281,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
             SCIP_CALL( SCIPchgVarUb(scip, vars[1], 0.0) );
          }
 
+         /* reset value */
          orbitvarinconflict[i] = FALSE;
       }
       else
@@ -3290,7 +3291,6 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
                propdata->conssaddlp, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
-
          propdata->schreiersimsconss[propdata->nschreiersimsconss++] = cons;
       }
    }
