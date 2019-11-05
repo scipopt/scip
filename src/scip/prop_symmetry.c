@@ -3350,15 +3350,10 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    *orbitidx = 0;
    *leaderidx = 0;
    *norbitvarinconflict = 0;
+   *success = FALSE;
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-
-   /* if not inequalities based on symretopes shall be added, Schreier Sims cuts are always valid */
-   if ( symretopesactive )
-      *success = FALSE;
-   else
-      *success = TRUE;
 
    /* select the leader and its orbit */
    if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT || leaderrule == SCIP_LEADERRULE_LASTINORBIT )
@@ -3451,7 +3446,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
 
          assert( conflictvars != NULL || nconflictvars == 0 );
 
-         if  ( nconflictvars > 0 )
+         if  ( nconflictvars > 0 && *success )
          {
             for (i = 0; i < orbitsize; ++i)
             {
@@ -3518,36 +3513,39 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
       }
 
       /* check which vars in the orbit are in conflict with the orbit leader */
-      orbitsize = orbitbegins[*orbitidx + 1] - orbitbegins[*orbitidx];
-      leader = SCIPvarGetProbindex(permvars[orbits[orbitbegins[*orbitidx] + *leaderidx]]);
-
-      assert( leader >= 0 );
-
-      conflictvars = SCIPdigraphGetSuccessors(conflictgraph, leader);
-      nconflictvars = SCIPdigraphGetNSuccessors(conflictgraph, leader);
-
-      assert( conflictvars != NULL || nconflictvars == 0 );
-
-      if ( nconflictvars > 0 )
+      if ( *success )
       {
-         for (i = 0; i < orbitsize; ++i)
+         orbitsize = orbitbegins[*orbitidx + 1] - orbitbegins[*orbitidx];
+         leader = SCIPvarGetProbindex(permvars[orbits[orbitbegins[*orbitidx] + *leaderidx]]);
+
+         assert( leader >= 0 );
+
+         conflictvars = SCIPdigraphGetSuccessors(conflictgraph, leader);
+         nconflictvars = SCIPdigraphGetNSuccessors(conflictgraph, leader);
+
+         assert( conflictvars != NULL || nconflictvars == 0 );
+
+         if ( nconflictvars > 0 )
          {
-            /* skip the leader */
-            if ( i == *leaderidx )
-               continue;
-
-            var = permvars[orbits[orbitbegins[*orbitidx] + i]];
-
-            for (j = 0; j < nconflictvars; ++j)
+            for (i = 0; i < orbitsize; ++i)
             {
-               neighbordata = SCIPdigraphGetNodeData(conflictgraph, conflictvars[j]);
+               /* skip the leader */
+               if ( i == *leaderidx )
+                  continue;
 
-               assert( neighbordata != NULL );
+               var = permvars[orbits[orbitbegins[*orbitidx] + i]];
 
-               if ( neighbordata->var == var )
+               for (j = 0; j < nconflictvars; ++j)
                {
-                  orbitvarinconflict[i] = TRUE;
-                  *norbitvarinconflict += 1;
+                  neighbordata = SCIPdigraphGetNodeData(conflictgraph, conflictvars[j]);
+
+                  assert( neighbordata != NULL );
+
+                  if ( neighbordata->var == var )
+                  {
+                     orbitvarinconflict[i] = TRUE;
+                     *norbitvarinconflict += 1;
+                  }
                }
             }
          }
