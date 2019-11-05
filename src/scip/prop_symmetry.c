@@ -1241,7 +1241,7 @@ static
 SCIP_RETCODE computeSymmetryGroup(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_Bool             doubleequations,    /**< Double equations to positive/negative version? */
-   SCIP_Bool             compresssymetries,  /**< Should non-affected variables be removed from permutation to save memory? */
+   SCIP_Bool             compresssymmetries, /**< Should non-affected variables be removed from permutation to save memory? */
    SCIP_Real             compressionthreshold, /**< compression is used if percentage of moved vars is at most the threshold */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
@@ -1897,7 +1897,7 @@ SCIP_RETCODE computeSymmetryGroup(
       int* labelmovedvars = NULL;
       int i;
 
-      if ( compresssymetries )
+      if ( compresssymmetries )
       {
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &labelmovedvars, matrixdata.npermvars) );
          for (i = 0; i < matrixdata.npermvars; ++i)
@@ -1940,7 +1940,7 @@ SCIP_RETCODE computeSymmetryGroup(
       if ( *nperms > 0 )
       {
          /* remove variables from permvars array that are not affected by any symmetry */
-         if ( compresssymetries && SCIPisLE(scip, percentagemovedvars, compressionthreshold) )
+         if ( compresssymmetries && SCIPisLE(scip, percentagemovedvars, compressionthreshold) )
          {
             SCIP_VAR** compressedpermvars;
             SCIP_CALL( SCIPallocBufferArray(scip, &compressedpermvars, *nmovedvars) );
@@ -1969,7 +1969,7 @@ SCIP_RETCODE computeSymmetryGroup(
          SCIPfreeBlockMemoryArray(scip, &vars, nvars);
       }
 
-      if ( compresssymetries )
+      if ( compresssymmetries )
       {
          SCIPfreeBlockMemoryArray(scip, &labelmovedvars, matrixdata.npermvars);
       }
@@ -3728,7 +3728,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/compresssymetries",
+         "propagating/" PROP_NAME "/compresssymmetries",
          "Should non-affected variables be removed from permutation to save memory?",
          &propdata->compresssymmetries, TRUE, DEFAULT_COMPRESSSYMMETRIES, NULL, NULL) );
 
