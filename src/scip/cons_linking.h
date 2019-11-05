@@ -15,7 +15,7 @@
 
 /**@file   cons_linking.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for linking binary variables to an integer variable
+ * @brief  constraint handler for linking binary variables to a linking (continuous or integer) variable
  * @author Stefan Heinz
  * @author Jens Schulz
  *
@@ -54,17 +54,17 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
  *
  * @{
  *
- * The constraints handler stores linking constraints between an integer variable and an array of binary variables. Such
+ * The constraints handler stores linking constraints between a linking variable (continuous or integer) and an array of binary variables. Such
  * a linking constraint has the form:
  * \f[
  * y = \sum_{i=1}^n {c_i * x_i}
  * \f]
- * with integer variable \f$ y \f$, binary variables \f$ x_1, \dots, x_n \f$ and offset \f$b \in Q\f$, and
+ * with linking variable (continuous or integer) \f$ y \f$, binary variables \f$ x_1, \dots, x_n \f$ and offset \f$b \in Q\f$, and
  * with the additional side condition that exactly one binary variable has to be one (set partitioning condition).
  *
- * This constraint can be created only with the integer variable. In this case the binary variables are only created on
+ * This constraint can be created only with the linking variable, if it is an integer variable. In this case the binary variables are only created on
  * demand. That is, whenever someone asks for the binary variables. Therefore, such constraints can be used to get a
- * "binary representation" of the domain of the integer variable which will be dynamically created.
+ * "binary representation" of the domain of the linking variable which will be dynamically created.
  */
 
 /** creates and captures a linking constraint
@@ -76,9 +76,9 @@ SCIP_RETCODE SCIPcreateConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             intvar,             /**< integer variable which should be linked */
+   SCIP_VAR*             linkvar,            /**< linking variable (continuous or integer) which should be linked */
    SCIP_VAR**            binvars,            /**< binary variables */
-   int*                  vals,               /**< coefficients of the binary variables */
+   SCIP_Real*            vals,               /**< coefficients of the binary variables */
    int                   nbinvars,           /**< number of binary starting variables */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
@@ -118,30 +118,30 @@ SCIP_RETCODE SCIPcreateConsBasicLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             intvar,             /**< integer variable which should be linked */
+   SCIP_VAR*             linkvar,            /**< linking variable (continuous or integer) which should be linked */
    SCIP_VAR**            binvars,            /**< binary variables, or NULL */
-   int*                  vals,               /**< coefficients of the binary variables */
+   SCIP_Real*            vals,               /**< coefficients of the binary variables */
    int                   nbinvars            /**< number of binary variables */
    );
 
 
-/** checks if for the given integer variable a linking constraint exists */
+/** checks if for the given linking variable (continuous or integer) a linking constraint exists */
 SCIP_EXPORT
 SCIP_Bool SCIPexistsConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             intvar              /**< integer variable which should be linked */
+   SCIP_VAR*             linkvar             /**< linking variable (continuous or integer) which should be linked */
    );
 
-/** returns the linking constraint belonging the given integer variable or NULL if it does not exist yet */
+/** returns the linking constraint belonging the given linking variable (continuous or integer) or NULL if it does not exist yet */
 SCIP_EXPORT
 SCIP_CONS* SCIPgetConsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             intvar              /**< integer variable which should be linked */
+   SCIP_VAR*             linkvar             /**< linking variable (continuous or integer) which should be linked */
    );
 
-/** returns the integer variable of the linking constraint */
+/** returns the linking variable (continuous or integer) of the linking constraint */
 SCIP_EXPORT
-SCIP_VAR* SCIPgetIntvarLinking(
+SCIP_VAR* SCIPgetLinkvarLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linking constraint */
    );
@@ -164,9 +164,18 @@ int SCIPgetNBinvarsLinking(
 
 /** returns the coefficients of the binary variables */
 SCIP_EXPORT
-int* SCIPgetValsLinking(
+SCIP_Real* SCIPgetValsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linking constraint */
+   );
+
+/** return all binary variable information of the linking constraint */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetBinvarsDataLinking(
+   SCIP_CONS*            cons,               /**< linking constraint */
+   SCIP_VAR***           binvars,            /**< pointer to store binary variables, or NULL */
+   SCIP_Real**           vals,               /**< pointer to store the binary coefficients, or NULL */
+   int*                  nbinvars            /**< pointer to store the number of binary variables, or NULL */
    );
 
 /* @} */
