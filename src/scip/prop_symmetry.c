@@ -3392,10 +3392,33 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
             curcriterion = orbitbegins[i + 1] - orbitbegins[i];
          else
          {
+            varidx = -1;
+
+            /* get first or last active variable in orbit */
             if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT )
-               varidx = orbits[orbitbegins[i]];
+            {
+               int cnt = orbitbegins[i];
+
+               do
+               {
+                  varidx = SCIPvarGetProbindex(permvars[orbits[cnt++]]);
+               }
+               while ( varidx == -1 && cnt < orbitbegins[i + 1]);
+            }
             else
-               varidx = orbits[orbitbegins[i + 1] - 1];
+            {
+               int cnt = orbitbegins[i + 1] - 1;
+
+               do
+               {
+                  varidx = SCIPvarGetProbindex(permvars[orbits[cnt--]]);
+               }
+               while ( varidx == -1 && cnt >= orbitbegins[i]);
+            }
+
+            /* skip inactive variables */
+            if ( varidx == -1 )
+               continue;
 
             nodedata = SCIPdigraphGetNodeData(conflictgraph, varidx);
             assert( nodedata != NULL );
