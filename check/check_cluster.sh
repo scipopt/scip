@@ -195,21 +195,22 @@ do
            export EXECNAME=${DEBUGTOOLCMD}$BINNAME
         fi
 
+	export SOLVERPATH=$SCIPPATH
+	# this looks wrong but is totally correct
+	export BASENAME=$FILENAME
+	export FILENAME=$INSTANCE
+	export CLIENTTMPDIR
+	export OUTPUTDIR
+	export HARDTIMELIMIT
+	export HARDMEMLIMIT
+	export CHECKERPATH=$SCIPPATH/solchecker
+	export SETFILE
+	export TIMELIMIT
+
                 # check queue type
 		if test  "$QUEUETYPE" = "srun"
 		then
 		# additional environment variables needed by run.sh
-		    export SOLVERPATH=$SCIPPATH
-                    # this looks wrong but is totally correct
-		    export BASENAME=$FILENAME
-		    export FILENAME=$INSTANCE
-		    export CLIENTTMPDIR
-                    export OUTPUTDIR
-		    export HARDTIMELIMIT
-		    export HARDMEMLIMIT
-		    export CHECKERPATH=$SCIPPATH/solchecker
-		    export SETFILE
-		    export TIMELIMIT
 		    # the space at the end is necessary
 		    export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
 
@@ -225,22 +226,9 @@ do
 				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
 		    fi
 		else
-                    export SOLVERPATH=$SCIPPATH
-                    # this looks wrong but is totally correct
-                    export BASENAME=$FILENAME
-                    export FILENAME=$INSTANCE
-                    export CLIENTTMPDIR
-                    export OUTPUTDIR
-                    export HARDTIMELIMIT
-                    export HARDMEMLIMIT
-                    export CHECKERPATH=$SCIPPATH/solchecker
-                    export SETFILE
-                    export TIMELIMIT
-
 		    # -V to copy all environment variables
-		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
-			-v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME},BASENAME=$FILENAME,FILENAME=$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR,OUTPUTDIR=$OUTPUTDIR \
-			-V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
+		    qsub -l walltime=$HARDTIMELIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
+			 -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
 		fi
 	    done # end for SETNAME
 	done # end for PERMUTE

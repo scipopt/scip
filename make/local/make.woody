@@ -14,7 +14,7 @@
 QUEUETYPE	=	qsub
 QUEUE		=	route
 PPN		=	4:sl32g
-MEM		=	29090
+MEM		=	32000
 CLIENTTMPDIR	=	/scratch
 NOWAITCLUSTER   =       0
 EXCLUSIVE       =       notneeded
