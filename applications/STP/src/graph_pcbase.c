@@ -962,6 +962,9 @@ SCIP_Bool graph_pc_evalTermIsNonLeaf(
    assert(Is_term(g->term[term]));
    assert(!graph_pc_knotIsFixedTerm(g, term));
 
+   if( graph_pc_realDegree(g, term, FALSE) == 0 )
+      return FALSE;
+
    for( int e = g->inpbeg[term]; e != EAT_LAST; e = g->ieat[e] )
    {
       const int neighbor = g->tail[e];
