@@ -238,12 +238,14 @@ SCIP_Bool isMaxprizeTerm(
    int t = -1;
    SCIP_Real max;
    const int nnodes = graph_get_nNodes(g);
+   const int root = g->source;
 
-   assert(i >= 0 && Is_term(g->term[i]) && g->prize[i] > 0.0);
+   assert(i >= 0 && i < nnodes);
+   assert(Is_term(g->term[i]) && g->prize[i] > 0.0);
 
-   if( g->stp_type == STP_RPCSPG && i != g->source )
+   if( g->stp_type == STP_RPCSPG && i != root)
       return FALSE;
-   else if( g->stp_type == STP_RPCSPG && i == g->source )
+   else if( g->stp_type == STP_RPCSPG && i == root )
       return TRUE;
 
    max = *maxprize;
@@ -255,10 +257,9 @@ SCIP_Bool isMaxprizeTerm(
 
    for( int k = 0; k < nnodes; k++ )
    {
-      if( Is_term(g->term[k]) )
+      if( Is_term(g->term[k]) && k != root )
       {
          assert(g->mark[k]);
-         assert(k != g->source);
 
          if( g->prize[k] > max )
          {
@@ -274,7 +275,10 @@ SCIP_Bool isMaxprizeTerm(
 
    *maxprize = max;
 
+   assert(t >= 0);
+
    SCIPdebugMessage("maxprize: %f (from %d) \n", g->prize[t], t );
+
    return (t == i);
 }
 
