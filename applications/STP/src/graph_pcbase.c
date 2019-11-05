@@ -613,7 +613,7 @@ SCIP_Bool graph_pc_term2edgeIsConsistent(
       if( i == root )
          continue;
 
-      if( !isExtended && Is_term(g->term[i]) )
+      if( !isExtended && Is_term(g->term[i]) && graph_pc_realDegree(g, i, graph_pc_knotIsFixedTerm(g, i)) )
       {
          const SCIP_Bool isNonLeaf = (g->term2edge[i] == TERM2EDGE_NONLEAFTERM);
 
