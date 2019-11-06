@@ -35,6 +35,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #else
 
 #include <assert.h>
+#include "scip/cons_linear.h"
 #include "scip/pub_matrix.h"
 #include "scip/pub_presol.h"
 #include "scip/pub_var.h"
@@ -43,6 +44,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "scip/scip_var.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_prob.h"
+#include "scip/scip_cons.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_message.h"
@@ -229,7 +231,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
-   // presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
 
    if( SCIPallowWeakDualReds(scip) )
@@ -251,7 +253,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
-
+   int oldnnz = problem.getConstraintMatrix().getNnz();
    PresolveResult<SCIP_Real> res = presolve.apply(problem);
    data->lastncols = problem.getNCols();
    data->lastnrows = problem.getNRows();
@@ -289,6 +291,63 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
    std::vector<SCIP_VAR*> aggrvars;
    std::vector<SCIP_Real> aggrvals;
+
+   // if the number of nonzeros decreased by a sufficient factor, rather create all constraints from scratch
+   int newnnz = problem.getConstraintMatrix().getNnz();
+   if( newnnz <= 0.9 * oldnnz )
+   {
+      int oldnrows = SCIPmatrixGetNRows(matrix);
+      int newnrows = problem.getNRows();
+
+      // capture constraints that are still present in the problem after presolve
+      for( int i = 0; i < newnrows; ++i )
+      {
+         SCIP_CONS* c = SCIPmatrixGetCons(matrix, res.postsolve.origrow_mapping[i]);
+         SCIP_CALL( SCIPcaptureCons(scip, c) );
+      }
+
+      // delete all constraints
+      *ndelconss += oldnrows;
+      *naddconss += newnrows;
+
+      for( int i = 0; i < oldnrows; ++i )
+      {
+         SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) );
+      }
+
+      // now loop over rows of presolved problem and create them as new linear constraints,
+      // then release the old constraint after its name was passed to the new constraint
+      const Vec<RowFlags>& rflags = problem.getRowFlags();
+      const auto& consmatrix = problem.getConstraintMatrix();
+      for( int i = 0; i < newnrows; ++i )
+      {
+         auto rowvec = consmatrix.getRowCoefficients(i);
+         const int* rowcols = rowvec.getIndices();
+         // SCIPcreateConsBasicLinear() requires a non const pointer
+         SCIP_Real* rowvals = const_cast<SCIP_Real*>(rowvec.getValues());
+         int rowlen = rowvec.getLength();
+
+         // retrieve SCIP compatible left and right hand sides
+         SCIP_Real lhs = rflags[i].test(RowFlag::LHS_INF) ? - SCIPinfinity(scip) : consmatrix.getLeftHandSides()[i];
+         SCIP_Real rhs = rflags[i].test(RowFlag::RHS_INF) ? SCIPinfinity(scip) : consmatrix.getRightHandSides()[i];
+
+         // create variable array matching the value array
+         aggrvars.clear();
+         aggrvars.reserve(rowlen);
+         for( int j = 0; j < rowlen; ++j )
+            aggrvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[rowcols[j]]));
+
+         // create and add new constraint with name of old constraint
+         SCIP_CONS* oldcons = SCIPmatrixGetCons(matrix, res.postsolve.origrow_mapping[i]);
+         SCIP_CONS* cons;
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, SCIPconsGetName(oldcons), rowlen, aggrvars.data(), rowvals, lhs, rhs) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+
+         // release old and new constraint
+         SCIP_CALL( SCIPreleaseCons(scip, &oldcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      }
+   }
 
    // loop over res.postsolve and add all fixed variables and aggregations to scip
    for( std::size_t i = 0; i != res.postsolve.types.size(); ++i )
