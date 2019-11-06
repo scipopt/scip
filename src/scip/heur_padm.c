@@ -185,12 +185,9 @@ static SCIP_RETCODE initBlock(
 )
 {
    BLOCK* block;
-   SCIP* scip;
 
    assert(problem != NULL);
-
-   scip = problem->scip;
-   assert(scip != NULL);
+   assert(problem->scip != NULL);
 
    block = &problem->blocks[problem->nblocks];
 
@@ -499,6 +496,7 @@ static SCIP_RETCODE createAndSplitProblem(
       if( !success )
          break;
    }
+   assert(nblocks == (*problem)->nblocks);
 
    SCIPhashmapFree(&consmap);
 
@@ -521,8 +519,7 @@ static SCIP_RETCODE assignLinking(
    int*                  varlabels,
    int*                  conslabels,         /**< sorted array */
    int                   nvars,
-   int                   nconss,
-   int                   nblocks             /**< number of blocks */
+   int                   nconss
    )
 {
    int nlinkconss;                           /* number of linking constraints */
@@ -865,6 +862,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    *result = SCIP_DIDNOTRUN;
 
    problem = NULL;
+   sortedconss = NULL;
    varlabels = NULL;
    conslabels = NULL;
    blockstartsconss = NULL;
@@ -879,7 +877,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    blockinfolist = NULL;
    htable = NULL;
 
-   doScaling = FALSE;
    gap = heurdata->gap;
    SCIPdebugMsg(scip, "Initialize padm heuristic ");
    if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
@@ -972,7 +969,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIP_DECOMP* newdecomp = NULL;
       SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), nblocks, heurdata->original, SCIPdecompUseBendersLabels(decomp)) );
 
-      SCIP_CALL( assignLinking(scip, decomp, newdecomp, vars, sortedconss, varlabels, conslabels, nvars, nconss, nblocks) );
+      SCIP_CALL( assignLinking(scip, decomp, newdecomp, vars, sortedconss, varlabels, conslabels, nvars, nconss) );
       decomp = newdecomp;
 
       /* number of blocks can have changed */
@@ -1017,7 +1014,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* create blockproblems */
    SCIP_CALL( createAndSplitProblem(scip, sortedconss, blockstartsconss, nblocks, &problem) );
-   assert(nblocks == problem->nblocks);
 
 #if 0
    for( b = 0; b < problem->nblocks; b++ )
@@ -1028,7 +1024,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 #endif
 
    /* count linking variables */
-   numlinkvars = 0;
    for( i = 0; i < nvars; i++ )
    {
       if( varlabels[i] == SCIP_DECOMP_LINKVAR )
@@ -1211,7 +1206,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                j = (problem->blocks[b]).ncoupling;
 
                /* create positive slack variable */
-               SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d", SCIPvarGetName(linkvars[linkvaridx]), b2);
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackpos_block_%d", SCIPvarGetName(linkvars[linkvaridx]), b2);
                (problem->blocks[b]).slackspos[j] = NULL;
                SCIP_CALL( SCIPcreateVarBasic((problem->blocks[b]).subscip,
                                             &((problem->blocks[b]).slackspos[j]), name,
@@ -1222,7 +1217,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                binfo->slackPosVar = (problem->blocks[b]).slackspos[j];
 
                /* create negative slack variable */
-               SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackneg_block_%d", SCIPvarGetName(linkvars[linkvaridx]), b2);
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_slackneg_block_%d", SCIPvarGetName(linkvars[linkvaridx]), b2);
                (problem->blocks[b]).slacksneg[j] = NULL;
                SCIP_CALL( SCIPcreateVarBasic((problem->blocks[b]).subscip,
                                             &((problem->blocks[b]).slacksneg[j]), name,
@@ -1238,7 +1233,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                tmpcouplingvars[2] = binfo->slackNegVar;
 
                /* create linking constraint */
-               SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_coupling_block_%d",
+               (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_coupling_block_%d",
                             SCIPvarGetName(linkvars[linkvaridx]), b2);
                (problem->blocks[b]).couplingcons[j] = NULL;
 
@@ -1307,9 +1302,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIPdebugMsg(scip, "Starting iterations\n");
    SCIPdebugMsg(scip, "PIt\tADMIt\tSlacks\tInfo\n");
 
-   aIter = 0;
    pIter = 0;
-   solutionsdiffer = FALSE;
    increasedslacks = 0;
    (void)SCIPsnprintf(info, SCIP_MAXSTRLEN, "-");
    solved = FALSE;
@@ -1395,7 +1388,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
                /* solve block */
 
-               SCIPsolve((problem->blocks[b]).subscip);
+               SCIP_CALL( SCIPsolve((problem->blocks[b]).subscip) );
                status = SCIPgetStatus((problem->blocks[b]).subscip);
 
                /* check solution if one of the three cases occurs
@@ -1689,13 +1682,13 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
             if( SCIPvarGetObj(linkvars[i]) < 0 )
             {
                fixedvalue = SCIPvarGetUbLocal(linkvars[i]);
-               if( fixedvalue == SCIPinfinity(scip) )
+               if( SCIPisInfinity(scip, fixedvalue) )
                   break; // todo: maybe we should return the status UNBOUNDED instead
             }
             else
             {
                fixedvalue = SCIPvarGetLbLocal(linkvars[i]);
-               if( fixedvalue == SCIPinfinity(scip) )
+               if( SCIPisInfinity(scip, fixedvalue) )
                   break; // todo: maybe we should return the status UNBOUNDED instead
             }
             SCIPdebugMsg(scip, "fix %s without any constraint to %.2f\n", SCIPvarGetName(linkvars[i]), fixedvalue);
@@ -1806,7 +1799,7 @@ TERMINATE:
       SCIPfreeBufferArray(scip, &sortedconss);
 
    if( problem != NULL )
-      freeProblem(&problem);
+      SCIP_CALL( freeProblem(&problem) );
 
    SCIPdebugMsg(scip, "Leave padm heuristic\n");
    return SCIP_OKAY;
