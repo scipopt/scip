@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@fiele   lpi_glop.cpp
+/**@file   lpi_glop.cpp
  * @ingroup LPIS
  * @brief  LP interface for Glop
  * @author Frederic Didier
@@ -106,6 +106,14 @@ struct SCIP_LPi
    int                   timing;             /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
 
    int                   numiter;            /**< iterations used in last run */
+
+   /* Temporary vectors allocated here for speed. This gain is non-negligible
+    * because in many situation, only a few entries of these vector are
+    * inspected (hypersparsity) and allocating them is in O(num_rows) or
+    * O(num_cols) instead of O(num_non_zeros) to read/clear them.
+    */
+   ScatteredRow* tmp_row;
+   ScatteredColumn* tmp_column;
 };
 
 /** define whether/which feasibility check is performed */
@@ -235,6 +243,9 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->checkcondition = false;
    (*lpi)->numiter = 0;
 
+   (*lpi)->tmp_row = new ScatteredRow();
+   (*lpi)->tmp_column = new ScatteredColumn();
+
    return SCIP_OKAY;
 }
 
@@ -250,6 +261,9 @@ SCIP_RETCODE SCIPlpiFree(
    delete (*lpi)->solver;
    delete (*lpi)->scaled_lp;
    delete (*lpi)->linear_program;
+
+   delete (*lpi)->tmp_row;
+   delete (*lpi)->tmp_column;
 
    BMSfreeMemory(lpi);
 
@@ -505,6 +519,32 @@ SCIP_RETCODE SCIPlpiAddRows(
    return SCIP_OKAY;
 }
 
+static
+void deleteRowsAndUpdateCurrentBasis(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   const DenseBooleanColumn& rows_to_delete
+   )
+{
+   const RowIndex num_rows = lpi->linear_program->num_constraints();
+   const ColIndex num_cols = lpi->linear_program->num_variables();
+
+   // Shift the status of the non-deleted rows. Note that if the deleted rows
+   // where part of the basis (i.e. constraint not tight), then we should be
+   // left with a correct basis afterward. This should be the most common use
+   // case in SCIP.
+   BasisState state = lpi->solver->GetState();
+   ColIndex new_size  = num_cols;
+   for (RowIndex row(0); row < num_rows; ++row) {
+    if (rows_to_delete[row]) continue;
+    state.statuses[new_size++] = state.statuses[num_cols + RowToColIndex(row)];
+   }
+   state.statuses.resize(new_size);
+   lpi->solver->LoadStateForNextSolve(state);
+
+   lpi->linear_program->DeleteRows(rows_to_delete);
+   lpi->lp_modified_since_last_solve = true;
+}
+
 /** deletes all rows in the given range from LP */
 SCIP_RETCODE SCIPlpiDelRows(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -516,16 +556,13 @@ SCIP_RETCODE SCIPlpiDelRows(
    assert( lpi->linear_program != NULL );
    assert( 0 <= firstrow && firstrow <= lastrow && lastrow < lpi->linear_program->num_constraints() );
 
-   SCIPdebugMessage("deleting rows %d to %d.\n", firstrow, lastrow);
-
    const RowIndex num_rows = lpi->linear_program->num_constraints();
    DenseBooleanColumn rows_to_delete(num_rows, false);
    for (int i = firstrow; i <= lastrow; ++i)
       rows_to_delete[RowIndex(i)] = true;
 
-   lpi->linear_program->DeleteRows(rows_to_delete);
-   lpi->lp_modified_since_last_solve = true;
-
+   SCIPdebugMessage("deleting rows %d to %d.\n", firstrow, lastrow);
+   deleteRowsAndUpdateCurrentBasis(lpi, rows_to_delete);
    return SCIP_OKAY;
 }
 
@@ -559,11 +596,9 @@ SCIP_RETCODE SCIPlpiDelRowset(
          ++new_index;
       }
    }
+
    SCIPdebugMessage("SCIPlpiDelRowset: deleting %d rows.\n", num_deleted_rows);
-
-   lpi->linear_program->DeleteRows(rows_to_delete);
-   lpi->lp_modified_since_last_solve = true;
-
+   deleteRowsAndUpdateCurrentBasis(lpi, rows_to_delete);
    return SCIP_OKAY;
 }
 
@@ -634,7 +669,7 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert( lpi != NULL );
    assert( lpi->linear_program != NULL );
 
-   if( nrows <= 0 )
+   if ( nrows <= 0 )
       return SCIP_OKAY;
 
    SCIPdebugMessage("changing %d sides\n", nrows);
@@ -1644,12 +1679,11 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    assert( primalfeasible != NULL );
    assert( dualfeasible != NULL );
 
-   SCIPdebugMessage("getting solution feasibility\n");
-
    const ProblemStatus status = lpi->solver->GetProblemStatus();
-
    *primalfeasible = (status == ProblemStatus::OPTIMAL || status == ProblemStatus::PRIMAL_FEASIBLE);
    *dualfeasible = (status == ProblemStatus::OPTIMAL || status == ProblemStatus::DUAL_FEASIBLE);
+
+   SCIPdebugMessage("SCIPlpiGetSolFeasibility primal:%d dual:%d\n", *primalfeasible, *dualfeasible);
 
    return SCIP_OKAY;
 }
@@ -2281,19 +2315,18 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert( lpi->linear_program != NULL );
    assert( coef != NULL );
 
-   ScatteredRow solution;
-   lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(r), &solution);
-   lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(r)), &solution);
+   lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(r), lpi->tmp_row);
+   lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(r)), lpi->tmp_row);
 
-   const ColIndex size = solution.values.size();
+   const ColIndex size = lpi->tmp_row->values.size();
    assert( size.value() == lpi->linear_program->num_constraints() );
 
    /* if we want a sparse vector and sparsity information is available */
-   if ( ninds != NULL && inds != NULL && ! solution.non_zeros.empty() )
+   if ( ninds != NULL && inds != NULL && ! lpi->tmp_row->non_zeros.empty() )
    {
       *ninds = 0;
-      ScatteredRowIterator end = solution.end();
-      for (ScatteredRowIterator iter = solution.begin(); iter != end; ++iter)
+      ScatteredRowIterator end = lpi->tmp_row->end();
+      for (ScatteredRowIterator iter = lpi->tmp_row->begin(); iter != end; ++iter)
       {
          int idx = (*iter).column().value();
          assert( 0 <= idx && idx < lpi->linear_program->num_constraints() );
@@ -2305,7 +2338,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
    /* dense version */
    for (ColIndex col(0); col < size; ++col)
-      coef[col.value()] = solution[col];
+      coef[col.value()] = (*lpi->tmp_row)[col];
 
    if ( ninds != NULL )
       *ninds = -1;
@@ -2348,11 +2381,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       *ninds = 0;
       for (int row = 0; row < num_rows; ++row)
       {
-         ScatteredRow solution;
-         lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(row), &solution);
-         lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(row)), &solution);
+         lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(row), lpi->tmp_row);
+         lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(row)), lpi->tmp_row);
 
-         SCIP_Real val = solution[col];
+         SCIP_Real val = (*lpi->tmp_row)[col];
          if ( fabs(val) >= eps )
          {
             coef[row] = val;
@@ -2365,10 +2397,9 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    /* dense version */
    for (int row = 0; row < num_rows; ++row)
    {
-      ScatteredRow solution;
-      lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(row), &solution);
-      lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(row)), &solution);
-      coef[row] = solution[col];
+      lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(row), lpi->tmp_row);
+      lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(row)), lpi->tmp_row);
+      coef[row] = (*lpi->tmp_row)[col];
    }
 
    if ( ninds != NULL )
@@ -2398,9 +2429,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert( coef != NULL );
 
    /* get row of basis inverse, loop through columns and muliply with matrix */
-   ScatteredRow solution;
-   lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(r), &solution);
-   lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(r)), &solution);
+   lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(r), lpi->tmp_row);
+   lpi->scaler->UnscaleUnitRowLeftSolve(lpi->solver->GetBasis(RowIndex(r)), lpi->tmp_row);
 
    const ColIndex num_cols = lpi->linear_program->num_variables();
 
@@ -2412,7 +2442,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
       *ninds = 0;
       for (ColIndex col(0); col < num_cols; ++col)
       {
-         SCIP_Real val = operations_research::glop::ScalarProduct(solution.values, lpi->linear_program->GetSparseColumn(col));
+         SCIP_Real val = operations_research::glop::ScalarProduct(lpi->tmp_row->values, lpi->linear_program->GetSparseColumn(col));
          if ( fabs(val) >= eps )
          {
             coef[col.value()] = val;
@@ -2424,7 +2454,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
    /* dense version */
    for (ColIndex col(0); col < num_cols; ++col)
-      coef[col.value()] = operations_research::glop::ScalarProduct(solution.values, lpi->linear_program->GetSparseColumn(col));
+      coef[col.value()] = operations_research::glop::ScalarProduct(lpi->tmp_row->values, lpi->linear_program->GetSparseColumn(col));
 
    if ( ninds != NULL )
       *ninds = -1;
@@ -2451,18 +2481,17 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert( lpi->linear_program != NULL );
    assert( coef != NULL );
 
-   ScatteredColumn solution;
-   lpi->solver->GetBasisFactorization().RightSolveForProblemColumn(ColIndex(c), &solution);
-   lpi->scaler->UnscaleColumnRightSolve(lpi->solver->GetBasisVector(), ColIndex(c), &solution);
+   lpi->solver->GetBasisFactorization().RightSolveForProblemColumn(ColIndex(c), lpi->tmp_column);
+   lpi->scaler->UnscaleColumnRightSolve(lpi->solver->GetBasisVector(), ColIndex(c), lpi->tmp_column);
 
-   const RowIndex num_rows = solution.values.size();
+   const RowIndex num_rows = lpi->tmp_column->values.size();
 
    /* if we want a sparse vector and sparsity information is available */
-   if ( ninds != NULL && inds != NULL && ! solution.non_zeros.empty() )
+   if ( ninds != NULL && inds != NULL && ! lpi->tmp_column->non_zeros.empty() )
    {
       *ninds = 0;
-      ScatteredColumnIterator end = solution.end();
-      for (ScatteredColumnIterator iter = solution.begin(); iter != end; ++iter)
+      ScatteredColumnIterator end = lpi->tmp_column->end();
+      for (ScatteredColumnIterator iter = lpi->tmp_column->begin(); iter != end; ++iter)
       {
          int idx = (*iter).row().value();
          assert( 0 <= idx && idx < num_rows );
@@ -2474,7 +2503,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 
    /* dense version */
    for (RowIndex row(0); row < num_rows; ++row)
-      coef[row.value()] = solution[row];
+      coef[row.value()] = (*lpi->tmp_column)[row];
 
    if ( ninds != NULL )
       *ninds = -1;
