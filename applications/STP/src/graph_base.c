@@ -2410,7 +2410,7 @@ SCIP_RETCODE graph_sol_getOrg(
          graph_sol_setNodeList(orggraph, orgnodearr, ancestors[e]);
 
    /* retransform edges fixed during graph reduction */
-   graph_sol_setNodeList(orggraph, orgnodearr, graph_get_fixedges(scip, transgraph));
+   graph_sol_setNodeList(orggraph, orgnodearr, graph_get_fixedges(transgraph));
 
    if( pcmw )
    {

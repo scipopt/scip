@@ -392,6 +392,61 @@ SCIP_Real getMinDistCombination(
 }
 
 
+/** deletes an edge and makes corresponding adaptations */
+static
+void removeEdge(
+   SCIP*                 scip,               /**< SCIP */
+   int                   edge,               /**< edge to delete */
+   GRAPH*                graph,              /**< graph data structure */
+   DISTDATA*             distdata            /**< distance data */
+)
+{
+   const int tail = graph->tail[edge];
+   const int head = graph->head[edge];
+
+   graph_edge_delFull(scip, graph, edge, TRUE);
+   reduce_distDataDeleteEdge(scip, graph, edge, distdata);
+
+   if( graph->grad[tail] == 0 )
+   {
+      if( Is_term(graph->term[tail])  )
+      {
+         assert(graph_pc_isPcMw(graph) || tail == graph->source);
+      }
+      else
+      {
+         graph->mark[tail] = FALSE;
+      }
+   }
+
+   if( graph->grad[head] == 0 )
+   {
+      if( Is_term(graph->term[head]) || head == graph->source )
+      {
+         assert(graph_pc_isPcMw(graph));
+      }
+      else
+      {
+         graph->mark[head] = FALSE;
+      }
+   }
+}
+
+
+/** get maximum allow depth for extended tree in given graph */
+static
+int getMaxTreeDepth(
+   const GRAPH*          graph               /**< graph data structure */
+)
+{
+   const int maxdepth = (graph->edges > STP_EXT_EDGELIMIT) ? STP_EXT_MINDFSDEPTH : STP_EXT_MAXDFSDEPTH;
+
+   assert(maxdepth > 0);
+
+   return maxdepth;
+}
+
+
 /** should we truncate from current component? */
 static
 void extPrintStack(
@@ -1967,7 +2022,6 @@ SCIP_RETCODE reduce_extendedCheckArc(
       SCIP_Real* tree_redcostSwap;
       int* pseudoancestor_mark;
       const int nnodes = graph->knots;
-      const int maxdfsdepth = (graph->edges > STP_EXT_EDGELIMIT) ? STP_EXT_MINDFSDEPTH : STP_EXT_MAXDFSDEPTH;
       const int maxstackedges = MIN(nnodes / 2, STP_EXT_MAXEDGES);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &extstack_data, nnodes) );
@@ -1991,7 +2045,7 @@ SCIP_RETCODE reduce_extendedCheckArc(
             .tree_bottleneckDistNode = bottleneckDistNode, .tree_parentNode = tree_parentNode,
             .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap, .tree_redcost = 0.0,
             .tree_root = -1, .tree_nedges = 0, .tree_depth = 0, .extstack_maxsize = nnodes - 1, .pcSdToNode = pcSdToNode,
-            .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = maxdfsdepth,
+            .extstack_maxedges = maxstackedges, .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES, .tree_maxdepth = getMaxTreeDepth(graph),
             .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
          extCheckArc(scip, graph, edge, &extdata, deletable);
@@ -2240,14 +2294,7 @@ SCIP_RETCODE reduce_extendedEdge2(
 
          if( deletable )
          {
-            graph_edge_delFull(scip, graph, e, TRUE);
-            reduce_distDataDeleteEdge(scip, graph, e, &distdata);
-
-            if( graph->grad[tail] == 0 )
-               graph->mark[tail] = FALSE;
-
-            if( graph->grad[head] == 0 )
-               graph->mark[head] = FALSE;
+            removeEdge(scip, e, graph, &distdata);
 
             (*nelims)++;
          }
@@ -2270,7 +2317,7 @@ SCIP_RETCODE reduce_extendedEdge2(
 
 #ifndef NDEBUG
    for( int k = 0; k < nnodes; k++ )
-      if( graph->grad[k] == 0 && k != redcostdata->redCostRoot )
+      if( graph->grad[k] == 0 && k != redcostdata->redCostRoot && !Is_term(graph->term[k]) )
          assert(!graph->mark[k]);
 #endif
 

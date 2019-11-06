@@ -287,7 +287,7 @@ SCIP_RETCODE retransformReducedProbSolution(
    /* retransform edges fixed during graph reduction */
    if( graph->stp_type != STP_DCSTP )
    {
-      IDX* curr = graph_get_fixedges(scip, solgraph);
+      IDX* curr = graph_get_fixedges(solgraph);
 
       while( curr != NULL )
       {
@@ -309,7 +309,7 @@ SCIP_RETCODE retransformReducedProbSolution(
    }
    else
    {
-      IDX* curr = graph_get_fixedges(scip, solgraph);
+      IDX* curr = graph_get_fixedges(solgraph);
 
       while( curr != NULL )
       {
@@ -1967,7 +1967,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          marksolverts(newgraph, newgraph->ancestors[e], unodemap, stvertex);
 
    /* retransform edges fixed during graph reduction */
-   marksolverts(newgraph, graph_get_fixedges(scip, newgraph), unodemap, stvertex);
+   marksolverts(newgraph, graph_get_fixedges(newgraph), unodemap, stvertex);
 
    for( int k = 0; k < nsolnodes; k++ )
       if( stvertex[unodemap[k]] )

@@ -1568,11 +1568,10 @@ SCIP_RETCODE graph_fixed_moveNodePc(
 
 /** gets fixed edges */
 IDX* graph_get_fixedges(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g                   /**< the graph */
 )
 {
-   assert(g && scip);
+   assert(g);
 
    if( !g->fixedcomponents )
       return NULL;

@@ -45,6 +45,43 @@
 #define STP_EXT_EDGELIMIT 50000
 
 
+/** deletes an edge and makes corresponding adaptations */
+static
+void removeEdge(
+   SCIP*                 scip,               /**< SCIP */
+   int                   edge,               /**< edge to delete */
+   GRAPH*                graph               /**< graph data structure */
+)
+{
+   const int tail = graph->tail[edge];
+   const int head = graph->head[edge];
+   graph_edge_del(scip, graph, edge, TRUE);
+
+   if( graph->grad[tail] == 0 )
+   {
+      if( Is_term(graph->term[tail])  )
+      {
+         assert(graph_pc_isPcMw(graph) || tail == graph->source);
+      }
+      else
+      {
+         graph->mark[tail] = FALSE;
+      }
+   }
+
+   if( graph->grad[head] == 0 )
+   {
+      if( Is_term(graph->term[head]) || head == graph->source )
+      {
+         assert(graph_pc_isPcMw(graph));
+      }
+      else
+      {
+         graph->mark[head] = FALSE;
+      }
+   }
+}
+
 /** mark ancestors of given edge */
 static
 SCIP_Bool markAncestorsConflict(
@@ -1206,15 +1243,7 @@ int reduce_extendedEdge(
 
          if( deletable )
          {
-            const int tail = graph->tail[e];
-            const int head = graph->head[e];
-            graph_edge_del(scip, graph, e, TRUE);
-
-            if( graph->grad[tail] == 0 )
-               graph->mark[tail] = FALSE;
-
-            if( graph->grad[head] == 0 )
-               graph->mark[head] = FALSE;
+            removeEdge(scip, e, graph);
 
             nfixed++;
          }
@@ -1227,7 +1256,7 @@ int reduce_extendedEdge(
 #ifndef NDEBUG
    for( int k = 0; k < nnodes; k++ )
       if( graph->grad[k] == 0 && k != root )
-         assert(!graph->mark[k]);
+         assert(!graph->mark[k]|| (Is_term(graph->term[k]) && graph_pc_isPcMw(graph)));
 #endif
 
    return nfixed;

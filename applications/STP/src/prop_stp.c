@@ -162,9 +162,9 @@ SCIP_RETCODE getRedCostDistances(
 }
 
 
-/** update method for redBased variable fixings */
+/** helper method for reduction based variable fixings */
 static
-void updateFixedEdges(
+void setRemain(
    const GRAPH*          graph,              /**< graph structure */
    IDX*                  curr,               /**< current ancestor */
    int*                  remain              /**< remain array */
@@ -173,17 +173,111 @@ void updateFixedEdges(
    while( curr != NULL )
    {
       const int i = curr->index;
+
       assert(i < graph->edges);
       assert(remain[i] != PROP_STP_EDGE_KILLED && remain[flipedge(i)] != PROP_STP_EDGE_KILLED);
 
       if( remain[i] == PROP_STP_EDGE_UNSET )
       {
+
+#ifdef SCIP_DEBUG
+         printf("set remain edge ");
+         graph_edge_printInfo(g, i);
+#endif
+
          remain[i] = PROP_STP_EDGE_SET;
          remain[flipedge(i)] = PROP_STP_EDGE_SET;
       }
       curr = curr->parent;
    }
 }
+
+
+/** helper method for reduction based variable fixings */
+static
+void fixRemain(
+   const GRAPH*          graph,              /**< graph structure */
+   IDX*                  curr,               /**< current ancestor */
+   int*                  remain              /**< remain array */
+)
+{
+   while( curr != NULL )
+   {
+      const int e = curr->index;
+      assert(e < graph->edges);
+
+#ifdef SCIP_DEBUG
+         printf("fix remain edge ");
+         graph_edge_printInfo(g, i);
+#endif
+
+      remain[e] = PROP_STP_EDGE_FIXED;
+      remain[flipedge(e)] = PROP_STP_EDGE_FIXED;
+
+      curr = curr->parent;
+   }
+}
+
+
+/** update method for reduction based variable fixings */
+static
+void updateRemainFromRed(
+   const GRAPH*          graph,              /**< graph structure */
+   const GRAPH*          propgraph,          /**< propagator graph */
+   SCIP_VAR**            vars,               /**< variables */
+   int*                  remain,             /**< remain array */
+   SCIP_Bool*            error               /**< error during update? */
+)
+{
+   const int nedges = graph_get_nEdges(graph);
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+
+   *error = FALSE;
+
+   if( pcmw )
+      setRemain(propgraph, propgraph->pcancestors[propgraph->source], remain);
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( propgraph->ieat[e] != EAT_FREE )
+      {
+         assert(propgraph->ieat[flipedge(e)] != EAT_FREE);
+         setRemain(propgraph, propgraph->ancestors[e], remain);
+         if( pcmw )
+         {
+            setRemain(propgraph, propgraph->pcancestors[propgraph->head[e]], remain);
+            setRemain(propgraph, propgraph->pcancestors[propgraph->tail[e]], remain);
+         }
+      }
+   }
+
+   fixRemain(propgraph, graph_get_fixedges(propgraph), remain);
+
+   /* 1-fixed edge to be deleted? */
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( (remain[e] == PROP_STP_EDGE_UNSET || remain[e] == PROP_STP_EDGE_KILLED) && (SCIPvarGetLbLocal(vars[e]) > 0.5) )
+      {
+         graph_edge_printInfo(propgraph, e);
+         printf("1-fixed arc deleted by reduction methods ... can't propagate  \n \n \n");
+         *error = TRUE;
+         return;
+      }
+   }
+
+   /* 0-fixed edge been contracted? */
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( remain[e] == PROP_STP_EDGE_FIXED && (SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[flipedge(e)]) < 0.5) )
+      {
+         graph_edge_printInfo(propgraph, e);
+         printf("0-fixed arc contracted by reduction methods ... can't propagate  \n \n \n");
+         *error = TRUE;
+         return;
+      }
+   }
+}
+
 
 /** updates fixing bounds for reduced cost fixings */
 static
@@ -669,12 +763,12 @@ SCIP_RETCODE fixVarsExtendedRed(
 static
 SCIP_RETCODE fixVarsRedbased(
    SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
    SCIP_Real             lpobjval,           /**< LP value */
    SCIP_VAR**            vars,               /**< variables */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    int*                  nfixed,             /**< pointer to number of fixed edges */
-   SCIP_Bool*            probisinfeas,       /**< is problem infeasible? */
-   const GRAPH*          g                   /**< graph data structure */
+   SCIP_Bool*            probisinfeas        /**< is problem infeasible? */
    )
 {
    GRAPH* propgraph;
@@ -682,13 +776,14 @@ SCIP_RETCODE fixVarsRedbased(
    SCIP_Real offset;
    int* remain;
    int* edgestate;
-   const int nedges = g->edges;
-   const SCIP_Bool pc = (g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG);
-   const SCIP_Bool pcmw = graph_pc_isPcMw(g);
+   const int nedges = graph_get_nEdges(graph);
+   SCIP_Bool error;
+   const SCIP_Bool pc = (graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG);
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
-   assert(g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP); // not implemented yet!
+   assert(graph->stp_type != STP_MWCSP && graph->stp_type != STP_RMWCSP); // not implemented yet!
    assert(propdata && scip && vars && probisinfeas && nfixed);
-   assert(!pcmw || g->extended);
+   assert(!pcmw || graph->extended);
 
    SCIPdebugMessage("start redbasedVarfixing, fixings: %d \n", *nfixed);
 
@@ -706,17 +801,16 @@ SCIP_RETCODE fixVarsRedbased(
    graph_free_history(scip, propgraph);
    graph_free_historyDeep(scip, propgraph);
 
-   /* copy the graph */
-   SCIP_CALL( graph_copy_data(scip, g, propgraph) );
+   SCIP_CALL( graph_copy_data(scip, graph, propgraph) );
    propgraph->norgmodeledges = propgraph->edges;
    propgraph->norgmodelknots = propgraph->knots;
    propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
-   assert(!graph_pc_isRootedPcMw(g) || graph_pc_nFixedTerms(g) == graph_pc_nFixedTerms(propgraph));
+   assert(!graph_pc_isRootedPcMw(graph) || graph_pc_nFixedTerms(graph) == graph_pc_nFixedTerms(propgraph));
 
    SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
 
-   SCIP_CALL( propgraphApplyBoundchanges(scip, vars, g, remain, edgestate, propgraph, nfixed, probisinfeas) );
+   SCIP_CALL( propgraphApplyBoundchanges(scip, vars, graph, remain, edgestate, propgraph, nfixed, probisinfeas) );
 
    if( *probisinfeas )
        goto TERMINATE;
@@ -753,63 +847,18 @@ SCIP_RETCODE fixVarsRedbased(
 
    assert(graph_valid(scip, propgraph));
 
-   /* try to fix edges ... */
+   /* mark surviving original edges of propgraph reductions in array remain */
+   updateRemainFromRed(graph, propgraph, vars, remain, &error);
 
-   if( pcmw )
-      updateFixedEdges(propgraph, propgraph->pcancestors[propgraph->source], remain);
-
-   for( int e = 0; e < nedges; e++ )
-   {
-      if( propgraph->ieat[e] != EAT_FREE )
-      {
-         assert(propgraph->ieat[flipedge(e)] != EAT_FREE);
-         updateFixedEdges(propgraph, propgraph->ancestors[e], remain);
-         if( pcmw )
-         {
-            updateFixedEdges(propgraph, propgraph->pcancestors[propgraph->head[e]], remain);
-            updateFixedEdges(propgraph, propgraph->pcancestors[propgraph->tail[e]], remain);
-         }
-      }
-   }
-
-   curr = graph_get_fixedges(scip, propgraph);
-
-   while( curr != NULL )
-   {
-      const int e = curr->index;
-      assert(e < nedges);
-
-      remain[e] = PROP_STP_EDGE_FIXED;
-      remain[flipedge(e)] = PROP_STP_EDGE_FIXED;
-
-      curr = curr->parent;
-   }
-
-   /* 1-fixed edge to be deleted? */
-   for( int e = 0; e < nedges; e++ )
-      if( (remain[e] == PROP_STP_EDGE_UNSET || remain[e] == PROP_STP_EDGE_KILLED) && (SCIPvarGetLbLocal(vars[e]) > 0.5) )
-      {
-         graph_edge_printInfo(g, e);
-         printf("1-fixed arc deleted by reduction methods ... can't propagate  \n \n \n");
-         goto TERMINATE;
-      }
-
-
-   /* 0-fixed edge been contracted? */
-   for( int e = 0; e < nedges; e++ )
-      if( remain[e] == PROP_STP_EDGE_FIXED && (SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[flipedge(e)]) < 0.5) )
-      {
-         graph_edge_printInfo(g, e);
-         printf("0-fixed arc contracted by reduction methods ... can't propagate  \n \n \n");
-         goto TERMINATE;
-      }
+   if( error )
+      goto TERMINATE;
 
 #if 0
    /* potentially 0-fixed edge been contracted? */
    for( int e = 0; e < nedges; e++ )
       if( remain[e] == PROP_STP_EDGE_FIXED && (SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetLbLocal(vars[flipedge(e)]) < 0.5) )
       {
-         graph_edge_printInfo(g, e);
+         graph_edge_printInfo(graph, e);
          printf(" SCIPvarGetLbLocal(vars[flipedge(e)])=%f \n", SCIPvarGetLbLocal(vars[flipedge(e)]));
          printf(" SCIPvarGetUbLocal(vars[flipedge(e)])=%f \n", SCIPvarGetUbLocal(vars[flipedge(e)]));
          printf("potentially 0-fixed arc contracted by reduction methods ... can't propagate  \n \n \n");
@@ -826,7 +875,7 @@ SCIP_RETCODE fixVarsRedbased(
       {
          assert(remain[erev] == PROP_STP_EDGE_UNSET);
 
-         if( pcmw && g->cost[e] != g->cost[erev] )
+         if( pcmw && graph->cost[e] != graph->cost[erev] )
             continue;
 
          SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[e], nfixed) );
@@ -998,7 +1047,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
       SCIPdebugMessage("use reduction techniques \n");
 
       /* call reduced cost based based variable fixing */
-      SCIP_CALL( fixVarsRedbased(scip, lpobjval, vars, propdata, &nfixed, &probisinfeas, graph) );
+      SCIP_CALL( fixVarsRedbased(scip, graph, lpobjval, vars, propdata, &nfixed, &probisinfeas) );
 
       propdata->postrednfixededges = 0;
 
@@ -1188,6 +1237,12 @@ SCIP_RETCODE SCIPStpFixEdgeVar(
 
    if( SCIPvarGetLbLocal(edgevar) < 0.5 && SCIPvarGetUbLocal(edgevar) > 0.5 )
    {
+
+#ifdef SCIP_DEBUG
+         printf("fix edge to 0: ");
+         graph_edge_printInfo(g, i);
+#endif
+
       SCIP_CALL( SCIPchgVarUb(scip, edgevar, 0.0) );
       (*nfixed)++;
    }

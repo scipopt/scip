@@ -1988,7 +1988,7 @@ SCIP_RETCODE reduce(
    int stp_type;
 
    assert(graph      != NULL);
-   assert(graph_get_fixedges(scip, graph) == NULL);
+   assert(graph_get_fixedges(graph) == NULL);
    assert(level  >= 0 && level <= 2);
    assert(minelims >= 0);
    assert(graph->layers == 1);
