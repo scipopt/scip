@@ -448,6 +448,8 @@ static SCIP_RETCODE blockCreateSubscip(
    else
       (*success) = FALSE;
 
+   SCIPdebugMsg(scip, "created subscip of block %d\n", block->number);
+
    return SCIP_OKAY;
 }
 
@@ -675,6 +677,44 @@ SCIP_Real getTimeLeft(
       return SCIPinfinity(scip);
 }
 
+/** returns the available memory limit that is left */
+static
+SCIP_Real getMemLeft(
+   SCIP*                 scip,               /**< main SCIP data structure */
+   PROBLEM*              problem,            /**< contains all subscips */
+   SCIP*                 subscip             /**< exclude this subscip (or NULL) */
+   )
+{
+   SCIP_Real memlim;
+   int b;
+
+   assert(scip != NULL);
+   assert(problem != NULL);
+
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memlim) );
+
+   if( !SCIPisInfinity(scip, memlim) )
+   {
+      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+      memlim -= SCIPgetMemUsed(scip)/1048576.0;
+      memlim -= SCIPgetMemExternEstim(scip)/1048576.0;
+
+      /* substract the memory already used by all other subSCIPs and the estimated memory usage of external software */
+      for( b = 0; b < problem->nblocks; b++ )
+      {
+         if( (problem->blocks[b]).subscip == subscip )
+            continue;
+
+         memlim -= SCIPgetMemUsed((problem->blocks[b]).subscip)/1048576.0;
+         memlim -= SCIPgetMemExternEstim((problem->blocks[b]).subscip)/1048576.0;
+      }
+
+      SCIPdebugMsg(scip, "memory left: %f\n", memlim);
+      return MAX(0.0, memlim);
+   }
+   else
+      return SCIPinfinity(scip);
+}
 
 /*
  * Callback methods of primal heuristic
@@ -813,6 +853,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_HEURDATA* heurdata;
    char name[SCIP_MAXSTRLEN];
    char info[SCIP_MAXSTRLEN];
+   SCIP_Real memory;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -924,6 +965,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    /* sort constraints by blocks */
    SCIPsortIntPtr(conslabels, (void**)sortedconss, nconss);
 
+   /* try to assign linking constraints */
    if( heurdata->assignlinking && conslabels[0] == SCIP_DECOMP_LINKCONS )
    {
       /* create new decomposition; don't change the decompositions in the decompstore */
@@ -965,6 +1007,15 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       while( i < nconss && conslabels[i] == conslabels[i-1] );
    }
 
+   /* estimate required memory for all blocks and terminate if not enough memory is available */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memory) );
+   if( (SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip)) * nblocks >= memory )
+   {
+      SCIPdebugMsg(scip, "The estimated memory usage is too large.\n");
+      goto TERMINATE;
+   }
+
+   /* create blockproblems */
    SCIP_CALL( createAndSplitProblem(scip, sortedconss, blockstartsconss, nblocks, &problem) );
    assert(nblocks == problem->nblocks);
 
@@ -1036,9 +1087,12 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       }
    }
 
-   /* check whether there is enough time left */
-   if( getTimeLeft(scip) <= 0)
+   /* check whether there is enough time and memory left */
+   if( getTimeLeft(scip) <= 0 || getMemLeft(scip, problem, NULL) <= 10)
+   {
+      SCIPdebugMsg(scip, "no time or memory left\n");
       goto TERMINATE;
+   }
 
    /* init block to linking variables set */
    for( b = 0; b < problem->nblocks; b++ )
@@ -1243,9 +1297,12 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* ------------------------------------------------------------------------------------------------- */
 
-   /* check whether there is enough time left */
-   if( getTimeLeft(scip) <= 0)
+   /* check whether there is enough time and memory left */
+   if( getTimeLeft(scip) <= 0 || getMemLeft(scip, problem, NULL) <= 10)
+   {
+      SCIPdebugMsg(scip, "no time or memory left\n");
       goto TERMINATE;
+   }
 
    SCIPdebugMsg(scip, "Starting iterations\n");
    SCIPdebugMsg(scip, "PIt\tADMIt\tSlacks\tInfo\n");
@@ -1332,6 +1389,10 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                /* update time limit of subproblem */
                SCIP_CALL( SCIPsetRealParam((problem->blocks[b]).subscip, "limits/time", getTimeLeft(scip)) );
 
+               /* update memory limit of subproblem */
+               SCIP_CALL( SCIPsetRealParam((problem->blocks[b]).subscip, "limits/memory", 
+                                             getMemLeft(scip, problem, (problem->blocks[b]).subscip)) );
+
                /* solve block */
 
                SCIPsolve((problem->blocks[b]).subscip);
@@ -1346,6 +1407,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                    (status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
                     SCIPisEQ(scip, SCIPsolGetOrigObj(SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) )
                {
+                  SCIPdebugMsg(scip, "Block is optimal or reached gaplimit or reached time limit with at least one feasible solution.\n");
                   for( i = 0; i < blocktolinkvars[b].size; i++ )
                   {
                      int linkvaridx;
@@ -1383,6 +1445,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                }
                else if( status == SCIP_STATUS_UNBOUNDED )
                {
+                  SCIPdebugMsg(scip, "Block is unbounded.\n");
                   for( i = 0; i < blocktolinkvars[b].size; i++ )
                   {
                      int linkvaridx;
@@ -1597,6 +1660,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
          /* get solution of block variables (without slack variables) */
          blocksol = SCIPgetBestSol((problem->blocks[b]).subscip);
+         assert(blocksol != NULL);
          blockvars = (problem->blocks[b]).subvars;
          nblockvars = (problem->blocks[b]).nsubvars;
          SCIP_CALL( SCIPgetSolVals((problem->blocks[b]).subscip, blocksol, nblockvars, blockvars, blocksolvals) );
