@@ -2987,13 +2987,15 @@ SCIP_RETCODE adaptSymmetryDataSchreierSims(
    int                   nleaders            /**< number of leaders */
    )
 {
-   int* reorderingpermvars;
-   int* posinpermvars;
-   int* permvarfrompos;
+   int* permvaridx;
+   int* posinpermvar;
    int leader;
+   int curposleader;
+   int varidx;
+   int lidx;
+   int i;
    int l;
    int p;
-   int i;
 
    assert( scip != NULL );
    assert( origperms != NULL );
@@ -3003,53 +3005,48 @@ SCIP_RETCODE adaptSymmetryDataSchreierSims(
    assert( leaders != NULL );
    assert( nleaders > 0 );
 
-   /* initialize map from variable label to its position in permvars
-    * permvar label -> position in reordering
+   /* initialize map from position in lexicographic order to index of original permvar */
+   SCIP_CALL( SCIPallocBufferArray(scip, &permvaridx, npermvars) );
+   for (i = 0; i < npermvars; ++i)
+      permvaridx[i] = i;
+
+   /* initialize map from permvaridx to its current position in the reordered permvars array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &posinpermvar, npermvars) );
+   for (i = 0; i < npermvars; ++i)
+      posinpermvar[i] = i;
+
+   /* Iterate over leaders and put the l-th leader to the l-th position of the lexicographic order.
+    * We do this by swapping the l-th leader with the element at position l of the current permvars array.
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &posinpermvars, npermvars) );
-   for (i = 0; i < npermvars; ++i)
-      posinpermvars[i] = i;
-
-   /* initialize map from position in lexicographic order to the variable at this position
-    * position in reordering -> permvar label
-    */
-   SCIP_CALL( SCIPallocBufferArray(scip, &permvarfrompos, npermvars) );
-   for (i = 0; i < npermvars; ++i)
-      permvarfrompos[i] = i;
-
-   /* initialize reodering of variables indices in new permvars array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &reorderingpermvars, npermvars) );
-   for (i = 0; i < npermvars; ++i)
-      reorderingpermvars[i] = i;
-
-   /* update posinpermvars map */
    for (l = 0; l < nleaders; ++l)
    {
       leader = leaders[l];
+      curposleader = posinpermvar[leader];
+      varidx = permvaridx[curposleader];
+      lidx = permvaridx[l];
 
-      posinpermvars[permvarfrompos[l]] = posinpermvars[leader];
-      permvarfrompos[leader] = permvarfrompos[l];
-      posinpermvars[leader] = l;
-      permvarfrompos[l] = leader;
+      /* swap the permvar at position l with the l-th leader */
+      permvaridx[curposleader] = lidx;
+      permvaridx[l] = varidx;
+
+      /* update the position map */
+      posinpermvar[lidx] = curposleader;
+      posinpermvar[leader] = l;
    }
 
-   /* update permvars array and reorderingpermvars map */
+   /* update the permvars array to new variable order */
    for (i = 0; i < npermvars; ++i)
-   {
-      reorderingpermvars[posinpermvars[i]] = i;
-      modifiedpermvars[posinpermvars[i]] = origpermvars[i];
-   }
+      modifiedpermvars[i] = origpermvars[permvaridx[i]];
 
-   /* adapt change of permvar order to permutations */
+   /* update the permutation to the new variable order */
    for (p = 0; p < nperms; ++p)
    {
       for (i = 0; i < npermvars; ++i)
-         modifiedperms[p][i] = posinpermvars[origperms[p][reorderingpermvars[i]]];
+         modifiedperms[p][i] = posinpermvar[origperms[p][permvaridx[i]]];
    }
 
-   SCIPfreeBufferArray(scip, &reorderingpermvars);
-   SCIPfreeBufferArray(scip, &permvarfrompos);
-   SCIPfreeBufferArray(scip, &posinpermvars);
+   SCIPfreeBufferArray(scip, &permvaridx);
+   SCIPfreeBufferArray(scip, &posinpermvar);
 
    return SCIP_OKAY;
 }
