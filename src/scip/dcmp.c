@@ -356,29 +356,29 @@ char* SCIPdecompPrintStats(
 
    ptr = strbuf;
 
-   ptr += snprintf(ptr, SCIP_MAXSTRLEN,
+   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
             "Decomposition with %d blocks.\n",
             decomp->nblocks);
-   ptr += snprintf(ptr, SCIP_MAXSTRLEN,
+   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
             "Largest block: Block %d with %d constraints and %d variables\n",
             decomp->nblocks == 0 ? -1 : decomp->labels[decomp->idxlargestblock],
             decomp->nblocks == 0 ? 0 : decomp->consssize[decomp->idxlargestblock],
             decomp->nblocks == 0 ? 0 : decomp->varssize[decomp->idxlargestblock]);
-   ptr += snprintf(ptr, SCIP_MAXSTRLEN,
+   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
             "Smallest block: Block %d with %d constraints and %d variables\n",
             decomp->nblocks == 0 ? 0 : decomp->labels[decomp->idxsmallestblock],
             decomp->nblocks == 0 ? 0 : decomp->consssize[decomp->idxsmallestblock],
             decomp->nblocks == 0 ? 0 : decomp->varssize[decomp->idxsmallestblock]);
-   ptr += snprintf(ptr, SCIP_MAXSTRLEN,
+   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
             "Border has %d constraints and %d variables\n",
             decomp->labels[0] == SCIP_DECOMP_LINKVAR ? decomp->consssize[0] : 0,
             decomp->labels[0] == SCIP_DECOMP_LINKVAR ? decomp->varssize[0] : 0
             );
 
-   ptr += snprintf(ptr, SCIP_MAXSTRLEN,
+   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
             "Modularity: %.3f, Area Score: %.3f\n",
             decomp->modularity, decomp->areascore);
-   ptr += snprintf(ptr, SCIP_MAXSTRLEN,
+   (void) SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
             "Constraint Block Graph: %d edges, %d articulation nodes, %d connected components, %d min., %d max. degree\n",
             decomp->nedges, decomp->narticulations, decomp->ncomponents, decomp->mindegree, decomp->maxdegree);
 

@@ -650,6 +650,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
 			scip/reader_cor.o \
+			scip/reader_dec.o \
 			scip/reader_diff.o \
 			scip/reader_fix.o \
 			scip/reader_fzn.o \
@@ -705,6 +706,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/cutpool.o \
 			scip/cuts.o \
 			scip/debug.o \
+			scip/dcmp.o \
 			scip/dialog.o \
 			scip/disp.o \
 			scip/event.o \
@@ -745,6 +747,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_cut.o \
 			scip/scip_datastructures.o\
 			scip/scip_debug.o \
+			scip/scip_dcmp.o \
 			scip/scip_dialog.o \
 			scip/scip_disp.o \
 			scip/scip_event.o \
