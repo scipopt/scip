@@ -37,9 +37,10 @@
 #include "nlpi/nlpi_ipopt.h" /* for LAPACK */
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "quadratic"
-#define NLHDLR_DESC         "handler for quadratic expressions"
-#define NLHDLR_PRIORITY     100
+#define NLHDLR_NAME               "quadratic"
+#define NLHDLR_DESC               "handler for quadratic expressions"
+#define NLHDLR_DETECTPRIORITY     100
+#define NLHDLR_ENFOPRIORITY       100
 
 /*
  * Data structures
@@ -1356,8 +1357,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY,
-            nlhdlrDetectQuadratic, nlhdlrEvalAuxQuadratic, NULL) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectQuadratic, nlhdlrEvalAuxQuadratic, NULL) );
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrcopyHdlrQuadratic);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataQuadratic);

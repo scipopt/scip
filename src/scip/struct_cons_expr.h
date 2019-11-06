@@ -145,11 +145,12 @@ struct SCIP_ConsExpr_Expr
 /** generic data and callback methods of an nonlinear handler */
 struct SCIP_ConsExpr_Nlhdlr
 {
-   char*                         name;       /**< nonlinearity handler name */
-   char*                         desc;       /**< nonlinearity handler description (can be NULL) */
-   SCIP_CONSEXPR_NLHDLRDATA*     data;       /**< data of handler */
-   int                           priority;   /**< priority of nonlinearity handler */
-   SCIP_Bool                     enabled;    /**< whether the nonlinear handler should be used */
+   char*                         name;             /**< nonlinearity handler name */
+   char*                         desc;             /**< nonlinearity handler description (can be NULL) */
+   SCIP_CONSEXPR_NLHDLRDATA*     data;             /**< data of handler */
+   int                           detectpriority;   /**< detection priority of nonlinearity handler */
+   int                           enfopriority;     /**< enforcement priority of nonlinearity handler */
+   SCIP_Bool                     enabled;          /**< whether the nonlinear handler should be used */
 
    SCIP_Longint                  nsepacalls; /**< number of times, the separation or estimation callback was called */
    SCIP_Longint                  nintevalcalls; /**< number of times, the interval evaluation callback was called */

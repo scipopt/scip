@@ -29,12 +29,13 @@
 #include "struct_cons_expr.h"
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "perspective"
-#define NLHDLR_DESC         "perspective handler for expressions"
-#define NLHDLR_PRIORITY     75
+#define NLHDLR_NAME               "perspective"
+#define NLHDLR_DESC               "perspective handler for expressions"
+#define NLHDLR_DETECTPRIORITY     -20 /* detect last so that to make use of what other handlers detected */
+#define NLHDLR_ENFOPRIORITY       125 /* enforce first because perspective cuts are always stronger */
 
-#define DETECTSUM    FALSE
-#define MULTCUTS     TRUE
+#define DEFAULT_DETECTSUM    FALSE
+#define DEFAULT_MULTCUTS     TRUE
 
 /*
  * Data structures
@@ -74,6 +75,8 @@ struct SCIP_ConsExpr_NlhdlrExprData
 /** nonlinear handler data */
 struct SCIP_ConsExpr_NlhdlrData
 {
+   SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a sum */
+   SCIP_Bool             multcuts;           /**< whether to add cuts for all suitable indicator variables */
    SCIP_HASHMAP*         scvars;             /**< maps semicontinuous variables to their on/off bounds */
 };
 
@@ -847,7 +850,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 #endif
 
    /* ignore sums */
-   if( !DETECTSUM && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
+   if( !nlhdlrdata->detectsum && SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
    {
       *success = FALSE;
       return SCIP_OKAY;
@@ -1027,7 +1030,7 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaPerspective)
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
-   if( !MULTCUTS || SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
+   if( !nlhdlrdata->multcuts || SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) ) /*lint !e506 !e774*/
    {
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
@@ -1230,8 +1233,17 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    BMSclearMemory(nlhdlrdata);
 
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectPerspective, nlhdlrEvalauxPerspective, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectPerspective, nlhdlrEvalauxPerspective, nlhdlrdata) );
    assert(nlhdlr != NULL);
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/detectsum",
+      "whether to run convexity detection when the root of an expression is a sum",
+      &nlhdlrdata->detectsum, FALSE, DEFAULT_DETECTSUM, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/multcuts",
+      "whether to add cuts for all suitable indicator variables",
+      &nlhdlrdata->multcuts, FALSE, DEFAULT_MULTCUTS, NULL, NULL) );
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);

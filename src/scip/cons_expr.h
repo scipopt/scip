@@ -1238,15 +1238,16 @@ SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
-   SCIP*                       scip,         /**< SCIP data structure */
-   SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
-   const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
-   const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
-   int                         priority,     /**< priority of nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
+   SCIP*                       scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*              conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR**      nlhdlr,             /**< buffer where to store nonlinear handler */
+   const char*                 name,               /**< name of nonlinear handler (must not be NULL) */
+   const char*                 desc,               /**< description of nonlinear handler (can be NULL) */
+   int                         detectpriority,     /**< detection priority of nonlinear handler */
+   int                         enfopriority,       /**< enforcement priority of nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)),  /**< structure detection callback of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
-   SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
+   SCIP_CONSEXPR_NLHDLRDATA*   data                /**< data of nonlinear handler (can be NULL) */
    );
 
 /** set the copy handler callback of a nonlinear handler */

@@ -724,6 +724,59 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    return SCIP_OKAY;
 }
 
+/** compares nonlinear handler by detection priority
+ *
+ * if handlers have same detection priority, then compare by name
+ */
+static
+int nlhdlrCmp(
+   void*                 hdlr1,              /**< first handler */
+   void*                 hdlr2               /**< second handler */
+)
+{
+   SCIP_CONSEXPR_NLHDLR* h1;
+   SCIP_CONSEXPR_NLHDLR* h2;
+
+   assert(hdlr1 != NULL);
+   assert(hdlr2 != NULL);
+
+   h1 = (SCIP_CONSEXPR_NLHDLR*)hdlr1;
+   h2 = (SCIP_CONSEXPR_NLHDLR*)hdlr2;
+
+   if( h1->detectpriority != h2->detectpriority )
+      return (int)(h1->detectpriority - h2->detectpriority);
+
+   return strcmp(h1->name, h2->name);
+}
+
+/** compares nonlinear handler by enforcement priority
+ *
+ * if handlers have same enforcement priority, then compare by detection priority, then by name
+ */
+static
+int nlhdlrEnfoCmp(
+   void*                 hdlr1,              /**< first handler */
+   void*                 hdlr2               /**< second handler */
+)
+{
+   SCIP_CONSEXPR_NLHDLR* h1;
+   SCIP_CONSEXPR_NLHDLR* h2;
+
+   assert(hdlr1 != NULL);
+   assert(hdlr2 != NULL);
+
+   h1 = (SCIP_CONSEXPR_NLHDLR*)hdlr1;
+   h2 = (SCIP_CONSEXPR_NLHDLR*)hdlr2;
+
+   if( h1->enfopriority != h2->enfopriority )
+      return (int)(h1->enfopriority - h2->enfopriority);
+
+   if( h1->detectpriority != h2->detectpriority )
+      return (int)(h1->detectpriority - h2->detectpriority);
+
+   return strcmp(h1->name, h2->name);
+}
+
 /** tries to automatically convert an expression constraint into a more specific and more specialized constraint */
 static
 SCIP_RETCODE presolveUpgrade(
@@ -1903,6 +1956,10 @@ SCIP_RETCODE detectNlhdlr(
 
    if( nsuccess == 0 )
       return SCIP_OKAY;
+
+   /* sort nonlinear handlers by enforcement priority, in decreasing order */
+   if( nsuccess > 1 )
+      SCIPsortDownPtr((void**)nlhdlrssuccess, nlhdlrEnfoCmp, nsuccess);
 
    /* copy collected nlhdlrs into expr->enfos */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, nsuccess) );
@@ -5368,31 +5425,6 @@ SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
    return SCIP_OKAY;
 }
 
-/** compares nonlinear handler by priority
- *
- * if handlers have same priority, then compare by name
- */
-static
-int nlhdlrCmp(
-   void*                 hdlr1,              /**< first handler */
-   void*                 hdlr2               /**< second handler */
-   )
-{
-   SCIP_CONSEXPR_NLHDLR* h1;
-   SCIP_CONSEXPR_NLHDLR* h2;
-
-   assert(hdlr1 != NULL);
-   assert(hdlr2 != NULL);
-
-   h1 = (SCIP_CONSEXPR_NLHDLR*)hdlr1;
-   h2 = (SCIP_CONSEXPR_NLHDLR*)hdlr2;
-
-   if( h1->priority != h2->priority )
-      return (int)(h1->priority - h2->priority);
-
-   return strcmp(h1->name, h2->name);
-}
-
 /** frees auxiliary variables which have been added to compute an outer approximation */
 static
 SCIP_RETCODE freeAuxVars(
@@ -7565,7 +7597,7 @@ SCIP_DECL_CONSINIT(consInitExpr)
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
    }
 
-   /* sort nonlinear handlers by priority, in decreasing order */
+   /* sort nonlinear handlers by detection priority, in decreasing order */
    if( conshdlrdata->nnlhdlrs > 1 )
       SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, nlhdlrCmp, conshdlrdata->nnlhdlrs);
 
@@ -12933,15 +12965,16 @@ SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
 
 /** creates the nonlinearity handler and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
-   SCIP*                       scip,         /**< SCIP data structure */
-   SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
-   const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
-   const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
-   int                         priority,     /**< priority of nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)), /**< structure detection callback of nonlinear handler */
+   SCIP*                       scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*              conshdlr,           /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR**      nlhdlr,             /**< buffer where to store nonlinear handler */
+   const char*                 name,               /**< name of nonlinear handler (must not be NULL) */
+   const char*                 desc,               /**< description of nonlinear handler (can be NULL) */
+   int                         detectpriority,     /**< detection priority of nonlinear handler */
+   int                         enfopriority,       /**< enforcement priority of nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)),  /**< structure detection callback of nonlinear handler */
    SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
-   SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
+   SCIP_CONSEXPR_NLHDLRDATA*   data                /**< data of nonlinear handler (can be NULL) */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -12966,7 +12999,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->desc, desc, strlen(desc)+1) );
    }
 
-   (*nlhdlr)->priority = priority;
+   (*nlhdlr)->detectpriority = detectpriority;
+   (*nlhdlr)->enfopriority = enfopriority;
    (*nlhdlr)->data = data;
    (*nlhdlr)->detect = detect;
    (*nlhdlr)->evalaux = evalaux;
@@ -12986,7 +13020,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBasic(
    conshdlrdata->nlhdlrs[conshdlrdata->nnlhdlrs] = *nlhdlr;
    ++conshdlrdata->nnlhdlrs;
 
-   /* sort nonlinear handlers by priority, in decreasing order
+   /* sort nonlinear handlers by detection priority, in decreasing order
     * will happen in INIT, so only do when called late
     */
    if( SCIPgetStage(scip) >= SCIP_STAGE_INIT && conshdlrdata->nnlhdlrs > 1 )
@@ -13122,14 +13156,14 @@ const char* SCIPgetConsExprNlhdlrDesc(
    return nlhdlr->desc;
 }
 
-/** gives priority of nonlinear handler */
-int SCIPgetConsExprNlhdlrPriority(
+/** gives detection priority of nonlinear handler */
+int SCIPgetConsExprNlhdlrDetectPriority(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr         /**< nonlinear handler */
    )
 {
    assert(nlhdlr != NULL);
 
-   return nlhdlr->priority;
+   return nlhdlr->detectpriority;
 }
 
 /** returns a nonlinear handler of a given name (or NULL if not found) */

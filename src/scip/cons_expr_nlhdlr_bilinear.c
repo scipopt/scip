@@ -28,12 +28,13 @@
 #include "scip/cons_expr_iterator.h"
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "bilinear"
-#define NLHDLR_DESC         "bilinear handler for expressions"
-#define NLHDLR_PRIORITY     -10 /* it is important that the nlhdlr runs after the default nldhlr */
+#define NLHDLR_NAME               "bilinear"
+#define NLHDLR_DESC               "bilinear handler for expressions"
+#define NLHDLR_DETECTPRIORITY     -10 /* it is important that the nlhdlr runs after the default nldhlr */
+#define NLHDLR_ENFOPRIORITY       -10
 
-#define MIN_INTERIORITY     0.01 /* minimum interiority for a reference point for applying separation */
-#define MIN_ABSBOUNDSIZE    0.1  /* minimum size of variable bounds for applying separation */
+#define MIN_INTERIORITY           0.01 /* minimum interiority for a reference point for applying separation */
+#define MIN_ABSBOUNDSIZE          0.1  /* minimum size of variable bounds for applying separation */
 
 /* properties of the bilinear nlhdlr statistics table */
 #define TABLE_NAME_BILINEAR                 "bilinear_nlhdlr"
@@ -1509,7 +1510,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrBilinear(
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    BMSclearMemory(nlhdlrdata);
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectBilinear, nlhdlrEvalauxBilinear, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectBilinear, nlhdlrEvalauxBilinear, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrBilinear);

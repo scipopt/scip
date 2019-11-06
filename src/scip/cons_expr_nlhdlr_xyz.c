@@ -24,9 +24,10 @@
 #include "scip/cons_expr.h"
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "xyz"
-#define NLHDLR_DESC         "xyz handler for expressions"
-#define NLHDLR_PRIORITY     0
+#define NLHDLR_NAME               "xyz"
+#define NLHDLR_DESC               "xyz handler for expressions"
+#define NLHDLR_DETECTPRIORITY     0
+#define NLHDLR_ENFOPRIORITY       0
 
 /*
  * Data structures
@@ -291,7 +292,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrXyz(
 
    /* TODO: create and store nonlinear handler specific data here */
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectXyz, nlhdlrEvalauxXyz, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectXyz, nlhdlrEvalauxXyz, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrXyz);

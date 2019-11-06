@@ -25,9 +25,10 @@
 #include "scip/cons_expr.h"
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "default"
-#define NLHDLR_DESC         "default handler for expressions"
-#define NLHDLR_PRIORITY     0
+#define NLHDLR_NAME               "default"
+#define NLHDLR_DESC               "default handler for expressions"
+#define NLHDLR_DETECTPRIORITY     0
+#define NLHDLR_ENFOPRIORITY       0
 
 /** evaluates an expression w.r.t. the values in the auxiliary variables */
 static
@@ -438,7 +439,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrDefault(
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectDefault, nlhdlrEvalAuxDefault, NULL) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectDefault, nlhdlrEvalAuxDefault, NULL) );
    assert(nlhdlr != NULL);
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrDefault);

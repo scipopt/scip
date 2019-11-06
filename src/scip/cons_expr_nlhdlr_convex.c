@@ -36,9 +36,10 @@
 #include "scip/cons_expr_sum.h"
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME         "convex"
-#define NLHDLR_DESC         "convex handler for expressions"
-#define NLHDLR_PRIORITY     50
+#define NLHDLR_NAME               "convex"
+#define NLHDLR_DESC               "convex handler for expressions"
+#define NLHDLR_DETECTPRIORITY     50
+#define NLHDLR_ENFOPRIORITY       50
 
 #define DEFAULT_DETECTSUM   FALSE
 #define DEFAULT_PREFEREXTENDED TRUE
@@ -1242,7 +1243,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_PRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvex, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectConvex, nlhdlrEvalAuxConvex, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/detectsum",
