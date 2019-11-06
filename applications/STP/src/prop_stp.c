@@ -22,7 +22,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+#define SCIP_DEBUG
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
@@ -182,7 +182,7 @@ void setRemain(
 
 #ifdef SCIP_DEBUG
          printf("set remain edge ");
-         graph_edge_printInfo(g, i);
+         graph_edge_printInfo(graph, i);
 #endif
 
          remain[i] = PROP_STP_EDGE_SET;
@@ -208,7 +208,7 @@ void fixRemain(
 
 #ifdef SCIP_DEBUG
          printf("fix remain edge ");
-         graph_edge_printInfo(g, i);
+         graph_edge_printInfo(graph, e);
 #endif
 
       remain[e] = PROP_STP_EDGE_FIXED;
@@ -216,6 +216,34 @@ void fixRemain(
 
       curr = curr->parent;
    }
+}
+
+
+/** update the graph from propdata from given graph */
+static
+SCIP_RETCODE updatePropgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure to use for the update */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+)
+{
+   GRAPH* propgraph = propdata->propgraph;
+
+   assert(propgraph != NULL);
+
+   graph_free_history(scip, propgraph);
+   graph_free_historyDeep(scip, propgraph);
+
+   SCIP_CALL( graph_copy_data(scip, graph, propgraph) );
+   propgraph->norgmodeledges = propgraph->edges;
+   propgraph->norgmodelknots = propgraph->knots;
+   propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+
+   assert(!graph_pc_isRootedPcMw(graph) || graph_pc_nFixedTerms(graph) == graph_pc_nFixedTerms(propgraph));
+
+   SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
+
+   return SCIP_OKAY;
 }
 
 
@@ -622,11 +650,10 @@ SCIP_RETCODE fixVarsDualcost(
          propdata->deg2bounds[i] = -FARAWAY;
          propdata->deg2bounded[i] = FALSE;
       }
-#if 1
+
       /* first call, so we can also fix incoming arcs of root to zero */
       for( int e = graph->inpbeg[graph->source]; e != EAT_LAST; e = graph->ieat[e] )
          SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[e], nfixed) );
-#endif
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
@@ -739,6 +766,8 @@ SCIP_RETCODE fixVarsExtendedRed(
              continue;
           }
 
+          SCIPdebugMessage("fix edge %d to 0 \n", e);
+
           SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[e], &extnfixed) );
        }
 
@@ -772,13 +801,11 @@ SCIP_RETCODE fixVarsRedbased(
    )
 {
    GRAPH* propgraph;
-   IDX* curr;
    SCIP_Real offset;
    int* remain;
    int* edgestate;
    const int nedges = graph_get_nEdges(graph);
    SCIP_Bool error;
-   const SCIP_Bool pc = (graph->stp_type == STP_PCSPG || graph->stp_type == STP_RPCSPG);
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
    assert(graph->stp_type != STP_MWCSP && graph->stp_type != STP_RMWCSP); // not implemented yet!
@@ -795,20 +822,8 @@ SCIP_RETCODE fixVarsRedbased(
    SCIP_CALL( SCIPallocBufferArray(scip, &remain, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgestate, nedges) );
 
+   SCIP_CALL( updatePropgraph(scip, graph, propdata) );
    propgraph = propdata->propgraph;
-   assert(propgraph != NULL);
-
-   graph_free_history(scip, propgraph);
-   graph_free_historyDeep(scip, propgraph);
-
-   SCIP_CALL( graph_copy_data(scip, graph, propgraph) );
-   propgraph->norgmodeledges = propgraph->edges;
-   propgraph->norgmodelknots = propgraph->knots;
-   propdata->propgraphnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
-
-   assert(!graph_pc_isRootedPcMw(graph) || graph_pc_nFixedTerms(graph) == graph_pc_nFixedTerms(propgraph));
-
-   SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
 
    SCIP_CALL( propgraphApplyBoundchanges(scip, vars, graph, remain, edgestate, propgraph, nfixed, probisinfeas) );
 
@@ -829,12 +844,10 @@ SCIP_RETCODE fixVarsRedbased(
       return SCIP_ERROR;
    }
 
-   /* reduce graph */
-#if 1
-   if( pc )
+   /* now reduce the graph */
+   if( graph_pc_isPc(propgraph) )
    {
       SCIP_CALL( fixVarsExtendedRed(scip, lpobjval, vars, propgraph) );
-
       SCIP_CALL( reducePc(scip, NULL, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    }
    else
@@ -843,7 +856,6 @@ SCIP_RETCODE fixVarsRedbased(
       SCIP_CALL( level0(scip, propgraph) );
       SCIP_CALL( reduceStp(scip, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
    }
-#endif
 
    assert(graph_valid(scip, propgraph));
 
@@ -853,30 +865,44 @@ SCIP_RETCODE fixVarsRedbased(
    if( error )
       goto TERMINATE;
 
-#if 0
-   /* potentially 0-fixed edge been contracted? */
+#ifdef SCIP_DEBUG
+   /* has potentially 0-fixed edge been contracted? */
    for( int e = 0; e < nedges; e++ )
+   {
       if( remain[e] == PROP_STP_EDGE_FIXED && (SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetLbLocal(vars[flipedge(e)]) < 0.5) )
       {
          graph_edge_printInfo(graph, e);
          printf(" SCIPvarGetLbLocal(vars[flipedge(e)])=%f \n", SCIPvarGetLbLocal(vars[flipedge(e)]));
          printf(" SCIPvarGetUbLocal(vars[flipedge(e)])=%f \n", SCIPvarGetUbLocal(vars[flipedge(e)]));
          printf("potentially 0-fixed arc contracted by reduction methods ... can't propagate  \n \n \n");
-         goto TERMINATE;
+         //goto TERMINATE;
+         return SCIP_ERROR; // todo is that really an issue?
       }
+   }
 #endif
 
-   /* fix to zero */
+   /* fix edge variables to 0 */
    for( int e = 0; e < nedges; e += 2 )
    {
-      const int erev = e + 1;
       /* edge not set yet? */
       if( remain[e] == PROP_STP_EDGE_UNSET )
       {
+         const int erev = e + 1;
+
          assert(remain[erev] == PROP_STP_EDGE_UNSET);
 
-         if( pcmw && graph->cost[e] != graph->cost[erev] )
-            continue;
+         if( pcmw  )
+         {
+            assert(graph->extended);
+
+            if( SCIPisGE(scip, graph->cost[e], FARAWAY) || SCIPisGE(scip, graph->cost[erev], FARAWAY) )
+               continue;
+         }
+
+#ifdef SCIP_DEBUG
+         printf("red-based fixing of ");
+         graph_edge_printInfo(graph, e);
+#endif
 
          SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[e], nfixed) );
          SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[erev], nfixed) );
@@ -1237,15 +1263,10 @@ SCIP_RETCODE SCIPStpFixEdgeVar(
 
    if( SCIPvarGetLbLocal(edgevar) < 0.5 && SCIPvarGetUbLocal(edgevar) > 0.5 )
    {
-
-#ifdef SCIP_DEBUG
-         printf("fix edge to 0: ");
-         graph_edge_printInfo(g, i);
-#endif
-
       SCIP_CALL( SCIPchgVarUb(scip, edgevar, 0.0) );
       (*nfixed)++;
    }
+
    return SCIP_OKAY;
 }
 
