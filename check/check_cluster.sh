@@ -190,9 +190,13 @@ do
         if test -e $SCIPPATH/../$BINNAME
         then
            export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
+           export VIPRCHECKNAME=${DEBUGTOOL}$SCIPPATH/../vipr-check
+           export VIPRCOMPRESSNAME=${DEBUGTOOLCMD}$SCIPPATH/../vipr-compress-opt
         elif type $BINNAME >/dev/null 2>&1
         then
            export EXECNAME=${DEBUGTOOLCMD}$BINNAME
+           export VIPRCHECKNAME=vipr-check
+		   export VIPRCOMPRESSNAME=vipr-compress-opt
         fi
 
                 # check queue type

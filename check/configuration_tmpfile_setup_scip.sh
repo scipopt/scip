@@ -101,6 +101,8 @@ echo set timing clocktype 1            >> $TMPFILE
 echo set display freq $DISPFREQ        >> $TMPFILE
 # avoid switching to dfs - better abort with memory error
 echo set memory savefac 1.0            >> $TMPFILE
+echo set certificate filename $CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.vipr >> $TMPFILE
+echo set certificate maxfilesize 100240 >> $TMPFILE
 echo set save $SETFILE                 >> $TMPFILE
 
 if test "$VISUALIZE" = true
