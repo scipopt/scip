@@ -1896,6 +1896,7 @@ SCIP_RETCODE computeSymmetryGroup(
       SCIP_Real percentagemovedvars;
       int* labelmovedvars = NULL;
       int i;
+      SCIP_Bool performcompression;
 
       if ( compresssymmetries )
       {
@@ -1915,10 +1916,14 @@ SCIP_RETCODE computeSymmetryGroup(
          SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
       }
 
-      /* remove variables from permutations that are not affected by any permutation */
+      /* remove variables from permutations that are not affected by any permutation if
+       * performcompression criterion is statisfied
+       */
       percentagemovedvars = (SCIP_Real) *nmovedvars / (SCIP_Real) nvars;
-      if ( *nmovedvars > 0 && compresssymmetries && (SCIPisLE(scip, percentagemovedvars, compressionthreshold)
-            || (SCIPgetNVars(scip) >= 25000 && SCIPisLE(scip, percentagemovedvars, 0.5))) )
+      performcompression = *nmovedvars > 0 && compresssymmetries
+         && (SCIPisLE(scip, percentagemovedvars, compressionthreshold)
+            || (SCIPgetNVars(scip) >= 25000 && SCIPisLE(scip, percentagemovedvars, 0.5)));
+      if ( performcompression )
       {
          int* compressedperm;
          SCIP_CALL( SCIPallocBufferArray(scip, &compressedperm, *nmovedvars) );
@@ -1941,7 +1946,7 @@ SCIP_RETCODE computeSymmetryGroup(
       if ( *nperms > 0 )
       {
          /* remove variables from permvars array that are not affected by any symmetry */
-         if ( compresssymmetries && SCIPisLE(scip, percentagemovedvars, compressionthreshold) )
+         if ( performcompression )
          {
             SCIP_VAR** compressedpermvars;
             SCIP_CALL( SCIPallocBufferArray(scip, &compressedpermvars, *nmovedvars) );
