@@ -2459,7 +2459,7 @@
  * To apply Farkas pricing, the pricer needs to know the Farkas values of the constraints. Like the dual solution values for
  * feasible LP solutions, the dual Farkas values for infeasible solutions can be obtained by constraint handler interface
  * methods such as the SCIPgetDualfarkasLinear() method of the linear constraint handler.
- * The Farkas values for the bounds of the variables are just the regular reduced costs and can be accessed with SCIPgetVarRedcost().
+ * The Farkas values for the bounds of the variables can be accessed with SCIPgetVarFarkasCoef().
  *
  * It is useful to note that Farkas pricing is the same as the regular pricing with a zero objective function.
  * Therefore, a typical implementation of a pricer would consist of a generic pricing algorithm that gets a dual solution and an
