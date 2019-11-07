@@ -212,15 +212,11 @@ SCIP_RETCODE freeBlock(
    )
 {
    PROBLEM* problem;
-   SCIP* scip;
 
    assert(block != NULL);
 
    problem = block->problem;
    assert(problem != NULL);
-
-   scip = problem->scip;
-   assert(scip != NULL);
 
    block->ncoupling = 0;
 
