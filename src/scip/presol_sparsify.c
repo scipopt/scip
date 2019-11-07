@@ -58,7 +58,7 @@
 #define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
-#define DEFAULT_ENABLECOPY          FALSE    /**< should sparsify presolver be copied to sub-SCIPs? */
+#define DEFAULT_ENABLECOPY           TRUE    /**< should sparsify presolver be copied to sub-SCIPs? */
 #define DEFAULT_CANCELLINEAR         TRUE    /**< should we cancel nonzeros in constraints of the linear constraint handler? */
 #define DEFAULT_PRESERVEINTCOEFS     TRUE    /**< should we forbid cancellations that destroy integer coefficients? */
 #define DEFAULT_OBJ_PRESERVEINTCOEFS FALSE   /**< should we forbid cancellations that destroy integer coefficients when sparsifying the objective? */

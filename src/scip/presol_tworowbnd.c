@@ -84,7 +84,7 @@
 #define PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
-#define DEFAULT_ENABLECOPY             FALSE    /**< should tworowbnd presolver be copied to sub-SCIPs? */
+#define DEFAULT_ENABLECOPY             TRUE    /**< should tworowbnd presolver be copied to sub-SCIPs? */
 #define DEFAULT_MAXCONSIDEREDNONZEROS  100
 #define DEFAULT_MAXRETRIEVEFAILS       1000
 #define DEFAULT_MAXCOMBINEFAILS        1000
@@ -2232,7 +2232,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyTworowbnd)
    assert(presoldata != NULL);
    if( presoldata->enablecopy )
    {
-      SCIP_CALL( SCIPincludePresolSparsify(scip) );
+      SCIP_CALL( SCIPincludePresolTworowbnd(scip) );
    }
 
    return SCIP_OKAY;
