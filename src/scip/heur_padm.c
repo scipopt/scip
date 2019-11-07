@@ -23,8 +23,9 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-
 #include <assert.h>
+#include <string.h>
+
 #include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
 #include "scip/dcmp.h"
@@ -63,7 +64,6 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
 
 #define HEUR_NAME             "padm"
 #define HEUR_DESC             "penalty alternating direction method primal heuristic"
@@ -72,12 +72,6 @@
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-
-/* author bzfhende
- *
- * TODO debatable: after root node probaby better
- */
-
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE                  /**< does the heuristic use a secondary SCIP instance? */
 
@@ -136,13 +130,14 @@ typedef struct blockinfo
 } BLOCKINFO;
 
 /** returns TRUE iff both keys are equal */
-static SCIP_DECL_HASHKEYEQ(indexesEqual)
+static
+SCIP_DECL_HASHKEYEQ(indexesEqual)
 {
    BLOCKINFO* binfo1;
    BLOCKINFO* binfo2;
 
-   binfo1 = (BLOCKINFO *)key1;
-   binfo2 = (BLOCKINFO *)key2;
+   binfo1 = (BLOCKINFO*) key1;
+   binfo2 = (BLOCKINFO*) key2;
 
    if( binfo1->block != binfo2->block )
       return FALSE;
@@ -157,18 +152,21 @@ static SCIP_DECL_HASHKEYEQ(indexesEqual)
 }
 
 /** returns the hash value of the key */
-static SCIP_DECL_HASHKEYVAL(indexesHashval)
+static
+SCIP_DECL_HASHKEYVAL(indexesHashval)
 { /*lint --e{715}*/
    BLOCKINFO* binfo;
-   binfo = (BLOCKINFO *)key;
+   binfo = (BLOCKINFO*) key;
 
-   return SCIPhashFour(binfo->block, binfo->otherblock, binfo->linkVarIdx, binfo->linkVarIdx);
+   return SCIPhashFour(SCIPrealHashCode(binfo->block), SCIPrealHashCode(binfo->otherblock),
+                        SCIPrealHashCode(binfo->linkVarIdx), SCIPrealHashCode(binfo->linkVarIdx));
 }
 
 /** primal heuristic data */
 struct SCIP_HeurData
 {
    int                   admiterations;
+   int                   penaltyiterations;
    SCIP_Real             gap;
    SCIP_Bool             scaling;
    SCIP_Bool             assignlinking;
@@ -180,9 +178,10 @@ struct SCIP_HeurData
  */
 
 /** initialize one block */
-static SCIP_RETCODE initBlock(
-    PROBLEM*             problem             /**< problem structure */
-)
+static
+SCIP_RETCODE initBlock(
+   PROBLEM*              problem             /**< problem structure */
+   )
 {
    BLOCK* block;
 
@@ -196,10 +195,8 @@ static SCIP_RETCODE initBlock(
    block->subvars = NULL;
    block->nsubvars = 0;
    block->number = problem->nblocks;
-
    block->slackspos = NULL;
    block->slacksneg = NULL;
-
    block->couplingcons = NULL;
    block->ncoupling = 0;
 
@@ -209,9 +206,10 @@ static SCIP_RETCODE initBlock(
 }
 
 /** free component structure */
-static SCIP_RETCODE freeBlock(
-    BLOCK*               block               /**< pointer to block structure */
-)
+static
+SCIP_RETCODE freeBlock(
+   BLOCK*                block               /**< pointer to block structure */
+   )
 {
    PROBLEM* problem;
    SCIP* scip;
@@ -224,8 +222,6 @@ static SCIP_RETCODE freeBlock(
    scip = problem->scip;
    assert(scip != NULL);
 
-   SCIPdebugMsg(scip, "freeing block %d of problem <%s>\n", block->number, block->problem->name);
-
    block->ncoupling = 0;
 
    if( block->subscip != NULL )
@@ -235,11 +231,12 @@ static SCIP_RETCODE freeBlock(
 }
 
 /** initialize subproblem structure */
-static SCIP_RETCODE initProblem(
-    SCIP*                scip,               /**< SCIP data structure */
-    PROBLEM**            problem,            /**< pointer to problem structure */
-    int                  nblocks             /**< number of blocks */
-)
+static
+SCIP_RETCODE initProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   PROBLEM**             problem,            /**< pointer to problem structure */
+   int                   nblocks             /**< number of blocks */
+   )
 {
    char name[SCIP_MAXSTRLEN];
 
@@ -264,9 +261,10 @@ static SCIP_RETCODE initProblem(
 }
 
 /** free subproblem structure */
-static SCIP_RETCODE freeProblem(
-    PROBLEM**            problem             /**< pointer to problem to free */
-)
+static
+SCIP_RETCODE freeProblem(
+   PROBLEM**             problem             /**< pointer to problem to free */
+   )
 {
    SCIP* scip;
    int c;
@@ -298,23 +296,18 @@ static SCIP_RETCODE freeProblem(
 }
 
 /** create a sub-SCIP for the given variables and constraints */
-static SCIP_RETCODE createSubscip(
-    SCIP*                scip,               /**< main SCIP data structure */
-    SCIP**               subscip             /**< pointer to store created sub-SCIP */
-)
+static
+SCIP_RETCODE createSubscip(
+   SCIP*                 scip,               /**< main SCIP data structure */
+   SCIP**                subscip             /**< pointer to store created sub-SCIP */
+   )
 {
    /* create a new SCIP instance */
    SCIP_CALL( SCIPcreate(subscip) );
 
    SCIP_CALL( SCIPincludeDefaultPlugins(*subscip) );
 
-   /* copy parameter settings */
-   //SCIP_CALL( SCIPcopyParamSettings(scip, *subscip) );
-
    SCIP_CALL( SCIPcopyLimits(scip, *subscip) );
-
-   /* disable probing (really?) */
-   SCIP_CALL( SCIPsetIntParam(*subscip, "propagating/probing/freq", -1) );
 
    /* avoid recursive calls */
    SCIP_CALL( SCIPsetSubscipsOff(*subscip, TRUE) );
@@ -332,25 +325,21 @@ static SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPsetBoolParam(*subscip, "timing/statistictiming", FALSE) );
 #endif
 
-   /* author bzfhende
-      *
-      * TODO disable/enable other expensive techniques, e.g. branching
-      */
-
    return SCIP_OKAY;
 }
 
 /** copies the given variables and constraints to the given sub-SCIP */
-static SCIP_RETCODE copyToSubscip(
-    SCIP*                scip,               /**< source SCIP */
-    SCIP*                subscip,            /**< target SCIP */
-    const char*          name,               /**< name for copied problem */
-    SCIP_CONS**          conss,              /**< constraint to copy */
-    SCIP_HASHMAP*        varmap,             /**< hashmap used for the copy process of variables */
-    SCIP_HASHMAP*        consmap,            /**< hashmap used for the copy process of constraints */
-    int                  nconss,             /**< number of constraints to copy */
-    SCIP_Bool*           success             /**< pointer to store whether copying was successful */
-)
+static
+SCIP_RETCODE copyToSubscip(
+   SCIP*                 scip,               /**< source SCIP */
+   SCIP*                 subscip,            /**< target SCIP */
+   const char*           name,               /**< name for copied problem */
+   SCIP_CONS**           conss,              /**< constraint to copy */
+   SCIP_HASHMAP*         varmap,             /**< hashmap used for the copy process of variables */
+   SCIP_HASHMAP*         consmap,            /**< hashmap used for the copy process of constraints */
+   int                   nconss,             /**< number of constraints to copy */
+   SCIP_Bool*            success             /**< pointer to store whether copying was successful */
+   )
 {
    SCIP_CONS* newcons;
    int i;
@@ -389,20 +378,21 @@ static SCIP_RETCODE copyToSubscip(
 }
 
 /** create the subscip for a given block */
-static SCIP_RETCODE blockCreateSubscip(
-    BLOCK*               block,              /**< block structure */
-    SCIP_HASHMAP*        varmap,             /**< variable hashmap used to improve performance */
-    SCIP_HASHMAP*        consmap,            /**< constraint hashmap used to improve performance */
-    SCIP_CONS**          conss,              /**< constraints contained in this block */
-    int                  nconss,             /**< number of constraints contained in this block */
-    SCIP_Bool*           success             /**< pointer to store whether the copying process was successful */
-)
+static
+SCIP_RETCODE blockCreateSubscip(
+   BLOCK*                block,              /**< block structure */
+   SCIP_HASHMAP*         varmap,             /**< variable hashmap used to improve performance */
+   SCIP_HASHMAP*         consmap,            /**< constraint hashmap used to improve performance */
+   SCIP_CONS**           conss,              /**< constraints contained in this block */
+   int                   nconss,             /**< number of constraints contained in this block */
+   SCIP_Bool*            success             /**< pointer to store whether the copying process was successful */
+   )
 {
    char name[SCIP_MAXSTRLEN];
    PROBLEM* problem;
    SCIP* scip;
-   int nsubscipvars;
    SCIP_VAR** subscipvars;
+   int nsubscipvars;
    int i;
 
    assert(block != NULL);
@@ -451,21 +441,22 @@ static SCIP_RETCODE blockCreateSubscip(
 }
 
 /** create problem structure and split it into blocks */
-static SCIP_RETCODE createAndSplitProblem(
-    SCIP*                scip,               /**< SCIP data structure */
-    SCIP_CONS**          sortedconss,        /**< array of (checked) constraints sorted by blocks */
-    int*                 blockstartsconss,   /**< start points of blocks in sortedconss array */
-    int                  nblocks,            /**< number of blocks */
-    PROBLEM**            problem             /**< pointer to store problem structure */
-)
+static
+SCIP_RETCODE createAndSplitProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           sortedconss,        /**< array of (checked) constraints sorted by blocks */
+   int*                  blockstartsconss,   /**< start points of blocks in sortedconss array */
+   int                   nblocks,            /**< number of blocks */
+   PROBLEM**             problem             /**< pointer to store problem structure */
+   )
 {
    BLOCK* block;
    SCIP_HASHMAP* varmap;
    SCIP_HASHMAP* consmap;
    SCIP_CONS** blockconss;
-   SCIP_Bool success = TRUE;
    int nblockconss;
    int b;
+   SCIP_Bool success = TRUE;
 
    /* init subproblem data structure */
    SCIP_CALL( initProblem(scip, problem, nblocks) );
@@ -510,7 +501,8 @@ static SCIP_RETCODE createAndSplitProblem(
 }
 
 /** try to assign linking constraints */
-static SCIP_RETCODE assignLinking(
+static
+SCIP_RETCODE assignLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    const SCIP_DECOMP*    decomp,             /**< decomposition */
    SCIP_DECOMP*          newdecomp,
@@ -581,8 +573,6 @@ static SCIP_RETCODE reuseSolution(
 
    assert(subscip != NULL);
    assert(block != NULL);
-
-   SCIPdebugMsg(subscip, "try to reuse old solution\n");
 
    nsols = SCIPgetNSols( subscip );
 
@@ -706,7 +696,6 @@ SCIP_Real getMemLeft(
          memlim -= SCIPgetMemExternEstim((problem->blocks[b]).subscip)/1048576.0;
       }
 
-      SCIPdebugMsg(scip, "memory left: %f\n", memlim);
       return MAX(0.0, memlim);
    }
    else
@@ -808,49 +797,49 @@ SCIP_DECL_HEUREXITSOL(heurExitsolXyz)
 /** execution method of primal heuristic */
 static SCIP_DECL_HEUREXEC(heurExecPADM)
 { /*lint --e{715}*/
+   char name[SCIP_MAXSTRLEN];
+   char info[SCIP_MAXSTRLEN];
+   SCIP_HEURDATA* heurdata;
    PROBLEM* problem;
    SCIP_DECOMP** alldecomps;
    SCIP_DECOMP* decomp;
+   SCIP_VAR** vars;
+   SCIP_VAR** linkvars;
+   SCIP_VAR** tmpcouplingvars;
+   SCIP_CONS** conss;
+   SCIP_CONS** sortedconss;
+   SET* linkvartoblocks;
+   SET* blocktolinkvars;
+   BLOCKINFO* blockinfolist;
+   SCIP_HASHTABLE* htable;
+   int* varlabels;
+   int* conslabels;
+   int* blockstartsconss;
+   int* allLinkVarToBlocks; /* for efficient memory allocation */
+   SCIP_Bool* varonlyobj;
+   SCIP_Real* tmpcouplingcoef;
+   SCIP_Real gap;
+   SCIP_Real maxslack;
+   SCIP_Real slackthreshold;
+   SCIP_Real memory;
+   SCIP_STATUS status;
+   SCIP_Bool solutionsdiffer;
+   SCIP_Bool solved;
+   SCIP_Bool doScaling;
    int ndecomps;
    int nconss;
    int nvars;
-   SCIP_VAR** vars;
-   SCIP_CONS** conss;
-   SCIP_CONS** sortedconss;
-   int* varlabels;
-   int* conslabels;
-   int i;
    int nblocks;
-   int b;
-   int k;
-   int* blockstartsconss;
-   int* allLinkVarToBlocks; /* for efficient memory allocation */
    int numlinkvars;
-   SCIP_VAR** linkvars;
-   SET* linkvartoblocks;
-   SET* blocktolinkvars;
-   SCIP_Bool* varonlyobj;
-   int j;
-   SCIP_VAR** tmpcouplingvars;
-   SCIP_Real* tmpcouplingcoef;
+   int nentries;
    int aIter;
    int pIter;
-   SCIP_Bool solutionsdiffer;
    int increasedslacks;
-   SCIP_Bool solved;
-   int nentries;
-   BLOCKINFO* blockinfolist;
    int blockinfolistfill;
-   SCIP_HASHTABLE* htable;
-   SCIP_Real gap;
-   SCIP_Bool doScaling;
-   SCIP_Real maxslack;
-   SCIP_Real slackthreshold;
-   SCIP_STATUS status;
-   SCIP_HEURDATA* heurdata;
-   char name[SCIP_MAXSTRLEN];
-   char info[SCIP_MAXSTRLEN];
-   SCIP_Real memory;
+   int i;
+   int b;
+   int k;
+   int j;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -878,55 +867,60 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    htable = NULL;
 
    gap = heurdata->gap;
-   SCIPdebugMsg(scip, "Initialize padm heuristic ");
+
    if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
    {
-      SCIPdebugMsg(scip, "before node\n");
+      SCIPdebugMsg(scip, "Initialize padm heuristic before node\n");
    }
    if( heurtiming & SCIP_HEURTIMING_AFTERNODE )
    {
-      SCIPdebugMsg(scip, "after node\n");
+      SCIPdebugMsg(scip, "Initialize padm heuristic after node\n");
    }
 
 #if 0
-   SCIP_CALL( SCIPwriteOrigProblem(scip, "debug_padm_orig.lp", "lp", FALSE) );
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orig_%s", SCIPgetProbName(scip));
+   SCIP_CALL( SCIPwriteOrigProblem(scip, name, "mps", FALSE) );
 #endif
 #if 0
-   SCIP_CALL( SCIPwriteTransProblem(scip, "debug_padm_trans.cip", "cip", FALSE) );
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "trans_%s", SCIPgetProbName(scip));
+   SCIP_CALL( SCIPwriteTransProblem(scip, name, "mps", FALSE) );
 #endif
 
+   /* take original problem */
    if( heurdata->original )
    {
-      SCIPgetDecomps(scip, &alldecomps, &ndecomps, TRUE); /* TRUE: original decomps */
+      SCIPgetDecomps(scip, &alldecomps, &ndecomps, TRUE);
       if( ndecomps == 0)
          return SCIP_OKAY;
-      /* currently it takes the first decomposition */
+
+      /* it takes the first decomposition */
       decomp = alldecomps[0];
       SCIPdebugMsg(scip, "First original decomposition is selected\n");
       assert(decomp != NULL);
 
-      /* get original problem */
       nconss = SCIPgetNOrigConss(scip);
       conss = SCIPgetOrigConss(scip);
       nvars = SCIPgetNOrigVars(scip);
       vars = SCIPgetOrigVars(scip);
    }
+   /* take transformed problem */
    else
    {
-      SCIPgetDecomps(scip, &alldecomps, &ndecomps, FALSE); /* FALSE: transformed decomps */
+      SCIPgetDecomps(scip, &alldecomps, &ndecomps, FALSE);
       if( ndecomps == 0)
          return SCIP_OKAY;
-      /* currently it takes the first decomposition */
+
+      /* it takes the first decomposition */
       decomp = alldecomps[0];
       SCIPdebugMsg(scip, "First transformed decomposition is selected\n");
       assert(decomp != NULL);
 
-      /* get transformed problem */
       nconss = SCIPgetNConss(scip);
       conss = SCIPgetConss(scip);
       nvars = SCIPgetNVars(scip);
       vars = SCIPgetVars(scip);
    }
+
    nblocks = SCIPdecompGetNBlocks(decomp);
 
    /* if problem has no constraints, no variables or less than two blocks, return */
@@ -936,11 +930,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       goto TERMINATE;
    }
 
-#if 0
-   for( i = 0; i < nconss; i++ )
-      SCIPdebugPrintCons(scip, conss[i], NULL);
-#endif
-
    /* don't change problem by sorting constraints */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &sortedconss, conss, nconss) );
 
@@ -949,15 +938,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_CALL( SCIPallocBufferArray(scip, &blockstartsconss, nconss + 1) );
 
    SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
-#if 0
-   for( i = 0; i < nconss; i++ )
-      SCIPdebugMsg(scip,"%s %d\n",SCIPconsGetName(conss[i]), conslabels[i]);
-#endif
    SCIPdecompGetVarsLabels(decomp, vars, varlabels, nvars);
-#if 0
-   for( i = 0; i < nvars; i++ )
-      SCIPdebugMsg(scip,"%s %d\n",SCIPvarGetName(vars[i]), varlabels[i]);
-#endif
 
    /* sort constraints by blocks */
    SCIPsortIntPtr(conslabels, (void**)sortedconss, nconss);
@@ -981,13 +962,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    if( conslabels[0] == SCIP_DECOMP_LINKCONS )
    {
-      SCIPdebugMsg(scip, "%s is linking contraint\n", SCIPconsGetName(sortedconss[0]));
-      SCIPdebugPrintCons(scip, sortedconss[0], NULL);
       SCIPdebugMsg(scip, "No support for linking contraints\n");
       goto TERMINATE;
    }
-
-   SCIPdebugMsg(scip, "Block numbering starts from %d\n", conslabels[0]);
 
    /* determine start indices of blocks in sorted conss array */
    i = 0;
@@ -1015,42 +992,27 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    /* create blockproblems */
    SCIP_CALL( createAndSplitProblem(scip, sortedconss, blockstartsconss, nblocks, &problem) );
 
-#if 0
-   for( b = 0; b < problem->nblocks; b++ )
-   {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), b);
-      SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[b]).subscip, name, "lp", FALSE) );
-   }
-#endif
-
    /* count linking variables */
    for( i = 0; i < nvars; i++ )
    {
       if( varlabels[i] == SCIP_DECOMP_LINKVAR )
-      {
          numlinkvars++;
-#if 0
-         SCIPdebugMsg(scip, "%s is linking variable\n", SCIPvarGetName(vars[i]));
-#endif
-      }
    }
    SCIPdebugMsg(scip, "%d linking variables\n", numlinkvars);
+
    SCIP_CALL( SCIPallocBufferArray(scip, &linkvartoblocks, numlinkvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &blocktolinkvars, problem->nblocks) );
 
    /* set pointer to NULL for safe memory release */
    for( i = 0; i < numlinkvars; i++ )
-   {
       linkvartoblocks[i].indexes = NULL;
-   }
    for( i = 0; i < problem->nblocks; i++ )
-   {
       blocktolinkvars[i].indexes = NULL;
-   }
 
    /* extract linking variables and init linking variable to blocks set */
    SCIP_CALL( SCIPallocBufferArray(scip, &allLinkVarToBlocks, problem->nblocks * numlinkvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &linkvars, numlinkvars) );
+
    b = 0;
    for( i = 0; i < nvars; i++ )
    {
@@ -1068,6 +1030,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    {
       SCIP_VAR *var;
       const char *vname;
+
       vname = SCIPvarGetName(linkvars[i]);
       k = 0;
       for( b = 0; b < problem->nblocks; b++ )
@@ -1109,6 +1072,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       {
          SCIP_VAR *var;
          const char *vname;
+
          vname = SCIPvarGetName(linkvars[i]);
          var = SCIPfindVar((problem->blocks[b]).subscip, vname);
          if( var != NULL )
@@ -1127,9 +1091,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       if(varonlyobj[i] == TRUE)
          SCIPdebugMsg(scip, "variable %s has no constraints\n", SCIPvarGetName(linkvars[i]));
    }
-#endif
 
-#if 0
    for( b = 0; b < problem->nblocks; b++ )
    {
       SCIPdebugMsg(scip, "%d linking variables in block %d\n", blocktolinkvars[b].size, b);
@@ -1164,6 +1126,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
    }
+
    SCIP_CALL( SCIPallocBufferArray(scip, &blockinfolist, nentries) );
    SCIP_CALL( SCIPhashtableCreate(&htable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, indexesEqual, indexesHashval, (void *)scip) );
    blockinfolistfill = 0;
@@ -1174,6 +1137,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    {
       SCIP_VAR **blockvars;
       int nblockvars;
+
       blockvars = SCIPgetVars((problem->blocks[b]).subscip);
       nblockvars = SCIPgetNVars((problem->blocks[b]).subscip);
 
@@ -1259,16 +1223,12 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                (problem->blocks[b]).ncoupling++;
 
                /* feed hashtable */
-               SCIP_CALL( SCIPhashtableSafeInsert(htable, (void *)binfo) );
+               SCIP_CALL( SCIPhashtableSafeInsert(htable, (void*) binfo) );
             }
          }
       }
-
-//      assert(blocktolinkvars[b].size <= (problem->blocks[b]).ncoupling); // todo: remove if you are sure
    }
-
    assert(nentries == SCIPhashtableGetNElements(htable));
-   SCIPdebugMsg(scip, "Hashtable has %d elements\n", SCIPhashtableGetNElements(htable));
 
 #if 0
    /* write extended submips */
@@ -1284,8 +1244,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    for( i = 0; i < nvars; i++ )
    {
       SCIP_Real obj;
-      obj = SCIPvarGetObj(vars[i]);
-      obj = REALABS(obj);
+
+      obj = REALABS(SCIPvarGetObj(vars[i]));
       if( obj > slackthreshold )
          slackthreshold = obj;
    }
@@ -1304,11 +1264,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    pIter = 0;
    increasedslacks = 0;
-   (void)SCIPsnprintf(info, SCIP_MAXSTRLEN, "-");
+   (void) SCIPsnprintf(info, SCIP_MAXSTRLEN, "-");
    solved = FALSE;
 
    /* Penalty loop */
-   while( !solved )
+   while( !solved && pIter < heurdata->penaltyiterations )
    {
       pIter++;
       solutionsdiffer = TRUE;
@@ -1336,25 +1296,25 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                   if( b2 != b )
                   {
                      BLOCKINFO binfo;
-                     BLOCKINFO *binfoout;
+                     BLOCKINFO* binfoout;
                      BLOCKINFO binfo2;
-                     BLOCKINFO *binfo2out;
+                     BLOCKINFO* binfo2out;
 
-                     SCIP_CONS *couplingcons;
+                     SCIP_CONS* couplingcons;
                      SCIP_Real newRhs;
 
                      binfo.block = b;
                      binfo.otherblock = b2;
                      binfo.linkVarIdx = linkvaridx;
 
-                     binfoout = (BLOCKINFO *)SCIPhashtableRetrieve(htable, (void *)&binfo);
+                     binfoout = (BLOCKINFO*) SCIPhashtableRetrieve(htable, (void *)&binfo);
                      couplingcons = binfoout->couplingCons;
 
                      /* interchange blocks b and b2 for getting new right hand side */
                      binfo2.block = b2;
                      binfo2.otherblock = b;
                      binfo2.linkVarIdx = linkvaridx;
-                     binfo2out = (BLOCKINFO *)SCIPhashtableRetrieve(htable, (void *)&binfo2);
+                     binfo2out = (BLOCKINFO*) SCIPhashtableRetrieve(htable, (void*) &binfo2);
                      newRhs = binfo2out->linkVarVal;
 
                      /* change side of coupling constraint equation with linking variable value of the other block */
@@ -1413,10 +1373,10 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
                         if( b2 != b )
                         {
-                           SCIP_SOL *sol;
+                           SCIP_SOL* sol;
                            BLOCKINFO binfo;
-                           BLOCKINFO *binfoout;
-                           SCIP_VAR *var;
+                           BLOCKINFO* binfoout;
+                           SCIP_VAR* var;
                            SCIP_Real val;
 
                            binfo.block = b;
@@ -1452,12 +1412,12 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                         if( b2 != b )
                         {
                            BLOCKINFO binfo;
-                           BLOCKINFO *binfoout;
+                           BLOCKINFO* binfoout;
 
                            binfo.block = b;
                            binfo.otherblock = b2;
                            binfo.linkVarIdx = linkvaridx;
-                           binfoout = (BLOCKINFO *)SCIPhashtableRetrieve(htable, (void *)&binfo);
+                           binfoout = (BLOCKINFO*) SCIPhashtableRetrieve(htable, (void*) &binfo);
 
                            /* increase penalty coefficients to obtain a bounded subproblem */
                            binfoout->slackPosObjCoeff *= 10.0;
@@ -1508,16 +1468,16 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
                if( b2 != b )
                {
-                  SCIP_SOL *sol;
+                  SCIP_SOL* sol;
                   BLOCKINFO binfo;
-                  BLOCKINFO *binfoout;
+                  BLOCKINFO* binfoout;
                   SCIP_Real slackPosVal;
                   SCIP_Real slackNegVal;
 
                   binfo.block = b;
                   binfo.otherblock = b2;
                   binfo.linkVarIdx = linkvaridx;
-                  binfoout = (BLOCKINFO *)SCIPhashtableRetrieve(htable, (void *)&binfo);
+                  binfoout = (BLOCKINFO*) SCIPhashtableRetrieve(htable, (void*) &binfo);
 
                   sol = SCIPgetBestSol((problem->blocks[b]).subscip);
                   slackPosVal = SCIPgetSolVal((problem->blocks[b]).subscip, sol, binfoout->slackPosVar);
@@ -1589,13 +1549,13 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                   if( b2 != b )
                   {
                      BLOCKINFO binfo;
-                     BLOCKINFO *binfoout;
+                     BLOCKINFO* binfoout;
                      SCIP_Real oldcoeff;
 
                      binfo.block = b;
                      binfo.otherblock = b2;
                      binfo.linkVarIdx = linkvaridx;
-                     binfoout = (BLOCKINFO *)SCIPhashtableRetrieve(htable, (void *)&binfo);
+                     binfoout = (BLOCKINFO*) SCIPhashtableRetrieve(htable, (void*) &binfo);
 
                      /* scale coefficient of positive slack variable */
                      oldcoeff = binfoout->slackPosObjCoeff;
@@ -1619,9 +1579,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          if( newgap >= mingap )
          {
             if( doScaling && heurdata->scaling )
-               (void)SCIPsnprintf(info, SCIP_MAXSTRLEN, "scale, %f", newgap);
+               (void) SCIPsnprintf(info, SCIP_MAXSTRLEN, "scale, %f", newgap);
             else
-               (void)SCIPsnprintf(info, SCIP_MAXSTRLEN, "%f", newgap);
+               (void) SCIPsnprintf(info, SCIP_MAXSTRLEN, "%f", newgap);
 
             gap = newgap;
          }
@@ -1636,9 +1596,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    /* copy solution if present */
    if( solved )
    {
-      SCIP_SOL *newsol;
+      SCIP_SOL* newsol;
       SCIP_Bool success;
-      SCIP_Real *blocksolvals;
+      SCIP_Real* blocksolvals;
 
       assert(increasedslacks == 0);
 
@@ -1647,8 +1607,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
       for( b = 0; b < problem->nblocks; b++ )
       {
-         SCIP_SOL *blocksol;
-         SCIP_VAR **blockvars;
+         SCIP_SOL* blocksol;
+         SCIP_VAR** blockvars;
          int nblockvars;
 
          /* get solution of block variables (without slack variables) */
@@ -1665,10 +1625,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
             origvar = SCIPfindVar(scip, SCIPvarGetName(blockvars[i]));
             solval = blocksolvals[i];
-#if 0
-            SCIPdebugMsg(scip,"Fixing: %s = %.2f\n",SCIPvarGetName(origvar),solval);
-            SCIPdebugMsg(scip, "Status fixed: %d\n", SCIPvarGetStatus(origvar));
-#endif
             SCIP_CALL( SCIPsetSolVal(scip, newsol, origvar, solval) );
          }
       }
@@ -1691,7 +1647,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                if( SCIPisInfinity(scip, fixedvalue) )
                   break; // todo: maybe we should return the status UNBOUNDED instead
             }
-            SCIPdebugMsg(scip, "fix %s without any constraint to %.2f\n", SCIPvarGetName(linkvars[i]), fixedvalue);
             SCIP_CALL( SCIPsetSolVal(scip, newsol, linkvars[i], fixedvalue) );
          }
       }
@@ -1712,6 +1667,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
       SCIPfreeBufferArray(scip, &blocksolvals);
    }
+   else
+   {
+      SCIPdebugMsg(scip, "maximum number of penalty loops reached\n");
+   }
+   
 
 TERMINATE:
    /* release variables, constraints and free memory */
@@ -1811,8 +1771,8 @@ TERMINATE:
 
 /** creates the PADM primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurPADM(
-    SCIP*                scip                /**< SCIP data structure */
-)
+   SCIP*                 scip                /**< SCIP data structure */
+   )
 {
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
@@ -1843,7 +1803,10 @@ SCIP_RETCODE SCIPincludeHeurPADM(
 
    /* add padm primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/admiterations",
-      "maximal number of ADM iterations in each penalty loop", &heurdata->admiterations, TRUE, 12, 0, 100, NULL, NULL) );
+      "maximal number of ADM iterations in each penalty loop", &heurdata->admiterations, TRUE, 12, 1, 100, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/penaltyiterations",
+      "maximal number of penalty iterations", &heurdata->penaltyiterations, TRUE, 100, 1, 100000, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gap",
       "mipgap at start", &heurdata->gap, TRUE, 8.0, 0.0, 16.0, NULL, NULL) );
