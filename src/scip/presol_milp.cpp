@@ -296,7 +296,11 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
    presolve.setEpsilon(SCIPepsilon(scip));
    presolve.setFeasTol(SCIPfeastol(scip));
+#ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
+   problem.setName(SCIPgetProbName(scip));
+#else
    presolve.setVerbosityLevel(VerbosityLevel::QUIET);
+#endif
 
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
