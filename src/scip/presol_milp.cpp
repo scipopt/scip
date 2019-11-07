@@ -39,11 +39,13 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "scip/pub_matrix.h"
 #include "scip/pub_presol.h"
 #include "scip/pub_var.h"
+#include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/scip_presol.h"
 #include "scip/scip_var.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_prob.h"
+#include "scip/scip_param.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_timing.h"
@@ -54,11 +56,22 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 
 #define PRESOL_NAME            "milp"
-#define PRESOL_DESC            "MILP specific presolving routine"
+#define PRESOL_DESC            "MILP specific presolving methods"
 #define PRESOL_PRIORITY        -9999999 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
+/* default parameter values */
+#define DEFAULT_THREADS            1         /**< maximum number of threads presolving may use (0: automatic) */
+#define DEFAULT_MAXFILLINPERSUBST  8         /**< maximal possible fillin for substitutions to be considered */
+#define DEFAULT_MODIFYCONSFAC      0.0       /**< modify SCIP constraints when the number of nonzeros is at most this
+                                              *   factor times the number of nonzeros before presolving */
+#define DEFAULT_ENABLEPARALLELROWS TRUE      /**< should the parallel rows presolver be enabled within the presolve library? */
+#define DEFAULT_ENABLEDOMCOL       TRUE      /**< should the dominated column presolver be enabled within the presolve library? */
+#define DEFAULT_ENABLEDUALINFER    TRUE      /**< should the dualinfer presolver be enabled within the presolve library? */
+#define DEFAULT_ENABLEMULTIAGGR    TRUE      /**< should the multi-aggregation presolver be enabled within the presolve library? */
+#define DEFAULT_ENABLEPROBING      TRUE      /**< should the probing presolver be enabled within the presolve library? */
+#define DEFAULT_ENABLESPARSIFY     FALSE     /**< should the sparsify presolver be enabled within the presolve library? */
 
 /*
  * Data structures
@@ -67,9 +80,18 @@ SCIP_RETCODE SCIPincludePresolMILP(
 /** presolver data */
 struct SCIP_PresolData
 {
+   tbb::task_scheduler_init schedulerinit;
    int lastncols;
    int lastnrows;
-   tbb::task_scheduler_init schedulerinit;
+   int threads;
+   int maxfillinpersubstitution;
+   SCIP_Bool enablesparsify;
+   SCIP_Bool enabledomcol;
+   SCIP_Bool enableprobing;
+   SCIP_Bool enabledualinfer;
+   SCIP_Bool enablemultiaggr;
+   SCIP_Bool enableparallelrows;
+   SCIP_Real modifyconsfac;
 };
 
 
@@ -77,9 +99,13 @@ struct SCIP_PresolData
  * Local methods
  */
 
+/** builds the presolvelib problem datastructure from the matrix */
 static
 Problem<SCIP_Real>
-buildProblem(SCIP* scip, SCIP_MATRIX* matrix)
+buildProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_MATRIX*          matrix              /**< initialized SCIP_MATRIX data structure */
+   )
 {
    ProblemBuilder<SCIP_Real> builder;
 
@@ -159,7 +185,16 @@ SCIP_DECL_PRESOLINIT(presolInitMILP)
    data->lastncols = -1;
    data->lastnrows = -1;
 
-   new (&data->schedulerinit) tbb::task_scheduler_init(1);
+   // determine the number of threads to initialize the tbb scheduler with.
+   // The tbb default is to use the number of available hardware threads
+   int numthreads = tbb::task_scheduler_init::default_num_threads();
+
+   // if data->threads has a lower number than that and is not set to automatic,
+   // then use that lower number of threads
+   if( data->threads != 0 && data->threads < numthreads )
+      numthreads = data->threads;
+
+   new (&data->schedulerinit) tbb::task_scheduler_init(numthreads);
 
    return SCIP_OKAY;
 }
@@ -187,8 +222,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    SCIP_PRESOLDATA* data;
 
    *result = SCIP_DIDNOTRUN;
-   // TODO if( SCIPgetNRuns(scip) != 1 )
-   //    return SCIP_OKAY;
+
+   if( !SCIPallowWeakDualReds(scip) )
+      return SCIP_OKAY;
 
    data = SCIPpresolGetData(presol);
 
@@ -218,6 +254,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    Presolve<SCIP_Real> presolve;
 
    presolve.getPresolveOptions().substitutebinarieswithints = false;
+   presolve.getPresolveOptions().maxfillinpersubstitution = data->maxfillinpersubstitution;
    using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
 
    presolve.addPresolveMethod( uptr( new CoefficientStrengthening<SCIP_Real>() ) );
@@ -225,26 +262,36 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    presolve.addPresolveMethod( uptr( new ConstraintPropagation<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
-   // todo: parallel cols cannot be handled by SCIP currently
-   // addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
 
-   if( SCIPallowWeakDualReds(scip) )
-   {
-      presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real> ) );
-   }
+   if( data->enableparallelrows )
+      presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
+
+   presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
+
+   if( data->enablemultiaggr )
+      presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
+
+   if( data->enableprobing )
+      presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
+
+   if( data->enablesparsify )
+      presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
+
+   if( data->enabledualinfer )
+      presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
 
    if( SCIPallowStrongDualReds(scip) )
    {
       presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
-      presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
+
+      if( data->enabledomcol )
+         presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
+
+      // todo: parallel cols cannot be handled by SCIP currently
+      // addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) );
    }
 
    presolve.setEpsilon(SCIPepsilon(scip));
@@ -294,7 +341,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
    // if the number of nonzeros decreased by a sufficient factor, rather create all constraints from scratch
    int newnnz = problem.getConstraintMatrix().getNnz();
-   if( newnnz <= 0.9 * oldnnz )
+
+   if( newnnz <= data->modifyconsfac * oldnnz )
    {
       int oldnrows = SCIPmatrixGetNRows(matrix);
       int newnrows = problem.getNRows();
@@ -499,9 +547,8 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
 
-   /* create xyz presolver data */
+   /* create MILP presolver data */
    presoldata = NULL;
-   /* TODO: (optional) create presolver specific data here */
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
 
    presol = NULL;
@@ -520,7 +567,50 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPsetPresolExit(scip, presol, presolExitMILP) );
 
    /* add MILP presolver parameters */
-   /* TODO: (optional) add presolver specific parameters with SCIPaddTypeParam() here */
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/" PRESOL_NAME "/threads",
+         "maximum number of threads presolving may use (0: automatic)",
+         &presoldata->threads, FALSE, DEFAULT_THREADS, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/" PRESOL_NAME "/maxfillinpersubstitution",
+         "maximal possible fillin for substitutions to be considered",
+         &presoldata->maxfillinpersubstitution, FALSE, DEFAULT_MAXFILLINPERSUBST, INT_MIN, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "presolving/" PRESOL_NAME "/modifyconsfac",
+         "modify SCIP constraints when the number of nonzeros is at most this factor times the number of nonzeros before presolving",
+         &presoldata->modifyconsfac, FALSE, DEFAULT_MODIFYCONSFAC, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/" PRESOL_NAME "/enableparallelrows",
+         "should the parallel rows presolver be enabled within the presolve library?",
+         &presoldata->enableparallelrows, TRUE, DEFAULT_ENABLEPARALLELROWS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/" PRESOL_NAME "/enabledomcol",
+         "should the dominated column presolver be enabled within the presolve library?",
+         &presoldata->enabledomcol, TRUE, DEFAULT_ENABLEDOMCOL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/" PRESOL_NAME "/enabledualinfer",
+         "should the dualinfer presolver be enabled within the presolve library?",
+         &presoldata->enabledualinfer, TRUE, DEFAULT_ENABLEDUALINFER, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/" PRESOL_NAME "/enablemultiaggr",
+         "should the multi-aggregation presolver be enabled within the presolve library?",
+         &presoldata->enablemultiaggr, TRUE, DEFAULT_ENABLEMULTIAGGR, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/" PRESOL_NAME "/enableprobing",
+         "should the probing presolver be enabled within the presolve library?",
+         &presoldata->enableprobing, TRUE, DEFAULT_ENABLEPROBING, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/" PRESOL_NAME "/enablesparsify",
+         "should the sparsify presolver be enabled within the presolve library?",
+         &presoldata->enablesparsify, TRUE, DEFAULT_ENABLESPARSIFY, NULL, NULL) );
 
    return SCIP_OKAY;
 }
