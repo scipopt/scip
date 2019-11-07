@@ -255,9 +255,7 @@ struct SCIP_RegForest
    int                   ntrees;             /**< number of trees in this forest */
    int                   dim;                /**< feature dimension */
    int*                  nbegin;             /**< array of root node indices of each tree */
-   int*                  node;               /**< node index array where roots have index 0 */
-   int*                  lchild;             /**< left child index of each internal node, or -1 for leaves */
-   int*                  rchild;             /**< right child index of each internal node or -1 for leaves */
+   int*                  child;              /**< child index pair of each internal node, or (-1, -1) for leaves */
    int*                  splitidx;           /**< data index for split at node, or -1 at a leaf */
    SCIP_Real*            value;              /**< split position at internal nodes, prediction at leaves */
    int                   size;               /**< length of node arrays */
@@ -285,9 +283,7 @@ void SCIPregforestFree(
    regforestptr = *regforest;
 
    BMSfreeMemoryArrayNull(&regforestptr->nbegin);
-   BMSfreeMemoryArrayNull(&regforestptr->lchild);
-   BMSfreeMemoryArrayNull(&regforestptr->rchild);
-   BMSfreeMemoryArrayNull(&regforestptr->node);
+   BMSfreeMemoryArrayNull(&regforestptr->child);
    BMSfreeMemoryArrayNull(&regforestptr->splitidx);
    BMSfreeMemoryArrayNull(&regforestptr->value);
 
@@ -311,22 +307,19 @@ SCIP_Real SCIPregforestPredict(
    for( treeidx = 0; treeidx < regforest->ntrees; ++treeidx )
    {
       int treepos = regforest->nbegin[treeidx];
-      int* lchildtree = &(regforest->lchild[treepos]);
-      int* rchildtree = &(regforest->rchild[treepos]);
+      int* childtree = &(regforest->child[treepos]);
       int* splitidxtree = &(regforest->splitidx[treepos]);
       int pos = 0;
       SCIP_Real* valuetree = &(regforest->value[treepos]);
 
-      assert(regforest->node[treepos] == 0);
-
       /* find the correct leaf */
-      while( splitidxtree[pos] != - 1)
+      while( splitidxtree[pos] != - 1 )
       {
+         int goright;
          assert(splitidxtree[pos] < regforest->dim);
-         if( datapoint[splitidxtree[pos]] <= valuetree[pos] )
-            pos = lchildtree[pos];
-         else
-            pos = rchildtree[pos];
+
+         goright = (datapoint[splitidxtree[pos]] > valuetree[pos]) ? 1 : 0;
+         pos = childtree[2 * pos + goright];
       }
 
       value += valuetree[pos];
@@ -409,9 +402,7 @@ SCIP_RETCODE SCIPregforestFromFile(
    regforestptr = *regforest;
 
    SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->nbegin, ntrees) );
-   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->lchild, size) );
-   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->rchild, size) );
-   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->node, size) );
+   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->child, 2 * size) );
    SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->splitidx, size) );
    SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->value, size) );
 
@@ -428,15 +419,16 @@ SCIP_RETCODE SCIPregforestFromFile(
    treepos = 0;
    while( !SCIPfeof(file) && !error )
    {
+      int node;
       char* endptr;
       /* get next line */
       if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
          break;
 
       sscanret = sscanf(buffer, dataformat,
-         &regforestptr->node[pos],
-         &regforestptr->lchild[pos],
-         &regforestptr->rchild[pos],
+         &node,
+         &regforestptr->child[2 * pos],
+         &regforestptr->child[2 * pos + 1],
          &regforestptr->splitidx[pos],
          valuestr);
 
@@ -449,7 +441,7 @@ SCIP_RETCODE SCIPregforestFromFile(
       (void)SCIPstrToRealValue(valuestr, &regforestptr->value[pos], &endptr);
 
       /* new root node - increase the tree index position */
-      if( regforestptr->node[pos] == 0 )
+      if( node == 0 )
       {
          assert(treepos < regforestptr->ntrees);
 
@@ -2599,7 +2591,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
    treedata = eventhdlrdata->treedata;
 
 /* the random forest is a huge c-file and should only be included if requested explicitly */
-#if 1
+#if 0
       values[6] = timeseriesGet(eventhdlrdata->timeseries[0]);
       values[7] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[0]->des);
       values[2] = timeseriesGet(eventhdlrdata->timeseries[3]);
