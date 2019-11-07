@@ -2282,8 +2282,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    int j;
    int k;
 
-   SCIPinfoMessage(scip, NULL, "starting tworowbnd\n");
-
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
    infeasible = FALSE;
@@ -2900,17 +2898,14 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       {
          *result = SCIP_SUCCESS;
          presoldata->nuselessruns = 0;
-         SCIPinfoMessage(scip, NULL, "tworowbnd evaluated %d pairs to tighten %d bounds, fix %d variables and delete %d redundant constraints\n", SCIPhashsetGetNElements(pairhashset), *nchgbds - oldnchgbds, *nfixedvars - oldnfixedvars, ndelcons);
       }
       else if( infeasible )
       {
          *result = SCIP_CUTOFF;
-         SCIPinfoMessage(scip, NULL, "tworowbnd detected infeasibility\n");
       }
       else
       {
          presoldata->nuselessruns++;
-         SCIPinfoMessage(scip, NULL, "tworowbnd evaluated %d pairs without success\n", SCIPhashsetGetNElements(pairhashset));
       }
 
       SCIPhashsetFree(&pairhashset, SCIPblkmem(scip));
