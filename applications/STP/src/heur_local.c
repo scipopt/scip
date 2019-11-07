@@ -25,7 +25,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+#define SCIP_DEBUG
 #include <assert.h>
 #include <string.h>
 
@@ -973,6 +973,11 @@ SCIP_RETCODE localKeyVertexHeuristics(
                {
                   kpcost += graph->cost[edge];
 
+#ifdef SCIP_DEBUG
+                  printf("key vertex start edge ");
+                  graph_edge_printInfo(graph, edge);
+#endif
+
                   /* check whether the current edge leads to the ST root */
                   if( solEdges[flipedge(edge)] > -1 )
                   {
@@ -1005,6 +1010,11 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
                               kpcost += graph->cost[e];
                               kpedges[nkpedges++] = e;
+#ifdef SCIP_DEBUG
+                              printf("key vertex edge ");
+                              graph_edge_printInfo(graph, e);
+#endif
+
                               break;
                            }
                         }
@@ -1027,6 +1037,10 @@ SCIP_RETCODE localKeyVertexHeuristics(
                      if( !solNodes[adjnode] )
                      {
                         kpcost -= graph->cost[e];
+#ifdef SCIP_DEBUG
+                        printf("key vertex remove edge ");
+                        graph_edge_printInfo(graph, e);
+#endif
                         nkpedges--;
                         adjnode = graph->tail[e];
                         if( adjnode != crucnode )
@@ -1063,6 +1077,11 @@ SCIP_RETCODE localKeyVertexHeuristics(
                      {
                         assert(solNodes[graph->tail[e]]);
                         kpcost += graph->cost[e];
+#ifdef SCIP_DEBUG
+                        printf("key vertex (root) edge ");
+                        graph_edge_printInfo(graph, e);
+#endif
+
                         kpedges[nkpedges++] = e;
                         break;
                      }
@@ -1209,8 +1228,9 @@ SCIP_RETCODE localKeyVertexHeuristics(
             prizemarkcount = 0;
 
 #ifndef NDEBUG
-            for( int k = 0; k < nnodes; k++ )
-               assert(!prizemark[k]);
+            if( mwpc  )
+               for( int k = 0; k < nnodes; k++ )
+                  assert(!prizemark[k]);
 #endif
 
             /* compute the cost of the MST */
@@ -1226,6 +1246,11 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
                mstcost += graph->cost[edge];
                mstcost -= getNewPrize(graph, solNodes, graphmark, edge, prizemark, prizemarklist, &prizemarkcount);
+
+#ifdef SCIP_DEBUG
+               printf("key vertex mst edge ");
+               graph_edge_printInfo(graph, edge);
+#endif
 
                assert( newedges[edge] != crucnode && newedges[flipedge(edge)] != crucnode );
 
@@ -1243,6 +1268,10 @@ SCIP_RETCODE localKeyVertexHeuristics(
                      newedges[e] = crucnode;
                      mstcost += graph->cost[e];
                      mstcost -= getNewPrize(graph, solNodes, graphmark, e, prizemark, prizemarklist, &prizemarkcount);
+#ifdef SCIP_DEBUG
+                     printf("key vertex mst edge ");
+                     graph_edge_printInfo(graph, e);
+#endif
                   }
                }
 
@@ -1256,12 +1285,20 @@ SCIP_RETCODE localKeyVertexHeuristics(
                      newedges[e] = crucnode;
                      mstcost += graph->cost[e];
                      mstcost -= getNewPrize(graph, solNodes, graphmark, e, prizemark, prizemarklist, &prizemarkcount);
+
+#ifdef SCIP_DEBUG
+                     printf("key vertex mst edge ");
+                     graph_edge_printInfo(graph, e);
+#endif
                   }
                }
             }
 
             for( int pi = 0; pi < prizemarkcount; pi++ )
+            {
+               assert(mwpc);
                prizemark[prizemarklist[pi]] = FALSE;
+            }
 
             if( SCIPisLT(scip, mstcost, kpcost) )
             {
@@ -1553,12 +1590,23 @@ SCIP_RETCODE localKeyVertexHeuristics(
             kptailnode = graph->head[linkcutNodes[crucnode].edge];
             kpathcost = graph->cost[linkcutNodes[crucnode].edge];
 
+#ifdef SCIP_DEBUG
+            printf("key path edge ");
+            graph_edge_printInfo(graph, linkcutNodes[crucnode].edge);
+#endif
+
             while( !nodeIsCrucial(graph, solEdges, kptailnode) && !pinned[kptailnode] )
             {
-               kpathcost += graph->cost[linkcutNodes[kptailnode].edge];
+               const int kpedge = linkcutNodes[kptailnode].edge;
+               kpathcost += graph->cost[kpedge];
+
+#ifdef SCIP_DEBUG
+               printf("key path edge ");
+               graph_edge_printInfo(graph, kpedge);
+#endif
 
                kpnodes[nkpnodes++] = kptailnode;
-               kptailnode = graph->head[linkcutNodes[kptailnode].edge];
+               kptailnode = graph->head[kpedge];
             }
 
             /* reset all nodes (henceforth referred to as 'C') whose bases are internal nodes of the current keypath */
@@ -1663,14 +1711,30 @@ SCIP_RETCODE localKeyVertexHeuristics(
             for( int k = 0; k < nnodes; k++ )
                assert(!prizemark[k]);
 #endif
-
+#ifdef SCIP_DEBUG
+               printf("key path alternative edge ");
+               graph_edge_printInfo(graph, newedge);
+#endif
                edgecost -= getNewPrize(graph, solNodes, graphmark, newedge, prizemark, prizemarklist, &prizemarkcount);
 
                for( int node = graph->tail[newedge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
+               {
+#ifdef SCIP_DEBUG
+                  printf("key path alternative edge ");
+                  graph_edge_printInfo(graph, vnoipath[node].edge);
+#endif
                   edgecost -= getNewPrize(graph, solNodes, graphmark, vnoipath[node].edge, prizemark, prizemarklist, &prizemarkcount);
+               }
 
                for( int node = graph->head[newedge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
+               {
+#ifdef SCIP_DEBUG
+                  printf("key path alternative edge ");
+                  graph_edge_printInfo(graph, vnoipath[node].edge);
+#endif
+
                   edgecost -= getNewPrize(graph, solNodes, graphmark, vnoipath[node].edge, prizemark, prizemarklist, &prizemarkcount);
+               }
 
                for( int pi = 0; pi < prizemarkcount; pi++ )
                   prizemark[prizemarklist[pi]] = FALSE;
