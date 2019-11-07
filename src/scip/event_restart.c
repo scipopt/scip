@@ -21,6 +21,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
+#include "blockmemshell/memory.h"
 #include "scip/event_restart.h"
 #include "scip/event_treesizeprediction.h"
 #include "scip/event_treeprofile.h"
@@ -106,6 +107,10 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define DES_ALPHA_OPENNODES 0.6
 #define DES_BETA_OPENNODES 0.15
 
+#define MAX_REGFORESTSIZE 10000000          /**< size limit (number of nodes) for regression forest */
+
+#define DEFAULT_REGFORESTFILENAME "-"       /**< default file name of user regression forest in RFCSV format */
+
 /** double exponential smoothing data structure */
 struct DoubleExpSmooth
 {
@@ -153,13 +158,19 @@ typedef struct TimeSeries TIMESERIES;
 
 /** data structure for convenient access of tree information */
 typedef struct TreeData TREEDATA;
+
+
 #define NTIMESERIES 5
+
+/** regression forest data structure */
+typedef struct SCIP_RegForest SCIP_REGFOREST;
 
 /** event handler data */
 struct SCIP_EventhdlrData
 {
    SEARCHPROGRESS*       ratioprogress;      /**< ratio progress data structure */
    BACKTRACKESTIM*       backtrackestim;     /**< backtrack estimator for tree size */
+   SCIP_REGFOREST*       regforest;          /**< regression forest data structure */
    TIMESERIES*           timeseries[NTIMESERIES]; /**< array of time series slots */
    TREEDATA*             treedata;           /**< tree data */
    char                  restartpolicyparam; /**< restart policy parameter */
@@ -178,6 +189,7 @@ struct SCIP_EventhdlrData
    SCIP_Real             proglastreport;     /**< progress at which last report was printed */
    SCIP_Bool             printreports;       /**< should periodic reports on estimation be printed? */
    int                   nreports;           /**< the number of reports already printed */
+   char*                 regforestfilename;  /**< file name of user regression forest in RFCSV format */
 };
 
 typedef struct SubtreeSumGap SUBTREESUMGAP;
@@ -238,11 +250,220 @@ struct NodeInfo
    int                   subtreeidx;         /**< subtree index of this node */
 };
 
+struct SCIP_RegForest
+{
+   int                   ntrees;             /**< number of trees in this forest */
+   int                   dim;                /**< feature dimension */
+   int*                  nbegin;             /**< array of root node indices of each tree */
+   int*                  node;               /**< node index array where roots have index 0 */
+   int*                  lchild;             /**< left child index of each internal node, or -1 for leaves */
+   int*                  rchild;             /**< right child index of each internal node or -1 for leaves */
+   int*                  splitidx;           /**< data index for split at node, or -1 at a leaf */
+   SCIP_Real*            value;              /**< split position at internal nodes, prediction at leaves */
+   int                   size;               /**< length of node arrays */
+};
+
+
 typedef struct NodeInfo NODEINFO;
+
 
 /*
  * Local methods
  */
+
+/** free a regression forest data structure */
+static
+void SCIPregforestFree(
+   SCIP_REGFOREST**      regforest           /**< regression forest data structure */
+   )
+{
+   SCIP_REGFOREST* regforestptr;
+   assert(regforest != NULL);
+
+   if( *regforest == NULL )
+      return;
+   regforestptr = *regforest;
+
+   BMSfreeMemoryArrayNull(&regforestptr->nbegin);
+   BMSfreeMemoryArrayNull(&regforestptr->lchild);
+   BMSfreeMemoryArrayNull(&regforestptr->rchild);
+   BMSfreeMemoryArrayNull(&regforestptr->node);
+   BMSfreeMemoryArrayNull(&regforestptr->splitidx);
+   BMSfreeMemoryArrayNull(&regforestptr->value);
+
+   BMSfreeMemory(regforest);
+}
+
+/** make a prediction with this regression forest */
+static
+SCIP_Real SCIPregforestPredict(
+   SCIP_REGFOREST*       regforest,          /**< regression forest data structure */
+   SCIP_Real*            datapoint           /**< a data point that matches the dimension of this regression forest */
+   )
+{
+   int treeidx;
+   SCIP_Real value = 0.0;
+
+   assert(regforest != NULL);
+   assert(datapoint != NULL);
+
+   /* loop through the trees */
+   for( treeidx = 0; treeidx < regforest->ntrees; ++treeidx )
+   {
+      int treepos = regforest->nbegin[treeidx];
+      int* lchildtree = &(regforest->lchild[treepos]);
+      int* rchildtree = &(regforest->rchild[treepos]);
+      int* splitidxtree = &(regforest->splitidx[treepos]);
+      int pos = 0;
+      SCIP_Real* valuetree = &(regforest->value[treepos]);
+
+      assert(regforest->node[treepos] == 0);
+
+      /* find the correct leaf */
+      while( splitidxtree[pos] != - 1)
+      {
+         assert(splitidxtree[pos] < regforest->dim);
+         if( datapoint[splitidxtree[pos]] <= valuetree[pos] )
+            pos = lchildtree[pos];
+         else
+            pos = rchildtree[pos];
+      }
+
+      value += valuetree[pos];
+   }
+
+   /* return the average value that the trees predict */
+   return value / (SCIP_Real)(regforest->ntrees);
+}
+
+/** read a regression forest from an rfcsv file */
+static
+SCIP_RETCODE SCIPregforestFromFile(
+   SCIP_REGFOREST**      regforest,          /**< regression forest data structure */
+   const char*           filename            /**< name of file with the regression forest data */
+   )
+{
+
+   SCIP_FILE* file;
+   SCIP_REGFOREST* regforestptr;
+   char buffer[SCIP_MAXSTRLEN];
+   char firstlineformat[SCIP_MAXSTRLEN];
+   char dataformat[SCIP_MAXSTRLEN];
+   char valuestr[SCIP_MAXSTRLEN];
+   SCIP_Bool error = FALSE;
+   int ntrees;
+   int dim;
+   int size;
+   int sscanret;
+   int pos;
+   int treepos;
+
+   /* try to open file */
+   file = SCIPfopen(filename, "r");
+
+   if( file == NULL )
+      return SCIP_NOFILE;
+
+
+   /* parse read the first line that contains the number of trees, feature dimension, and total number of nodes */
+   (void) SCIPsnprintf(firstlineformat, SCIP_MAXSTRLEN, "### NTREES=%%10d FEATURE_DIM=%%10d LENGTH=%%10d\n");
+   if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
+   {
+      error = TRUE;
+      SCIPerrorMessage("Could not read first line of regression file '%s'\n", filename);
+      goto CLOSEFILE;
+   }
+
+   sscanret = sscanf(buffer, firstlineformat, &ntrees, &dim, &size);
+
+   if( sscanret != 3 )
+   {
+      error = TRUE;
+      SCIPerrorMessage("Could not extract tree information from buffer line [%s]\n", buffer);
+      goto CLOSEFILE;
+   }
+
+   SCIPdebugMessage("Read ntrees=%d, dim=%d, size=%d (return value %d)\n", ntrees, dim, size, sscanret);
+
+   /* author bzfhende
+    *
+    * check if the tree is too big, or numbers are negative
+    */
+   if( size > MAX_REGFORESTSIZE )
+   {
+      error = TRUE;
+      SCIPerrorMessage("Requested size %d exceeds size limit %d for regression trees", size, MAX_REGFORESTSIZE);
+      goto CLOSEFILE;
+   }
+
+   if( dim <= 0 || ntrees <= 0 || size <= 0 )
+   {
+      error = TRUE;
+      SCIPerrorMessage("Cannot create regression tree with negative size, dimension, or number of trees\n");
+      goto CLOSEFILE;
+   }
+
+
+   /* allocate memory in regression forest data structure */
+   SCIP_ALLOC( BMSallocMemory(regforest) );
+   regforestptr = *regforest;
+
+   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->nbegin, ntrees) );
+   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->lchild, size) );
+   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->rchild, size) );
+   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->node, size) );
+   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->splitidx, size) );
+   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->value, size) );
+
+   regforestptr->dim = dim;
+   regforestptr->size = size;
+   regforestptr->ntrees = ntrees;
+
+   SCIPdebugMessage("Random Forest allocated\n");
+
+   /* loop through the rest of the file, which contains the comma separated node data */
+   (void) SCIPsnprintf(dataformat, SCIP_MAXSTRLEN, "%%10d,%%10d,%%10d,%%10d,%%%ds\n", SCIP_MAXSTRLEN);
+
+   pos = 0;
+   treepos = 0;
+   while( !SCIPfeof(file) && !error )
+   {
+      char* endptr;
+      /* get next line */
+      if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
+         break;
+
+      sscanret = sscanf(buffer, dataformat,
+         &regforestptr->node[pos],
+         &regforestptr->lchild[pos],
+         &regforestptr->rchild[pos],
+         &regforestptr->splitidx[pos],
+         valuestr);
+
+      if( sscanret != 5 )
+      {
+         SCIPerrorMessage("Something wrong with line %d '%s'", pos + 1, buffer);
+         error = TRUE;
+      }
+
+      (void)SCIPstrToRealValue(valuestr, &regforestptr->value[pos], &endptr);
+
+      /* new root node - increase the tree index position */
+      if( regforestptr->node[pos] == 0 )
+      {
+         assert(treepos < regforestptr->ntrees);
+
+         regforestptr->nbegin[treepos++] = pos;
+      }
+
+      ++pos;
+   }
+
+CLOSEFILE:
+    SCIPfclose(file);
+
+   return SCIP_OKAY;
+}
 
 /** clean subtrees stored as priority queues */
 static
@@ -1678,23 +1899,31 @@ static
 SCIP_DECL_EVENTINIT(eventInitRestart)
 {  /*lint --e{715}*/
 
+   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   /* test if user specified a regression forest */
+   if( 0 != strncmp(eventhdlrdata->regforestfilename, DEFAULT_REGFORESTFILENAME, strlen(DEFAULT_REGFORESTFILENAME)) )
+   {
+      SCIP_CALL( SCIPregforestFromFile(&eventhdlrdata->regforest,
+               eventhdlrdata->regforestfilename) );
+   }
 
    return SCIP_OKAY;
 }
 
 /** deinitialization method of event handler (called before transformed problem is freed) */
-#if 0
 static
 SCIP_DECL_EVENTEXIT(eventExitRestart)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of restart event handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   SCIPregforestFree(&eventhdlrdata->regforest);
 
    return SCIP_OKAY;
 }
-#else
-#define eventExitRestart NULL
-#endif
 
 
 /** reset all time series */
@@ -2359,6 +2588,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    TREEDATA* treedata;
    SCIP_Real completed;
+   SCIP_Real values[9];
 
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME) == 0);
@@ -2369,30 +2599,17 @@ SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
    treedata = eventhdlrdata->treedata;
 
 /* the random forest is a huge c-file and should only be included if requested explicitly */
-#ifdef SCIP_ESTIM_RF
-#define MAKE_STR(x) _MAKE_STR(x)
-#define _MAKE_STR(x) #x
-      SCIP_Real values[9];
-#define GAPVALUE values[0]
-#define GAPTREND values[1]
-#define SSGVALUE values[2]
-#define SSGTREND values[3]
-#define PROGRESSVALUE values[4]
-#define PROGRESSTREND values[5]
-#define LEAFFREQVALUE values[6]
-#define LEAFFREQTREND values[7]
-#define OPENTREND values[8]
-#define __value__ completed
-      GAPVALUE = timeseriesGet(eventhdlrdata->timeseries[0]);
-      GAPTREND = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[0]->des);
-      SSGVALUE = timeseriesGet(eventhdlrdata->timeseries[3]);
-      SSGTREND = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[3]->des);
-      PROGRESSVALUE = timeseriesGet(eventhdlrdata->timeseries[1]);
-      PROGRESSTREND = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[1]->des);
-      LEAFFREQVALUE = timeseriesGet(eventhdlrdata->timeseries[2]);
-      LEAFFREQTREND = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[2]->des);
-      OPENTREND = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[4]->des) < 0 ? 1.0 : 0.0;
-#include MAKE_STR(SCIP_ESTIM_RF)
+#if 1
+      values[6] = timeseriesGet(eventhdlrdata->timeseries[0]);
+      values[7] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[0]->des);
+      values[2] = timeseriesGet(eventhdlrdata->timeseries[3]);
+      values[3] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[3]->des);
+      values[0] = timeseriesGet(eventhdlrdata->timeseries[1]);
+      values[1] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[1]->des);
+      values[4] = timeseriesGet(eventhdlrdata->timeseries[2]);
+      values[5] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[2]->des);
+      values[8] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[4]->des) < 0 ? 1.0 : 0.0;
+      completed = SCIPregforestPredict(eventhdlrdata->regforest, values);
 #else
    completed = 0.5828 + 0.3667 * treedata->progress - 0.6101 * timeseriesGet(eventhdlrdata->timeseries[3]);
 #endif
@@ -2517,16 +2734,15 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_EVENTHDLR* eventhdlr;
 
+   SCIP_REGFOREST* regforest = NULL;
+
+
+
+
    /* create restart event handler data */
    eventhdlrdata = NULL;
 
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
-
-   /* author bzfhende
-    *
-    * TODO add parameters
-    */
-
    BMSclearMemory(eventhdlrdata);
 
    SCIP_CALL( createSearchprogress(&eventhdlrdata->ratioprogress) );
@@ -2586,7 +2802,10 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
          &eventhdlrdata->hitcounterlim, FALSE, 50, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "restarts/printreports", "should periodic reports on estimation be printed?",
-            &eventhdlrdata->printreports, TRUE, FALSE, NULL, NULL) );
+         &eventhdlrdata->printreports, TRUE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddStringParam(scip, "restarts/regforestfilename", "user regression forest in RFCSV format",
+         &eventhdlrdata->regforestfilename, TRUE, DEFAULT_REGFORESTFILENAME, NULL, NULL) );
 
 
    /* include statistics table */
