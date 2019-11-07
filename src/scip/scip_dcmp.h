@@ -94,6 +94,8 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
  *
  * Each linking constraint is assigned to the most frequent block among its variables.
  * Variables of other blocks are relabeled as linking variables.
+ *
+ * @note: In contrast to SCIPdecompComputeConsLabels(), this method potentially relabels variables.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdecompAssignLinkConss(

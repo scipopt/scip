@@ -163,14 +163,12 @@ SCIP_RETCODE SCIPaddDecomposition(
    SCIP_DECOMP*          decomp              /**< decomposition to add */
    )
 {
-   SCIP_Bool isoriginal;
-
    assert(scip != NULL);
    assert(decomp != NULL);
 
-   isoriginal = SCIPdecompIsOriginal(decomp);
-
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddDecomposition", FALSE, isoriginal, isoriginal, isoriginal, isoriginal, TRUE, TRUE, TRUE, !isoriginal, !isoriginal, !isoriginal, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddDecomposition", FALSE, SCIPdecompIsOriginal(decomp), SCIPdecompIsOriginal(decomp),
+      SCIPdecompIsOriginal(decomp), SCIPdecompIsOriginal(decomp), TRUE, TRUE, TRUE, !SCIPdecompIsOriginal(decomp),
+      !SCIPdecompIsOriginal(decomp), !SCIPdecompIsOriginal(decomp), FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPdecompstoreAdd(scip->decompstore, decomp) );
 
@@ -461,6 +459,8 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
  *
  * Each linking constraint is assigned to the most frequent block among its variables.
  * Variables of other blocks are relabeled as linking variables.
+ *
+ * @note: In contrast to SCIPdecompComputeConsLabels(), this method potentially relabels variables.
  */
 SCIP_RETCODE SCIPdecompAssignLinkConss(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -487,7 +487,8 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
    for( c = 0; c < nconss; c++ )
    {
       SCIP_Bool success;
-      SCIPgetConsNVars(scip, conss[c], &nconsvars, &success);
+
+      SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
       SCIP_CALL( SCIPgetConsVars(scip, conss[c], vars, nvars, &success) );
 
       if( ! SCIPdecompIsOriginal(decomp) )
@@ -516,6 +517,7 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
          int v;
          int p;
 
+         /* count linking variables */
          if( varslabels[0] == SCIP_DECOMP_LINKVAR )
          {
             nlinkvars = countLabelFromPos(varslabels, 0, nconsvars);
@@ -528,7 +530,9 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
          assert(nlinkvars < nconsvars);
 
          curr = nlinkvars;
+         /* find the most frequent block label among the nonlinking variables */
          maxnblockvars = 0;
+         block = -1;
          do
          {
             int nblockvars = countLabelFromPos(varslabels, curr, nconsvars);
@@ -541,19 +545,20 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
          }
          while (curr < nconsvars);
 
-         varslabels[block];
-
+         /* reassign all variables from other blocks as linking variables */
          startposs[0] = nlinkvars;
          endposs[0] = block;
          startposs[1] = block + maxnblockvars;
          endposs[1] = nconsvars;
 
-         p = 0;
+         /* loop over all variables before (p==0) and after (p==1) the most frequent block label */
          for( p = 0; p < 2; ++p )
          {
+            /* relabel */
             for( v = startposs[p]; v < endposs[p]; ++v)
                varslabels[v] = SCIP_DECOMP_LINKVAR;
 
+            /* set labels in the decomposition */
             SCIP_CALL( SCIPdecompSetVarsLabels(decomp, &vars[startposs[p]], &varslabels[startposs[p]], endposs[p] - startposs[p]) );
          }
 
@@ -565,6 +570,20 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
    SCIPfreeBufferArray(scip, &varslabels);
 
    return SCIP_OKAY;
+}
+
+/** return position of a label in decomp array */
+static
+int findLabelIdx(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   int                   label               /**< the label */
+   )
+{
+   int pos;
+
+   (void)SCIPsortedvecFindInt(decomp->labels, label, decomp->nblocks + 1, &pos);
+
+   return pos;
 }
 
 /** compute decomposition modularity */
@@ -613,15 +632,13 @@ SCIP_RETCODE computeModularity(
       int varblockstart;
       int requiredsize;
       SCIP_Bool success;
-      SCIP_Bool found;
 
       /* linking constraints do not contribute to the modularity */
       if( conslabel == SCIP_DECOMP_LINKCONS )
          continue;
 
       /* find the position of the constraint label. Constraints of the border always belong to the first block at index 0 */
-      found = SCIPsortedvecFindInt(decomp->labels, conslabel, decomp->nblocks + 1, &blockpos);
-      assert(found);
+      blockpos = findLabelIdx(decomp, conslabel);
 
       SCIP_CALL( decompGetConsVarsAndLabels(scip, decomp, conss[c], varbuf, varslabels,
                nvars, &nconsvars, &requiredsize, &success) );
@@ -636,8 +653,7 @@ SCIP_RETCODE computeModularity(
          int varblockpos;
          int nblockvars = countLabelFromPos(varslabels, varblockstart, nconsvars);
 
-         found = SCIPsortedvecFindInt(decomp->labels, varslabels[varblockstart], decomp->nblocks + 1, &varblockpos);
-         assert(found);
+         varblockpos = findLabelIdx(decomp, varslabels[varblockstart]);
 
          /* don't consider linking variables for modularity statistics */
          if( varslabels[varblockstart] != SCIP_DECOMP_LINKVAR )
@@ -671,6 +687,7 @@ SCIP_RETCODE computeModularity(
 
    /* compute modularity */
    *modularity = 0.0;
+   nnonzeroes = MAX(nnonzeroes, 1);
    for( b = 1; b < decomp->nblocks + 1; ++b )
    {
       SCIP_Real expectedval;
@@ -735,7 +752,7 @@ SCIP_RETCODE buildBlockGraph(
    int* conslabels;
    int* linkvaridx;
    int* succnodes;
-   SCIP_Bool success, found;
+   SCIP_Bool success;
    int nvars;
    int nconss;
    int nblocks;
@@ -813,8 +830,7 @@ SCIP_RETCODE buildBlockGraph(
 
             assert(linkingvarnodeidx >= 0);
             /* find the position of the constraint label. Subtract later by 1 to get the node index as the 1st block is reserved for linking constraints */
-            found = SCIPsortedvecFindInt(decomp->labels, conslabels[i], decomp->nblocks + 1, &blocknodeidx); /* assuming labels are sorted */
-            assert(found);
+            blocknodeidx = findLabelIdx(decomp, conslabels[i]);
 
             SCIP_CALL( SCIPdigraphAddArcSafe(blocklinkingvargraph, nblocks + linkingvarnodeidx, blocknodeidx - 1, NULL) );
             SCIP_CALL( SCIPdigraphAddArcSafe(blocklinkingvargraph, blocknodeidx - 1, nblocks + linkingvarnodeidx, NULL) );
@@ -865,8 +881,7 @@ SCIP_RETCODE buildBlockGraph(
    decomp->ncomponents = SCIPdigraphGetNComponents(blockgraph);
 
    /* Get the number of articulation nodes in the block-decomposition graph using DFS.*/
-   SCIP_CALL( SCIPdigraphGetArticulationPoints(blockgraph, NULL) );
-   decomp->narticulations = SCIPdigraphGetNArticulationPoints(blockgraph);
+   SCIP_CALL( SCIPdigraphGetArticulationPoints(blockgraph, NULL, &decomp->narticulations) );
 
    SCIPfreeBufferArray(scip, &consvars);
    SCIPfreeBufferArray(scip, &linkvaridx);
@@ -1061,10 +1076,12 @@ SCIP_RETCODE SCIPcomputeDecompStats(
         decomp->idxlargestblock = i;
   }
 
+  /* compute more involved statistics such as the area score, the modularity, and the block graph statistics */
   SCIP_CALL( computeModularity(scip, decomp, &decomp->modularity) );
 
   computeAreaScore(scip, decomp);
-  buildBlockGraph(scip, decomp);
+
+  SCIP_CALL( buildBlockGraph(scip, decomp) );
 
   SCIPfreeBufferArray(scip, &varslabels);
   SCIPfreeBufferArray(scip, &varsarray);
