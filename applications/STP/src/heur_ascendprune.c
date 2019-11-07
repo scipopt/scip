@@ -565,7 +565,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
    SCIPdebugMessage("obj after prune %f \n", graph_sol_getObj(newgraph->cost, newedges, 0.0, newgraph->edges));
 
-   SCIP_CALL( SCIPStpHeurLocalRun(scip, newgraph, newgraph->cost, newedges) );
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, newgraph, newedges) );
 
    SCIPdebugMessage("obj after local %f \n", graph_sol_getObj(newgraph->cost, newedges, 0.0, newgraph->edges));
 

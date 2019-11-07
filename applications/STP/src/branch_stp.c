@@ -262,7 +262,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
    SCIP_CALL( SCIPStpHeurTMRunLP(scip, graph, NULL, soledges, BRANCHRULE_TMRUNS, cost, costrev, &success) );
    assert(success);
-   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, soledges) );
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, soledges) );
 
    assert(graph_sol_valid(scip, graph, soledges));
 

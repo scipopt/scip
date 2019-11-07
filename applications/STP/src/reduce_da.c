@@ -187,7 +187,7 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
    SCIPfreeBufferArray(scip, &nodearrint);
    SCIPfreeBufferArray(scip, &nodearrchar);
 
-   SCIP_CALL(SCIPStpHeurLocalRun(scip, graph, graph->cost, result));
+   SCIP_CALL(SCIPStpHeurLocalRun(scip, graph, result));
    assert(graph_sol_valid(scip, graph, result));
 
    objval = graph_sol_getObj(graph->cost, result, 0.0, nedges);
@@ -218,7 +218,7 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
          {
             BMScopyMemoryArray(result, sol->soledges, nedges);
 
-            SCIP_CALL(SCIPStpHeurLocalRun(scip, graph, graph->cost, result));
+            SCIP_CALL(SCIPStpHeurLocalRun(scip, graph, result));
             objval = graph_sol_getObj(graph->cost, result, 0.0, nedges);
 
             assert(SCIPisLE(scip, objval, sol->obj));
@@ -1434,7 +1434,7 @@ SCIP_RETCODE computeDaSolPcMw(
    SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, result2, vbase, -1, nodearrchar, &success, FALSE) );
    assert(success);
 
-   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, result2) );
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
 
    assert(graph_sol_valid(scip, graph, result2));
 
@@ -1480,7 +1480,7 @@ SCIP_RETCODE computeDaSolPcMw(
             {
                BMScopyMemoryArray(result2, sol->soledges, nedges);
 
-               SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, result2) );
+               SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
                ub = graph_sol_getObj(graph->cost, result2, 0.0, nedges);
 
                if( SCIPisLT(scip, ub, sol->obj) )
@@ -1572,7 +1572,7 @@ SCIP_RETCODE computePertubedSol(
          SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, bestcost, result2, vbase, -1, nodearrchar, &success, FALSE) );
          assert(success);
 
-         SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, result2) );
+         SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
 
          assert(graph_sol_valid(scip, graph, result2));
 
@@ -2994,7 +2994,7 @@ SCIP_RETCODE reduce_daPcMw(
          SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, NULL, NULL, result2, DEFAULT_HEURRUNS / 5, root, graph->cost, graph->cost, NULL, NULL, 0.0, &success, FALSE) );
          assert(success);
 
-         SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, graph->cost, result2) );
+         SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
          ub = graph_sol_getObj(graph->cost, result2, 0.0, nedges);
 
          SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ub, result2, pool, &success) );

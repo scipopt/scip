@@ -688,7 +688,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       /* solution found by ascend and prune? */
       if( apsuccess )
       {
-         SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, prunegraph->cost, soledge) );
+         SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, soledge) );
 
          assert(graph_sol_valid(scip, prunegraph, soledge));
 
@@ -723,7 +723,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
    } /* reduction loop */
 
-   SCIP_CALL(SCIPStpHeurLocalRun(scip, g, g->cost, globalsoledge));
+   SCIP_CALL(SCIPStpHeurLocalRun(scip, g, globalsoledge));
 
    graph_path_exit(scip, prunegraph);
 

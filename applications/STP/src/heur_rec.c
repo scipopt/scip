@@ -526,7 +526,7 @@ SCIP_RETCODE computeReducedProbSolution(
    if( !SCIPisStopped(scip) && probtype != STP_DHCSTP && probtype != STP_DCSTP
          && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_RMWCSP && probtype != STP_NWPTSPG )
    {
-      SCIP_CALL( SCIPStpHeurLocalRun(scip, solgraph, solgraph->cost, soledges) );
+      SCIP_CALL( SCIPStpHeurLocalRun(scip, solgraph, soledges) );
       assert(graph_sol_valid(scip, solgraph, soledges));
    }
 
