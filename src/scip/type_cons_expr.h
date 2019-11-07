@@ -705,6 +705,8 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * - enforcedabove indicates whether an enforcement method for expr >= auxvar exists (to be updated by detect callback) or is not necessary
  * - success buffer to store whether the nonlinear handler should be called for this expression
  * - nlhdlrexprdata nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE
+ * - nlhdlrssuccess nlhdlrs which have already detected a suitable structure in expr
+ * - nsuccess number of nlhdlrs which have already detected a suitable structure in expr
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRDETECT(x) SCIP_RETCODE x (\
    SCIP* scip, \
@@ -716,7 +718,9 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_Bool* enforcedbelow, \
    SCIP_Bool* enforcedabove, \
    SCIP_Bool* success, \
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, \
+   SCIP_CONSEXPR_NLHDLR** nlhdlrssuccess, \
+   int nsuccess)
 
 /** nonlinear handler callback for reformulation
  *
