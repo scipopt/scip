@@ -3675,7 +3675,7 @@ SCIP_RETCODE addSchreierSimsConss(
       if ( ! success )
          break;
 
-      SCIPdebugMsg(scip, "%d\t%d\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
+      SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
 
       /* add Schreier Sims cuts */
       SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, propdata, permvars,
