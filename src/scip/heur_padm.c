@@ -211,12 +211,7 @@ SCIP_RETCODE freeBlock(
    BLOCK*                block               /**< pointer to block structure */
    )
 {
-   PROBLEM* problem;
-
    assert(block != NULL);
-
-   problem = block->problem;
-   assert(problem != NULL);
 
    block->ncoupling = 0;
 
