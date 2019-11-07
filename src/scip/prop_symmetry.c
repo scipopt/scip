@@ -3529,10 +3529,6 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
       }
    }
 
-   if ( *success )
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-         "Orbitidx: %d\tLeaderidx: %d\tCriterion: %d\n", *orbitidx, *leaderidx, orbitcriterion);
-
    return SCIP_OKAY;
 }
 
@@ -3654,6 +3650,9 @@ SCIP_RETCODE addSchreierSimsConss(
       SCIP_CALL( SCIPhashmapInsertInt(varmap, vars[v], v) );
    }
 
+   SCIPdebugMsg(scip, "Start selection of orbits and leaders for Schreier Sims cuts.\n");
+   SCIPdebugMsg(scip, "orbitidx\tleaderidx\torbitsize\n");
+
    /* as long as the stabilizer is non-trivial, add Schreier Sims cuts */
    ninactiveperms = 0;
    while ( ninactiveperms < nperms )
@@ -3675,6 +3674,8 @@ SCIP_RETCODE addSchreierSimsConss(
 
       if ( ! success )
          break;
+
+      SCIPdebugMsg(scip, "%d\t%d\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
 
       /* add Schreier Sims cuts */
       SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, propdata, permvars,
