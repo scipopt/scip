@@ -2367,6 +2367,7 @@ SCIP_Bool isAcyclicGraph(
    SCIP_CALL( SCIPallocClearBufferArray(scip, &pred, nnodes) );
    SCIP_CALL( SCIPqueueCreate(&queue, nnodes / 2, 2.0) );
 
+   /* we need this enclosing loop for unconnected graphs */
    for( i = 0; i < nnodes; ++i )
    {
       if( visited[i] )
@@ -2386,9 +2387,11 @@ SCIP_Bool isAcyclicGraph(
 
          for( j = 0; j < SCIPdigraphGetNSuccessors(graph, currnode); ++j )
          {
+            /* don't go back to node that we came from */
             if( successors[j] == pred[currnode] )
                continue;
 
+            /* if a node is encountered for the second time, we found a cycle */
             if( visited[successors[j]] )
             {
                SCIPfreeBufferArray(scip, &pred);
@@ -2397,6 +2400,7 @@ SCIP_Bool isAcyclicGraph(
                return FALSE;
             }
 
+            /* add successor of the current node to queue */
             SCIP_CALL( SCIPqueueInsertUInt(queue, (unsigned int) successors[j]) );
 
             pred[successors[j]] = currnode;
@@ -2725,7 +2729,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "strong_sbc", 2, vars, vals, 0.0, SCIPinfinity(scip),
                   propdata->conssaddlp, propdata->conssaddlp, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-            SCIP_CALL(SCIPaddCons(scip, cons));
+            SCIP_CALL( SCIPaddCons(scip, cons) );
 
 #ifdef SCIP_DEBUG
       SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
