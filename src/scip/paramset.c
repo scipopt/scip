@@ -3236,6 +3236,22 @@ SCIP_RETCODE paramsetSetPresolvingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/gateextraction/maxrounds", 0, quiet) );
    }
 
+   /* explicitly disable gate extraction presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "sparsify") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/sparsify/maxrounds", 0, quiet) );
+   }
+
+   /* explicitly disable gate extraction presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "tworowbnd") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/tworowbnd/maxrounds", 0, quiet) );
+   }
+
    /* explicitly forbid the use of implications in logicor presolving */
 #ifndef NDEBUG
    if( SCIPsetFindConshdlr(set, "logicor") != NULL )
