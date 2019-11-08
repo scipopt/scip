@@ -3236,7 +3236,7 @@ SCIP_RETCODE paramsetSetPresolvingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/gateextraction/maxrounds", 0, quiet) );
    }
 
-   /* explicitly disable gate extraction presolver, if included */
+   /* explicitly disable sparsify presolver, if included */
 #ifndef NDEBUG
    if( SCIPsetFindPresol(set, "sparsify") != NULL )
 #endif
@@ -3244,7 +3244,7 @@ SCIP_RETCODE paramsetSetPresolvingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/sparsify/maxrounds", 0, quiet) );
    }
 
-   /* explicitly disable gate extraction presolver, if included */
+   /* explicitly disable tworowbnd presolver, if included */
 #ifndef NDEBUG
    if( SCIPsetFindPresol(set, "tworowbnd") != NULL )
 #endif

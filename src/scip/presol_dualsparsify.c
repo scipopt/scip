@@ -1648,7 +1648,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       presoldata->nwaitingcalls = INT_MAX;
    }
 
-   SCIPmatrixFree(scip, &matrix);
+   if( initialized )
+      SCIPmatrixFree(scip, &matrix);
 
    return SCIP_OKAY;
 }
