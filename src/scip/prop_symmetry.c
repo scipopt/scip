@@ -1921,8 +1921,7 @@ SCIP_RETCODE computeSymmetryGroup(
        */
       percentagemovedvars = (SCIP_Real) *nmovedvars / (SCIP_Real) nvars;
       performcompression = *nmovedvars > 0 && compresssymmetries
-         && (SCIPisLE(scip, percentagemovedvars, compressionthreshold)
-            || (SCIPgetNVars(scip) >= 25000 && SCIPisLE(scip, percentagemovedvars, 0.5)));
+         && (SCIPgetNVars(scip) >= 25000 && SCIPisLE(scip, percentagemovedvars, compressionthreshold));
       if ( performcompression )
       {
          int* compressedperm;
