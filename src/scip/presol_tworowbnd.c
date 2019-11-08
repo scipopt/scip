@@ -1872,7 +1872,7 @@ SCIP_RETCODE combineRows
                   if( currentmaxinds[cliqueidx] == -1 )
                      newubs[i] = MIN(newubs[i], l2 / row2coefs[idx]);
                   else if( SCIPisLT(scip, (l2 + row2coefs[currentmaxinds[cliqueidx]]) / row2coefs[idx], 1.0) )
-                     newubs[i] = 0.0;
+                     newubs[i] = MIN(newubs[i], 0.0);
                }
                else
                   newubs[i] = MIN(newubs[i], (l2 + row2coefs[idx] * lbs[idx]) / row2coefs[idx]);
@@ -2046,7 +2046,7 @@ SCIP_RETCODE combineRows
                      if(currentmaxinds[cliqueidx] == -1)
                         newubs[j] = MIN(newubs[j], (breakpoints[i] * l1 + (1 - breakpoints[i]) * l2) / coef);
                      else if(SCIPisLT(scip, (breakpoints[i] * (l1 + row1coefs[currentmaxinds[cliqueidx]]) + (1 - breakpoints[i]) * (l2 + row2coefs[currentmaxinds[cliqueidx]])) / coef, 1.0) )
-                        newubs[j] = 0.0;
+                        newubs[j] = MIN(newubs[j], 0.0);
                   }
                   else
                      newlbs[j] = MAX(newlbs[j], (breakpoints[i] * l1 + (1 - breakpoints[i]) * l2) / coef);
