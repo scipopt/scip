@@ -2349,12 +2349,65 @@ int* chooseOrderOfGenerators(
 /** checks whether a given graph is acyclic */
 static
 SCIP_Bool isAcyclicGraph(
+   SCIP*                 scip,               /**< SCIP instance */
    SCIP_DIGRAPH*         graph               /**< the graph to be checked */
    )
 {
+   SCIP_QUEUE* queue;
+   SCIP_Bool* visited;
+   int* pred;
+   int nnodes;
+   int i;
+
    assert(graph != NULL);
 
-   /* @TODO: implement */
+   nnodes = SCIPdigraphGetNNodes(graph);
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &visited, nnodes) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &pred, nnodes) );
+   SCIP_CALL( SCIPqueueCreate(&queue, nnodes / 2, 2.0) );
+
+   for( i = 0; i < nnodes; ++i )
+   {
+      if( visited[i] )
+         continue;
+
+      SCIP_CALL( SCIPqueueInsertUInt(queue, (unsigned int) i) );
+      pred[i] = -1;
+
+      while( !SCIPqueueIsEmpty(queue) )
+      {
+         int* successors;
+         int currnode;
+         int j;
+
+         currnode = (int) SCIPqueueRemoveUInt(queue);
+         successors = SCIPdigraphGetSuccessors(graph, currnode);
+
+         for( j = 0; j < SCIPdigraphGetNSuccessors(graph, currnode); ++j )
+         {
+            if( successors[j] == pred[currnode] )
+               continue;
+
+            if( visited[successors[j]] )
+            {
+               SCIPfreeBufferArray(scip, &pred);
+               SCIPfreeBufferArray(scip, &visited);
+
+               return FALSE;
+            }
+
+            SCIP_CALL( SCIPqueueInsertUInt(queue, (unsigned int) successors[j]) );
+
+            pred[successors[j]] = currnode;
+            visited[successors[j]] = TRUE;
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &pred);
+   SCIPfreeBufferArray(scip, &visited);
+
    return TRUE;
 }
 
@@ -2421,7 +2474,6 @@ SCIP_RETCODE buildSubgroupGraph(
       int k;
       int ntwocyclesperm;
       int firstcolor = -1;
-      SCIP_Bool isvalidperm = TRUE;
 
       /* use given order of generators, if specified */
       genidx = (genorder == NULL ? j : genorder[j]);
@@ -2453,20 +2505,14 @@ SCIP_RETCODE buildSubgroupGraph(
 
          /* if both variables are in the same component, this generator would create a cycle, so skip it */
          if( comp1 == comp2 )
-         {
-            isvalidperm = FALSE;
             break;
-         }
 
          color1 = SCIPdisjointsetFind(comptocolor, comp1);
          color2 = SCIPdisjointsetFind(comptocolor, comp2);
 
          /* a generator is not allowed to connect two components of the same color, since they depend on each other */
          if( color1 == color2 )
-         {
-            isvalidperm = FALSE;
             break;
-         }
 
          if( firstcolor == -1 )
             firstcolor = color1;
@@ -2475,8 +2521,8 @@ SCIP_RETCODE buildSubgroupGraph(
          SCIP_CALL( SCIPdigraphAddArc(graph, k, img, NULL) );
       }
 
-      /* if the new graph is not acyclic, delete the newly added edges and go to next generator */
-      if( k < npermvars || isAcyclicGraph(graph) )
+      /* if the new graph is not acyclic, delete the newly added edges */
+      if( k < npermvars || !isAcyclicGraph(scip, graph) )
       {
          int l;
 
@@ -2488,12 +2534,13 @@ SCIP_RETCODE buildSubgroupGraph(
             }
          }
 
+         /* go to next generator */
          continue;
       }
 
       assert(firstcolor != -1);
 
-      /* if generator can be added, update the datastructures for graph components and colors */
+      /* if the generator can be added, update the datastructures for graph components and colors */
       for( k = 0; k < npermvars; ++k )
       {
          int comp1;
@@ -2511,7 +2558,10 @@ SCIP_RETCODE buildSubgroupGraph(
          color1 = SCIPdisjointsetFind(comptocolor, comp1);
          color2 = SCIPdisjointsetFind(comptocolor, comp2);
 
-         assert(comp1 != comp2);
+         /* if the swapped variables lie in the same component, it means we've already dealt with the inverse edge */
+         if( comp1 == comp2 )
+            continue;
+
          assert(color1 != color2);
 
          SCIPdisjointsetUnion(comptocolor, firstcolor, color1, TRUE);
@@ -2541,36 +2591,38 @@ SCIP_RETCODE buildSubgroupGraph(
 
    *ngraphcomponents = SCIPdisjointsetGetComponentCount(vartocomponent);
    *ncompcolors = SCIPdisjointsetGetComponentCount(comptocolor);
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, graphcompbegins, *ngraphcomponents + 1) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, compcolorbegins, *ncompcolors + 1) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, graphcompbegins, (*ngraphcomponents) + 1) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, compcolorbegins, (*ncompcolors) + 1) );
 
    nextcolor = 1;
    nextcomp = 1;
-   (graphcompbegins)[0] = 0;
-   (graphcompbegins)[0] = 0;
+   (*graphcompbegins)[0] = 0;
+   (*compcolorbegins)[0] = 0;
 
    for( j = 1; j < npermvars; ++j )
    {
       int idx1 = (*graphcomponents)[j];
       int idx2 = (*graphcomponents)[j-1];
 
-      assert(graphcompvartype.components[idx1] >= graphcompvartype.components[idx2]);
       assert(graphcompvartype.colors[idx1] >= graphcompvartype.colors[idx2]);
 
-      if( graphcompvartype.components[idx1] > graphcompvartype.components[idx2] )
+      if( graphcompvartype.components[idx1] != graphcompvartype.components[idx2] )
       {
          (*graphcompbegins)[nextcomp] = j;
          ++nextcomp;
 
          if( graphcompvartype.colors[idx1] > graphcompvartype.colors[idx2] )
          {
-            (*compcolorbegins)[nextcolor] = j;
+            (*compcolorbegins)[nextcolor] = nextcomp-1;
             ++nextcolor;
          }
       }
    }
    assert(nextcomp == *ngraphcomponents);
    assert(nextcolor == *ncompcolors);
+
+   (*compcolorbegins)[nextcolor] = *ngraphcomponents;
+   (*graphcompbegins)[nextcomp] = npermvars;
 
    SCIPfreeBufferArray(scip, &(graphcompvartype.colors));
    SCIPfreeBufferArray(scip, &(graphcompvartype.components));
@@ -2588,11 +2640,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
    SCIP_PROPDATA*        propdata            /**< pointer to data of symmetry propagator */
    )
 {
-   int* graphcomponents;
-   int* graphcompbegins;
-   int* compcolorbegins;
-   int ngraphcomponents;
-   int ncompcolors;
    int i;
 
    assert(scip != NULL);
@@ -2614,7 +2661,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
    /* iterate over components */
    for( i = 0; i < propdata->ncomponents; ++i )
    {
+      int* graphcomponents;
+      int* graphcompbegins;
+      int* compcolorbegins;
       int* genorder;
+      int ngraphcomponents;
+      int ncompcolors;
       int j;
 
       /* if component is blocked, skip it */
@@ -2625,6 +2677,71 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       SCIP_CALL( buildSubgroupGraph(scip, propdata, genorder, i, &graphcomponents, &graphcompbegins,
             &compcolorbegins, &ngraphcomponents, &ncompcolors) );
+
+      assert(graphcomponents != NULL);
+      assert(graphcompbegins != NULL);
+      assert(compcolorbegins != NULL);
+      assert(ngraphcomponents > 0);
+      assert(ncompcolors > 0);
+
+      SCIPdebugMsg(scip, "number of colors: %d\n", ncompcolors);
+
+      if( ncompcolors == propdata->npermvars )
+      {
+         SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
+         SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
+         SCIPfreeBlockMemoryArray(scip, &graphcomponents, propdata->npermvars);
+
+         continue;
+      }
+
+      for( j = 0; j < ncompcolors; ++j )
+      {
+         SCIP_CONS* cons;
+         SCIP_VAR* vars[2];
+         SCIP_Real vals[2] = {1,-1};
+         int firstcomp;
+         int k;
+
+         SCIPdebugMsg(scip, "color %d has %d components with overall %d variables\n", j+1, compcolorbegins[j+1] - compcolorbegins[j],
+            graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]]);
+
+         /* choose first component for each color for now (@TODO: use different rules) */
+         firstcomp = compcolorbegins[j];
+         assert(firstcomp >= 0);
+         assert(firstcomp < ngraphcomponents);
+
+         SCIPdebugMsg(scip, "choosing first component with %d varirables\n", graphcompbegins[firstcomp+1] - graphcompbegins[firstcomp]);
+         SCIPdebugMsg(scip, "the variables are...\n");
+
+         /* add strong SBCs (lex-max order) for chosen graph component */
+         for( k = graphcompbegins[firstcomp]+1; k < graphcompbegins[firstcomp+1]; ++k )
+         {
+            SCIPdebugMsg(scip, "    %s\n", SCIPvarGetName(propdata->permvars[graphcomponents[k]]));
+
+            vars[1] = propdata->permvars[graphcomponents[k-1]];
+            vars[0] = propdata->permvars[graphcomponents[k]];
+
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "strong_sbc", 2, vars, vals, 0.0, SCIPinfinity(scip),
+                  propdata->conssaddlp, propdata->conssaddlp, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+            SCIP_CALL(SCIPaddCons(scip, cons));
+
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+            propdata->genconss[propdata->ngenconss] = cons;
+            ++propdata->ngenconss;
+         }
+      }
+
+      propdata->componentblocked[i] = TRUE;
+
+      SCIPfreeBlockMemoryArrayNull(scip, &compcolorbegins, ncompcolors + 1);
+      SCIPfreeBlockMemoryArrayNull(scip, &graphcompbegins, ngraphcomponents + 1);
+      SCIPfreeBlockMemoryArrayNull(scip, &graphcomponents, propdata->npermvars);
    }
 
    return SCIP_OKAY;
