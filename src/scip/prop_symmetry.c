@@ -1437,7 +1437,7 @@ SCIP_RETCODE computeSymmetryGroup(
       else if ( strcmp(conshdlrname, "linking") == 0 )
       {
          SCIP_VAR** curconsvars;
-         int* curconsvals;
+         SCIP_Real* curconsvals;
          int i;
 
          /* get constraint variables and their coefficients */
@@ -1454,8 +1454,8 @@ SCIP_RETCODE computeSymmetryGroup(
          }
 
          /* set final entry of vars and vals to the linking variable and its coefficient, respectively */
-         consvars[nconsvars - 1] = SCIPgetIntvarLinking(scip, cons);
-         consvals[nconsvars - 1] = -1;
+         consvars[nconsvars - 1] = SCIPgetLinkvarLinking(scip, cons);
+         consvals[nconsvars - 1] = -1.0;
 
          SCIP_CALL( collectCoefficients(scip, doubleequations, consvars, consvals, nconsvars, 0.0, 0.0,
                SCIPconsIsTransformed(cons), SYM_SENSE_UNKOWN, &matrixdata, nconssforvar) );
