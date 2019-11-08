@@ -528,18 +528,22 @@ void deleteRowsAndUpdateCurrentBasis(
    const RowIndex num_rows = lpi->linear_program->num_constraints();
    const ColIndex num_cols = lpi->linear_program->num_variables();
 
-   /* Shift the status of the non-deleted rows. Note that if the deleted rows where part of the basis (i.e., constraint
-    * not tight), then we should be left with a correct basis afterward. This should be the most common use case in SCIP. */
+   /* avoid work if problem have been changed before */
    BasisState state = lpi->solver->GetState();
-   ColIndex new_size  = num_cols;
-   for (RowIndex row(0); row < num_rows; ++row)
+   if ( state.statuses.size() == num_cols.value() + num_rows.value() )
    {
-      if ( rows_to_delete[row] )
-         continue;
-      state.statuses[new_size++] = state.statuses[num_cols + RowToColIndex(row)];
+      /* Shift the status of the non-deleted rows. Note that if the deleted rows where part of the basis (i.e., constraint
+       * not tight), then we should be left with a correct basis afterward. This should be the most common use case in SCIP. */
+      ColIndex new_size  = num_cols;
+      for (RowIndex row(0); row < num_rows; ++row)
+      {
+         if ( rows_to_delete[row] )
+            continue;
+         state.statuses[new_size++] = state.statuses[num_cols + RowToColIndex(row)];
+      }
+      state.statuses.resize(new_size);
+      lpi->solver->LoadStateForNextSolve(state);
    }
-   state.statuses.resize(new_size);
-   lpi->solver->LoadStateForNextSolve(state);
 
    lpi->linear_program->DeleteRows(rows_to_delete);
    lpi->lp_modified_since_last_solve = true;
