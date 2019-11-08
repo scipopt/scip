@@ -108,12 +108,11 @@ struct SCIP_LPi
    int                   numiter;            /**< iterations used in last run */
 
    /* Temporary vectors allocated here for speed. This gain is non-negligible
-    * because in many situation, only a few entries of these vector are
+    * because in many situations, only a few entries of these vectors are
     * inspected (hypersparsity) and allocating them is in O(num_rows) or
-    * O(num_cols) instead of O(num_non_zeros) to read/clear them.
-    */
-   ScatteredRow* tmp_row;
-   ScatteredColumn* tmp_column;
+    * O(num_cols) instead of O(num_non_zeros) to read/clear them. */
+   ScatteredRow*         tmp_row;            /**< temporary vector */
+   ScatteredColumn*      tmp_column;         /**< temporary vector */
 };
 
 /** define whether/which feasibility check is performed */
@@ -519,24 +518,25 @@ SCIP_RETCODE SCIPlpiAddRows(
    return SCIP_OKAY;
 }
 
+/** delete rows from LP and update the current basis */
 static
 void deleteRowsAndUpdateCurrentBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   const DenseBooleanColumn& rows_to_delete
+   const DenseBooleanColumn& rows_to_delete  /**< array to mark rows that should be deleted */
    )
 {
    const RowIndex num_rows = lpi->linear_program->num_constraints();
    const ColIndex num_cols = lpi->linear_program->num_variables();
 
-   // Shift the status of the non-deleted rows. Note that if the deleted rows
-   // where part of the basis (i.e. constraint not tight), then we should be
-   // left with a correct basis afterward. This should be the most common use
-   // case in SCIP.
+   /* Shift the status of the non-deleted rows. Note that if the deleted rows where part of the basis (i.e., constraint
+    * not tight), then we should be left with a correct basis afterward. This should be the most common use case in SCIP. */
    BasisState state = lpi->solver->GetState();
    ColIndex new_size  = num_cols;
-   for (RowIndex row(0); row < num_rows; ++row) {
-    if (rows_to_delete[row]) continue;
-    state.statuses[new_size++] = state.statuses[num_cols + RowToColIndex(row)];
+   for (RowIndex row(0); row < num_rows; ++row)
+   {
+      if ( rows_to_delete[row] )
+         continue;
+      state.statuses[new_size++] = state.statuses[num_cols + RowToColIndex(row)];
    }
    state.statuses.resize(new_size);
    lpi->solver->LoadStateForNextSolve(state);
