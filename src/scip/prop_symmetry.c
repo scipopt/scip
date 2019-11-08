@@ -3198,7 +3198,8 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    int                   orbitidx,           /**< index of orbit for Schreier Sims cuts */
    int                   orbitleaderidx,     /**< index of leader variable for Schreier Sims cuts */
    SCIP_Shortbool*       orbitvarinconflict, /**< indicator whether orbitvar is in conflict with orbit leader */
-   int                   norbitvarinconflict /**< number of variables in conflict with orbit leader */
+   int                   norbitvarinconflict, /**< number of variables in conflict with orbit leader */
+   int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 {
    SCIP_CONS* cons;
@@ -3252,6 +3253,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    vals[0] = -1.0;
    vals[1] = 1.0;
    propdata->leaders[propdata->nleaders++] = orbits[posleader];
+   *nchgbds = 0;
    for (i = 0; i < orbitsize; ++i)
    {
       ++poscur;
@@ -3273,6 +3275,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
          if ( SCIPvarGetUbLocal(vars[1]) > 0.5 )
          {
             SCIP_CALL( SCIPchgVarUb(scip, vars[1], 0.0) );
+            *nchgbds += 1;
          }
 
          /* reset value */
@@ -3537,7 +3540,8 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
 static
 SCIP_RETCODE addSchreierSimsConss(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_PROPDATA*        propdata            /**< datas of symmetry propagator */
+   SCIP_PROPDATA*        propdata,           /**< datas of symmetry propagator */
+   int*                  nchgbds             /** pointer to store number of bound changes (or NULL) */
    )
 {
    SCIP_DIGRAPH* conflictgraph;
@@ -3655,8 +3659,12 @@ SCIP_RETCODE addSchreierSimsConss(
 
    /* as long as the stabilizer is non-trivial, add Schreier Sims cuts */
    ninactiveperms = 0;
+   if ( nchgbds != NULL )
+      *nchgbds = 0;
    while ( ninactiveperms < nperms )
    {
+      int nchanges = 0;
+
       /* compute orbits w.r.t. active perms */
       /* @todo adapt the routine such that component blocked is not necessary */
       SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, npermvars, permstrans, nperms, inactiveperms,
@@ -3679,7 +3687,10 @@ SCIP_RETCODE addSchreierSimsConss(
 
       /* add Schreier Sims cuts */
       SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, propdata, permvars,
-            orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict) );
+            orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges) );
+
+      if ( nchgbds != NULL )
+         *nchgbds += nchanges;
 
       /* deactivate permutations that move the orbit leader */
       posleader = orbits[orbitbegins[orbitidx] + orbitleaderidx];
@@ -3711,6 +3722,7 @@ static
 SCIP_RETCODE tryAddSymmetryHandlingConss(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROP*            prop,               /**< symmetry breaking propagator */
+   int*                  nchgbds,            /**< pointer to store number of bound changes (or NULL)*/
    SCIP_Bool*            earlyterm           /**< pointer to store whether we terminated early  (or NULL) */
    )
 {
@@ -3750,7 +3762,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       /* Schreier Sims cuts for non-binary variables and symretopes are not compatible */
       if ( propdata->schreiersimsleadervartype != SCIP_VARTYPE_BINARY )
          propdata->symconsenabled = FALSE;
-      SCIP_CALL( addSchreierSimsConss(scip, propdata) );
+      SCIP_CALL( addSchreierSimsConss(scip, propdata, nchgbds) );
    }
 
    if ( ! propdata->symconsenabled )
@@ -4340,7 +4352,7 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    {
       SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.");
 
-      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL) );
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL, NULL) );
    }
 
    return SCIP_OKAY;
@@ -4367,7 +4379,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
     * and even if presolving has been disabled */
    if ( (propdata->symconsenabled || propdata->schreiersimsenabled) && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
    {
-      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL) );
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL, NULL) );
    }
 
    return SCIP_OKAY;
@@ -4396,6 +4408,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    if ( propdata->symconsenabled || propdata->schreiersimsenabled )
    {
       int noldngenconns;
+      int nchanges = 0;
       SCIP_Bool earlyterm = FALSE;
 
       /* skip presolving if we are not at the end if addconsstiming == 2 */
@@ -4409,12 +4422,18 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
 
       noldngenconns = propdata->ngenconss + propdata->nschreiersimsconss;
 
-      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, &earlyterm) );
+      SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, &nchanges, &earlyterm) );
 
       /* if we actually tried to add symmetry handling constraints */
       if ( ! earlyterm )
       {
          *result = SCIP_DIDNOTFIND;
+
+         if ( nchanges > 0 )
+         {
+            *result = SCIP_SUCCESS;
+            *nchgbds += nchanges;
+         }
 
          /* if symmetry handling constraints have been added, presolve each */
          if ( propdata->ngenconss > 0 || propdata->nschreiersimsconss > 0 )
