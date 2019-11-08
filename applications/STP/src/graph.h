@@ -470,7 +470,7 @@ extern void   graph_path_st_pcmw_reduce(SCIP*, const GRAPH*, const SCIP_Real*, S
 extern void   graph_path_st_pcmw_extend(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Bool, PATH*, STP_Bool*, SCIP_Bool*);
 extern void   graph_path_st_pcmw_extendBiased(SCIP*, GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, STP_Bool*, SCIP_Bool*);
 extern void   graph_path_st_pcmw_extendOut(SCIP*, const GRAPH*, int, STP_Bool*, SCIP_Real*, int*, STP_Bool*, DHEAP*, SCIP_Bool*);
-extern void   graph_voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, STP_Bool*, int*, PATH*);
+extern void   graph_voronoi(SCIP* scip, const GRAPH*, const SCIP_Real*, const SCIP_Real*, const STP_Bool*, int*, PATH*);
 extern void   graph_get2next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern void   graph_get3next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern void   graph_get4next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);
