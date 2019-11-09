@@ -2815,7 +2815,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       }
       else
       {
-         (void) google::SetVLOGLevel("*", google::GLOG_FATAL);
+         (void) google::SetVLOGLevel("*", google::GLOG_ERROR);
          lpi->lp_info = true;
       }
       break;
