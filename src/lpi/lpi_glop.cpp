@@ -116,8 +116,15 @@ struct SCIP_LPi
    ScatteredColumn*      tmp_column;         /**< temporary vector */
 };
 
-/** define whether/which feasibility check is performed */
-#define UNSCALEDFEAS_CHECK 2  /**< 0: no check, 1: completely new check, 2: check unscaled variable and activity values */
+/** uncomment to turn off scaling */
+/* #define NOSCALING */
+
+/**< define feasibility check to possibly reoptimize: 0: no check, 1: completely new check, 2: check unscaled variable and activity values */
+#ifdef NOSCALING
+#define UNSCALEDFEAS_CHECK 0
+#else
+#define UNSCALEDFEAS_CHECK 2
+#endif
 
 
 /*
@@ -245,6 +252,10 @@ SCIP_RETCODE SCIPlpiCreate(
 
    (*lpi)->tmp_row = new ScatteredRow();
    (*lpi)->tmp_column = new ScatteredColumn();
+
+#ifdef NOSCALING
+   (*lpi)->parameters->set_use_scaling(false);
+#endif
 
    return SCIP_OKAY;
 }
@@ -2754,10 +2765,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->pricing;
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_PRICING = %d.\n", *ival);
       break;
+#ifndef NOSCALING
    case SCIP_LPPAR_SCALING:
       *ival = lpi->parameters->use_scaling();
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_SCALING = %d.\n", *ival);
       break;
+#endif
    case SCIP_LPPAR_THREADS:
       *ival = lpi->numthreads;
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_THREADS = %d.\n", *ival);
@@ -2837,10 +2850,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          return SCIP_PARAMETERUNKNOWN;
       }
       break;
+#ifndef NOSCALING
    case SCIP_LPPAR_SCALING:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_SCALING -> %d.\n", ival);
       lpi->parameters->set_use_scaling(ival);
       break;
+#endif
    case SCIP_LPPAR_THREADS:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_THREADS -> %d.\n", ival);
       assert( ival >= 0 );
