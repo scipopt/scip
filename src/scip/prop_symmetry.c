@@ -1898,22 +1898,35 @@ SCIP_RETCODE computeSymmetryGroup(
       int i;
       SCIP_Bool performcompression;
 
-      if ( compresssymmetries )
-      {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &labelmovedvars, matrixdata.npermvars) );
-         for (i = 0; i < matrixdata.npermvars; ++i)
-            labelmovedvars[i] = -1;
-      }
-
       /* determine generators */
-      SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms,
-            log10groupsize, labelmovedvars, nmovedvars) );
+      SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms, log10groupsize) );
       assert( *nperms <= *nmaxperms );
 
       /* SCIPisStopped() might call SCIPgetGap() which is only available after initpresolve */
       if ( checksymmetries && SCIPgetStage(scip) > SCIP_STAGE_INITPRESOLVE && ! SCIPisStopped(scip) )
       {
          SCIP_CALL( checkSymmetriesAreSymmetries(scip, fixedtype, &matrixdata, *nperms, *perms) );
+      }
+
+      /* if symmetries shall be compressed, detect number of moved vars and label moved vars */
+      if ( compresssymmetries )
+      {
+         int p;
+
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &labelmovedvars, matrixdata.npermvars) );
+         for (i = 0; i < matrixdata.npermvars; ++i)
+         {
+            labelmovedvars[i] = -1;
+
+            for (p = 0; p < *nperms; ++p)
+            {
+               if ( (*perms)[p][i] != i )
+               {
+                  labelmovedvars[i] = (*nmovedvars)++;
+                  break;
+               }
+            }
+         }
       }
 
       /* remove variables from permutations that are not affected by any permutation if

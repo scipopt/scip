@@ -40,8 +40,6 @@ struct BLISS_Data
    int**                 perms;              /**< permutation generators as (nperms x npermvars) matrix */
    int                   nmaxperms;          /**< maximal number of permutations */
    int                   maxgenerators;      /**< maximal number of generators constructed (= 0 if unlimited) */
-   int*                  labelmovedvars;     /**< unique label for each moved permvar (-1 = not affected) */
-   int                   nmovedvars;         /**< number of variables affected by some permutation */
 };
 
 
@@ -76,13 +74,7 @@ void blisshook(
       /* convert index of variable-level 0-nodes to variable indices */
       p[j] = (int) aut[j];
       if ( p[j] != j )
-      {
          isIdentity = false;
-
-         /* remeber that variable j is moved */
-         if ( data->labelmovedvars != NULL && data->labelmovedvars[j] == -1 )
-            data->labelmovedvars[j] = (data->nmovedvars)++;
-      }
    }
 
    /* ignore trivial generators, i.e. generators that only permute the constraints */
@@ -322,9 +314,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
-   int*                  labelmovedvars,     /**< unique label for each moved permvar (-1 = not affected) or NULL if not needed */
-   int*                  nmovedvars          /**< pointer to store number of moved vars */
+   SCIP_Real*            log10groupsize      /**< pointer to store size of group */
    )
 {
    assert( scip != NULL );
@@ -370,8 +360,6 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    data.nmaxperms = 0;
    data.maxgenerators = maxgenerators;
    data.perms = NULL;
-   data.labelmovedvars = labelmovedvars;
-   data.nmovedvars = 0;
 
    /* Prefer splitting partition cells corresponding to variables over those corresponding
     * to inequalities. This is because we are only interested in the action
@@ -397,7 +385,6 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
       *perms = data.perms;
       *nperms = data.nperms;
       *nmaxperms = data.nmaxperms;
-      *nmovedvars = data.nmovedvars;
    }
    else
    {
