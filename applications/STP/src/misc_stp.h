@@ -58,7 +58,7 @@ typedef struct ST_Node
 {
    int                   edge;               /**< edge to the node       */
    struct ST_Node        *parent;            /**< pointer to parent node */
-}NODE;
+} NODE;
 
 
 /** a  weighted-quick-union-path-compression union find structure */
@@ -66,25 +66,28 @@ typedef struct UnionFind_Structure
 {
    int*                  parent;             /**< parent[i] stores the parent of i                       */
    int*                  size;               /**< size[i] stores number of nodes in the tree rooted at i */
-   int                   count;              /**< number of components                                   */
-}UF;
+   int                   nComponents;        /**< number of components                                   */
+   int                   nElements;          /**< number of elements                                     */
+} UF;
+
 
 /** integer list node */
 typedef struct Int_List_Node
 {
    int                   index;              /**< int value to store     */
    struct Int_List_Node  *parent;            /**< pointer to parent node */
-}IDX;
+} IDX;
+
 
 /** Pairing heap node */
 typedef struct PHeap_Node
 {
-   int                   element;            /**< int data value        */
-   SCIP_Real             key;                /**< key value        */
    struct PHeap_Node*    child;              /**< pointer to child node */
    struct PHeap_Node*    sibling;            /**< pointer to right sibling */
    struct PHeap_Node*    prev;               /**< pointer to to previous node */
-}PHNODE;
+   SCIP_Real             key;                /**< key value        */
+   int                   element;            /**< integer data value        */
+} PHNODE;
 
 
 /**
@@ -235,9 +238,16 @@ SCIP_RETCODE SCIPStpunionfindInit(
 /** clears the union-find structure 'uf'*/
 void SCIPStpunionfindClear(
    SCIP*                 scip,               /**< SCIP data structure */
-   UF*                   uf,                 /**< union find data structure */
-   int                   length              /**< number of components */
+   UF*                   uf                  /**< union find data structure */
    );
+
+
+/** is the union-find structure 'uf' clear? */
+SCIP_Bool SCIPStpunionfindIsClear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const UF*             uf                  /**< union find data structure */
+   );
+
 
 /** finds and returns the component identifier */
 int SCIPStpunionfindFind(

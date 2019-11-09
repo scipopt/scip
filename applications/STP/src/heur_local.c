@@ -94,7 +94,8 @@ typedef struct Voronoi_data_structures
 /** Connectivity data */
 typedef struct connectivity_data
 {
-   IDX**                 blists_start;       /**< boundary lists starts */
+   IDX**                 blists_start;       /**< boundary lists starts (on nodes) */
+   IDX**                 lvledges_start;     /**< horizontal edges starts (on nodes) */
    PHNODE**              pheap_boundpaths;   /**< boundary paths (on nodes) */
    int*                  pheap_sizes;        /**< size (on nodes) */
    UF*                   uf;                 /**< union find */
@@ -145,23 +146,23 @@ static
 void dfsorder(
    const GRAPH*          graph,
    const int*            edges,
-   const int*            node,
+   int                   node,
    int*                  counter,
    int*                  dfst
    )
 {
-   int oedge = graph->outbeg[*node];
+   int oedge = graph->outbeg[node];
 
    while( oedge >= 0 )
    {
       if( edges[oedge] >= 0 )
       {
-         dfsorder(graph, edges, &(graph->head[oedge]), counter, dfst);
+         dfsorder(graph, edges, graph->head[oedge], counter, dfst);
       }
       oedge = graph->oeat[oedge];
    }
 
-   dfst[*counter] = *node;
+   dfst[*counter] = node;
    (*counter)++;
 }
 
@@ -225,46 +226,45 @@ SCIP_RETCODE lca(
    int                   u,
    UF*                   uf,
    STP_Bool*             nodesmark,
-   int*                  steineredges,
+   const int*            steineredges,
    IDX**                 lcalists,
    PHNODE**              boundpaths,
-   int*                  heapsize,
-   int*                  vbase
+   const int*            heapsize,
+   const int*            vbase
    )
 {
    int* uboundpaths; /* boundary-paths (each one represented by its boundary edge) having node 'u' as an endpoint */
-   int ancestor;
-   int v;
-   int i;
-   int oedge; /* outgoing edge */
-   IDX* curr;
    uf->parent[u] = u;
 
-   for( oedge = graph->outbeg[u]; oedge != EAT_LAST; oedge = graph->oeat[oedge] )
+   for( int oedge = graph->outbeg[u]; oedge != EAT_LAST; oedge = graph->oeat[oedge] )
    {
-      v = graph->head[oedge];
-      if( steineredges[oedge] == 0 )
+      const int v = graph->head[oedge];
+      if( steineredges[oedge] == CONNECT )
       {
          SCIP_CALL( lca(scip, graph, v, uf, nodesmark, steineredges, lcalists, boundpaths, heapsize, vbase) );
          SCIPStpunionfindUnion(uf, u, v, FALSE);
          uf->parent[SCIPStpunionfindFind(uf, u)] = u;
       }
    }
+
    nodesmark[u] = TRUE;
 
    /* iterate through all boundary-paths having one endpoint in the voronoi region of node 'u' */
    SCIP_CALL( SCIPpairheapBuffarr(scip, boundpaths[u], heapsize[u], &uboundpaths) );
-   for( i = 0; i < heapsize[u]; i++ )
+
+   for( int i = 0; i < heapsize[u]; i++ )
    {
-      oedge = uboundpaths[i];
-      v = vbase[graph->head[oedge]];
+      const int oedge = uboundpaths[i];
+      const int v = vbase[graph->head[oedge]];
       if( nodesmark[v] )
       {
-         ancestor = uf->parent[SCIPStpunionfindFind(uf, v)];
+         const int ancestor = uf->parent[SCIPStpunionfindFind(uf, v)];
 
          /* if the ancestor of 'u' and 'v' is one of the two, the boundary-edge is already in boundpaths[u] */
          if( ancestor != u && ancestor != v)
          {
+            IDX* curr;
+
             SCIP_CALL( SCIPallocBlockMemory(scip, &curr) );
             curr->index = oedge;
             curr->parent = lcalists[ancestor];
@@ -279,6 +279,38 @@ SCIP_RETCODE lca(
    return SCIP_OKAY;
 }
 
+
+/** computes lowest common ancestors for all pairs {vbase(v), vbase(u)} such that {u,w} is a boundary edge */
+static
+SCIP_RETCODE getLowestCommonAncestors(
+   SCIP*                 scip,
+   const GRAPH*          graph,
+   const VNOI*           vnoiData,           /**< Voronoi data */
+   const SOLTREE*        soltreeData,        /**< solution tree data */
+   CONN*                 connectData         /**< data */
+)
+{
+   PHNODE** const boundpaths = connectData->pheap_boundpaths;
+   IDX** const lvledges_start = connectData->lvledges_start;
+   const int* const solEdges = soltreeData->solEdges;
+   int* const pheapsize = connectData->pheap_sizes;
+   const int* const vnoibase = vnoiData->vnoi_base;
+   STP_Bool* nodesmark;
+   const int nnodes = graph->knots;
+
+   assert(SCIPStpunionfindIsClear(scip, connectData->uf));
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodesmark, nnodes) );
+
+   for( int i = 0; i < nnodes; ++i )
+      nodesmark[i] = FALSE;
+
+   SCIP_CALL( lca(scip, graph, graph->source, connectData->uf, nodesmark, solEdges, lvledges_start, boundpaths, pheapsize, vnoibase) );
+
+   SCIPfreeBufferArray(scip, &nodesmark);
+
+   return SCIP_OKAY;
+}
 
 /** submethod for local extend */
 static
@@ -416,6 +448,75 @@ void markSolTreeNodes(
 }
 
 
+/** initialize */
+static
+SCIP_RETCODE connectivityDataInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const VNOI*           vnoiData,           /**< Voronoi data */
+   const SOLTREE*        soltreeData,        /**< solution tree data */
+   const int*            graphmark,          /**< marks allowed vertices */
+   CONN*                 connectData         /**< data */
+)
+{
+   PHNODE** const boundpaths = connectData->pheap_boundpaths;
+   IDX** const blists_start = connectData->blists_start;
+   IDX** const lvledges_start = connectData->lvledges_start;
+   const PATH* const vnoipath = vnoiData->vnoi_path;
+   int* const pheapsize = connectData->pheap_sizes;
+   const int* const vnoibase = vnoiData->vnoi_base;
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+
+   for( int k = 0; k < nnodes; ++k )
+   {
+      IDX* blists_curr;
+
+      /* initialize pairing heaps */
+      pheapsize[k] = 0;
+      boundpaths[k] = NULL;
+
+      lvledges_start[k] = NULL;
+
+      if( !graphmark[k] )
+         continue;
+
+      /* link all nodes to their (respective) Voronoi base */
+      SCIP_CALL( SCIPallocBlockMemory(scip, &blists_curr) );
+      blists_curr->index = k;
+      blists_curr->parent = blists_start[vnoibase[k]];
+      blists_start[vnoibase[k]] = blists_curr;
+   }
+
+
+   /* for each node, store all of its outgoing boundary-edges in a (respective) heap*/
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      if( graph->oeat[e] != EAT_FREE )
+      {
+         const int node = graph->tail[e];
+         const int adjnode = graph->head[e];
+
+         /* is edge 'e' a boundary-edge? */
+         if( vnoibase[node] != vnoibase[adjnode] && graphmark[node] && graphmark[adjnode] )
+         {
+            const SCIP_Real edgecost = vnoipath[node].dist + graph->cost[e] + vnoipath[adjnode].dist;
+
+            assert(SCIPisGE(scip, edgecost, 0.0));
+
+            /* add the boundary-edge 'e' and its reversed to the corresponding heaps */
+            SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[vnoibase[node]], e, edgecost, &(pheapsize[vnoibase[node]])) );
+            SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[vnoibase[adjnode]], flipedge(e), edgecost, &(pheapsize[vnoibase[adjnode]])) );
+         }
+      }
+   }
+
+   SCIP_CALL( getLowestCommonAncestors(scip, graph, vnoiData, soltreeData, connectData) );
+
+   return SCIP_OKAY;
+}
+
+
 /** get key path above given crucial node */
 static
 void getKeyPathUpper(
@@ -523,6 +624,30 @@ void getKeyPathUpper(
 
 
 /** get key paths starting from given key vertex */
+/** gets cost of shortest path along boundary edge*/
+static
+SCIP_Real vnoiGetBoundaryPathCost(
+   const GRAPH*          graph,              /**< graph data structure */
+   const VNOI*           vnoiData,           /**< data */
+   int                   boundaryedge        /**< boundary edge*/
+   )
+{
+   const PATH* const vnoipath = vnoiData->vnoi_path;
+   SCIP_Real pathcost;
+   const int node = graph->tail[boundaryedge];
+   const int adjnode = graph->head[boundaryedge];
+
+   assert(boundaryedge >= 0);
+   assert(vnoiData->vnoi_base[node] != vnoiData->vnoi_base[adjnode]);
+
+   pathcost = vnoipath[node].dist + graph->cost[boundaryedge] + vnoipath[adjnode].dist;
+   assert(pathcost >= 0.0);
+
+   return pathcost;
+}
+
+
+/** preprocessing step for Voronoi repair */
 static
 void getKeyPathsStar(
    int                   keyvertex,          /**< key vertex to start from */
@@ -696,30 +821,6 @@ void getKeyPathsStar(
 }
 
 
-/** gets cost of shortest path along boundary edge*/
-static
-SCIP_Real vnoiGetBoundaryPathCost(
-   const GRAPH*          graph,              /**< graph data structure */
-   const VNOI*           vnoiData,           /**< data */
-   const int             boundaryedge        /**< boundary edge*/
-   )
-{
-   const PATH* const vnoipath = vnoiData->vnoi_path;
-   SCIP_Real pathcost;
-   const int node = graph->tail[boundaryedge];
-   const int adjnode = graph->head[boundaryedge];
-
-   assert(boundaryedge >= 0);
-   assert(vnoiData->vnoi_base[node] != vnoiData->vnoi_base[adjnode]);
-
-   pathcost = vnoipath[node].dist + graph->cost[boundaryedge] + vnoipath[adjnode].dist;
-   assert(pathcost >= 0.0);
-
-   return pathcost;
-}
-
-
-/** preprocessing step for Voronoi repair */
 static
 void vnoiDataRepairPreprocess(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1182,7 +1283,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
    const int nedges = graph->edges;
    STP_Bool* pinned;
    STP_Bool* scanned;
-   STP_Bool* nodesmark;
+   STP_Bool* supernodesmark;
    STP_Bool* prizemark = NULL;
    const STP_Bool mwpc = graph_pc_isPcMw(graph);
    SCIP_Bool solimproved = FALSE;
@@ -1197,7 +1298,6 @@ SCIP_RETCODE localKeyVertexHeuristics(
    /* memory needed for both Key-Path Elimination and Exchange */
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoipath, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoibase, nnodes) );
-
 
    /* only needed for Key-Path Elimination */
    SCIP_CALL( SCIPallocBufferArray(scip, &newedges, nedges) );
@@ -1225,7 +1325,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
    SCIP_CALL( SCIPallocBufferArray(scip, &boundpaths, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pinned, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &dfstree, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodesmark, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &supernodesmark, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &supernodes, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &kpnodes, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &kpedges, nnodes) );
@@ -1245,11 +1345,11 @@ SCIP_RETCODE localKeyVertexHeuristics(
          .meminedges = meminedges, .vnoi_nodestate = state, .nmems = 0, .nkpnodes = -1 };
       KPATHS keypathsData = { .kpnodes = kpnodes, .kpedges = kpedges, .kpcost = 0.0, .nkpnodes = 0, .nkpedges = 0,
          .kptailnode = -1 };
-      CONN connectivityData = { .blists_start = blists_start, .pheap_boundpaths = boundpaths, .pheap_sizes = pheapsize,
-          .uf = &uf };
+      CONN connectivityData = { .blists_start = blists_start, .pheap_boundpaths = boundpaths, .lvledges_start = lvledges_start,
+         .pheap_sizes = pheapsize, .uf = &uf };
       SOLTREE soltreeData = { .solNodes = solNodes, .linkcutNodes = linkcutNodes, .solEdges = solEdges, .nodeIsPinned = pinned,
          .nodeIsScanned = scanned };
-      SGRAPH supergraphData = { .supernodes = supernodes, .supernodesid = supernodesid, .nodeIsSupernode = nodesmark,
+      SGRAPH supergraphData = { .supernodes = supernodes, .supernodesid = supernodesid, .nodeIsSupernode = supernodesmark,
          .nsupernodes = 0 };
       int nstnodes = 0;
 
@@ -1258,7 +1358,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
       BMSclearMemoryArray(blists_start, nnodes);
 
       /* find a DFS order of the ST nodes */
-      dfsorder(graph, solEdges, &(root), &nstnodes, dfstree);
+      dfsorder(graph, solEdges, root, &nstnodes, dfstree);
 
       /* compute a Voronoi diagram with the ST nodes as bases */
       graph_voronoi(scip, graph, graph->cost, graph->cost, solNodes, vnoibase, vnoipath);
@@ -1266,28 +1366,15 @@ SCIP_RETCODE localKeyVertexHeuristics(
       /* initialize data structures  */
       for( int k = 0; k < nnodes; k++ )
       {
-         IDX* blists_curr;
          assert(state[k] == CONNECT || !graphmark[k]);
 
          pinned[k] = FALSE;
          scanned[k] = FALSE;
-         nodesmark[k] = FALSE;
-
-         /* initialize pairing heaps */
-         pheapsize[k] = 0;
-         boundpaths[k] = NULL;
-
-         lvledges_start[k] = NULL;
-
-         if( !graphmark[k] )
-            continue;
-
-         /* link all nodes to their (respective) Voronoi base */
-         SCIP_CALL( SCIPallocBlockMemory(scip, &blists_curr) );
-         blists_curr->index = k;
-         blists_curr->parent = blists_start[vnoibase[k]];
-         blists_start[vnoibase[k]] = blists_curr;
+         supernodesmark[k] = FALSE;
       }
+
+      for( int e = 0; e < nedges; e++ )
+         newedges[e] = UNKNOWN;
 
       if( mwpc )
       {
@@ -1315,49 +1402,11 @@ SCIP_RETCODE localKeyVertexHeuristics(
             graphmark[root] = FALSE;
       }
 
-      /* for each node, store all of its outgoing boundary-edges in a (respective) heap*/
-      for( int e = 0; e < nedges; e += 2 )
-      {
-         if( graph->oeat[e] != EAT_FREE )
-         {
-            const int node = graph->tail[e];
-            const int adjnode = graph->head[e];
-
-            newedges[e] = UNKNOWN;
-            newedges[e + 1] = UNKNOWN;
-
-            /* is edge 'e' a boundary-edge? */
-            if( vnoibase[node] != vnoibase[adjnode] && graphmark[node] && graphmark[adjnode] )
-            {
-               const SCIP_Real edgecost = vnoipath[node].dist + graph->cost[e] + vnoipath[adjnode].dist;
-
-               assert(SCIPisGE(scip, edgecost, 0.0));
-
-               /* add the boundary-edge 'e' and its reversed to the corresponding heaps */
-               SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[vnoibase[node]], e, edgecost, &(pheapsize[vnoibase[node]])) );
-               SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[vnoibase[adjnode]], flipedge(e), edgecost, &(pheapsize[vnoibase[adjnode]])) );
-            }
-         }
-      }
-
-      /* find LCAs for all edges */
-      SCIP_CALL( lca(scip, graph, root, &uf, nodesmark, solEdges, lvledges_start, boundpaths, pheapsize, vnoibase) );
+      SCIP_CALL( connectivityDataInit(scip, graph, &vnoiData, &soltreeData, graphmark, &connectivityData) );
 
       /* henceforth, the union-find structure will be used on the ST */
-      SCIPStpunionfindClear(scip, &uf, nnodes);
-
-      /* henceforth, 'nodesmark' will be used to mark the current super-vertices (except for the one representing the root-component) */
-      {
-         int i;
-         for( i = 0; dfstree[i] != root; i++ )
-            nodesmark[dfstree[i]] = FALSE;
-         nodesmark[dfstree[i]] = FALSE;
-      }
-
-#ifndef NDEBUG
-      for( int k = 0; k < nnodes; k++ )
-         assert(!nodesmark[k]);
-#endif
+      assert(uf.nElements == nnodes);
+      SCIPStpunionfindClear(scip, &uf);
 
       /* main loop visiting all nodes of the current ST in post-order */
       for( int i = 0; dfstree[i] != root; i++ )
@@ -1418,7 +1467,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                   node = (vnoibase[graph->head[edge]] == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(&uf, vnoibase[graph->head[edge]]);
 
                   /* check whether edge 'edge' represents a boundary-path having an endpoint in the kth-component and in the root-component respectively */
-                  if( node != UNKNOWN && !nodesmark[node] && graphmark[node] )
+                  if( node != UNKNOWN && !supernodesmark[node] && graphmark[node] )
                   {
                      boundedges[nboundedges++] = edge;
                      SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[supernode], edge, edgecost, &pheapsize[supernode]) );
@@ -1437,7 +1486,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                const int adjnode = (basetail == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(&uf, basetail);
 
                /* check whether the current boundary-path connects two child components */
-               if( node != UNKNOWN && nodesmark[node] && adjnode != UNKNOWN && nodesmark[adjnode] )
+               if( node != UNKNOWN && supernodesmark[node] && adjnode != UNKNOWN && supernodesmark[adjnode] )
                {
                   assert(graphmark[node]);
                   assert(graphmark[adjnode]);
@@ -1450,7 +1499,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
             /* try to connect the nodes of C (directly) to COMP(C), as a preprocessing for graph_voronoiRepair */
             vnoiDataRepairPreprocess(scip, graph, &keypathsData, &connectivityData, graphmark, &vnoiData, &nheapelems);
 
-            graph_voronoiRepairMult(scip, graph, graph->cost, &nheapelems, vnoibase, boundedges, &nboundedges, nodesmark, &uf, vnoipath);
+            graph_voronoiRepairMult(scip, graph, graph->cost, &nheapelems, vnoibase, boundedges, &nboundedges, supernodesmark, &uf, vnoipath);
 
             /* create a supergraph, having the endpoints of the key-paths incident to the current crucial node as (super-) vertices */
             SCIP_CALL( graph_init(scip, &supergraph, supergraphData.nsupernodes, nboundedges * 2, 1) );
@@ -1475,8 +1524,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
                int adjnode = SCIPStpunionfindFind(&uf, vnoibase[graph->head[edge]]);
 
                /* if node 'node' or 'adjnode' belongs to the root-component, take the (temporary) root-component identifier instead */
-               node = ((nodesmark[node])? node : superroot);
-               adjnode = ((nodesmark[adjnode])? adjnode : superroot);
+               node = ((supernodesmark[node])? node : superroot);
+               adjnode = ((supernodesmark[adjnode])? adjnode : superroot);
 
                /* compute the cost of the boundary-path pertaining to the boundary-edge 'edge' */
                edgecost = vnoipath[graph->tail[edge]].dist + graph->cost[edge] + vnoipath[graph->head[edge]].dist;
@@ -1594,7 +1643,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                for( int k = 0; k < i; k++ )
                {
                   const int node = SCIPStpunionfindFind(&uf, dfstree[k]);
-                  if( nodesmark[node] || node == crucnode )
+                  if( supernodesmark[node] || node == crucnode )
                   {
                      graphmark[dfstree[k]] = FALSE;
                      solNodes[dfstree[k]] = FALSE;
@@ -1612,11 +1661,11 @@ SCIP_RETCODE localKeyVertexHeuristics(
                      edge = flipedge(boundedges[mst[l].edge / 2 ]);
 
                   /* change the orientation within the target-component if necessary */
-                  if( !nodesmark[vnoibase[graph->head[edge]]] )
+                  if( !supernodesmark[vnoibase[graph->head[edge]]] )
                   {
                      int node = vnoibase[graph->head[edge]];
                      const int nodebase = SCIPStpunionfindFind(&uf, node);
-                     assert(nodesmark[nodebase]);
+                     assert(supernodesmark[nodebase]);
 
                      while( node != nodebase )
                      {
@@ -1631,7 +1680,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                   }
 
                   /* is the vbase of the current boundary-edge tail in the root-component? */
-                  if( !nodesmark[SCIPStpunionfindFind(&uf, vnoibase[graph->tail[edge]])] )
+                  if( !supernodesmark[SCIPStpunionfindFind(&uf, vnoibase[graph->tail[edge]])] )
                   {
                      int node;
                      solEdges[edge] = CONNECT;
@@ -1646,7 +1695,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                         solEdges[vnoipath[node].edge] = CONNECT;
                      }
 
-                     assert(!nodesmark[node] && vnoibase[node] == node);
+                     assert(!supernodesmark[node] && vnoibase[node] == node);
                      assert( graphmark[node] == TRUE );
 
                      /* is the pinned node its own component identifier? */
@@ -1772,11 +1821,11 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
             /* unmark the descendant supervertices */
             for( int k = 0; k < supergraphData.nsupernodes - 1; k++ )
-               nodesmark[supernodes[k]] = FALSE;
+               supernodesmark[supernodes[k]] = FALSE;
 
 #ifndef NDEBUG
             for( int k = 0; k < nnodes; k++ )
-               assert(!nodesmark[k]);
+               assert(!supernodesmark[k]);
 #endif
 
             /* restore the original Voronoi diagram */
@@ -2032,7 +2081,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
    TERMINATE:
 
-      SCIPStpunionfindClear(scip, &uf, nnodes);
+      assert(uf.nElements == nnodes);
+      SCIPStpunionfindClear(scip, &uf);
 
       /* free data structures */
 
@@ -2096,7 +2146,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
    SCIPfreeBufferArray(scip, &kpedges);
    SCIPfreeBufferArray(scip, &kpnodes);
    SCIPfreeBufferArray(scip, &supernodes);
-   SCIPfreeBufferArray(scip, &nodesmark);
+   SCIPfreeBufferArray(scip, &supernodesmark);
    SCIPfreeBufferArray(scip, &dfstree);
    SCIPfreeBufferArray(scip, &pinned);
    SCIPfreeBufferArray(scip, &boundpaths);

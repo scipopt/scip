@@ -676,8 +676,10 @@ SCIP_RETCODE SCIPpairheapBuffarr(
    )
 {
    int n = 0;
+
    SCIP_CALL( SCIPallocBufferArray(scip, elements, size) );
    pairheapRec(root, elements, &n);
+
    return SCIP_OKAY;
 }
 
@@ -690,14 +692,19 @@ SCIP_RETCODE SCIPpairheapBuffarr(
 SCIP_RETCODE SCIPStpunionfindInit(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
-   int                   length              /**< number of components */
+   int                   length              /**< number of elements */
    )
 {
-   int i;
-   uf->count = length;
+   assert(length > 0);
+
+   uf->nComponents = length;
+   uf->nElements = length;
+
    SCIP_CALL( SCIPallocMemoryArray(scip, &(uf->parent), length) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(uf->size), length) );
-   for( i = 0; i < length; i++ ) {
+
+   for( int i = 0; i < length; i++ )
+   {
       uf->parent[i] = i;
       uf->size[i] = 1;
    }
@@ -708,20 +715,44 @@ SCIP_RETCODE SCIPStpunionfindInit(
 /** clears the union-find structure 'uf'*/
 void SCIPStpunionfindClear(
    SCIP*                 scip,               /**< SCIP data structure */
-   UF*                   uf,                 /**< union find data structure */
-   int                   length              /**< number of components */
+   UF*                   uf                  /**< union find data structure */
    )
 {
-   int i;
-   uf->count = length;
+   const int length = uf->nElements;
 
-   for( i = 0; i < length; i++ )
+   uf->nComponents = length;
+
+   for( int i = 0; i < length; i++ )
    {
       uf->parent[i] = i;
       uf->size[i] = 1;
    }
 
    return;
+}
+
+
+/** is the union-find structure 'uf' clear? */
+SCIP_Bool SCIPStpunionfindIsClear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const UF*             uf                  /**< union find data structure */
+   )
+{
+   const int length = uf->nElements;
+
+   if( uf->nComponents != length )
+      return FALSE;
+
+   for( int i = 0; i < length; i++ )
+   {
+      if( uf->parent[i] != i )
+         return FALSE;
+
+      if( uf->size[i] != 1 )
+         return FALSE;
+   }
+
+   return TRUE;
 }
 
 
@@ -788,7 +819,7 @@ void SCIPStpunionfindUnion(
    }
 
    /* one less component */
-   uf->count--;
+   uf->nComponents--;
 
 }
 
@@ -798,6 +829,9 @@ void SCIPStpunionfindFreeMembers(
    UF*                   uf                  /**< union find data structure */
    )
 {
+   uf->nElements = 0;
+   uf->nComponents = 0;
+
    SCIPfreeMemoryArray(scip, &uf->parent);
    SCIPfreeMemoryArray(scip, &uf->size);
 }
