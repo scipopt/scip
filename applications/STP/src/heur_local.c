@@ -137,6 +137,16 @@ typedef struct supergraph_data
 } SGRAPH;
 
 
+/** Prize-collecting/maximum-weight connected subgraph data */
+typedef struct pcmw_data
+{
+   SCIP_Real* const      prize_biased;       /**< prize */
+   SCIP_Real* const      edgecost_biased;    /**< cost */
+   STP_Bool* const       prizemark;          /**< marked? */
+   int* const            prizemarklist;      /**< list of all marked */
+   int                   prizemarkcount;     /**< number of all marked */
+} PCMW;
+
 /*
  * Local methods
  */
@@ -448,6 +458,46 @@ void markSolTreeNodes(
 }
 
 
+/** initialize for PC/MW */
+static
+void pcmwInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   SOLTREE*              soltreeData,        /**< solution tree data */
+   int*                  graphmark,          /**< marks allowed vertices */
+   PCMW*                 pcmwData            /**< data */
+   )
+{
+   STP_Bool *const pinned = soltreeData->nodeIsPinned;
+   const int root = graph->source;
+
+   assert(graph->extended);
+   assert(graph_pc_isPcMw(graph));
+
+   graph_pc_getBiased(scip, graph, TRUE, pcmwData->edgecost_biased, pcmwData->prize_biased);
+
+   for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+   {
+      const int k = graph->head[e];
+      if( Is_term(graph->term[k]) )
+      {
+         if( !graph_pc_knotIsFixedTerm(graph, k) )
+         {
+            const int pterm = graph->head[graph->term2edge[k]];
+
+            assert(Is_pterm(graph->term[pterm]));
+
+            graphmark[k] = FALSE;
+            pinned[pterm] = TRUE;
+         }
+      }
+   }
+
+   if( !graph_pc_isRootedPcMw(graph) )
+      graphmark[root] = FALSE;
+}
+
+
 /** initialize */
 static
 SCIP_RETCODE connectivityDataInit(
@@ -467,6 +517,8 @@ SCIP_RETCODE connectivityDataInit(
    const int* const vnoibase = vnoiData->vnoi_base;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
+
+   BMSclearMemoryArray(blists_start, nnodes);
 
    for( int k = 0; k < nnodes; ++k )
    {
@@ -629,6 +681,7 @@ static
 SCIP_Real vnoiGetBoundaryPathCost(
    const GRAPH*          graph,              /**< graph data structure */
    const VNOI*           vnoiData,           /**< data */
+   const PCMW*           pcmwData,           /**< data */
    int                   boundaryedge        /**< boundary edge*/
    )
 {
@@ -1247,7 +1300,7 @@ SCIP_RETCODE localVertexInsertion(
 static
 SCIP_RETCODE localKeyVertexHeuristics(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph data structure */
+   GRAPH*                graph,              /**< graph data structure */
    STP_Bool*             solNodes,           /**< Steiner tree nodes */
    NODE*                 linkcutNodes,       /**< Steiner tree nodes */
    int*                  solEdges,           /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
@@ -1263,6 +1316,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
    PHNODE** boundpaths;
    UF uf;  /* union-find */
    SCIP_Real* memvdist;
+   SCIP_Real* edgecost_pc = NULL;
+   SCIP_Real* prize_pc = NULL;
    int* vnoibase;
    int* kpedges;
    int* kpnodes;
@@ -1310,6 +1365,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
    /* memory needed for both Key-Path Elimination and Exchange */
    if( mwpc )
    {
+      SCIP_CALL(SCIPallocBufferArray(scip, &edgecost_pc, nedges));
+      SCIP_CALL(SCIPallocBufferArray(scip, &prize_pc, nnodes));
       SCIP_CALL(SCIPallocBufferArray(scip, &prizemark, nnodes));
       SCIP_CALL(SCIPallocBufferArray(scip, &prizemarklist, nnodes));
 
@@ -1351,11 +1408,11 @@ SCIP_RETCODE localKeyVertexHeuristics(
          .nodeIsScanned = scanned };
       SGRAPH supergraphData = { .supernodes = supernodes, .supernodesid = supernodesid, .nodeIsSupernode = supernodesmark,
          .nsupernodes = 0 };
+      PCMW pcmwData = { .prize_biased = prize_pc, .edgecost_biased = edgecost_pc, .prizemark = prizemark,
+         .prizemarklist = prizemarklist, .prizemarkcount = 0 };
       int nstnodes = 0;
 
       localmoves = 0;
-
-      BMSclearMemoryArray(blists_start, nnodes);
 
       /* find a DFS order of the ST nodes */
       dfsorder(graph, solEdges, root, &nstnodes, dfstree);
@@ -1378,28 +1435,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
       if( mwpc )
       {
-         assert(graph->extended);
-
-         for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
-         {
-            const int k = graph->head[e];
-            if( Is_term(graph->term[k]) )
-            {
-               int pterm;
-
-               if( !graph_pc_knotIsFixedTerm(graph, k) )
-               {
-                  graphmark[k] = FALSE;
-                  pterm = graph->head[graph->term2edge[k]];
-                  assert(Is_pterm(graph->term[pterm]));
-
-                  pinned[pterm] = TRUE;
-               }
-            }
-         }
-
-         if( !graph_pc_isRootedPcMw(graph) )
-            graphmark[root] = FALSE;
+         pcmwInit(scip, graph, &soltreeData, graphmark, &pcmwData);
       }
 
       SCIP_CALL( connectivityDataInit(scip, graph, &vnoiData, &soltreeData, graphmark, &connectivityData) );
@@ -1528,7 +1564,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                adjnode = ((supernodesmark[adjnode])? adjnode : superroot);
 
                /* compute the cost of the boundary-path pertaining to the boundary-edge 'edge' */
-               edgecost = vnoipath[graph->tail[edge]].dist + graph->cost[edge] + vnoipath[graph->head[edge]].dist;
+               edgecost = vnoiGetBoundaryPathCost(graph, &vnoiData, &pcmwData, edge);
                graph_edge_add(scip, supergraph, supernodesid[node], supernodesid[adjnode], edgecost, edgecost);
             }
 
@@ -1894,7 +1930,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                newedge = linkcutNodes[crucnode].edge;
 
             if( oldedge != UNKNOWN && newedge != UNKNOWN
-               && SCIPisLT(scip, edgecost, vnoipath[graph->tail[newedge]].dist + graph->cost[newedge] + vnoipath[graph->head[newedge]].dist) )
+               && SCIPisLT(scip, edgecost, vnoiGetBoundaryPathCost(graph, &vnoiData, &pcmwData, newedge)) )
             {
                assert(SCIPisGE(scip, edgecost, 0.0));
                newedge = oldedge;
@@ -1905,7 +1941,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
             assert( newedge != UNKNOWN );
 
-            edgecost = vnoipath[graph->tail[newedge]].dist + graph->cost[newedge] + vnoipath[graph->head[newedge]].dist;
+            edgecost = vnoiGetBoundaryPathCost(graph, &vnoiData, &pcmwData, newedge);;
 
             if( mwpc )
             {
@@ -2158,6 +2194,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
    SCIPfreeBufferArray(scip, &scanned);
    SCIPfreeBufferArrayNull(scip, &prizemarklist);
    SCIPfreeBufferArrayNull(scip, &prizemark);
+   SCIPfreeBufferArrayNull(scip, &prize_pc);
+   SCIPfreeBufferArrayNull(scip, &edgecost_pc);
    SCIPfreeBufferArray(scip, &supernodesid);
    SCIPfreeBufferArray(scip, &boundedges);
    SCIPfreeBufferArray(scip, &lvledges_start);

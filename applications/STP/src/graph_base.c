@@ -1755,7 +1755,7 @@ void graph_pc_getBiased(
    const int nedges = graph->edges;
    const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(graph);
    const int root = graph->source;
-
+int todo; // double check for small-prizes branch!
    assert(scip && graph && costbiased && prizebiased);
    assert(graph->extended);
    assert(!rpcmw || graph_pc_knotIsFixedTerm(graph, root));
