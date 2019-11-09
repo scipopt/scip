@@ -149,7 +149,7 @@
 #define DEFAULT_USECOLUMNSPARSITY   FALSE    /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
 #define DEFAULT_DOUBLEEQUATIONS      FALSE   /**< Double equations to positive/negative version? */
 #define DEFAULT_COMPRESSSYMMETRIES   TRUE    /**< Should non-affected variables be removed from permutation to save memory? */
-#define DEFAULT_COMPRESSIONTHRESHOLD  0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
+#define DEFAULT_COMPRESSTHRESHOLD     0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
 
 /* default parameters for symmetry constraints */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
@@ -221,7 +221,7 @@ struct SCIP_PropData
    SCIP_Bool             checksymmetries;    /**< Should all symmetries be checked after computation? */
    SCIP_Bool             displaynorbitvars;  /**< Whether the number of variables in non-trivial orbits shall be computed */
    SCIP_Bool             compresssymmetries; /**< Should non-affected variables be removed from permutation to save memory? */
-   SCIP_Real             compressionthreshold; /**< Compression is used if percentage of moved vars is at most the threshold. */
+   SCIP_Real             compressthreshold;  /**< Compression is used if percentage of moved vars is at most the threshold. */
    SCIP_Bool             computedsymmetry;   /**< Have we already tried to compute symmetries? */
    int                   usesymmetry;        /**< encoding of active symmetry handling methods (for debugging) */
    SCIP_Bool             usecolumnsparsity;  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
@@ -1242,7 +1242,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_Bool             doubleequations,    /**< Double equations to positive/negative version? */
    SCIP_Bool             compresssymmetries, /**< Should non-affected variables be removed from permutation to save memory? */
-   SCIP_Real             compressionthreshold, /**< compression is used if percentage of moved vars is at most the threshold */
+   SCIP_Real             compressthreshold,  /**< Compression is used if percentage of moved vars is at most the threshold. */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_SPEC              fixedtype,          /**< variable types that must be fixed by symmetries */
    SCIP_Bool             local,              /**< Use local variable bounds? */
@@ -1894,9 +1894,9 @@ SCIP_RETCODE computeSymmetryGroup(
    if ( matrixdata.nuniquevars < nvars && matrixdata.nuniquemat < matrixdata.nmatcoef )
    {
       SCIP_Real percentagemovedvars;
+      SCIP_Bool performcompression;
       int* labelmovedvars = NULL;
       int i;
-      SCIP_Bool performcompression;
 
       /* determine generators */
       SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, &matrixdata, nperms, nmaxperms, perms, log10groupsize) );
@@ -1934,7 +1934,7 @@ SCIP_RETCODE computeSymmetryGroup(
        */
       percentagemovedvars = (SCIP_Real) *nmovedvars / (SCIP_Real) nvars;
       performcompression = *nmovedvars > 0 && compresssymmetries
-         && (SCIPgetNVars(scip) >= 25000 && SCIPisLE(scip, percentagemovedvars, compressionthreshold));
+         && (SCIPgetNVars(scip) >= 25000 && SCIPisLE(scip, percentagemovedvars, compressthreshold));
       if ( performcompression )
       {
          int* compressedperm;
@@ -2178,7 +2178,7 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
    /* actually compute (global) symmetry */
-   SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, propdata->compresssymmetries, propdata->compressionthreshold,
+   SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, propdata->compresssymmetries, propdata->compressthreshold,
 	 maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries, propdata->usecolumnsparsity,
          &propdata->npermvars, &propdata->permvars, &propdata->nperms, &propdata->nmaxperms, &propdata->perms,
          &propdata->log10groupsize, &propdata->nmovedvars, &successful) );
@@ -3751,9 +3751,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          &propdata->compresssymmetries, TRUE, DEFAULT_COMPRESSSYMMETRIES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
-         "propagating/" PROP_NAME "/compressionthreshold",
+         "propagating/" PROP_NAME "/compressthreshold",
          "Compression is used if percentage of moved vars is at most the threshold.",
-         &propdata->compressionthreshold, TRUE, DEFAULT_COMPRESSIONTHRESHOLD, 0.0, 1.0, NULL, NULL) );
+         &propdata->compressthreshold, TRUE, DEFAULT_COMPRESSTHRESHOLD, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
      "propagating/" PROP_NAME "/usecolumnsparsity",
