@@ -1249,6 +1249,7 @@ SCIP_RETCODE setSymmetryData(
    int                   nperms,             /**< number of permutations */
    int*                  nmovedvars,         /**< pointer to store number of vars affected by symmetry */
    SCIP_Bool*            binvaraffected,     /**< pointer to store whether a binary variable is affected by symmetry */
+   SCIP_Bool             usecompression,     /**< whether symmetry data shall be compressed */
    SCIP_Real             compressthreshold   /**< if percentage of moved vars is at most threshold, compression is done */
    )
 {
@@ -1292,7 +1293,8 @@ SCIP_RETCODE setSymmetryData(
    }
 
    percentagemovedvars = (SCIP_Real) *nmovedvars / (SCIP_Real) nvars;
-   compress = *nmovedvars > 0 && (SCIPgetNVars(scip) >= 25000 && SCIPisLE(scip, percentagemovedvars, compressthreshold));
+   compress = *nmovedvars > 0 && usecompression
+      && (SCIPgetNVars(scip) >= 25000 && SCIPisLE(scip, percentagemovedvars, compressthreshold));
 
    /* no compression is performed*/
    if ( ! compress )
@@ -2011,7 +2013,7 @@ SCIP_RETCODE computeSymmetryGroup(
       if ( *nperms > 0 )
       {
          SCIP_CALL( setSymmetryData(scip, vars, nvars, permvars, npermvars, *perms, *nperms,
-               nmovedvars, binvaraffected, compressthreshold) );
+               nmovedvars, binvaraffected, compresssymmetries, compressthreshold) );
       }
    }
    else
