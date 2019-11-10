@@ -1292,7 +1292,7 @@ SCIP_RETCODE setSymmetryData(
    }
 
    percentagemovedvars = (SCIP_Real) *nmovedvars / (SCIP_Real) nvars;
-   compress = *nmovedvars > 0 && (SCIPgetNVars(scip) >= 0 && SCIPisLE(scip, percentagemovedvars, compressthreshold));
+   compress = *nmovedvars > 0 && (SCIPgetNVars(scip) >= 25000 && SCIPisLE(scip, percentagemovedvars, compressthreshold));
 
    /* no compression is performed*/
    if ( ! compress )
