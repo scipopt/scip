@@ -2151,6 +2151,7 @@ SCIP_RETCODE dualBoundStrengthening(
          }
       }
 
+      SCIPhashtableFree(&pairtable);
       SCIPfreeBlockMemoryArray(scip, &colidxlistmp, listsizemp);
       SCIPfreeBlockMemoryArray(scip, &colidxlistpm, listsizepm);
       SCIPfreeBlockMemoryArray(scip, &colidxlistmm, listsizemm);
@@ -2374,8 +2375,12 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    if( SCIPgetNContVars(scip)==0 )
       return SCIP_OKAY;
 
-   /* todo: I think dual infer is a weak dual reduction since no optimal solutions should be discarded */
-   if( !SCIPallowStrongDualReds(scip) )
+   /* do not use this presolver if dual reductions are not allowed.
+    * the reductions made in this presolver apply to all optimal solutions
+    * because of complementary slackness.
+    * This means that only weak dual reductions are carried out.
+    */
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
