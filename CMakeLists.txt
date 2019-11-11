@@ -53,7 +53,6 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 option(ZLIB "should zlib be linked" ON)
 option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
-option(BOOST "should boost multiprecision be linked" ON)
 option(STATIC_GMP "prefer static gmp library" OFF)
 option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
@@ -198,11 +197,22 @@ add_custom_target(scip_update_githash
 
 set(WITH_SCIPDEF on)
 
-# EXACT_SOLVE
+# EXACT_SOLVE soplex and Boost is required
 if(EXSOLVE)
     add_definitions(-DSCIP_WITH_EXACTSOLVE)
+    find_package(SOPLEX REQUIRED CONFIG)
+    set(lpiex lpi/lpiex_spx.cpp)
+    #Multiprecision
+    find_package(Boost 1.70.0 COMPONENTS iostreams serialization system program_options REQUIRED)
+    add_definitions(-DSCIP_WITH_BOOST)
+    include_directories(${Boost_INCLUDE_DIRS})
+    get_directory_property(MYDEFS COMPILE_DEFINITIONS)
+    message( STATUS "Compile defs contain: " ${MYDEFS} )
+    if(NOT SOPLEX_GMP)
+        message(FATAL_ERROR "SoPlex with GMP is necessary for exact solving mode but Soplex_GMP is not set.
+        Make sure to rebuild SoPlex with GMP enabled.")
+    endif()
 endif()
-set(lpiex lpi/lpiex_spx.cpp)
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
@@ -232,12 +242,6 @@ if(READLINE_FOUND)
     set(SCIP_WITH_READLINE on)
 else()
     set(Readline_LIBRARY "")
-endif()
-
-#Multiprecision
-if(BOOST)
-    find_package(Boost COMPONENTS iostreams serialization system program_options REQUIRED)
-    include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
 # GMP
