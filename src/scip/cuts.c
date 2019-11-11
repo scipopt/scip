@@ -2180,7 +2180,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
       }
    }
 
-   SCIPaggrRowRemoveZeros(scip, aggrrow, valid);
+   SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, valid);
 
    return SCIP_OKAY;
 }
@@ -2321,13 +2321,15 @@ SCIP_RETCODE postprocessCutQuad(
 void SCIPaggrRowRemoveZeros(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Bool             useglbbounds,       /**< consider global bound although the cut is local? */
    SCIP_Bool*            valid               /**< pointer to return whether the aggregation row is still valid */
    )
 {
    assert(aggrrow != NULL);
    assert(valid != NULL);
 
-   *valid = ! removeZerosQuad(scip, SCIPsumepsilon(scip), aggrrow->local, aggrrow->vals, QUAD(&aggrrow->rhs), aggrrow->inds, &aggrrow->nnz);
+   *valid = ! removeZerosQuad(scip, SCIPsumepsilon(scip), useglbbounds ? FALSE : aggrrow->local, aggrrow->vals,
+      QUAD(&aggrrow->rhs), aggrrow->inds, &aggrrow->nnz);
 }
 
 /** get number of aggregated rows */

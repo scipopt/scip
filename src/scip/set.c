@@ -153,6 +153,7 @@
 /* Conflict Analysis (dual ray) */
 
 #define SCIP_DEFAULT_CONF_SEPAALTPROOFS   FALSE /**< apply cut generating functions to construct alternative proofs */
+#define SCIP_DEFAULT_CONF_USELOCALROWS    TRUE  /**< use local rows to construct infeasibility proofs */
 
 /* Constraints */
 
@@ -1272,6 +1273,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/cleanboundexceedings",
          "should conflicts based on an old cutoff bound be removed from the conflict pool after improving the primal bound?",
          &(*set)->conf_cleanbnddepend, TRUE, SCIP_DEFAULT_CONF_CLEANBNDDEPEND,
+         NULL, NULL) );
+      SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/uselocalrows",
+         "use local rows to construct infeasibility proofs",
+         &(*set)->conf_uselocalrows, TRUE, SCIP_DEFAULT_CONF_USELOCALROWS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/useprop",
