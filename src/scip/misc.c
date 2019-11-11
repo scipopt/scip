@@ -7173,8 +7173,9 @@ SCIP_RETCODE SCIPdigraphCreate(
    (*digraph)->componentstarts = NULL;
 
    /* all nodes are initially considered as non-articulation points */
-   (*digraph)->narticulations = 0;
+   (*digraph)->narticulations = -1;
    (*digraph)->articulations = NULL;
+   (*digraph)->articulationscheck = FALSE;
 
    return SCIP_OKAY;
 }
@@ -7230,7 +7231,7 @@ SCIP_RETCODE SCIPdigraphCopy(
    int ncomponents;
    int nnodes;
    int i;
-   int narticulations;
+   SCIP_Bool articulationscheck;
 
    assert(sourcedigraph != NULL);
    assert(targetdigraph != NULL);
@@ -7245,7 +7246,7 @@ SCIP_RETCODE SCIPdigraphCopy(
 
    nnodes = sourcedigraph->nnodes;
    ncomponents = sourcedigraph->ncomponents;
-   narticulations = sourcedigraph->narticulations;
+   articulationscheck = sourcedigraph->articulationscheck;
    (*targetdigraph)->nnodes = nnodes;
    (*targetdigraph)->ncomponents = ncomponents;
    (*targetdigraph)->blkmem = targetblkmem;
@@ -7292,16 +7293,18 @@ SCIP_RETCODE SCIPdigraphCopy(
       (*targetdigraph)->componentstartsize = 0;
    }
 
-   /* copy the articulation point information if it has been computed */
-   if( narticulations > 0 )
+   /* copy the articulation point information if it has been computed and is up-to-date */
+   if( articulationscheck )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->articulations, sourcedigraph->articulations, narticulations) );
-      (*targetdigraph)->narticulations = narticulations;
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->articulations, sourcedigraph->articulations, sourcedigraph->narticulations) );
+      (*targetdigraph)->narticulations = sourcedigraph->narticulations;
+      (*targetdigraph)->articulationscheck = TRUE;
    }
    else
    {
-      (*targetdigraph)->narticulations = 0;
+      (*targetdigraph)->narticulations = -1;
       (*targetdigraph)->articulations = NULL;
+      (*targetdigraph)->articulationscheck = FALSE;
    }
 
    return SCIP_OKAY;
@@ -7362,7 +7365,7 @@ void SCIPdigraphFree(
    assert(digraphptr->componentstarts == NULL);
 
    /* free the articulation nodes structure if it has been computed*/
-   if( digraphptr->narticulations > 0 )
+   if( digraphptr->articulationscheck )
       BMSfreeBlockMemoryArray(blkmem, &digraphptr->articulations, digraphptr->narticulations);
 
    /* free directed graph data structure */
@@ -7446,6 +7449,9 @@ SCIP_RETCODE SCIPdigraphAddArc(
    digraph->arcdata[startnode][digraph->nsuccessors[startnode]] = data;
    digraph->nsuccessors[startnode]++;
 
+   /* the articulation nodes are not up-to-date */
+   digraph->articulationscheck = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -7483,6 +7489,9 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
    digraph->successors[startnode][nsuccessors] = endnode;
    digraph->arcdata[startnode][nsuccessors] = data;
    ++(digraph->nsuccessors[startnode]);
+
+   /* the articulation nodes are not up-to-date */
+   digraph->articulationscheck = FALSE;
 
    return SCIP_OKAY;
 }
@@ -7703,6 +7712,11 @@ void findArticulationPointsUtil(
    int                   time                /**< current discovery time in the DFS */
    )
 {
+   int n;
+   int nchildren = 0;
+   int nsucc;
+   int* succnodes;
+
    assert(digraph != NULL);
    assert(startnode >= 0);
    assert(startnode < digraph->nnodes);
@@ -7714,10 +7728,8 @@ void findArticulationPointsUtil(
    assert(articulationflag != NULL);
    assert(time >= 0);
 
-   int n;
-   int nchildren = 0;
-   int nsucc = (int) SCIPdigraphGetNSuccessors(digraph, startnode);
-   int* succnodes = (int*) SCIPdigraphGetSuccessors(digraph, startnode);
+   nsucc = (int) SCIPdigraphGetNSuccessors(digraph, startnode);
+   succnodes = (int*) SCIPdigraphGetSuccessors(digraph, startnode);
    visited[startnode] = TRUE;
    tdisc[startnode] = time + 1;
    mindisc[startnode] = time + 1;
@@ -7757,12 +7769,11 @@ void findArticulationPointsUtil(
  */
 SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int*                  articulations       /**< array to store the sorted node indices of the found articulation points
-                                              *   of recommended size as the number of nodes in the graph, NULL if not needed */
+   int**                 articulations,      /**< array to store the sorted node indices of the computed articulation points,
+                                              *   NULL if not needed */
+   int*                  narticulations      /**< number of the computed articulation points */
 )
 {
-   assert(digraph != NULL);
-   assert(digraph->nnodes > 0);
 
    BMS_BLKMEM* blkmem;
    SCIP_Bool* visited;
@@ -7774,69 +7785,69 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    int articulationidx = 0;
    int time = 0;
 
-   SCIP_ALLOC( BMSallocMemoryArray(&visited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&tdisc, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&mindisc, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&parent, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&articulationflag, digraph->nnodes) );
+   assert(digraph != NULL);
+   assert(digraph->nnodes > 0);
 
-   assert(digraph->blkmem != NULL);
-   blkmem = digraph->blkmem;
-
-   /* Reset if the articulation nodes have been computed before */
-   if( digraph->narticulations > 0 )
+   /* Only perform the computation if the articulation nodes are NOT up-to-date */
+   if( !digraph->articulationscheck )
    {
-      BMSfreeBlockMemoryArray(blkmem, &digraph->articulations, digraph->narticulations);
+      SCIP_ALLOC( BMSallocMemoryArray(&visited, digraph->nnodes) );
+      SCIP_ALLOC( BMSallocMemoryArray(&tdisc, digraph->nnodes) );
+      SCIP_ALLOC( BMSallocMemoryArray(&mindisc, digraph->nnodes) );
+      SCIP_ALLOC( BMSallocMemoryArray(&parent, digraph->nnodes) );
+      SCIP_ALLOC( BMSallocMemoryArray(&articulationflag, digraph->nnodes) );
+
+      assert(digraph->blkmem != NULL);
+      blkmem = digraph->blkmem;
+
+      if( digraph->narticulations >= 0 ) /* case: articulations have already been computed but not up-to-date */
+         BMSfreeBlockMemoryArray(blkmem, &digraph->articulations, digraph->narticulations);
+
+      /* Initialize the no. of articulation nodes ahead of the recursive computation */
       digraph->narticulations = 0;
-   }
 
-   for( n = 0; n < digraph->nnodes; ++n )
-   {
-      visited[n] = FALSE;
-      parent[n] = -1;
-      articulationflag[n] = FALSE;
-   }
-
-   /* the function is called on every unvisited node in the graph to cover the disconnected graph case */
-   for( n = 0; n < digraph->nnodes; ++n )
-   {
-      if( visited[n] == FALSE )
-         findArticulationPointsUtil(digraph, n, visited, tdisc, mindisc, parent, articulationflag, time);
-   }
-
-   /* allocation the block memory for the node indices of the articulation points*/
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->articulations, digraph->narticulations) );
-
-   for( n = 0; n < digraph->nnodes; ++n )
-   {
-      if ( articulationflag[n] == TRUE )
+      for( n = 0; n < digraph->nnodes; ++n )
       {
-         if( articulations != NULL )
-            articulations[articulationidx] = n;
-         digraph->articulations[articulationidx] = n;
-         ++articulationidx;
+         visited[n] = FALSE;
+         parent[n] = -1;
+         articulationflag[n] = FALSE;
       }
+
+      /* the function is called on every unvisited node in the graph to cover the disconnected graph case */
+      for( n = 0; n < digraph->nnodes; ++n )
+      {
+         if( visited[n] == FALSE )
+            findArticulationPointsUtil(digraph, n, visited, tdisc, mindisc, parent, articulationflag, time);
+      }
+
+      /* allocation of the block memory for the node indices of the articulation points*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->articulations, digraph->narticulations) );
+
+      for( n = 0; n < digraph->nnodes; ++n )
+      {
+         if ( articulationflag[n] == TRUE )
+         {
+            digraph->articulations[articulationidx] = n;
+            ++articulationidx;
+         }
+      }
+
+      BMSfreeMemoryArrayNull(&articulationflag);
+      BMSfreeMemoryArrayNull(&parent);
+      BMSfreeMemoryArrayNull(&mindisc);
+      BMSfreeMemoryArrayNull(&tdisc);
+      BMSfreeMemoryArrayNull(&visited);
    }
 
-   BMSfreeMemoryArrayNull(&articulationflag);
-   BMSfreeMemoryArrayNull(&parent);
-   BMSfreeMemoryArrayNull(&mindisc);
-   BMSfreeMemoryArrayNull(&tdisc);
-   BMSfreeMemoryArrayNull(&visited);
+   if( articulations != NULL )
+      (*articulations) = digraph->articulations;
+   if( narticulations != NULL )
+      (*narticulations) = digraph->narticulations;
+
+   /* the articulation nodes are now up-to-date */
+   digraph->articulationscheck = TRUE;
 
    return SCIP_OKAY;
-}
-
-/** returns the number of articulation points in a given directed graph
- *  to be called after SCIPdigraphGetArticulationPoints to obtain the updated answer
- */
-int SCIPdigraphGetNArticulationPoints(
-   SCIP_DIGRAPH*         digraph             /**< directed graph */
-)
-{
-   assert(digraph != NULL);
-
-   return digraph->narticulations;
 }
 
 /** Compute undirected connected components on the given graph.
@@ -9174,6 +9185,9 @@ SCIP_Bool SCIPrealToRational(
    assert(maxdelta > 0.0);
    assert(nominator != NULL);
    assert(denominator != NULL);
+
+   if( REALABS(val) >= 1.0 * SCIP_LONGINT_MAX / maxdnom )
+      return FALSE;
 
    /* try the simple denominators first: each value of the simpledenoms table multiplied by powers of 10
     * is tried as denominator

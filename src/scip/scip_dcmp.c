@@ -551,7 +551,6 @@ SCIP_RETCODE SCIPdecompAssignLinkConss(
          startposs[1] = block + maxnblockvars;
          endposs[1] = nconsvars;
 
-         p = 0;
          /* loop over all variables before (p==0) and after (p==1) the most frequent block label */
          for( p = 0; p < 2; ++p )
          {
@@ -882,8 +881,7 @@ SCIP_RETCODE buildBlockGraph(
    decomp->ncomponents = SCIPdigraphGetNComponents(blockgraph);
 
    /* Get the number of articulation nodes in the block-decomposition graph using DFS.*/
-   SCIP_CALL( SCIPdigraphGetArticulationPoints(blockgraph, NULL) );
-   decomp->narticulations = SCIPdigraphGetNArticulationPoints(blockgraph);
+   SCIP_CALL( SCIPdigraphGetArticulationPoints(blockgraph, NULL, &decomp->narticulations) );
 
    SCIPfreeBufferArray(scip, &consvars);
    SCIPfreeBufferArray(scip, &linkvaridx);
