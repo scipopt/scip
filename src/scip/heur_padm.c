@@ -812,7 +812,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Real gap;
    SCIP_Real maxslack;
    SCIP_Real slackthreshold;
-   SCIP_Real memory;
+   SCIP_Real memory; /* in MB */
    SCIP_STATUS status;
    SCIP_Bool solutionsdiffer;
    SCIP_Bool solved;
@@ -974,7 +974,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* estimate required memory for all blocks and terminate if not enough memory is available */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memory) );
-   if( (SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip)) * nblocks >= memory )
+   if( ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * nblocks >= memory )
    {
       SCIPdebugMsg(scip, "The estimated memory usage is too large.\n");
       goto TERMINATE;
