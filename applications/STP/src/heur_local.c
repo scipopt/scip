@@ -98,7 +98,9 @@ typedef struct connectivity_data
    IDX**                 lvledges_start;     /**< horizontal edges starts (on nodes) */
    PHNODE**              pheap_boundpaths;   /**< boundary paths (on nodes) */
    int*                  pheap_sizes;        /**< size (on nodes) */
+   int*                  boundedges;         /**< boundary edge */
    UF*                   uf;                 /**< union find */
+   int                   nboundedges;        /**< number of bound edges */
 } CONN;
 
 
@@ -123,6 +125,7 @@ typedef struct solution_tree_data
    int* const            solEdges;           /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    STP_Bool* const       nodeIsPinned;       /**< of size nodes */
    STP_Bool* const       nodeIsScanned;      /**< of size nodes */
+   int* const            newedges;           /**< marks new edges of the tree */
 } SOLTREE;
 
 
@@ -130,9 +133,10 @@ typedef struct solution_tree_data
 typedef struct supergraph_data
 {
    int* const            supernodes;         /**< super nodes */
-   int* const            supernodesid;       /**< super nodes id */
    STP_Bool* const       nodeIsSupernode;    /**< marks the current super-vertices
                                               * (except for the one representing the root-component) */
+   PATH*                 mst;                /**< MST */
+   SCIP_Real             mstcost;            /**< cost of MST */
    int                   nsupernodes;        /**< number of super nodes */
 } SGRAPH;
 
@@ -144,7 +148,6 @@ typedef struct pcmw_data
    SCIP_Real* const      edgecost_biased;    /**< cost */
    STP_Bool* const       prizemark;          /**< marked? */
    int* const            prizemarklist;      /**< list of all marked */
-   int                   prizemarkcount;     /**< number of all marked */
 } PCMW;
 
 /*
@@ -498,6 +501,78 @@ void pcmwInit(
 }
 
 
+/** update for key-vertex elimination */
+static
+SCIP_RETCODE connectivityDataKeyElimUpdate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const VNOI*           vnoiData,           /**< Voronoi data */
+   const SGRAPH*         supergraphData,     /**< super-graph*/
+   const int*            graphmark,          /**< marks allowed vertices */
+   int                   crucnode,           /**< node to eliminate */
+   CONN*                 connectData         /**< data */
+)
+{
+   PHNODE** const boundpaths = connectData->pheap_boundpaths;
+   IDX** const lvledges_start = connectData->lvledges_start;
+   UF* const uf = connectData->uf;
+   int* const pheapsize = connectData->pheap_sizes;
+   const int* const supernodes = supergraphData->supernodes;
+   const int* const vnoibase = vnoiData->vnoi_base;
+   const STP_Bool* const isSupernode = supergraphData->nodeIsSupernode;
+   int* const boundedges = connectData->boundedges;
+   int nboundedges = 0;
+
+   connectData->nboundedges = -1;
+
+   /* add vertical boundary-paths between the child components and the root-component (w.r.t. node 'crucnode') */
+   for( int k = 0; k < supergraphData->nsupernodes - 1; k++ )
+   {
+      const int supernode = supernodes[k];
+      int edge = UNKNOWN;
+
+      while( boundpaths[supernode] != NULL )
+      {
+         int node;
+         SCIP_Real edgecost;
+
+         SCIP_CALL( SCIPpairheapDeletemin(scip, &edge, &edgecost, &boundpaths[supernode], &pheapsize[supernode]) );
+
+         node = (vnoibase[graph->head[edge]] == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(uf, vnoibase[graph->head[edge]]);
+
+         /* check whether edge 'edge' represents a boundary-path having an endpoint in the kth-component and in the root-component respectively */
+         if( node != UNKNOWN && !isSupernode[node] && graphmark[node] )
+         {
+            boundedges[nboundedges++] = edge;
+            SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[supernode], edge, edgecost, &pheapsize[supernode]) );
+            break;
+         }
+      }
+   }
+
+   /* add horizontal boundary-paths (between the  child-components) */
+   for( IDX* lvledges_curr = lvledges_start[crucnode]; lvledges_curr != NULL; lvledges_curr = lvledges_curr->parent )
+   {
+      const int edge = lvledges_curr->index;
+      const int basetail = vnoibase[graph->tail[edge]];
+      const int basehead = vnoibase[graph->head[edge]];
+      const int node = (basehead == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(uf, basehead);
+      const int adjnode = (basetail == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(uf, basetail);
+
+      /* check whether the current boundary-path connects two child components */
+      if( node != UNKNOWN && isSupernode[node] && adjnode != UNKNOWN && isSupernode[adjnode] )
+      {
+         assert(graphmark[node] && graphmark[adjnode]);
+         boundedges[nboundedges++] = edge;
+      }
+   }
+
+   connectData->nboundedges = nboundedges;
+
+   return SCIP_OKAY;
+}
+
+
 /** initialize */
 static
 SCIP_RETCODE connectivityDataInit(
@@ -517,6 +592,9 @@ SCIP_RETCODE connectivityDataInit(
    const int* const vnoibase = vnoiData->vnoi_base;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
+
+   assert(connectData->nboundedges == 0);
+   assert(connectData->boundedges);
 
    BMSclearMemoryArray(blists_start, nnodes);
 
@@ -700,6 +778,174 @@ SCIP_Real vnoiGetBoundaryPathCost(
 }
 
 
+/** compute minimum-spanning tree  */
+static
+SCIP_RETCODE supergraphDataComputeMst(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const CONN*           connectData,        /**< data */
+   const SOLTREE*        soltreeData,        /**< solution tree data */
+   const VNOI*           vnoiData,           /**< data */
+   const PCMW*           pcmwData,           /**< data */
+   const int*            graphmark,          /**< graph mark */
+   int                   crucnode,           /**< node to eliminate */
+   KPATHS*               keypathsData,       /**< key paths */
+   SGRAPH*               supergraphData      /**< super-graph*/
+)
+{
+   PATH* mst = NULL;
+   GRAPH* supergraph = NULL;
+   UF* const uf = connectData->uf;
+   const int* const supernodes = supergraphData->supernodes;
+   int* supernodesid = NULL;
+   STP_Bool* isSupernode = supergraphData->nodeIsSupernode;
+   const STP_Bool* const solNodes = soltreeData->solNodes;
+   int* const newedges = soltreeData->newedges;
+   const PATH* const vnoipath = vnoiData->vnoi_path;
+   const int* const vnoibase = vnoiData->vnoi_base;
+   const int* const boundedges = connectData->boundedges;
+   STP_Bool* const prizemark = pcmwData->prizemark;
+   int* const prizemarklist = pcmwData->prizemarklist;
+   SCIP_Real mstcost = 0.0;
+   int prizemarkcount = 0;
+   const int nboundedges = connectData->nboundedges;
+   const int nnodes = graph->knots;
+   const int nsupernodes = supergraphData->nsupernodes;
+   /* the (super-) vertex representing the current root-component of the Steiner tree */
+   const int superroot = supernodes[nsupernodes - 1];
+   const SCIP_Bool mwpc = graph_pc_isPcMw(graph);
+
+   assert(nboundedges > 0);
+   assert(superroot >= 0);
+   assert(!supergraphData->mst);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &supernodesid, nnodes) );
+
+   /* create a supergraph, having the endpoints of the key-paths incident to the current crucial node as (super-) vertices */
+   SCIP_CALL( graph_init(scip, &supergraph, nsupernodes, nboundedges * 2, 1) );
+   supergraph->stp_type = STP_SPG;
+
+#ifndef NDEBUG
+   for( int k = 0; k < nnodes; k++ )
+      supernodesid[k] = -1;
+#endif
+
+   for( int k = 0; k < nsupernodes; k++ )
+   {
+      supernodesid[supernodes[k]] = k;
+      graph_knot_add(supergraph, graph->term[supernodes[k]]);
+   }
+
+   /* add edges to the supergraph */
+   for( int l = 0; l < nboundedges; l++ )
+   {
+      SCIP_Real edgecost;
+      const int edge = boundedges[l];
+      int node = SCIPStpunionfindFind(uf, vnoibase[graph->tail[edge]]);
+      int adjnode = SCIPStpunionfindFind(uf, vnoibase[graph->head[edge]]);
+
+      /* if node 'node' or 'adjnode' belongs to the root-component, take the (temporary) root-component identifier instead */
+      node = ((isSupernode[node])? node : superroot);
+      adjnode = ((isSupernode[adjnode])? adjnode : superroot);
+
+      /* compute the cost of the boundary-path pertaining to the boundary-edge 'edge' */
+      edgecost = vnoiGetBoundaryPathCost(graph, vnoiData, pcmwData, edge);
+      graph_edge_add(scip, supergraph, supernodesid[node], supernodesid[adjnode], edgecost, edgecost);
+   }
+
+   /* compute a MST on the supergraph */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(supergraphData->mst), nsupernodes) );
+   mst = supergraphData->mst;
+   SCIP_CALL( graph_path_init(scip, supergraph) );
+   graph_path_exec(scip, supergraph, MST_MODE, nsupernodes - 1, supergraph->cost, mst);
+
+   /* compute the cost of the MST */
+   mstcost = 0.0;
+   prizemarkcount = 0;
+
+#ifndef NDEBUG
+     if( mwpc  )
+        for( int k = 0; k < nnodes; k++ )
+           assert(!prizemark[k]);
+#endif
+
+   /* compute the cost of the MST */
+   for( int l = 0; l < nsupernodes - 1; l++ )
+   {
+      int edge;
+
+      /* compute the edge in the original graph corresponding to the current MST edge */
+      if( mst[l].edge % 2  == 0 )
+         edge = boundedges[mst[l].edge / 2 ];
+      else
+         edge = flipedge(boundedges[mst[l].edge / 2 ]);
+
+      mstcost += graph->cost[edge];
+      mstcost -= getNewPrize(graph, solNodes, graphmark, edge, prizemark, prizemarklist, &prizemarkcount);
+
+#ifdef SCIP_DEBUG
+        printf("key vertex mst edge ");
+        graph_edge_printInfo(graph, edge);
+#endif
+
+      assert( newedges[edge] != crucnode && newedges[flipedge(edge)] != crucnode );
+
+      /* mark the edge (in the original graph) as visited */
+      newedges[edge] = crucnode;
+
+      /* traverse along the boundary-path belonging to the boundary-edge 'edge' */
+      for( int node = graph->tail[edge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
+      {
+         const int e = vnoipath[node].edge;
+
+         /* if edge 'e' and its reversed have not been visited yet */
+         if( newedges[e] != crucnode && newedges[flipedge(e)] != crucnode )
+         {
+            newedges[e] = crucnode;
+            mstcost += graph->cost[e];
+            mstcost -= getNewPrize(graph, solNodes, graphmark, e, prizemark, prizemarklist, &prizemarkcount);
+#ifdef SCIP_DEBUG
+              printf("key vertex mst edge ");
+              graph_edge_printInfo(graph, e);
+#endif
+         }
+      }
+
+      for( int node = graph->head[edge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
+      {
+         const int e = flipedge(vnoipath[node].edge);
+
+         /* if edge 'e' and its reversed have not been visited yet */
+         if( newedges[vnoipath[node].edge] != crucnode && newedges[e] != crucnode )
+         {
+            newedges[e] = crucnode;
+            mstcost += graph->cost[e];
+            mstcost -= getNewPrize(graph, solNodes, graphmark, e, prizemark, prizemarklist, &prizemarkcount);
+
+#ifdef SCIP_DEBUG
+              printf("key vertex mst edge ");
+              graph_edge_printInfo(graph, e);
+#endif
+         }
+      }
+   }
+
+   for( int pi = 0; pi < prizemarkcount; pi++ )
+   {
+      assert(mwpc);
+      prizemark[prizemarklist[pi]] = FALSE;
+   }
+
+   supergraphData->mstcost = mstcost;
+
+   SCIPfreeBufferArray(scip, &supernodesid);
+   graph_path_exit(scip, supergraph);
+   graph_free(scip, &supergraph, TRUE);
+
+   return SCIP_OKAY;
+}
+
+
 /** preprocessing step for Voronoi repair */
 static
 void getKeyPathsStar(
@@ -716,7 +962,7 @@ void getKeyPathsStar(
    int* const kpedges = keypathsData->kpedges;
    const int* const solEdges = soltreeData->solEdges;
    int* const supernodes = supergraphData->supernodes;
-   STP_Bool* nodesmark = supergraphData->nodeIsSupernode;
+   STP_Bool* isSupernode = supergraphData->nodeIsSupernode;
    const STP_Bool* const solNodes = soltreeData->solNodes;
    const STP_Bool* const pinned = soltreeData->nodeIsPinned;
    int edge2root = UNKNOWN;
@@ -737,11 +983,9 @@ void getKeyPathsStar(
    for( int edge = graph->outbeg[keyvertex]; edge != EAT_LAST; edge = graph->oeat[edge] )
    {
       /* check whether the outgoing edge is in the ST */
-      if( (solEdges[edge] > -1 && solNodes[graph->head[edge]])
-          || (solEdges[flipedge(edge)] > -1 && solNodes[graph->tail[edge]]) )
+      if( (solEdges[edge] == CONNECT && solNodes[graph->head[edge]])
+          || (solEdges[flipedge(edge)] == CONNECT && solNodes[graph->tail[edge]]) )
       {
-         assert(solEdges[edge] == CONNECT || solEdges[flipedge(edge)] == CONNECT);
-
          keypathsData->kpcost += graph->cost[edge];
 
 #ifdef SCIP_DEBUG
@@ -750,10 +994,8 @@ void getKeyPathsStar(
 #endif
 
          /* check whether the current edge leads to the ST root */
-         if( solEdges[flipedge(edge)] > -1 )
+         if( solEdges[flipedge(edge)] == CONNECT )
          {
-            assert(CONNECT == solEdges[flipedge(edge)]);
-
             edge2root = flipedge(edge);
             kpedges[nkpedges++] = edge2root;
             assert( edge == soltreeData->linkcutNodes[keyvertex].edge );
@@ -762,6 +1004,8 @@ void getKeyPathsStar(
          {
             int adjnode = graph->head[edge];
             int e = edge;
+
+            assert(solEdges[flipedge(edge)] == UNKNOWN);
 
             kpedges[nkpedges++] = e;
 
@@ -775,10 +1019,8 @@ void getKeyPathsStar(
 
                for( e = graph->outbeg[adjnode]; e != EAT_LAST; e = graph->oeat[e] )
                {
-                  if( solEdges[e] > -1 )
+                  if( solEdges[e] == CONNECT )
                   {
-                     assert(CONNECT == solEdges[e]);
-
                      keypathsData->kpcost += graph->cost[e];
                      kpedges[nkpedges++] = e;
 #ifdef SCIP_DEBUG
@@ -815,13 +1057,13 @@ void getKeyPathsStar(
                if( adjnode != keyvertex )
                {
                   supernodes[nsupernodes++] = adjnode;
-                  nodesmark[adjnode] = TRUE;
+                  isSupernode[adjnode] = TRUE;
                }
             }
             else
             {
                supernodes[nsupernodes++] = adjnode;
-               nodesmark[adjnode] = TRUE;
+               isSupernode[adjnode] = TRUE;
             }
          }
       }
@@ -866,7 +1108,7 @@ void getKeyPathsStar(
    /* the last of the key-path nodes to be stored is the current key-node */
    kpnodes[nkpnodes++] = keyvertex;
 
-   TERMINATE:
+ TERMINATE:
 
    keypathsData->nkpedges = nkpedges;
    keypathsData->nkpnodes = nkpnodes;
@@ -874,6 +1116,7 @@ void getKeyPathsStar(
 }
 
 
+/** preprocessing for Voronoi repair method */
 static
 void vnoiDataRepairPreprocess(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1307,39 +1550,36 @@ SCIP_RETCODE localKeyVertexHeuristics(
    SCIP_Bool*            success             /**< solution improved? */
    )
 {
-   IDX** blists_start;  /* array [1,..,nnodes],
-                         * if node i is in the current ST, blists_start[i] points to a linked list of all nodes having i as their base */
-   PATH* mst;           /* minimal spanning tree structure */
-   PATH* vnoipath;
-   GRAPH* supergraph;
-   IDX** lvledges_start;  /* horizontal edges */
-   PHNODE** boundpaths;
    UF uf;  /* union-find */
-   SCIP_Real* memvdist;
+   IDX** blists_start = NULL;  /* array [1,..,nnodes],
+                         * if node i is in the current ST, blists_start[i] points to a linked list of all nodes having i as their base */
+   PATH* vnoipath = NULL;
+   IDX** lvledges_start = NULL;  /* horizontal edges */
+   PHNODE** boundpaths = NULL;
+   SCIP_Real* memvdist = NULL;
    SCIP_Real* edgecost_pc = NULL;
    SCIP_Real* prize_pc = NULL;
-   int* vnoibase;
-   int* kpedges;
-   int* kpnodes;
-   int* dfstree;
-   int* newedges;
-   int* memvbase;
-   int* pheapsize;
-   int* boundedges;
-   int* meminedges;
-   int* supernodes;
-   int* supernodesid;
+   int* vnoibase = NULL;
+   int* kpedges = NULL;
+   int* kpnodes = NULL;
+   int* dfstree = NULL;
+   int* newedges = NULL;
+   int* memvbase = NULL;
+   int* pheapsize = NULL;
+   int* boundedges = NULL;
+   int* meminedges = NULL;
+   int* supernodes = NULL;
    int* prizemarklist = NULL;
    int* const graphmark = graph->mark;
+   STP_Bool* pinned = NULL;
+   STP_Bool* scanned = NULL;
+   STP_Bool* supernodesmark = NULL;
+   STP_Bool* prizemark = NULL;
    int prizemarkcount;
    const int probtype = graph->stp_type;
    const int root = graph->source;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
-   STP_Bool* pinned;
-   STP_Bool* scanned;
-   STP_Bool* supernodesmark;
-   STP_Bool* prizemark = NULL;
    const STP_Bool mwpc = graph_pc_isPcMw(graph);
    SCIP_Bool solimproved = FALSE;
 
@@ -1358,7 +1598,6 @@ SCIP_RETCODE localKeyVertexHeuristics(
    SCIP_CALL( SCIPallocBufferArray(scip, &newedges, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lvledges_start, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundedges, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &supernodesid, nnodes) );
 
    /* only needed for Key-Path Exchange */
 
@@ -1403,13 +1642,13 @@ SCIP_RETCODE localKeyVertexHeuristics(
       KPATHS keypathsData = { .kpnodes = kpnodes, .kpedges = kpedges, .kpcost = 0.0, .nkpnodes = 0, .nkpedges = 0,
          .kptailnode = -1 };
       CONN connectivityData = { .blists_start = blists_start, .pheap_boundpaths = boundpaths, .lvledges_start = lvledges_start,
-         .pheap_sizes = pheapsize, .uf = &uf };
+         .pheap_sizes = pheapsize, .uf = &uf, .boundedges = boundedges, .nboundedges = 0 };
       SOLTREE soltreeData = { .solNodes = solNodes, .linkcutNodes = linkcutNodes, .solEdges = solEdges, .nodeIsPinned = pinned,
-         .nodeIsScanned = scanned };
-      SGRAPH supergraphData = { .supernodes = supernodes, .supernodesid = supernodesid, .nodeIsSupernode = supernodesmark,
-         .nsupernodes = 0 };
+         .nodeIsScanned = scanned, .newedges = newedges };
+      SGRAPH supergraphData = { .supernodes = supernodes, .nodeIsSupernode = supernodesmark,
+         .mst = NULL, .mstcost = 0.0, .nsupernodes = 0 };
       PCMW pcmwData = { .prize_biased = prize_pc, .edgecost_biased = edgecost_pc, .prizemark = prizemark,
-         .prizemarklist = prizemarklist, .prizemarkcount = 0 };
+         .prizemarklist = prizemarklist };
       int nstnodes = 0;
 
       localmoves = 0;
@@ -1435,21 +1674,21 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
       if( mwpc )
       {
+         assert(graph->extended);
          pcmwInit(scip, graph, &soltreeData, graphmark, &pcmwData);
       }
 
       SCIP_CALL( connectivityDataInit(scip, graph, &vnoiData, &soltreeData, graphmark, &connectivityData) );
 
-      /* henceforth, the union-find structure will be used on the ST */
+      /* henceforth, the union-find structure will be used on the Steiner tree */
       assert(uf.nElements == nnodes);
       SCIPStpunionfindClear(scip, &uf);
 
-      /* main loop visiting all nodes of the current ST in post-order */
+      /* main loop visiting all nodes of the current Steiner tree in post-order */
       for( int i = 0; dfstree[i] != root; i++ )
       {
          /* current crucial node */
          const int crucnode = dfstree[i];
-         SCIP_Real mstcost;
          int nheapelems = -1;
 
          scanned[crucnode] = TRUE;
@@ -1464,8 +1703,6 @@ SCIP_RETCODE localKeyVertexHeuristics(
          /* is node 'crucnode' a removable crucial node? (i.e. not pinned or a terminal) */
          if( !pinned[crucnode] && !Is_term(graph->term[crucnode]) && nodeIsCrucial(graph, solEdges, crucnode) )
          {
-            int nboundedges = -1;
-            int superroot = -1;
             SCIP_Bool allgood;
 
 #ifndef NDEBUG
@@ -1483,183 +1720,33 @@ SCIP_RETCODE localKeyVertexHeuristics(
                goto TERMINATE;
             }
 
+            assert(keypathsData.nkpnodes != 0); /* if there are no key-path nodes, something has gone wrong */
+
             /* reset all nodes (referred to as 'C' henceforth) whose bases are internal nodes of the current key-paths */
             vnoiDataReset(&connectivityData, &keypathsData, graphmark, &vnoiData);
 
-            /* add vertical boundary-paths between the child components and the root-component (w.r.t. node 'crucnode') */
-            nboundedges = 0;
-            for( int k = 0; k < supergraphData.nsupernodes - 1; k++ )
-            {
-               const int supernode = supernodes[k];
-               int edge = UNKNOWN;
-
-               while( boundpaths[supernode] != NULL )
-               {
-                  int node;
-                  SCIP_Real edgecost;
-
-                  SCIP_CALL( SCIPpairheapDeletemin(scip, &edge, &edgecost, &boundpaths[supernode], &pheapsize[supernode]) );
-
-                  node = (vnoibase[graph->head[edge]] == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(&uf, vnoibase[graph->head[edge]]);
-
-                  /* check whether edge 'edge' represents a boundary-path having an endpoint in the kth-component and in the root-component respectively */
-                  if( node != UNKNOWN && !supernodesmark[node] && graphmark[node] )
-                  {
-                     boundedges[nboundedges++] = edge;
-                     SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[supernode], edge, edgecost, &pheapsize[supernode]) );
-                     break;
-                  }
-               }
-            }
-
-            /* add horizontal boundary-paths (between the  child-components) */
-            for( IDX* lvledges_curr = lvledges_start[crucnode]; lvledges_curr != NULL; lvledges_curr = lvledges_curr->parent )
-            {
-               const int edge = lvledges_curr->index;
-               const int basetail = vnoibase[graph->tail[edge]];
-               const int basehead = vnoibase[graph->head[edge]];
-               const int node = (basehead == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(&uf, basehead);
-               const int adjnode = (basetail == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(&uf, basetail);
-
-               /* check whether the current boundary-path connects two child components */
-               if( node != UNKNOWN && supernodesmark[node] && adjnode != UNKNOWN && supernodesmark[adjnode] )
-               {
-                  assert(graphmark[node]);
-                  assert(graphmark[adjnode]);
-                  boundedges[nboundedges++] = edge;
-               }
-            }
-
-            assert(keypathsData.nkpnodes != 0); /* if there are no key-path nodes, something has gone wrong */
+            SCIP_CALL( connectivityDataKeyElimUpdate(scip, graph, &vnoiData, &supergraphData, graphmark, crucnode, &connectivityData) );
 
             /* try to connect the nodes of C (directly) to COMP(C), as a preprocessing for graph_voronoiRepair */
             vnoiDataRepairPreprocess(scip, graph, &keypathsData, &connectivityData, graphmark, &vnoiData, &nheapelems);
 
-            graph_voronoiRepairMult(scip, graph, graph->cost, &nheapelems, vnoibase, boundedges, &nboundedges, supernodesmark, &uf, vnoipath);
+            graph_voronoiRepairMult(scip, graph, graph->cost, &nheapelems, vnoibase, connectivityData.boundedges, &(connectivityData.nboundedges),
+                  supernodesmark, &uf, vnoipath);
 
-            /* create a supergraph, having the endpoints of the key-paths incident to the current crucial node as (super-) vertices */
-            SCIP_CALL( graph_init(scip, &supergraph, supergraphData.nsupernodes, nboundedges * 2, 1) );
-            supergraph->stp_type = STP_SPG;
+            SCIP_CALL( supergraphDataComputeMst(scip, graph, &connectivityData, &soltreeData, &vnoiData, &pcmwData,
+                  graphmark, crucnode, &keypathsData, &supergraphData) );
 
-            /* add vertices to the supergraph */
-            for( int k = 0; k < supergraphData.nsupernodes; k++ )
+            if( SCIPisLT(scip, supergraphData.mstcost, keypathsData.kpcost) )
             {
-               supernodesid[supernodes[k]] = k;
-               graph_knot_add(supergraph, graph->term[supernodes[k]]);
-            }
-
-            /* the (super-) vertex representing the current root-component of the ST */
-            superroot = supernodes[supergraphData.nsupernodes - 1];
-
-            /* add edges to the supergraph */
-            for( int l = 0; l < nboundedges; l++ )
-            {
-               SCIP_Real edgecost;
-               const int edge = boundedges[l];
-               int node = SCIPStpunionfindFind(&uf, vnoibase[graph->tail[edge]]);
-               int adjnode = SCIPStpunionfindFind(&uf, vnoibase[graph->head[edge]]);
-
-               /* if node 'node' or 'adjnode' belongs to the root-component, take the (temporary) root-component identifier instead */
-               node = ((supernodesmark[node])? node : superroot);
-               adjnode = ((supernodesmark[adjnode])? adjnode : superroot);
-
-               /* compute the cost of the boundary-path pertaining to the boundary-edge 'edge' */
-               edgecost = vnoiGetBoundaryPathCost(graph, &vnoiData, &pcmwData, edge);
-               graph_edge_add(scip, supergraph, supernodesid[node], supernodesid[adjnode], edgecost, edgecost);
-            }
-
-            /* compute a MST on the supergraph */
-            SCIP_CALL( SCIPallocBufferArray(scip, &mst, supergraphData.nsupernodes) );
-            SCIP_CALL( graph_path_init(scip, supergraph) );
-            graph_path_exec(scip, supergraph, MST_MODE, supergraphData.nsupernodes - 1, supergraph->cost, mst);
-
-            /* compute the cost of the MST */
-            mstcost = 0.0;
-            prizemarkcount = 0;
-
-#ifndef NDEBUG
-            if( mwpc  )
-               for( int k = 0; k < nnodes; k++ )
-                  assert(!prizemark[k]);
-#endif
-
-            /* compute the cost of the MST */
-            for( int l = 0; l < supergraphData.nsupernodes - 1; l++ )
-            {
-               int edge;
-
-               /* compute the edge in the original graph corresponding to the current MST edge */
-               if( mst[l].edge % 2  == 0 )
-                  edge = boundedges[mst[l].edge / 2 ];
-               else
-                  edge = flipedge(boundedges[mst[l].edge / 2 ]);
-
-               mstcost += graph->cost[edge];
-               mstcost -= getNewPrize(graph, solNodes, graphmark, edge, prizemark, prizemarklist, &prizemarkcount);
-
-#ifdef SCIP_DEBUG
-               printf("key vertex mst edge ");
-               graph_edge_printInfo(graph, edge);
-#endif
-
-               assert( newedges[edge] != crucnode && newedges[flipedge(edge)] != crucnode );
-
-               /* mark the edge (in the original graph) as visited */
-               newedges[edge] = crucnode;
-
-               /* traverse along the boundary-path belonging to the boundary-edge 'edge' */
-               for( int node = graph->tail[edge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
-               {
-                  const int e = vnoipath[node].edge;
-
-                  /* if edge 'e' and its reversed have not been visited yet */
-                  if( newedges[e] != crucnode && newedges[flipedge(e)] != crucnode )
-                  {
-                     newedges[e] = crucnode;
-                     mstcost += graph->cost[e];
-                     mstcost -= getNewPrize(graph, solNodes, graphmark, e, prizemark, prizemarklist, &prizemarkcount);
-#ifdef SCIP_DEBUG
-                     printf("key vertex mst edge ");
-                     graph_edge_printInfo(graph, e);
-#endif
-                  }
-               }
-
-               for( int node = graph->head[edge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
-               {
-                  const int e = flipedge(vnoipath[node].edge);
-
-                  /* if edge 'e' and its reversed have not been visited yet */
-                  if( newedges[vnoipath[node].edge] != crucnode && newedges[e] != crucnode )
-                  {
-                     newedges[e] = crucnode;
-                     mstcost += graph->cost[e];
-                     mstcost -= getNewPrize(graph, solNodes, graphmark, e, prizemark, prizemarklist, &prizemarkcount);
-
-#ifdef SCIP_DEBUG
-                     printf("key vertex mst edge ");
-                     graph_edge_printInfo(graph, e);
-#endif
-                  }
-               }
-            }
-
-            for( int pi = 0; pi < prizemarkcount; pi++ )
-            {
-               assert(mwpc);
-               prizemark[prizemarklist[pi]] = FALSE;
-            }
-
-            if( SCIPisLT(scip, mstcost, keypathsData.kpcost) )
-            {
+               const PATH* mst = supergraphData.mst;
                localmoves++;
                solimproved = TRUE;
 
                SCIPdebugMessage("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
 
 #ifndef NDEBUG
-               assert((keypathsData.kpcost - mstcost) >= 0.0);
-               objimprovement += (keypathsData.kpcost - mstcost);
+               assert((keypathsData.kpcost - supergraphData.mstcost) >= 0.0);
+               objimprovement += (keypathsData.kpcost - supergraphData.mstcost);
 #endif
 
                /* unmark the original edges spanning the supergraph */
@@ -1760,7 +1847,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                               while( !nodeIsCrucial(graph, solEdges, head) && !pinned[head] )
                               {
                                  int e;
-                                 for( e  = graph->outbeg[head]; e != EAT_LAST; e = graph->oeat[e] )
+                                 for( e = graph->outbeg[head]; e != EAT_LAST; e = graph->oeat[e] )
                                  {
                                     if( solEdges[e] != -1 )
                                        break;
@@ -1850,10 +1937,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                }
             }
 
-            /* free the supergraph and the MST data structure */
-            graph_path_exit(scip, supergraph);
-            graph_free(scip, &supergraph, TRUE);
-            SCIPfreeBufferArray(scip, &mst);
+            SCIPfreeMemoryArray(scip, &(supergraphData.mst));
 
             /* unmark the descendant supervertices */
             for( int k = 0; k < supergraphData.nsupernodes - 1; k++ )
@@ -1866,7 +1950,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
             /* restore the original Voronoi diagram */
             vnoiDataRestore(&connectivityData, &keypathsData, &vnoiData);
-         }
+         }  /* key vertex elimination: */
+
 
          /* Key-Path Exchange.
          *  If the crucnode has just been eliminated, skip Key-Path Exchange */
@@ -2196,7 +2281,6 @@ SCIP_RETCODE localKeyVertexHeuristics(
    SCIPfreeBufferArrayNull(scip, &prizemark);
    SCIPfreeBufferArrayNull(scip, &prize_pc);
    SCIPfreeBufferArrayNull(scip, &edgecost_pc);
-   SCIPfreeBufferArray(scip, &supernodesid);
    SCIPfreeBufferArray(scip, &boundedges);
    SCIPfreeBufferArray(scip, &lvledges_start);
    SCIPfreeBufferArray(scip, &newedges);
@@ -2213,7 +2297,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
 #ifndef NDEBUG
    {
       const SCIP_Real newobj = graph_sol_getObj(graph->cost, solEdges, 0.0, nedges);
-      SCIPdebugMessage("key vertex heuristic obj before/after: %f/%f \n", initialobj, newobj);
+      SCIPdebugMessage("key vertex heuristic obj before/after: %f/%f (improvement=%f)\n", initialobj, newobj, objimprovement);
       assert(SCIPisLE(scip, newobj + objimprovement, initialobj));
    }
 #endif
