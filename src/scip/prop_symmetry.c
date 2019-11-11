@@ -19,6 +19,7 @@
  * @author Marc Pfetsch
  * @author Thomas Rehn
  * @author Christopher Hojny
+ * @author Fabian Wegscheider
  *
  * This propagator combines the following symmetry handling functionalities:
  * - It allows to compute symmetries of the problem and to store this information in adequate form. The symmetry
