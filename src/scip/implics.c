@@ -2545,6 +2545,14 @@ SCIP_RETCODE SCIPcliquetableAdd(
    if( nvars == 0 || *infeasible )
       goto FREEMEM;
 
+   if( !SCIPsetIsInfinity(set, set->presol_clqtablefac) && SCIPcliquetableGetNEntries(cliquetable) + nvars > set->presol_clqtablefac * stat->nnz )
+   {
+      SCIPsetDebugMsg(set, "reject %d-variable clique to keep clique table entries below threshold of %g entries\n",
+         nvars, set->presol_clqtablefac * stat->nnz);
+
+      goto FREEMEM;
+   }
+
    /* if less than two variables are left over, the clique is redundant */
    if( nvars > 1 )
    {

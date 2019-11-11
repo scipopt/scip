@@ -3987,7 +3987,8 @@ SCIP_DECL_CONSPARSE(consParseOptcumulative)
 
          (*success) = TRUE;
 
-         SCIPwarningMessage(scip, "ignoring hmin = %d and hmax = %d (not supported for the optional cumulative constraint, yet\n", hmin, hmax);
+         SCIP_CALL( SCIPsetHminOptcumulative(scip, *cons, hmin) );
+         SCIP_CALL( SCIPsetHmaxOptcumulative(scip, *cons, hmax) );
       }
    }
 
@@ -4219,4 +4220,91 @@ SCIP_RETCODE SCIPcreateConsOptcumulative(
    }
 
    return SCIP_OKAY;
+}
+
+/** set the left bound of the time axis to be considered (including hmin) */
+SCIP_RETCODE SCIPsetHminOptcumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   int                   hmin                /**< left bound of time axis to be considered */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a cumulative constraint with optional activities\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(hmin >= 0);
+   assert(hmin <= consdata->hmax);
+
+   consdata->hmin = hmin;
+
+   return SCIP_OKAY;
+}
+
+/** returns the left bound of the time axis to be considered */
+int SCIPgetHminOptcumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a cumulative constraint with optional activities\n");
+      SCIPABORT();
+      return 0;  /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->hmin;
+}
+
+/** set the right bound of the time axis to be considered (not including hmax) */
+SCIP_RETCODE SCIPsetHmaxOptcumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   int                   hmax                /**< right bound of time axis to be considered */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a cumulative constraint with optional activities\n");
+      return SCIP_INVALIDCALL; /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(hmax >= consdata->hmin);
+
+   consdata->hmax = hmax;
+
+   return SCIP_OKAY;
+}
+
+/** returns the right bound of the time axis to be considered */
+int SCIPgetHmaxOptcumulative(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a cumulative constraint with optional activities\n");
+      SCIPABORT();
+      return 0;  /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->hmax;
 }
