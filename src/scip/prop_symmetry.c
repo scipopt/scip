@@ -109,25 +109,25 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <scip/cons_linear.h>
-#include <scip/cons_knapsack.h>
-#include <scip/cons_varbound.h>
-#include <scip/cons_setppc.h>
-#include <scip/cons_and.h>
-#include <scip/cons_logicor.h>
-#include <scip/cons_or.h>
+#include "scip/cons_linear.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_varbound.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_and.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_or.h"
 #include "scip/cons_orbitope.h"
 #include "scip/cons_symresack.h"
-#include <scip/cons_xor.h>
-#include <scip/cons_linking.h>
-#include <scip/cons_bounddisjunction.h>
-#include <scip/misc.h>
+#include "scip/cons_xor.h"
+#include "scip/cons_linking.h"
+#include "scip/cons_bounddisjunction.h"
+#include "scip/pub_misc.h"
 
-#include <scip/prop_symmetry.h>
-#include <symmetry/compute_symmetry.h>
-#include <scip/symmetry.h>
+#include "scip/prop_symmetry.h"
+#include "symmetry/compute_symmetry.h"
+#include "scip/symmetry.h"
 
-#include <string.h>
+#include "string.h"
 
 /* propagator properties */
 #define PROP_NAME            "symmetry"
@@ -2467,9 +2467,9 @@ SCIP_RETCODE buildSubgroupGraph(
 
    assert(npermsincomp > 0);
 
-   SCIP_CALL( SCIPdisjointsetCreate(&vartocomponent, SCIPblkmem(scip), npermvars) );
-   SCIP_CALL( SCIPdisjointsetCreate(&comptocolor, SCIPblkmem(scip), npermvars) );
-   SCIP_CALL( SCIPdigraphCreate(&graph, SCIPblkmem(scip), npermvars) );
+   SCIP_CALL( SCIPcreateDisjointset(scip, &vartocomponent, npermvars) );
+   SCIP_CALL( SCIPcreateDisjointset(scip, &comptocolor, npermvars) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &graph, npermvars) );
 
    for( j = 0; j < npermsincomp; ++j )
    {
@@ -2503,6 +2503,9 @@ SCIP_RETCODE buildSubgroupGraph(
 
          if( img == k )
             continue;
+
+         if( SCIPdigraphGetNSuccessors(graph, k) > 1 )
+            break;
 
          comp1 = SCIPdisjointsetFind(vartocomponent, k);
          comp2 = SCIPdisjointsetFind(vartocomponent, img);
@@ -2631,8 +2634,8 @@ SCIP_RETCODE buildSubgroupGraph(
    SCIPfreeBufferArray(scip, &(graphcompvartype.colors));
    SCIPfreeBufferArray(scip, &(graphcompvartype.components));
    SCIPdigraphFree(&graph);
-   SCIPdisjointsetFree(&comptocolor, SCIPblkmem(scip));
-   SCIPdisjointsetFree(&vartocomponent, SCIPblkmem(scip));
+   SCIPfreeDisjointset(scip, &comptocolor);
+   SCIPfreeDisjointset(scip, &vartocomponent);
 
    return SCIP_OKAY;
 }

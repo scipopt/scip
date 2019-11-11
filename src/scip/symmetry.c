@@ -296,7 +296,7 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
  */
 SCIP_RETCODE SCIPgetPropertiesPerm(
    int*                  perm,               /**< permutation */
-   SCIP_VAR**            vars,               /**< array of variables perm is acting on */
+   SCIP_VAR**            vars,               /**< array of variables perm is acting on (or NULL, if !allvarsbinary) */
    int                   nvars,              /**< number of variables */
    int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles */
    SCIP_Bool             allvarsbinary       /**< whether perm is also required to act on binary variables only */
@@ -306,7 +306,7 @@ SCIP_RETCODE SCIPgetPropertiesPerm(
    int i;
 
    assert( perm != NULL );
-   assert( vars != NULL );
+   assert( vars != NULL || !allvarsbinary );
    assert( ntwocyclesperm != NULL );
 
    *ntwocyclesperm = 0;
