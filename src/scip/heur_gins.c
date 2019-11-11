@@ -145,6 +145,8 @@ struct DecompHorizon
    int                   nsuitableblocks;    /**< the total number of suitable blocks */
    int                   lastblocklabel;     /**< label of last block used */
    int                   nblocks;            /**< the number of available variable blocks, only available after initialization */
+   int*                  ndiscretevars;      /**< number of binary and integer variables in each block */
+   int*                  nvars;              /**< number of variables (including continuous and implicit integers) in each block */
    int                   memsize;            /**< storage size of the used arrays */
    SCIP_Bool             init;               /**< has the decomposition horizon been initialized? */
 };
@@ -253,6 +255,38 @@ void addHistogramEntry(
 
 #endif
 
+
+/** check if enough fixings have been found */
+static
+SCIP_Bool checkFixingrate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   int                   nfixings            /**< actual number of fixings */
+   )
+{
+   int fixthreshold;
+   int nvars = SCIPgetNVars(scip);
+   int nbinvars = SCIPgetNBinVars(scip);
+   int nintvars = SCIPgetNIntVars(scip);
+   fixthreshold = (int)(heurdata->minfixingrate * (heurdata->fixcontvars ? nvars : (nbinvars + nintvars)));
+
+   /* compare actual number of fixings to limit; if we fixed not enough variables we terminate here;
+    * we also terminate if no discrete variables are left
+    */
+   if( nfixings < fixthreshold )
+   {
+      SCIPdebugMsg(scip, "Fixed %d < %d variables in gins heuristic, stopping\n", nfixings, fixthreshold);
+
+      return FALSE;
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "Fixed enough (%d >= %d) variables in gins heuristic\n", nfixings, fixthreshold);
+
+      return TRUE;
+   }
+}
+
 /** create a decomp horizon data structure */
 static
 SCIP_RETCODE decompHorizonCreate(
@@ -283,6 +317,8 @@ SCIP_RETCODE decompHorizonCreate(
    SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->blocklabels, memsize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->varblockend, memsize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->suitable, memsize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->ndiscretevars, memsize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->nvars, memsize) );
 
    /* initialize data later */
    decomphorizonptr->init = FALSE;
@@ -314,6 +350,8 @@ void decompHorizonFree(
    SCIPfreeMemoryArray(scip, &decomphorizonptr->blocklabels);
    SCIPfreeMemoryArray(scip, &decomphorizonptr->varblockend);
    SCIPfreeMemoryArray(scip, &decomphorizonptr->suitable);
+   SCIPfreeMemoryArray(scip, &decomphorizonptr->ndiscretevars);
+   SCIPfreeMemoryArray(scip, &decomphorizonptr->nvars);
 
    SCIPfreeMemory(scip, decomphorizon);
 }
@@ -376,7 +414,8 @@ SCIP_RETCODE decompHorizonInitialize(
 
    /* get variable labels from decomposition */
    SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, nvars) );
-   SCIPduplicateMemoryArray(scip, &varscopy, vars, nvars);
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &varscopy, vars, nvars) );
+
    SCIPdecompGetVarsLabels(decomp, varscopy, varlabels, nvars);
 
    /*  sort labels and variables */
@@ -423,6 +462,8 @@ SCIP_RETCODE decompHorizonInitialize(
       decomphorizon->suitable[blockpos] = suitable;
       decomphorizon->blocklabels[blockpos] = blocklabel;
       decomphorizon->varblockend[blockpos] = currblockend;
+      decomphorizon->nvars[blockpos] = currblockend - currblockstart;
+      decomphorizon->ndiscretevars[blockpos] = ndiscretevars;
       currblockstart = currblockend;
       nstblblocks += (suitable);
 
@@ -454,9 +495,11 @@ static
 SCIP_Bool decompHorizonNext(
    DECOMPHORIZON*        decomphorizon,      /**< decomposition horizon data structure */
    int                   lastblockused,      /**< label of last used block, or INT_MIN if none has been used, yet */
+   int                   maxblocksize,       /**< maximum block size in number of variables */
    int*                  blockstart,         /**< pointer to store start position in variables of next suitable block */
    int*                  blockend,           /**< pointer to store start position of the block that follows next suitable block */
-   int*                  nextblocklabel      /**< pointer to store label of the next suitable block */
+   int*                  nextblocklabel,     /**< pointer to store label of the next suitable block */
+   SCIP_Bool*            fixlinkvars         /**< should the linking variables be fixed, as well? */
    )
 {
    SCIP_Bool found;
@@ -466,6 +509,7 @@ SCIP_Bool decompHorizonNext(
    assert(blockstart != NULL);
    assert(blockend != NULL);
    assert(nextblocklabel != NULL);
+   assert(fixlinkvars != NULL);
 
    assert(decomphorizon->init);
 
@@ -476,8 +520,10 @@ SCIP_Bool decompHorizonNext(
 
    ++decomphorizon->iterations;
 
+   *fixlinkvars = TRUE;
    /* get the last block position that was used by the heuristic. Search for it, and continue with the next block. */
    found = SCIPsortedvecFindInt(decomphorizon->blocklabels, lastblockused, decomphorizon->nblocks, &firstpos);
+
 
    if( !found )
       firstpos = -1;
@@ -499,9 +545,30 @@ SCIP_Bool decompHorizonNext(
    /* the next suitable block position has been discovered */
    if( pos != firstpos && decomphorizon->suitable[pos] )
    {
+      int ndiscretevars;
       *blockend = decomphorizon->varblockend[pos];
       *blockstart = pos == 0 ? 0 : decomphorizon->varblockend[pos - 1];
       *nextblocklabel = decomphorizon->blocklabels[pos];
+
+      ndiscretevars = decomphorizon->ndiscretevars[pos];
+      /* check if linking variable block exceeds maximum block size */
+      if( decomphorizon->blocklabels[0] == SCIP_DECOMP_LINKVAR )
+      {
+         *fixlinkvars = decomphorizon->ndiscretevars[0] + ndiscretevars > maxblocksize;
+      }
+
+      /* add linking variables to the block */
+      if( !(*fixlinkvars) )
+         ndiscretevars += decomphorizon->ndiscretevars[0];
+
+      /* extend the subproblem until maximum target fixing rate is reached */
+      while( ++pos < decomphorizon->nblocks && decomphorizon->suitable[pos] && ndiscretevars + decomphorizon->ndiscretevars[pos] < maxblocksize )
+      {
+         *blockend = decomphorizon->varblockend[pos];
+         *nextblocklabel = decomphorizon->blocklabels[pos];
+         ndiscretevars += decomphorizon->ndiscretevars[pos];
+      }
+
 
       return TRUE;
    }
@@ -897,7 +964,7 @@ SCIP_RETCODE fixNonNeighborhoodVariables(
 
          fixval = getFixVal(scip, sol, vars[i]);
 
-         /* perform the bound change */
+         /* store variable and value of this fixing */
          if( !SCIPisInfinity(scip, REALABS(fixval)) )
          {
             fixedvars[*nfixings] = vars[i];
@@ -1472,37 +1539,6 @@ SCIP_RETCODE selectNextVariable(
    return SCIP_OKAY;
 }
 
-/** check if enough fixings have been found */
-static
-SCIP_Bool checkFixingrate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   int                   nfixings            /**< actual number of fixings */
-   )
-{
-   int fixthreshold;
-   int nvars = SCIPgetNVars(scip);
-   int nbinvars = SCIPgetNBinVars(scip);
-   int nintvars = SCIPgetNIntVars(scip);
-   fixthreshold = (int)(heurdata->minfixingrate * (heurdata->fixcontvars ? nvars : (nbinvars + nintvars)));
-
-   /* compare actual number of fixings to limit; if we fixed not enough variables we terminate here;
-    * we also terminate if no discrete variables are left
-    */
-   if( nfixings < fixthreshold )
-   {
-      SCIPdebugMsg(scip, "Fixed %d < %d variables in gins heuristic, stopping\n", nfixings, fixthreshold);
-
-      return FALSE;
-   }
-   else
-   {
-      SCIPdebugMsg(scip, "Fixed enough (%d >= %d) variables in gins heuristic\n", nfixings, fixthreshold);
-
-      return TRUE;
-   }
-}
-
 /** determine the variable fixings based on a decomposition */
 static
 SCIP_RETCODE determineVariableFixingsDecomp(
@@ -1518,10 +1554,12 @@ SCIP_RETCODE determineVariableFixingsDecomp(
 
    SCIP_SOL* sol;
    SCIP_Bool hasnext;
+   SCIP_Bool fixlinkvars;
    int nvars;
    int currblockstart;
    int currblockend;
    int currblocklabel;
+   int maxblocksize;
 
    assert(scip != NULL);
    assert(decomphorizon != NULL);
@@ -1535,8 +1573,10 @@ SCIP_RETCODE determineVariableFixingsDecomp(
       SCIP_CALL( decompHorizonInitialize(scip, decomphorizon, heurdata) );
    }
 
+   maxblocksize = (int)((1.0 - heurdata->minfixingrate) * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip))) - 1;
+
    /* query the next suitable block */
-   hasnext = decompHorizonNext(decomphorizon, heurdata->lastblockuseddecomp, &currblockstart, &currblockend, &currblocklabel);
+   hasnext = decompHorizonNext(decomphorizon, heurdata->lastblockuseddecomp, maxblocksize, &currblockstart, &currblockend, &currblocklabel, &fixlinkvars);
 
    if( ! hasnext )
    {
@@ -1550,12 +1590,13 @@ SCIP_RETCODE determineVariableFixingsDecomp(
       /* fix all discrete/continuous variables that are not part of this block */
       SCIP_VAR** vars;
       int v;
-      int startposs[] = {0, currblockend};
+      int startposs[] = {fixlinkvars ? 0 : decomphorizon->varblockend[0], currblockend};
       int endposs[] = {currblockstart, nvars};
       int p;
 
-      SCIPdebugMsg(scip, "Fix %s variables outside of block %d\n",
+      SCIPdebugMsg(scip, "Fix %s variables (%scluding linking variables) outside of block %d\n",
          heurdata->fixcontvars ? "all" : "discrete",
+         fixlinkvars ? "in" : "ex",
          currblocklabel);
 
       vars = decomphorizonGetVars(decomphorizon);
@@ -1574,7 +1615,7 @@ SCIP_RETCODE determineVariableFixingsDecomp(
 
                fixval = getFixVal(scip, sol, var);
 
-               /* perform the bound change */
+               /* store variable and value of this fixing */
                if( !SCIPisInfinity(scip, REALABS(fixval)) )
                {
                   fixedvars[*nfixings] = var;
