@@ -700,18 +700,19 @@ SCIP_Real getMemLeft(
 /* TODO: Implement all necessary primal heuristic methods. The methods with an #if 0 ... #else #define ... are optional */
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
-#if 0
 static
-SCIP_DECL_HEURCOPY(heurCopyXyz)
+SCIP_DECL_HEURCOPY(heurCopyPADM)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurPADM(scip) );
 
    return SCIP_OKAY;
 }
-#else
-#define heurCopyPADM NULL
-#endif
+
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
