@@ -28,7 +28,6 @@
 //#define SCIP_DEBUG
 #include <assert.h>
 #include <string.h>
-
 #include "heur_local.h"
 #include "heur_tm.h"
 #include "probdata_stp.h"
@@ -373,9 +372,10 @@ STP_Bool nodeIsCrucial(
    int                   node
 )
 {
+   int todo; // adapt for small prizes
+
    assert(graph != NULL);
    assert(steineredges != NULL);
-int todo;
    if( graph->term[node] == -1 )
    {
       int counter = 0;
@@ -778,9 +778,446 @@ SCIP_Real vnoiGetBoundaryPathCost(
 }
 
 
+
+/** exchanges key path */
+static
+SCIP_RETCODE soltreeExchangeKeyPath(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const CONN*           connectData,        /**< data */
+   const VNOI*           vnoiData,           /**< data */
+   const KPATHS*         keypathsData,       /**< key paths */
+   const int*            dfstree,            /**< DFS tree */
+   const STP_Bool*       scanned,            /**< array to mark which nodes have been scanned */
+   int                   dfstree_pos,        /**< current position in dfs tree */
+   int                   boundedge_new,      /**< new Voronoi boundary edge */
+   int*                  graphmark,          /**< graph mark */
+   SOLTREE*              soltreeData         /**< solution tree data */
+)
+{
+   UF* const uf = connectData->uf;
+   PHNODE** const boundpaths = connectData->pheap_boundpaths;
+   int* const pheapsize = connectData->pheap_sizes;
+   const PATH* const vnoipath = vnoiData->vnoi_path;
+   const int* const vnoibase = vnoiData->vnoi_base;
+   const int* const kpnodes = keypathsData->kpnodes;
+   STP_Bool* const pinned = soltreeData->nodeIsPinned;
+   const NODE* const linkcutNodes = soltreeData->linkcutNodes;
+   int* const solEdges = soltreeData->solEdges;
+   STP_Bool* const solNodes = soltreeData->solNodes;
+   const int nkpnodes = keypathsData->nkpnodes;
+   const int crucnode = dfstree[dfstree_pos];
+   int newpathend = -1;
+   int newedge = boundedge_new;
+   int node = SCIPStpunionfindFind(uf, vnoibase[graph->head[newedge]]);
+
+   /* remove old keypath */
+   assert(solEdges[flipedge(linkcutNodes[crucnode].edge)] != UNKNOWN);
+
+   solEdges[flipedge(linkcutNodes[crucnode].edge)] = UNKNOWN;
+   solNodes[crucnode] = FALSE;
+   graphmark[crucnode] = FALSE;
+
+   for( int k = 0; k < nkpnodes; k++ )
+   {
+      const int keypathnode = kpnodes[k];
+      assert(solEdges[flipedge(linkcutNodes[keypathnode].edge)] != UNKNOWN);
+
+      solEdges[flipedge(linkcutNodes[keypathnode].edge)] = UNKNOWN;
+      solNodes[keypathnode] = FALSE;
+      graphmark[keypathnode] = FALSE;
+   }
+
+   assert(graphmark[keypathsData->kptailnode]);
+
+   if( node == crucnode )
+      newedge = flipedge(newedge);
+
+   for( node = graph->tail[newedge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
+   {
+      graphmark[node] = FALSE;
+
+      solEdges[flipedge(vnoipath[node].edge)] = CONNECT;
+      solEdges[vnoipath[node].edge] = UNKNOWN;
+   }
+
+   for( node = graph->head[newedge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
+   {
+      graphmark[node] = FALSE;
+
+      solEdges[vnoipath[node].edge] = CONNECT;
+   }
+
+   solEdges[flipedge(newedge)] = CONNECT;
+
+   newpathend = vnoibase[graph->tail[newedge]];
+   assert(node == vnoibase[graph->head[newedge]] );
+
+   /* flip all edges on the ST path between the endnode of the new key-path and the current crucial node */
+   assert(SCIPStpunionfindFind(uf, newpathend) == crucnode);
+
+   for( int k = newpathend; k != crucnode; k = graph->head[linkcutNodes[k].edge] )
+   {
+      assert(graphmark[k]);
+      assert( solEdges[flipedge(linkcutNodes[k].edge)] != -1);
+
+      solEdges[flipedge(linkcutNodes[k].edge)] = UNKNOWN;
+      solEdges[linkcutNodes[k].edge] = CONNECT;
+   }
+
+   for( int k = 0; k < dfstree_pos; k++ )
+   {
+      if( crucnode == SCIPStpunionfindFind(uf, dfstree[k]) )
+      {
+         graphmark[dfstree[k]] = FALSE;
+         solNodes[dfstree[k]] = FALSE;
+      }
+   }
+
+   /* update union find */
+   if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPStpunionfindFind(uf, node) == node )
+   {
+      for( int edge = graph->outbeg[node]; edge != EAT_LAST; edge = graph->oeat[edge] )
+      {
+         int adjnode = graph->head[edge];
+
+         /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
+         if( solEdges[edge] == CONNECT && solNodes[adjnode]  && graphmark[adjnode] && SCIPStpunionfindFind(uf, adjnode) != node )
+         {
+            assert(scanned[adjnode]);
+            /* meld the heaps */
+            SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &pheapsize[node], &pheapsize[adjnode]);
+
+            /* update the union-find data structure */
+            SCIPStpunionfindUnion(uf, node, adjnode, FALSE);
+
+            /* move along the key-path until its end (i.e. until a crucial node is reached) */
+            while( !nodeIsCrucial(graph, solEdges, adjnode) && !pinned[adjnode] )
+            {
+               int e;
+               for( e = graph->outbeg[adjnode]; e != EAT_LAST; e = graph->oeat[e] )
+               {
+                  if( solEdges[e] != -1 )
+                     break;
+               }
+
+               /* assert that each leaf of the ST is a terminal */
+               assert( e != EAT_LAST );
+               adjnode = graph->head[e];
+
+               if( !solNodes[adjnode]  )
+                  break;
+
+               assert(scanned[adjnode]);
+               assert(SCIPStpunionfindFind(uf, adjnode) != node);
+
+               /* update the union-find data structure */
+               SCIPStpunionfindUnion(uf, node, adjnode, FALSE);
+
+               /* meld the heaps */
+               SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &pheapsize[node], &pheapsize[adjnode]);
+            }
+         }
+      }
+
+   }
+   pinned[node] = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
+
+/** exchanges key-paths star */
+static
+SCIP_RETCODE soltreeElimKeyPathsStar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const CONN*           connectData,        /**< data */
+   const VNOI*           vnoiData,           /**< data */
+   const KPATHS*         keypathsData,       /**< key paths */
+   const SGRAPH*         supergraphData,     /**< super-graph */
+   const int*            dfstree,            /**< DFS tree */
+   const STP_Bool*       scanned,            /**< array to mark which nodes have been scanned */
+   int                   dfstree_pos,        /**< current position in dfs tree */
+   int*                  graphmark,          /**< graph mark */
+   SOLTREE*              soltreeData         /**< solution tree data */
+)
+{
+   const PATH* mst = supergraphData->mst;
+   UF* const uf = connectData->uf;
+   const STP_Bool* const isSupernode = supergraphData->nodeIsSupernode;
+   PHNODE** const boundpaths = connectData->pheap_boundpaths;
+   int* const pheapsize = connectData->pheap_sizes;
+   const PATH* const vnoipath = vnoiData->vnoi_path;
+   const int* const vnoibase = vnoiData->vnoi_base;
+   const int* const boundedges = connectData->boundedges;
+   const int* const kpnodes = keypathsData->kpnodes;
+   const int* const kpedges = keypathsData->kpedges;
+   STP_Bool* const pinned = soltreeData->nodeIsPinned;
+   const NODE* const linkcutNodes = soltreeData->linkcutNodes;
+   int* const solEdges = soltreeData->solEdges;
+   STP_Bool* const solNodes = soltreeData->solNodes;
+   const int nkpnodes = keypathsData->nkpnodes;
+   const int nkpedges = keypathsData->nkpedges;
+   const int nsupernodes = supergraphData->nsupernodes;
+
+   /* unmark the original edges spanning the supergraph */
+   for( int e = 0; e < nkpedges; e++ )
+   {
+      assert(solEdges[kpedges[e]] != -1);
+      solEdges[kpedges[e]] = -1;
+   }
+
+   /* mark all ST nodes except for those belonging to the root-component as forbidden */
+   for( int k = keypathsData->rootpathstart; k < nkpnodes; k++ )
+   {
+      graphmark[kpnodes[k]] = FALSE;
+      solNodes[kpnodes[k]] = FALSE;
+   }
+
+   for( int k = 0; k < dfstree_pos; k++ )
+   {
+      const int node = SCIPStpunionfindFind(uf, dfstree[k]);
+      if( isSupernode[node] || node == dfstree[dfstree_pos] )
+      {
+         graphmark[dfstree[k]] = FALSE;
+         solNodes[dfstree[k]] = FALSE;
+      }
+   }
+
+   /* add the new edges reconnecting the (super-) components */
+   for( int l = 0; l < nsupernodes - 1; l++ )
+   {
+      int edge;
+
+      if( mst[l].edge % 2  == 0 )
+         edge = boundedges[mst[l].edge / 2 ];
+      else
+         edge = flipedge(boundedges[mst[l].edge / 2 ]);
+
+      /* change the orientation within the target-component if necessary */
+      if( !isSupernode[vnoibase[graph->head[edge]]] )
+      {
+         int node = vnoibase[graph->head[edge]];
+         const int nodebase = SCIPStpunionfindFind(uf, node);
+         assert(isSupernode[nodebase]);
+
+         while( node != nodebase )
+         {
+            /* the ST edge pointing towards the root */
+            const int e = linkcutNodes[node].edge;
+
+            assert(solEdges[e] == -1 && solEdges[flipedge(e)] != -1 );
+            solEdges[e] = CONNECT;
+            solEdges[flipedge(e)] = UNKNOWN;
+            node = graph->head[e];
+         }
+      }
+
+      /* is the vbase of the current boundary-edge tail in the root-component? */
+      if( !isSupernode[SCIPStpunionfindFind(uf, vnoibase[graph->tail[edge]])] )
+      {
+         int node;
+         solEdges[edge] = CONNECT;
+
+         for( node = graph->tail[edge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
+         {
+            graphmark[node] = FALSE;
+
+            if( solEdges[flipedge(vnoipath[node].edge)] == CONNECT )
+               solEdges[flipedge(vnoipath[node].edge)] = UNKNOWN;
+
+            solEdges[vnoipath[node].edge] = CONNECT;
+         }
+
+         assert(!isSupernode[node] && vnoibase[node] == node);
+         assert( graphmark[node] == TRUE );
+
+         /* is the pinned node its own component identifier? */
+         if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPStpunionfindFind(uf, node) == node )
+         {
+            const int oldedge = edge;
+
+            graphmark[graph->head[edge]] = FALSE;
+
+            for( edge = graph->outbeg[node]; edge != EAT_LAST; edge = graph->oeat[edge] )
+            {
+               int head = graph->head[edge];
+
+               /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
+               if( solEdges[edge] == CONNECT && graphmark[head] && solNodes[head]  && SCIPStpunionfindFind(uf, head) != node )
+               {
+
+                  assert(scanned[head]);
+                  /* meld the heaps */
+                  SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[head], &pheapsize[node], &pheapsize[head]);
+
+                  /* update the union-find data structure */
+                  SCIPStpunionfindUnion(uf, node, head, FALSE);
+
+                  /* move along the key-path until its end (i.e. until a crucial node is reached) */
+                  while( !nodeIsCrucial(graph, solEdges, head) && !pinned[head] )
+                  {
+                     int e;
+                     for( e = graph->outbeg[head]; e != EAT_LAST; e = graph->oeat[e] )
+                     {
+                        if( solEdges[e] != -1 )
+                           break;
+                     }
+
+                     /* assert that each leaf of the ST is a terminal */
+                     assert( e != EAT_LAST );
+                     head = graph->head[e];
+
+                     if( !solNodes[head]  )
+                        break;
+
+                     assert(scanned[head]);
+                     assert(SCIPStpunionfindFind(uf, head) != node);
+
+                     /* update the union-find data structure */
+                     SCIPStpunionfindUnion(uf, node, head, FALSE);
+
+                     /* meld the heaps */
+                     SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[head], &pheapsize[node], &pheapsize[head]);
+                  }
+               }
+            }
+            edge = oldedge;
+         }
+
+         /* mark the start node (lying in the root-component of the ST) of the current boundary-path as pinned,
+          * so that it may not be removed later on */
+         pinned[node] = TRUE;
+
+         for( node = graph->head[edge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
+         {
+            graphmark[node] = FALSE;
+            if( solEdges[vnoipath[node].edge] == CONNECT )
+               solEdges[vnoipath[node].edge] = -1;
+
+            solEdges[flipedge(vnoipath[node].edge)] = CONNECT;
+         }
+      }
+      else
+      {
+
+         solEdges[edge] = CONNECT;
+
+         for( int node = graph->tail[edge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
+         {
+            graphmark[node] = FALSE;
+            if( solEdges[vnoipath[node].edge] != CONNECT && solEdges[flipedge(vnoipath[node].edge)] != CONNECT )
+            {
+               solEdges[vnoipath[node].edge] = CONNECT;
+            }
+         }
+
+         for( int node = graph->head[edge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
+         {
+            graphmark[node] = FALSE;
+
+            solEdges[flipedge(vnoipath[node].edge)] = CONNECT;
+            solEdges[vnoipath[node].edge] = UNKNOWN;
+         }
+      }
+   }
+
+   for( int k = 0; k < nkpnodes; k++ )
+   {
+      assert(graphmark[kpnodes[k]] == FALSE);
+      assert(solNodes[kpnodes[k]] == FALSE);
+   }
+
+   assert(!graphmark[dfstree[dfstree_pos]]);
+
+   return SCIP_OKAY;
+}
+
+
+/** compute cost of alternative key path */
+static
+SCIP_Real getKeyPathReplaceCost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const VNOI*           vnoiData,           /**< data */
+   const PCMW*           pcmwData,           /**< data */
+   const SOLTREE*        soltreeData,        /**< solution tree data */
+   const int*            graphmark,          /**< graph mark */
+   SCIP_Real             edgecost_initial,   /**< initial edge cost */
+   int                   boundedge_old,      /**< Voronoi boundary edge */
+   int*                  boundedge_new       /**< new Voronoi boundary edge */
+)
+{
+   SCIP_Real edgecost = edgecost_initial;
+   int newedge = *boundedge_new;
+
+   if( boundedge_old != UNKNOWN && newedge != UNKNOWN
+      && SCIPisLT(scip, edgecost, vnoiGetBoundaryPathCost(graph, vnoiData, pcmwData, newedge)) )
+   {
+      assert(SCIPisGE(scip, edgecost, 0.0));
+      newedge = boundedge_old;
+   }
+
+   if( boundedge_old != UNKNOWN && newedge == UNKNOWN )
+      newedge = boundedge_old;
+
+   assert( newedge != UNKNOWN );
+
+   edgecost = vnoiGetBoundaryPathCost(graph, vnoiData, pcmwData, newedge);;
+
+   if( graph_pc_isPcMw(graph) )
+   {
+      const STP_Bool* const solNodes = soltreeData->solNodes;
+      const PATH* const vnoipath = vnoiData->vnoi_path;
+      const int* const vnoibase = vnoiData->vnoi_base;
+      STP_Bool* const prizemark = pcmwData->prizemark;
+      int* const prizemarklist = pcmwData->prizemarklist;
+      int prizemarkcount = 0;
+
+#ifndef NDEBUG
+      for( int k = 0; k < graph->knots; k++ )
+         assert(!prizemark[k]);
+#endif
+#ifdef SCIP_DEBUG
+      printf("key path alternative edge ");
+      graph_edge_printInfo(graph, newedge);
+#endif
+      edgecost -= getNewPrize(graph, solNodes, graphmark, newedge, prizemark, prizemarklist, &prizemarkcount);
+
+      for( int node = graph->tail[newedge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
+      {
+#ifdef SCIP_DEBUG
+         printf("key path alternative edge ");
+         graph_edge_printInfo(graph, vnoipath[node].edge);
+#endif
+         edgecost -= getNewPrize(graph, solNodes, graphmark, vnoipath[node].edge, prizemark, prizemarklist, &prizemarkcount);
+      }
+
+      for( int node = graph->head[newedge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
+      {
+#ifdef SCIP_DEBUG
+         printf("key path alternative edge ");
+         graph_edge_printInfo(graph, vnoipath[node].edge);
+#endif
+
+         edgecost -= getNewPrize(graph, solNodes, graphmark, vnoipath[node].edge, prizemark, prizemarklist, &prizemarkcount);
+      }
+
+      for( int pi = 0; pi < prizemarkcount; pi++ )
+         prizemark[prizemarklist[pi]] = FALSE;
+   }
+
+   *boundedge_new = newedge;
+
+   return edgecost;
+}
+
+
 /** compute minimum-spanning tree  */
 static
-SCIP_RETCODE supergraphDataComputeMst(
+SCIP_RETCODE supergraphComputeMst(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const CONN*           connectData,        /**< data */
@@ -813,7 +1250,6 @@ SCIP_RETCODE supergraphDataComputeMst(
    const int nsupernodes = supergraphData->nsupernodes;
    /* the (super-) vertex representing the current root-component of the Steiner tree */
    const int superroot = supernodes[nsupernodes - 1];
-   const SCIP_Bool mwpc = graph_pc_isPcMw(graph);
 
    assert(nboundedges > 0);
    assert(superroot >= 0);
@@ -864,7 +1300,7 @@ SCIP_RETCODE supergraphDataComputeMst(
    prizemarkcount = 0;
 
 #ifndef NDEBUG
-     if( mwpc  )
+     if( graph_pc_isPcMw(graph)  )
         for( int k = 0; k < nnodes; k++ )
            assert(!prizemark[k]);
 #endif
@@ -932,7 +1368,7 @@ SCIP_RETCODE supergraphDataComputeMst(
 
    for( int pi = 0; pi < prizemarkcount; pi++ )
    {
-      assert(mwpc);
+      assert(graph_pc_isPcMw(graph));
       prizemark[prizemarklist[pi]] = FALSE;
    }
 
@@ -1575,7 +2011,6 @@ SCIP_RETCODE localKeyVertexHeuristics(
    STP_Bool* scanned = NULL;
    STP_Bool* supernodesmark = NULL;
    STP_Bool* prizemark = NULL;
-   int prizemarkcount;
    const int probtype = graph->stp_type;
    const int root = graph->source;
    const int nnodes = graph->knots;
@@ -1636,9 +2071,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
    /* main loop */
    for( int nruns = 0, localmoves = 1; nruns < LOCAL_MAXRESTARTS && localmoves > 0; nruns++ )
    {
-      int* const state = graph->path_state;
       VNOI vnoiData = { .vnoi_path = vnoipath, .vnoi_base = vnoibase, .memvdist = memvdist, .memvbase = memvbase,
-         .meminedges = meminedges, .vnoi_nodestate = state, .nmems = 0, .nkpnodes = -1 };
+         .meminedges = meminedges, .vnoi_nodestate = graph->path_state, .nmems = 0, .nkpnodes = -1 };
       KPATHS keypathsData = { .kpnodes = kpnodes, .kpedges = kpedges, .kpcost = 0.0, .nkpnodes = 0, .nkpedges = 0,
          .kptailnode = -1 };
       CONN connectivityData = { .blists_start = blists_start, .pheap_boundpaths = boundpaths, .lvledges_start = lvledges_start,
@@ -1656,14 +2090,9 @@ SCIP_RETCODE localKeyVertexHeuristics(
       /* find a DFS order of the ST nodes */
       dfsorder(graph, solEdges, root, &nstnodes, dfstree);
 
-      /* compute a Voronoi diagram with the ST nodes as bases */
-      graph_voronoi(scip, graph, graph->cost, graph->cost, solNodes, vnoibase, vnoipath);
-
       /* initialize data structures  */
       for( int k = 0; k < nnodes; k++ )
       {
-         assert(state[k] == CONNECT || !graphmark[k]);
-
          pinned[k] = FALSE;
          scanned[k] = FALSE;
          supernodesmark[k] = FALSE;
@@ -1676,7 +2105,17 @@ SCIP_RETCODE localKeyVertexHeuristics(
       {
          assert(graph->extended);
          pcmwInit(scip, graph, &soltreeData, graphmark, &pcmwData);
+
+         /* compute a Voronoi diagram with the Steiner tree nodes as bases */
+         graph_voronoi(scip, graph, graph->cost, graph->cost, soltreeData.solNodes, vnoiData.vnoi_base, vnoiData.vnoi_path);
       }
+      else
+      {
+         graph_voronoi(scip, graph, graph->cost, graph->cost, soltreeData.solNodes, vnoiData.vnoi_base, vnoiData.vnoi_path);
+      }
+
+      for( int k = 0; k < nnodes; k++ )
+         assert(graph->path_state[k] == CONNECT || !graphmark[k]);
 
       SCIP_CALL( connectivityDataInit(scip, graph, &vnoiData, &soltreeData, graphmark, &connectivityData) );
 
@@ -1685,15 +2124,15 @@ SCIP_RETCODE localKeyVertexHeuristics(
       SCIPStpunionfindClear(scip, &uf);
 
       /* main loop visiting all nodes of the current Steiner tree in post-order */
-      for( int i = 0; dfstree[i] != root; i++ )
+      for( int dfstree_pos = 0; dfstree[dfstree_pos] != root; dfstree_pos++ )
       {
          /* current crucial node */
-         const int crucnode = dfstree[i];
+         const int crucnode = dfstree[dfstree_pos];
          int nheapelems = -1;
 
          scanned[crucnode] = TRUE;
 
-         SCIPdebugMessage("iteration %d (crucial node: %d) \n", i, crucnode);
+         SCIPdebugMessage("iteration %d (crucial node: %d) \n", dfstree_pos, crucnode);
 
          /*  has the node been temporarily removed from the ST? */
          if( !graphmark[crucnode] )
@@ -1707,7 +2146,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
 #ifndef NDEBUG
             for( int j = 0; j < nnodes; j++ )
-               assert(state[j] == CONNECT || !graphmark[j]);
+               assert(graph->path_state[j] == CONNECT || !graphmark[j]);
 #endif
 
             getKeyPathsStar(crucnode, graph, &connectivityData, &soltreeData, &keypathsData, &supergraphData, &allgood);
@@ -1733,196 +2172,29 @@ SCIP_RETCODE localKeyVertexHeuristics(
             graph_voronoiRepairMult(scip, graph, graph->cost, &nheapelems, vnoibase, connectivityData.boundedges, &(connectivityData.nboundedges),
                   supernodesmark, &uf, vnoipath);
 
-            SCIP_CALL( supergraphDataComputeMst(scip, graph, &connectivityData, &soltreeData, &vnoiData, &pcmwData,
+            SCIP_CALL( supergraphComputeMst(scip, graph, &connectivityData, &soltreeData, &vnoiData, &pcmwData,
                   graphmark, crucnode, &keypathsData, &supergraphData) );
 
+            assert(crucnode == dfstree[dfstree_pos]);
+
+            /* improving solution found? */
             if( SCIPisLT(scip, supergraphData.mstcost, keypathsData.kpcost) )
             {
-               const PATH* mst = supergraphData.mst;
                localmoves++;
                solimproved = TRUE;
 
                SCIPdebugMessage("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
 
+               SCIP_CALL( soltreeElimKeyPathsStar( scip, graph, &connectivityData, &vnoiData, &keypathsData, &supergraphData,
+                  dfstree, scanned, dfstree_pos, graphmark, &soltreeData) );
+
 #ifndef NDEBUG
                assert((keypathsData.kpcost - supergraphData.mstcost) >= 0.0);
                objimprovement += (keypathsData.kpcost - supergraphData.mstcost);
 #endif
-
-               /* unmark the original edges spanning the supergraph */
-               for( int e = 0; e < keypathsData.nkpedges; e++ )
-               {
-                  assert(solEdges[kpedges[e]] != -1);
-                  solEdges[kpedges[e]] = -1;
-               }
-
-               /* mark all ST nodes except for those belonging to the root-component as forbidden */
-               for( int k = keypathsData.rootpathstart; k < keypathsData.nkpnodes; k++ )
-               {
-                  graphmark[kpnodes[k]] = FALSE;
-                  solNodes[kpnodes[k]] = FALSE;
-               }
-
-               for( int k = 0; k < i; k++ )
-               {
-                  const int node = SCIPStpunionfindFind(&uf, dfstree[k]);
-                  if( supernodesmark[node] || node == crucnode )
-                  {
-                     graphmark[dfstree[k]] = FALSE;
-                     solNodes[dfstree[k]] = FALSE;
-                  }
-               }
-
-               /* add the new edges reconnecting the (super-) components */
-               for( int l = 0; l < supergraphData.nsupernodes - 1; l++ )
-               {
-                  int edge;
-
-                  if( mst[l].edge % 2  == 0 )
-                     edge = boundedges[mst[l].edge / 2 ];
-                  else
-                     edge = flipedge(boundedges[mst[l].edge / 2 ]);
-
-                  /* change the orientation within the target-component if necessary */
-                  if( !supernodesmark[vnoibase[graph->head[edge]]] )
-                  {
-                     int node = vnoibase[graph->head[edge]];
-                     const int nodebase = SCIPStpunionfindFind(&uf, node);
-                     assert(supernodesmark[nodebase]);
-
-                     while( node != nodebase )
-                     {
-                        /* the ST edge pointing towards the root */
-                        const int e = linkcutNodes[node].edge;
-
-                        assert(solEdges[e] == -1 && solEdges[flipedge(e)] != -1 );
-                        solEdges[e] = CONNECT;
-                        solEdges[flipedge(e)] = UNKNOWN;
-                        node = graph->head[e];
-                     }
-                  }
-
-                  /* is the vbase of the current boundary-edge tail in the root-component? */
-                  if( !supernodesmark[SCIPStpunionfindFind(&uf, vnoibase[graph->tail[edge]])] )
-                  {
-                     int node;
-                     solEdges[edge] = CONNECT;
-
-                     for( node = graph->tail[edge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
-                     {
-                        graphmark[node] = FALSE;
-
-                        if( solEdges[flipedge(vnoipath[node].edge)] == CONNECT )
-                           solEdges[flipedge(vnoipath[node].edge)] = UNKNOWN;
-
-                        solEdges[vnoipath[node].edge] = CONNECT;
-                     }
-
-                     assert(!supernodesmark[node] && vnoibase[node] == node);
-                     assert( graphmark[node] == TRUE );
-
-                     /* is the pinned node its own component identifier? */
-                     if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPStpunionfindFind(&uf, node) == node )
-                     {
-                        const int oldedge = edge;
-
-                        graphmark[graph->head[edge]] = FALSE;
-
-                        for( edge = graph->outbeg[node]; edge != EAT_LAST; edge = graph->oeat[edge] )
-                        {
-                           int head = graph->head[edge];
-
-                           /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
-                           if( solEdges[edge] == CONNECT && graphmark[head] && solNodes[head]  && SCIPStpunionfindFind(&uf, head) != node )
-                           {
-
-                              assert(scanned[head]);
-                              /* meld the heaps */
-                              SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[head], &pheapsize[node], &pheapsize[head]);
-
-                              /* update the union-find data structure */
-                              SCIPStpunionfindUnion(&uf, node, head, FALSE);
-
-                              /* move along the key-path until its end (i.e. until a crucial node is reached) */
-                              while( !nodeIsCrucial(graph, solEdges, head) && !pinned[head] )
-                              {
-                                 int e;
-                                 for( e = graph->outbeg[head]; e != EAT_LAST; e = graph->oeat[e] )
-                                 {
-                                    if( solEdges[e] != -1 )
-                                       break;
-                                 }
-
-                                 /* assert that each leaf of the ST is a terminal */
-                                 assert( e != EAT_LAST );
-                                 head = graph->head[e];
-
-                                 if( !solNodes[head]  )
-                                    break;
-
-                                 assert(scanned[head]);
-                                 assert(SCIPStpunionfindFind(&uf, head) != node);
-
-                                 /* update the union-find data structure */
-                                 SCIPStpunionfindUnion(&uf, node, head, FALSE);
-
-                                 /* meld the heaps */
-                                 SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[head], &pheapsize[node], &pheapsize[head]);
-                              }
-                           }
-                        }
-                        edge = oldedge;
-                     }
-
-                     /* mark the start node (lying in the root-component of the ST) of the current boundary-path as pinned,
-                      * so that it may not be removed later on */
-                     pinned[node] = TRUE;
-
-                     for( node = graph->head[edge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
-                     {
-                        graphmark[node] = FALSE;
-                        if( solEdges[vnoipath[node].edge] == CONNECT )
-                           solEdges[vnoipath[node].edge] = -1;
-
-                        solEdges[flipedge(vnoipath[node].edge)] = CONNECT;
-                     }
-                  }
-                  else
-                  {
-
-                     solEdges[edge] = CONNECT;
-
-                     for( int node = graph->tail[edge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
-                     {
-                        graphmark[node] = FALSE;
-                        if( solEdges[vnoipath[node].edge] != CONNECT && solEdges[flipedge(vnoipath[node].edge)] != CONNECT )
-                        {
-                           solEdges[vnoipath[node].edge] = CONNECT;
-                        }
-
-                     }
-
-                     for( int node = graph->head[edge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
-                     {
-                        graphmark[node] = FALSE;
-
-                        solEdges[flipedge(vnoipath[node].edge)] = CONNECT;
-                        solEdges[vnoipath[node].edge] = UNKNOWN;
-                     }
-                  }
-               }
-
-               for( int k = 0; k < keypathsData.nkpnodes; k++ )
-               {
-                  assert(graphmark[kpnodes[k]] == FALSE);
-                  assert(solNodes[kpnodes[k]] == FALSE);
-               }
-               assert(!graphmark[crucnode]);
             }
-            else /* improving solution found */
+            else    /* no improving solution has been found during the move */
             {
-               /* no improving solution has been found during the move */
-
                /* meld the heap pertaining to 'crucnode' and all heaps pertaining to descendant key-paths of node 'crucnode' */
                for( int k = 0; k < keypathsData.rootpathstart; k++ )
                {
@@ -1931,8 +2203,6 @@ SCIP_RETCODE localKeyVertexHeuristics(
                for( int k = 0; k < supergraphData.nsupernodes - 1; k++ )
                {
                   SCIPpairheapMeldheaps(scip, &boundpaths[crucnode], &boundpaths[supernodes[k]], &pheapsize[crucnode], &pheapsize[supernodes[k]]);
-
-                  /* update the union-find data structure */
                   SCIPStpunionfindUnion(&uf, crucnode, supernodes[k], FALSE);
                }
             }
@@ -1953,7 +2223,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
          }  /* key vertex elimination: */
 
 
-         /* Key-Path Exchange.
+         /* Key-Path Exchange:
          *  If the crucnode has just been eliminated, skip Key-Path Exchange */
          if( probtype != STP_MWCSP && graphmark[crucnode] )
          {
@@ -1972,26 +2242,26 @@ SCIP_RETCODE localKeyVertexHeuristics(
             getKeyPathUpper(scip, crucnode, graph, &soltreeData, graphmark, &connectivityData, &keypathsData);
 
             for( int k = 0; k < nnodes; k++ )
-               assert(state[k] == CONNECT || !graphmark[k]);
+               assert(graph->path_state[k] == CONNECT || !graphmark[k]);
 
             /* reset all nodes (henceforth referred to as 'C') whose bases are internal nodes of the current keypath */
             vnoiDataReset(&connectivityData, &keypathsData, graphmark, &vnoiData);
 
             while( boundpaths[crucnode] != NULL )
             {
-               int l;
+               int base;
                int node;
 
                SCIP_CALL( SCIPpairheapDeletemin(scip, &e, &edgecost, &boundpaths[crucnode], &(pheapsize[crucnode])) );
 
                assert( e != UNKNOWN );
-               l = vnoibase[graph->head[e]];
+               base = vnoibase[graph->head[e]];
 
                assert(graphmark[vnoibase[graph->tail[e]]]);
-               node = (l == UNKNOWN || !graphmark[l] )? UNKNOWN : SCIPStpunionfindFind(&uf, l);
+               node = (base == UNKNOWN || !graphmark[base] )? UNKNOWN : SCIPStpunionfindFind(&uf, base);
 
                /* does the boundary-path end in the root component? */
-               if( node != UNKNOWN && node != crucnode && graphmark[l] )
+               if( node != UNKNOWN && node != crucnode && graphmark[base] )
                {
                   SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[crucnode], e, edgecost, &(pheapsize[crucnode])) );
                   break;
@@ -2014,182 +2284,23 @@ SCIP_RETCODE localKeyVertexHeuristics(
             else
                newedge = linkcutNodes[crucnode].edge;
 
-            if( oldedge != UNKNOWN && newedge != UNKNOWN
-               && SCIPisLT(scip, edgecost, vnoiGetBoundaryPathCost(graph, &vnoiData, &pcmwData, newedge)) )
-            {
-               assert(SCIPisGE(scip, edgecost, 0.0));
-               newedge = oldedge;
-            }
-
-            if( oldedge != UNKNOWN && newedge == UNKNOWN )
-               newedge = oldedge;
-
-            assert( newedge != UNKNOWN );
-
-            edgecost = vnoiGetBoundaryPathCost(graph, &vnoiData, &pcmwData, newedge);;
-
-            if( mwpc )
-            {
-               prizemarkcount = 0;
-
-#ifndef NDEBUG
-               for( int k = 0; k < nnodes; k++ )
-                  assert(!prizemark[k]);
-#endif
-#ifdef SCIP_DEBUG
-               printf("key path alternative edge ");
-               graph_edge_printInfo(graph, newedge);
-#endif
-               edgecost -= getNewPrize(graph, solNodes, graphmark, newedge, prizemark, prizemarklist, &prizemarkcount);
-
-               for( int node = graph->tail[newedge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
-               {
-#ifdef SCIP_DEBUG
-                  printf("key path alternative edge ");
-                  graph_edge_printInfo(graph, vnoipath[node].edge);
-#endif
-                  edgecost -= getNewPrize(graph, solNodes, graphmark, vnoipath[node].edge, prizemark, prizemarklist, &prizemarkcount);
-               }
-
-               for( int node = graph->head[newedge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
-               {
-#ifdef SCIP_DEBUG
-                  printf("key path alternative edge ");
-                  graph_edge_printInfo(graph, vnoipath[node].edge);
-#endif
-
-                  edgecost -= getNewPrize(graph, solNodes, graphmark, vnoipath[node].edge, prizemark, prizemarklist, &prizemarkcount);
-               }
-
-               for( int pi = 0; pi < prizemarkcount; pi++ )
-                  prizemark[prizemarklist[pi]] = FALSE;
-            }
+            edgecost = getKeyPathReplaceCost(scip, graph, &vnoiData, &pcmwData, &soltreeData, graphmark,
+                  edgecost, oldedge, &newedge);
 
             if( SCIPisLT(scip, edgecost, keypathsData.kpcost) )
             {
-               int newpathend = -1;
-               int node = SCIPStpunionfindFind(&uf, vnoibase[graph->head[newedge]]);
-
                localmoves++;
                solimproved = TRUE;
 
                SCIPdebugMessage( "ADDING NEW KEY PATH (%f )\n", edgecost - keypathsData.kpcost );
-
 #ifndef NDEBUG
                assert((keypathsData.kpcost - edgecost) >= 0.0);
                objimprovement += (keypathsData.kpcost - edgecost);
+               assert(crucnode == dfstree[dfstree_pos]);
 #endif
 
-               /* remove old keypath */
-               assert(solEdges[flipedge(linkcutNodes[crucnode].edge)] != UNKNOWN);
-
-               solEdges[flipedge(linkcutNodes[crucnode].edge)] = UNKNOWN;
-               solNodes[crucnode] = FALSE;
-               graphmark[crucnode] = FALSE;
-
-               for( int k = 0; k < keypathsData.nkpnodes; k++ )
-               {
-                  const int keypathnode = kpnodes[k];
-                  assert(solEdges[flipedge(linkcutNodes[keypathnode].edge)] != UNKNOWN);
-
-                  solEdges[flipedge(linkcutNodes[keypathnode].edge)] = UNKNOWN;
-                  solNodes[keypathnode] = FALSE;
-                  graphmark[keypathnode] = FALSE;
-               }
-
-               assert(graphmark[keypathsData.kptailnode]);
-
-               if( node == crucnode )
-                  newedge = flipedge(newedge);
-
-               for( node = graph->tail[newedge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
-               {
-                  graphmark[node] = FALSE;
-
-                  solEdges[flipedge(vnoipath[node].edge)] = CONNECT;
-                  solEdges[vnoipath[node].edge] = UNKNOWN;
-               }
-
-               for( node = graph->head[newedge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
-               {
-                  graphmark[node] = FALSE;
-
-                  solEdges[vnoipath[node].edge] = CONNECT;
-               }
-
-               solEdges[flipedge(newedge)] = CONNECT;
-
-               newpathend = vnoibase[graph->tail[newedge]];
-               assert(node == vnoibase[graph->head[newedge]] );
-
-               /* flip all edges on the ST path between the endnode of the new key-path and the current crucial node */
-               assert(SCIPStpunionfindFind(&uf, newpathend) == crucnode);
-
-               for( int k = newpathend; k != crucnode; k = graph->head[linkcutNodes[k].edge] )
-               {
-                  assert(graphmark[k]);
-                  assert( solEdges[flipedge(linkcutNodes[k].edge)] != -1);
-
-                  solEdges[flipedge(linkcutNodes[k].edge)] = UNKNOWN;
-                  solEdges[linkcutNodes[k].edge] = CONNECT;
-               }
-
-               for( int k = 0; k < i; k++ )
-               {
-                  if( crucnode == SCIPStpunionfindFind(&uf, dfstree[k]) )
-                  {
-                     graphmark[dfstree[k]] = FALSE;
-                     solNodes[dfstree[k]] = FALSE;
-                  }
-               }
-
-               /* update union find */
-               if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPStpunionfindFind(&uf, node) == node )
-               {
-                  for( int edge = graph->outbeg[node]; edge != EAT_LAST; edge = graph->oeat[edge] )
-                  {
-                     int adjnode = graph->head[edge];
-
-                     /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
-                     if( solEdges[edge] == CONNECT && solNodes[adjnode]  && graphmark[adjnode] && SCIPStpunionfindFind(&uf, adjnode) != node )
-                     {
-                        assert(scanned[adjnode]);
-                        /* meld the heaps */
-                        SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &pheapsize[node], &pheapsize[adjnode]);
-
-                        /* update the union-find data structure */
-                        SCIPStpunionfindUnion(&uf, node, adjnode, FALSE);
-
-                        /* move along the key-path until its end (i.e. until a crucial node is reached) */
-                        while( !nodeIsCrucial(graph, solEdges, adjnode) && !pinned[adjnode] )
-                        {
-                           for( e = graph->outbeg[adjnode]; e != EAT_LAST; e = graph->oeat[e] )
-                           {
-                              if( solEdges[e] != -1 )
-                                 break;
-                           }
-
-                           /* assert that each leaf of the ST is a terminal */
-                           assert( e != EAT_LAST );
-                           adjnode = graph->head[e];
-
-                           if( !solNodes[adjnode]  )
-                              break;
-
-                           assert(scanned[adjnode]);
-                           assert(SCIPStpunionfindFind(&uf, adjnode) != node);
-
-                           /* update the union-find data structure */
-                           SCIPStpunionfindUnion(&uf, node, adjnode, FALSE);
-
-                           /* meld the heaps */
-                           SCIPpairheapMeldheaps(scip, &boundpaths[node], &boundpaths[adjnode], &pheapsize[node], &pheapsize[adjnode]);
-                        }
-                     }
-                  }
-
-               }
-               pinned[node] = TRUE;
+               SCIP_CALL( soltreeExchangeKeyPath(scip, graph, &connectivityData, &vnoiData, &keypathsData,
+                     dfstree, scanned, dfstree_pos, newedge, graphmark, &soltreeData) );
             }
 
             /* restore the original Voronoi diagram */
@@ -2209,26 +2320,19 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
       for( int k = nnodes - 1; k >= 0; k-- )
       {
-         IDX* blists_curr;
-         IDX* lvledges_curr;
-
-         if( boundpaths[k] != NULL )
+         if( boundpaths[k] )
             SCIPpairheapFree(scip, &boundpaths[k]);
 
-         lvledges_curr = lvledges_start[k];
-         while( lvledges_curr != NULL )
+         for( IDX* lvledges_curr = lvledges_start[k]; lvledges_curr != NULL; lvledges_curr = lvledges_start[k] )
          {
             lvledges_start[k] = lvledges_curr->parent;
             SCIPfreeBlockMemory(scip, &lvledges_curr);
-            lvledges_curr = lvledges_start[k];
          }
 
-         blists_curr = blists_start[k];
-         while( blists_curr != NULL )
+         for( IDX* blists_curr = blists_start[k]; blists_curr != NULL; blists_curr = blists_start[k] )
          {
             blists_start[k] = blists_curr->parent;
             SCIPfreeBlockMemory(scip, &blists_curr);
-            blists_curr = blists_start[k];
          }
       }
 
@@ -2252,6 +2356,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
             /* if edge e is in the tree, so are its incident vertices */
             if( solEdges[e] != -1 )
             {
+               assert(CONNECT == solEdges[e]);
+
                solNodes[graph->tail[e]] = TRUE;
                solNodes[graph->head[e]] = TRUE;
                SCIPlinkcuttreeLink(&linkcutNodes[graph->head[e]], &linkcutNodes[graph->tail[e]], flipedge(e));
@@ -2674,7 +2780,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    if( success )
    {
-      int todo;
+      int todo; // activate later and also make other changes...such as randomization, new root, more rounds for local
 #if 0
       SCIP_CALL( localVertexInsertion(scip, graph, solNodes, linkcutNodes, solEdges) );
 #endif
