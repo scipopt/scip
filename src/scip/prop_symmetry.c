@@ -190,6 +190,7 @@ struct SCIP_PropData
 {
    /* symmetry group information */
    int                   npermvars;          /**< number of variables for permutations */
+   int                   nbinpermvars;       /**< number of binary variables for permuations */
    int                   npermvarscaptured;  /**< number of captured variables */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
 #ifndef NDEBUG
@@ -223,6 +224,7 @@ struct SCIP_PropData
    SCIP_Bool             displaynorbitvars;  /**< Whether the number of variables in non-trivial orbits shall be computed */
    SCIP_Bool             compresssymmetries; /**< Should non-affected variables be removed from permutation to save memory? */
    SCIP_Real             compressthreshold;  /**< Compression is used if percentage of moved vars is at most the threshold. */
+   SCIP_Bool             compressed;         /**< Whether symmetry data has been compressed */
    SCIP_Bool             computedsymmetry;   /**< Have we already tried to compute symmetries? */
    int                   usesymmetry;        /**< encoding of active symmetry handling methods (for debugging) */
    SCIP_Bool             usecolumnsparsity;  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
@@ -549,6 +551,7 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->perms == NULL );
    assert( propdata->permstrans == NULL );
    assert( propdata->npermvars == 0 );
+   assert( propdata->nbinpermvars == 0 );
    assert( propdata->nperms == -1 || propdata->nperms == 0 );
    assert( propdata->nmaxperms == 0 );
    assert( propdata->nmovedpermvars == 0 );
@@ -594,24 +597,58 @@ SCIP_RETCODE freeSymmetryData(
 
       for (i = 0; i < propdata->npermvars; ++i)
       {
-         if ( SCIPvarGetType(propdata->permvars[i]) == SCIP_VARTYPE_BINARY && propdata->permvarsevents[i] >= 0 )
+         if ( SCIPvarGetType(propdata->permvars[i]) == SCIP_VARTYPE_BINARY )
          {
             /* If symmetry is computed before presolving, it might happen that some variables are turned into binary
              * variables, for which no event has been catched. Since there currently is no way of checking whether a var
              * event has been caught for a particular variable, we use the stored eventfilter positions. */
-            SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[i], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
-                  propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[i]) );
+            if ( propdata->permvarsevents[i] >= 0 )
+            {
+               SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[i], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
+                     propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[i]) );
+            }
+
+            if ( propdata->compressed )
+            {
+               SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+            }
+            else
+            {
+               int p;
+               for (p = 0; p < propdata->nperms; ++p)
+               {
+                  if ( propdata->perms[p][i] != i )
+                  {
+                     SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+                     break;
+                  }
+               }
+            }
          }
-         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
       }
       SCIPfreeBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars);
       propdata->npermvarscaptured = 0;
    }
    else
    {
-      for (i = 0; i < propdata->npermvarscaptured; ++i)
+      for (i = 0; i < propdata->nbinpermvars; ++i)
       {
-         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+         if ( propdata->compressed )
+         {
+            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+         }
+         else
+         {
+            int p;
+            for (p = 0; p < propdata->nperms; ++p)
+            {
+               if ( propdata->perms[p][i] != i )
+               {
+                  SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
+                  break;
+               }
+            }
+         }
       }
       propdata->npermvarscaptured = 0;
    }
@@ -705,6 +742,7 @@ SCIP_RETCODE freeSymmetryData(
 #endif
 
       propdata->npermvars = 0;
+      propdata->nbinpermvars = 0;
       propdata->nperms = -1;
       propdata->nmaxperms = 0;
       propdata->nmovedpermvars = 0;
@@ -718,6 +756,7 @@ SCIP_RETCODE freeSymmetryData(
    assert( checkSymmetryDataFree(scip, propdata) );
 
    propdata->computedsymmetry = FALSE;
+   propdata->compressed = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1248,13 +1287,15 @@ SCIP_RETCODE setSymmetryData(
    int                   nvars,              /**< number of vars present at time of symmetry computation */
    SCIP_VAR***           permvars,           /**< pointer to permvars array */
    int*                  npermvars,          /**< pointer to store number of permvars */
+   int*                  nbinpermvars,       /**< pointer to store number of binary permvars */
    int**                 perms,              /**< permutations matrix (nperms x nvars) */
    int                   nperms,             /**< number of permutations */
    int*                  nmovedvars,         /**< pointer to store number of vars affected by symmetry (if usecompression) or NULL */
    int*                  nbinvaraffected,    /**< pointer to store number of affected binary vars (if usecompression) or NULL */
    SCIP_Bool*            binvaraffected,     /**< pointer to store whether a binary variable is affected by symmetry */
    SCIP_Bool             usecompression,     /**< whether symmetry data shall be compressed */
-   SCIP_Real             compressthreshold   /**< if percentage of moved vars is at most threshold, compression is done */
+   SCIP_Real             compressthreshold,  /**< if percentage of moved vars is at most threshold, compression is done */
+   SCIP_Bool*            compressed          /**< pointer to store whether compression has been performed */
    )
 {
    int* labelmovedvars;
@@ -1276,6 +1317,7 @@ SCIP_RETCODE setSymmetryData(
    assert( binvaraffected != NULL );
    assert( SCIPisGE(scip, compressthreshold, 0.0) );
    assert( SCIPisLE(scip, compressthreshold, 1.0) );
+   assert( compressed != NULL );
 
    /* detect number of moved vars and label moved vars */
    *binvaraffected = FALSE;
@@ -1307,14 +1349,17 @@ SCIP_RETCODE setSymmetryData(
    }
    else
    {
-      /* just detect whether binary variable is affected by symmetry*/
-      for (i = 0; i < nvars && ! *binvaraffected; ++i)
+      *nbinpermvars = 0;
+
+      /* detect whether binary variable is affected by symmetry and count number of binary permvars */
+      for (i = 0; i < nvars; ++i)
       {
          /* binary variables come first in vars array */
          if ( ! SCIPvarIsBinary(vars[i]) )
             break;
 
-         for (p = 0; p < nperms; ++p)
+         (*nbinpermvars)++;
+         for (p = 0; p < nperms && ! *binvaraffected; ++p)
          {
             if ( perms[p][i] != i )
             {
@@ -1337,6 +1382,7 @@ SCIP_RETCODE setSymmetryData(
 
       *permvars = vars;
       *npermvars = nvars;
+      *compressed = FALSE;
 
       return SCIP_OKAY;
    }
@@ -1366,6 +1412,7 @@ SCIP_RETCODE setSymmetryData(
          (*permvars)[labelmovedvars[i]] = vars[i];
    }
    *npermvars = *nmovedvars;
+   *compressed = TRUE;
 
    SCIPfreeBufferArray(scip, &labelmovedvars);
    SCIPfreeBlockMemoryArray(scip, &vars, nvars);
@@ -1387,6 +1434,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_Bool             checksymmetries,    /**< Should all symmetries be checked after computation? */
    SCIP_Bool             usecolumnsparsity,  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
+   int*                  nbinpermvars,       /**< pointer to store number of binary variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
@@ -1395,6 +1443,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int*                  nmovedvars,         /**< pointer to store number of moved vars */
    int*                  nbinvaraffected,    /**< pointer to store number of binary vars affected by symmetry */
    SCIP_Bool*            binvaraffected,     /**< pointer to store wether a binary variable is affected by symmetry */
+   SCIP_Bool*            compressed,         /**< pointer to store whether compression has been performed */
    SCIP_Bool*            success             /**< pointer to store whether symmetry computation was successful */
    )
 {
@@ -1423,17 +1472,20 @@ SCIP_RETCODE computeSymmetryGroup(
 
    assert( scip != NULL );
    assert( npermvars != NULL );
+   assert( nbinpermvars != NULL );
    assert( permvars != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
    assert( log10groupsize != NULL );
    assert( binvaraffected != NULL );
+   assert( compressed != NULL );
    assert( success != NULL );
    assert( SYMcanComputeSymmetry() );
 
    /* init */
    *npermvars = 0;
+   *nbinpermvars = 0;
    *permvars = NULL;
    *nperms = 0;
    *nmaxperms = 0;
@@ -1442,6 +1494,7 @@ SCIP_RETCODE computeSymmetryGroup(
    *nmovedvars = -1;
    *nbinvaraffected = -1;
    *binvaraffected = FALSE;
+   *compressed = FALSE;
    *success = FALSE;
 
    nconss = SCIPgetNConss(scip);
@@ -2048,8 +2101,8 @@ SCIP_RETCODE computeSymmetryGroup(
 
       if ( *nperms > 0 )
       {
-         SCIP_CALL( setSymmetryData(scip, vars, nvars, permvars, npermvars, *perms, *nperms,
-               nmovedvars, nbinvaraffected, binvaraffected, compresssymmetries, compressthreshold) );
+         SCIP_CALL( setSymmetryData(scip, vars, nvars, permvars, npermvars, nbinpermvars, *perms, *nperms,
+               nmovedvars, nbinvaraffected, binvaraffected, compresssymmetries, compressthreshold, compressed) );
       }
    }
    else
@@ -2241,8 +2294,9 @@ SCIP_RETCODE determineSymmetry(
    /* actually compute (global) symmetry */
    SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, propdata->compresssymmetries, propdata->compressthreshold,
 	 maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries, propdata->usecolumnsparsity,
-         &propdata->npermvars, &propdata->permvars, &propdata->nperms, &propdata->nmaxperms, &propdata->perms,
-         &propdata->log10groupsize, &propdata->nmovedvars, &propdata->nbinvaraffected, &propdata->binvaraffected, &successful) );
+         &propdata->npermvars, &propdata->nbinpermvars, &propdata->permvars, &propdata->nperms, &propdata->nmaxperms,
+         &propdata->perms, &propdata->log10groupsize, &propdata->nmovedvars, &propdata->nbinvaraffected,
+         &propdata->binvaraffected, &propdata->compressed, &successful) );
 
    /* mark that we have computed the symmetry group */
    propdata->computedsymmetry = TRUE;
@@ -2409,38 +2463,40 @@ SCIP_RETCODE determineSymmetry(
       assert( propdata->nbg1 == 0 );
    }
 
-   /* handle several general aspects */
 #ifndef NDEBUG
+   /* store objective coefficients for debug purposes */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->permvarsobj, propdata->npermvars) );
-#endif
    for (j = 0; j < propdata->npermvars; ++j)
-   {
-      /* capture all variables */
-      SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
-
-      /* store objective */
-#ifndef NDEBUG
       propdata->permvarsobj[j] = SCIPvarGetObj(propdata->permvars[j]);
 #endif
 
-      /* symmetric variables are not allowed to be multi-aggregated
-       *
-       * just needed for orbital fixing, polyhedral methods forbid multi-aggregation on their own
-       */
-      if ( SCIPvarGetType(propdata->permvars[j]) != SCIP_VARTYPE_BINARY && propdata->ofenabled )
-         continue;
-
-      /* symmetric variables are not allowed to be multi-aggregated */
-      for (p = 0; p < propdata->nperms; ++p)
+   /* capture all symmetric binary variables and forbid multi-aggregation for these variables
+    *
+    * note: binary variables are in the beginning of pervars
+    */
+   propdata->npermvarscaptured = 0;
+   for (j = 0; j < propdata->nbinpermvars; ++j)
+   {
+      if ( propdata->compressed )
       {
-         if ( propdata->perms[p][j] != j )
+         SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+         ++(propdata->npermvarscaptured);
+      }
+      else
+      {
+         for (p = 0; p < propdata->nperms; ++p)
          {
-            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-            break;
+            if ( propdata->perms[p][j] != j )
+            {
+               SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
+               SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+               ++(propdata->npermvarscaptured);
+               break;
+            }
          }
       }
    }
-   propdata->npermvarscaptured = propdata->npermvars;
 
    return SCIP_OKAY;
 }
