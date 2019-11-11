@@ -400,29 +400,46 @@ STP_Bool nodeIsCrucial(
 }
 
 
-/** perform local vertex insertion heuristic on given Steiner tree */
+/** is given Steiner tree a trivial solution (i.e. contains only one vertex?) */
 static
 SCIP_Bool solIsTrivialPcMw(
    const GRAPH*          graph,              /**< graph data structure */
    const int*            solEdges            /**< Steiner tree edges */
 )
 {
-   int e;
    const int root = graph->source;
+   SCIP_Bool isTrivial = TRUE;
 
    assert(graph_pc_isPcMw(graph));
+   assert(graph->extended);
 
-   for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
-      if( !Is_term(graph->term[graph->head[e]]) && solEdges[e] )
-         break;
-
-   if( e == EAT_LAST )
+   if( graph_pc_isRootedPcMw(graph) )
    {
-      SCIPdebugMessage("trivial solution given \n");
-      return TRUE;
+      for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         if( solEdges[e] )
+         {
+            const int head = graph->head[e];
+            if( graph_pc_knotIsFixedTerm(graph, head) || !Is_term(graph->term[head]) )
+            {
+               isTrivial = FALSE;
+               break;
+            }
+         }
+      }
+   }
+   else
+   {
+      isTrivial = FALSE;
    }
 
-   return FALSE;
+
+   if( isTrivial )
+   {
+      SCIPdebugMessage("trivial solution given \n");
+   }
+
+   return isTrivial;
 }
 
 
@@ -458,6 +475,32 @@ void markSolTreeNodes(
          solNodes[graph->head[e]] = TRUE;
       }
    }
+}
+
+
+
+/** get key paths starting from given key vertex */
+/** gets cost of shortest path along boundary edge*/
+static
+SCIP_Real vnoiGetBoundaryPathCost(
+   const GRAPH*          graph,              /**< graph data structure */
+   const VNOI*           vnoiData,           /**< data */
+   const PCMW*           pcmwData,           /**< data */
+   int                   boundaryedge        /**< boundary edge*/
+   )
+{
+   const PATH* const vnoipath = vnoiData->vnoi_path;
+   SCIP_Real pathcost;
+   const int node = graph->tail[boundaryedge];
+   const int adjnode = graph->head[boundaryedge];
+
+   assert(boundaryedge >= 0);
+   assert(vnoiData->vnoi_base[node] != vnoiData->vnoi_base[adjnode]);
+
+   pathcost = vnoipath[node].dist + graph->cost[boundaryedge] + vnoipath[adjnode].dist;
+   assert(pathcost >= 0.0);
+
+   return pathcost;
 }
 
 
@@ -580,6 +623,7 @@ SCIP_RETCODE connectivityDataInit(
    const GRAPH*          graph,              /**< graph data structure */
    const VNOI*           vnoiData,           /**< Voronoi data */
    const SOLTREE*        soltreeData,        /**< solution tree data */
+   const PCMW*           pcmwData,           /**< data */
    const int*            graphmark,          /**< marks allowed vertices */
    CONN*                 connectData         /**< data */
 )
@@ -587,7 +631,6 @@ SCIP_RETCODE connectivityDataInit(
    PHNODE** const boundpaths = connectData->pheap_boundpaths;
    IDX** const blists_start = connectData->blists_start;
    IDX** const lvledges_start = connectData->lvledges_start;
-   const PATH* const vnoipath = vnoiData->vnoi_path;
    int* const pheapsize = connectData->pheap_sizes;
    const int* const vnoibase = vnoiData->vnoi_base;
    const int nnodes = graph->knots;
@@ -630,7 +673,7 @@ SCIP_RETCODE connectivityDataInit(
          /* is edge 'e' a boundary-edge? */
          if( vnoibase[node] != vnoibase[adjnode] && graphmark[node] && graphmark[adjnode] )
          {
-            const SCIP_Real edgecost = vnoipath[node].dist + graph->cost[e] + vnoipath[adjnode].dist;
+            const SCIP_Real edgecost = vnoiGetBoundaryPathCost(graph, vnoiData, pcmwData, e);
 
             assert(SCIPisGE(scip, edgecost, 0.0));
 
@@ -751,32 +794,6 @@ void getKeyPathUpper(
    keypathsData->kptailnode = kptailnode;
    keypathsData->nkpnodes = nkpnodes;
 }
-
-
-/** get key paths starting from given key vertex */
-/** gets cost of shortest path along boundary edge*/
-static
-SCIP_Real vnoiGetBoundaryPathCost(
-   const GRAPH*          graph,              /**< graph data structure */
-   const VNOI*           vnoiData,           /**< data */
-   const PCMW*           pcmwData,           /**< data */
-   int                   boundaryedge        /**< boundary edge*/
-   )
-{
-   const PATH* const vnoipath = vnoiData->vnoi_path;
-   SCIP_Real pathcost;
-   const int node = graph->tail[boundaryedge];
-   const int adjnode = graph->head[boundaryedge];
-
-   assert(boundaryedge >= 0);
-   assert(vnoiData->vnoi_base[node] != vnoiData->vnoi_base[adjnode]);
-
-   pathcost = vnoipath[node].dist + graph->cost[boundaryedge] + vnoipath[adjnode].dist;
-   assert(pathcost >= 0.0);
-
-   return pathcost;
-}
-
 
 
 /** exchanges key path */
@@ -1559,6 +1576,7 @@ void vnoiDataRepairPreprocess(
    const GRAPH*          graph,              /**< graph data structure */
    const KPATHS*         keypathsData,       /**< key paths */
    const CONN*           connectData,        /**< base lists */
+   const PCMW*           pcmwData,           /**< data */
    const int*            graphmark,          /**< graph mark */
    VNOI*                 vnoiData,           /**< data */
    int*                  nheapelems          /**< to store */
@@ -2117,7 +2135,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
       for( int k = 0; k < nnodes; k++ )
          assert(graph->path_state[k] == CONNECT || !graphmark[k]);
 
-      SCIP_CALL( connectivityDataInit(scip, graph, &vnoiData, &soltreeData, graphmark, &connectivityData) );
+      SCIP_CALL( connectivityDataInit(scip, graph, &vnoiData, &soltreeData, &pcmwData, graphmark, &connectivityData) );
 
       /* henceforth, the union-find structure will be used on the Steiner tree */
       assert(uf.nElements == nnodes);
@@ -2167,7 +2185,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
             SCIP_CALL( connectivityDataKeyElimUpdate(scip, graph, &vnoiData, &supergraphData, graphmark, crucnode, &connectivityData) );
 
             /* try to connect the nodes of C (directly) to COMP(C), as a preprocessing for graph_voronoiRepair */
-            vnoiDataRepairPreprocess(scip, graph, &keypathsData, &connectivityData, graphmark, &vnoiData, &nheapelems);
+            vnoiDataRepairPreprocess(scip, graph, &keypathsData, &connectivityData, &pcmwData, graphmark, &vnoiData, &nheapelems);
 
             graph_voronoiRepairMult(scip, graph, graph->cost, &nheapelems, vnoibase, connectivityData.boundedges, &(connectivityData.nboundedges),
                   supernodesmark, &uf, vnoipath);
@@ -2274,7 +2292,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                oldedge = e;
 
             /* try to connect the nodes of C (directly) to COMP(C), as a preprocessing for Voronoi-repair */
-            vnoiDataRepairPreprocess(scip, graph, &keypathsData, &connectivityData, graphmark, &vnoiData, &nheapelems);
+            vnoiDataRepairPreprocess(scip, graph, &keypathsData, &connectivityData, &pcmwData, graphmark, &vnoiData, &nheapelems);
 
             newedge = UNKNOWN;
 
@@ -2510,7 +2528,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    SCIP_Real* xval;
    int v;
    int min;
-   int root;
    int nvars;
    int nsols;                                /* number of all solutions found so far */
    int nedges;
@@ -2551,7 +2568,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( SCIPgetBestSol(scip) == NULL )
       return SCIP_OKAY;
 
-   root = graph->source;
    sols = SCIPgetSols(scip);
    nsols = SCIPgetNSols(scip);
    nedges = graph->edges;
@@ -2598,19 +2614,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    assert(vars != NULL);
    assert(xval != NULL);
-
-   /* for PC/MW: test whether solution is trivial */
-   if( graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP )
-   {
-      int e;
-      assert(graph->extended);
-
-      for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
-         if( !Is_term(graph->term[graph->head[e]]) && SCIPisEQ(scip, xval[e], 1.0) )
-            break;
-      if( e == EAT_LAST )
-         return SCIP_OKAY;
-   }
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &results, nedges) );
@@ -2663,9 +2666,11 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       SCIP_CALL( SCIPStpHeurLocalExtendPcMwImp(scip, graph, results) );
 #endif
 
+   assert(nvars == nedges);
+
    /* can we connect the network */
    for( v = 0; v < nvars; v++ )
-      nval[v] = (results[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
+      nval[v] = (results[v] == CONNECT) ? 1.0 : 0.0;
 
    SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, &feasible) );
 
