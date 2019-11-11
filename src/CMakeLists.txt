@@ -548,7 +548,7 @@ set(scipheaders
     scip/heur_octane.h
     scip/heur_ofins.h
     scip/heur_oneopt.h
-    scip/heut_padm.h
+    scip/heur_padm.h
     scip/heur_proximity.h
     scip/heur_pscostdiving.h
     scip/heur_randrounding.h
