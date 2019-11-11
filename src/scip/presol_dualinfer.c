@@ -2375,9 +2375,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    if( SCIPgetNContVars(scip)==0 )
       return SCIP_OKAY;
 
-   /* do not use this presolver if dual reductions are not allowed.
-    * the reductions made in this presolver apply to all optimal solutions
-    * because of complementary slackness.
+   /* The reductions made in this presolver apply to all optimal solutions because of complementary slackness.
     * This means that only weak dual reductions are carried out.
     */
    if( !SCIPallowWeakDualReds(scip) )
