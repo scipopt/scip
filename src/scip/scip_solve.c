@@ -399,11 +399,13 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPbranchcandCreate(&scip->branchcand) );
    SCIP_CALL( SCIPlpCreate(&scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
+#ifdef SCIP_WITH_EXACTSOLVE
    if( SCIPisExactSolve(scip) )
    {
       SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &scip->primal->cutoffboundex) );
       SCIP_CALL( SCIPlpexCreate(&scip->lpex, SCIPblkmem(scip), scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
    }
+#endif
 
    SCIP_CALL( SCIPtreeCreate(&scip->tree, scip->mem->probmem, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
    SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree) );
@@ -1619,15 +1621,17 @@ SCIP_RETCODE initSolve(
    /* possibly create visualization output file */
    SCIP_CALL( SCIPvisualInit(scip->stat->visual, scip->mem->probmem, scip->set, scip->messagehdlr) );
 
-   /* possibly create a certificate output file */
-   SCIP_CALL( SCIPcertificateInit(scip, SCIPgetCertificate(scip), scip->mem->probmem, scip->set, scip->messagehdlr) );
-
    /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastoreprobing, scip->mem->probmem, scip->set) );
+#ifdef SCIP_WITH_EXACTSOLVE
+   /* possibly create a certificate output file */
+   SCIP_CALL( SCIPcertificateInit(scip, SCIPgetCertificate(scip), scip->mem->probmem, scip->set, scip->messagehdlr) );
+
    if( SCIPisExactSolve(scip) )
       SCIP_CALL( SCIPsepastoreexCreate(&scip->sepastoreex, scip->mem->probmem, scip->set) );
+#endif
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -1746,8 +1750,10 @@ SCIP_RETCODE freeSolve(
    /* switch stage to EXITSOLVE */
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
+#ifdef SCIP_WITH_EXACTSOLVE
    /* Print last part of certificate file */
    SCIP_CALL( SCIPcertificatePrintResult(scip, scip->set, SCIPgetCertificate(scip)) );
+#endif
 
    /* cleanup the conflict storage */
    SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->reopt) );
@@ -1766,7 +1772,9 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
    SCIPlpInvalidateRootObjval(scip->lp);
 
+#ifdef SCIP_WITH_EXACTSOLVE
    SCIP_CALL( SCIPlpexReset(scip->lpex, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
+#endif
 
    /* resets the debug environment */
    SCIP_CALL( SCIPdebugReset(scip->set) ); /*lint !e506 !e774*/
@@ -1788,15 +1796,17 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastoreprobing, scip->mem->probmem) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore, scip->mem->probmem) );
+#ifdef SCIP_WITH_EXACTSOLVE
    if( SCIPisExactSolve(scip) )
    {
       SCIP_CALL( SCIPsepastoreexClearCuts(scip->sepastoreex, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter, scip->lpex) );
       SCIP_CALL( SCIPsepastoreexFree(&scip->sepastoreex, scip->mem->probmem) );
    }
-   SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
-
    /* possibly close CERTIFICATE output file */
    SCIPcertificateExit(scip->stat->certificate, scip->set, scip->messagehdlr);
+#endif
+
+   SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
    /* possibly close visualization output file */
    SCIPvisualExit(scip->stat->visual, scip->set, scip->messagehdlr);
@@ -2085,10 +2095,12 @@ SCIP_RETCODE freeTransform(
    /* free the debug solution which might live in transformed primal data structure */
    SCIP_CALL( SCIPdebugFreeSol(scip->set) ); /*lint !e506 !e774*/
 
+#ifdef SCIP_WITH_EXACTSOLVE
    if( SCIPisExactSolve(scip) )
    {
       SCIP_CALL( SCIPlpexFree(&scip->lpex, SCIPblkmem(scip), scip->set, scip->eventqueue, scip->eventfilter) );
    }
+#endif
    SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
    SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
 

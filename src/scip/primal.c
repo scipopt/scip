@@ -187,8 +187,10 @@ SCIP_RETCODE SCIPprimalFree(
    BMSfreeMemoryArrayNull(&(*primal)->sols);
    BMSfreeMemoryArrayNull(&(*primal)->partialsols);
    BMSfreeMemoryArrayNull(&(*primal)->existingsols);
+#ifdef SCIP_WITH_EXACTSOLVE
    if( (*primal)->cutoffboundex != NULL )
       RatFreeBlock(blkmem, &(*primal)->cutoffboundex);
+#endif
 
    BMSfreeMemory(primal);
 
@@ -1938,6 +1940,7 @@ void SCIPprimalSetUpdateViolations(
 }
 
 
+#ifdef SCIP_WITH_EXACTSOLVE
 /** adds exact primal solution to solution storage at given position */
 static
 SCIP_RETCODE primalAddSolex(
@@ -2065,3 +2068,4 @@ SCIP_RETCODE SCIPprimalTrySolexFree(
 
    return SCIP_OKAY;
 }
+#endif

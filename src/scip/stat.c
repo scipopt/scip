@@ -92,7 +92,9 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
    SCIP_CALL( SCIPvisualCreate(&(*stat)->visual, messagehdlr) );
+#ifdef SCIP_WITH_EXACTSOLVE
    SCIP_CALL( SCIPcertificateCreate(&(*stat)->certificate, messagehdlr ) );
+#endif
 
    SCIP_CALL( SCIPregressionCreate(&(*stat)->regressioncandsobjval) );
 
@@ -156,7 +158,9 @@ SCIP_RETCODE SCIPstatFree(
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
    SCIPvisualFree(&(*stat)->visual);
+#ifdef SCIP_WITH_EXACTSOLVE
    SCIPcertificateFree(&(*stat)->certificate);
+#endif
 
    SCIPregressionFree(&(*stat)->regressioncandsobjval);
 

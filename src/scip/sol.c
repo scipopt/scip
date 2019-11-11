@@ -409,13 +409,15 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->viol.relviolbounds = sourcesol->viol.relviolbounds;
    (*sol)->viol.relviolcons = sourcesol->viol.relviolcons;
    (*sol)->viol.relviollprows = sourcesol->viol.relviollprows;
+
+#ifdef SCIP_WITH_EXACTSOLVE
    if( SCIPsolIsExactSol(sourcesol) )
    {
       SCIP_CALL( SCIPvalsexCopy( &(*sol)->valsex, blkmem, set, stat, sourcesol->valsex) );
    }
    else
       (*sol)->valsex = NULL;
-
+#endif
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -822,10 +824,12 @@ SCIP_RETCODE SCIPsolFree(
 
    SCIP_CALL( SCIPrealarrayFree(&(*sol)->vals) );
    SCIP_CALL( SCIPboolarrayFree(&(*sol)->valid) );
+#ifdef SCIP_WITH_EXACTSOLVE
    if( SCIPsolIsExactSol(*sol) )
    {
       SCIP_CALL( SCIPvalsexFree(&((*sol)->valsex), blkmem) );
    }
+#endif
    BMSfreeBlockMemory(blkmem, sol);
 
    return SCIP_OKAY;
@@ -1915,10 +1919,12 @@ SCIP_RETCODE SCIPsolRetransform(
 
    /* transform exact values first (needs unchanged solorigin) */
    /** @todo exip: this works only now because we do not presolve, and so solvals do not change. might need to be more sophisticated later */
+#ifdef SCIP_WITH_EXACTSOLVE
    if( set->misc_exactsolve && SCIPsolIsExactSol(sol) )
    {
       SCIP_CALL( SCIPsolexRetransform(sol, set, stat, origprob, transprob, hasinfval) );
    }
+#endif
 
    /* This method was a performance bottleneck when retransforming a solution during presolving, before flattening the
     * aggregation graph. In that case, calling SCIPsolGetVal() on the original variable consumed too much

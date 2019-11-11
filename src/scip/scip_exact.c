@@ -265,6 +265,8 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
    return scip->stat->certificate;
 }
 
+#ifdef SCIP_WITH_EXACTSOLVE
+/** @todo exip: add comments */
 SCIP_RETCODE SCIPcomputeSafeBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             proveinfeas,
@@ -304,3 +306,4 @@ SCIP_RETCODE SCIPenfoIntegralityExact(
    
    return SCIP_OKAY;
 }
+#endif

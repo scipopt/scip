@@ -378,6 +378,7 @@ void SCIPintervalSet(
    resultant->sup = value;
 }
 
+#ifdef SCIP_WITH_EXACTSOLVE
 /** stores given value as interval */
 void SCIPintervalSetRational(
    SCIP_INTERVAL*        resultant,          /**< interval to store value into */
@@ -389,6 +390,7 @@ void SCIPintervalSetRational(
    resultant->inf = RatRoundReal(value, 0);
    resultant->sup = RatRoundReal(value, 1);
 }
+#endif
 
 /** stores given infimum and supremum as interval */
 void SCIPintervalSetBounds(

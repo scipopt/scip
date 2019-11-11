@@ -52,6 +52,7 @@
 #include "scip/varex.h"
 #include "scip/rational.h"
 
+#ifdef SCIP_WITH_EXACTSOLVE
 
 /** clears solution arrays of primal CIP solution */
 static
@@ -2030,3 +2031,5 @@ SCIP_Bool SCIPsolIsExactSol(
 
    return sol->valsex != NULL;
 }
+
+#endif

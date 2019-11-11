@@ -132,6 +132,11 @@ SCIP_RETCODE checkIntegralityExact(
    integral = TRUE;
    fpintegral = TRUE;
 
+#ifndef SCIP_WITH_EXACTSOLVE
+   SCIPerrorMessage("No compiled for exact solving \n");
+   SCIPABORT();
+#else
+
    SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &solval) );
 
    /* get all problem variables and integer region in vars array */
@@ -163,6 +168,7 @@ SCIP_RETCODE checkIntegralityExact(
    }
 
    RatFreeBuffer(SCIPbuffer(scip), &solval);
+#endif
 
    return SCIP_OKAY;
 }
@@ -218,12 +224,14 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
       return SCIP_OKAY;
    }
 
+#ifdef SCIP_WITH_EXACTSOLVE
    if( SCIPisExactSolve(scip) )
    {
       SCIP_CALL( SCIPenfoIntegralityExact(scip, result) );
       if( *result == SCIP_FEASIBLE )
          return SCIP_OKAY;
    }
+#endif
 
    /* call branching methods */
    SCIP_CALL( SCIPbranchLP(scip, result) );

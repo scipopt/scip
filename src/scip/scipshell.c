@@ -121,9 +121,15 @@ SCIP_RETCODE fromCommandLine(
 
          SCIP_CALL( SCIPcreateSolCopy(scip, &origsol, bestsol) );
          SCIP_CALL( SCIPretransformSol(scip, origsol) );
-         if( SCIPisExactSolve(scip) && SCIPisExactSol(scip, bestsol) )
+
+         if( SCIPisExactSolve(scip) )
          {
-            SCIP_CALL( SCIPprintSolex(scip, origsol, NULL, FALSE) );
+#ifdef SCIP_WITH_EXACTSOLVE
+            if( SCIPisExactSol(scip, bestsol) )
+            {
+               SCIP_CALL( SCIPprintSolex(scip, origsol, NULL, FALSE) );
+            }
+#endif
          }
          else
          {

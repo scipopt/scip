@@ -567,12 +567,14 @@ SCIP_RETCODE SCIPprobTransform(
    {
       SCIP_CALL( SCIPvarTransform(source->vars[v], blkmem, set, stat, source->objsense, &targetvar) );
       /* todo exip: wrap this */
+#ifdef SCIP_WITH_EXACTSOLVE
       if( set->misc_exactsolve && source->vars[v]->exactdata != NULL )
       {
          SCIP_CALL( SCIPvarCopyExactData(blkmem, targetvar, source->vars[v]) );
          if( source->objsense == SCIP_OBJSEN_MAXIMIZE )
             RatNegate(targetvar->exactdata->obj, targetvar->exactdata->obj);
       }
+#endif
 
       SCIP_CALL( SCIPprobAddVar(*target, blkmem, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
       SCIP_CALL( SCIPvarRelease(&targetvar, blkmem, set, eventqueue, NULL) );
@@ -982,7 +984,9 @@ SCIP_RETCODE SCIPprobAddVar(
    {
       SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       SCIP_CALL( SCIPlpUpdateAddVar(lp, set, var) );
+#ifdef SCIP_WITH_EXACTSOLVE
       SCIP_CALL( SCIPlpexUpdateAddVar(lp->lpex, set, var) );
+#endif
    }
 
    SCIPsetDebugMsg(set, "added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
@@ -1723,7 +1727,9 @@ SCIP_RETCODE SCIPprobScaleObj(
                   {
                      SCIPsetDebugMsg(set, " -> var <%s>: newobj = %.6f\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
                      SCIP_CALL( SCIPvarChgObj(transprob->vars[v], blkmem, set, transprob, primal, lp, eventqueue, objvals[v]) );
+#ifdef SCIP_WITH_EXACTSOLVE
                      SCIP_CALL( SCIPvarScaleObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpex, eventqueue, intscalar) );
+#endif
                   }
                   transprob->objoffset *= intscalar;
                   transprob->objscale /= intscalar;

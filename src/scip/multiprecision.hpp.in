@@ -7,27 +7,28 @@
 #ifndef _PRESOLVE_MISC_MULTIPRECISION_HPP_
 #define _PRESOLVE_MISC_MULTIPRECISION_HPP_
 
+
+#ifdef SCIP_WITH_EXACTSOLVE
 #include <boost/multiprecision/number.hpp>
 
-#if @SCIP_HAVE_GMP@
+#ifdef SCIP_WITH_GMP
 #include <boost/multiprecision/gmp.hpp>
 #include <boost/multiprecision/debug_adaptor.hpp>
 using namespace boost::multiprecision;
-
-#if @USE_DEBUG_ADAPTOR@
-using Rational = boost::multiprecision::number<debug_adaptor<gmp_rational>>;
-#else
 using Rational = mpq_rational;
-#endif
-using Float100 = boost::multiprecision::mpf_float_100;
-using Float500 = boost::multiprecision::mpf_float_500;
-using Float1000 = boost::multiprecision::mpf_float_1000;
+using Float100 = mpf_float_100;
+using Float500 = mpf_float_500;
+using Float1000 = mpf_float_1000;
 #else
 #include <boost/multiprecision/cpp_int.hpp>
 using Rational = boost::multiprecision::cpp_rational;
 using Float100 = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100>>;
 using Float500 = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<500>>;
 using Float1000 = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<1000>>;
+#endif
+
+#else
+using Rational = double;
 #endif
 
 #endif

@@ -70,6 +70,8 @@
 #include "scip/varex.h"
 #include <ctype.h>
 
+#ifdef SCIP_WITH_EXACTSOLVE
+
 /** changes variable's objective value
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -242,3 +244,5 @@ SCIP_RETCODE SCIPwriteVarsExactLinearsum(
 
    return SCIP_OKAY;
 }
+
+#endif

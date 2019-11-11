@@ -69,6 +69,7 @@ SCIP_RETCODE SCIPeventhdlrCopyInclude(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_WITH_EXACTSOLVE
 static
 SCIP_RETCODE updateLpexBdChg(
    SCIP_VAR*             var,
@@ -80,7 +81,7 @@ SCIP_RETCODE updateLpexBdChg(
    )
 {
    if( !set->misc_exactsolve )
-    return SCIP_OKAY;
+      return SCIP_OKAY;
 
    assert(var != NULL);
    assert(lp != NULL);
@@ -122,6 +123,9 @@ SCIP_RETCODE updateLpexBdChg(
 
    return SCIP_OKAY;
 }
+#else
+#define updateLpexBdChg(var, lp, set, event, isUb, isGlb) (SCIP_OKAY)
+#endif
 
 /** internal method for creating an event handler */
 static
@@ -1704,11 +1708,12 @@ SCIP_RETCODE SCIPeventProcess(
       }
 
       /* if in exact solving mode, adjust rational lp data */
+#ifdef SCIP_WITH_EXACTSOLVE
       if( set->misc_exactsolve )
       {
-         SCIP_Rational* newobj; 
-         SCIP_Rational* oldobj; 
-         
+         SCIP_Rational* newobj;
+         SCIP_Rational* oldobj;
+
          SCIP_CALL( RatCreateBuffer(set->buffer, &newobj) );
          SCIP_CALL( RatCreateBuffer(set->buffer, &oldobj) );
          RatSetReal(newobj, event->data.eventobjchg.newobj);
@@ -1723,6 +1728,7 @@ SCIP_RETCODE SCIPeventProcess(
          RatFreeBuffer(set->buffer, &oldobj);
          RatFreeBuffer(set->buffer, &newobj);
       }
+#endif
 
       /* inform all existing primal solutions about the objective change (only if this is not a temporary change in
        * probing mode)

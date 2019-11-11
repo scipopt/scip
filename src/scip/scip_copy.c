@@ -1023,10 +1023,12 @@ SCIP_RETCODE copyVars(
 
       /* copy variable and add this copy to the target SCIP if the copying was valid */
       SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevars[i], &targetvar, localvarmap, localconsmap, global, &success) );
+#ifdef SCIP_WITH_EXACTSOLVE
       if( SCIPisExactSolve(targetscip) )
       {
          SCIP_CALL( SCIPvarCopyExactData(targetscip->mem->probmem, targetvar, sourcevars[i]) );
       }
+#endif
       assert(success);
       assert(targetvar != NULL);
    }

@@ -56,6 +56,8 @@
 #include "scip/varex.h"
 #include <string.h>
 
+#ifdef SCIP_WITH_EXACTSOLVE
+
 /** gets objective function value of variable */
 SCIP_Rational* SCIPvarGetObjExact(
    SCIP_VAR*             var                 /**< problem variable */
@@ -918,3 +920,5 @@ SCIP_VARSTATUS SCIPvarGetStatusExact(
 
    return var->exactdata->exvarstatus;
 }
+
+#endif

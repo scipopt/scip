@@ -74,6 +74,7 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
+#ifdef SCIP_WITH_EXACTSOLVE
 
 #define CONSHDLR_NAME          "linear-exact"
 #define CONSHDLR_DESC          "exact linear constraints of the form  lhs <= a^T x <= rhs"
@@ -18550,4 +18551,6 @@ SCIP_RETCODE SCIPupgradeConsLinear(
 
    return SCIP_OKAY;
 }
+#endif
+
 #endif
