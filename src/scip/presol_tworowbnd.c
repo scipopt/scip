@@ -2990,7 +2990,7 @@ SCIP_RETCODE SCIPincludePresolTworowbnd(
          "Should the bounds be tightened via LP-bound?",
          &presoldata->lpbound, FALSE, DEFAULT_LPBOUND, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/tworowbnd/comvcomb",
+         "presolving/tworowbnd/convcomb",
          "Should the bounds be tightened via feasibility based bound-tightening on convex combined constraints?",
          &presoldata->convcomb, FALSE, DEFAULT_CONVCOMB, NULL, NULL) );
 
