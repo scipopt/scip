@@ -1872,6 +1872,9 @@ SCIP_RETCODE resolvePropagationFullOrbitopes(
    assert( consdata->nspcons > 0 );
    assert( consdata->nblocks > 0 );
 
+   if ( ! consdata->resolveprop )
+      return SCIP_OKAY;
+
    vars = consdata->vars;
    ncols = consdata->nblocks;
 
