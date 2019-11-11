@@ -2946,10 +2946,12 @@ SCIP_RETCODE freeConflictGraphSchreierSims(
 
       /* get node data */
       nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, i);
-      assert( nodedata != NULL );
 
-      /* free node data */
-      SCIPfreeBlockMemory(scip, &nodedata);
+      /* free node data (might not have been allocated if all components are already blocked) */
+      if ( nodedata != NULL )
+      {
+         SCIPfreeBlockMemory(scip, &nodedata);
+      }
       SCIPdigraphSetNodeData(conflictgraph, NULL, i);
    }
 
@@ -3577,6 +3579,7 @@ SCIP_RETCODE addSchreierSimsConss(
    int leadervartype;
    SCIP_Bool success;
 
+   int c;
    int v;
    int p;
 
@@ -3590,6 +3593,7 @@ SCIP_RETCODE addSchreierSimsConss(
    nperms = propdata->nperms;
    components = propdata->components;
    componentbegins = propdata->componentbegins;
+   componentblocked = propdata->componentblocked;
    vartocomponent = propdata->vartocomponent;
    ncomponents = propdata->ncomponents;
    nmovedpermvars = propdata->nmovedpermvars;
@@ -3642,7 +3646,6 @@ SCIP_RETCODE addSchreierSimsConss(
 
    /* allocate data structures necessary for orbit computations and conflict graph */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &inactiveperms, nperms) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &componentblocked, ncomponents) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &orbitvarinconflict, npermvars) );
@@ -3661,12 +3664,25 @@ SCIP_RETCODE addSchreierSimsConss(
    ninactiveperms = 0;
    if ( nchgbds != NULL )
       *nchgbds = 0;
+
+   /* ignore permutations of blocked components*/
+   for (c = 0; c < ncomponents; ++c)
+   {
+      if ( componentblocked[c] )
+      {
+         for(p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
+         {
+            inactiveperms[components[p]] = TRUE;
+            ++ninactiveperms;
+         }
+      }
+   }
+
    while ( ninactiveperms < nperms )
    {
       int nchanges = 0;
 
       /* compute orbits w.r.t. active perms */
-      /* @todo adapt the routine such that component blocked is not necessary */
       SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, npermvars, permstrans, nperms, inactiveperms,
             orbits, orbitbegins, &norbits, components, componentbegins, vartocomponent,
             componentblocked, ncomponents, nmovedpermvars) );
@@ -3696,6 +3712,9 @@ SCIP_RETCODE addSchreierSimsConss(
       posleader = orbits[orbitbegins[orbitidx] + orbitleaderidx];
       for (p = 0; p < nperms; ++p)
       {
+         if ( inactiveperms[p] )
+            continue;
+
          if ( permstrans[posleader][p] != posleader )
          {
             inactiveperms[p] = TRUE;
@@ -3709,7 +3728,6 @@ SCIP_RETCODE addSchreierSimsConss(
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
    SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, nvars) );
-   SCIPfreeBufferArray(scip, &componentblocked);
    SCIPfreeBufferArray(scip, &inactiveperms);
 
    return SCIP_OKAY;
@@ -3757,6 +3775,16 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( propdata->binvaraffected );
    propdata->triedaddconss = TRUE;
 
+   if ( propdata->symconsenabled )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genconss, propdata->nperms) );
+
+      if ( propdata->detectorbitopes )
+      {
+         SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
+      }
+   }
+
    if ( propdata->schreiersimsenabled )
    {
       /* Schreier Sims cuts for non-binary variables and symretopes are not compatible */
@@ -3767,14 +3795,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    if ( ! propdata->symconsenabled )
       return SCIP_OKAY;
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genconss, propdata->nperms) );
-
-   /* orbitopes are not compatible with Schreier Sims cuts */
-   if ( propdata->detectorbitopes && ! propdata->schreiersimsenabled )
-   {
-      SCIP_CALL( detectOrbitopes(scip, propdata, propdata->components, propdata->componentbegins, propdata->ncomponents) );
-   }
 
    /* possibly stop */
    if ( SCIPisStopped(scip) )
