@@ -2061,6 +2061,7 @@ SCIP_RETCODE determineSymmetry(
    int type = 0;
    int nvars;
    int j;
+   int p;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -2299,7 +2300,6 @@ SCIP_RETCODE determineSymmetry(
    if ( propdata->ofenabled )
    {
       int componentidx;
-      int p;
       int v;
 
       /* transpose symmetries matrix here if necessary */
@@ -2374,17 +2374,30 @@ SCIP_RETCODE determineSymmetry(
 #endif
    for (j = 0; j < propdata->npermvars; ++j)
    {
-      /* symmetric variables are not allowed to be multi-aggregated */
-      /* TODO: Do we have to forbid multi-aggregation in any case? */
-      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+      /* capture all variables */
+      SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
 
       /* store objective */
 #ifndef NDEBUG
       propdata->permvarsobj[j] = SCIPvarGetObj(propdata->permvars[j]);
 #endif
 
-      /* capture all variables */
-      SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
+      /* symmetric variables are not allowed to be multi-aggregated
+       *
+       * just needed for orbital fixing, polyhedral methods forbid multi-aggregation on their own
+       */
+      if ( SCIPvarGetType(propdata->permvars[j]) != SCIP_VARTYPE_BINARY && propdata->ofenabled )
+         continue;
+
+      /* symmetric variables are not allowed to be multi-aggregated */
+      for (p = 0; p < propdata->nperms; ++p)
+      {
+         if ( propdata->perms[p][j] != j )
+         {
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
+            break;
+         }
+      }
    }
    propdata->npermvarscaptured = propdata->npermvars;
 
