@@ -9186,6 +9186,9 @@ SCIP_Bool SCIPrealToRational(
    assert(nominator != NULL);
    assert(denominator != NULL);
 
+   if( REALABS(val) >= 1.0 * SCIP_LONGINT_MAX / maxdnom )
+      return FALSE;
+
    /* try the simple denominators first: each value of the simpledenoms table multiplied by powers of 10
     * is tried as denominator
     */
