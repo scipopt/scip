@@ -671,7 +671,7 @@ SCIP_RETCODE aggregateNextRow(
    {
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(scip, aggrrow, success);
+      SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, success);
       goto TERMINATE;
    }
 
@@ -753,7 +753,7 @@ SCIP_RETCODE aggregateNextRow(
    {
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(scip, aggrrow, success);
+      SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, success);
    }
 
 TERMINATE:
