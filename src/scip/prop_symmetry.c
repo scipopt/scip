@@ -2381,7 +2381,7 @@ SCIP_RETCODE chooseOrderOfGenerators(
       if( ntwocycles[i] == 0 )
       {
          /* we change the number of two cycles for this perm so that it will be sorted to the end */
-         ntwocycleperms[i] = npermvars;
+         ntwocycles[i] = npermvars;
          --(*ntwocycleperms);
       }
    }
