@@ -31,8 +31,6 @@
 #include <iostream>
 #include <time.h>
 #include <stdlib.h>
-
-#ifdef SCIP_WITH_EXACTSOLVE
 #include <boost/numeric/ublas/vector_sparse.hpp>
 
 #ifdef WITH_GMP
@@ -1606,5 +1604,3 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
 }
 
 }
-
-#endif

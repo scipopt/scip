@@ -35,6 +35,7 @@
 #include "scip/type_var.h"
 #include "scip/pub_fileio.h"
 #include "scip/type_prob.h"
+#include "gmp.h"
 
 #ifdef __cplusplus
 extern "C" {

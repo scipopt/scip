@@ -109,7 +109,7 @@ SCIP_ReaderData
    SCIP_RETCODE          retcode;            /**< store a none SCIP_OKAY return code if an error occurred */
 };
 
-#ifdef SCIP_WITH_EXACTSOLVE
+
 /** convert between scips_rational and zimpl's numb type */
 static
 SCIP_RETCODE RcreateNumb(
@@ -130,7 +130,6 @@ SCIP_RETCODE RcreateNumb(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** abort the reading with an errormessage; this type of constraint is not supported
  *  in exact solving
@@ -264,10 +263,6 @@ SCIP_RETCODE addConsTerm(
 
    if( SCIPisExactSolve(scip) )
    {
-#ifndef SCIP_WITH_EXACTSOLVE
-      SCIPerrorMessage("Not compiled for exact solving \n");
-      SCIPABORT();
-#else
       /* get exact lhs and rhs */
       switch( type )
       {
@@ -297,7 +292,6 @@ SCIP_RETCODE addConsTerm(
          readerdata->readerror = TRUE;
          break;
       }
-#endif
    }
    else
    {
@@ -476,10 +470,7 @@ SCIP_RETCODE addConsTerm(
       {
          if( SCIPisExactSolve(scip) )
          {
-#ifndef SCIP_WITH_EXACTSOLVE
-            SCIPerrorMessage("Not compiled for exact solving \n");
-            SCIPABORT();
-#else
+            // todo: (exip) create exact constraint and add to SCIP
             SCIP_CALL( SCIPcreateConsExactLinear(scip, &cons, name, 0, NULL, NULL, ratlhs, ratrhs,
                   initial, separate, enforce, check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
             SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -501,9 +492,6 @@ SCIP_RETCODE addConsTerm(
                SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, scipvar, scipvalrat) );
                RatFreeBlock(SCIPblkmem(scip), &scipvalrat);
             }
-            RatFreeBlock(SCIPblkmem(scip), &ratlhs);
-            RatFreeBlock(SCIPblkmem(scip), &ratrhs);
-#endif
          }
          else
          {
@@ -944,6 +932,11 @@ SCIP_RETCODE addConsTerm(
    {
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
+   if( SCIPisExactSolve(scip) )
+   {
+      RatFreeBlock(SCIPblkmem(scip), &ratlhs);
+      RatFreeBlock(SCIPblkmem(scip), &ratrhs);
+   }
 
    return SCIP_OKAY;
 }
@@ -1006,10 +999,6 @@ SCIP_RETCODE addVar(
 
    if( SCIPisExactSolve(scip) )
    {
-#ifndef SCIP_WITH_EXACTSOLVE
-      SCIPerrorMessage("Not compiled for exact solving \n");
-      SCIPABORT();
-#else
       /* get exact lower bounds for exactlp constraint handler and safe FP-values for FP-problem */
       switch( bound_get_type(lower) )
       {
@@ -1055,7 +1044,6 @@ SCIP_RETCODE addVar(
          ub = 0.0;
          break;
       }
-#endif
    }
    else
    {
@@ -1119,17 +1107,18 @@ SCIP_RETCODE addVar(
    /* create variable */
    if( SCIPisExactSolve(scip) )
    {
-#ifdef SCIP_WITH_EXACTSOLVE
       char strlb[SCIP_MAXSTRLEN];
       char strub[SCIP_MAXSTRLEN];
+      // todo: create exact variable with lbrat/ubrat
       SCIPdebugMessage("zimpl reader: added new variable");
       SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVarExactData(scip, var, lbrat, ubrat, NULL) );
-      SCIPdebug(SCIPprintVar(scip, var, NULL));
-      SCIPdebugMessage("exact bounds are [%s,%s]\n", strlb, strub);
+      /* SCIPdebug(SCIPprintVar(scip, var, NULL));
+      RatToString(lbrat, strlb);
+      RatToString(ubrat, strub);
+      SCIPdebugMessage("exact bounds are [%s,%s]\n", strlb, strub); */
       RatFreeBlock(SCIPblkmem(scip), &lbrat);
       RatFreeBlock(SCIPblkmem(scip), &ubrat);
-#endif
    }
    else
    {
@@ -1398,17 +1387,17 @@ Bound* xlp_getlower(
    readerdata = (SCIP_READERDATA*)data;
    assert(readerdata != NULL);
 
-   scip = readerdata->scip;
-   assert(scip != NULL);
-
-   scipvar = (SCIP_VAR*)var;
-   assert(scipvar != NULL);
-
    if( SCIP_ERROR == abortReadIfExact(scip, NULL, "xlp_getlower: exact version not supported.\n") )
    {
       readerdata->readerror = TRUE;
       return NULL;
    }
+
+   scip = readerdata->scip;
+   assert(scip != NULL);
+
+   scipvar = (SCIP_VAR*)var;
+   assert(scipvar != NULL);
 
    /* collect lower bound */
    lb = SCIPvarGetLbGlobal(scipvar);
@@ -1455,17 +1444,17 @@ Bound* xlp_getupper(
    readerdata = (SCIP_READERDATA*)data;
    assert(readerdata != NULL);
 
+   if( SCIP_ERROR == abortReadIfExact(scip, NULL, "xlp_getupper: exact version not supported.\n") )
+   {
+      readerdata->readerror = TRUE;
+      return NULL;
+   }
+
    scip = readerdata->scip;
    assert(scip != NULL);
 
    scipvar = (SCIP_VAR*)var;
    assert(scipvar != NULL);
-
-  if( SCIP_ERROR == abortReadIfExact(scip, NULL, "xlp_getupper: exact version not supported.\n") )
-   {
-      readerdata->readerror = TRUE;
-      return NULL;
-   }
 
    /* collect upper bound */
    ub = SCIPvarGetUbGlobal(scipvar);
@@ -1547,10 +1536,6 @@ void xlp_addtocost(
 
    if( SCIPisExactSolve(scip) )
    {
-#ifndef SCIP_WITH_EXACTSOLVE
-      SCIPerrorMessage("Not compiled for exact solving \n");
-      SCIPABORT();
-#else
       char str[SCIP_MAXSTRLEN];
 
       RcreateNumb(SCIPblkmem(scip), &scipvalrat, cost);
@@ -1565,7 +1550,6 @@ void xlp_addtocost(
       SCIPchgVarObj(scip, scipvar, RatApproxReal(scipvalrat));
 
       RatFreeBlock(SCIPblkmem(scip), &scipvalrat);
-#endif
    }
    else
    {

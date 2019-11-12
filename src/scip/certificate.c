@@ -40,12 +40,6 @@
 #include "scip/struct_scip.h"
 #include "scip/pub_varex.h"
 
-#ifdef SCIP_WITH_GMP
-#include "gmp.h"
-#endif
-
-#ifdef SCIP_WITH_EXACTSOLVE
-
 #define SCIP_HASHSIZE_CERTIFICATE    500 /**< size of hash map for certificate -> nodesdata mapping used for certificate output */
 
 /** gets the key of the given element */
@@ -1853,5 +1847,3 @@ void SCIPcertificatePrintSolex(
 
    SCIPcertificatePrintProblemMessage(certificate, "\n");
 }
-
-#endif

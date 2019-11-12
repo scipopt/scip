@@ -43,8 +43,6 @@
 #include "scip/rational.h"
 #include "scip/pub_lpex.h"
 
-#ifdef SCIP_WITH_EXACTSOLVE
-
 /** resizes cuts and score arrays to be able to store at least num entries */
 static
 SCIP_RETCODE sepastoreexEnsureCutsMem(
@@ -365,5 +363,3 @@ int SCIPsepastoreexGetNCutsApplied(
 
    return sepastoreex->ncutsapplied;
 }
-
-#endif

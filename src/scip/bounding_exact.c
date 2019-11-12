@@ -48,8 +48,6 @@
 #include "scip/struct_scip.h"
 #include "rectlu/rectlu.h"
 
-#ifdef SCIP_WITH_EXACTSOLVE
-
 #define PSBIGM                      100
 #define PSWARMSTARTAUXPROB         TRUE
 #define PSPOSTPROCESSDUALSOL       TRUE
@@ -3901,7 +3899,5 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
    /* choose which bounding method should be calles and return a safe objective bound */
    return SCIP_OKAY;
 }
-
-#endif
 
 #endif

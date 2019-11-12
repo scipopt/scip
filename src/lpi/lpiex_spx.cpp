@@ -798,12 +798,6 @@ SCIP_RETCODE SCIPlpiexCreate(
    assert(lpi != NULL);
    assert(name != NULL);
 
-#ifndef SOPLEX_WITH_GMP
-   SCIPerrorMessage("For use as exact LP solver, SoPLex needs to be compiled with GMP \n.");
-   SCIPABORT();
-   return SCIP_ERROR;
-#endif
-
    /* create SoPlex object */
    SCIP_ALLOC( BMSallocMemory(lpi) );
 

@@ -265,8 +265,7 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
    return scip->stat->certificate;
 }
 
-#ifdef SCIP_WITH_EXACTSOLVE
-/** compute a safe bound for the current floating point lp */
+/** compute a safe bound for the current lp solution */
 SCIP_RETCODE SCIPcomputeSafeBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             proveinfeas,        /**< should infeasibility be proven */
@@ -277,10 +276,13 @@ SCIP_RETCODE SCIPcomputeSafeBound(
 
    assert(scip != NULL);
    assert(scip->stat != NULL);
+   assert(scip->lp != NULL && scip->lpex != NULL);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCertificate", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPlpexComputeSafeBound(scip->lp, scip->lpex, scip->set, scip->messagehdlr, SCIPblkmem(scip), scip->stat,         scip->eventqueue, scip->eventfilter, scip->transprob, scip->lpex->lpiitlim, &lperror, proveinfeas, safebound) );
+   SCIP_CALL( SCIPlpexComputeSafeBound(scip->lp, scip->lpex, scip->set, scip->messagehdlr, SCIPblkmem(scip),
+         scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob, scip->lpex->lpiitlim,
+         &lperror, proveinfeas, safebound) );
 
    if( lperror )
       return SCIP_ERROR;
@@ -293,6 +295,9 @@ SCIP_RETCODE SCIPforceExactSolve(
    SCIP*                 scip               /**< SCIP data structure */
    )
 {
+   assert(scip != NULL);
+   assert(scip->lpex != NULL);
+
    scip->lpex->forceexactsolve = TRUE;
 
    return SCIP_OKAY;
@@ -304,8 +309,11 @@ SCIP_RETCODE SCIPenfoIntegralityExact(
    SCIP_RESULT*          result             /**< result pointer */
    )
 {
-   SCIP_CALL( SCIPlpexEnfoIntegralityExact(scip->lp, scip->lpex, scip->set, scip->stat, result) );
-   
+   assert(scip != NULL);
+   assert(scip->lp != NULL && scip->lpex != NULL);
+
+   SCIP_CALL( SCIPlpexEnfoIntegralityExact(scip->lp, scip->lpex,
+         scip->set, scip->stat, result) );
+
    return SCIP_OKAY;
 }
-#endif

@@ -12476,14 +12476,12 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
          SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
 
-#ifdef SCIP_WITH_EXACTSOLVE
          /** @todo exip: placeholder for probing/diving, this needs to be refactored at some point */
          if( set->misc_exactsolve && !lp->diving && !lp->probing && !lp->strongbranchprobing )
          {
             SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                      prob, itlim, lperror, FALSE, &(lp->lpobjval) ) );
          }
-#endif
 
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
@@ -12560,11 +12558,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
 
-#ifdef SCIP_WITH_EXACTSOLVE
                if( set->misc_exactsolve && !lp->diving )
                   SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                      prob, itlim, lperror, TRUE, &(lp->lpobjval) ) );
-#endif
             }
             /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
              * with the primal simplex due to numerical problems) - treat this case like an LP error
@@ -12884,13 +12880,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      {
                         SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
 
-#ifdef SCIP_WITH_EXACTSOLVE
                         if( set->misc_exactsolve && !lp->diving )
                         {
                            SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                                  prob, itlim, lperror, TRUE, &(lp->lpobjval)) );
                         }
-#endif
                      }
                      /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
                       * with the primal simplex due to numerical problems) - treat this case like an LP error

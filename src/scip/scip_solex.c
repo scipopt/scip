@@ -134,7 +134,6 @@
 
 #include "scip/struct_sol.h"
 
-#ifdef SCIP_WITH_EXACTSOLVE
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -319,5 +318,3 @@ SCIP_Bool SCIPisExactSol(
 
    return SCIPsolIsExactSol(sol);
 }
-
-#endif

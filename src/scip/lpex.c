@@ -64,7 +64,6 @@
 #include <string.h>
 #include <inttypes.h>
 
-#ifdef SCIP_WITH_EXACTSOLVE
 static
 SCIP_DECL_HASHKEYVAL(hashValExCol)
 {
@@ -3609,9 +3608,6 @@ SCIP_RETCODE SCIPlpexAddCol(
    assert(SCIPvarGetCol(col->var) == col->fpcol);
    assert(SCIPvarIsIntegral(col->var) == col->integral);
 
-   if( !set->misc_exactsolve )
-      return SCIP_OKAY;
-
    SCIPsetDebugMsg(set, "adding column <%s> to exact LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
 #ifdef SCIP_DEBUG
    /* {
@@ -6386,5 +6382,3 @@ SCIP_RETCODE SCIPlpexEnfoIntegralityExact(
 
    return SCIP_OKAY;
 }
-
-#endif

@@ -82,7 +82,6 @@
 extern "C" {
 #endif
 
-#ifdef SCIP_WITH_EXACTSOLVE
 /** collected values of a column which depend on the LP solution
  *  We store these values in each column to recover the LP solution at start of diving or probing mode, say, without
  *  having to resolve the LP.  Note that we do not store the farkascoef value since we do expect a node with infeasible
@@ -361,8 +360,6 @@ struct SCIP_LpEx
    SCIP_Bool             projshiftpossible;  /**< can a safe bound be computed with project-and-shift? */
    SCIP_Bool             forceexactsolve;    /**< should the next safe bounding step be forced to solve the lp exactly? */
 };
-
-#endif
 
 #ifdef __cplusplus
 }
