@@ -179,7 +179,7 @@ void dfsorder(
 }
 
 
-static
+static inline
 SCIP_Real getNewPrizeNode(
    const GRAPH*          graph,
    const STP_Bool*       steinertree,
@@ -510,12 +510,12 @@ void pcmwInit(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    SOLTREE*              soltreeData,        /**< solution tree data */
-   int*                  graphmark,          /**< marks allowed vertices */
    PCMW*                 pcmwData            /**< data */
    )
 {
    STP_Bool *const pinned = soltreeData->nodeIsPinned;
    const int root = graph->source;
+   int* const graphmark = graph->mark;
 
    assert(graph->extended);
    assert(graph_pc_isPcMw(graph));
@@ -551,7 +551,6 @@ SCIP_RETCODE connectivityDataKeyElimUpdate(
    const GRAPH*          graph,              /**< graph data structure */
    const VNOI*           vnoiData,           /**< Voronoi data */
    const SGRAPH*         supergraphData,     /**< super-graph*/
-   const int*            graphmark,          /**< marks allowed vertices */
    int                   crucnode,           /**< node to eliminate */
    CONN*                 connectData         /**< data */
 )
@@ -564,6 +563,7 @@ SCIP_RETCODE connectivityDataKeyElimUpdate(
    const int* const vnoibase = vnoiData->vnoi_base;
    const STP_Bool* const isSupernode = supergraphData->nodeIsSupernode;
    int* const boundedges = connectData->boundedges;
+   const int* const graphmark = graph->mark;
    int nboundedges = 0;
 
    connectData->nboundedges = -1;
@@ -624,7 +624,6 @@ SCIP_RETCODE connectivityDataInit(
    const VNOI*           vnoiData,           /**< Voronoi data */
    const SOLTREE*        soltreeData,        /**< solution tree data */
    const PCMW*           pcmwData,           /**< data */
-   const int*            graphmark,          /**< marks allowed vertices */
    CONN*                 connectData         /**< data */
 )
 {
@@ -633,6 +632,7 @@ SCIP_RETCODE connectivityDataInit(
    IDX** const lvledges_start = connectData->lvledges_start;
    int* const pheapsize = connectData->pheap_sizes;
    const int* const vnoibase = vnoiData->vnoi_base;
+   const int* const graphmark = graph->mark;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
 
@@ -697,7 +697,6 @@ void getKeyPathUpper(
    int                   crucnode,           /**< crucial node to start from */
    const GRAPH*          graph,              /**< graph data structure */
    const SOLTREE*        soltreeData,        /**< solution tree data */
-   const int*            graphmark,          /**< nodes */
    CONN*                 connectData,        /**< data */
    KPATHS*               keypathsData        /**< key paths */
 )
@@ -709,6 +708,7 @@ void getKeyPathUpper(
    const STP_Bool* const pinned = soltreeData->nodeIsPinned;
    PHNODE** const boundpaths = connectData->pheap_boundpaths;
    int* const pheapsize = connectData->pheap_sizes;
+   const int* const graphmark = graph->mark;
    int nkpnodes = 0;
    int kptailnode = -1;
    SCIP_Real kpcost = -FARAWAY;
@@ -800,7 +800,7 @@ void getKeyPathUpper(
 static
 SCIP_RETCODE soltreeExchangeKeyPath(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph data structure */
+   GRAPH*                graph,              /**< graph data structure */
    const CONN*           connectData,        /**< data */
    const VNOI*           vnoiData,           /**< data */
    const KPATHS*         keypathsData,       /**< key paths */
@@ -808,7 +808,6 @@ SCIP_RETCODE soltreeExchangeKeyPath(
    const STP_Bool*       scanned,            /**< array to mark which nodes have been scanned */
    int                   dfstree_pos,        /**< current position in dfs tree */
    int                   boundedge_new,      /**< new Voronoi boundary edge */
-   int*                  graphmark,          /**< graph mark */
    SOLTREE*              soltreeData         /**< solution tree data */
 )
 {
@@ -824,6 +823,7 @@ SCIP_RETCODE soltreeExchangeKeyPath(
    STP_Bool* const solNodes = soltreeData->solNodes;
    const int nkpnodes = keypathsData->nkpnodes;
    const int crucnode = dfstree[dfstree_pos];
+   int* const graphmark = graph->mark;
    int newpathend = -1;
    int newedge = boundedge_new;
    int node = SCIPStpunionfindFind(uf, vnoibase[graph->head[newedge]]);
@@ -899,7 +899,7 @@ SCIP_RETCODE soltreeExchangeKeyPath(
          int adjnode = graph->head[edge];
 
          /* check whether edge 'edge' leads to an ancestor of terminal 'node' */
-         if( solEdges[edge] == CONNECT && solNodes[adjnode]  && graphmark[adjnode] && SCIPStpunionfindFind(uf, adjnode) != node )
+         if( solEdges[edge] == CONNECT && solNodes[adjnode] && graphmark[adjnode] && SCIPStpunionfindFind(uf, adjnode) != node )
          {
             assert(scanned[adjnode]);
             /* meld the heaps */
@@ -957,7 +957,6 @@ SCIP_RETCODE soltreeElimKeyPathsStar(
    const int*            dfstree,            /**< DFS tree */
    const STP_Bool*       scanned,            /**< array to mark which nodes have been scanned */
    int                   dfstree_pos,        /**< current position in dfs tree */
-   int*                  graphmark,          /**< graph mark */
    SOLTREE*              soltreeData         /**< solution tree data */
 )
 {
@@ -974,6 +973,7 @@ SCIP_RETCODE soltreeElimKeyPathsStar(
    STP_Bool* const pinned = soltreeData->nodeIsPinned;
    const NODE* const linkcutNodes = soltreeData->linkcutNodes;
    int* const solEdges = soltreeData->solEdges;
+   int* const graphmark = graph->mark;
    STP_Bool* const solNodes = soltreeData->solNodes;
    const int nkpnodes = keypathsData->nkpnodes;
    const int nkpedges = keypathsData->nkpedges;
@@ -1161,7 +1161,6 @@ SCIP_Real getKeyPathReplaceCost(
    const VNOI*           vnoiData,           /**< data */
    const PCMW*           pcmwData,           /**< data */
    const SOLTREE*        soltreeData,        /**< solution tree data */
-   const int*            graphmark,          /**< graph mark */
    SCIP_Real             edgecost_initial,   /**< initial edge cost */
    int                   boundedge_old,      /**< Voronoi boundary edge */
    int*                  boundedge_new       /**< new Voronoi boundary edge */
@@ -1189,6 +1188,7 @@ SCIP_Real getKeyPathReplaceCost(
       const STP_Bool* const solNodes = soltreeData->solNodes;
       const PATH* const vnoipath = vnoiData->vnoi_path;
       const int* const vnoibase = vnoiData->vnoi_base;
+      const int* const graphmark = graph->mark;
       STP_Bool* const prizemark = pcmwData->prizemark;
       int* const prizemarklist = pcmwData->prizemarklist;
       int prizemarkcount = 0;
@@ -1241,7 +1241,6 @@ SCIP_RETCODE supergraphComputeMst(
    const SOLTREE*        soltreeData,        /**< solution tree data */
    const VNOI*           vnoiData,           /**< data */
    const PCMW*           pcmwData,           /**< data */
-   const int*            graphmark,          /**< graph mark */
    int                   crucnode,           /**< node to eliminate */
    KPATHS*               keypathsData,       /**< key paths */
    SGRAPH*               supergraphData      /**< super-graph*/
@@ -1260,6 +1259,7 @@ SCIP_RETCODE supergraphComputeMst(
    const int* const boundedges = connectData->boundedges;
    STP_Bool* const prizemark = pcmwData->prizemark;
    int* const prizemarklist = pcmwData->prizemarklist;
+   const int* const graphmark = graph->mark;
    SCIP_Real mstcost = 0.0;
    int prizemarkcount = 0;
    const int nboundedges = connectData->nboundedges;
@@ -1577,16 +1577,16 @@ void vnoiDataRepairPreprocess(
    const KPATHS*         keypathsData,       /**< key paths */
    const CONN*           connectData,        /**< base lists */
    const PCMW*           pcmwData,           /**< data */
-   const int*            graphmark,          /**< graph mark */
    VNOI*                 vnoiData,           /**< data */
    int*                  nheapelems          /**< to store */
 )
 {
-   IDX** blists_start = connectData->blists_start;
-   PATH* vnoipath = vnoiData->vnoi_path;
-   const int* kpnodes = keypathsData->kpnodes;
-   int* vnoibase = vnoiData->vnoi_base;
-   int* state = vnoiData->vnoi_nodestate;
+   IDX** const blists_start = connectData->blists_start;
+   PATH* const vnoipath = vnoiData->vnoi_path;
+   const int* const kpnodes = keypathsData->kpnodes;
+   int* const vnoibase = vnoiData->vnoi_base;
+   int* const state = vnoiData->vnoi_nodestate;
+   const int* const graphmark = graph->mark;
    const int nkpnodes = keypathsData->nkpnodes;
    int count = 0;
 
@@ -2024,7 +2024,6 @@ SCIP_RETCODE localKeyVertexHeuristics(
    int* meminedges = NULL;
    int* supernodes = NULL;
    int* prizemarklist = NULL;
-   int* const graphmark = graph->mark;
    STP_Bool* pinned = NULL;
    STP_Bool* scanned = NULL;
    STP_Bool* supernodesmark = NULL;
@@ -2080,9 +2079,9 @@ SCIP_RETCODE localKeyVertexHeuristics(
    SCIP_CALL( SCIPallocBufferArray(scip, &kpedges, nnodes) );
 
    for( int k = 0; k < nnodes; k++ )
-      graphmark[k] = (graph->grad[k] > 0);
+      graph->mark[k] = (graph->grad[k] > 0);
 
-   graphmark[root] = TRUE;
+   graph->mark[root] = TRUE;
 
    SCIP_CALL( SCIPStpunionfindInit(scip, &uf, nnodes) );
 
@@ -2122,7 +2121,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
       if( mwpc )
       {
          assert(graph->extended);
-         pcmwInit(scip, graph, &soltreeData, graphmark, &pcmwData);
+         pcmwInit(scip, graph, &soltreeData, &pcmwData);
 
          /* compute a Voronoi diagram with the Steiner tree nodes as bases */
          graph_voronoi(scip, graph, graph->cost, graph->cost, soltreeData.solNodes, vnoiData.vnoi_base, vnoiData.vnoi_path);
@@ -2133,9 +2132,9 @@ SCIP_RETCODE localKeyVertexHeuristics(
       }
 
       for( int k = 0; k < nnodes; k++ )
-         assert(graph->path_state[k] == CONNECT || !graphmark[k]);
+         assert(graph->path_state[k] == CONNECT || !graph->mark[k]);
 
-      SCIP_CALL( connectivityDataInit(scip, graph, &vnoiData, &soltreeData, &pcmwData, graphmark, &connectivityData) );
+      SCIP_CALL( connectivityDataInit(scip, graph, &vnoiData, &soltreeData, &pcmwData, &connectivityData) );
 
       /* henceforth, the union-find structure will be used on the Steiner tree */
       assert(uf.nElements == nnodes);
@@ -2153,7 +2152,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
          SCIPdebugMessage("iteration %d (crucial node: %d) \n", dfstree_pos, crucnode);
 
          /*  has the node been temporarily removed from the ST? */
-         if( !graphmark[crucnode] )
+         if( !graph->mark[crucnode] )
             continue;
 
          /* key vertex elimination: */
@@ -2164,7 +2163,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
 #ifndef NDEBUG
             for( int j = 0; j < nnodes; j++ )
-               assert(graph->path_state[j] == CONNECT || !graphmark[j]);
+               assert(graph->path_state[j] == CONNECT || !graph->mark[j]);
 #endif
 
             getKeyPathsStar(crucnode, graph, &connectivityData, &soltreeData, &keypathsData, &supergraphData, &allgood);
@@ -2180,18 +2179,18 @@ SCIP_RETCODE localKeyVertexHeuristics(
             assert(keypathsData.nkpnodes != 0); /* if there are no key-path nodes, something has gone wrong */
 
             /* reset all nodes (referred to as 'C' henceforth) whose bases are internal nodes of the current key-paths */
-            vnoiDataReset(&connectivityData, &keypathsData, graphmark, &vnoiData);
+            vnoiDataReset(&connectivityData, &keypathsData, graph->mark, &vnoiData);
 
-            SCIP_CALL( connectivityDataKeyElimUpdate(scip, graph, &vnoiData, &supergraphData, graphmark, crucnode, &connectivityData) );
+            SCIP_CALL( connectivityDataKeyElimUpdate(scip, graph, &vnoiData, &supergraphData, crucnode, &connectivityData) );
 
             /* try to connect the nodes of C (directly) to COMP(C), as a preprocessing for graph_voronoiRepair */
-            vnoiDataRepairPreprocess(scip, graph, &keypathsData, &connectivityData, &pcmwData, graphmark, &vnoiData, &nheapelems);
+            vnoiDataRepairPreprocess(scip, graph, &keypathsData, &connectivityData, &pcmwData, &vnoiData, &nheapelems);
 
             graph_voronoiRepairMult(scip, graph, graph->cost, &nheapelems, vnoibase, connectivityData.boundedges, &(connectivityData.nboundedges),
                   supernodesmark, &uf, vnoipath);
 
             SCIP_CALL( supergraphComputeMst(scip, graph, &connectivityData, &soltreeData, &vnoiData, &pcmwData,
-                  graphmark, crucnode, &keypathsData, &supergraphData) );
+                  crucnode, &keypathsData, &supergraphData) );
 
             assert(crucnode == dfstree[dfstree_pos]);
 
@@ -2204,7 +2203,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                SCIPdebugMessage("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
 
                SCIP_CALL( soltreeElimKeyPathsStar( scip, graph, &connectivityData, &vnoiData, &keypathsData, &supergraphData,
-                  dfstree, scanned, dfstree_pos, graphmark, &soltreeData) );
+                  dfstree, scanned, dfstree_pos, &soltreeData) );
 
 #ifndef NDEBUG
                assert((keypathsData.kpcost - supergraphData.mstcost) >= 0.0);
@@ -2243,27 +2242,29 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
          /* Key-Path Exchange:
          *  If the crucnode has just been eliminated, skip Key-Path Exchange */
-         if( probtype != STP_MWCSP && graphmark[crucnode] )
+         if( probtype != STP_MWCSP && graph->mark[crucnode] )
          {
             SCIP_Real edgecost = -1.0;
             int e = UNKNOWN;
             int oldedge = UNKNOWN;
             int newedge = UNKNOWN;
 
-            assert(graphmark[crucnode]);
+            assert(graph->mark[crucnode]);
 
             /* is crucnode not a crucial node and not a pinned vertex? */
             if( (!nodeIsCrucial(graph, solEdges, crucnode) && !pinned[crucnode]) )
                continue;
 
             /* gets key path from crucnode towards tree root */
-            getKeyPathUpper(scip, crucnode, graph, &soltreeData, graphmark, &connectivityData, &keypathsData);
+            getKeyPathUpper(scip, crucnode, graph, &soltreeData, &connectivityData, &keypathsData);
 
+#ifndef NDEBUG
             for( int k = 0; k < nnodes; k++ )
-               assert(graph->path_state[k] == CONNECT || !graphmark[k]);
+               assert(graph->path_state[k] == CONNECT || !graph->mark[k]);
+#endif
 
             /* reset all nodes (henceforth referred to as 'C') whose bases are internal nodes of the current keypath */
-            vnoiDataReset(&connectivityData, &keypathsData, graphmark, &vnoiData);
+            vnoiDataReset(&connectivityData, &keypathsData, graph->mark, &vnoiData);
 
             while( boundpaths[crucnode] != NULL )
             {
@@ -2275,11 +2276,11 @@ SCIP_RETCODE localKeyVertexHeuristics(
                assert( e != UNKNOWN );
                base = vnoibase[graph->head[e]];
 
-               assert(graphmark[vnoibase[graph->tail[e]]]);
-               node = (base == UNKNOWN || !graphmark[base] )? UNKNOWN : SCIPStpunionfindFind(&uf, base);
+               assert(graph->mark[vnoibase[graph->tail[e]]]);
+               node = (base == UNKNOWN || !graph->mark[base] )? UNKNOWN : SCIPStpunionfindFind(&uf, base);
 
                /* does the boundary-path end in the root component? */
-               if( node != UNKNOWN && node != crucnode && graphmark[base] )
+               if( node != UNKNOWN && node != crucnode && graph->mark[base] )
                {
                   SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[crucnode], e, edgecost, &(pheapsize[crucnode])) );
                   break;
@@ -2292,7 +2293,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                oldedge = e;
 
             /* try to connect the nodes of C (directly) to COMP(C), as a preprocessing for Voronoi-repair */
-            vnoiDataRepairPreprocess(scip, graph, &keypathsData, &connectivityData, &pcmwData, graphmark, &vnoiData, &nheapelems);
+            vnoiDataRepairPreprocess(scip, graph, &keypathsData, &connectivityData, &pcmwData, &vnoiData, &nheapelems);
 
             newedge = UNKNOWN;
 
@@ -2302,8 +2303,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
             else
                newedge = linkcutNodes[crucnode].edge;
 
-            edgecost = getKeyPathReplaceCost(scip, graph, &vnoiData, &pcmwData, &soltreeData, graphmark,
-                  edgecost, oldedge, &newedge);
+            edgecost = getKeyPathReplaceCost(scip, graph, &vnoiData, &pcmwData, &soltreeData, edgecost, oldedge, &newedge);
 
             if( SCIPisLT(scip, edgecost, keypathsData.kpcost) )
             {
@@ -2318,7 +2318,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
 #endif
 
                SCIP_CALL( soltreeExchangeKeyPath(scip, graph, &connectivityData, &vnoiData, &keypathsData,
-                     dfstree, scanned, dfstree_pos, newedge, graphmark, &soltreeData) );
+                     dfstree, scanned, dfstree_pos, newedge, &soltreeData) );
             }
 
             /* restore the original Voronoi diagram */
@@ -2360,11 +2360,11 @@ SCIP_RETCODE localKeyVertexHeuristics(
          for( int i = 0; i < nnodes; i++ )
          {
             solNodes[i] = FALSE;
-            graphmark[i] = (graph->grad[i] > 0);
+            graph->mark[i] = (graph->grad[i] > 0);
             SCIPlinkcuttreeInit(&linkcutNodes[i]);
          }
 
-         graphmark[root] = TRUE;
+         graph->mark[root] = TRUE;
 
          /* create a link-cut tree representing the current Steiner tree */
          for( int e = 0; e < nedges; e++ )
