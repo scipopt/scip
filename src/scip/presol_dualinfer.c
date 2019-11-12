@@ -27,6 +27,25 @@
  *                                c_j - inf_y(y^T A_{.j}) < 0 => x_j = u_j
  * ii) positive dual lower bound: y_i > 0 =>  A_{i.}x = b_i
  */
+// I think it is clearer to say something like (if it is correct of course):
+// This presolver does bound strengthening on the dual variables, y.
+// The bounds of the dual variables are then used to fix primal variables or change the side of constraints.
+
+// maybe add a dual for easier visualization
+// min c^T x
+// lhs <= A x <= rhs
+// l <= x <= u
+//
+// max lhs^T y_l - rhs^T y_r  + l^T z_l - u^T z_u
+// A^T (y_l - y_r) + I (z_l - z_u) = c
+// y_l, y_r, z_l, z_u >= 0
+//
+// feasible region is
+// A^T (y_l - y_r) + I (z_l - z_u) = c
+// y_l, y_r, z_l, z_u >= 0
+//
+// Thus, if y_l_i and y_r_i exist, then y_i is free
+// If not, the matrix only has lhs-constraints so y_r_i does not exist
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -74,6 +93,7 @@
  */
 
 /** control parameters */
+//missing documentation
 struct SCIP_PresolData
 {
    SCIP_Bool usetwocolcombine;              /**< use convex combination of two columns */
@@ -146,6 +166,7 @@ SCIP_DECL_HASHKEYVAL(colPairHashval)
    return SCIPhashTwo(colpair->col1idx, colpair->col2idx);
 }
 
+// documentation
 static
 SCIP_RETCODE addEntry
 (
@@ -173,6 +194,7 @@ SCIP_RETCODE addEntry
    return SCIP_OKAY;
 }
 
+// documentation
 static
 void findNextBlock
 (
@@ -193,10 +215,11 @@ void findNextBlock
 
 /**
  * Tries to derive upper and lower bounds for all variables from given rows using the algorithm described by Belotti.
- * The method assumes the inequalities to be given in the form a^T x >= b. The computed bounds will be written
+ * The method assumes the inequalities are given in the form a^T x >= b. The computed bounds will be written
  * into the arrays lbs/ubs respectively.
  * We apply the following algorithm to pairs of columns.
  */
+//which algorithm?
 static
 SCIP_RETCODE combineCols
 (
@@ -1279,7 +1302,7 @@ void calcMinColActivity(
    assert(mincolactinf != NULL);
 
    /* init activities */
-   mincolact[col] = 0;
+   mincolact[col] = 0.0;
    mincolactinf[col] = 0;
 
    colpnt = SCIPmatrixGetColIdxPtr(matrix, col);
@@ -1292,8 +1315,8 @@ void calcMinColActivity(
       row = *colpnt;
       val = *valpnt;
 
-      /* consider >= inequalities */
-      if( val > 0 )
+      /* consider >= inequalities */ //what is the purpose of this comment?
+      if( val > 0.0 )
       {
          if(SCIPisInfinity(scip, -lbdual[row]))
             mincolactinf[col]++;
@@ -1340,7 +1363,7 @@ void calcMaxColActivity(
    assert(maxcolactinf != NULL);
 
    /* init activities */
-   maxcolact[col] = 0;
+   maxcolact[col] = 0.0;
    maxcolactinf[col] = 0;
 
    colpnt = SCIPmatrixGetColIdxPtr(matrix, col);
@@ -1353,8 +1376,8 @@ void calcMaxColActivity(
       row = *colpnt;
       val = *valpnt;
 
-      /* consider >= inequalities */
-      if( val > 0 )
+      /* consider >= inequalities */ // what is the purpose of this comment?
+      if( val > 0.0 )
       {
          if(SCIPisInfinity(scip, ubdual[row]))
             maxcolactinf[col]++;
@@ -1380,7 +1403,7 @@ void calcMaxColActivity(
 
 /** update minimal/maximal column activity infinity counters */
 static
-void infCntUpdate(
+void infCntUpdate(  // rename this to infinityCountUpdate
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   row,                /**< row index */
@@ -1836,7 +1859,7 @@ SCIP_RETCODE dualBoundStrengthening(
          SCIP_Bool ubimplied;
          SCIP_Bool lbimplied;
 
-         getImpliedBounds(scip, matrix, i, tmplbs, tmpubs, &ubimplied, &lbimplied);
+         getImpliedBounds(scip, matrix, i, tmplbs, tmpubs, &ubimplied, &lbimplied); //why not pass directly &(isubimplied[i]) ? alternatively one could make this whole loop inside the function
          isubimplied[i] = ubimplied;
          islbimplied[i] = lbimplied;
 
@@ -1853,6 +1876,8 @@ SCIP_RETCODE dualBoundStrengthening(
 
          if( islbimplied[i] )
             tmplbs[i] = -SCIPinfinity(scip);
+
+         //What about lower bounds? add a comment somewhere explaining; or fix if wrong
       }
       else
       {
@@ -1882,6 +1907,8 @@ SCIP_RETCODE dualBoundStrengthening(
    }
 
    /* run convex combination on column pairs */
+   // what does this even mean? why not wrap all this code into another function that could have its own documentation?
+   // it seems to be that is not completely necessary for this function
    if( nimplubvars >= 2 && presoldata->usetwocolcombine )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hashlistpp, ncols) );
@@ -1903,7 +1930,8 @@ SCIP_RETCODE dualBoundStrengthening(
       listsizepm = ncols;
       listsizemp = ncols;
       maxhashes = ncols * presoldata->maxhashfac;
-      // prevent overflow issues
+
+      /* prevent overflow issues */
       if( nrows != 0 && maxhashes / nrows != presoldata->maxhashfac )
       {
          maxhashes = INT_MAX;
@@ -1922,20 +1950,32 @@ SCIP_RETCODE dualBoundStrengthening(
          {
             for( k = j+1; k < maxlen; k++)
             {
+               /* right-shift is required because we want to sort the hashes later on */
                if( SCIPisPositive(scip, colvalptr[j]) )
                {
                   if(SCIPisPositive(scip, colvalptr[k]) )
-                     // right-shift is required because we want to sort the hashes later on
-                     SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &colidxlistpp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                  {
+                     SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &colidxlistpp,
+                              (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                  }
                   else
-                     SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &colidxlistpm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                  {
+                     SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &colidxlistpm,
+                              (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                  }
                }
                else
                {
                   if(SCIPisPositive(scip, colvalptr[k]) )
-                     SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &colidxlistmp, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                  {
+                     SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &colidxlistmp,
+                              (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                  }
                   else
-                     SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &colidxlistmm, (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                  {
+                     SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &colidxlistmm,
+                              (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                  }
                }
             }
          }
@@ -1948,7 +1988,8 @@ SCIP_RETCODE dualBoundStrengthening(
       SCIPsortIntInt(hashlistpm, colidxlistpm, pospm);
       SCIPsortIntInt(hashlistmp, colidxlistmp, posmp);
 
-      SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, colPairsEqual, colPairHashval, (void*) scip) );
+      SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, colPairsEqual,
+               colPairHashval, (void*) scip) );
 
       /* Process pp and mm lists */
       if( pospp > 0 && posmm > 0 )
@@ -1967,11 +2008,13 @@ SCIP_RETCODE dualBoundStrengthening(
          block2start = 0;
          block2end = 0;
          maxcombines = ncols * presoldata->maxpairfac;
-         // prevent overflow issues
+
+         /* prevent overflow issues */
          if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
          {
             maxcombines = INT_MAX;
          }
+
          ncombines = 0;
          combinefails = 0;
          retrievefails = 0;
@@ -1995,18 +2038,19 @@ SCIP_RETCODE dualBoundStrengthening(
 
                         if( SCIPhashtableRetrieve(pairtable, (void*) &colpair) == NULL )
                         {
-                           int* colpnt1 = SCIPmatrixGetColIdxPtr(matrix, colpair.col1idx);
+                           int* colpnt1       = SCIPmatrixGetColIdxPtr(matrix, colpair.col1idx);
                            SCIP_Real* valpnt1 = SCIPmatrixGetColValPtr(matrix, colpair.col1idx);
-                           int* colpnt2 = SCIPmatrixGetColIdxPtr(matrix, colpair.col2idx);
+                           int* colpnt2       = SCIPmatrixGetColIdxPtr(matrix, colpair.col2idx);
                            SCIP_Real* valpnt2 = SCIPmatrixGetColValPtr(matrix, colpair.col2idx);
-                           SCIP_Real obj1 = SCIPvarGetObj(SCIPmatrixGetVar(matrix, colpair.col1idx));
-                           SCIP_Real obj2 = SCIPvarGetObj(SCIPmatrixGetVar(matrix, colpair.col2idx));
-                           int collen1 = SCIPmatrixGetColNNonzs(matrix, colpair.col1idx);
-                           int collen2 = SCIPmatrixGetColNNonzs(matrix, colpair.col2idx);
+                           SCIP_Real obj1     = SCIPvarGetObj(SCIPmatrixGetVar(matrix, colpair.col1idx));
+                           SCIP_Real obj2     = SCIPvarGetObj(SCIPmatrixGetVar(matrix, colpair.col2idx));
+                           int collen1        = SCIPmatrixGetColNNonzs(matrix, colpair.col1idx);
+                           int collen2        = SCIPmatrixGetColNNonzs(matrix, colpair.col2idx);
 
                            success = FALSE;
 
-                           SCIP_CALL( combineCols(scip, colpnt1, colpnt2, valpnt1, valpnt2, obj1, obj2, collen1, collen2, nrows, TRUE, TRUE, lbdual, ubdual, &success) );
+                           SCIP_CALL( combineCols(scip, colpnt1, colpnt2, valpnt1, valpnt2, obj1, obj2, collen1,
+                                    collen2, nrows, TRUE, TRUE, lbdual, ubdual, &success) );
 
                            if( success )
                               combinefails = 0;
@@ -2097,18 +2141,19 @@ SCIP_RETCODE dualBoundStrengthening(
 
                         if( SCIPhashtableRetrieve(pairtable, (void*) &colpair) == NULL )
                         {
-                           int* colpnt1 = SCIPmatrixGetColIdxPtr(matrix, colpair.col1idx);
+                           int* colpnt1       = SCIPmatrixGetColIdxPtr(matrix, colpair.col1idx);
                            SCIP_Real* valpnt1 = SCIPmatrixGetColValPtr(matrix, colpair.col1idx);
-                           int* colpnt2 = SCIPmatrixGetColIdxPtr(matrix, colpair.col2idx);
+                           int* colpnt2       = SCIPmatrixGetColIdxPtr(matrix, colpair.col2idx);
                            SCIP_Real* valpnt2 = SCIPmatrixGetColValPtr(matrix, colpair.col2idx);
-                           SCIP_Real obj1 = SCIPvarGetObj(SCIPmatrixGetVar(matrix, colpair.col1idx));
-                           SCIP_Real obj2 = SCIPvarGetObj(SCIPmatrixGetVar(matrix, colpair.col2idx));
-                           int collen1 = SCIPmatrixGetColNNonzs(matrix, colpair.col1idx);
-                           int collen2 = SCIPmatrixGetColNNonzs(matrix, colpair.col2idx);
+                           SCIP_Real obj1     = SCIPvarGetObj(SCIPmatrixGetVar(matrix, colpair.col1idx));
+                           SCIP_Real obj2     = SCIPvarGetObj(SCIPmatrixGetVar(matrix, colpair.col2idx));
+                           int collen1        = SCIPmatrixGetColNNonzs(matrix, colpair.col1idx);
+                           int collen2        = SCIPmatrixGetColNNonzs(matrix, colpair.col2idx);
 
                            success = FALSE;
 
-                           SCIP_CALL( combineCols(scip, colpnt1, colpnt2, valpnt1, valpnt2, obj1, obj2, collen1, collen2, nrows, TRUE, TRUE, lbdual, ubdual, &success) );
+                           SCIP_CALL( combineCols(scip, colpnt1, colpnt2, valpnt1, valpnt2, obj1, obj2, collen1,
+                                    collen2, nrows, TRUE, TRUE, lbdual, ubdual, &success) );
 
                            if( success )
                               combinefails = 0;
@@ -2372,7 +2417,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) )
       return SCIP_OKAY;
 
-   if( SCIPgetNContVars(scip)==0 )
+   if( SCIPgetNContVars(scip) == 0 )
       return SCIP_OKAY;
 
    /* The reductions made in this presolver apply to all optimal solutions because of complementary slackness.
@@ -2431,7 +2476,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
          }
       }
 
-      if( locksconsistent )
+      if( locksconsistent ) // maybe add a goto cleanup to remove one level of indentation?
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &varstofix, ncols) );
          SCIP_CALL( SCIPallocBufferArray(scip, &sidestochange, nrows) );
@@ -2460,7 +2505,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
                   {
                      /* no fixing, locks for this variable not consistent */
                      continue;
-                  }
+                  } // can this checked be somehow merged with the one above?
 
                   lb = SCIPvarGetLbLocal(var);
 
@@ -2518,7 +2563,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
                      nintvarsfixed++;
                }
             }
-         }
+         } // this code can be factor; the check of lock can be done outside the if; then the if can only get the to which the fixing is going to be done; then the fix can be done outside the if
 
          if( npossiblesidechanges > 0 )
          {
@@ -2531,14 +2576,14 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
                if( sidestochange[i] == NOCHANGE )
                   continue;
 
-               if(presoldata->maxrowsupport < SCIPmatrixGetRowNNonzs(matrix, i))
+               if( presoldata->maxrowsupport < SCIPmatrixGetRowNNonzs(matrix, i) )
                   continue;
 
                cons = SCIPmatrixGetCons(matrix,i);
                conshdlr = SCIPconsGetHdlr(cons);
                conshdlrname = SCIPconshdlrGetName(conshdlr);
 
-               if( strcmp(conshdlrname, "linear") == 0 )
+               if( strcmp(conshdlrname, "linear") == 0 ) //if there a lot of constraints, can't this strcmp become a bit expresive? maybe it is best to get the linearconshdlr once and just compare the pointers?
                {
                   SCIP_Real lhs;
                   SCIP_Real rhs;
@@ -2550,26 +2595,34 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
                   matrixlhs = SCIPmatrixGetRowLhs(matrix, i);
                   matrixrhs = SCIPmatrixGetRowRhs(matrix, i);
 
+                  assert(!SCIPisEQ(scip, matrixlhs, matrixrhs));
+
                   if( sidestochange[i] == RHSTOLHS )
                   {
-                     assert(!SCIPisEQ(scip, matrixlhs, matrixrhs));
-
+                     // i am guessing this code here is because when building the matrix some constraints get multiplied by -1?
+                     // a comment saying that would be helpful
                      if( SCIPisEQ(scip, matrixlhs, lhs) )
+                     {
                         SCIP_CALL( SCIPchgRhsLinear(scip, cons, matrixlhs) );
+                     }
                      else
+                     {
                         SCIP_CALL( SCIPchgLhsLinear(scip, cons, -matrixlhs) );
+                     }
 
                      nsideschanged++;
                      (*nchgsides)++;
                   }
                   else
                   {
-                     assert(!SCIPisEQ(scip, matrixlhs, matrixrhs));
-
                      if( SCIPisEQ(scip, matrixrhs, rhs) )
+                     {
                         SCIP_CALL( SCIPchgLhsLinear(scip, cons, matrixrhs) );
+                     }
                      else
+                     {
                         SCIP_CALL( SCIPchgRhsLinear(scip, cons, -matrixrhs) );
+                     }
 
                      nsideschanged++;
                      (*nchgsides)++;
@@ -2624,7 +2677,7 @@ SCIP_RETCODE SCIPincludePresolDualinfer(
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/dualinfer/maxdualbndloops",
          "maximal number of dual bound strengthening loops",
-         &presoldata->maxdualbndloops, FALSE, DEFAULT_MAXLOOPS_DUALBNDSTR, -1, 100, NULL, NULL) );
+         &presoldata->maxdualbndloops, FALSE, DEFAULT_MAXLOOPS_DUALBNDSTR, -1, 100, NULL, NULL) ); //why isn't INT_MAX the max?
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/dualinfer/maxconsiderednonzeros",
@@ -2633,7 +2686,7 @@ SCIP_RETCODE SCIPincludePresolDualinfer(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/dualinfer/maxretrievefails",
-         "maximal number of consecutive useless hashtable retrieves",
+         "maximal number of consecutive useless hashtable retrieves", // a hastable retrieve is something very generic; either a better description is needed or make it an advanced parameter?
          &presoldata->maxretrievefails, FALSE, DEFAULT_MAXRETRIEVEFAILS, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
@@ -2653,7 +2706,7 @@ SCIP_RETCODE SCIPincludePresolDualinfer(
 
     SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/dualinfer/maxrowsupport",
-         "Maximum number of row non-zeros for changing inequality to equality",
+         "Maximum number of row's non-zeros for changing inequality to equality",
          &presoldata->maxrowsupport, FALSE, DEFAULT_MAXROWSUPPORT, 2, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
