@@ -565,14 +565,14 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
          do
          {
             int nblockvars = countLabelFromPos(varslabels, curr, nconsvars);
-            if (nblockvars > maxnblockvars)
+            if( nblockvars > maxnblockvars )
             {
                maxnblockvars = nblockvars;
                block = curr;
             }
             curr += nblockvars;
          }
-         while (curr < nconsvars);
+         while( curr < nconsvars );
 
          /* reassign all variables from other blocks as linking variables */
          startposs[0] = nlinkvars;
@@ -584,7 +584,7 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
          for( p = 0; p < 2; ++p )
          {
             /* relabel */
-            for( v = startposs[p]; v < endposs[p]; ++v)
+            for( v = startposs[p]; v < endposs[p]; ++v )
                varslabels[v] = SCIP_DECOMP_LINKVAR;
 
             /* set labels in the decomposition */
@@ -635,7 +635,7 @@ SCIP_RETCODE computeModularity(
    int c;
    int b;
 
-   /* allocate buffer arrays to hold constraint and variable labels,  and store within-edges and total community degrees */
+   /* allocate buffer arrays to hold constraint and variable labels, and store within-edges and total community degrees */
    nvars = SCIPgetNVars(scip);
    conss = SCIPgetConss(scip);
    nconss = SCIPgetNConss(scip);
@@ -675,7 +675,7 @@ SCIP_RETCODE computeModularity(
 
       SCIPsortInt(varslabels, nconsvars);
 
-      /* count occurences of labels (blocks) in the sorted labels array */
+      /* count occurrences of labels (blocks) in the sorted labels array */
       varblockstart = 0;
       while( varblockstart < nconsvars )
       {
@@ -880,7 +880,9 @@ SCIP_RETCODE buildBlockGraph(
          for( succ2 = 0; succ2 < nsucc; ++succ2 )
          {
             if( succnodes[succ1] != succnodes[succ2] ) /* no self-loops */
+            {
                SCIP_CALL( SCIPdigraphAddArcSafe(blockgraph, succnodes[succ1], succnodes[succ2], NULL) );
+            }
          }
       }
    }
