@@ -2763,24 +2763,34 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIP_CONS* cons;
          SCIP_VAR* vars[2];
          SCIP_Real vals[2] = {1,-1};
-         int firstcomp;
+         int chosencomp;
+         int chosencompsize = 0;
          int k;
 
          SCIPdebugMsg(scip, "color %d has %d components with overall %d variables\n", j+1, compcolorbegins[j+1] - compcolorbegins[j],
             graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]]);
 
-         /* choose first component for each color for now (@TODO: use different rules) */
-         firstcomp = compcolorbegins[j];
-         assert(firstcomp >= 0);
-         assert(firstcomp < ngraphcomponents);
+         /* choose largest component for that color */
+         for( k = compcolorbegins[j]; k < compcolorbegins[j+1]; ++k )
+         {
+            int compsize = graphcompbegins[k+1] - graphcompbegins[k];
 
-         SCIPdebugMsg(scip, "choosing first component with %d varirables\n", graphcompbegins[firstcomp+1] - graphcompbegins[firstcomp]);
-         SCIPdebugMsg(scip, "the variables are...\n");
+            if( compsize > chosencompsize )
+            {
+               chosencomp = k;
+               chosencompsize = compsize;
+            }
+         }
+
+         assert(chosencomp >= 0);
+         assert(chosencomp < ngraphcomponents);
+
+         SCIPdebugMsg(scip, "choosing component %d with %d variables\n", chosencomp+1,
+            graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp]);
 
          /* add strong SBCs (lex-max order) for chosen graph component */
+         for( k = graphcompbegins[chosencomp]+1; k < graphcompbegins[chosencomp+1]; ++k )
          {
-            SCIPdebugMsg(scip, "    %s\n", SCIPvarGetName(propdata->permvars[graphcomponents[k]]));
-
             vars[1] = propdata->permvars[graphcomponents[k-1]];
             vars[0] = propdata->permvars[graphcomponents[k]];
 
