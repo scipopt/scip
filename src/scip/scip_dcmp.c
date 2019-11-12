@@ -271,7 +271,7 @@ SCIP_RETCODE SCIPhasConsOnlyLinkVars(
 }
 
 
-/** computes constraint labels from variable labels.
+/** computes constraint labels from variable labels
  *
  *  Existing labels for the constraints are simply overridden
  *
@@ -380,7 +380,7 @@ SCIP_RETCODE SCIPcomputeDecompConsLabels(
    return SCIP_OKAY;
 }
 
-/** creates a decomposition of the variables from a labeling of the constraints.
+/** creates a decomposition of the variables from a labeling of the constraints
  *
  *  NOTE: by default, the variable labeling is based on a Dantzig-Wolfe decomposition. This means that constraints in named
  *  blocks have have precedence over linking constraints. If a variable exists in constraints from

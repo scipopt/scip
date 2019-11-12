@@ -76,7 +76,7 @@ SCIP_RETCODE SCIPhasConsOnlyLinkVars(
    SCIP_Bool*            hasonlylinkvars     /**< will be set to TRUE if this constraint has only linking variables */
    );
 
-/** computes constraint labels from variable labels.
+/** computes constraint labels from variable labels
  *
  *  Existing labels for the constraints are simply overridden
  *
@@ -99,7 +99,7 @@ SCIP_RETCODE SCIPcomputeDecompConsLabels(
    int                   nconss              /**< number of constraints */
    );
 
-/** creates a decomposition of the variables from a labeling of the constraints.
+/** creates a decomposition of the variables from a labeling of the constraints
  *
  *  NOTE: by default, the variable labeling is based on a Dantzig-Wolfe decomposition. This means that constraints in named
  *  blocks have have precedence over linking constraints. If a variable exists in constraints from
