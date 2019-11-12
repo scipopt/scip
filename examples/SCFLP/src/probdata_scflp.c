@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,7 +19,7 @@
  *
  * This file handles the main problem data used in that project. For more details see \ref SCFLP_PROBLEMDATA page.
  *
- * @page SCFLP_SOLVEPROB "Solving the deterministic equivalent using SCIP - with and without Benders' decomposition"
+ * @page SCFLP_SOLVEPROB Solving the deterministic equivalent
  *
  * The probdata_scflp.c is used to store the global problem data and build the monolithic MIP and decomposed problems.
  * First, the structure of the problem data is describe. This is followed by a description of how to solve the problem
@@ -121,10 +121,10 @@
 
 #include "probdata_scflp.h"
 
-#include "scip/cons_linear.h"
-#include "scip/benders_default.h"
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
+
+#define DEFAULT_SCALINGFACTOR    5000.0
 
 /** @brief Problem data which is accessible in all places
  *
@@ -145,8 +145,11 @@ struct SCIP_ProbData
    SCIP_Real*            fixedcost;          /**< the fixed cost of opening each facility */
    int                   ncustomers;         /**< the number of customers */
    int                   nfacilities;        /**< the number of facilities */
+
+   /* probdata parameters */
    int                   nscenarios;         /**< the number of scenarios */
    SCIP_Bool             usebenders;         /**< whether Benders' decomposition is used */
+   SCIP_Bool             quadcosts;          /**< should the problem be formulated with quadratic costs */
 };
 
 
@@ -171,17 +174,24 @@ SCIP_RETCODE createOriginalproblem(
    SCIP_Real*            fixedcost,          /**< the fixed cost of opening a facility */
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
-   int                   nscenarios          /**< the number of scenarios */
+   int                   nscenarios,         /**< the number of scenarios */
+   SCIP_Bool             quadcosts           /**< should the problem be formulated with quadratic costs */
    )
 {
    SCIP_CONS* cons;
    SCIP_VAR* var;
+   SCIP_VAR* sqrvar;
    SCIP_Real maxdemand;
    SCIP_Real coeff;
+   SCIP_Real custcoeff;
+   SCIP_Real one = 1.0;
+   SCIP_Real minusone = -1.0;
    int i;
    int j;
    int k;
    char name[SCIP_MAXSTRLEN];
+
+
    assert(scip != NULL);
 
    /* adding the sufficient capacity constraints */
@@ -254,9 +264,19 @@ SCIP_RETCODE createOriginalproblem(
       {
          for( k = 0; k < nscenarios; k++ )
          {
-            coeff = costs[i][j]/(SCIP_Real)nscenarios;
+            custcoeff = costs[i][j]/(SCIP_Real)nscenarios;
+
+            /* if the quadratic costs are used, then the customer coefficient is zero and the quadratic costs are scaled
+             * by 10,000. */
+            if( quadcosts )
+            {
+               coeff = custcoeff / DEFAULT_SCALINGFACTOR;
+               custcoeff = 0.0;
+            }
+
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customer(%d,%d,%d)", i, j, k);
-            SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), coeff, SCIP_VARTYPE_CONTINUOUS) );
+            SCIP_CALL( SCIPcreateVarBasic(scip, &var, name, 0.0, SCIPinfinity(scip), custcoeff,
+                  SCIP_VARTYPE_CONTINUOUS) );
 
             SCIP_CALL( SCIPaddVar(scip, var) );
 
@@ -270,6 +290,27 @@ SCIP_RETCODE createOriginalproblem(
 
                /* adding the variable to the demand constraints */
                SCIP_CALL( SCIPaddCoefLinear(scip, demandconss[i][k], customervars[i][j][k], 1.0) );
+
+               /* if the quadratic costs are used, then variables representing the square of the customer supply
+                * must be added
+                */
+               if( quadcosts )
+               {
+                  (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqr(%d,%d,%d)", i, j, k);
+                  SCIP_CALL( SCIPcreateVarBasic(scip, &sqrvar, name, 0.0, SCIPinfinity(scip), coeff, SCIP_VARTYPE_CONTINUOUS) );
+
+                  SCIP_CALL( SCIPaddVar(scip, sqrvar) );
+
+                  /* add constraint var^2 <= sqrvar */
+                  (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqrcons(%d,%d,%d)", i, j, k);
+                  SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, name, 1, &sqrvar, &minusone, 1, &var, &var,
+                        &one, -SCIPinfinity(scip), 0.0) );
+
+                  SCIP_CALL( SCIPaddCons(scip, cons) );
+
+                  SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+                  SCIP_CALL( SCIPreleaseVar(scip, &sqrvar) );
+               }
             }
          }
       }
@@ -299,6 +340,9 @@ SCIP_RETCODE createMasterproblem(
    char name[SCIP_MAXSTRLEN];
    assert(scip != NULL);
 
+   SCIPmessagePrintVerbInfo(SCIPgetMessagehdlr(scip), SCIPgetVerbLevel(scip), SCIP_VERBLEVEL_NORMAL,
+      "Creating the master problem\n============\n");
+
    /* adding the sufficient capacity constraints */
    maxdemand = 0;
    for( i = 0; i < nscenarios; i++)
@@ -316,7 +360,6 @@ SCIP_RETCODE createMasterproblem(
 
    SCIP_CALL( SCIPaddCons(scip, (*sufficientcap)) );
 
-
    /* adding the facility variables */
    for( i = 0; i < nfacilities; i++ )
    {
@@ -331,6 +374,9 @@ SCIP_RETCODE createMasterproblem(
       /* adding the variable to the sufficient capacity constraints */
       SCIP_CALL( SCIPaddCoefLinear(scip, (*sufficientcap), var, capacity[i]) );
    }
+
+   SCIPmessagePrintVerbInfo(SCIPgetMessagehdlr(scip), SCIPgetVerbLevel(scip), SCIP_VERBLEVEL_NORMAL,
+      "master problem has %d binary variables and 1 constraint\n\n", nfacilities);
 
    return SCIP_OKAY;
 }
@@ -351,17 +397,27 @@ SCIP_RETCODE createSubproblems(
    SCIP_Real*            fixedcost,          /**< the fixed cost of opening a facility */
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
-   int                   nscenarios          /**< the number of scenarios */
+   int                   nscenarios,         /**< the number of scenarios */
+   SCIP_Bool             quadcosts           /**< should the problem be formulated with quadratic costs */
    )
 {
    SCIP_CONS* cons;
    SCIP_VAR* var;
+   SCIP_VAR* sqrvar;
    SCIP_Real coeff;
+   SCIP_Real custcoeff;
+   SCIP_Real one = 1.0;
+   SCIP_Real minusone = -1.0;
    int i;
    int j;
    int k;
    char name[SCIP_MAXSTRLEN];
+
+
    assert(scip != NULL);
+
+   SCIPmessagePrintVerbInfo(SCIPgetMessagehdlr(scip), SCIPgetVerbLevel(scip), SCIP_VERBLEVEL_NORMAL,
+      "Creating the subproblems\n============\n");
 
    /* adds the capacity constraints to the scenario */
    for( i = 0; i < nfacilities; i++ )
@@ -415,9 +471,19 @@ SCIP_RETCODE createSubproblems(
       {
          for( k = 0; k < nscenarios; k++ )
          {
-            coeff = costs[i][j]/(SCIP_Real)nscenarios;
+            custcoeff = costs[i][j]/(SCIP_Real)nscenarios;
+
+            /* if the quadratic costs are used, then the customer coefficient is zero and the quadratic costs are scaled
+             * by 10,000. */
+            if( quadcosts )
+            {
+               coeff = custcoeff / 10000.0;
+               custcoeff = 0.0;
+            }
+
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customer(%d,%d,%d)", i, j, k);
-            SCIP_CALL( SCIPcreateVarBasic(subproblems[k], &var, name, 0.0, SCIPinfinity(subproblems[k]), coeff, SCIP_VARTYPE_CONTINUOUS) );
+            SCIP_CALL( SCIPcreateVarBasic(subproblems[k], &var, name, 0.0, SCIPinfinity(subproblems[k]), custcoeff,
+                  SCIP_VARTYPE_CONTINUOUS) );
 
             SCIP_CALL( SCIPaddVar(subproblems[k], var) );
 
@@ -431,10 +497,36 @@ SCIP_RETCODE createSubproblems(
 
                /* adding the variable to the demand constraints */
                SCIP_CALL( SCIPaddCoefLinear(subproblems[k], demandconss[i][k], customervars[i][j][k], 1.0) );
+
+
+               /* if the quadratic costs are used, then variables representing the square of the customer supply
+                * must be added
+                */
+               if( quadcosts )
+               {
+                  coeff = costs[i][j]/(SCIP_Real)nscenarios / DEFAULT_SCALINGFACTOR;
+                  (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqr(%d,%d,%d)", i, j, k);
+                  SCIP_CALL( SCIPcreateVarBasic(subproblems[k], &sqrvar, name, 0.0, SCIPinfinity(subproblems[k]), coeff, SCIP_VARTYPE_CONTINUOUS) );
+
+                  SCIP_CALL( SCIPaddVar(subproblems[k], sqrvar) );
+
+                  /* add constraint var^2 <= sqrvar */
+                  (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqrcons(%d,%d,%d)", i, j, k);
+                  SCIP_CALL( SCIPcreateConsBasicQuadratic(subproblems[k], &cons, name, 1, &sqrvar, &minusone, 1, &var, &var, &one, -SCIPinfinity(subproblems[k]), 0.0) );
+
+                  SCIP_CALL( SCIPaddCons(subproblems[k], cons) );
+
+                  SCIP_CALL( SCIPreleaseCons(subproblems[k], &cons) );
+                  SCIP_CALL( SCIPreleaseVar(subproblems[k], &sqrvar) );
+               }
             }
          }
       }
    }
+
+   SCIPmessagePrintVerbInfo(SCIPgetMessagehdlr(scip), SCIPgetVerbLevel(scip), SCIP_VERBLEVEL_NORMAL,
+      "%d subproblems have been created.\neach subproblem has %d continuous variables and %d constraint\n\n",
+      nscenarios, ncustomers*nfacilities + nfacilities, nfacilities + ncustomers);
 
    return SCIP_OKAY;
 }
@@ -459,7 +551,8 @@ SCIP_RETCODE probdataCreate(
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
    int                   nscenarios,         /**< the number of scenarios */
-   SCIP_Bool             usebenders          /**< whether Benders' decomposition is used */
+   SCIP_Bool             usebenders,         /**< whether Benders' decomposition is used */
+   SCIP_Bool             quadcosts           /**< should the problem be formulated with quadratic costs */
    )
 {
    int i;
@@ -518,6 +611,7 @@ SCIP_RETCODE probdataCreate(
    (*probdata)->nfacilities = nfacilities;
    (*probdata)->nscenarios = nscenarios;
    (*probdata)->usebenders = usebenders;
+   (*probdata)->quadcosts = quadcosts;
 
    return SCIP_OKAY;
 }
@@ -592,7 +686,6 @@ SCIP_RETCODE probdataFree(
       SCIPfreeBlockMemoryArray(scip, &(*probdata)->costs[i], (*probdata)->nfacilities);
    SCIPfreeBlockMemoryArray(scip, &(*probdata)->costs, (*probdata)->ncustomers);
 
-
    for( i = (*probdata)->ncustomers - 1; i >= 0; i-- )
       SCIPfreeBlockMemoryArray(scip, &(*probdata)->demands[i], (*probdata)->nscenarios);
    SCIPfreeBlockMemoryArray(scip, &(*probdata)->demands, (*probdata)->ncustomers);
@@ -632,7 +725,6 @@ SCIP_RETCODE probdataFree(
          SCIPfreeBlockMemoryArray(scip, &(*probdata)->subfacilityvars[i], (*probdata)->nscenarios);
 
       SCIPfreeBlockMemoryArray(scip, &(*probdata)->subfacilityvars, (*probdata)->nfacilities);
-
 
       for( i = (*probdata)->nscenarios - 1; i >= 0 ; i-- )
          SCIP_CALL( SCIPfree(&(*probdata)->subproblems[i]) );
@@ -703,8 +795,9 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_Real*            fixedcost,          /**< the fixed cost of opening a facility */
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
-   int                   nscenarios,       /**< the number of Benders' decomposition scenarios */
-   SCIP_Bool             usebenders          /**< will Benders' decomposition be used to solve the problem */
+   int                   nscenarios,         /**< the number of Benders' decomposition scenarios */
+   SCIP_Bool             usebenders,         /**< whether Benders' decomposition is used */
+   SCIP_Bool             quadcosts           /**< should the problem be formulated with quadratic costs */
    )
 {
    SCIP** subproblems;
@@ -751,6 +844,13 @@ SCIP_RETCODE SCIPprobdataCreate(
    subproblems = NULL;
    subfacilityvars = NULL;
 
+   /* if quadratic costs are used, then the costs are scaled by 10,000. The user must be informed about this scaling */
+   if( quadcosts )
+   {
+      SCIPinfoMessage(scip, NULL, "The problem will be formulated with quadratic costs. "
+         "The input costs will be scaled by %g\n\n", DEFAULT_SCALINGFACTOR);
+   }
+
    if( usebenders )
    {
       char subprobname[SCIP_MAXSTRLEN];
@@ -777,7 +877,7 @@ SCIP_RETCODE SCIPprobdataCreate(
       SCIP_CALL( createMasterproblem(scip, facilityvars, &sufficientcap, capacity, fixedcost, demands, ncustomers,
             nfacilities, nscenarios) );
       SCIP_CALL( createSubproblems(scip, subproblems, facilityvars, subfacilityvars, customervars, capconss,
-            demandconss, costs, demands, capacity, fixedcost, ncustomers, nfacilities, nscenarios) );
+            demandconss, costs, demands, capacity, fixedcost, ncustomers, nfacilities, nscenarios, quadcosts) );
 
       /* including the Benders' decomposition plugin */
       SCIP_CALL( SCIPcreateBendersDefault(scip, subproblems, nscenarios) );
@@ -793,12 +893,13 @@ SCIP_RETCODE SCIPprobdataCreate(
    {
       /* creating the original problem */
       SCIP_CALL( createOriginalproblem(scip, facilityvars, customervars, capconss, demandconss, &sufficientcap, costs,
-            demands, capacity, fixedcost, ncustomers, nfacilities, nscenarios) );
+            demands, capacity, fixedcost, ncustomers, nfacilities, nscenarios, quadcosts) );
    }
 
    /* create problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, subproblems, facilityvars, subfacilityvars, customervars, capconss,
-         demandconss, sufficientcap, costs, demands, capacity, fixedcost, ncustomers, nfacilities, nscenarios, usebenders) );
+         demandconss, sufficientcap, costs, demands, capacity, fixedcost, ncustomers, nfacilities, nscenarios,
+         usebenders, quadcosts) );
 
    /* set user problem data */
    SCIP_CALL( SCIPsetProbData(scip, probdata) );

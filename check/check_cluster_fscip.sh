@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -29,6 +29,8 @@
 #  - results/check.$TSTNAME.$BINNAME.$SETNAME.out
 #  - results/check.$TSTNAME.$BINNAME.$SETNAME.res
 #  - results/check.$TSTNAME.$BINNAME.$SETNAME.err
+#
+# To get verbose output from Slurm, have SRUN_FLAGS="-v -v" set in your environment.
 
 TSTNAME=$1
 BINNAME=$2
@@ -52,11 +54,12 @@ EXCLUSIVE=${19}
 PERMUTE=${20}
 SEEDS=${21}
 GLBSEEDSHIFT=${22}
-DEBUGTOOL=${23}
-REOPT=${24}
-OPTCOMMAND=${25}
-SETCUTOFF=${26}
-VISUALIZE=${27}
+STARTPERM=${23}
+DEBUGTOOL=${24}
+REOPT=${25}
+OPTCOMMAND=${26}
+SETCUTOFF=${27}
+VISUALIZE=${28}
 
 SOLVER=fscip
 
@@ -86,6 +89,7 @@ then
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
     echo "GLBSEEDSHIFT  = $GLBSEEDSHIFT"
+    echo "STARTPERM     = $STARTPERM"
     echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
@@ -157,7 +161,7 @@ do
 	    do
 		# infer the names of all involved files from the arguments
 		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s \
-		  $THREADS $GLBSEEDSHIFT
+		  $THREADS $GLBSEEDSHIFT $STARTPERM
 
 		# skip instance if log file is present and we want to continue a previously launched test run
 		if test "$SKIPINSTANCE" = "true"
@@ -189,7 +193,7 @@ do
                     export THREADS
 		    export TIMELIMIT
 		    # the space at the end is necessary
-		    export SRUN="srun --cpu_bind=verbose,cores -v -v "
+		    export SRUN="srun --cpu_bind=verbose,cores ${SRUN_FLAGS} "
 		    sbatch --ntasks=1 --cpus-per-task=`expr $THREADS + 1` --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run_fscip.sh
 		else
 		    # -V to copy all environment variables

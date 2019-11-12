@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_fixandinfer.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  fix-and-infer primal heuristic
  * @author Tobias Achterberg
  */
@@ -40,7 +41,7 @@
 
 #define HEUR_NAME             "fixandinfer"
 #define HEUR_DESC             "iteratively fixes variables and propagates inferences"
-#define HEUR_DISPCHAR         'I'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         -500000
 #define HEUR_FREQ             -1        /* at the moment, the heuristic seems to be useless */
 #define HEUR_FREQOFS          0

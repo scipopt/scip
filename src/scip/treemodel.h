@@ -45,21 +45,21 @@ extern "C" {
 #endif
 
 /** initialises the Treemodel parameter data structure */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtreemodelInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_TREEMODEL**      treemodel           /**< Treemodel parameter data structure */
 );
 
 /** frees the Treemodel parameter data structure */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtreemodelFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_TREEMODEL**      treemodel           /**< Treemodel parameter data structure */
 );
 
 /** returns TRUE if the Treemodel branching rules are enabled */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPtreemodelIsEnabled(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_TREEMODEL*       treemodel           /**< Treemodel parameter data structure */
@@ -68,7 +68,7 @@ SCIP_Bool SCIPtreemodelIsEnabled(
 /** apply the Treemodel branching rules to attempt to select a better
  *  branching candidate than the one selected by pseudocost branching
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_TREEMODEL*       treemodel,          /**< Treemodel parameter data structure */

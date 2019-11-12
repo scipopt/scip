@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlpi/expr.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for expressions, expression trees, expression graphs, and related
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
@@ -1017,6 +1018,7 @@ SCIP_RETCODE polynomialdataMultiplyByPolynomial(
       polynomialdataMultiplyByConstant(blkmem, polynomialdata, factordata->constant);
       return SCIP_OKAY;
    }
+   assert(factordata->monomials != NULL);
 
    if( factordata->nmonomials == 1 && factordata->constant == 0.0 )
    {
@@ -4987,7 +4989,7 @@ SCIP_RETCODE exprparseReadVariable(
 
       /* store index of variable and variable name in varnames buffer */
       **varnames = varidx;
-      strcpy((char*)(*varnames + 1), varname);
+      (void) SCIPstrncpy((char*)(*varnames + 1), varname, (int)strlen(varname)+1);
 
       /* insert variable into hashtable */
       SCIP_CALL( SCIPhashtableInsert(vartable, (void*)*varnames) );
@@ -8391,7 +8393,7 @@ void SCIPexprPrint(
 
       if( expr->nchildren == 0 )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", constant);
          break;
       }
 
@@ -8399,12 +8401,12 @@ void SCIPexprPrint(
 
       if( constant != 0.0 )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", constant);
       }
 
       for( i = 0; i < expr->nchildren; ++i )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", ((SCIP_Real*)expr->data.data)[i]);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", ((SCIP_Real*)expr->data.data)[i]);
          SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
       }
 
@@ -8423,20 +8425,20 @@ void SCIPexprPrint(
       SCIPmessageFPrintInfo(messagehdlr, file, "(");
 
       if( quadraticdata->constant != 0.0 )
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", quadraticdata->constant);
 
       if( quadraticdata->lincoefs != NULL )
          for( i = 0; i < expr->nchildren; ++i )
          {
             if( quadraticdata->lincoefs[i] == 0.0 )
                continue;
-            SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->lincoefs[i]);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", quadraticdata->lincoefs[i]);
             SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
          }
 
       for( i = 0; i < quadraticdata->nquadelems; ++i )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g ", quadraticdata->quadelems[i].coef);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g ", quadraticdata->quadelems[i].coef);
          SCIPexprPrint(expr->children[quadraticdata->quadelems[i].idx1], messagehdlr, file, varnames, paramnames, paramvals);
          if( quadraticdata->quadelems[i].idx1 == quadraticdata->quadelems[i].idx2 )
          {
@@ -8467,13 +8469,13 @@ void SCIPexprPrint(
 
       if( polynomialdata->constant != 0.0 || polynomialdata->nmonomials == 0 )
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%.20g", polynomialdata->constant);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", polynomialdata->constant);
       }
 
       for( i = 0; i < polynomialdata->nmonomials; ++i )
       {
          monomialdata = polynomialdata->monomials[i];
-         SCIPmessageFPrintInfo(messagehdlr, file, " %+.20g", monomialdata->coef);
+         SCIPmessageFPrintInfo(messagehdlr, file, " %+.15g", monomialdata->coef);
 
          for( j = 0; j < monomialdata->nfactors; ++j )
          {
@@ -8482,11 +8484,11 @@ void SCIPexprPrint(
             SCIPexprPrint(expr->children[monomialdata->childidxs[j]], messagehdlr, file, varnames, paramnames, paramvals);
             if( monomialdata->exponents[j] < 0.0 )
             {
-               SCIPmessageFPrintInfo(messagehdlr, file, "^(%.20g)", monomialdata->exponents[j]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "^(%.15g)", monomialdata->exponents[j]);
             }
             else if( monomialdata->exponents[j] != 1.0 )
             {
-               SCIPmessageFPrintInfo(messagehdlr, file, "^%.20g", monomialdata->exponents[j]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "^%.15g", monomialdata->exponents[j]);
             }
          }
       }
@@ -9404,6 +9406,7 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
 {
    SCIP_EXPRGRAPHNODE* node_;
    int pos;
+   int i;
 
    assert(exprgraph != NULL);
    assert(node != NULL);
@@ -9423,6 +9426,7 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
    assert(pos < (*node)->nparents);
    assert((*node)->parents[pos] == parent);
 
+#ifdef SCIP_DISABLED_CODE
    /* move last parent to pos, if pos is before last
     * update sorted flag */
    if( pos < (*node)->nparents-1 )
@@ -9430,6 +9434,13 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
       (*node)->parents[pos]  = (*node)->parents[(*node)->nparents-1];
       (*node)->parentssorted = ((*node)->nparents <= 2);
    }
+#else
+   /* move all parents behind pos one position up
+    * this is faster than moving the last parent to position pos if there are many repeated calls to this function as the parents array remains sorted
+    */
+   for( i = pos+1; i < (*node)->nparents; ++i )
+      (*node)->parents[i-1] = (*node)->parents[i];
+#endif
    --(*node)->nparents;
 
    /* keep pointer to *node in case it is still used */
@@ -9586,7 +9597,7 @@ SCIP_RETCODE exprgraphNodeReplaceChild(
    SCIP_EXPRGRAPHNODE*   newchild            /**< node that should take position of oldchild */
    )
 {
-   int i;
+   int childpos = -1;
 
    assert(exprgraph != NULL);
    assert(node != NULL);
@@ -9599,27 +9610,34 @@ SCIP_RETCODE exprgraphNodeReplaceChild(
 
    SCIPdebugMessage("replace child %p in node %p by %p\n", (void*)*oldchild, (void*)node, (void*)newchild);
 
-   /* search for oldchild in children array */
-   for( i = 0; i < node->nchildren; ++i )
+   /* let's see if child is just next to the place where we looked in a previous call to this function */
+   if( exprgraph->lastreplacechildpos >= 0 && exprgraph->lastreplacechildpos+1 < node->nchildren && node->children[exprgraph->lastreplacechildpos+1] == *oldchild )
    {
-      if( node->children[i] == *oldchild )
-      {
-         /* add as parent to newchild */
-         SCIP_CALL( exprgraphNodeAddParent(exprgraph->blkmem, newchild, node) );
-
-         /* remove as parent from oldchild */
-         SCIP_CALL( exprgraphNodeRemoveParent(exprgraph, oldchild, node) );
-
-         /* set newchild as child i */
-         node->children[i] = newchild;
-
-         /* we're done */
-         break;
-      }
+      childpos = exprgraph->lastreplacechildpos+1;
    }
-   assert(i < node->nchildren); /* assert that oldchild has been found in children array */
+   else for( childpos = 0; childpos < node->nchildren; ++childpos )
+   {
+      /* search for oldchild in children array */
+      if( node->children[childpos] == *oldchild )
+         break;
+   }
+   assert(childpos >= 0);
+   assert(childpos < node->nchildren);
+   assert(node->children[childpos] == *oldchild);
+
+   /* add as parent to newchild */
+   SCIP_CALL( exprgraphNodeAddParent(exprgraph->blkmem, newchild, node) );
+
+   /* remove as parent from oldchild */
+   SCIP_CALL( exprgraphNodeRemoveParent(exprgraph, oldchild, node) );
+
+   /* set newchild as child i */
+   node->children[childpos] = newchild;
 
    node->simplified = FALSE;
+
+   /* remember to look next to childpos first next time */
+   exprgraph->lastreplacechildpos = childpos;
 
    return SCIP_OKAY;
 }
@@ -11260,7 +11278,7 @@ void exprgraphNodePropagateBounds(
          }
 
          SCIPintervalPowerScalarInverse(infinity, &childbounds, node->children[i]->bounds, n, tmp);
-         SCIPdebugPrintf(" -> c%d = [%10g, %10g]\n", i, childbounds.inf, childbounds.sup);
+         SCIPdebugPrintf(" with c%d = [%10g, %10g] -> c%d = [%10g, %10g]\n", i, node->children[i]->bounds.inf, node->children[i]->bounds.sup, i, childbounds.inf, childbounds.sup);
          if( SCIPintervalIsEmpty(infinity, childbounds) )
          {
             SCIPdebugMessage(" -> cutoff\n");
@@ -11846,6 +11864,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    {
       assert(node->nchildren == 1);
       assert(childexprs != NULL);
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], node->data.dbl) );  /*lint !e613*/
       break;
    }
@@ -11854,6 +11873,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    {
       assert(node->nchildren == 1);
       assert(childexprs != NULL);
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], node->data.intval) );  /*lint !e613*/
       break;
    }
@@ -11867,6 +11887,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    {
       assert(node->nchildren == 2);
       assert(childexprs != NULL);
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], childexprs[1]) );  /*lint !e613*/
       break;
    }
@@ -11885,6 +11906,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    {
       assert(node->nchildren == 1);
       assert(childexprs != NULL);
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0]) );  /*lint !e613*/
       break;
    }
@@ -11944,6 +11966,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
       else
          userdata = exprdata->userdata;
 
+      /* coverity[var_deref_op] */
       SCIP_CALL( SCIPexprCreateUser(exprgraph->blkmem, expr, node->nchildren, childexprs,
          userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata, exprdata->print) );
 
@@ -12042,6 +12065,7 @@ void exprgraphNodeCheckSeparabilityComponent(
          varcomps[i] = varcomps[varidx];
    for( i = 0; i < nchildcomps; ++i )
       if( childcomps[i] == *compnr )
+         /* coverity[copy_paste_error] */
          childcomps[i] = varcomps[varidx];
    *compnr = varcomps[varidx];
 }
@@ -12119,7 +12143,7 @@ SCIP_RETCODE exprgraphRemoveVar(
       exprgraph->varbounds[varidx] = exprgraph->varbounds[exprgraph->nvars-1];
       exprgraph->varnodes[varidx]  = exprgraph->varnodes[exprgraph->nvars-1];
       exprgraph->varnodes[varidx]->data.intval = varidx;
-      SCIP_CALL( SCIPhashmapSetImage(exprgraph->varidxs, exprgraph->vars[varidx], (void*)(size_t)(varidx)) );
+      SCIP_CALL( SCIPhashmapSetImageInt(exprgraph->varidxs, exprgraph->vars[varidx], varidx) );
    }
    --exprgraph->nvars;
 
@@ -14144,7 +14168,7 @@ SCIP_RETCODE SCIPexprgraphNodeSplitOffLinear(
       }
 
       /* if there is no linear part or no space left for linear variables, then stop */
-      if( quaddata->lincoefs != NULL || linvarssize == 0 )
+      if( quaddata->lincoefs == NULL || linvarssize == 0 )
          break;
 
       /* check which childs are used in quadratic terms */
@@ -15006,7 +15030,7 @@ void SCIPexprgraphSetVarBounds(
    assert(var != NULL);
    assert(SCIPhashmapExists(exprgraph->varidxs, var));
 
-   pos = (int)(size_t)SCIPhashmapGetImage(exprgraph->varidxs, var);
+   pos = SCIPhashmapGetImageInt(exprgraph->varidxs, var);
    assert(pos < exprgraph->nvars);
    assert(exprgraph->vars[pos] == var);
 
@@ -15305,7 +15329,7 @@ SCIP_RETCODE SCIPexprgraphAddVars(
       exprgraph->vars[exprgraph->nvars] = vars[i];  /*lint !e613*/
       exprgraph->varnodes[exprgraph->nvars] = node;
       SCIPintervalSetEntire(SCIP_REAL_MAX, &exprgraph->varbounds[exprgraph->nvars]);
-      SCIP_CALL( SCIPhashmapInsert(exprgraph->varidxs, vars[i], (void*)(size_t)exprgraph->nvars) );  /*lint !e613*/
+      SCIP_CALL( SCIPhashmapInsertInt(exprgraph->varidxs, vars[i], exprgraph->nvars) ); /*lint !e613*/
       ++exprgraph->nvars;
 
       if( varnodes != NULL )
@@ -15398,6 +15422,7 @@ SCIP_RETCODE SCIPexprgraphAddExprtreeSum(
       assert(exprtrees[0] != NULL);
       assert(exprtrees[0]->vars != NULL || exprtrees[0]->nvars == 0);
 
+      /* coverity[var_deref_model] */
       SCIP_CALL( exprgraphAddExpr(exprgraph, exprtrees[0]->root, exprtrees[0]->vars, exprtrees[0]->params, rootnode, rootnodeisnew) );
    }
    else
@@ -15534,7 +15559,7 @@ SCIP_RETCODE SCIPexprgraphReplaceVarByLinearSum(
    assert(coefs != NULL || ncoefs == 0);
    assert(vars  != NULL || ncoefs == 0);
 
-   varidx = (int)(size_t)SCIPhashmapGetImage(exprgraph->varidxs, var);
+   varidx = SCIPhashmapGetImageInt(exprgraph->varidxs, var);
    assert(varidx < exprgraph->nvars);
    assert(exprgraph->vars[varidx] == var);
    varnode = exprgraph->varnodes[varidx];
@@ -15626,7 +15651,7 @@ SCIP_RETCODE SCIPexprgraphReplaceVarByLinearSum(
          exprgraph->vars[exprgraph->nvars] = vars[0];  /*lint !e613*/
          exprgraph->varnodes[exprgraph->nvars] = varnode;
          SCIPintervalSetEntire(SCIP_REAL_MAX, &exprgraph->varbounds[exprgraph->nvars]);
-         SCIP_CALL( SCIPhashmapInsert(exprgraph->varidxs, vars[0], (void*)(size_t)exprgraph->nvars) );  /*lint !e613*/
+         SCIP_CALL( SCIPhashmapInsertInt(exprgraph->varidxs, vars[0], exprgraph->nvars) ); /*lint !e613*/
          ++exprgraph->nvars;
 
          /* call callback method, if set */
@@ -15704,7 +15729,7 @@ SCIP_Bool SCIPexprgraphFindVarNode(
       return FALSE;
    }
 
-   pos = (int)(size_t)SCIPhashmapGetImage(exprgraph->varidxs, var);
+   pos = SCIPhashmapGetImageInt(exprgraph->varidxs, var);
    assert(pos < exprgraph->nvars);
 
    *varnode = exprgraph->varnodes[pos];
@@ -16013,7 +16038,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          if( node->nuses > 0 )
          {
             ensureBlockMemoryArraySize(exprgraph->blkmem, &testvals, &testvalssize, ntestvals+1);
-            SCIP_CALL( SCIPhashmapInsert(testvalidx, (void*)node, (void*)(size_t)ntestvals) );
+            SCIP_CALL( SCIPhashmapInsertInt(testvalidx, (void*)node, ntestvals) );
             testvals[ntestvals] = SCIPexprgraphGetNodeVal(node);  /*lint !e613 !e794*/
             ++ntestvals;
          }
@@ -16201,8 +16226,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          {
             assert(SCIPhashmapExists(testvalidx, (void*)node));
 
-            idx = (int)(size_t)(void*)SCIPhashmapGetImage(testvalidx, (void*)node);
+            idx = SCIPhashmapGetImageInt(testvalidx, (void*)node);
             assert(idx < ntestvals);
+            assert(testvals != NULL);
 
             testval_before = testvals[idx];  /*lint !e613*/
             testval_after = SCIPexprgraphGetNodeVal(node);

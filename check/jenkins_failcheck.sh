@@ -173,6 +173,10 @@ EOF
 # End of AWK Scripts            #
 #################################
 
+if [ "$PSMESSAGE" != "" ]; then
+  PSMESSAGE="
+PS: $PSMESSAGE"
+fi
 # The RBDB database has the form: timestamp_of_testrun rubberbandid p=PERM s=SEED
 RBDB="/nfs/OPTI/adm_timo/databases/rbdb/${PWD##*/}_${TESTSET}_${SETTING}_${LPS}_rbdb.txt"
 touch $RBDB
@@ -198,6 +202,9 @@ while [ $PERM -le $PERMUTE ]; do
   touch ${STILLFAILING}
 
   SUBJECTINFO="[BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING: $SETTING] [OPT: $OPT] [LPS: $LPS] [GITHASH: $GITHASH] [PERM: $PERM]"
+  if [ "${PSSUBJECT}" != "" ]; then
+    SUBJECTINFO="${SUBJECTINFO} ${PSSUBJECT}"
+  fi
 
   AWKARGS="-v GITBRANCH=$GITBRANCH -v TESTSET=$TESTSET -v SETTING=$SETTING -v OPT=$OPT -v LPS=$LPS -v DATABASE=$DATABASE -v TMPDATABASE=$TMPDATABASE -v STILLFAILING=$STILLFAILING -v PERM=$PERM"
   echo $AWKARGS
@@ -338,7 +345,8 @@ $ERRFILE
 $OUTFILE
 $RESFILE
 
-Please note that they might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+Please note that they might be deleted soon
+$PSMESSAGE" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
     else
         echo "No new errors, sending no emails."
     fi

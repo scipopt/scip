@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rounding.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
  * @author Tobias Achterberg
  */
@@ -39,7 +40,7 @@
 
 #define HEUR_NAME             "rounding"
 #define HEUR_DESC             "LP rounding heuristic with infeasibility recovering"
-#define HEUR_DISPCHAR         'R'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -1000
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0

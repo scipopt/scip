@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_fzn.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  FlatZinc file reader
  * @author Timo Berthold
  * @author Stefan Heinz
@@ -256,10 +257,8 @@ void freeStringBufferArray(
 {
    int i;
 
-   for( i = 0; i < nelements; ++i )
-   {
+   for( i = nelements - 1; i >= 0; --i )
       SCIPfreeBufferArray(scip, &array[i]);
-   }
 
    SCIPfreeBufferArray(scip, &array);
 }
@@ -3246,8 +3245,8 @@ CREATE_CONSTRAINT(createComparisonOpCons)
       }
 
    TERMINATE:
-      SCIPfreeBufferArray(scip, &vars);
       SCIPfreeBufferArray(scip, &vals);
+      SCIPfreeBufferArray(scip, &vars);
    }
    else if( equalTokens(scip, ftokens[1], "minus") || equalTokens(scip, ftokens[1], "plus") || equalTokens(scip, ftokens[1], "negate") )
    {
@@ -3704,8 +3703,8 @@ SCIP_RETCODE parseSolveItem(
          }
 
       TERMINATE:
-         SCIPfreeBufferArray(scip, &vars);
          SCIPfreeBufferArray(scip, &vals);
+         SCIPfreeBufferArray(scip, &vars);
       }
       else
       {
@@ -3919,11 +3918,20 @@ SCIP_RETCODE getActiveVariables(
       }
    }
    else
+   {
+      if( *nvars > 0 && (vars == NULL || scalars == NULL) ) /*lint !e774 !e845*/
+      {
+         SCIPerrorMessage("Null pointer"); /* should not happen */
+         SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
+      }
+
       for( v = 0; v < *nvars; ++v )
       {
          assert(vars != NULL);
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
       }
+   }
 
    return SCIP_OKAY;
 }
@@ -3976,7 +3984,7 @@ SCIP_RETCODE appendBuffer(
    }
 
    /* append extension to linebuffer - safe to use strcpy */
-   (void)strcpy((*buffer) + (*bufferpos), extension);
+   (void)SCIPstrncpy((*buffer) + (*bufferpos), extension, (int)strlen(extension));
    *bufferpos = newpos;
 
    return SCIP_OKAY;
@@ -4015,6 +4023,7 @@ SCIP_RETCODE printRow(
    char buffy[FZN_BUFFERLEN];
 
    assert( scip != NULL );
+   assert( vars != NULL || nvars == 0 );
    assert( strcmp(type, "eq") == 0 || strcmp(type, "le") == 0 || strcmp(type, "ge") == 0 );
 
    /* Add a constraint of type float_lin or int_lin, depending on whether there are continuous variables or coefficients */
@@ -4057,7 +4066,7 @@ SCIP_RETCODE printRow(
    /* print all variables but the last one */
    for( v = 0; v < nvars-1; ++v )
    {
-      var = vars[v];
+      var = vars[v];  /*lint !e613*/
       assert( var != NULL );
 
       if( hasfloats )
@@ -4072,9 +4081,9 @@ SCIP_RETCODE printRow(
    {
       if( hasfloats )
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s",SCIPvarGetName(vars[nvars-1]),
-            SCIPvarGetProbindex(vars[nvars-1]) < fznoutput->ndiscretevars ? "_float" : "");
+            SCIPvarGetProbindex(vars[nvars-1]) < fznoutput->ndiscretevars ? "_float" : "");  /*lint !e613*/
       else
-         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s",SCIPvarGetName(vars[nvars-1]));
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s",SCIPvarGetName(vars[nvars-1]));  /*lint !e613*/
 
       SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
    }
@@ -4823,21 +4832,22 @@ SCIP_DECL_READERREAD(readerReadFzn)
    SCIP_CALL( readFZNFile(scip, SCIPreaderGetData(reader), &fzninput, filename) );
 
    /* free dynamically allocated memory */
-   SCIPfreeBufferArrayNull(scip, &fzninput.token);
-   for( i = 0; i < FZN_MAX_PUSHEDTOKENS; ++i )
-   {
-      SCIPfreeBufferArrayNull(scip, &fzninput.pushedtokens[i]);
-   }
-
-   /* free buffer memory */
-   for( i = 0; i < fzninput.nconstants; ++i )
+   for( i = fzninput.nconstants - 1; i >= 0; --i )
    {
       SCIPfreeBufferArray(scip, &fzninput.constants[i]->name);
       SCIPfreeBuffer(scip, &fzninput.constants[i]);
    }
+   SCIPfreeBufferArray(scip, &fzninput.constants);
+
+   for( i = FZN_MAX_PUSHEDTOKENS - 1; i >= 0; --i ) /*lint !e778*/
+   {
+      SCIPfreeBufferArrayNull(scip, &fzninput.pushedtokens[i]);
+   }
+   SCIPfreeBufferArrayNull(scip, &fzninput.token);
+
+   /* free memory */
    SCIPhashtableFree(&fzninput.varHashtable);
    SCIPhashtableFree(&fzninput.constantHashtable);
-   SCIPfreeBufferArray(scip, &fzninput.constants);
 
    /* free variable arrays */
    for( i = 0; i < fzninput.nvararrays; ++i )

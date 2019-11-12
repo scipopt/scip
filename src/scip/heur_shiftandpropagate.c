@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_shiftandpropagate.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  shiftandpropagate primal heuristic
  * @author Timo Berthold
  * @author Gregor Hendel
@@ -50,7 +51,7 @@
 
 #define HEUR_NAME             "shiftandpropagate"
 #define HEUR_DESC             "Pre-root heuristic to expand an auxiliary branch-and-bound tree and apply propagation techniques"
-#define HEUR_DISPCHAR         'T'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         1000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
@@ -420,9 +421,10 @@ void transformVariable(
       matrix->transformshiftvals[colpos] = 0.0;
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_FREE;
    }
-   else if( SCIPisFeasLE(scip, ABS(lb), ABS(ub)) )
+   else if( SCIPisLE(scip, REALABS(lb), REALABS(ub)) )
    {
-      assert(!SCIPisInfinity(scip, lb));
+      assert(!SCIPisInfinity(scip, REALABS(lb)));
+
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_LB;
       deltashift = lb;
       matrix->transformshiftvals[colpos] = lb;
@@ -439,7 +441,7 @@ void transformVariable(
 
    /* determine the upper bound for this variable in heuristic transformation (lower bound is implicit; always 0) */
    if( !SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, lb) )
-      matrix->upperbounds[colpos] = ub - lb;
+      matrix->upperbounds[colpos] = MIN(ub - lb, SCIPinfinity(scip)); /*lint !e666*/
    else
       matrix->upperbounds[colpos] = SCIPinfinity(scip);
 
@@ -478,8 +480,8 @@ void transformVariable(
          assert(SCIPisFeasLE(scip, matrix->lhs[rowpos], matrix->rhs[rowpos]));
       }
    }
-   SCIPdebugMsg(scip, "Variable <%s> at colpos %d transformed. LB <%g> --> <%g>, UB <%g> --> <%g>\n",
-      SCIPvarGetName(var), colpos, lb, 0.0, ub, matrix->upperbounds[colpos]);
+   SCIPdebugMsg(scip, "Variable <%s> at colpos %d transformed. Status %d LB <%g> --> <%g>, UB <%g> --> <%g>\n",
+      SCIPvarGetName(var), colpos, matrix->transformstatus[colpos], lb, 0.0, ub, matrix->upperbounds[colpos]);
 }
 
 /** initializes copy of the original coefficient matrix and applies heuristic specific adjustments: normalizing row
@@ -769,11 +771,12 @@ void freeMatrix(
       SCIPfreeBufferArray(scip, &((*matrix)->rhs));
       SCIPfreeBufferArray(scip, &((*matrix)->lhs));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatbegin));
+      SCIPfreeBufferArray(scip, &((*matrix)->rowmatbegin));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatind));
       SCIPfreeBufferArray(scip, &((*matrix)->colmatvals));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatind));
       SCIPfreeBufferArray(scip, &((*matrix)->rowmatvals));
-      SCIPfreeBufferArray(scip, &((*matrix)->rowmatbegin));
+
 
      (*matrix)->nrows = 0;
      (*matrix)->ncols = 0;
@@ -1187,7 +1190,7 @@ SCIP_RETCODE updateTransformation(
          matrix->transformshiftvals[varindex] = ub;
 
          if( !SCIPisInfinity(scip, -lb) )
-            matrix->upperbounds[varindex] = ub - lb;
+            matrix->upperbounds[varindex] = MIN(ub - lb, SCIPinfinity(scip)); /*lint !e666*/
          else
             matrix->upperbounds[varindex] = SCIPinfinity(scip);
       }
@@ -1202,8 +1205,8 @@ SCIP_RETCODE updateTransformation(
          /* violations have to be rechecked for rows in which variable appears */
          checkviolations = TRUE;
 
-         assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || TRANSFORMSTATUS_NEG);
-         assert(SCIPisFeasLE(scip, ABS(lb), ABS(ub)) || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
+         assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
+         assert(SCIPisLE(scip, ABS(lb), ABS(ub)) || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
       }
       break;
 
@@ -1580,9 +1583,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    /* initialize heuristic matrix and working solution */
    SCIP_CALL( SCIPallocBuffer(scip, &matrix) );
    SCIP_CALL( initMatrix(scip, matrix, heurdata, colposs, heurdata->normalize, &nmaxrows, heurdata->relax, &initialized, &infeasible) );
-
-   /* the column positions are not needed anymore */
-   SCIPfreeBufferArray(scip, &colposs);
 
    /* could not initialize matrix */
    if( !initialized || infeasible )
@@ -2315,8 +2315,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       );
 
    SCIP_CALL( SCIPendProbing(scip) );
-   SCIPfreeBufferArray(scip, &heurdata->lpcols);
    freeMatrix(scip, &matrix);
+   SCIPfreeBufferArray(scip, &colposs);
+   SCIPfreeBufferArray(scip, &heurdata->lpcols);
    eventhdlrdata->matrix = NULL;
 
    return SCIP_OKAY;

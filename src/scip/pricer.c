@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricer.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for variable pricers
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -367,7 +368,6 @@ SCIP_RETCODE SCIPpricerDeactivate(
 {
    assert(pricer != NULL);
    assert(set != NULL);
-   assert(set->stage == SCIP_STAGE_PROBLEM);
 
    if( pricer->active )
    {

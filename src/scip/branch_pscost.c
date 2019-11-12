@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_pscost.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  pseudo costs branching rule
  * @author Tobias Achterberg
  * @author Stefan Vigerske
@@ -46,7 +47,7 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define BRANCHRULE_STRATEGIES          "cdsu" /**< possible pseudo cost multiplication strategies for branching on external candidates */
+#define BRANCHRULE_STRATEGIES          "dsuv" /**< possible pseudo cost multiplication strategies for branching on external candidates */
 #define BRANCHRULE_STRATEGY_DEFAULT       'u' /**< default pseudo cost multiplication strategy */
 #define BRANCHRULE_SCOREMINWEIGHT_DEFAULT 0.8 /**< default weight for minimum of scores of a branching candidate */
 #define BRANCHRULE_SCOREMAXWEIGHT_DEFAULT 1.3 /**< default weight for maximum of scores of a branching candidate */
@@ -536,8 +537,8 @@ SCIP_RETCODE selectBranchVar(
    }
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &candssorted);
    SCIPfreeBufferArray(scip, &candsorigidx);
+   SCIPfreeBufferArray(scip, &candssorted);
 
    return SCIP_OKAY;
 }

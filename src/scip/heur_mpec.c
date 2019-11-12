@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_mpec.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  mpec primal heuristic
  * @author Felipe Serrano
  * @author Benjamin Mueller
@@ -50,7 +51,7 @@
 
 #define HEUR_NAME             "mpec"
 #define HEUR_DESC             "regularization heuristic for convex and nonconvex MINLPs"
-#define HEUR_DISPCHAR         'W'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -2050000
 #define HEUR_FREQ             50
 #define HEUR_FREQOFS          0
@@ -211,7 +212,7 @@ SCIP_RETCODE addRegularScholtes(
          assert(var != NULL);
          assert(heurdata->var2idx != NULL);
          assert(SCIPhashmapExists(heurdata->var2idx, (void*)var));
-         idx = (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)var);
+         idx = SCIPhashmapGetImageInt(heurdata->var2idx, (void*)var);
 
          lininds[0] = idx;
          linvals[0] = 1.0;
@@ -436,7 +437,7 @@ SCIP_RETCODE heurExec(
       regularfeasible = TRUE;
       for( j = 0; j < nbinvars; ++j )
       {
-         int idx = (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)binvars[j]);
+         int idx = SCIPhashmapGetImageInt(heurdata->var2idx, (void*)binvars[j]);
          binaryfeasible = binaryfeasible && SCIPisFeasIntegral(scip, primal[idx]);
          regularfeasible = regularfeasible && SCIPisLE(scip, primal[idx] - SQR(primal[idx]), theta);
 
@@ -493,7 +494,7 @@ SCIP_RETCODE heurExec(
          for( j = 0; j < SCIPgetNVars(scip); ++j )
          {
             SCIP_VAR* var = SCIPgetVars(scip)[j];
-            assert(j == (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)var));
+            assert(j == SCIPhashmapGetImageInt(heurdata->var2idx, (void*)var));
             SCIP_CALL( SCIPsetSolVal(scip, sol, var, primal[j]) );
          }
 
@@ -532,7 +533,7 @@ SCIP_RETCODE heurExec(
             {
                lbs[j] = 0.0;
                ubs[j] = 1.0;
-               indices[j] = (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)binvars[j]);
+               indices[j] = SCIPhashmapGetImageInt(heurdata->var2idx, (void*)binvars[j]);
             }
             SCIP_CALL( SCIPnlpiChgVarBounds(heurdata->nlpi, heurdata->nlpiprob, nbinvars, indices, lbs, ubs) );
             fixed = FALSE;
@@ -568,7 +569,7 @@ SCIP_RETCODE heurExec(
             /* fix binary variables */
             for( j = 0; j < nbinvars; ++j )
             {
-               int idx = (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)binvars[j]);
+               int idx = SCIPhashmapGetImageInt(heurdata->var2idx, (void*)binvars[j]);
                indices[j] = idx;
 
                if( SCIPisFeasLE(scip, primal[idx] - SQR(primal[idx]), theta) )
@@ -595,7 +596,7 @@ SCIP_RETCODE heurExec(
             /* set initial point */
             for( j = 0; j < nbinvars; ++j )
             {
-               int idx = (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)binvars[j]);
+               int idx = SCIPhashmapGetImageInt(heurdata->var2idx, (void*)binvars[j]);
                initguess[idx] = primal[idx] >= 0.5 ? 0.0 : 1.0;
                /* SCIPdebugMsg(scip, "update init guess for %s to %g\n", SCIPvarGetName(binvars[j]), initguess[idx]); */
             }

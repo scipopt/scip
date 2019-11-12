@@ -1,0 +1,21 @@
+# SCIP version 6.0.0.2
+
+# is the Benders' decomposition LP cut constraint handler active?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+constraints/benderslp/active = TRUE
+
+# should Benders' decomposition be used?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+reading/storeader/usebenders = TRUE
+
+# frequency for calling primal heuristic <alns> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 20]
+heuristics/alns/freq = -1
+
+# frequency for calling primal heuristic <rens> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+heuristics/rens/freq = -1
+
+# should Benders' decomposition be used in LNS heurisics?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
+benders/default/lnscheck = FALSE

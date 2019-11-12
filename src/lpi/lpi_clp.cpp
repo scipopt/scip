@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3171,7 +3171,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
-extern
 SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
@@ -3301,7 +3300,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3335,7 +3334,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3759,6 +3758,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          lpi->clp->setLogLevel(0);
       break;
    case SCIP_LPPAR_LPITLIM:
+      /* ival >= 0, 0 stop immediately */
+      assert( ival >= 0 );
       lpi->clp->setMaximumIterations(ival);
       break;
    case SCIP_LPPAR_FASTMIP:
@@ -3829,18 +3830,43 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      assert( dval > 0.0 );
+      /* 0 < dval < 1e10 */
+      if( dval > 1e+10 )
+      {
+         /* however dval is required to be strictly less than 1e+10 */
+         dval = 9e+9;
+      }
+
       lpi->clp->setPrimalTolerance(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      assert( dval > 0.0 );
+      /* 0 < dval < 1e10 */
+      if( dval > 1e+10 )
+      {
+         /* however dval is required to be strictly less than 1e+10 */
+         dval = 9e+9;
+      }
+
       lpi->clp->setDualTolerance(dval);
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       /* @todo add BARRIERCONVTOL parameter */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
+
       lpi->clp->setDualObjectiveLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      assert( dval > 0.0 );
+      /* clp poses no restrictions on dval
+       * (it handles the case dval < 0 internally and sets param to -1 meaning no time limit.)
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
+
       lpi->clp->setMaximumSeconds(dval);
       break;
    default:

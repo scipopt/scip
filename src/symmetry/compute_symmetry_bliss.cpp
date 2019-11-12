@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -56,30 +56,19 @@ void blisshook(
 
    BLISS_Data* data = (BLISS_Data*) user_param;
    assert( data->scip != NULL );
-   assert( data->perms != NULL );
    assert( data->npermvars < (int) n );
    assert( data->maxgenerators >= 0);
 
-   /* make sure we do not generate more that maxgenerators many permutations, if the limit is bliss is not available */
+   /* make sure we do not generate more that maxgenerators many permutations, if the limit in bliss is not available */
    if ( data->maxgenerators != 0 && data->nperms >= data->maxgenerators )
       return;
-
-   /* check whether we need to resize */
-   if ( data->nperms >= data->nmaxperms )
-   {
-      int newsize = SCIPcalcMemGrowSize(data->scip, data->nperms);
-      SCIP_RETCODE retcode = SCIPreallocBlockMemoryArray(data->scip, &data->perms, data->nmaxperms, newsize);
-      if ( retcode != SCIP_OKAY )
-         return;
-      data->nmaxperms = newsize;
-   }
 
    /* copy first part of automorphism */
    bool isIdentity = true;
    int* p = 0;
-   SCIP_RETCODE retcode = SCIPallocBlockMemoryArray(data->scip, &p, data->npermvars);
-   if ( retcode != SCIP_OKAY )
+   if ( SCIPallocBlockMemoryArray(data->scip, &p, data->npermvars) != SCIP_OKAY )
       return;
+
    for (int j = 0; j < data->npermvars; ++j)
    {
       /* convert index of variable-level 0-nodes to variable indices */
@@ -88,13 +77,37 @@ void blisshook(
          isIdentity = false;
    }
 
-   /*  ignore trivial generators, i.e. generators that only permute the constraints */
+   /* ignore trivial generators, i.e. generators that only permute the constraints */
    if ( isIdentity )
    {
       SCIPfreeBlockMemoryArray(data->scip, &p, data->npermvars);
+      return;
    }
-   else
-      data->perms[data->nperms++] = p;
+
+   /* check whether we should allocate space for perms */
+   if ( data->nmaxperms <= 0 )
+   {
+      if ( data->maxgenerators == 0 )
+         data->nmaxperms = 100;   /* seems to cover many cases */
+      else
+         data->nmaxperms = data->maxgenerators;
+
+      if ( SCIPallocBlockMemoryArray(data->scip, &data->perms, data->nmaxperms) != SCIP_OKAY )
+         return;
+   }
+   else if ( data->nperms >= data->nmaxperms )    /* check whether we need to resize */
+   {
+      int newsize = SCIPcalcMemGrowSize(data->scip, data->nperms + 1);
+      assert( newsize >= data->nperms );
+      assert( data->maxgenerators == 0 );
+
+      if ( SCIPreallocBlockMemoryArray(data->scip, &data->perms, data->nmaxperms, newsize) != SCIP_OKAY )
+         return;
+
+      data->nmaxperms = newsize;
+   }
+
+   data->perms[data->nperms++] = p;
 }
 
 
@@ -344,10 +357,9 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    data.scip = scip;
    data.npermvars = matrixdata->npermvars;
    data.nperms = 0;
-   data.nmaxperms = 100 * matrixdata->npermvars;
+   data.nmaxperms = 0;
    data.maxgenerators = maxgenerators;
    data.perms = NULL;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &data.perms, data.nmaxperms) );
 
    /* Prefer splitting partition cells corresponding to variables over those corresponding
     * to inequalities. This is because we are only interested in the action
@@ -368,9 +380,17 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 #endif
 
    /* prepare return values */
-   *perms = data.perms;
-   *nperms = data.nperms;
-   *nmaxperms = data.nmaxperms;
+   if ( data.nperms > 0 )
+   {
+      *perms = data.perms;
+      *nperms = data.nperms;
+      *nmaxperms = data.nmaxperms;
+   }
+   else
+   {
+      assert( data.perms == NULL );
+      assert( data.nmaxperms == 0 );
+   }
 
    /* determine log10 of symmetry group size */
    *log10groupsize = (SCIP_Real) log10l(stats.get_group_size_approx());

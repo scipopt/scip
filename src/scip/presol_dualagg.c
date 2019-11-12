@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_dualagg.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  aggregate variables by dual arguments
  * @author Dieter Weninger
  *
@@ -503,13 +504,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDualagg)
    if( SCIPgetNBinVars(scip) == 0 )
       return SCIP_OKAY;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
 
    /* we only work on pure MIPs currently */
    if( initialized && complete )

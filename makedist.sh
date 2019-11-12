@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="6.0.0"
+VERSION="6.0.2.4"
 NAME="scip-$VERSION"
 if test ! -e release
 then
@@ -36,6 +36,7 @@ git ls-files -c | xargs tar --transform "s|^|${NAME}/|" -chf $NAME.tar \
 --exclude="makepictures.sh" \
 --exclude="suppressions.*" \
 --exclude="tex/*" \
+--exclude="interfaces/matlab" \
 --exclude="check/check_*" \
 --exclude="check/*cluster*" \
 --exclude="check/checkcuts.py" \

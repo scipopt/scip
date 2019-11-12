@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_pseudoobj.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  Pseudo objective propagator
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -401,7 +402,7 @@ SCIP_RETCODE objimplicsCreate(
          assert(!SCIPisZero(scip, SCIPvarGetObj(var)));
 
          assert(SCIPhashmapExists(binobjvarmap, var));
-         pos = (int)(size_t)SCIPhashmapGetImage(binobjvarmap, (void*)var);
+         pos = SCIPhashmapGetImageInt(binobjvarmap, (void*)var);
          assert(pos > 0);
          assert(collectedlbvars[pos]);
 
@@ -443,7 +444,7 @@ SCIP_RETCODE objimplicsCreate(
          assert(!SCIPisZero(scip, SCIPvarGetObj(var)));
 
          assert(SCIPhashmapExists(binobjvarmap, var));
-         pos = (int)(size_t)SCIPhashmapGetImage(binobjvarmap, (void*)var);
+         pos = SCIPhashmapGetImageInt(binobjvarmap, (void*)var);
          assert(pos > 0);
          assert(collectedubvars[pos]);
 
@@ -802,7 +803,7 @@ SCIP_Real collectMinactImplicVar(
       return 0.0;
 
    assert(SCIPhashmapExists(binobjvarmap, var));
-   pos = (int)(size_t)SCIPhashmapGetImage(binobjvarmap, var);
+   pos = SCIPhashmapGetImageInt(binobjvarmap, var);
    assert(pos > 0);
 
    /* check if the variables was already collected through other cliques */
@@ -1355,7 +1356,7 @@ void resetContributors(
       assert(var != NULL);
 
       assert(SCIPhashmapExists(binobjvarmap, var));
-      pos = (int)(size_t)SCIPhashmapGetImage(binobjvarmap, var);
+      pos = SCIPhashmapGetImageInt(binobjvarmap, var);
       assert(pos > 0);
       collectedvars[pos] = FALSE;
    }
@@ -1561,7 +1562,7 @@ SCIP_RETCODE propdataInit(
 
          if( SCIPvarIsBinary(var) )
          {
-            SCIP_CALL( SCIPhashmapInsert(binobjvarmap, (void*)var, (void*)(size_t)(nbinobjvars + 1)) );
+            SCIP_CALL( SCIPhashmapInsertInt(binobjvarmap, (void*)var, nbinobjvars + 1) );
             nbinobjvars++;
          }
       }
@@ -3503,7 +3504,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
       return SCIP_OKAY;
 
    /* do nothing if objective propagation is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    pseudoobjval = SCIPgetGlobalPseudoObjval(scip);
@@ -3584,7 +3585,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
       return SCIP_OKAY;
 
    /* do not run if propagation w.r.t. objective is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* check if enough new variable are added (due to column generation to reinitialized the propagator data) */
