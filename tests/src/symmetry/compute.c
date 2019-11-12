@@ -866,7 +866,9 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
 
    /* check canonical order */
 
-   SCIP_CALL( buildSubgroupGraph(scip, &propdata, NULL, 0, &graphcomponents, &graphcompbegins,
+   int permorder[6] = {0,1,2,3,4,5};
+
+   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder, 6, 0, &graphcomponents, &graphcompbegins,
          &compcolorbegins, &ngraphcomponents, &ncompcolors) );
 
    cr_assert(graphcomponents != NULL);
@@ -892,7 +894,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
 
    int permorder1[6] = {2,3,4,5,0,1};
 
-   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder1, 0, &graphcomponents, &graphcompbegins,
+   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder1, 6, 0, &graphcomponents, &graphcompbegins,
          &compcolorbegins, &ngraphcomponents, &ncompcolors) );
 
    cr_assert(graphcomponents != NULL);
@@ -918,7 +920,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
 
    int permorder2[6] = {5,0,1,2,3,4};
 
-   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder2, 0, &graphcomponents, &graphcompbegins,
+   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder2, 6, 0, &graphcomponents, &graphcompbegins,
          &compcolorbegins, &ngraphcomponents, &ncompcolors) );
 
    cr_assert(graphcomponents != NULL);

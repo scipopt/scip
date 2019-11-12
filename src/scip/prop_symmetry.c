@@ -2332,19 +2332,65 @@ SCIP_RETCODE determineSymmetry(
 
 /** choose an order in which the generators should be added for subgroup detection */
 static
-int* chooseOrderOfGenerators(
+SCIP_RETCODE chooseOrderOfGenerators(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
-   int                   compidx             /**< index of component */
+   int                   compidx,            /**< index of component */
+   int**                 genorder,           /**< (initialized) buffer to store the resulting order of generator */
+   int*                  ntwocycleperms      /**< buffer to store the number of 2-cycle permutations */
    )
 {
+   int** perms;
+   int* components;
+   int* componentbegins;
+   int* ntwocycles;
+   int nperms;
+   int ncomponents;
+   int npermvars;
+   int npermsincomp;
+   int i;
+
    assert(scip != NULL);
    assert(propdata != NULL);
    assert(compidx >= 0);
    assert(compidx < propdata->ncomponents);
+   assert(genorder != NULL);
+   assert(*genorder != NULL);
+   assert(ntwocycleperms != NULL);
 
-   /* @TODO: implement */
-   return NULL;
+   perms = propdata->perms;
+   nperms = propdata->nperms;
+   npermvars = propdata->npermvars;
+   components = propdata->components;
+   componentbegins = propdata->componentbegins;
+   ncomponents = propdata->ncomponents;
+   npermsincomp = componentbegins[compidx + 1] - componentbegins[compidx];
+   *ntwocycleperms = npermsincomp;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &ntwocycles, npermsincomp) );
+
+   for( i = 0; i < npermsincomp; ++i )
+   {
+      int* perm;
+
+      perm = perms[components[componentbegins[compidx] + i]];
+
+      SCIP_CALL( SCIPgetPropertiesPerm(perm, NULL, npermvars, &(ntwocycles[i]), FALSE) );
+
+      /* we skip permutations which do not purely consist of 2-cycles */
+      if( ntwocycles[i] == 0 )
+      {
+         /* we change the number of two cycles for this perm so that it will be sorted to the end */
+         ntwocycleperms[i] = npermvars;
+         --(*ntwocycleperms);
+      }
+   }
+
+   SCIPsortIntInt(ntwocycles, *genorder, npermsincomp);
+
+   SCIPfreeBufferArray(scip, &ntwocycles);
+
+   return SCIP_OKAY;
 }
 
 /** checks whether a given graph is acyclic */
@@ -2421,7 +2467,8 @@ static
 SCIP_RETCODE buildSubgroupGraph(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
-   int*                  genorder,           /**< order in which the generators should be considered (or NULL) */
+   int*                  genorder,           /**< order in which the generators should be considered */
+   int                   ntwocycleperms,     /**< number of 2-cycle permutations in this component */
    int                   compidx,            /**< index of the component */
    int**                 graphcomponents,    /**< buffer to store the components of the graph (ordered var indices) */
    int**                 graphcompbegins,    /**< buffer to store the indices of each new graph component */
@@ -2453,6 +2500,8 @@ SCIP_RETCODE buildSubgroupGraph(
    assert(compcolorbegins != NULL);
    assert(ngraphcomponents != NULL);
    assert(ncompcolors != NULL);
+   assert(genorder != NULL);
+   assert(ntwocycleperms >= 0);
    assert(compidx >= 0);
    assert(compidx < propdata->ncomponents);
    assert(!propdata->componentblocked[compidx]);
@@ -2463,35 +2512,22 @@ SCIP_RETCODE buildSubgroupGraph(
    components = propdata->components;
    componentbegins = propdata->componentbegins;
    ncomponents = propdata->ncomponents;
-   npermsincomp = componentbegins[compidx + 1] - componentbegins[compidx];
    nextcolor = 0;
 
-   assert(npermsincomp > 0);
+   assert(ntwocycleperms <= componentbegins[compidx + 1] - componentbegins[compidx]);
 
    SCIP_CALL( SCIPcreateDisjointset(scip, &vartocomponent, npermvars) );
    SCIP_CALL( SCIPcreateDisjointset(scip, &comptocolor, npermvars) );
    SCIP_CALL( SCIPcreateDigraph(scip, &graph, npermvars) );
 
-   for( j = 0; j < npermsincomp; ++j )
+   for( j = 0; j < ntwocycleperms; ++j )
    {
       int* perm;
-      int genidx;
       int k;
-      int ntwocyclesperm;
       int firstcolor = -1;
 
-      /* use given order of generators, if specified */
-      genidx = (genorder == NULL ? j : genorder[j]);
-
-      perm = perms[components[componentbegins[compidx] + genidx]];
-
-      SCIP_CALL( SCIPgetPropertiesPerm(perm, permvars, npermvars, &ntwocyclesperm, FALSE) );
-
-      /* we skip permutations which do not purely consist of 2-cycles */
-      if( ntwocyclesperm == 0 )
-         continue;
-
-      assert(ntwocyclesperm > 0);
+      /* use given order of generators */
+      perm = perms[components[componentbegins[compidx] + genorder[j]]];
 
       for( k = 0; k < npermvars; ++k )
       {
@@ -2675,16 +2711,35 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int* genorder;
       int ngraphcomponents;
       int ncompcolors;
+      int ntwocycleperms;
+      int npermsincomp;
       int j;
 
       /* if component is blocked, skip it */
       if( propdata->componentblocked[i] )
          continue;
 
-      genorder = chooseOrderOfGenerators(scip, propdata, i);
+      npermsincomp = propdata->componentbegins[i + 1] - propdata->componentbegins[i];
 
-      SCIP_CALL( buildSubgroupGraph(scip, propdata, genorder, i, &graphcomponents, &graphcompbegins,
-            &compcolorbegins, &ngraphcomponents, &ncompcolors) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &genorder, npermsincomp) );
+
+      for( j = 0; j < npermsincomp; ++j )
+         genorder[j] = j;
+
+      SCIP_CALL( chooseOrderOfGenerators(scip, propdata, i, &genorder, &ntwocycleperms) );
+
+      assert(genorder != NULL);
+      assert(ntwocycleperms >= 0);
+      assert(ntwocycleperms <= npermsincomp);
+
+      if( ntwocycleperms < 2 )
+      {
+         SCIPfreeBufferArray(scip, &genorder);
+         continue;
+      }
+
+      SCIP_CALL( buildSubgroupGraph(scip, propdata, genorder, ntwocycleperms, i, &graphcomponents,
+            &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors) );
 
       assert(graphcomponents != NULL);
       assert(graphcompbegins != NULL);
@@ -2723,7 +2778,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIPdebugMsg(scip, "the variables are...\n");
 
          /* add strong SBCs (lex-max order) for chosen graph component */
-         for( k = graphcompbegins[firstcomp]+1; k < graphcompbegins[firstcomp+1]; ++k )
          {
             SCIPdebugMsg(scip, "    %s\n", SCIPvarGetName(propdata->permvars[graphcomponents[k]]));
 
@@ -2736,8 +2790,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
 #ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
+            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
             propdata->genconss[propdata->ngenconss] = cons;
@@ -2750,6 +2804,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIPfreeBlockMemoryArrayNull(scip, &compcolorbegins, ncompcolors + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcompbegins, ngraphcomponents + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcomponents, propdata->npermvars);
+      SCIPfreeBufferArray(scip, &genorder);
    }
 
    return SCIP_OKAY;
