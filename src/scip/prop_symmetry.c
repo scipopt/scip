@@ -3233,15 +3233,18 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    if ( propdata->nschreiersimsconss == 0 && ncuts > 0 )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->schreiersimsconss), ncuts) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->leaders), 10) );
-      propdata->maxnleaders = 10;
    }
    else if ( ncuts > 0 )
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->schreiersimsconss),
             propdata->nschreiersimsconss, propdata->nschreiersimsconss + ncuts) );
    }
-   if ( propdata->nleaders == propdata->maxnleaders )
+   if ( propdata->nleaders == 0 )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->leaders), 10) );
+      propdata->maxnleaders = 10;
+   }
+   else if ( propdata->nleaders == propdata->maxnleaders )
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(propdata->leaders),
             propdata->maxnleaders, propdata->maxnleaders + 10) );
