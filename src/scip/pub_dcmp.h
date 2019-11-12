@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-/** create a decomposition */
+/** creates a decomposition */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdecompCreate(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
@@ -43,7 +43,7 @@ SCIP_RETCODE SCIPdecompCreate(
    SCIP_Bool             benderslabels       /**< should the variables be labeled for the application of Benders' decomposition */
    );
 
-/** free a decomposition */
+/** frees a decomposition */
 SCIP_EXPORT
 void SCIPdecompFree(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
@@ -119,7 +119,7 @@ int SCIPdecompGetBlockGraphMinDegree(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
-/** set labels for an array of variables */
+/** sets labels for an array of variables */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdecompSetVarsLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -128,7 +128,7 @@ SCIP_RETCODE SCIPdecompSetVarsLabels(
    int                   nvars               /**< length of variables array */
    );
 
-/** query labels for an array of variables */
+/** queries labels for an array of variables */
 SCIP_EXPORT
 void SCIPdecompGetVarsLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -137,7 +137,7 @@ void SCIPdecompGetVarsLabels(
    int                   nvars               /**< length of variables array */
    );
 
-/** set labels for an array of constraints */
+/** sets labels for an array of constraints */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdecompSetConsLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -146,7 +146,7 @@ SCIP_RETCODE SCIPdecompSetConsLabels(
    int                   nconss              /**< length of constraints array */
    );
 
-/** query labels for an array of constraints */
+/** queries labels for an array of constraints */
 SCIP_EXPORT
 void SCIPdecompGetConsLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -163,7 +163,7 @@ SCIP_RETCODE SCIPdecompClear(
    SCIP_Bool             clearconslabels     /**< should the constraint labels be cleared? */
    );
 
-/** print decomposition statistics into string buffer */
+/** prints decomposition statistics into string buffer */
 SCIP_EXPORT
 char* SCIPdecompPrintStats(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */

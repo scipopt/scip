@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   decomp.c
+/**@file   scip_dcmp.c
  * @brief  methods for working with decompositions
  * @author Gregor Hendel
  */
@@ -157,8 +157,35 @@ SCIP_RETCODE decompGetConsVarsAndLabels(
    return SCIP_OKAY;
 }
 
-/** add decomposition to SCIP */
-SCIP_RETCODE SCIPaddDecomposition(
+/** creates a decomposition */
+SCIP_RETCODE SCIPcreateDecomp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
+   int                   nblocks,            /**< the number of blocks (without the linking block) */
+   SCIP_Bool             original,           /**< is this a decomposition in the original (TRUE) or transformed space? */
+   SCIP_Bool             benderslabels       /**< should the variables be labeled for the application of Benders' decomposition */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPdecompCreate(decomp, SCIPblkmem(scip), nblocks, original, benderslabels) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a decomposition */
+void SCIPfreeDecomp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP**         decomp              /**< pointer to free the decomposition data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIPdecompFree(decomp, SCIPblkmem(scip));
+}
+
+/** adds decomposition to SCIP */
+SCIP_RETCODE SCIPaddDecomp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp              /**< decomposition to add */
    )
@@ -166,7 +193,7 @@ SCIP_RETCODE SCIPaddDecomposition(
    assert(scip != NULL);
    assert(decomp != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddDecomposition", FALSE, SCIPdecompIsOriginal(decomp), SCIPdecompIsOriginal(decomp),
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddDecomp", FALSE, SCIPdecompIsOriginal(decomp), SCIPdecompIsOriginal(decomp),
       SCIPdecompIsOriginal(decomp), SCIPdecompIsOriginal(decomp), TRUE, TRUE, TRUE, !SCIPdecompIsOriginal(decomp),
       !SCIPdecompIsOriginal(decomp), !SCIPdecompIsOriginal(decomp), FALSE, FALSE, FALSE) );
 
@@ -175,7 +202,7 @@ SCIP_RETCODE SCIPaddDecomposition(
    return SCIP_OKAY;
 }
 
-/** get available user decompositions for either the original or transformed problem */
+/** gets available user decompositions for either the original or transformed problem */
 void SCIPgetDecomps(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP***        decomps,            /**< pointer to store decompositions array */
@@ -185,7 +212,7 @@ void SCIPgetDecomps(
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPaddDecomposition", FALSE, original, original, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPaddDecomp", FALSE, original, original, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    if( decomps != NULL )
       *decomps = original ? SCIPdecompstoreGetOrigDecomps(scip->decompstore) : SCIPdecompstoreGetDecomps(scip->decompstore);
@@ -194,7 +221,7 @@ void SCIPgetDecomps(
       *ndecomps = original ? SCIPdecompstoreGetNOrigDecomps(scip->decompstore) : SCIPdecompstoreGetNDecomps(scip->decompstore);
 }
 
-/** returns TRUE if this constraint contains only linking variables */
+/** returns TRUE if a constraint contains only linking variables in a decomposition */
 SCIP_RETCODE SCIPhasConsOnlyLinkVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -258,8 +285,8 @@ SCIP_RETCODE SCIPhasConsOnlyLinkVars(
  *
  *  If the flag is set to TRUE, the assignment is the same, unless variables from 2 named blocks occur in the same
  *  constraint, which is an invalid labeling for the Benders case.
- *   */
-SCIP_RETCODE SCIPdecompComputeConsLabels(
+ */
+SCIP_RETCODE SCIPcomputeDecompConsLabels(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_CONS**           conss,              /**< array of constraints */
@@ -353,7 +380,7 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
    return SCIP_OKAY;
 }
 
-/** create a decomposition of the variables from a labeling of the constraints.
+/** creates a decomposition of the variables from a labeling of the constraints.
  *
  *  NOTE: by default, the variable labeling is based on a Dantzig-Wolfe decomposition. This means that constraints in named
  *  blocks have have precedence over linking constraints. If a variable exists in constraints from
@@ -368,7 +395,7 @@ SCIP_RETCODE SCIPdecompComputeConsLabels(
  *  Now, a variable is considered linking if it is present in at least one linking constraint and an arbitrary
  *  number of constraints from named blocks.
  */
-SCIP_RETCODE SCIPdecompComputeVarsLabels(
+SCIP_RETCODE SCIPcomputeDecompVarsLabels(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_CONS**           conss,              /**< array of constraints */
@@ -455,14 +482,14 @@ SCIP_RETCODE SCIPdecompComputeVarsLabels(
    return SCIP_OKAY;
 }
 
-/** assign linking constraints to blocks
+/** assigns linking constraints to blocks
  *
  * Each linking constraint is assigned to the most frequent block among its variables.
  * Variables of other blocks are relabeled as linking variables.
  *
- * @note: In contrast to SCIPdecompComputeConsLabels(), this method potentially relabels variables.
+ * @note: In contrast to SCIPcomputeDecompConsLabels(), this method potentially relabels variables.
  */
-SCIP_RETCODE SCIPdecompAssignLinkConss(
+SCIP_RETCODE SCIPassignDecompLinkConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_CONS**           conss,              /**< array of linking constraints that should be reassigned */
@@ -880,7 +907,7 @@ SCIP_RETCODE buildBlockGraph(
    SCIP_CALL( SCIPdigraphComputeUndirectedComponents(blockgraph, -1, NULL, NULL) );
    decomp->ncomponents = SCIPdigraphGetNComponents(blockgraph);
 
-   /* Get the number of articulation nodes in the block-decomposition graph using DFS.*/
+   /* Get the number of articulation points in the block-decomposition graph using DFS.*/
    SCIP_CALL( SCIPdigraphGetArticulationPoints(blockgraph, NULL, &decomp->narticulations) );
 
    SCIPfreeBufferArray(scip, &consvars);
@@ -893,7 +920,7 @@ SCIP_RETCODE buildBlockGraph(
    return SCIP_OKAY;
 }
 
-/** compute decomposition statistics and store them in the decomp object */
+/** computes decomposition statistics and store them in the decomposition object */
 SCIP_RETCODE SCIPcomputeDecompStats(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
