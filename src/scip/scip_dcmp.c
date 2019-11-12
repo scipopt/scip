@@ -516,7 +516,9 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
       SCIP_Bool success;
 
       SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
+      assert(success);
       SCIP_CALL( SCIPgetConsVars(scip, conss[c], vars, nvars, &success) );
+      assert(success);
 
       if( ! SCIPdecompIsOriginal(decomp) )
       {
