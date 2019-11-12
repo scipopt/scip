@@ -517,8 +517,6 @@ void rowexSortLP(
       return;
 
    /* sort coefficients */
-
-   /** todo exip: add correct sorting methods so this works in one go */
    SCIPsortIntIntPtrPtrInterval(row->cols_index, row->linkpos, (void**)row->cols,
                         (void**)row->vals, row->valsinterval, row->nlpcols);
 
@@ -551,7 +549,6 @@ void rowexSortNonLP(
    if( row->nonlpcolssorted || row->delaysort )
       return;
 
-/** todo exip: add correct sorting methods so this works in one go */
    /* sort coefficients */
    SCIPsortIntIntPtrPtrInterval(&(row->cols_index[row->nlpcols]), &(row->linkpos[row->nlpcols]),
                         (void**)(&(row->cols[row->nlpcols])), (void**)&(row->vals[row->nlpcols]), &(row->valsinterval[row->nlpcols]),
@@ -1604,7 +1601,7 @@ SCIP_RETCODE rowexDelCoefPos(
    coefChangedExact(row, col, lp);
 
    /* issue row coefficient changed event */
-   /*  todo exip: do we need this? */
+   /** @todo exip: do we need this? */
    //   SCIP_CALL( rowexEventCoefChanged(rowex, blkmem, set, eventqueue, colex, valex, NULL) );
 
    return SCIP_OKAY;
@@ -4156,7 +4153,7 @@ SCIP_RETCODE SCIProwexChgConstant(
          RatDiff(row->minactivity, row->minactivity, row->constant);
          RatDiff(row->maxactivity, row->maxactivity, row->constant);
       }
-      /* todo exip do we need the changed event here? */
+      /** @todo exip do we need the changed event here? */
    }
 
    return SCIP_OKAY;

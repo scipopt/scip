@@ -1299,7 +1299,7 @@ void consdataInvalidateActivities(
    consdata->glbmaxactivityposhuge = -1;
 }
 
-/** todo exip: should this return a real-relaxation instead
+/** @todo exip: should this return a real-relaxation instead
  *  compute the pseudo activity of a constraint */
 static
 void consdataComputePseudoActivity(
@@ -1322,7 +1322,7 @@ void consdataComputePseudoActivity(
    for( i = consdata->nvars - 1; i >= 0; --i )
    {
       val = consdata->vals[i];
-      /** todo exip: should bound be rational? */
+      /** @todo exip: should bound be rational? */
       bound = (SCIPvarGetBestBoundType(consdata->vars[i]) == SCIP_BOUNDTYPE_LOWER) ? SCIPvarGetLbLocalExact(consdata->vars[i]) : SCIPvarGetUbLocalExact(consdata->vars[i]);
       if( RatIsInfinity(bound) )
       {
@@ -3091,7 +3091,6 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
    return SCIPvarCompare(consdata->vars[ind1], consdata->vars[ind2]);
 }
 
-/** todo exip: maybe some pointers get overwritten here and memory gets leaked, check it again */
 /** permutes the constraint's variables according to a given permutation. */
 static
 void permSortConsdata(
@@ -7122,7 +7121,7 @@ checkCons(
 
    /* the activity of pseudo solutions may be invalid if it comprises positive and negative infinity contributions; we
     * return infeasible for safety
-    * todo exip: do we need to handle this as well? */
+    * @todo exip: do we need to handle this as well? */
    if( /* activity == SCIP_INVALID */ FALSE ) /*lint !e777*/
    {
       assert(sol == NULL);
@@ -12712,7 +12711,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqExactLinearcons)
    }
 
    /* compute scale before comparing coefficients of constraints */
-   /* todo exip: do we want this here? makes it pretty expensive */
+   /** @todo exip: do we want this here? makes it pretty expensive */
    //cons1scale = COPYSIGN(1.0/consdata1->maxabsval, consdata1->vals[0]);
    //cons2scale = COPYSIGN(1.0/consdata2->maxabsval, consdata2->vals[0]);
 
@@ -15622,7 +15621,7 @@ SCIP_DECL_CONSINITLP(consInitlpExactLinear)
    return SCIP_OKAY;
 }
 
-/* todo exip: this is not correct yet */
+/** @todo exip: this is not correct yet */
 /** separation method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSSEPALP(consSepalpExactLinear)
@@ -16584,7 +16583,6 @@ SCIP_DECL_CONSCOPY(consCopyExactLinear)
    assert(sourcecons != NULL);
 
    /* get variables and coefficients of the source constraint */
-   /* @todo exip: put proper wrapper here */
    sourcevars = SCIPgetVarsExactLinear(sourcescip, sourcecons);
    sourcecoefs = SCIPgetValsRealExactLinear(sourcescip, sourcecons);
    nvars = SCIPgetNVarsExactLinear(sourcescip, sourcecons);
@@ -17751,7 +17749,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
    /* for the solving process we need linear rows, containing only active variables; therefore when creating a linear
     * constraint after presolving we have to ensure that it holds active variables
     */
-   /* todo exip: might be needed */
+   /** @todo exip: might be needed */
    if( SCIPgetStage(scip) >= SCIP_STAGE_EXITPRESOLVE )
    {
       SCIP_CONSDATA* consdata;

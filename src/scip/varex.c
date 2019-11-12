@@ -410,7 +410,7 @@ SCIP_BOUNDTYPE SCIPvarGetWorstBoundTypeExact(
       return SCIP_BOUNDTYPE_LOWER;
 }
 
-/** todo exip: this does not work exactly yet */
+/** @todo exip: this does not work exactly yet */
 /** retransforms given variable, scalar anqd constant to the corresponding original variable, scalar
  *  and constant, if possible; if the retransformation is impossible, NULL is returned as variable
  */
@@ -717,7 +717,7 @@ SCIP_RETCODE SCIPvarCopyExactData(
    assert(targetvar != NULL);
    assert(sourcevar != NULL);
 
-   /* todo exip: what should happen here? error or just no copy? */
+   /** @todo exip: what should happen here? error or just no copy? */
    if( sourcevar->exactdata == NULL )
    {
       return SCIP_OKAY;
@@ -771,7 +771,7 @@ SCIP_RETCODE SCIPvarFreeExactData(
    return SCIP_OKAY;
 }
 
-/* @todo exip: this is currently a blank */
+/** @todo exip: this is currently a blank */
 /** appends OBJCHANGED event to the event queue */
 static
 SCIP_RETCODE varEventObjChanged(
@@ -889,7 +889,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
          oldobj = var->obj;
          RatSet(var->exactdata->obj, newobj);
 
-         /* @todo exip SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp->fplp, eventqueue, oldobj, var->obj) ); */
+         /** @todo exip SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp->fplp, eventqueue, oldobj, var->obj) ); */
          break;
 
       case SCIP_VARSTATUS_FIXED:

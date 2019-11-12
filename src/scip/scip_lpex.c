@@ -271,7 +271,7 @@ SCIP_RETCODE SCIPaddVarsToRowEx(
    /* resize the row to be able to store all variables (at least, if they are COLUMN variables) */
    SCIP_CALL( SCIProwexEnsureSize(row, scip->mem->probmem, scip->set, SCIProwGetNNonz(row->fprow) + nvars) );
 
-   /* todo exip: do we need the sorting? */
+   /** @todo exip: do we need the sorting? */
    /* delay the row sorting */
    //SCIProwDelaySort(row);
 

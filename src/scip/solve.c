@@ -2876,7 +2876,7 @@ SCIP_RETCODE applyBounding(
       /* update lower bound w.r.t. the pseudo solution */
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set, transprob);
 
-      /** @todo exip: currently if you print the pseudosol for the root node, it will mess up indexing in the
+      /** exip: currently if you print the pseudosol for the root node, it will mess up indexing in the
        * certificate and we assume that the lp gets solved anyways so we do not print the pseudoobj bound in the 
        * root node */
 #ifdef SCIP_WITH_EXACTSOLVE
@@ -2894,7 +2894,7 @@ SCIP_RETCODE applyBounding(
          primal->cutoffbound, SCIPprobExternObjval(transprob, origprob, set, primal->cutoffbound) + SCIPgetOrigObjoffset(set->scip));
 
       /* check for infeasible node by bounding */
-      /* @todo exip: this is sort of hacky, maybe add exact lowerbound to nodes? or similar */
+      /** @todo exip: this is sort of hacky, maybe add exact lowerbound to nodes? or similar */
       if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound) )
       {
 #ifdef SCIP_WITH_EXACTSOLVE

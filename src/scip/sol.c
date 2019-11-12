@@ -465,13 +465,14 @@ SCIP_RETCODE SCIPsolTransform(
    sol->solorigin = tsol->solorigin;
    sol->obj = tsol->obj;
 
-   /** @todo exip: wrap this? */
+#ifdef SCIP_WITH_EXACTSOLVE
    {
       SCIP_VALSEX* tmpvalsex;
       tmpvalsex = sol->valsex;
       sol->valsex = tsol->valsex;
       tsol->valsex = tmpvalsex;
    }
+#endif
 
    SCIP_CALL( SCIPsolFree(transsol, blkmem, primal) );
 

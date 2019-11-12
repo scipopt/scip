@@ -98,7 +98,7 @@ SCIP_RETCODE evaluateLPEX(
    SCIP_RESULT*          result              /**< pointer to store the result of the lp enforcement call */
    )
 {
-   /** @todo exiptodo:
+   /** @todo exip:
     *  - in a similar function for LP in lp.c the case SCIPlpiIsPrimalUnbounded() is not explicitely handled. why? if case
     *    should be added, include it here as well.
     */
@@ -3548,7 +3548,7 @@ SCIP_RETCODE boundShift(
       if( SCIPlpiIsInfinity(lp->lpi, -fpdual[j]) )
 	      fpdual[j] = -SCIPsetInfinity(set);
 
-      /** @todo exiptodo: dual bounding improvement
+      /** @todo exip: dual bounding improvement
        *  - should we also set nonzero values of y to zero if corresponding lhs/rhs is not finite (to improve dual bound)?
        *  - do such situations come up?
        */

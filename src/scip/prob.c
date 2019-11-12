@@ -566,7 +566,7 @@ SCIP_RETCODE SCIPprobTransform(
    for( v = 0; v < source->nvars; ++v )
    {
       SCIP_CALL( SCIPvarTransform(source->vars[v], blkmem, set, stat, source->objsense, &targetvar) );
-      /* todo exip: wrap this */
+      /** @todo exip: wrap this */
 #ifdef SCIP_WITH_EXACTSOLVE
       if( set->misc_exactsolve && source->vars[v]->exactdata != NULL )
       {

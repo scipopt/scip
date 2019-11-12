@@ -266,11 +266,11 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
 }
 
 #ifdef SCIP_WITH_EXACTSOLVE
-/** @todo exip: add comments */
+/** compute a safe bound for the current floating point lp */
 SCIP_RETCODE SCIPcomputeSafeBound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             proveinfeas,
-   SCIP_Real*            safebound
+   SCIP_Bool             proveinfeas,        /**< should infeasibility be proven */
+   SCIP_Real*            safebound           /**< safe the resulting bound */
    )
 {
    SCIP_Bool lperror = false;
@@ -288,6 +288,7 @@ SCIP_RETCODE SCIPcomputeSafeBound(
    return SCIP_OKAY;
 }
 
+/** force the next lp to be solved exactly */
 SCIP_RETCODE SCIPforceExactSolve(
    SCIP*                 scip               /**< SCIP data structure */
    )
@@ -297,9 +298,10 @@ SCIP_RETCODE SCIPforceExactSolve(
    return SCIP_OKAY;
 }
 
+/** enforce exact integrality */
 SCIP_RETCODE SCIPenfoIntegralityExact(
-   SCIP*                 scip,
-   SCIP_RESULT*          result
+   SCIP*                 scip,              /**< SCIP data structure */
+   SCIP_RESULT*          result             /**< result pointer */
    )
 {
    SCIP_CALL( SCIPlpexEnfoIntegralityExact(scip->lp, scip->lpex, scip->set, scip->stat, result) );

@@ -1033,7 +1033,7 @@ void SCIPcertificatePrintCons(
 
    for( i = 0; i < len; i++ )
    {
-      /* TODO: perform line breaking before exceeding maximum line length */
+      /** @todo exip: perform line breaking before exceeding maximum line length */
       SCIPcertificatePrintProblemMessage(certificate, " %d ", ind[i]);
       SCIPcertificatePrintProblemRational(certificate, val[i], 10);
    }
@@ -1532,7 +1532,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
       int i;
       for( i = 0; i < len; i++ )
       {
-         /* TODO: perform line breaking before exceeding maximum line length */
+         /** @todo exip: perform line breaking before exceeding maximum line length */
          assert(!RatIsAbsInfinity(val[i]));
          SCIPcertificatePrintProofMessage(certificate, " %d ", ind[i]);
          SCIPcertificatePrintProofRational(certificate, val[i], 10);
@@ -1616,7 +1616,7 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
       }
    }
 
-   /* @todo exip: disable and do this somewheere else set the lowerbound of node according to parent lowerbound */ 
+   /** @todo exip: disable and do this somewheere else set the lowerbound of node according to parent lowerbound */ 
    //SCIP_CALL( SCIPcertificateNodeBound(set, certificate, stat, node) );
 
    /* Whenever a branching is performed, SCIP computes the pseudo solution of the new node with bound change.

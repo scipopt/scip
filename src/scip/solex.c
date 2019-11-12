@@ -930,7 +930,7 @@ SCIP_RETCODE SCIPsolexSetVal(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      /** @todo exiptodo: presolving extension
+      /** @todo exip: presolving extension
        *  - implement this if exact version of SCIP supports aggregated variables
        */
       SCIPerrorMessage("cannot set solution value for aggregated variable\n");
@@ -1149,7 +1149,6 @@ void SCIPsolexGetVal(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-   /** @todo exip: this check with lpcount has to be adapted */
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
       assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var)) 
       || sol->lpcount == stat->lpcount );
@@ -1165,7 +1164,7 @@ void SCIPsolexGetVal(
       break;
 
     case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      /** @todo exiptodo: presolving extension
+      /** @todo exip: presolving extension
        *  - implement this if exact version of SCIP supports aggregated variables
        */
       SCIPerrorMessage("cannot get solution value of aggregated variable\n");
@@ -1173,7 +1172,7 @@ void SCIPsolexGetVal(
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      /** @todo exiptodo: presolving extension
+      /** @todo exip: presolving extension
        *  - implement this if exact version of SCIP supports multiaggregated variables
        */
       SCIPerrorMessage("cannot get solution value of multiaggregated variable\n");
@@ -1277,7 +1276,7 @@ SCIP_Rational* SCIPsolexGetObj(
    /* for original solutions, sol->obj contains the external objective value */
    if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
    {
-      /** @todo exiptodo: heuristics extension
+      /** @todo exip: heuristics extension
        *  - implement this if exact version of SCIP supports getting objective value of original solutions */
       SCIPerrorMessage("cannot get objectiv value of original solution\n");
       SCIPABORT();
