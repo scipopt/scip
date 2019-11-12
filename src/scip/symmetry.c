@@ -291,6 +291,83 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
 }
 
 
+/** Compute orbit of a given variable and store it in @p orbit. The first entry of orbit will
+ *  be the given variable index and the rest is filled with the remaining variables excluding
+ *  the ones specified in @p ignoredvars (note that it should contain the variable indices+1).
+ *
+ * @pre orbit is an initialized array of size propdata->npermvars
+ */
+SCIP_RETCODE SCIPcomputeVarOrbit(
+   SCIP*                 scip,               /**< SCIP instance */
+   int                   npermvars,          /**< number of variables in permvars */
+   int**                 perms,              /**< the generators of the permutation group */
+   int                   nperms,             /**< number of permutations */
+   int*                  components,         /**< the components of the permutation group */
+   int*                  componentbegins,    /**< array containing the starting index of each component */
+   SCIP_HASHSET*         ignoredvars,        /**< hashset containing variables that should be ignored (or NULL) */
+   int                   varidx,             /**< index of variable for which the orbit is requested */
+   int                   component,          /**< component that var is in */
+   int**                 orbit,              /**< buffer to store the orbit */
+   int*                  orbitsize           /**< buffer to store the size of the orbit */
+   )
+{
+   SCIP_Shortbool* varadded;
+   int* varstotest;
+   int nvarstotest;
+   int image;
+   int j;
+   int p;
+
+   assert(scip != NULL);
+   assert(perms != NULL);
+   assert(components != NULL);
+   assert(componentbegins != NULL);
+   assert(orbit != NULL);
+   assert(orbitsize != NULL);
+   assert(varidx >= 0);
+   assert(varidx <= npermvars);
+   assert(component >= 0);
+   assert(npermvars > 0);
+
+   /* init data structures*/
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &varadded, npermvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &varstotest, npermvars) );
+
+   /* compute and store orbit if it is non-trivial */
+   (*orbit)[0] = varidx;
+   varstotest[0] = varidx;
+   *orbitsize = 1;
+   nvarstotest = 1;
+   varadded[varidx] = TRUE;
+
+   /* iterate over variables in orbit and compute their images */
+   for( j = 0; j < nvarstotest; ++j )
+   {
+      for( p = componentbegins[component]; p < componentbegins[component+1]; ++p )
+      {
+         int* perm = perms[components[p]];
+         image = perm[varstotest[j]];
+
+         /* found new element of the orbit of i */
+         if( !varadded[image] )
+         {
+            varstotest[nvarstotest++] = image;
+            varadded[image] = TRUE;
+
+            if( ignoredvars == NULL || !SCIPhashsetExists(ignoredvars, (void*) (size_t) image+1) )
+               (*orbit)[(*orbitsize)++] = image;
+         }
+      }
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &varstotest);
+   SCIPfreeBufferArray(scip, &varadded);
+
+   return SCIP_OKAY;
+}
+
+
 /** check whether a permutation is a composition of 2-cycles and this case determine the number of 2-cycles
  *  @p allvarsbinary can be used to restrict to permutations that swap binary variables
  */

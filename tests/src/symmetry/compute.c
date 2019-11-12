@@ -847,6 +847,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    int* compcolorbegins;
    int ngraphcomponents;
    int ncompcolors;
+   int nusedperms;
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
@@ -870,11 +871,12 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    /* check canonical order */
 
    SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder1, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors) );
+         &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
 
    cr_assert(graphcomponents != NULL);
    cr_assert(graphcompbegins != NULL);
    cr_assert(compcolorbegins != NULL);
+   cr_assert(nusedperms == 5);
    cr_assert(ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents);
    cr_assert(ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors);
 
@@ -894,11 +896,12 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    /* check different order */
 
    SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder2, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors) );
+         &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
 
    cr_assert(graphcomponents != NULL);
    cr_assert(graphcompbegins != NULL);
    cr_assert(compcolorbegins != NULL);
+   cr_assert(nusedperms == 5);
    cr_assert(ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents);
    cr_assert(ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors);
 
@@ -918,11 +921,12 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    /* check order that leads to trivial subgroup */
 
    SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder3, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors) );
+         &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
 
    cr_assert(graphcomponents != NULL);
    cr_assert(graphcompbegins != NULL);
    cr_assert(compcolorbegins != NULL);
+   cr_assert(nusedperms == 2);
    cr_assert(ngraphcomponents == 4, "expected 4 graph components, but got %d\n", ngraphcomponents);
    cr_assert(ncompcolors == 1, "expected 1 component colors, but got %d\n", ncompcolors);
 
@@ -953,14 +957,15 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symetric subgroup
    int perm6[10] = {0,1,2,3,4,5,6,7,9,8};
    int components[6] = {0,1,2,3,4,5};
    int componentbegins[2] = {0,6};
-   int* permorder;
    SCIP_Shortbool componentblocked[2] = {FALSE, FALSE};
+   int* permorder;
    int* graphcomponents;
    int* graphcompbegins;
    int* compcolorbegins;
    int ngraphcomponents;
    int ncompcolors;
    int ntwocycleperms;
+   int nusedperms;
    int i;
 
    /* skip test if no symmetry can be computed */
@@ -982,7 +987,7 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symetric subgroup
    propdata.componentbegins = componentbegins;
    propdata.componentblocked = componentblocked;
 
-   /* check soted order */
+   /* check sorted order */
 
    SCIP_CALL( SCIPallocBufferArray(scip, &permorder, 6) );
 
@@ -996,11 +1001,12 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symetric subgroup
    checkArraysEqual(expectedpermorder, permorder, 6, "permorder");
 
    SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder, ntwocycleperms, 0, &graphcomponents,
-         &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors) );
+         &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
 
    cr_assert(graphcomponents != NULL);
    cr_assert(graphcompbegins != NULL);
    cr_assert(compcolorbegins != NULL);
+   cr_assert(nusedperms == 5);
    cr_assert(ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents);
    cr_assert(ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors);
 

@@ -2474,7 +2474,8 @@ SCIP_RETCODE buildSubgroupGraph(
    int**                 graphcompbegins,    /**< buffer to store the indices of each new graph component */
    int**                 compcolorbegins,    /**< buffer to store at which indices a new color begins */
    int*                  ngraphcomponents,   /**< buffer to store the number of graph components */
-   int*                  ncompcolors         /**< buffer to store the number of different colors */
+   int*                  ncompcolors,        /**< buffer to store the number of different colors */
+   int*                  nusedperms          /**< buffer to store the number of used permutations in the graph */
    )
 {
    SCIP_DISJOINTSET* vartocomponent;
@@ -2500,6 +2501,7 @@ SCIP_RETCODE buildSubgroupGraph(
    assert(compcolorbegins != NULL);
    assert(ngraphcomponents != NULL);
    assert(ncompcolors != NULL);
+   assert(nusedperms != NULL);
    assert(genorder != NULL);
    assert(ntwocycleperms >= 0);
    assert(compidx >= 0);
@@ -2513,6 +2515,7 @@ SCIP_RETCODE buildSubgroupGraph(
    componentbegins = propdata->componentbegins;
    ncomponents = propdata->ncomponents;
    nextcolor = 0;
+   *nusedperms = 0;
 
    assert(ntwocycleperms <= componentbegins[compidx + 1] - componentbegins[compidx]);
 
@@ -2583,6 +2586,7 @@ SCIP_RETCODE buildSubgroupGraph(
       }
 
       assert(firstcolor != -1);
+      ++(*nusedperms);
 
       /* if the generator can be added, update the datastructures for graph components and colors */
       for( k = 0; k < npermvars; ++k )
@@ -2713,6 +2717,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int ncompcolors;
       int ntwocycleperms;
       int npermsincomp;
+      int nusedperms;
       int j;
 
       /* if component is blocked, skip it */
@@ -2739,13 +2744,14 @@ SCIP_RETCODE detectAndHandleSubgroups(
       }
 
       SCIP_CALL( buildSubgroupGraph(scip, propdata, genorder, ntwocycleperms, i, &graphcomponents,
-            &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors) );
+            &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
 
       assert(graphcomponents != NULL);
       assert(graphcompbegins != NULL);
       assert(compcolorbegins != NULL);
       assert(ngraphcomponents > 0);
       assert(ncompcolors > 0);
+      assert(nusedperms <= ntwocycleperms);
 
       SCIPdebugMsg(scip, "number of colors: %d\n", ncompcolors);
 
@@ -2754,15 +2760,16 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
          SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
          SCIPfreeBlockMemoryArray(scip, &graphcomponents, propdata->npermvars);
+         SCIPfreeBufferArray(scip, &genorder);
 
          continue;
       }
 
       for( j = 0; j < ncompcolors; ++j )
       {
-         SCIP_CONS* cons;
          SCIP_VAR* vars[2];
          SCIP_Real vals[2] = {1,-1};
+         SCIP_CONS* cons;
          int chosencomp;
          int chosencompsize = 0;
          int k;
@@ -2794,8 +2801,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
             vars[1] = propdata->permvars[graphcomponents[k-1]];
             vars[0] = propdata->permvars[graphcomponents[k]];
 
-            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "strong_sbc", 2, vars, vals, 0.0, SCIPinfinity(scip),
-                  propdata->conssaddlp, propdata->conssaddlp, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "strong_sbc", 2, vars, vals, 0.0,
+                  SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
+                  FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
@@ -2807,6 +2815,66 @@ SCIP_RETCODE detectAndHandleSubgroups(
             propdata->genconss[propdata->ngenconss] = cons;
             ++propdata->ngenconss;
          }
+      }
+
+      /* possibly add weak SBCs for enclosing orbit of first component */
+      if( nusedperms < npermsincomp )
+      {
+         SCIP_CONS* cons;
+         SCIP_HASHSET* usedvars;
+         SCIP_VAR* vars[2];
+         SCIP_Real vals[2] = {1,-1};
+         int* orbit;
+         int orbitsize;
+
+         /* @TODO first component could be a trivial one! make different choice */
+
+         SCIP_CALL( SCIPhashsetCreate(&usedvars, SCIPblkmem(scip), 2 * npermsincomp) );
+
+         /* mark all variables that have been used in strong SBCs */
+         for( j = graphcompbegins[0]; j < graphcompbegins[1]; ++j )
+         {
+            SCIP_CALL( SCIPhashsetInsert(usedvars, SCIPblkmem(scip),
+                  (void*) (size_t) graphcomponents[j]+1) );
+         }
+
+         if( SCIPhashsetGetNElements(usedvars) < propdata->npermvars )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &orbit, propdata->npermvars) );
+
+            SCIP_CALL( SCIPcomputeVarOrbit(scip, propdata->npermvars, propdata->perms,
+                  propdata->nperms, propdata->components, propdata->componentbegins,
+                  usedvars, graphcomponents[0], i, &orbit, &orbitsize) );
+
+            assert(orbit[0] == graphcomponents[0]);
+            vars[1] = propdata->permvars[orbit[0]];
+
+            /* add weak SBCs for rest of enclosing orbit */
+            for( j = 1; j < orbitsize; ++j )
+            {
+               assert(!SCIPhashsetExists(usedvars, (void*) (size_t) graphcomponents[orbit[j]]+1));
+
+               vars[0] = propdata->permvars[graphcomponents[orbit[j]]];
+
+               SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "weak_sbc", 2, vars, vals, 0.0,
+                     SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
+                     FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   #ifdef SCIP_DEBUG
+               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+               SCIPinfoMessage(scip, NULL, "\n");
+   #endif
+
+               propdata->genconss[propdata->ngenconss] = cons;
+               ++propdata->ngenconss;
+            }
+
+            SCIPfreeBufferArray(scip, &orbit);
+         }
+
+         SCIPhashsetFree(&usedvars, SCIPblkmem(scip));
       }
 
       propdata->componentblocked[i] = TRUE;

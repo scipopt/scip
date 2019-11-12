@@ -26,6 +26,7 @@
 #define __SCIP_SYMMETRY_H__
 
 #include "scip/def.h"
+#include "scip/pub_misc.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
@@ -95,6 +96,20 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
                                               *   that is handled by orbital fixing */
    );
 
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeVarOrbit(
+   SCIP*                 scip,               /**< SCIP instance */
+   int                   npermvars,          /**< number of variables in permvars */
+   int**                 perms,              /**< the generators of the permutation group */
+   int                   nperms,             /**< number of permutations */
+   int*                  components,         /**< the components of the permutation group */
+   int*                  componentbegins,    /**< array containing the starting index of each component */
+   SCIP_HASHSET*         ignoredvars,        /**< hashset containing variables that should be ignored (or NULL) */
+   int                   varidx,             /**< index of variable for which the orbit is requested */
+   int                   component,          /**< component that var is in */
+   int**                 orbit,              /**< buffer to store the orbit */
+   int*                  orbitsize           /**< buffer to store the size of the orbit */
+   );
 
 /** check whether a permutation is a composition of 2-cycles and this case determine the number of 2-cycles
  *  @p allvarsbinary can be used to restrict to permutations that swap binary variables
