@@ -72,7 +72,6 @@ option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
-option(EXSOLVE "should the program be compiled for exact solving" ON)
 option(DEBUG_ADAPTOR "should rationals be used with a debug adaptor?" OFF)
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
@@ -197,22 +196,16 @@ add_custom_target(scip_update_githash
 
 set(WITH_SCIPDEF on)
 
-# EXACT_SOLVE soplex and Boost is required
-if(EXSOLVE)
-    add_definitions(-DSCIP_WITH_EXACTSOLVE)
-    find_package(SOPLEX REQUIRED CONFIG)
-    set(lpiex lpi/lpiex_spx.cpp)
-    #Multiprecision
-    find_package(Boost 1.70.0 COMPONENTS iostreams serialization system program_options REQUIRED)
-    add_definitions(-DSCIP_WITH_BOOST)
-    include_directories(${Boost_INCLUDE_DIRS})
-    get_directory_property(MYDEFS COMPILE_DEFINITIONS)
-    message( STATUS "Compile defs contain: " ${MYDEFS} )
-    if(NOT SOPLEX_GMP)
-        message(FATAL_ERROR "SoPlex with GMP is necessary for exact solving mode but Soplex_GMP is not set.
-        Make sure to rebuild SoPlex with GMP enabled.")
-    endif()
-endif()
+# soplex and Boost is required
+find_package(SOPLEX REQUIRED CONFIG)
+set(lpiex lpi/lpiex_spx.cpp)
+#Multiprecision
+find_package(Boost 1.70.0 REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
+#if(NOT SOPLEX_GMP)
+#    message(WARNING "SoPlex with GMP is necessary for exact solving mode but Soplex_GMP is not set.
+#        Make sure to rebuild SoPlex with GMP enabled.")
+#endif()
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
