@@ -77,6 +77,9 @@ Features
   methods are defined. A NULL pointer can be supplied to SCIPaddBendersSubproblem. In this case, no internal Benders'
   cut generation methods can be used.
 
+- To save memory, it is now possible to remove all variables from the internal symmetry data structures that are
+  not affected by any symmetry.
+
 Performance improvements
 ------------------------
 
@@ -285,6 +288,8 @@ Interface changes
   - new parameter "propagating/symmetry/ofsymcomptiming"
   - new parameter "propagating/symmetry/performpresolving"
   - new parameter "propagating/symmetry/recomputerestart"
+  - new parameter "propagating/symmetry/compresssymmetries"
+  - new parameter "propagating/symmetry/compressthreshold"
 
 ### Data structures
 
