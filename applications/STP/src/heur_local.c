@@ -668,15 +668,15 @@ SCIP_Real getBoundaryPathCostPrized(
       const int* const vnoibase = vnoiData->vnoi_base;
 
 #ifdef SCIP_DEBUG
-      printf("key path alternative edge ");
-      graph_edge_printInfo(graph, newedge);
+      printf("boundary path edge ");
+      graph_edge_printInfo(graph, boundaryedge);
 #endif
       pathcost -= pcmwGetNewEdgePrize(graph, solNodes, boundaryedge, pcmwData);
 
       for( int node = graph->tail[boundaryedge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
       {
 #ifdef SCIP_DEBUG
-         printf("key path alternative edge ");
+         printf("boundary path edge ");
          graph_edge_printInfo(graph, vnoipath[node].edge);
 #endif
          pathcost -= pcmwGetNewEdgePrize(graph, solNodes, vnoipath[node].edge, pcmwData);
@@ -685,7 +685,7 @@ SCIP_Real getBoundaryPathCostPrized(
       for( int node = graph->head[boundaryedge]; node != vnoibase[node]; node = graph->tail[vnoipath[node].edge] )
       {
 #ifdef SCIP_DEBUG
-         printf("key path alternative edge ");
+         printf("boundary path edge ");
          graph_edge_printInfo(graph, vnoipath[node].edge);
 #endif
 
@@ -1360,7 +1360,10 @@ SCIP_Real getKeyPathReplaceCost(
 
    if( boundedge_old != UNKNOWN )
    {
+      SCIPdebugMessage("get replace path for old edge: \n");
+
       edgecost_old = getBoundaryPathCostPrized(graph, vnoiData, soltreeData, boundedge_old, pcmwData);
+
       assert(SCIPisLE(scip, edgecost_old, edgecost_old_in));
       assert(SCIPisLT(scip, edgecost_old_in, FARAWAY));
 
@@ -1369,6 +1372,8 @@ SCIP_Real getKeyPathReplaceCost(
 
    if( newedge != UNKNOWN )
    {
+      SCIPdebugMessage("get replace path for new edge: \n");
+
       edgecost_new = getBoundaryPathCostPrized(graph, vnoiData, soltreeData, newedge, pcmwData);
 
       pcmwDataClean(graph, pcmwData);
@@ -1385,7 +1390,7 @@ SCIP_Real getKeyPathReplaceCost(
       *boundedge_new = newedge;
    }
 
-   assert(SCIPisLT(scip, edgecost, FARAWAY));
+   assert(SCIPisLT(scip, edgecost, FARAWAY) || (graph_pc_isPcMw(graph) && graph->source == graph->head[*boundedge_new] ) );
    assert(*boundedge_new != UNKNOWN);
 
    return edgecost;
@@ -1471,6 +1476,8 @@ SCIP_RETCODE supergraphComputeMst(
    }
 
    assert(pcmwDataIsClean(graph, pcmwData));
+
+   SCIPdebugMessage("build super-graph: \n");
 
    /* add edges to the supergraph */
    for( int k = 0; k < nboundaryedges; k++ )
