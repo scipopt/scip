@@ -23,22 +23,32 @@
 #include <string.h>
 #include "blockmemshell/memory.h"
 #include "scip/event_restart.h"
-#include "scip/event_treesizeprediction.h"
-#include "scip/event_treeprofile.h"
-#include "type_disp.h"
 #include "scip/pub_disp.h"
+#include "scip/pub_event.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_tree.h"
 #include "scip/scip_disp.h"
-#include "pub_event.h"
-#include "pub_message.h"
-#include "scip_event.h"
-#include "scip_mem.h"
-#include "scip_message.h"
-#include "scip_param.h"
-#include "scip_solve.h"
-#include "scip_solvingstats.h"
-#include "type_event.h"
-#include "type_message.h"
-#include "type_retcode.h"
+#include "scip/scip_event.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_table.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_tree.h"
+#include "scip/type_disp.h"
+#include "scip/type_event.h"
+#include "scip/type_message.h"
+#include "scip/type_misc.h"
+#include "scip/type_retcode.h"
+#include "scip/type_stat.h"
+#include "scip/type_table.h"
 
 #define EVENTHDLR_NAME         "restart"
 #define EVENTHDLR_DESC         "event handler for restart event"
@@ -61,33 +71,30 @@ typedef enum RestartPolicy RESTARTPOLICY;
 
 #define RESTARTPOLICY_CHAR_NEVER 'n'
 #define RESTARTPOLICY_CHAR_ALWAYS 'a'
-#define RESTARTPOLICY_CHAR_ESTIMATION 'e'
 #define RESTARTPOLICY_CHAR_PROGRESS 'p'
-#define NREPORTS                    100      /**< maximum number of reports that should be generated */
 
-#define ESTIMATION_CHAR_TREESIZE         't' /**< should estimation use probability based tree size prediction? */
-#define ESTIMATION_CHAR_PROFILE          'p'  /**< should estimation use profile based prediction a la Cornuejols? */
-
-#define PROGRESS_CHAR_RATIO               'r' /**< should the search progress be measured using ratio-based probabilities? */
-#define PROGRESS_CHAR_UNIFORM             'u' /**< should the search progress be measured using even probabilities? */
-#define PROGRESS_CHAR_GAP                 'g' /**< should the search progress be measured in terms of the gap? */
-#define PROGRESS_CHAR_FIXED               'f' /**< should the search progress be measured using fixed, ratio based probabilities? */
-
+#define DEFAULT_REPORTFREQ                -1  /**< report frequency on estimation: -1: never, 0:always, k >= 1: k times evenly during search */
 #define DEFAULT_WINDOWSIZE               100  /**< window size for search progress */
 #define MAX_WINDOWSIZE                   500  /**< window size for search progress */
 #define DEFAULT_DES_ALPHA               0.95  /**< default level smoothing constant for double exponential smoothing */
 #define DEFAULT_DES_BETA                0.10   /**< default trend smoothing constant for double exponential smoothing */
 #define DEFAULT_DES_USETRENDINLEVEL      TRUE /**< should the trend be used in the level update? */
 
-#define FORECAST_BACKTRACKESTIM           'b' /**< use backtrack estimation for forecasting */
-#define FORECAST_LINEAR                   'l' /**< use linear trends based on double exponential smoothing for forecasting */
-#define FORECAST_WINDOW                   'w' /**< use either linear or quadratic trends within window for forecasting */
-
+/* constants for the table estimation */
 #define TABLE_NAME              "restart"
-#define TABLE_DESC              "restart statistics table"
+#define TABLE_DESC              "tree size estimations statistics table"
 #define TABLE_POSITION          22000           /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE    SCIP_STAGE_INIT /**< output of the statistics table is only printed from this stage onwards */
 
+/* constants for the search completion display column */
+#define DISP_NAME               "completed"
+#define DISP_DESC               "completion of search in percent (based on tree size estimation)"
+#define DISP_HEADER             "compl."
+#define DISP_WIDTH              8       /**< the width of the display column */
+#define DISP_PRIORITY           110000  /**< the priority of the display column */
+#define DISP_POSITION           30100   /**< the relative position of the display column */
+#define DISP_STRIPLINE          TRUE    /**< the default for whether the display column should be separated
+                                         *   with a line from its right neighbor */
 #define INITIALSIZE             100
 #define SESCOEFF                0.75            /**< coefficient of single exponential smoothing of estimation */
 
@@ -107,9 +114,25 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define DES_ALPHA_OPENNODES 0.6
 #define DES_BETA_OPENNODES 0.15
 
-#define MAX_REGFORESTSIZE 10000000          /**< size limit (number of nodes) for regression forest */
+#define MAX_REGFORESTSIZE 10000000               /**< size limit (number of nodes) for regression forest */
 
-#define DEFAULT_REGFORESTFILENAME "-"       /**< default file name of user regression forest in RFCSV format */
+#define DEFAULT_REGFORESTFILENAME "-"            /**< default file name of user regression forest in RFCSV format */
+
+
+/** computation of search completion */
+#define COMPLETIONTYPE_AUTO      'a'             /**< automatic (regression forest if available, else monotone regression on binary and SSG on nonbinary trees) */
+#define COMPLETIONTYPE_REGFOREST 'r'             /**< regression forest (must be provided by user) */
+#define COMPLETIONTYPE_MONOREG   'm'             /**< monotone regression (using progress and SSG) */
+#define COMPLETIONTYPE_PROGRESS  'p'             /**< use progress value as approximation of search tree completion */
+#define COMPLETIONTYPE_SSG       's'             /**< use SSG value as approximation of search tree completion */
+#define COMPLETIONTYPE_GAP       'g'             /**< use gap value as approximation of search tree completion */
+
+#define DEFAULT_COMPLETIONTYPE COMPLETIONTYPE_AUTO /**< default computation of search tree completion */
+
+/* constants and default values for treeprofile parameters */
+#define TREEPRROFILE_MINSIZE    512               /**< minimum size (depth) that tree profile can hold */
+#define DEFAULT_TREEPROFILE_ENABLED FALSE         /**< should the event handler collect data? */
+#define DEFAULT_TREEPROFILE_MINNODESPERDEPTH 20.0 /**< minimum average number of nodes at each depth before producing estimations */
 
 /** double exponential smoothing data structure */
 struct DoubleExpSmooth
@@ -123,28 +146,6 @@ struct DoubleExpSmooth
    int                   n;                  /**< number of observations */
 };
 typedef struct DoubleExpSmooth DOUBLEEXPSMOOTH;
-
-/** data structure to hold the search progress */
-struct SearchProgress
-{
-   SCIP_Real*            progressarray;       /**< captures the current search progress in an array */
-   SCIP_Real*            resourcearray;       /**< captures the resource measurements, e.g., nodes */
-   int                   curr;                /**< index of current element */
-   int                   nobservations;       /**< total number of training observations */
-   DOUBLEEXPSMOOTH       desprogress;         /**< double exponential smoothing data structure for progress */
-   DOUBLEEXPSMOOTH       desresources;        /**< double exponential smoothing data structure for resources */
-};
-
-typedef struct SearchProgress SEARCHPROGRESS;
-
-/** estimation of tree size that is updated at every leaf node */
-struct BacktrackEstim
-{
-   SCIP_Real             numerator;          /**< weighted sample sizes based on the path probability */
-   SCIP_Real             denominator;        /**< sum of weights (aka progress) */
-   char                  progressmethod;     /**< 'f'ixed or 'u'niform? */
-};
-typedef struct BacktrackEstim BACKTRACKESTIM;
 
 /** time series data structure for leaf time series
  *
@@ -165,31 +166,54 @@ typedef struct TreeData TREEDATA;
 /** regression forest data structure */
 typedef struct SCIP_RegForest SCIP_REGFOREST;
 
+/** statistics collected from profile used for prediction */
+struct TreeProfileStats
+{
+   int                   maxdepth;           /**< maximum node depth encountered */
+   int                   lastfulldepth;      /**< deepest layer for which all nodes have been explored */
+   int                   minwaistdepth;      /**< minimum depth of the waist, ie the widest part of the tree */
+   int                   maxwaistdepth;      /**< maximum depth of the waist, ie the widest part of the tree */
+};
+
+typedef struct TreeProfileStats TREEPROFILESTATS;
+
+
+/** profile data structure for tree */
+struct TreeProfile
+{
+   SCIP_Longint*         profile;            /**< array to store the tree profile */
+   int                   profilesize;        /**< size of the profile array */
+   TREEPROFILESTATS      stats;              /**< statistics collected from profile used for prediction */
+   SCIP_Real             lastestimate;       /**< the last estimate predicted by SCIPpredictTotalSizeTreeprofile() */
+   TREEPROFILESTATS      lastestimatestats;  /**< tree profile statistics at last estimation */
+};
+
+typedef struct TreeProfile TREEPROFILE;
+
 /** event handler data */
 struct SCIP_EventhdlrData
 {
-   SEARCHPROGRESS*       ratioprogress;      /**< ratio progress data structure */
-   BACKTRACKESTIM*       backtrackestim;     /**< backtrack estimator for tree size */
    SCIP_REGFOREST*       regforest;          /**< regression forest data structure */
    TIMESERIES*           timeseries[NTIMESERIES]; /**< array of time series slots */
    TREEDATA*             treedata;           /**< tree data */
-   char                  restartpolicyparam; /**< restart policy parameter */
-   char                  estimationparam;    /**< parameter to select the estimation method */
-   char                  progressparam;      /**< progress method to use */
-   char                  forecastparam;      /**< method used for forecasting */
-   int                   windowsize;         /**< the window size used */
-   SCIP_Bool             useacceleration;    /**< consider also acceleration within window? */
+   TREEPROFILE*          treeprofile;        /**< tree profile data structure */
+   char*                 regforestfilename;  /**< file name of user regression forest in RFCSV format */
+   SCIP_Real             estim_factor;       /**< factor by which the estimated number of nodes should exceed the current number of nodes */
+   SCIP_Real             proglastreport;     /**< progress at which last report was printed */
+   SCIP_Real             treeprofile_minnodesperdepth;/**< minimum average number of nodes at each depth before producing estimations */
+   SCIP_Longint          minnodes;           /**< minimum number of nodes in a run before restart is triggered */
    int                   restartlimit;       /**< how often should a restart be triggered? (-1 for no limit) */
    int                   nrestartsperformed; /**< number of restarts performed so far */
    int                   restarthitcounter;  /**< the number of successive samples that would trigger a restart */
    int                   hitcounterlim;      /**< limit on the number of successive samples to really trigger a restart */
-   SCIP_Longint          minnodes;           /**< minimum number of nodes in a run before restart is triggered */
-   SCIP_Bool             countonlyleaves;    /**< should only leaves count for the minnodes parameter? */
-   SCIP_Real             estim_factor;       /**< factor by which the estimated number of nodes should exceed the current number of nodes */
-   SCIP_Real             proglastreport;     /**< progress at which last report was printed */
-   SCIP_Bool             printreports;       /**< should periodic reports on estimation be printed? */
    int                   nreports;           /**< the number of reports already printed */
-   char*                 regforestfilename;  /**< file name of user regression forest in RFCSV format */
+   int                   reportfreq;         /**< report frequency on estimation: -1: never, 0:always, k >= 1: k times evenly during search */
+   char                  restartpolicyparam; /**< restart policy parameter */
+   char                  estimationparam;    /**< parameter to select the estimation method */
+   char                  completiontypeparam;/**< approximation of search tree completion:
+                                               *  (a)uto, (g)ap, (p)rogress, (m)onotone regression, (r)egression forest, (s)sg */
+   SCIP_Bool             countonlyleaves;    /**< should only leaves count for the minnodes parameter? */
+   SCIP_Bool             treeprofile_enabled;/**< should the event handler collect treeprofile data? */
 };
 
 typedef struct SubtreeSumGap SUBTREESUMGAP;
@@ -249,6 +273,7 @@ struct NodeInfo
    int                   pos;                /**< position of this node in priority queue */
    int                   subtreeidx;         /**< subtree index of this node */
 };
+typedef struct NodeInfo NODEINFO;
 
 struct SCIP_RegForest
 {
@@ -260,10 +285,6 @@ struct SCIP_RegForest
    SCIP_Real*            value;              /**< split position at internal nodes, prediction at leaves */
    int                   size;               /**< length of node arrays */
 };
-
-
-typedef struct NodeInfo NODEINFO;
-
 
 /*
  * Local methods
@@ -303,14 +324,18 @@ SCIP_Real SCIPregforestPredict(
    assert(regforest != NULL);
    assert(datapoint != NULL);
 
+   SCIPdebugMessage("Start prediction method of regression forest\n");
+
    /* loop through the trees */
    for( treeidx = 0; treeidx < regforest->ntrees; ++treeidx )
    {
       int treepos = regforest->nbegin[treeidx];
-      int* childtree = &(regforest->child[treepos]);
+      int* childtree = &(regforest->child[2 * treepos]);
       int* splitidxtree = &(regforest->splitidx[treepos]);
       int pos = 0;
       SCIP_Real* valuetree = &(regforest->value[treepos]);
+
+      SCIPdebugMessage("Tree %d at position %d\n", treeidx, treepos);
 
       /* find the correct leaf */
       while( splitidxtree[pos] != - 1 )
@@ -328,6 +353,11 @@ SCIP_Real SCIPregforestPredict(
    /* return the average value that the trees predict */
    return value / (SCIP_Real)(regforest->ntrees);
 }
+
+/* author bzfhende
+ *
+ * TODO pimp this parser to fail if the regression forest dimension is wrong, or other unexpected things happen
+ */
 
 /** read a regression forest from an rfcsv file */
 static
@@ -455,6 +485,260 @@ CLOSEFILE:
     SCIPfclose(file);
 
    return SCIP_OKAY;
+}
+
+/** compare two tree profile statistics for equality */
+static
+SCIP_Bool isEqualTreeprofilestats(
+   TREEPROFILESTATS*     stats,              /**< first tree profile statistics */
+   TREEPROFILESTATS*     other               /**< other tree profile statistics */
+   )
+{
+   assert(stats != NULL);
+   assert(other != NULL);
+
+   return  stats->maxdepth == other->maxdepth &&
+      stats->lastfulldepth == other->lastfulldepth &&
+      stats->minwaistdepth == other->minwaistdepth &&
+      stats->maxwaistdepth == other->maxwaistdepth;
+}
+
+/** copy source tree profile into destination */
+static
+void copyTreeprofilestats(
+   TREEPROFILESTATS*     dest,               /**< destination tree profile statistics */
+   TREEPROFILESTATS*     src                 /**< source tree profile statistics */
+   )
+{
+   assert(dest != NULL);
+   assert(src != NULL);
+
+   dest->maxdepth = src->maxdepth;
+   dest->lastfulldepth = src->lastfulldepth;
+   dest->minwaistdepth = src->minwaistdepth;
+   dest->maxwaistdepth = src->maxwaistdepth;
+}
+
+/** reset tree profile statistics */
+static
+void resetTreeprofilestats(
+   TREEPROFILESTATS*     treeprofilestats   /**< tree profile statistics */
+   )
+{
+   assert(treeprofilestats != NULL);
+
+   BMSclearMemory(treeprofilestats);
+}
+
+
+/** extend tree profile to deeper tree */
+static
+SCIP_RETCODE extendMemoryTreeprofile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TREEPROFILE*          treeprofile,        /**< tree profile data structure */
+   int                   mindepth            /**< minimum depth that the tree profile should hold */
+   )
+{
+   if( mindepth < treeprofile->profilesize )
+      return SCIP_OKAY;
+
+   if( treeprofile->profile == NULL )
+   {
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &treeprofile->profile, mindepth) );
+      treeprofile->profilesize = mindepth;
+   }
+   else
+   {
+      int newsize = SCIPcalcMemGrowSize(scip, mindepth + 1);
+
+      assert(newsize > treeprofile->profilesize);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &treeprofile->profile, newsize) );
+      BMSclearMemoryArray(&treeprofile->profile[treeprofile->profilesize], newsize - treeprofile->profilesize);
+      treeprofile->profilesize = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** create a tree profile */
+static
+SCIP_RETCODE createTreeprofile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TREEPROFILE**         treeprofile         /**< pointer to store tree profile data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(treeprofile != NULL);
+
+   SCIP_CALL( SCIPallocMemory(scip, treeprofile) );
+
+   (*treeprofile)->profile = NULL;
+   (*treeprofile)->profilesize = 0;
+   SCIP_CALL( extendMemoryTreeprofile(scip, *treeprofile, TREEPRROFILE_MINSIZE) );
+
+   resetTreeprofilestats(&(*treeprofile)->stats);
+   resetTreeprofilestats(&(*treeprofile)->lastestimatestats);
+
+   (*treeprofile)->lastestimate = -1.0;
+
+   return SCIP_OKAY;
+}
+
+/** free a tree profile */
+static
+void freeTreeprofile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TREEPROFILE**         treeprofile         /**< pointer to tree profile data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(treeprofile != NULL);
+
+   if( *treeprofile == NULL )
+      return;
+
+   SCIPfreeMemoryArray(scip, &(*treeprofile)->profile);
+
+   SCIPfreeMemory(scip, treeprofile);
+
+   *treeprofile = NULL;
+}
+
+/** update tree profile */
+static
+SCIP_RETCODE updateTreeprofile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TREEPROFILE*          treeprofile,        /**< tree profile data structure */
+   SCIP_NODE*            node                /**< node that should be added to the profile */
+   )
+{
+   int nodedepth;
+   SCIP_Longint nodedepthcnt;
+   SCIP_Longint maxnodes;
+
+   assert(scip != NULL);
+   assert(node != NULL);
+
+   if( treeprofile == NULL )
+      return SCIP_OKAY;
+
+   nodedepth = SCIPnodeGetDepth(node);
+   assert(nodedepth >= 0);
+   maxnodes = treeprofile->profile[treeprofile->stats.minwaistdepth];
+   assert(treeprofile->stats.minwaistdepth == treeprofile->stats.maxwaistdepth ||
+      maxnodes == treeprofile->profile[treeprofile->stats.maxwaistdepth]);
+
+   /* ensure that the memory can hold at least this depth */
+   SCIP_CALL( extendMemoryTreeprofile(scip, treeprofile, nodedepth) );
+
+   nodedepthcnt = ++treeprofile->profile[nodedepth];
+
+   /* is this level full explored? We assume binary branching */
+   if( (unsigned int)nodedepth < 8*sizeof(int) && nodedepthcnt == (1U << nodedepth) )
+   {
+      SCIPdebugMsg(scip, "Level %d fully explored: %lld nodes\n", nodedepth, nodedepthcnt);
+
+      treeprofile->stats.lastfulldepth = nodedepth;
+   }
+
+   /* update maximum depth */
+   if( treeprofile->stats.maxdepth < nodedepth )
+   {
+      assert(treeprofile->stats.maxdepth == nodedepth - 1);
+      treeprofile->stats.maxdepth = nodedepth;
+      SCIPdebugMsg(scip, "Maximum depth increased to %d\n", treeprofile->stats.maxdepth);
+   }
+
+   /* minimum and maximum waist now coincide */
+   if( nodedepthcnt > maxnodes )
+   {
+      treeprofile->stats.minwaistdepth = treeprofile->stats.maxwaistdepth = nodedepth;
+      SCIPdebugMsg(scip, "Updating depth of tree waist: %d (%lld nodes)\n", treeprofile->stats.minwaistdepth, nodedepthcnt);
+   }
+   else if( nodedepthcnt == maxnodes )
+   {
+      /* enlarge the interval in which the waist lies */
+      if( treeprofile->stats.minwaistdepth > nodedepth )
+         treeprofile->stats.minwaistdepth = nodedepth;
+      else if( treeprofile->stats.maxwaistdepth < nodedepth )
+         treeprofile->stats.maxwaistdepth = nodedepth;
+   }
+   assert(treeprofile->stats.minwaistdepth <= treeprofile->stats.maxwaistdepth);
+
+
+
+   return SCIP_OKAY;
+}
+
+/** make a prediction of the total tree size based on the current tree profile */
+static
+SCIP_Real predictTotalSizeTreeprofile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TREEPROFILE*          treeprofile,        /**< tree profile data structure */
+   SCIP_Real             maxdepthfactor      /**< minimum number of average nodes per depth to make a prediction */
+   )
+{
+   SCIP_Real estimate;
+   SCIP_Real gamma_prod;
+   int d;
+   int waist;
+
+   /* prediction is disabled */
+   if( treeprofile == NULL )
+      return -1.0;
+
+   /* two few nodes to make a prediction */
+   if( maxdepthfactor * treeprofile->stats.maxdepth > SCIPgetNNodes(scip) )
+      return -1.0;
+
+   /* reuse previous estimation if tree profile hasn't changed */
+   if( isEqualTreeprofilestats(&treeprofile->lastestimatestats, &treeprofile->stats) )
+   {
+      SCIPdebugMsg(scip, "Reusing previous estimation result %g\n", treeprofile->lastestimate);
+
+      return treeprofile->lastestimate;
+   }
+
+   waist = (2 * treeprofile->stats.maxwaistdepth + treeprofile->stats.minwaistdepth) / 3;
+
+   gamma_prod = 2;
+   estimate = 1;
+
+   /* loop over all full levels */
+   for( d = 1; d < treeprofile->stats.lastfulldepth; ++d )
+   {
+      SCIP_Real gamma_d = 2.0;
+
+      estimate += gamma_prod;
+      gamma_prod *= gamma_d;
+   }
+
+   /* loop until the waist is reached */
+   for( ; d < waist; ++d )
+   {
+      SCIP_Real gamma_d = 2.0 - (d - treeprofile->stats.lastfulldepth + 1.0)/(waist - treeprofile->stats.lastfulldepth + 1.0);
+
+      assert(1.0 <= gamma_d && gamma_d <= 2.0);
+      estimate += gamma_prod;
+      gamma_prod *= gamma_d;
+   }
+
+   /* loop over the remaining levels */
+   for( ; d <= treeprofile->stats.maxdepth; ++d )
+   {
+      SCIP_Real gamma_d = (1.0 - (d - waist + 1.0)/(treeprofile->stats.maxdepth - waist + 1.0));
+      assert(0.0 <= gamma_d && gamma_d <= 1.0);
+
+      estimate += gamma_prod;
+      gamma_prod *= gamma_d;
+   }
+
+   /* copy tree profile statistics */
+   copyTreeprofilestats(&treeprofile->lastestimatestats, &treeprofile->stats);
+
+   treeprofile->lastestimate = estimate;
+
+   return estimate;
 }
 
 /** clean subtrees stored as priority queues */
@@ -766,7 +1050,7 @@ SCIP_RETCODE subtreesumgapRemoveNode(
       SCIP_Real newgap;
 
       oldgap = calcGap(scip, nodeinfo->lowerbound);
-      nodeinfofirst = SCIPpqueueFirst(ssg->subtreepqueues[subtreeidx]);
+      nodeinfofirst = (NODEINFO*)SCIPpqueueFirst(ssg->subtreepqueues[subtreeidx]);
       assert(nodeinfofirst == NULL || subtreeidx == nodeinfofirst->subtreeidx);
       newgap = calcGap(scip, nodeinfofirst != NULL ? nodeinfofirst->lowerbound : SCIPinfinity(scip) );
 
@@ -827,7 +1111,8 @@ SCIP_RETCODE subtreesumGapInsertChildren(
    return SCIP_OKAY;
 }
 
-#if 0
+/* this function is inefficient because it loops over all open nodes, but can be used for debugging */
+#ifdef SCIP_DISABLED_CODE
 /** compute subtree sum gap from scratch (inefficiently because loop over all open nodes) */
 static
 SCIP_RETCODE subtreesumgapComputeFromScratch(
@@ -1033,7 +1318,7 @@ SCIP_RETCODE subtreesumGapUpdate(
 
 /** reset tree data */
 static
-void treedataReset(
+void resetTreedata(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEDATA*             treedata            /**< tree data */
    )
@@ -1051,7 +1336,7 @@ void treedataReset(
 
 /** create tree data structure */
 static
-SCIP_RETCODE treedataCreate(
+SCIP_RETCODE createTreedata(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEDATA**            treedata            /**< pointer to store tree data */
    )
@@ -1063,14 +1348,14 @@ SCIP_RETCODE treedataCreate(
 
    SCIP_CALL( subtreesumgapCreate(scip, &(*treedata)->ssg) );
 
-   treedataReset(scip, *treedata);
+   resetTreedata(scip, *treedata);
 
    return SCIP_OKAY;
 }
 
 /** free tree data structure */
 static
-void treedataFree(
+void freeTreedata(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEDATA**            treedata            /**< pointer to tree data */
    )
@@ -1086,7 +1371,7 @@ void treedataFree(
 
 /** update tree data structure after a node has been solved/is about to be deleted */
 static
-SCIP_RETCODE treedataUpdate(
+SCIP_RETCODE updateTreedata(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEDATA*             treedata,           /**< tree data */
    SCIP_NODE*            node,               /**< the corresponding node */
@@ -1119,6 +1404,18 @@ SCIP_RETCODE treedataUpdate(
    }
 
    return SCIP_OKAY;
+}
+
+/** get weighted backtrack estimation from this tree data */
+static
+SCIP_Real getTreedataWBE(
+   TREEDATA*             treedata            /**< tree data */
+   )
+{
+   if( treedata->progress <= 0.0 || treedata->nleaves == 0 )
+      return -1.0;
+
+   return 2.0 * treedata->nleaves / treedata->progress - 1.0;
 }
 
 #ifdef SCIP_DEBUG
@@ -1479,355 +1776,6 @@ char* timeseriesGetName(
 
 
 
-/** reset search progress */
-static
-void resetSearchprogress(
-   SEARCHPROGRESS*       progress            /**< search progress data structure */
-   )
-{
-   progress->curr = -1;
-   progress->nobservations = 0;
-
-   doubleexpsmoothReset(&progress->desprogress, 0.0);
-   doubleexpsmoothReset(&progress->desresources, 0.0);
-}
-
-/** create a search progress */
-static
-SCIP_RETCODE createSearchprogress(
-   SEARCHPROGRESS**      progress            /**< pointer to store search progress data structure */
-   )
-{
-   assert(progress != NULL);
-
-   SCIP_ALLOC( BMSallocMemory(progress) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*progress)->progressarray, MAX_WINDOWSIZE) );
-   SCIP_ALLOC( BMSallocMemoryArray(&(*progress)->resourcearray, MAX_WINDOWSIZE) );
-
-   (*progress)->desprogress.alpha = DEFAULT_DES_ALPHA;
-   (*progress)->desprogress.beta = DEFAULT_DES_BETA;
-
-   (*progress)->desresources.alpha = DEFAULT_DES_ALPHA;
-   (*progress)->desresources.beta = DEFAULT_DES_BETA;
-
-   resetSearchprogress(*progress);
-
-   return SCIP_OKAY;
-}
-
-/** free search progress */
-static
-void freeSearchprogress(
-   SEARCHPROGRESS**      progress            /**< pointer to search progress data structure */
-   )
-{
-   assert(progress != NULL);
-
-   if( *progress == NULL )
-      return;
-
-   BMSfreeMemoryArray(&(*progress)->progressarray);
-   BMSfreeMemoryArray(&(*progress)->resourcearray);
-   BMSfreeMemory(progress);
-}
-
-/** add a new sample to the search progress */
-static
-void addSampleSearchprogress(
-   SEARCHPROGRESS*       progress,           /**< search progress data structure */
-   SCIP_Real             obs,                /**< new observation */
-   SCIP_Real             res                 /**< total resources, e.g., nodes, to reach observation */
-   )
-{
-   assert(progress != NULL);
-   progress->nobservations++;
-   progress->curr = (progress->curr + 1) % MAX_WINDOWSIZE;
-   progress->progressarray[progress->curr] = obs;
-   progress->resourcearray[progress->curr] = res;
-
-   doubleexpsmoothUpdate(&progress->desprogress, obs);
-   doubleexpsmoothUpdate(&progress->desresources, res);
-}
-
-/** get the current search progress */
-static
-SCIP_Real getCurrentProgress(
-   SEARCHPROGRESS*       progress            /**< search progress data structure */
-   )
-{
-   assert(progress != NULL);
-   if( progress->curr == -1 )
-      return 0.0;
-
-   assert(0 <= progress->curr && progress->curr <= MAX_WINDOWSIZE - 1);
-
-   return progress->progressarray[progress->curr];
-}
-
-/** get the current resource measurement */
-static
-SCIP_Real getCurrentResources(
-   SEARCHPROGRESS*       progress            /**< search progress data structure */
-   )
-{
-   if( progress->curr == -1 )
-      return 0.0;
-
-   return progress->resourcearray[progress->curr];
-}
-
-/** forecast how many additional resources are necessary to reach a certain level of progress */
-static
-SCIP_Real forecastRemainingResources(
-   SEARCHPROGRESS*       progress,           /**< search progress data structure */
-   SCIP_Real             targetlevel         /**< targeted progress level, e.g., 1.0 to finish the search */
-   )
-{
-   SCIP_Real progresstrend;
-   /*SCIP_Real resourcetrend;*/
-   SCIP_Real remprogress;
-   SCIP_Real remleaves;
-   SCIP_Real totalleaves;
-
-   assert(progress != NULL);
-
-   remprogress = targetlevel - getCurrentProgress(progress);
-
-   /* we have already reached the target level */
-   if( remprogress <= 0.0 )
-      return 0.0;
-
-   /* no observation available yet */
-   if( progress->nobservations == 0 )
-      return SCIP_REAL_MAX;
-
-   progresstrend = doubleexpsmoothGetTrend(&progress->desprogress);
-   /*resourcetrend = getTrendDoubleexpsmooth(&progress->desresources);*/
-
-   if( progresstrend == 0.0 )
-      return SCIP_REAL_MAX;
-
-   /* the remaining progress to the target level will be reached in approximately remprogress /progresstrend
-    * many samples. The corresponding resource trend per time step yields the remaining ressources
-    */
-   remleaves = remprogress / progresstrend;
-   totalleaves = remleaves + progress->nobservations;
-
-   /* the total number of nodes is the 2 * N (leave number) - 1 */
-   return 2 * totalleaves - 1 - getCurrentResources(progress);
-}
-
-/** measure the velocity between the indices at t1 and t2 */
-static
-SCIP_Real measureVelocity(
-   SEARCHPROGRESS*       progress,           /**< search progress data structure */
-   int                   t1,                 /**< the earlier time index */
-   int                   t2                  /**< the later time index */
-   )
-{
-   return (progress->progressarray[t2] - progress->progressarray[t1]) / (progress->resourcearray[t2] - progress->resourcearray[t1]);
-}
-
-/** forecast how many additional resources are needed to reach a target level by using a moving window */
-static
-SCIP_Real forecastRollingAverageWindow(
-   SEARCHPROGRESS*       progress,           /**< search progress data structure */
-   SCIP_Real             targetlevel,        /**< targeted progress level, e.g., 1.0 to finish the search */
-   int                   windowsize,         /**< the size of the moving window */
-   SCIP_Bool             useacceleration     /**< should the acceleration within the window in speed be taken into account? */
-   )
-{
-   SCIP_Real remprogress;
-   int windowstart;
-   int windowend;
-
-   assert(progress != NULL);
-   windowsize = MIN(windowsize, progress->nobservations);
-
-   /* we need at least 3 observations in our window to compute the acceleration */
-   useacceleration = useacceleration && windowsize >= 3;
-
-   remprogress = targetlevel - getCurrentProgress(progress);
-
-   /* nothing to forecast anymore */
-   if( remprogress <= 0.0 )
-      return 0.0;
-
-   windowend = progress->curr;
-   assert(progress->curr == (progress->nobservations - 1) % MAX_WINDOWSIZE);
-
-   /* compute the start index of the window */
-   if( progress->nobservations > MAX_WINDOWSIZE )
-      windowstart = (progress->curr - windowsize + 1 + MAX_WINDOWSIZE) % MAX_WINDOWSIZE;
-   else
-      windowstart = progress->curr - windowsize + 1;
-
-   assert(windowstart >= 0);
-
-   /* try to compute remaining ressources as the root of a quadratic function
-    *
-    * s(r) = s_0 + v * r + .5 a * r^2
-    *
-    * where s_0, v, and a are computed by using the start, end, and midpoint of the current
-    * window.
-    * */
-   if( useacceleration )
-   {
-      SCIP_Real rootdiscriminant;
-      SCIP_Real remres1;
-      SCIP_Real remres2;
-      SCIP_Real v;
-      SCIP_Real s0;
-      int windowmid = ((windowstart + windowsize) / 2) % MAX_WINDOWSIZE;
-      SCIP_Real w1 = progress->resourcearray[windowstart];
-      SCIP_Real w3 = progress->resourcearray[windowend];
-      SCIP_Real w2 = progress->resourcearray[windowmid];
-      SCIP_Real vel1 = measureVelocity(progress, windowstart, windowmid);
-      SCIP_Real velwindow = measureVelocity(progress, windowstart, windowend);
-      SCIP_Real discriminant;
-
-      /* coefficient a, the acceleration, in the above formula */
-      SCIP_Real acceleration = (velwindow - vel1) / (w3 - w2) * 2.0;
-
-      /* coefficient v, the velocity, and s_0, the y intercept in the quadratic function */
-      v = vel1 - .5 * acceleration * (w1 + w2);
-      s0 = progress->progressarray[windowstart] - v * w1 - .5 * acceleration * w1 * w1;
-
-      if( ! EPSZ(acceleration, 1e-9) )
-      {
-         /* solve the quadratic equation s(r) = targetlevel = s_0 + v * r + 0.5 * a * r^2
-          *
-          * r1/2 = 2 / a * (-v +/- sqrt(v^2 - 2 * a * (s_0 - targetlevel)))
-          * */
-         discriminant = v * v - 2 * acceleration * (s0 - targetlevel);
-         discriminant = MAX(0, discriminant);
-         rootdiscriminant = sqrt(discriminant);
-         remres1 = (-v + rootdiscriminant) / acceleration;
-         remres2 = (-v - rootdiscriminant) / acceleration;
-
-         return MAX(remres1, remres2);
-      }
-      else
-      {
-         /* solve the linear displacement formula because the acceleration is 0 */
-         return remprogress / v;
-      }
-   }
-   else
-   {
-      SCIP_Real velocitywindow = measureVelocity(progress, windowstart, windowend);
-
-      return remprogress / velocitywindow;
-   }
-}
-
-/** reset a backtrack estimator */
-static
-void resetBacktrackestim(
-   BACKTRACKESTIM*       backtrackestim      /**< backtrack estimator */
-   )
-{
-   BMSclearMemory(backtrackestim);
-
-   return;
-}
-
-/** create a backtrack estimator */
-static
-SCIP_RETCODE createBacktrackestim(
-   BACKTRACKESTIM**      backtrackestim,     /**< pointer to store backtrack estimator */
-   char                  progressmethod      /**< 'f'ixed or 'u'niform? */
-   )
-{
-   assert(backtrackestim != NULL);
-
-   SCIP_ALLOC( BMSallocMemory(backtrackestim) );
-
-   resetBacktrackestim(*backtrackestim);
-
-   return SCIP_OKAY;
-}
-
-/** free a backtrack estimator */
-static
-void freeBacktrackestim(
-   BACKTRACKESTIM**      backtrackestim      /**< pointer to store backtrack estimator */
-   )
-{
-   assert(backtrackestim != NULL);
-
-   if( *backtrackestim == NULL )
-      return;
-
-   BMSfreeMemory(backtrackestim);
-}
-
-/** update backtrack estimator by a new leaf node */
-static
-void updateBacktrackestim(
-   BACKTRACKESTIM*       backtrackestim,     /**< backtrack estimator */
-   SCIP_NODE*            leafnode            /**< new, previously unseen leaf node */
-   )
-{
-   SCIP_Real probability;
-   SCIP_Real num;
-   SCIP_Real arcprobability;
-   SCIP_Real pathprobability;
-   SCIP_NODE* parent;
-   SCIP_NODE* current;
-
-
-   assert(backtrackestim != NULL);
-   assert(leafnode != NULL);
-
-   switch (backtrackestim->progressmethod) {
-      case PROGRESS_CHAR_FIXED:
-         probability = SCIPnodeGetFixedProbability(leafnode);
-         pathprobability = probability;
-
-         current = leafnode;
-         num = 1.0;
-         /* loop back along all arcs along the path */
-         while( (parent = SCIPnodeGetParent(current)) != NULL )
-         {
-            arcprobability = SCIPnodeGetFixedProbability(current) / SCIPnodeGetFixedProbability(parent);
-            num += probability / pathprobability;
-            pathprobability /= arcprobability;
-
-            current = parent;
-         }
-         break;
-      case PROGRESS_CHAR_UNIFORM:
-         probability = pow(0.5, SCIPnodeGetDepth(leafnode));
-         num = 2 - probability;
-         break;
-      default:
-         SCIPerrorMessage("Unsupported progress type <%c> for backtrack estimation\n");
-         SCIPABORT();
-
-         break;
-   }
-
-   backtrackestim->numerator += num;
-   backtrackestim->denominator += probability;
-}
-
-/** estimate the total tree size using the backtrack estimation */
-static
-SCIP_Real estimateTreesizeBacktrackestim(
-   BACKTRACKESTIM*       backtrackestim      /**< backtrack estimator */
-   )
-{
-   assert(backtrackestim != NULL);
-
-   if( backtrackestim->denominator == 0.0 )
-      return -1;
-
-   return backtrackestim->numerator / backtrackestim->denominator;
-}
-
-
-
 /*
  * Callback methods of event handler
  */
@@ -1873,11 +1821,7 @@ SCIP_DECL_EVENTFREE(eventFreeRestart)
    SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   freeSearchprogress(&eventhdlrdata->ratioprogress);
-
-   freeBacktrackestim(&eventhdlrdata->backtrackestim);
-
-   treedataFree(scip, &eventhdlrdata->treedata);
+   freeTreedata(scip, &eventhdlrdata->treedata);
 
    freeTimeseries(scip, eventhdlrdata);
 
@@ -1943,26 +1887,22 @@ SCIP_DECL_EVENTINITSOL(eventInitsolRestart)
    SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   resetSearchprogress(eventhdlrdata->ratioprogress);
-
-   resetBacktrackestim(eventhdlrdata->backtrackestim);
-
-   /* backtrack estimator only allows fixed or uniform progress */
-   if( eventhdlrdata->progressparam == PROGRESS_CHAR_FIXED )
-      eventhdlrdata->backtrackestim->progressmethod = PROGRESS_CHAR_FIXED;
-   else
-      eventhdlrdata->backtrackestim->progressmethod = PROGRESS_CHAR_UNIFORM;
-
    eventhdlrdata->restarthitcounter = 0;
    eventhdlrdata->proglastreport = 0.0;
    eventhdlrdata->nreports = 0;
 
    /* reset tree data */
-   treedataReset(scip, eventhdlrdata->treedata);
+   resetTreedata(scip, eventhdlrdata->treedata);
 
    resetTimeseries(eventhdlrdata);
 
    SCIP_CALL( SCIPcatchEvent(scip, EVENTTYPE_RESTART, eventhdlr, NULL, NULL) );
+
+   if( eventhdlrdata->treeprofile_enabled )
+   {
+      SCIP_CALL( createTreeprofile(scip, &eventhdlrdata->treeprofile) );
+   }
+
 
    return SCIP_OKAY;
 }
@@ -1971,6 +1911,11 @@ SCIP_DECL_EVENTINITSOL(eventInitsolRestart)
 static
 SCIP_DECL_EVENTEXITSOL(eventExitsolRestart)
 {  /*lint --e{715}*/
+   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+
+   if( eventhdlrdata->treeprofile != NULL )
+      freeTreeprofile(scip, &eventhdlrdata->treeprofile);
+
 
    SCIP_CALL( SCIPdropEvent(scip, EVENTTYPE_RESTART, eventhdlr, NULL, -1) );
 
@@ -2002,8 +1947,6 @@ RESTARTPOLICY getRestartPolicy(
          return RESTARTPOLICY_ALWAYS;
       case RESTARTPOLICY_CHAR_NEVER:
          return RESTARTPOLICY_NEVER;
-      case RESTARTPOLICY_CHAR_ESTIMATION:
-         return RESTARTPOLICY_ESTIMATION;
       case RESTARTPOLICY_CHAR_PROGRESS:
          return RESTARTPOLICY_PROGRESS;
       default:
@@ -2041,74 +1984,6 @@ SCIP_Bool checkConditions(
    return TRUE;
 }
 
-/** should a restart be applied based on the current tree size estimation? */
-static
-SCIP_Bool shouldApplyRestartEstimation(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
-   )
-{
-   SCIP_Real estimation = -1.0;
-   assert(scip != NULL);
-   assert(eventhdlrdata != NULL);
-
-   /* query a tree size estimation based on the user parameter */
-   switch (eventhdlrdata->estimationparam) {
-      case ESTIMATION_CHAR_TREESIZE:
-         /* use the probability based tree size prediction */
-         estimation = SCIPtreeSizeGetEstimateTotal(scip);
-         break;
-      case ESTIMATION_CHAR_PROFILE:
-         /* use the estimation based on the tree profile */
-         estimation = SCIPpredictTotalSizeTreeprofile(scip);
-         break;
-      default:
-         break;
-   }
-
-   /* no estimation is available yet */
-   if( estimation < 0.0 )
-      return FALSE;
-
-   /* if the estimation exceeds the current number of nodes by a dramatic factor, restart */
-   if( estimation > SCIPgetNNodes(scip) * eventhdlrdata->estim_factor )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "Estimation %g exceeds current number of nodes %lld by a factor of %.1f\n",
-               estimation, SCIPgetNNodes(scip), estimation / SCIPgetNNodes(scip));
-      return TRUE;
-   }
-
-   return FALSE;
-}
-
-/** forecast the number of remaining nodes depending on the selected user parameters */
-static
-SCIP_Real forecastRemainingNodes(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
-   )
-{
-
-   switch (eventhdlrdata->forecastparam) {
-      case FORECAST_BACKTRACKESTIM:
-         return MAX(0.0, estimateTreesizeBacktrackestim(eventhdlrdata->backtrackestim) - SCIPgetNNodes(scip));
-         break;
-      case FORECAST_LINEAR:
-         return forecastRemainingResources(eventhdlrdata->ratioprogress, 1.0);
-         break;
-      case FORECAST_WINDOW:
-         return forecastRollingAverageWindow(eventhdlrdata->ratioprogress, 1.0,
-                  eventhdlrdata->windowsize,
-                  eventhdlrdata->useacceleration);
-         break;
-      default:
-         break;
-   }
-
-   return -1.0;
-}
-
 /** should a restart be applied based on the current progress? */
 static
 SCIP_Bool shouldApplyRestartProgress(
@@ -2118,14 +1993,8 @@ SCIP_Bool shouldApplyRestartProgress(
 {
 
    SCIP_Real estimation;
-   SCIP_Real remainnodes;
 
-   remainnodes = forecastRemainingNodes(scip, eventhdlrdata);
-
-   if( remainnodes < 0.0 )
-      return FALSE;
-
-   estimation = SCIPgetNNodes(scip) + remainnodes;
+   estimation = getTreedataWBE(eventhdlrdata->treedata);
 
    /* if the estimation exceeds the current number of nodes by a dramatic factor, restart */
    if( estimation > SCIPgetNNodes(scip) * eventhdlrdata->estim_factor )
@@ -2151,8 +2020,6 @@ SCIP_Bool shouldApplyRestart(
          return TRUE;
       case RESTARTPOLICY_NEVER:
          return FALSE;
-      case RESTARTPOLICY_ESTIMATION:
-         return shouldApplyRestartEstimation(scip, eventhdlrdata);
       case RESTARTPOLICY_PROGRESS:
          return shouldApplyRestartProgress(scip, eventhdlrdata);
          break;
@@ -2161,52 +2028,6 @@ SCIP_Bool shouldApplyRestart(
    }
 
    return FALSE;
-}
-
-/** update the search progress after a new leaf has been reached */
-static
-SCIP_RETCODE updateSearchProgress(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLRDATA*   eventhdlrdata,      /**< event handler data */
-   SCIP_NODE*            leafnode            /**< current leaf node of SCIP */
-   )
-{
-   SEARCHPROGRESS* searchprogress;
-   SCIP_Real currentprogress;
-
-   assert(scip != NULL);
-   assert(eventhdlrdata != NULL);
-
-   searchprogress = eventhdlrdata->ratioprogress;
-
-
-   switch (eventhdlrdata->progressparam) {
-      case PROGRESS_CHAR_GAP:
-         currentprogress = 1.0 - MIN(SCIPgetGap(scip), 1.0);
-         break;
-      case PROGRESS_CHAR_UNIFORM:
-         currentprogress = getCurrentProgress(searchprogress) + pow(0.5, SCIPnodeGetDepth(leafnode));
-
-         break;
-      case PROGRESS_CHAR_RATIO:
-         SCIP_CALL( SCIPgetNodeProbability(scip, leafnode, &currentprogress) );
-         currentprogress += getCurrentProgress(searchprogress);
-         break;
-      case PROGRESS_CHAR_FIXED:
-         currentprogress = getCurrentProgress(searchprogress) + SCIPnodeGetFixedProbability(leafnode);
-         break;
-      default:
-         break;
-   }
-
-   addSampleSearchprogress(searchprogress, currentprogress, SCIPgetNNodes(scip));
-
-   updateBacktrackestim(eventhdlrdata->backtrackestim, leafnode);
-
-   SCIPdebugMsg(scip, "Update search progress by leaf %lld at depth %d: %g\n",
-      SCIPnodeGetNumber(leafnode), SCIPnodeGetDepth(leafnode), pow(0.5, SCIPnodeGetDepth(leafnode)));
-
-   return SCIP_OKAY;
 }
 
 /** update all time series */
@@ -2237,7 +2058,7 @@ SCIP_RETCODE updateTimeseries(
    return SCIP_OKAY;
 }
 
-/** todo convert SCIP_INVALID into string '-' */
+/** convert SCIP_INVALID into string '-' */
 static
 char* real2String(
    SCIP_Real             num,                /**< number to convert to string */
@@ -2293,9 +2114,9 @@ char* printReport(
    ptr += sprintf(ptr, "\n");
 
    ptr += sprintf(ptr, "  wbe              : %11.0f %11s %11s %11s %11s\n",
-            estimateTreesizeBacktrackestim(eventhdlrdata->backtrackestim), "-", "-", "-", "-");
-   ptr += sprintf(ptr, "  tree profile     : %11.0f %11s %11s %11s %11s\n",
-            SCIPpredictTotalSizeTreeprofile(scip),
+            getTreedataWBE(eventhdlrdata->treedata), "-", "-", "-", "-");
+   ptr += sprintf(ptr, "  tree-profile     : %11.0f %11s %11s %11s %11s\n",
+            predictTotalSizeTreeprofile(scip, eventhdlrdata->treeprofile, eventhdlrdata->treeprofile_minnodesperdepth),
             "-", "-", "-", "-");
 
    /* print time series forecasts */
@@ -2346,12 +2167,15 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
 
    if( eventtype == SCIP_EVENTTYPE_NODEBRANCHED || eventtype == SCIP_EVENTTYPE_PQNODEINFEASIBLE )
    {
+      SCIP_NODE* eventnode;
       int nchildren = 0;
 
       if( eventtype == SCIP_EVENTTYPE_NODEBRANCHED )
          nchildren = SCIPgetNChildren(scip);
 
-      SCIP_CALL( treedataUpdate(scip, treedata, SCIPeventGetNode(event), nchildren) );
+      eventnode = SCIPeventGetNode(event);
+      SCIP_CALL( updateTreedata(scip, treedata, eventnode, nchildren) );
+      SCIP_CALL( updateTreeprofile(scip, eventhdlrdata->treeprofile, eventnode) );
 
 #ifdef SCIP_DEBUG
       {
@@ -2363,15 +2187,18 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       SCIP_CALL( updateTimeseries(scip, eventhdlrdata, treedata, nchildren == 0) );
 
       /* should a new report be printed? */
-      if( eventhdlrdata->printreports &&
-            SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN &&
-            treedata->progress >= eventhdlrdata->proglastreport + 1.0 / (SCIP_Real)NREPORTS )
+      if( eventhdlrdata->reportfreq >= 0 && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN &&
+         (eventhdlrdata->reportfreq == 0
+         || treedata->progress >= eventhdlrdata->proglastreport + 1.0 / (SCIP_Real)eventhdlrdata->reportfreq) )
       {
          char strbuf[SCIP_MAXSTRLEN];
 
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s\n", printReport(scip, eventhdlrdata, strbuf, ++eventhdlrdata->nreports));
 
-         eventhdlrdata->proglastreport = 1 / (SCIP_Real)NREPORTS * (int)(treedata->progress * NREPORTS);
+         if( eventhdlrdata->reportfreq > 0 )
+            eventhdlrdata->proglastreport = 1 / (SCIP_Real)eventhdlrdata->reportfreq * (int)(treedata->progress * eventhdlrdata->reportfreq);
+         else
+            eventhdlrdata->proglastreport = treedata->progress;
       }
    }
 
@@ -2386,18 +2213,6 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
    if( isleaf != isleafbit )
    {
       SCIPABORT();
-   }
-
-   if( isleaf )
-   {
-      SCIP_Real remainnodes;
-      SCIP_CALL( updateSearchProgress(scip, eventhdlrdata, SCIPeventGetNode(event)) );
-
-      remainnodes = forecastRemainingNodes(scip, eventhdlrdata);
-      SCIPdebugMsg(scip, "Updated search progress to %.8f tree size estimation %g (%lld + %g)\n",
-         getCurrentProgress(eventhdlrdata->ratioprogress),
-         SCIPgetNNodes(scip) + remainnodes,
-         SCIPgetNNodes(scip), remainnodes);
    }
 
    /* if nodes have been pruned, this is usually an indication that things are progressing, don't restart */
@@ -2561,17 +2376,6 @@ SCIP_RETCODE includeTimeseries(
    return SCIP_OKAY;
 }
 
-#define DISP_NAME               "completed"
-#define DISP_DESC               "completion of search in percent (based on tree size estimation)"
-#define DISP_HEADER             "compl."
-#define DISP_WIDTH              8       /**< the width of the display column */
-#define DISP_PRIORITY           110000  /**< the priority of the display column */
-#define DISP_POSITION           30100   /**< the relative position of the display column */
-#define DISP_STRIPLINE          TRUE    /**< the default for whether the display column should be separated
-                                         *   with a line from its right neighbor */
-
-
-
 /** output method of display column to output file stream 'file' */
 static
 SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
@@ -2582,29 +2386,72 @@ SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
    SCIP_Real completed;
    SCIP_Real values[9];
 
+   char completiontype;
+
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME) == 0);
    assert(scip != NULL);
 
+   SCIPdebugMsg(scip, "Start dispout\n");
+
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    treedata = eventhdlrdata->treedata;
+   completiontype = eventhdlrdata->completiontypeparam;
+
+   /* infer automatic completion type */
+   if( completiontype == COMPLETIONTYPE_AUTO )
+   {
+      /* use regression forest if available, or use monotone regression */
+      if( eventhdlrdata->regforest != NULL )
+         completiontype = COMPLETIONTYPE_REGFOREST;
+      else
+         completiontype = COMPLETIONTYPE_MONOREG;
+
+      /* author bzfhende
+       *
+       * TODO use SSG if tree is nonbinary
+       */
+   }
+
+   switch (completiontype)
+   {
+      case COMPLETIONTYPE_REGFOREST:
+         values[6] = timeseriesGet(eventhdlrdata->timeseries[0]);
+         values[7] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[0]->des);
+         values[2] = timeseriesGet(eventhdlrdata->timeseries[3]);
+         values[3] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[3]->des);
+         values[0] = timeseriesGet(eventhdlrdata->timeseries[1]);
+         values[1] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[1]->des);
+         values[4] = timeseriesGet(eventhdlrdata->timeseries[2]);
+         values[5] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[2]->des);
+         values[8] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[4]->des) < 0 ? 1.0 : 0.0;
+
+         completed = SCIPregforestPredict(eventhdlrdata->regforest, values);
+         break;
+      case COMPLETIONTYPE_MONOREG:
+         /* author bzfhende
+          *
+          * TODO make this user parameters
+          */
+         completed = 0.5828 + 0.3667 * treedata->progress - 0.6101 * timeseriesGet(eventhdlrdata->timeseries[3]);
+         break;
+      case COMPLETIONTYPE_PROGRESS:
+         completed = timeseriesGet(eventhdlrdata->timeseries[1]);
+         break;
+      case COMPLETIONTYPE_GAP:
+         completed = timeseriesGet(eventhdlrdata->timeseries[0]); /* gap is stored as 1 - gap */
+         break;
+      case COMPLETIONTYPE_SSG:
+         completed = 1.0 - timeseriesGet(eventhdlrdata->timeseries[3]); /* ssg is decreasing */
+         break;
+      default:
+         SCIPerrorMessage("Unsupported completion type '%c'\n", completiontype);
+         SCIPABORT();
+         return SCIP_PARAMETERWRONGVAL;
+   }
 
 /* the random forest is a huge c-file and should only be included if requested explicitly */
-#if 0
-      values[6] = timeseriesGet(eventhdlrdata->timeseries[0]);
-      values[7] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[0]->des);
-      values[2] = timeseriesGet(eventhdlrdata->timeseries[3]);
-      values[3] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[3]->des);
-      values[0] = timeseriesGet(eventhdlrdata->timeseries[1]);
-      values[1] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[1]->des);
-      values[4] = timeseriesGet(eventhdlrdata->timeseries[2]);
-      values[5] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[2]->des);
-      values[8] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[4]->des) < 0 ? 1.0 : 0.0;
-      completed = SCIPregforestPredict(eventhdlrdata->regforest, values);
-#else
-   completed = 0.5828 + 0.3667 * treedata->progress - 0.6101 * timeseriesGet(eventhdlrdata->timeseries[3]);
-#endif
    completed = MIN(completed, 1.0);
 
    /* interpolate between ssg and progress */
@@ -2681,7 +2528,7 @@ SCIP_Real SCIPgetTreesizeEstimation(
       }
 
       /* add WBE */
-      estim += 0.156 * estimateTreesizeBacktrackestim(eventhdlrdata->backtrackestim);
+      estim += 0.156 * getTreedataWBE(treedata);
    }
    else
    {
@@ -2705,7 +2552,7 @@ SCIP_Real SCIPgetTreesizeEstimation(
       }
 
       /* add WBE */
-      estim += 0.579 * estimateTreesizeBacktrackestim(eventhdlrdata->backtrackestim);
+      estim += 0.579 * getTreedataWBE(treedata);
    }
 
 
@@ -2726,22 +2573,13 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_EVENTHDLR* eventhdlr;
 
-   SCIP_REGFOREST* regforest = NULL;
-
-
-
-
    /* create restart event handler data */
    eventhdlrdata = NULL;
 
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    BMSclearMemory(eventhdlrdata);
 
-   SCIP_CALL( createSearchprogress(&eventhdlrdata->ratioprogress) );
-
-   SCIP_CALL( createBacktrackestim(&eventhdlrdata->backtrackestim, PROGRESS_CHAR_UNIFORM) );
-
-   SCIP_CALL( treedataCreate(scip, &eventhdlrdata->treedata) );
+   SCIP_CALL( createTreedata(scip, &eventhdlrdata->treedata) );
 
    eventhdlr = NULL;
 
@@ -2763,42 +2601,39 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
 
    /* add restart event handler parameters */
    /* TODO: (optional) add event handler specific parameters with SCIPaddTypeParam() here */
-   SCIP_CALL( SCIPaddCharParam(scip, "restarts/restartpolicy", "restart policy: aenp",
-            &eventhdlrdata->restartpolicyparam, FALSE, 'n', "aenp", NULL, NULL) );
-   SCIP_CALL( SCIPaddCharParam(scip, "restarts/estimationmethod", "select estimation method",
-               &eventhdlrdata->estimationparam, FALSE, 't', "t", NULL, NULL) );
-   SCIP_CALL( SCIPaddCharParam(scip, "restarts/progressmeasure", "select progress measure",
-               &eventhdlrdata->progressparam, FALSE, 'u', "fgru", NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "restarts/restartpolicy", "restart policy: anp",
+         &eventhdlrdata->restartpolicyparam, FALSE, 'n', "anp", NULL, NULL) );
 
+   /* author bzfhende
+    *
+    * TODO revitalize the estimation method parameter
+    */
+   SCIP_CALL( SCIPaddCharParam(scip, "restarts/estimation/method", "select estimation method",
+         &eventhdlrdata->estimationparam, FALSE, 't', "t", NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/restartlimit", "restart limit",
-      &eventhdlrdata->restartlimit, FALSE, 1, -1, INT_MAX, NULL, NULL) );
+         &eventhdlrdata->restartlimit, FALSE, 1, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip, "restarts/minnodes", "minimum number of nodes before restart",
          &eventhdlrdata->minnodes, FALSE, 1000, -1, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "restarts/countonlyleaves", "should only leaves count for the minnodes parameter?",
          &eventhdlrdata->countonlyleaves, FALSE, FALSE, NULL, NULL) );
-
    SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/factor",
          "factor by which the estimated number of nodes should exceed the current number of nodes",
          &eventhdlrdata->estim_factor, FALSE, 2.0, 1.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddCharParam(scip, "restarts/forecast", "method used for forecasting",
-         &eventhdlrdata->forecastparam, FALSE, FORECAST_LINEAR, "blw", NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip, "restarts/windowsize", "the window size for window forecasting",
-         &eventhdlrdata->windowsize, FALSE, DEFAULT_WINDOWSIZE, 2, MAX_WINDOWSIZE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "restarts/useacceleration", "consider also acceleration within window?",
-         &eventhdlrdata->useacceleration, FALSE, FALSE, NULL, NULL) );
-
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/hitcounterlim", "limit on the number of successive samples to really trigger a restart",
          &eventhdlrdata->hitcounterlim, FALSE, 50, 1, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "restarts/printreports", "should periodic reports on estimation be printed?",
-         &eventhdlrdata->printreports, TRUE, FALSE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddStringParam(scip, "restarts/regforestfilename", "user regression forest in RFCSV format",
-         &eventhdlrdata->regforestfilename, TRUE, DEFAULT_REGFORESTFILENAME, NULL, NULL) );
-
+   SCIP_CALL( SCIPaddIntParam(scip, "restarts/estimation/reportfreq",
+         "report frequency on estimation: -1: never, 0:always, k >= 1: k times evenly during search",
+         &eventhdlrdata->reportfreq, FALSE, DEFAULT_REPORTFREQ, -1, INT_MAX / 2, NULL, NULL) );
+   SCIP_CALL( SCIPaddStringParam(scip, "restarts/estimation/regforestfilename", "user regression forest in RFCSV format",
+         &eventhdlrdata->regforestfilename, FALSE, DEFAULT_REGFORESTFILENAME, NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "restarts/estimation/completiontype",
+         "approximation of search tree completion: (a)uto, (g)ap, (p)rogress, (m)onotone regression, (r)egression forest, (s)sg",
+         &eventhdlrdata->completiontypeparam, FALSE, DEFAULT_COMPLETIONTYPE, "agpmrs", NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "restarts/estimation/treeprofile/enabled",
+         "should the event handler collect data?", &eventhdlrdata->treeprofile_enabled, FALSE, DEFAULT_TREEPROFILE_ENABLED, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/treeprofile/maxdepthfactor",
+         "minimum average number of nodes at each depth before producing estimations",
+         &eventhdlrdata->treeprofile_minnodesperdepth, FALSE, DEFAULT_TREEPROFILE_MINNODESPERDEPTH, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,

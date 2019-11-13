@@ -123,10 +123,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
-   SCIP_CALL( SCIPincludeEventHdlrTreeSizePrediction(scip) );
    SCIP_CALL( SCIPincludeEventHdlrRestart(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );
-   SCIP_CALL( SCIPincludeEventHdlrTreeprofile(scip) );
    SCIP_CALL( SCIPincludeComprLargestrepr(scip) );
    SCIP_CALL( SCIPincludeComprWeakcompr(scip) );
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );
@@ -210,7 +208,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
-   SCIP_CALL( SCIPincludeDispEstimates(scip) );
    SCIP_CALL( SCIPincludeTableDefault(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
    SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
