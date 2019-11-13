@@ -1847,7 +1847,7 @@ SCIP_RETCODE computeSteinerTreeVnoi(
          for( j = 0; j < nneighbnodes; j++ )
          {
             assert(termsmark[vbase[tovisit[nnodes - j - 1]]]);
-            heap_add(g->path_heap, state, &count, tovisit[nnodes - j - 1], vnoi);
+            heap_add(vnoi, tovisit[nnodes - j - 1], g->path_heap, state, &count);
          }
          SCIP_CALL( graph_voronoiExtend(scip, g, ((term == root)? cost : costrev), vnoi, node_dist, node_base, node_edge, termsmark, reachednodes, &nreachednodes, nodenterms,
                nneighbterms, term, nneighbnodes) );
