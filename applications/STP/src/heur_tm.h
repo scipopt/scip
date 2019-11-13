@@ -87,13 +87,12 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
    );
 
-/** prune a Steiner tree in such a way that all leaves are terminals */
+/** prune a STP Steiner tree in such a way that all leaves are terminals */
 SCIP_EXPORT
-SCIP_RETCODE SCIPStpHeurTMPrune(
+SCIP_RETCODE SCIPStpHeurTMPruneStp(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    const SCIP_Real*      cost,               /**< edge costs */
-   int                   layer,              /**< layer, @note: should be set to 0 */
    int*                  result,             /**< ST edges */
    STP_Bool*             connected           /**< ST nodes */
    );
@@ -101,6 +100,16 @@ SCIP_RETCODE SCIPStpHeurTMPrune(
 /** prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
 SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurTMPrunePc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   int*                  result,             /**< ST edges */
+   STP_Bool*             connected           /**< ST nodes */
+   );
+
+/** prune a Steiner tree in such a way that all leaves are terminals */
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpHeurTMPrune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    const SCIP_Real*      cost,               /**< edge costs */

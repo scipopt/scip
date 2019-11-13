@@ -4263,10 +4263,7 @@ SCIP_RETCODE graph_sol_getOrg(
       orgsoledge[e] = UNKNOWN;
 
    /* prune solution (in original graph) */
-   if( pcmw )
-      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, orggraph, orggraph->cost, orgsoledge, orgnodearr) );
-   else
-      SCIP_CALL( SCIPStpHeurTMPrune(scip, orggraph, orggraph->cost, 0, orgsoledge, orgnodearr) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, orggraph, orggraph->cost, orgsoledge, orgnodearr) );
 
    SCIPfreeBufferArray(scip, &orgnodearr);
 

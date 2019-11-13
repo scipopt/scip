@@ -181,8 +181,13 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    const int nnodes = g->knots;
    const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g);
 
+#ifndef NDEBUG
+   for( int i = 0; i < g->edges; ++i )
+      assert(UNKNOWN == result[i]);
+
    assert(g != NULL && cost != NULL && result != NULL && connected != NULL);
    assert(g->extended);
+#endif
 
    if( rpcmw )
    {
@@ -592,56 +597,56 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
 }
 
 
-/** prune a Steiner tree in such a way that all leaves are terminals */
-SCIP_RETCODE SCIPStpHeurTMPrune(
+/** prune a STP Steiner tree in such a way that all leaves are terminals */
+SCIP_RETCODE SCIPStpHeurTMPruneStp(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    const SCIP_Real*      cost,               /**< edge costs */
-   int                   layer,              /**< layer (usually 0) */
    int*                  result,             /**< ST edges, which need to be set to UNKNOWN */
    STP_Bool*             connected           /**< ST nodes */
    )
 {
    PATH*  mst;
-   int i;
-   int j;
    int count;
    int nnodes;
 
-   assert(g != NULL);
-   assert(scip != NULL);
-   assert(cost != NULL);
-   assert(layer == 0);
-   assert(result != NULL);
-   assert(connected != NULL);
+#ifndef NDEBUG
+   int nconnected = 0;
 
-   j = 0;
+   assert(g && scip && cost && result && connected);
+
+   for( int i = 0; i < g->edges; ++i )
+      assert(UNKNOWN == result[i]);
+#endif
+
+
    nnodes = g->knots;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
 
    /* compute the MST */
-   for( i = nnodes - 1; i >= 0; --i )
+   for( int i = nnodes - 1; i >= 0; --i )
    {
+#ifndef NDEBUG
       if( connected[i] )
-         j++;
+         nconnected++;
+#endif
       g->mark[i] = connected[i];
    }
 
-   assert(g->source >= 0);
-   assert(g->source < nnodes);
-   assert(j >= g->terms);
+   assert(g->source >= 0 && g->source < nnodes);
+   assert(nconnected >= g->terms);
 
    graph_path_exec(scip, g, MST_MODE, g->source, cost, mst);
 
-   for( i = nnodes - 1; i >= 0; --i )
+   for( int i = nnodes - 1; i >= 0; --i )
    {
       if( connected[i] && (mst[i].edge != -1) )
       {
          assert(g->head[mst[i].edge] == i);
          assert(result[mst[i].edge] == UNKNOWN);
 
-         result[mst[i].edge] = layer;
+         result[mst[i].edge] = CONNECT;
       }
    }
 
@@ -653,16 +658,18 @@ SCIP_RETCODE SCIPStpHeurTMPrune(
 
       count = 0;
 
-      for( i = nnodes - 1; i >= 0; --i )
+      for( int i = nnodes - 1; i >= 0; --i )
       {
+         int j;
+
          if( !g->mark[i] )
             continue;
 
-         if( g->term[i] == layer )
+         if( Is_term(g->term[i]) )
             continue;
 
          for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
-            if( result[j] == layer )
+            if( result[j] == CONNECT )
                break;
 
          if( j == EAT_LAST )
@@ -671,9 +678,9 @@ SCIP_RETCODE SCIPStpHeurTMPrune(
              */
             for( j = g->inpbeg[i]; j != EAT_LAST; j = g->ieat[j] )
             {
-               if( result[j] == layer )
+               if( result[j] == CONNECT )
                {
-                  result[j]    = -1;
+                  result[j]    = UNKNOWN;
                   g->mark[i]   = FALSE;
                   connected[i] = FALSE;
                   count++;
@@ -689,6 +696,25 @@ SCIP_RETCODE SCIPStpHeurTMPrune(
 
    return SCIP_OKAY;
 }
+
+
+/** prune a Steiner tree in such a way that all leaves are terminals */
+SCIP_RETCODE SCIPStpHeurTMPrune(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   int*                  result,             /**< ST edges, which need to be set to UNKNOWN */
+   STP_Bool*             connected           /**< ST nodes */
+   )
+{
+   if( graph_pc_isPcMw(g) )
+      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, cost, result, connected) );
+   else
+      SCIP_CALL( SCIPStpHeurTMPruneStp(scip, g, cost, result, connected) );
+
+   return SCIP_OKAY;
+}
+
 
 /** build Steiner tree in such a way that all leaves are terminals */
 SCIP_RETCODE SCIPStpHeurTMBuildTree(
@@ -881,10 +907,7 @@ SCIP_RETCODE SCIPStpHeurTMpruneNodeSol(
    for( int e = 0; e < nedges; e++ )
       result[e] = UNKNOWN;
 
-   if( graph_pc_isPcMw(g) )
-      SCIP_CALL(SCIPStpHeurTMPrunePc(scip, g, g->cost, result, connected));
-   else
-      SCIP_CALL(SCIPStpHeurTMPrune(scip, g, g->cost, 0, result, connected));
+   SCIP_CALL(SCIPStpHeurTMPrune(scip, g, g->cost, result, connected));
 
    return SCIP_OKAY;
 }
@@ -1173,7 +1196,7 @@ SCIP_RETCODE prune(
    if( graph_pc_isPcMw(g) )
       SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, result, connected) );
    else
-      SCIP_CALL( SCIPStpHeurTMPrune(scip, g, (g->stp_type != STP_DHCSTP) ? g->cost : cost, 0, result, connected) );
+      SCIP_CALL( SCIPStpHeurTMPruneStp(scip, g, (g->stp_type != STP_DHCSTP) ? g->cost : cost, result, connected) );
 
    return SCIP_OKAY;
 }

@@ -2169,10 +2169,7 @@ SCIP_RETCODE localVertexInsertion(
 
    if( newnverts > 0  )
    {
-      if( mwpc )
-         SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, solEdges, solNodes) );
-      else
-         SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, solEdges, solNodes) );
+      SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, solEdges, solNodes) );
 
       for( i = 0; i < nnodes; i++ )
          SCIPlinkcuttreeInit(&linkcutNodes[i]);
@@ -2411,7 +2408,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                localmoves++;
                solimproved = TRUE;
 
-               SCIPdebugMessage("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
+               SCIPdebugMessage("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n \n ", nruns);
 
                SCIP_CALL( soltreeElimKeyPathsStar(scip, graph, &connectivityData, &vnoiData, &keypathsData, &supergraphData,
                   dfstree, scanned, dfstree_pos, &soltreeData) );
@@ -2511,7 +2508,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
                localmoves++;
                solimproved = TRUE;
 
-               SCIPdebugMessage( "ADDING NEW KEY PATH (%f )\n", edgecost - keypathsData.kpcost );
+               SCIPdebugMessage( "ADDING NEW KEY PATH (%f )\n\n", edgecost - keypathsData.kpcost );
 #ifndef NDEBUG
                assert((keypathsData.kpcost - edgecost) >= 0.0);
                objimprovement += (keypathsData.kpcost - edgecost);
@@ -2851,10 +2848,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       for( int e = 0; e < nedges; e++ )
          results[e] = UNKNOWN;
 
-      if( graph_pc_isPcMw(graph) )
-         SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, results, steinertree) );
-      else
-         SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, results, steinertree) );
+      SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, results, steinertree) );
 
       SCIPfreeBufferArray(scip, &steinertree);
    }

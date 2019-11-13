@@ -1749,7 +1749,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          else if( probtype == STP_DCSTP )
             SCIP_CALL( SCIPStpHeurTMBuildTreeDc(scip, graph, newsoledges, stnodes) );
          else
-            SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, newsoledges, stnodes) );
+            SCIP_CALL( SCIPStpHeurTMPruneStp(scip, graph, graph->cost, newsoledges, stnodes) );
 
          assert(graph_sol_valid(scip, graph, newsoledges) || SCIPisStopped(scip));
          pobj = graph_sol_getObj(graph->cost, newsoledges, 0.0, nedges);

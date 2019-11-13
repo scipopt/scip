@@ -1397,6 +1397,169 @@ SCIP_RETCODE sdPcMwTest4(
 }
 
 
+/** test key path exchange */
+static
+SCIP_RETCODE localKeyPathExchange(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int* steinertree;
+   int nnodes = 6;
+   int nedges = 6;
+
+   assert(scip);
+
+   SCIP_CALL(graph_init(scip, &graph, nnodes, 2 * nedges, 1));
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph_knot_chg(graph, 0, 0);
+   graph_knot_chg(graph, 2, 0);
+   graph_knot_chg(graph, 3, 0);
+   graph_knot_chg(graph, 4, 0);
+   graph->source = 0;
+
+   graph_edge_add(scip, graph, 0, 1, 2.0, 2.0); // 0,1
+   graph_edge_add(scip, graph, 1, 2, 2.0, 2.0); // 2,3
+   graph_edge_add(scip, graph, 2, 3, 2.0, 2.0);
+   graph_edge_add(scip, graph, 2, 4, 2.0, 2.0);
+   graph_edge_add(scip, graph, 4, 5, 1.0, 1.0);
+   graph_edge_add(scip, graph, 5, 0, 2.0, 2.0); // 10,11
+
+   SCIP_CALL(graph_init_history(scip, graph));
+   SCIP_CALL(graph_path_init(scip, graph));
+
+   graph_mark(graph);
+
+   nnodes = graph->knots;
+   nedges = graph->edges;
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
+
+   for( int i = 0; i < nedges; i++ )
+      steinertree[i] = UNKNOWN;
+
+   steinertree[0] = CONNECT;
+   steinertree[2] = CONNECT;
+   steinertree[4] = CONNECT;
+   steinertree[6] = CONNECT;
+
+   assert(graph_sol_valid(scip, graph, steinertree));
+
+   /* actual test */
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
+
+   assert(steinertree[11] == CONNECT && steinertree[9] == CONNECT);
+   assert(steinertree[0] == UNKNOWN && steinertree[2] == UNKNOWN);
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   SCIPfreeBufferArray(scip, &steinertree);
+
+   return SCIP_OKAY;
+}
+
+
+/** test key path exchange */
+static
+SCIP_RETCODE localKeyPathExchangePc(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int* steinertree;
+   STP_Bool* steinertree_nodes;
+   int nnodes = 6;
+   int nedges = 6;
+
+   assert(scip);
+
+   SCIP_CALL(graph_init(scip, &graph, nnodes, 2 * nedges, 1));
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph->source = 0;
+
+
+   graph_edge_add(scip, graph, 0, 1, 2.0, 2.0); // 0,1
+   graph_edge_add(scip, graph, 1, 2, 2.0, 2.0); // 2,3
+   graph_edge_add(scip, graph, 2, 3, 2.0, 2.0);
+   graph_edge_add(scip, graph, 2, 4, 2.0, 2.0);
+   graph_edge_add(scip, graph, 4, 5, 2.0, 2.0);
+   graph_edge_add(scip, graph, 5, 0, 3.0, 3.0); // 10,11
+
+   nnodes = graph->knots;
+   nedges = graph->edges;
+
+   graph_pc_init(scip, graph, nnodes, -1);
+
+   for( int i = 0; i < nnodes; i++ )
+      graph->prize[i] = 0.0;
+
+   graph->prize[0] = 5.0;
+   graph->prize[2] = 3.0;
+   graph->prize[3] = 3.1;
+   graph->prize[4] = 3.1;
+   graph->prize[5] = 3;
+
+   graph_knot_chg(graph, 0, 0);
+   graph_knot_chg(graph, 2, 0);
+   graph_knot_chg(graph, 3, 0);
+   graph_knot_chg(graph, 4, 0);
+   graph_knot_chg(graph, 5, 0);
+
+   SCIP_CALL(graph_pc_2pc(scip, graph));
+
+   nnodes = graph->knots;
+   nedges = graph->edges;
+
+   SCIP_CALL(graph_init_history(scip, graph));
+   SCIP_CALL(graph_path_init(scip, graph));
+
+   graph_mark(graph);
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree_nodes, nnodes));
+
+   for( int i = 0; i < nedges; i++ )
+      steinertree[i] = UNKNOWN;
+
+   for( int i = 0; i < nnodes; i++ )
+      steinertree_nodes[i] = FALSE;
+
+   steinertree_nodes[0] = TRUE;
+   steinertree_nodes[1] = TRUE;
+   steinertree_nodes[2] = TRUE;
+   steinertree_nodes[3] = TRUE;
+   steinertree_nodes[4] = TRUE;
+
+   // 4 is the implicit root
+
+   SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, steinertree, steinertree_nodes) );
+
+   assert(graph_sol_valid(scip, graph, steinertree));
+
+   /* actual test */
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
+
+   // 5 is the implicit root
+
+   assert(steinertree[9] == CONNECT && steinertree[10] == CONNECT);
+   assert(steinertree[0] == UNKNOWN && steinertree[2] == UNKNOWN);
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   SCIPfreeBufferArray(scip, &steinertree_nodes);
+   SCIPfreeBufferArray(scip, &steinertree);
+
+   return SCIP_OKAY;
+}
+
 /** test pseudo ancestors */
 SCIP_RETCODE pseudoAncestors_test(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1437,6 +1600,11 @@ SCIP_RETCODE testAll(
 )
 {
    assert(scip);
+
+   SCIP_CALL( heur_localTest(scip) );
+
+   assert(0);
+
 
    SCIP_CALL( pseudoDel_test(scip) );
    SCIP_CALL( reduce_extTest(scip) );
@@ -1668,6 +1836,19 @@ SCIP_RETCODE heur_extendPcMwOuterTest(
 
    SCIPfreeBufferArray(scip, &stedge);
    SCIPfreeBufferArray(scip, &stvertex);
+
+   return SCIP_OKAY;
+}
+
+
+/** test local search heuristics */
+SCIP_RETCODE heur_localTest(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_CALL( localKeyPathExchange(scip) );
+   SCIP_CALL( localKeyPathExchangePc(scip) );
+
 
    return SCIP_OKAY;
 }
