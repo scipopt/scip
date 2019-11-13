@@ -1214,6 +1214,13 @@ SCIP_Real getMinColActWithoutRow(
 
 
 /** calculate minimal/maximal column residual activities */
+// why does the comment say maximal?
+// maybe be more explicit in documentation:
+//
+// calculate minimal column residual activity.
+// In the primal the residual activity of a constraint w.r.t. a variable is the activity of the constraint without
+// the variable. In the dual, a constraint is a column of the matrix and a variable is a row. This function computes the
+// residual activity of column 'col' w.r.t. variable 'row'
 static
 void calcMinColActResidual(
    SCIP*                 scip,               /**< SCIP main data structure */
@@ -1238,6 +1245,15 @@ void calcMinColActResidual(
 
    *mincolresact = -SCIPinfinity(scip);
 
+   // maybe factor the code?
+   // if val > 0.0
+   //    bnd = -lbdual[row]
+   // else if val < 0.0
+   //    bnd = ubdual[row]
+   // else
+   //    return;
+   //
+   // rest
    if( val > 0.0 )
    {
       if( SCIPisInfinity(scip, -lbdual[row]) )
