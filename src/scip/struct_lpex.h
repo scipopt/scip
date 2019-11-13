@@ -249,7 +249,9 @@ struct SCIP_Psdata
    SCIP_Rational**       correction;         /**< needed on every iteration, so only construct once and possibly resize */
    int*                  includedrows;       /**< 1 if constraints dual variable is included in original S-interior point/ray */
    int*                  psbasis;            /**< mapping for basis used in factorization */
+#ifdef SCIP_WITH_GMP
    qsnum_factor_work*    rectfactor;         /**< stores factorized matrix for project-and-shift */
+#endif
    SCIP_Rational*        commonslack;        /**< slack by which S-interior point/ray satisfies inequalities */
    int                   npsbasis;           /**< length of psbasis */
    int                   nextendedrows;      /**< dimension of S-interior point/ray = 2*(ncols+nrows) */
@@ -267,6 +269,7 @@ struct SCIP_Psdata
    unsigned int          psintpointselection:3;/**< method to select interior point ('a'rbitrary interior point, 'o'ptimized interior point
                                               *   'A'rbitrary interior point in dual form, 't'wo stage optimized interior point) */
 };
+
 
 /** current LP data */
 struct SCIP_LpEx

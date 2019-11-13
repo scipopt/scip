@@ -177,12 +177,17 @@ using namespace soplex;
    }                                                                    \
    while( FALSE )
 
+/* Set the value of a SCIP_Rational* from a SoPlex Rational */
 static void RsetSpxR(
       SCIP_Rational* r,
       Rational       spxr
    )
 {
+#ifdef SOPLEX_WITH_GMP
    RatSetGMP(r, spxr.getMpqRef());
+#else
+   RatSetReal(r, spxr);
+#endif
 }
 
 static void RsetSpxVector(
@@ -197,6 +202,20 @@ static void RsetSpxVector(
       RsetSpxR(r[i], src[i]);
    }
 }
+
+static void SpxRSetRat(
+   Rational          spxr,
+   SCIP_Rational*    src
+)
+{
+#ifdef SOPLEX_WITH_GMP
+   spxr = *RatGetGMP(src);
+#else
+   spxr = RatApproxReal(src);
+#endif
+}
+
+
 
 /** SCIP's SoPlex class */
 class SPxexSCIP : public SoPlex

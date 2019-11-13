@@ -352,6 +352,7 @@ SCIP_RETCODE allocIntMem(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_WITH_GMP
 /** subroutine of constructPSdata(); chooses which columns of the matrix are designated as set S, used for projections */
 static
 SCIP_RETCODE psChooseS(
@@ -3384,6 +3385,7 @@ SCIP_RETCODE getPSdual(
 
    return SCIP_OKAY;
 }
+#endif
 
 static
 char chooseBoundingMethod(
@@ -3412,6 +3414,7 @@ char chooseBoundingMethod(
       if( SCIPlpexBSpossible(lpex) )
          dualboundmethod = 'n';
       /* check if project and shift is possible */
+#ifdef SCIP_WITH_GMP
       else if( SCIPlpexPSpossible(lpex) )
       {
          SCIP_CALL( constructPSData(lp, lpex, set, stat, messagehdlr, eventqueue, eventfilter,
@@ -3421,6 +3424,7 @@ char chooseBoundingMethod(
          else
             dualboundmethod = 'e';
       }
+#endif
       /* otherwise solve exactly */
       else
          dualboundmethod = 'e';
@@ -3444,6 +3448,7 @@ char chooseBoundingMethod(
          /* check if neumair-scher is possible */
          if( SCIPlpexBSpossible(lpex) )
             dualboundmethod = 'n';
+#ifdef SCIP_WITH_GMP
          /* check if project and shift is possible */
          else if( SCIPlpexPSpossible(lpex) )
          {
@@ -3454,6 +3459,7 @@ char chooseBoundingMethod(
             else
                dualboundmethod = 'e';
          }
+#endif
          /* otherwise solve exactly */
          else
             dualboundmethod = 'e';
@@ -3872,6 +3878,7 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
          SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
          SCIPABORT();
          break;
+#ifdef SCIP_WITH_GMP
       /* project and shift */
       case 'p':
          SCIP_CALL( constructPSData(lp, lpex, set, stat, messagehdlr, eventqueue, eventfilter,
@@ -3879,6 +3886,7 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
          SCIP_CALL( getPSdual(lp, lpex, set, stat, messagehdlr, eventqueue, eventfilter,
                         prob, blkmem, dualfarkas) );
          break;
+#endif
       /* exact LP */
       case 'e':
          SCIP_CALL( solveLpExact(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,

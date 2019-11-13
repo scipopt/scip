@@ -109,7 +109,7 @@ SCIP_ReaderData
    SCIP_RETCODE          retcode;            /**< store a none SCIP_OKAY return code if an error occurred */
 };
 
-
+#ifdef SCIP_WITH_GMP
 /** convert between scips_rational and zimpl's numb type */
 static
 SCIP_RETCODE RcreateNumb(
@@ -130,6 +130,20 @@ SCIP_RETCODE RcreateNumb(
 
    return SCIP_OKAY;
 }
+#else
+/** convert between scips_rational and zimpl's numb type */
+static
+SCIP_RETCODE RcreateNumb(
+   BMS_BLKMEM*           mem,
+   SCIP_Rational**       rational,
+   const Numb*           numb
+   )
+{
+   SCIP_CALL( RatCreateBlock(mem, rational) ); 
+   RatSetReal(*rational, numb_todbl(numb));
+   return SCIP_OKAY;
+}
+#endif
 
 /** abort the reading with an errormessage; this type of constraint is not supported
  *  in exact solving

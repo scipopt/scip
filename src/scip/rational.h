@@ -474,27 +474,32 @@ SCIP_Bool RatIsFpRepresentable(
 /** convert a Rational to a string for printing, returns the number of copied characters.
  * If return value is equal to strlen, it means the string was truncated.
  */
+SCIP_EXPORT
 int RatToString(
    SCIP_Rational*        r,                  /**< the rational to print */
    char*                 str,                /**< the string to save the rational in */
    int                   strlen              /**< maximal length that can be copied to str */
    );
 
+SCIP_EXPORT
 const char* RatGetString(
    SCIP_Rational*        r
    );
 
 /** return the strlen of a rational number */
+SCIP_EXPORT
 SCIP_Longint RatStrlen(
    SCIP_Rational*        r                /** rational to consider */
    );
 
-/** print a rational to command line (for debugging) */
+/** print a rational to command line (for debugging) */\
+SCIP_EXPORT
 void RatPrint(
    SCIP_Rational*        r                   /**< the rational to print */
    );
 
 /** print rational to file using message handler */
+SCIP_EXPORT
 void RatMessage(
    SCIP_MESSAGEHDLR*     msg,                /**< message handler */
    FILE*                 file,               /**< file pointer */

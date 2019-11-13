@@ -215,6 +215,7 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    SCIP_Rational* r5;
    SCIP_Rational* infpos;
    SCIP_Rational* infneg;
+   long  intval;
    SCIP_Real doub;
    char buf[SCIP_MAXSTRLEN];
 
@@ -278,6 +279,20 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    RatSetString(infneg, "-inf");
    RatToString(infneg, buf, SCIP_MAXSTRLEN);
    printf("Test print -inf: %s \n", buf);
+
+   RatSetString(r1, "3/4");
+   RatRoundInteger(&intval, r1, SCIP_ROUND_DOWNWARDS);
+   cr_assert_eq(intval, 0);
+   RatSetString(r1, "3/4");
+   RatRoundInteger(&intval, r1, SCIP_ROUND_UPWARDS);
+   cr_assert_eq(intval, 1);
+
+   RatSetString(r1, "-5/4");
+   RatRoundInteger(&intval, r1, SCIP_ROUND_DOWNWARDS);
+   cr_assert_eq(intval, -2);
+   RatSetString(r1, "-9/4");
+   RatRoundInteger(&intval, r1, SCIP_ROUND_UPWARDS);
+   cr_assert_eq(intval, -2);
 
    RatFreeBlock(blkmem, &r1);
    RatFreeBlock(blkmem, &r2);

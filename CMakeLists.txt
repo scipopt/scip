@@ -254,6 +254,7 @@ if(GMP_FOUND)
     endif()
 else()
     set(GMP_LIBRARIES "")
+    set(SCIP_HAVE_GMP 1)
 endif()
 
 # MPFR

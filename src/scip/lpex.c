@@ -3317,7 +3317,9 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    psdata->commonslack = NULL;
    psdata->includedrows = NULL;
    psdata->psbasis = NULL;
+#ifdef SCIP_WITH_GMP
    psdata->rectfactor = (qsnum_factor_work*) NULL;
+#endif
    psdata->commonslack = NULL;
 
    psdata->nextendedrows = 0;
@@ -3365,9 +3367,10 @@ SCIP_RETCODE SCIPlpPsdataFree(
 
       BMSfreeBlockMemoryArrayNull(blkmem, &psdata->includedrows, psdata->nextendedrows);
       BMSfreeBlockMemoryArrayNull(blkmem, &psdata->psbasis, psdata->nextendedrows);
-
+#ifdef SCIP_WITH_GMP
       if( psdata->rectfactor != NULL )
          RECTLUfreeFactorization(psdata->rectfactor);
+#endif
    }
    assert(psdata->interiorpt == NULL);
    assert(psdata->interiorray == NULL);

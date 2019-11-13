@@ -13,6 +13,7 @@
 #include <boost/multiprecision/gmp.hpp>
 using namespace boost::multiprecision;
 using Rational = mpq_rational;
+using Integer = mpz_int;
 using Float100 = mpf_float_100;
 using Float500 = mpf_float_500;
 using Float1000 = mpf_float_1000;
@@ -20,6 +21,7 @@ using Float1000 = mpf_float_1000;
 #include <boost/multiprecision/cpp_int.hpp>
 using namespace boost::multiprecision;
 using Rational = cpp_rational;
+using Integer = cpp_int;
 using Float100 = number<boost::multiprecision::cpp_bin_float<100>>;
 using Float500 = number<boost::multiprecision::cpp_bin_float<500>>;
 using Float1000 = number<boost::multiprecision::cpp_bin_float<1000>>;

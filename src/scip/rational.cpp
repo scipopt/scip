@@ -73,11 +73,9 @@ long Rnumerator(
    )
 {
    long result;
-#ifdef SCIP_WITH_DEBUG_ADAPTOR
-   result =  mpz_get_si(&(rational->val.backend().value().data())->_mp_num);
-#else
+
    result = (boost::multiprecision::numerator(rational->val)).convert_to<long>();
-#endif
+   
    return result;
 }
 
@@ -87,11 +85,9 @@ long Rdenominator(
    )
 {
    long result;
-#ifdef SCIP_WITH_DEBUG_ADAPTOR
-   result mpz_get_si(&(rational->val.backend().value().data())->_mp_den);
-#else
+
     result = (boost::multiprecision::denominator(rational->val)).convert_to<long>();
-#endif
+   
    return result;
 }
 
@@ -1294,19 +1290,19 @@ void RatRound(
    SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
    )
 {
-   mpz_t roundint;
+   Integer roundint, rest;
 
    assert(src != NULL);
    assert(res != NULL);
 
-   mpz_init(roundint);
+   divide_qr(numerator(src->val),denominator(src->val), roundint, rest);
    switch (roundmode)
    {
    case SCIP_ROUND_DOWNWARDS:
-      mpz_fdiv_q(roundint, mpq_numref(*RatGetGMP(src)), mpq_denref(*RatGetGMP(src)));
+      roundint = src->val.sign() > 0 ? roundint : roundint - 1;
       break;
    case SCIP_ROUND_UPWARDS:
-      mpz_cdiv_q(roundint, mpq_numref(*RatGetGMP(src)), mpq_denref(*RatGetGMP(src)));
+      roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
       break;
    case SCIP_ROUND_NEAREST:
    default:
@@ -1314,9 +1310,7 @@ void RatRound(
       SCIPABORT();
       break;
    }
-   mpq_set_z(*RatGetGMP(res), roundint);
-
-   mpz_clear(roundint);
+   res->val = roundint;
 }
 
 /** round rational to next integer in direction of roundmode */
@@ -1327,19 +1321,19 @@ SCIP_Bool RatRoundInteger(
    )
 {
    SCIP_Bool success = FALSE;
-   mpz_t roundint;
+      Integer roundint, rest;
 
    assert(src != NULL);
    assert(res != NULL);
 
-   mpz_init(roundint);
+   divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
    switch (roundmode)
    {
    case SCIP_ROUND_DOWNWARDS:
-      mpz_fdiv_q(roundint, mpq_numref(*RatGetGMP(src)), mpq_denref(*RatGetGMP(src)));
+      roundint = src->val.sign() > 0 ? roundint : roundint - 1;
       break;
    case SCIP_ROUND_UPWARDS:
-      mpz_cdiv_q(roundint, mpq_numref(*RatGetGMP(src)), mpq_denref(*RatGetGMP(src)));
+      roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
       break;
    case SCIP_ROUND_NEAREST:
    default:
@@ -1347,14 +1341,9 @@ SCIP_Bool RatRoundInteger(
       SCIPABORT();
       break;
    }
-
-   if( mpz_fits_slong_p(roundint) )
-   {
-      *res = mpz_get_si(roundint);
+   *res = roundint.convert_to<long int>();
+   if( *res == roundint )
       success = TRUE;
-   }
-   mpz_clear(roundint);
-
    return success;
 }
 
@@ -1363,146 +1352,14 @@ SCIP_Real RatApproxReal(
    SCIP_Rational*        rational            /**< the rational */
    )
 {
+   SCIP_Real retval;
    assert(rational != NULL);
 
    if( rational->isinf )
       return (rational->val.sign() * SCIP_DEFAULT_INFINITY);
 
-   return mpq_get_d(rational->val.backend().data());
-}
-
-void testNumericsRational(
-   )
-{
-   if (std::numeric_limits<Rational>::is_specialized == false)
-   {
-   std::cout << "type " << typeid(Rational).name()  << " is not specialized for std::numeric_limits!" << std::endl;
-   // ...
-   }
-   if(std::numeric_limits<Rational>::has_infinity)
-   {
-      std::cout << std::numeric_limits<Rational>::infinity() << std::endl;
-   }
-   else
-   {
-      std::cout << "type rational is not specialized for infinity" << std:: endl;
-   }
-   if( std::numeric_limits<Rational>::is_signed == true)
-   {
-      std::cout << "type rational is signed " << std::endl;
-   }
-   std::cout << "rounding style is " << std::numeric_limits<double>::round_style << std::endl;
-}
-
-void testRuntimesRational(
-   )
-{
-   SCIP_Rational* r;
-   SCIP_Rational* rat2;
-
-   clock_t startt, endt;
-   int niterations = 1000000;
-   int i;
-   int nrep = 0;
-   double runtime = 0;
-   double runtime2 = 0;
-   double addval;
-
-   RatCreate(&r);
-   RatCreate(&rat2);
-
-   srand((unsigned int)time(NULL));
-
-   printf("Testing time for performing tasks %d times\n", niterations);
-
-   startt = clock();
-   for( i = 0; i < niterations; ++i )
-   {
-      RatSetReal(r, ((float)rand())/RAND_MAX);
-   }
-   endt = clock();
-   printf(" cpu time used for setting: %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC);
-
-   runtime = 0;
-   startt = clock();
-   for( i = 0; i < niterations; ++i )
-   {
-      double val = ((float)rand())/RAND_MAX;
-      RatSetReal(r, val);
-      nrep += RatIsFpRepresentable(r) ? 1 : 0;
-   }
-   endt = clock();
-   runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
-   printf(" cpu time used for checking fp-rep: %e \n", runtime);
-   if( nrep != niterations )
-   {
-      printf(" error! fprep, %d iterations but only %d are representable \n", niterations, nrep);
-   }
-
-   runtime = 0;
-   startt = clock();
-   for( i = 0; i < niterations; ++i )
-   {
-      RatSetReal(r, ((float)rand())/RAND_MAX);
-      addval += RatRoundReal(r, SCIP_ROUND_DOWNWARDS);
-      addval += RatRoundReal(r, SCIP_ROUND_UPWARDS);
-   }
-   endt = clock();
-   runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
-   printf(" cpu time used for rounding: %.17e, addval %e \n", runtime, addval);
-
-   runtime = 0;
-   addval = 0;
-   startt = clock();
-   for( i = 0; i < niterations; ++i )
-   {
-      RatSetReal(r, ((float)rand())/RAND_MAX);
-      addval += RatApproxReal(r);
-   }
-   endt = clock();
-   runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
-   printf(" cpu time used for apporx: %e, addval %e \n", runtime, addval);
-
-   runtime = 0;
-         startt = clock();
-   for( i = 0; i < niterations; ++i )
-   {
-      RatSetReal(r, ((float)rand())/RAND_MAX);
-      RatSetReal(rat2, ((float)rand())/RAND_MAX);
-      RatAdd(r, r, rat2);
-   }
-   endt = clock();
-   runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
-   printf(" cpu time used for adding: %e \n", runtime);
-
-   {
-   SCIP_Real reals[niterations];
-   runtime = 0;
-   startt = clock();
-   for( i = 0; i < niterations; ++i )
-   {
-      reals[i] = ((float)rand())/RAND_MAX;
-      reals[i] += ((float)rand())/RAND_MAX;
-   }
-   endt = clock();
-   runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
-   printf(" cpu time used for adding reals: %e \n", runtime);
-   }
-
-   runtime = 0;
-   startt = clock();
-   for( i = 0; i < niterations; ++i )
-   {
-      RatSetReal(r, ((float)rand())/RAND_MAX);
-      RatSetReal(rat2, ((float)rand())/RAND_MAX);
-      RatMult(r, r, rat2);
-   }
-   endt = clock();
-   runtime += ((double) (endt - startt)) / CLOCKS_PER_SEC;
-   printf(" cpu time used for multiplication: %e \n", runtime);
-
-   RatFree(&r);
-   RatFree(&rat2);
+   retval = rational->val.convert_to<SCIP_Real>();
+   return retval;
 }
 
 /*

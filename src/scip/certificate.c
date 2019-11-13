@@ -700,20 +700,8 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    {
       if( !RatIsZero(coefs[i]) )
       {
-         printlen = gmp_snprintf(&obj[buffpos], SCIP_MAXSTRLEN - buffpos, "%s%d %Qd", (i > 0 ? " " : ""), i, *RatGetGMP(coefs[i]));
-         if( printlen >= SCIP_MAXSTRLEN - buffpos )
-         {
-            obj[buffpos] = '\0';
-            SCIPcertificatePrintProblemMessage(certificate, "%s \n", obj);
-            buffpos = 0;
-            i--;
-         }
-         else
-         {
-            objstring += printlen;
-            buffpos += printlen;
-            leftsize -= printlen;
-         }
+         SCIPcertificatePrintProblemMessage(certificate, "%s%d ", (i > 0 ? " " : ""), i );
+         SCIPcertificatePrintProblemRational(certificate, coefs[i], 10);
       }
    }
 
