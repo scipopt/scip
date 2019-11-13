@@ -598,6 +598,13 @@ SCIP_Real getEdgeCostUnbiased(
    {
       assert(graph->extended);
 
+      if( !graph_pc_isPc(graph) )
+      {
+         assert(graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP);
+
+         return 0.0;
+      }
+
       // todo for small prizes: need to check whether head is a non-terminal leaf...and then add the original prize
    }
 
@@ -2934,9 +2941,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    NODE* linkcutNodes;
    const int root = graph->source;
    const int nnodes = graph->knots;
-   const int probtype = graph->stp_type;
    STP_Bool* solNodes;
-   const STP_Bool mw = (probtype == STP_MWCSP);
    const STP_Bool mwpc = graph_pc_isPcMw(graph);
    SCIP_Bool success = FALSE;
 #ifndef NDEBUG
@@ -2972,11 +2977,8 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    assert(graph_sol_valid(scip, graph, solEdges));
 
-   /* run Key-Vertex Elimination & Key-Path Exchange heuristics? */
-   if( !mw )
-   {
-      SCIP_CALL( localKeyVertexHeuristics(scip, graph, solNodes, linkcutNodes, solEdges, &success) );
-   }
+   /* run Key-Vertex Elimination & Key-Path Exchange heuristics */
+   SCIP_CALL( localKeyVertexHeuristics(scip, graph, solNodes, linkcutNodes, solEdges, &success) );
 
    if( success )
    {

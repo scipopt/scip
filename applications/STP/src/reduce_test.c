@@ -1484,7 +1484,6 @@ SCIP_RETCODE localKeyPathExchangePc(
 
    graph->source = 0;
 
-
    graph_edge_add(scip, graph, 0, 1, 2.0, 2.0); // 0,1
    graph_edge_add(scip, graph, 1, 2, 2.0, 2.0); // 2,3
    graph_edge_add(scip, graph, 2, 3, 2.0, 2.0);
