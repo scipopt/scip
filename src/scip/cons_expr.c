@@ -5787,6 +5787,11 @@ SCIP_RETCODE enforceConstraint(
       assert(expr->lastenforced <= conshdlrdata->enforound);
       if( expr->lastenforced == conshdlrdata->enforound )
       {
+         ENFOLOG(
+            SCIPinfoMessage(scip, enfologfile, "  skip expr ");
+            SCIPprintConsExprExpr(scip, conshdlr, expr, enfologfile);
+            SCIPinfoMessage(scip, enfologfile, " as already enforced in this enforound\n");
+         )
          *success = TRUE;
          continue;
       }
@@ -5843,13 +5848,13 @@ SCIP_RETCODE enforceConstraints2(
    assert(conshdlrdata != NULL);
 
    /* increase tag to tell whether branching scores in expression belong to this sweep
+    * and which expressions have already been enforced in this sweep
     * (this could be moved into enforceConstraints, if we were sure that no branching scores
     *  will be left from a previous enforceConstraints2 call in the same enfo round where we
     *  could not register branching candidates, but at the moment we can register branching scores
     *  but if they all point to fixed variables, we wouldn't add branching candidates)
     */
-   if( inenforcement )
-      ++(conshdlrdata->enforound);
+   ++(conshdlrdata->enforound);
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
@@ -7862,8 +7867,10 @@ SCIP_DECL_CONSINIT(consInitExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* make sure current acitivity tags in expressions are invalid, because we start catching variable events only now */
+   /* make sure current activity tags in expressions are invalid, because we start catching variable events only now */
    conshdlrdata->lastboundrelax = ++conshdlrdata->curboundstag;
+   /* set to 1 so it is larger than initial value of lastenforound in exprs */
+   conshdlrdata->enforound = 1;
 
    for( i = 0; i < nconss; ++i )
    {
