@@ -16807,6 +16807,14 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIPlpMarkDivingObjChanged
 #undef SCIPlpUnmarkDivingObjChanged
 #undef SCIPlpDivingRowsChanged
+#undef SCIPlpIsFeasEQ
+#undef SCIPlpIsFeasLT
+#undef SCIPlpIsFeasLE
+#undef SCIPlpIsFeasGT
+#undef SCIPlpIsFeasGE
+#undef SCIPlpIsFeasZero
+#undef SCIPlpIsFeasPositive
+#undef SCIPlpIsFeasNegative
 
 /** gets objective value of column */
 SCIP_Real SCIPcolGetObj(
@@ -18616,4 +18624,137 @@ SCIP_RETCODE SCIPlpGetDualDegeneracy(
    *varconsratio = lp->varconsratio;
 
    return SCIP_OKAY;
+}
+
+/** checks, if absolute difference of values is in range of LP primal feastol */
+SCIP_Bool SCIPlpIsFeasEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+   assert(lp != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
+   return EPSEQ(val1, val2, lp->feastol);
+}
+
+/** checks, if absolute difference of val1 and val2 is lower than LP primal feastol */
+SCIP_Bool SCIPlpIsFeasLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+   assert(lp != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
+   return EPSLT(val1, val2, lp->feastol);
+}
+
+/** checks, if absolute difference of val1 and val2 is not greater than LP primal feastol */
+SCIP_Bool SCIPlpIsFeasLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+   assert(lp != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
+   return EPSLE(val1, val2, lp->feastol);
+}
+
+/** checks, if absolute difference of val1 and val2 is greater than LP primal feastol */
+SCIP_Bool SCIPlpIsFeasGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+   assert(lp != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
+   return EPSGT(val1, val2, lp->feastol);
+}
+
+/** checks, if absolute difference of val1 and val2 is not lower than -LP primal feastol */
+SCIP_Bool SCIPlpIsFeasGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+   assert(lp != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
+   return EPSGE(val1, val2, lp->feastol);
+}
+
+/** checks, if value is in range LP primal feasibility tolerance of 0.0 */
+SCIP_Bool SCIPlpIsFeasZero(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(lp != NULL);
+
+   return EPSZ(val, lp->feastol);
+}
+
+/** checks, if value is greater than LP primal feasibility tolerance */
+SCIP_Bool SCIPlpIsFeasPositive(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(lp != NULL);
+
+   return EPSP(val, lp->feastol);
+}
+
+/** checks, if value is lower than -LP primal feasibility tolerance */
+SCIP_Bool SCIPlpIsFeasNegative(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(lp != NULL);
+
+   return EPSN(val, lp->feastol);
 }
