@@ -3693,6 +3693,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    assert( propdata != NULL );
 
    propdata->npermvars = 0;
+   propdata->nbinpermvars = 0;
    propdata->permvars = NULL;
 #ifndef NDEBUG
    propdata->permvarsobj = NULL;
