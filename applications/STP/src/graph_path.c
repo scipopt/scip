@@ -4525,7 +4525,7 @@ void graph_voronoiWithRadiusMw(
 void graph_voronoiRepair(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   const SCIP_Real*      cost,               /**< edge costs */
+   const SCIP_Real*      cost,               /**< edge costs (possibly biased) */
    int*                  nheapelems,         /**< pointer to number of heap elements */
    int*                  vbase,              /**< array containing Voronoi base of each node */
    PATH*                 path,               /**< Voronoi paths data struture */
@@ -4594,8 +4594,8 @@ void graph_voronoiRepair(
                else
                {
                   int todo; // adapt for small prizes! maybe an extra method in graph_base? to get unbiased edge cost...try to inline?
-                  const SCIP_Real c_new = isMw? 0.0 : cost[e];
-                  const SCIP_Real c_old = isMw? 0.0 : cost[e];
+                  const SCIP_Real c_new = isMw? 0.0 : g->cost[e];
+                  const SCIP_Real c_old = isMw? 0.0 : g->cost[e];
                   const SCIP_Real dist_new = path[k].dist + c_new + path[m].dist;
                   const SCIP_Real dist_old = path[g->tail[boundaryedge]].dist + c_old + path[g->head[boundaryedge]].dist;
 

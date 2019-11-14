@@ -2578,9 +2578,14 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
             /* if there is no key path, nothing has to be repaired */
             if( keypathsData.nkpnodes > 0 )
-               graph_voronoiRepair(scip, graph, graph->cost, &nheapelems, vnoibase, vnoipath, &newedge, crucnode, &uf);
+            {
+               graph_voronoiRepair(scip, graph, pcmwData.isActive? pcmwData.edgecost_biased : graph->cost,
+                  &nheapelems, vnoibase, vnoipath, &newedge, crucnode, &uf);
+            }
             else
+            {
                newedge = linkcutNodes[crucnode].edge;
+            }
 
             edgecost = getKeyPathReplaceCost(scip, graph, &vnoiData, &soltreeData, edgecost, oldedge, &pcmwData, &newedge);
 
