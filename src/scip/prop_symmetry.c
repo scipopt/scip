@@ -191,7 +191,6 @@ struct SCIP_PropData
    /* symmetry group information */
    int                   npermvars;          /**< number of variables for permutations */
    int                   nbinpermvars;       /**< number of binary variables for permuations */
-   int                   npermvarscaptured;  /**< number of captured variables */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
 #ifndef NDEBUG
    SCIP_Real*            permvarsobj;        /**< objective values of permuted variables (for debugging) */
@@ -562,8 +561,6 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->components == NULL );
    assert( propdata->ncomponents == -1 );
 
-   assert( propdata->npermvarscaptured == 0 );
-
    return TRUE;
 }
 #endif
@@ -591,7 +588,6 @@ SCIP_RETCODE freeSymmetryData(
    {
       assert( propdata->permvars != NULL );
       assert( propdata->npermvars > 0 );
-      assert( propdata->npermvarscaptured == propdata->npermvars );
 
       for (i = 0; i < propdata->npermvars; ++i)
       {
@@ -605,50 +601,17 @@ SCIP_RETCODE freeSymmetryData(
                SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[i], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
                      propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[i]) );
             }
-
-            if ( propdata->compressed )
-            {
-               SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
-            }
-            else
-            {
-               int p;
-               for (p = 0; p < propdata->nperms; ++p)
-               {
-                  if ( propdata->perms[p][i] != i )
-                  {
-                     SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
-                     break;
-                  }
-               }
-            }
+            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
          }
       }
       SCIPfreeBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars);
-      propdata->npermvarscaptured = 0;
    }
    else
    {
       for (i = 0; i < propdata->nbinpermvars; ++i)
       {
-         if ( propdata->compressed )
-         {
-            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
-         }
-         else
-         {
-            int p;
-            for (p = 0; p < propdata->nperms; ++p)
-            {
-               if ( propdata->perms[p][i] != i )
-               {
-                  SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
-                  break;
-               }
-            }
-         }
+         SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
       }
-      propdata->npermvarscaptured = 0;
    }
 
    /* free lists for orbitopal fixing */
@@ -2464,18 +2427,17 @@ SCIP_RETCODE determineSymmetry(
       propdata->permvarsobj[j] = SCIPvarGetObj(propdata->permvars[j]);
 #endif
 
-   /* capture all symmetric binary variables and forbid multi-aggregation for these variables
+   /* capture binary variables and forbid multi-aggregation of symmetric variables
     *
     * note: binary variables are in the beginning of pervars
     */
-   propdata->npermvarscaptured = 0;
    for (j = 0; j < propdata->nbinpermvars; ++j)
    {
+      SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
+
       if ( propdata->compressed )
       {
-         SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
          SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-         ++(propdata->npermvarscaptured);
       }
       else
       {
@@ -2483,9 +2445,7 @@ SCIP_RETCODE determineSymmetry(
          {
             if ( propdata->perms[p][j] != j )
             {
-               SCIP_CALL( SCIPcaptureVar(scip, propdata->permvars[j]) );
                SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->permvars[j]) );
-               ++(propdata->npermvarscaptured);
                break;
             }
          }
@@ -3738,7 +3698,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    assert( propdata != NULL );
 
    propdata->npermvars = 0;
-   propdata->npermvarscaptured = 0;
    propdata->permvars = NULL;
 #ifndef NDEBUG
    propdata->permvarsobj = NULL;
