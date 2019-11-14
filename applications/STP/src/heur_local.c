@@ -895,10 +895,6 @@ SCIP_RETCODE connectivityDataInit(
       blists_start[vnoibase[k]] = blists_curr;
    }
 
-   // todo
- //  printf("boundaries...graph->source %d \n", graph->source);
-
-
    /* for each node, store all of its outgoing boundary-edges in a (respective) heap*/
    for( int e = 0; e < nedges; e += 2 )
    {
@@ -911,13 +907,11 @@ SCIP_RETCODE connectivityDataInit(
          printf("candidate " );
          graph_edge_printInfo(graph, e);
 
-printf("vnoibase[tail]=%d \n", vnoibase[tail]);
-printf("vnoibase[head]=%d \n", vnoibase[head]);
-printf("graph->path_state[tail]=%d \n", graph->path_state[tail]);
-printf("graph->path_state[head]=%d \n", graph->path_state[head]);
-
+         printf("vnoibase[tail]=%d \n", vnoibase[tail]);
+         printf("vnoibase[head]=%d \n", vnoibase[head]);
+         printf("graph->path_state[tail]=%d \n", graph->path_state[tail]);
+         printf("graph->path_state[head]=%d \n", graph->path_state[head]);
 #endif
-
 
          /* is edge 'e' a boundary-edge? */
          if( vnoibase[tail] != vnoibase[head] && graphmark[tail] && graphmark[head] )
@@ -2109,7 +2103,9 @@ SCIP_RETCODE localVertexInsertion(
             solDegree[lastnodeidx]++;
          }
          else
+         {
             diff = graph->cost[v->edge];
+         }
 
          counter = 0;
 
