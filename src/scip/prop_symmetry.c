@@ -1355,16 +1355,24 @@ SCIP_RETCODE setSymmetryData(
       percentagemovedvars = (SCIP_Real) *nmovedvars / (SCIP_Real) nvars;
       if ( *nmovedvars > 0 && SCIPgetNVars(scip) >= COMPRESSNVARSLB && SCIPisLE(scip, percentagemovedvars, compressthreshold) )
       {
+         int* labeltopermvaridx;
+
+         /* generate map from label to index of corresponding variable in permvars */
+         SCIP_CALL( SCIPallocBufferArray(scip, &labeltopermvaridx, *nmovedvars) );
+         for (i = 0; i < nvars; ++i)
+         {
+            if ( labelmovedvars[i] != -1 )
+               labeltopermvaridx[labelmovedvars[i]] = i;
+         }
+
          /* remove variables from permutations that are not affected by any permutation */
          for (p = 0; p < nperms; ++p)
          {
-            for (i = 0; i < nvars; ++i)
+            /* iterate over labels and adapt permutation */
+            for (i = 0; i < *nmovedvars; ++i)
             {
-               if ( labelmovedvars[i] != -1 )
-               {
-                  assert( labelmovedvars[i] <= i );
-                  perms[p][labelmovedvars[i]] = labelmovedvars[perms[p][i]];
-               }
+               assert( i <= labeltopermvaridx[i] );
+               perms[p][i] = labelmovedvars[perms[p][labeltopermvaridx[i]]];
             }
 
             SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &perms[p], nvars, *nmovedvars) );
@@ -1372,16 +1380,16 @@ SCIP_RETCODE setSymmetryData(
 
          /* remove variables from permvars array that are not affected by any symmetry */
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, permvars, *nmovedvars) );
-         for (i = 0; i < nvars; ++i)
+         for (i = 0; i < *nmovedvars; ++i)
          {
-            if ( labelmovedvars[i] != -1 )
-               (*permvars)[labelmovedvars[i]] = vars[i];
+            (*permvars)[i] = vars[labeltopermvaridx[i]];
          }
          *npermvars = *nmovedvars;
          *nbinpermvars = nbinvarsaffected;
          *compressed = TRUE;
 
          SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+         SCIPfreeBufferArray(scip, &labeltopermvaridx);
       }
       SCIPfreeBufferArray(scip, &labelmovedvars);
    }
