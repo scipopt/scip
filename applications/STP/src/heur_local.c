@@ -2209,7 +2209,7 @@ SCIP_RETCODE localVertexInsertion(
                newnode = i;
                solNodes[i] = TRUE;
                newnverts++;
-               SCIPdebugMessage("ADDED VERTEX \n");
+               SCIPdebugMessage("Inclusion: ADDED VERTEX %d \n", i);
             }
          }
       }
