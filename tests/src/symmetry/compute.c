@@ -876,7 +876,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    cr_assert(graphcomponents != NULL);
    cr_assert(graphcompbegins != NULL);
    cr_assert(compcolorbegins != NULL);
-   cr_assert(nusedperms == 5);
+   cr_assert(nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms);
    cr_assert(ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents);
    cr_assert(ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors);
 
@@ -901,7 +901,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    cr_assert(graphcomponents != NULL);
    cr_assert(graphcompbegins != NULL);
    cr_assert(compcolorbegins != NULL);
-   cr_assert(nusedperms == 5);
+   cr_assert(nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms);
    cr_assert(ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents);
    cr_assert(ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors);
 
@@ -926,7 +926,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    cr_assert(graphcomponents != NULL);
    cr_assert(graphcompbegins != NULL);
    cr_assert(compcolorbegins != NULL);
-   cr_assert(nusedperms == 2);
+   cr_assert(nusedperms == 2, "expected 2 used permutations, but got %d\n", nusedperms);
    cr_assert(ngraphcomponents == 4, "expected 4 graph components, but got %d\n", ngraphcomponents);
    cr_assert(ncompcolors == 1, "expected 1 component colors, but got %d\n", ncompcolors);
 
@@ -1006,7 +1006,7 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symetric subgroup
    cr_assert(graphcomponents != NULL);
    cr_assert(graphcompbegins != NULL);
    cr_assert(compcolorbegins != NULL);
-   cr_assert(nusedperms == 5);
+   cr_assert(nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms);
    cr_assert(ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents);
    cr_assert(ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors);
 

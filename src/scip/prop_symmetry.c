@@ -2485,6 +2485,7 @@ SCIP_RETCODE buildSubgroupGraph(
    int** perms;
    int* components;
    int* componentbegins;
+   int* componentslastperm;
    SYM_SORTGRAPHCOMPVARS graphcompvartype;
    int ncomponents;
    int npermvars;
@@ -2522,6 +2523,10 @@ SCIP_RETCODE buildSubgroupGraph(
    SCIP_CALL( SCIPcreateDisjointset(scip, &vartocomponent, npermvars) );
    SCIP_CALL( SCIPcreateDisjointset(scip, &comptocolor, npermvars) );
    SCIP_CALL( SCIPcreateDigraph(scip, &graph, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray( scip, &componentslastperm, npermvars) );
+
+   for( k = 0; k < npermvars; ++k )
+      componentslastperm[k] = -1;
 
    for( j = 0; j < ntwocycleperms; ++j )
    {
@@ -2544,14 +2549,11 @@ SCIP_RETCODE buildSubgroupGraph(
          if( img == k )
             continue;
 
-         if( SCIPdigraphGetNSuccessors(graph, k) > 1 )
-            break;
-
          comp1 = SCIPdisjointsetFind(vartocomponent, k);
          comp2 = SCIPdisjointsetFind(vartocomponent, img);
 
          /* if both variables are in the same component, this generator would create a cycle, so skip it */
-         if( comp1 == comp2 )
+         if( comp1 == comp2 || componentslastperm[comp1] == j )
             break;
 
          color1 = SCIPdisjointsetFind(comptocolor, comp1);
@@ -2560,6 +2562,8 @@ SCIP_RETCODE buildSubgroupGraph(
          /* a generator is not allowed to connect two components of the same color, since they depend on each other */
          if( color1 == color2 )
             break;
+
+         componentslastperm[comp1] = j;
 
          if( firstcolor == -1 )
             firstcolor = color1;
@@ -2674,6 +2678,7 @@ SCIP_RETCODE buildSubgroupGraph(
 
    SCIPfreeBufferArray(scip, &(graphcompvartype.colors));
    SCIPfreeBufferArray(scip, &(graphcompvartype.components));
+   SCIPfreeBufferArray(scip, &componentslastperm);
    SCIPdigraphFree(&graph);
    SCIPfreeDisjointset(scip, &comptocolor);
    SCIPfreeDisjointset(scip, &vartocomponent);
