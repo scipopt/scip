@@ -1654,8 +1654,8 @@ SCIP_RETCODE localKeyPathExchangePc2(
 
    cost1 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
 
-   assert(SCIPisEQ(scip, cost1 + 1.0, cost0));
-
+   if( !SCIPisEQ(scip, cost1 + 1.0, cost0) )
+      return SCIP_ERROR;
 
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
@@ -1742,7 +1742,8 @@ SCIP_RETCODE localKeyVertex(
    // 5 is the implicit root
 
    cost1 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
-   assert(SCIPisEQ(scip, cost1 + 1.0, cost0));
+   if( !SCIPisEQ(scip, cost1 + 1.0, cost0) )
+      return SCIP_ERROR;
 
    assert(steinertree[12] == CONNECT && steinertree[15] == CONNECT);
    assert(steinertree[0] == UNKNOWN && steinertree[2] == UNKNOWN);
@@ -1854,7 +1855,8 @@ SCIP_RETCODE localKeyVertexPc(
    // 6 is the implicit root
 
    cost1 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
-   assert(SCIPisEQ(scip, cost1 + 0.5, cost0));
+   if( !SCIPisEQ(scip, cost1 + 0.5, cost0) )
+      return SCIP_ERROR;
 
    assert(steinertree[12] == CONNECT && steinertree[14] == CONNECT);
    assert(steinertree[0] == UNKNOWN && steinertree[2] == UNKNOWN);
@@ -1973,7 +1975,8 @@ SCIP_RETCODE localKeyVertexPc2(
    // 6 is the implicit root
 
    cost1 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
-   assert(SCIPisEQ(scip, cost1 + 0.5, cost0));
+   if( !SCIPisEQ(scip, cost1 + 0.5, cost0) )
+      return SCIP_ERROR;
 
    assert(steinertree[16] == CONNECT && steinertree[18] == CONNECT);
    assert(steinertree[0] == UNKNOWN && steinertree[2] == UNKNOWN);
