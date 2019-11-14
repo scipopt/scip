@@ -551,30 +551,29 @@ SCIP_RETCODE pcmwUpdate(
    PCMW*                 pcmwData            /**< data */
    )
 {
+   SCIP_Bool* reachable_nodes;
    STP_Bool* const pinned = soltreeData->nodeIsPinned;
    const int root = graph->source;
    const int nnodes = graph->knots;
    int* const graphmark = graph->mark;
+   const int solstartnode = graph_pc_isRootedPcMw(graph)? graph->source : pcmwData->solroot;
 
    assert(graph->extended);
    assert(graph_pc_isPcMw(graph));
+   assert(solstartnode >= 0 && solstartnode < graph->knots);
+   assert(soltreeData->solNodes[solstartnode]);
 
-   if( !graph_pc_isRootedPcMw(graph) )
-   {
-      SCIP_Bool* reachable_nodes;
+   /* remove unconnected vertices */
+   SCIP_CALL( SCIPallocBufferArray(scip, &reachable_nodes, nnodes) );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &reachable_nodes, nnodes) );
+   SCIP_CALL( graph_trail_costAware(scip, graph, solstartnode, reachable_nodes) );
 
-      assert(pcmwData->solroot >= 0 && soltreeData->solNodes[pcmwData->solroot]);
+   for( int k = 0; k < nnodes; k++ )
+      graphmark[k] = reachable_nodes[k];
 
-      SCIP_CALL( graph_trail_costAware(scip, graph, pcmwData->solroot, reachable_nodes) );
+   SCIPfreeBufferArray(scip, &reachable_nodes);
 
-      for( int k = 0; k < nnodes; k++ )
-         graphmark[k] = reachable_nodes[k];
-
-      SCIPfreeBufferArray(scip, &reachable_nodes);
-   }
-
+   /* unmark and pin pseudo terminals */
    for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
    {
       const int k = graph->head[e];
