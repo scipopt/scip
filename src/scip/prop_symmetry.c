@@ -3081,7 +3081,7 @@ SCIP_RETCODE addSymresackConss(
    assert( permvars != NULL );
    assert( npermvars > 0 );
 
-   if ( propdata->nschreiersimsconss > 0 )
+   if ( propdata->nleaders > 0 )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &modifiedperms, nperms) );
       for (p = 0; p < nperms; ++p)
@@ -3112,7 +3112,7 @@ SCIP_RETCODE addSymresackConss(
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_perm%d", p);
 
          /* adapt permutation to leader */
-         if ( propdata->nschreiersimsconss > 0 )
+         if ( propdata->nleaders > 0 )
          {
             SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[p], modifiedpermvars, npermvars, FALSE,
                   conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -3152,7 +3152,7 @@ SCIP_RETCODE addSymresackConss(
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_component%d_perm%d", i, permidx);
 
             /* adapt permutation to leader */
-            if ( propdata->nschreiersimsconss > 0 )
+            if ( propdata->nleaders > 0 )
             {
                SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[permidx], modifiedpermvars, npermvars, FALSE,
                      conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
