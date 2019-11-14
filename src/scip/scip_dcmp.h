@@ -67,7 +67,7 @@ void SCIPgetDecomps(
    SCIP_Bool             original            /**< should the decompositions for the original problem be returned? */
    );
 
-/** returns TRUE if a constraint contains only linking variables in a decomposition */
+/** returns TRUE if the constraint \p cons contains only linking variables in decomposition \p decomp */
 SCIP_EXPORT
 SCIP_RETCODE SCIPhasConsOnlyLinkVars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -80,9 +80,8 @@ SCIP_RETCODE SCIPhasConsOnlyLinkVars(
  *
  *  Existing labels for the constraints are simply overridden
  *
- *  The computed labels depend on the flag SCIPdecompUseBendersLabels() of the decomposition.
- *
- *  If the flag is set to FALSE, the labeling assigns
+ *  The computed labels depend on the flag SCIPdecompUseBendersLabels() of the decomposition. If the flag is set
+ *  to FALSE, the labeling assigns
  *
  *  - label i, if only variables labeled i are present in the constraint (and optionally linking variables)
  *  - SCIP_DECOMP_LINKCONS, if there are either only variables labeled with SCIP_DECOMP_LINKVAR present, or
@@ -126,6 +125,7 @@ SCIP_RETCODE SCIPcomputeDecompVarsLabels(
  *
  * Each linking constraint is assigned to the most frequent block among its variables.
  * Variables of other blocks are relabeled as linking variables.
+ * Constraints that have only linking variables are skipped.
  *
  * @note: In contrast to SCIPcomputeDecompConsLabels(), this method potentially relabels variables.
  */
@@ -134,7 +134,8 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_CONS**           conss,              /**< array of linking constraints that should be reassigned */
-   int                   nconss              /**< number of constraints */
+   int                   nconss,             /**< number of constraints */
+   int*                  nskipconss          /**< pointer to store the number of constraints that were skipped, or NULL */
    );
 
 /** computes decomposition statistics and store them in the decomposition object */

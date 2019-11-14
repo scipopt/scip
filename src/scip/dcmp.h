@@ -39,7 +39,6 @@ extern "C" {
 #define SCIP_DECOMPSTORE_CAPA 10             /**< hardcoded maximum capacity of decomposition store */
 
 /** creates a decomposition storage */
-SCIP_EXPORT
 SCIP_RETCODE SCIPdecompstoreCreate(
    SCIP_DECOMPSTORE**    decompstore,        /**< pointer to store decomposition storage */
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
@@ -47,57 +46,43 @@ SCIP_RETCODE SCIPdecompstoreCreate(
    );
 
 /** frees a decomposition storage */
-SCIP_EXPORT
 void SCIPdecompstoreFree(
    SCIP_DECOMPSTORE**    decompstore,        /**< pointer to free decomposition storage */
    BMS_BLKMEM*           blkmem              /**< block memory data structure */
    );
 
 /** adds decomposition to storage */
-SCIP_EXPORT
 SCIP_RETCODE SCIPdecompstoreAdd(
    SCIP_DECOMPSTORE*     decompstore,        /**< decomposition storage */
    SCIP_DECOMP*          decomp              /**< decomposition to add */
    );
 
-/** gets decomposition store from SCIP */
-SCIP_EXPORT
-SCIP_DECOMPSTORE* SCIPgetDecompstore(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** transforms all available original decompositions into transformed space */
-SCIP_EXPORT
 SCIP_RETCODE SCIPtransformDecompstore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** frees all decompositions in transformed space */
-SCIP_EXPORT
 void SCIPexitSolveDecompstore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets decompositions from storage */
-SCIP_EXPORT
 SCIP_DECOMP** SCIPdecompstoreGetDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    );
 
 /** gets number of decompositions in storage */
-SCIP_EXPORT
 int SCIPdecompstoreGetNDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    );
 
 /** gets decompositions in original space from storage */
-SCIP_EXPORT
 SCIP_DECOMP** SCIPdecompstoreGetOrigDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    );
 
 /** gets number of decompositions in original space in storage */
-SCIP_EXPORT
 int SCIPdecompstoreGetNOrigDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    );
