@@ -399,7 +399,7 @@ extern void   graph_mark(GRAPH*);
 extern SCIP_RETCODE   graph_pc_init(SCIP*, GRAPH*, int, int);
 extern SCIP_RETCODE   graph_pc_2pc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rpc(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_pc_2mw(SCIP*, GRAPH*, SCIP_Real*);
+extern SCIP_RETCODE   graph_pc_2mw(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rmw(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_pcmw2rooted(SCIP*, GRAPH*, SCIP_Real);
 extern SCIP_RETCODE   graph_pc_getSap(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);

@@ -2193,20 +2193,17 @@ SCIP_RETCODE graph_pc_2rpc(
 /** alters the graph for MWCS problems */
 SCIP_RETCODE graph_pc_2mw(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph,              /**< the graph */
-   SCIP_Real*            maxweights          /**< array containing the weight of each node */
+   GRAPH*                graph               /**< the graph */
    )
 {
-   int nnodes;
+   const int nnodes = graph->knots;
    int nterms = 0;
+   SCIP_Real* const maxweights = graph->prize;
 
    assert(maxweights != NULL);
    assert(scip != NULL);
-   assert(graph != NULL);
    assert(graph->cost != NULL);
    assert(graph->terms == 0);
-
-   nnodes = graph->knots;
 
    /* count number of terminals, modify incoming edges for non-terminals */
    for( int i = 0; i < nnodes; i++ )
@@ -2225,7 +2222,6 @@ SCIP_RETCODE graph_pc_2mw(
    nterms = 0;
    for( int i = 0; i < nnodes; i++ )
    {
-      graph->prize[i] = maxweights[i];
       if( Is_term(graph->term[i]) )
       {
          assert(SCIPisGE(scip, maxweights[i], 0.0));

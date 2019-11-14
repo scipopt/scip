@@ -2184,6 +2184,7 @@ SCIP_RETCODE localVertexInsertion(
             {
                solNodes[i] = TRUE;
                newnverts++;
+               SCIPdebugMessage("Inclusion: ADDED VERTEX %d \n", i);
             }
          }
          else
