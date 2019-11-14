@@ -3125,6 +3125,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    int nactiveperms;
    int norbits;
    int npermvars;
+   int nbinpermvars;
    int** permstrans;
    int nperms;
    int p;
@@ -3162,6 +3163,7 @@ SCIP_RETCODE propagateOrbitalFixing(
 
    permvars = propdata->permvars;
    npermvars = propdata->npermvars;
+   nbinpermvars = propdata->nbinpermvars;
    permstrans = propdata->permstrans;
    inactiveperms = propdata->inactiveperms;
    components = propdata->components;
@@ -3325,10 +3327,10 @@ SCIP_RETCODE propagateOrbitalFixing(
    if ( nactiveperms == 0 )
       return SCIP_OKAY;
 
-   /* compute orbits */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, npermvars, permstrans, nperms, inactiveperms,
+   /* compute orbits of binary variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, nbinpermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, nbinpermvars) );
+   SCIP_CALL( SCIPcomputeOrbitsFilterSym(scip, nbinpermvars, permstrans, nperms, inactiveperms,
          orbits, orbitbegins, &norbits, components, componentbegins, vartocomponent, propdata->componentblocked, ncomponents, propdata->nmovedpermvars) );
 
    if ( norbits > 0 )
@@ -3337,7 +3339,7 @@ SCIP_RETCODE propagateOrbitalFixing(
       int nfixedone = 0;
 
       SCIPdebugMsg(scip, "Perform orbital fixing on %d orbits (%d active perms).\n", norbits, nactiveperms);
-      SCIP_CALL( performOrbitalFixing(scip, permvars, npermvars, orbits, orbitbegins, norbits, infeasible, &nfixedzero, &nfixedone) );
+      SCIP_CALL( performOrbitalFixing(scip, permvars, nbinpermvars, orbits, orbitbegins, norbits, infeasible, &nfixedzero, &nfixedone) );
 
       propdata->nfixedzero += nfixedzero;
       propdata->nfixedone += nfixedone;
