@@ -115,7 +115,6 @@ SCIP_RETCODE SCIPdetermineNVarsAffectedSym(
    int                   nperms,             /**< number of permutations in perms */
    SCIP_VAR**            permvars,           /**< variables corresponding to permutations */
    int                   npermvars,          /**< number of permvars in perms */
-   int*                  nbinvarsaffected,   /**< pointer to store number of binary affected variables */
    int*                  nvarsaffected       /**< pointer to store number of all affected variables */
    );
 

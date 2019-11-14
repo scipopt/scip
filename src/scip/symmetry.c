@@ -352,7 +352,6 @@ SCIP_RETCODE SCIPdetermineNVarsAffectedSym(
    int                   nperms,             /**< number of permutations in perms */
    SCIP_VAR**            permvars,           /**< variables corresponding to permutations */
    int                   npermvars,          /**< number of permvars in perms */
-   int*                  nbinvarsaffected,   /**< pointer to store number of binary affected variables */
    int*                  nvarsaffected       /**< pointer to store number of all affected variables */
    )
 {
@@ -365,10 +364,8 @@ SCIP_RETCODE SCIPdetermineNVarsAffectedSym(
    assert( nperms > 0 );
    assert( permvars != NULL );
    assert( npermvars > 0 );
-   assert( nbinvarsaffected != NULL );
    assert( nvarsaffected != NULL );
 
-   *nbinvarsaffected = 0;
    *nvarsaffected = 0;
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &affected, npermvars) );
@@ -385,9 +382,6 @@ SCIP_RETCODE SCIPdetermineNVarsAffectedSym(
          {
             affected[i] = TRUE;
             ++(*nvarsaffected);
-
-            if ( SCIPvarIsBinary(permvars[i]) )
-               ++(*nbinvarsaffected);
          }
       }
    }
