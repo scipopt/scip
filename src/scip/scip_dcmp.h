@@ -142,7 +142,8 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeDecompStats(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_Bool             uselimits           /**< respect user limits on potentially expensive graph statistics? */
    );
 
 #ifdef __cplusplus

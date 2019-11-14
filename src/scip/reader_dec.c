@@ -288,7 +288,7 @@ SCIP_RETCODE readDecomposition(
       SCIPdebugMsg(scip, "Using %d SCIP constraints for labeling variables.\n", nconss);
       SCIP_CALL( SCIPcomputeDecompVarsLabels(scip, decomp, scip_conss, nconss) );
 
-      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp) );
+      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp, TRUE) );
 
       SCIP_CALL( SCIPaddDecomp(scip, decomp) );
 

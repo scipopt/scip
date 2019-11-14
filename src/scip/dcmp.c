@@ -625,7 +625,7 @@ SCIP_RETCODE SCIPtransformDecompstore(
       /* 4. use the constraint labels for the final variable labeling */
       SCIP_CALL( SCIPcomputeDecompVarsLabels(scip, decomp, conss, nconss) );
 
-      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp) );
+      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp, TRUE) );
 
       SCIP_CALL( SCIPdecompstoreAdd(decompstore, decomp) );
 

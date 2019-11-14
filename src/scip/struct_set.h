@@ -447,6 +447,7 @@ struct SCIP_Set
    /* Decomposition settings */
    SCIP_Bool             decomp_benderslabels; /**< should the variables be labeled for the application of Benders'
                                                 *   decomposition */
+   int                   decomp_maxgraphedge;  /**< maximum number of edges in block graph computation, or -1 for no limit */
 
    /* Benders' decomposition settings */
    SCIP_Real             benders_soltol;     /**< the tolerance for checking optimality in Benders' decomposition */
