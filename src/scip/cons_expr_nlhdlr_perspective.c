@@ -568,11 +568,11 @@ SCIP_RETCODE exprIsSemicontinuous(
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,  /**< nlhdlr expression data */
    SCIP_CONSEXPR_EXPR*           expr,            /**< expression term to be added */
    int*                          nbvars,          /**< buffer to store the number of indicator variables */
-   SCIP_VAR***                   expr_bvars,      /**< buffer to store indicator variables of the expression */
+   SCIP_VAR**                    expr_bvars,      /**< buffer to store indicator variables of the expression */
    SCIP_Bool*                    res              /**< buffer to store whether the expression is semicontinuous */
    )
 {
-   int v, nvars, nbvars0;
+   int v, v0, nvars;
    SCIP_CONSEXPR_EXPR** varexprs;
    SCIP_Bool var_is_sc;
    SCIP_SCVARDATA* scvdata;
@@ -582,11 +582,15 @@ SCIP_RETCODE exprIsSemicontinuous(
    SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, nlhdlrexprdata->nvarexprs) );
    SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, varexprs, &nvars) );
 
+   /* expression with a constant is fine */
    if( nvars == 0 )
+   {
+      *res = TRUE;
       goto TERMINATE;
+   }
 
-   /* all variables of an on/off term should be semicontinuous */
-   /* TODO check auxiliary variables */
+   /* all nonlinear variables of an on/off term should be semicontinuous */
+   /* TODO propagate auxiliary variables */
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
@@ -594,32 +598,38 @@ SCIP_RETCODE exprIsSemicontinuous(
       var = SCIPgetConsExprExprVarVar(varexprs[v]);
       SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, &var_is_sc) );
       if( !var_is_sc )
+      {
+         /* a non-semicontinuous var appearing linearly is ok */
+         if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrVar(conshdlr) || SCIPgetConsExprExprAuxVar(expr) != NULL )
+            *res = TRUE;
          goto TERMINATE;
+      }
    }
 
    /* find common binary variables for all variables of children[c] */
    scvdata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)SCIPgetConsExprExprVarVar(varexprs[0]));
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, expr_bvars, scvdata->bvars, scvdata->nbnds) );
+
+   if( *nbvars == 0 )
+      BMScopyMemoryArray(expr_bvars, scvdata->bvars, scvdata->nbnds);
+
+   v0 = *nbvars == 0 ? 1 : 0;
    *nbvars = scvdata->nbnds;
-   nbvars0 = scvdata->nbnds;
 
    SCIPdebugMsg(scip, "\nArray intersection for vars %s", SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[0])));
-   for( v = 1; v < nvars; ++v )
+   for( v = v0; v < nvars; ++v )
    {
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "\n%s; ", SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[v])));
 #endif
       scvdata = (SCIP_SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*)SCIPgetConsExprExprVarVar(varexprs[v]));
-      SCIPcomputeArraysIntersectionPtr((void**)*expr_bvars, *nbvars, (void**)scvdata->bvars, scvdata->nbnds, SCIPvarComp, (void**)*expr_bvars, nbvars);
+      SCIPcomputeArraysIntersectionPtr((void**)expr_bvars, *nbvars, (void**)scvdata->bvars, scvdata->nbnds, SCIPvarComp, (void**)expr_bvars, nbvars);
 
       /* if we have found out that the intersection is empty, expr is not semicontinuous */
       if( *nbvars == 0 )
       {
-         SCIPfreeBlockMemoryArray(scip, expr_bvars, nbvars0);
          goto TERMINATE;
       }
    }
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, expr_bvars, nbvars0, *nbvars) );
 
    *res = TRUE;
 
@@ -652,7 +662,7 @@ SCIP_RETCODE addTerm(
    SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, nlhdlrexprdata->nvarexprs) );
    SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, term, varexprs, &nvars) );
 
-   SCIP_CALL( exprIsSemicontinuous(scip, conshdlr, nlhdlrdata, nlhdlrexprdata, term, &nbvars, &expr_bvars, &expr_is_sc) );
+   SCIP_CALL( exprIsSemicontinuous(scip, conshdlr, nlhdlrdata, nlhdlrexprdata, term, &nbvars, expr_bvars, &expr_is_sc) );
 
    if( expr_is_sc )
    {
@@ -849,10 +859,10 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 { /*lint --e{715}*/
-   int h, nbvars;
+   int nbvars, nchildren, c;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_VAR** expr_bvars;
-   SCIP_Bool expr_is_sc;
+   SCIP_CONSEXPR_EXPR** children;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
@@ -886,23 +896,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       return SCIP_OKAY;
    }
 
-   if( SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_UNKNOWN || SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_LINEAR )
-   {
-      SCIPdebugMsg(scip, "curvature of expr %p is %s\n", expr, SCIPexprcurvGetName(SCIPgetConsExprExprCurvature(expr)));
-      return SCIP_OKAY;
-   }
-
-   /* look for a nonlinear handler that can build cuts for this expression */
-   for( h = 0; h < nsuccess; ++h )
-   {
-      if( nlhdlrssuccess[h]->sepa != NULL || nlhdlrssuccess[h]->estimate != NULL )
-      {
-         *success = TRUE;
-         break;
-      }
-   }
-
-   if( !*success )
+   /* some other nonlinear handler should be able to separate */
+   if( !(*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && !(*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
@@ -915,28 +910,52 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       SCIP_CALL( SCIPhashmapCreate(&(nlhdlrdata->scvars), SCIPblkmem(scip), (*nlhdlrexprdata)->nvarexprs) );
    }
 
-   /* check if expr is semicontinuous */
-   SCIP_CALL( exprIsSemicontinuous(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, expr, &nbvars, &expr_bvars, success) );
+   /* prepare the list of terms */
+   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
+   {
+      children = SCIPgetConsExprExprChildren(expr);
+      nchildren = SCIPgetConsExprExprNChildren(expr);
+   }
+   else
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &children, 1) );
+      *children = expr;
+      nchildren = 1;
+   }
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr_bvars, SCIPgetNBinVars(scip)) );
+
+   /* collect terms that satisfy the conditions for g_i(x_i) and the corresponding binary variables
+    * all other terms are stored in convterms */
+
+   nbvars = 0;
+   *success = TRUE;
+
+   for( c = 0; c < nchildren; ++c )
+   {
+      /* check if expr is semicontinuous */
+      SCIP_CALL( exprIsSemicontinuous(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, children[c], &nbvars, expr_bvars, success) );
+
+      if( !*success )
+         break;
+   }
+
+   /* this might happen since non-semicontinuous linear terms are allowed */
+   if( nbvars == 0 )
+      *success = FALSE;
 
    if( *success )
    {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &expr_bvars, SCIPgetNBinVars(scip), nbvars) );
+
       SCIPdebugMsg(scip, "\ndetected an on/off expr");
 
       addOnoffTerm(scip, conshdlr, *nlhdlrexprdata, 1.0, expr, expr_bvars, nbvars);
 
-      /* depending on curvature, set enforcemethods */
-      if( (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONVEX )
-      {
-         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-         *enforcedbelow = TRUE;
-         SCIPdebugMsg(scip, "detected expr to be convex -> can enforce expr <= auxvar\n");
-      }
-      else if( (*nlhdlrexprdata)->curvature == SCIP_EXPRCURV_CONCAVE )
-      {
-         *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-         *enforcedabove = TRUE;
-         SCIPdebugMsg(scip, "detected expr to be concave -> can enforce expr >= auxvar\n");
-      }
+      /* if we get here, enforcemethods should have already been set by other handlers */
+      assert(((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && *enforcedbelow)
+         || ((*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && *enforcedabove));
+
       /* save varexprs to nlhdlrexprdata */
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->varexprs, (*nlhdlrexprdata)->nvarexprs) );
       SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, expr, (*nlhdlrexprdata)->varexprs, &(*nlhdlrexprdata)->nvarexprs) );
@@ -944,9 +963,15 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    }
    else
    {
+      SCIPfreeBlockMemoryArray(scip, &expr_bvars, SCIPgetNBinVars(scip));
       SCIP_CALL( freeNlhdlrExprData(scip, *nlhdlrexprdata) );
       SCIPfreeBlockMemory(scip, nlhdlrexprdata);
       *nlhdlrexprdata = NULL;
+   }
+
+   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+   {
+      SCIPfreeBufferArray(scip, &children);
    }
 
    return SCIP_OKAY;
