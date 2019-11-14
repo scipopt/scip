@@ -3343,7 +3343,7 @@ SCIP_RETCODE graph_voronoiExtend(
 }
 
 
-/** build a voronoi region, w.r.t. shortest paths, for a given set of bases */
+/** build a Voronoi region, w.r.t. shortest paths, for a given set of bases */
 void graph_voronoi(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
@@ -3388,7 +3388,7 @@ void graph_voronoi(
       else
       {
          vbase[i] = UNKNOWN;
-         path[i].dist = FARAWAY + 1;
+         path[i].dist = FARAWAY;
          path[i].edge = UNKNOWN;
          state[i] = UNKNOWN;
       }
@@ -4525,8 +4525,8 @@ void graph_voronoiWithRadiusMw(
 void graph_voronoiRepair(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Real*            cost,               /**< edge costs */
-   int*                  count,              /**< pointer to number of heap elements */
+   const SCIP_Real*      cost,               /**< edge costs */
+   int*                  nheapelems,         /**< pointer to number of heap elements */
    int*                  vbase,              /**< array containing Voronoi base of each node */
    PATH*                 path,               /**< Voronoi paths data struture */
    int*                  newedge,            /**< the new edge */
@@ -4534,68 +4534,80 @@ void graph_voronoiRepair(
    UF*                   uf                  /**< union find data structure */
    )
 {
-   int k;
-   int m;
-   int i;
-   int e;
-   int* heap;
-   int* state;
-   int node1;
-   int node2;
+   int boundaryedge = UNKNOWN;
+   const int nnodes = g->knots;
+
+   assert(cost && scip && nheapelems && newedge);
 
    *newedge = UNKNOWN;
-   e = UNKNOWN;
-   assert(g != NULL);
-   assert(g->path_heap != NULL);
-   assert(g->path_state != NULL);
-   assert(path != NULL);
-   assert(cost != NULL);
 
-   if( g->knots == 0 )
-      return;
-
-   heap = g->path_heap;
-   state = g->path_state;
-
-   if( g->knots > 1 )
+   if( nnodes > 1 )
    {
+      int* const heap = g->path_heap;
+      int* const state = g->path_state;
+      const SCIP_Bool isMw = (g->stp_type == STP_MWCSP) || (g->stp_type == STP_RMWCSP);
+
+      assert(heap && state);
+
       /* until the heap is empty */
-      while( *count > 0 )
+      while( *nheapelems > 0 )
       {
          /* get the next (i.e. a nearest) vertex from the heap */
-         k = nearest(heap, state, count, path);
+         const int k = nearest(heap, state, nheapelems, path);
 
          /* mark vertex k as scanned */
          state[k] = CONNECT;
-         assert(g->mark[k]);
-         assert(g->mark[vbase[k]]);
+
+         assert(vbase[k] >= 0);
+         assert(g->mark[k] && g->mark[vbase[k]]);
+
          /* iterate over all outgoing edges of vertex k */
-         for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
+         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
-            m = g->head[i];
+            const int m = g->head[e];
 
             /* check whether the path (to m) including k is shorter than the so far best known */
-            if( (state[m]) && (SCIPisGT(scip, path[m].dist, path[k].dist + cost[i])) )/*&& g->mark[m] ) */
+            if( (state[m]) && (SCIPisGT(scip, path[m].dist, path[k].dist + cost[e])) )
             {
                assert(g->mark[m]);
-               correct(scip, heap, state, count, path, m, k, i, cost[i], FSP_MODE);
+               correct(scip, heap, state, nheapelems, path, m, k, e, cost[e], FSP_MODE);
                vbase[m] = vbase[k];
             }
-
             /* check whether there is a better new boundary edge adjacent to vertex k */
-            else
+            else if( state[m] == CONNECT && g->mark[m] )
             {
-               node1 = SCIPStpunionfindFind(uf, vbase[m]);
-               node2 = SCIPStpunionfindFind(uf, vbase[k]);
-               if( state[m] == CONNECT && ((node1 == crucnode) != (node2 == crucnode)) && g->mark[m] && g->mark[vbase[m]]
-                  && g->mark[node1] && g->mark[node2] && ((e == UNKNOWN) || SCIPisGT(scip,
-                        (path[g->tail[e]].dist + cost[e] + path[g->head[e]].dist), path[k].dist + cost[i] + path[m].dist)) )
-                  e = i;
-            }
+               const int node1 = SCIPStpunionfindFind(uf, vbase[m]);
+               const int node2 = SCIPStpunionfindFind(uf, vbase[k]);
+
+               if( (node1 == crucnode) == (node2 == crucnode) )
+                  continue;
+
+               if( !g->mark[node1] || !g->mark[node2] || !g->mark[vbase[m]] )
+                  continue;
+
+               /* now to the actual checks */
+
+               if( boundaryedge == UNKNOWN )
+               {
+                  boundaryedge = e;
+               }
+               else
+               {
+                  int todo; // adapt for small prizes! maybe an extra method in graph_base? to get unbiased edge cost...try to inline?
+                  const SCIP_Real c_new = isMw? 0.0 : cost[e];
+                  const SCIP_Real c_old = isMw? 0.0 : cost[e];
+                  const SCIP_Real dist_new = path[k].dist + c_new + path[m].dist;
+                  const SCIP_Real dist_old = path[g->tail[boundaryedge]].dist + c_old + path[g->head[boundaryedge]].dist;
+
+                  if( dist_new < dist_old )
+                     boundaryedge = e;
+               }
+            } /* check for boundary edge */
          }
       }
    }
-   *newedge = e;
+
+   *newedge = boundaryedge;
 }
 
 

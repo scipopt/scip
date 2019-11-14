@@ -149,6 +149,7 @@ typedef struct pcmw_data
    int* const            prizemarklist;      /**< list of all marked */
    int                   nprizemarks;        /**< size of list */
    SCIP_Bool             isActive;           /**< actively used (i.e. Pc/Mw graph)? */
+   int                   solroot;            /**< root of Steiner tree solution */
 } PCMW;
 
 /*
@@ -423,6 +424,36 @@ SCIP_Real getNewPrizeNode(
 }
 
 
+/** gets root of solution for Pc/Mw or -1 otherwise */
+static
+int pcmwGetSolRoot(
+   const GRAPH*          graph,
+   const int*            solEdges
+)
+{
+   int solroot = -1;
+
+   if( graph_pc_isPcMw(graph) && !graph_pc_isRootedPcMw(graph) )
+   {
+      const int root = graph->source;
+
+      for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         const int head = graph->head[e];
+         if( solEdges[e] == CONNECT && !Is_term(graph->term[head]) )
+         {
+            assert(graph->cost[e] == 0.0);
+            solroot = head;
+            break;
+         }
+      }
+      assert(solroot >= 0);
+   }
+
+   return solroot;
+}
+
+
 /** get prize not already counted that is associated to edge, not including solution nodes or forbidden ones */
 static
 SCIP_Real pcmwGetNewEdgePrize(
@@ -513,7 +544,7 @@ void pcmwDataClean(
 
 /** updates for PC/MW: graph->mark and pinned */
 static
-void pcmwUpdate(
+SCIP_RETCODE pcmwUpdate(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    SOLTREE*              soltreeData,        /**< solution tree data */
@@ -522,10 +553,27 @@ void pcmwUpdate(
 {
    STP_Bool* const pinned = soltreeData->nodeIsPinned;
    const int root = graph->source;
+   const int nnodes = graph->knots;
    int* const graphmark = graph->mark;
 
    assert(graph->extended);
    assert(graph_pc_isPcMw(graph));
+
+   if( !graph_pc_isRootedPcMw(graph) )
+   {
+      SCIP_Bool* reachable_nodes;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &reachable_nodes, nnodes) );
+
+      assert(pcmwData->solroot >= 0 && soltreeData->solNodes[pcmwData->solroot]);
+
+      SCIP_CALL( graph_trail_costAware(scip, graph, pcmwData->solroot, reachable_nodes) );
+
+      for( int k = 0; k < nnodes; k++ )
+         graphmark[k] = reachable_nodes[k];
+
+      SCIPfreeBufferArray(scip, &reachable_nodes);
+   }
 
    for( int e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
    {
@@ -545,7 +593,12 @@ void pcmwUpdate(
    }
 
    if( !graph_pc_isRootedPcMw(graph) )
+   {
       graphmark[root] = FALSE;
+      soltreeData->solNodes[root] = FALSE;
+   }
+
+   return SCIP_OKAY;
 }
 
 
@@ -842,6 +895,9 @@ SCIP_RETCODE connectivityDataInit(
       blists_start[vnoibase[k]] = blists_curr;
    }
 
+   // todo
+ //  printf("boundaries...graph->source %d \n", graph->source);
+
 
    /* for each node, store all of its outgoing boundary-edges in a (respective) heap*/
    for( int e = 0; e < nedges; e += 2 )
@@ -851,11 +907,24 @@ SCIP_RETCODE connectivityDataInit(
          const int tail = graph->tail[e];
          const int head = graph->head[e];
 
+#if 0
+         printf("candidate " );
+         graph_edge_printInfo(graph, e);
+
+printf("vnoibase[tail]=%d \n", vnoibase[tail]);
+printf("vnoibase[head]=%d \n", vnoibase[head]);
+printf("graph->path_state[tail]=%d \n", graph->path_state[tail]);
+printf("graph->path_state[head]=%d \n", graph->path_state[head]);
+
+#endif
+
+
          /* is edge 'e' a boundary-edge? */
          if( vnoibase[tail] != vnoibase[head] && graphmark[tail] && graphmark[head] )
          {
             const SCIP_Real edgecost = getBoundaryPathCost(graph, vnoiData, pcmwData, e);
 
+            assert(vnoibase[tail] != UNKNOWN && vnoibase[head] != UNKNOWN);
             assert(SCIPisGE(scip, edgecost, 0.0));
 
             /* add the boundary-edge 'e' and its reversed to the corresponding heaps */
@@ -2253,6 +2322,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
    const int root = graph->source;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
+   const int solroot = pcmwGetSolRoot(graph, solEdges);
    const STP_Bool mwpc = graph_pc_isPcMw(graph);
    SCIP_Bool solimproved = FALSE;
 
@@ -2262,6 +2332,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
 #endif
 
    *success = FALSE;
+
+   assert(mwpc || solroot == -1);
 
    /* memory needed for both Key-Path Elimination and Exchange */
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoipath, nnodes) );
@@ -2320,7 +2392,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
       SGRAPH supergraphData = { .supernodes = supernodes, .nodeIsLowSupernode = supernodesmark,
          .mst = NULL, .mstcost = 0.0, .nsupernodes = 0 };
       PCMW pcmwData = { .prize_biased = prize_pc, .edgecost_biased = edgecost_pc, .prizemark = prizemark,
-         .prizemarklist = prizemarklist, .nprizemarks = 0, .isActive = graph_pc_isPcMw(graph) };
+         .prizemarklist = prizemarklist, .nprizemarks = 0, .isActive = graph_pc_isPcMw(graph), .solroot = solroot };
       int nstnodes = 0;
 
       localmoves = 0;
@@ -2342,7 +2414,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
       if( mwpc )
       {
          assert(graph->extended);
-         pcmwUpdate(scip, graph, &soltreeData, &pcmwData);
+         SCIP_CALL( pcmwUpdate(scip, graph, &soltreeData, &pcmwData) );
 
          /* compute a Voronoi diagram with the Steiner tree nodes as bases */
          graph_voronoi(scip, graph, pcmwData.edgecost_biased, pcmwData.edgecost_biased, soltreeData.solNodes, vnoiData.vnoi_base, vnoiData.vnoi_path);
@@ -2370,7 +2442,13 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
          SCIPdebugMessage("iteration %d (crucial node: %d) \n", dfstree_pos, crucnode);
 
-         /*  has the node been temporarily removed from the ST? */
+         if( solroot == crucnode )
+         {
+            assert(mwpc && !graph_pc_isRootedPcMw(graph));
+            continue;
+         }
+
+         /*  has the node been temporarily removed from the Steiner tree? */
          if( !graph->mark[crucnode] )
             continue;
 

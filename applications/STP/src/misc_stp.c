@@ -766,6 +766,8 @@ int SCIPStpunionfindFind(
    int root = element;
    int* parent = uf->parent;
 
+   assert(element >= 0 && element < uf->nElements);
+
    while( root != parent[root] )
    {
       root = parent[root];
