@@ -1286,6 +1286,7 @@ SCIP_RETCODE setSymmetryData(
    {
       SCIP_Real percentagemovedvars;
       int* labelmovedvars;
+      int* labeltopermvaridx;
       int nbinvarsaffected = 0;
 
       assert( nmovedvars != NULL );
@@ -1294,6 +1295,7 @@ SCIP_RETCODE setSymmetryData(
 
       /* detect number of moved vars and label moved vars */
       SCIP_CALL( SCIPallocBufferArray(scip, &labelmovedvars, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &labeltopermvaridx, nvars) );
       for (i = 0; i < nvars; ++i)
       {
          labelmovedvars[i] = -1;
@@ -1302,6 +1304,7 @@ SCIP_RETCODE setSymmetryData(
          {
             if ( perms[p][i] != i )
             {
+               labeltopermvaridx[*nmovedvars] = i;
                labelmovedvars[i] = (*nmovedvars)++;
 
                if ( SCIPvarIsBinary(vars[i]) )
@@ -1318,16 +1321,6 @@ SCIP_RETCODE setSymmetryData(
       percentagemovedvars = (SCIP_Real) *nmovedvars / (SCIP_Real) nvars;
       if ( *nmovedvars > 0 && SCIPgetNVars(scip) >= COMPRESSNVARSLB && SCIPisLE(scip, percentagemovedvars, compressthreshold) )
       {
-         int* labeltopermvaridx;
-
-         /* generate map from label to index of corresponding variable in permvars */
-         SCIP_CALL( SCIPallocBufferArray(scip, &labeltopermvaridx, *nmovedvars) );
-         for (i = 0; i < nvars; ++i)
-         {
-            if ( labelmovedvars[i] != -1 )
-               labeltopermvaridx[labelmovedvars[i]] = i;
-         }
-
          /* remove variables from permutations that are not affected by any permutation */
          for (p = 0; p < nperms; ++p)
          {
@@ -1352,8 +1345,8 @@ SCIP_RETCODE setSymmetryData(
          *compressed = TRUE;
 
          SCIPfreeBlockMemoryArray(scip, &vars, nvars);
-         SCIPfreeBufferArray(scip, &labeltopermvaridx);
       }
+      SCIPfreeBufferArray(scip, &labeltopermvaridx);
       SCIPfreeBufferArray(scip, &labelmovedvars);
    }
    else
