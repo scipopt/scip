@@ -1323,7 +1323,6 @@ SCIP_RETCODE setSymmetryData(
    {
       SCIP_Real percentagemovedvars;
       int* labelmovedvars;
-      int* compressedperm;
       int nbinvarsaffected = 0;
 
       assert( nmovedvars != NULL );
@@ -1357,21 +1356,19 @@ SCIP_RETCODE setSymmetryData(
       if ( *nmovedvars > 0 && SCIPgetNVars(scip) >= COMPRESSNVARSLB && SCIPisLE(scip, percentagemovedvars, compressthreshold) )
       {
          /* remove variables from permutations that are not affected by any permutation */
-         SCIP_CALL( SCIPallocBufferArray(scip, &compressedperm, *nmovedvars) );
          for (p = 0; p < nperms; ++p)
          {
             for (i = 0; i < nvars; ++i)
             {
                if ( labelmovedvars[i] != -1 )
-                  compressedperm[labelmovedvars[i]] = labelmovedvars[perms[p][i]];
+               {
+                  assert( labelmovedvars[i] <= i );
+                  perms[p][labelmovedvars[i]] = labelmovedvars[perms[p][i]];
+               }
             }
 
             SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &perms[p], nvars, *nmovedvars) );
-
-            for (i = 0; i < *nmovedvars; ++i)
-               perms[p][i] = compressedperm[i];
          }
-         SCIPfreeBufferArray(scip, &compressedperm);
 
          /* remove variables from permvars array that are not affected by any symmetry */
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, permvars, *nmovedvars) );
