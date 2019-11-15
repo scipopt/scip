@@ -2598,7 +2598,10 @@ SCIP_RETCODE SCIPselectCuts(
    }
    else
    {
-      efficacyfac += objparalweight;
+      /* in case there is no solution add the directed cutoff distance weight to the efficacy weight
+       * since the efficacy underestimates the directed cuttoff distance
+       */
+      efficacyfac += dircutoffdistweight;
       for( i = 0; i < ncuts; ++i )
       {
          SCIP_Real objparallelism;
