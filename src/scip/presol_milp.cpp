@@ -41,6 +41,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "scip/pub_var.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
+#include "scip/scip_general.h"
 #include "scip/scip_presol.h"
 #include "scip/scip_var.h"
 #include "scip/scip_mem.h"
@@ -579,6 +580,10 @@ SCIP_RETCODE SCIPincludePresolMILP(
 {
    SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
+
+   /* add external code info for the presolve library */
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "presolve library",
+      "external library for presolving MILPs (link and versioning coming soon)") );
 
    /* create MILP presolver data */
    presoldata = NULL;
