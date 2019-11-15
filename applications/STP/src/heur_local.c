@@ -2094,7 +2094,47 @@ void vnoiDataReset(
 }
 
 
-/** perform local vertex insertion heuristic on given Steiner tree */
+#if 0
+static
+SCIP_Bool solDegIsValid(
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            solEdges,           /**< Steiner tree edges */
+   const int*            solDegree           /**< solution degree */
+   )
+{
+   int solDegreeNew;
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &solDegreeNew, nnodes) );
+
+   BMSclearMemoryArray(solDegreeNew, nnodes);
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( solEdges[e] == CONNECT )
+      {
+         solDegreeNew[graph->tail[e]]++;
+         solDegreeNew[graph->head[e]]++;
+      }
+   }
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      if( solDegree[i] != solDegreeNew[i] )
+      {
+         return FALSE;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &solDegreeNew);
+
+   return TRUE;
+}
+#endif
+
+
+/** subroutine for insertion heuristic */
 static
 void insertionInit(
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
@@ -2195,7 +2235,6 @@ SCIP_RETCODE localVertexInsertion(
    int* insertcands = NULL;
    int* adds = NULL;
    int* cuts = NULL;
-   int* cuts2 = NULL;
    int* solDegree = NULL;
    int* vertices;
    int newnverts = 0;
@@ -2223,12 +2262,7 @@ SCIP_RETCODE localVertexInsertion(
    SCIP_CALL( SCIPallocBufferArray(scip, &insertcands, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &adds, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cuts, nnodes) );
-
-   if( mw )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &cuts2, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &solDegree, nnodes) );
-   }
+   SCIP_CALL( SCIPallocBufferArray(scip, &solDegree, nnodes) );
 
    insertionInit(heurdata, graph, solEdges, solDegree, vertices);
 
@@ -2400,7 +2434,6 @@ SCIP_RETCODE localVertexInsertion(
 
    /* free buffer memory */
    SCIPfreeBufferArrayNull(scip, &solDegree);
-   SCIPfreeBufferArrayNull(scip, &cuts2);
    SCIPfreeBufferArray(scip, &cuts);
    SCIPfreeBufferArray(scip, &adds);
    SCIPfreeBufferArray(scip, &insertcands);
