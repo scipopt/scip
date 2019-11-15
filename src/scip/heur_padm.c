@@ -698,8 +698,6 @@ SCIP_Real getMemLeft(
  * Callback methods of primal heuristic
  */
 
-/* TODO: Implement all necessary primal heuristic methods. The methods with an #if 0 ... #else #define ... are optional */
-
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_HEURCOPY(heurCopyPADM)
@@ -731,61 +729,6 @@ SCIP_DECL_HEURFREE(heurFreePADM)
    return SCIP_OKAY;
 }
 
-/** initialization method of primal heuristic (called after problem was transformed) */
-#if 0
-static
-SCIP_DECL_HEURINIT(heurInitXyz)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurInitPADM NULL
-#endif
-
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_HEUREXIT(heurExitXyz)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurExitPADM NULL
-#endif
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_HEURINITSOL(heurInitsolXyz)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurInitsolPADM NULL
-#endif
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_HEUREXITSOL(heurExitsolXyz)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurExitsolPADM NULL
-#endif
 
 /** execution method of primal heuristic */
 static SCIP_DECL_HEUREXEC(heurExecPADM)
@@ -1789,10 +1732,6 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyPADM) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreePADM) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitPADM) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitPADM) );
-   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolPADM) );
-   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolPADM) );
 
    /* add padm primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/admiterations",
