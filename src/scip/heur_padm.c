@@ -531,11 +531,11 @@ SCIP_RETCODE assignLinking(
    SCIPdebugMsg(scip, "try to assign %d linking constraints\n", nlinkconss);
 
    /* reassign linking constraints */
-   SCIP_CALL( SCIPdecompAssignLinkConss(scip, newdecomp, &sortedconss[0], nlinkconss) );
+   SCIP_CALL( SCIPassignDecompLinkConss(scip, newdecomp, &sortedconss[0], nlinkconss, NULL) );
 
-   SCIP_CALL( SCIPdecompComputeVarsLabels(scip, newdecomp, sortedconss, nconss) );
+   SCIP_CALL( SCIPcomputeDecompVarsLabels(scip, newdecomp, sortedconss, nconss) );
 
-   SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp) );
+   SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp, TRUE) );
 
    SCIPdecompGetConsLabels(newdecomp, sortedconss, conslabels, nconss);
    SCIPdecompGetVarsLabels(newdecomp, vars, varlabels, nvars);
