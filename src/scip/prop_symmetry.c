@@ -281,6 +281,7 @@ struct SCIP_NodeData
    int                   nconflictinorbit;   /**< number of variables the node's var is in conflict with */
    int                   orbitsize;          /**< size of the variable's orbit */
    int                   posinorbit;         /**< position of variable in its orbit */
+   SCIP_Bool             active;             /**< whether variable has not been fixed by Schreier Sims code */
 };
 typedef struct SCIP_NodeData SCIP_NODEDATA;
 
@@ -2659,7 +2660,7 @@ SCIP_RETCODE detectOrbitopes(
 }
 
 
-/* update symmetry information to conflict graph */
+/* update symmetry information of conflict graph */
 static
 SCIP_RETCODE updateSymInfoConflictGraphSchreierSims(
    SCIP*                 scip,               /**< SCIP instance */
@@ -2703,6 +2704,7 @@ SCIP_RETCODE updateSymInfoConflictGraphSchreierSims(
       {
          SCIP_CALL( SCIPallocBlockMemory(scip, &nodedata) );
          nodedata->var = graphvars[i];
+         nodedata->active = TRUE;
       }
 
       /* (re-)set node data */
@@ -2778,14 +2780,14 @@ SCIP_RETCODE updateSymInfoConflictGraphSchreierSims(
          continue;
       }
 
-      /* get conflicts in orbit by couting the neighbors of i in the same orbit */
+      /* get conflicts in orbit by couting the active neighbors of i in the same orbit */
       for (j = 0; j < SCIPdigraphGetNSuccessors(conflictgraph, i); ++j)
       {
          nodedataconflict = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, conflictvaridx[j]);
 
          assert( nodedataconflict != NULL );
 
-         if ( nodedataconflict->orbitidx == curorbit )
+         if ( nodedataconflict->active && nodedataconflict->orbitidx == curorbit )
             ++nconflictinorbit;
       }
 
@@ -3193,6 +3195,7 @@ SCIP_RETCODE addSymresackConss(
 static
 SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    SCIP*                 scip,               /**< SCIP instance */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
    SCIP_VAR**            permvars,           /**< permvars array */
    int*                  orbits,             /**< symmetry orbits */
@@ -3215,6 +3218,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    int i;
 
    assert( scip != NULL );
+   assert( conflictgraph != NULL );
    assert( propdata != NULL );
    assert( permvars != NULL );
    assert( orbits != NULL );
@@ -3279,8 +3283,17 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
 
          if ( SCIPvarGetUbLocal(vars[1]) > 0.5 )
          {
+            SCIP_NODEDATA* nodedata;
+
             SCIP_CALL( SCIPchgVarUb(scip, vars[1], 0.0) );
             *nchgbds += 1;
+
+            /* deactivate the fixed variable (cannot contribute to a conflict anymore) */
+            nodedata = (SCIP_NODEDATA*) SCIPdigraphGetNodeData(conflictgraph, orbits[poscur]);
+            assert( nodedata != NULL );
+            assert( nodedata->active = TRUE );
+
+            nodedata->active = FALSE;
          }
 
          /* reset value */
@@ -3453,7 +3466,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
 
                   assert( neighbordata != NULL );
 
-                  if ( neighbordata->var == var )
+                  if ( neighbordata->var == var && neighbordata->active )
                   {
                      orbitvarinconflict[i] = TRUE;
                      *norbitvarinconflict += 1;
@@ -3525,7 +3538,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
 
                   assert( neighbordata != NULL );
 
-                  if ( neighbordata->var == var )
+                  if ( neighbordata->var == var && neighbordata->active )
                   {
                      orbitvarinconflict[i] = TRUE;
                      *norbitvarinconflict += 1;
@@ -3705,7 +3718,7 @@ SCIP_RETCODE addSchreierSimsConss(
       SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
 
       /* add Schreier Sims cuts */
-      SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, propdata, permvars,
+      SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, conflictgraph, propdata, permvars,
             orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges) );
 
       if ( nchgbds != NULL )
