@@ -815,13 +815,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIPdebugMsg(scip, "Initialize padm heuristic after node\n");
    }
 
-#if 0
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orig_%s", SCIPgetProbName(scip));
-   SCIP_CALL( SCIPwriteOrigProblem(scip, name, "mps", FALSE) );
-#endif
-#if 0
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "trans_%s", SCIPgetProbName(scip));
-   SCIP_CALL( SCIPwriteTransProblem(scip, name, "mps", FALSE) );
+#ifdef PADM_WRITE_PROBLEMS
+   SCIP_CALL( SCIPwriteOrigProblem(scip, "orig_problem", NULL, FALSE) );
+   SCIP_CALL( SCIPwriteTransProblem(scip, "trans_problem", NULL, FALSE) );
 #endif
 
    /* take original problem */
@@ -1023,19 +1019,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       }
    }
 
-#if 0
-   for( i = 0; i < numlinkvars; i++ )
-   {
-      if(varonlyobj[i] == TRUE)
-         SCIPdebugMsg(scip, "variable %s has no constraints\n", SCIPvarGetName(linkvars[i]));
-   }
-
-   for( b = 0; b < problem->nblocks; b++ )
-   {
-      SCIPdebugMsg(scip, "%d linking variables in block %d\n", blocktolinkvars[b].size, b);
-   }
-#endif
-
    /* init arrays for slack variables and coupling constraints */
    for( b = 0; b < problem->nblocks; b++ )
    {
@@ -1170,12 +1153,12 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    }
    assert(nentries == SCIPhashtableGetNElements(htable));
 
-#if 0
+#ifdef PADM_WRITE_PROBLEMS
    /* write extended submips */
    for( b = 0; b < problem->nblocks; b++ )
    {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_block_%d.lp", SCIPgetProbName(scip), b);
-      SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[b]).subscip, name, "lp", FALSE) );
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "extended_block_%d.lp", b);
+      SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[b]).subscip, name, NULL, FALSE) );
    }
 #endif
 
@@ -1271,11 +1254,14 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
             /* increase slack penalty coeffs until each subproblem can be solved to optimality */
             do
             {
-               SCIP_CALL( SCIPsetRealParam((problem->blocks[b]).subscip, "limits/gap", gap) );
-#if 0
-               SCIPdebugMsg(scip, "write subscip block %d\n", b);
-               SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[b]).subscip, "debug_block_orig.lp", "lp", FALSE) );
+#ifdef PADM_WRITE_PROBLEMS
+               SCIPdebugMsg(scip, "write subscip of block %d in pIter=%d and aIter=%d\n", b, pIter, aIter);
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "blockproblem_%d_%d_%d.lp", b, pIter, aIter);
+               SCIP_CALL( SCIPwriteOrigProblem((problem->blocks[b]).subscip, name, NULL, FALSE) );
 #endif
+
+               SCIP_CALL( SCIPsetRealParam((problem->blocks[b]).subscip, "limits/gap", gap) );
+
                /* reuse old solution if available*/
                SCIP_CALL( reuseSolution((problem->blocks[b]).subscip, &problem->blocks[b]) );
 
