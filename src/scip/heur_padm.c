@@ -171,6 +171,7 @@ struct SCIP_HeurData
    SCIP_Bool             scaling;            /**< enable sigmoid rescaling of penalty parameters */
    SCIP_Bool             assignlinking;      /**< should linking constraints be assigned? */
    SCIP_Bool             original;           /**< should the original problem be used? */
+   SCIP_Bool             afternode;          /**< should the heuristic also run after the processing of the node? */
 };
 
 /*
@@ -810,7 +811,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    {
       SCIPdebugMsg(scip, "Initialize padm heuristic before node\n");
    }
-   if( heurtiming & SCIP_HEURTIMING_AFTERNODE )
+   if( (heurtiming & SCIP_HEURTIMING_AFTERNODE) && heurdata->afternode )
    {
       SCIPdebugMsg(scip, "Initialize padm heuristic after node\n");
    }
@@ -1745,6 +1746,9 @@ SCIP_RETCODE SCIPincludeHeurPADM(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/original",
       "should the original problem be used?", &heurdata->original, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/afternode",
+      "should the heuristic also run after the processing of the node?", &heurdata->afternode, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
