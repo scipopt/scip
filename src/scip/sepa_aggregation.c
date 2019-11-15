@@ -630,9 +630,8 @@ SCIP_RETCODE aggregateNextRow(
       probvaridx = badvarinds[i];
 
       if( !getRowAggregationCandidates(aggrdata, probvaridx, &candrows, &candrowcoefs, &nrows, &ngoodrows) )
-      {
-         SCIPABORT();
-      }
+         return SCIP_ERROR;
+
       assert(ngoodrows > 0); /* bounddistance was negative for this variable, so it should have good rows */
 
       for( k = 0; k < ngoodrows; ++k )
@@ -672,7 +671,7 @@ SCIP_RETCODE aggregateNextRow(
    {
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(scip, aggrrow, success);
+      SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, success);
       goto TERMINATE;
    }
 
@@ -700,9 +699,7 @@ SCIP_RETCODE aggregateNextRow(
       probvaridx = badvarinds[i];
 
       if( !getRowAggregationCandidates(aggrdata, probvaridx, &candrows, &candrowcoefs, &nrows, &ngoodrows) )
-      {
-         SCIPABORT();
-      }
+         return SCIP_ERROR;
 
       /* bounddistance was positive for this variable, so it should not have good rows */
       assert(ngoodrows == 0);
@@ -756,7 +753,7 @@ SCIP_RETCODE aggregateNextRow(
    {
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(scip, aggrrow, success);
+      SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, success);
    }
 
 TERMINATE:

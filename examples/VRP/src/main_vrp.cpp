@@ -57,6 +57,7 @@ using namespace scip;
 
 
 /** read VRP problem */
+static
 int read_problem(
    const char*           filename,           /**< filename */
    int&                  num_nodes,          /**< number of nodes in instance */
@@ -225,6 +226,7 @@ int read_problem(
 
 
 //------------------------------------------------------------
+static
 SCIP_RETCODE execmain(int argc, char** argv)
 {
    SCIP* scip = NULL;

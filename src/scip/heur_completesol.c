@@ -560,14 +560,13 @@ SCIP_RETCODE tightenVariables(
                offset = REALABS(heurdata->boundwidening * (newub-newlb));
             else
             {
-               /* if one bound is finite, widen bound w.r.t. solution value and finite bound */
+               offset = 0.0;
+
+               /* if exactly one bound is finite, widen bound w.r.t. solution value and finite bound */
                if( !SCIPisInfinity(scip, -newlb) )
                   offset = REALABS(heurdata->boundwidening * (solval-newlb));
-               else
-               {
-                  assert(!SCIPisInfinity(scip, newub));
+               else if( !SCIPisInfinity(scip, newub) )
                   offset = REALABS(heurdata->boundwidening * (newub-solval));
-               }
             }
 
             /* update bounds */
