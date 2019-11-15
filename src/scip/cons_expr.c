@@ -5393,13 +5393,13 @@ SCIP_RETCODE enforceExprNlhdlr(
                 *
                 * if we are overestimating, we have z >= c'x-b >= f(x)
                 * cutviol is z - (c'x-b), so estimator value is c'x-b = z - cutviol
-                * it's weak if c'x-b >= f(x) + weakcutthreshold * (z - f(x))
-                *   <->   c'x-b - z >= (1-weakcutthreshold) * (f(x)-z)
+                * it's weak if c'x-b >= f(x) + (1-weakcutthreshold) * (z - f(x))
+                *   <->   c'x-b - z >= weakcutthreshold * (f(x)-z)
                 *
                 * when linearizing convex expressions, then we should have c'x-b = f(x), so they would never be weak
                 */
-               if( (!overestimate && ( cutviol <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
-                   ( overestimate && (-cutviol >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
+               if( (!overestimate && ( cutviol <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
+                   ( overestimate && (-cutviol >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )
                {
                   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s succeeded, but cut is too weak: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
                      SCIPgetConsExprNlhdlrName(nlhdlr), auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol), auxvalue, overestimate); )
@@ -5464,8 +5464,8 @@ SCIP_RETCODE enforceExprNlhdlr(
                }
 
                if( auxvarcoef == 0.0 ||
-                   (!overestimate && ( cutviol / auxvarcoef <=      conshdlrdata->weakcutthreshold  * (auxvalue - auxvarvalue))) ||
-                   ( overestimate && (-cutviol / auxvarcoef >= (1.0-conshdlrdata->weakcutthreshold) * (auxvalue - auxvarvalue))) )
+                   (!overestimate && ( cutviol / auxvarcoef <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
+                   ( overestimate && (-cutviol / auxvarcoef >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )
                {
                   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
                      auxvalue, auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
