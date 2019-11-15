@@ -157,6 +157,20 @@ typedef struct pcmw_data
  */
 
 
+/** can the problem class be used? */
+static
+SCIP_Bool probtypeIsValidForLocal(
+   const GRAPH*          graph               /**< graph data structure */
+)
+{
+   const int stp_type = graph->stp_type;
+   if( stp_type != STP_SPG && stp_type != STP_RSMT && stp_type != STP_OARSMT && stp_type != STP_PCSPG
+      && stp_type != STP_RPCSPG && stp_type != STP_GSTP && stp_type != STP_MWCSP && stp_type != STP_RMWCSP )
+      return FALSE;
+
+   return TRUE;
+}
+
 /** submethod for local extend */
 static
 SCIP_RETCODE addToCandidates(
@@ -2095,13 +2109,14 @@ SCIP_RETCODE localVertexInsertion(
    const STP_Bool pc = graph_pc_isPc(graph);
    const STP_Bool mw = (graph->stp_type == STP_MWCSP);
    const STP_Bool mwpc = graph_pc_isPcMw(graph);
-   const int probtype = graph->stp_type;
+   const int stp_type = graph->stp_type;
 
 #ifndef NDEBUG
    const SCIP_Real initialobj = graph_sol_getObj(graph->cost, solEdges, 0.0, nedges);
+   SCIP_Real diff_total = 0.0;
 #endif
 
-   if( probtype != STP_SPG && probtype != STP_RSMT && probtype != STP_OARSMT && probtype != STP_GSTP && !mwpc )
+   if( stp_type == STP_RMWCSP || (stp_type != STP_SPG && stp_type != STP_RSMT && stp_type != STP_OARSMT && stp_type != STP_GSTP && !mwpc) )
    {
       SCIPdebugMessage("vertex inclusion does not work for current problem type \n");
       return SCIP_OKAY;
@@ -2251,6 +2266,9 @@ SCIP_RETCODE localVertexInsertion(
                solNodes[i] = TRUE;
                newnverts++;
                SCIPdebugMessage("Inclusion: ADDED VERTEX %d \n", i);
+#ifndef NDEBUG
+               diff_total += diff;
+#endif
             }
          }
          else
@@ -2277,6 +2295,10 @@ SCIP_RETCODE localVertexInsertion(
                solNodes[i] = TRUE;
                newnverts++;
                SCIPdebugMessage("Inclusion: ADDED VERTEX %d \n", i);
+
+#ifndef NDEBUG
+               diff_total -= diff;
+#endif
             }
          }
       }
@@ -2293,11 +2315,8 @@ SCIP_RETCODE localVertexInsertion(
    }
 
    /* free buffer memory */
-   if( mw )
-   {
-      SCIPfreeBufferArray(scip, &solDegree);
-      SCIPfreeBufferArray(scip, &cuts2);
-   }
+   SCIPfreeBufferArrayNull(scip, &solDegree);
+   SCIPfreeBufferArrayNull(scip, &cuts2);
    SCIPfreeBufferArray(scip, &cuts);
    SCIPfreeBufferArray(scip, &adds);
    SCIPfreeBufferArray(scip, &insert);
@@ -2317,8 +2336,8 @@ SCIP_RETCODE localVertexInsertion(
       {
          if( solEdges[e] == CONNECT )
          {
-            assert(solNodes[graph->tail[e]]);
-            assert(solNodes[graph->head[e]]);
+            assert(solNodes[graph->tail[e]] && solNodes[graph->head[e]]);
+
             SCIPlinkcuttreeLink(&linkcutNodes[graph->head[e]], &linkcutNodes[graph->tail[e]], flipedge(e));
          }
       }
@@ -2338,7 +2357,8 @@ SCIP_RETCODE localVertexInsertion(
    {
       const SCIP_Real newobj = graph_sol_getObj(graph->cost, solEdges, 0.0, nedges);
       SCIPdebugMessage("vertex inclusion obj before/after: %f/%f \n", initialobj, newobj);
-      assert(SCIPisLE(scip, newobj, initialobj));
+      assert(SCIPisLE(scip, newobj + diff_total, initialobj));
+      assert(SCIPisGE(scip, diff_total, 0.0));
    }
 #endif
 
@@ -2906,10 +2926,8 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* the local heuristics may not work correctly for several problem variants*/
-   if( graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT &&
-      graph->stp_type != STP_PCSPG && graph->stp_type != STP_RPCSPG && graph->stp_type != STP_GSTP
-      && graph->stp_type != STP_MWCSP )
+   /* the local heuristics may not work correctly for several problem variants */
+   if( !probtypeIsValidForLocal(graph) )
       return SCIP_OKAY;
 
    /* don't run local in a Subscip */
@@ -3060,7 +3078,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( *result != SCIP_FOUNDSOL )
    {
       heurdata->nfails++;
-      if( heurdata->nbestsols > DEFAULT_MINNBESTSOLS && heurdata->nfails > 1 && graph->stp_type != STP_MWCSP )
+      if( heurdata->nbestsols > DEFAULT_MINNBESTSOLS && heurdata->nfails > 1 )
          heurdata->nbestsols--;
 
       SCIPdebugMessage("fail! %d \n", heurdata->nbestsols);
