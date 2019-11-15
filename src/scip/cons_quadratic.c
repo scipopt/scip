@@ -1498,7 +1498,8 @@ SCIP_RETCODE consdataFree(
 
    /* free eigen decomposition information */
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->eigenvalues, (*consdata)->nquadvars);
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->eigenvectors, (int)((*consdata)->nquadvars*(*consdata)->nquadvars));
+   if( (*consdata)->eigenvectors != NULL )  /* explicit check on NULL to avoid runtime warning if nquadvars^2 > int_max */
+      SCIPfreeBlockMemoryArray(scip, &(*consdata)->eigenvectors, (int)((*consdata)->nquadvars*(*consdata)->nquadvars));
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->bp, (*consdata)->nquadvars);
 
    /* free unique indices of bilinear terms array */
@@ -11586,7 +11587,7 @@ SCIP_RETCODE proposeFeasibleSolution(
             gap = SCIPvarGetUbGlobal(var) - SCIPgetSolVal(scip, newsol, var);
             delta = MIN(MAX(0.0, gap), delta);
          }
-         if( SCIPisPositive(scip, delta) )
+         if( SCIPisPositive(scip, delta) && !SCIPisInfinity(scip, REALABS(delta)) )
          {
             /* if variable is integral, round delta up so that it will still have an integer value */
             if( SCIPvarIsIntegral(var) )
@@ -11620,7 +11621,7 @@ SCIP_RETCODE proposeFeasibleSolution(
             gap = SCIPgetSolVal(scip, newsol, var) - SCIPvarGetLbGlobal(var);
             delta = MAX(MIN(0.0, gap), delta);
          }
-         if( SCIPisNegative(scip, delta) )
+         if( SCIPisNegative(scip, delta) && !SCIPisInfinity(scip, REALABS(delta)) )
          {
             /* if variable is integral, round delta down so that it will still have an integer value */
             if( SCIPvarIsIntegral(var) )
@@ -11807,10 +11808,10 @@ SCIP_RETCODE enforceConstraint(
    /* find branching candidates */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
 
-   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPlpfeastol(scip) )
+   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPgetLPFeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPlpfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPgetLPFeastol(scip), TRUE, &separateresult, &sepaefficacy) );
       if( separateresult == SCIP_CUTOFF )
       {
          SCIPdebugMsg(scip, "separation found cutoff\n");
@@ -13028,6 +13029,13 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          SCIP_CALL( mergeAndCleanQuadVarTerms(scip, conss[c]) );
          SCIP_CALL( mergeAndCleanLinearVars(scip, conss[c]) );
          consdata->initialmerge = TRUE;
+
+         if( SCIPisInfinity(scip, consdata->lhs) || SCIPisInfinity(scip, -consdata->rhs) )
+         {
+            SCIPdebugMsg(scip, "lhs or rhs at wrong side of infinity -> declaring cutoff\n");
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
       }
 
       havechange = FALSE;

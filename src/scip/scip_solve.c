@@ -43,7 +43,6 @@
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
 #include "scip/cutpool.h"
-#include "scip/cuts.h"
 #include "scip/dcmp.h"
 #include "scip/debug.h"
 #include "scip/event.h"
@@ -750,7 +749,7 @@ SCIP_RETCODE exitPresolve(
       /* we need to update the primal dual integral here to update the last{upper/dual}bound values after a restart */
       if( scip->set->misc_calcintegral )
       {
-         SCIPstatUpdatePrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
+         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
       }
    }
 
@@ -1905,7 +1904,7 @@ SCIP_RETCODE freeReoptSolve(
    else
    {
       /* even if statistics are not completely reset, a partial reset of the primal-dual integral is necessary */
-      SCIPstatResetPrimalDualIntegral(scip->stat, scip->set, TRUE);
+      SCIPstatResetPrimalDualIntegrals(scip->stat, scip->set, TRUE);
    }
 
    /* reset objective limit */
@@ -2079,7 +2078,7 @@ SCIP_RETCODE freeTransform(
    else
    {
       /* even if statistics are not completely reset, a partial reset of the primal-dual integral is necessary */
-      SCIPstatResetPrimalDualIntegral(scip->stat, scip->set, TRUE);
+      SCIPstatResetPrimalDualIntegrals(scip->stat, scip->set, TRUE);
    }
 
    /* switch stage to PROBLEM */

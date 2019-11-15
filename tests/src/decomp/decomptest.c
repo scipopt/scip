@@ -80,7 +80,7 @@ void setup(void)
 
 
    SCIP_CALL( SCIPreadProb(scip, testfilename, NULL) );
-   SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), nblocks, TRUE, FALSE) );
+   SCIP_CALL( SCIPcreateDecomp(scip, &decomp, nblocks, TRUE, FALSE) );
 
    setupData();
 }
@@ -88,7 +88,7 @@ void setup(void)
 static
 void teardown(void)
 {
-   SCIPdecompFree(&decomp, SCIPblkmem(scip));
+   SCIPfreeDecomp(scip, &decomp);
    SCIPfree(&scip);
 
    BMScheckEmptyMemory();
@@ -105,9 +105,9 @@ Test(decomptest, create_and_free)
 Test(decomptest, create_decomp, .description="test constructor and destructor of decomposition")
 {
    SCIP_DECOMP* newdecomp;
-   SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), 1, TRUE, FALSE) );
+   SCIP_CALL( SCIPcreateDecomp(scip, &newdecomp, 1, TRUE, FALSE) );
 
-   SCIPdecompFree(&newdecomp, SCIPblkmem(scip));
+   SCIPfreeDecomp(scip, &newdecomp);
 }
 
 Test(decomptest, test_data_setup, .description = "check data setup")
@@ -170,7 +170,7 @@ Test(decomptest, test_cons_labeling, .description="check constraint label comput
 {
    SCIP_CALL( SCIPdecompSetVarsLabels(decomp, vars, labels_vars, NVARS) );
 
-   SCIP_CALL( SCIPdecompComputeConsLabels(scip, decomp, conss, NCONSS) );
+   SCIP_CALL( SCIPcomputeDecompConsLabels(scip, decomp, conss, NCONSS) );
 
    checkConsLabels(decomp);
 
@@ -198,7 +198,7 @@ Test(decomptest, test_var_labeling, .description="check variable label computati
 
    SCIP_CALL( SCIPdecompSetConsLabels(decomp, conss, labels_conss, NCONSS) );
 
-   SCIP_CALL( SCIPdecompComputeVarsLabels(scip, decomp, conss, NCONSS) );
+   SCIP_CALL( SCIPcomputeDecompVarsLabels(scip, decomp, conss, NCONSS) );
 
    checkVarsLabels(decomp, labels_vars);
 
@@ -210,7 +210,7 @@ Test(decomptest, test_benders_var_labeling, .description="check variable labelli
 
    SCIP_CALL( SCIPdecompSetConsLabels(decomp, conss, labels_conss, NCONSS) );
 
-   SCIP_CALL( SCIPdecompComputeVarsLabels(scip, decomp, conss, NCONSS) );
+   SCIP_CALL( SCIPcomputeDecompVarsLabels(scip, decomp, conss, NCONSS) );
 
    checkVarsLabels(decomp, benderslabels_vars);
 

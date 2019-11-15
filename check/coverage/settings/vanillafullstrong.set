@@ -1,0 +1,19 @@
+# priority of branching rule <vanillafullstrong>
+# [type: int, advanced: FALSE, range: [-536870912,536870911], default: -2000]
+branching/vanillafullstrong/priority = 10000000
+
+# should integral variables in the current LP solution be considered as branching candidates ?
+# [type: bool, advanced: FALSE, default: False]
+branching/vanillafullstrong/integralcands = TRUE
+
+# should strong branching side-effects be prevented (e.g., domain changes, stat updates etc.) ?
+# [type: bool, advanced: FALSE, default: False]
+branching/vanillafullstrong/idempotent = TRUE
+
+# should strong branching scores be computed for all candidates, or can we early stop when a variable has infinite score ?
+# [type: bool, advanced: TRUE, default: False]
+branching/vanillafullstrong/scoreall = TRUE
+
+# should strong branching scores be collected ?
+# [type: bool, advanced: TRUE, default: False]
+branching/vanillafullstrong/collectscores = TRUE
