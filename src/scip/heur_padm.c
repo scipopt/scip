@@ -165,19 +165,19 @@ SCIP_DECL_HASHKEYVAL(indexesHashval)
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int                   admiterations;
-   int                   penaltyiterations;
-   SCIP_Real             gap;
-   SCIP_Bool             scaling;
-   SCIP_Bool             assignlinking;
-   SCIP_Bool             original;
+   int                   admiterations;      /**< maximal number of ADM iterations in each penalty loop */
+   int                   penaltyiterations;  /**< maximal number of penalty iterations */
+   SCIP_Real             gap;                /**< mipgap at start */
+   SCIP_Bool             scaling;            /**< enable sigmoid rescaling of penalty parameters */
+   SCIP_Bool             assignlinking;      /**< should linking constraints be assigned? */
+   SCIP_Bool             original;           /**< should the original problem be used? */
 };
 
 /*
  * Local methods
  */
 
-/** initialize one block */
+/** initializes one block */
 static
 SCIP_RETCODE initBlock(
    PROBLEM*              problem             /**< problem structure */
@@ -205,10 +205,10 @@ SCIP_RETCODE initBlock(
    return SCIP_OKAY;
 }
 
-/** free component structure */
+/** frees component structure */
 static
 SCIP_RETCODE freeBlock(
-   BLOCK*                block               /**< pointer to block structure */
+   BLOCK*                block               /**< block structure */
    )
 {
    assert(block != NULL);
@@ -221,7 +221,7 @@ SCIP_RETCODE freeBlock(
    return SCIP_OKAY;
 }
 
-/** initialize subproblem structure */
+/** initializes subproblem structure */
 static
 SCIP_RETCODE initProblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -251,7 +251,7 @@ SCIP_RETCODE initProblem(
    return SCIP_OKAY;
 }
 
-/** free subproblem structure */
+/** frees subproblem structure */
 static
 SCIP_RETCODE freeProblem(
    PROBLEM**             problem             /**< pointer to problem to free */
@@ -286,7 +286,7 @@ SCIP_RETCODE freeProblem(
    return SCIP_OKAY;
 }
 
-/** create a sub-SCIP for the given variables and constraints */
+/** creates a sub-SCIP for the given variables and constraints */
 static
 SCIP_RETCODE createSubscip(
    SCIP*                 scip,               /**< main SCIP data structure */
@@ -368,7 +368,7 @@ SCIP_RETCODE copyToSubscip(
    return SCIP_OKAY;
 }
 
-/** create the subscip for a given block */
+/** creates the subscip for a given block */
 static
 SCIP_RETCODE blockCreateSubscip(
    BLOCK*                block,              /**< block structure */
@@ -431,7 +431,7 @@ SCIP_RETCODE blockCreateSubscip(
    return SCIP_OKAY;
 }
 
-/** create problem structure and split it into blocks */
+/** creates problem structure and split it into blocks */
 static
 SCIP_RETCODE createAndSplitProblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -491,21 +491,21 @@ SCIP_RETCODE createAndSplitProblem(
    return SCIP_OKAY;
 }
 
-/** try to assign linking constraints */
+/** copies labels to newdecomp and assigns linking constraints if possible*/
 static
 SCIP_RETCODE assignLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    const SCIP_DECOMP*    decomp,             /**< decomposition */
-   SCIP_DECOMP*          newdecomp,
-   SCIP_VAR**            vars,
-   SCIP_CONS**           sortedconss,        /**< sorted array */
-   int*                  varlabels,
-   int*                  conslabels,         /**< sorted array */
-   int                   nvars,
-   int                   nconss
+   SCIP_DECOMP*          newdecomp,          /**< decomposition with (partially) assigned linking constraints */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_CONS**           sortedconss,        /**< sorted array of constraints */
+   int*                  varlabels,          /**< array of variable labels */
+   int*                  conslabels,         /**< sorted array of constraint labels */
+   int                   nvars,              /**< number of variables */
+   int                   nconss              /**< number of constraints */
    )
 {
-   int nlinkconss;                           /* number of linking constraints */
+   int nlinkconss;
    int c;
 
    assert(scip != NULL);
@@ -545,14 +545,15 @@ SCIP_RETCODE assignLinking(
    return SCIP_OKAY;
 }
 
-/** compute feasible solution from last stored solution */
-static SCIP_RETCODE reuseSolution(
+/** computes feasible solution from last stored solution of the block*/
+static
+SCIP_RETCODE reuseSolution(
    SCIP*                 subscip,            /**< SCIP data structure */
-   BLOCK*                block
+   BLOCK*                block               /**< block structure*/
    )
 {
    SCIP_SOL** sols;
-   SCIP_SOL* sol; /* solution that will be repaired */
+   SCIP_SOL* sol; /* solution of block that will be repaired */
    SCIP_SOL* newsol;
    SCIP_VAR** blockvars;
    SCIP_VAR** consvars;
@@ -1780,8 +1781,8 @@ SCIP_RETCODE SCIPincludeHeurPADM(
     * compile independent of new callbacks being added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
-                                  HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                                  HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecPADM, heurdata) );
+               HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+               HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecPADM, heurdata) );
 
    assert(heur != NULL);
 
