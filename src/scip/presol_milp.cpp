@@ -258,6 +258,11 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    Problem<SCIP_Real> problem = buildProblem(scip, matrix);
    Presolve<SCIP_Real> presolve;
 
+   /* store current numbers of aggregations, fixings, and changed bounds for statistics */
+   int oldnaggrvars = *naggrvars;
+   int oldnfixedvars = *nfixedvars;
+   int oldnchgbds = *nchgbds;
+
    /* important so that SCIP does not throw an error, e.g. when an integer variable is substituted
     * into a knapsack constraint */
    presolve.getPresolveOptions().substitutebinarieswithints = false;
@@ -559,7 +564,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* finish with a final verb message and return */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
       "   (%.1fs) MILP presolver (%d rounds): %d aggregations, %d fixings, %d bound changes\n",
-      SCIPgetSolvingTime(scip), presolve.getStatistics().nrounds, *naggrvars, *nfixedvars, *nchgbds);
+      SCIPgetSolvingTime(scip), presolve.getStatistics().nrounds, *naggrvars - oldnaggrvars,
+      *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
 
    /* free the matrix */
    assert(initialized);
