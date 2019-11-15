@@ -1376,9 +1376,8 @@ void** SCIPdigraphGetSuccessorsData(
 SCIP_EXPORT
 SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int**                 articulations,      /**< array to store the sorted node indices of the computed articulation points,
-                                              *   NULL if not needed */
-   int*                  narticulations      /**< number of the computed articulation points */
+   int**                 articulations,      /**< array to store the sorted node indices of the computed articulation points, or NULL */
+   int*                  narticulations      /**< number of the computed articulation points, or NULL */
    );
 
 /** Compute undirected connected components on the given graph.

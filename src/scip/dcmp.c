@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   decomp.c
+/**@file   dcmp.c
  * @brief  methods for working with decompositions
  * @author Gregor Hendel
  */
@@ -42,7 +42,7 @@
 /* create and free a decomposition */
 #define INIT_MAP_SIZE 2000
 
-/** create a decomposition */
+/** creates a decomposition */
 SCIP_RETCODE SCIPdecompCreate(
    SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -85,7 +85,7 @@ SCIP_RETCODE SCIPdecompCreate(
 
 /** free a decomposition */
 void SCIPdecompFree(
-   SCIP_DECOMP**         decomp,             /**< pointer to store the decomposition data structure */
+   SCIP_DECOMP**         decomp,             /**< pointer to free the decomposition data structure */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
@@ -108,7 +108,7 @@ void SCIPdecompFree(
 
 /* getter and setter for variable labels */
 
-/** set labels for an array of variables */
+/** sets labels for an array of variables */
 SCIP_RETCODE SCIPdecompSetVarsLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_VAR**            vars,               /**< array of variables */
@@ -133,7 +133,7 @@ SCIP_RETCODE SCIPdecompSetVarsLabels(
    return SCIP_OKAY;
 }
 
-/** query labels for an array of variables */
+/** queries labels for an array of variables */
 void SCIPdecompGetVarsLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_VAR**            vars,               /**< array of variables */
@@ -157,7 +157,7 @@ void SCIPdecompGetVarsLabels(
    }
 }
 
-/** set labels for an array of constraints */
+/** sets labels for an array of constraints */
 SCIP_RETCODE SCIPdecompSetConsLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_CONS**           conss,              /**< array of constraints */
@@ -182,7 +182,7 @@ SCIP_RETCODE SCIPdecompSetConsLabels(
    return SCIP_OKAY;
 }
 
-/** query labels for an array of constraints */
+/** queries labels for an array of constraints */
 void SCIPdecompGetConsLabels(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    SCIP_CONS**           conss,              /**< array of constraints */
@@ -343,7 +343,7 @@ int SCIPdecompGetBlockGraphMinDegree(
    return decomp->mindegree;
 }
 
-/** print decomposition statistics into string buffer */
+/** prints decomposition statistics into string buffer */
 char* SCIPdecompPrintStats(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    char*                 strbuf              /**< string buffer storage */
@@ -379,13 +379,13 @@ char* SCIPdecompPrintStats(
             "Modularity: %.3f, Area Score: %.3f\n",
             decomp->modularity, decomp->areascore);
    (void) SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
-            "Constraint Block Graph: %d edges, %d articulation nodes, %d connected components, %d min., %d max. degree\n",
+            "Constraint Block Graph: %d edges, %d articulation points, %d connected components, %d min., %d max. degree\n",
             decomp->nedges, decomp->narticulations, decomp->ncomponents, decomp->mindegree, decomp->maxdegree);
 
    return strbuf;
 }
 
-/** create a decomposition storage */
+/** creates a decomposition storage */
 SCIP_RETCODE SCIPdecompstoreCreate(
    SCIP_DECOMPSTORE**    decompstore,        /**< pointer to store decomposition storage */
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
@@ -408,7 +408,7 @@ SCIP_RETCODE SCIPdecompstoreCreate(
    return SCIP_OKAY;
 }
 
-/** free array of decompositions */
+/** frees array of decompositions */
 static
 void freeDecompositions(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
@@ -428,7 +428,7 @@ void freeDecompositions(
    *ndecomps = 0;
 }
 
-/** free all decompositions in transformed space */
+/** frees all decompositions in transformed space */
 void SCIPexitSolveDecompstore(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -440,7 +440,7 @@ void SCIPexitSolveDecompstore(
    freeDecompositions(SCIPblkmem(scip), decompstore->decomps, &decompstore->ndecomps);
 }
 
-/** free a decomposition storage */
+/** frees a decomposition storage */
 void SCIPdecompstoreFree(
    SCIP_DECOMPSTORE**    decompstore,        /**< pointer to store decomposition storage */
    BMS_BLKMEM*           blkmem              /**< block memory data structure */
@@ -460,7 +460,7 @@ void SCIPdecompstoreFree(
    BMSfreeBlockMemory(blkmem, decompstore);
 }
 
-/** add decomposition to storage */
+/** adds decomposition to storage */
 SCIP_RETCODE SCIPdecompstoreAdd(
    SCIP_DECOMPSTORE*     decompstore,        /**< decomposition storage */
    SCIP_DECOMP*          decomp              /**< decomposition to add */
@@ -496,7 +496,7 @@ SCIP_RETCODE SCIPdecompstoreAdd(
    return SCIP_OKAY;
 }
 
-/** get decompositions from this storage */
+/** gets decompositions from storage */
 SCIP_DECOMP** SCIPdecompstoreGetDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    )
@@ -506,7 +506,7 @@ SCIP_DECOMP** SCIPdecompstoreGetDecomps(
    return decompstore->decomps;
 }
 
-/** get number of decompositions in this storage */
+/** gets number of decompositions in storage */
 int SCIPdecompstoreGetNDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    )
@@ -515,7 +515,7 @@ int SCIPdecompstoreGetNDecomps(
    return decompstore->ndecomps;
 }
 
-/** get decompositions from this storage */
+/** gets decompositions from storage */
 SCIP_DECOMP** SCIPdecompstoreGetOrigDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    )
@@ -525,7 +525,7 @@ SCIP_DECOMP** SCIPdecompstoreGetOrigDecomps(
    return decompstore->origdecomps;
 }
 
-/** get number of decompositions in this storage */
+/** gets number of decompositions in storage */
 int SCIPdecompstoreGetNOrigDecomps(
    SCIP_DECOMPSTORE*     decompstore         /**< decomposition storage */
    )
@@ -534,7 +534,7 @@ int SCIPdecompstoreGetNOrigDecomps(
    return decompstore->norigdecomps;
 }
 
-/** transform all available original decompositions into transformed space */
+/** transforms all available original decompositions into transformed space */
 SCIP_RETCODE SCIPtransformDecompstore(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -610,22 +610,22 @@ SCIP_RETCODE SCIPtransformDecompstore(
       /* 1. query the decomposition labels of the original variables and set them for the transformed variables
        * that have original counterparts
        */
-      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), SCIPdecompGetNBlocks(origdecomp), original, SCIPdecompUseBendersLabels(origdecomp)) );
+      SCIP_CALL( SCIPcreateDecomp(scip, &decomp, SCIPdecompGetNBlocks(origdecomp), original, SCIPdecompUseBendersLabels(origdecomp)) );
 
       SCIPdecompGetVarsLabels(origdecomp, origvars, varslabels, nvarsoriginal);
 
       SCIP_CALL( SCIPdecompSetVarsLabels(decomp, varssorted, varslabels, nvarsoriginal) );
 
       /* 2. compute the constraint labels based on the preliminary variable labels */
-      SCIP_CALL( SCIPdecompComputeConsLabels(scip, decomp, conss, nconss) );
+      SCIP_CALL( SCIPcomputeDecompConsLabels(scip, decomp, conss, nconss) );
 
       /* 3. remove the variable labels now that we have constraint labels */
       SCIP_CALL( SCIPdecompClear(decomp, TRUE, FALSE) );
 
       /* 4. use the constraint labels for the final variable labeling */
-      SCIP_CALL( SCIPdecompComputeVarsLabels(scip, decomp, conss, nconss) );
+      SCIP_CALL( SCIPcomputeDecompVarsLabels(scip, decomp, conss, nconss) );
 
-      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp) );
+      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp, TRUE) );
 
       SCIP_CALL( SCIPdecompstoreAdd(decompstore, decomp) );
 

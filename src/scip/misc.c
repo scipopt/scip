@@ -7364,7 +7364,7 @@ void SCIPdigraphFree(
    assert(digraphptr->components == NULL);
    assert(digraphptr->componentstarts == NULL);
 
-   /* free the articulation nodes structure if it has been computed*/
+   /* free the articulation points structure if it has been computed*/
    if( digraphptr->articulationscheck )
       BMSfreeBlockMemoryArray(blkmem, &digraphptr->articulations, digraphptr->narticulations);
 
@@ -7449,7 +7449,7 @@ SCIP_RETCODE SCIPdigraphAddArc(
    digraph->arcdata[startnode][digraph->nsuccessors[startnode]] = data;
    digraph->nsuccessors[startnode]++;
 
-   /* the articulation nodes are not up-to-date */
+   /* the articulation points are not up-to-date */
    digraph->articulationscheck = FALSE;
 
    return SCIP_OKAY;
@@ -7490,7 +7490,7 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
    digraph->arcdata[startnode][nsuccessors] = data;
    ++(digraph->nsuccessors[startnode]);
 
-   /* the articulation nodes are not up-to-date */
+   /* the articulation points are not up-to-date */
    digraph->articulationscheck = FALSE;
 
    return SCIP_OKAY;
@@ -7737,7 +7737,7 @@ void findArticulationPointsUtil(
    /* process all the adjacent nodes to startnode */
    for( n = 0; n < nsucc; ++n)
    {
-      if( visited[succnodes[n]] == FALSE )
+      if( !visited[succnodes[n]] )
       {
          parent[succnodes[n]] = startnode;
          ++nchildren;
@@ -7760,7 +7760,7 @@ void findArticulationPointsUtil(
       }
    }
 
-   if( articulationflag[startnode] == TRUE )
+   if( articulationflag[startnode] )
       ++digraph->narticulations;
 }
 
@@ -7769,10 +7769,9 @@ void findArticulationPointsUtil(
  */
 SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
-   int**                 articulations,      /**< array to store the sorted node indices of the computed articulation points,
-                                              *   NULL if not needed */
-   int*                  narticulations      /**< number of the computed articulation points */
-)
+   int**                 articulations,      /**< array to store the sorted node indices of the computed articulation points, or NULL */
+   int*                  narticulations      /**< number of the computed articulation points, or NULL */
+   )
 {
 
    BMS_BLKMEM* blkmem;
@@ -7788,7 +7787,7 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    assert(digraph != NULL);
    assert(digraph->nnodes > 0);
 
-   /* Only perform the computation if the articulation nodes are NOT up-to-date */
+   /* Only perform the computation if the articulation points are NOT up-to-date */
    if( !digraph->articulationscheck )
    {
       SCIP_ALLOC( BMSallocMemoryArray(&visited, digraph->nnodes) );
@@ -7803,7 +7802,7 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
       if( digraph->narticulations >= 0 ) /* case: articulations have already been computed but not up-to-date */
          BMSfreeBlockMemoryArray(blkmem, &digraph->articulations, digraph->narticulations);
 
-      /* Initialize the no. of articulation nodes ahead of the recursive computation */
+      /* Initialize the no. of articulation points ahead of the recursive computation */
       digraph->narticulations = 0;
 
       for( n = 0; n < digraph->nnodes; ++n )
@@ -7816,7 +7815,7 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
       /* the function is called on every unvisited node in the graph to cover the disconnected graph case */
       for( n = 0; n < digraph->nnodes; ++n )
       {
-         if( visited[n] == FALSE )
+         if( !visited[n] )
             findArticulationPointsUtil(digraph, n, visited, tdisc, mindisc, parent, articulationflag, time);
       }
 
@@ -7825,7 +7824,7 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
 
       for( n = 0; n < digraph->nnodes; ++n )
       {
-         if ( articulationflag[n] == TRUE )
+         if ( articulationflag[n] )
          {
             digraph->articulations[articulationidx] = n;
             ++articulationidx;
@@ -7844,7 +7843,7 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    if( narticulations != NULL )
       (*narticulations) = digraph->narticulations;
 
-   /* the articulation nodes are now up-to-date */
+   /* the articulation points are now up-to-date */
    digraph->articulationscheck = TRUE;
 
    return SCIP_OKAY;

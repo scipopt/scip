@@ -278,7 +278,7 @@ SCIP_RETCODE readDecomposition(
       /* retrieving the Benders' variable labels setting */
       SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/benderslabels", &benderslabels) );
 
-      SCIP_CALL( SCIPdecompCreate(&decomp, SCIPblkmem(scip), nblocks, TRUE, benderslabels) );
+      SCIP_CALL( SCIPcreateDecomp(scip, &decomp, nblocks, TRUE, benderslabels) );
 
       SCIP_CALL( SCIPdecompSetConsLabels(decomp, conss, labels, consptr) );
       SCIPdebugMsg(scip, "Setting labels for %d constraints.\n", nconss);
@@ -286,11 +286,11 @@ SCIP_RETCODE readDecomposition(
       scip_conss = SCIPgetConss(scip);
 
       SCIPdebugMsg(scip, "Using %d SCIP constraints for labeling variables.\n", nconss);
-      SCIP_CALL( SCIPdecompComputeVarsLabels(scip, decomp, scip_conss, nconss) );
+      SCIP_CALL( SCIPcomputeDecompVarsLabels(scip, decomp, scip_conss, nconss) );
 
-      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp) );
+      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp, TRUE) );
 
-      SCIP_CALL( SCIPaddDecomposition(scip, decomp) );
+      SCIP_CALL( SCIPaddDecomp(scip, decomp) );
 
       /* display result */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Added decomposition <%s> with %d blocks to SCIP\n", filename, nblocks);
