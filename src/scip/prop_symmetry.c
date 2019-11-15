@@ -1282,7 +1282,7 @@ SCIP_RETCODE setSymmetryData(
    *compressed = FALSE;
 
    /* if we possibly perform compression */
-   if ( usecompression )
+   if ( usecompression && SCIPgetNVars(scip) >= COMPRESSNVARSLB )
    {
       SCIP_Real percentagemovedvars;
       int* labelmovedvars;
@@ -1319,7 +1319,7 @@ SCIP_RETCODE setSymmetryData(
 
       /* check whether compression should be performed */
       percentagemovedvars = (SCIP_Real) *nmovedvars / (SCIP_Real) nvars;
-      if ( *nmovedvars > 0 && SCIPgetNVars(scip) >= COMPRESSNVARSLB && SCIPisLE(scip, percentagemovedvars, compressthreshold) )
+      if ( *nmovedvars > 0 && SCIPisLE(scip, percentagemovedvars, compressthreshold) )
       {
          /* remove variables from permutations that are not affected by any permutation */
          for (p = 0; p < nperms; ++p)
