@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   heur_padm.c
  * @brief  PADM primal heuristic based on ideas published in the paper
  *         "A Decomposition Heuristic for Mixed-Integer Supply Chain Problems"
