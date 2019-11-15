@@ -216,7 +216,9 @@ SCIP_RETCODE freeBlock(
    block->ncoupling = 0;
 
    if( block->subscip != NULL )
+   {
       SCIP_CALL( SCIPfree(&block->subscip) );
+   }
 
    return SCIP_OKAY;
 }
@@ -269,7 +271,7 @@ SCIP_RETCODE freeProblem(
    /* free all blocks */
    for( c = (*problem)->nblocks - 1; c >= 0; --c )
    {
-      SCIP_CALL(freeBlock(&(*problem)->blocks[c]));
+      SCIP_CALL( freeBlock(&(*problem)->blocks[c]) );
    }
    if( (*problem)->blocks != NULL )
    {
@@ -1079,7 +1081,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
       /* set objective function of each block to zero */
       for( i = 0; i < nblockvars; i++ )
+      {
          SCIP_CALL( SCIPchgVarObj((problem->blocks[b]).subscip, blockvars[i], 0.0) );
+      }
 
       /* add two slack variables for each linking variable in block */
       for( i = 0; i < blocktolinkvars[b].size; i++ )
@@ -1526,7 +1530,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       /* free solution process data */
       if( !solved )
          for( b = 0; b < problem->nblocks; b++ )
+         {
             SCIP_CALL( SCIPfreeTransform((problem->blocks[b]).subscip) );
+         }
    }
 
    /* copy solution if present */
@@ -1695,7 +1701,9 @@ TERMINATE:
       SCIPfreeBufferArray(scip, &sortedconss);
 
    if( problem != NULL )
+   {
       SCIP_CALL( freeProblem(&problem) );
+   }
 
    SCIPdebugMsg(scip, "Leave padm heuristic\n");
    return SCIP_OKAY;
