@@ -216,6 +216,7 @@ SCIP_RETCODE addToCandidates(
 /** perform local vertex insertion heuristic on given Steiner tree */
 static
 void markSolTreeNodes(
+   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const int*            solEdges,           /**< Steiner tree edges */
    NODE*                 linkcutNodes,       /**< Steiner tree nodes */
@@ -224,6 +225,8 @@ void markSolTreeNodes(
 {
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
+
+   assert(graph_sol_valid(scip, graph, solEdges));
 
    for( int i = 0; i < nnodes; i++ )
    {
@@ -245,6 +248,8 @@ void markSolTreeNodes(
          solNodes[graph->head[e]] = TRUE;
       }
    }
+
+   solNodes[graph->source] = TRUE;
 
    assert(linkcutNodes[graph->source].edge == -1);
 }
@@ -2140,7 +2145,8 @@ void insertionGetCandidateEdges(
    )
 {
    int insertcount = 0;
-   const STP_Bool mwpc = graph_pc_isPcMw(graph);
+   const SCIP_Bool mwpc = graph_pc_isPcMw(graph);
+   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(graph);
 
    assert(!Is_term(graph->term[vertex]));
    assert(heurdata);
@@ -2153,8 +2159,17 @@ void insertionGetCandidateEdges(
          continue;
 
       /* skip dummy terminals */
-      if( mwpc && SCIPisGE(scip, graph->cost[oedge], FARAWAY) )
-         continue;
+      if( mwpc )
+      {
+         if( Is_term(graph->term[head]) && !graph_pc_knotIsFixedTerm(graph, head) )
+            continue;
+
+         /* note: source is also a fixed terminal */
+         if( !rpcmw && head == graph->source )
+            continue;
+      }
+
+      assert(SCIPisLT(scip, graph->cost[oedge], FARAWAY));
 
       insertcands[insertcount++] = oedge;
    }
@@ -3220,7 +3235,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    if( mwpc )
       SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, solEdges, solNodes) );
 
-   markSolTreeNodes(graph, solEdges, linkcutNodes, solNodes);
+   markSolTreeNodes(scip, graph, solEdges, linkcutNodes, solNodes);
 
    if( runInsertionFirst )
       SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
@@ -3228,10 +3243,15 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP_CALL( localKeyVertexHeuristics(scip, graph, solNodes, linkcutNodes, solEdges, &success) );
 
    if( success || !runInsertionFirst )
+   {
+      markSolTreeNodes(scip, graph, solEdges, linkcutNodes, solNodes);
       SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
+   }
 
    if( success && mwpc )
+   {
       SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, solEdges, solNodes) );
+   }
 
 #ifndef NDEBUG
    {
