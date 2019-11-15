@@ -587,76 +587,6 @@ SCIP_RETCODE probdataFree(
    return SCIP_OKAY;
 }
 
-/** print graph (in undirected form) in GML format */
-static
-SCIP_RETCODE probdataPrintGraph(
-   GRAPH*                graph,              /**< Graph to be printed */
-   const char*           filename,           /**< Name of the output file */
-   SCIP_Bool*            edgemark            /**< Array of (undirected) edges to highlight */
-   )
-{
-   char label[SCIP_MAXSTRLEN];
-   FILE* file;
-   int e;
-   int n;
-   int m;
-
-   assert(graph != NULL);
-   file = fopen((filename != NULL) ? filename : "stpgraph.gml", "w");
-
-#ifndef NDEBUG
-   for( e = 0; e < graph->edges; e += 2 )
-   {
-      assert(graph->tail[e] == graph->head[e + 1]);
-      assert(graph->tail[e + 1] == graph->head[e]);
-   }
-#endif
-
-   /* write GML format opening, undirected */
-   SCIPgmlWriteOpening(file, FALSE);
-
-   /* write all nodes, discriminate between root, terminals and the other nodes */
-   e = 0;
-   m = 0;
-   for( n = 0; n < graph->knots; n++ )
-   {
-
-      if( n == graph->source )
-      {
-         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
-         SCIPgmlWriteNode(file, (unsigned int) n, label, "rectangle", "#666666", NULL);
-         m = 1;
-      }
-      else if( graph->term[n] == 0 )
-      {
-         (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Terminal %d", n, e + 1);
-         SCIPgmlWriteNode(file, (unsigned int) n, label, "circle", "#ff0000", NULL);
-         e += 1;
-      }
-      else
-      {
-         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Node %d", n, n + 1 - e - m);
-         SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#336699", NULL);
-      }
-   }
-
-   /* write all edges (undirected) */
-   for( e = 0; e < graph->edges; e += 2 )
-   {
-
-      (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
-
-      if( edgemark != NULL && edgemark[e / 2] )
-         SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, "#ff0000");
-      else
-         SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, NULL);
-   }
-
-   /* write GML format closing */
-   SCIPgmlWriteClosing(file);
-
-   return SCIP_OKAY;
-}
 
 /** create (edge-) HOP constraint (cut mode only) */
 static
@@ -2326,7 +2256,9 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* print the graph */
    if( print )
-      SCIP_CALL( probdataPrintGraph(graph, "OriginalGraph.gml", NULL) );
+   {
+      SCIP_CALL( graph_writeGml(graph, "OriginalGraph.gml", NULL) );
+   }
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &oldtimelimit) );
    SCIP_CALL( SCIPgetRealParam(scip, "stp/pretimelimit", &presoltimelimit) );
@@ -2438,7 +2370,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
       if( print )
       {
-         SCIP_CALL( probdataPrintGraph(graph, "ReducedGraph.gml", NULL) );
+         SCIP_CALL( graph_writeGml(graph, "ReducedGraph.gml", NULL) );
       }
 
       nedges = graph->edges;
@@ -2918,7 +2850,7 @@ SCIP_RETCODE SCIPprobdataPrintGraph(
    if( !printsol )
    {
       /* print the graph without highlighting a solution */
-      SCIP_CALL( probdataPrintGraph( probdata->graph, filename, NULL) );
+      SCIP_CALL( graph_writeGml( probdata->graph, filename, NULL) );
    }
    else
    {
@@ -2933,7 +2865,7 @@ SCIP_RETCODE SCIPprobdataPrintGraph(
 	    edgemark[e / 2] = FALSE;
 
       /* print the graph highlighting a solution */
-      SCIP_CALL( probdataPrintGraph( probdata->graph, filename, edgemark) );
+      SCIP_CALL( graph_writeGml( probdata->graph, filename, edgemark) );
 
       SCIPfreeBufferArray(scip, &edgemark);
    }
@@ -2956,46 +2888,6 @@ SCIP_RETCODE SCIPprobdataWriteIntermediateSolution(
    }
 
    return SCIP_OKAY;
-}
-
-/** writes SPG (no variant!) to a file */
-void SCIPprobdataWriteStp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph data structure */
-   const char*           filename            /**< file name */
-   )
-{
-   FILE *fptr;
-
-   assert(scip != NULL);
-   assert(graph != NULL);
-
-   fptr = fopen(filename, "w");
-   assert(fptr != NULL);
-
-   fprintf(fptr, "33D32945 STP File, STP Format Version 1.0\n");
-   fprintf(fptr, "SECTION Comment\n");
-   fprintf(fptr, "END\n\n");
-   fprintf(fptr, "SECTION Graph\n");
-   fprintf(fptr, "Nodes %d\n", graph->knots);
-   fprintf(fptr, "Edges %d\n", graph->edges);
-
-   for( int e = 0; e < graph->edges; e += 2 )
-      fprintf(fptr, "E %d %d %f\n", graph->tail[e] + 1, graph->head[e] + 1, graph->cost[e]);
-   fprintf(fptr, "END\n\n");
-
-   fprintf(fptr, "SECTION Terminals\n");
-   fprintf(fptr, "Terminals %d\n", graph->terms);
-
-   for( int k = 0; k < graph->knots; k++ )
-      if( Is_term(graph->term[k]) )
-         fprintf(fptr, "T %d\n", k + 1);
-
-   fprintf(fptr, "END\n\n");
-
-   fprintf(fptr, "EOF\n");
-
-   fclose(fptr);
 }
 
 /** writes the best solution to a file */
@@ -3683,75 +3575,6 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
    return SCIP_OKAY;
 }
 
-/** print graph (in undirected form) in GML format with given edges highlighted */
-SCIP_RETCODE SCIPprobdataPrintGraph2(
-   const GRAPH*          graph,              /**< Graph to be printed */
-   const char*           filename,           /**< Name of the output file */
-   SCIP_Bool*            edgemark            /**< Array of (undirected) edges to highlight */
-   )
-{
-   char label[SCIP_MAXSTRLEN];
-   FILE* file;
-   int e;
-   int n;
-   int m;
-
-   assert(graph != NULL);
-   file = fopen((filename != NULL) ? filename : "graphX.gml", "w");
-
-   for( e = 0; e < graph->edges; e += 2 )
-   {
-      assert(graph->tail[e] == graph->head[e + 1]);
-      assert(graph->tail[e + 1] == graph->head[e]);
-   }
-
-   /* write GML format opening, undirected */
-   SCIPgmlWriteOpening(file, FALSE);
-
-   /* write all nodes, discriminate between root, terminals and the other nodes */
-   e = 0;
-   m = 0;
-   for( n = 0; n < graph->knots; ++n )
-   {
-      if( n == graph->source )
-      {
-         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
-	 SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
-	 m = 1;
-      }
-      else if( graph->term[n] == 0 )
-      {
-	 (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Terminal %d", n, e + 1);
-	 SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#ff0000", NULL);
-	 e += 1;
-      }
-      else
-      {
-         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Node %d", n, n + 1 - e - m);
-         SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#336699", NULL);
-      }
-   }
-
-   /* write all edges (undirected) */
-   for( e = 0; e < graph->edges; e += 2 )
-   {
-      if( graph->oeat[e] == EAT_FREE )
-         continue;
-      if( !graph->mark[graph->head[e]] || !graph->mark[graph->tail[e]] )
-         continue;
-      (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
-      if( edgemark != NULL && edgemark[e / 2] == TRUE  )
-	 SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, "#ff0000");
-      else
-         SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, NULL);
-   }
-
-
-   /* write GML format closing */
-   SCIPgmlWriteClosing(file);
-
-   return SCIP_OKAY;
-}
 
 /** returns problem type */
 int SCIPprobdataGetType(

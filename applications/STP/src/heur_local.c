@@ -1060,6 +1060,54 @@ void getKeyPathUpper(
 }
 
 
+/** unmarks key path nodes */
+static
+void soltreeUnmarkKpNodes(
+   const GRAPH*          graph,              /**< graph data structure */
+   const KPATHS*         keypathsData,       /**< key paths */
+   SOLTREE*              soltreeData         /**< solution tree data */
+)
+{
+   const int* const kpnodes = keypathsData->kpnodes;
+   STP_Bool* const solNodes = soltreeData->solNodes;
+   const int nkpnodes = keypathsData->nkpnodes;
+
+   for( int k = 0; k < nkpnodes; k++ )
+   {
+      const int node = kpnodes[k];
+
+      assert(node >= 0 && node < graph->knots);
+      assert(solNodes[node]);
+
+      solNodes[node] = FALSE;
+   }
+}
+
+
+/** (re-)marks key path nodes */
+static
+void soltreeMarkKpNodes(
+   const GRAPH*          graph,              /**< graph data structure */
+   const KPATHS*         keypathsData,       /**< key paths */
+   SOLTREE*              soltreeData         /**< solution tree data */
+)
+{
+   const int* const kpnodes = keypathsData->kpnodes;
+   STP_Bool* const solNodes = soltreeData->solNodes;
+   const int nkpnodes = keypathsData->nkpnodes;
+
+   for( int k = 0; k < nkpnodes; k++ )
+   {
+      const int node = kpnodes[k];
+
+      assert(node >= 0 && node < graph->knots);
+      assert(!solNodes[node]);
+
+      solNodes[node] = TRUE;
+   }
+}
+
+
 /** exchanges key path */
 static
 SCIP_RETCODE soltreeExchangeKeyPath(
@@ -1494,11 +1542,11 @@ SCIP_RETCODE supergraphComputeMst(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const CONN*           connectData,        /**< data */
-   const SOLTREE*        soltreeData,        /**< solution tree data */
    const VNOI*           vnoiData,           /**< data */
+   const KPATHS*         keypathsData,       /**< key paths */
    int                   crucnode,           /**< node to eliminate */
+   SOLTREE*              soltreeData,        /**< solution tree data */
    PCMW*                 pcmwData,           /**< data */
-   KPATHS*               keypathsData,       /**< key paths */
    SGRAPH*               supergraphData      /**< super-graph*/
 )
 {
@@ -1509,7 +1557,7 @@ SCIP_RETCODE supergraphComputeMst(
    int* supernodesid = NULL;
    const SCIP_Real* const edgecosts = getEdgeCosts(graph, pcmwData);
    const STP_Bool* const isLowerSupernode = supergraphData->nodeIsLowSupernode;
-   const STP_Bool* const solNodes = soltreeData->solNodes;
+   STP_Bool* const solNodes = soltreeData->solNodes;
    int* const newedges = soltreeData->newedges;
    const PATH* const vnoipath = vnoiData->vnoi_path;
    const int* const vnoibase = vnoiData->vnoi_base;
@@ -1522,8 +1570,8 @@ SCIP_RETCODE supergraphComputeMst(
    const int superroot = supernodes[nsupernodes - 1];
 #ifdef SCIP_DEBUG
    SCIP_Real mstcost_supergraph = 0.0;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 #endif
-
    assert(nboundaryedges > 0);
    assert(superroot >= 0);
    assert(!supergraphData->mst);
@@ -1542,6 +1590,11 @@ SCIP_RETCODE supergraphComputeMst(
    {
       supernodesid[supernodes[k]] = k;
       graph_knot_add(supergraph, graph->term[supernodes[k]]);
+   }
+
+   if( pcmwData->isActive )
+   {
+      soltreeUnmarkKpNodes(graph, keypathsData, soltreeData);
    }
 
    assert(pcmwDataIsClean(graph, pcmwData));
@@ -1576,6 +1629,7 @@ SCIP_RETCODE supergraphComputeMst(
    assert(pcmwDataIsClean(graph, pcmwData));
 
    /* compute the cost of the MST */
+
    mstcost = 0.0;
 
    for( int l = 0; l < nsupernodes - 1; l++ )
@@ -1589,6 +1643,7 @@ SCIP_RETCODE supergraphComputeMst(
 #ifdef SCIP_DEBUG
       printf("key vertex mst edge ");
       graph_edge_printInfo(graph, edge);
+      if( pcmw ) printf("nodeweights: %f -> %f \n", graph->prize[graph->tail[edge]], graph->prize[graph->head[edge]]);
 
       mstcost_supergraph += supergraph->cost[mst[l].edge];
 #endif
@@ -1607,11 +1662,14 @@ SCIP_RETCODE supergraphComputeMst(
          if( newedges[e] != crucnode && newedges[flipedge(e)] != crucnode )
          {
             newedges[e] = crucnode;
+
             mstcost += edgecosts[e];
             mstcost -= pcmwGetNewEdgePrize(graph, solNodes, e, pcmwData);
+
 #ifdef SCIP_DEBUG
             printf("key vertex mst edge ");
             graph_edge_printInfo(graph, e);
+            if( pcmw ) printf("nodeweights: %f -> %f \n", graph->prize[graph->tail[edge]], graph->prize[graph->head[edge]]);
 #endif
          }
       }
@@ -1625,11 +1683,14 @@ SCIP_RETCODE supergraphComputeMst(
          if( newedges[e] != crucnode && newedges[erev] != crucnode )
          {
             newedges[erev] = crucnode;
+
             mstcost += edgecosts[e];
             mstcost -= pcmwGetNewEdgePrize(graph, solNodes, e, pcmwData);
+
 #ifdef SCIP_DEBUG
             printf("key vertex mst edge ");
             graph_edge_printInfo(graph, erev);
+            if( pcmw ) printf("nodeweights: %f -> %f \n", graph->prize[graph->tail[edge]], graph->prize[graph->head[edge]]);
 #endif
          }
       }
@@ -1641,6 +1702,11 @@ SCIP_RETCODE supergraphComputeMst(
    pcmwDataClean(graph, pcmwData);
 
    supergraphData->mstcost = mstcost;
+
+   if( pcmwData->isActive )
+   {
+      soltreeMarkKpNodes(graph, keypathsData, soltreeData);
+   }
 
    SCIPfreeBufferArray(scip, &supernodesid);
    graph_path_exit(scip, supergraph);
@@ -1703,7 +1769,7 @@ void getKeyPathsStar(
 
 #ifdef SCIP_DEBUG
          printf("key vertex start edge ");
-         graph_edge_printInfo(graph, edge);
+         graph_edge_printInfo(graph, edge_rev);
 #endif
 
          /* does current edge lead to the Steiner tree root? */
@@ -1743,7 +1809,7 @@ void getKeyPathsStar(
                      kpedges[nkpedges++] = e;
 #ifdef SCIP_DEBUG
                      printf("key vertex edge ");
-                     graph_edge_printInfo(graph, e);
+                     graph_edge_printInfo(graph, flipedge(e));
 #endif
                      break;
                   }
@@ -1771,7 +1837,7 @@ void getKeyPathsStar(
                keypathsData->kpcost -= edgecosts[flipedge(e)];
 #ifdef SCIP_DEBUG
                printf("key vertex remove edge ");
-               graph_edge_printInfo(graph, e);
+               graph_edge_printInfo(graph, flipedge(e));
 #endif
                nkpedges--;
                adjnode = graph->tail[e];
@@ -1795,10 +1861,10 @@ void getKeyPathsStar(
    assert(inedgescount >= 0);
 
    // todo for small prizes check whether non-leafterminal
-   if( inedgescount > 1 && pcmwData->isActive && 0 )
+   if( inedgescount > 1 && pcmwData->isActive && !graph_pc_isPc(graph) )
    {
       assert(graph_pc_isPcMw(graph));
-      assert(graph_pc_termIsNonLeaf(graph, keyvertex));
+      assert(!graph_pc_isPc(graph) || graph_pc_termIsNonLeaf(graph, keyvertex));
 
       /* we have implicitly subtracted the prize of the key vertex several times, need to revert */
       keypathsData->kpcost += (SCIP_Real)(inedgescount - 1) * graph->prize[keyvertex];
@@ -2478,10 +2544,12 @@ SCIP_RETCODE localKeyVertexHeuristics(
             graph_voronoiRepairMult(scip, graph, (pcmwData.isActive? pcmwData.edgecost_biased : graph->cost),
                supernodesmark, &nheapelems, vnoibase, connectivityData.boundaryedges, &(connectivityData.nboundaryedges), &uf, vnoipath);
 
-            SCIP_CALL( supergraphComputeMst(scip, graph, &connectivityData, &soltreeData, &vnoiData,
-                  crucnode, &pcmwData, &keypathsData, &supergraphData) );
+            SCIP_CALL( supergraphComputeMst(scip, graph, &connectivityData, &vnoiData, &keypathsData,
+                  crucnode, &soltreeData, &pcmwData, &supergraphData) );
 
             assert(crucnode == dfstree[dfstree_pos]);
+
+            SCIPdebugMessage("kpcost=%f  mstcost=%f \n", keypathsData.kpcost, supergraphData.mstcost);
 
             /* improving solution found? */
             if( SCIPisLT(scip, supergraphData.mstcost, keypathsData.kpcost) )

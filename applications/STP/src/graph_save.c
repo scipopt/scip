@@ -35,7 +35,316 @@
 #include "graph.h"
 
 
-void SCIPwriteStp(
+
+
+
+
+/*---------------------------------------------------------------------------*/
+/*--- Name     : STP Save Graph                                           ---*/
+/*--- Function : Writes a graph to a file in STP format.                  ---*/
+/*--- Parameter: Graph and Filepointer.                                   ---*/
+/*--- Returns  : Nothing.                                                 ---*/
+/*---------------------------------------------------------------------------*/
+static void stp_save(
+   const GRAPH* g,
+   FILE*        fp
+   )
+{
+   int   i;
+
+   assert(g  != NULL);
+   assert(fp != NULL);
+
+   fprintf(fp, "%8x STP File, STP Format Version %2d.%02d\n",
+      STP_MAGIC, VERSION_MAJOR, VERSION_MINOR);
+
+   fprintf(fp, "Section Comment\n");
+   fprintf(fp, "Name \"%s\"\n", "noname");
+   fprintf(fp, "End\n\n");
+
+   fprintf(fp, "Section Graph\n");
+   fprintf(fp, "Nodes %d\n", g->knots);
+   fprintf(fp, "Edges %d\n", g->edges / 2);
+
+   for(i = 0; i < g->edges; i += 2)
+   {
+      if (g->ieat[i] != EAT_FREE)
+      {
+         assert(g->oeat[i] != EAT_FREE);
+
+         fprintf(fp, "E %d %d %g\n",
+            g->tail[i] + 1,
+            g->head[i] + 1,
+            g->cost[i]);
+      }
+   }
+   fprintf(fp, "End\n\n");
+   fprintf(fp, "Section Terminals\n");
+   fprintf(fp, "Terminals %d\n", g->terms);
+
+   for(i = 0; i < g->knots; i++)
+   {
+      if (Is_term(g->term[i]))
+         fprintf(fp, "T %d\n", i + 1);
+   }
+   fprintf(fp, "End\n\n");
+/*
+   if (g->flags & GRAPH_HAS_COORDINATES)
+   {
+      fprintf(fp, "Section Coordinates\n");
+
+      for(i = 0; i < g->knots; i++)
+         fprintf(fp, "DD %d %d %d\n", i + 1, g->xpos[i], g->ypos[i]);
+
+      fprintf(fp, "End\n\n");
+   }
+*/
+   fprintf(fp, "EOF\n");
+}
+
+/*---------------------------------------------------------------------------*/
+/*--- Name     : Beasley Save Graph                                       ---*/
+/*--- Function : Writes a graph to a file in Beasleys format.             ---*/
+/*--- Parameter: Graph and Filepointer.                                   ---*/
+/*--- Returns  : Nothing.                                                 ---*/
+/*---------------------------------------------------------------------------*/
+static void bea_save(
+   const GRAPH* g,
+   FILE*        fp)
+{
+   int i;
+
+   assert(g  != NULL);
+   assert(fp != NULL);
+
+   fprintf(fp, "%d %d\n",
+      g->knots,
+      g->edges / 2);
+
+   for(i = 0; i < g->edges; i += 2)
+   {
+      if (g->ieat[i] != EAT_FREE)
+      {
+         assert(g->oeat[i] != EAT_FREE);
+
+         fprintf(fp, "%d %d %g\n",
+            g->tail[i] + 1,
+            g->head[i] + 1,
+            g->cost[i]);
+      }
+   }
+   fprintf(fp, "%d\n", g->terms);
+
+   for(i = 0; i < g->knots; i++)
+   {
+      if (Is_term(g->term[i]))
+         fprintf(fp, "%d\n", i + 1);
+   }
+}
+
+/*---------------------------------------------------------------------------*/
+/*--- Name     : Graph Save                                               ---*/
+/*--- Function : Write a graph to a file.                                 ---*/
+/*--- Parameter: Graph, Filename, Filetype (Fileformat).                  ---*/
+/*--- Returns  : Nothing.                                                 ---*/
+/*---------------------------------------------------------------------------*/
+void graph_save(
+   SCIP* scip,
+   const GRAPH* g,
+   const char*  filename,
+   FILETYPE     type)
+{
+   const char* msg_writing_s = "Writing Graph to File %s:\n";
+
+   FILE* fp;
+
+   assert(g && scip && filename);
+   assert(graph_valid(scip, g));
+   assert(strlen(filename) > 0);
+   assert((type == FF_BEA) || (type == FF_STP));
+
+   if ((fp = fopen(filename, "w")) == NULL)
+      perror(filename);
+   else
+   {
+      printf(msg_writing_s, filename);
+
+      switch(type)
+      {
+      case FF_BEA :
+         bea_save(g, fp);
+         break;
+      case FF_STP :
+         stp_save(g, fp);
+         break;
+      case FF_PRB :
+      case FF_GRD :
+      default     :
+         /* CONSTCOND */
+         assert(FALSE);
+      }
+      fclose(fp);
+   }
+}
+
+
+/** print graph (in undirected form) in GML format */
+SCIP_RETCODE graph_writeGml(
+   const GRAPH*          graph,              /**< Graph to be printed */
+   const char*           filename,           /**< Name of the output file */
+   const SCIP_Bool*      edgemark            /**< Array of (undirected) edges to highlight */
+   )
+{
+   char label[SCIP_MAXSTRLEN];
+   FILE* file;
+   int e;
+   int m;
+
+   assert(graph != NULL);
+   file = fopen((filename != NULL) ? filename : "stpgraph.gml", "w");
+
+#ifndef NDEBUG
+   for( e = 0; e < graph->edges; e += 2 )
+   {
+      assert(graph->tail[e] == graph->head[e + 1]);
+      assert(graph->tail[e + 1] == graph->head[e]);
+   }
+#endif
+
+   /* write GML format opening, undirected */
+   SCIPgmlWriteOpening(file, FALSE);
+
+   /* write all nodes, discriminate between root, terminals and the other nodes */
+   e = 0;
+   m = 0;
+   for( int k = 0; k < graph->knots; k++ )
+   {
+      if( k == graph->source )
+      {
+         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", k);
+         SCIPgmlWriteNode(file, (unsigned int) k, label, "rectangle", "#666666", NULL);
+         m = 1;
+      }
+      else if( graph->term[k] == 0 )
+      {
+         (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Terminal %d", k, e + 1);
+         SCIPgmlWriteNode(file, (unsigned int) k, label, "circle", "#ff0000", NULL);
+         e += 1;
+      }
+      else
+      {
+         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Node %d", k, k + 1 - e - m);
+         SCIPgmlWriteNode(file, (unsigned int)k, label, "circle", "#336699", NULL);
+      }
+   }
+
+   /* write all edges (undirected) */
+   for( e = 0; e < graph->edges; e += 2 )
+   {
+      if( graph->oeat[e] == EAT_FREE )
+         continue;
+
+      (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
+
+      if( edgemark != NULL && edgemark[e / 2] )
+         SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, "#ff0000");
+      else
+         SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, NULL);
+   }
+
+   /* write GML format closing */
+   SCIPgmlWriteClosing(file);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** prints subgraph of given graph (in undirected form) in GML format */
+SCIP_RETCODE graph_writeGmlSub(
+   const GRAPH*          graph,              /**< Graph to be printed */
+   const char*           filename,           /**< Name of the output file */
+   const SCIP_Bool*      subnodesmark        /**< Array to mark the nodes of the subgraph*/
+   )
+{
+   char label[SCIP_MAXSTRLEN];
+   FILE* file;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+   int e;
+   int m;
+
+   assert(graph != NULL);
+   file = fopen((filename != NULL) ? filename : "stpgraph.gml", "w");
+
+#ifndef NDEBUG
+   for( e = 0; e < graph->edges; e += 2 )
+   {
+      assert(graph->tail[e] == graph->head[e + 1]);
+      assert(graph->tail[e + 1] == graph->head[e]);
+   }
+#endif
+
+   /* write GML format opening, undirected */
+   SCIPgmlWriteOpening(file, FALSE);
+
+   /* write all nodes, discriminate between root, terminals and the other nodes */
+   e = 0;
+   m = 0;
+   for( int k = 0; k < graph->knots; k++ )
+   {
+      const int head = graph->head[e];
+      const int tail = graph->tail[e];
+
+      if( !subnodesmark[tail] || !subnodesmark[head] )
+         continue;
+
+      if( k == graph->source )
+      {
+         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", k);
+         SCIPgmlWriteNode(file, (unsigned int) k, label, "rectangle", "#666666", NULL);
+         m = 1;
+      }
+      else if( graph->term[k] == 0 )
+      {
+         if( pcmw )
+            (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Terminal %d, p=%f", k, e + 1, graph->prize[k]);
+         else
+            (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Terminal %d", k, e + 1);
+
+         SCIPgmlWriteNode(file, (unsigned int) k, label, "circle", "#ff0000", NULL);
+         e += 1;
+      }
+      else
+      {
+         if( pcmw )
+            (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Node %d p=%f", k, k + 1 - e - m, graph->prize[k]);
+         else
+            (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Node %d", k, k + 1 - e - m);
+
+         SCIPgmlWriteNode(file, (unsigned int)k, label, "circle", "#336699", NULL);
+      }
+   }
+
+   /* write all edges (undirected) */
+   for( e = 0; e < graph->edges; e += 2 )
+   {
+      if( graph->oeat[e] == EAT_FREE )
+         continue;
+
+      (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
+
+      SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, NULL);
+   }
+
+   /* write GML format closing */
+   SCIPgmlWriteClosing(file);
+
+   return SCIP_OKAY;
+}
+
+
+/** writes graph in .stp format to file */
+void graph_writeStp(
    SCIP* scip,
    const GRAPH* g,
    FILE*        fp,
@@ -191,7 +500,6 @@ void SCIPwriteStp(
       fprintf(fp, "limit %d\n", g->hoplimit);
       for( int e = 0; e < g->edges; e++ )
       {
-         /* TODO: When presolving is used: MODIFY */
          hopfactor = 1;
          fprintf(fp, "HC %d %d\n", e + 1, hopfactor);
       }
@@ -210,152 +518,42 @@ void SCIPwriteStp(
 }
 
 
-
-
-/*---------------------------------------------------------------------------*/
-/*--- Name     : STP Save Graph                                           ---*/
-/*--- Function : Writes a graph to a file in STP format.                  ---*/
-/*--- Parameter: Graph and Filepointer.                                   ---*/
-/*--- Returns  : Nothing.                                                 ---*/
-/*---------------------------------------------------------------------------*/
-static void stp_save(
-   const GRAPH* g,
-   FILE*        fp
+/** writes SPG (no variant!) to a file; deprecated */
+void graph_writeStpOrg(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const char*           filename            /**< file name */
    )
 {
-   int   i;
+   FILE *fptr;
 
-   assert(g  != NULL);
-   assert(fp != NULL);
+   assert(scip != NULL);
+   assert(graph != NULL);
 
-   fprintf(fp, "%8x STP File, STP Format Version %2d.%02d\n",
-      STP_MAGIC, VERSION_MAJOR, VERSION_MINOR);
+   fptr = fopen(filename, "w");
+   assert(fptr != NULL);
 
-   fprintf(fp, "Section Comment\n");
-   fprintf(fp, "Name \"%s\"\n", "noname");
-   fprintf(fp, "End\n\n");
+   fprintf(fptr, "33D32945 STP File, STP Format Version 1.0\n");
+   fprintf(fptr, "SECTION Comment\n");
+   fprintf(fptr, "END\n\n");
+   fprintf(fptr, "SECTION Graph\n");
+   fprintf(fptr, "Nodes %d\n", graph->knots);
+   fprintf(fptr, "Edges %d\n", graph->edges);
 
-   fprintf(fp, "Section Graph\n");
-   fprintf(fp, "Nodes %d\n", g->knots);
-   fprintf(fp, "Edges %d\n", g->edges / 2);
+   for( int e = 0; e < graph->edges; e += 2 )
+      fprintf(fptr, "E %d %d %f\n", graph->tail[e] + 1, graph->head[e] + 1, graph->cost[e]);
+   fprintf(fptr, "END\n\n");
 
-   for(i = 0; i < g->edges; i += 2)
-   {
-      if (g->ieat[i] != EAT_FREE)
-      {
-         assert(g->oeat[i] != EAT_FREE);
+   fprintf(fptr, "SECTION Terminals\n");
+   fprintf(fptr, "Terminals %d\n", graph->terms);
 
-         fprintf(fp, "E %d %d %g\n",
-            g->tail[i] + 1,
-            g->head[i] + 1,
-            g->cost[i]);
-      }
-   }
-   fprintf(fp, "End\n\n");
-   fprintf(fp, "Section Terminals\n");
-   fprintf(fp, "Terminals %d\n", g->terms);
+   for( int k = 0; k < graph->knots; k++ )
+      if( Is_term(graph->term[k]) )
+         fprintf(fptr, "T %d\n", k + 1);
 
-   for(i = 0; i < g->knots; i++)
-   {
-      if (Is_term(g->term[i]))
-         fprintf(fp, "T %d\n", i + 1);
-   }
-   fprintf(fp, "End\n\n");
-/*
-   if (g->flags & GRAPH_HAS_COORDINATES)
-   {
-      fprintf(fp, "Section Coordinates\n");
+   fprintf(fptr, "END\n\n");
 
-      for(i = 0; i < g->knots; i++)
-         fprintf(fp, "DD %d %d %d\n", i + 1, g->xpos[i], g->ypos[i]);
+   fprintf(fptr, "EOF\n");
 
-      fprintf(fp, "End\n\n");
-   }
-*/
-   fprintf(fp, "EOF\n");
-}
-
-/*---------------------------------------------------------------------------*/
-/*--- Name     : Beasley Save Graph                                       ---*/
-/*--- Function : Writes a graph to a file in Beasleys format.             ---*/
-/*--- Parameter: Graph and Filepointer.                                   ---*/
-/*--- Returns  : Nothing.                                                 ---*/
-/*---------------------------------------------------------------------------*/
-static void bea_save(
-   const GRAPH* g,
-   FILE*        fp)
-{
-   int i;
-
-   assert(g  != NULL);
-   assert(fp != NULL);
-
-   fprintf(fp, "%d %d\n",
-      g->knots,
-      g->edges / 2);
-
-   for(i = 0; i < g->edges; i += 2)
-   {
-      if (g->ieat[i] != EAT_FREE)
-      {
-         assert(g->oeat[i] != EAT_FREE);
-
-         fprintf(fp, "%d %d %g\n",
-            g->tail[i] + 1,
-            g->head[i] + 1,
-            g->cost[i]);
-      }
-   }
-   fprintf(fp, "%d\n", g->terms);
-
-   for(i = 0; i < g->knots; i++)
-   {
-      if (Is_term(g->term[i]))
-         fprintf(fp, "%d\n", i + 1);
-   }
-}
-
-/*---------------------------------------------------------------------------*/
-/*--- Name     : Graph Save                                               ---*/
-/*--- Function : Write a graph to a file.                                 ---*/
-/*--- Parameter: Graph, Filename, Filetype (Fileformat).                  ---*/
-/*--- Returns  : Nothing.                                                 ---*/
-/*---------------------------------------------------------------------------*/
-void graph_save(
-   SCIP* scip,
-   const GRAPH* g,
-   const char*  filename,
-   FILETYPE     type)
-{
-   const char* msg_writing_s = "Writing Graph to File %s:\n";
-
-   FILE* fp;
-
-   assert(g && scip && filename);
-   assert(graph_valid(scip, g));
-   assert(strlen(filename) > 0);
-   assert((type == FF_BEA) || (type == FF_STP));
-
-   if ((fp = fopen(filename, "w")) == NULL)
-      perror(filename);
-   else
-   {
-      printf(msg_writing_s, filename);
-
-      switch(type)
-      {
-      case FF_BEA :
-         bea_save(g, fp);
-         break;
-      case FF_STP :
-         stp_save(g, fp);
-         break;
-      case FF_PRB :
-      case FF_GRD :
-      default     :
-         /* CONSTCOND */
-         assert(FALSE);
-      }
-      fclose(fp);
-   }
+   fclose(fptr);
 }

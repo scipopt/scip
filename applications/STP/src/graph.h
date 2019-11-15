@@ -520,7 +520,11 @@ extern SCIP_RETCODE graph_load(SCIP*, GRAPH**, const char*, PRESOL*);
 /* graph_save.c
  */
 extern void graph_save(SCIP*, const GRAPH*, const char*, FILETYPE);
-extern void SCIPwriteStp(SCIP*, const GRAPH*, FILE*, SCIP_Real);
+extern SCIP_RETCODE graph_writeGml(const GRAPH*, const char*, const SCIP_Bool*);
+extern SCIP_RETCODE graph_writeGmlSub(const GRAPH*, const char*, const SCIP_Bool*);
+extern void graph_writeStp(SCIP*, const GRAPH*, FILE*, SCIP_Real);
+extern void graph_writeStpOrg(SCIP*, const GRAPH*, const char*);
+
 
 /* validate.c
  */
