@@ -139,6 +139,8 @@
 #define DEFAULT_SUBSCIPFAST        TRUE /**< Should the settings for the sub-MIP be optimized for speed? */
 #define DEFAULT_OUTPUT            FALSE /**< Should information about the sub-MIP and cuts be displayed? */
 #define DEFAULT_RANDSEED            101 /**< start random seed for random number generation */
+#define DEFAULT_GENPRIMALSOLS     FALSE /**< Try to generate primal solutions from Gomory cuts? */
+
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
 #define NCOLSTOOSMALL                 5 /**< only separate if the number of columns is larger than this number */
@@ -160,6 +162,8 @@
 #define FIXINTEGRALRHS            FALSE
 #define MAKECONTINTEGRAL          FALSE
 #define MAXWEIGHTRANGE            1e+05 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+#define AWAY                      0.005 /**< minimal fractionality of a basic variable in order to try GMI cut */
+#define SEPARATEROWS               TRUE /**< Separate rows with integral slack? */
 
 #define MAXAGGRLEN(nvars)         nvars /**< currently very large to allow any generation; an alternative would be (0.1*(nvars)+1000) */
 
@@ -205,6 +209,7 @@ struct SCIP_SepaData
    SCIP_Bool             useobjlb;           /**< Use lower bound on objective function (via lower bound)? */
    SCIP_Bool             subscipfast;        /**< Should the settings for the sub-MIP be optimized for speed? */
    SCIP_Bool             output;             /**< Should information about the sub-MIP and cuts be displayed? */
+   SCIP_Bool             genprimalsols;      /**< Try to generate primal solutions from Gomory cuts? */
 };
 
 
@@ -242,6 +247,9 @@ struct CGMIP_MIPData
    SCIP_VAR**            yrhs;               /**< auxiliary row variables for rhs (NULL if not present) */
 
    SCIP_VAR**            z;                  /**< auxiliary variables for upper bounds (NULL if not present) */
+
+   SCIP_Real*            lhs;                /**< transformed left hand sides */
+   SCIP_Real*            rhs;                /**< transformed left hand sides */
 
    char                  normtype;           /**< type of norm to use for efficacy norm calculation */
 
@@ -1112,10 +1120,12 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->ylhs), ntotalrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->yrhs), ntotalrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->z), 2*ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->lhs), ntotalrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->rhs), ntotalrows) );
+   lhs = mipdata->lhs;
+   rhs = mipdata->rhs;
 
    /* get temporary storage */
-   SCIP_CALL( SCIPallocBufferArray(origscip, &lhs, ntotalrows) );
-   SCIP_CALL( SCIPallocBufferArray(origscip, &rhs, ntotalrows) );
    SCIP_CALL( SCIPallocBufferArray(origscip, &lb, ncols) );
    SCIP_CALL( SCIPallocBufferArray(origscip, &ub, ncols) );
    SCIP_CALL( SCIPallocBufferArray(origscip, &primsol, ncols) );
@@ -1996,8 +2006,6 @@ SCIP_RETCODE createSubscip(
    SCIPfreeBufferArray(origscip, &primsol);
    SCIPfreeBufferArray(origscip, &lb);
    SCIPfreeBufferArray(origscip, &ub);
-   SCIPfreeBufferArray(origscip, &rhs);
-   SCIPfreeBufferArray(origscip, &lhs);
 
    /* SCIPdebug( SCIP_CALL( SCIPprintOrigProblem(subscip, NULL, NULL, FALSE) ) ); */
 
@@ -2147,13 +2155,262 @@ SCIP_RETCODE subscipSetParams(
 }
 
 
+/** try to convert fractional gomory cuts to primal solutions of CG-MIP */
+static
+SCIP_RETCODE createCGMIPprimalsols(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   CGMIP_MIPDATA*        mipdata             /**< data for sub-MIP */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_ROW** rows;
+   SCIP_COL** cols;
+   SCIP_Real* binvrow;
+   SCIP_Real* cutcoefs;
+   int* basisind;
+   int nvars;
+   int nrows;
+   int ncols;
+   int ngen = 0;
+   int ntried = 0;
+   int i;
+
+   assert( scip != NULL );
+   assert( sepadata != NULL );
+   assert( mipdata != NULL );
+
+   /* get variables */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   /* get rows and columns */
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
+   assert( ncols <= nvars );
+
+   /* get storage */
+   SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, ncols) );
+
+   /* get basis indices */
+   SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
+
+   /* loop through rows */
+   for (i = 0; i < nrows; ++i)
+   {
+      SCIP_Bool tryrow = FALSE;
+      SCIP_Real primsol = SCIP_INVALID;
+      int c;
+      int r;
+
+      c = basisind[i];
+      assert( c < ncols );
+
+      if ( c >= 0 )
+      {
+         SCIP_VAR* var;
+
+         var = SCIPcolGetVar(cols[c]);
+
+         if ( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         {
+            primsol = SCIPcolGetPrimsol(cols[c]);
+            assert( SCIPgetVarSol(scip, var) == primsol );
+
+            if ( SCIPfeasFrac(scip, primsol) >= AWAY && SCIPfeasFrac(scip, primsol) <= 1 - AWAY )
+               tryrow = TRUE;
+         }
+      }
+#if ( SEPARATEROWS == TRUE )
+      else
+      {
+         SCIP_ROW* row;
+
+         assert(0 <= -c-1 && -c-1 < nrows);
+
+         row = rows[-c-1];
+
+         if ( SCIProwIsIntegral(row) && ! SCIProwIsModifiable(row) )
+         {
+            /* Compute value of the slack variable (we only care about the correct fractionality) */
+            if ( SCIPisInfinity(scip, SCIProwGetRhs(row)) )
+               primsol = SCIProwGetLhs(row) - SCIPgetRowLPActivity(scip, row);
+            else
+               primsol = SCIProwGetRhs(row) - SCIPgetRowLPActivity(scip, row);
+
+            if ( SCIPfeasFrac(scip, primsol) >= AWAY && SCIPfeasFrac(scip, primsol) <= 1 - AWAY )
+               tryrow = TRUE;
+         }
+      }
+#endif
+
+      if ( tryrow )
+      {
+         SCIP_Bool success;
+         SCIP_SOL* sol;
+         SCIP_Real cutrhs = 0.0;
+         SCIP_ROW* row;
+         SCIP_Real val;
+         int j;
+
+         assert( primsol != SCIP_INVALID );
+
+         /* get the row of B^-1 for this basic integer variable with fractional solution value */
+         SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, NULL, NULL) );
+
+         /* clear cutcoefs */
+         BMSclearMemoryArray(cutcoefs, ncols);
+
+         /* create solution */
+         SCIP_CALL( SCIPcreateSol(mipdata->subscip, &sol, NULL) );
+
+         /* add values of multipliers to solution and compute coefficients */
+         for (r = 0; r < nrows; ++r)
+         {
+            SCIP_COL** rowcols;
+            SCIP_Real* rowvals;
+            SCIP_Real binvval;
+            SCIP_Real weight;
+
+            row = rows[r];
+            assert( row != NULL );
+
+            binvval = binvrow[r];
+            binvval = SCIPfrac(scip, binvval);  /* can always take fractional value */
+            if ( ! SCIPisFeasZero(scip, binvval) )
+            {
+               SCIP_Real lhs;
+               SCIP_Real rhs;
+               SCIP_Bool uselhs;
+
+               lhs = SCIProwGetLhs(row);
+               rhs = SCIProwGetRhs(row);
+
+               if ( ! SCIPisEQ(scip, lhs, rhs) )
+               {
+                  SCIP_BASESTAT stat;
+
+                  stat = SCIProwGetBasisStatus(row);
+
+                  if ( stat == SCIP_BASESTAT_LOWER )
+                  {
+                     assert( ! SCIPisInfinity(scip, -lhs) );
+                     uselhs = TRUE;
+                  }
+                  else if ( stat == SCIP_BASESTAT_UPPER )
+                  {
+                     assert( ! SCIPisInfinity(scip, rhs) );
+                     uselhs = FALSE;
+                  }
+                  else if ( SCIPisInfinity(scip, rhs) )
+                     uselhs = TRUE;
+                  else
+                     uselhs = FALSE;
+               }
+               else if ( binvval < 0.0 )
+                  uselhs = TRUE;
+               else
+                  uselhs = FALSE;
+
+               if ( uselhs )
+               {
+                  assert( mipdata->ylhs[r] != NULL );
+                  SCIP_CALL( SCIPsetSolVal(mipdata->subscip, sol, mipdata->ylhs[r], fabs(binvval)) );
+                  weight = -fabs(binvval);
+               }
+               else
+               {
+                  assert( mipdata->yrhs[r] != NULL );
+                  SCIP_CALL( SCIPsetSolVal(mipdata->subscip, sol, mipdata->yrhs[r], fabs(binvval)) );
+                  weight = fabs(binvval);
+               }
+
+               /* update cut coefficients */
+               rowcols = SCIProwGetCols(row);
+               rowvals = SCIProwGetVals(row);
+
+               /* add the row coefficients to the sum */
+               for (j = 0; j < SCIProwGetNLPNonz(row); ++j)
+               {
+                  int idx;
+
+                  assert( rowcols[j] != NULL );
+
+                  idx = SCIPcolGetLPPos(rowcols[j]);
+                  assert( 0 <= idx && idx < ncols );
+
+                  cutcoefs[idx] += weight * rowvals[j];
+               }
+
+               /* compute rhs */
+               if ( uselhs )
+               {
+                  assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
+                  val = mipdata->lhs[r];
+               }
+               else
+               {
+                  assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
+                  val = mipdata->rhs[r];
+               }
+               cutrhs += weight * val;
+            }
+         }
+
+         /* fill in values of cut */
+         for (c = 0; c < ncols; ++c)
+         {
+            if ( mipdata->coltype[c] != colPresent )
+               continue;
+
+            val = SCIPfloor(scip, cutcoefs[c]);
+            if ( mipdata->iscomplemented[c] )
+               val = -val;
+            if ( ! SCIPisFeasZero(scip, val) )
+            {
+               SCIP_CALL( SCIPsetSolVal(mipdata->subscip, sol, mipdata->alpha[c], val) );
+            }
+            val = SCIPfeasFrac(scip, cutcoefs[c]);
+            if ( ! SCIPisFeasZero(scip, val) )
+            {
+               SCIP_CALL( SCIPsetSolVal(mipdata->subscip, sol, mipdata->fracalpha[c], val) );
+            }
+         }
+
+         if ( ! SCIPisFeasZero(scip, SCIPfloor(scip, cutrhs)) )
+         {
+            SCIP_CALL( SCIPsetSolVal(mipdata->subscip, sol, mipdata->beta, SCIPfloor(scip, cutrhs)) );
+         }
+         if ( ! SCIPisFeasZero(scip, SCIPfeasFrac(scip, cutrhs)) )
+         {
+            SCIP_CALL( SCIPsetSolVal(mipdata->subscip, sol, mipdata->fracbeta, SCIPfeasFrac(scip, cutrhs)) );
+         }
+
+         SCIP_CALL( SCIPtrySolFree(mipdata->subscip, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+         ++ntried;
+         if ( success )
+            ++ngen;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &cutcoefs);
+   SCIPfreeBufferArray(scip, &binvrow);
+   SCIPfreeBufferArray(scip, &basisind);
+
+   SCIPdebugMsg(scip, "Created %d primal solutions for CG-MIP from tableau cuts (tried: %d).\n", ngen, ntried);
+
+   return SCIP_OKAY;
+}
+
+
 /** solve subscip */
 static
 SCIP_RETCODE solveSubscip(
    SCIP*                 origscip,           /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
-   SCIP_Bool*            success             /**< if setting was successful -> stop solution otherwise */
+   SCIP_Bool*            success             /**< if setting was successful -> stop */
    )
 {
    SCIP* subscip;
@@ -2234,6 +2491,13 @@ SCIP_RETCODE solveSubscip(
    }
    assert( nodelimit >= 0 );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
+
+   /* try to create primal solutions of CG-MIP problem via tableau cuts */
+   if ( sepadata->genprimalsols )
+   {
+      SCIP_CALL( SCIPtransformProb(subscip) );
+      SCIP_CALL( createCGMIPprimalsols(origscip, sepadata, mipdata) );
+   }
 
    SCIPdebugMsg(origscip, "Solving sub-SCIP (time limit: %f  mem limit: %f  node limit: %" SCIP_LONGINT_FORMAT ") ...\n", timelimit, memorylimit, nodelimit);
 
@@ -3918,6 +4182,8 @@ SCIP_RETCODE freeSubscip(
 
    SCIP_CALL( SCIPfree(&(mipdata->subscip)) );
 
+   SCIPfreeBlockMemoryArray(scip, &(mipdata->rhs), mipdata->ntotalrows);
+   SCIPfreeBlockMemoryArray(scip, &(mipdata->lhs), mipdata->ntotalrows);
    SCIPfreeBlockMemoryArray(scip, &(mipdata->z), 2*mipdata->ncols); /*lint !e647*/
    SCIPfreeBlockMemoryArray(scip, &(mipdata->yrhs), mipdata->ntotalrows);
    SCIPfreeBlockMemoryArray(scip, &(mipdata->ylhs), mipdata->ntotalrows);
@@ -4130,6 +4396,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    mipdata->ylhs = NULL;
    mipdata->yrhs = NULL;
    mipdata->z = NULL;
+   mipdata->lhs = NULL;
+   mipdata->rhs = NULL;
    mipdata->normtype = ' ';
 
    mipdata->conshdlrfullnorm = CONSHDLRFULLNORM;
@@ -4387,6 +4655,11 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
          "separating/" SEPA_NAME "/output",
          "Should information about the sub-MIP and cuts be displayed?",
          &sepadata->output, FALSE, DEFAULT_OUTPUT, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/" SEPA_NAME "/genprimalsols",
+         "Try to generate primal solutions from Gomory cuts?",
+         &sepadata->genprimalsols, FALSE, DEFAULT_GENPRIMALSOLS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
