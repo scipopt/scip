@@ -37,7 +37,7 @@
  * There are several versions to generate the final cut:
  *
  * - The CMIR-routines of SCIP can be used (if @p usecmir is true). One can determine which bound is
- *   used in the rounding operation (if cmirownbounds is true) or let SCIP choose the best. This
+ *   used in the rounding operation (if @p cmirownbounds is true) or let SCIP choose the best. This
  *   version is generally numerically the most stable.
  * - If @p usestrongcg is true, we try to generate Strong-CG cuts (as done in sepa_strongcg.c).
  * - One can directly generate the CG-cut as computed (if @p usecmir and @p usestrongcg are
@@ -155,13 +155,13 @@
 #define BOUNDSWITCH              0.9999
 #define USEVBDS                    TRUE
 #define POSTPROCESS                TRUE
-#define MINFRAC                  0.0009 /* to allow a deviation of the same size as EPSILONVALUE */
-#define MAXFRAC                  0.9991 /* to allow a deviation of the same size as EPSILONVALUE */
+#define MINFRAC                  0.0009 /**< to allow a deviation of the same size as EPSILONVALUE */
+#define MAXFRAC                  0.9991 /**< to allow a deviation of the same size as EPSILONVALUE */
 #define FIXINTEGRALRHS            FALSE
 #define MAKECONTINTEGRAL          FALSE
 #define MAXWEIGHTRANGE            1e+05 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
 
-#define MAXAGGRLEN(nvars)         nvars      /**< currently very large to allow any generation; an alternative would be (0.1*(nvars)+1000) */
+#define MAXAGGRLEN(nvars)         nvars /**< currently very large to allow any generation; an alternative would be (0.1*(nvars)+1000) */
 
 /** separator data */
 struct SCIP_SepaData
@@ -1147,7 +1147,7 @@ SCIP_RETCODE createSubscip(
       if ( ! sepadata->onlyactiverows && sepadata->maxrowage > 0 && SCIProwGetAge(row) > sepadata->maxrowage )
          continue;
 
-      /* check whether we want to skip cut produced by the CGMIP separator */
+      /* check whether we want to skip cuts produced by the CGMIP separator */
       if ( sepadata->onlyrankone )
       {
          if ( SCIProwGetOriginSepa(row) == sepa )
@@ -1412,7 +1412,7 @@ SCIP_RETCODE createSubscip(
       if ( ! sepadata->onlyactiverows && sepadata->maxrowage > 0 && SCIProwGetAge(row) > sepadata->maxrowage )
          continue;
 
-      /* check whether we want to skip cut produced by the CGMIP separator */
+      /* check whether we want to skip cuts produced by the CGMIP separator */
       if ( sepadata->onlyrankone )
       {
          if ( SCIProwGetOriginSepa(row) == sepa )
@@ -2381,13 +2381,13 @@ SCIP_RETCODE solveSubscip(
  *  If such a variable was at its upper bound before the transformation, it is at its lower bound
  *  afterwards. Hence, its contribution to the cut is 0.
  *
- *  Note that if the original LP-solution does not satisfy some of the rows with equality the
+ *  Note that if the original LP-solution does not satisfy some of the rows with equality, the
  *  violation of the cut might be smaller than what is computed with the reduced sub-MIP.
  *
- *  Furthermore, note that if continuous variables have been shifted, the computed violated may be
+ *  Furthermore, note that if continuous variables have been shifted, the computed violation may be
  *  different as well, because the necessary changes in the lhs/rhs are not used here anymore.
  *
- *  @todo check if cut is correct if continuous variables have been shifted.
+ *  @todo Check if cut is correct if continuous variables have been shifted.
  */
 static
 SCIP_RETCODE computeCut(
