@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -59,15 +59,13 @@
  * and setting up the above model.
  * - cons_lop.c: contains the constraint handler that takes care of the
  * equations and the triangle inequalities.
- * - genRandomLOPInstance.c: problem generator (see \ref LOP_PROBLEMGENERATOR "below")
+ * - genRandomLOPInstance.c: problem generator (see \ref LOP_PROBLEMGENERATORUSEIT "below")
  *
- *
- * @section LOP_PROBLEMGENERATOR Problem Generator
  *
  * To use the problem generator you have do two things. First
  * \ref LOP_PROBLEMGENERATORCOMPILE "compile the generator" and second \ref LOP_PROBLEMGENERATORUSEIT "use it".
  *
- * @subsection LOP_PROBLEMGENERATORCOMPILE Compile the Problem Generator
+ * @section LOP_PROBLEMGENERATORCOMPILE Compile the Problem Generator
  *
  * Call the command
  *
@@ -76,7 +74,7 @@
  * in main directory of the example. This will create a binary in the <code>bin/</code> directory
  * with the name <code>genRandomLOPInstance</code>.
  *
- * @subsection LOP_PROBLEMGENERATORUSEIT Use the Problem Generator
+ * @section LOP_PROBLEMGENERATORUSEIT Use the Problem Generator
  *
  * The problem generator needs three parameter:
  * -# the name of the file to create
@@ -89,5 +87,9 @@
  *
  * produces a file named "instance" containing a matrix of dimension 10x10 with entries between 0 and 6.
  *
+ * Installation
+ * ============
+ *
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
  *
  */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_boundshift.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  presolver that converts variables with domain [a,b] to variables with domain [0,b-a]
  * @author Stefan Heinz
  * @author Michael Winkler
@@ -198,9 +199,6 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       if( !SCIPisEQ(scip, lb, 0.0) &&                           /* lower bound != 0.0 */
          SCIPisLT(scip, ub, SCIPinfinity(scip)) &&              /* upper bound != infinity */
          SCIPisGT(scip, lb, -SCIPinfinity(scip)) &&             /* lower bound != -infinity */
-#if 0
-         SCIPisLT(scip, ub - lb, SCIPinfinity(scip)) &&         /* interval length less than SCIPinfinity(scip) */
-#endif
          SCIPisLT(scip, ub - lb, (SCIP_Real) presoldata->maxshift) &&      /* less than max shifting */
          SCIPisLE(scip, REALABS(lb), MAXABSBOUND) &&            /* ensures a small constant in aggregation */
          SCIPisLE(scip, REALABS(ub), MAXABSBOUND) )             /* ensures a small constant in aggregation */

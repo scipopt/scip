@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlp.c
+ * @ingroup OTHER_CFILES
  * @brief  NLP management methods and datastructures
  * @author Thorsten Gellermann
  * @author Stefan Vigerske
@@ -262,7 +263,7 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
       if( SCIPhashmapExists(varhash, tree->vars[i]) )
          continue;
 
-      SCIP_CALL( SCIPhashmapInsert(varhash, tree->vars[i], (void*)(size_t)i) );
+      SCIP_CALL( SCIPhashmapInsertInt(varhash, tree->vars[i], i) );
 
       if( !SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) )
          havefixedvar = TRUE;
@@ -314,11 +315,11 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
             /* var not in tree yet, so add it */
             SCIP_CALL( SCIPexprtreeAddVars(tree, 1, &var) );
             idx = tree->nvars - 1;
-            SCIP_CALL( SCIPhashmapInsert(varhash, (void*)var, (void*)(size_t)idx) );
+            SCIP_CALL( SCIPhashmapInsertInt(varhash, (void*)var, idx) );
          }
          else
          {
-            idx = (int)(size_t) SCIPhashmapGetImage(varhash, (void*)var);
+            idx = SCIPhashmapGetImageInt(varhash, (void*)var);
          }
          assert(idx >= 0 && idx < tree->nvars);
          assert((SCIP_VAR*)tree->vars[idx] == var);
@@ -367,11 +368,11 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
                /* var not in tree yet, so add it */
                SCIP_CALL( SCIPexprtreeAddVars(tree, 1, &mvar) );
                idx = tree->nvars - 1;
-               SCIP_CALL( SCIPhashmapInsert(varhash, (void*)mvar, (void*)(size_t)idx) );
+               SCIP_CALL( SCIPhashmapInsertInt(varhash, (void*)mvar, idx) );
             }
             else
             {
-               idx = (int)(size_t) SCIPhashmapGetImage(varhash, (void*)mvar);
+               idx = SCIPhashmapGetImageInt(varhash, (void*)mvar);
             }
             assert(idx >= 0 && idx < tree->nvars);
             assert((SCIP_VAR*)tree->vars[idx] == mvar);
@@ -528,7 +529,7 @@ SCIP_RETCODE nlrowLinearCoefChanged(
 
          /* get index of variable in NLPI */
          assert(SCIPhashmapExists(nlp->varhash, var));
-         idx = (int)(size_t)SCIPhashmapGetImage(nlp->varhash, var);
+         idx = SCIPhashmapGetImageInt(nlp->varhash, var);
          assert(idx >= 0 && idx < nlp->nvars);
 
          idx = nlp->varmap_nlp2nlpi[idx];
@@ -581,7 +582,7 @@ SCIP_RETCODE nlrowQuadElemChanged(
          /* get NLPI index of first variable */
          assert(nlrow->quadvars[quadelem.idx1] != NULL);
          assert(SCIPhashmapExists(nlp->varhash, nlrow->quadvars[quadelem.idx1]));
-         elem.idx1 = (int)(size_t)SCIPhashmapGetImage(nlp->varhash, nlrow->quadvars[quadelem.idx1]);
+         elem.idx1 = SCIPhashmapGetImageInt(nlp->varhash, nlrow->quadvars[quadelem.idx1]);
          assert(elem.idx1 >= 0 && elem.idx1 < nlp->nvars);
 
          elem.idx1 = nlp->varmap_nlp2nlpi[elem.idx1];
@@ -590,7 +591,7 @@ SCIP_RETCODE nlrowQuadElemChanged(
          /* get NLPI index of second variable */
          assert(nlrow->quadvars[quadelem.idx2] != NULL);
          assert(SCIPhashmapExists(nlp->varhash, nlrow->quadvars[quadelem.idx2]));
-         elem.idx2 = (int)(size_t)SCIPhashmapGetImage(nlp->varhash, nlrow->quadvars[quadelem.idx2]);
+         elem.idx2 = SCIPhashmapGetImageInt(nlp->varhash, nlrow->quadvars[quadelem.idx2]);
          assert(elem.idx2 >= 0 && elem.idx2 < nlp->nvars);
 
          elem.idx2 = nlp->varmap_nlp2nlpi[elem.idx2];
@@ -665,7 +666,7 @@ SCIP_RETCODE nlrowExprtreeChanged(
                assert(SCIPvarIsActive(var)); /* at this point, there should be only active variables in the row */
 
                assert(SCIPhashmapExists(nlp->varhash, var));
-               nlinidxs[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
+               nlinidxs[i] = nlp->varmap_nlp2nlpi[SCIPhashmapGetImageInt(nlp->varhash, var)];
             }
 
             SCIP_CALL( SCIPnlpiChgExprtree(nlp->solver, nlp->problem, nlrow->nlpiindex, nlinidxs, nlrow->exprtree) );
@@ -1089,7 +1090,7 @@ SCIP_RETCODE nlrowSetupQuadVarsHash(
 
    for( i = 0; i < nlrow->nquadvars; ++i )
    {
-      SCIP_CALL( SCIPhashmapInsert(nlrow->quadvarshash, (void*)nlrow->quadvars[i], (void*)(size_t)i) );
+      SCIP_CALL( SCIPhashmapInsertInt(nlrow->quadvarshash, (void*)nlrow->quadvars[i], i) );
    }
 
    return SCIP_OKAY;
@@ -1902,7 +1903,7 @@ SCIP_RETCODE nlrowRemoveFixedQuadVars(
             nlrow->quadvars[newpos[i]] = nlrow->quadvars[i];
             if( nlrow->quadvarshash != NULL )
             {
-               SCIP_CALL( SCIPhashmapSetImage(nlrow->quadvarshash, (void*)nlrow->quadvars[i], (void*)(size_t)newpos[i]) );
+               SCIP_CALL( SCIPhashmapSetImageInt(nlrow->quadvarshash, (void*)nlrow->quadvars[i], newpos[i]) );
             }
          }
       }
@@ -2573,7 +2574,7 @@ SCIP_RETCODE SCIPnlrowAddQuadVar(
    }
    else
    {
-      SCIP_CALL( SCIPhashmapInsert(nlrow->quadvarshash, (void*)var, (void*)(size_t)(nlrow->nquadvars-1)) );
+      SCIP_CALL( SCIPhashmapInsertInt(nlrow->quadvarshash, (void*)var, nlrow->nquadvars-1) );
    }
    assert(SCIPnlrowSearchQuadVar(nlrow, var) == nlrow->nquadvars-1);
 
@@ -3305,7 +3306,7 @@ int SCIPnlrowSearchQuadVar(
 
    if( nlrow->quadvarshash != NULL )
    {
-      pos = SCIPhashmapExists(nlrow->quadvarshash, var) ? (int)(size_t)SCIPhashmapGetImage(nlrow->quadvarshash, var) : -1;
+      pos = SCIPhashmapExists(nlrow->quadvarshash, var) ? SCIPhashmapGetImageInt(nlrow->quadvarshash, var) : -1;
    }
    else
    {
@@ -3676,7 +3677,7 @@ SCIP_RETCODE nlpUpdateVarBounds(
       return SCIP_OKAY;
 
    /* get position of variable in NLP */
-   pos = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
+   pos = SCIPhashmapGetImageInt(nlp->varhash, var);
 
    /* if variable not in NLPI yet, nothing to do */
    if( nlp->varmap_nlp2nlpi[pos] == -1 )
@@ -3740,7 +3741,7 @@ SCIP_RETCODE nlpUpdateObjCoef(
    }
 
    /* get position of variable in NLP and objective coefficient */
-   pos  = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
+   pos  = SCIPhashmapGetImageInt(nlp->varhash, var);
    assert(nlp->varmap_nlp2nlpi[pos] == -1 || nlp->solver != NULL);
 
    /* actually we only need to remember flushing the objective if we also have an NLPI */
@@ -3810,7 +3811,7 @@ SCIP_RETCODE nlpAddVars(
 
       nlp->vars[nlp->nvars+i]            = var;
       nlp->varmap_nlp2nlpi[nlp->nvars+i] = -1;
-      SCIP_CALL( SCIPhashmapInsert(nlp->varhash, var, (void*) (size_t) (nlp->nvars+i)) );
+      SCIP_CALL( SCIPhashmapInsertInt(nlp->varhash, var, nlp->nvars+i) );
 
       nlp->varlbdualvals[nlp->nvars+i]   = 0.0;
       nlp->varubdualvals[nlp->nvars+i]   = 0.0;
@@ -3870,7 +3871,7 @@ SCIP_RETCODE nlpMoveVar(
    if( oldpos == newpos )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPhashmapSetImage(nlp->varhash, nlp->vars[oldpos], (void*) (size_t) newpos) );
+   SCIP_CALL( SCIPhashmapSetImageInt(nlp->varhash, nlp->vars[oldpos], newpos) );
    nlp->vars[newpos]            = nlp->vars[oldpos];
    nlp->varmap_nlp2nlpi[newpos] = nlp->varmap_nlp2nlpi[oldpos];
    nlp->varlbdualvals[newpos]   = nlp->varlbdualvals[oldpos];
@@ -4039,7 +4040,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
          assert(SCIPvarIsActive(var)); /* at this point, there should be only active variables in the row */
 
          assert(SCIPhashmapExists(nlp->varhash, var));
-         (*linidxs)[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
+         (*linidxs)[i] = nlp->varmap_nlp2nlpi[SCIPhashmapGetImageInt(nlp->varhash, var)];
          assert((*linidxs)[i] >= 0);
       }
    }
@@ -4055,8 +4056,11 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       assert(nlrow->nquadelems  > 0);
       assert(nlrow->quadelems   != NULL);
 
-      /* compute mapping of variable indices quadratic term -> NLPI */
+      /* allocate memory */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, quadelems, nlrow->nquadelems) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &quadvarsidx, nlrow->nquadvars) );
+
+      /* compute mapping of variable indices quadratic term -> NLPI */
       for( i = 0; i < nlrow->nquadvars; ++i )
       {
          var = nlrow->quadvars[i];
@@ -4064,11 +4068,10 @@ SCIP_RETCODE nlpSetupNlpiIndices(
          assert(SCIPvarIsActive(var)); /* at this point, there should be only active variables in the row */
 
          assert(SCIPhashmapExists(nlp->varhash, var));
-         quadvarsidx[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
+         quadvarsidx[i] = nlp->varmap_nlp2nlpi[SCIPhashmapGetImageInt(nlp->varhash, var)];
       }
 
       /* compute quad elements using NLPI indices */
-      SCIP_CALL( SCIPsetAllocBufferArray(set, quadelems, nlrow->nquadelems) );
       for( i = 0; i < nlrow->nquadelems; ++i )
       {
          assert(nlrow->quadelems[i].idx1 >= 0);
@@ -4109,7 +4112,7 @@ SCIP_RETCODE nlpSetupNlpiIndices(
          assert(SCIPvarIsActive(var)); /* at this point, there should be only active variables in the row */
 
          assert(SCIPhashmapExists(nlp->varhash, var));
-         (*nlinidxs)[i] = nlp->varmap_nlp2nlpi[(size_t) (void*) SCIPhashmapGetImage(nlp->varhash, var)];
+         (*nlinidxs)[i] = nlp->varmap_nlp2nlpi[SCIPhashmapGetImageInt(nlp->varhash, var)];
       }
    }
    else
@@ -4484,28 +4487,28 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
          nlidxs, exprtrees,
          names) );
 
-   for( c = 0; c < nlp->nunflushednlrowadd; ++c )
+   for( c = nlp->nunflushednlrowadd - 1; c >= 0 ; --c )
    {
-      if( linidxs[c] != NULL )
-         SCIPsetFreeBufferArray(set, &linidxs[c]);
-      if( quadelems[c] != NULL )
-         SCIPsetFreeBufferArray(set, &quadelems[c]);
       if( nlidxs[c] != NULL )
          SCIPsetFreeBufferArray(set, &nlidxs[c]);
+      if( quadelems[c] != NULL )
+         SCIPsetFreeBufferArray(set, &quadelems[c]);
+      if( linidxs[c] != NULL )
+         SCIPsetFreeBufferArray(set, &linidxs[c]);
    }
 
 #if ADDNAMESTONLPI
    SCIPsetFreeBufferArray(set, &names);
 #endif
-   SCIPsetFreeBufferArray(set, &lhss);
-   SCIPsetFreeBufferArray(set, &rhss);
-   SCIPsetFreeBufferArray(set, &nlinvars);
-   SCIPsetFreeBufferArray(set, &linidxs);
-   SCIPsetFreeBufferArray(set, &lincoefs);
-   SCIPsetFreeBufferArray(set, &nquadelems);
-   SCIPsetFreeBufferArray(set, &quadelems);
-   SCIPsetFreeBufferArray(set, &nlidxs);
    SCIPsetFreeBufferArray(set, &exprtrees);
+   SCIPsetFreeBufferArray(set, &nlidxs);
+   SCIPsetFreeBufferArray(set, &quadelems);
+   SCIPsetFreeBufferArray(set, &nquadelems);
+   SCIPsetFreeBufferArray(set, &lincoefs);
+   SCIPsetFreeBufferArray(set, &linidxs);
+   SCIPsetFreeBufferArray(set, &nlinvars);
+   SCIPsetFreeBufferArray(set, &rhss);
+   SCIPsetFreeBufferArray(set, &lhss);
 
    nlp->nunflushednlrowadd = 0;
 
@@ -4592,8 +4595,8 @@ SCIP_RETCODE nlpFlushVarAdditions(
 #if ADDNAMESTONLPI
    SCIPsetFreeBufferArray(set, &names);
 #endif
-   SCIPsetFreeBufferArray(set, &lbs);
    SCIPsetFreeBufferArray(set, &ubs);
+   SCIPsetFreeBufferArray(set, &lbs);
 
    nlp->nunflushedvaradd = 0;
 
@@ -4653,8 +4656,8 @@ SCIP_RETCODE nlpFlushObjective(
          NULL, NULL,
          0.0) );
 
-   SCIPsetFreeBufferArray(set, &linindices);
    SCIPsetFreeBufferArray(set, &lincoefs);
+   SCIPsetFreeBufferArray(set, &linindices);
 
    nlp->objflushed = TRUE;
 
@@ -4674,6 +4677,8 @@ SCIP_RETCODE nlpSolve(
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
+   SCIP_Real sciptimelimit;
+   SCIP_Real timeleft;
    int i;
 
    assert(nlp    != NULL);
@@ -4721,6 +4726,11 @@ SCIP_RETCODE nlpSolve(
    /* set NLP tolerances to current SCIP primal and dual feasibility tolerance */
    SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_FEASTOL, SCIPsetFeastol(set)) );
    SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_RELOBJTOL, SCIPsetDualfeastol(set)) );
+
+   /* set the NLP timelimit to the remaining time */
+   SCIP_CALL( SCIPsetGetRealParam(set, "limits/time", &sciptimelimit) );
+   timeleft = sciptimelimit - SCIPclockGetTime(stat->solvingtime);
+   SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_TILIM, MAX(0.0, timeleft)) );
 
    /* let NLP solver do his work */
    SCIPclockStart(stat->nlpsoltime, set);
@@ -5402,7 +5412,7 @@ SCIP_RETCODE SCIPnlpDelVar(
       return SCIP_ERROR;
    }
 
-   varpos = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
+   varpos = SCIPhashmapGetImageInt(nlp->varhash, var);
 
    SCIP_CALL( nlpDelVarPos(nlp, blkmem, set, eventqueue, lp, varpos) );
 
@@ -5831,8 +5841,9 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
       for( i = 0; i < nlrow->nquadvars; ++i )
       {
          assert(SCIPhashmapExists(nlp->varhash, (void*)nlrow->quadvars[i]));
-         varidx = (int)(size_t) SCIPhashmapGetImage(nlp->varhash, (void*)nlrow->quadvars[i]);
+         varidx = SCIPhashmapGetImageInt(nlp->varhash, (void*)nlrow->quadvars[i]);
          assert(varidx < nlp->nvars);
+         assert(nlcount != NULL);
          ++nlcount[varidx];  /*lint !e613 */
       }
 
@@ -5852,8 +5863,9 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
             if( nlrow->quadvarshash != NULL && SCIPhashmapExists(nlrow->quadvarshash, (void*)exprtreevars[i]) )  /*lint !e613 */
                continue;
 
-            varidx = (int)(size_t) SCIPhashmapGetImage(nlp->varhash, (void*)exprtreevars[i]);  /*lint !e613 */
+            varidx = SCIPhashmapGetImageInt(nlp->varhash, (void*)exprtreevars[i]);  /*lint !e613 */
             assert(varidx < nlp->nvars);
+            assert(nlcount != NULL);
             ++nlcount[varidx];  /*lint !e613 */
          }
       }
@@ -6236,7 +6248,7 @@ SCIP_RETCODE SCIPnlpChgVarObjDive(
    assert(nlp->problem != NULL);
 
    /* get position of variable in NLPI problem */
-   pos = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
+   pos = SCIPhashmapGetImageInt(nlp->varhash, var);
    pos = nlp->varmap_nlp2nlpi[pos];
    assert(pos >= 0);
 
@@ -6293,7 +6305,7 @@ SCIP_RETCODE SCIPnlpChgVarBoundsDive(
    assert(nlp->problem != NULL);
 
    /* get position of variable in NLPI problem */
-   pos = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
+   pos = SCIPhashmapGetImageInt(nlp->varhash, var);
    pos = nlp->varmap_nlp2nlpi[pos];
    assert(pos >= 0);
 
@@ -6334,7 +6346,7 @@ SCIP_RETCODE SCIPnlpChgVarsBoundsDive(
       assert(SCIPhashmapExists(nlp->varhash, vars[i]));  /*lint !e613*/
 
       /* get position of variable in NLPI problem */
-      poss[i] = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, vars[i]);   /*lint !e613*/
+      poss[i] = SCIPhashmapGetImageInt(nlp->varhash, vars[i]);   /*lint !e613*/
       poss[i] = nlp->varmap_nlp2nlpi[poss[i]];
       assert(poss[i] >= 0);
    }

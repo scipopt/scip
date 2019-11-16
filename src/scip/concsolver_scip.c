@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,7 +51,6 @@
 #include <string.h>
 
 /* event handler for synchronization */
-
 #define EVENTHDLR_NAME         "sync"
 #define EVENTHDLR_DESC         "event handler for synchronization of concurrent scip sovlers"
 
@@ -88,8 +87,6 @@ SCIP_DECL_EVENTFREE(eventFreeSync)
 
    return SCIP_OKAY;
 }
-
-
 
 /** initialization method of event handler (called after problem was transformed) */
 static
@@ -208,7 +205,7 @@ SCIP_RETCODE disableConflictingDualReductions(
    if( !commvarbnds )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowdualreds", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowstrongdualreds", FALSE) );
    return SCIP_OKAY;
 }
 
@@ -258,7 +255,8 @@ SCIP_RETCODE initConcsolver(
    /* create the concurrent solver's SCIP instance and set up the problem */
    SCIP_CALL( SCIPcreate(&data->solverscip) );
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(data->solverscip), data->nvars) );
-   SCIP_CALL( SCIPcopy(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver), TRUE, FALSE, FALSE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver), TRUE, FALSE, FALSE,
+         FALSE, &valid) );
    assert(valid);
 
    /* allocate memory for the arrays to store the variable mapping */
@@ -270,8 +268,29 @@ SCIP_RETCODE initConcsolver(
    {
       SCIP_VAR* var;
       var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      assert(var != NULL);
       varperm[SCIPvarGetIndex(var)] = i;
       data->vars[i] = var;
+   }
+
+   if( SCIPgetNSols(scip) != 0 )
+   {
+      SCIP_Bool stored;
+      SCIP_Real* solvals;
+      SCIP_SOL* sol = SCIPgetBestSol(scip);
+      SCIP_SOL* solversol;
+
+      SCIP_CALL( SCIPallocBufferArray(data->solverscip, &solvals, data->nvars) );
+
+      SCIP_CALL( SCIPgetSolVals(scip, sol, data->nvars, vars, solvals) );
+      SCIP_CALL( SCIPcreateSol(data->solverscip, &solversol, NULL) );
+      SCIP_CALL( SCIPsetSolVals(data->solverscip, solversol, data->nvars, data->vars, solvals) );
+
+      SCIPfreeBufferArray(data->solverscip, &solvals);
+
+      SCIP_CALL( SCIPaddSol(data->solverscip, solversol, &stored) );
+
+      assert(stored);
    }
 
    /* create the concurrent data structure for the concurrent solver's SCIP */
@@ -289,7 +308,7 @@ SCIP_RETCODE initConcsolver(
    return SCIP_OKAY;
 }
 
-/* creates an instance of a concurrent SCIP solver */
+/** creates an instance of a concurrent SCIP solver */
 static
 SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
 {
@@ -518,6 +537,7 @@ static
 SCIP_DECL_CONCSOLVEREXEC(concsolverScipExec)
 {
    SCIP_CONCSOLVERDATA* data;
+
    assert(concsolver != NULL);
 
    data = SCIPconcsolverGetData(concsolver);
@@ -723,6 +743,7 @@ SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
    )
 {
    SCIP_CONCSOLVERTYPEDATA* data;
+
    assert(scip != NULL);
 
    /* include concurrent solvers for SCIP for all emphasis settings and without an emphasis setting.

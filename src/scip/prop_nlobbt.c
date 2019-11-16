@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_nlobbt.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  nlobbt propagator
  * @author Benjamin Mueller
  */
@@ -230,7 +231,7 @@ SCIP_RETCODE filterCands(
       var = propdata->nlpivars[i];
       assert(var != NULL && SCIPhashmapExists(propdata->var2nlpiidx, (void*)var));
 
-      varidx = (int)(size_t)SCIPhashmapGetImage(propdata->var2nlpiidx, (void*)var);
+      varidx = SCIPhashmapGetImageInt(propdata->var2nlpiidx, (void*)var);
       assert(SCIPgetVars(scip)[varidx] == var);
       val = primal[varidx];
 
@@ -585,7 +586,7 @@ SCIP_RETCODE applyNlobbt(
 
       /* get index of var in the nlpi */
       assert(SCIPhashmapExists(propdata->var2nlpiidx, (void*)var) );
-      varidx = (int)(size_t)SCIPhashmapGetImage(propdata->var2nlpiidx, (void*)var);
+      varidx = SCIPhashmapGetImageInt(propdata->var2nlpiidx, (void*)var);
       assert(var == SCIPgetVars(scip)[varidx]);
 
       /* case: minimize var */
@@ -681,7 +682,7 @@ SCIP_DECL_PROPEXEC(propExecNlobbt)
    assert(propdata != NULL);
 
    if( propdata->skipprop || SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip)
-      || SCIPinProbing(scip) || SCIPinDive(scip) || !SCIPallowObjProp(scip) || SCIPgetNNlpis(scip) == 0 )
+      || SCIPinProbing(scip) || SCIPinDive(scip) || !SCIPallowWeakDualReds(scip) || SCIPgetNNlpis(scip) == 0 )
    {
       SCIPdebugMsg(scip, "skip nlobbt propagator\n");
       return SCIP_OKAY;

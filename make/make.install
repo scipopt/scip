@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -30,7 +30,7 @@ install:	installheaders installlibs installbinary
 installheaders:
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP headers into INSTALLDIR <$(INSTALLDIR)>"
-		@-install -m 755 -d $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
+		@-install -m 755 -d $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 		@-install -m 644 -p $(SCIPPLUGININCSRC) $(INSTALLDIR)/$(INCLUDEDIR)/scip/
 		@-install -m 644 -p $(SRCDIR)/scip/*.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
 		@-install -m 644 -p $(OBJSCIPINCSRC) $(INSTALLDIR)/$(INCLUDEDIR)/objscip/
@@ -38,6 +38,7 @@ ifneq ($(INSTALLDIR),)
 		@-install -m 644 -p $(SRCDIR)/nlpi/*.h $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/
 		@-install -m 644 -p $(SRCDIR)/blockmemshell/*.h $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/
 		@-install -m 644 -p $(SRCDIR)/dijkstra/*.h $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/
+		@-install -m 644 -p $(SRCDIR)/symmetry/*.h $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/
 		@-install -m 644 -p $(SRCDIR)/tclique/*.h $(INSTALLDIR)/$(INCLUDEDIR)/tclique/
 		@-install -m 644 -p $(SRCDIR)/xml/*.h $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 else
@@ -110,11 +111,13 @@ ifeq ($(DELHEADERS), true)
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/*.h
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/*.h
+		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/
+		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/*.h
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/tclique/
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/tclique/*.h
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/xml/*.h
-		@-rmdir $(INSTALLDIR)/$(INCLUDEDIR)/scip $(INSTALLDIR)/$(INCLUDEDIR)/objscip $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
+		@-rmdir $(INSTALLDIR)/$(INCLUDEDIR)/scip $(INSTALLDIR)/$(INCLUDEDIR)/objscip $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 else
 		@echo "-> keeping scip headers under <$(INSTALLDIR)/$(INCLUDEDIR)>; rerun with 'DELHEADERS=true' to force deletion"
 endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpioracle.c
+ * @ingroup OTHER_CFILES
  * @brief   implementation of NLPI oracle interface
  * @author  Stefan Vigerske
  *
@@ -1191,7 +1192,7 @@ SCIP_RETCODE hessLagAddExprtree(
 /** prints a name, if available, makes sure it has not more than 64 characters, and adds a unique prefix if the longnames flag is set */
 static
 void printName(
-   char*                 buffer,             /**< buffer to print to, has to be not NULL */
+   char*                 buffer,             /**< buffer to print to, has to be not NULL and should be at least 65 bytes */
    char*                 name,               /**< name, or NULL */
    int                   idx,                /**< index of var or cons which the name corresponds to */
    char                  prefix,             /**< a letter (typically 'x' or 'e') to distinguish variable and equation names, if names[idx] is not available */
@@ -1204,19 +1205,22 @@ void printName(
    if( longnames )
    {
       if( name != NULL )
-         sprintf(buffer, "%c%05d%.*s%s", prefix, idx, suffix ? (int)(57-strlen(suffix)) : 57, name, suffix ? suffix : "");
+         (void) SCIPsnprintf(buffer, 64, "%c%05d%.*s%s", prefix, idx, suffix ? (int)(57-strlen(suffix)) : 57, name, suffix ? suffix : "");
       else
-         sprintf(buffer, "%c%05d", prefix, idx);
+         (void) SCIPsnprintf(buffer, 64, "%c%05d", prefix, idx);
    }
    else
    {
       if( name != NULL )
       {
          assert(strlen(name) + (suffix ? strlen(suffix) : 0) <= 64);
-         sprintf(buffer, "%s%s", name, suffix ? suffix : "");
+         (void) SCIPsnprintf(buffer, 64, "%s%s", name, suffix ? suffix : "");
       }
       else
-         sprintf(buffer, "%c%d%s", prefix, idx, suffix ? suffix : "");
+      {
+         assert(1 + 5 + (suffix ? strlen(suffix) : 0) <= 64);
+         (void) SCIPsnprintf(buffer, 64, "%c%d%s", prefix, idx, suffix ? suffix : "");
+      }
    }
 }
 
@@ -1867,6 +1871,10 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       {
          /* constraint should not be deleted and is kept on position c */
          delstats[c] = c;
+
+         if( c == lastgood )
+            break;
+
          continue;
       }
       assert(delstats[c] == 1); /* constraint should be deleted */

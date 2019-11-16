@@ -65,11 +65,15 @@ def formatsection((section, items)):
    '''
    returns a fully formatted array to represent an entire section together with its items
    '''
+   sectionlabel = "faq_{}".format(re.sub(r'[^a-zA-Z]', '', section).lower())
    return """
           array(
              'title'=>%s,
+             'label'=>%s,
              'content'=>array(%s),
-             )""" % (repr(section), ",\n".join(map(formatitem, items.__iter__())))
+             )""" % (repr(section),
+                     repr(sectionlabel),
+                     ",\n".join(map(formatitem, items.__iter__())))
 
 def formatallsections(sections, sectionitems):
    '''

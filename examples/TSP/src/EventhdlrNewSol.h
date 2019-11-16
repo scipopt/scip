@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,11 +23,11 @@
 #ifndef __EVENTHDLRNEWSOL_H__
 #define __EVENTHDLRNEWSOL_H__
 
-
 #include "objscip/objscip.h"
 
 namespace tsp
 {
+
 /** C++ wrapper object for event handlers */
 class EventhdlrNewSol : public scip::ObjEventhdlr
 {
@@ -83,6 +83,5 @@ public:
 }; /*lint !e1712*/
 
 } /* namespace tsp */
-
 
 #endif

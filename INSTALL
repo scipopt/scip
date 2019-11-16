@@ -3,7 +3,7 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -74,6 +74,8 @@ Installation description with Makefile
 For Linux and Mac, reading the section "Brief installation description"
 should usually be enough. If this is not the case, you can find the "Detailed
 installation description" below as well as some examples.
+
+We recommend gcc version 4.8 or later.
 
 
 Content
@@ -194,7 +196,6 @@ Here is what you have to do to get SCIP running:
    - "OPT=opt"         to use optimized compilation mode (default)
    - "OPT=dbg"         to use debug compilation mode
    - "OPT=prf"         to use performance analysis compilation mode
-   - "OPT=opt-gccold"  to use optimized compilation mode and gnu gcc compiler version less than 4.2
 
    - "LPS=spx"         to use SoPlex as LP solver (based on the new interface available since version 2.0, default)
    - "LPS=spx1"        to use SoPlex as LP solver (based on the old interface for versions >= 1.4)

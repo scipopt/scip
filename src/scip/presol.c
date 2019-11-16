@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for presolvers
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -192,7 +193,7 @@ SCIP_RETCODE SCIPpresolCreate(
    assert(desc != NULL);
 
    SCIP_CALL_FINALLY( doPresolCreate(presol, set, messagehdlr, blkmem, name, desc, priority, maxrounds, timing,
-      presolcopy, presolfree, presolinit, presolexit, presolinitpre, presolexitpre, presolexec, presoldata), 
+      presolcopy, presolfree, presolinit, presolexit, presolinitpre, presolexitpre, presolexec, presoldata),
       (void) SCIPpresolFree(presol, set) );
 
    return SCIP_OKAY;

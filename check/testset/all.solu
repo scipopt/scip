@@ -1305,7 +1305,7 @@
 =best=       etamac                               -15.29467564
 =opt=        ethanolh                             -157.5865321
 =opt=        ethanolm                             -157.5865321
-=opt=        ex10                                 100
+=opt=        ex10                                 100.0
 =best=       ex1010-pi                            238.0
 =opt=        ex1221                               7.667180069
 =opt=        ex1222                               1.076543083
@@ -2307,7 +2307,7 @@
 =inf=        markshare_3_3
 =inf=        markshare_3_4
 =inf=        markshare_3_5
-=inf=        markshare_4_0
+=opt=        markshare_4_0                        1.0
 =inf=        markshare_4_1
 =inf=        markshare_4_2
 =inf=        markshare_4_4
@@ -2858,7 +2858,7 @@
 =opt=        neos-633273                          6996841100.0
 =best=       neos-641591                          184385.0
 =opt=        neos-655508                          63015042.0
-=best=       neos-662469                          184385.0
+=opt=        neos-662469                          184380
 =opt=        neos-686190                          6730.0
 =best=       neos-691058                          297.0
 =best=       neos-691073                          297.0
@@ -2929,7 +2929,7 @@
 =opt=        neos-880324                          108.67
 =opt=        neos-881765                          0.0
 =opt=        neos-885086                          -243.0
-=opt=        neos-885524                          12320.1
+=opt=        neos-885524                          12320.092
 =opt=        neos-886822                          28755.0
 =opt=        neos-892255                          14.0
 =opt=        neos-905856                          -6.0
@@ -5067,6 +5067,7 @@
 =opt=        ns1208400                            2.0
 =best=       ns1456591                            988.1413
 =best=       ns1631475                            12300.0
+=opt=        ns1644855                            -1524.33333
 =opt=        ns1648184                            -1231.3175
 =best=       ns1663818                            105.0
 =opt=        ns1671066                            7.6346
@@ -7019,3 +7020,4 @@
 =opt=        mc11                                 11689
 =opt=        k16x240                              10674
 =opt=        ns1952667                            0.0
+=opt=        ns1644855                            -1524.33333333333

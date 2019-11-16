@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** Create default message handler. To free the message handler use SCIPmessagehdlrRelease(). */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateMessagehdlrDefault(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store message handler */
    SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */

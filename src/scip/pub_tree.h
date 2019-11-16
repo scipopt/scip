@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,11 +51,11 @@ extern "C" {
  */
 
 /** node comparator for best lower bound */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPnodeCompLowerbound);
 
 /** returns the set of variable branchings that were performed in the parent node to create this node */
-EXTERN
+SCIP_EXPORT
 void SCIPnodeGetParentBranchings(
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR**            branchvars,         /**< array of variables on which the branching has been performed in the parent node */
@@ -67,7 +67,7 @@ void SCIPnodeGetParentBranchings(
    );
 
 /** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node */
-EXTERN
+SCIP_EXPORT
 void SCIPnodeGetAncestorBranchings(
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
@@ -79,7 +79,7 @@ void SCIPnodeGetAncestorBranchings(
    );
 
 /** returns the set of variable branchings that were performed between the given @p node and the given @p parent node. */
-EXTERN
+SCIP_EXPORT
 void SCIPnodeGetAncestorBranchingsPart(
    SCIP_NODE*            node,               /**< node data */
    SCIP_NODE*            parent,             /**< node data */
@@ -92,7 +92,7 @@ void SCIPnodeGetAncestorBranchingsPart(
    );
 
 /** outputs the path into given file stream in GML format */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPnodePrintAncestorBranchings(
    SCIP_NODE*            node,               /**< node data */
    FILE*                 file                /**< file to output the path */
@@ -101,7 +101,7 @@ SCIP_RETCODE SCIPnodePrintAncestorBranchings(
 /** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node
  *  sorted by the nodes, starting from the current node going up to the root
  */
-EXTERN
+SCIP_EXPORT
 void SCIPnodeGetAncestorBranchingPath(
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
@@ -120,14 +120,14 @@ void SCIPnodeGetAncestorBranchingPath(
 
 
 /** checks for two nodes whether they share the same root path, i.e., whether one is an ancestor of the other */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPnodesSharePath(
    SCIP_NODE*            node1,              /**< node data */
    SCIP_NODE*            node2               /**< node data */
    );
 
 /** finds the common ancestor node of two given nodes */
-EXTERN
+SCIP_EXPORT
 SCIP_NODE* SCIPnodesGetCommonAncestor(
    SCIP_NODE*            node1,              /**< node data */
    SCIP_NODE*            node2               /**< node data */
@@ -135,38 +135,38 @@ SCIP_NODE* SCIPnodesGetCommonAncestor(
 
 
 /** gets the type of the node */
-EXTERN
+SCIP_EXPORT
 SCIP_NODETYPE SCIPnodeGetType(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets successively assigned number of the node */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPnodeGetNumber(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets the depth of the node */
-EXTERN
+SCIP_EXPORT
 int SCIPnodeGetDepth(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets the lower bound of the node */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPnodeGetLowerbound(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets the estimated value of the best feasible solution in subtree of the node */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPnodeGetEstimate(
    SCIP_NODE*            node                /**< node */
    );
 
 
 /** gets the reoptimization type of a node */
-EXTERN
+SCIP_EXPORT
 SCIP_REOPTTYPE SCIPnodeGetReopttype(
    SCIP_NODE*            node                /**< node */
    );
@@ -174,27 +174,27 @@ SCIP_REOPTTYPE SCIPnodeGetReopttype(
 /** gets the unique id to identify the node during reoptimization; id is 0 if the node is the root or not part of the
  * reoptimization tree
  */
-EXTERN
+SCIP_EXPORT
 unsigned int SCIPnodeGetReoptID(
    SCIP_NODE*            node                /**< node */
    );
 
 /** sets the reoptimization type of the node */
-EXTERN
+SCIP_EXPORT
 void SCIPnodeSetReopttype(
    SCIP_NODE*            node,               /**< node */
    SCIP_REOPTTYPE        reopttype           /**< reoptimization type */
    );
 
 /** sets a unique id to identify the node during reoptimization */
-EXTERN
+SCIP_EXPORT
 void SCIPnodeSetReoptID(
    SCIP_NODE*            node,               /**< node */
    unsigned int          id                  /**< unique id */
    );
 
 /** counts the number of bound changes due to branching, constraint propagation, and propagation */
-EXTERN
+SCIP_EXPORT
 void SCIPnodeGetNDomchg(
    SCIP_NODE*            node,               /**< node */
    int*                  nbranchings,        /**< pointer to store number of branchings (or NULL if not needed) */
@@ -205,19 +205,19 @@ void SCIPnodeGetNDomchg(
 /** gets the domain change information of the node, i.e., the information about the differences in the
  *  variables domains to the parent node
  */
-EXTERN
+SCIP_EXPORT
 SCIP_DOMCHG* SCIPnodeGetDomchg(
    SCIP_NODE*            node                /**< node */
    );
 
 /** gets the parent node of a node in the branch-and-bound tree, if any */
-EXTERN
+SCIP_EXPORT
 SCIP_NODE* SCIPnodeGetParent(
    SCIP_NODE*            node                /**< node */
    );
 
 /** returns all constraints added to a given node */
-EXTERN
+SCIP_EXPORT
 void SCIPnodeGetAddedConss(
    SCIP_NODE*            node,               /**< node */
    SCIP_CONS**           addedconss,         /**< array to store the constraints */
@@ -226,31 +226,31 @@ void SCIPnodeGetAddedConss(
    );
 
 /** returns the number of added constraints to the given node */
-EXTERN
+SCIP_EXPORT
 int SCIPnodeGetNAddedConss(
    SCIP_NODE*           node
    );
 
 /** returns whether node is in the path to the current node */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPnodeIsActive(
    SCIP_NODE*            node                /**< node */
    );
 
 /** returns whether the node is marked to be propagated again */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPnodeIsPropagatedAgain(
    SCIP_NODE*            node                /**< node data */
    );
 
 /* returns the set of changed constraints for a particular node */
-EXTERN
+SCIP_EXPORT
 SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
    SCIP_NODE*            node                /**< node data */
    );
 
 /** return the fixed probability of a node that has been assigned at branching time */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPnodeGetFixedProbability(
    SCIP_NODE*            node                /**< node data structure */
    );

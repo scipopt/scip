@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_rootredcost.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  reduced cost strengthening using root node reduced costs and the cutoff bound
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -598,7 +599,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
       return SCIP_OKAY;
 
    /* do not run if propagation w.r.t. objective is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */

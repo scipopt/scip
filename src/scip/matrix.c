@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   matrix.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for MIP matrix data structure
  * @author Dieter Weninger
  * @author Gerald Gamrath
@@ -40,6 +41,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
+#include "scip/scip_pricer.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_var.h"
 #include "scip/struct_matrix.h"
@@ -433,10 +435,15 @@ SCIP_RETCODE calcActivityBounds(
  * public functions
  */
 
-/** initialize matrix */
+/** initialize matrix by copying all check constraints
+ *
+ *  @note Completeness is checked by testing whether all check constraints are from a list of linear constraint handlers
+ *        that can be represented.
+ */
 SCIP_RETCODE SCIPmatrixCreate(
    SCIP*                 scip,               /**< current scip instance */
    SCIP_MATRIX**         matrixptr,          /**< pointer to constraint matrix object to be initialized */
+   SCIP_Bool             onlyifcomplete,     /**< should matrix creation be skipped if matrix will not be complete? */
    SCIP_Bool*            initialized,        /**< was the initialization successful? */
    SCIP_Bool*            complete            /**< are all constraint represented within the matrix? */
    )
@@ -470,6 +477,10 @@ SCIP_RETCODE SCIPmatrixCreate(
 
    /* return if no variables or constraints are present */
    if( SCIPgetNVars(scip) == 0 || SCIPgetNConss(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* return if pricers are present and the matrix should only be built when complete */
+   if( onlyifcomplete && SCIPgetNActivePricers(scip) != 0 )
       return SCIP_OKAY;
 
    /* loop over all constraint handlers and collect the number of checked constraints */
@@ -508,16 +519,15 @@ SCIP_RETCODE SCIPmatrixCreate(
       }
    }
 
-   /* print warning if we have unsupported constraint types.
-    * we do not abort the matrix creation process here, because
-    * it makes sometimes sense to work on an incomplete
-    * matrix as long as the number of interesting variable
-    * uplocks or downlocks of the matrix and scip
-    * are the same.
+   /* print warning if we have unsupported constraint types; we only abort the matrix creation process if requested,
+    * because it makes sometimes sense to work on an incomplete matrix as long as the number of interesting variable
+    * uplocks or downlocks of the matrix and scip are the same
     */
    if( nconss < nconssall )
    {
       SCIPdebugMsg(scip, "Warning: milp matrix not complete!\n");
+      if( onlyifcomplete )
+         return SCIP_OKAY;
    }
    else
    {
@@ -606,7 +616,7 @@ SCIP_RETCODE SCIPmatrixCreate(
       int nconshdlrconss;
       SCIP_Bool rowadded;
 
-      if( SCIPisStopped(scip) )
+      if( SCIPisStopped(scip) || (onlyifcomplete && !(*complete)) )
       {
          stopped = TRUE;
          break;
@@ -622,6 +632,17 @@ SCIP_RETCODE SCIPmatrixCreate(
          {
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
+
+            /* do not include constraints that can be altered due to column generation */
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *complete = FALSE;
+
+               if( onlyifcomplete )
+                  break;
+
+               continue;
+            }
 
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLinear(scip, cons),
                   SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
@@ -644,6 +665,17 @@ SCIP_RETCODE SCIPmatrixCreate(
 
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
+
+            /* do not include constraints that can be altered due to column generation */
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *complete = FALSE;
+
+               if( onlyifcomplete )
+                  break;
+
+               continue;
+            }
 
             switch( SCIPgetTypeSetppc(scip, cons) )
             {
@@ -681,6 +713,17 @@ SCIP_RETCODE SCIPmatrixCreate(
             cons = conshdlrconss[c];
             assert(SCIPconsIsTransformed(cons));
 
+            /* do not include constraints that can be altered due to column generation */
+            if( SCIPconsIsModifiable(cons) )
+            {
+               *complete = FALSE;
+
+               if( onlyifcomplete )
+                  break;
+
+               continue;
+            }
+
             SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsLogicor(scip, cons),
                   NULL, SCIPgetNVarsLogicor(scip, cons), 1.0, SCIPinfinity(scip), nnonzstmp, &rowadded) );
 
@@ -708,6 +751,17 @@ SCIP_RETCODE SCIPmatrixCreate(
 
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
+
+               /* do not include constraints that can be altered due to column generation */
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *complete = FALSE;
+
+                  if( onlyifcomplete )
+                     break;
+
+                  continue;
+               }
 
                weights = SCIPgetWeightsKnapsack(scip, cons);
                nvars = SCIPgetNVarsKnapsack(scip, cons);
@@ -751,6 +805,17 @@ SCIP_RETCODE SCIPmatrixCreate(
             {
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
+
+               /* do not include constraints that can be altered due to column generation */
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *complete = FALSE;
+
+                  if( onlyifcomplete )
+                     break;
+
+                  continue;
+               }
 
                consvars[0] = SCIPgetVarVarbound(scip, cons);
                consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
@@ -797,6 +862,17 @@ SCIP_RETCODE SCIPmatrixCreate(
             {
                cons = conshdlrconss[c];
                assert(SCIPconsIsTransformed(cons));
+
+               /* do not include constraints that can be altered due to column generation */
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *complete = FALSE;
+
+                  if( onlyifcomplete )
+                     break;
+
+                  continue;
+               }
 
                /* get constraint variables and their amount */
                SCIP_CALL( SCIPgetBinvarsLinking(scip, cons, &curconsvars, &nconsvars) );
@@ -845,6 +921,27 @@ SCIP_RETCODE SCIPmatrixCreate(
    assert(matrix->nrows <= nconss);
    assert(matrix->nnonzs <= nnonzstmp);
 
+   if( *complete )
+   {
+      SCIP_Bool lockmismatch = FALSE;
+
+      for( i = 0; i < matrix->ncols; ++i )
+      {
+         if( SCIPmatrixUplockConflict(matrix, i) || SCIPmatrixDownlockConflict(matrix, i) )
+         {
+            lockmismatch = TRUE;
+            break;
+         }
+      }
+
+      if( lockmismatch )
+      {
+         *complete = FALSE;
+         if( onlyifcomplete )
+            stopped = TRUE;
+      }
+   }
+
    if( !stopped )
    {
       /* calculate row activity bounds */
@@ -854,6 +951,37 @@ SCIP_RETCODE SCIPmatrixCreate(
       SCIP_CALL( setColumnMajorFormat(scip, matrix) );
 
       *initialized = TRUE;
+   }
+   else
+   {
+      SCIPfreeBufferArray(scip, &matrix->maxactivityposinf);
+      SCIPfreeBufferArray(scip, &matrix->maxactivityneginf);
+      SCIPfreeBufferArray(scip, &matrix->minactivityposinf);
+      SCIPfreeBufferArray(scip, &matrix->minactivityneginf);
+      SCIPfreeBufferArray(scip, &matrix->maxactivity);
+      SCIPfreeBufferArray(scip, &matrix->minactivity);
+
+      SCIPfreeMemoryArray(scip, &matrix->isrhsinfinite);
+      SCIPfreeBufferArray(scip, &matrix->cons);
+
+      SCIPfreeBufferArray(scip, &matrix->rhs);
+      SCIPfreeBufferArray(scip, &matrix->lhs);
+      SCIPfreeBufferArray(scip, &matrix->rowmatcnt);
+      SCIPfreeBufferArray(scip, &matrix->rowmatbeg);
+      SCIPfreeBufferArray(scip, &matrix->rowmatind);
+      SCIPfreeBufferArray(scip, &matrix->rowmatval);
+
+      SCIPfreeBufferArray(scip, &matrix->ndownlocks);
+      SCIPfreeBufferArray(scip, &matrix->nuplocks);
+      SCIPfreeBufferArray(scip, &matrix->ub);
+      SCIPfreeBufferArray(scip, &matrix->lb);
+      SCIPfreeBufferArray(scip, &matrix->colmatcnt);
+      SCIPfreeBufferArray(scip, &matrix->colmatbeg);
+      SCIPfreeBufferArray(scip, &matrix->colmatind);
+      SCIPfreeBufferArray(scip, &matrix->colmatval);
+      SCIPfreeBufferArrayNull(scip, &matrix->vars);
+
+      SCIPfreeBuffer(scip, matrixptr);
    }
 
    return SCIP_OKAY;

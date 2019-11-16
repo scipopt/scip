@@ -33,13 +33,13 @@ extern "C" {
 #endif
 
 /** creates event handler for restart event */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /* return an estimation of the final tree size */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetTreesizeEstimation(
    SCIP*                 scip                /**< SCIP data structure */
    );

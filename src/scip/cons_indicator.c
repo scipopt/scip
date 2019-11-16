@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_indicator.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
@@ -423,7 +424,7 @@ while ( FALSE )
 
 /* ---------------- Callback methods of event handlers ---------------- */
 
-/** exec the event handler for getting variable bound changes
+/** execute the event handler for getting variable bound changes
  *
  *  We update the number of variables fixed to be nonzero.
  */
@@ -1025,8 +1026,8 @@ SCIP_RETCODE checkIIS(
             if ( ! SCIPhashmapExists(varhash, var) )
             {
                /* add variable in map */
-               SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) nvars) );
-               assert( nvars == (int) (size_t) SCIPhashmapGetImage(varhash, var) );
+               SCIP_CALL( SCIPhashmapInsertInt(varhash, var, nvars) );
+               assert( nvars == SCIPhashmapGetImageInt(varhash, var) );
                /* SCIPdebugMsg(scip, "Inserted variable <%s> into hashmap (%d).\n", SCIPvarGetName(var), nvars); */
                nvars++;
 
@@ -1086,7 +1087,7 @@ SCIP_RETCODE checkIIS(
                continue;
 
             assert( SCIPhashmapExists(varhash, var) );
-            matind[cnt] = (int) (size_t) SCIPhashmapGetImage(varhash, var);
+            matind[cnt] = SCIPhashmapGetImageInt(varhash, var);
             matval[cnt] = sign * linvals[v];
             ++cnt;
          }
@@ -1173,8 +1174,8 @@ SCIP_RETCODE checkIIS(
             if ( ! SCIPhashmapExists(varhash, var) )
             {
                /* add variable in map */
-               SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) nvars) );
-               assert( nvars == (int) (size_t) SCIPhashmapGetImage(varhash, var) );
+               SCIP_CALL( SCIPhashmapInsertInt(varhash, var, nvars) );
+               assert( nvars == SCIPhashmapGetImageInt(varhash, var) );
                /* SCIPdebugMsg(scip, "Inserted variable <%s> into hashmap (%d).\n", SCIPvarGetName(var), nvars); */
                nvars++;
 
@@ -1229,7 +1230,7 @@ SCIP_RETCODE checkIIS(
             assert( var != NULL );
 
             assert( SCIPhashmapExists(varhash, var) );
-            matind[cnt] = (int) (size_t) SCIPhashmapGetImage(varhash, var);
+            matind[cnt] = SCIPhashmapGetImageInt(varhash, var);
             matval[cnt] = linvals[v];
             ++cnt;
          }
@@ -1748,7 +1749,7 @@ SCIP_RETCODE updateFirstRow(
       {
          int col;
 
-         col = (int) (size_t) SCIPhashmapGetImage(lbhash, var);
+         col = SCIPhashmapGetImageInt(lbhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, -SCIPvarGetLbLocal(var)) );
          if ( ! SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var)) )
             ++cnt;
@@ -1757,7 +1758,7 @@ SCIP_RETCODE updateFirstRow(
       {
          int col;
 
-         col = (int) (size_t) SCIPhashmapGetImage(ubhash, var);
+         col = SCIPhashmapGetImageInt(ubhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, SCIPvarGetUbLocal(var)) );
          if ( ! SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var)) )
             ++cnt;
@@ -1812,13 +1813,13 @@ SCIP_RETCODE updateFirstRowGlobal(
       var = vars[v];
       if ( SCIPhashmapExists(lbhash, var) )
       {
-         col = (int) (size_t) SCIPhashmapGetImage(lbhash, var);
+         col = SCIPhashmapGetImageInt(lbhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, -SCIPvarGetLbGlobal(var)) );
          ++cnt;
       }
       if ( SCIPhashmapExists(ubhash, var) )
       {
-         col = (int) (size_t) SCIPhashmapGetImage(ubhash, var);
+         col = SCIPhashmapGetImageInt(ubhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, SCIPvarGetUbGlobal(var)) );
          ++cnt;
       }
@@ -1888,7 +1889,7 @@ SCIP_RETCODE checkIISlocal(
          {
             int col;
 
-            col = (int) (size_t) SCIPhashmapGetImage(lbhash, var);
+            col = SCIPhashmapGetImageInt(lbhash, var);
             assert( 0 <= col && col < nCols );
             if ( ! SCIPisFeasZero(scip, vector[col]) )
             {
@@ -1906,7 +1907,7 @@ SCIP_RETCODE checkIISlocal(
          {
             int col;
 
-            col = (int) (size_t) SCIPhashmapGetImage(ubhash, var);
+            col = SCIPhashmapGetImageInt(ubhash, var);
             assert( 0 <= col && col < nCols );
             if ( ! SCIPisFeasZero(scip, vector[col]) )
             {
@@ -2051,6 +2052,7 @@ SCIP_RETCODE addAltLPColumn(
    SCIP_CALL( SCIPallocBufferArray(scip, &newrowsslack, 2 * nvars) );
 
    /* store index of column in constraint */
+   /* coverity[var_deref_model] */
    SCIP_CALL( SCIPlpiGetNCols(conshdlrdata->altlp, &ncols) );
    *colindex = ncols;
 
@@ -2077,22 +2079,22 @@ SCIP_RETCODE addAltLPColumn(
          {
             int ind;
 
-            ind = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackhash, var);
+            ind = SCIPhashmapGetImageInt(conshdlrdata->slackhash, var);
 
             if ( ind < INT_MAX )
                matind[cnt] = ind;
             else
             {
                /* correct number of variable already in map/array and remember to add a new row */
-               SCIP_CALL( SCIPhashmapSetImage(conshdlrdata->slackhash, var, (void*) (size_t) conshdlrdata->nrows) );
-               assert( conshdlrdata->nrows == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackhash, var) );
+               SCIP_CALL( SCIPhashmapSetImageInt(conshdlrdata->slackhash, var, conshdlrdata->nrows) );
+               assert( conshdlrdata->nrows == SCIPhashmapGetImageInt(conshdlrdata->slackhash, var) );
                SCIPdebugMsg(scip, "Inserted slack variable <%s> into hashmap (row: %d).\n", SCIPvarGetName(var), conshdlrdata->nrows);
                matind[cnt] = (conshdlrdata->nrows)++;
 
                /* store new variables */
                newrowsslack[nnewrows++] = TRUE;
             }
-            assert( conshdlrdata->nrows >= (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackhash, var) );
+            assert( conshdlrdata->nrows >= SCIPhashmapGetImageInt(conshdlrdata->slackhash, var) );
             matval[cnt++] = sign * vals[v];
          }
       }
@@ -2100,12 +2102,12 @@ SCIP_RETCODE addAltLPColumn(
       {
          /* if variable exists */
          if ( SCIPhashmapExists(conshdlrdata->varhash, var) )
-            matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+            matind[cnt] = SCIPhashmapGetImageInt(conshdlrdata->varhash, var);
          else
          {
             /* add variable in map and array and remember to add a new row */
-            SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) (size_t) conshdlrdata->nrows) );
-            assert( conshdlrdata->nrows == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) );
+            SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->varhash, var, conshdlrdata->nrows) );
+            assert( conshdlrdata->nrows == SCIPhashmapGetImageInt(conshdlrdata->varhash, var) );
             SCIPdebugMsg(scip, "Inserted variable <%s> into hashmap (row: %d).\n", SCIPvarGetName(var), conshdlrdata->nrows);
             matind[cnt] = (conshdlrdata->nrows)++;
 
@@ -2176,14 +2178,14 @@ SCIP_RETCODE addAltLPColumn(
          }
          assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
 
-         matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+         matind[cnt] = SCIPhashmapGetImageInt(conshdlrdata->varhash, var);
          matval[cnt++] = -1.0;
          obj[nnewcols] = 0.0;
          lb[nnewcols] = 0.0;
          ub[nnewcols] = SCIPlpiInfinity(conshdlrdata->altlp);
          ++conshdlrdata->nlbbounds;
 
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->lbhash, var, (void*) (size_t) (ncols + 1 + nnewcols)) );
+         SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->lbhash, var, ncols + 1 + nnewcols) );
          assert( SCIPhashmapExists(conshdlrdata->lbhash, var) );
          SCIPdebugMsg(scip, "Added column for lower bound (%f) of variable <%s> to alternative polyhedron (col: %d).\n",
             val, SCIPvarGetName(var), ncols + 1 + nnewcols);
@@ -2202,14 +2204,14 @@ SCIP_RETCODE addAltLPColumn(
          }
          assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
 
-         matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+         matind[cnt] = SCIPhashmapGetImageInt(conshdlrdata->varhash, var);
          matval[cnt++] = 1.0;
          obj[nnewcols] = 0.0;
          lb[nnewcols] = 0.0;
          ub[nnewcols] = SCIPlpiInfinity(conshdlrdata->altlp);
          ++conshdlrdata->nubbounds;
 
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->ubhash, var, (void*) (size_t) (ncols + 1 + nnewcols)) );
+         SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->ubhash, var, ncols + 1 + nnewcols) );
          assert( SCIPhashmapExists(conshdlrdata->ubhash, var) );
          SCIPdebugMsg(scip, "Added column for upper bound (%f) of variable <%s> to alternative polyhedron (col: %d).\n",
             val, SCIPvarGetName(var), ncols + 1 + nnewcols);
@@ -3013,9 +3015,9 @@ SCIP_RETCODE extendToCover(
             /* create row */
 #ifdef SCIP_DEBUG
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "iis%d", conshdlrdata->niiscutsgen + *nGen);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
 #else
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "", -SCIPinfinity(scip), (SCIP_Real) (sizeIIS - 1), isLocal, FALSE, removable) );
 #endif
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -3136,6 +3138,11 @@ SCIP_RETCODE consdataCreate(
             SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(var), SCIPvarGetType(var));
             return SCIP_ERROR;
          }
+
+         /* the indicator variable must not be multi-aggregated because the constraint handler propagation tries
+          * to tighten its bounds, which is not allowed for multi-aggregated variables
+          */
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
 
          /* catch local bound change events on binary variable */
          if ( linconsactive )
@@ -3528,7 +3535,7 @@ SCIP_RETCODE presolRoundIndicator(
       assert( var != consdata->slackvar );
 
       /* we can replace the slack variable by the active variable if it is also a >= variable */
-      if ( var != consdata->binvar && boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, bound, 0.0) )
+      if ( var != consdata->binvar && boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisEQ(scip, bound, 0.0) )
       {
          assert( SCIPvarIsActive(var) );
          SCIPdebugMsg(scip, "Slack variable <%s> is aggregated or negated and replaced by active variable <%s>.\n", SCIPvarGetName(consdata->slackvar), SCIPvarGetName(var) );
@@ -3740,7 +3747,7 @@ SCIP_RETCODE propIndicator(
             lhs = SCIPgetRhsLinear(scip, consdata->lincons);
             if ( SCIPisInfinity(scip, lhs) )
                lhs = -SCIPinfinity(scip);
-            rhs = SCIPgetRhsLinear(scip, consdata->lincons);
+            rhs = SCIPgetLhsLinear(scip, consdata->lincons);
             if ( SCIPisInfinity(scip, -rhs) )
                rhs = SCIPinfinity(scip);
 
@@ -4061,7 +4068,7 @@ SCIP_RETCODE enforceIndicators(
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
       SCIP_CALL( propIndicator(scip, conss[c], consdata,
-            conshdlrdata->dualreductions && SCIPallowDualReds(scip), conshdlrdata->addopposite,
+            conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip), conshdlrdata->addopposite,
             &cutoff, &cnt) );
       if ( cutoff )
       {
@@ -4575,7 +4582,7 @@ SCIP_RETCODE separatePerspective(
 
             SCIPdebugMsg(scip, "Found cut of lhs value %f > %f.\n", cutval, cutrhs);
             (void) SCIPsnprintf(name, 50, "persp%d", conshdlrdata->nperspcutsgen + *nGen);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), name, -SCIPinfinity(scip), cutrhs, islocal, FALSE, conshdlrdata->removable) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), cutrhs, islocal, FALSE, conshdlrdata->removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, row, cnt, cutvars, cutvals) );
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
@@ -4685,9 +4692,9 @@ SCIP_RETCODE separateIndicators(
                char name[50];
 
                (void) SCIPsnprintf(name, 50, "couple%d", c);
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), name, -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
 #else
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), "", -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
+               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], "", -SCIPinfinity(scip), ub, islocal, FALSE, conshdlrdata->removable) );
 #endif
                SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -5192,7 +5199,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          assert( consdata->slackvar != NULL );
 
          /* insert slack variable into hash */
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->slackhash, consdata->slackvar, (void*) (size_t) (INT_MAX)) );
+         SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->slackhash, consdata->slackvar, INT_MAX) );
          assert( SCIPhashmapExists(conshdlrdata->slackhash, consdata->slackvar) );
          ++conshdlrdata->nslackvars;
       }
@@ -5886,7 +5893,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 
          /* perform one presolving round */
          SCIP_CALL( presolRoundIndicator(scip, conshdlrdata, cons, consdata,
-               conshdlrdata->dualreductions && SCIPallowDualReds(scip), &cutoff, &success, ndelconss, nfixedvars) );
+               conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip), &cutoff, &success, ndelconss, nfixedvars) );
 
          if ( cutoff )
          {
@@ -6007,7 +6014,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
          {
             SCIP_ROW* row;
 
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
             SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
@@ -6389,7 +6396,7 @@ SCIP_DECL_CONSPROP(consPropIndicator)
 
       *result = SCIP_DIDNOTFIND;
 
-      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions && SCIPallowDualReds(scip),
+      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions && SCIPallowStrongDualReds(scip),
             conshdlrdata->addopposite, &cutoff, &cnt) );
 
       if ( cutoff )
@@ -6454,7 +6461,7 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    {
       assert( inferinfo == 2 );
       assert( SCIPisFeasZero(scip, SCIPgetVarUbAtIndex(scip, consdata->slackvar, bdchgidx, FALSE)) );
-      assert( SCIPconshdlrGetData(conshdlr)->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) );
+      assert( SCIPconshdlrGetData(conshdlr)->dualreductions && SCIPallowStrongDualReds(scip) && SCIPallowWeakDualReds(scip) );
       SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
    }
    *result = SCIP_SUCCESS;
@@ -6778,10 +6785,17 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
 
       if ( lincons == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin_%s> or <%s>.\n",
-            name, binvarname, binvarname);
-         *success = FALSE;
-         return SCIP_OKAY;
+         /* if not found - check without indrhs or indlhs */
+         (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+16);
+         lincons = SCIPfindCons(scip, binvarname);
+
+         if( lincons == NULL )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin%s>, <%s> or <%s>.\n",
+               name, posstr+8, posstr+9, posstr+16);
+            *success = FALSE;
+            return SCIP_OKAY;
+         }
       }
    }
 

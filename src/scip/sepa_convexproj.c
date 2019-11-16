@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_convexproj.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  convexproj separator
  * @author Felipe Serrano
  *
@@ -34,6 +35,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_nlp.h"
 #include "scip/pub_sepa.h"
+#include "scip/pub_var.h"
 #include "scip/scip_cut.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
@@ -347,7 +349,7 @@ SCIP_RETCODE setQuadraticObj(
       var = sepadata->nlpivars[i];
       assert(SCIPhashmapExists(sepadata->var2nlpiidx, (void*)var) );
 
-      quadelems[i].idx1 = (int)(size_t)SCIPhashmapGetImage(sepadata->var2nlpiidx, (void*)var);
+      quadelems[i].idx1 = SCIPhashmapGetImageInt(sepadata->var2nlpiidx, (void*)var);
       quadelems[i].idx2 = quadelems[i].idx1;
       quadelems[i].coef = 1.0;
    }
@@ -416,7 +418,7 @@ SCIP_RETCODE separateCuts(
       var = sepadata->nlpivars[i];
       assert(SCIPhashmapExists(sepadata->var2nlpiidx, (void*)var) );
 
-      lininds[i] = (int)(size_t)SCIPhashmapGetImage(sepadata->var2nlpiidx, (void*)var);
+      lininds[i] = SCIPhashmapGetImageInt(sepadata->var2nlpiidx, (void*)var);
       linvals[i] = - 2.0 * SCIPgetSolVal(scip, sol, var);
 
       /* if coefficient is too large, don't separate */
@@ -485,7 +487,7 @@ SCIP_RETCODE separateCuts(
             assert(SCIPhashmapExists(sepadata->var2nlpiidx, (void*)var) );
 
             SCIP_CALL( SCIPsetSolVal(scip, projection, var,
-                     nlpisol[(int)(size_t)SCIPhashmapGetImage(sepadata->var2nlpiidx, (void *)var)]) );
+                     nlpisol[SCIPhashmapGetImageInt(sepadata->var2nlpiidx, (void *)var)]) );
          }
          SCIPdebug( SCIPprintSol(scip, projection, NULL, TRUE) );
 

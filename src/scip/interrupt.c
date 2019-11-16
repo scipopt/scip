@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   interrupt.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for catching the user CTRL-C interrupt
  * @author Tobias Achterberg
  */
@@ -37,7 +38,7 @@ static volatile
 int                      nterms = 0;         /**< static variable counting the number of times that the process received a SIGTERM signal */
 
 
-#ifdef NO_SIGACTION
+#ifdef SCIP_NO_SIGACTION
 typedef void (*SigHdlr)(int);
 
 /** CTRL-C interrupt data */
@@ -108,7 +109,7 @@ void SCIPinterruptCapture(
 
    if( interrupt->nuses == 0 )
    {
-#ifdef NO_SIGACTION
+#ifdef SCIP_NO_SIGACTION
       interrupt->oldsighdlr = signal(SIGINT, interruptHandler);
 #else
       struct sigaction newaction;
@@ -139,7 +140,7 @@ void SCIPinterruptRelease(
    interrupt->nuses--;
    if( interrupt->nuses == 0 )
    {
-#ifdef NO_SIGACTION
+#ifdef SCIP_NO_SIGACTION
       (void)signal(SIGINT, interrupt->oldsighdlr);
 #else
       (void)sigaction(SIGINT, &interrupt->oldsigaction, NULL);

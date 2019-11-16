@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_cnf.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  CNF file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
@@ -236,6 +237,7 @@ SCIP_RETCODE readCnf(
          while( tok != NULL )
          {
             /* parse literal and check for errors */
+            /* coverity[secure_coding] */
             if( sscanf(tok, "%d", &v) != 1 )
             {
                (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid literal <%s>", tok);

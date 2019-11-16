@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2559,6 +2559,11 @@ SCIP_Bool SCIPlpiIsStable(
 
    SCIPdebugMessage("checking for stability: Xpress solstat = %d\n", lpi->solstat);
 
+#ifdef SCIP_DISABLED_CODE
+   /* The following workaround is not needed anymore for SCIP, since it tries to heuristically construct a feasible
+    * solution or automatically resolves the problem if the status is "unbounded"; see SCIPlpGetUnboundedSol().
+    */
+
    /* If the solution status of Xpress is XPRS_LP_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
     * result as instability, s.t. the problem is resolved from scratch
@@ -2573,7 +2578,9 @@ SCIP_Bool SCIPlpiIsStable(
       if( retcode != 0 || pinfeas )
          return FALSE;
    }
-   else if( lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS )
+#endif
+
+   if( lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS )
    {
       /* presolved problem was solved to optimality but infeasibilities were introduced by postsolve */
       return FALSE;
@@ -3040,7 +3047,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3113,7 +3120,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3557,6 +3564,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_OUTPUTLOG, (ival == TRUE) ? 1 : 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
+      assert( ival >= 0 );
+      /* 0 <= ival, 0 stopping immediately */
       ival = MIN(ival, XPRS_MAXINT); /*lint !e685*/
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, ival) );
       break;
@@ -3602,7 +3611,8 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_MAXTIME, &ictrlval) );
-      *dval = (double) ictrlval;
+      /* ictrlval is the negative of the timelimit (see SCIPlpiSetRealpar) */
+      *dval = (double) -ictrlval;
       break;
    case SCIP_LPPAR_MARKOWITZ:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, &dctrlval) );
@@ -3634,31 +3644,51 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      /* Xpress does not pose any restriction on dval, its absolute value is used as tolerance.
+       * For consistency we assert it to be strictly positive.
+       */
+      assert( dval > 0.0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_FEASTOL, dval) );
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      /* Xpress does not pose any restriction on dval,
+       * however for consistency we assert it to be strictly positive.
+       */
+      assert( dval > 0.0 );
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_OPTIMALITYTOL, dval) );
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
+      assert( dval >= 0.0 );
+      /* Xpress poses no restriction on dval
+       * However for consistency we assert it to be nonnegative.
+       */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_BARGAPSTOP, dval) );
       break;
    case SCIP_LPPAR_LPTILIM:
    {
      int ival;
 
-     /* if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit */
-     if (dval >= INT_MAX)
-       ival = 0;
-     else
-       ival = (int) floor(dval);
+     /* From the Xpress documentation:
+      * dval>0   If an integer solution has been found, stop MIP search after dval seconds,
+      *   otherwise continue until an integer solution is finally found.
+      * dval<0   Stop in LP or MIP search after dval seconds.
+      * dval=0   No time limit
+      */
+      assert( dval > 0.0 );
+      if( dval >= INT_MAX )
+         ival = 0;
+      else
+         ival = (int) -floor(dval);
 
-     CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
-     break;
+      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
+      break;
    }
    case SCIP_LPPAR_MARKOWITZ:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, dval) );
       break;
    default:
