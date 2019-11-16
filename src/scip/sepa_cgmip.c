@@ -2180,22 +2180,49 @@ SCIP_RETCODE solveSubscip(
    /* @todo Check whether copying the parameters is useful */
    /* SCIP_CALL( SCIPcopyLimits(origscip, subscip) ); */
 
-   SCIP_CALL( SCIPgetRealParam(subscip, "limits/time", &timelimit) );
-   SCIP_CALL( SCIPgetRealParam(subscip, "limits/memory", &memorylimit) );
-
-   /* reduce time and memory limit if a smaller limit is stored in the separator data */
+   /* determine time limit */
+   SCIP_CALL( SCIPgetRealParam(origscip, "limits/time", &timelimit) );
    if ( sepadata->timelimit < timelimit )
+      timelimit = sepadata->timelimit;
+
+   if ( ! SCIPisInfinity(origscip, timelimit) )
    {
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", sepadata->timelimit) );
+      timelimit -= SCIPgetSolvingTime(origscip);
+      if ( timelimit > 0.0 )
+      {
+         SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+      }
+      else
+      {
+         SCIPdebugMsg(origscip, "Reached timelimit.\n");
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
    }
 
+   /* determine memory limit */
+   SCIP_CALL( SCIPgetRealParam(origscip, "limits/memory", &memorylimit) );
    if ( sepadata->memorylimit < memorylimit )
+      memorylimit = sepadata->memorylimit;
+
+   if ( ! SCIPisInfinity(origscip, memorylimit) )
    {
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memorylimit", sepadata->memorylimit) );
+      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+      memorylimit -= SCIPgetMemUsed(origscip)/1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(origscip)/1048576.0;
+      if ( memorylimit > 0.0 )
+      {
+         SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+      }
+      else
+      {
+         SCIPdebugMsg(origscip, "Reached memorylimit.\n");
+         *success = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
-
-   /* set nodelimit for subproblem */
+   /* set node limit for subproblem */
    if ( sepadata->minnodelimit < 0 || sepadata->maxnodelimit < 0 )
       nodelimit = SCIP_LONGINT_MAX;
    else
