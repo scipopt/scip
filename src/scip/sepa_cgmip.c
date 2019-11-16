@@ -2174,25 +2174,26 @@ SCIP_RETCODE solveSubscip(
 
    SCIP_CALL( SCIPcheckCopyLimits(origscip, success) );
 
-   if ( *success )
-   {
-      SCIP_CALL( SCIPcopyLimits(scip, subscip) );
+   if ( ! *success )
+      return SCIP_OKAY;
 
       SCIP_CALL( SCIPgetRealParam(subscip, "limits/time", &timelimit) );
       SCIP_CALL( SCIPgetRealParam(subscip, "limits/memory", &memorylimit) );
 
-      /* reduce time and memory limit if a smaller limit is stored in the separator data */
-      if ( sepadata->timelimit < timelimit )
-      {
-         SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", sepadata->timelimit) );
-      }
-      if ( sepadata->memorylimit < memorylimit )
-      {
-         SCIP_CALL( SCIPsetRealParam(subscip, "limits/memorylimit", sepadata->memorylimit) );
-      }
+   SCIP_CALL( SCIPgetRealParam(subscip, "limits/time", &timelimit) );
+   SCIP_CALL( SCIPgetRealParam(subscip, "limits/memory", &memorylimit) );
+
+   /* reduce time and memory limit if a smaller limit is stored in the separator data */
+   if ( sepadata->timelimit < timelimit )
+   {
+      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", sepadata->timelimit) );
    }
-   else
-      return SCIP_OKAY;
+
+   if ( sepadata->memorylimit < memorylimit )
+   {
+      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memorylimit", sepadata->memorylimit) );
+   }
+
 
    /* set nodelimit for subproblem */
    if ( sepadata->minnodelimit < 0 || sepadata->maxnodelimit < 0 )
