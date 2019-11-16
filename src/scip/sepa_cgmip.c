@@ -2354,11 +2354,15 @@ SCIP_RETCODE solveSubscip(
       /* solve some more, if a feasible solution was found */
       if ( status == SCIP_STATUS_BESTSOLLIMIT )
       {
-         SCIPdebugMsg(origscip, "Continue solving separation problem ...\n");
+         SCIPdebugMsg(origscip, "Continue solving separation problem (current time: %.2f, nodes: %" SCIP_LONGINT_FORMAT ") ...\n",
+            SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip));
 
          SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", STALLNODELIMIT) );
          retcode = SCIPsolve(subscip);
          SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", -1LL) );
+
+         SCIPdebugMsg(origscip, "Finished solving CG-MIP (dualbound: %g, solving time: %.2f, nodes: %" SCIP_LONGINT_FORMAT ", nodelimit: %"SCIP_LONGINT_FORMAT").\n",
+            SCIPgetDualbound(subscip), SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), nodelimit);
 
          /* errors in solving the subproblem should not kill the overall solving process;
           * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
