@@ -1026,7 +1026,7 @@ SCIP_Real computeObjWeightSize(
  */
 static
 SCIP_RETCODE createSubscip(
-   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 origscip,           /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    CGMIP_MIPDATA*        mipdata             /**< data for sub-MIP */
@@ -1064,13 +1064,13 @@ SCIP_RETCODE createSubscip(
    int minrowsize = INT_MAX;
    int i, j;
 
-   assert( scip != NULL );
+   assert( origscip != NULL );
    assert( sepadata != NULL );
 
    assert( mipdata->subscip == NULL );
 
-   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
-   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+   SCIP_CALL( SCIPgetLPColsData(origscip, &cols, &ncols) );
+   SCIP_CALL( SCIPgetLPRowsData(origscip, &rows, &nrows) );
    assert( ncols > 0 && nrows > 0 );
 
    mipdata->m = 0;
@@ -1099,26 +1099,26 @@ SCIP_RETCODE createSubscip(
       SCIP_CALL( SCIPincludeConshdlrViolatedCut(subscip, mipdata) );
    }
 
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sepa_cgmip separating MIP (%s)", SCIPgetProbName(scip));
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sepa_cgmip separating MIP (%s)", SCIPgetProbName(origscip));
    SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL , NULL , NULL , NULL , NULL , NULL) );
    SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
 
    /* alloc memory for subscipdata elements */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->alpha), ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->fracalpha), ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->coltype), ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->iscomplemented), ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->isshifted), ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->ylhs), ntotalrows) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->yrhs), ntotalrows) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(mipdata->z), 2*ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->alpha), ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->fracalpha), ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->coltype), ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->iscomplemented), ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->isshifted), ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->ylhs), ntotalrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->yrhs), ntotalrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(origscip, &(mipdata->z), 2*ncols) );
 
    /* get temporary storage */
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhs, ntotalrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rhs, ntotalrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lb, ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ub, ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &primsol, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(origscip, &lhs, ntotalrows) );
+   SCIP_CALL( SCIPallocBufferArray(origscip, &rhs, ntotalrows) );
+   SCIP_CALL( SCIPallocBufferArray(origscip, &lb, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(origscip, &ub, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(origscip, &primsol, ncols) );
 
    /* store lhs/rhs for complementing (see below) and compute maximal nonzeros of candidate rows */
    for (i = 0; i < nrows; ++i)
@@ -1131,12 +1131,12 @@ SCIP_RETCODE createSubscip(
 
       val = SCIProwGetLhs(row) - SCIProwGetConstant(row);
       if ( SCIProwIsIntegral(row) )
-         val = SCIPfeasCeil(scip, val); /* row is integral: round left hand side up */
+         val = SCIPfeasCeil(origscip, val); /* row is integral: round left hand side up */
       lhs[i] = val;
 
       val = SCIProwGetRhs(row) - SCIProwGetConstant(row);
       if ( SCIProwIsIntegral(row) )
-         val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side down */
+         val = SCIPfeasFloor(origscip, val); /* row is integral: round right hand side down */
       rhs[i] = val;
 
       /* skip modifiable rows and local rows, unless allowed */
@@ -1155,10 +1155,10 @@ SCIP_RETCODE createSubscip(
       }
 
       /* determine maximal row size: */
-      val = SCIPgetRowLPActivity(scip, row);
-      if ( ! SCIPisInfinity(scip, REALABS(lhs[i])) )
+      val = SCIPgetRowLPActivity(origscip, row);
+      if ( ! SCIPisInfinity(origscip, REALABS(lhs[i])) )
       {
-         if ( ! sepadata->onlyactiverows || SCIPisFeasEQ(scip, val, SCIProwGetLhs(row)) )
+         if ( ! sepadata->onlyactiverows || SCIPisFeasEQ(origscip, val, SCIProwGetLhs(row)) )
          {
             if ( SCIProwGetNLPNonz(row) > maxrowsize )
                maxrowsize = SCIProwGetNLPNonz(row);
@@ -1168,9 +1168,9 @@ SCIP_RETCODE createSubscip(
       }
       else
       {
-         if ( ! SCIPisInfinity(scip, rhs[i]) )
+         if ( ! SCIPisInfinity(origscip, rhs[i]) )
          {
-            if ( ! sepadata->onlyactiverows || SCIPisFeasEQ(scip, val, SCIProwGetRhs(row)) )
+            if ( ! sepadata->onlyactiverows || SCIPisFeasEQ(origscip, val, SCIProwGetRhs(row)) )
             {
                if ( SCIProwGetNLPNonz(row) > maxrowsize )
                   maxrowsize = SCIProwGetNLPNonz(row);
@@ -1187,27 +1187,27 @@ SCIP_RETCODE createSubscip(
    if ( sepadata->useobjub )
    {
       assert( mipdata->ntotalrows == mipdata->nrows + 1 );
-      rhs[mipdata->nrows] = SCIPgetUpperbound(scip);
-      assert( ! SCIPisObjIntegral(scip) || SCIPisFeasIntegral(scip, SCIPgetUpperbound(scip)) );
+      rhs[mipdata->nrows] = SCIPgetUpperbound(origscip);
+      assert( ! SCIPisObjIntegral(origscip) || SCIPisFeasIntegral(origscip, SCIPgetUpperbound(origscip)) );
 
-      if ( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && SCIPgetNObjVars(scip) > maxrowsize )
-         maxrowsize = SCIPgetNObjVars(scip);
-      if ( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && SCIPgetNObjVars(scip) < minrowsize )
-         minrowsize = SCIPgetNObjVars(scip);
+      if ( ! SCIPisInfinity(origscip, SCIPgetUpperbound(origscip)) && SCIPgetNObjVars(origscip) > maxrowsize )
+         maxrowsize = SCIPgetNObjVars(origscip);
+      if ( ! SCIPisInfinity(origscip, SCIPgetUpperbound(origscip)) && SCIPgetNObjVars(origscip) < minrowsize )
+         minrowsize = SCIPgetNObjVars(origscip);
    }
    if ( sepadata->useobjlb )
    {
       assert( mipdata->ntotalrows == mipdata->nrows + 1 );
 
-      if ( SCIPisObjIntegral(scip) )
-         lhs[mipdata->nrows] = SCIPfeasCeil(scip, SCIPgetLowerbound(scip));
+      if ( SCIPisObjIntegral(origscip) )
+         lhs[mipdata->nrows] = SCIPfeasCeil(origscip, SCIPgetLowerbound(origscip));
       else
-         lhs[mipdata->nrows] = SCIPgetLowerbound(scip);
+         lhs[mipdata->nrows] = SCIPgetLowerbound(origscip);
 
-      if ( ! SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) && SCIPgetNObjVars(scip) > maxrowsize )
-         maxrowsize = SCIPgetNObjVars(scip);
-      if ( ! SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) && SCIPgetNObjVars(scip) < minrowsize )
-         minrowsize = SCIPgetNObjVars(scip);
+      if ( ! SCIPisInfinity(origscip, -SCIPgetLowerbound(origscip)) && SCIPgetNObjVars(origscip) > maxrowsize )
+         maxrowsize = SCIPgetNObjVars(origscip);
+      if ( ! SCIPisInfinity(origscip, -SCIPgetLowerbound(origscip)) && SCIPgetNObjVars(origscip) < minrowsize )
+         minrowsize = SCIPgetNObjVars(origscip);
    }
 
    /* store lb/ub for complementing and perform preprocessing */
@@ -1228,20 +1228,20 @@ SCIP_RETCODE createSubscip(
       assert( var != NULL );
 
       primsol[j] = SCIPcolGetPrimsol(col);
-      assert( SCIPisEQ(scip, SCIPgetVarSol(scip, var), primsol[j]) );
+      assert( SCIPisEQ(origscip, SCIPgetVarSol(origscip, var), primsol[j]) );
 
       lb[j] = SCIPvarGetLbGlobal(var);
-      assert( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPcolGetLb(col)) );
+      assert( SCIPisEQ(origscip, SCIPvarGetLbLocal(var), SCIPcolGetLb(col)) );
 
       /* if allowed, try to use stronger local bound */
-      if ( sepadata->allowlocal && SCIPisGT(scip, SCIPvarGetLbLocal(var), lb[j]) )
+      if ( sepadata->allowlocal && SCIPisGT(origscip, SCIPvarGetLbLocal(var), lb[j]) )
          lb[j] = SCIPvarGetLbLocal(var);
 
       ub[j] = SCIPvarGetUbGlobal(var);
-      assert( SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPcolGetUb(col)) );
+      assert( SCIPisEQ(origscip, SCIPvarGetUbLocal(var), SCIPcolGetUb(col)) );
 
       /* if allowed, try to use stronger local bound */
-      if ( sepadata->allowlocal && SCIPisLT(scip, SCIPvarGetUbLocal(var), ub[j]) )
+      if ( sepadata->allowlocal && SCIPisLT(origscip, SCIPvarGetUbLocal(var), ub[j]) )
          ub[j] = SCIPvarGetUbLocal(var);
 
       mipdata->coltype[j] = colPresent;
@@ -1252,7 +1252,7 @@ SCIP_RETCODE createSubscip(
       if ( SCIPcolIsIntegral(col) )
       {
          /* integral variables taking integral values are not interesting - will be substituted out below */
-         if ( ! SCIPisFeasIntegral(scip, primsol[j]) )
+         if ( ! SCIPisFeasIntegral(origscip, primsol[j]) )
          {
             /* possibly convert fractional integral variables to take integral values */
             if ( sepadata->intconvert && ncols >= sepadata->intconvmin )
@@ -1260,15 +1260,15 @@ SCIP_RETCODE createSubscip(
                /* randomly convert variables */
                if ( SCIPrandomGetReal(sepadata->randnumgen, 0.0, 1.0) <= sepadata->intconvfrac )
                {
-                  assert( ! SCIPisInfinity(scip, ub[j]) || ! SCIPisInfinity(scip, -lb[j]) );
+                  assert( ! SCIPisInfinity(origscip, ub[j]) || ! SCIPisInfinity(origscip, -lb[j]) );
 
                   /* if both bounds are finite, take the closer one */
-                  if ( ! SCIPisInfinity(scip, ub[j]) && ! SCIPisInfinity(scip, -lb[j]) )
+                  if ( ! SCIPisInfinity(origscip, ub[j]) && ! SCIPisInfinity(origscip, -lb[j]) )
                   {
-                     assert( SCIPisFeasIntegral(scip, ub[j]) );
-                     assert( SCIPisFeasIntegral(scip, lb[j]) );
-                     assert( SCIPisFeasLT(scip, primsol[j], ub[j]) );
-                     assert( SCIPisFeasGT(scip, primsol[j], lb[j]) );
+                     assert( SCIPisFeasIntegral(origscip, ub[j]) );
+                     assert( SCIPisFeasIntegral(origscip, lb[j]) );
+                     assert( SCIPisFeasLT(origscip, primsol[j], ub[j]) );
+                     assert( SCIPisFeasGT(origscip, primsol[j], lb[j]) );
                      if ( ub[j] - primsol[j] < primsol[j] - lb[j] )
                         primsol[j] = ub[j];
                      else
@@ -1278,16 +1278,16 @@ SCIP_RETCODE createSubscip(
                   else
                   {
                      /* if only lower bound is finite */
-                     if ( ! SCIPisInfinity(scip, -lb[j]) )
+                     if ( ! SCIPisInfinity(origscip, -lb[j]) )
                      {
-                        assert( SCIPisFeasIntegral(scip, lb[j]) );
+                        assert( SCIPisFeasIntegral(origscip, lb[j]) );
                         primsol[j] = lb[j];
                         ++nintconverted;
                      }
                      else
                      {
-                        assert( ! SCIPisInfinity(scip, ub[j]) );
-                        assert( SCIPisFeasIntegral(scip, ub[j]) );
+                        assert( ! SCIPisInfinity(origscip, ub[j]) );
+                        assert( SCIPisFeasIntegral(origscip, ub[j]) );
                         primsol[j] = ub[j];
                         ++nintconverted;
                      }
@@ -1297,7 +1297,7 @@ SCIP_RETCODE createSubscip(
          }
 
          /* integral variables taking integral values are not interesting - will be substituted out below */
-         if ( ! SCIPisFeasIntegral(scip, primsol[j]) )
+         if ( ! SCIPisFeasIntegral(origscip, primsol[j]) )
          {
             /* possibly convert integral variables to be continuous */
             if ( sepadata->contconvert && ncols >= sepadata->contconvmin )
@@ -1319,10 +1319,10 @@ SCIP_RETCODE createSubscip(
       }
 
       /* if integer variable is at its upper bound -> complementing (this also generates a 0 lower bound) */
-      if ( mipdata->coltype[j] == colPresent && SCIPisFeasEQ(scip, primsol[j], ub[j]) )
+      if ( mipdata->coltype[j] == colPresent && SCIPisFeasEQ(origscip, primsol[j], ub[j]) )
       {
-         assert( ! SCIPisInfinity(scip, ub[j]) );
-         SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
+         assert( ! SCIPisInfinity(origscip, ub[j]) );
+         SCIP_CALL( transformColumn(origscip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
          mipdata->iscomplemented[j] = TRUE;
          mipdata->coltype[j] = colAtUb;
          ++nubounds;
@@ -1330,18 +1330,18 @@ SCIP_RETCODE createSubscip(
       else
       {
          /* if a variable has a finite nonzero lower bound -> shift */
-         if ( ! SCIPisInfinity(scip, -lb[j]) )
+         if ( ! SCIPisInfinity(origscip, -lb[j]) )
          {
-            if ( ! SCIPisZero(scip, lb[j]) )
+            if ( ! SCIPisZero(origscip, lb[j]) )
             {
-               SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, -lb[j], 1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
-               assert( SCIPisZero(scip, lb[j]) );
+               SCIP_CALL( transformColumn(origscip, sepadata, mipdata, col, -lb[j], 1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
+               assert( SCIPisZero(origscip, lb[j]) );
                mipdata->isshifted[j] = TRUE;
                ++nshifted;
             }
 
             /* if integer variable is at its lower bound */
-            if ( mipdata->coltype[j] == colPresent && SCIPisZero(scip, primsol[j]) )
+            if ( mipdata->coltype[j] == colPresent && SCIPisZero(origscip, primsol[j]) )
             {
                mipdata->coltype[j] = colAtLb;
                ++nlbounds;
@@ -1350,16 +1350,16 @@ SCIP_RETCODE createSubscip(
          else
          {
             /* lower bound is minus-infinity -> check whether upper bound is finite */
-            if ( ! SCIPisInfinity(scip, ub[j]) )
+            if ( ! SCIPisInfinity(origscip, ub[j]) )
             {
                /* complement variable */
-               SCIP_CALL( transformColumn(scip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
-               assert( SCIPisZero(scip, lb[j]) );
+               SCIP_CALL( transformColumn(origscip, sepadata, mipdata, col, ub[j], -1.0, lhs, rhs, &(lb[j]), &(ub[j]), &(primsol[j])) );
+               assert( SCIPisZero(origscip, lb[j]) );
                mipdata->iscomplemented[j] = TRUE;
                ++ncomplemented;
 
                /* if integer variable is at its lower bound */
-               if ( mipdata->coltype[j] == colPresent && SCIPisZero(scip, primsol[j]) )
+               if ( mipdata->coltype[j] == colPresent && SCIPisZero(origscip, primsol[j]) )
                {
                   mipdata->coltype[j] = colAtLb;
                   ++nlbounds;
@@ -1368,27 +1368,27 @@ SCIP_RETCODE createSubscip(
          }
       }
 
-      assert( SCIPisFeasLE(scip, lb[j], primsol[j]) );
-      assert( SCIPisFeasLE(scip, primsol[j], ub[j]) );
+      assert( SCIPisFeasLE(origscip, lb[j], primsol[j]) );
+      assert( SCIPisFeasLE(origscip, primsol[j], ub[j]) );
    }
 
 #ifndef NDEBUG
    if ( sepadata->intconvert && ncols >= sepadata->intconvmin )
    {
-      SCIPdebugMsg(scip, "Converted %u fractional integral variables to have integral value.\n", nintconverted);
+      SCIPdebugMsg(origscip, "Converted %u fractional integral variables to have integral value.\n", nintconverted);
    }
    if ( sepadata->contconvert && ncols >= sepadata->contconvmin )
    {
-      SCIPdebugMsg(scip, "Converted %u integral variables to be continuous.\n", ncontconverted);
+      SCIPdebugMsg(origscip, "Converted %u integral variables to be continuous.\n", ncontconverted);
    }
 #endif
-   SCIPdebugMsg(scip, "original variables: %d integral, %d continuous, %u shifted, %u complemented, %u at lb, %u at ub\n",
-      SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip), SCIPgetNContVars(scip),
+   SCIPdebugMsg(origscip, "Original variables: %d integral, %d continuous, %u shifted, %u complemented, %u at lb, %u at ub\n",
+      SCIPgetNBinVars(origscip) + SCIPgetNIntVars(origscip) + SCIPgetNImplVars(origscip), SCIPgetNContVars(origscip),
       nshifted, ncomplemented, nlbounds, nubounds);
 
    /* prepare upper bound on y-variables */
    if ( sepadata->skipmultbounds )
-      multvarub = SCIPinfinity(scip);
+      multvarub = SCIPinfinity(origscip);
    else
       multvarub =  1.0-EPSILONVALUE;
 
@@ -1420,13 +1420,13 @@ SCIP_RETCODE createSubscip(
       }
 
       /* if we have an equation */
-      if ( SCIPisEQ(scip, lhs[i], rhs[i]) )
+      if ( SCIPisEQ(origscip, lhs[i], rhs[i]) )
       {
          SCIP_Real weight = -sepadata->objweight;
 
-         assert( ! SCIPisInfinity(scip, rhs[i]) );
-         assert( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) ); /* equations should always be active */
-         assert( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row)) );
+         assert( ! SCIPisInfinity(origscip, rhs[i]) );
+         assert( SCIPisFeasEQ(origscip, SCIPgetRowLPActivity(origscip, row), SCIProwGetLhs(row)) ); /* equations should always be active */
+         assert( SCIPisFeasEQ(origscip, SCIPgetRowLPActivity(origscip, row), SCIProwGetRhs(row)) );
 
          if ( sepadata->objweightsize )
             weight = - sepadata->objweight * computeObjWeightSize(SCIProwGetNLPNonz(row), minrowsize, maxrowsize);
@@ -1439,7 +1439,7 @@ SCIP_RETCODE createSubscip(
          ++cnt;
 
 #ifdef SCIP_MORE_DEBUG
-         SCIPdebugMsg(scip, "Created variable <%s> for equation <%s>.\n", name, SCIProwGetName(row));
+         SCIPdebugMsg(origscip, "Created variable <%s> for equation <%s>.\n", name, SCIProwGetName(row));
 #endif
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq2_%d", i);
@@ -1449,19 +1449,19 @@ SCIP_RETCODE createSubscip(
          ++cnt;
 
 #ifdef SCIP_MORE_DEBUG
-         SCIPdebugMsg(scip, "Created variable <%s> for equation <%s>.\n", name, SCIProwGetName(row));
+         SCIPdebugMsg(origscip, "Created variable <%s> for equation <%s>.\n", name, SCIProwGetName(row));
 #endif
       }
       else
       {
          /* create variable for lhs of row if necessary */
-         if ( ! SCIPisInfinity(scip, -lhs[i]) )
+         if ( ! SCIPisInfinity(origscip, -lhs[i]) )
          {
             SCIP_Bool isactive = FALSE;
             SCIP_Real weight = 0.0;
 
             /* if the row is active, use objective weight equal to -sepadata->objweight */
-            if ( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) )
+            if ( SCIPisFeasEQ(origscip, SCIPgetRowLPActivity(origscip, row), SCIProwGetLhs(row)) )
             {
                isactive = TRUE;
                if ( sepadata->objweightsize )
@@ -1480,19 +1480,19 @@ SCIP_RETCODE createSubscip(
                ++cnt;
 
 #ifdef SCIP_MORE_DEBUG
-               SCIPdebugMsg(scip, "Created variable <%s> for >= inequality <%s> (weight: %f).\n", name, SCIProwGetName(row), weight);
+               SCIPdebugMsg(origscip, "Created variable <%s> for >= inequality <%s> (weight: %f).\n", name, SCIProwGetName(row), weight);
 #endif
             }
          }
 
          /* create variable for rhs of row if necessary */
-         if ( ! SCIPisInfinity(scip, rhs[i]) )
+         if ( ! SCIPisInfinity(origscip, rhs[i]) )
          {
             SCIP_Bool isactive = FALSE;
             SCIP_Real weight = 0.0;
 
             /* if the row is active, use objective weight equal to -sepadata->objweight */
-            if ( SCIPisFeasEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row)) )
+            if ( SCIPisFeasEQ(origscip, SCIPgetRowLPActivity(origscip, row), SCIProwGetRhs(row)) )
             {
                isactive = TRUE;
                if ( sepadata->objweightsize )
@@ -1510,7 +1510,7 @@ SCIP_RETCODE createSubscip(
                ++cnt;
 
 #ifdef SCIP_MORE_DEBUG
-               SCIPdebugMsg(scip, "Created variable <%s> for <= inequality <%s> (weight: %f).\n", name, SCIProwGetName(row), weight);
+               SCIPdebugMsg(origscip, "Created variable <%s> for <= inequality <%s> (weight: %f).\n", name, SCIProwGetName(row), weight);
 #endif
             }
          }
@@ -1530,12 +1530,12 @@ SCIP_RETCODE createSubscip(
       cnt = 0;
 
       if ( sepadata->objweightsize )
-         weight = -sepadata->objweight * computeObjWeightSize(SCIPgetNObjVars(scip), minrowsize, maxrowsize);
+         weight = -sepadata->objweight * computeObjWeightSize(SCIPgetNObjVars(origscip), minrowsize, maxrowsize);
       else
          weight = -sepadata->objweight;
 
       /* create variable for upper objective bound if necessary */
-      if ( sepadata->useobjub && ! SCIPisInfinity(scip, rhs[mipdata->nrows]) )
+      if ( sepadata->useobjub && ! SCIPisInfinity(origscip, rhs[mipdata->nrows]) )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yobjub");
          SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->yrhs[mipdata->nrows]), name, 0.0, multvarub,
@@ -1544,12 +1544,12 @@ SCIP_RETCODE createSubscip(
          ++cnt;
 
 #ifdef SCIP_MORE_DEBUG
-         SCIPdebugMsg(scip, "Created variable <%s> for upper bound on objective (weight: %f).\n", name, weight);
+         SCIPdebugMsg(origscip, "Created variable <%s> for upper bound on objective (weight: %f).\n", name, weight);
 #endif
       }
 
       /* create variable for lower bound objective if necessary */
-      if ( sepadata->useobjlb && ! SCIPisInfinity(scip, -lhs[mipdata->nrows]) )
+      if ( sepadata->useobjlb && ! SCIPisInfinity(origscip, -lhs[mipdata->nrows]) )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yobjlb");
          SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->ylhs[mipdata->nrows]), name, 0.0, multvarub,
@@ -1558,7 +1558,7 @@ SCIP_RETCODE createSubscip(
          ++cnt;
 
 #ifdef SCIP_MORE_DEBUG
-         SCIPdebugMsg(scip, "Created variable <%s> for lower bound on objective (weight: %f).\n", name, weight);
+         SCIPdebugMsg(origscip, "Created variable <%s> for lower bound on objective (weight: %f).\n", name, weight);
 #endif
       }
 
@@ -1593,7 +1593,7 @@ SCIP_RETCODE createSubscip(
 
          /* create fractional variables */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "f_%d", j);
-         if ( SCIPisInfinity(scip, -lb[j]) && SCIPisInfinity(scip, ub[j]) )
+         if ( SCIPisInfinity(origscip, -lb[j]) && SCIPisInfinity(origscip, ub[j]) )
          {
             /* fix fractional value to be zero for free original variables */
             SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->fracalpha[j]), name, 0.0, 0.0, 0.0,
@@ -1609,7 +1609,7 @@ SCIP_RETCODE createSubscip(
          ++cnt;
 
          /* create variables for upper bounds */
-         if ( ! SCIPisInfinity(scip, ub[j]) )
+         if ( ! SCIPisInfinity(origscip, ub[j]) )
          {
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "zub_%d", j);
             SCIP_CALL( SCIPcreateVar(subscip, &(mipdata->z[j]), name, 0.0, multvarub,
@@ -1642,8 +1642,8 @@ SCIP_RETCODE createSubscip(
    mipdata->n += cnt + ucnt + 2;
 
    /* get temporary storage */
-   SCIP_CALL( SCIPallocBufferArray(scip, &consvals, (int) mipdata->n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, (int) mipdata->n) );
+   SCIP_CALL( SCIPallocBufferArray(origscip, &consvals, (int) mipdata->n) );
+   SCIP_CALL( SCIPallocBufferArray(origscip, &consvars, (int) mipdata->n) );
 
    /* create constraints for alpha variables of CG-cut */
    cnt = 0;
@@ -1700,7 +1700,7 @@ SCIP_RETCODE createSubscip(
          /* add part for upper bounds */
          if ( mipdata->z[j] != NULL )
          {
-            assert( ! SCIPisInfinity(scip, ub[j]) );
+            assert( ! SCIPisInfinity(origscip, ub[j]) );
             consvars[nconsvars] = mipdata->z[j];
             consvals[nconsvars] = 1.0;
             ++nconsvars;
@@ -1720,7 +1720,7 @@ SCIP_RETCODE createSubscip(
          assert( nconsvars <= (int) mipdata->n );
 
          /* check for lower and upper objective bounds */
-         if ( (sepadata->useobjub || sepadata->useobjlb) && ! SCIPisZero(scip, SCIPcolGetObj(cols[j])) )
+         if ( (sepadata->useobjub || sepadata->useobjlb) && ! SCIPisZero(origscip, SCIPcolGetObj(cols[j])) )
          {
             /* add lower objective bound */
             if ( mipdata->ylhs[mipdata->nrows] != NULL )
@@ -1797,7 +1797,7 @@ SCIP_RETCODE createSubscip(
          }
 
          /* check for lower and upper objective bounds */
-         if ( (sepadata->useobjub || sepadata->useobjlb) && ! SCIPisZero(scip, SCIPcolGetObj(cols[j])) )
+         if ( (sepadata->useobjub || sepadata->useobjlb) && ! SCIPisZero(origscip, SCIPcolGetObj(cols[j])) )
          {
             /* add lower objective bound */
             if ( mipdata->ylhs[mipdata->nrows] )
@@ -1823,10 +1823,10 @@ SCIP_RETCODE createSubscip(
 
          /* for free continuous variables require equality */
          r = SCIPinfinity(subscip);
-         if ( SCIPisInfinity(scip, -lb[j]) && SCIPisInfinity(scip, ub[j]) )
+         if ( SCIPisInfinity(origscip, -lb[j]) && SCIPisInfinity(origscip, ub[j]) )
             r = 0.0;
          else
-            assert( SCIPisZero(scip, lb[j]) );
+            assert( SCIPisZero(origscip, lb[j]) );
 
          SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, name, nconsvars, consvars, consvals, 0.0, r,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -1851,17 +1851,17 @@ SCIP_RETCODE createSubscip(
          continue;
 
       /* if lhs is there */
-      if ( mipdata->ylhs[i] != NULL && ! SCIPisZero(scip, lhs[i]) )
+      if ( mipdata->ylhs[i] != NULL && ! SCIPisZero(origscip, lhs[i]) )
       {
-         assert( ! SCIPisInfinity(scip, -lhs[i]) );
+         assert( ! SCIPisInfinity(origscip, -lhs[i]) );
          consvars[nconsvars] = mipdata->ylhs[i];
          consvals[nconsvars] = -lhs[i];
          ++nconsvars;
       }
       /* if rhs is there */
-      if ( mipdata->yrhs[i] != NULL && ! SCIPisZero(scip, rhs[i]) )
+      if ( mipdata->yrhs[i] != NULL && ! SCIPisZero(origscip, rhs[i]) )
       {
-         assert( ! SCIPisInfinity(scip, rhs[i]) );
+         assert( ! SCIPisInfinity(origscip, rhs[i]) );
          consvars[nconsvars] = mipdata->yrhs[i];
          consvals[nconsvars] = rhs[i];
          ++nconsvars;
@@ -1872,20 +1872,20 @@ SCIP_RETCODE createSubscip(
    if ( sepadata->useobjub || sepadata->useobjlb )
    {
       /* add lower objective bound */
-      if ( mipdata->ylhs[mipdata->nrows] != NULL && ! SCIPisZero(scip, lhs[mipdata->nrows]) )
+      if ( mipdata->ylhs[mipdata->nrows] != NULL && ! SCIPisZero(origscip, lhs[mipdata->nrows]) )
       {
          assert( sepadata->useobjlb );
-         assert( ! SCIPisInfinity(scip, -lhs[mipdata->nrows]) );
+         assert( ! SCIPisInfinity(origscip, -lhs[mipdata->nrows]) );
          consvars[nconsvars] = mipdata->ylhs[mipdata->nrows];
          consvals[nconsvars] = -lhs[mipdata->nrows];
          ++nconsvars;
       }
 
       /* add upper objective bound */
-      if ( mipdata->yrhs[mipdata->nrows] != NULL && ! SCIPisZero(scip, rhs[mipdata->nrows]) )
+      if ( mipdata->yrhs[mipdata->nrows] != NULL && ! SCIPisZero(origscip, rhs[mipdata->nrows]) )
       {
          assert( sepadata->useobjub );
-         assert( ! SCIPisInfinity(scip, rhs[mipdata->nrows]) );
+         assert( ! SCIPisInfinity(origscip, rhs[mipdata->nrows]) );
          consvars[nconsvars] = mipdata->yrhs[mipdata->nrows];
          consvals[nconsvars] = rhs[mipdata->nrows];
          ++nconsvars;
@@ -1897,10 +1897,10 @@ SCIP_RETCODE createSubscip(
    for (j = 0; j < ncols; ++j)
    {
       /* if ub is there */
-      if ( mipdata->z[j] != NULL && ! SCIPisZero(scip, ub[j]) )
+      if ( mipdata->z[j] != NULL && ! SCIPisZero(origscip, ub[j]) )
       {
          assert( mipdata->coltype[j] == colPresent );
-         assert( ! SCIPisInfinity(scip, ub[j]) );
+         assert( ! SCIPisInfinity(origscip, ub[j]) );
          consvars[nconsvars] = mipdata->z[j];
          consvals[nconsvars] = ub[j];
          ++nconsvars;
@@ -1929,7 +1929,7 @@ SCIP_RETCODE createSubscip(
    if ( sepadata->primalseparation )
    {
       SCIP_SOL* bestsol;
-      bestsol = SCIPgetBestSol(scip);
+      bestsol = SCIPgetBestSol(origscip);
       if ( bestsol != NULL )
       {
          nconsvars = 0;
@@ -1940,7 +1940,7 @@ SCIP_RETCODE createSubscip(
                SCIP_Real val;
                assert( mipdata->coltype[j] == colPresent );
 
-               val = SCIPgetSolVal(scip, bestsol, SCIPcolGetVar(cols[j]));
+               val = SCIPgetSolVal(origscip, bestsol, SCIPcolGetVar(cols[j]));
                consvars[nconsvars] = mipdata->alpha[j];
                consvals[nconsvars] = val;
                ++nconsvars;
@@ -1986,18 +1986,18 @@ SCIP_RETCODE createSubscip(
       ++mipdata->m;
    }
 
-   SCIPdebugMsg(scip, "Subscip has %u vars (%d integral, %d continuous), %u conss.\n",
+   SCIPdebugMsg(origscip, "Subscip has %u vars (%d integral, %d continuous), %u conss.\n",
       mipdata->n, SCIPgetNIntVars(subscip), SCIPgetNContVars(subscip), mipdata->m);
 
    /* free temporary memory */
-   SCIPfreeBufferArray(scip, &consvars);
-   SCIPfreeBufferArray(scip, &consvals);
+   SCIPfreeBufferArray(origscip, &consvars);
+   SCIPfreeBufferArray(origscip, &consvals);
 
-   SCIPfreeBufferArray(scip, &primsol);
-   SCIPfreeBufferArray(scip, &lb);
-   SCIPfreeBufferArray(scip, &ub);
-   SCIPfreeBufferArray(scip, &rhs);
-   SCIPfreeBufferArray(scip, &lhs);
+   SCIPfreeBufferArray(origscip, &primsol);
+   SCIPfreeBufferArray(origscip, &lb);
+   SCIPfreeBufferArray(origscip, &ub);
+   SCIPfreeBufferArray(origscip, &rhs);
+   SCIPfreeBufferArray(origscip, &lhs);
 
    /* SCIPdebug( SCIP_CALL( SCIPprintOrigProblem(subscip, NULL, NULL, FALSE) ) ); */
 
@@ -2010,7 +2010,7 @@ SCIP_RETCODE createSubscip(
          sepadata->primalseparation ? "_ps" : "",
          SCIPgetProbName(scip));
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, "lp", FALSE) );
-      SCIPinfoMessage(scip, NULL, "Wrote subscip to file <%s>.\n", name);
+      SCIPinfoMessage(origscip, NULL, "Wrote subscip to file <%s>.\n", name);
    }
 #endif
 
@@ -2154,7 +2154,7 @@ SCIP_RETCODE subscipSetParams(
 /** solve subscip */
 static
 SCIP_RETCODE solveSubscip(
-   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 origscip,           /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
    SCIP_Bool*            success             /**< if setting was successful -> stop solution otherwise */
@@ -2167,7 +2167,7 @@ SCIP_RETCODE solveSubscip(
    SCIP_Real memorylimit;
    SCIP_Longint nodelimit;
 
-   assert( scip != NULL );
+   assert( origscip != NULL );
    assert( sepadata != NULL );
    assert( mipdata != NULL );
    assert( success != NULL );
@@ -2176,7 +2176,7 @@ SCIP_RETCODE solveSubscip(
 
    subscip = mipdata->subscip;
 
-   SCIP_CALL( SCIPcheckCopyLimits(scip, success) );
+   SCIP_CALL( SCIPcheckCopyLimits(origscip, success) );
 
    if ( *success )
    {
@@ -2204,14 +2204,14 @@ SCIP_RETCODE solveSubscip(
    else
    {
       assert( sepadata->minnodelimit >= 0 && sepadata->maxnodelimit >= 0 );
-      nodelimit = SCIPgetNLPIterations(scip);
+      nodelimit = SCIPgetNLPIterations(origscip);
       nodelimit = MAX(sepadata->minnodelimit, nodelimit);
       nodelimit = MIN(sepadata->maxnodelimit, nodelimit);
    }
    assert( nodelimit >= 0 );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
 
-   SCIPdebugMsg(scip, "Solving sub-SCIP (time limit: %f  mem limit: %f  node limit: %" SCIP_LONGINT_FORMAT ") ...\n", timelimit, memorylimit, nodelimit);
+   SCIPdebugMsg(origscip, "Solving sub-SCIP (time limit: %f  mem limit: %f  node limit: %" SCIP_LONGINT_FORMAT ") ...\n", timelimit, memorylimit, nodelimit);
 
    /* disable statistic timing inside sub SCIP */
    if( !sepadata->output )
@@ -2231,7 +2231,7 @@ SCIP_RETCODE solveSubscip(
 #ifndef NDEBUG
          SCIP_CALL( retcode );
 #endif
-         SCIPwarningMessage(scip, "Error while solving subproblem in CGMIP separator; sub-SCIP terminated with code <%d>\n", retcode);
+         SCIPwarningMessage(origscip, "Error while solving subproblem in CGMIP separator; sub-SCIP terminated with code <%d>\n", retcode);
          *success = FALSE;
          return SCIP_OKAY;
       }
@@ -2277,7 +2277,7 @@ SCIP_RETCODE solveSubscip(
 #ifndef NDEBUG
          SCIP_CALL( retcode );
 #endif
-         SCIPwarningMessage(scip, "Error while solving subproblem in CGMIP separator; sub-SCIP terminated with code <%d>\n", retcode);
+         SCIPwarningMessage(origscip, "Error while solving subproblem in CGMIP separator; sub-SCIP terminated with code <%d>\n", retcode);
          *success = FALSE;
          return SCIP_OKAY;
       }
@@ -2311,7 +2311,7 @@ SCIP_RETCODE solveSubscip(
       /* solve some more, if a feasible solution was found */
       if ( status == SCIP_STATUS_BESTSOLLIMIT )
       {
-         SCIPdebugMsg(scip, "Continue solving separation problem ...\n");
+         SCIPdebugMsg(origscip, "Continue solving separation problem ...\n");
 
          SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", STALLNODELIMIT) );
          retcode = SCIPsolve(subscip);
@@ -2324,7 +2324,7 @@ SCIP_RETCODE solveSubscip(
 #ifndef NDEBUG
             SCIP_CALL( retcode );
 #endif
-            SCIPwarningMessage(scip, "Error while solving subproblem in CGMIP separator; sub-SCIP terminated with code <%d>\n", retcode);
+            SCIPwarningMessage(origscip, "Error while solving subproblem in CGMIP separator; sub-SCIP terminated with code <%d>\n", retcode);
             *success = FALSE;
             return SCIP_OKAY;
          }
