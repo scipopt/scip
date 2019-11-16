@@ -65,7 +65,6 @@
 #include "scip/dialog_default.h"
 #include "scip/disp.h"
 #include "scip/event.h"
-#include "scip/event_restart.h"
 #include "scip/heur.h"
 #include "scip/heur_ofins.h"
 #include "scip/heur_reoptsols.h"
@@ -2173,13 +2172,6 @@ SCIP_RETCODE displayRelevantStats(
       else
          SCIPmessagePrintInfo(scip->messagehdlr, "Solving Nodes      : %" SCIP_LONGINT_FORMAT "\n", scip->stat->nnodes);
 
-      if( scip->set->stage >= SCIP_STAGE_SOLVING &&
-            scip->stat->status != SCIP_STATUS_OPTIMAL &&
-            scip->stat->status != SCIP_STATUS_INFEASIBLE &&
-            scip->stat->status != SCIP_STATUS_INFORUNBD )
-      {
-         SCIPmessagePrintInfo(scip->messagehdlr, "Estim. Tree Size   : %" SCIP_LONGINT_FORMAT "\n", (SCIP_Longint)SCIPgetTreesizeEstimation(scip));
-      }
       if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_EXITSOLVE )
       {
          if( objlimitreached )
