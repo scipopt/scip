@@ -2174,7 +2174,7 @@ SCIP_RETCODE solveSubscip(
 
    SCIP_CALL( SCIPcheckCopyLimits(origscip, success) );
 
-   if ( ! *success )
+   if ( ! (*success) )
       return SCIP_OKAY;
 
    /* @todo Check whether copying the parameters is useful */
@@ -2247,6 +2247,8 @@ SCIP_RETCODE solveSubscip(
    if ( ! sepadata->earlyterm )
    {
       retcode = SCIPsolve(subscip);
+      SCIPdebugMsg(origscip, "Finished solving CG-MIP (dualbound: %g, solving time: %.2f, nodes: %" SCIP_LONGINT_FORMAT ", nodelimit: %"SCIP_LONGINT_FORMAT").\n",
+         SCIPgetDualbound(subscip), SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), nodelimit);
 
       /* errors in solving the subproblem should not kill the overall solving process;
        * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
@@ -2271,14 +2273,31 @@ SCIP_RETCODE solveSubscip(
       }
 #endif
 
-      /* if the solution process was terminated or the problem is infeasible (can happen because of violation constraint) */
-      if ( status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_USERINTERRUPT || status == SCIP_STATUS_INFEASIBLE || status == SCIP_STATUS_INFORUNBD )
+      /* if the problem is infeasible (can happen because of violation constraint) */
+      if ( status == SCIP_STATUS_INFEASIBLE || status == SCIP_STATUS_INFORUNBD )
       {
+         SCIPdebugMsg(origscip, "CG-MIP separation problem infeasible.\n");
          *success = FALSE;
          return SCIP_OKAY;
       }
 
-      /* all other statuses except optimal are invalid */
+      /* if the solution ran into the time limit */
+      if ( status == SCIP_STATUS_TIMELIMIT )
+      {
+         SCIPdebugMsg(origscip, "CG-MIP separation problem ran into time limit.\n");
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      /* if the solution process was terminated */
+      if ( status == SCIP_STATUS_USERINTERRUPT )
+      {
+         SCIPdebugMsg(origscip, "CG-MIP separation problem stopped by user interrupt.\n");
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      /* all other statuses except optimal or node limit are invalid */
       if ( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_NODELIMIT )
       {
          SCIPerrorMessage("Solution of subscip for CG-separation returned with invalid status %d.\n", status);
