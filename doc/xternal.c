@@ -94,7 +94,7 @@
  * `xprs`   | FICO XPress
  * `grb`    | Gurobi (version at least 7.0.2 required)
  * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
- * `glop`   | Google Glop (experimental, LPI is contained in Glop package/Google OR tools)
+ * `glop`   | Google Glop (contained in OR-tools)
  * `msk`    | Mosek (version at least 7.0.0 required)
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
