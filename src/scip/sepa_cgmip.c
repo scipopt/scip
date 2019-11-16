@@ -2022,17 +2022,13 @@ SCIP_RETCODE createSubscip(
 static
 SCIP_RETCODE subscipSetParams(
    SCIP_SEPADATA*        sepadata,           /**< separator data */
-   CGMIP_MIPDATA*        mipdata,            /**< data for sub-MIP */
-   SCIP_Bool*            success             /**< if setting was successful -> stop solution otherwise */
+   CGMIP_MIPDATA*        mipdata             /**< data for sub-MIP */
    )
 {
    SCIP* subscip;
 
    assert( sepadata != NULL );
    assert( mipdata != NULL );
-   assert( success != NULL );
-
-   *success = TRUE;
 
    subscip = mipdata->subscip;
    assert( subscip != NULL );
@@ -4085,9 +4081,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    SCIP_CALL( createSubscip(scip, sepa, sepadata, mipdata) );
 
    /* set parameters */
-   SCIP_CALL( subscipSetParams(sepadata, mipdata, &success) );
+   SCIP_CALL( subscipSetParams(sepadata, mipdata) );
 
-   if ( success && !SCIPisStopped(scip) )
+   if ( ! SCIPisStopped(scip) )
    {
       /* solve subscip */
       SCIP_CALL( solveSubscip(scip, sepadata, mipdata, &success) );
