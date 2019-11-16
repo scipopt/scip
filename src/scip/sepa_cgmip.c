@@ -2642,8 +2642,8 @@ SCIP_RETCODE computeCut(
          /* add the row coefficients to the sum */
          for (j = 0; j < SCIProwGetNLPNonz(row); ++j)
          {
-            int idx;
             SCIP_VAR* var;
+            int idx;
 
             assert( rowcols[j] != NULL );
             var = SCIPcolGetVar(rowcols[j]);
@@ -2673,7 +2673,7 @@ SCIP_RETCODE computeCut(
             if ( SCIProwIsIntegral(row) )
                val = SCIPfeasFloor(scip, val); /* row is integral: round right hand side down */
          }
-         (*cutrhs) += weight * val;
+         *cutrhs += weight * val;
 
          *localrowsused = *localrowsused || SCIProwIsLocal(row);
 
@@ -2725,13 +2725,19 @@ SCIP_RETCODE computeCut(
       if ( ! SCIPisSumZero(scip, weight) && absweight * MAXWEIGHTRANGE >= maxabsweight )
       {
          SCIP_Real obj = 0.0;
+         int idx;
 
          /* add the objective row coefficients to the sum */
          for (j = 0; j < ncols; ++j)
          {
+            assert( cols[j] != NULL );
+
             obj = SCIPcolGetObj(cols[j]);
             if ( ! SCIPisZero(scip, obj) )
-               cutcoefs[j] += weight * obj;
+            {
+               idx = SCIPvarGetProbindex( SCIPcolGetVar(cols[j]) );
+               cutcoefs[idx] += weight * obj;
+            }
          }
 
          /* compute rhs */
@@ -2749,7 +2755,7 @@ SCIP_RETCODE computeCut(
             if ( SCIPisObjIntegral(scip) )
                val = SCIPfeasFloor(scip, val); /* objective is integral: round right hand side down */
          }
-         (*cutrhs) += weight * val;
+         *cutrhs += weight * val;
       }
    }
 
@@ -2926,7 +2932,7 @@ SCIP_RETCODE computeCut(
          /* check whether all coefficients for continuous or converted variables are nonnegative */
          if ( pos >= 0 )
          {
-            if ( SCIPisNegative(scip, cutcoefs[j]) )
+            if ( SCIPisFeasNegative(scip, cutcoefs[j]) )
             {
                *success = FALSE;
                break;
