@@ -22,7 +22,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/* turn off some warnings */
+/* turn off some warnings from includes */
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
@@ -102,7 +102,7 @@ struct SCIP_LPi
    bool                  from_scratch;       /**< store whether basis is ignored for next solving call */
    int                   numthreads;         /**< number of threads used to solve the LP (0 = automatic) */
    SCIP_Real             conditionlimit;     /**< maximum condition number of LP basis counted as stable (-1.0: no limit) */
-   bool                  checkcondition;     /**< should condition number of LP basis be checked for stability? */
+   bool                  checkcondition;     /**< Should condition number of LP basis be checked for stability? */
    int                   timing;             /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
 
    /* other data */
@@ -131,7 +131,7 @@ struct SCIP_LPi
  * LP Interface Methods
  */
 
-static char glopname[100];
+static char glopname[128];
 
 /** gets name and version of LP solver */
 const char* SCIPlpiGetSolverName(
@@ -147,7 +147,7 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-   return "Glop Linear Solver, developed by Google (developers.google.com/optimization)";
+   return "Glop Linear Solver, developed by Google, part of OR-Tools (developers.google.com/optimization)";
 }
 
 /** gets pointer for LP solver - use only with great care */
@@ -156,11 +156,13 @@ void* SCIPlpiGetSolverPointer(
    )
 {
    assert( lpi != NULL );
+
    SCIPerrorMessage("SCIPlpiGetSolverPointer() has not been implemented yet.\n");
+
    return NULL;
 }
 
-/** pass integrality information to LP solver */ /*lint -e{715}*/
+/** pass integrality information to LP solver */
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
@@ -171,7 +173,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    assert( lpi->linear_program != NULL );
    assert( ncols == 0 || ncols == lpi->linear_program->num_variables().value() );
 
-   /* Pass on integrality information (currently not used by Glop) */
+   /* Pass on integrality information (currently not used by Glop). */
    for (ColIndex col(0); col < ColIndex(ncols); ++col)
    {
       assert( intInfo != NULL );
@@ -443,17 +445,14 @@ SCIP_RETCODE SCIPlpiDelColset(
    for (ColIndex col(0); col < num_cols; ++col)
    {
       int i = col.value();
-      if (dstat[i] == 1)
+      if ( dstat[i] == 1 )
       {
          columns_to_delete[col] = true;
          dstat[i] = -1;
          ++num_deleted_columns;
       }
       else
-      {
-         dstat[i] = new_index;
-         ++new_index;
-      }
+         dstat[i] = new_index++;
    }
    SCIPdebugMessage("SCIPlpiDelColset: deleting %d columns.\n", num_deleted_columns);
    lpi->linear_program->DeleteColumns(columns_to_delete);
@@ -508,7 +507,7 @@ SCIP_RETCODE SCIPlpiAddRows(
          const RowIndex row = lpi->linear_program->CreateNewConstraint();
          lpi->linear_program->SetConstraintBounds(row, lhs[i], rhs[i]);
          const int end = (nnonz == 0 || i == nrows - 1) ? nnonz : beg[i + 1];
-         while (nz < end)
+         while ( nz < end )
          {
             lpi->linear_program->SetCoefficient(row, ColIndex(ind[nz]), val[nz]);
             ++nz;
@@ -540,7 +539,7 @@ void deleteRowsAndUpdateCurrentBasis(
    const RowIndex num_rows = lpi->linear_program->num_constraints();
    const ColIndex num_cols = lpi->linear_program->num_variables();
 
-   /* avoid work if problem have been changed before */
+   /* try to repair basis status if problem size has not changed before */
    BasisState state = lpi->solver->GetState();
    if ( state.statuses.size() == num_cols.value() + num_rows.value() )
    {
@@ -579,6 +578,7 @@ SCIP_RETCODE SCIPlpiDelRows(
 
    SCIPdebugMessage("deleting rows %d to %d.\n", firstrow, lastrow);
    deleteRowsAndUpdateCurrentBasis(lpi, rows_to_delete);
+
    return SCIP_OKAY;
 }
 
@@ -607,14 +607,12 @@ SCIP_RETCODE SCIPlpiDelRowset(
          ++num_deleted_rows;
       }
       else
-      {
-         dstat[i] = new_index;
-         ++new_index;
-      }
+         dstat[i] = new_index++;
    }
 
    SCIPdebugMessage("SCIPlpiDelRowset: deleting %d rows.\n", num_deleted_rows);
    deleteRowsAndUpdateCurrentBasis(lpi, rows_to_delete);
+
    return SCIP_OKAY;
 }
 
@@ -936,6 +934,7 @@ SCIP_RETCODE SCIPlpiGetNCols(
    SCIPdebugMessage("getting number of columns.\n");
 
    *ncols = lpi->linear_program->num_variables().value();
+
    return SCIP_OKAY;
 }
 
@@ -1381,7 +1380,7 @@ SCIP_RETCODE SolveInternal(
          /* Re-solve without scaling to try to fix the infeasibility. */
          lpi->parameters->set_use_scaling(false);
          lpi->lp_modified_since_last_solve = true;
-         SolveInternal(lpi, true, time_limit);   /* inherit time limit, so used time is not reset */
+         SolveInternal(lpi, true, time_limit);   /* inherit time limit, so used time is not reset; do not change iteration limit for resolve */
          lpi->parameters->set_use_scaling(true);
 
 #ifdef SCIP_DEBUG
@@ -1596,7 +1595,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
 
    SCIPerrorMessage("SCIPlpiStrongbranchesFrac - not implemented.\n");
 
-   return SCIP_LPERROR;
+   return SCIP_NOTIMPLEMENTED;
 }
 
 /** performs strong branching iterations on one candidate with @b integral value */
@@ -1623,7 +1622,7 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
 
    SCIPerrorMessage("SCIPlpiStrongbranchInt - not implemented.\n");
 
-   return SCIP_LPERROR;
+   return SCIP_NOTIMPLEMENTED;
 }
 
 /** performs strong branching iterations on given candidates with @b integral values */
@@ -1653,7 +1652,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
 
    SCIPerrorMessage("SCIPlpiStrongbranchesInt - not implemented.\n");
 
-   return SCIP_LPERROR;
+   return SCIP_NOTIMPLEMENTED;
 }
 /**@} */
 
@@ -2219,7 +2218,6 @@ VariableStatus ConvertSCIPConstraintStatusToSlackStatus(
    }
 }
 
-
 /** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
 SCIP_RETCODE SCIPlpiGetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2263,6 +2261,7 @@ SCIP_RETCODE SCIPlpiSetBase(
 {
    assert( lpi != NULL );
    assert( lpi->linear_program != NULL );
+   assert( lpi->solver != NULL );
 
    const ColIndex num_cols = lpi->linear_program->num_variables();
    const RowIndex num_rows = lpi->linear_program->num_constraints();
@@ -2294,6 +2293,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 {
    assert( lpi != NULL );
    assert( lpi->linear_program != NULL );
+   assert( lpi->solver != NULL );
    assert( bind != NULL );
 
    SCIPdebugMessage("SCIPlpiGetBasisInd\n");
@@ -2333,6 +2333,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 {
    assert( lpi != NULL );
    assert( lpi->linear_program != NULL );
+   assert( lpi->solver != NULL );
+   assert( lpi->scaler != NULL );
    assert( coef != NULL );
 
    lpi->solver->GetBasisFactorization().LeftSolveForUnitRow(ColIndex(r), lpi->tmp_row);
@@ -2387,6 +2389,8 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 {
    assert( lpi != NULL );
    assert( lpi->linear_program != NULL );
+   assert( lpi->solver != NULL );
+   assert( lpi->scaler != NULL );
    assert( coef != NULL );
 
    /* we need to loop through the rows to extract the values for column c */
@@ -2446,6 +2450,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 {
    assert( lpi != NULL );
    assert( lpi->linear_program != NULL );
+   assert( lpi->solver != NULL );
+   assert( lpi->scaler != NULL );
    assert( coef != NULL );
 
    /* get row of basis inverse, loop through columns and muliply with matrix */
@@ -2499,6 +2505,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 {
    assert( lpi != NULL );
    assert( lpi->linear_program != NULL );
+   assert( lpi->solver != NULL );
+   assert( lpi->scaler != NULL );
    assert( coef != NULL );
 
    lpi->solver->GetBasisFactorization().RightSolveForProblemColumn(ColIndex(c), lpi->tmp_column);
