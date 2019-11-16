@@ -1,6 +1,6 @@
 #!groovy
 
-node ('nightly'){
+node ('ubuntu18'){
     catchError {
         timeout(1) {
             stage('Clean') {

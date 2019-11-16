@@ -523,6 +523,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/branch_pscost.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
+			scip/branch_vanillafullstrong.o \
 			scip/cons_abspower.o \
 			scip/compr_largestrepr.o \
 			scip/compr_weakcompr.o \
