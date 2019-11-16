@@ -2177,8 +2177,8 @@ SCIP_RETCODE solveSubscip(
    if ( ! *success )
       return SCIP_OKAY;
 
-      SCIP_CALL( SCIPgetRealParam(subscip, "limits/time", &timelimit) );
-      SCIP_CALL( SCIPgetRealParam(subscip, "limits/memory", &memorylimit) );
+   /* @todo Check whether copying the parameters is useful */
+   /* SCIP_CALL( SCIPcopyLimits(origscip, subscip) ); */
 
    SCIP_CALL( SCIPgetRealParam(subscip, "limits/time", &timelimit) );
    SCIP_CALL( SCIPgetRealParam(subscip, "limits/memory", &memorylimit) );
