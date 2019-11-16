@@ -2478,6 +2478,12 @@ SCIP_RETCODE computeCut(
    assert( cutrank != NULL );
    assert( success != NULL );
 
+   /* initialize */
+   *localrowsused = FALSE;
+   *localboundsused = FALSE;
+   *cutrank = 0;
+   *success = TRUE;
+
    subscip = mipdata->subscip;
    assert( subscip != NULL );
 
@@ -2488,11 +2494,6 @@ SCIP_RETCODE computeCut(
    assert( nrows == (int) mipdata->nrows );
    assert( ncols == (int) mipdata->ncols );
 
-   /* initialize */
-   *success = TRUE;
-   *localrowsused = FALSE;
-   *cutrank = 0;
-   *localboundsused = FALSE;
    BMSclearMemoryArray(cutcoefs, nvars);
    *cutrhs = 0.0;
 
