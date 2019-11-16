@@ -1164,9 +1164,15 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       case Invalid_Option:
       case Unrecoverable_Exception:
       case NonIpopt_Exception_Thrown:
-      case Internal_Error:
          SCIPerrorMessage("Ipopt returned with application return status %d\n", status);
          return SCIP_ERROR;
+      case Internal_Error:
+         // could be a fail in the linear solver
+         SCIPerrorMessage("Ipopt returned with status \"Internal Error\"\n");
+         invalidateSolution(problem);
+         problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+         problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+         break;
       case Insufficient_Memory:
          SCIPerrorMessage("Ipopt returned with status \"Insufficient Memory\"\n");
          return SCIP_NOMEMORY;
@@ -1175,6 +1181,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          invalidateSolution(problem);
          problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
          problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
+         break;
       default: ;
       }
 
@@ -2909,7 +2916,7 @@ SCIP_RETCODE SCIPsolveLinearProb3(
 
    if( info != 0 )
    {
-      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      SCIPdebugMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
       *success = FALSE;
    }
    else
@@ -2971,7 +2978,7 @@ SCIP_RETCODE SCIPsolveLinearProb(
 
    if( info != 0 )
    {
-      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      SCIPdebugMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
       *success = FALSE;
    }
    else

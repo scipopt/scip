@@ -272,7 +272,6 @@ SCIP_RETCODE tryFixVar(
    SCIP_VAR*             subvar,             /**< representative variable for var in the sub-SCIP */
    int*                  inftycounter,       /**< counters how many variables have an infinity potential in a row */
    SCIP_HEURDATA*        heurdata,           /**< repairs heuristic data */
-   SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
    SCIP_Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
    )
 {
@@ -281,6 +280,7 @@ SCIP_RETCODE tryFixVar(
    SCIP_Real* vals;
    SCIP_Real alpha;
    SCIP_Real solval;
+   SCIP_Bool infeasible;
    int nrows;
    int i;
    int sgn;
@@ -294,7 +294,7 @@ SCIP_RETCODE tryFixVar(
    assert(NULL != heurdata);
 
    alpha = heurdata->alpha;
-   *infeasible = TRUE;
+   infeasible = TRUE;
    *fixed = FALSE;
 
    solval = SCIPgetSolVal(scip, sol, var);
@@ -316,8 +316,8 @@ SCIP_RETCODE tryFixVar(
    if( NULL == rows )
    {
       SCIP_CALL( SCIPfixVar(subscip, subvar, solval,
-               infeasible, fixed) );
-      assert(!*infeasible && *fixed);
+               &infeasible, fixed) );
+      assert(!infeasible && *fixed);
       heurdata->nvarfixed++;
       SCIPdebugMsg(scip,"Variable %s is fixed to %g\n",SCIPvarGetName(var), solval);
       return SCIP_OKAY;
@@ -384,8 +384,8 @@ SCIP_RETCODE tryFixVar(
       }
    }
 
-   SCIP_CALL( SCIPfixVar(subscip, subvar, solval, infeasible, fixed) );
-   assert(!*infeasible && *fixed);
+   SCIP_CALL( SCIPfixVar(subscip, subvar, solval, &infeasible, fixed) );
+   assert(!infeasible && *fixed);
    heurdata->nvarfixed++;
    SCIPdebugMsg(scip,"Variable %s is fixed to %g\n",SCIPvarGetName(var),
          SCIPgetSolVal(scip, sol, var));
@@ -886,10 +886,13 @@ SCIP_RETCODE applyRepair(
       heurdata->nvarfixed = 0;
       for( i = 0; i < nvars; ++i )
       {
-         SCIP_Bool infeasible = FALSE;
-         SCIP_Bool fixed = TRUE;
+         SCIP_Bool fixed;
 
-         SCIP_CALL( tryFixVar(scip, subscip, sol, potential, slacks, vars[permutation[i]], subvars[permutation[i]], inftycounter, heurdata, &infeasible, &fixed) );
+         /* continue if we have a loose variable */
+         if( SCIPvarGetStatus(vars[permutation[i]]) != SCIP_VARSTATUS_COLUMN )
+            continue;
+
+         SCIP_CALL( tryFixVar(scip, subscip, sol, potential, slacks, vars[permutation[i]], subvars[permutation[i]], inftycounter, heurdata, &fixed) );
 
          if( fixed && (SCIP_VARTYPE_BINARY == SCIPvarGetType(subvars[permutation[i]])
             || SCIP_VARTYPE_INTEGER == SCIPvarGetType(subvars[permutation[i]])) )

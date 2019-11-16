@@ -2177,6 +2177,12 @@ SCIP_RETCODE setupSubScip(
    {
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
    }
+
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
+   }
+
    if( ! SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
@@ -2385,6 +2391,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       SCIP_HASHMAP* varmapf;
       SCIP_EVENTHDLR* eventhdlr;
       SCIP_EVENTDATA eventdata;
+      char probnamesuffix[SCIP_MAXSTRLEN];
       int ndomchgs;
       int nchgobjs;
       int naddedconss;
@@ -2480,9 +2487,10 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
 
       SCIP_CALL( SCIPcreate(&subscip) );
       SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(scip), nvars) );
+      sprintf(probnamesuffix, "alns_%s", neighborhood->name);
 
       /* todo later: run global propagation for this set of fixings */
-      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapf, neighborhood->name, varbuf, valbuf, nfixings, FALSE, heurdata->copycuts, &success, NULL) );
+      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapf, probnamesuffix, varbuf, valbuf, nfixings, FALSE, heurdata->copycuts, &success, NULL) );
 
       /* store sub-SCIP variables in array for faster access */
       for( v = 0; v < nvars; ++v )
@@ -2541,7 +2549,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
 #ifdef ALNS_SUBSCIPOUTPUT
-      SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+      SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
 
       SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.submipclock) );
@@ -2664,7 +2672,7 @@ DECL_VARFIXINGS(varFixingsRens)
    for( i = 0; i < nbinvars + nintvars; ++i )
    {
       SCIP_VAR* var = vars[i];
-      SCIP_Real lpsolval = SCIPgetSolVal(scip, NULL, var);
+      SCIP_Real lpsolval = SCIPvarGetLPSol(var);
       assert((i < nbinvars && SCIPvarIsBinary(var)) || (i >= nbinvars && SCIPvarIsIntegral(var)));
 
       /* fix all binary and integer variables with integer LP solution value */
@@ -3945,7 +3953,7 @@ SCIP_RETCODE SCIPincludeHeurAlns(
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/unfixtol",
          "tolerance by which the fixing rate may be exceeded without generic unfixing",
-         &heurdata->fixtol, TRUE, DEFAULT_UNFIXTOL, 0.0, 1.0, NULL, NULL) );
+         &heurdata->unfixtol, TRUE, DEFAULT_UNFIXTOL, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselocalredcost",
          "should local reduced costs be used for generic (un)fixing?",
