@@ -121,6 +121,7 @@ Interface changes
   + now for all lp interfaces consistent requirements on SCIP_LPPAR:
     LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
+  + add interface to Glop
 - Symmetry:
   + removed method SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
