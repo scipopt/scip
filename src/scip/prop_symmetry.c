@@ -1354,7 +1354,6 @@ SCIP_RETCODE setSymmetryData(
       /* detect whether binary variable is affected by symmetry and count number of binary permvars */
       for (i = 0; i < nbinvars; ++i)
       {
-         (*nbinpermvars)++;
          for (p = 0; p < nperms && ! *binvaraffected; ++p)
          {
             if ( perms[p][i] != i )
