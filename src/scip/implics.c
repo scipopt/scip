@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   implics.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for implications, variable bounds, and clique tables
  * @author Tobias Achterberg
  */
@@ -2544,6 +2545,14 @@ SCIP_RETCODE SCIPcliquetableAdd(
    if( nvars == 0 || *infeasible )
       goto FREEMEM;
 
+   if( !SCIPsetIsInfinity(set, set->presol_clqtablefac) && SCIPcliquetableGetNEntries(cliquetable) + nvars > set->presol_clqtablefac * stat->nnz )
+   {
+      SCIPsetDebugMsg(set, "reject %d-variable clique to keep clique table entries below threshold of %g entries\n",
+         nvars, set->presol_clqtablefac * stat->nnz);
+
+      goto FREEMEM;
+   }
+
    /* if less than two variables are left over, the clique is redundant */
    if( nvars > 1 )
    {
@@ -2941,8 +2950,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       cliquetableSwapCliques(cliquetable, 0, cliquetable->ndirtycliques);
       cliqueCheck(clique);
 
-      /* @todo check if we can aggregate variables if( clique->equation && clique->nvars == 2 && SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING */
-#if 0
+      /* @todo check if we can/want to aggregate variables with the following code */
+#ifdef SCIP_DISABLED_CODE
       if( clique->nvars == 2 && clique->equation && SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING )
       {
          SCIP_VAR* var0;

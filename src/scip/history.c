@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   history.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for branching and inference history
  * @author Tobias Achterberg
  */

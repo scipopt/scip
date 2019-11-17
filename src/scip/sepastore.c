@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepastore.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing separated cuts
  * @author Tobias Achterberg
  * @author Marc Pfetsch
@@ -38,6 +39,7 @@
 #include "scip/debug.h"
 #include "scip/scip.h"
 #include "scip/cuts.h"
+#include "scip/struct_event.h"
 #include "scip/struct_sepastore.h"
 #include "scip/misc.h"
 

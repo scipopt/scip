@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   intervalarith.c
+ * @ingroup OTHER_CFILES
  * @brief  interval arithmetics for provable bounds
  * @author Tobias Achterberg
  * @author Stefan Vigerske
@@ -32,6 +33,26 @@
 #include "scip/intervalarith.h"
 #include "scip/pub_message.h"
 #include "scip/misc.h"
+
+/* Inform compiler that this code accesses the floating-point environment, so that
+ * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
+ * Not supported by Clang (gives warning) and GCC (silently), at the moment.
+ */
+#ifndef __clang__
+#pragma STD FENV_ACCESS ON
+#endif
+
+/* Unfortunately, the FENV_ACCESS pragma is essentially ignored by GCC at the moment (2019),
+ * see #2650 and https://gcc.gnu.org/bugzilla/show_bug.cgi?id=34678.
+ * There are ways to work around this by declaring variables volatile or inserting more assembler code,
+ * but there is always the danger that something would be overlooked.
+ * A more drastic but safer way seems to be to just disable all compiler optimizations for this file.
+ * The Intel compiler seems to implement FENV_ACCESS correctly, but also defines __GNUC__.
+ */
+#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+#endif
 
 #ifdef SCIP_ROUNDING_FE
 #define ROUNDING
@@ -212,10 +233,11 @@ SCIP_ROUNDMODE SCIPintervalGetRoundingMode(
 /** gets the negation of a double
  * Do this in a way that the compiler does not "optimize" it away, which usually does not considers rounding modes.
  * However, compiling with -frounding-math would allow to return -x here.
+ * @todo We now set the FENV_ACCESS pragma to on, which is the same as -frounding-math, so we might be able to eliminate this.
  */
 static
 double negate(
-   /* we explicitely use double here, since I'm not sure the assembler code would work as it for other float's */
+   /* we explicitly use double here, since I'm not sure the assembler code would work as it for other float's */
    double                x                   /**< number that should be negated */
    )
 {
@@ -234,7 +256,7 @@ double negate(
  */
 static
 double negate(
-   /* we explicitely use double here, since I'm not sure the assembler code would work as it for other float's */
+   /* we explicitly use double here, since I'm not sure the assembler code would work as it for other float's */
    double                x                   /**< number that should be negated */
    )
 {
@@ -1433,6 +1455,18 @@ void SCIPintervalPower(
    if( operand2.inf == operand2.sup )
    {  /* operand is number */
       SCIPintervalPowerScalar(infinity, resultant, operand1, operand2.inf);
+      return;
+   }
+
+   /* log([..,0]) will give an empty interval below, but we want [0,0]^exponent to be 0
+    * if 0 is in exponent, then resultant should also contain 1 (the case exponent == [0,0] is handled above)
+    */
+   if( operand1.sup == 0.0 )
+   {
+      if( operand2.inf <= 0.0 && operand2.sup >= 0.0 )
+         SCIPintervalSetBounds(resultant, 0.0, 1.0);
+      else
+         SCIPintervalSet(resultant, 0.0);
       return;
    }
 
@@ -4342,3 +4376,8 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       SCIPintervalIntersect(resultant, *resultant, xbnds);
    }
 }
+
+/* pop -O0 from beginning, though it probably doesn't matter here at the end of the compilation unit */
+#if defined(__GNUC__) && !defined( __INTEL_COMPILER)
+#pragma GCC pop_options
+#endif

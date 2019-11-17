@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   xmldef.h
+ * @ingroup OTHER_CFILES
  * @brief  declarations for XML parsing
  * @author Thorsten Koch
  * @author Marc Pfetsch

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for primal heuristics
  * @author Tobias Achterberg
  * @author Timo Berthold

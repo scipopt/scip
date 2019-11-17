@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cutpool.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing cuts in a cut pool
  * @author Tobias Achterberg
  * @author Stefan Heinz

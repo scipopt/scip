@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_shiftandpropagate.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  shiftandpropagate primal heuristic
  * @author Timo Berthold
  * @author Gregor Hendel
@@ -411,7 +412,7 @@ void transformVariable(
     * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the
     * corresponding rows needs to be modified.
     */
-   if( SCIPisHugeValue(scip, -lb) && SCIPisHugeValue(scip, ub) )
+   if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
    {
       if( matrix->transformstatus[colpos] == TRANSFORMSTATUS_NEG )
          negatecoeffs = TRUE;
@@ -420,16 +421,17 @@ void transformVariable(
       matrix->transformshiftvals[colpos] = 0.0;
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_FREE;
    }
-   else if( SCIPisFeasLE(scip, ABS(lb), ABS(ub)) )
+   else if( SCIPisLE(scip, REALABS(lb), REALABS(ub)) )
    {
-      assert(!SCIPisHugeValue(scip, lb));
+      assert(!SCIPisInfinity(scip, REALABS(lb)));
+
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_LB;
       deltashift = lb;
       matrix->transformshiftvals[colpos] = lb;
    }
    else
    {
-      assert(!SCIPisHugeValue(scip, ub));
+      assert(!SCIPisInfinity(scip, ub));
       if( matrix->transformstatus[colpos] != TRANSFORMSTATUS_NEG )
          negatecoeffs = TRUE;
       matrix->transformstatus[colpos] = TRANSFORMSTATUS_NEG;
@@ -438,8 +440,8 @@ void transformVariable(
    }
 
    /* determine the upper bound for this variable in heuristic transformation (lower bound is implicit; always 0) */
-   if( !SCIPisHugeValue(scip, ub) && !SCIPisHugeValue(scip, lb) )
-      matrix->upperbounds[colpos] = ub - lb;
+   if( !SCIPisInfinity(scip, ub) && !SCIPisInfinity(scip, lb) )
+      matrix->upperbounds[colpos] = MIN(ub - lb, SCIPinfinity(scip)); /*lint !e666*/
    else
       matrix->upperbounds[colpos] = SCIPinfinity(scip);
 
@@ -453,7 +455,7 @@ void transformVariable(
       int nrows;
       int i;
 
-      assert(!SCIPisHugeValue(scip, deltashift));
+      assert(!SCIPisInfinity(scip, deltashift));
 
       /* get nonzero values and corresponding rows of column */
       getColumnData(matrix, colpos, &vals, &rows, &nrows);
@@ -478,8 +480,8 @@ void transformVariable(
          assert(SCIPisFeasLE(scip, matrix->lhs[rowpos], matrix->rhs[rowpos]));
       }
    }
-   SCIPdebugMsg(scip, "Variable <%s> at colpos %d transformed. LB <%g> --> <%g>, UB <%g> --> <%g>\n",
-      SCIPvarGetName(var), colpos, lb, 0.0, ub, matrix->upperbounds[colpos]);
+   SCIPdebugMsg(scip, "Variable <%s> at colpos %d transformed. Status %d LB <%g> --> <%g>, UB <%g> --> <%g>\n",
+      SCIPvarGetName(var), colpos, matrix->transformstatus[colpos], lb, 0.0, ub, matrix->upperbounds[colpos]);
 }
 
 /** initializes copy of the original coefficient matrix and applies heuristic specific adjustments: normalizing row
@@ -1188,7 +1190,7 @@ SCIP_RETCODE updateTransformation(
          matrix->transformshiftvals[varindex] = ub;
 
          if( !SCIPisInfinity(scip, -lb) )
-            matrix->upperbounds[varindex] = ub - lb;
+            matrix->upperbounds[varindex] = MIN(ub - lb, SCIPinfinity(scip)); /*lint !e666*/
          else
             matrix->upperbounds[varindex] = SCIPinfinity(scip);
       }
@@ -1203,8 +1205,8 @@ SCIP_RETCODE updateTransformation(
          /* violations have to be rechecked for rows in which variable appears */
          checkviolations = TRUE;
 
-         assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || TRANSFORMSTATUS_NEG);
-         assert(SCIPisFeasLE(scip, ABS(lb), ABS(ub)) || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
+         assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
+         assert(SCIPisLE(scip, ABS(lb), ABS(ub)) || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
       }
       break;
 

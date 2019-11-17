@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_sync.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  primal heuristic that adds solutions from synchronization
  * @author Robert Lion Gottwald
  *

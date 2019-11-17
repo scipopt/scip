@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricer.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for variable pricers
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -367,7 +368,6 @@ SCIP_RETCODE SCIPpricerDeactivate(
 {
    assert(pricer != NULL);
    assert(set != NULL);
-   assert(set->stage == SCIP_STAGE_PROBLEM);
 
    if( pricer->active )
    {

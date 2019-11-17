@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trustregion.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  Large neighborhood search heuristic for Benders' decomposition based on trust region methods
  * @author Stephen J. Maher
  *
@@ -158,6 +159,7 @@ SCIP_RETCODE addTrustRegionConstraints(
 
    int nvars;
    int nbinvars;
+   int nconsvars;
    int i;
    SCIP_Real lhs;
    SCIP_Real rhs;
@@ -175,6 +177,7 @@ SCIP_RETCODE addTrustRegionConstraints(
    /* memory allocation */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nvars + 1) );
+   nconsvars = 0;
 
    /* create the upper bounding constraint. An absolute minimum improvement is used for this heuristic. This is
     * different to other LNS heuristics, where a relative improvement is used. The absolute improvement tries to take
@@ -191,14 +194,17 @@ SCIP_RETCODE addTrustRegionConstraints(
    /* adding the coefficients to the upper bounding constraint */
    for( i = 0; i < nvars; i++ )
    {
-      consvals[i] = SCIPvarGetObj(subvars[i]);
-      consvars[i] = subvars[i];
+      if( subvars[i] == NULL )
+         continue;
+      consvals[nconsvars] = SCIPvarGetObj(subvars[i]);
+      consvars[nconsvars] = subvars[i];
+      ++nconsvars;
    }
 
    /* creates trustregion constraint and adds it to subscip */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upperboundcons", SCIPgetProbName(scip));
 
-   SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, name, nvars, consvars, consvals,
+   SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, name, nconsvars, consvars, consvals,
          lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
    SCIP_CALL( SCIPaddCons(subscip, cons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
@@ -407,7 +413,7 @@ SCIP_RETCODE setupAndSolveSubscipTrustregion(
       SCIPgetNNodes(subscip), nsubnodes);
 
    /* checks the solutions of the sub SCIP and adds them to the main SCIP if feasible */
-   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success) );
+   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, NULL) );
 
    if( success )
       *result = SCIP_FOUNDSOL;

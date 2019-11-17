@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_dualagg.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  aggregate variables by dual arguments
  * @author Dieter Weninger
  *

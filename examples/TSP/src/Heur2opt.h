@@ -31,10 +31,10 @@ namespace tsp
 /** C++ wrapper */
 class Heur2opt : public scip::ObjHeur
 {
-   GRAPH*             graph_;             /**< the underlying graph of the TSP */
-   int                ncalls_;            /**< number of calls of the heuristic since the last solution was found */
-   SCIP_SOL*          sol_;               /**< current solution */
-   GRAPHEDGE**        tour_;              /**< tour induced by sol */
+   GRAPH*                graph_;             /**< the underlying graph of the TSP */
+   int                   ncalls_;            /**< number of calls of the heuristic since the last solution was found */
+   SCIP_SOL*             sol_;               /**< current solution */
+   GRAPHEDGE**           tour_;              /**< tour induced by sol */
 
 public:
 

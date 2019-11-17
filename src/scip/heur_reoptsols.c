@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_reoptsols.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  reoptsols primal heuristic
  * @author Jakob Witzig
  */

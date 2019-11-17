@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   visual.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for creating output for visualization tools (VBC, BAK)
  * @author Tobias Achterberg
  * @author Marc Pfetsch

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   conflictstore.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing conflicts
  * @author Jakob Witzig
  */
@@ -403,9 +404,11 @@ SCIP_RETCODE delPosDualray(
    if( pos < lastpos )
    {
       conflictstore->dualrayconfs[pos] = conflictstore->dualrayconfs[lastpos];
+      conflictstore->drayrelaxonly[pos] = conflictstore->drayrelaxonly[lastpos];
 
 #ifndef NDEBUG
       conflictstore->dualrayconfs[lastpos] = NULL;
+      conflictstore->drayrelaxonly[lastpos] = TRUE;
 #endif
    }
 
@@ -467,12 +470,14 @@ SCIP_RETCODE delPosDualsol(
       conflictstore->dualprimalbnds[pos] = conflictstore->dualprimalbnds[lastpos];
       conflictstore->scalefactors[pos] = conflictstore->scalefactors[lastpos];
       conflictstore->updateside[pos] = conflictstore->updateside[lastpos];
+      conflictstore->dsolrelaxonly[pos] = conflictstore->dsolrelaxonly[lastpos];
 
 #ifndef NDEBUG
       conflictstore->dualsolconfs[lastpos] = NULL;
       conflictstore->dualprimalbnds[lastpos] = SCIP_UNKNOWN;
       conflictstore->scalefactors[lastpos] = 1.0;
       conflictstore->updateside[lastpos] = FALSE;
+      conflictstore->dsolrelaxonly[lastpos] = TRUE;
 #endif
    }
 
@@ -742,6 +747,8 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    (*conflictstore)->dualprimalbnds = NULL;
    (*conflictstore)->scalefactors = NULL;
    (*conflictstore)->updateside = NULL;
+   (*conflictstore)->drayrelaxonly = NULL;
+   (*conflictstore)->dsolrelaxonly = NULL;
    (*conflictstore)->dualrayconfs = NULL;
    (*conflictstore)->dualsolconfs = NULL;
    (*conflictstore)->origconfs = NULL;
@@ -794,10 +801,12 @@ SCIP_RETCODE SCIPconflictstoreFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->conflicts, (*conflictstore)->conflictsize);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->confprimalbnds, (*conflictstore)->conflictsize);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualrayconfs, CONFLICTSTORE_DUALRAYSIZE);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->drayrelaxonly, CONFLICTSTORE_DUALRAYSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualsolconfs, CONFLICTSTORE_DUALSOLSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dualprimalbnds, CONFLICTSTORE_DUALSOLSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->scalefactors, CONFLICTSTORE_DUALSOLSIZE);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->updateside, CONFLICTSTORE_DUALSOLSIZE);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictstore)->dsolrelaxonly, CONFLICTSTORE_DUALSOLSIZE);
    BMSfreeMemoryNull(conflictstore);
 
    return SCIP_OKAY;
@@ -872,6 +881,7 @@ SCIP_RETCODE SCIPconflictstoreClean(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
@@ -910,8 +920,26 @@ SCIP_RETCODE SCIPconflictstoreClean(
    if( SCIPisInRestart(set->scip) )
    {
       int i;
-      for( i = 0; i < conflictstore->ndualsolconfs; i++ )
-         conflictstore->updateside[i] = FALSE;
+
+      for( i = conflictstore->ndualrayconfs-1; i >= 0 ; i-- )
+      {
+         if( conflictstore->drayrelaxonly[i] )
+         {
+            SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, reopt, i, TRUE) );
+         }
+      }
+
+      for( i = conflictstore->ndualsolconfs-1; i >= 0 ; i-- )
+      {
+         if( conflictstore->dsolrelaxonly[i] )
+         {
+            SCIP_CALL( delPosDualsol(conflictstore, set, stat, transprob, blkmem, reopt, i, TRUE) );
+         }
+         else
+         {
+            conflictstore->updateside[i] = FALSE;
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -928,7 +956,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_REOPT*           reopt               /**< reoptimization data */
+   SCIP_REOPT*           reopt,              /**< reoptimization data */
+   SCIP_Bool             hasrelaxvar         /**< does the dual proof contain at least one variable that exists in
+                                               *  the current relaxation only? */
    )
 {
    int nvars;
@@ -944,6 +974,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    if( conflictstore->dualrayconfs == NULL )
    {
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->dualrayconfs, CONFLICTSTORE_DUALRAYSIZE) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->drayrelaxonly, CONFLICTSTORE_DUALRAYSIZE) );
    }
 
    /* the store is full, we proceed as follows
@@ -961,18 +992,33 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
       /* if we could not remove a dual ray that is already marked as deleted we need to remove the oldest active one */
       if( ndeleted == 0 )
       {
+         SCIP_Bool local = SCIPconsIsLocal(dualproof);
+         int pos = 0;
+
          /* sort dual rays */
-         SCIPsortPtr((void**)conflictstore->dualrayconfs, compareConss, conflictstore->ndualrayconfs);
+         SCIPsortPtrBool((void**)conflictstore->dualrayconfs, conflictstore->drayrelaxonly, compareConss,
+            conflictstore->ndualrayconfs);
          assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualrayconfs[0]),
                SCIPconsGetAge(conflictstore->dualrayconfs[conflictstore->ndualrayconfs-1])));
 
-         SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, reopt, 0, TRUE) );
+         while( pos < conflictstore->ndualrayconfs-1 && local != SCIPconsIsLocal(conflictstore->dualrayconfs[pos]) )
+            pos++;
+
+         /* we don't want to keep the dual proof */
+         if( pos >= conflictstore->ndualrayconfs )
+         {
+            SCIP_CALL( SCIPconsDelete(dualproof, blkmem, set, stat, transprob, reopt) );
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( delPosDualray(conflictstore, set, stat, transprob, blkmem, reopt, pos, TRUE) );
       }
    }
 
    /* add the new constraint based on a dual ray at the last position */
    SCIPconsCapture(dualproof);
    conflictstore->dualrayconfs[conflictstore->ndualrayconfs] = dualproof;
+   conflictstore->drayrelaxonly[conflictstore->ndualrayconfs] = hasrelaxvar;
    ++conflictstore->ndualrayconfs;
 
    /* add conflict locks */
@@ -999,7 +1045,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_Real             scale,              /**< scaling factor that needs to be considered when updating the side */
-   SCIP_Bool             updateside          /**< should the side be updated if a new incumbent is found */
+   SCIP_Bool             updateside,         /**< should the side be updated if a new incumbent is found */
+   SCIP_Bool             hasrelaxvar         /**< does the dual proof contain at least one variable that exists in
+                                               *  the current relaxation only? */
    )
 {
    int nvars;
@@ -1018,6 +1066,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->dualprimalbnds, CONFLICTSTORE_DUALSOLSIZE) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->scalefactors, CONFLICTSTORE_DUALSOLSIZE) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->updateside, CONFLICTSTORE_DUALSOLSIZE) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &conflictstore->dsolrelaxonly, CONFLICTSTORE_DUALSOLSIZE) );
    }
 
    /* the store is full, we proceed as follows
@@ -1035,13 +1084,27 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
       /* if we could not remove a dual proof that is already marked as deleted we need to remove the oldest active one */
       if( ndeleted == 0 )
       {
+         SCIP_Bool local = SCIPconsIsLocal(dualproof);
+         int pos = 0;
+
          /* sort dual rays */
-         SCIPsortPtrRealRealInt((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds,
-               conflictstore->scalefactors, (int*)conflictstore->updateside, compareConss, conflictstore->ndualsolconfs);
+         SCIPsortPtrRealRealIntBool((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds,
+               conflictstore->scalefactors, (int*)conflictstore->updateside, conflictstore->dsolrelaxonly,
+               compareConss, conflictstore->ndualsolconfs);
          assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualsolconfs[0]),
                SCIPconsGetAge(conflictstore->dualsolconfs[conflictstore->ndualsolconfs-1])));
 
-         SCIP_CALL( delPosDualsol(conflictstore, set, stat, transprob, blkmem, reopt, 0, TRUE) );
+         while( pos < conflictstore->ndualsolconfs-1 && local != SCIPconsIsLocal(conflictstore->dualsolconfs[pos]) )
+            pos++;
+
+         /* we don't want to keep the dual proof */
+         if( pos >= conflictstore->ndualsolconfs )
+         {
+            SCIP_CALL( SCIPconsDelete(dualproof, blkmem, set, stat, transprob, reopt) );
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( delPosDualsol(conflictstore, set, stat, transprob, blkmem, reopt, pos, TRUE) );
       }
    }
 
@@ -1051,6 +1114,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    conflictstore->dualprimalbnds[conflictstore->ndualsolconfs] = SCIPgetCutoffbound(set->scip) - SCIPsetSumepsilon(set);
    conflictstore->scalefactors[conflictstore->ndualsolconfs] = scale;
    conflictstore->updateside[conflictstore->ndualsolconfs] = updateside;
+   conflictstore->dsolrelaxonly[conflictstore->ndualsolconfs] = hasrelaxvar;
    ++conflictstore->ndualsolconfs;
 
    /* add conflict locks */

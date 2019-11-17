@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_trivial.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
  * @author Tobias Achterberg
  */
@@ -164,7 +165,10 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
 #ifdef FIXSIMPLEVALUE
             fixval = SCIPselectSimpleValue(lb - 0.9 * SCIPepsilon(scip), ub + 0.9 * SCIPepsilon(scip), MAXDNOM);
 #else
-            fixval = (lb + ub)/2;
+            /* prefer integral values (especially 0) over midpoint */
+            fixval = SCIPround(scip, lb);
+            if( fixval < lb || fixval > ub )
+               fixval = (lb + ub)/2;
 #endif
             SCIPdebugMsg(scip, "fixing continuous variable <%s>[%.17f,%.17f] to %.17f\n", SCIPvarGetName(vars[v]), lb, ub, fixval);
             SCIP_CALL( SCIPfixVar(scip, vars[v], fixval, &infeasible, &fixed) );

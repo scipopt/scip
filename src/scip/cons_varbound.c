@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_varbound.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for variable bound constraints \f$lhs \le x + c y \le rhs\f$.
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -4419,8 +4420,8 @@ SCIP_DECL_CONSPROP(consPropVarbound)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
-   int nchgbds;
-   int nchgsides;
+   int nchgbds = 0;
+   int nchgsides = 0;
    int i;
 
    assert(conshdlr != NULL);
@@ -4429,7 +4430,6 @@ SCIP_DECL_CONSPROP(consPropVarbound)
    assert(conshdlrdata != NULL);
 
    cutoff = FALSE;
-   nchgbds = 0;
 
    SCIPdebugMsg(scip, "propagating %d variable bound constraints\n", nmarkedconss);
 

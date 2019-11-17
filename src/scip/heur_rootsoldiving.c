@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rootsoldiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
  * @author Kati Wolter
  */

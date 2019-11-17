@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   bandit_ucb.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for UCB bandit selection
  * @author Gregor Hendel
  */

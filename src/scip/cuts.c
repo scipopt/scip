@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cuts.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for aggregation of rows
  * @author Jakob Witzig
  * @author Robert Lion Gottwald
@@ -2179,7 +2180,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
       }
    }
 
-   SCIPaggrRowRemoveZeros(scip, aggrrow, valid);
+   SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, valid);
 
    return SCIP_OKAY;
 }
@@ -2320,13 +2321,15 @@ SCIP_RETCODE postprocessCutQuad(
 void SCIPaggrRowRemoveZeros(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Bool             useglbbounds,       /**< consider global bound although the cut is local? */
    SCIP_Bool*            valid               /**< pointer to return whether the aggregation row is still valid */
    )
 {
    assert(aggrrow != NULL);
    assert(valid != NULL);
 
-   *valid = ! removeZerosQuad(scip, SCIPsumepsilon(scip), aggrrow->local, aggrrow->vals, QUAD(&aggrrow->rhs), aggrrow->inds, &aggrrow->nnz);
+   *valid = ! removeZerosQuad(scip, SCIPsumepsilon(scip), useglbbounds ? FALSE : aggrrow->local, aggrrow->vals,
+      QUAD(&aggrrow->rhs), aggrrow->inds, &aggrrow->nnz);
 }
 
 /** get number of aggregated rows */
@@ -2595,7 +2598,10 @@ SCIP_RETCODE SCIPselectCuts(
    }
    else
    {
-      efficacyfac += objparalweight;
+      /* in case there is no solution add the directed cutoff distance weight to the efficacy weight
+       * since the efficacy underestimates the directed cuttoff distance
+       */
+      efficacyfac += dircutoffdistweight;
       for( i = 0; i < ncuts; ++i )
       {
          SCIP_Real objparallelism;

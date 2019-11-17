@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel_bfs.c
+ * @ingroup DEFPLUGINS_NODESEL
  * @brief  node selector for best first search
  * @author Tobias Achterberg
  */

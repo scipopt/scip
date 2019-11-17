@@ -42,7 +42,7 @@ SETNAME=$7   # the name of the setting
 TSTNAME=$8   # the name of the testset
 CONTINUE=$9  # should test continue an existing run
 QUEUE=${10}  # the queue name
-p=${11}      # the index of the current permutation
+p=${11}      # shift of the global permutation seed
 s=${12}      # shift of the global random seed
 THREADS=${13} # the number of threads
 
@@ -63,9 +63,10 @@ then
 fi
 
 # if permutation is positive, add postfix
-if test $p -gt 0
+PERM=`expr $p + $STARTPERM`
+if test $PERM -gt 0
 then
-    EVALFILE=$EVALFILE"-p"$p
+    EVALFILE=$EVALFILE"-p"$PERM
 fi
 
 OUTFILE=$EVALFILE.out
@@ -80,7 +81,7 @@ then
     fname=$SCIPPATH/$OUTPUTDIR/`basename $EVALFILE .eval`.meta
     if ! test -e $fname
     then
-        echo @Permutation $p > $fname
+        echo @Permutation $PERM > $fname
         echo @Seed $SEED >> $fname
         echo @Settings $SETNAME >> $fname
         echo @TstName $TSTNAME >> $fname
@@ -175,9 +176,9 @@ then
 fi
 
 # if permutation is positive, add postfix
-if test $p -gt 0
+if test $PERM -gt 0
 then
-    FILENAME=$FILENAME"-p"$p
+    FILENAME=$FILENAME"-p"$PERM
 fi
 
 SKIPINSTANCE="false"
@@ -194,4 +195,4 @@ TMPFILE=$BASENAME.tmp
 SETFILE=$BASENAME.set
 
 # even if we decide to skip this instance, we write the basename to the eval file
-echo $BASENAME >> $EVALFILE
+echo ${OUTPUTDIR}/${FILENAME} >> $EVALFILE

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_pip.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  file reader for polynomial mixed-integer programs in PIP format
  * @author Stefan Vigerske
  * @author Marc Pfetsch

@@ -15,6 +15,7 @@
 /* #define SCIP_WRITEPROB */
 /* #define SCIP_OUTPUT */
 /**@file   sepa_cgmip.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  Chvatal-Gomory cuts computed via a sub-MIP
  * @author Marc Pfetsch
  *
@@ -34,14 +35,14 @@
  * Mathematical Programming 113, No. 2 (2008)
  *
  *
- * There are several versions to generate the final cut:
+ * There are several possibilities to generate the final cut:
  *
  * - The CMIR-routines of SCIP can be used (if @p usecmir is true). One can determine which bound is
  *   used in the rounding operation (if @p cmirownbounds is true) or let SCIP choose the best. This
  *   version is generally numerically the most stable.
  * - If @p usestrongcg is true, we try to generate Strong-CG cuts (as done in sepa_strongcg.c).
  * - One can directly generate the CG-cut as computed (if @p usecmir and @p usestrongcg are
- *   false). The cut is not take from the solution of the MIP, but is recomputed, and some care (but
+ *   false). The cut is not taken from the solution of the MIP, but is recomputed, and some care (but
  *   not as much as in the first version) has been taken to create a valid cut.
  *
  * The computation time of the separation MIP is limited as follows:
@@ -50,7 +51,7 @@
  * - If paramter @a earlyterm is true, the separation is run until the first cut that is violated is
  *   found. (Note that these cuts are not necessarily added to the LP, because here also the norm of
  *   the cuts are taken into account - which cannot easily be included into the separation subscip.)
- *   Then the solution is continued for a certain number of nodes.
+ *   Then the solution process is continued for a certain number of nodes.
  *
  * @todo Check whether one can weaken the conditions on the continuous variables.
  * @todo Use pointers to originating separators to sort out cuts that should not be used.
@@ -977,14 +978,14 @@ SCIP_Real computeObjWeightSize(
  *  original system.  The separating MIP created below is
  *  \f[
  *    \begin{array}{rlr@{\;}l}
- *       \max & \multicolumn{2}{@{}l}{(x^*)^T \alpha - \beta - w^T y} &\\
- *            & f = & \tilde{A}^T y + \overline{z} - \alpha & \\
- *            & \tilde{f} = & \tilde{b}^T y + u^T \overline{z} - \beta &\\
- *            & & \tilde{C}^T y & \geq 0\\
- *            & & 0 \leq f & \leq 1 - \epsilon \\
- *            & & 0 \leq \tilde{f} & \leq 1 - \epsilon\\
- *            & & 0 \leq y, \overline{z} & \leq 1 - \epsilon.\\
- *            & & \alpha \in Z^m, \beta & \in Z.
+ *       \max & (x^*)^T \alpha - \beta - w^T y \\
+ *            & f = \tilde{A}^T y + \overline{z} - \alpha \\
+ *            & \tilde{f} = \tilde{b}^T y + u^T \overline{z} - \beta\\
+ *            & \tilde{C}^T y \geq 0\\
+ *            & 0 \leq f \leq 1 - \epsilon \\
+ *            & 0 \leq \tilde{f} \leq 1 - \epsilon\\
+ *            & 0 \leq y, \overline{z} \leq 1 - \epsilon.\\
+ *            & \alpha \in Z^m, \beta \in Z.
  *    \end{array}
  *  \f]
  *  Here, \f$w\f$ is a weight vector; it's idea is to make the sum over all components of \f$y\f$ as
@@ -1020,7 +1021,7 @@ SCIP_Real computeObjWeightSize(
  *    case, the combintation of rows and bounds has to be integral. We force this by requiring that
  *    \f$f_i = 0\f$.
  *
- *  - If @p contconvert is true some integral variables are randomly treated as if they were
+ *  - If @p contconvert is true, some integral variables are randomly treated as if they were
  *    continuous. This has the effect that in the resulting cut the corresponding coefficient has
  *    value 0. This makes the cuts more sparse. Moreover, the separation problems should become
  *    easier.
@@ -1400,7 +1401,7 @@ SCIP_RETCODE createSubscip(
    if ( sepadata->skipmultbounds )
       multvarub = SCIPinfinity(origscip);
    else
-      multvarub =  1.0-EPSILONVALUE;
+      multvarub = 1.0 - EPSILONVALUE;
 
    /* create artificial variables for row combinations (y-variables) */
    cnt = 0;
@@ -2100,7 +2101,7 @@ SCIP_RETCODE subscipSetParams(
 #else
 
    /* zirounding is often successful, so allow it some more calls */
-   if( !SCIPisParamFixed(subscip, "heuristics/zirounding/minstopncalls") )
+   if ( ! SCIPisParamFixed(subscip, "heuristics/zirounding/minstopncalls") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/zirounding/minstopncalls", 10000) );
    }
@@ -2108,19 +2109,19 @@ SCIP_RETCODE subscipSetParams(
    if ( sepadata->subscipfast )
    {
       /* set other heuristics */
-      if( !SCIPisParamFixed(subscip, "heuristics/shifting/freq") )
+      if ( ! SCIPisParamFixed(subscip, "heuristics/shifting/freq") )
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/shifting/freq", 3) );
       }
-      if( !SCIPisParamFixed(subscip, "heuristics/simplerounding/freq") )
+      if ( ! SCIPisParamFixed(subscip, "heuristics/simplerounding/freq") )
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/simplerounding/freq", 1) );
       }
-      if( !SCIPisParamFixed(subscip, "heuristics/rounding/freq") )
+      if ( ! SCIPisParamFixed(subscip, "heuristics/rounding/freq") )
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rounding/freq", 1) );
       }
-      if( !SCIPisParamFixed(subscip, "heuristics/oneopt/freq") )
+      if ( ! SCIPisParamFixed(subscip, "heuristics/oneopt/freq") )
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", 1) );
       }
@@ -2502,7 +2503,7 @@ SCIP_RETCODE solveSubscip(
    SCIPdebugMsg(origscip, "Solving sub-SCIP (time limit: %f  mem limit: %f  node limit: %" SCIP_LONGINT_FORMAT ") ...\n", timelimit, memorylimit, nodelimit);
 
    /* disable statistic timing inside sub SCIP */
-   if( !sepadata->output )
+   if ( ! sepadata->output )
    {
       SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
    }
@@ -2739,6 +2740,7 @@ SCIP_RETCODE computeCut(
    assert( cutcoefs != NULL );
    assert( cutrhs != NULL );
    assert( localrowsused != NULL );
+   assert( localboundsused != NULL );
    assert( cutrank != NULL );
    assert( success != NULL );
 
@@ -2855,7 +2857,7 @@ SCIP_RETCODE computeCut(
       assert( row != NULL );
 
       /* skip modifiable rows and local rows, unless allowed */
-      if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !sepadata->allowlocal) )
+      if ( SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && ! sepadata->allowlocal) )
       {
          assert( mipdata->ylhs[i] == NULL && mipdata->yrhs[i] == NULL );
          continue;
@@ -3000,6 +3002,7 @@ SCIP_RETCODE computeCut(
             if ( ! SCIPisZero(scip, obj) )
             {
                idx = SCIPvarGetProbindex( SCIPcolGetVar(cols[j]) );
+               assert( 0 <= idx && idx < nvars );
                cutcoefs[idx] += weight * obj;
             }
          }
@@ -3271,7 +3274,7 @@ SCIP_RETCODE createCGCutDirect(
    SCIP_CALL( computeCut(scip, sepa, mipdata, sepadata, sol, TRUE, cutcoefs, &cutrhs, &localrowsused, &localboundsused, &cutrank, &success) );
    cutislocal = localrowsused || localboundsused;
 
-   /* take next solution if cut was not valid */
+   /* Take next solution if cut was not valid - this can easily happen for mixed-integer problems, see function computeCut(). */
    if ( ! success )
    {
       /* try again without using fractional value */
@@ -3360,7 +3363,7 @@ SCIP_RETCODE createCGCutDirect(
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
 
-            for( k = 0; k < cutlen; ++k )
+            for (k = 0; k < cutlen; ++k)
             {
                SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[k]], cutvals[k]) );
             }
@@ -3382,7 +3385,7 @@ SCIP_RETCODE createCGCutDirect(
             /* add cut if it is violated */
             if ( violated )
             {
-               /* check whether cut has been found before - may happend due to projection */
+               /* check whether cut has been found before - may happened due to projection */
                for (k = 0; k < *nprevrows; ++k)
                {
                   SCIP_Real parval;
@@ -3601,7 +3604,7 @@ SCIP_RETCODE createCGCutCMIR(
    SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, weights, NULL, -1, FALSE,
          sepadata->allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
 
-   if( !success )
+   if ( ! success )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, boundsfortrans,
@@ -3612,10 +3615,9 @@ SCIP_RETCODE createCGCutCMIR(
    SCIPdebugMsg(scip, "CMIR: success = %u, cut is%sefficacious (cutefficacy: %g, cutrhs: %g)\n", success,
       SCIPisEfficacious(scip, cutefficacy) ? " " : " not ", cutefficacy, cutrhs);
 
-   /* if successful, convert dense cut into sparse row, and add the row as a cut
-    * only if the cut if violated - if it is not violated we might store non-local cuts in the pool
-    */
-   if( success && (SCIPisEfficacious(scip, cutefficacy) || (sepadata->usecutpool && ! cutislocal)) )
+   /* If successful, convert dense cut into sparse row, and add the row as a cut only if the cut if violated - if it is
+    * not violated we might store non-local cuts in the pool. */
+   if ( success && (SCIPisEfficacious(scip, cutefficacy) || (sepadata->usecutpool && ! cutislocal)) )
    {
       SCIP_ROW* cut;
 
@@ -3625,7 +3627,7 @@ SCIP_RETCODE createCGCutCMIR(
 
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
 
-      for( k = 0; k < cutnnz; ++k )
+      for (k = 0; k < cutnnz; ++k)
       {
          SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[k]], cutcoefs[k]) );
       }
@@ -3645,8 +3647,8 @@ SCIP_RETCODE createCGCutCMIR(
 #endif
 
       /* try to scale the cut to integral values */
-      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip), maxdnom,
-            maxscale, MAKECONTINTEGRAL, &success) );
+      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
+            maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
 
       /* if the cut could be made integral */
       if ( success )
@@ -3834,7 +3836,7 @@ SCIP_RETCODE createCGCutStrongCG(
    SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, weights, NULL, -1, FALSE,
          sepadata->allowlocal, 1, (int) MAXAGGRLEN(nvars), &success) );
 
-   if( !success )
+   if ( ! success )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, MINFRAC, MAXFRAC,
@@ -3844,10 +3846,9 @@ SCIP_RETCODE createCGCutStrongCG(
    SCIPdebugMsg(scip, "Strong-CG: success = %u, cut is%sefficacious (cutefficacy: %g, cutrhs: %g)\n", success,
       SCIPisEfficacious(scip, cutefficacy) ? " " : " not ", cutefficacy, cutrhs);
 
-   /* if successful, convert dense cut into sparse row, and add the row as a cut
-    * only if the cut if violated - if it is not violated we might store non-local cuts in the pool
-    */
-   if( success && (SCIPisEfficacious(scip, cutefficacy) || (sepadata->usecutpool && ! cutislocal)) )
+   /* If successful, convert dense cut into sparse row, and add the row as a cut only if the cut if violated - if it is
+    * not violated we might store non-local cuts in the pool. */
+   if ( success && (SCIPisEfficacious(scip, cutefficacy) || (sepadata->usecutpool && ! cutislocal)) )
    {
       SCIP_ROW* cut;
 
@@ -3857,7 +3858,7 @@ SCIP_RETCODE createCGCutStrongCG(
 
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
 
-      for( k = 0; k < cutnnz; ++k )
+      for (k = 0; k < cutnnz; ++k)
       {
          SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[k]], cutcoefs[k]) );
       }
@@ -4420,12 +4421,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    {
       /* solve subscip */
       SCIP_CALL( solveSubscip(scip, sepadata, mipdata, &success) );
+   }
 
-      /* preceed if solution was successful */
-      if ( success && ! SCIPisStopped(scip) )
-      {
-         SCIP_CALL( createCGCuts(scip, sepa, sepadata, mipdata, &cutoff, &ngen) );
-      }
+   /* preceed if solution was successful */
+   if ( success && ! SCIPisStopped(scip) )
+   {
+      SCIP_CALL( createCGCuts(scip, sepa, sepadata, mipdata, &cutoff, &ngen) );
    }
 
    SCIP_CALL( freeSubscip(scip, sepa, mipdata) );
@@ -4456,12 +4457,11 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
    )
 {
    SCIP_SEPADATA* sepadata;
-   SCIP_SEPA* sepa;
+   SCIP_SEPA* sepa = NULL;
 
    /* create separator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
-   sepa = NULL;
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpCGMIP, NULL, sepadata) );

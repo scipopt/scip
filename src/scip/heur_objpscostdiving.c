@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_objpscostdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
  * @author Tobias Achterberg
  */

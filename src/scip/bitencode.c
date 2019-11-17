@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   bitencode.c
+ * @ingroup OTHER_CFILES
  * @brief  packing single and dual bit values
  * @author Thorsten Koch
  * @author Tobias Achterberg

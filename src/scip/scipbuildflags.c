@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipbuildflags.c
+ * @ingroup OTHER_CFILES
  * @brief  build flags methods
  * @author Felipe Serrano
  */

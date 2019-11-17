@@ -14,8 +14,20 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_diff.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  DIFF file reader
  * @author Jakob Witzig
+ *
+ * This reader allows to parse a new objective function in the style of CPLEX .lp files.
+ *
+ * The lp format is defined within the CPLEX documentation.
+ *
+ * An example of a *.diff file looks like this:
+ *
+ *  Minimize
+ *    obj: - STM6 + STM7
+ *
+ * Here is the objective sense set to minimize the function -STM6 + STM7.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -375,6 +387,7 @@ SCIP_Bool getNextToken(
    }
    assert(lpinput->linepos < LP_MAX_LINELEN);
    assert(!isDelimChar(buf[lpinput->linepos]));
+   assert(buf[lpinput->linepos] != '\0'); /* '\0' is a delim-char, so this assert is redundant, but it helps to suppress a scan-build warning */
 
    /* check if the token is a value */
    hasdot = FALSE;

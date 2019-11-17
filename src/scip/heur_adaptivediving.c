@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_adaptivediving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  diving heuristic that selects adaptively between the existing, public dive sets
  * @author Gregor Hendel
  */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_linear.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief Constraint handler for linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -242,11 +243,11 @@ struct SCIP_ConsData
    unsigned int          normalized:1;       /**< is the constraint in normalized form? */
    unsigned int          upgradetried:1;     /**< was the constraint already tried to be upgraded? */
    unsigned int          upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
-   unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
+   unsigned int          indexsorted:1;      /**< are the constraint's variables sorted by type and index? */
    unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
    unsigned int          cliquesadded:1;     /**< were the cliques of the constraint already extracted? */
    unsigned int          implsadded:1;       /**< were the implications of the constraint already extracted? */
-   unsigned int          binvarssorted:1;    /**< are binary variables sorted w.r.t. the absolute of their coefficient? */
+   unsigned int          coefsorted:1;       /**< are variables sorted by type and their absolute activity delta? */
    unsigned int          varsdeleted:1;      /**< were variables deleted after last cleanup? */
    unsigned int          hascontvar:1;       /**< does the constraint contain at least one continuous variable? */
    unsigned int          hasnonbinvar:1;     /**< does the constraint contain at least one non-binary variable? */
@@ -729,7 +730,7 @@ SCIP_RETCODE consCatchEvent(
 
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[pos],
          SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED
-         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED,
+         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED,
          eventhdlr, consdata->eventdata[pos], &consdata->eventdata[pos]->filterpos) );
 
    consdata->removedfixings = consdata->removedfixings && SCIPvarIsActive(consdata->vars[pos]);
@@ -764,7 +765,7 @@ SCIP_RETCODE consDropEvent(
 
    SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos],
          SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED
-         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED,
+         | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED,
          eventhdlr, consdata->eventdata[pos], consdata->eventdata[pos]->filterpos) );
 
    SCIPfreeBlockMemory(scip, &consdata->eventdata[pos]); /*lint !e866*/
@@ -1007,11 +1008,11 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->normalized = FALSE;
    (*consdata)->upgradetried = FALSE;
    (*consdata)->upgraded = FALSE;
-   (*consdata)->sorted = (nvars <= 1);
+   (*consdata)->indexsorted = (nvars <= 1);
    (*consdata)->merged = (nvars <= 1);
    (*consdata)->cliquesadded = FALSE;
    (*consdata)->implsadded = FALSE;
-   (*consdata)->binvarssorted = FALSE;
+   (*consdata)->coefsorted = FALSE;
    (*consdata)->nbinvars = -1;
    (*consdata)->varsdeleted = FALSE;
    (*consdata)->rangedrowpropagated = 0;
@@ -3192,12 +3193,108 @@ static
 SCIP_DECL_SORTINDCOMP(consdataCompVar)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
 
    assert(consdata != NULL);
    assert(0 <= ind1 && ind1 < consdata->nvars);
    assert(0 <= ind2 && ind2 < consdata->nvars);
 
-   return SCIPvarCompare(consdata->vars[ind1], consdata->vars[ind2]);
+   var1 = consdata->vars[ind1];
+   var2 = consdata->vars[ind2];
+
+   /* exactly one variable is binary */
+   if( SCIPvarIsBinary(var1) != SCIPvarIsBinary(var2) )
+   {
+      return (SCIPvarIsBinary(var1) ? -1 : +1);
+   }
+   /* both variables are binary */
+   else if( SCIPvarIsBinary(var1) )
+   {
+      return SCIPvarCompare(var1, var2);
+   }
+   else
+   {
+      SCIP_VARTYPE vartype1 = SCIPvarGetType(var1);
+      SCIP_VARTYPE vartype2 = SCIPvarGetType(var2);
+
+      if( vartype1 < vartype2 )
+         return -1;
+      else if( vartype1 > vartype2 )
+         return +1;
+      else
+         return SCIPvarCompare(var1, var2);
+   }
+}
+
+/** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
+static
+SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+
+   assert(consdata != NULL);
+   assert(0 <= ind1 && ind1 < consdata->nvars);
+   assert(0 <= ind2 && ind2 < consdata->nvars);
+
+   var1 = consdata->vars[ind1];
+   var2 = consdata->vars[ind2];
+
+   /* exactly one variable is binary */
+   if( SCIPvarIsBinary(var1) != SCIPvarIsBinary(var2) )
+   {
+      return (SCIPvarIsBinary(var1) ? -1 : +1);
+   }
+   /* both variables are binary */
+   else if( SCIPvarIsBinary(var1) )
+   {
+      SCIP_Real abscoef1 = REALABS(consdata->vals[ind1]);
+      SCIP_Real abscoef2 = REALABS(consdata->vals[ind2]);
+
+      if( EPSGT(abscoef1, abscoef2, 1e-9) )
+         return -1;
+      else if( EPSGT(abscoef2, abscoef1, 1e-9) )
+         return +1;
+      else
+         return (SCIPvarGetProbindex(var1) - SCIPvarGetProbindex(var2));
+   }
+   else
+   {
+      SCIP_VARTYPE vartype1 = SCIPvarGetType(var1);
+      SCIP_VARTYPE vartype2 = SCIPvarGetType(var2);
+
+      if( vartype1 < vartype2 )
+      {
+         return -1;
+      }
+      else if( vartype1 > vartype2 )
+      {
+         return +1;
+      }
+      else
+      {
+         /* both variables are continuous */
+         if( !SCIPvarIsIntegral(var1) )
+         {
+            assert(!SCIPvarIsIntegral(var2));
+            return (SCIPvarGetProbindex(var1) - SCIPvarGetProbindex(var2));
+         }
+         else
+         {
+            SCIP_Real abscont1 = REALABS(consdata->vals[ind1] * (SCIPvarGetUbGlobal(var1) - SCIPvarGetLbGlobal(var1)));
+            SCIP_Real abscont2 = REALABS(consdata->vals[ind2] * (SCIPvarGetUbGlobal(var2) - SCIPvarGetLbGlobal(var2)));
+
+            if( EPSGT(abscont1, abscont2, 1e-9) )
+               return -1;
+            else if( EPSGT(abscont2, abscont1, 1e-9) )
+               return +1;
+            else
+               return (SCIPvarGetProbindex(var1) - SCIPvarGetProbindex(var2));
+         }
+      }
+   }
 }
 
 /** permutes the constraint's variables according to a given permutation. */
@@ -3271,7 +3368,10 @@ void permSortConsdata(
  *       and the variables of the same type by non-decreasing variable index
  *
  * - during SOLVING
- *       sorts binary variables of the remaining problem w.r.t the absolute of their coefficient.
+ *       sorts variables of the remaining problem by binaries, integers, implicit integers, and continuous variables,
+ *       and binary and integer variables by their global max activity delta (within each group),
+ *       ties within a group are broken by problem index of the variable.
+ *
  *       This fastens the propagation time of the constraint handler.
  */
 static
@@ -3286,132 +3386,51 @@ SCIP_RETCODE consdataSort(
    /* check if there are variables for sorting */
    if( consdata->nvars <= 1 )
    {
-      consdata->sorted = TRUE;
-      consdata->binvarssorted = TRUE;
+      consdata->indexsorted = TRUE;
+      consdata->coefsorted = TRUE;
+      consdata->nbinvars = (consdata->nvars == 1 ? (int)SCIPvarIsBinary(consdata->vars[0]) : 0);
    }
-   else if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE && !consdata->sorted )
+   else if( (!consdata->indexsorted && SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE)
+      || (!consdata->coefsorted && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE) )
    {
       int* perm;
+      int v;
 
       /* get temporary memory to store the sorted permutation */
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
 
       /* call sorting method  */
-      SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
+      if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
+         SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
+      else
+         SCIPsort(perm, consdataCompVarProp, (void*)consdata, consdata->nvars);
 
       permSortConsdata(consdata, perm, consdata->nvars);
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &perm);
 
-      consdata->sorted = TRUE;
-      consdata->binvarssorted = FALSE;
-   }
-   else if( SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && !consdata->binvarssorted )
-   {
-      SCIP_EVENTDATA** eventdata;
-      SCIP_VAR** vars;
-      SCIP_Real* vals;
-      int nvars;
-      int v;
-      int lastbin;
-
-      nvars = consdata->nvars;
-      vars = consdata->vars;
-      vals = consdata->vals;
-      eventdata = consdata->eventdata;
-      assert(vars != NULL || nvars == 0);
-      assert(vals != NULL || nvars == 0);
-
-      lastbin = 0;
-      /* count binary variables and permute variables such that binaries appear first in the sorted vars array */
-      for( v = 0; v < nvars; ++v )
+      if( SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE )
       {
-         assert( vars != NULL); /* for flexelint */
-         assert( vals != NULL); /* for flexelint */
-         if( SCIPvarIsBinary(vars[v]) )
+         consdata->indexsorted = FALSE;
+         consdata->coefsorted = TRUE;
+
+         /* count binary variables in the sorted vars array */
+         consdata->nbinvars = 0;
+         for( v = 0; v < consdata->nvars; ++v )
          {
-            /* swap variable at the end of the binary variables, if necessary */
-            if( lastbin < v )
-            {
-               SCIP_VAR* tmpvar;
-               SCIP_Real tmpval;
-
-               tmpvar = vars[lastbin];
-               tmpval = vals[lastbin];
-
-               vars[lastbin] = vars[v];
-               vals[lastbin] = vals[v];
-
-               vars[v] = tmpvar;
-               vals[v] = tmpval;
-
-               if( eventdata != NULL )
-               {
-                  SCIP_EVENTDATA* tmpeventdata;
-
-                  tmpeventdata = eventdata[lastbin];
-                  eventdata[lastbin] = eventdata[v];
-                  eventdata[lastbin]->varpos = lastbin;
-                  eventdata[v] = tmpeventdata;
-                  eventdata[v]->varpos = v;
-               }
-               assert(SCIPvarIsBinary(vars[lastbin]));
-            }
-#ifndef NDEBUG
+            if( SCIPvarIsBinary(consdata->vars[v]) )
+               ++consdata->nbinvars;
             else
-               assert(lastbin == v);
-#endif
-            ++lastbin;
+               break;
          }
       }
-      consdata->nbinvars = lastbin;
-
-#ifndef NDEBUG
-      /* check sorting */
-      for( v = 0; v < nvars; ++v )
+      else
       {
-         assert(vars != NULL); /* for flexelint */
-         assert(eventdata == NULL || eventdata[v]->varpos == v);
-         assert((v >= consdata->nbinvars && !SCIPvarIsBinary(vars[v])) || (v < consdata->nbinvars && SCIPvarIsBinary(vars[v])));
+         consdata->indexsorted = TRUE;
+         consdata->coefsorted = FALSE;
       }
-#endif
-
-      if( consdata->nbinvars > 1 )
-      {
-         SCIP_Real* absvals;
-         int*       perm;
-
-         assert(lastbin == consdata->nbinvars);
-         assert(lastbin <= nvars);
-         assert(vals != NULL);
-
-         /* initialize absolute coefficients and the target permutation for binary variables */
-         SCIP_CALL( SCIPallocBufferArray(scip, &absvals, lastbin) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &perm, lastbin) );
-
-         for( v = 0; v < lastbin; ++v )
-         {
-            absvals[v] = ABS(vals[v]);
-            perm[v] = v;
-         }
-
-         /* execute the sorting */
-         SCIPsortDownRealInt(absvals, perm, lastbin);
-
-         permSortConsdata(consdata, perm, lastbin);
-
-         /* free temporary arrays */
-         SCIPfreeBufferArray(scip, &perm);
-         SCIPfreeBufferArray(scip, &absvals);
-      }
-      consdata->binvarssorted = TRUE;
-
-      /* presolve sorting cannot be guaranteed after binary sorting */
-      consdata->sorted = (consdata->sorted && consdata->nbinvars == 0);
    }
-   assert(SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE || consdata->binvarssorted);
-   assert(SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE || consdata->sorted);
 
    return SCIP_OKAY;
 }
@@ -3691,6 +3710,9 @@ SCIP_RETCODE addCoef(
    assert(cons != NULL);
    assert(var != NULL);
 
+   /* relaxation-only variables must not be used in checked or enforced constraints */
+   assert(!SCIPvarIsRelaxationOnly(var) || (!SCIPconsIsChecked(cons) && !SCIPconsIsEnforced(cons)));
+
    /* ignore coefficient if it is nearly zero */
    if( SCIPisZero(scip, val) )
       return SCIP_OKAY;
@@ -3794,16 +3816,24 @@ SCIP_RETCODE addCoef(
 
    if( consdata->nvars == 1 )
    {
-      consdata->binvarssorted = TRUE;
-      consdata->sorted = TRUE;
+      consdata->indexsorted = TRUE;
+      consdata->coefsorted = TRUE;
       consdata->merged = TRUE;
    }
    else
    {
-      consdata->binvarssorted = consdata->binvarssorted && !SCIPvarIsBinary(var);
-      consdata->sorted = consdata->sorted
-         && (SCIPvarCompare(consdata->vars[consdata->nvars-2], consdata->vars[consdata->nvars-1]) <= 0);
       consdata->merged = FALSE;
+
+      if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
+      {
+         consdata->indexsorted = consdata->indexsorted && (consdataCompVar((void*)consdata, consdata->nvars-2, consdata->nvars-1) <= 0);
+         consdata->coefsorted = FALSE;
+      }
+      else
+      {
+         consdata->indexsorted = FALSE;
+         consdata->coefsorted = consdata->coefsorted && (consdataCompVarProp((void*)consdata, consdata->nvars-2, consdata->nvars-1) <= 0);
+      }
    }
 
    /* update hascontvar and hasnonbinvar flags */
@@ -3876,10 +3906,8 @@ SCIP_RETCODE delCoefPos(
    }
 
    /* move the last variable to the free slot */
-   if( pos != consdata->nvars-1 )
+   if( pos != consdata->nvars - 1 )
    {
-      consdata->binvarssorted = consdata->binvarssorted && !SCIPvarIsBinary(consdata->vars[pos]);
-
       consdata->vars[pos] = consdata->vars[consdata->nvars-1];
       consdata->vals[pos] = consdata->vals[consdata->nvars-1];
 
@@ -3889,7 +3917,9 @@ SCIP_RETCODE delCoefPos(
          assert(consdata->eventdata[pos] != NULL);
          consdata->eventdata[pos]->varpos = pos;
       }
-      consdata->sorted = consdata->sorted && (pos + 2 >= consdata->nvars || (SCIPvarCompare(consdata->vars[pos], consdata->vars[pos + 1]) <= 0));
+
+      consdata->indexsorted = consdata->indexsorted && (pos + 2 >= consdata->nvars);
+      consdata->coefsorted = consdata->coefsorted && (pos + 2 >= consdata->nvars);
    }
    consdata->nvars--;
 
@@ -3998,7 +4028,13 @@ SCIP_RETCODE chgCoefPos(
    /* change the value */
    consdata->vals[pos] = newval;
 
-   consdata->binvarssorted = consdata->binvarssorted && !SCIPvarIsBinary(var);
+   if( consdata->coefsorted )
+   {
+      if( pos > 0 )
+         consdata->coefsorted = (consdataCompVarProp((void*)consdata, pos - 1, pos) <= 0);
+      if( consdata->coefsorted && pos < consdata->nvars - 1 )
+         consdata->coefsorted = (consdataCompVarProp((void*)consdata, pos, pos + 1) <= 0);
+   }
 
    /* update minimum and maximum activities */
    if( SCIPconsIsTransformed(cons) )
@@ -7023,10 +7059,10 @@ SCIP_RETCODE tightenBounds(
       return SCIP_OKAY;
 
    /* ensure that the variables are properly sorted */
-   if( sortvars && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && !consdata->binvarssorted )
+   if( sortvars && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && !consdata->coefsorted )
    {
       SCIP_CALL( consdataSort(scip, consdata) );
-      assert(consdata->binvarssorted);
+      assert(consdata->coefsorted);
    }
 
    /* update maximal activity delta if necessary */
@@ -7076,6 +7112,16 @@ SCIP_RETCODE tightenBounds(
 
    for( nrounds = 0; (force || consdata->boundstightened < tightenmode) && nrounds < MAXTIGHTENROUNDS; ++nrounds ) /*lint !e574*/
    {
+      /* ensure that the variables are properly sorted
+       *
+       * note: it might happen that integer variables become binary during bound tightening at the root node
+       */
+      if( sortvars && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && !consdata->coefsorted )
+      {
+         SCIP_CALL( consdataSort(scip, consdata) );
+         assert(consdata->coefsorted);
+      }
+
       /* mark the constraint to have the variables' bounds tightened */
       consdata->boundstightened = (unsigned int)tightenmode;
 
@@ -7086,8 +7132,6 @@ SCIP_RETCODE tightenBounds(
       while( v < nvars && v != lastchange && !(*cutoff) )
       {
          oldnchgbds = *nchgbds;
-
-         assert(!sortvars || SCIPgetStage(scip) < SCIP_STAGE_SOLVING || consdata->binvarssorted);
 
          if( easycase )
          {
@@ -7104,7 +7148,7 @@ SCIP_RETCODE tightenBounds(
             lastchange = v;
             ++v;
          }
-         else if( consdata->binvarssorted && v < consdata->nbinvars - 1
+         else if( consdata->coefsorted && v < consdata->nbinvars - 1
             && !SCIPisFeasEQ(scip, SCIPvarGetUbLocal(consdata->vars[v]), SCIPvarGetLbLocal(consdata->vars[v])) )
             v = consdata->nbinvars;
          else
@@ -7908,8 +7952,13 @@ SCIP_RETCODE extractCliques(
        */
       /* fast abort if no binaries exist */
       if( !SCIPvarIsBinary(consdata->vars[0]) )
+      {
+#ifndef NDEBUG
+         for( i = 1; i < consdata->nvars; i++ )
+            assert(!SCIPvarIsBinary(consdata->vars[i]));
+#endif
          return SCIP_OKAY;
-
+      }
       nvars = consdata->nvars;
       vars = consdata->vars;
       vals = consdata->vals;
@@ -8831,6 +8880,7 @@ SCIP_RETCODE tightenSides(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(nchgsides != NULL);
+   assert(infeasible != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -11451,8 +11501,8 @@ SCIP_RETCODE simplifyInequalities(
 
    /* perform sorting after permutation array */
    permSortConsdata(consdata, perm, nvars);
-   consdata->sorted = FALSE;
-   consdata->binvarssorted = FALSE;
+   consdata->indexsorted = FALSE;
+   consdata->coefsorted = FALSE;
 
    vars = consdata->vars;
    vals = consdata->vals;
@@ -12878,8 +12928,8 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    assert(key2 != NULL);
    consdata1 = SCIPconsGetData((SCIP_CONS*)key1);
    consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
-   assert(consdata1->sorted);
-   assert(consdata2->sorted);
+   assert(consdata1->indexsorted);
+   assert(consdata2->indexsorted);
 
    scip = (SCIP*)userptr;
    assert(scip != NULL);
@@ -12945,12 +12995,11 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    assert(consdata != NULL);
    assert(consdata->nvars > 0);
 
-   assert(consdata->sorted);
+   assert(consdata->indexsorted);
 
    minidx = SCIPvarGetIndex(consdata->vars[0]);
    mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
-   assert(minidx >= 0 && minidx <= maxidx);
    scale = COPYSIGN(1.0/consdata->maxabsval, consdata->vals[0]);
 
    /* using only the variable indices as hash, since the values are compared by epsilon */
@@ -13095,7 +13144,7 @@ SCIP_RETCODE detectRedundantConstraints(
       consdata0 = SCIPconsGetData(cons0);
       assert(consdata0 != NULL);
       SCIP_CALL( consdataSort(scip, consdata0) );
-      assert(consdata0->sorted);
+      assert(consdata0->indexsorted);
 
       /* get constraints from current hash table with same variables as cons0 and with coefficients equal
        * to the ones of cons0 when both are scaled such that maxabsval is 1.0 and the coefficient of the
@@ -13135,7 +13184,7 @@ SCIP_RETCODE detectRedundantConstraints(
             assert(consdatadel != NULL);
             assert(consdata0->nvars >= 1 && consdata0->nvars == consdatadel->nvars);
 
-            assert(consdatadel->sorted);
+            assert(consdatadel->indexsorted);
             assert(consdata0->vars[0] == consdatadel->vars[0]);
 
             scale = consdata0->vals[0] / consdatadel->vals[0];
@@ -15649,6 +15698,17 @@ SCIP_DECL_CONSTRANS(consTransLinear)
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
 
+#ifndef NDEBUG
+   /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
+   if( SCIPconsIsEnforced(sourcecons) || SCIPconsIsChecked(sourcecons) )
+   {
+      int n;
+      for(n = targetdata->nvars - 1; n >= 0; --n )
+         assert(!SCIPvarIsRelaxationOnly(targetdata->vars[n]));
+   }
+#endif
+
+
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
@@ -17065,7 +17125,6 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          consdata->maxactdeltavar = NULL;
       }
    }
-
    else if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != 0 )
    {
       /* there is only one lock left: we may multi-aggregate the variable as slack of an equation */
@@ -17098,6 +17157,25 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          assert((eventtype & SCIP_EVENTTYPE_GUBCHANGED) != 0);
          consdataUpdateActivitiesGlbUb(scip, consdata, oldbound, newbound, val, TRUE);
       }
+
+      /* if the variable is binary but not fixed it had to become binary due to this global change */
+      if( SCIPvarIsBinary(var) && SCIPisGT(scip, SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var)) )
+      {
+         if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
+            consdata->indexsorted = FALSE;
+         else
+            consdata->coefsorted = FALSE;
+      }
+   }
+   else if( (eventtype & SCIP_EVENTTYPE_TYPECHANGED) != 0 )
+   {
+      assert(SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED);
+
+      /* for presolving it only matters if a variable type changed from continuous to some kind of integer */
+      consdata->presolved = (consdata->presolved && SCIPeventGetOldtype(event) < SCIP_VARTYPE_CONTINUOUS);
+
+      /* the ordering is preserved if the type changes from something different to binary to binary but SCIPvarIsBinary() is true */
+      consdata->indexsorted = (consdata->indexsorted && SCIPeventGetNewtype(event) == SCIP_VARTYPE_BINARY && SCIPvarIsBinary(var));
    }
    else
    {
@@ -17706,6 +17784,16 @@ SCIP_RETCODE SCIPcreateConsLinear(
       assert(consdata != NULL);
    }
 
+#ifndef NDEBUG
+   /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
+   if( check || enforce )
+   {
+      int n;
+      for(n = consdata->nvars - 1; n >= 0; --n )
+         assert(!SCIPvarIsRelaxationOnly(consdata->vars[n]));
+   }
+#endif
+
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
@@ -17842,6 +17930,9 @@ SCIP_RETCODE SCIPcopyConsLinear(
    {
       SCIP_VAR* var;
       var = vars[v];
+
+      /* if this is a checked or enforced constraints, then there must be no relaxation-only variables */
+      assert(!SCIPvarIsRelaxationOnly(var) || (!check && !enforce));
 
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, consmap, global, &success) );
       assert(!(success) || vars[v] != NULL);
@@ -18423,6 +18514,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_Real negcoeffsum;
    SCIP_Bool infeasible;
    SCIP_Bool integral;
+   int nchgsides = 0;
    int nposbin;
    int nnegbin;
    int nposint;
@@ -18498,6 +18590,12 @@ SCIP_RETCODE SCIPupgradeConsLinear(
     * TODO: this needs to be fixed on master by changing the API and passing a pointer to whether the constraint is
     *       proven to be infeasible.
     */
+   if( infeasible )
+      return SCIP_OKAY;
+
+   /* tighten sides */
+   SCIP_CALL( tightenSides(scip, cons, &nchgsides, &infeasible) );
+
    if( infeasible )
       return SCIP_OKAY;
 

@@ -25,6 +25,11 @@
  * - \ref scip::ObjTable "C++ wrapper class
  */
 
+/** @defgroup DEFPLUGINS_TABLE Default Tables
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default statistics tables of SCIP
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_TYPE_TABLE_H__

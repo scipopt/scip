@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   table.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for displaying statistics tables
  * @author Tristan Gally
  */

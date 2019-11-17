@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   interrupt.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for catching the user CTRL-C interrupt
  * @author Tobias Achterberg
  */

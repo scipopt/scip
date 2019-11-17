@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_solvingstats.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for querying solving statistics
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -32,92 +33,20 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <ctype.h>
-#include <stdarg.h>
-#include <assert.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/
-#endif
-
-
-#include "lpi/lpi.h"
-#include "nlpi/exprinterpret.h"
-#include "nlpi/nlpi.h"
-#include "scip/benders.h"
-#include "scip/benderscut.h"
+#include "blockmemshell/memory.h"
 #include "scip/branch.h"
-#include "scip/branch_nodereopt.h"
 #include "scip/clock.h"
-#include "scip/compr.h"
 #include "scip/concsolver.h"
 #include "scip/concurrent.h"
 #include "scip/conflict.h"
 #include "scip/conflictstore.h"
-#include "scip/cons.h"
-#include "scip/cons_linear.h"
-#include "scip/cutpool.h"
-#include "scip/cuts.h"
 #include "scip/debug.h"
-#include "scip/def.h"
-#include "scip/dialog.h"
-#include "scip/dialog_default.h"
 #include "scip/disp.h"
-#include "scip/event.h"
-#include "scip/heur.h"
-#include "scip/heur_ofins.h"
-#include "scip/heur_reoptsols.h"
-#include "scip/heur_trivialnegation.h"
-#include "scip/heuristics.h"
 #include "scip/history.h"
 #include "scip/implics.h"
-#include "scip/interrupt.h"
-#include "scip/lp.h"
-#include "scip/mem.h"
-#include "scip/message_default.h"
-#include "scip/misc.h"
-#include "scip/nlp.h"
-#include "scip/nodesel.h"
-#include "scip/paramset.h"
-#include "scip/presol.h"
-#include "scip/presolve.h"
-#include "scip/pricer.h"
 #include "scip/pricestore.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
-#include "scip/prop.h"
-#include "scip/reader.h"
-#include "scip/relax.h"
-#include "scip/reopt.h"
-#include "scip/retcode.h"
-#include "scip/scipbuildflags.h"
-#include "scip/scipcoreplugins.h"
-#include "scip/scipgithash.h"
-#include "scip/sepa.h"
-#include "scip/sepastore.h"
-#include "scip/set.h"
-#include "scip/sol.h"
-#include "scip/solve.h"
-#include "scip/stat.h"
-#include "scip/syncstore.h"
-#include "scip/table.h"
-#include "scip/tree.h"
-#include "scip/var.h"
-#include "scip/visual.h"
-#include "xml/xml.h"
-
-#include "scip/scip_benders.h"
-#include "scip/scip_general.h"
-#include "scip/scip_mem.h"
-#include "scip/scip_message.h"
-#include "scip/scip_numerics.h"
-#include "scip/scip_sol.h"
-#include "scip/scip_solvingstats.h"
-#include "scip/scip_table.h"
-#include "scip/scip_timing.h"
-#include "scip/scip_var.h"
-
 #include "scip/pub_benderscut.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_branch.h"
@@ -139,16 +68,33 @@
 #include "scip/pub_sol.h"
 #include "scip/pub_table.h"
 #include "scip/pub_var.h"
-
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons)
- */
-#ifndef NDEBUG
+#include "scip/reader.h"
+#include "scip/reopt.h"
+#include "scip/scip_benders.h"
+#include "scip/scip_general.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_sol.h"
+#include "scip/scip_solvingstats.h"
+#include "scip/scip_table.h"
+#include "scip/scip_timing.h"
+#include "scip/scip_var.h"
+#include "scip/sepastore.h"
+#include "scip/set.h"
+#include "scip/sol.h"
+#include "scip/stat.h"
+#include "scip/struct_mem.h"
+#include "scip/struct_primal.h"
+#include "scip/struct_prob.h"
 #include "scip/struct_scip.h"
-#endif
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/syncstore.h"
+#include "scip/table.h"
+#include "scip/tree.h"
+#include "scip/var.h"
+#include <string.h>
 
 /** gets number of branch and bound runs performed, including the current run
  *
@@ -1131,8 +1077,8 @@ SCIP_Longint SCIPgetNConflictConssFound(
       + SCIPconflictGetNStrongbranchReconvergenceConss(scip->conflict)
       + SCIPconflictGetNPseudoConflictConss(scip->conflict)
       + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict)
-      + SCIPconflictGetNDualrayBndGlobal(scip->conflict)
-      + SCIPconflictGetNDualrayInfGlobal(scip->conflict);
+      + SCIPconflictGetNDualproofsBndGlobal(scip->conflict)
+      + SCIPconflictGetNDualproofsInfGlobal(scip->conflict);
 }
 
 /** get number of conflict constraints found so far at the current node
@@ -1181,6 +1127,30 @@ SCIP_Longint SCIPgetNConflictConssApplied(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNConflictConssApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPconflictGetNAppliedConss(scip->conflict);
+}
+
+/** get total number of dual proof constraints added to the problem
+ *
+ *  @return the total number of dual proof constraints added to the problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_Longint SCIPgetNConflictDualproofsApplied(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNConflictDualproofsApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPconflictGetNDualproofsInfSuccess(scip->conflict) + SCIPconflictGetNDualproofsBndSuccess(scip->conflict);
 }
 
 /** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
@@ -2480,6 +2450,8 @@ void SCIPprintTransProblemStatistics(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
    SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Nonzeros         : %d constraint, %d clique table\n",
+         scip->stat->nnz, SCIPcliquetableGetNEntries(scip->cliquetable));
 }
 
 /** outputs presolver statistics
@@ -2856,10 +2828,10 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNInfeasibleLPReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict) : 0,
-      SCIPconflictGetNDualrayInfSuccess(scip->conflict),
-      SCIPconflictGetNDualrayInfSuccess(scip->conflict) > 0
-      ? (SCIP_Real)SCIPconflictGetNDualrayInfNonzeros(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNDualrayInfSuccess(scip->conflict) : 0,
+      SCIPconflictGetNDualproofsInfSuccess(scip->conflict),
+      SCIPconflictGetNDualproofsInfSuccess(scip->conflict) > 0
+      ? (SCIP_Real)SCIPconflictGetNDualproofsInfNonzeros(scip->conflict)
+      / (SCIP_Real)SCIPconflictGetNDualproofsInfSuccess(scip->conflict) : 0,
       SCIPconflictGetNInfeasibleLPIterations(scip->conflict));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  bound exceed. LP : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT "\n",
       SCIPconflictGetBoundexceedingLPTime(scip->conflict),
@@ -2873,10 +2845,10 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNBoundexceedingLPReconvergenceConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNBoundexceedingLPReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNBoundexceedingLPReconvergenceConss(scip->conflict) : 0,
-      SCIPconflictGetNDualrayBndSuccess(scip->conflict),
-      SCIPconflictGetNDualrayBndSuccess(scip->conflict) > 0
-      ? (SCIP_Real)SCIPconflictGetNDualrayBndNonzeros(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNDualrayBndSuccess(scip->conflict) : 0,
+      SCIPconflictGetNDualproofsBndSuccess(scip->conflict),
+      SCIPconflictGetNDualproofsBndSuccess(scip->conflict) > 0
+      ? (SCIP_Real)SCIPconflictGetNDualproofsBndNonzeros(scip->conflict)
+      / (SCIP_Real)SCIPconflictGetNDualproofsBndSuccess(scip->conflict) : 0,
       SCIPconflictGetNBoundexceedingLPIterations(scip->conflict));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  strong branching : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f          -          - %10" SCIP_LONGINT_FORMAT "\n",
       SCIPconflictGetStrongbranchTime(scip->conflict),
@@ -2910,15 +2882,14 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNAppliedGlobalConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedGlobalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedGlobalConss(scip->conflict) : 0,
-      SCIPconflictGetNDualrayInfGlobal(scip->conflict) + SCIPconflictGetNDualrayBndGlobal(scip->conflict));
+      SCIPconflictGetNDualproofsInfGlobal(scip->conflict) + SCIPconflictGetNDualproofsBndGlobal(scip->conflict));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  applied locally  :          -          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.1f          -          - %10" SCIP_LONGINT_FORMAT "          -          -\n",
       SCIPconflictGetNLocalChgBds(scip->conflict),
       SCIPconflictGetNAppliedLocalConss(scip->conflict),
       SCIPconflictGetNAppliedLocalConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0,
-      SCIPconflictGetNDualrayInfSuccess(scip->conflict) + SCIPconflictGetNDualrayBndSuccess(scip->conflict)
-      - SCIPconflictGetNDualrayInfGlobal(scip->conflict) - SCIPconflictGetNDualrayBndGlobal(scip->conflict));
+      SCIPconflictGetNDualproofsInfLocal(scip->conflict) + SCIPconflictGetNDualproofsBndLocal(scip->conflict));
 }
 
 /** outputs separator statistics
@@ -3437,7 +3408,6 @@ void SCIPprintSolutionStatistics(
 {
    SCIP_Real primalbound;
    SCIP_Real dualbound;
-   SCIP_Real bestsol;
    SCIP_Real gap;
    SCIP_Real firstprimalbound;
    SCIP_Bool objlimitreached;
@@ -3453,9 +3423,13 @@ void SCIPprintSolutionStatistics(
    dualbound = SCIPgetDualbound(scip);
    gap = SCIPgetGap(scip);
 
+   /* We output that the objective limit has been reached if the problem has been solved, no solution respecting the
+    * objective limit has been found (nlimsolsfound == 0) and the primal bound is finite. Note that it still might be
+    * that the original problem is infeasible, even without the objective limit, i.e., we cannot be sure that we
+    * actually reached the objective limit. */
    objlimitreached = FALSE;
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED && scip->primal->nlimsolsfound == 0
-      && !SCIPisInfinity(scip, primalbound)  )
+      && !SCIPisInfinity(scip, primalbound) && SCIPgetStatus(scip) != SCIP_STATUS_INFORUNBD )
       objlimitreached = TRUE;
 
    if( scip->primal->nsolsfound != scip->primal->nlimsolsfound )
@@ -3467,7 +3441,7 @@ void SCIPprintSolutionStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Solutions found  : %10" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT " improvements%s)\n",
       scip->primal->nsolsfound, scip->primal->nbestsolsfound, limsolstring);
 
-   if( objlimitreached || SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
+   if( SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
    {
       if( scip->set->stage == SCIP_STAGE_SOLVED )
       {
@@ -3501,8 +3475,17 @@ void SCIPprintSolutionStatistics(
    {
       if( scip->primal->nlimsolsfound == 0 )
       {
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e", primalbound);
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (user objective limit)\n");
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e   (objective limit)\n", primalbound);
+
+         /* display (best) primal bound */
+         if( scip->primal->nsolsfound > 0 )
+         {
+            SCIP_Real bestsol;
+            bestsol = SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob);
+            bestsol = SCIPretransformObj(scip, bestsol);
+
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Best Solution    : %+21.14e\n", bestsol);
+         }
       }
       else
       {
@@ -3531,14 +3514,6 @@ void SCIPprintSolutionStatistics(
 
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Primal Bound     : %+21.14e", primalbound);
 
-         /* display (best) primal bound */
-         bestsol = SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob);
-         bestsol = SCIPretransformObj(scip, bestsol);
-         if( SCIPsetIsGT(scip->set, bestsol, primalbound) )
-         {
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (user objective limit)\n");
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Best Solution    : %+21.14e", bestsol);
-         }
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "   (in run %d, after %" SCIP_LONGINT_FORMAT " nodes, %.2f seconds, depth %d, found by <%s>)\n",
             SCIPsolGetRunnum(scip->primal->sols[0]),
             SCIPsolGetNodenum(scip->primal->sols[0]),
@@ -3549,10 +3524,12 @@ void SCIPprintSolutionStatistics(
             : (SCIPsolGetRunnum(scip->primal->sols[0]) == 0 ? "initial" : "relaxation"));
       }
    }
-   if( objlimitreached || SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
+
+   if( SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Dual Bound       :          -\n");
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Dual Bound       : %+21.14e\n", dualbound);
+
    if( SCIPsetIsInfinity(scip->set, gap) )
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Gap              :   infinite\n");
    else
@@ -3560,33 +3537,59 @@ void SCIPprintSolutionStatistics(
 
    if( scip->set->misc_calcintegral )
    {
-      if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE )
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (problem infeasible)\n");
+      int s;
+      const char* names[] = {
+         "primal-dual",
+         "primal-ref",
+         "dual-ref"
+      };
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Integrals          :      Total       Avg%%\n");
+      if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE && ! objlimitreached )
+      {
+        for( s = 0; s < 3; ++s )
+        {
+           SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s: %10s %10s (problem infeasible)\n",
+              names[s], "-", "-");
+        }
+      }
       else
       {
-         SCIP_Real avggap;
-         SCIP_Real primaldualintegral;
+         SCIP_Real integrals[3];
+         SCIP_Real solvingtime = SCIPgetSolvingTime(scip);
 
-         if( !SCIPisFeasZero(scip, SCIPgetSolvingTime(scip)) )
+         if( !SCIPisFeasZero(scip, solvingtime) )
          {
-            primaldualintegral = SCIPstatGetPrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob);
-            avggap = primaldualintegral/SCIPgetSolvingTime(scip);
+            integrals[0] =  SCIPstatGetPrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, TRUE);
+
+            if( scip->set->misc_referencevalue != SCIP_INVALID ) /*lint !e777*/
+            {
+               integrals[1] = SCIPstatGetPrimalReferenceIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, FALSE);
+               integrals[2] = SCIPstatGetDualReferenceIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, FALSE);
+            }
+            else
+               integrals[1] = integrals[2] = SCIP_INVALID;
          }
          else
          {
-            avggap = 0.0;
-            primaldualintegral = 0.0;
+            BMSclearMemoryArray(integrals, 3);
          }
 
-         /* caution: this assert is non-deterministic since it depends on the solving time */
-         assert(0.0 <= avggap && SCIPisLE(scip, avggap, 100.0));
+         /* print integrals, if computed */
+         for( s = 0; s < 3; ++s )
+         {
+            if( integrals[s] == SCIP_INVALID ) /*lint !e777*/
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s:          -          - (not evaluated)\n", names[s]);
+            else
+            {
+               SCIP_Real avg = integrals[s] / MAX(solvingtime,1e-6);
 
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         : %10.2f %% (%.2f primal-dual integral)\n",
-            avggap, primaldualintegral);
+               /* caution: this assert is non-deterministic since it depends on the solving time */
+               assert(0.0 <= avg && SCIPisLE(scip, avg, 100.0));
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s: %10.2f %10.2f\n", names[s], integrals[s], avg);
+            }
+         }
       }
    }
-   else
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Avg. Gap         :          - (not evaluated)\n");
 }
 
 /** outputs concurrent solver statistics
@@ -4157,6 +4160,6 @@ void SCIPstoreSolutionGap(
 
    if( scip->set->stage == SCIP_STAGE_SOLVING && scip->set->misc_calcintegral )
    {
-      SCIPstatUpdatePrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
+      SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
    }
 }

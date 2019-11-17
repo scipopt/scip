@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   tclique_branch.c
+ * @ingroup OTHER_CFILES
  * @brief  branch and bound part of algorithm for maximum cliques
  * @author Tobias Achterberg
  * @author Ralf Borndoerfer

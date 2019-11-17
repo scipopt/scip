@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trivial.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  trivial primal heuristic
  * @author Timo Berthold
  */

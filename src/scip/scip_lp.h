@@ -43,25 +43,6 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -344,6 +325,28 @@ SCIP_Real SCIPgetLPRootColumnObjval(
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetLPRootLooseObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets current primal feasibility tolerance of LP */
+SCIP_EXPORT
+SCIP_Real SCIPgetLPFeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** sets primal feasibility tolerance of LP */
+SCIP_EXPORT
+void SCIPsetLPFeastol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newfeastol          /**< new primal feasibility tolerance for LP */
+   );
+
+/** resets primal feasibility tolerance of LP
+ *
+ * Sets primal feasibility tolerance to min of numerics/lpfeastolfactor * numerics/feastol and relaxfeastol.
+ */
+SCIP_EXPORT
+void SCIPresetLPFeastol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

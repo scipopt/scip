@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_ccg.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  Graph file reader (actually, only a writer)
  * @author Marc Pfetsch
  *

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_rapidlearning.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  rapidlearning separator
  * @author Timo Berthold
  * @author Jakob Witzig
@@ -34,7 +35,7 @@
 #define SEPA_NAME              "rapidlearning"
 #define SEPA_DESC               "rapid learning heuristic and separator"
 #define SEPA_PRIORITY          -1200000
-#define SEPA_FREQ                    -1
+#define SEPA_FREQ                     5
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP           TRUE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
@@ -55,7 +56,7 @@
                                          *   cutoff bound be checked? */
 #define DEFAULT_CHECKOBJ          FALSE /**< should the local objection function be checked? */
 #define DEFAULT_CHECKNSOLS         TRUE /**< should the number of solutions found so far be checked? */
-#define DEFAULT_MINDEGENERACY       0.8 /**< minimal degeneracy threshold to allow local rapid learning */
+#define DEFAULT_MINDEGENERACY       0.7 /**< minimal degeneracy threshold to allow local rapid learning */
 #define DEFAULT_MININFLPRATIO      10.0 /**< minimal threshold of inf/obj leaves to allow local rapid learning */
 #define DEFAULT_MINVARCONSRATIO     2.0 /**< minimal ratio of unfixed variables in relation to basis size to
                                          *   allow local rapid learning */
@@ -232,8 +233,11 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    for( i = implstart; i < implend; i++ )
    {
       SCIP_Bool infeasible;
-      assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT);
 
+      if( subvars[i] == NULL )
+         continue;
+
+      assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT);
       SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
       assert(!infeasible);
    }
@@ -248,6 +252,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    {
       for( i = 0; i < nvars; i++ )
       {
+         if( subvars[i] == NULL )
+            continue;
          SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, 1, 1 ) );
       }
    }
@@ -349,6 +355,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP_CALL( SCIPtransformProb(subscip) );
    for( i = 0; i < nvars; ++i)
    {
+      if( subvars[i] == NULL )
+         continue;
       SCIP_CALL( SCIPhashmapInsert(varmapbw, SCIPvarGetTransVar(subvars[i]), vars[i]) );
    }
 
@@ -425,9 +433,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    disabledualreductions = FALSE;
 
    /* check, whether a solution was found */
-   if( sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPfindHeur(scip, "trysol") != NULL )
+   if( sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 )
    {
-      SCIP_HEUR* heurtrysol;
       SCIP_SOL** subsols;
       int nsubsols;
 
@@ -437,12 +444,14 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       nsubsols = SCIPgetNSols(subscip);
       subsols = SCIPgetSols(subscip);
       soladded = FALSE;
-      heurtrysol = SCIPfindHeur(scip, "trysol");
 
-      /* sequentially add solutions to trysol heuristic */
+      /* try adding solution from subSCIP to SCIP, until finding one that is accepted */
       for( i = 0; i < nsubsols && !soladded; ++i )
       {
-         SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heurtrysol, subvars, &soladded) );
+         SCIP_SOL* newsol;
+
+         SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], NULL, subvars, &newsol) );
+         SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &soladded) );
       }
       if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
          disabledualreductions = TRUE;
@@ -540,6 +549,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       {
          SCIP_Bool tightened;
 
+         if( subvars[i] == NULL )
+            continue;
+
          assert(SCIPisLE(scip, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetLbGlobal(subvars[i])));
          assert(SCIPisLE(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])));
          assert(SCIPisLE(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPvarGetUbGlobal(vars[i])));
@@ -553,6 +565,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
             if( SCIPgetEffectiveRootDepth(scip) < SCIPgetDepth(scip) )
                return SCIP_INVALIDCALL;
 #endif
+            tightened = FALSE;
+
             SCIP_CALL( SCIPtightenVarUbGlobal(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
 
             if( cutoff )
@@ -560,6 +574,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
             if( tightened )
                nbdchgs++;
+
+            tightened = FALSE;
 
             SCIP_CALL( SCIPtightenVarLbGlobal(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
 
@@ -571,6 +587,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          }
          else
          {
+            tightened = FALSE;
+
             SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
 
             if( cutoff )
@@ -578,6 +596,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
             if( tightened )
                nbdchgs++;
+
+            tightened = FALSE;
 
             SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &cutoff, &tightened) );
 
@@ -602,6 +622,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          SCIP_Real upvsids;
          SCIP_Real downconflen;
          SCIP_Real upconflen;
+
+         if( subvars[i] == NULL )
+            continue;
 
          /* copy downwards branching statistics */
          downvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
@@ -663,6 +686,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       /* remove all locks that were added to avoid dual presolving */
       for( i = 0; i < nvars; i++ )
       {
+         if( subvars[i] == NULL )
+            continue;
+
          SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, -1, -1 ) );
       }
    }

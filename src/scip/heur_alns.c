@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_alns.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  Adaptive large neighborhood search heuristic that orchestrates popular LNS heuristics
  * @author Gregor Hendel
  */
@@ -38,6 +39,7 @@
 #include "scip/scip_bandit.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
 #include "scip/scip_event.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
@@ -902,10 +904,7 @@ SCIP_RETCODE transferSolution(
    SCIP_VAR** subvars;            /* the variables of the subproblem */
    SCIP_HEUR* heur;               /* alns heuristic structure */
    SCIP_SOL*  subsol;             /* solution of the subproblem */
-   SCIP_VAR** vars;               /* the original problem's variables                */
-   int        nvars;
    SCIP_SOL*  newsol;             /* solution to be created for the original problem */
-   SCIP_Real* subsolvals;         /* solution values of the subproblem               */
    SCIP_Bool  success;
    NH_STATS*  runstats;
    SCIP_SOL*  oldbestsol;
@@ -925,21 +924,7 @@ SCIP_RETCODE transferSolution(
    assert(subvars != NULL);
    assert(runstats != NULL);
 
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(sourcescip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(sourcescip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(sourcescip, newsol, nvars, vars, subsolvals) );
+   SCIP_CALL( SCIPtranslateSubSol(sourcescip, subscip, subsol, heur, subvars, &newsol) );
 
    oldbestsol = SCIPgetBestSol(sourcescip);
 
@@ -974,8 +959,6 @@ SCIP_RETCODE transferSolution(
 
    /* update new upper bound for reward later */
    runstats->newupperbound = SCIPgetUpperbound(sourcescip);
-
-   SCIPfreeBufferArray(sourcescip, &subsolvals);
 
    return SCIP_OKAY;
 }
@@ -2193,6 +2176,12 @@ SCIP_RETCODE setupSubScip(
    {
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
    }
+
+   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
+   {
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
+   }
+
    if( ! SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
@@ -2259,6 +2248,7 @@ SCIP_RETCODE setupSubScip(
          {
             if( ! SCIPisFeasZero(subscip, SCIPvarGetObj(vars[i])) )
             {
+               assert(subvars[i] != NULL);
                SCIP_CALL( SCIPaddCoefLinear(subscip, objcons, subvars[i], SCIPvarGetObj(vars[i])) );
             }
          }
@@ -2401,6 +2391,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       SCIP_HASHMAP* varmapf;
       SCIP_EVENTHDLR* eventhdlr;
       SCIP_EVENTDATA eventdata;
+      char probnamesuffix[SCIP_MAXSTRLEN];
       int ndomchgs;
       int nchgobjs;
       int naddedconss;
@@ -2496,15 +2487,15 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
 
       SCIP_CALL( SCIPcreate(&subscip) );
       SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(scip), nvars) );
+      sprintf(probnamesuffix, "alns_%s", neighborhood->name);
 
       /* todo later: run global propagation for this set of fixings */
-      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapf, neighborhood->name, varbuf, valbuf, nfixings, FALSE, heurdata->copycuts, &success, NULL) );
+      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapf, probnamesuffix, varbuf, valbuf, nfixings, FALSE, heurdata->copycuts, &success, NULL) );
 
       /* store sub-SCIP variables in array for faster access */
       for( v = 0; v < nvars; ++v )
       {
          subvars[v] = (SCIP_VAR*)SCIPhashmapGetImage(varmapf, (void *)vars[v]);
-         assert(subvars[v] != NULL);
       }
 
       SCIPhashmapFree(&varmapf);
@@ -2557,7 +2548,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
 #ifdef ALNS_SUBSCIPOUTPUT
-      SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+      SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
 
       SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.submipclock) );
@@ -2680,7 +2671,7 @@ DECL_VARFIXINGS(varFixingsRens)
    for( i = 0; i < nbinvars + nintvars; ++i )
    {
       SCIP_VAR* var = vars[i];
-      SCIP_Real lpsolval = SCIPgetSolVal(scip, NULL, var);
+      SCIP_Real lpsolval = SCIPvarGetLPSol(var);
       assert((i < nbinvars && SCIPvarIsBinary(var)) || (i >= nbinvars && SCIPvarIsIntegral(var)));
 
       /* fix all binary and integer variables with integer LP solution value */
@@ -2713,6 +2704,9 @@ DECL_CHANGESUBSCIP(changeSubscipRens)
    {
       SCIP_VAR* var = vars[i];
       SCIP_Real lpsolval = SCIPgetSolVal(sourcescip, NULL, var);
+
+      if( subvars[i] == NULL )
+         continue;
 
       if( ! SCIPisFeasIntegral(sourcescip, lpsolval) )
       {
@@ -3149,6 +3143,10 @@ SCIP_RETCODE addLocalBranchingConstraint(
    /* loop over binary variables and fill the local branching constraint */
    for( i = 0; i < nbinvars; ++i )
    {
+      /* skip variables that are not present in sub-SCIP */
+      if( subvars[i] == NULL )
+         continue;
+
       if( SCIPisEQ(sourcescip, SCIPgetSolVal(sourcescip, referencesol, vars[i]), 0.0) )
          consvals[i] = 1.0;
       else
@@ -3205,6 +3203,11 @@ DECL_CHANGESUBSCIP(changeSubscipProximity)
    for( i = 0; i < nbinvars; ++i )
    {
       SCIP_Real newobj;
+
+      /* skip variables not present in sub-SCIP */
+      if( subvars[i] == NULL )
+         continue;
+
       if( SCIPgetSolVal(sourcescip, referencesol, vars[i]) < 0.5 )
          newobj = -1.0;
       else
@@ -3215,6 +3218,10 @@ DECL_CHANGESUBSCIP(changeSubscipProximity)
    /* loop over the remaining variables and change their objective coefficients to 0 */
    for( ; i < nvars; ++i )
    {
+      /* skip variables not present in sub-SCIP */
+      if( subvars[i] == NULL )
+         continue;
+
       SCIP_CALL( SCIPchgVarObj(targetscip, subvars[i], 0.0) );
    }
 
@@ -3243,6 +3250,10 @@ DECL_CHANGESUBSCIP(changeSubscipZeroobjective)
    /* loop over the variables and change their objective coefficients to 0 */
    for( i = 0; i < nvars; ++i )
    {
+      /* skip variables not present in sub-SCIP */
+      if( subvars[i] == NULL )
+         continue;
+
       SCIP_CALL( SCIPchgVarObj(targetscip, subvars[i], 0.0) );
    }
 
@@ -3423,6 +3434,10 @@ DECL_CHANGESUBSCIP(changeSubscipDins)
    {
       SCIP_Real lb;
       SCIP_Real ub;
+
+      /* skip variables not present in sub-SCIP */
+      if( subvars[v] == NULL )
+         continue;
 
       computeIntegerVariableBoundsDins(sourcescip, vars[v], &lb, &ub);
 
@@ -4005,7 +4020,7 @@ SCIP_RETCODE SCIPincludeHeurAlns(
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/unfixtol",
          "tolerance by which the fixing rate may be exceeded without generic unfixing",
-         &heurdata->fixtol, TRUE, DEFAULT_UNFIXTOL, 0.0, 1.0, NULL, NULL) );
+         &heurdata->unfixtol, TRUE, DEFAULT_UNFIXTOL, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselocalredcost",
          "should local reduced costs be used for generic (un)fixing?",

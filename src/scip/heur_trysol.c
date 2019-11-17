@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trysol.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  primal heuristic that tries a given solution
  * @author Marc Pfetsch
  *

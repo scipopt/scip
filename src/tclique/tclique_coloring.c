@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   tclique_coloring.c
+ * @ingroup OTHER_CFILES
  * @brief  coloring part of algorithm for maximum cliques
  * @author Tobias Achterberg
  * @author Ralf Borndoerfer

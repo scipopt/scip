@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   clock.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for clocks and timing issues
  * @author Tobias Achterberg
  */

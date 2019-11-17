@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_linesearchdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that fixes variables with a large difference to their root solution
  * @author Tobias Achterberg
  */

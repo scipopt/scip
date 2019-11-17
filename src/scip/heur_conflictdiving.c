@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_conflictdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP diving heuristic that chooses fixings w.r.t. conflict locks
  * @author Jakob Witzig
  */
@@ -38,7 +39,7 @@
 #define HEUR_DESC                    "LP diving heuristic that chooses fixings w.r.t. conflict locks"
 #define HEUR_DISPCHAR                SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY                -1000100
-#define HEUR_FREQ                    -1
+#define HEUR_FREQ                    10
 #define HEUR_FREQOFS                 0
 #define HEUR_MAXDEPTH                -1
 #define HEUR_TIMING                  SCIP_HEURTIMING_AFTERLPPLUNGE
@@ -66,7 +67,7 @@
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
-#define DEFAULT_LOCKWEIGHT          1.0 /**< weight used in a convex combination of conflict and variable locks */
+#define DEFAULT_LOCKWEIGHT         0.75 /**< weight used in a convex combination of conflict and variable locks */
 #define DEFAULT_LIKECOEF          FALSE /**< perform rounding like coefficient diving */
 #define DEFAULT_MAXVIOL            TRUE /**< prefer rounding direction with most violation */
 #define DEFAULT_MINCONFLICTLOCKS      5 /**< threshold for penalizing the score */

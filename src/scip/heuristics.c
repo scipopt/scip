@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heuristics.c
+ * @ingroup OTHER_CFILES
  * @brief  methods commonly used by primal heuristics
  * @author Gregor Hendel
  */
@@ -972,92 +973,6 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    return SCIP_OKAY;
 }
 
-/** translates a solution from the subproblem and tries to add it to the master SCIP */
-static
-SCIP_RETCODE translateSubSol(
-   SCIP*                 scip,               /**< SCIP data structure of the original problem */
-   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem */
-   SCIP_Bool*            success             /**< pointer to store, whether new solution was found */
-   )
-{
-   SCIP_VAR** vars;
-   int nvars;
-   SCIP_SOL* newsol;
-   SCIP_Real* subsolvals;
-
-   assert( scip != NULL );
-   assert( subscip != NULL );
-   assert( subvars != NULL );
-   assert( subsol != NULL );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-
-   SCIPfreeBufferArray(scip, &subsolvals);
-
-   return SCIP_OKAY;
-}
-/** checks the solutions from the subscip and adds them to the master SCIP is feasible */
-SCIP_RETCODE SCIPtranslateSubSols(
-   SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
-   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
-   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
-   SCIP_Bool*            success             /**< pointer to store, whether new solution was found */
-   )
-{
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(heur != NULL);
-   assert(subvars != NULL);
-   assert(success != NULL);
-
-   *success = FALSE;
-   /* check, whether a solution was found */
-   if( SCIPgetNSols(subscip) > 0 )
-   {
-      SCIP_SOL** subsols;
-      int nsubsols;
-      int i;
-
-      /* check, whether a solution was found;
-       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-       */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
-      for( i = 0; i < nsubsols && ! (*success); ++i )
-      {
-         SCIP_CALL( translateSubSol(scip, subscip, subvars, heur, subsols[i], success) );
-      }
-      if( *success )
-      {
-         SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** adds a trust region neighborhood constraint to the @p targetscip
  *
  *  a trust region constraint measures the deviation from the current incumbent solution \f$x^*\f$ by an auxiliary
@@ -1075,7 +990,7 @@ SCIP_RETCODE SCIPtranslateSubSols(
 SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    SCIP*                 sourcescip,         /**< the data structure for the main SCIP instance */
    SCIP*                 targetscip,         /**< SCIP data structure of the subproblem */
-   SCIP_VAR**            subvars,            /**< variables of the subproblem */
+   SCIP_VAR**            subvars,            /**< variables of the subproblem, NULL entries are ignored */
    SCIP_Real             violpenalty         /**< the penalty for violating the trust region */
    )
 {
@@ -1087,6 +1002,7 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
 
    int nvars;
    int nbinvars;
+   int nconsvars;
    int i;
    SCIP_Real rhs;
    SCIP_Real* consvals;
@@ -1102,6 +1018,7 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    /* memory allocation */
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &consvars, nbinvars + 1) );
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &consvals, nbinvars + 1) );
+   nconsvars = 0;
 
    /* set initial left and right hand sides of trust region constraint */
    rhs = 0.0;
@@ -1111,32 +1028,37 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    {
       SCIP_Real solval;
 
+      if( subvars[i] == NULL )
+         continue;
+
       solval = SCIPgetSolVal(sourcescip, bestsol, vars[i]);
       assert( SCIPisFeasIntegral(sourcescip,solval) );
 
       /* is variable i  part of the binary support of bestsol? */
       if( SCIPisFeasEQ(sourcescip, solval, 1.0) )
       {
-         consvals[i] = -1.0;
+         consvals[nconsvars] = -1.0;
          rhs -= 1.0;
       }
       else
-         consvals[i] = 1.0;
-      consvars[i] = subvars[i];
-      assert(SCIPvarGetType(consvars[i]) == SCIP_VARTYPE_BINARY);
+         consvals[nconsvars] = 1.0;
+      consvars[nconsvars] = subvars[i];
+      assert(SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY);
+      ++nconsvars;
    }
 
    /* adding the violation variable */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "trustregion_violationvar", i);
    SCIP_CALL( SCIPcreateVarBasic(targetscip, &violvar, name, 0.0, SCIPinfinity(targetscip), violpenalty, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(targetscip, violvar) );
-   consvars[nbinvars] = violvar;
-   consvals[nbinvars] = -1.0;
+   consvars[nconsvars] = violvar;
+   consvals[nconsvars] = -1.0;
+   ++nconsvars;
 
    /* creates trustregion constraint and adds it to subscip */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_trustregioncons", SCIPgetProbName(sourcescip));
 
-   SCIP_CALL( SCIPcreateConsLinear(targetscip, &trustregioncons, name, nbinvars + 1, consvars, consvals,
+   SCIP_CALL( SCIPcreateConsLinear(targetscip, &trustregioncons, name, nconsvars, consvars, consvals,
             rhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
    SCIP_CALL( SCIPaddCons(targetscip, trustregioncons) );
    SCIP_CALL( SCIPreleaseCons(targetscip, &trustregioncons) );

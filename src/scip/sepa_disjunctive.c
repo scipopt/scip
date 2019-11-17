@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_disjunctive.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  disjunctive cut separator
  * @author Tobias Fischer
  * @author Marc Pfetsch
@@ -578,6 +579,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
    /* get conflict graph and number of conflict graph edges (note that the digraph arcs were added in both directions) */
    conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
+   if( conflictgraph == NULL )
+      return SCIP_OKAY;
+
    nedges = (int)SCIPceil(scip, (SCIP_Real)SCIPdigraphGetNArcs(conflictgraph)/2);
 
    /* if too many conflict graph edges, the separator can be slow: delay it until no other cuts have been found */

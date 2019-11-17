@@ -1,5 +1,0 @@
-# SCIP version 6.0.0.2
-
-# should Benders' decomposition be used?
-# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
-reading/storeader/usebenders = TRUE

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_countsols.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for counting feasible solutions
  * @author Stefan Heinz
  * @author Michael Winkler
@@ -1845,11 +1846,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
    if ( usesymmetry == 1 || usesymmetry == 3 )
    {
-      SCIP_CALL( SCIPgetIntParam(scip, "presolving/symbreak/addconsstiming", &symcomptiming) );
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
    }
    else if ( usesymmetry == 2 )
    {
-      SCIP_CALL( SCIPgetIntParam(scip, "propagating/orbitalfixing/symcomptiming", &symcomptiming) );
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
    }
 
    if ( usesymmetry != 0 )
@@ -1962,11 +1963,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
    if ( usesymmetry == 1 || usesymmetry == 3 )
    {
-      SCIP_CALL( SCIPgetIntParam(scip, "presolving/symbreak/addconsstiming", &symcomptiming) );
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
    }
    else if ( usesymmetry == 2 )
    {
-      SCIP_CALL( SCIPgetIntParam(scip, "propagating/orbitalfixing/symcomptiming", &symcomptiming) );
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
    }
 
    if ( usesymmetry != 0 )

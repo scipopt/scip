@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   tclique_graph.c
+ * @ingroup OTHER_CFILES
  * @brief  graph data part of algorithm for maximum cliques
  * @author Tobias Achterberg
  * @author Ralf Borndoerfer

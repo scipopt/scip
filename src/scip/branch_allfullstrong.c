@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_allfullstrong.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  all variables full strong LP branching rule
  * @author Tobias Achterberg
  *
@@ -397,12 +398,12 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
 
          if( integral )
          {
-            SCIP_CALL( SCIPgetVarStrongbranchInt(scip, pseudocands[c], INT_MAX,
+            SCIP_CALL( SCIPgetVarStrongbranchInt(scip, pseudocands[c], INT_MAX, FALSE,
                   skipdown[c] ? NULL : &down, skipup[c] ? NULL : &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
          }
          else
          {
-            SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, pseudocands[c], INT_MAX,
+            SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, pseudocands[c], INT_MAX, FALSE,
                   skipdown[c] ? NULL : &down, skipup[c] ? NULL : &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
          }
          nsbcalls++;

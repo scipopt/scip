@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_randrounding.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  randomized LP rounding heuristic which also generates conflicts via an auxiliary probing tree
  * @author Gregor Hendel
  *

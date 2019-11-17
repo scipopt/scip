@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_lp.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  LP file reader
  * @author Tobias Achterberg
  * @author Marc Pfetsch
@@ -2466,41 +2467,6 @@ SCIP_DECL_HASHKEYVAL(hashKeyValVar)
    assert( SCIPvarGetIndex((SCIP_VAR*) key) >= 0 );
    return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
 }
-
-
-#if 0
-/* prints variable name LP format conform; always use this method to stay consistent
- *
- * 1) variable names should not start with a digit
- * 2) avoid variable name starting with an 'e' or 'E' since this notation is reserved for exponential entries
- */
-static
-void printVarName(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   SCIP_VAR*             var,                /**< variable */
-   SCIP_Bool             genericnames        /**< use generic variable names? */
-   )
-{
-   const char* name;
-
-   assert( scip != NULL );
-   assert( var != NULL );
-
-   name = SCIPvarGetName(var);
-   assert( name != NULL );
-
-   if( genericnames || name[0] == '\0' )
-      SCIPinfoMessage(scip, file, "x%d", SCIPvarGetProbindex(var) + 1);
-   else
-   {
-      if( isdigit((unsigned char)name[0]) || name[0] == 'e' || name[0] == 'E' )
-         SCIPinfoMessage(scip, file, "_%s", name);
-      else
-         SCIPinfoMessage(scip, file, "%s", name);
-   }
-}
-#endif
 
 /** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
 static

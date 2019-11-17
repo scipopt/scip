@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_intshifting.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities, shifts integer variables, and
  *         solves a final LP to calculate feasible values for continuous variables
  * @author Tobias Achterberg

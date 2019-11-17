@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_shifting.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities and shifts continuous variables
  * @author Tobias Achterberg
  */

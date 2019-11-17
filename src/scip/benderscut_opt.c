@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_opt.c
+ * @ingroup OTHER_CFILES
  * @brief  Generates a standard Benders' decomposition optimality cut
  * @author Stephen J. Maher
  */
@@ -681,6 +682,15 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   if( subproblem == NULL )
+   {
+      SCIPdebugMsg(scip, "The subproblem %d is set to NULL. The <%s> Benders' decomposition cut can not be executed.\n",
+         probnumber, BENDERSCUT_NAME);
+
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /* setting a flag to indicate whether the NLP relaxation should be used to generate cuts */
    nlprelaxation = SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem);

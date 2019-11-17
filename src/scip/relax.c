@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   relax.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for relaxation handlers
  * @author Tobias Achterberg
  * @author Timo Berthold

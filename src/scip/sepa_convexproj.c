@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_convexproj.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  convexproj separator
  * @author Felipe Serrano
  *
@@ -34,6 +35,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_nlp.h"
 #include "scip/pub_sepa.h"
+#include "scip/pub_var.h"
 #include "scip/scip_cut.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"

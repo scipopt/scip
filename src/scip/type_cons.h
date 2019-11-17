@@ -26,6 +26,11 @@
  *  - \ref scip::ObjConshdlr "C++ wrapper class"
  */
 
+/** @defgroup DEFPLUGINS_CONS Default constraint handlers
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default constraint handlers of SCIP
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_TYPE_CONS_H__
@@ -340,6 +345,7 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *  - SCIP_CONSADDED  : an additional constraint was generated
  *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_SOLVELP    : the LP should be solved again because the LP primal feasibility tolerance has been tightened
  *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
  *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible

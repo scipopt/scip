@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_knapsack.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for knapsack constraints of the form  \f$a^T x \le b\f$, x binary and \f$a \ge 0\f$.
  * @author Tobias Achterberg
  * @author Xin Liu
@@ -2898,9 +2899,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
    int*                  maxgubvarssize      /**< pointer to store the maximal size of GUB constraints */
    )
 {
-#if 0 /* not required */
-   SORTKEYPAIR** sortkeypairsF;
-#endif
    SORTKEYPAIR** sortkeypairsGFC1;
    SORTKEYPAIR* sortkeypairsGFC1store;
    SCIP_Real* sortkeysC1;
@@ -2972,9 +2970,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
 
    /* allocates temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC1, nvarsC1) );
-#if 0 /* not required */
-   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairsF, nvarsF) );
-#endif
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC2, nvarsC2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysR, nvarsR) );
 
@@ -3006,13 +3001,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
     */
    for( j = 0; j < nvarsF; j++ )
    {
-#if 0 /* not required */
-      /* gets sortkeys */
-      SCIP_CALL( SCIPallocBuffer(scip, &sortkeypairsF[j]) );
-      sortkeypairsF[j]->key1 = solvals[varsF[j]];
-      sortkeypairsF[j]->key2 = (SCIP_Real) weights[varsF[j]];
-#endif
-
       /* update status of variable in its gub constraint */
       gubconsidx = gubset->gubconssidx[varsF[j]];
       varidx = gubset->gubvarsidx[varsF[j]];
@@ -3054,12 +3042,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
    {
       SCIPsortRealInt(sortkeysC1, varsC1, nvarsC1);
    }
-#if 0 /* not required */
-   if( nvarsF > 0 )
-   {
-      SCIPsortDownPtrInt((void**)sortkeypairsF, varsF, compSortkeypairs, nvarsF);
-   }
-#endif
    if( nvarsC2 > 0 )
    {
       SCIPsortDownRealInt(sortkeysC2, varsC2, nvarsC2);
@@ -3072,11 +3054,6 @@ SCIP_RETCODE getLiftingSequenceGUB(
    /* frees temporary memory */
    SCIPfreeBufferArray(scip, &sortkeysR);
    SCIPfreeBufferArray(scip, &sortkeysC2);
-#if 0 /* not required */
-   for( j = nvarsF-1; j >= 0; j-- )
-      SCIPfreeBuffer(scip, &sortkeypairsF[j]);
-   SCIPfreeBufferArray(scip, &sortkeypairsF);
-#endif
    SCIPfreeBufferArray(scip, &sortkeysC1);
 
    /* allocate and initialize temporary memory for sorting GUB constraints */
