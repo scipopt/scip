@@ -2512,7 +2512,7 @@ SCIP_RETCODE solveSubscip(
    if ( ! sepadata->earlyterm )
    {
       retcode = SCIPsolve(subscip);
-      SCIPdebugMsg(origscip, "Finished solving CG-MIP (dualbound: %g, solving time: %.2f, nodes: %" SCIP_LONGINT_FORMAT ", nodelimit: %"SCIP_LONGINT_FORMAT").\n",
+      SCIPdebugMsg(origscip, "Finished solving CG-MIP (dualbound: %g, solving time: %.2f, nodes: %" SCIP_LONGINT_FORMAT ", nodelimit: %" SCIP_LONGINT_FORMAT").\n",
          SCIPgetDualbound(subscip), SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), nodelimit);
 
       /* errors in solving the subproblem should not kill the overall solving process;
@@ -2626,7 +2626,7 @@ SCIP_RETCODE solveSubscip(
          retcode = SCIPsolve(subscip);
          SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", -1LL) );
 
-         SCIPdebugMsg(origscip, "Finished solving CG-MIP (dualbound: %g, solving time: %.2f, nodes: %" SCIP_LONGINT_FORMAT ", nodelimit: %"SCIP_LONGINT_FORMAT").\n",
+         SCIPdebugMsg(origscip, "Finished solving CG-MIP (dualbound: %g, solving time: %.2f, nodes: %" SCIP_LONGINT_FORMAT ", nodelimit: %" SCIP_LONGINT_FORMAT").\n",
             SCIPgetDualbound(subscip), SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), nodelimit);
 
          /* errors in solving the subproblem should not kill the overall solving process;
