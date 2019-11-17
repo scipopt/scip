@@ -337,6 +337,8 @@ Interface changes
 
 - new parameter conflict/uselocalrows (default: TRUE) to incorporate locally valid cuts / rows for dual proof analysis
 
+- new parameter separating/cgmip/genprimalsols that allows to generate initial primal solutions from Gomory cuts
+
 ### Data structures
 
 ### Build system
