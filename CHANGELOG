@@ -122,9 +122,12 @@ Performance improvements
 
 - allow rapid learning at local nodes
 
+- allow to recompute cut without using fractional values for sepa_cgmip
+
 - restrict the number of the clique table nonzeros relative to the number of problem nonzeros, which could be a performance bottleneck.
 
 - variable fixings of LP face heuristic are now computed earlier; subproblem creation is skipped if not enough variables are fixed.
+
 
 Examples and applications
 -------------------------
@@ -333,6 +336,8 @@ Interface changes
 - new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
 
 - new parameter conflict/uselocalrows (default: TRUE) to incorporate locally valid cuts / rows for dual proof analysis
+
+- new parameter separating/cgmip/genprimalsols that allows to generate initial primal solutions from Gomory cuts
 
 ### Data structures
 
