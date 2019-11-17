@@ -1121,7 +1121,8 @@ SCIP_RETCODE separateCons(
    vbdcoef = consdata->vbdcoef;
    assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
 
-   if( SCIPvarGetLbLocal(vbdvar) + 0.5 > SCIPvarGetUbLocal(vbdvar) )
+   /* if x is not multiaggregated and y is fixed, propagate bounds on x */
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR && SCIPvarGetLbLocal(vbdvar) + 0.5 > SCIPvarGetUbLocal(vbdvar) )
    {
       assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(vbdvar), SCIPvarGetUbLocal(vbdvar)));
 
