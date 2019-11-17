@@ -2053,6 +2053,10 @@ SCIP_RETCODE computeSymmetryGroup(
          SCIP_CALL( setSymmetryData(scip, vars, nvars, nbinvars, permvars, npermvars, nbinpermvars, *perms, *nperms,
                nmovedvars, binvaraffected, compresssymmetries, compressthreshold, compressed) );
       }
+      else
+      {
+         SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+      }
    }
    else
    {
