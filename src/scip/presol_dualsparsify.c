@@ -58,6 +58,7 @@
 #include "scip/scip_pricer.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
+#include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_var.h"
 #include <string.h>
@@ -1244,6 +1245,16 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       return SCIP_OKAY;
 
    if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
+   if( SCIPdoNotAggr(scip) )
+      return SCIP_OKAY;
+
+   /* If restart is performed, some cuts will be tranformed into linear constraints.
+   * However, SCIPmatrixCreate() only collects the original constraints (not the constraints transformed from cuts)
+   * For this reason, we only perform this method in the first run of branch-and-cut.
+   * */
+   if( SCIPgetNRuns(scip) > 1 )
       return SCIP_OKAY;
 
    presoldata = SCIPpresolGetData(presol);
