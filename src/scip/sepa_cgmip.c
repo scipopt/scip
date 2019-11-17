@@ -3522,6 +3522,7 @@ SCIP_RETCODE createCGCutCMIR(
          if ( SCIPisFeasPositive(subscip, val) )
             weights[k] = -val;
       }
+
       if ( mipdata->yrhs[k] != NULL )
       {
          assert( !SCIProwIsModifiable(rows[k]) && (!SCIProwIsLocal(rows[k]) || sepadata->allowlocal) );
@@ -3644,8 +3645,8 @@ SCIP_RETCODE createCGCutCMIR(
 #endif
 
       /* try to scale the cut to integral values */
-      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-                                     maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
+      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip), maxdnom,
+            maxscale, MAKECONTINTEGRAL, &success) );
 
       /* if the cut could be made integral */
       if ( success )
@@ -3662,8 +3663,8 @@ SCIP_RETCODE createCGCutCMIR(
          if ( ! SCIPisCutEfficacious(scip, NULL, cut) )
          {
             SCIPdebugMsg(scip, " -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
-                         name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                         SCIPgetCutEfficacy(scip, NULL, cut));
+               name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+               SCIPgetCutEfficacy(scip, NULL, cut));
 
             /* release the row */
             SCIP_CALL( SCIPreleaseRow(scip, &cut) );
@@ -3689,18 +3690,18 @@ SCIP_RETCODE createCGCutCMIR(
                ++(*nprevrows);
 
                SCIPdebugMsg(scip, " -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%f)\n",
-                            name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                            SCIPgetCutEfficacy(scip, NULL, cut), SCIProwGetRank(cut),
-                            SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
-                            SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-               #ifdef SCIP_OUTPUT
+                  name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                  SCIPgetCutEfficacy(scip, NULL, cut), SCIProwGetRank(cut),
+                  SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                  SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+#ifdef SCIP_OUTPUT
                SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
-               #else
+#else
                if ( sepadata->output )
                {
                   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
                }
-               #endif
+#endif
                SCIP_CALL( SCIPaddRow(scip, cut, FALSE, cutoff) );
                ++(*ngen);
             }
@@ -3715,7 +3716,7 @@ SCIP_RETCODE createCGCutCMIR(
       else
       {
          SCIPdebugMsg(scip, " -> CG-cut <%s> could not be scaled to integral coefficients: rhs=%f, eff=%f\n",
-                      name, cutefficacy, cutrhs);
+            name, cutefficacy, cutrhs);
 
          /* release the row */
          SCIP_CALL( SCIPreleaseRow(scip, &cut) );
@@ -3810,6 +3811,7 @@ SCIP_RETCODE createCGCutStrongCG(
          if ( SCIPisFeasPositive(subscip, val) )
             weights[k] = -val;
       }
+
       if ( mipdata->yrhs[k] != NULL )
       {
          assert( !SCIProwIsModifiable(rows[k]) && (!SCIProwIsLocal(rows[k]) || sepadata->allowlocal) );
@@ -3876,7 +3878,7 @@ SCIP_RETCODE createCGCutStrongCG(
 
       /* try to scale the cut to integral values */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-                                     maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
+            maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
 
       /* if the cut could be made integral */
       if ( success )
@@ -3893,8 +3895,8 @@ SCIP_RETCODE createCGCutStrongCG(
          if ( ! SCIPisCutEfficacious(scip, NULL, cut) )
          {
             SCIPdebugMsg(scip, " -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
-                         name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                         SCIPgetCutEfficacy(scip, NULL, cut));
+               name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+               SCIPgetCutEfficacy(scip, NULL, cut));
 
             /* release the row */
             SCIP_CALL( SCIPreleaseRow(scip, &cut) );
@@ -3920,18 +3922,18 @@ SCIP_RETCODE createCGCutStrongCG(
                ++(*nprevrows);
 
                SCIPdebugMsg(scip, " -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%f)\n",
-                            name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                            SCIPgetCutEfficacy(scip, NULL, cut), SCIProwGetRank(cut),
-                            SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
-                            SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-               #ifdef SCIP_OUTPUT
+                  name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
+                  SCIPgetCutEfficacy(scip, NULL, cut), SCIProwGetRank(cut),
+                  SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                  SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+#ifdef SCIP_OUTPUT
                SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
-               #else
+#else
                if ( sepadata->output )
                {
                   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
                }
-               #endif
+#endif
                SCIP_CALL( SCIPaddRow(scip, cut, FALSE, cutoff) );
                ++(*ngen);
             }
@@ -3946,7 +3948,7 @@ SCIP_RETCODE createCGCutStrongCG(
       else
       {
          SCIPdebugMsg(scip, " -> CG-cut <%s> could not be scaled to integral coefficients: rhs=%f, eff=%f\n",
-                      name, cutefficacy, cutrhs);
+            name, cutefficacy, cutrhs);
 
          /* release the row */
          SCIP_CALL( SCIPreleaseRow(scip, &cut) );
