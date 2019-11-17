@@ -4282,7 +4282,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    int ncalls;
    int ncols;
    int nrows;
-   unsigned int ngen;
+   unsigned int ngen = 0;
    SCIP_Bool success;
    SCIP_Bool cutoff = FALSE;
 
@@ -4292,7 +4292,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
-   ngen = 0;
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
@@ -4421,12 +4420,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    {
       /* solve subscip */
       SCIP_CALL( solveSubscip(scip, sepadata, mipdata, &success) );
-   }
 
-   /* preceed if solution was successful */
-   if ( success && ! SCIPisStopped(scip) )
-   {
-      SCIP_CALL( createCGCuts(scip, sepa, sepadata, mipdata, &cutoff, &ngen) );
+      /* preceed if solution was successful */
+      if ( success && ! SCIPisStopped(scip) )
+      {
+         SCIP_CALL( createCGCuts(scip, sepa, sepadata, mipdata, &cutoff, &ngen) );
+      }
    }
 
    SCIP_CALL( freeSubscip(scip, sepa, mipdata) );
