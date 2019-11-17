@@ -2217,7 +2217,7 @@ SCIP_RETCODE createCGMIPprimalsols(
          if ( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
          {
             primsol = SCIPcolGetPrimsol(cols[c]);
-            assert( SCIPgetVarSol(scip, var) == primsol );
+            assert( SCIPgetVarSol(scip, var) == primsol ); /*lint !e777*/
 
             if ( SCIPfeasFrac(scip, primsol) >= AWAY && SCIPfeasFrac(scip, primsol) <= 1 - AWAY )
                tryrow = TRUE;
@@ -2255,7 +2255,7 @@ SCIP_RETCODE createCGMIPprimalsols(
          SCIP_Real val;
          int j;
 
-         assert( primsol != SCIP_INVALID );
+         assert( primsol != SCIP_INVALID );  /*lint !e777*/
 
          /* get the row of B^-1 for this basic integer variable with fractional solution value */
          SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, NULL, NULL) );
