@@ -471,6 +471,7 @@ Fixed bugs
 - fixed bug in interval evaluation with power-operator in certain situations
 - fixed behavior of SCIPmatrixCreate() regarding memory management and column generation
 - SCIPmatrixCreate() returns complete=FALSE when locks do not add up
+- fixed bug in sepa_oddcylce when variables are fixed
 
 Miscellaneous
 -------------
