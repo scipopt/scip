@@ -606,7 +606,7 @@ SCIP_RETCODE freeSymmetryData(
       }
       SCIPfreeBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars);
    }
-   else
+   else if ( propdata->binvaraffected )
    {
       for (i = 0; i < propdata->nbinpermvars; ++i)
       {
