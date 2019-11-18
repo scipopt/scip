@@ -1011,7 +1011,13 @@ SCIP_RETCODE SCIPapplyBendersDecomposition(
 
    /* retrieving the default Benders' decomposition plugin */
    benders = SCIPfindBenders(scip, "default");
-   assert(benders != NULL);
+
+   /* if the default Benders' decomposition plugin doesn't exist, then this will result in an error */
+   if( benders == NULL )
+   {
+      SCIPerrorMessage("The default Benders' decomposition plugin is required to apply Benders' decomposition using the input decomposition.");
+      return SCIP_ERROR;
+   }
 
    /* applying the Benders' decomposition. If SCIP is in the PROBLEM stage, then the auxiliary variables don't need to
     * be added. However, in any other stage, then the auxiliary variables must be added to the problem.
