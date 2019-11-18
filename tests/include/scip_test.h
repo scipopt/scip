@@ -10,7 +10,9 @@
  *  If stage == SCIP_STAGE_SOLVING and enableNLP is true, then SCIP will build its NLP
  */
 SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP);
+
 #include "scip_test.c"
+#include "locale.h"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wredundant-decls"
@@ -38,3 +40,18 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
+
+
+CR_API int main(int argc, char *argv[]) {
+    struct criterion_test_set *tests = criterion_initialize();
+
+    int result = 0;
+    if (criterion_handle_args(argc, argv, true))
+    {
+       setlocale(LC_ALL, "C");
+       result = !criterion_run_all_tests(tests);
+    }
+
+    criterion_finalize(tests);
+    return result;
+}

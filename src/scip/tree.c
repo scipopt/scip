@@ -1183,7 +1183,7 @@ SCIP_RETCODE SCIPnodeCutoff(
    {
       stat->rootlowerbound = SCIPsetInfinity(set);
       if( set->misc_calcintegral )
-         SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), SCIPsetInfinity(set));
+         SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), SCIPsetInfinity(set));
    }
    else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) )
    {
@@ -1192,7 +1192,7 @@ SCIP_RETCODE SCIPnodeCutoff(
 
       /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
       if( lowerbound > stat->lastlowerbound )
-         SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), SCIPsetInfinity(set));
+         SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), SCIPsetInfinity(set));
    }
 
    SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
@@ -2322,7 +2322,7 @@ void SCIPnodeUpdateLowerbound(
       {
          stat->rootlowerbound = newbound;
          if( set->misc_calcintegral )
-            SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), newbound);
+            SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), newbound);
          SCIPvisualLowerbound(stat->visual, set, stat, newbound);
       }
       else if ( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
@@ -2335,7 +2335,7 @@ void SCIPnodeUpdateLowerbound(
 
          /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
          if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) && lowerbound > stat->lastlowerbound )
-            SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
+            SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
       }
    }
 }
@@ -6321,6 +6321,12 @@ SCIP_RETCODE treeCreateProbingNode(
 
       SCIPsetDebugMsg(set, "created probing child node #%" SCIP_LONGINT_FORMAT " at depth %d, probing depth %d\n",
          SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetDepth(node) - SCIPnodeGetDepth(tree->probingroot));
+
+      currentnode->data.probingnode->ncols = SCIPlpGetNCols(lp);
+      currentnode->data.probingnode->nrows = SCIPlpGetNRows(lp);
+
+      SCIPsetDebugMsg(set, "updated probingnode information of parent (%d cols, %d rows)\n",
+         currentnode->data.probingnode->ncols, currentnode->data.probingnode->nrows);
    }
 
    /* create the new active path */

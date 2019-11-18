@@ -1141,6 +1141,7 @@ static
 SCIP_RETCODE addExtendedFlowFormulation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
+   int*                  naggrvars,          /**< pointer to add up the number of aggregated variables */
    int*                  naddedconss         /**< number of added constraints */
    )
 {
@@ -1218,6 +1219,7 @@ SCIP_RETCODE addExtendedFlowFormulation(
          assert( ! infeasible );
          assert( redundant );
          assert( aggregated );
+         ++(*naggrvars);
       }
       else
       {
@@ -1243,6 +1245,7 @@ SCIP_RETCODE addExtendedFlowFormulation(
                assert( ! infeasible );
                assert( redundant );
                assert( aggregated );
+               ++(*naggrvars);
             }
             else
             {
@@ -1264,6 +1267,7 @@ SCIP_RETCODE addExtendedFlowFormulation(
                assert( ! infeasible );
                assert( redundant );
                assert( aggregated );
+               ++(*naggrvars);
             }
          }
          else
@@ -1446,6 +1450,7 @@ static
 SCIP_RETCODE addExtendedAsymmetricFormulation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
+   int*                  naggrvars,          /**< pointer to add up the number of aggregated variables */
    int*                  naddedconss         /**< number of added constraints */
    )
 {
@@ -1525,6 +1530,7 @@ SCIP_RETCODE addExtendedAsymmetricFormulation(
          assert( ! infeasible );
          assert( redundant );
          assert( aggregated );
+         ++(*naggrvars);
       }
       else
       {
@@ -3787,6 +3793,10 @@ SCIP_RETCODE detectRedundantConstraints(
 
                SCIP_CALL( SCIPaggregateVars(scip, consdata0->intvar, consdata1->intvar, 1.0, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
 
+               if( aggregated )
+               {
+                  ++(*naggrvars);
+               }
                if( infeasible )
                {
                   *cutoff = TRUE;
@@ -4053,6 +4063,11 @@ SCIP_RETCODE preprocessConstraintPairs(
                         &infeasible, &redundant, &aggregated) );
                   assert(!infeasible);
                   assert(redundant || SCIPdoNotAggr(scip));
+
+                  if( aggregated )
+                  {
+                     ++(*naggrvars);
+                  }
                }
             }
 
@@ -5346,11 +5361,11 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
 
          if ( conshdlrdata->addflowextended )
          {
-            SCIP_CALL( addExtendedFlowFormulation(scip, cons, &naddedconss) );
+            SCIP_CALL( addExtendedFlowFormulation(scip, cons, naggrvars, &naddedconss) );
          }
          else
          {
-            SCIP_CALL( addExtendedAsymmetricFormulation(scip, cons, &naddedconss) );
+            SCIP_CALL( addExtendedAsymmetricFormulation(scip, cons, naggrvars, &naddedconss) );
          }
          (*naddconss) += naddedconss;
       }

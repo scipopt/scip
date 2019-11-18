@@ -535,6 +535,15 @@ SCIP_Bool SCIPisConcaveQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** Checks and indicates whether the quadratic constraint is convex. */
+SCIP_EXPORT
+SCIP_RETCODE SCIPisConvexConsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_Bool*            result              /**< buffer where to store whether constraint is convex (under given variable fixing) */
+   );
+
 /** Gets the violation of a constraint by a solution. */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetViolationQuadratic(

@@ -534,6 +534,7 @@ SCIP_RETCODE SCIPreoptSaveGlobalBounds(
  */
 SCIP_RETCODE SCIPreoptSaveActiveConss(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem data */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
