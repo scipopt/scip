@@ -122,7 +122,7 @@ typedef struct keypaths_data_structures
 typedef struct solution_tree_data
 {
    STP_Bool* const       solNodes;           /**< Steiner tree nodes */
-   NODE* const           linkcutNodes;       /**< Steiner tree nodes */
+   LCNODE* const         linkcutNodes;       /**< Steiner tree nodes */
    int* const            solEdges;           /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    STP_Bool* const       nodeIsPinned;       /**< of size nodes */
    STP_Bool* const       nodeIsScanned;      /**< of size nodes */
@@ -153,6 +153,23 @@ typedef struct pcmw_data
    SCIP_Bool             isActive;           /**< actively used (i.e. Pc/Mw graph)? */
    int                   solroot;            /**< root of Steiner tree solution */
 } PCMW;
+
+
+/** local insertion heuristic data */
+typedef struct insertion_data
+{
+   LCNODE**              chainStarts;        /**< pointers to starts of current chains (nInsertions many) */
+   LCNODE**              chainEnds;          /**< pointers to ends of current chains (nInsertions many) */
+   int* const            solDegreeNonTerm;   /**< degree of node [v] in current solution; (pseudo) terminals are marked as UNKNOWN */
+   int* const            addedEdges;         /**< added edges */
+   int* const            cutedges;           /**< cut edges for the chains */
+   STP_Bool* const       solNodes;           /**< solution nodes */
+   SCIP_Bool* const      nodeIsBlocked;      /**< is node [v] blocked? */
+   int* const            blockedList;        /**< list of currently blocked nodes */
+   int                   blockedListSize;    /**< size of list */
+   int                   nInsertions;        /**< number of insertions */
+} INSERT;
+
 
 /*
  * Local methods
@@ -219,7 +236,7 @@ void markSolTreeNodes(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const int*            solEdges,           /**< Steiner tree edges */
-   NODE*                 linkcutNodes,       /**< Steiner tree nodes */
+   LCNODE*               linkcutNodes,       /**< Steiner tree nodes */
    STP_Bool*             solNodes            /**< Steiner tree nodes */
    )
 {
@@ -970,7 +987,7 @@ void getKeyPathUpper(
 {
    int* const kpnodes = keypathsData->kpnodes;
    const int* const solEdges = soltreeData->solEdges;
-   const NODE* const linkcutNodes = soltreeData->linkcutNodes;
+   const LCNODE* const linkcutNodes = soltreeData->linkcutNodes;
    const STP_Bool* const solNodes = soltreeData->solNodes;
    const STP_Bool* const pinned = soltreeData->nodeIsPinned;
    PHNODE** const boundpaths = connectData->pheap_boundpaths;
@@ -1153,7 +1170,7 @@ SCIP_RETCODE soltreeExchangeKeyPath(
    const int* const vnoibase = vnoiData->vnoi_base;
    const int* const kpnodes = keypathsData->kpnodes;
    STP_Bool* const pinned = soltreeData->nodeIsPinned;
-   const NODE* const linkcutNodes = soltreeData->linkcutNodes;
+   const LCNODE* const linkcutNodes = soltreeData->linkcutNodes;
    int* const solEdges = soltreeData->solEdges;
    STP_Bool* const solNodes = soltreeData->solNodes;
    const int nkpnodes = keypathsData->nkpnodes;
@@ -1306,7 +1323,7 @@ SCIP_RETCODE soltreeElimKeyPathsStar(
    const int* const kpnodes = keypathsData->kpnodes;
    const int* const kpedges = keypathsData->kpedges;
    STP_Bool* const pinned = soltreeData->nodeIsPinned;
-   const NODE* const linkcutNodes = soltreeData->linkcutNodes;
+   const LCNODE* const linkcutNodes = soltreeData->linkcutNodes;
    int* const solEdges = soltreeData->solEdges;
    int* const graphmark = graph->mark;
    STP_Bool* const solNodes = soltreeData->solNodes;
@@ -2094,42 +2111,104 @@ void vnoiDataReset(
 }
 
 
-#if 0
+#ifndef NDEBUG
 static
 SCIP_Bool solDegIsValid(
+   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   const int*            solEdges,           /**< Steiner tree edges */
-   const int*            solDegree           /**< solution degree */
+   const int*            solDegree,          /**< solution degree */
+   const LCNODE*         linkcutNodes        /**< Steiner tree nodes */
    )
 {
-   int solDegreeNew;
+   int* solDegreeNew;
+   SCIP_Bool isValid;
    const int nnodes = graph->knots;
-   const int nedges = graph->edges;
 
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &solDegreeNew, nnodes) );
 
    BMSclearMemoryArray(solDegreeNew, nnodes);
 
-   for( int e = 0; e < nedges; e++ )
+   for( int i = 0; i < nnodes; ++i )
    {
-      if( solEdges[e] == CONNECT )
-      {
-         solDegreeNew[graph->tail[e]]++;
-         solDegreeNew[graph->head[e]]++;
-      }
+      const int edge = linkcutNodes[i].edge;
+
+      if( edge == -1 )
+         continue;
+
+      assert(edge >= 0 && edge < graph->edges);
+      assert(graph->tail[edge] == i);
+
+      solDegreeNew[graph->tail[edge]]++;
+      solDegreeNew[graph->head[edge]]++;
    }
+
+   isValid = TRUE;
 
    for( int i = 0; i < nnodes; ++i )
    {
+      if( Is_gterm(graph->term[i]) )
+      {
+         assert(UNKNOWN == solDegree[i]);
+         continue;
+      }
+
       if( solDegree[i] != solDegreeNew[i] )
       {
-         return FALSE;
+         isValid = FALSE;
+         break;
       }
    }
 
    SCIPfreeBufferArray(scip, &solDegreeNew);
 
-   return TRUE;
+   return isValid;
+}
+
+
+static
+SCIP_Bool solNodeIsValid(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const STP_Bool*       solNodes,           /**< Steiner tree nodes */
+   const LCNODE*         linkcutNodes        /**< Steiner tree nodes */
+   )
+{
+   SCIP_Bool isValid;
+   STP_Bool* solNodes_new;
+   const int nnodes = graph->knots;
+
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &solNodes_new, nnodes) );
+
+   for( int i = 0; i < nnodes; ++i )
+      solNodes_new[i] = FALSE;
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      const int edge = linkcutNodes[i].edge;
+
+      if( edge >= 0 )
+      {
+         assert(graph->tail[edge] == i);
+
+         solNodes_new[graph->head[edge]] = TRUE;
+         solNodes_new[graph->tail[edge]] = TRUE;
+      }
+   }
+
+   isValid = TRUE;
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      if( solNodes_new[i] != solNodes[i] )
+      {
+         isValid = FALSE;
+         break;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &solNodes_new);
+
+   return isValid;
 }
 #endif
 
@@ -2172,6 +2251,290 @@ void insertionInit(
 }
 
 
+/** subroutine for insertion heuristic */
+static
+void insertionInit2(
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            solEdges,           /**< Steiner tree edges */
+   int*                  solDegreeNonTerm,   /**< degree */
+   SCIP_Bool*            nodeIsBlocked,      /**< blocked */
+   int*                  vertices            /**< vertices permuted */
+   )
+{
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+
+   assert(solDegreeNonTerm);
+
+   BMSclearMemoryArray(solDegreeNonTerm, nnodes);
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( solEdges[e] == CONNECT )
+      {
+         solDegreeNonTerm[graph->tail[e]]++;
+         solDegreeNonTerm[graph->head[e]]++;
+      }
+   }
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      vertices[i] = i;
+      nodeIsBlocked[i] = FALSE;
+
+      if( Is_gterm(graph->term[i]) )
+         solDegreeNonTerm[i] = UNKNOWN;
+   }
+
+   SCIPrandomPermuteIntArray(heurdata->randnumgen, vertices, 0, nnodes);
+}
+
+
+/** reduces solution degree */
+static inline
+void insertionDecrementSolDegree(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   node,               /**< replacement edge */
+   INSERT*               insertData          /**< insertion data */
+)
+{
+   int* const solDegreeNonTerm = insertData->solDegreeNonTerm;
+
+   assert(node >= 0);
+   assert(insertData->solNodes[node]);
+
+   if( Is_gterm(graph->term[node]) )
+   {
+      assert(solDegreeNonTerm[node] == UNKNOWN);
+   }
+   else
+   {
+      solDegreeNonTerm[node] -= 1;
+
+      assert(solDegreeNonTerm[node] >= 0);
+   }
+}
+
+
+/** increases solution degree */
+static inline
+void insertionIncrementSolDegree(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   node,               /**< replacement edge */
+   INSERT*               insertData          /**< insertion data */
+)
+{
+   int* const solDegreeNonTerm = insertData->solDegreeNonTerm;
+
+   assert(node >= 0);
+   assert(insertData->solNodes[node]);
+
+   if( Is_gterm(graph->term[node]) )
+   {
+      assert(solDegreeNonTerm[node] == UNKNOWN);
+   }
+   else
+   {
+      solDegreeNonTerm[node] += 1;
+   }
+}
+
+
+/** remove (blocked) chains from tree */
+static
+void insertionRemoveChains(
+   const GRAPH*          graph,              /**< graph data structure */
+   LCNODE*               linkcutNodes,       /**< Steiner tree nodes */
+   INSERT*               insertData          /**< insertion data */
+)
+{
+   SCIP_Bool* const nodeIsBlocked = insertData->nodeIsBlocked;
+   int* const blockedList = insertData->blockedList;
+   STP_Bool* const solNodes = insertData->solNodes;
+   const int size = insertData->blockedListSize;
+   int* const solDegreeNonTerm = insertData->solDegreeNonTerm;
+
+   for( int i = 0; i < size; i++ )
+   {
+      const int node = blockedList[i];
+
+      assert(node >= 0 && node < graph->knots);
+      assert(nodeIsBlocked[node]);
+      assert(solNodes[node]);
+
+      nodeIsBlocked[node] = FALSE;
+      solNodes[node] = FALSE;
+
+      if( !Is_gterm(graph->term[node]) )
+      {
+         assert(2 == solDegreeNonTerm[node]);
+
+         solDegreeNonTerm[node] = 0;
+      }
+      else
+      {
+         assert(UNKNOWN == solDegreeNonTerm[node]);
+      }
+
+      SCIPlinkcuttreeInit(&linkcutNodes[node]);
+   }
+
+   for( int k = 0; k < graph->knots; k++ )
+      assert(!nodeIsBlocked[k]);
+
+   insertData->blockedListSize = 0;
+}
+
+
+/** reinsert (blocked) chains to tree */
+static
+void insertionRestoreTree(
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            insertCands,        /**< insertion candidates */
+   LCNODE*               v_lc,               /**< the vertex tested for insertion */
+   LCNODE*               linkcutNodes,       /**< Steiner tree nodes */
+   INSERT*               insertData          /**< insertion data */
+)
+{
+   LCNODE** chainEnds = insertData->chainEnds;
+   const int* const addedEdges = insertData->addedEdges;
+   const int* const cutedges = insertData->cutedges;
+   const int* const graphTail = graph->tail;
+   const int* const graphHead = graph->head;
+   SCIP_Bool* const nodeIsBlocked = insertData->nodeIsBlocked;
+
+   SCIPlinkcuttreeEvert(v_lc);
+
+   /* reinsert each chain and remove the  */
+   for( int k = insertData->nInsertions - 1; k >= 0; k-- )
+   {
+      const int cutedge = cutedges[k];
+      LCNODE* chainFirstNode = &linkcutNodes[graphTail[cutedge]];
+      LCNODE* chainSecondNode = &linkcutNodes[graphHead[cutedge]];
+      LCNODE* chainLastNode = chainEnds[k];
+      const int cutedgeLast = chainLastNode->edge;
+
+      assert(cutedgeLast >= 0);
+      assert(chainFirstNode == insertData->chainStarts[k]);
+
+      /* remove the newly added edge */
+      SCIPlinkcuttreeCut(&linkcutNodes[graphHead[addedEdges[k]]]);
+      insertionDecrementSolDegree(graph, graphHead[addedEdges[k]], insertData);
+
+      /* re-link the tail of the chain */
+      SCIPlinkcuttreeEvert(chainFirstNode);
+      SCIPlinkcuttreeLink(chainFirstNode, chainSecondNode, cutedge);
+
+      /* unblock chain */
+      for( LCNODE* curr = chainSecondNode; curr != NULL; curr = curr->parent )
+      {
+         const int edge = curr->edge;
+         assert(edge >= 0);
+         assert(2 == insertData->solDegreeNonTerm[graphHead[edge]]);
+         assert(nodeIsBlocked[graphHead[edge]]);
+
+         nodeIsBlocked[graphHead[edge]] = FALSE;
+      }
+
+      /* re-link the head of the chain */
+      assert(chainLastNode->edge == -1);
+      SCIPlinkcuttreeLink(chainLastNode, &linkcutNodes[graphHead[cutedgeLast]], cutedgeLast);
+
+      /* reset solution degrees of chain border vertices */
+      insertionIncrementSolDegree(graph, graphTail[cutedge], insertData);
+      insertionIncrementSolDegree(graph, graphHead[cutedgeLast], insertData);
+   }
+
+   /* finally, cut the edge added first (if it had been cut during the insertion process, it would have been restored above) */
+   SCIPlinkcuttreeEvert(v_lc);
+   SCIPlinkcuttreeCut(&linkcutNodes[graphHead[insertCands[0]]]);
+   insertionDecrementSolDegree(graph, graphHead[insertCands[0]], insertData);
+
+   for( int k = 0; k < graph->knots; k++ )
+      assert(!nodeIsBlocked[k]);
+
+   insertData->blockedListSize = 0;
+}
+
+
+/** mark inner chain nodes as blocked */
+static inline
+void insertionBlockChain(
+   const GRAPH*          graph,              /**< graph data structure */
+   const LCNODE*         chainfirst,         /**< first chain entry */
+   const LCNODE*         chainlast,          /**< last chain entry (inside) */
+   INSERT*               insertData          /**< insertion data */
+)
+{
+   if( chainfirst != chainlast )
+   {
+      SCIP_Bool* const nodeIsBlocked = insertData->nodeIsBlocked;
+      int* const blockedList = insertData->blockedList;
+
+      for( const LCNODE* node = chainfirst; node != chainlast; node = node->parent )
+      {
+         int head;
+
+         assert(node);
+         assert(node->edge >= 0);
+
+         head = graph->head[node->edge];
+
+         assert(!nodeIsBlocked[head]);
+
+         nodeIsBlocked[head] = TRUE;
+         blockedList[insertData->blockedListSize++] = head;
+      }
+   }
+}
+
+
+/** replaces chain by a single edge */
+static
+void insertionReplaceChain(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   newedge,            /**< replacement edge */
+   INSERT*               insertData,         /**< insertion data */
+   LCNODE*               v_lc,               /**< current vertex */
+   LCNODE*               headCurr_lc,        /**< head of newedge */
+   LCNODE*               chainfirst,         /**< first chain entry */
+   LCNODE*               chainlast           /**< last chain entry (inside) */
+)
+{
+   LCNODE** chainStarts = insertData->chainStarts;
+   LCNODE** chainEnds = insertData->chainEnds;
+   int* const cutedges = insertData->cutedges;
+   int* const addedEdges = insertData->addedEdges;
+   const int nInsertions = insertData->nInsertions;
+   const int newhead = graph->head[newedge];
+
+   assert(v_lc && headCurr_lc && chainfirst && chainlast);
+   assert(chainlast->edge >= 0);
+
+   cutedges[nInsertions] = chainlast->edge;
+   chainStarts[nInsertions] = chainfirst;
+   chainEnds[nInsertions] = chainlast;
+   addedEdges[nInsertions] = newedge;
+
+   insertionIncrementSolDegree(graph, newhead, insertData);
+
+   /* decrease the degree of the chain border vertices */
+   insertionDecrementSolDegree(graph, graph->tail[chainfirst->edge], insertData);
+   insertionDecrementSolDegree(graph, graph->head[chainlast->edge], insertData);
+
+   insertionBlockChain(graph, chainfirst, chainlast, insertData);
+
+   SCIPlinkcuttreeCut(chainfirst);
+   SCIPlinkcuttreeCut(chainlast);
+
+   SCIPlinkcuttreeLink(v_lc, headCurr_lc, newedge);
+   assert(v_lc->edge == newedge);
+
+   insertData->nInsertions++;
+}
+
+
 /** perform local vertex insertion heuristic on given Steiner tree */
 static
 void insertionGetCandidateEdges(
@@ -2204,7 +2567,7 @@ void insertionGetCandidateEdges(
          if( Is_term(graph->term[head]) && !graph_pc_knotIsFixedTerm(graph, head) )
             continue;
 
-         /* note: source is also a fixed terminal */
+         /* note: for unrooted problems the (artificial) source is also a fixed terminal */
          if( !rpcmw && head == graph->source )
             continue;
       }
@@ -2228,7 +2591,7 @@ SCIP_RETCODE localVertexInsertion(
    SCIP_HEURDATA*        heurdata,           /**< heuristic data or NULL */
    const GRAPH*          graph,              /**< graph data structure */
    STP_Bool*             solNodes,           /**< Steiner tree nodes */
-   NODE*                 linkcutNodes,       /**< Steiner tree nodes */
+   LCNODE*               linkcutNodes,       /**< Steiner tree nodes */
    int*                  solEdges            /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    )
 {
@@ -2272,7 +2635,7 @@ SCIP_RETCODE localVertexInsertion(
 
       for( int i = 0; i < nnodes; i++ )
       {
-         NODE* v_lc;
+         LCNODE* v_lc;
          SCIP_Real diff;
          int insertcount;
          int lastnodeidx;
@@ -2320,7 +2683,7 @@ SCIP_RETCODE localVertexInsertion(
          /* try to add edges between new vertex and tree */
          for( int k = 1; k < ninsertcands; k++ )
          {
-            NODE* firstnode;
+            LCNODE* firstnode;
             int firstnodidx;
             SCIPlinkcuttreeEvert(v_lc);
 
@@ -2330,18 +2693,20 @@ SCIP_RETCODE localVertexInsertion(
 
             if( mw )
             {
-               NODE* chainfirst;
-               NODE* chainlast;
+               LCNODE* chainfirst;
+               LCNODE* chainlast;
                SCIP_Real minweight;
 
                assert(solDegree != NULL);
 
-               minweight = SCIPlinkcuttreeFindMinChain(scip, graph->prize, graph->head, solDegree, firstnode, &chainfirst, &chainlast);
+               minweight = SCIPlinkcuttreeFindMinChainMw(scip, graph->prize, graph->head, solDegree, firstnode,
+                     (const LCNODE**) &chainfirst, (const LCNODE**) &chainlast);
 
                if( SCIPisLT(scip, minweight, graph->prize[v]) )
                {
                   assert(chainfirst != NULL && chainlast != NULL);
-                  for( NODE* mynode = chainfirst; mynode != chainlast; mynode = mynode->parent )
+
+                  for( LCNODE* mynode = chainfirst; mynode != chainlast; mynode = mynode->parent )
                   {
                      int mynodeidx = graph->head[mynode->edge];
                      solNodes[mynodeidx] = FALSE;
@@ -2361,7 +2726,7 @@ SCIP_RETCODE localVertexInsertion(
             else
             {
                /* if there is an edge with cost greater than that of the current edge... */
-               NODE* max = SCIPlinkcuttreeFindMax(scip, graph->cost, firstnode);
+               LCNODE* max = SCIPlinkcuttreeFindMax(scip, graph->cost, firstnode);
                if( SCIPisGT(scip, graph->cost[max->edge], graph->cost[insertcands[k]]) )
                {
                   diff += graph->cost[insertcands[k]];
@@ -2486,13 +2851,252 @@ SCIP_RETCODE localVertexInsertion(
 }
 
 
+
+/** perform local vertex insertion heuristic on given Steiner tree */
+static
+SCIP_RETCODE localVertexInsertion2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data or NULL */
+   const GRAPH*          graph,              /**< graph data structure */
+   STP_Bool*             solNodes,           /**< Steiner tree nodes */
+   LCNODE*               linkcutNodes,       /**< Steiner tree nodes */
+   int*                  solEdges            /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   )
+{
+   LCNODE** chainStarts;
+   LCNODE** chainEnds;
+   int* insertCands = NULL;
+   int* addedEdges = NULL;
+   int* cutedges = NULL;
+   int* solDegree = NULL;
+   int* vertices = NULL;
+   int* blockedList = NULL;
+   SCIP_Bool* nodeIsBlocked = NULL;
+
+   int newnverts = 0;
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+   const int root = graph->source;
+   const int stp_type = graph->stp_type;
+   const SCIP_Bool pc = graph_pc_isPc(graph);
+   const SCIP_Bool mw = (stp_type == STP_MWCSP || stp_type == STP_RMWCSP);
+   const SCIP_Bool mwpc = graph_pc_isPcMw(graph);
+   SCIP_Bool solimproved = TRUE;
+
+#ifndef NDEBUG
+   const SCIP_Real initialobj = graph_sol_getObj(graph->cost, solEdges, 0.0, nedges);
+   SCIP_Real diff_total = 0.0;
+#endif
+
+   if( stp_type != STP_SPG && stp_type != STP_RSMT && stp_type != STP_OARSMT && stp_type != STP_GSTP && !mwpc )
+   {
+      SCIPdebugMessage("vertex inclusion does not work for current problem type \n");
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &chainStarts, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &chainEnds, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &blockedList, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodeIsBlocked, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vertices, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &insertCands, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &addedEdges, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutedges, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solDegree, nnodes) );
+
+   insertionInit2(heurdata, graph, solEdges, solDegree, nodeIsBlocked, vertices);
+
+   assert(solDegIsValid(scip, graph, solDegree, linkcutNodes));
+   assert(solNodeIsValid(scip, graph, solNodes, linkcutNodes));
+
+   /* main loop */
+   while( solimproved )
+   {
+      INSERT insertData = { .chainStarts = chainStarts, .chainEnds = chainEnds, .solDegreeNonTerm = solDegree,
+         .solNodes = solNodes, .nodeIsBlocked = nodeIsBlocked,
+         .cutedges = cutedges, .addedEdges = addedEdges, .blockedList = blockedList, .blockedListSize = 0, .nInsertions = 0 };
+
+      solimproved = FALSE;
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         LCNODE* v_lc;
+         SCIP_Real diff;
+         int candHeadInitial;
+         int ninsertcands = 0;
+         const int v = vertices[i];
+
+         assert(v >= 0 && v < graph->knots);
+
+         if( solNodes[v] || graph->grad[v] <= 1 )
+            continue;
+
+         assert(!Is_term(graph->term[v]));
+
+         insertionGetCandidateEdges(scip, heurdata, graph, solNodes, v, insertCands, &ninsertcands);
+
+         /* if there are less than two edges connecting node i and the current tree, continue */
+         if( ninsertcands <= 1 )
+            continue;
+
+         /* the node to insert */
+         v_lc = &linkcutNodes[v];
+
+         candHeadInitial = graph->head[insertCands[0]];
+
+         SCIPlinkcuttreeLink(v_lc, &linkcutNodes[candHeadInitial], insertCands[0]);
+
+         if( mw )
+         {
+            assert(!SCIPisPositive(scip, graph->prize[v]));
+            diff = -graph->prize[v];
+         }
+         else
+         {
+            diff = graph->cost[insertCands[0]];
+
+            if( pc && Is_pterm(graph->term[v]) )
+               diff -= graph->prize[v];
+         }
+
+         insertionIncrementSolDegree(graph, candHeadInitial, &insertData);
+         insertData.nInsertions = 0;
+
+         /* try to add additional edges between new vertex and tree */
+         for( int k = 1; k < ninsertcands; k++ )
+         {
+            LCNODE* headCurr_lc;
+            LCNODE* chainfirst = NULL;
+            LCNODE* chainlast = NULL;
+            const int insertEdgeCurr = insertCands[k];
+            const int insertHeadCurr = graph->head[insertEdgeCurr];
+
+            if( nodeIsBlocked[insertHeadCurr] )
+            {
+               assert(k > 1);
+
+               continue;
+            }
+
+            SCIPlinkcuttreeEvert(v_lc);
+
+            headCurr_lc = &linkcutNodes[insertHeadCurr];
+
+            if( mw )
+            {
+               const SCIP_Real chainweight = SCIPlinkcuttreeFindMinChainMw(scip, graph->prize, graph->head, solDegree, headCurr_lc,
+                     (const LCNODE**) &chainfirst, (const LCNODE**) &chainlast); // todo: need to adapt for nodeIsBlocked
+
+               if( SCIPisLT(scip, chainweight, 0.0) )
+               {
+                  diff += chainweight;
+                  insertionReplaceChain(graph, insertEdgeCurr, &insertData, v_lc, headCurr_lc, chainfirst, chainlast);
+               }
+            }
+            else
+            {
+               const SCIP_Real chainweight = SCIPlinkcuttreeFindMaxChain(graph->cost, graph->head, solDegree, nodeIsBlocked,
+                     headCurr_lc, (const LCNODE**) &chainfirst, (const LCNODE**) &chainlast);
+
+               if( SCIPisGT(scip, chainweight, graph->cost[insertEdgeCurr]) )
+               {
+                  diff += graph->cost[insertEdgeCurr];
+                  diff -= chainweight;
+                  insertionReplaceChain(graph, insertEdgeCurr, &insertData, v_lc, headCurr_lc, chainfirst, chainlast);
+               }
+            }
+         }
+
+         /* is the new tree better? */
+         if( SCIPisNegative(scip, diff) )
+         {
+            SCIPlinkcuttreeEvert(&linkcutNodes[root]);
+            solimproved = TRUE;
+            solNodes[v] = TRUE;
+            newnverts++;
+
+            insertionRemoveChains(graph, linkcutNodes, &insertData);
+
+            SCIPdebugMessage("Inclusion: ADDED VERTEX %d \n", v);
+#ifndef NDEBUG
+            diff_total -= diff;
+#endif
+         }
+         else
+         {
+            /* restore the old tree */
+            insertionRestoreTree(graph, insertCands, v_lc, linkcutNodes, &insertData);
+         }
+
+         assert(solDegIsValid(scip, graph, solDegree, linkcutNodes));
+         assert(solNodeIsValid(scip, graph, solNodes, linkcutNodes));
+
+      } /* for i 0:nnodes */
+   }
+
+   /* free buffer memory */
+   SCIPfreeBufferArray(scip, &solDegree);
+   SCIPfreeBufferArray(scip, &cutedges);
+   SCIPfreeBufferArray(scip, &addedEdges);
+   SCIPfreeBufferArray(scip, &insertCands);
+   SCIPfreeBufferArray(scip, &vertices);
+   SCIPfreeBufferArray(scip, &blockedList);
+   SCIPfreeBufferArray(scip, &chainEnds);
+   SCIPfreeBufferArray(scip, &chainStarts);
+
+   for( int e = 0; e < nedges; e++ )
+      solEdges[e] = UNKNOWN;
+
+   if( newnverts > 0  )
+   {
+      SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, solEdges, solNodes) );
+
+      for( int i = 0; i < nnodes; i++ )
+         SCIPlinkcuttreeInit(&linkcutNodes[i]);
+
+      /* create a link-cut tree representing the current Steiner tree */
+      for( int e = 0; e < nedges; e++ )
+      {
+         if( solEdges[e] == CONNECT )
+         {
+            assert(solNodes[graph->tail[e]] && solNodes[graph->head[e]]);
+
+            SCIPlinkcuttreeLink(&linkcutNodes[graph->head[e]], &linkcutNodes[graph->tail[e]], flipedge(e));
+         }
+      }
+      SCIPlinkcuttreeEvert(&linkcutNodes[root]);
+   }
+   else
+   {
+      SCIPlinkcuttreeEvert(&linkcutNodes[root]);
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( solNodes[i] && linkcutNodes[i].edge != -1 )
+            solEdges[flipedge(linkcutNodes[i].edge)] = CONNECT;
+      }
+   }
+
+#ifndef NDEBUG
+   {
+      const SCIP_Real newobj = graph_sol_getObj(graph->cost, solEdges, 0.0, nedges);
+      SCIPdebugMessage("vertex inclusion obj before/after: %f/%f \n", initialobj, newobj);
+      assert(SCIPisLE(scip, newobj + diff_total, initialobj));
+      assert(SCIPisGE(scip, diff_total, 0.0));
+   }
+#endif
+
+   assert(graph_sol_valid(scip, graph, solEdges));
+
+   return SCIP_OKAY;
+}
+
 /** perform local vertex insertion heuristic on given Steiner tree */
 static
 SCIP_RETCODE localKeyVertexHeuristics(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    STP_Bool*             solNodes,           /**< Steiner tree nodes */
-   NODE*                 linkcutNodes,       /**< Steiner tree nodes */
+   LCNODE*               linkcutNodes,       /**< Steiner tree nodes */
    int*                  solEdges,           /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    SCIP_Bool*            success             /**< solution improved? */
    )
@@ -3228,13 +3832,12 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 {
    SCIP_HEUR* heur;
    SCIP_HEURDATA* heurdata;
-   NODE* linkcutNodes;
+   LCNODE* linkcutNodes;
    const int root = graph->source;
    const int nnodes = graph->knots;
    STP_Bool* solNodes;
    const STP_Bool mwpc = graph_pc_isPcMw(graph);
    SCIP_Bool success = FALSE;
-   SCIP_Bool runInsertionFirst;
 #ifndef NDEBUG
    const SCIP_Real initialobj = graph_sol_getObj(graph->cost, solEdges, 0.0, graph->edges);
 #endif
@@ -3258,8 +3861,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   runInsertionFirst = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 1);
-
    SCIP_CALL( SCIPallocBufferArray(scip, &linkcutNodes, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solNodes, nnodes) );
 
@@ -3270,12 +3871,11 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    markSolTreeNodes(scip, graph, solEdges, linkcutNodes, solNodes);
 
-   if( runInsertionFirst )
-      SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
+   SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
 
    SCIP_CALL( localKeyVertexHeuristics(scip, graph, solNodes, linkcutNodes, solEdges, &success) );
 
-   if( success || !runInsertionFirst )
+   if( success )
    {
       markSolTreeNodes(scip, graph, solEdges, linkcutNodes, solNodes);
       SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
