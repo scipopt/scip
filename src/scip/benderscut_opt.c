@@ -735,7 +735,7 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
 
 /** Generates a classical Benders' optimality cut using the dual solutions from the subproblem or the input arrays. If
  *  the dual solutions are input as arrays, then a mapping between the array indices and the rows/variables is required.
- *  This method can also be used to generate a feasiblity, is a problem to minimise the infeasibilities has been solved
+ *  This method can also be used to generate a feasibility cut, if a problem to minimise the infeasibilities has been solved
  *  to generate the dual solutions
  */
 SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
