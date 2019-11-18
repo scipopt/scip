@@ -880,7 +880,7 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
           */
          if( !SCIPbendersInStrengthenRound(benders) )
          {
-            //SCIPABORT();
+            SCIPABORT();
          }
 #endif
       }
