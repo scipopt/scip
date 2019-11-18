@@ -46,6 +46,8 @@
 //
 // Thus, if y_l_i and y_r_i exist, then y_i is free
 // If not, the matrix only has lhs-constraints so y_r_i does not exist
+//
+// What happens with the bound constraints?
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -168,8 +170,7 @@ SCIP_DECL_HASHKEYVAL(colPairHashval)
 
 // documentation
 static
-SCIP_RETCODE addEntry
-(
+SCIP_RETCODE addEntry(
    SCIP* scip,                   /**< SCIP datastructure */
    int* pos,
    int* listsize,
@@ -196,8 +197,7 @@ SCIP_RETCODE addEntry
 
 // documentation
 static
-void findNextBlock
-(
+void findNextBlock(
    int*                 list,
    int                  len,
    int*                 start,
@@ -221,8 +221,7 @@ void findNextBlock
  */
 //which algorithm?
 static
-SCIP_RETCODE combineCols
-(
+SCIP_RETCODE combineCols(
    SCIP*                scip,                /**< SCIP datastructure */
    int*                 row1idxptr,          /**< indices specifying bound positions in lbs and ubs for first row */
    int*                 row2idxptr,          /**< indices specifying bound positions in lbs und ubs for second row */
@@ -2650,7 +2649,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
          SCIPfreeBufferArray(scip, &sidestochange);
          SCIPfreeBufferArray(scip, &varstofix);
 
-         if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 || npossiblesidechanges > 0)
+         if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 || npossiblesidechanges > 0 )
          {
             SCIPdebugMsg(scip, "### fixed vars [cont: %d, int: %d, bin: %d], changed sides [%d]\n",
                nconvarsfixed, nintvarsfixed, nbinvarsfixed, nsideschanged);
