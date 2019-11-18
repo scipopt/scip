@@ -4143,7 +4143,7 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    /* changing all of the master problem variable to continuous. */
    SCIP_CALL( SCIPbendersChgMastervarsToCont(benders, set, probnumber) );
 
-   /* if the Benders' decomposition subproblem is has convex constraints and continuous variables, then probing mode
+   /* if the Benders' decomposition subproblem is convex and has continuous variables, then probing mode
     * must be started.
     * If the subproblem is contains non-convex constraints or discrete variables, then the problem must be initialised,
     * and then put into SCIP_STAGE_SOLVING to be able to change the variable bounds. The probing mode is entered once
