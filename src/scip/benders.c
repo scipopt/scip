@@ -1237,7 +1237,12 @@ static
 SCIP_RETCODE addSlackVars(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP_CONS*            cons                /**< constraint to which the slack variable(s) is added to */
+   SCIP_CONS*            cons,               /**< constraint to which the slack variable(s) is added to */
+   SCIP_CONSHDLR**       linearconshdlrs,    /**< an array storing the linear constraint handlers */
+   SCIP_CONSHDLR*        conshdlr_nonlinear, /**< pointer to the non-linear constraint handler */
+   SCIP_CONSHDLR*        conshdlr_quadratic, /**< pointer to the quadratic constraint handler */
+   SCIP_CONSHDLR*        conshdlr_abspower,  /**< pointer to the absolute power constraint handler */
+   int                   nlinearconshdlrs    /**< the number of linear constraint handlers */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -1249,24 +1254,6 @@ SCIP_RETCODE addSlackVars(
    SCIP_Bool linearcons;
    SCIP_Bool success;
    char name[SCIP_MAXSTRLEN];
-   SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
-   SCIP_CONSHDLR* conshdlr_nonlinear;
-   SCIP_CONSHDLR* conshdlr_quadratic;
-   SCIP_CONSHDLR* conshdlr_abspower;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-
-   /* get pointers to linear constraints handlers, so can avoid string comparisons */
-   linearconshdlrs[0] = SCIPfindConshdlr(scip, "knapsack");
-   linearconshdlrs[1] = SCIPfindConshdlr(scip, "linear");
-   linearconshdlrs[2] = SCIPfindConshdlr(scip, "logicor");
-   linearconshdlrs[3] = SCIPfindConshdlr(scip, "setppc");
-   linearconshdlrs[4] = SCIPfindConshdlr(scip, "varbound");
-
-   conshdlr_nonlinear = SCIPfindConshdlr(scip, "nonlinear");
-   conshdlr_quadratic = SCIPfindConshdlr(scip, "quadratic");
-   conshdlr_abspower = SCIPfindConshdlr(scip, "abspower");
 
    conshdlr = SCIPconsGetHdlr(cons);
 
@@ -1274,7 +1261,7 @@ SCIP_RETCODE addSlackVars(
    linearcons = FALSE;
 
    /* checking whether the constraint is a linear constraint. If so, we add a coefficient to the constraint */
-   for( i = 0; i < NLINEARCONSHDLRS; ++i )
+   for( i = 0; i < nlinearconshdlrs; ++i )
    {
       if( conshdlr == linearconshdlrs[i] )
       {
@@ -1375,6 +1362,10 @@ SCIP_RETCODE addSlackVarsToConstraints(
    )
 {
    SCIP* subproblem;
+   SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
+   SCIP_CONSHDLR* conshdlr_nonlinear;
+   SCIP_CONSHDLR* conshdlr_quadratic;
+   SCIP_CONSHDLR* conshdlr_abspower;
    SCIP_CONS* cons;
    int i;
 
@@ -1384,12 +1375,24 @@ SCIP_RETCODE addSlackVarsToConstraints(
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
+   /* get pointers to linear constraints handlers, so can avoid string comparisons */
+   linearconshdlrs[0] = SCIPfindConshdlr(subproblem, "knapsack");
+   linearconshdlrs[1] = SCIPfindConshdlr(subproblem, "linear");
+   linearconshdlrs[2] = SCIPfindConshdlr(subproblem, "logicor");
+   linearconshdlrs[3] = SCIPfindConshdlr(subproblem, "setppc");
+   linearconshdlrs[4] = SCIPfindConshdlr(subproblem, "varbound");
+
+   conshdlr_nonlinear = SCIPfindConshdlr(subproblem, "nonlinear");
+   conshdlr_quadratic = SCIPfindConshdlr(subproblem, "quadratic");
+   conshdlr_abspower = SCIPfindConshdlr(subproblem, "abspower");
+
    for( i = 0; i < SCIPgetNOrigConss(subproblem); ++i )
    {
       cons = SCIPgetOrigConss(subproblem)[i];
 
       /* adding the slack variables to the constraint */
-      SCIP_CALL( addSlackVars(subproblem, benders, cons) );
+      SCIP_CALL( addSlackVars(subproblem, benders, cons, linearconshdlrs, conshdlr_nonlinear, conshdlr_quadratic,
+            conshdlr_abspower, NLINEARCONSHDLRS) );
    }
 
    return SCIP_OKAY;
@@ -3250,8 +3253,9 @@ SCIP_RETCODE generateBendersCuts(
          SCIP_RESULT subprobresult;
          SCIP_Bool convexsub = SCIPbendersGetSubproblemType(benders, i) == SCIP_BENDERSSUBTYPE_CONVEXCONT;
 
-         /* cuts can only be generated if the subproblem is not independent and if it has been solved. The subproblem
-          * solved flag is important for the user-defined subproblem solving methods
+         /* cuts can only be generated if the subproblem is not independent and if it has been solved. Additionally, the
+          * status of the subproblem solving must not be INFEASIBLE while in a cut strengthening round.
+          * The subproblem solved flag is important for the user-defined subproblem solving methods
           */
          if( subproblemIsActive(benders, i) && subprobsolved[i]
             && !(substatus[i] == SCIP_BENDERSSUBSTATUS_INFEAS && benders->strengthenround) )
@@ -5255,11 +5259,9 @@ SCIP_RETCODE addConstraintToBendersSubproblem(
       {
          SCIP_VAR* var;
 
-         /* creating a variable as a copy of the original variable.
-          * TODO: check whether this should be GLOBAL or LOCAL bounds
-          */
-         SCIP_CALL( SCIPcreateVar(subproblem, &var, SCIPvarGetName(consvars[i]), SCIPvarGetLbLocal(consvars[i]),
-               SCIPvarGetUbLocal(consvars[i]), SCIPvarGetObj(consvars[i]), SCIPvarGetType(consvars[i]),
+         /* creating a variable as a copy of the original variable. */
+         SCIP_CALL( SCIPcreateVar(subproblem, &var, SCIPvarGetName(consvars[i]), SCIPvarGetLbGlobal(consvars[i]),
+               SCIPvarGetUbGlobal(consvars[i]), SCIPvarGetObj(consvars[i]), SCIPvarGetType(consvars[i]),
                SCIPvarIsInitial(consvars[i]), SCIPvarIsRemovable(consvars[i]), NULL, NULL, NULL, NULL, NULL) );
 
          /* adding the variable to the subproblem */
@@ -5368,9 +5370,7 @@ SCIP_RETCODE SCIPbendersApplyDecomposition(
 
    SCIPdebugMessage("Applying a Benders' decomposition to <%s>\n", SCIPgetProbName(set->scip));
 
-   /* retrieving the number of blocks for this decomposition
-    * TODO: need to check whether the number of blocks is just the subproblems or also the master problem.
-    */
+   /* retrieving the number of blocks for this decomposition */
    nblocks = SCIPdecompGetNBlocks(decomp);
    assert(nblocks > 0);
 
@@ -5380,10 +5380,13 @@ SCIP_RETCODE SCIPbendersApplyDecomposition(
    /* creating the subproblems before adding the constraints */
    for( i = 0; i < nblocks; i++ )
    {
+      SCIP_Bool valid;
+
       SCIP_CALL( SCIPcreate(&subproblems[i]) );
 
-      /* include default SCIP plugins */
-      SCIP_CALL( SCIPincludeDefaultPlugins(subproblems[i]) );
+      /* copying the plugins from the original SCIP instance to the subproblem SCIP */
+      SCIP_CALL( SCIPcopyPlugins(set->scip, subproblems[i], TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
 
       (void) SCIPsnprintf(subprobname, SCIP_MAXSTRLEN, "sub_%s_%d", SCIPgetProbName(set->scip), i);
       SCIP_CALL( SCIPcreateProbBasic(subproblems[i], subprobname) );
