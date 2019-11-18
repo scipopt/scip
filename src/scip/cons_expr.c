@@ -6026,6 +6026,9 @@ SCIP_RETCODE enforceConstraints2(
             )
             /* *maxvarboundviol = MAX3(*maxvarboundviol, lb - solval, solval - ub); */
          }
+
+         /* invalidate branchscore-tag, so that we do not register variables that appear in multiple constraints severaltimes as external branching candidate */
+         consdata->varexprs[i]->brscoretag = 0;
       }
    }
 
