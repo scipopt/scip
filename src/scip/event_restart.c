@@ -52,7 +52,7 @@
 
 #define EVENTHDLR_NAME         "restart"
 #define EVENTHDLR_DESC         "event handler for restart event"
-#define EVENTTYPE_RESTART      (SCIP_EVENTTYPE_PQNODEINFEASIBLE | SCIP_EVENTTYPE_NODEBRANCHED)
+#define EVENTTYPE_RESTART      (SCIP_EVENTTYPE_NODEDELETE | SCIP_EVENTTYPE_NODEBRANCHED)
 
 /*
  * Data structures
@@ -2470,7 +2470,6 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA*   eventhdlrdata;
    SCIP_Bool isleaf;
-   SCIP_Bool isleafbit;
    SCIP_EVENTTYPE eventtype;
    TREEDATA* treedata;
 
@@ -2482,7 +2481,16 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
    eventtype = SCIPeventGetType(event);
    treedata = eventhdlrdata->treedata;
 
-   if( eventtype == SCIP_EVENTTYPE_NODEBRANCHED || eventtype == SCIP_EVENTTYPE_PQNODEINFEASIBLE )
+   /* actual leaf nodes for our tree data are children/siblings/leaves or the focus node itself (deadend)
+    * if it has not been branched on
+    */
+   isleaf = (eventtype == SCIP_EVENTTYPE_NODEDELETE) &&
+      (SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_CHILD ||
+         SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_SIBLING ||
+         SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_LEAF ||
+         (SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_DEADEND && !SCIPwasFocusNodeBranched(scip)));
+
+   if( eventtype == SCIP_EVENTTYPE_NODEBRANCHED || isleaf )
    {
       SCIP_NODE* eventnode;
       int nchildren = 0;
@@ -2519,27 +2527,10 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       }
    }
 
-   if( eventtype != SCIP_EVENTTYPE_PQNODEINFEASIBLE )
+   /* if nodes have been pruned, things are progressing, don't restart right now */
+   if( isleaf )
       return SCIP_OKAY;
 
-   /* update the search progress at leaf nodes */
-   isleaf = (eventtype == SCIP_EVENTTYPE_PQNODEINFEASIBLE);
-
-   isleafbit = 0 != (eventtype & (SCIP_EVENTTYPE_PQNODEINFEASIBLE));
-
-   if( isleaf != isleafbit )
-   {
-      SCIPABORT();
-   }
-
-   /* if nodes have been pruned, this is usually an indication that things are progressing, don't restart */
-   if( eventtype & SCIP_EVENTTYPE_PQNODEINFEASIBLE )
-   {
-      SCIPdebugMsg(scip, "PQ node %lld (depth %d) infeasible, isleaf: %u\n",
-               SCIPnodeGetNumber(SCIPeventGetNode(event)),
-               SCIPnodeGetDepth(SCIPeventGetNode(event)),
-               isleaf);
-   }
 
    /* check if all conditions are met such that the event handler should run */
    if( ! checkConditions(scip, eventhdlrdata) )
