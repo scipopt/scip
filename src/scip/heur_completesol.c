@@ -370,7 +370,6 @@ SCIP_RETCODE createNewSol(
    {
       SCIP_Real solval = SCIPgetSolVal(subscip, subsol, subvars[v]);
 
-      assert(!SCIPisInfinity(subscip, solval) && !SCIPisInfinity(subscip, -solval));
       assert(solval != SCIP_UNKNOWN); /*lint !e777*/
 
       SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], solval) );
