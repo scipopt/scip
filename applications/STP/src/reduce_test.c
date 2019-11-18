@@ -2168,6 +2168,83 @@ SCIP_RETCODE localInsertion(
 }
 
 
+/** test insertion */
+static
+SCIP_RETCODE localInsertion2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int* steinertree;
+   int nnodes = 6;
+   int nedges = 7;
+   SCIP_Real cost0;
+   SCIP_Real cost1;
+
+   assert(scip);
+
+   SCIP_CALL(graph_init(scip, &graph, nnodes, 2 * nedges, 1));
+
+   graph->stp_type = STP_SPG;
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph_knot_chg(graph, 0, 0);
+   graph_knot_chg(graph, 2, 0);
+   graph_knot_chg(graph, 3, 0);
+   graph_knot_chg(graph, 4, 0);
+   graph->source = 0;
+
+   graph_edge_add(scip, graph, 0, 1, 2.0, 2.0); // 0,1
+   graph_edge_add(scip, graph, 1, 2, 2.0, 2.0); // 2,3
+   graph_edge_add(scip, graph, 2, 3, 2.0, 2.0);
+   graph_edge_add(scip, graph, 2, 4, 2.0, 2.0);
+
+   graph_edge_add(scip, graph, 5, 0, 1.5, 1.5);
+   graph_edge_add(scip, graph, 5, 3, 1.5, 1.5); // 10,11
+   graph_edge_add(scip, graph, 5, 4, 1.5, 1.5); // 12,13
+
+   SCIP_CALL(graph_init_history(scip, graph));
+   SCIP_CALL(graph_path_init(scip, graph));
+
+   graph_mark(graph);
+
+   nnodes = graph->knots;
+   nedges = graph->edges;
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
+
+   for( int i = 0; i < nedges; i++ )
+      steinertree[i] = UNKNOWN;
+
+   steinertree[0] = CONNECT;
+   steinertree[2] = CONNECT;
+   steinertree[4] = CONNECT;
+   steinertree[6] = CONNECT;
+
+   assert(graph_sol_valid(scip, graph, steinertree));
+
+   cost0 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
+
+
+   /* actual test */
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
+
+   cost1 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
+
+   if( !SCIPisEQ(scip, cost1 + 1.5, cost0) )
+      return SCIP_ERROR;
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   SCIPfreeBufferArray(scip, &steinertree);
+
+   return SCIP_OKAY;
+}
+
+
 /** test pseudo ancestors */
 SCIP_RETCODE pseudoAncestors_test(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2450,6 +2527,7 @@ SCIP_RETCODE heur_localTest(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+   SCIP_CALL( localInsertion2(scip) );
    SCIP_CALL( localKeyPathExchangeMw(scip) );
    SCIP_CALL( localInsertion(scip) );
    SCIP_CALL( localKeyVertexPc2(scip) );

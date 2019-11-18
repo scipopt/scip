@@ -2154,6 +2154,10 @@ SCIP_Bool solDegIsValid(
 
       if( solDegree[i] != solDegreeNew[i] )
       {
+#ifdef SCIP_DEBUG
+         graph_knot_printInfo(graph, i);
+         SCIPdebugMessage("%d != %d (old/new degree) \n", solDegree[i], solDegreeNew[i]);
+#endif
          isValid = FALSE;
          break;
       }
@@ -2343,8 +2347,9 @@ void insertionIncrementSolDegree(
 
 /** remove (blocked) chains from tree */
 static
-void insertionRemoveChains(
+void insertionFinalizeReplacement(
    const GRAPH*          graph,              /**< graph data structure */
+   int                   v_insert,           /**< the vertex to insert */
    LCNODE*               linkcutNodes,       /**< Steiner tree nodes */
    INSERT*               insertData          /**< insertion data */
 )
@@ -2378,6 +2383,17 @@ void insertionRemoveChains(
       }
 
       SCIPlinkcuttreeInit(&linkcutNodes[node]);
+   }
+
+   if( solDegreeNonTerm[v_insert] != UNKNOWN )
+   {
+      assert(0 == solDegreeNonTerm[v_insert]);
+
+      solDegreeNonTerm[v_insert] = insertData->nInsertions + 1;
+   }
+   else
+   {
+      assert(graph_pc_isPcMw(graph));
    }
 
    for( int k = 0; k < graph->knots; k++ )
@@ -2908,6 +2924,7 @@ SCIP_RETCODE localVertexInsertion2(
 
    assert(solDegIsValid(scip, graph, solDegree, linkcutNodes));
    assert(solNodeIsValid(scip, graph, solNodes, linkcutNodes));
+   assert(linkcutNodes[graph->source].edge == -1);
 
    /* main loop */
    while( solimproved )
@@ -3015,7 +3032,7 @@ SCIP_RETCODE localVertexInsertion2(
             solNodes[v] = TRUE;
             newnverts++;
 
-            insertionRemoveChains(graph, linkcutNodes, &insertData);
+            insertionFinalizeReplacement(graph, v, linkcutNodes, &insertData);
 
             SCIPdebugMessage("Inclusion: ADDED VERTEX %d \n", v);
 #ifndef NDEBUG
@@ -3871,14 +3888,14 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    markSolTreeNodes(scip, graph, solEdges, linkcutNodes, solNodes);
 
-   SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
+   SCIP_CALL( localVertexInsertion2(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
 
    SCIP_CALL( localKeyVertexHeuristics(scip, graph, solNodes, linkcutNodes, solEdges, &success) );
 
    if( success )
    {
       markSolTreeNodes(scip, graph, solEdges, linkcutNodes, solNodes);
-      SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
+      SCIP_CALL( localVertexInsertion2(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
    }
 
    if( success && mwpc )

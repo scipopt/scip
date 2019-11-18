@@ -345,7 +345,7 @@ SCIP_Real SCIPlinkcuttreeFindMaxChain(
    reset_chain = TRUE;
 
    /* while curr is not root */
-   for( const LCNODE* curr = start; curr != NULL; curr = curr->parent )
+   for( const LCNODE* curr = start; curr->parent != NULL; curr = curr->parent )
    {
       int head;
       const int edge = curr->edge;
