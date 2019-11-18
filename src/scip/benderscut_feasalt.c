@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_feasalt.c
- * @brief  Standard feasibility cuts for Benders' decomposition
+ * @brief  Alternative feasibility cuts for Benders' decomposition
  * @author Stephen J. Maher
  */
 
@@ -53,7 +53,7 @@
 #include "scip/scip_var.h"
 
 #define BENDERSCUT_NAME             "feasalt"
-#define BENDERSCUT_DESC             "Standard feasibility cuts for Benders' decomposition"
+#define BENDERSCUT_DESC             "Alternative feasibility cuts for Benders' decomposition"
 #define BENDERSCUT_PRIORITY     10001
 #define BENDERSCUT_LPCUT         TRUE
 
@@ -460,7 +460,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeasalt)
  * Benders' decomposition cuts specific interface methods
  */
 
-/** creates the Standard Feasibility Benders' decomposition cuts and includes it in SCIP */
+/** creates the Alternative Feasibility Benders' decomposition cuts and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBenderscutFeasalt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
