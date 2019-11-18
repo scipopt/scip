@@ -31,6 +31,8 @@
  *       indicate in which constraint type (<=, >=, or ranged row / ==) they are existing. Then sort the variables (and
  *       corresponding data) after the ranged row/equation hashvalue and only try to derive dominance on variables with
  *       the same hashvalue on ranged row/equation and fitting hashvalues for the other constraint types.
+ * @todo run on incomplete matrices; in order to do so, check at the time when dominance is detected that the locks are
+ *       consistent; probably, it is sufficient to check one lock direction for each of the two variables
  *
  */
 

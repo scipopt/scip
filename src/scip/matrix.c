@@ -21,6 +21,8 @@
  *
  * The MIP matrix is organized as sparse data structure in row and
  * and column major format.
+ *
+ * @todo disregard relaxation-only variables in lock check and don't copy them to the matrix
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1752,7 +1754,7 @@ SCIP_Bool SCIPmatrixUplockConflict(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
 
-   return (SCIPvarGetNLocksUpType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) == matrix->nuplocks[col]);
+   return (SCIPvarGetNLocksUpType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) != matrix->nuplocks[col]);
 }
 
 /** get if conflicting downlocks of a specific variable present */
@@ -1764,5 +1766,5 @@ SCIP_Bool SCIPmatrixDownlockConflict(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
 
-   return (SCIPvarGetNLocksDownType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) == matrix->ndownlocks[col]);
+   return (SCIPvarGetNLocksDownType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) != matrix->ndownlocks[col]);
 }

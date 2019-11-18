@@ -267,8 +267,8 @@ SCIP_Bool SCIPmatrixDownlockConflict(
 #define SCIPmatrixGetRowNMaxActNegInf(matrix,row)      (matrix->maxactivityneginf[row])
 #define SCIPmatrixGetRowNMaxActPosInf(matrix,row)      (matrix->maxactivityposinf[row])
 #define SCIPmatrixGetCons(matrix,row)                  (matrix->cons[row])
-#define SCIPmatrixUplockConflict(matrix,col)           (SCIPvarGetNLocksUp(matrix->vars[col]) == matrix->nuplocks[col] ? FALSE : TRUE)
-#define SCIPmatrixDownlockConflict(matrix,col)         (SCIPvarGetNLocksDown(matrix->vars[col]) == matrix->ndownlocks[col] ? FALSE : TRUE)
+#define SCIPmatrixUplockConflict(matrix,col)           (SCIPvarGetNLocksUpType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) != matrix->nuplocks[col])
+#define SCIPmatrixDownlockConflict(matrix,col)         (SCIPvarGetNLocksDownType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) != matrix->ndownlocks[col])
 
 #endif
 
@@ -310,7 +310,7 @@ SCIP_RETCODE SCIPmatrixGetParallelRows(
    int*                  pclass              /**< parallel row classes */
    );
 
-/** detect parallel rows, obj ignored */
+/** detect parallel columns, obj ignored */
 SCIP_EXPORT
 SCIP_RETCODE SCIPmatrixGetParallelCols(
    SCIP*                 scip,               /**< current SCIP instance */

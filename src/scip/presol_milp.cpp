@@ -58,7 +58,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 #define PRESOL_NAME            "milp"
 #define PRESOL_DESC            "MILP specific presolving methods"
-#define PRESOL_PRIORITY        -9999999 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
+#define PRESOL_PRIORITY        9999999 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
