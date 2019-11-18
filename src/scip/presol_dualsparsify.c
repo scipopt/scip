@@ -108,7 +108,7 @@ struct SCIP_PresolData
    SCIP_Bool             preservegoodlocks;  /**< should we preserve good locked properties of variables (at most one lock in one direction)? */
 };
 
-/** structure representing a pair of constraints in a cols; used for lookup in a hashtable */
+/** structure representing a pair of constraints in a column; used for lookup in a hashtable */
 struct ColConsPair
 {
    int colindex;
@@ -162,7 +162,7 @@ SCIP_DECL_HASHKEYVAL(consPairHashval)
                       SCIPrealHashCode(conspair->conscoef2 / conspair->conscoef1));
 }
 
-/** calculate max activity of one row without one column */
+/** calculate maximal activity of one row without one specific column */
 static
 SCIP_Real getMaxActivitySingleRowWithoutCol(
    SCIP*                 scip,               /**< SCIP main data structure */
@@ -189,7 +189,7 @@ SCIP_Real getMaxActivitySingleRowWithoutCol(
    rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, row);
    valpnt = SCIPmatrixGetRowValPtr(matrix, row);
 
-   for(; (rowpnt < rowend); rowpnt++, valpnt++)
+   for( ; (rowpnt < rowend); rowpnt++, valpnt++ )
    {
       c = *rowpnt;
       val = *valpnt;
@@ -214,7 +214,7 @@ SCIP_Real getMaxActivitySingleRowWithoutCol(
    return maxactivity;
 }
 
-/** calculate min activity of one row without one column */
+/** calculate minimal activity of one row without one specific column */
 static
 SCIP_Real getMinActivitySingleRowWithoutCol(
    SCIP*                 scip,               /**< SCIP main data structure */
@@ -241,7 +241,7 @@ SCIP_Real getMinActivitySingleRowWithoutCol(
    rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, row);
    valpnt = SCIPmatrixGetRowValPtr(matrix, row);
 
-   for(; (rowpnt < rowend); rowpnt++, valpnt++)
+   for( ; (rowpnt < rowend); rowpnt++, valpnt++ )
    {
       c = *rowpnt;
       val = *valpnt;
@@ -266,7 +266,7 @@ SCIP_Real getMinActivitySingleRowWithoutCol(
    return minactivity;
 }
 
-/** get min/max residual activity without the specified column */
+/** get minimal and maximal residual activity without one specified column */
 static
 void getMinMaxActivityResiduals(
    SCIP*                 scip,               /**< SCIP main data structure */
@@ -504,7 +504,7 @@ void getVarLowerBoundOfRow(
 }
 
 
-/** verify whether variable upper bound is implied */
+/** detect whether variable upper bound is implied */
 static
 SCIP_Bool isUpperBoundImplied(
    SCIP*                 scip,               /**< SCIP main data structure */
@@ -550,7 +550,7 @@ SCIP_Bool isUpperBoundImplied(
    return ubimplied;
 }
 
-/** verify whether variable lower bound is implied */
+/** detect whether variable lower bound is implied */
 static
 SCIP_Bool isLowerBoundImplied(
    SCIP*                 scip,               /**< SCIP main data structure */
