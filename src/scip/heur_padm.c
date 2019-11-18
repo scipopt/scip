@@ -811,9 +811,13 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    {
       SCIPdebugMsg(scip, "Initialize padm heuristic before node\n");
    }
-   if( (heurtiming & SCIP_HEURTIMING_AFTERNODE) && heurdata->afternode )
+   else if( (heurtiming & SCIP_HEURTIMING_AFTERNODE) && heurdata->afternode )
    {
       SCIPdebugMsg(scip, "Initialize padm heuristic after node\n");
+   }
+   else
+   {
+      return SCIP_OKAY;
    }
 
 #ifdef PADM_WRITE_PROBLEMS
@@ -1599,6 +1603,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    else
    {
       SCIPdebugMsg(scip, "maximum number of penalty loops reached\n");
+      *result = SCIP_DIDNOTFIND;
    }
    
 
