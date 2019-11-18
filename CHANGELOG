@@ -261,7 +261,7 @@ Interface changes
   feasibility tolerance for the LP relaxation
 - new API function SCIPgenerateAndApplyBendersOptCut is used to generate a Benders' optimality cut using the dual
   solutions. This function can be supplied vectors for the primal and dual solution for generating an optimality cut.
-  This avoids the need to using SCIP instance for solving the Benders' decomposition subproblem and generating cuts.
+  This avoids the need for a SCIP instance to solve the Benders' decomposition subproblem and generating cuts.
 - new API function SCIPconsAddCoef used for adding a coefficient to a linear-type constraint.
 - new API functions SCIPconsNonlinearGetRhs, SCIPconsNonlinearGetLhs and SCIPconsNonlinearAddLinearCoef for getting the
   RHS and LHS from a nonlinear-type constraint and adding a linear coefficient to the constraint.
