@@ -4556,8 +4556,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 
       SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_ITLIM, INT_MAX) );
 
-      SCIP_CALL( SCIPwriteTransProblem(subproblem, "subprob.lp", NULL, FALSE) );
-
       SCIP_CALL( SCIPsolveNLP(subproblem) );
 
       nlpsolstat = SCIPgetNLPSolstat(subproblem);
