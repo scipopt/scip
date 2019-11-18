@@ -2129,7 +2129,6 @@ SCIP_RETCODE displayRelevantStats(
       }
       else
          SCIPmessagePrintInfo(scip->messagehdlr, "Solving Nodes      : %" SCIP_LONGINT_FORMAT "\n", scip->stat->nnodes);
-
       if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_EXITSOLVE )
       {
          if( objlimitreached )

@@ -25,7 +25,6 @@
 
 #include <assert.h>
 
-#include "scip/branch.h"
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/stat.h"
@@ -976,7 +975,6 @@ SCIP_RETCODE nodeCreate(
    (*node)->cutoff = FALSE;
    (*node)->reprop = FALSE;
    (*node)->repropsubtreemark = 0;
-   (*node)->probability = 1.0;
 
    return SCIP_OKAY;
 }
@@ -5363,121 +5361,6 @@ SCIP_Real SCIPtreeCalcChildEstimate(
    return estimate;
 }
 
-/** assign fixed probability to a node */
-static
-void nodeAssignFixedProbability(
-   SCIP_NODE*            node,
-   SCIP_Real             probability
-   )
-{
-   assert(node != NULL);
-   assert(probability <= 1.0);
-   assert(probability >= 0.0);
-   assert(node->parent == NULL || probability <= node->parent->probability);
-
-   node->probability = probability;
-}
-
-/** assign the left and right tree fraction based on the estimated or real gains */
-static
-SCIP_RETCODE assignFixedProbabilitiesBranching(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_VAR*             var,                /**< variable to branch on */
-   SCIP_Real             val,                /**< value to branch on or SCIP_INVALID for branching on current LP/pseudo solution.
-                                              *   A branching value is required for branching on continuous variables */
-   SCIP_NODE*            leftchild,          /**< left child node */
-   SCIP_NODE*            rightchild,         /**< right child node */
-   SCIP_NODE*            parent              /**< parent node */
-   )
-{
-   SCIP_Real fractionleft;
-   SCIP_Real fractionright;
-
-   assert(var != NULL);
-   assert(leftchild != NULL);
-   assert(rightchild != NULL);
-
-   /* use 1/2 as fraction if no valid branch ratio could be computed */
-   fractionleft = 0.5;
-   fractionright = 0.5;
-
-   /* use inferences as a substitution for pseudo costs */
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
-   {
-      SCIP_Real infdown;
-      SCIP_Real infup;
-
-      infdown = SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_DOWNWARDS) + 1.0;
-      infup = SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_UPWARDS) + 1.0;
-
-      fractionleft = infdown/(infdown + infup);
-      fractionright = 1.0 - fractionleft;
-   }
-   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-   {
-      SCIP_Real gains[2];
-      SCIP_BRANCHRATIO branchratio;
-      SCIP_COL* varcol;
-      SCIP_Bool leftbetterthanright;
-
-      /* check if strong branching result is available, otherwise use pseudo cost estimation */
-      varcol = SCIPvarGetCol(var);
-      if( SCIPcolGetStrongbranchNode(varcol) == stat->nnodes )
-      {
-         SCIP_Real up;
-         SCIP_Real down;
-         SCIP_Real lpsolval;
-         SCIP_Real solval;
-         SCIPcolGetStrongbranchLast(varcol, &down, &up, NULL, NULL, &solval, &lpsolval);
-
-         gains[0] = MAX(down - lpsolval, 0.0);
-         gains[1] = MAX(up - lpsolval, 0.0);
-      }
-      else
-      {
-         SCIP_Real solvaldeltadown;
-         SCIP_Real solvaldeltaup;
-
-         solvaldeltadown = SCIPsetFloor(set, val) - val;
-         solvaldeltaup = SCIPsetCeil(set, val) - val;
-
-         gains[0] = SCIPvarGetPseudocost(var, stat, solvaldeltadown);
-         gains[1] = SCIPvarGetPseudocost(var, stat, solvaldeltaup);
-      }
-
-      if( gains[0] > gains[1] )
-         leftbetterthanright = TRUE;
-      else
-         leftbetterthanright = FALSE;
-
-      /* compute a branch ratio with the smaller gain passed as first argument, and the larger gain second */
-      SCIPbranchComputeVarRatio(set, NULL, gains[leftbetterthanright], gains[1 - leftbetterthanright], 100, &branchratio);
-
-      /* compute fractions for valid branch ratios */
-      if( branchratio.valid )
-      {
-         if( ! leftbetterthanright )
-         {
-            fractionleft = 1.0/branchratio.upratio;
-            fractionright = 1 - fractionleft;
-            assert(fractionleft >= fractionright);
-         }
-         else
-         {
-            fractionright = 1.0/branchratio.upratio;
-            fractionleft = 1 - fractionright;
-            assert(fractionleft <= fractionright);
-         }
-      }
-   }
-
-   nodeAssignFixedProbability(leftchild, parent->probability * fractionleft);
-   nodeAssignFixedProbability(rightchild, parent->probability * fractionright);
-
-   return SCIP_OKAY;
-}
-
 /** branches on a variable x
  *  if x is a continuous variable, then two child nodes will be created
  *  (x <= x', x >= x')
@@ -5517,9 +5400,6 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_NODE* node;
    SCIP_Real priority;
    SCIP_Real estimate;
-   SCIP_NODE* upchildlocal;
-   SCIP_NODE* downchildlocal;
-   SCIP_NODE* eqchildlocal;
 
    SCIP_Real downub;
    SCIP_Real fixval;
@@ -5533,9 +5413,12 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(var != NULL);
 
    /* initialize children pointer */
-   downchildlocal = NULL;
-   eqchildlocal = NULL;
-   upchildlocal = NULL;
+   if( downchild != NULL )
+      *downchild = NULL;
+   if( eqchild != NULL )
+      *eqchild = NULL;
+   if( upchild != NULL )
+      *upchild = NULL;
 
    /* store whether a valid value was given for branching */
    validval = (val != SCIP_INVALID);  /*lint !e777 */
@@ -5773,7 +5656,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
 
-      downchildlocal = node;
+      if( downchild != NULL )
+         *downchild = node;
    }
 
    if( fixval != SCIP_INVALID )    /*lint !e777*/
@@ -5797,7 +5681,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
 
-      eqchildlocal = node;
+      if( eqchild != NULL )
+         *eqchild = node;
    }
 
    if( uplb != SCIP_INVALID )    /*lint !e777*/
@@ -5816,23 +5701,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
       /* output branching bound change to visualization file */
       SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
 
-
-      upchildlocal = node;
+      if( upchild != NULL )
+         *upchild = node;
    }
-
-   /* ensure that at least two-way branching is performed */
-   assert(downub != SCIP_INVALID || uplb != SCIP_INVALID);
-   assert(downchildlocal != NULL || (eqchildlocal != NULL && upchildlocal != NULL));
-   assert(upchildlocal != NULL || (eqchildlocal != NULL && downchildlocal != NULL));
-
-   SCIP_CALL( assignFixedProbabilitiesBranching(set, stat, var, val, downchildlocal != NULL ? downchildlocal : eqchildlocal, upchildlocal != NULL ? upchildlocal : eqchildlocal, tree->focusnode) );
-
-   if( upchild != NULL )
-      *upchild = upchildlocal;
-   if( eqchild != NULL )
-      *eqchild = eqchildlocal;
-   if( downchild != NULL )
-      *downchild = downchildlocal;
 
    return SCIP_OKAY;
 }
@@ -7476,7 +7347,6 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPnodeGetDomchg
 #undef SCIPnodeGetParent
 #undef SCIPnodeGetConssetchg
-#undef SCIPnodeGetFixedProbability
 #undef SCIPnodeIsActive
 #undef SCIPnodeIsPropagatedAgain
 #undef SCIPtreeGetNLeaves
@@ -7549,15 +7419,6 @@ SCIP_Real SCIPnodeGetEstimate(
    assert(node != NULL);
 
    return node->estimate;
-}
-
-
-/** return the fixed probability of a node that has been assigned at branching time */
-SCIP_Real SCIPnodeGetFixedProbability(
-   SCIP_NODE*            node                /**< node data structure */
-   )
-{
-   return node->probability;
 }
 
 /** gets the reoptimization type of this node */

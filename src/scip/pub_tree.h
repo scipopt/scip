@@ -249,12 +249,6 @@ SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
    SCIP_NODE*            node                /**< node data */
    );
 
-/** return the fixed probability of a node that has been assigned at branching time */
-SCIP_EXPORT
-SCIP_Real SCIPnodeGetFixedProbability(
-   SCIP_NODE*            node                /**< node data structure */
-   );
-
 
 #ifdef NDEBUG
 
@@ -272,7 +266,6 @@ SCIP_Real SCIPnodeGetFixedProbability(
 #define SCIPnodeIsActive(node)          ((node)->active)
 #define SCIPnodeIsPropagatedAgain(node) ((node)->reprop)
 #define SCIPnodeGetConssetchg(node)    ((node)->conssetchg)
-#define SCIPnodeGetFixedProbability(node) ((node)->probability)
 
 #endif
 

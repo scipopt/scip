@@ -686,3 +686,21 @@ int SCIPgetPlungeDepth(
 
    return scip->stat->plungedepth;
 }
+
+/** query if focus node was already branched on
+ *
+ *  @return TRUE if focus node was already branched on (note that subsequent solutions may have pruned the children)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Bool SCIPwasFocusNodeBranched(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPwasFocusNodeBranched", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPtreeWasFocusNodeBranched(scip->tree);
+}

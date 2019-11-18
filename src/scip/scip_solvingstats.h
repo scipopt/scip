@@ -1002,11 +1002,6 @@ SCIP_Real SCIPgetAvgLowerbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** query if focus node was already branched on */
-SCIP_Bool SCIPwasFocusNodeBranched(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** gets global dual bound
  *
  *  @return the global dual bound

@@ -562,43 +562,6 @@ SCIP_Real SCIPgetBranchScoreMultiple(
    SCIP_Real*            gains               /**< prediction of objective gain for each child */
    );
 
-/** returns true iff the variable with given gains has a ratio better (i.e
- *  smaller) than the given one
- *
- *  @return iff the variable with given gains has a ratio better (i.e
- *  smaller) than the given one
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-SCIP_EXPORT
-SCIP_Bool SCIPhasBranchBetterVarRatio(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_Real             leftgain,           /**< the left gain of a variable */
-   SCIP_Real             rightgain,          /**< the right gain of a variable */
-   SCIP_BRANCHRATIO*     branchratio         /**< The variable's ratio to compute */
-   );
-
-/** computes the variable ratio corresponding to the left and right gains
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-SCIP_EXPORT
-void SCIPcomputeBranchVarRatio(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_Real             leftgain,           /**< the left gain of a variable */
-   SCIP_Real             rightgain,          /**< the right gain of a variable */
-   int                   maxiters,           /**< the maximum number of iterations */
-   SCIP_BRANCHRATIO*     branchratio         /**< The variable's ratio to compute */
-   );
-
 /** computes a branching point for a continuous or discrete variable
  *
  *  @see SCIPbranchGetBranchingPoint

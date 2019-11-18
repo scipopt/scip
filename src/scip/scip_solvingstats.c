@@ -1299,16 +1299,6 @@ SCIP_Real SCIPgetAvgLowerbound(
    return SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound);
 }
 
-/** query if focus node was already branched on */
-SCIP_Bool SCIPwasFocusNodeBranched(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPwasFocusNodeBranched", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   return SCIPtreeWasFocusNodeBranched(scip->tree);
-}
-
 /** gets global dual bound
  *
  *  @return the global dual bound

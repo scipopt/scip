@@ -43,7 +43,6 @@
 extern "C" {
 #endif
 
-typedef struct SCIP_BranchRatio SCIP_BRANCHRATIO;  /**< branching variable's ratio */
 typedef struct SCIP_BranchCand SCIP_BRANCHCAND;   /**< branching candidate storage */
 typedef struct SCIP_Branchrule SCIP_BRANCHRULE;   /**< branching method data structure */
 typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method specific data */

@@ -28,7 +28,6 @@
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/clock.h"
-#include "scip/event.h"
 #include "scip/stat.h"
 #include "scip/visual.h"
 #include "scip/paramset.h"

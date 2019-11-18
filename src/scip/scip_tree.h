@@ -454,6 +454,21 @@ void SCIPsetFocusnodeLP(
    SCIP_Bool             solvelp             /**< should the LP be solved? */
    );
 
+
+/** query if focus node was already branched on
+ *
+ *  @return TRUE if focus node was already branched on (note that subsequent solutions may have pruned the children)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPwasFocusNodeBranched(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@} */
 
 #ifdef __cplusplus

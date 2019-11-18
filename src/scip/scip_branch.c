@@ -873,53 +873,6 @@ SCIP_Real SCIPgetBranchScoreMultiple(
    return SCIPbranchGetScoreMultiple(scip->set, var, nchildren, gains);
 }
 
-/** returns true iff the variable with given gains has a ratio better (i.e
- *  smaller) than the given one
- *
- *  @return iff the variable with given gains has a ratio better (i.e
- *  smaller) than the given one
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-SCIP_Bool SCIPhasBranchBetterVarRatio(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_Real             leftgain,           /**< the left gain of a variable */
-   SCIP_Real             rightgain,          /**< the right gain of a variable */
-   SCIP_BRANCHRATIO*     branchratio         /**< The variable's ratio to compute */
-   )
-{
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, " SCIPhasBranchBetterVarRatio", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   return SCIPbranchHasBetterVarRatio(scip->set, branchrule, leftgain, rightgain, branchratio);
-}
-
-
-
-/** computes the variable ratio corresponding to the left and right gains
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-void SCIPcomputeBranchVarRatio(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_Real             leftgain,           /**< the left gain of a variable */
-   SCIP_Real             rightgain,          /**< the right gain of a variable */
-   int                   maxiters,           /**< the maximum number of iterations */
-   SCIP_BRANCHRATIO*     branchratio         /**< The variable's ratio to compute */
-   )
-{
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, " SCIPcomputeBranchVarRatio", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIPbranchComputeVarRatio(scip->set, branchrule, leftgain, rightgain, maxiters, branchratio);
-}
-
 /** computes a branching point for a continuous or discrete variable
  *
  *  @see SCIPbranchGetBranchingPoint

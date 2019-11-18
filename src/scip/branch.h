@@ -490,27 +490,6 @@ SCIP_RETCODE SCIPbranchExecPseudo(
    SCIP_RESULT*          result              /**< pointer to store the result of the branching */
    );
 
-
-/** Returns true iff the variable with given gains has a ratio better (i.e
- *  smaller) than the given one */
-SCIP_Bool SCIPbranchHasBetterVarRatio(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_Real             leftgain,           /**< the left gain of a variable */
-   SCIP_Real             rightgain,          /**< the right gain of a variable */
-   SCIP_BRANCHRATIO*     branchratio         /**< the variable's ratio to compare against */
-   );
-
-/** Returns the variable ratio corresponding to the left and right gains */
-void SCIPbranchComputeVarRatio(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   SCIP_Real             leftgain,           /**< the left gain of a variable */
-   SCIP_Real             rightgain,          /**< the right gain of a variable */
-   int                   maxiters,           /**< the maximum number of iterations */
-   SCIP_BRANCHRATIO*     branchratio         /**< the variable's ratio to compute */
-   );
-
 #ifdef __cplusplus
 }
 #endif

@@ -33,21 +33,6 @@
 extern "C" {
 #endif
 
-
-
-/** variable's ratio is defined based upon its left and right LP gains,
- * as the unique root > 1 of the polynomial x^r - x^(r-l) -1 
- * where l and r are the left and right LP gains.
- * we store the root as upratio^(invleft), with invleft = 1/l.
- * an extra boolean stores whether the encoded ratio is valid, i.e.
- * there was no computation problem when computing it */
-struct SCIP_BranchRatio
-{
-   SCIP_Real             upratio;           /**< "UnPowered" ratio, i.e. the ratio of the characteristic polynomia with gains (1, rightgain/leftgain) */
-   SCIP_Real             invleft;           /**< "INVverse left gain, i.e. 1/leftgain */
-   SCIP_Bool             valid;             /**< True iff the ratio computed is valid */
-};
-
 /** branching candidate storage */
 struct SCIP_BranchCand
 {
