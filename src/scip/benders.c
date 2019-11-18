@@ -1823,7 +1823,7 @@ SCIP_RETCODE createSubproblems(
           */
          SCIP_CALL( checkSubproblemConvexity(benders, set, i) );
 
-         /* if the problem is has convex constraints but is nonlinear, then slack variables must be added to each of the
+         /* if the problem is convex and has nonlinear constraints, then slack variables must be added to each of the
           * constraints
              */
          if( benders->execfeasphase ||
