@@ -15,7 +15,7 @@
 
 /**@file   pub_misc_nonlinear.h
  * @ingroup INTERNALAPI
- * @brief  internal miscellaneous methods for linear constraints
+ * @brief  internal miscellaneous methods for nonlinear constraints
  * @author Stephen J. Maher
  */
 
