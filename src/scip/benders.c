@@ -4208,7 +4208,7 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
       else if( strstr(SCIPvarGetName(vars[i]), SLACKVAR_NAME) != NULL )
       {
          /* if the slack variables have been added to help improve feasibility, then they remain unfixed with a large
-          * objective coefficient. Once the root node has been solved to optimality, then the slack variables are then
+          * objective coefficient. Once the root node has been solved to optimality, then the slack variables are
           * fixed to zero.
           */
          if( benders->feasibilityphase && SCIPgetDepth(set->scip) == 0 && type != SCIP_BENDERSENFOTYPE_CHECK )
