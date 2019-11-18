@@ -1826,7 +1826,7 @@ SCIP_RETCODE createSubproblems(
           */
          SCIP_CALL( checkSubproblemConvexity(benders, set, i) );
 
-         /* if the problem is has convex constraints but is nonlinear, then slack variables must be added to each of the
+         /* if the problem is convex and has nonlinear constraints, then slack variables must be added to each of the
           * constraints
              */
          if( benders->execfeasphase ||
@@ -4147,9 +4147,9 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    /* changing all of the master problem variable to continuous. */
    SCIP_CALL( SCIPbendersChgMastervarsToCont(benders, set, probnumber) );
 
-   /* if the Benders' decomposition subproblem is has convex constraints and continuous variables, then probing mode
+   /* if the Benders' decomposition subproblem is convex and has continuous variables, then probing mode
     * must be started.
-    * If the subproblem is contains non-convex constraints or discrete variables, then the problem must be initialised,
+    * If the subproblem contains non-convex constraints or discrete variables, then the problem must be initialised,
     * and then put into SCIP_STAGE_SOLVING to be able to change the variable bounds. The probing mode is entered once
     * the variable bounds are set.
     * In the latter case, the transformed problem is freed after each subproblem solve round. */
@@ -4212,7 +4212,7 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
       else if( strstr(SCIPvarGetName(vars[i]), SLACKVAR_NAME) != NULL )
       {
          /* if the slack variables have been added to help improve feasibility, then they remain unfixed with a large
-          * objective coefficient. Once the root node has been solved to optimality, then the slack variables are then
+          * objective coefficient. Once the root node has been solved to optimality, then the slack variables are
           * fixed to zero.
           */
          if( benders->feasibilityphase && SCIPgetDepth(set->scip) == 0 && type != SCIP_BENDERSENFOTYPE_CHECK )
@@ -4559,8 +4559,6 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
 #endif
 
       SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_ITLIM, INT_MAX) );
-
-      SCIP_CALL( SCIPwriteTransProblem(subproblem, "subprob.lp", NULL, FALSE) );
 
       SCIP_CALL( SCIPsolveNLP(subproblem) );
 

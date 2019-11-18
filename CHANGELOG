@@ -98,7 +98,7 @@ Features
 - Linking variables in the linking constraint handler (cons_linking.{ch}) can now be integer or continuous. The coefficients of the binary variables are therefore now stored as SCIP_Real.
 
 - The Benders' decomposition framework can handle MINLPs. If a convex relaxation of the MINLP exists, then this is
-  solved to generate convex cuts. The extensions to the framework are:
+  solved to generate optimality and feasibility cuts. The extensions to the framework are:
   - New generic solving methods to solve convex NLP subproblems.
   - Modification to benderscut_opt and benderscut_feas to enable the generation of cuts from convex NLPs.
   - Addition of benderscut_feasalt to generate feasibility cuts from an alternative subproblem that minimises the
@@ -261,7 +261,7 @@ Interface changes
   feasibility tolerance for the LP relaxation
 - new API function SCIPgenerateAndApplyBendersOptCut is used to generate a Benders' optimality cut using the dual
   solutions. This function can be supplied vectors for the primal and dual solution for generating an optimality cut.
-  This avoids the need to using SCIP instance for solving the Benders' decomposition subproblem and generating cuts.
+  This avoids the need for a SCIP instance to solve the Benders' decomposition subproblem and generating cuts.
 - new API function SCIPconsAddCoef used for adding a coefficient to a linear-type constraint.
 - new API functions SCIPconsNonlinearGetRhs, SCIPconsNonlinearGetLhs and SCIPconsNonlinearAddLinearCoef for getting the
   RHS and LHS from a nonlinear-type constraint and adding a linear coefficient to the constraint.
