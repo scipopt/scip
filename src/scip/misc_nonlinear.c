@@ -114,7 +114,7 @@ SCIP_Real SCIPconsNonlinearGetLhs(
    }
    else
    {
-      SCIPwarningMessage(scip, "Cannot return rhs for constraint of type <%s>\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return lhs for constraint of type <%s>\n", conshdlrname);
       *success = FALSE;
    }
 
