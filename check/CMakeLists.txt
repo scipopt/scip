@@ -81,8 +81,6 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
-    "enable_treeprofile"
-    "estimation_ratio"
     )
 #
 # settings for the componentshandler test
@@ -107,6 +105,7 @@ set(settings_fastMIP
     "presolving_off"
     "separating_off"
     "vbcvisualization"
+    "enable_treeprofile"
   )
 set(settings_MINLP
     "minlp"
@@ -152,7 +151,7 @@ set(settings_Benders
     "usebenders-tr"
     "usebenders-cutstrengthen"
    )
-   
+
 set(settings_Indicator
     "default"
     "indicatorrestart"
@@ -171,7 +170,7 @@ set(settings_reopt
     "reopt-test-settings-varorderinterdiction-r"
     )
 
-   
+
 #
 # Indicator instances
 #

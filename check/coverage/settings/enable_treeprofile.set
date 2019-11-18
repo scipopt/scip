@@ -2,13 +2,8 @@
 
 # should the event handler collect data?
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
-estimates/profile/enabled = TRUE
+restarts/estimation/treeprofile/enabled = TRUE
 
 # factor by which the number of nodes exceeds the maximum width before producing estimations
 # [type: real, advanced: FALSE, range: [1,1.79769313486232e+308], default: 20]
-estimates/profile/maxdepthfactor = 10
-
-# positive frequency for periodic output of estimation, or -1 for no output
-# [type: int, advanced: FALSE, range: [-1,2147483647], default: -1]
-estimates/profile/freq = 0
-
+restarts/estimation/treeprofile/minnodesperdepth = 10

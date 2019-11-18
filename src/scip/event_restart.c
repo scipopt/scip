@@ -2669,7 +2669,7 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
          &eventhdlrdata->completiontypeparam, FALSE, DEFAULT_COMPLETIONTYPE, "agpmrs", NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "restarts/estimation/treeprofile/enabled",
          "should the event handler collect data?", &eventhdlrdata->treeprofile_enabled, FALSE, DEFAULT_TREEPROFILE_ENABLED, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/treeprofile/maxdepthfactor",
+   SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/treeprofile/minnodesperdepth",
          "minimum average number of nodes at each depth before producing estimations",
          &eventhdlrdata->treeprofile_minnodesperdepth, FALSE, DEFAULT_TREEPROFILE_MINNODESPERDEPTH, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 

@@ -1,5 +1,0 @@
-display/estimates/active = 2
-estimates/active = TRUE
-estimates/estimationmethod = s
-estimates/probabilitymethod = r
-estimates/measureerror = TRUE
