@@ -1330,7 +1330,17 @@ SCIP_RETCODE computeSymmetryGroup(
    assert( vars != NULL );
 
    /* fill matrixdata */
-   matrixdata.nmaxmatcoef = 100 * nvars;
+
+   /* use a staggered scheme for allocating space for non-zeros of constraint matrix since it can become large */
+   if ( nvars <= 100000 )
+      matrixdata.nmaxmatcoef = 100 * nvars;
+   else if ( nvars <= 1000000 )
+      matrixdata.nmaxmatcoef = 32 * nvars;
+   else if ( nvars <= 16700000 )
+      matrixdata.nmaxmatcoef = 16 * nvars;
+   else
+      matrixdata.nmaxmatcoef = INT_MAX / 10;
+
    matrixdata.nmatcoef = 0;
    matrixdata.nrhscoef = 0;
    matrixdata.nuniquemat = 0;
