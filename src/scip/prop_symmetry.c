@@ -583,7 +583,7 @@ SCIP_RETCODE freeSymmetryData(
       SCIPhashmapFree(&propdata->permvarmap);
    }
 
-   /* drop events and release variables */
+   /* drop events */
    if ( propdata->permvarsevents != NULL )
    {
       assert( propdata->permvars != NULL );
@@ -601,12 +601,13 @@ SCIP_RETCODE freeSymmetryData(
                SCIP_CALL( SCIPdropVarEvent(scip, propdata->permvars[i], SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED,
                      propdata->eventhdlr, (SCIP_EVENTDATA*) propdata, propdata->permvarsevents[i]) );
             }
-            SCIP_CALL( SCIPreleaseVar(scip, &propdata->permvars[i]) );
          }
       }
       SCIPfreeBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars);
    }
-   else if ( propdata->binvaraffected )
+
+   /*  release variables */
+   if ( propdata->binvaraffected )
    {
       for (i = 0; i < propdata->nbinpermvars; ++i)
       {
