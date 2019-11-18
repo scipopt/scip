@@ -93,6 +93,10 @@ Features
 
 - If a reference value (misc/referencevalue) is given, the primal-reference and reference-dual integrals are calculated automatically and printed within the SCIP statistics.
 
+- Locally valid cuts / rows are now considered for dual proof analysis when `conflict/uselocalrows` is set to TRUE.
+
+- Linking variables in the linking constraint handler (cons_linking.{ch}) can now be integer or continuous. The coefficients of the binary variables are therefore now stored as SCIP_Real.
+
 Performance improvements
 ------------------------
 
@@ -124,6 +128,8 @@ Performance improvements
 
 Examples and applications
 -------------------------
+
+- added methods to set and get hmin and hmax for optcumulative constraints
 
 Interface changes
 -----------------
@@ -193,6 +199,12 @@ Interface changes
   thus it cannot be assumed anymore that each active variable from the master SCIP also has a counterpart in the copy.
   SCIPcopy, SCIPcopyConsCompression, and SCIPcopyConss can now return *valid=TRUE if some non-checked and non-enforced constraints were not copied, e.g.,
   because they involved relaxation-only variables. Thus, a copy is already regarded as valid if all checked or enforced constraints were copied successfully.
+
+- linking constraint handler:
+  - changed type of vals argument from int *to SCIP_Real* in SCIPcreateConsLinking() and SCIPcreateConsBasicLinking()
+  - SCIPgetIntvarLinking() has been renamed to SCIPgetLinkvarLinking().
+  - changed return value of SCIPgetValsLinking() from int* to SCIP_Real*.
+  - new method SCIPgetBinvarsDataLinking().
 
 ### New API functions
 
@@ -320,6 +332,8 @@ Interface changes
 
 - new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
 
+- new parameter conflict/uselocalrows (default: TRUE) to incorporate locally valid cuts / rows for dual proof analysis
+
 ### Data structures
 
 ### Build system
@@ -355,6 +369,7 @@ Fixed bugs
 - fix and improve memory handling in symmetry computation
 - fix shown number of applied conflicts in solving statistics
 - fix wrongly skipping strong branching call and using old information if LP was solved with 0 iterations
+- fix minor bug in cut score calculation
 
 Miscellaneous
 -------------
@@ -450,6 +465,7 @@ Fixed bugs
 - added safety check in conversion to rational number to avoid overflow
 - fixed bug in interval evaluation with power-operator in certain situations
 - fixed behavior of SCIPmatrixCreate() regarding memory management and column generation
+- SCIPmatrixCreate() returns complete=FALSE when locks do not add up
 
 Miscellaneous
 -------------
