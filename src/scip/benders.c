@@ -5964,7 +5964,6 @@ SCIP_RETCODE SCIPbendersSolSlackVarsActive(
    /* if the slack variables have not been added, then we can immediately state that no slack variables are active */
    if( !benders->feasibilityphase )
    {
-      (*activeslack) = FALSE;
       return SCIP_OKAY;
    }
 
