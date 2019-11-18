@@ -1309,13 +1309,11 @@ SCIP_RETCODE addSlackVars(
       /* adds the slack variable to the constraint */
       if( linearcons )
       {
-         SCIP_CALL( SCIPconsAddCoef(scip, cons, var, -1.0, &success) );
-         assert(success);
+         SCIP_CALL( SCIPconsAddCoef(scip, cons, var, -1.0) );
       }
       else
       {
-         SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, -1.0, &success) );
-         assert(success);
+         SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, -1.0) );
       }
 
       /* releasing the variable */
@@ -1335,13 +1333,11 @@ SCIP_RETCODE addSlackVars(
       /* adds the slack variable to the constraint */
       if( linearcons )
       {
-         SCIP_CALL( SCIPconsAddCoef(scip, cons, var, 1.0, &success) );
-         assert(success);
+         SCIP_CALL( SCIPconsAddCoef(scip, cons, var, 1.0) );
       }
       else
       {
-         SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, 1.0, &success) );
-         assert(success);
+         SCIP_CALL( SCIPconsNonlinearAddLinearCoef(scip, cons, var, 1.0) );
       }
 
       /* releasing the variable */

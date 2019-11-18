@@ -59,8 +59,7 @@ SCIP_RETCODE SCIPconsNonlinearAddLinearCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which row is queried */
    SCIP_VAR*             var,                /**< variable of the constraint entry */
-   SCIP_Real             val,                /**< the coefficient of the constraint entry */
-   SCIP_Bool*            success             /**< returns TRUE is the coefficient was added successfully */
+   SCIP_Real             val                 /**< the coefficient of the constraint entry */
    );
 
 #ifdef __cplusplus

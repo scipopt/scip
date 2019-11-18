@@ -126,8 +126,7 @@ SCIP_RETCODE SCIPconsNonlinearAddLinearCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which row is queried */
    SCIP_VAR*             var,                /**< variable of the constraint entry */
-   SCIP_Real             val,                /**< the coefficient of the constraint entry */
-   SCIP_Bool*            success             /**< returns TRUE is the coefficient was added successfully */
+   SCIP_Real             val                 /**< the coefficient of the constraint entry */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -141,8 +140,6 @@ SCIP_RETCODE SCIPconsNonlinearAddLinearCoef(
    assert(conshdlr != NULL);
    conshdlrname = SCIPconshdlrGetName(conshdlr);
 
-   *success = TRUE;
-
    if( strcmp(conshdlrname, "nonlinear") == 0 )
    {
       SCIP_CALL( SCIPaddLinearVarNonlinear(scip, cons, var, val) );
@@ -153,13 +150,13 @@ SCIP_RETCODE SCIPconsNonlinearAddLinearCoef(
    }
    else if( strcmp(conshdlrname, "abspower") == 0 )
    {
-      SCIPwarningMessage(scip, "Sorry, can't add coefficient for constraint of type <%s>\n", conshdlrname);
-      *success = FALSE;
+      SCIPerrorMessage("Sorry, can't add coefficient for constraint of type <%s>\n", conshdlrname);
+      return SCIP_ERROR;
    }
    else
    {
-      SCIPwarningMessage(scip, "Sorry, can't add coefficient for constraint of type <%s>\n", conshdlrname);
-      *success = FALSE;
+      SCIPerrorMessage("Sorry, can't add coefficient for constraint of type <%s>\n", conshdlrname);
+      return SCIP_ERROR;
    }
 
    return SCIP_OKAY;
