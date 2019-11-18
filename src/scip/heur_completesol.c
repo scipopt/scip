@@ -1185,7 +1185,11 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
 
       /* run the heuristic, if not too many unknown variables exist */
       if( unknownrate > heurdata->maxunknownrate )
+      {
+         SCIPwarningMessage(scip, "ignore partial solution (%d) because unknown rate is too large (%g > %g)\n", s,
+            unknownrate, heurdata->maxunknownrate);
          continue;
+      }
 
       /* all variables have a finite/known solution value all integer variables have an integral solution value,
        * and there are no continuous variables
