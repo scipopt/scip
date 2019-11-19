@@ -1063,11 +1063,9 @@ SCIP_RETCODE SCIPnodeFree(
 
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
+   /* trigger a node deletion event */
    SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEDELETE) );
    SCIP_CALL( SCIPeventChgNode(&event, *node) );
-   /* We use an ugly hack below: we need eventfilter, and if we want it we have to add it as a parameter to dozens of
-    * functions in SCIP and change the corresponding calls to these functions throughout the solver.
-    */
    SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
    /* inform solution debugger, that the node has been freed */
