@@ -50,7 +50,7 @@
  *     \ell \leq x \leq u \\
  *   \end{array}
  * \end{equation}
- * this method determines useful values for $\lambda in (0,1)$ and
+ * this method determines promising values for $\lambda in (0,1)$ and
  * applies feasibility-based bound tightening on the convex combinations
  *
  * (\lambda A_{r\cdot} + (1 - \lambda) A_{s\cdot}) x \geq \lambda b_r + (1 - \lambda) b_s$.
@@ -77,14 +77,13 @@
 #include "presol_tworowbnd.h"
 #include <string.h>
 
-// TODO Fix aligning
-#define PRESOL_NAME            "tworowbnd"
-#define PRESOL_DESC            "do bound tigthening by using two rows"
-#define PRESOL_PRIORITY         -2000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
-#define PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
+#define PRESOL_NAME                    "tworowbnd"
+#define PRESOL_DESC                    "do bound tigthening by using two rows"
+#define PRESOL_PRIORITY                -2000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
+#define PRESOL_MAXROUNDS               -1  /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_TIMING                  SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
-#define DEFAULT_ENABLECOPY             TRUE    /**< should tworowbnd presolver be copied to sub-SCIPs? */
+#define DEFAULT_ENABLECOPY             TRUE /**< should tworowbnd presolver be copied to sub-SCIPs? */
 #define DEFAULT_MAXCONSIDEREDNONZEROS  100
 #define DEFAULT_MAXRETRIEVEFAILS       1000
 #define DEFAULT_MAXCOMBINEFAILS        1000
@@ -150,6 +149,7 @@ hashIndexPair(
    return *((int*) &hash);
 }
 
+/** add hash/rowidx pair to hashlist/rowidxlist **/
 static
 SCIP_RETCODE addEntry
 (
@@ -177,6 +177,12 @@ SCIP_RETCODE addEntry
    return SCIP_OKAY;
 }
 
+/** Within a sorted list, get next block with same value
+ *  E.g. for [h1, h1, h1, h2, h2, h2, h2, h3,...] and end = 0
+ *  returns start = 0, end = 3
+ *  and on a second call with end = 3 on the same list
+ *  returns start = 3, end = 7.
+ **/
 static
 void findNextBlock
 (
@@ -196,8 +202,14 @@ void findNextBlock
 }
 
 /** Solve single-row LP of the form
- *  min c^T x, s.t. a^T x >= b
- *  TODO proper documentation
+ *  min c^T x
+ *  s.t. a^T x >= b
+ *  lbs <= x <= ubs
+ *
+ *  First, the problem is transformed such that
+ *  SCIPselectWeightedReal() can be applied, which
+ *  then solves the problem as a continuous knapsack
+ *  in linear time.
  */
 static
 SCIP_RETCODE solveSingleRowLP(
@@ -478,8 +490,6 @@ SCIP_RETCODE solveSingleRowLP(
       else
       {
          assert(nvars > 0);
-         //TODO Check what happens if I can pack all elements
-         //TODO test whether k == nvars holds iff all elements can be used
 #ifdef SCIP_DEBUG_SINGLEROWLP
          for( i = 0; i < nvars; i++ )
             SCIPdebugMsg(scip, "c[%d] = %g, a[%d] = %g\n", i, c[i], i, a[i]);
@@ -546,17 +556,17 @@ SCIP_RETCODE transformAndSolve(
    int                   row2idx,
    SCIP_Bool             swaprow1,
    SCIP_Bool             swaprow2,
-   SCIP_Real*            amin,
-   SCIP_Real*            amax,
-   SCIP_Real*            cmin,
-   SCIP_Real*            cmax,
+   SCIP_Real*            aoriginal,
+   SCIP_Real*            acopy,
+   SCIP_Real*            coriginal,
+   SCIP_Real*            ccopy,
    SCIP_Bool*            cangetbnd,
    SCIP_Real*            lbs,
    SCIP_Real*            ubs,
-   SCIP_Real*            newlbsmin,
-   SCIP_Real*            newlbsmax,
-   SCIP_Real*            newubsmin,
-   SCIP_Real*            newubsmax,
+   SCIP_Real*            newlbsoriginal,
+   SCIP_Real*            newlbscopy,
+   SCIP_Real*            newubsoriginal,
+   SCIP_Real*            newubscopy,
    SCIP_Bool*            success,            /**< return (success || "found better bounds") */
    SCIP_Bool*            redundant,          /**< return whether first row is redundant */
    SCIP_Bool*            infeasible          /**< we return (infeasible || "detected infeasibility") */
@@ -614,10 +624,10 @@ SCIP_RETCODE transformAndSolve(
 
       if( idx1 == idx2 )
       {
-         cmin[nvars] = row1valptr[i];
-         amin[nvars] = row2valptr[j];
-         newlbsmin[nvars] = lbs[idx1];
-         newubsmin[nvars] = ubs[idx1];
+         coriginal[nvars] = row1valptr[i];
+         aoriginal[nvars] = row2valptr[j];
+         newlbsoriginal[nvars] = lbs[idx1];
+         newubsoriginal[nvars] = ubs[idx1];
          cangetbnd[idx1] = FALSE;
          nvars++;
 #ifdef SCIP_DEBUG_2RB
@@ -661,10 +671,10 @@ SCIP_RETCODE transformAndSolve(
       }
       else
       {
-         cmin[nvars] = 0.0;
-         amin[nvars] = row2valptr[j];
-         newlbsmin[nvars] = lbs[idx2];
-         newubsmin[nvars] = ubs[idx2];
+         coriginal[nvars] = 0.0;
+         aoriginal[nvars] = row2valptr[j];
+         newlbsoriginal[nvars] = lbs[idx2];
+         newubsoriginal[nvars] = ubs[idx2];
          cangetbnd[idx2] = FALSE;
          nvars++;
 #ifdef SCIP_DEBUG_2RB
@@ -709,10 +719,10 @@ SCIP_RETCODE transformAndSolve(
    while( j < row2len )
    {
       idx2 = row2idxptr[j];
-      cmin[nvars] = 0.0;
-      amin[nvars] = row2valptr[j];
-      newlbsmin[nvars] = lbs[idx2];
-      newubsmin[nvars] = ubs[idx2];
+      coriginal[nvars] = 0.0;
+      aoriginal[nvars] = row2valptr[j];
+      newlbsoriginal[nvars] = lbs[idx2];
+      newubsoriginal[nvars] = ubs[idx2];
       nvars++;
 #ifdef SCIP_DEBUG_2RB
       SCIPdebugMsg(scip, "%g <= (%s) <= %g has coefs 0.0 and %g, %d LP vars\n", lbs[idx2], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx2)), ubs[idx2], row2valptr[j], nvars);
@@ -731,15 +741,14 @@ SCIP_RETCODE transformAndSolve(
    /* solve LPs */
    if( maxinfs <= 1 )
    {
-      // TODO fix naming of amin/amax/... as *min is used to store the initial values and *max is used to make a copy for the solving process -> * and *copy would be better names
       for( i = 0; i < nvars; i++ )
       {
-         amax[i] = amin[i];
-         cmax[i] = -cmin[i];
-         newlbsmax[i] = newlbsmin[i];
-         newubsmax[i] = newubsmin[i];
+         acopy[i] = aoriginal[i];
+         ccopy[i] = -coriginal[i];
+         newlbscopy[i] = newlbsoriginal[i];
+         newubscopy[i] = newubsoriginal[i];
       }
-      SCIP_CALL( solveSingleRowLP(scip, amax, SCIPmatrixGetRowLhs(matrix, row2idx), cmax, newlbsmax, newubsmax, nvars, &maxobj, &maxsolvable) );
+      SCIP_CALL( solveSingleRowLP(scip, acopy, SCIPmatrixGetRowLhs(matrix, row2idx), ccopy, newlbscopy, newubscopy, nvars, &maxobj, &maxsolvable) );
 #ifdef SCIP_DEBUG_2RB
       SCIPdebugMsg(scip, "max-LP solved: obj = %g\n", maxobj);
 #endif
@@ -747,15 +756,15 @@ SCIP_RETCODE transformAndSolve(
 
    if( mininfs == 0 || (mininfs == 1 && swaprow1) )
    {
-      // copy stuff
+      /* copy coefficients */
       for( i = 0; i < nvars; i++ )
       {
-         amax[i] = amin[i];
-         cmax[i] = cmin[i];
-         newlbsmax[i] = newlbsmin[i];
-         newubsmax[i] = newubsmin[i];
+         acopy[i] = aoriginal[i];
+         ccopy[i] = coriginal[i];
+         newlbscopy[i] = newlbsoriginal[i];
+         newubscopy[i] = newubsoriginal[i];
       }
-      SCIP_CALL( solveSingleRowLP(scip, amax, SCIPmatrixGetRowLhs(matrix, row2idx), cmax, newlbsmax, newubsmax, nvars, &minobj, &minsolvable) );
+      SCIP_CALL( solveSingleRowLP(scip, acopy, SCIPmatrixGetRowLhs(matrix, row2idx), ccopy, newlbscopy, newubscopy, nvars, &minobj, &minsolvable) );
 #ifdef SCIP_DEBUG_2RB
       SCIPdebugMsg(scip, "min-LP solved: obj = %g\n", minobj);
 #endif
@@ -765,15 +774,15 @@ SCIP_RETCODE transformAndSolve(
    {
       if( maxinfs <= 1 )
       {
-         // copy stuff
+         /* copy coefficients */
          for( i = 0; i < nvars; i++ )
          {
-            amax[i] = -amin[i];
-            cmax[i] = -cmin[i];
-            newlbsmax[i] = newlbsmin[i];
-            newubsmax[i] = newubsmin[i];
+            acopy[i] = -aoriginal[i];
+            ccopy[i] = -coriginal[i];
+            newlbscopy[i] = newlbsoriginal[i];
+            newubscopy[i] = newubsoriginal[i];
          }
-         SCIP_CALL( solveSingleRowLP(scip, amax, -SCIPmatrixGetRowRhs(matrix, row2idx), cmax, newlbsmax, newubsmax, nvars, &maxswapobj, &maxswapsolvable) );
+         SCIP_CALL( solveSingleRowLP(scip, acopy, -SCIPmatrixGetRowRhs(matrix, row2idx), ccopy, newlbscopy, newubscopy, nvars, &maxswapobj, &maxswapsolvable) );
 #ifdef SCIP_DEBUG_2RB
          SCIPdebugMsg(scip, "maxswap-LP solved: obj = %g\n", maxswapobj);
 #endif
@@ -781,22 +790,22 @@ SCIP_RETCODE transformAndSolve(
 
       if( mininfs == 0 || (mininfs == 1 && swaprow1) )
       {
-         // copy stuff
+         /* copy coefficients */
          for( i = 0; i < nvars; i++ )
          {
-            amax[i] = -amin[i];
-            cmax[i] = cmin[i];
-            newlbsmax[i] = newlbsmin[i];
-            newubsmax[i] = newubsmin[i];
+            acopy[i] = -aoriginal[i];
+            ccopy[i] = coriginal[i];
+            newlbscopy[i] = newlbsoriginal[i];
+            newubscopy[i] = newubsoriginal[i];
          }
-         SCIP_CALL( solveSingleRowLP(scip, amax, -SCIPmatrixGetRowRhs(matrix, row2idx), cmax, newlbsmax, newubsmax, nvars, &minswapobj, &minswapsolvable) );
+         SCIP_CALL( solveSingleRowLP(scip, acopy, -SCIPmatrixGetRowRhs(matrix, row2idx), ccopy, newlbscopy, newubscopy, nvars, &minswapobj, &minswapsolvable) );
 #ifdef SCIP_DEBUG_2RB
          SCIPdebugMsg(scip, "minswap-LP solved: obj = %g\n", minswapobj);
 #endif
       }
    }
 
-   // perform bound tightening, infeasibility checks and redundancy checks
+   /* perform bound tightening, infeasibility checks and redundancy checks */
    if( maxinfs <= 1 && (maxsolvable || maxswapsolvable) )
    {
       SCIP_Real activity;
@@ -808,7 +817,7 @@ SCIP_RETCODE transformAndSolve(
       else
          activity = maxswapobj + SCIPmatrixGetRowLhs(matrix, row1idx) + maxact; /*lint !e644*/
 
-      // infeasibility check
+      /* infeasibility check */
       if( maxinfs == 0 && SCIPisPositive(scip, activity) )
       {
          (*infeasible) = TRUE;
@@ -816,7 +825,7 @@ SCIP_RETCODE transformAndSolve(
          return SCIP_OKAY;
       }
 
-      // strengthen bounds of all variables outside overlap
+      /* strengthen bounds of all variables outside overlap */
       else if( maxinfs == 0 )
       {
          for( i = 0; i < row1len; i++ )
@@ -864,7 +873,7 @@ SCIP_RETCODE transformAndSolve(
             }
          }
       }
-      // strengthen bound of the single variable contributing the infinity
+      /* strengthen bound of the single variable contributing the infinity */
       else
       {
          assert(maxinfs == 1);
@@ -915,7 +924,7 @@ SCIP_RETCODE transformAndSolve(
       }
    }
 
-   // redundancy check
+   /* redundancy check */
    if( mininfs == 0 && !swaprow1 )
    {
       if( (minsolvable && SCIPisGT(scip, minobj, SCIPmatrixGetRowLhs(matrix, row1idx) + minact))
@@ -930,7 +939,7 @@ SCIP_RETCODE transformAndSolve(
    /* in this case the objective is swapped. therefore the minimum and the maximum of the support switch roles */
    if( swaprow1 )
    {
-      // perform bound tightening, infeasibility checks and redundancy checks
+      /* perform bound tightening, infeasibility checks and redundancy checks */
       if( mininfs <= 1 && (minsolvable || minswapsolvable) )
       {
          SCIP_Real activity;
@@ -942,14 +951,14 @@ SCIP_RETCODE transformAndSolve(
          else
             activity = minswapobj - SCIPmatrixGetRowRhs(matrix, row1idx) - minact;
 
-         // infeasibility check
+         /* infeasibility check */
          if( mininfs == 0 && SCIPisPositive(scip, activity) )
          {
             (*infeasible) = TRUE;
             (*success) = TRUE;
             return SCIP_OKAY;
          }
-         // strengthen bounds of all variables outside overlap
+         /* strengthen bounds of all variables outside overlap */
          else if( mininfs == 0 )
          {
             for( i = 0; i < row1len; i++ )
@@ -957,7 +966,7 @@ SCIP_RETCODE transformAndSolve(
                idx1 = row1idxptr[i];
                if( cangetbnd[idx1] )
                {
-                  if( SCIPisNegative(scip, row1valptr[i]) ) // since we look at the swapped case, this represents a positive coefficient
+                  if( SCIPisNegative(scip, row1valptr[i]) ) /* since we look at the swapped case, this represents a positive coefficient */
                   {
                      if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
                          || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
@@ -977,7 +986,7 @@ SCIP_RETCODE transformAndSolve(
                   }
                   else
                   {
-                     assert(SCIPisPositive(scip, row1valptr[i])); // since we look at the swapped case, this represents a negative coefficient
+                     assert(SCIPisPositive(scip, row1valptr[i])); /* since we look at the swapped case, this represents a negative coefficient */
                      if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
                          || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
                          || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_IMPLINT )
@@ -997,7 +1006,7 @@ SCIP_RETCODE transformAndSolve(
                }
             }
          }
-         // strengthen bound of the single variable contributing the infinity
+         /* strengthen bound of the single variable contributing the infinity */
          else
          {
             assert(mininfs == 1);
@@ -1006,7 +1015,7 @@ SCIP_RETCODE transformAndSolve(
                idx1 = row1idxptr[i];
                if( cangetbnd[idx1] )
                {
-                  if( SCIPisNegative(scip, row1valptr[i]) && SCIPisInfinity(scip, ubs[idx1]) ) // since we look at the swapped case, this represents a positive coefficient
+                  if( SCIPisNegative(scip, row1valptr[i]) && SCIPisInfinity(scip, ubs[idx1]) ) /* since we look at the swapped case, this represents a positive coefficient */
                   {
                      if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
                          || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
@@ -1026,7 +1035,7 @@ SCIP_RETCODE transformAndSolve(
                   }
                   else if( SCIPisInfinity(scip, -lbs[idx1]) )
                   {
-                     assert(SCIPisPositive(scip, row1valptr[i])); // since we look at the swapped case, this represents a negative coefficient
+                     assert(SCIPisPositive(scip, row1valptr[i])); /* since we look at the swapped case, this represents a negative coefficient */
                      if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
                          || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
                          || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_IMPLINT )
@@ -1067,14 +1076,14 @@ SCIP_RETCODE twoRowBound(
    SCIP_Bool*            success             /**< return (success || "found better bounds") */
    )
 {
-   SCIP_Real* amin;
-   SCIP_Real* amax;
-   SCIP_Real* cmin;
-   SCIP_Real* cmax;
-   SCIP_Real* newlbsmin;
-   SCIP_Real* newlbsmax;
-   SCIP_Real* newubsmin;
-   SCIP_Real* newubsmax;
+   SCIP_Real* aoriginal;
+   SCIP_Real* acopy;
+   SCIP_Real* coriginal;
+   SCIP_Real* ccopy;
+   SCIP_Real* newlbsoriginal;
+   SCIP_Real* newlbscopy;
+   SCIP_Real* newubsoriginal;
+   SCIP_Real* newubscopy;
    SCIP_Bool* cangetbnd;
    SCIP_Bool row1redundant;
    SCIP_Bool row2redundant;
@@ -1084,14 +1093,14 @@ SCIP_RETCODE twoRowBound(
    SCIPdebugMsg(scip, "combining rows %d (%s) and %d (%s)\n", row1, SCIPmatrixGetRowName(matrix, row1), row2, SCIPmatrixGetRowName(matrix, row2));
 #endif
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &amin, SCIPmatrixGetNColumns(matrix)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &amax, SCIPmatrixGetNColumns(matrix)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cmin, SCIPmatrixGetNColumns(matrix)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cmax, SCIPmatrixGetNColumns(matrix)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &newlbsmin, SCIPmatrixGetNColumns(matrix)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &newlbsmax, SCIPmatrixGetNColumns(matrix)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &newubsmin, SCIPmatrixGetNColumns(matrix)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &newubsmax, SCIPmatrixGetNColumns(matrix)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aoriginal, SCIPmatrixGetNColumns(matrix)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &acopy, SCIPmatrixGetNColumns(matrix)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coriginal, SCIPmatrixGetNColumns(matrix)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ccopy, SCIPmatrixGetNColumns(matrix)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newlbsoriginal, SCIPmatrixGetNColumns(matrix)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newlbscopy, SCIPmatrixGetNColumns(matrix)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newubsoriginal, SCIPmatrixGetNColumns(matrix)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newubscopy, SCIPmatrixGetNColumns(matrix)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cangetbnd, SCIPmatrixGetNColumns(matrix)) );
 
    // Sort matrix rows
@@ -1100,15 +1109,15 @@ SCIP_RETCODE twoRowBound(
 
    // Use row2 to strengthen row1
    infeasible = FALSE;
-   SCIP_CALL( transformAndSolve(scip, matrix, row1, row2, swaprow1, swaprow2, amin, amax, cmin, cmax, cangetbnd, lbs, ubs, newlbsmin, newlbsmax, newubsmin, newubsmax, success, &row1redundant, &infeasible) );
+   SCIP_CALL( transformAndSolve(scip, matrix, row1, row2, swaprow1, swaprow2, aoriginal, acopy, coriginal, ccopy, cangetbnd, lbs, ubs, newlbsoriginal, newlbscopy, newubsoriginal, newubscopy, success, &row1redundant, &infeasible) );
 
    if( row1redundant )
    {
       delcons[row1] = TRUE;
    }
 
-   // Switch roles and use row1 to strengthen row2
-   SCIP_CALL( transformAndSolve(scip, matrix, row2, row1, swaprow2, swaprow1, amin, amax, cmin, cmax, cangetbnd, lbs, ubs, newlbsmin, newlbsmax, newubsmin, newubsmax, success, &row2redundant, &infeasible) );
+   /* Switch roles and use row1 to strengthen row2 */
+   SCIP_CALL( transformAndSolve(scip, matrix, row2, row1, swaprow2, swaprow1, aoriginal, acopy, coriginal, ccopy, cangetbnd, lbs, ubs, newlbsoriginal, newlbscopy, newubsoriginal, newubscopy, success, &row2redundant, &infeasible) );
 
    if( row2redundant && !row1redundant )
    {
@@ -1116,14 +1125,14 @@ SCIP_RETCODE twoRowBound(
    }
 
    SCIPfreeBufferArray(scip, &cangetbnd);
-   SCIPfreeBufferArray(scip, &newubsmax);
-   SCIPfreeBufferArray(scip, &newubsmin);
-   SCIPfreeBufferArray(scip, &newlbsmax);
-   SCIPfreeBufferArray(scip, &newlbsmin);
-   SCIPfreeBufferArray(scip, &cmax);
-   SCIPfreeBufferArray(scip, &cmin);
-   SCIPfreeBufferArray(scip, &amax);
-   SCIPfreeBufferArray(scip, &amin);
+   SCIPfreeBufferArray(scip, &newubscopy);
+   SCIPfreeBufferArray(scip, &newubsoriginal);
+   SCIPfreeBufferArray(scip, &newlbscopy);
+   SCIPfreeBufferArray(scip, &newlbsoriginal);
+   SCIPfreeBufferArray(scip, &ccopy);
+   SCIPfreeBufferArray(scip, &coriginal);
+   SCIPfreeBufferArray(scip, &acopy);
+   SCIPfreeBufferArray(scip, &aoriginal);
 
    return SCIP_OKAY;
 }
@@ -1156,7 +1165,7 @@ int calcCliqueMaximums(
    SCIPdebugMsg(scip, "calculating maximums for clique %d\n", -cliquemaxinds[cliquevarpos[0]]);
 #endif
 
-   // calculate gradients
+   /* calculate gradients */
    for( i = 0; i < cliquesize; i++ )
    {
       gradients[i] = row1coefs[varinds[cliquevarpos[i]]] - row2coefs[varinds[cliquevarpos[i]]];
@@ -1170,7 +1179,7 @@ int calcCliqueMaximums(
 #endif
 
 
-   // find maximum for lambda = 0
+   /* find maximum for lambda = 0 */
    maxpos = 0;
    for( i = 1; i < cliquesize; i++ )
    {
@@ -1178,7 +1187,7 @@ int calcCliqueMaximums(
          maxpos = i;
    }
 
-   // variable is relevant only if its coefficient is non-negative, if all coefs are negative we set firstmaxpos to -1
+   /* variable is relevant only if its coefficient is non-negative, if all coefs are negative we set firstmaxpos to -1 */
    if( SCIPisPositive(scip, row2coefs[varinds[cliquevarpos[maxpos]]]) || (SCIPisZero(scip, row2coefs[varinds[cliquevarpos[maxpos]]]) && SCIPisPositive(scip, gradients[maxpos])) )
       firstmaxpos = maxpos;
    else
@@ -1188,7 +1197,7 @@ int calcCliqueMaximums(
    SCIPdebugMsg(scip, "first maxvar: var_%d at coef(0) = %g, firstmaxpos = %d\n", maxpos, row2coefs[varinds[cliquevarpos[maxpos]]], firstmaxpos);
 #endif
 
-   // find next maximum
+   /* find next maximum */
    minlambda = 0.0;
    if( firstmaxpos == -1 )
       maxidx = -1;
@@ -1199,10 +1208,10 @@ int calcCliqueMaximums(
    {
       newmaxpos = -1;
 
-      // all coefficients are negative
+      /* all coefficients are negative */
       if( maxidx == -1 )
       {
-         // find variable with lowest non-negative lambda such that (row2coef - row1coef) * lambda + row2coef >= 0 */
+         /* find variable with lowest non-negative lambda such that (row2coef - row1coef) * lambda + row2coef >= 0 */
          minlambda = 2.0;
          for( i = maxpos; i < cliquesize; i++ )
          {
@@ -1244,7 +1253,7 @@ int calcCliqueMaximums(
             assert(SCIPisPositive(scip, row2coefs[varinds[cliquevarpos[maxpos]]]));
             assert(cliquemaxinds[cliquevarpos[firstmaxpos]] < 0);
             assert(firstmaxpos != -1); // cheesy use of firstmaxpos as breakpoint dummy variable for the negative segment
-            breakpoints[cliquevarpos[firstmaxpos]] = -row2coefs[maxidx] / gradients[maxpos]; // lambda where old maxcoef hits zero
+            breakpoints[cliquevarpos[firstmaxpos]] = -row2coefs[maxidx] / gradients[maxpos]; /* lambda where old maxcoef hits zero */
             maxidx = -1;
             (*nbreakpoints)++;
          }
@@ -1260,8 +1269,8 @@ int calcCliqueMaximums(
          if( SCIPisNegative(scip, breakpointval) || (SCIPisZero(scip, breakpointval) && !SCIPisPositive(scip, gradients[newmaxpos])) )
          {
             assert(cliquemaxinds[cliquevarpos[firstmaxpos]] < 0);
-            assert(firstmaxpos != -1); // cheesy use of firstmaxpos as breakpoint dummy variable for the negative segment
-            breakpoints[cliquevarpos[firstmaxpos]] = -row2coefs[maxidx] / gradients[maxpos]; // lambda where old maxcoef hits zero
+            assert(firstmaxpos != -1); /* use firstmaxpos as breakpoint dummy variable for the negative segment */
+            breakpoints[cliquevarpos[firstmaxpos]] = -row2coefs[maxidx] / gradients[maxpos]; /* lambda where old maxcoef hits zero */
             maxidx = -1;
          }
          else
@@ -1357,10 +1366,8 @@ SCIP_RETCODE combineRows
    SCIP_Real* subscipubs;
 #endif
 
-   //TODO Check if I can ask row if its variable bounds are tightened with standard bound tightening
-
 #ifdef SCIP_DEBUG
-   // swap = 0 means that lhs <= cons is used for bound tightening
+   /* swap = 0 means that lhs <= cons is used for bound tightening */
    SCIPdebugMsg(scip, "combining rows %d (%s) and %d (%s) with swaps %d/%d\n", row1, SCIPmatrixGetRowName(matrix, row1), row2, SCIPmatrixGetRowName(matrix, row2), swaprow1, swaprow2);
    SCIPinfoMessage(scip, NULL, "Cons1: \n");
    SCIPprintCons(scip, SCIPmatrixGetCons(matrix, row1), NULL);
@@ -1439,7 +1446,7 @@ SCIP_RETCODE combineRows
       /* We use 2.0 as default value for "no cancellation". For cancellations, this will be replaced by values in (0,1).
        * A value larger than 1.0 is used because we sort the array and want to put non-cancellations at the end. */
       breakpoints[nvars] = 2.0;
-      // We use 0 as default value for "not in any clique"
+      /* We use 0 as default value for "not in any clique" */
       cliquemaxinds[nvars] = 0;
 
       if( idx1 == idx2 )
@@ -1775,8 +1782,6 @@ SCIP_RETCODE combineRows
       SCIP_CALL( SCIPaddCons(subscip, subcons2) );
       SCIP_CALL( SCIPreleaseCons(subscip, &subcons2) );
 
-      //SCIP_CALL( SCIPwriteOrigProblem(subscip, "../subscip.lp", "lp", FALSE) );
-
       for( i = 0; i < nvars; i++ )
       {
          SCIPchgVarObj(subscip, subvars[i], 1.0);
@@ -2015,7 +2020,7 @@ SCIP_RETCODE combineRows
                coef = breakpoints[i] * row1coefs[idx] + (1 - breakpoints[i]) * row2coefs[idx];
                assert(!SCIPisEQ(scip, breakpoints[i], 2.0));
 
-               // skip if the coefficient is too close to zero as it becomes numerically unstable
+               /* skip if the coefficient is too close to zero as it becomes numerically unstable */
                if( SCIPisZero(scip, coef) )
                   continue;
 
@@ -2138,7 +2143,7 @@ SCIP_RETCODE combineRows
                      newubs[i] = MIN(newubs[i], l1 / row1coefs[idx]);
                   else
                   {
-                     // never leads to division by zero as negative coefficients can never be equal to the cliquemaximum
+                     /* never leads to division by zero as negative coefficients can never be equal to the cliquemaximum */
                      assert(!SCIPisZero(scip, row1coefs[idx] - row1coefs[currentmaxinds[cliqueidx]]));
                      newubs[i] = MIN(newubs[i], l1 / (row1coefs[idx] - row1coefs[currentmaxinds[cliqueidx]]));
                   }
@@ -2378,7 +2383,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       listsizepm = nrows;
       listsizemp = nrows;
       maxhashes = nrows * presoldata->maxhashfac;
-      // prevent integer overflow issues
+
+      /* prevent integer overflow issues */
       if( nrows != 0 && maxhashes / nrows != presoldata->maxhashfac )
       {
          maxhashes = INT_MAX;
@@ -2401,7 +2407,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                {
                   if(SCIPisPositive(scip, rowvalptr[k]) )
                   {
-                     // right-shift is required because we want to sort the hashes later on
+                     /* right-shift is required because we want to sort the hashes later on */
                      SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
                         hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
                      if( finiterhs )
@@ -2421,7 +2427,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                {
                   if(SCIPisPositive(scip, rowvalptr[k]) )
                   {
-                     // right-shift is required because we want to sort the hashes later on
+                     /* right-shift is required because we want to sort the hashes later on */
                      SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
                         hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
                      if( finiterhs )
@@ -2513,7 +2519,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
          block2start = 0;
          block2end = 0;
          maxcombines = nrows * presoldata->maxpairfac;
-         // prevent overflow issues
+
+         /* prevent overflow issues */
          if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
          {
             maxcombines = INT_MAX;
@@ -2543,7 +2550,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
 
                            success = FALSE;
 
-                           // apply lp-based bound tightening
+                           /* apply lp-based bound tightening */
                            if( presoldata->lpbound )
                            {
                               swaprow1 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx));
@@ -2552,7 +2559,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                               SCIP_CALL( twoRowBound(scip, matrix, rowpair.row1idx, rowpair.row2idx, swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
                            }
 
-                           // apply bound tightening on convex-combined rows
+                           /* apply bound tightening on convex-combined rows */
                            if( presoldata->convcomb )
                            {
                               SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
@@ -2628,7 +2635,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
          block2start = 0;
          block2end = 0;
          maxcombines = nrows * presoldata->maxpairfac;
-         // prevent overflow issues
+
+         /* prevent overflow issues */
          if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
          {
             maxcombines = INT_MAX;
@@ -2658,7 +2666,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
 
                            success = FALSE;
 
-                           // apply lp-based bound tightening
+                           /* apply lp-based bound tightening */
                            if( presoldata->lpbound )
                            {
                               swaprow1 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx));
@@ -2667,7 +2675,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                               SCIP_CALL( twoRowBound(scip, matrix, rowpair.row1idx, rowpair.row2idx, swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
                            }
 
-                           // apply bound tightening on convex-combined rows
+                           /* apply bound tightening on convex-combined rows */
                            if( presoldata->convcomb )
                            {
                               SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
@@ -2796,7 +2804,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
          if( delcons[i] )
          {
             ndelcons++;
-            delcons[i] = FALSE; //Remove nonzero from clean buffer array
+            delcons[i] = FALSE; /* Remove nonzero from clean buffer array */
             SCIPdebugMsg(scip, "removing redundant constraint %s\n", SCIPmatrixGetRowName(matrix, i));
             SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) );
          }
@@ -2881,13 +2889,6 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                   SCIPdebugMsg(scip, "infeasibility detected in %s, rowsup = %g\n", SCIPmatrixGetRowName(matrix, i), rowsup);
                   infeasible = TRUE;
                }
-               // TODO we currently can't do this for ranged rows or equality constraints
-               /* if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i)) && SCIPisGE(scip, SCIPmatrixGetRowRhs(matrix, i), rowsup) ) */
-               /* { */
-               /*    ndelcons++; */
-               /*    SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) ); */
-               /*    SCIPdebugMsg(scip, "removing redundant cxonstraint %s\n", SCIPmatrixGetRowName(matrix, i)); */
-               /* } */
             }
          }
       }
