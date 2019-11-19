@@ -149,6 +149,7 @@ SCIP_Real SCIPlinkcuttreeFindMinChainMw(
    const SCIP_Real*      nodeweight,         /**< node weight array */
    const int*            head,               /**< head of an arc */
    const int*            stdeg,              /**< degree in Steiner tree */
+   const SCIP_Bool*      nodeIsBlocked,      /**< has node been blocked? */
    const LCNODE*         start,              /**< the node to start at */
    const LCNODE**        first,              /**< first node of chain */
    const LCNODE**        last                /**< last node of chain */

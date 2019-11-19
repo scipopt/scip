@@ -2528,8 +2528,8 @@ SCIP_RETCODE heur_localTest(
 )
 {
    SCIP_CALL( localInsertion2(scip) );
-   SCIP_CALL( localKeyPathExchangeMw(scip) );
    SCIP_CALL( localInsertion(scip) );
+   SCIP_CALL( localKeyPathExchangeMw(scip) );
    SCIP_CALL( localKeyVertexPc2(scip) );
    SCIP_CALL( localKeyVertex(scip) );
    SCIP_CALL( localKeyVertexPc(scip) );

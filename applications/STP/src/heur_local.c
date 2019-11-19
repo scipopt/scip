@@ -162,7 +162,8 @@ typedef struct insertion_data
    LCNODE**              chainEnds;          /**< pointers to ends of current chains (nInsertions many) */
    int* const            solDegreeNonTerm;   /**< degree of node [v] in current solution; (pseudo) terminals are marked as UNKNOWN */
    int* const            addedEdges;         /**< added edges */
-   int* const            cutedges;           /**< cut edges for the chains */
+   int* const            cutedgesStart;      /**< cut edges for the chains */
+   int* const            cutedgesEnd;        /**< cut edges for the chains */
    STP_Bool* const       solNodes;           /**< solution nodes */
    SCIP_Bool* const      nodeIsBlocked;      /**< is node [v] blocked? */
    int* const            blockedList;        /**< list of currently blocked nodes */
@@ -2355,7 +2356,7 @@ void insertionFinalizeReplacement(
 )
 {
    SCIP_Bool* const nodeIsBlocked = insertData->nodeIsBlocked;
-   int* const blockedList = insertData->blockedList;
+   const int* const blockedList = insertData->blockedList;
    STP_Bool* const solNodes = insertData->solNodes;
    const int size = insertData->blockedListSize;
    int* const solDegreeNonTerm = insertData->solDegreeNonTerm;
@@ -2403,74 +2404,26 @@ void insertionFinalizeReplacement(
 }
 
 
-/** reinsert (blocked) chains to tree */
-static
-void insertionRestoreTree(
-   const GRAPH*          graph,              /**< graph data structure */
-   const int*            insertCands,        /**< insertion candidates */
-   LCNODE*               v_lc,               /**< the vertex tested for insertion */
-   LCNODE*               linkcutNodes,       /**< Steiner tree nodes */
+/** remove (blocked) chains from tree */
+static inline
+void insertionResetBlockedNodes(
    INSERT*               insertData          /**< insertion data */
 )
 {
-   LCNODE** chainEnds = insertData->chainEnds;
-   const int* const addedEdges = insertData->addedEdges;
-   const int* const cutedges = insertData->cutedges;
-   const int* const graphTail = graph->tail;
-   const int* const graphHead = graph->head;
    SCIP_Bool* const nodeIsBlocked = insertData->nodeIsBlocked;
+   const int* const blockedList = insertData->blockedList;
+   const int size = insertData->blockedListSize;
 
-   SCIPlinkcuttreeEvert(v_lc);
-
-   /* reinsert each chain and remove the  */
-   for( int k = insertData->nInsertions - 1; k >= 0; k-- )
+   for( int i = 0; i < size; i++ )
    {
-      const int cutedge = cutedges[k];
-      LCNODE* chainFirstNode = &linkcutNodes[graphTail[cutedge]];
-      LCNODE* chainSecondNode = &linkcutNodes[graphHead[cutedge]];
-      LCNODE* chainLastNode = chainEnds[k];
-      const int cutedgeLast = chainLastNode->edge;
+      const int node = blockedList[i];
 
-      assert(cutedgeLast >= 0);
-      assert(chainFirstNode == insertData->chainStarts[k]);
+      assert(node >= 0);
+      assert(nodeIsBlocked[node]);
+      assert(2 == insertData->solDegreeNonTerm[node]);
 
-      /* remove the newly added edge */
-      SCIPlinkcuttreeCut(&linkcutNodes[graphHead[addedEdges[k]]]);
-      insertionDecrementSolDegree(graph, graphHead[addedEdges[k]], insertData);
-
-      /* re-link the tail of the chain */
-      SCIPlinkcuttreeEvert(chainFirstNode);
-      SCIPlinkcuttreeLink(chainFirstNode, chainSecondNode, cutedge);
-
-      /* unblock chain */
-      for( LCNODE* curr = chainSecondNode; curr != NULL; curr = curr->parent )
-      {
-         const int edge = curr->edge;
-         assert(edge >= 0);
-         assert(2 == insertData->solDegreeNonTerm[graphHead[edge]]);
-         assert(nodeIsBlocked[graphHead[edge]]);
-
-         nodeIsBlocked[graphHead[edge]] = FALSE;
-      }
-
-      /* re-link the head of the chain */
-      assert(chainLastNode->edge == -1);
-      SCIPlinkcuttreeLink(chainLastNode, &linkcutNodes[graphHead[cutedgeLast]], cutedgeLast);
-
-      /* reset solution degrees of chain border vertices */
-      insertionIncrementSolDegree(graph, graphTail[cutedge], insertData);
-      insertionIncrementSolDegree(graph, graphHead[cutedgeLast], insertData);
+      nodeIsBlocked[node] = FALSE;
    }
-
-   /* finally, cut the edge added first (if it had been cut during the insertion process, it would have been restored above) */
-   SCIPlinkcuttreeEvert(v_lc);
-   SCIPlinkcuttreeCut(&linkcutNodes[graphHead[insertCands[0]]]);
-   insertionDecrementSolDegree(graph, graphHead[insertCands[0]], insertData);
-
-   for( int k = 0; k < graph->knots; k++ )
-      assert(!nodeIsBlocked[k]);
-
-   insertData->blockedListSize = 0;
 }
 
 
@@ -2506,6 +2459,69 @@ void insertionBlockChain(
 }
 
 
+/** reinsert (blocked) chains to tree */
+static
+void insertionRestoreTree(
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            insertCands,        /**< insertion candidates */
+   LCNODE*               v_lc,               /**< the vertex tested for insertion */
+   LCNODE*               linkcutNodes,       /**< Steiner tree nodes */
+   INSERT*               insertData          /**< insertion data */
+)
+{
+   LCNODE** chainEnds = insertData->chainEnds;
+   const int* const addedEdges = insertData->addedEdges;
+   const int* const cutedgesStart = insertData->cutedgesStart;
+   const int* const cutedgesEnd = insertData->cutedgesEnd;
+   const int* const graphTail = graph->tail;
+   const int* const graphHead = graph->head;
+   SCIP_Bool* const nodeIsBlocked = insertData->nodeIsBlocked;
+
+   SCIPlinkcuttreeEvert(v_lc);
+
+   insertionResetBlockedNodes(insertData);
+
+   /* reinsert each chain and remove the  */
+   for( int k = insertData->nInsertions - 1; k >= 0; k-- )
+   {
+      const int cutedgeFirst = cutedgesStart[k];
+      const int cutedgeLast = cutedgesEnd[k];
+      LCNODE* chainFirstNode = &linkcutNodes[graphTail[cutedgeFirst]];
+      LCNODE* chainSecondNode = &linkcutNodes[graphHead[cutedgeFirst]];
+      LCNODE* chainLastNode = chainEnds[k];
+
+      assert(cutedgeLast >= 0);
+      assert(chainFirstNode == insertData->chainStarts[k]);
+
+      /* remove the newly added edge */
+      SCIPlinkcuttreeCut(&linkcutNodes[graphHead[addedEdges[k]]]);
+      insertionDecrementSolDegree(graph, graphHead[addedEdges[k]], insertData);
+
+      /* re-link the tail of the chain */
+      SCIPlinkcuttreeEvert(chainFirstNode);
+      SCIPlinkcuttreeLink(chainFirstNode, chainSecondNode, cutedgeFirst);
+
+      /* re-link the head of the chain (if not already done) */
+      if( chainLastNode != chainFirstNode )
+         SCIPlinkcuttreeLink(chainLastNode, &linkcutNodes[graphHead[cutedgeLast]], cutedgeLast);
+
+      /* reset solution degrees of chain border vertices */
+      insertionIncrementSolDegree(graph, graphTail[cutedgeFirst], insertData);
+      insertionIncrementSolDegree(graph, graphHead[cutedgeLast], insertData);
+   }
+
+   /* finally, cut the edge added first (if it had been cut during the insertion process, it would have been restored above) */
+   SCIPlinkcuttreeEvert(v_lc);
+   SCIPlinkcuttreeCut(&linkcutNodes[graphHead[insertCands[0]]]);
+   insertionDecrementSolDegree(graph, graphHead[insertCands[0]], insertData);
+
+   for( int k = 0; k < graph->knots; k++ )
+      assert(!nodeIsBlocked[k]);
+
+   insertData->blockedListSize = 0;
+}
+
+
 /** replaces chain by a single edge */
 static
 void insertionReplaceChain(
@@ -2520,7 +2536,8 @@ void insertionReplaceChain(
 {
    LCNODE** chainStarts = insertData->chainStarts;
    LCNODE** chainEnds = insertData->chainEnds;
-   int* const cutedges = insertData->cutedges;
+   int* const cutedgesStart = insertData->cutedgesStart;
+   int* const cutedgesEnd = insertData->cutedgesEnd;
    int* const addedEdges = insertData->addedEdges;
    const int nInsertions = insertData->nInsertions;
    const int newhead = graph->head[newedge];
@@ -2528,7 +2545,8 @@ void insertionReplaceChain(
    assert(v_lc && headCurr_lc && chainfirst && chainlast);
    assert(chainlast->edge >= 0);
 
-   cutedges[nInsertions] = chainlast->edge;
+   cutedgesStart[nInsertions] = chainfirst->edge;
+   cutedgesEnd[nInsertions] = chainlast->edge;
    chainStarts[nInsertions] = chainfirst;
    chainEnds[nInsertions] = chainlast;
    addedEdges[nInsertions] = newedge;
@@ -2715,7 +2733,7 @@ SCIP_RETCODE localVertexInsertion(
 
                assert(solDegree != NULL);
 
-               minweight = SCIPlinkcuttreeFindMinChainMw(scip, graph->prize, graph->head, solDegree, firstnode,
+               minweight = SCIPlinkcuttreeFindMinChainMw(scip, graph->prize, graph->head, solDegree, NULL, firstnode,
                      (const LCNODE**) &chainfirst, (const LCNODE**) &chainlast);
 
                if( SCIPisLT(scip, minweight, graph->prize[v]) )
@@ -2883,7 +2901,8 @@ SCIP_RETCODE localVertexInsertion2(
    LCNODE** chainEnds;
    int* insertCands = NULL;
    int* addedEdges = NULL;
-   int* cutedges = NULL;
+   int* cutedgesStart = NULL;
+   int* cutedgesEnd = NULL;
    int* solDegree = NULL;
    int* vertices = NULL;
    int* blockedList = NULL;
@@ -2917,7 +2936,8 @@ SCIP_RETCODE localVertexInsertion2(
    SCIP_CALL( SCIPallocBufferArray(scip, &vertices, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &insertCands, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &addedEdges, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutedges, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutedgesStart, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutedgesEnd, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &solDegree, nnodes) );
 
    insertionInit2(heurdata, graph, solEdges, solDegree, nodeIsBlocked, vertices);
@@ -2930,8 +2950,8 @@ SCIP_RETCODE localVertexInsertion2(
    while( solimproved )
    {
       INSERT insertData = { .chainStarts = chainStarts, .chainEnds = chainEnds, .solDegreeNonTerm = solDegree,
-         .solNodes = solNodes, .nodeIsBlocked = nodeIsBlocked,
-         .cutedges = cutedges, .addedEdges = addedEdges, .blockedList = blockedList, .blockedListSize = 0, .nInsertions = 0 };
+         .solNodes = solNodes, .nodeIsBlocked = nodeIsBlocked, .cutedgesStart = cutedgesStart, .cutedgesEnd = cutedgesEnd,
+         .addedEdges = addedEdges, .blockedList = blockedList, .blockedListSize = 0, .nInsertions = 0 };
 
       solimproved = FALSE;
 
@@ -3001,8 +3021,8 @@ SCIP_RETCODE localVertexInsertion2(
 
             if( mw )
             {
-               const SCIP_Real chainweight = SCIPlinkcuttreeFindMinChainMw(scip, graph->prize, graph->head, solDegree, headCurr_lc,
-                     (const LCNODE**) &chainfirst, (const LCNODE**) &chainlast); // todo: need to adapt for nodeIsBlocked
+               const SCIP_Real chainweight = SCIPlinkcuttreeFindMinChainMw(scip, graph->prize, graph->head, solDegree, nodeIsBlocked,
+                     headCurr_lc, (const LCNODE**) &chainfirst, (const LCNODE**) &chainlast);
 
                if( SCIPisLT(scip, chainweight, 0.0) )
                {
@@ -3053,11 +3073,13 @@ SCIP_RETCODE localVertexInsertion2(
 
    /* free buffer memory */
    SCIPfreeBufferArray(scip, &solDegree);
-   SCIPfreeBufferArray(scip, &cutedges);
+   SCIPfreeBufferArray(scip, &cutedgesEnd);
+   SCIPfreeBufferArray(scip, &cutedgesStart);
    SCIPfreeBufferArray(scip, &addedEdges);
    SCIPfreeBufferArray(scip, &insertCands);
    SCIPfreeBufferArray(scip, &vertices);
    SCIPfreeBufferArray(scip, &blockedList);
+   SCIPfreeBufferArray(scip, &nodeIsBlocked);
    SCIPfreeBufferArray(scip, &chainEnds);
    SCIPfreeBufferArray(scip, &chainStarts);
 

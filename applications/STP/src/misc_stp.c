@@ -261,6 +261,7 @@ SCIP_Real SCIPlinkcuttreeFindMinChainMw(
    const SCIP_Real*      nodeweight,         /**< node weight array */
    const int*            heads,              /**< head of an arc */
    const int*            stdeg,              /**< degree in Steiner tree */
+   const SCIP_Bool*      nodeIsBlocked,      /**< has node been blocked? */
    const LCNODE*         start,              /**< the node to start at */
    const LCNODE**        first,              /**< first node of chain */
    const LCNODE**        last                /**< last node of chain */
@@ -271,7 +272,7 @@ SCIP_Real SCIPlinkcuttreeFindMinChainMw(
    SCIP_Real tmpmin = 0.0;
    SCIP_Bool stopped = TRUE;
 
-   assert(scip && heads && nodeweight && stdeg && start && first && last);
+   assert(scip && heads && nodeweight && nodeIsBlocked && stdeg && start && first && last);
 
    *first = NULL;
    *last = NULL;
@@ -286,7 +287,7 @@ SCIP_Real SCIPlinkcuttreeFindMinChainMw(
 
       head = heads[curr->edge];
 
-      if( stdeg[head] == 2 && nodeweight[head] < 0.0 && !headIsRoot )
+      if( stdeg[head] == 2 && nodeweight[head] < 0.0 && !headIsRoot && !nodeIsBlocked[head] )
       {
          if( stopped )
          {
