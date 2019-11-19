@@ -447,7 +447,13 @@ SCIP_RETCODE SCIPmatrixCreate(
    SCIP_MATRIX**         matrixptr,          /**< pointer to constraint matrix object to be initialized */
    SCIP_Bool             onlyifcomplete,     /**< should matrix creation be skipped if matrix will not be complete? */
    SCIP_Bool*            initialized,        /**< was the initialization successful? */
-   SCIP_Bool*            complete            /**< are all constraint represented within the matrix? */
+   SCIP_Bool*            complete,           /**< are all constraint represented within the matrix? */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether problem was detected to be infeasible during matrix creation */
+   int*                  naddcons,           /**< pointer to count number of added (linear) constraints during matrix creation */
+   int*                  ndelcons,           /**< pointer to count number of deleted specialized linear constraints during matrix creation */
+   int*                  nchgcoefs,          /**< pointer to count number of changed coefficients during matrix creation */
+   int*                  nchgbds,            /**< pointer to count number of changed bounds during matrix creation */
+   int*                  nfixedvars          /**< pointer to count number of fixed variables during matrix creation */
    )
 {
    SCIP_MATRIX* matrix;
@@ -476,6 +482,7 @@ SCIP_RETCODE SCIPmatrixCreate(
 
    *initialized = FALSE;
    *complete = FALSE;
+   *infeasible = FALSE;
 
    /* return if no variables or constraints are present */
    if( SCIPgetNVars(scip) == 0 || SCIPgetNConss(scip) == 0 )
@@ -542,6 +549,47 @@ SCIP_RETCODE SCIPmatrixCreate(
       return SCIP_OKAY;
 
    stopped = FALSE;
+
+   {
+      SCIP_CONSHDLR* conshdlr;
+      conshdlr = SCIPfindConshdlr(scip, "varbound");
+      if( conshdlr != NULL )
+      {
+         SCIP_CALL( SCIPcleanupConssVarbound(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), nchgbds, naddcons, ndelcons, infeasible) );
+         if( *infeasible )
+            return SCIP_OKAY;
+      }
+
+      conshdlr = SCIPfindConshdlr(scip, "setppc");
+      if( conshdlr != NULL )
+      {
+         SCIP_CALL( SCIPcleanupConssSetppc(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), naddcons, ndelcons, nfixedvars, infeasible) );
+         if( *infeasible )
+            return SCIP_OKAY;
+      }
+
+      conshdlr = SCIPfindConshdlr(scip, "logicor");
+      if( conshdlr != NULL )
+      {
+         SCIP_CALL( SCIPcleanupConssLogicor(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), nchgcoefs, naddcons, ndelcons) );
+      }
+
+      conshdlr = SCIPfindConshdlr(scip, "knapsack");
+      if( conshdlr != NULL )
+      {
+         SCIP_CALL( SCIPcleanupConssKnapsack(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), infeasible) );
+         if( *infeasible )
+            return SCIP_OKAY;
+      }
+
+      conshdlr = SCIPfindConshdlr(scip, "linear");
+      if( conshdlr != NULL )
+      {
+         SCIP_CALL( SCIPcleanupConssLinear(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), infeasible) );
+         if( *infeasible )
+            return SCIP_OKAY;
+      }
+   }
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);

@@ -369,7 +369,19 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, FALSE, &initialized, &complete) );
+   {
+      SCIP_Bool infeasible;
+      SCIP_CALL( SCIPmatrixCreate(scip, &matrix, FALSE, &initialized, &complete, &infeasible,
+         naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
+      if( infeasible )
+      {
+         if( initialized )
+            SCIPmatrixFree(scip, &matrix);
+
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+   }
 
    if( initialized )
    {
