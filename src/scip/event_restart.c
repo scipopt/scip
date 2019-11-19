@@ -64,14 +64,15 @@ enum RestartPolicy
    RESTARTPOLICY_NEVER      = 0,             /**< never restart (disable this event handler) */
    RESTARTPOLICY_ALWAYS     = 1,             /**< always restart (can be fine tuned by using minimum number of nodes and restart limit) */
    RESTARTPOLICY_ESTIMATION = 2,             /**< base restart on the estimation method */
-   RESTARTPOLICY_PROGRESS   = 3              /**< use progress measure to trigger restart */
+   RESTARTPOLICY_COMPLETION = 3              /**< trigger restart based on search completion approximation */
 };
 
 typedef enum RestartPolicy RESTARTPOLICY;
 
 #define RESTARTPOLICY_CHAR_NEVER 'n'
 #define RESTARTPOLICY_CHAR_ALWAYS 'a'
-#define RESTARTPOLICY_CHAR_PROGRESS 'p'
+#define RESTARTPOLICY_CHAR_COMPLETION 'c'
+#define RESTARTPOLICY_CHAR_ESTIMATION 'e'
 
 #define DEFAULT_REPORTFREQ                -1  /**< report frequency on estimation: -1: never, 0:always, k >= 1: k times evenly during search */
 #define DEFAULT_DES_USETRENDINLEVEL      TRUE /**< should the trend be used in the level update? */
@@ -109,6 +110,7 @@ typedef enum RestartPolicy RESTARTPOLICY;
 
 #define DES_ALPHA_OPENNODES 0.6
 #define DES_BETA_OPENNODES 0.15
+#define DEFAULT_USELEAFTS       TRUE             /**< use leaf nodes as basic observations for time series, or all nodes? */
 
 #define MAX_REGFORESTSIZE 10000000               /**< size limit (number of nodes) for regression forest */
 
@@ -221,7 +223,7 @@ struct SCIP_EventhdlrData
    TREEDATA*             treedata;           /**< tree data */
    TREEPROFILE*          treeprofile;        /**< tree profile data structure */
    char*                 regforestfilename;  /**< file name of user regression forest in RFCSV format */
-   SCIP_Real             estim_factor;       /**< factor by which the estimated number of nodes should exceed the current number of nodes */
+   SCIP_Real             restartfactor;      /**< factor by which the estimated number of nodes should exceed the current number of nodes */
    SCIP_Real             proglastreport;     /**< progress at which last report was printed */
    SCIP_Real             treeprofile_minnodesperdepth;/**< minimum average number of nodes at each depth before producing estimations */
    SCIP_Longint          minnodes;           /**< minimum number of nodes in a run before restart is triggered */
@@ -231,11 +233,13 @@ struct SCIP_EventhdlrData
    int                   hitcounterlim;      /**< limit on the number of successive samples to really trigger a restart */
    int                   nreports;           /**< the number of reports already printed */
    int                   reportfreq;         /**< report frequency on estimation: -1: never, 0:always, k >= 1: k times evenly during search */
+   int                   lastrestartrun;     /**< the last run at which this event handler triggered restart */
    char                  restartpolicyparam; /**< restart policy parameter */
    char                  estimationparam;    /**< parameter to select the estimation method */
    char                  completiontypeparam;/**< approximation of search tree completion:
                                                *  (a)uto, (g)ap, (p)rogress, (m)onotone regression, (r)egression forest, (s)sg */
    SCIP_Bool             countonlyleaves;    /**< should only leaves count for the minnodes parameter? */
+   SCIP_Bool             useleafts;          /**< use leaf nodes as basic observations for time series, or all nodes? */
    SCIP_Bool             treeprofile_enabled;/**< should the event handler collect treeprofile data? */
 };
 
@@ -285,6 +289,7 @@ struct TimeSeries
    int                   valssize;           /**< size of value array */
    int                   nvals;              /**< number of values */
    int                   resolution;         /**< current (inverse of) resolution */
+   SCIP_Bool             useleafts;          /**< should this time series be recorded at leaf nodes, or at every node? */
    DECL_TIMESERIESUPDATE((*timeseriesupdate));/**< update callback at nodes */
 };
 
@@ -1688,6 +1693,7 @@ SCIP_Real timeseriesEstimate(
    SCIP_Real val;
    SCIP_Real targetval;
    SCIP_Real trend;
+   SCIP_Real estimated;
 
    /* if no observations have been made yet, return infinity */
    if( timeseries->nobs == 0L )
@@ -1698,7 +1704,7 @@ SCIP_Real timeseriesEstimate(
 
    /* if the value has reached the target value already, return the number of observations */
    if( EPSZ(val - targetval, 1e-6) )
-      return 2.0 * timeseries->nobs - 1;
+      return treedata->nnodes;
 
 
    trend = doubleexpsmoothGetTrend(&timeseries->des);
@@ -1711,7 +1717,8 @@ SCIP_Real timeseriesEstimate(
    }
 
    /* compute after how many additional steps the current trend reaches the target value; multiply by resolution */
-   return 2.0 * timeseriesGetResolution(timeseries) * (timeseries->nvals + (targetval - val) / (SCIP_Real)trend) - 1.0;
+   estimated = timeseriesGetResolution(timeseries) * (timeseries->nvals + (targetval - val) / (SCIP_Real)trend);
+   return timeseries->useleafts ? 2.0 * estimated - 1.0 : estimated;
 }
 
 
@@ -1785,13 +1792,13 @@ SCIP_RETCODE timeseriesUpdate(
    assert(timeseries->timeseriesupdate != NULL);
    SCIP_CALL( timeseries->timeseriesupdate(scip, timeseries, treedata, &value) );
 
-   if( !isleaf )
-      return SCIP_OKAY;
-
    /* store the value as current value */
    timeseries->currentvalue = value;
-   timeseries->nobs++;
 
+   if( timeseries->useleafts && ! isleaf )
+      return SCIP_OKAY;
+
+   timeseries->nobs++;
 
    /* if this is a leaf that matches the time series resolution, store the value */
    if( timeseries->nobs % timeseries->resolution == 0 )
@@ -1838,6 +1845,8 @@ void resetTimeseries(
    {
       assert(tss[t] != NULL);
       timeseriesReset(tss[t]);
+
+      tss[t]->useleafts = eventhdlrdata->useleafts;
    }
 }
 
@@ -2190,8 +2199,10 @@ RESTARTPOLICY getRestartPolicy(
          return RESTARTPOLICY_ALWAYS;
       case RESTARTPOLICY_CHAR_NEVER:
          return RESTARTPOLICY_NEVER;
-      case RESTARTPOLICY_CHAR_PROGRESS:
-         return RESTARTPOLICY_PROGRESS;
+      case RESTARTPOLICY_CHAR_COMPLETION:
+         return RESTARTPOLICY_COMPLETION;
+      case RESTARTPOLICY_CHAR_ESTIMATION:
+         return RESTARTPOLICY_ESTIMATION;
       default:
          SCIPerrorMessage("Unknown restart policy %c\n", eventhdlrdata->restartpolicyparam);
          SCIPABORT();
@@ -2217,9 +2228,9 @@ SCIP_Bool checkConditions(
 
    /* check if number of nodes exceeds the minimum number of nodes */
    if( eventhdlrdata->countonlyleaves )
-      nnodes = SCIPgetNFeasibleLeaves(scip) + SCIPgetNInfeasibleLeaves(scip) + SCIPgetNObjlimLeaves(scip);
+      nnodes = eventhdlrdata->treedata->nleaves;
    else
-      nnodes = SCIPgetNNodes(scip);
+      nnodes = eventhdlrdata->treedata->nvisited;
 
    if( nnodes < eventhdlrdata->minnodes )
       return FALSE;
@@ -2227,24 +2238,54 @@ SCIP_Bool checkConditions(
    return TRUE;
 }
 
-/** should a restart be applied based on the current progress? */
+/** should a restart be applied based on the value of the selected completion method? */
 static
-SCIP_Bool shouldApplyRestartProgress(
+SCIP_Bool shouldApplyRestartCompletion(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
+   SCIP_Real completion;
 
-   SCIP_Real estimation;
-
-   estimation = getTreedataWBE(eventhdlrdata->treedata);
+   SCIP_CALL_ABORT( getSearchCompletion(eventhdlrdata, &completion) );
 
    /* if the estimation exceeds the current number of nodes by a dramatic factor, restart */
-   if( estimation > SCIPgetNNodes(scip) * eventhdlrdata->estim_factor )
+   if( completion < 1.0 / eventhdlrdata->restartfactor )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "Estimation %g exceeds current number of nodes %lld by a factor of %.1f\n",
-               estimation, SCIPgetNNodes(scip), estimation / SCIPgetNNodes(scip));
+         "Completion %.5f less than restart threshold %.5f\n",
+         completion, 1.0 / eventhdlrdata->restartfactor);
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+/** should a restart be applied based on the value of the selected completion method? */
+static
+SCIP_Bool shouldApplyRestartEstimation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   )
+{
+   SCIP_Real estimation;
+
+   estimation = SCIPgetTreesizeEstimation(scip);
+
+   if( estimation < 0.0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "Estimation %g is still unavailable\n",
+         estimation);
+      return TRUE;
+   }
+
+   /* if the estimation exceeds the current number of nodes by a dramatic factor, restart */
+   if( estimation > eventhdlrdata->treedata->nnodes * eventhdlrdata->restartfactor )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "Estimation %g exceeds number of estimation tree nodes %lld by a factor of %.1f\n",
+         estimation, eventhdlrdata->treedata->nnodes, estimation / eventhdlrdata->treedata->nnodes);
       return TRUE;
    }
 
@@ -2263,9 +2304,11 @@ SCIP_Bool shouldApplyRestart(
          return TRUE;
       case RESTARTPOLICY_NEVER:
          return FALSE;
-      case RESTARTPOLICY_PROGRESS:
-         return shouldApplyRestartProgress(scip, eventhdlrdata);
+      case RESTARTPOLICY_COMPLETION:
+         return shouldApplyRestartCompletion(scip, eventhdlrdata);
          break;
+      case RESTARTPOLICY_ESTIMATION:
+         return shouldApplyRestartEstimation(scip, eventhdlrdata);
       default:
          break;
    }
@@ -2426,6 +2469,8 @@ SCIP_DECL_EVENTINIT(eventInitRestart)
                eventhdlrdata->regforestfilename) );
    }
 
+   eventhdlrdata->lastrestartrun = 0;
+
    return SCIP_OKAY;
 }
 
@@ -2565,7 +2610,9 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
 
       if( eventhdlrdata->restarthitcounter >= eventhdlrdata->hitcounterlim )
       {
-         eventhdlrdata->nrestartsperformed++;
+         /* safe that we triggered a restart at this run */
+         eventhdlrdata->nrestartsperformed += (SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun);
+         eventhdlrdata->lastrestartrun = SCIPgetNRuns(scip);
 
          SCIP_CALL( SCIPrestartSolve(scip) );
       }
@@ -2656,8 +2703,8 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventExitsolRestart) );
 
    /* add restart event handler parameters */
-   SCIP_CALL( SCIPaddCharParam(scip, "restarts/restartpolicy", "restart policy: anp",
-         &eventhdlrdata->restartpolicyparam, FALSE, 'n', "anp", NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "restarts/restartpolicy", "restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever",
+         &eventhdlrdata->restartpolicyparam, FALSE, 'n', "acen", NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip, "restarts/estimation/method", "select estimation method",
          &eventhdlrdata->estimationparam, FALSE, DEFAULT_ESTIMMETHOD, ESTIMMETHODS, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/restartlimit", "restart limit",
@@ -2666,9 +2713,9 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
          &eventhdlrdata->minnodes, FALSE, 1000L, -1L, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "restarts/countonlyleaves", "should only leaves count for the minnodes parameter?",
          &eventhdlrdata->countonlyleaves, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/factor",
+   SCIP_CALL( SCIPaddRealParam(scip, "restarts/restartfactor",
          "factor by which the estimated number of nodes should exceed the current number of nodes",
-         &eventhdlrdata->estim_factor, FALSE, 2.0, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+         &eventhdlrdata->restartfactor, FALSE, 2.0, 1.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/hitcounterlim", "limit on the number of successive samples to really trigger a restart",
          &eventhdlrdata->hitcounterlim, FALSE, 50, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/estimation/reportfreq",
@@ -2684,6 +2731,9 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/treeprofile/minnodesperdepth",
          "minimum average number of nodes at each depth before producing estimations",
          &eventhdlrdata->treeprofile_minnodesperdepth, FALSE, DEFAULT_TREEPROFILE_MINNODESPERDEPTH, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "restarts/estimation/useleafts",
+         "use leaf nodes as basic observations for time series, or all nodes?",
+         &eventhdlrdata->useleafts, FALSE, DEFAULT_USELEAFTS, NULL, NULL) );
 
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
