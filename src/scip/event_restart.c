@@ -74,10 +74,6 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define RESTARTPOLICY_CHAR_PROGRESS 'p'
 
 #define DEFAULT_REPORTFREQ                -1  /**< report frequency on estimation: -1: never, 0:always, k >= 1: k times evenly during search */
-#define DEFAULT_WINDOWSIZE               100  /**< window size for search progress */
-#define MAX_WINDOWSIZE                   500  /**< window size for search progress */
-#define DEFAULT_DES_ALPHA               0.95  /**< default level smoothing constant for double exponential smoothing */
-#define DEFAULT_DES_BETA                0.10   /**< default trend smoothing constant for double exponential smoothing */
 #define DEFAULT_DES_USETRENDINLEVEL      TRUE /**< should the trend be used in the level update? */
 
 /* constants for the table estimation */
@@ -325,7 +321,7 @@ char* real2String(
    int                   digits              /**< number of decimal digits */
    )
 {
-   if( num == SCIP_INVALID )
+   if( num == SCIP_INVALID )/*lint !e777*/
       sprintf(buf, "-");
    else
       sprintf(buf, "%11.*f", digits, num);
@@ -475,7 +471,7 @@ SCIP_RETCODE SCIPregforestFromFile(
    regforestptr = *regforest;
 
    SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->nbegin, ntrees) );
-   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->child, 2 * size) );
+   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->child, 2 * size) ); /*lint !e647*/
    SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->splitidx, size) );
    SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->value, size) );
 
@@ -525,7 +521,10 @@ SCIP_RETCODE SCIPregforestFromFile(
    }
 
 CLOSEFILE:
-    SCIPfclose(file);
+   SCIPfclose(file);
+
+   if( error )
+      return SCIP_INVALIDDATA;
 
    return SCIP_OKAY;
 }
@@ -593,10 +592,13 @@ SCIP_RETCODE extendMemoryTreeprofile(
    else
    {
       int newsize = SCIPcalcMemGrowSize(scip, mindepth + 1);
-
+      int nnewelems = newsize - treeprofile->profilesize;
+      SCIP_Longint* newprofile;
       assert(newsize > treeprofile->profilesize);
+
       SCIP_CALL( SCIPreallocMemoryArray(scip, &treeprofile->profile, newsize) );
-      BMSclearMemoryArray(&treeprofile->profile[treeprofile->profilesize], newsize - treeprofile->profilesize);
+      newprofile = &treeprofile->profile[treeprofile->profilesize];
+      BMSclearMemoryArray(newprofile, nnewelems);
       treeprofile->profilesize = newsize;
    }
 
@@ -677,7 +679,7 @@ SCIP_RETCODE updateTreeprofile(
    nodedepthcnt = ++treeprofile->profile[nodedepth];
 
    /* is this level full explored? We assume binary branching */
-   if( (unsigned int)nodedepth < 8*sizeof(int) && nodedepthcnt == (1U << nodedepth) )
+   if( (unsigned int)nodedepth < 8*sizeof(int) && nodedepthcnt == (1U << nodedepth) )/*lint !e647*/
    {
       SCIPdebugMsg(scip, "Level %d fully explored: %lld nodes\n", nodedepth, nodedepthcnt);
 
@@ -828,7 +830,7 @@ void subtreesumgapDelSubtrees(
 
 /** reset subtree sum gap */
 static
-void subtreesumgapReset(
+SCIP_RETCODE subtreesumgapReset(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP*        ssg                 /**< subtree sum gap data structure */
    )
@@ -836,7 +838,7 @@ void subtreesumgapReset(
    assert(ssg != NULL);
    assert(ssg->nodes2info != NULL);
 
-   SCIPhashmapRemoveAll(ssg->nodes2info);
+   SCIP_CALL( SCIPhashmapRemoveAll(ssg->nodes2info) );
 
    subtreesumgapDelSubtrees(scip, ssg);
 
@@ -845,6 +847,8 @@ void subtreesumgapReset(
    ssg->nsubtrees = 1;
    ssg->subtreepqueues = NULL;
    ssg->pblastsplit = SCIP_INVALID;
+
+   return SCIP_OKAY;
 }
 
 /** create a subtree sum gap */
@@ -865,7 +869,7 @@ SCIP_RETCODE subtreesumgapCreate(
    (*ssg)->nsubtrees = 0;
 
    /* reset ssg */
-   subtreesumgapReset(scip, *ssg);
+   SCIP_CALL( subtreesumgapReset(scip, *ssg) );
 
    return SCIP_OKAY;
 }
@@ -984,7 +988,7 @@ SCIP_RETCODE subtreesumgapSplit(
    subtreesumgapDelSubtrees(scip, ssg);
 
    /* query the open nodes of SCIP */
-   SCIPgetOpenNodesData(scip, &opennodes[0], &opennodes[1], &opennodes[2], &nopennodes[0], &nopennodes[1], &nopennodes[2]);
+   SCIP_CALL( SCIPgetOpenNodesData(scip, &opennodes[0], &opennodes[1], &opennodes[2], &nopennodes[0], &nopennodes[1], &nopennodes[2]) );
 
    ssg->nsubtrees = nopennodes[0] + nopennodes[1] + nopennodes[2] + (addfocusnode ? 1 : 0);
 
@@ -1022,7 +1026,7 @@ SCIP_RETCODE subtreesumgapSplit(
    if( addfocusnode )
    {
       assert(SCIPgetFocusNode(scip) != NULL);
-      subtreesumgapStoreNode(scip, ssg, SCIPgetFocusNode(scip), label++);
+      SCIP_CALL( subtreesumgapStoreNode(scip, ssg, SCIPgetFocusNode(scip), label++) );
    }
 
    return SCIP_OKAY;
@@ -1037,6 +1041,8 @@ SCIP_Real calcGap(
 {
    SCIP_Real db;
    SCIP_Real pb;
+   SCIP_Real abspb;
+   SCIP_Real absdb;
    SCIP_Real gap;
 
    if( SCIPisInfinity(scip, lowerbound) )
@@ -1051,7 +1057,9 @@ SCIP_Real calcGap(
    if( SCIPisEQ(scip, db, pb) )
       return 0.0;
 
-   gap = REALABS(pb - db)/MAX(REALABS(pb),REALABS(db));
+   abspb = REALABS(pb);
+   absdb = REALABS(db);
+   gap = REALABS(pb - db)/MAX(abspb,absdb);
    gap = MIN(gap, 1.0);
 
    return gap;
@@ -1149,7 +1157,7 @@ SCIP_RETCODE subtreesumGapInsertChildren(
    }
 
    /* remove focus node from hash map */
-   subtreesumgapRemoveNode(scip, ssg, focusnode);
+   SCIP_CALL( subtreesumgapRemoveNode(scip, ssg, focusnode) );
 
    return SCIP_OKAY;
 }
@@ -1361,7 +1369,7 @@ SCIP_RETCODE subtreesumGapUpdate(
 
 /** reset tree data */
 static
-void resetTreedata(
+SCIP_RETCODE resetTreedata(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEDATA*             treedata            /**< tree data */
    )
@@ -1374,7 +1382,9 @@ void resetTreedata(
    treedata->nnodes = 1;
    treedata->nopen = 1;
 
-   subtreesumgapReset(scip, treedata->ssg);
+   SCIP_CALL( subtreesumgapReset(scip, treedata->ssg) );
+
+   return SCIP_OKAY;
 }
 
 /** create tree data structure */
@@ -1391,7 +1401,7 @@ SCIP_RETCODE createTreedata(
 
    SCIP_CALL( subtreesumgapCreate(scip, &(*treedata)->ssg) );
 
-   resetTreedata(scip, *treedata);
+   SCIP_CALL( resetTreedata(scip, *treedata) );
 
    return SCIP_OKAY;
 }
@@ -1712,7 +1722,7 @@ void timeseriesUpdateSmoothEstimation(
    SCIP_Real             estimation          /**< estimation value */
    )
 {
-   if( timeseries->smoothestimation == SCIP_INVALID )
+   if( timeseries->smoothestimation == SCIP_INVALID )/*lint !e777*/
       timeseries->smoothestimation = estimation;
    else
    {
@@ -1786,15 +1796,15 @@ SCIP_RETCODE timeseriesUpdate(
    /* if this is a leaf that matches the time series resolution, store the value */
    if( timeseries->nobs % timeseries->resolution == 0 )
    {
-      int index;
+      int tspos;
       SCIP_Real estimate;
 
       assert(timeseries->nvals < timeseries->valssize);
-      index = timeseries->nvals++;
-      timeseries->vals[index] = value;
+      tspos = timeseries->nvals++;
+      timeseries->vals[tspos] = value;
       doubleexpsmoothUpdate(&timeseries->des, value);
       estimate = timeseriesEstimate(timeseries, treedata);
-      timeseries->estimation[index] = estimate;
+      timeseries->estimation[tspos] = estimate;
       timeseriesUpdateSmoothEstimation(timeseries, estimate);
    }
 
@@ -1914,10 +1924,14 @@ SCIP_Real getEnsembleEstimation(
    {
       estim = 0.0;
       coeffs = coeffs_early;
+      /* ensure that coeffs and time series are still aligned */
+      assert(sizeof(coeffs_early)/sizeof(SCIP_Real) == NTIMESERIES);
    }
    else if( treedata->progress <= 0.6 )
    {
       coeffs = coeffs_intermediate;
+      /* ensure that coeffs and time series are still aligned */
+      assert(sizeof(coeffs_intermediate)/sizeof(SCIP_Real) == NTIMESERIES);
 
       /* initialize by intermediate WBE coefficient */
       estim = 0.156 * getTreedataWBE(treedata);
@@ -1925,13 +1939,13 @@ SCIP_Real getEnsembleEstimation(
    else
    {
       coeffs = coeffs_late;
+      /* ensure that coeffs and time series are still aligned */
+      assert(sizeof(coeffs_late)/sizeof(SCIP_Real) == NTIMESERIES);
 
       /* initialize by late WBE coefficient */
       estim = 0.579 * getTreedataWBE(treedata);
    }
 
-   /* ensure that coeffs and time series are still aligned */
-   assert(sizeof(coeffs)/sizeof(SCIP_Real) == NTIMESERIES);
 
    /* combine estimation using the stage-dependent coefficients */
    for( t = 0; t < NTIMESERIES; ++t )
@@ -2049,7 +2063,7 @@ SCIP_RETCODE getEstimCompletion(
 /** update callback at nodes */
 static
 DECL_TIMESERIESUPDATE(timeseriesUpdateGap)
-{
+{ /*lint --e{715}*/
    SCIP_Real primalbound;
    SCIP_Real dualbound;
 
@@ -2072,7 +2086,14 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateGap)
    else if( SCIPisEQ(scip, primalbound, dualbound) )
       *value = 1.0;
    else
-      *value = 1.0 - REALABS(primalbound - dualbound)/MAX(REALABS(primalbound), REALABS(dualbound));
+   {
+      SCIP_Real abspb;
+      SCIP_Real absdb;
+
+      abspb = REALABS(primalbound);
+      absdb = REALABS(dualbound);
+      *value = 1.0 - REALABS(primalbound - dualbound)/MAX(abspb, absdb);
+   }
 
    /* using this max, we set the closed gap to 0 in the case where the primal and dual bound differ in their sign */
    *value = MAX(*value, 0.0);
@@ -2083,7 +2104,7 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateGap)
 /** update callback at nodes */
 static
 DECL_TIMESERIESUPDATE(timeseriesUpdateProgress)
-{
+{ /*lint --e{715}*/
    *value = treedata->progress;
 
    return SCIP_OKAY;
@@ -2092,7 +2113,7 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateProgress)
 /** update callback at nodes */
 static
 DECL_TIMESERIESUPDATE(timeseriesUpdateLeaffreq)
-{
+{ /*lint --e{715}*/
    if( treedata->nvisited == 0 )
       *value = -0.5;
    else
@@ -2104,7 +2125,7 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateLeaffreq)
 /** update callback at nodes */
 static
 DECL_TIMESERIESUPDATE(timeseriesUpdateSsg)
-{
+{ /*lint --e{715}*/
    if( treedata->nvisited == 0 )
       *value = 1.0;
    else
@@ -2116,7 +2137,7 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateSsg)
 /** update callback at nodes */
 static
 DECL_TIMESERIESUPDATE(timeseriesUpdateOpenNodes)
-{
+{ /*lint --e{715}*/
    if( treedata->nvisited == 0 )
       *value = 0.0;
    else
@@ -2268,9 +2289,9 @@ SCIP_RETCODE updateTimeseries(
    for( t = 0; t < NTIMESERIES; ++t )
    {
       assert(tss[t] != NULL);
-      timeseriesUpdate(scip, tss[t], treedata, isleaf);
+      SCIP_CALL( timeseriesUpdate(scip, tss[t], treedata, isleaf) );
 
-#if 0
+#ifdef SCIP_MORE_DEBUG
       SCIPdebugMsg(scip,
          "Update of time series '%s', current value %.4f (%lld observations)\n",
          timeseriesGetName(tss[t]), timeseriesGet(tss[t]), tss[t]->nobs);
@@ -2367,7 +2388,7 @@ static
 SCIP_DECL_EVENTCOPY(eventCopyRestart)
 {  /*lint --e{715}*/
 
-   SCIPincludeEventHdlrRestart(scip);
+   SCIP_CALL( SCIPincludeEventHdlrRestart(scip) );
 
    return SCIP_OKAY;
 }
@@ -2434,7 +2455,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolRestart)
    eventhdlrdata->nreports = 0;
 
    /* reset tree data */
-   resetTreedata(scip, eventhdlrdata->treedata);
+   SCIP_CALL( resetTreedata(scip, eventhdlrdata->treedata) );
 
    resetTimeseries(eventhdlrdata);
 
@@ -2642,7 +2663,7 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/restartlimit", "restart limit",
          &eventhdlrdata->restartlimit, FALSE, 1, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip, "restarts/minnodes", "minimum number of nodes before restart",
-         &eventhdlrdata->minnodes, FALSE, 1000, -1, SCIP_LONGINT_MAX, NULL, NULL) );
+         &eventhdlrdata->minnodes, FALSE, 1000L, -1L, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "restarts/countonlyleaves", "should only leaves count for the minnodes parameter?",
          &eventhdlrdata->countonlyleaves, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/factor",
@@ -2696,6 +2717,12 @@ SCIP_Real SCIPgetTreesizeEstimation(
    assert(scip != NULL);
 
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   if( eventhdlr == NULL )
+   {
+      SCIPwarningMessage(scip, "SCIPgetTreesizeEstimation() called, but event handler " EVENTHDLR_NAME " is missing.\n");
+      return -1.0;
+   }
+
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
    switch (eventhdlrdata->estimationparam) {
