@@ -958,9 +958,9 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
    );
 
 /** query if focus node was already branched on */
-extern
-SCIP_Bool SCIPtreeWasFocusNodeBranched(
-   SCIP_TREE*            tree                /**< branch and bound tree */
+SCIP_Bool SCIPtreeWasNodeLastBranchParent(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NODE*            node                /**< tree node, or NULL to check focus node */
    );
 
 #ifdef __cplusplus

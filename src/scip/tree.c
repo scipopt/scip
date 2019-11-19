@@ -1030,11 +1030,13 @@ SCIP_RETCODE SCIPnodeCreateChild(
 }
 
 /** query if focus node was already branched on */
-SCIP_Bool SCIPtreeWasFocusNodeBranched(
-   SCIP_TREE*            tree                /**< branch and bound tree */
+SCIP_Bool SCIPtreeWasNodeLastBranchParent(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NODE*            node                /**< tree node, or NULL to check focus node */
    )
 {
-   if( tree->focusnode != NULL && tree->focusnode->number == tree->lastbranchparentid)
+   node = node == NULL ? tree->focusnode : node;
+   if( node != NULL && node->number == tree->lastbranchparentid)
       return TRUE;
 
    return FALSE;

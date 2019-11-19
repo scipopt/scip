@@ -455,9 +455,9 @@ void SCIPsetFocusnodeLP(
    );
 
 
-/** query if focus node was already branched on
+/** query if node was the last parent of a branching of the tree
  *
- *  @return TRUE if focus node was already branched on (note that subsequent solutions may have pruned the children)
+ *  @return TRUE if node was the last parent of a branching of the tree
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
@@ -465,8 +465,9 @@ void SCIPsetFocusnodeLP(
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_EXPORT
-SCIP_Bool SCIPwasFocusNodeBranched(
-   SCIP*                 scip                /**< SCIP data structure */
+SCIP_Bool SCIPwasNodeLastBranchParent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< tree node, or NULL to check focus node */
    );
 
 /**@} */

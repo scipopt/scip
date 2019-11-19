@@ -1342,7 +1342,7 @@ SCIP_RETCODE subtreesumGapUpdate(
    /* make a new tree split if the primal bound has changed. */
    if( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && ! SCIPisEQ(scip, SCIPgetPrimalbound(scip), ssg->pblastsplit) )
    {
-      SCIP_Bool addfocusnode = SCIPgetFocusNode(scip) != NULL && SCIPgetNChildren(scip) == 0 && !SCIPwasFocusNodeBranched(scip);
+      SCIP_Bool addfocusnode = SCIPgetFocusNode(scip) != NULL && SCIPgetNChildren(scip) == 0 && !SCIPwasNodeLastBranchParent(scip, SCIPgetFocusNode(scip));
       SCIP_CALL( subtreesumgapSplit(scip, ssg, addfocusnode) );
 
       ssg->pblastsplit = SCIPgetPrimalbound(scip);
@@ -2509,7 +2509,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       (SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_CHILD ||
          SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_SIBLING ||
          SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_LEAF ||
-         (SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_DEADEND && !SCIPwasFocusNodeBranched(scip)));
+         (SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_DEADEND && !SCIPwasNodeLastBranchParent(scip, SCIPeventGetNode(event))));
 
    if( eventtype == SCIP_EVENTTYPE_NODEBRANCHED || isleaf )
    {
