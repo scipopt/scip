@@ -3645,6 +3645,7 @@ SCIP_RETCODE SCIPvarFix(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Real             fixedval,           /**< value to fix variable at */
@@ -3691,7 +3692,7 @@ SCIP_RETCODE SCIPvarFix(
          return SCIP_INVALIDDATA;
       }
       SCIP_CALL( SCIPvarFix(var->data.original.transvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt,
-            lp, branchcand, eventqueue, cliquetable, fixedval, infeasible, fixed) );
+            lp, branchcand, eventfilter, eventqueue, cliquetable, fixedval, infeasible, fixed) );
       break;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -3741,7 +3742,7 @@ SCIP_RETCODE SCIPvarFix(
       }
 
       /* reset the objective value of the fixed variable, thus adjusting the problem's objective offset */
-      SCIP_CALL( SCIPvarAddObj(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, eventqueue, obj) );
+      SCIP_CALL( SCIPvarAddObj(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, eventfilter, eventqueue, obj) );
 
       /* issue VARFIXED event */
       SCIP_CALL( varEventVarFixed(var, blkmem, set, eventqueue, 0) );
@@ -3767,7 +3768,7 @@ SCIP_RETCODE SCIPvarFix(
       else
          childfixedval = (fixedval - var->data.aggregate.constant)/var->data.aggregate.scalar;
       SCIP_CALL( SCIPvarFix(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp,
-            branchcand, eventqueue, cliquetable, childfixedval, infeasible, fixed) );
+            branchcand, eventfilter, eventqueue, cliquetable, childfixedval, infeasible, fixed) );
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -3782,7 +3783,7 @@ SCIP_RETCODE SCIPvarFix(
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
       SCIP_CALL( SCIPvarFix(var->negatedvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp,
-            branchcand, eventqueue, cliquetable, var->data.negate.constant - fixedval, infeasible, fixed) );
+            branchcand, eventfilter, eventqueue, cliquetable, var->data.negate.constant - fixedval, infeasible, fixed) );
       break;
 
    default:
@@ -4398,6 +4399,7 @@ SCIP_RETCODE varUpdateAggregationBounds(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             aggvar,             /**< variable y in aggregation x = a*y + c */
@@ -4471,13 +4473,13 @@ SCIP_RETCODE varUpdateAggregationBounds(
       {
          /* the aggregated variable is fixed -> fix both variables */
          SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
-               eventqueue, cliquetable, varlb, infeasible, fixed) );
+               eventfilter, eventqueue, cliquetable, varlb, infeasible, fixed) );
          if( !(*infeasible) )
          {
             SCIP_Bool aggfixed;
 
             SCIP_CALL( SCIPvarFix(aggvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
-                  eventqueue, cliquetable, (varlb-constant)/scalar, infeasible, &aggfixed) );
+                  eventfilter, eventqueue, cliquetable, (varlb-constant)/scalar, infeasible, &aggfixed) );
             assert(*fixed == aggfixed);
          }
          return SCIP_OKAY;
@@ -4536,13 +4538,13 @@ SCIP_RETCODE varUpdateAggregationBounds(
       {
          /* the aggregation variable is fixed -> fix both variables */
          SCIP_CALL( SCIPvarFix(aggvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
-               eventqueue, cliquetable, aggvarlb, infeasible, fixed) );
+               eventfilter, eventqueue, cliquetable, aggvarlb, infeasible, fixed) );
          if( !(*infeasible) )
          {
             SCIP_Bool varfixed;
 
             SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
-                  eventqueue, cliquetable, aggvarlb * scalar + constant, infeasible, &varfixed) );
+                  eventfilter, eventqueue, cliquetable, aggvarlb * scalar + constant, infeasible, &varfixed) );
             assert(*fixed == varfixed);
          }
          return SCIP_OKAY;
@@ -4589,6 +4591,7 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
    SCIP_Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
@@ -4632,8 +4635,8 @@ SCIP_RETCODE SCIPvarAggregate(
    /* aggregation is a fixing, if the scalar is zero */
    if( SCIPsetIsZero(set, scalar) )
    {
-      SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue,
-            cliquetable, constant, infeasible, aggregated) );
+      SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventfilter,
+            eventqueue, cliquetable, constant, infeasible, aggregated) );
       return SCIP_OKAY;
    }
 
@@ -4662,14 +4665,14 @@ SCIP_RETCODE SCIPvarAggregate(
       else
       {
          SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
-               eventqueue, cliquetable, constant/(1.0-scalar), infeasible, aggregated) );
+               eventfilter, eventqueue, cliquetable, constant/(1.0-scalar), infeasible, aggregated) );
       }
       return SCIP_OKAY;
    }
 
    /* tighten the bounds of aggregated and aggregation variable */
    SCIP_CALL( varUpdateAggregationBounds(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp,
-         branchcand, eventqueue, cliquetable, aggvar, scalar, constant, infeasible, &fixed) );
+         branchcand, eventfilter, eventqueue, cliquetable, aggvar, scalar, constant, infeasible, &fixed) );
    if( *infeasible || fixed )
    {
       *aggregated = fixed;
@@ -4861,7 +4864,7 @@ SCIP_RETCODE SCIPvarAggregate(
    /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
     * variable and the problem's objective offset
     */
-   SCIP_CALL( SCIPvarAddObj(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, eventqueue, obj) );
+   SCIP_CALL( SCIPvarAddObj(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, eventfilter, eventqueue, obj) );
 
    /* issue VARFIXED event */
    SCIP_CALL( varEventVarFixed(var, blkmem, set, eventqueue, 1) );
@@ -4987,7 +4990,7 @@ SCIP_RETCODE tryAggregateIntVars(
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
       SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
-            branchcand, eventqueue, vary, (SCIP_Real)(-b/a), (SCIP_Real)(c/a), infeasible, aggregated) );
+            branchcand, eventfilter, eventqueue, vary, (SCIP_Real)(-b/a), (SCIP_Real)(c/a), infeasible, aggregated) );
       assert(*aggregated);
       return SCIP_OKAY;
    }
@@ -4996,7 +4999,7 @@ SCIP_RETCODE tryAggregateIntVars(
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
       SCIP_CALL( SCIPvarAggregate(vary, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
-            branchcand, eventqueue, varx, (SCIP_Real)(-a/b), (SCIP_Real)(c/b), infeasible, aggregated) );
+            branchcand, eventfilter, eventqueue, varx, (SCIP_Real)(-a/b), (SCIP_Real)(c/b), infeasible, aggregated) );
       assert(*aggregated);
       return SCIP_OKAY;
    }
@@ -5075,13 +5078,13 @@ SCIP_RETCODE tryAggregateIntVars(
    SCIP_CALL( SCIPprobAddVar(transprob, blkmem, set, lp, branchcand, eventfilter, eventqueue, aggvar) );
 
    SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
-         branchcand, eventqueue, aggvar, (SCIP_Real)(-b), (SCIP_Real)xsol, infeasible, aggregated) );
+         branchcand, eventfilter, eventqueue, aggvar, (SCIP_Real)(-b), (SCIP_Real)xsol, infeasible, aggregated) );
    assert(*aggregated || *infeasible);
 
    if( !(*infeasible) )
    {
       SCIP_CALL( SCIPvarAggregate(vary, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
-            branchcand, eventqueue, aggvar, (SCIP_Real)a, (SCIP_Real)ysol, infeasible, aggregated) );
+            branchcand, eventfilter, eventqueue, aggvar, (SCIP_Real)a, (SCIP_Real)ysol, infeasible, aggregated) );
       assert(*aggregated || *infeasible);
    }
 
@@ -5255,7 +5258,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
 
       /* aggregate the variable */
       SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
-            branchcand, eventqueue, vary, scalar, constant, infeasible, aggregated) );
+            branchcand, eventfilter, eventqueue, vary, scalar, constant, infeasible, aggregated) );
       assert(*aggregated || *infeasible);
    }
    else if( (SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT)
@@ -5402,7 +5405,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 
             SCIPsetDebugMsg(set, "Possible multi-aggregation led to fixing of variable <%s> to %g.\n", SCIPvarGetName(tmpvars[0]), -constant/tmpscalars[0]);
             SCIP_CALL( SCIPvarFix(tmpvars[0], blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp,
-                  branchcand, eventqueue, cliquetable, -constant/tmpscalars[0], infeasible, aggregated) );
+                  branchcand, eventfilter, eventqueue, cliquetable, -constant/tmpscalars[0], infeasible, aggregated) );
             goto TERMINATE;
          }
          else if( ntmpvars == 2 ) /* 0 = a_1*y_1 + a_2*y_2 + c => y_1 = -a_2/a_1 * y_2 - c/a_1 */
@@ -5438,7 +5441,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       {
          SCIPsetDebugMsg(set, "Possible multi-aggregation led to fixing of variable <%s> to %g.\n", SCIPvarGetName(var), tmpconstant);
          SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
-               eventqueue, cliquetable, tmpconstant, infeasible, aggregated) );
+               eventfilter, eventqueue, cliquetable, tmpconstant, infeasible, aggregated) );
          goto TERMINATE;
       }
 
@@ -5563,7 +5566,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
        * variables and the problem's objective offset
        */
-      SCIP_CALL( SCIPvarAddObj(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, eventqueue, obj) );
+      SCIP_CALL( SCIPvarAddObj(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, eventfilter, eventqueue, obj) );
 
       *aggregated = TRUE;
 
@@ -6094,6 +6097,7 @@ SCIP_RETCODE SCIPvarAddObj(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             addobj              /**< additional objective value for variable */
    )
@@ -6116,7 +6120,7 @@ SCIP_RETCODE SCIPvarAddObj(
          if( var->data.original.transvar != NULL )
          {
             SCIP_CALL( SCIPvarAddObj(var->data.original.transvar, blkmem, set, stat, transprob, origprob, primal, tree,
-                  reopt, lp, eventqueue, (SCIP_Real) transprob->objsense * addobj/transprob->objscale) );
+                  reopt, lp, eventfilter, eventqueue, (SCIP_Real) transprob->objsense * addobj/transprob->objscale) );
          }
          else
             assert(set->stage == SCIP_STAGE_PROBLEM);
@@ -6152,26 +6156,26 @@ SCIP_RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_FIXED:
          assert(SCIPsetIsEQ(set, var->locdom.lb, var->locdom.ub));
          SCIPprobAddObjoffset(transprob, var->locdom.lb * addobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
          break;
 
       case SCIP_VARSTATUS_AGGREGATED:
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
          SCIPprobAddObjoffset(transprob, var->data.aggregate.constant * addobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
          SCIP_CALL( SCIPvarAddObj(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, primal, tree, reopt,
-               lp, eventqueue, var->data.aggregate.scalar * addobj) );
+               lp, eventfilter, eventqueue, var->data.aggregate.scalar * addobj) );
          break;
 
       case SCIP_VARSTATUS_MULTAGGR:
          assert(!var->donotmultaggr);
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
          SCIPprobAddObjoffset(transprob, var->data.multaggr.constant * addobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
          for( i = 0; i < var->data.multaggr.nvars; ++i )
          {
             SCIP_CALL( SCIPvarAddObj(var->data.multaggr.vars[i], blkmem, set, stat, transprob, origprob, primal, tree,
-                  reopt, lp, eventqueue, var->data.multaggr.scalars[i] * addobj) );
+                  reopt, lp, eventfilter, eventqueue, var->data.multaggr.scalars[i] * addobj) );
          }
          break;
 
@@ -6181,9 +6185,9 @@ SCIP_RETCODE SCIPvarAddObj(
          assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(var->negatedvar->negatedvar == var);
          SCIPprobAddObjoffset(transprob, var->data.negate.constant * addobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
          SCIP_CALL( SCIPvarAddObj(var->negatedvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp,
-               eventqueue, -addobj) );
+               eventfilter, eventqueue, -addobj) );
          break;
 
       default:

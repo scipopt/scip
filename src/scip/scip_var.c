@@ -4574,7 +4574,7 @@ SCIP_RETCODE SCIPaddVarObj(
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
       SCIP_CALL( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal,
-            scip->tree, scip->reopt, scip->lp, scip->eventqueue, addobj) );
+            scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -4582,7 +4582,7 @@ SCIP_RETCODE SCIPaddVarObj(
    case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_PRESOLVED:
       SCIP_CALL( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob, scip->primal,
-            scip->tree, scip->reopt, scip->lp, scip->eventqueue, addobj) );
+            scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    default:
@@ -5435,8 +5435,8 @@ SCIP_RETCODE SCIPinferVarFixCons(
       SCIP_Bool fixed;
 
       SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-            fixedval, infeasible, &fixed) );
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter,
+            scip->eventqueue, scip->cliquetable, fixedval, infeasible, &fixed) );
 
       if( tightened != NULL )
 	 *tightened = fixed;
@@ -5759,8 +5759,8 @@ SCIP_RETCODE SCIPinferBinvarCons(
          SCIP_Bool fixed;
 
          SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-               (SCIP_Real)fixedval, infeasible, &fixed) );
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->cliquetable, (SCIP_Real)fixedval, infeasible, &fixed) );
          break;
       }
       /*lint -fallthrough*/
@@ -5829,8 +5829,8 @@ SCIP_RETCODE SCIPinferVarFixProp(
       SCIP_Bool fixed;
 
       SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-            fixedval, infeasible, &fixed) );
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->cliquetable, fixedval, infeasible, &fixed) );
 
       if( tightened != NULL )
 	 *tightened = fixed;
@@ -6156,8 +6156,8 @@ SCIP_RETCODE SCIPinferBinvarProp(
          SCIP_Bool fixed;
 
          SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-               (SCIP_Real)fixedval, infeasible, &fixed) );
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->cliquetable, (SCIP_Real)fixedval, infeasible, &fixed) );
          break;
       }
       /*lint -fallthrough*/
@@ -8310,8 +8310,8 @@ SCIP_RETCODE SCIPfixVar(
       if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
       {
          SCIP_CALL( SCIPvarFix(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-               fixedval, infeasible, fixed) );
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->cliquetable, fixedval, infeasible, fixed) );
          return SCIP_OKAY;
       }
       /*lint -fallthrough*/
@@ -8447,8 +8447,8 @@ SCIP_RETCODE SCIPaggregateVars(
 
       /* variable x was resolved to fixed variable: variable y can be fixed to c'/b' */
       SCIP_CALL( SCIPvarFix(vary, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-            rhs/scalary, infeasible, aggregated) );
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->cliquetable, rhs/scalary, infeasible, aggregated) );
       *redundant = TRUE;
    }
    else if( vary == NULL )
@@ -8458,8 +8458,8 @@ SCIP_RETCODE SCIPaggregateVars(
 
       /* variable y was resolved to fixed variable: variable x can be fixed to c'/a' */
       SCIP_CALL( SCIPvarFix(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-            rhs/scalarx, infeasible, aggregated) );
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->cliquetable, rhs/scalarx, infeasible, aggregated) );
       *redundant = TRUE;
    }
    else if( varx == vary )
@@ -8475,8 +8475,8 @@ SCIP_RETCODE SCIPaggregateVars(
       {
          /* sum of scalars is not zero: fix variable x' == y' to c'/(a'+b') */
          SCIP_CALL( SCIPvarFix(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable,
-               rhs/scalarx, infeasible, aggregated) );
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->cliquetable, rhs/scalarx, infeasible, aggregated) );
       }
       *redundant = TRUE;
    }
