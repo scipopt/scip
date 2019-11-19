@@ -2558,7 +2558,15 @@ void insertionRestoreTree(
    SCIPlinkcuttreeCut(&linkcutNodes[graphHead[insertCands[0]]]);
    insertionDecrementSolDegree(graph, graphHead[insertCands[0]], insertData);
 
-   insertData->solDegreeNonTerm[v] = 0;
+   if( Is_gterm(graph->term[v]) )
+   {
+      assert(graph_pc_isPcMw(graph));
+      insertData->solDegreeNonTerm[v] = UNKNOWN;
+   }
+   else
+   {
+      insertData->solDegreeNonTerm[v] = 0;
+   }
 
    assert(insertData->solNodes[v]);
    insertData->solNodes[v] = FALSE;
