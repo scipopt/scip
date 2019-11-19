@@ -33,10 +33,6 @@
 #include "reduce.h"
 
 #define EXT_ANCESTORS_MAX  16
-#define EXT_STATE_NONE     0
-#define EXT_STATE_EXPANDED 1
-#define EXT_STATE_MARKED   2
-#define EXT_REDCOST_NRECOMP 10
 
 #define STP_EXT_MAXDFSDEPTH 6
 #define STP_EXT_MINDFSDEPTH 4
@@ -660,7 +656,7 @@ SCIP_RETCODE reduceCheckEdge(
                if( truncateSubtree(graph, extendedcost, root, currhead, maxgrad, dfsdepth, maxdfsdepth, &minbound, &stopped) )
                {
                   /* stopped and no further improvement of bound possible? */
-                 if( stopped && minbound <= edgebound )
+                  if( stopped && minbound <= edgebound )
                     break;
 
                   continue;
@@ -720,7 +716,7 @@ SCIP_RETCODE reduceCheckEdge(
             {
                const SCIP_Real extendedcost = treecost + redcost[curredge] + pathdist[currtail];
 
-               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, treeedges, cutoff, extendedcost, dfsdepth, flipedge((unsigned)curredge), equality,
+               if( ruleOutSubtree(scip, graph, treecosts, basebottlenecks, nodepos, treeedges, cutoff, extendedcost, dfsdepth, flipedge(curredge), equality,
                      ancestormark, eqstack, eqstack_size, eqmark) )
                   continue;
 

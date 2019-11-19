@@ -92,9 +92,8 @@ typedef struct extension_data
 } EXTDATA;
 
 
-static
+static inline
 void extdataClean(
-   const GRAPH*          graph,              /**< graph data structure */
    EXTDATA*              extdata             /**< extension data */
 )
 {
@@ -758,7 +757,7 @@ void extTreeBottleneckUnmarkRootPath(
    {
       assert(currentNode >= 0);
       assert(extdata->tree_deg[currentNode] >= 0);
-      assert(bottleneckDist_node[currentNode] >= -0.0);
+      assert(bottleneckDist_node[currentNode] >= 0.0);
 
       bottleneckDist_node[currentNode] = -1.0;
    }
@@ -1211,7 +1210,9 @@ SCIP_Real extTreeGetRedcostBound(
    for( int i = 0; i < nleaves; i++ )
    {
       const int leaf = tree_leaves[i];
-      tree_redcost = MIN(tree_redcost, extTreeGetDirectedRedcost(scip, graph, extdata, leaf));
+      const SCIP_Real tree_redcost_new = extTreeGetDirectedRedcost(scip, graph, extdata, leaf);
+
+      tree_redcost = MIN(tree_redcost, tree_redcost_new);
    }
 
    return tree_redcost;
@@ -1347,7 +1348,7 @@ SCIP_Bool extRuleOutPeriph(
       for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
       {
          const int extleaf = graph->head[extstack_data[i]];
-         int nPcSdCands;
+         int nPcSdCands = 0;
          SCIP_Real specialDist;
 
          assert(extleaf >= 0 && extleaf < graph->knots);
@@ -1591,6 +1592,11 @@ void extStackExpand(
    const int setsize = extstack_start[stackpos + 1] - extstack_start[stackpos];
    const uint32_t powsize = pow(2, setsize);
 
+#ifndef NDEBUG
+   for( int i = 0; i < STP_EXT_MAXGRAD; i++ )
+      extedges[i] = -1;
+#endif
+
    assert(extdata && scip && graph && success);
    assert(setsize <= STP_EXT_MAXGRAD);
    assert(setsize > 0 && setsize <= 32);
@@ -1628,6 +1634,8 @@ void extStackExpand(
          if( counter & (1 << j) )
          {
             assert(datasize < extdata->extstack_maxsize);
+            assert(extedges[j] >= 0);
+
             extstack_data[datasize++] = extedges[j];
             SCIPdebugMessage(" head %d \n", graph->head[extedges[j]]);
          }
@@ -2105,7 +2113,7 @@ SCIP_RETCODE reduce_extendedCheckEdge(
          /* try to extend from tail? */
          if( !(*deletable) && extLeafIsExtendable(graph, isterm, tail) )
          {
-            extdataClean(graph, &extdata);
+            extdataClean(&extdata);
             extCheckArc(scip, graph, flipedge(edge), &extdata, deletable);
          }
       }
