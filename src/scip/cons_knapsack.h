@@ -271,6 +271,16 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
 
+/** cleans up (multi-)aggregations and fixings from knapsack constraints */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcleanupConssKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< knapsack constraint handler */
+   SCIP_CONS**           conss,              /**< knapsack constraints to clean up */
+   int                   nconss,             /**< number of knapsack constraints to clean up */
+   SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
+   );
+
 /* @} */
 
 /* @} */

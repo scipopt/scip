@@ -5394,3 +5394,42 @@ SCIP_ROW* SCIPgetRowLogicor(
    return consdata->row;
 }
 
+/** cleans up (multi-)aggregations and fixings from logicor constraints */
+SCIP_RETCODE SCIPcleanupConssLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< logicor constraint handler */
+   SCIP_CONS**           conss,              /**< array of logicor constraints to clean up */
+   int                   nconss,             /**< number of logicor constraints to clean up */
+   int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
+   int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
+   int*                  ndelcons            /**< pointer to count number of deleted (logicor) constraints */
+   )
+{
+   int i;
+   SCIP_EVENTHDLR* eventhdlr;
+
+   assert(strcmp(SCIPconshdlrGetName(conshdlr),CONSHDLR_NAME) == 0);
+   assert(naddcons != NULL);
+   assert(ndelcons != NULL);
+   assert(nchgcoefs != NULL);
+
+   eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
+
+   /* loop backwards in case the given array is the constraint handlers constraint array
+    * since then deleted constraints do not need to be handled
+    */
+   for( i = nconss - 1; i > 0; --i )
+   {
+      SCIP_Bool redundant;
+      assert(SCIPconsGetHdlr(conss[i]) == conshdlr);
+      SCIP_CALL( applyFixings(scip, conss[i], eventhdlr, &redundant, nchgcoefs, naddcons, ndelcons) );
+
+      if( redundant )
+      {
+         SCIP_CALL( SCIPdelCons(scip, conss[i]) );
+         ++(*ndelcons);
+      }
+   }
+
+   return SCIP_OKAY;
+}

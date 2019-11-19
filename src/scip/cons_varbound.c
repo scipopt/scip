@@ -5268,4 +5268,42 @@ SCIP_ROW* SCIPgetRowVarbound(
    return consdata->row;
 }
 
+/** cleans up (multi-)aggregations and fixings from varbound constraints */
+SCIP_RETCODE SCIPcleanupConssVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< varbound constraint handler */
+   SCIP_CONS**           conss,              /**< array of varbound constraints to clean up */
+   int                   nconss,             /**< number of varbound constraints to clean up */
+   int*                  nchgbds,            /**< pointer to count number of bound changes */
+   int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
+   int*                  ndelcons,           /**< pointer to count number of deleted (varbound) constraints */
+   SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
+   )
+{
+   int i;
+   SCIP_EVENTHDLR* eventhdlr;
+
+   assert(strcmp(SCIPconshdlrGetName(conshdlr),CONSHDLR_NAME) == 0);
+   assert(nchgbds != NULL);
+   assert(naddcons != NULL);
+   assert(ndelcons != NULL);
+   *infeasible = FALSE;
+
+   eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
+
+   /* loop backwards in case the given array is the constraint handlers constraint array
+    * since then deleted constraints do not need to be handled
+    */
+   for( i = nconss - 1; i > 0; --i )
+   {
+      assert(SCIPconsGetHdlr(conss[i]) == conshdlr);
+      SCIP_CALL( applyFixings(scip, conss[i], eventhdlr, infeasible, nchgbds, ndelcons, naddcons) );
+
+      if( *infeasible )
+         break;
+   }
+
+   return SCIP_OKAY;
+}
+
 /**@} */

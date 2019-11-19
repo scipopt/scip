@@ -18735,3 +18735,31 @@ SCIP_RETCODE SCIPupgradeConsLinear(
 
    return SCIP_OKAY;
 }
+
+/** cleans up (multi-)aggregations and fixings from linear constraints */
+SCIP_RETCODE SCIPcleanupConssLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< linear constraint handler */
+   SCIP_CONS**           conss,              /**< linear constraints to clean up */
+   int                   nconss,             /**< number of linear constraints to clean up */
+   SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
+   )
+{
+   int i;
+
+   assert(strcmp(SCIPconshdlrGetName(conshdlr),CONSHDLR_NAME) == 0);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss; ++i )
+   {
+      assert(SCIPconsGetHdlr(conss[i]) == conshdlr);
+      SCIP_CALL( applyFixings(scip, conss[i], infeasible) );
+
+      if( *infeasible )
+         break;
+   }
+
+   return SCIP_OKAY;
+}

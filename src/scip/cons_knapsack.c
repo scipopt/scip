@@ -13716,3 +13716,31 @@ SCIP_ROW* SCIPgetRowKnapsack(
 
    return consdata->row;
 }
+
+/** cleans up (multi-)aggregations and fixings from knapsack constraints */
+SCIP_RETCODE SCIPcleanupConssKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< knapsack constraint handler */
+   SCIP_CONS**           conss,              /**< knapsack constraints to clean up */
+   int                   nconss,             /**< number of knapsack constraints to clean up */
+   SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
+   )
+{
+   int i;
+
+   assert(strcmp(SCIPconshdlrGetName(conshdlr),CONSHDLR_NAME) == 0);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss; ++i )
+   {
+      assert(SCIPconsGetHdlr(conss[i]) == conshdlr);
+      SCIP_CALL( applyFixings(scip, conss[i], infeasible) );
+
+      if( *infeasible )
+         break;
+   }
+
+   return SCIP_OKAY;
+}
