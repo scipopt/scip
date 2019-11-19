@@ -1998,7 +1998,8 @@ SCIP_RETCODE reduce(
    /* initialize shortest path algorithms */
    SCIP_CALL( graph_path_init(scip, graph) );
 
-#if 1
+//#define UNIT_TEST_STP
+#ifdef UNIT_TEST_STP
 #ifndef NDEBUG
    SCIP_CALL( testAll(scip) );
 #endif

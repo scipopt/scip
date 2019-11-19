@@ -169,6 +169,7 @@ typedef struct insertion_data
    int* const            blockedList;        /**< list of currently blocked nodes */
    int                   blockedListSize;    /**< size of list */
    int                   nInsertions;        /**< number of insertions */
+   int                   insertionVertex;    /**< vertex to be inserted */
 } INSERT;
 
 
@@ -2218,6 +2219,55 @@ SCIP_Bool solNodeIsValid(
 #endif
 
 
+/** reduces solution degree */
+static inline
+void insertionDecrementSolDegree(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   node,               /**< replacement edge */
+   INSERT*               insertData          /**< insertion data */
+)
+{
+   int* const solDegreeNonTerm = insertData->solDegreeNonTerm;
+
+   assert(node >= 0);
+   assert(insertData->solNodes[node]);
+
+   if( Is_gterm(graph->term[node]) )
+   {
+      assert(solDegreeNonTerm[node] == UNKNOWN);
+   }
+   else
+   {
+      solDegreeNonTerm[node] -= 1;
+
+      assert(solDegreeNonTerm[node] >= 0 || node == insertData->insertionVertex);
+   }
+}
+
+
+/** increases solution degree */
+static inline
+void insertionIncrementSolDegree(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   node,               /**< replacement edge */
+   INSERT*               insertData          /**< insertion data */
+)
+{
+   int* const solDegreeNonTerm = insertData->solDegreeNonTerm;
+
+   assert(node >= 0);
+   assert(insertData->solNodes[node]);
+
+   if( Is_gterm(graph->term[node]) )
+   {
+      assert(solDegreeNonTerm[node] == UNKNOWN);
+   }
+   else
+   {
+      solDegreeNonTerm[node] += 1;
+   }
+}
+
 /** subroutine for insertion heuristic */
 static
 void insertionInit(
@@ -2295,54 +2345,46 @@ void insertionInit2(
    SCIPrandomPermuteIntArray(heurdata->randnumgen, vertices, 0, nnodes);
 }
 
-
-/** reduces solution degree */
-static inline
-void insertionDecrementSolDegree(
+/** subroutine for insertion heuristic: prepare insertion of new vertex */
+static
+void insertionInitInsert(
+   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   int                   node,               /**< replacement edge */
-   INSERT*               insertData          /**< insertion data */
-)
+   int                   v_insert,           /**< the vertex to add */
+   int                   initialEdge,        /**< first edge from node to tree */
+   LCNODE*               linkcutNodes,       /**< Steiner tree nodes */
+   INSERT*               insertData,         /**< insertion data (in/out) */
+   SCIP_Real*            diff                /**< the initial diff (out) */
+   )
 {
-   int* const solDegreeNonTerm = insertData->solDegreeNonTerm;
+   const int candHeadInitial = graph->head[initialEdge];
+   const int stp_type = graph->stp_type;
+   const SCIP_Bool mw = (stp_type == STP_MWCSP || stp_type == STP_RMWCSP);
+   LCNODE* v_lc = &linkcutNodes[v_insert];
 
-   assert(node >= 0);
-   assert(insertData->solNodes[node]);
+   assert(graph->tail[initialEdge] == v_insert);
 
-   if( Is_gterm(graph->term[node]) )
+   SCIPlinkcuttreeLink(v_lc, &linkcutNodes[candHeadInitial], initialEdge);
+
+   if( mw )
    {
-      assert(solDegreeNonTerm[node] == UNKNOWN);
+      assert(!SCIPisPositive(scip, graph->prize[v_insert]));
+      *diff = -graph->prize[v_insert];
    }
    else
    {
-      solDegreeNonTerm[node] -= 1;
+      const SCIP_Bool pc = graph_pc_isPc(graph);
 
-      assert(solDegreeNonTerm[node] >= 0);
+      *diff = graph->cost[initialEdge];
+
+      if( pc && Is_pterm(graph->term[v_insert]) )
+         *diff -= graph->prize[v_insert];
    }
-}
 
-
-/** increases solution degree */
-static inline
-void insertionIncrementSolDegree(
-   const GRAPH*          graph,              /**< graph data structure */
-   int                   node,               /**< replacement edge */
-   INSERT*               insertData          /**< insertion data */
-)
-{
-   int* const solDegreeNonTerm = insertData->solDegreeNonTerm;
-
-   assert(node >= 0);
-   assert(insertData->solNodes[node]);
-
-   if( Is_gterm(graph->term[node]) )
-   {
-      assert(solDegreeNonTerm[node] == UNKNOWN);
-   }
-   else
-   {
-      solDegreeNonTerm[node] += 1;
-   }
+   insertionIncrementSolDegree(graph, candHeadInitial, insertData);
+   insertData->nInsertions = 0;
+   insertData->insertionVertex = v_insert;
+   insertData->solNodes[v_insert] = TRUE;
 }
 
 
@@ -2476,6 +2518,7 @@ void insertionRestoreTree(
    const int* const graphTail = graph->tail;
    const int* const graphHead = graph->head;
    SCIP_Bool* const nodeIsBlocked = insertData->nodeIsBlocked;
+   const int v = insertData->insertionVertex;
 
    SCIPlinkcuttreeEvert(v_lc);
 
@@ -2514,6 +2557,11 @@ void insertionRestoreTree(
    SCIPlinkcuttreeEvert(v_lc);
    SCIPlinkcuttreeCut(&linkcutNodes[graphHead[insertCands[0]]]);
    insertionDecrementSolDegree(graph, graphHead[insertCands[0]], insertData);
+
+   insertData->solDegreeNonTerm[v] = 0;
+
+   assert(insertData->solNodes[v]);
+   insertData->solNodes[v] = FALSE;
 
    for( int k = 0; k < graph->knots; k++ )
       assert(!nodeIsBlocked[k]);
@@ -2913,7 +2961,6 @@ SCIP_RETCODE localVertexInsertion2(
    const int nedges = graph->edges;
    const int root = graph->source;
    const int stp_type = graph->stp_type;
-   const SCIP_Bool pc = graph_pc_isPc(graph);
    const SCIP_Bool mw = (stp_type == STP_MWCSP || stp_type == STP_RMWCSP);
    const SCIP_Bool mwpc = graph_pc_isPcMw(graph);
    SCIP_Bool solimproved = TRUE;
@@ -2951,7 +2998,7 @@ SCIP_RETCODE localVertexInsertion2(
    {
       INSERT insertData = { .chainStarts = chainStarts, .chainEnds = chainEnds, .solDegreeNonTerm = solDegree,
          .solNodes = solNodes, .nodeIsBlocked = nodeIsBlocked, .cutedgesStart = cutedgesStart, .cutedgesEnd = cutedgesEnd,
-         .addedEdges = addedEdges, .blockedList = blockedList, .blockedListSize = 0, .nInsertions = 0 };
+         .addedEdges = addedEdges, .blockedList = blockedList, .blockedListSize = 0, .nInsertions = 0, .insertionVertex = -1 };
 
       solimproved = FALSE;
 
@@ -2959,7 +3006,6 @@ SCIP_RETCODE localVertexInsertion2(
       {
          LCNODE* v_lc;
          SCIP_Real diff;
-         int candHeadInitial;
          int ninsertcands = 0;
          const int v = vertices[i];
 
@@ -2979,25 +3025,7 @@ SCIP_RETCODE localVertexInsertion2(
          /* the node to insert */
          v_lc = &linkcutNodes[v];
 
-         candHeadInitial = graph->head[insertCands[0]];
-
-         SCIPlinkcuttreeLink(v_lc, &linkcutNodes[candHeadInitial], insertCands[0]);
-
-         if( mw )
-         {
-            assert(!SCIPisPositive(scip, graph->prize[v]));
-            diff = -graph->prize[v];
-         }
-         else
-         {
-            diff = graph->cost[insertCands[0]];
-
-            if( pc && Is_pterm(graph->term[v]) )
-               diff -= graph->prize[v];
-         }
-
-         insertionIncrementSolDegree(graph, candHeadInitial, &insertData);
-         insertData.nInsertions = 0;
+        insertionInitInsert(scip, graph, v, insertCands[0], linkcutNodes, &insertData, &diff);
 
          /* try to add additional edges between new vertex and tree */
          for( int k = 1; k < ninsertcands; k++ )
@@ -3018,6 +3046,7 @@ SCIP_RETCODE localVertexInsertion2(
             SCIPlinkcuttreeEvert(v_lc);
 
             headCurr_lc = &linkcutNodes[insertHeadCurr];
+
 
             if( mw )
             {
@@ -3049,8 +3078,8 @@ SCIP_RETCODE localVertexInsertion2(
          {
             SCIPlinkcuttreeEvert(&linkcutNodes[root]);
             solimproved = TRUE;
-            solNodes[v] = TRUE;
             newnverts++;
+            assert(solNodes[v]);
 
             insertionFinalizeReplacement(graph, v, linkcutNodes, &insertData);
 
