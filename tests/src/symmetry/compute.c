@@ -130,6 +130,9 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    /* turn on checking of symmetries */
    SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
 
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
+
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
 
@@ -270,6 +273,9 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
+
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
 
@@ -404,6 +410,9 @@ Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simpl
    /* turn on checking of symmetries */
    SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
 
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
+
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
 
@@ -495,6 +504,9 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
 
    /* turn on checking of symmetries */
    SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
+
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
 
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
@@ -618,6 +630,9 @@ Test(test_compute_symmetry, basic5, .description = "compute symmetry for a simpl
 
    /* turn on checking of symmetries */
    SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
+
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
 
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
@@ -770,6 +785,9 @@ Test(test_compute_symmetry, basic6, .description = "compute symmetry for a simpl
 
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
 
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );

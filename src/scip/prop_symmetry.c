@@ -2693,6 +2693,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
    SCIP_PROPDATA*        propdata            /**< pointer to data of symmetry propagator */
    )
 {
+   int* genorder;
    int i;
 
    assert(scip != NULL);
@@ -2711,13 +2712,15 @@ SCIP_RETCODE detectAndHandleSubgroups(
    assert(propdata->npermvars > 0);
    assert(propdata->permvars != NULL);
 
+   /* create array for permuation order */
+   SCIP_CALL( SCIPallocBufferArray(scip, &genorder, propdata->nperms) );
+
    /* iterate over components */
    for( i = 0; i < propdata->ncomponents; ++i )
    {
       int* graphcomponents;
       int* graphcompbegins;
       int* compcolorbegins;
-      int* genorder;
       int ngraphcomponents;
       int ncompcolors;
       int ntwocycleperms;
@@ -2731,22 +2734,17 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       npermsincomp = propdata->componentbegins[i + 1] - propdata->componentbegins[i];
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &genorder, npermsincomp) );
-
+      /* set the first npermsincomp entries of genorder; the others are not used for this component */
       for( j = 0; j < npermsincomp; ++j )
          genorder[j] = j;
 
       SCIP_CALL( chooseOrderOfGenerators(scip, propdata, i, &genorder, &ntwocycleperms) );
 
-      assert(genorder != NULL);
       assert(ntwocycleperms >= 0);
       assert(ntwocycleperms <= npermsincomp);
 
       if( ntwocycleperms < 2 )
-      {
-         SCIPfreeBufferArray(scip, &genorder);
          continue;
-      }
 
       SCIP_CALL( buildSubgroupGraph(scip, propdata, genorder, ntwocycleperms, i, &graphcomponents,
             &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &nusedperms) );
@@ -2765,7 +2763,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
          SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
          SCIPfreeBlockMemoryArray(scip, &graphcomponents, propdata->npermvars);
-         SCIPfreeBufferArray(scip, &genorder);
 
          continue;
       }
@@ -2887,8 +2884,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIPfreeBlockMemoryArrayNull(scip, &compcolorbegins, ncompcolors + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcompbegins, ngraphcomponents + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcomponents, propdata->npermvars);
-      SCIPfreeBufferArray(scip, &genorder);
    }
+
+   SCIPfreeBufferArray(scip, &genorder);
 
    return SCIP_OKAY;
 }
