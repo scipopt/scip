@@ -2240,7 +2240,7 @@ void insertionDecrementSolDegree(
    {
       solDegreeNonTerm[node] -= 1;
 
-      assert(solDegreeNonTerm[node] >= 0 || node == insertData->insertionVertex);
+      assert(solDegreeNonTerm[node] >= 0);
    }
 }
 
@@ -2381,10 +2381,18 @@ void insertionInitInsert(
          *diff -= graph->prize[v_insert];
    }
 
-   insertionIncrementSolDegree(graph, candHeadInitial, insertData);
+   assert(insertData->solDegreeNonTerm[v_insert] == 0
+      || (insertData->solDegreeNonTerm[v_insert] == UNKNOWN && graph_pc_isPcMw(graph)));
+   assert(!insertData->nodeIsBlocked[v_insert]);
+
+
+
    insertData->nInsertions = 0;
    insertData->insertionVertex = v_insert;
    insertData->solNodes[v_insert] = TRUE;
+   insertData->nodeIsBlocked[v_insert] = TRUE;
+   insertionIncrementSolDegree(graph, v_insert, insertData);
+   insertionIncrementSolDegree(graph, candHeadInitial, insertData);
 }
 
 
@@ -2428,16 +2436,9 @@ void insertionFinalizeReplacement(
       SCIPlinkcuttreeInit(&linkcutNodes[node]);
    }
 
-   if( solDegreeNonTerm[v_insert] != UNKNOWN )
-   {
-      assert(0 == solDegreeNonTerm[v_insert]);
 
-      solDegreeNonTerm[v_insert] = insertData->nInsertions + 1;
-   }
-   else
-   {
-      assert(graph_pc_isPcMw(graph));
-   }
+   assert(nodeIsBlocked[v_insert]);
+   nodeIsBlocked[v_insert] = FALSE;
 
    for( int k = 0; k < graph->knots; k++ )
       assert(!nodeIsBlocked[k]);
@@ -2466,6 +2467,9 @@ void insertionResetBlockedNodes(
 
       nodeIsBlocked[node] = FALSE;
    }
+
+   assert(nodeIsBlocked[insertData->insertionVertex]);
+   nodeIsBlocked[insertData->insertionVertex] = FALSE;
 }
 
 
@@ -2597,9 +2601,11 @@ void insertionReplaceChain(
    int* const addedEdges = insertData->addedEdges;
    const int nInsertions = insertData->nInsertions;
    const int newhead = graph->head[newedge];
+   const int v_insert = insertData->insertionVertex;
 
    assert(v_lc && headCurr_lc && chainfirst && chainlast);
    assert(chainlast->edge >= 0);
+   assert(graph->tail[newedge] == v_insert);
 
    cutedgesStart[nInsertions] = chainfirst->edge;
    cutedgesEnd[nInsertions] = chainlast->edge;
@@ -2607,6 +2613,7 @@ void insertionReplaceChain(
    chainEnds[nInsertions] = chainlast;
    addedEdges[nInsertions] = newedge;
 
+   insertionIncrementSolDegree(graph, v_insert, insertData);
    insertionIncrementSolDegree(graph, newhead, insertData);
 
    /* decrease the degree of the chain border vertices */
