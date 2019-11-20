@@ -385,6 +385,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
    *vertex = getHighSolDegVertex(nodestatenew, soledges, graph);
 
+   SCIPfreeBufferArrayNull(scip, &term2edgeorg);
    SCIPfreeBufferArrayNull(scip, &prizeorg);
    SCIPfreeBufferArray(scip, &termorg);
    SCIPfreeBufferArray(scip, &nodestatenew);
