@@ -219,8 +219,7 @@ struct SCIP_HeurData
 struct SolveLimits
 {
    SCIP_Longint          nodelimit;          /**< maximum number of solving nodes for the sub-SCIP */
-   SCIP_Real             memorylimit;        /**< memory limit for the sub-SCIP */
-   SCIP_Real             timelimit;          /**< time limit for the sub-SCIP */
+   SCIP_Longint          stallnodelimit;     /**< limit on the number of stall nodes (nodes after last incumbent) */
 };
 typedef struct SolveLimits SOLVELIMITS;
 
@@ -1934,16 +1933,22 @@ SCIP_RETCODE determineVariableFixings(
 /** set sub-SCIP solving limits */
 static
 SCIP_RETCODE setLimits(
+   SCIP*                 sourcescip,         /**< SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure */
    SOLVELIMITS*          solvelimits         /**< pointer to solving limits data structure */
    )
 {
+   assert(sourcescip != NULL);
    assert(subscip != NULL);
    assert(solvelimits != NULL);
 
+   SCIP_CALL( SCIPcopyLimits(sourcescip, subscip) );
+
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", solvelimits->nodelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", solvelimits->timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", solvelimits->memorylimit) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", solvelimits->stallnodelimit) );
+
+   /* safe long running times caused by lack of dual convergence */
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", 0.01) );
 
    return SCIP_OKAY;
 }
@@ -2043,7 +2048,7 @@ SCIP_RETCODE setupSubScip(
    SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
 
    /* set solve limits for sub-SCIP */
-   SCIP_CALL( setLimits(subscip, solvelimits) );
+   SCIP_CALL( setLimits(scip, subscip, solvelimits) );
 
    return SCIP_OKAY;
 }
@@ -2059,36 +2064,30 @@ SCIP_RETCODE determineLimits(
 {
    SCIP_HEURDATA* heurdata;
    SCIP_Real maxnnodesr;
+   SCIP_Real confidence;
    SCIP_Longint maxnnodes;
    assert(scip != NULL);
    assert(heur != NULL);
    assert(solvelimits != NULL);
    assert(runagain != NULL);
 
+   SCIP_Bool copylimits;
+
    heurdata = SCIPheurGetData(heur);
 
    /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &solvelimits->timelimit) );
-   if( !SCIPisInfinity(scip, solvelimits->timelimit) )
-      solvelimits->timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &solvelimits->memorylimit) );
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &copylimits) );
 
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, solvelimits->memorylimit) )
-   {
-      solvelimits->memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      solvelimits->memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( solvelimits->timelimit <= 0.0 || solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+   if( ! copylimits )
       *runagain = FALSE;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    maxnnodesr = heurdata->nodesquot * SCIPgetNNodes(scip);
 
    /* reward gins if it succeeded often, count the setup costs for the sub-MIP as 100 nodes */
-   maxnnodesr *= 1.0 + 2.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(heurdata->nsubmips + 1.0);
+   confidence = (SCIP_Real)SCIPheurGetNCalls(heur);
+   confidence = confidence / (confidence + 5.0);
+   maxnnodesr *= 1.0 + confidence * 2.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(heurdata->nsubmips + 1.0);
    maxnnodes = (SCIP_Longint)(maxnnodesr - 100.0 * heurdata->nsubmips);
    maxnnodes += heurdata->nodesofs;
 
@@ -2099,6 +2098,8 @@ SCIP_RETCODE determineLimits(
    /* check whether we have enough nodes left to call subproblem solving */
    if( solvelimits->nodelimit < heurdata->minnodes )
       *runagain = FALSE;
+
+   solvelimits->stallnodelimit = heurdata->minnodes;
 
    return SCIP_OKAY;
 }
