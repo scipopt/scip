@@ -19,15 +19,19 @@
  * @author Dieter Weninger
  * @author Patrick Gemander
  *
- * This presolver does bound strengthening on continuous variables
- * for getting bounds on the dual variables y. The bounds on the dual
- * variables are then used to derive variable fixings or side changes.
+ * This presolver does bound strengthening on continuous variables (columns) for getting bounds on dual variables y.
+ * The bounds of the dual variables are then used to fix primal variables or change the side of constraints.
+ * For ranged rows one needs to decide which side (rhs or lhs) determines the equality.
  *
  * We distinguish two cases concerning complementary slackness:
  * i)  reduced cost fixing:       c_j - sup_y(y^T A_{.j}) > 0 => x_j = l_j
  *                                c_j - inf_y(y^T A_{.j}) < 0 => x_j = u_j
  * ii) positive dual lower bound: y_i > 0 =>  A_{i.}x = b_i
  *
+ * Further information on this presolving approach are given in
+ * Achterberg et al. "Presolve reductions in mixed integer programming"
+ * and for a two-column extension in
+ * Gemander et al. "Two-row and two-column mixed-integer presolve using hasing-based pairing methods".
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
