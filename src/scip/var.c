@@ -2680,6 +2680,8 @@ SCIP_RETCODE varFree(
    assert(SCIPvarGetStatus(*var) != SCIP_VARSTATUS_COLUMN || &(*var)->data.col->var != var);
    assert((*var)->nuses == 0);
    assert((*var)->probindex == -1);
+   assert((*var)->nlocksup[SCIP_LOCKTYPE_MODEL] == 0);
+   assert((*var)->nlocksdown[SCIP_LOCKTYPE_MODEL] == 0);
 
    SCIPsetDebugMsg(set, "free variable <%s> with status=%d\n", (*var)->name, SCIPvarGetStatus(*var));
 
