@@ -2205,7 +2205,6 @@ RESTARTPOLICY getRestartPolicy(
          return RESTARTPOLICY_ESTIMATION;
       default:
          SCIPerrorMessage("Unknown restart policy %c\n", eventhdlrdata->restartpolicyparam);
-         SCIPABORT();
          break;
    }
 
@@ -2299,21 +2298,25 @@ SCIP_Bool shouldApplyRestart(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
+   SCIP_Bool applyrestart = FALSE;
    switch (getRestartPolicy(eventhdlrdata)) {
       case RESTARTPOLICY_ALWAYS:
-         return TRUE;
+         applyrestart = TRUE;
+         break;
       case RESTARTPOLICY_NEVER:
-         return FALSE;
+         applyrestart = FALSE;
+         break;
       case RESTARTPOLICY_COMPLETION:
-         return shouldApplyRestartCompletion(scip, eventhdlrdata);
+         applyrestart = shouldApplyRestartCompletion(scip, eventhdlrdata);
          break;
       case RESTARTPOLICY_ESTIMATION:
-         return shouldApplyRestartEstimation(scip, eventhdlrdata);
+         applyrestart = shouldApplyRestartEstimation(scip, eventhdlrdata);
+         break;
       default:
          break;
    }
 
-   return FALSE;
+   return applyrestart;
 }
 
 /** update all time series */
@@ -2611,7 +2614,9 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       if( eventhdlrdata->restarthitcounter >= eventhdlrdata->hitcounterlim )
       {
          /* safe that we triggered a restart at this run */
-         eventhdlrdata->nrestartsperformed += (SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun);
+         if( SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
+            eventhdlrdata->nrestartsperformed++;
+
          eventhdlrdata->lastrestartrun = SCIPgetNRuns(scip);
 
          SCIP_CALL( SCIPrestartSolve(scip) );
@@ -2779,7 +2784,6 @@ SCIP_Real SCIPgetTreesizeEstimation(
       case ESTIMMETHOD_COMPL:
          SCIP_CALL_ABORT( getEstimCompletion(scip, eventhdlrdata, &estim) );
          return estim;
-         break;
 
       case ESTIMMETHOD_ENSMBL:
          return getEnsembleEstimation(eventhdlrdata);
