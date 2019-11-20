@@ -633,12 +633,14 @@ SCIP_RETCODE aggregation(
 
    if( weight1 > 0 )
    {
-      if(SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx1])) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])))
+      if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx1])) ||
+            SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])) )
          newlb = -SCIPinfinity(scip);
       else
          newlb = weight1*SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetLbGlobal(vars[colidx2]);
 
-      if(SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx1])) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx2])))
+      if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx1])) ||
+            SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx2])) )
          newub = SCIPinfinity(scip);
       else
          newub = weight1*SCIPvarGetUbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
@@ -646,24 +648,23 @@ SCIP_RETCODE aggregation(
 
    else
    {
-      if(SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx1])) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])))
+      if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx1])) ||
+            SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])) )
          newlb = -SCIPinfinity(scip);
       else
          newlb = weight1*SCIPvarGetUbGlobal(vars[colidx1]) + SCIPvarGetLbGlobal(vars[colidx2]);
 
-      if(SCIPisInfinity(scip, SCIPvarGetLbGlobal(vars[colidx1])) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx2])))
+      if( SCIPisInfinity(scip, SCIPvarGetLbGlobal(vars[colidx1])) ||
+            SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx2])) )
          newub = SCIPinfinity(scip);
       else
          newub = weight1*SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
    }
+
    if( SCIPvarIsIntegral(aggregatedvar) )
-   {
       newvartype = (SCIPvarGetType(aggregatedvar) == SCIP_VARTYPE_IMPLINT) ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_INTEGER;
-   }
    else
-   {
       newvartype = SCIP_VARTYPE_CONTINUOUS;
-   }
 
    lhs = SCIPvarGetLbGlobal(vars[colidx2]);
    rhs = SCIPvarGetUbGlobal(vars[colidx2]);
@@ -681,6 +682,7 @@ SCIP_RETCODE aggregation(
    coefs[1] = 1;
 
    SCIP_CALL( SCIPmultiaggregateVar(scip, aggregatedvar, 2, tmpvars, coefs, constant, &infeasible, &aggregated) );
+
    assert(!infeasible);
    assert(aggregated);
 
@@ -693,6 +695,7 @@ SCIP_RETCODE aggregation(
       SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, newconsname, 2, tmpvars, coefs,
                lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, newcons) );
+
       SCIPdebugPrintCons(scip, newcons, NULL);
 
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
