@@ -371,8 +371,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPcleanupConssLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< linear constraint handler */
-   SCIP_CONS**           conss,              /**< linear constraints to clean up */
-   int                   nconss,             /**< number of linear constraints to clean up */
    SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
    );
 

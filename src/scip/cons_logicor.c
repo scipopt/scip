@@ -5398,15 +5398,15 @@ SCIP_ROW* SCIPgetRowLogicor(
 SCIP_RETCODE SCIPcleanupConssLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< logicor constraint handler */
-   SCIP_CONS**           conss,              /**< array of logicor constraints to clean up */
-   int                   nconss,             /**< number of logicor constraints to clean up */
    int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
    int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
    int*                  ndelcons            /**< pointer to count number of deleted (logicor) constraints */
    )
 {
-   int i;
    SCIP_EVENTHDLR* eventhdlr;
+   SCIP_CONS** conss;
+   int nconss;
+   int i;
 
    assert(strcmp(SCIPconshdlrGetName(conshdlr),CONSHDLR_NAME) == 0);
    assert(naddcons != NULL);
@@ -5414,6 +5414,8 @@ SCIP_RETCODE SCIPcleanupConssLogicor(
    assert(nchgcoefs != NULL);
 
    eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+   conss = SCIPconshdlrGetConss(conshdlr);
 
    /* loop backwards in case the given array is the constraint handlers constraint array
     * since then deleted constraints do not need to be handled

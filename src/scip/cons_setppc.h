@@ -311,8 +311,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPcleanupConssSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< setppc constraint handler */
-   SCIP_CONS**           conss,              /**< array of setppc constraints to clean up */
-   int                   nconss,             /**< number of setppc constraints to clean up */
    int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
    int*                  ndelcons,           /**< pointer to count number of deleted (setppc) constraints */
    int*                  nfixedvars,         /**< pointer to count number of fixed variables */

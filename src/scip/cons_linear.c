@@ -18740,17 +18740,19 @@ SCIP_RETCODE SCIPupgradeConsLinear(
 SCIP_RETCODE SCIPcleanupConssLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< linear constraint handler */
-   SCIP_CONS**           conss,              /**< linear constraints to clean up */
-   int                   nconss,             /**< number of linear constraints to clean up */
    SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
    )
 {
+   SCIP_CONS** conss;
+   int nconss;
    int i;
 
    assert(strcmp(SCIPconshdlrGetName(conshdlr),CONSHDLR_NAME) == 0);
    assert(infeasible != NULL);
 
    *infeasible = FALSE;
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+   conss = SCIPconshdlrGetConss(conshdlr);
 
    for( i = 0; i < nconss; ++i )
    {

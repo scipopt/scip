@@ -167,8 +167,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPcleanupConssLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< logicor constraint handler */
-   SCIP_CONS**           conss,              /**< array of logicor constraints to clean up */
-   int                   nconss,             /**< number of logicor constraints to clean up */
    int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
    int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
    int*                  ndelcons            /**< pointer to count number of deleted (logicor) constraints */

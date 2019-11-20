@@ -189,8 +189,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPcleanupConssVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< varbound constraint handler */
-   SCIP_CONS**           conss,              /**< array of varbound constraints to clean up */
-   int                   nconss,             /**< number of varbound constraints to clean up */
    int*                  nchgbds,            /**< pointer to count number of bound changes */
    int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
    int*                  ndelcons,           /**< pointer to count number of deleted (varbound) constraints */

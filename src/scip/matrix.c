@@ -555,7 +555,7 @@ SCIP_RETCODE SCIPmatrixCreate(
       conshdlr = SCIPfindConshdlr(scip, "varbound");
       if( conshdlr != NULL )
       {
-         SCIP_CALL( SCIPcleanupConssVarbound(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), nchgbds, naddcons, ndelcons, infeasible) );
+         SCIP_CALL( SCIPcleanupConssVarbound(scip, conshdlr, nchgbds, naddcons, ndelcons, infeasible) );
          if( *infeasible )
             return SCIP_OKAY;
       }
@@ -563,7 +563,7 @@ SCIP_RETCODE SCIPmatrixCreate(
       conshdlr = SCIPfindConshdlr(scip, "setppc");
       if( conshdlr != NULL )
       {
-         SCIP_CALL( SCIPcleanupConssSetppc(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), naddcons, ndelcons, nfixedvars, infeasible) );
+         SCIP_CALL( SCIPcleanupConssSetppc(scip, conshdlr, naddcons, ndelcons, nfixedvars, infeasible) );
          if( *infeasible )
             return SCIP_OKAY;
       }
@@ -571,13 +571,13 @@ SCIP_RETCODE SCIPmatrixCreate(
       conshdlr = SCIPfindConshdlr(scip, "logicor");
       if( conshdlr != NULL )
       {
-         SCIP_CALL( SCIPcleanupConssLogicor(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), nchgcoefs, naddcons, ndelcons) );
+         SCIP_CALL( SCIPcleanupConssLogicor(scip, conshdlr, nchgcoefs, naddcons, ndelcons) );
       }
 
       conshdlr = SCIPfindConshdlr(scip, "knapsack");
       if( conshdlr != NULL )
       {
-         SCIP_CALL( SCIPcleanupConssKnapsack(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), infeasible) );
+         SCIP_CALL( SCIPcleanupConssKnapsack(scip, conshdlr, infeasible) );
          if( *infeasible )
             return SCIP_OKAY;
       }
@@ -585,7 +585,7 @@ SCIP_RETCODE SCIPmatrixCreate(
       conshdlr = SCIPfindConshdlr(scip, "linear");
       if( conshdlr != NULL )
       {
-         SCIP_CALL( SCIPcleanupConssLinear(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), infeasible) );
+         SCIP_CALL( SCIPcleanupConssLinear(scip, conshdlr, infeasible) );
          if( *infeasible )
             return SCIP_OKAY;
       }

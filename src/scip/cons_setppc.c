@@ -9418,14 +9418,14 @@ int SCIPgetNFixedzerosSetppc(
 SCIP_RETCODE SCIPcleanupConssSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< setppc constraint handler */
-   SCIP_CONS**           conss,              /**< array of setppc constraints to clean up */
-   int                   nconss,             /**< number of setppc constraints to clean up */
    int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
    int*                  ndelcons,           /**< pointer to count number of deleted (setppc) constraints */
    int*                  nfixedvars,         /**< pointer to count number of fixed variables */
    SCIP_Bool*            infeasible          /**< pointer to return whether problem was detected to be infeasible */
    )
 {
+   SCIP_CONS** conss;
+   int nconss;
    int i;
 
    assert(strcmp(SCIPconshdlrGetName(conshdlr),CONSHDLR_NAME) == 0);
@@ -9434,6 +9434,9 @@ SCIP_RETCODE SCIPcleanupConssSetppc(
    assert(nfixedvars != NULL);
    assert(infeasible != NULL);
    *infeasible = FALSE;
+
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+   conss = SCIPconshdlrGetConss(conshdlr);
 
    /* loop backwards in case the given array is the constraint handlers constraint array
     * since then deleted constraints do not need to be handled
