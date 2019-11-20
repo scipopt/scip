@@ -97,6 +97,9 @@ Features
 
 - Linking variables in the linking constraint handler (cons_linking.{ch}) can now be integer or continuous. The coefficients of the binary variables are therefore now stored as SCIP_Real.
 
+- To save memory, it is now possible to remove all variables from the internal symmetry data structures that are
+  not affected by any symmetry.
+
 Performance improvements
 ------------------------
 
@@ -332,6 +335,8 @@ Interface changes
   - new parameter "propagating/symmetry/performpresolving"
   - new parameter "propagating/symmetry/recomputerestart"
   - new parameter "constraints/symresack/checkmonotonicity"
+  - new parameter "propagating/symmetry/compresssymmetries"
+  - new parameter "propagating/symmetry/compressthreshold"
 
 - new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
 
