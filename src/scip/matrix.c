@@ -563,7 +563,7 @@ SCIP_RETCODE SCIPmatrixCreate(
       conshdlr = SCIPfindConshdlr(scip, "setppc");
       if( conshdlr != NULL )
       {
-         SCIP_CALL( SCIPcleanupConssSetppc(scip, conshdlr, naddcons, ndelcons, nfixedvars, infeasible) );
+         SCIP_CALL( SCIPcleanupConssSetppc(scip, conshdlr, naddcons, ndelcons, nfixedvars, nchgcoefs, infeasible) );
          if( *infeasible )
             return SCIP_OKAY;
       }

@@ -9421,6 +9421,7 @@ SCIP_RETCODE SCIPcleanupConssSetppc(
    int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
    int*                  ndelcons,           /**< pointer to count number of deleted (setppc) constraints */
    int*                  nfixedvars,         /**< pointer to count number of fixed variables */
+   int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
    SCIP_Bool*            infeasible          /**< pointer to return whether problem was detected to be infeasible */
    )
 {
@@ -9435,7 +9436,7 @@ SCIP_RETCODE SCIPcleanupConssSetppc(
    assert(infeasible != NULL);
    *infeasible = FALSE;
 
-   nconss = SCIPconshdlrGetNConss(conshdlr);
+   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
    conss = SCIPconshdlrGetConss(conshdlr);
 
    /* loop backwards in case the given array is the constraint handlers constraint array
@@ -9443,8 +9444,20 @@ SCIP_RETCODE SCIPcleanupConssSetppc(
     */
    for( i = nconss - 1; i > 0; --i )
    {
-      assert(SCIPconsGetHdlr(conss[i]) == conshdlr);
-      SCIP_CALL( applyFixings(scip, conss[i], naddcons, ndelcons, nfixedvars, infeasible) );
+      SCIP_CONS* cons = conss[i];
+
+      assert(SCIPconsGetHdlr(cons) == conshdlr);
+
+      SCIP_CALL( applyFixings(scip, cons, naddcons, ndelcons, nfixedvars, infeasible) );
+
+      if( *infeasible )
+         break;
+
+      if( SCIPconsIsDeleted(cons) )
+         continue;
+
+      /* merging unmerged constraints */
+      SCIP_CALL( mergeMultiples(scip, cons, nfixedvars, ndelcons, nchgcoefs, infeasible) );
 
       if( *infeasible )
          break;

@@ -13731,7 +13731,7 @@ SCIP_RETCODE SCIPcleanupConssKnapsack(
    assert(strcmp(SCIPconshdlrGetName(conshdlr),CONSHDLR_NAME) == 0);
    assert(infeasible != NULL);
 
-   nconss = SCIPconshdlrGetNConss(conshdlr);
+   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
    conss = SCIPconshdlrGetConss(conshdlr);
    *infeasible = FALSE;
 

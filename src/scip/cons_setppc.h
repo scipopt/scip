@@ -314,6 +314,7 @@ SCIP_RETCODE SCIPcleanupConssSetppc(
    int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
    int*                  ndelcons,           /**< pointer to count number of deleted (setppc) constraints */
    int*                  nfixedvars,         /**< pointer to count number of fixed variables */
+   int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
    SCIP_Bool*            infeasible          /**< pointer to return whether problem was detected to be infeasible */
    );
 

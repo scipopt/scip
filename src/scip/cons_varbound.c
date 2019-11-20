@@ -5290,7 +5290,7 @@ SCIP_RETCODE SCIPcleanupConssVarbound(
    *infeasible = FALSE;
 
    eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
-   nconss = SCIPconshdlrGetNConss(conshdlr);
+   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
    conss = SCIPconshdlrGetConss(conshdlr);
 
    /* loop backwards in case the given array is the constraint handlers constraint array

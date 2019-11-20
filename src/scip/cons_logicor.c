@@ -5405,7 +5405,9 @@ SCIP_RETCODE SCIPcleanupConssLogicor(
 {
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_CONS** conss;
+   unsigned char* entries;
    int nconss;
+   int nentries;
    int i;
 
    assert(strcmp(SCIPconshdlrGetName(conshdlr),CONSHDLR_NAME) == 0);
@@ -5414,24 +5416,44 @@ SCIP_RETCODE SCIPcleanupConssLogicor(
    assert(nchgcoefs != NULL);
 
    eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
-   nconss = SCIPconshdlrGetNConss(conshdlr);
+   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
    conss = SCIPconshdlrGetConss(conshdlr);
+
+   nentries = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &entries, nentries) );
 
    /* loop backwards in case the given array is the constraint handlers constraint array
     * since then deleted constraints do not need to be handled
     */
    for( i = nconss - 1; i > 0; --i )
    {
+      SCIP_CONS* cons;
       SCIP_Bool redundant;
-      assert(SCIPconsGetHdlr(conss[i]) == conshdlr);
-      SCIP_CALL( applyFixings(scip, conss[i], eventhdlr, &redundant, nchgcoefs, naddcons, ndelcons) );
+
+      cons = conss[i];
+      redundant = FALSE;
+
+      assert(SCIPconsGetHdlr(cons) == conshdlr);
+
+      SCIP_CALL( applyFixings(scip, cons, eventhdlr, &redundant, nchgcoefs, naddcons, ndelcons) );
+
+      if( SCIPconsIsDeleted(cons) )
+         continue;
+
+      /* merge constraint */
+      if( !redundant )
+      {
+         SCIP_CALL( mergeMultiples(scip, cons, eventhdlr, &entries, &nentries, &redundant, nchgcoefs) );
+      }
 
       if( redundant )
       {
-         SCIP_CALL( SCIPdelCons(scip, conss[i]) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
          ++(*ndelcons);
       }
    }
+
+   SCIPfreeBufferArray(scip, &entries);
 
    return SCIP_OKAY;
 }
