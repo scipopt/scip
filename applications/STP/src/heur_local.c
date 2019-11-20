@@ -3995,6 +3995,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    {
       const SCIP_Real newsolval = graph_sol_getObj(graph->cost, stedge, 0.0, nedges);
       assert(SCIPisLE(scip, newsolval + objdiff, initialobj));
+      SCIPdebugMessage("pcmw extend obj: initial=%f, new=%f \n", initialobj, newsolval);
    }
 #endif
 

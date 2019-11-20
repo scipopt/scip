@@ -1396,6 +1396,118 @@ SCIP_RETCODE sdPcMwTest4(
 }
 
 
+/** extension test */
+static
+SCIP_RETCODE localExtendPc(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int* steinertree;
+   STP_Bool* steinertree_nodes;
+   int nnodes = 9;
+   int nedges = 9;
+   SCIP_Real cost0;
+   SCIP_Real cost1;
+
+   assert(scip);
+
+   SCIP_CALL(graph_init(scip, &graph, nnodes, 2 * nedges, 1));
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+   graph->source = 0;
+
+   /* the solution */
+   graph_edge_add(scip, graph, 0, 1, 2.0, 2.0); // 0,1
+   graph_edge_add(scip, graph, 1, 2, 2.0, 2.0); // 2,3
+   graph_edge_add(scip, graph, 2, 3, 2.0, 2.0);
+   graph_edge_add(scip, graph, 2, 4, 2.0, 2.0);
+
+   /* the right part */
+   graph_edge_add(scip, graph, 4, 5, 1.0, 1.0);
+   graph_edge_add(scip, graph, 5, 6, 1.0, 1.0); // 10,11
+   graph_edge_add(scip, graph, 6, 7, 1.0, 1.0); // 12,13
+
+   /* dummy part */
+   graph_edge_add(scip, graph, 7, 8, 5.0, 5.0); // 16,17
+   graph_edge_add(scip, graph, 8, 1, 5.0, 5.0); // 18,19
+
+   nnodes = graph->knots;
+   nedges = graph->edges;
+
+   graph_pc_initPrizes(scip, graph, nnodes);
+
+   for( int i = 0; i < nnodes; i++ )
+      graph->prize[i] = 0.0;
+
+   graph->prize[0] = 5.0;
+ //  graph->prize[2] = 3.0; // todo
+   graph->prize[3] = 3.0;
+   graph->prize[4] = 3.0;
+   graph->prize[6] = 1.0;
+   graph->prize[7] = 2.5;
+
+   graph->prize[8] = 0.5;
+
+
+   graph_knot_chg(graph, 0, 0);
+  // graph_knot_chg(graph, 2, 0); todo activate again as non-leaf later
+   graph_knot_chg(graph, 3, 0);
+   graph_knot_chg(graph, 4, 0);
+   graph_knot_chg(graph, 6, 0);
+   graph_knot_chg(graph, 7, 0);
+   graph_knot_chg(graph, 8, 0);
+
+
+   SCIP_CALL(graph_pc_2pc(scip, graph));
+
+   nnodes = graph->knots;
+   nedges = graph->edges;
+
+   SCIP_CALL(graph_init_history(scip, graph));
+   SCIP_CALL(graph_path_init(scip, graph));
+
+   graph_mark(graph);
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
+   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree_nodes, nnodes));
+
+   for( int i = 0; i < nedges; i++ )
+      steinertree[i] = UNKNOWN;
+
+   for( int i = 0; i < nnodes; i++ )
+      steinertree_nodes[i] = FALSE;
+
+   steinertree_nodes[0] = TRUE;
+   steinertree_nodes[1] = TRUE;
+   steinertree_nodes[2] = TRUE;
+   steinertree_nodes[3] = TRUE;
+   steinertree_nodes[4] = TRUE;
+
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, steinertree, steinertree_nodes) );
+   assert(graph_sol_valid(scip, graph, steinertree));
+
+   cost0 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
+
+   /* actual test */
+   SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, steinertree, steinertree_nodes) );
+
+   cost1 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
+   if( !SCIPisEQ(scip, cost1 + 0.5, cost0) )
+      return SCIP_ERROR;
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   SCIPfreeBufferArray(scip, &steinertree_nodes);
+   SCIPfreeBufferArray(scip, &steinertree);
+
+   return SCIP_OKAY;
+}
+
+
 /** test key path exchange */
 static
 SCIP_RETCODE localKeyPathExchange(
@@ -2233,7 +2345,12 @@ SCIP_RETCODE localInsertion2(
    cost1 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
 
    if( !SCIPisEQ(scip, cost1 + 1.5, cost0) )
+   {
+      printf("localInsertion2 unit test failed \n");
+      printf("cost1=%f, cost0=%f \n", cost1, cost0);
+
       return SCIP_ERROR;
+   }
 
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
@@ -2284,13 +2401,16 @@ SCIP_RETCODE testAll(
 )
 {
    assert(scip);
-
+   SCIP_CALL( heur_extendPcMwTest(scip) );
    SCIP_CALL( heur_localTest(scip) );
+
+   assert(0);
+
+
    SCIP_CALL( pseudoDel_test(scip) );
    SCIP_CALL( reduce_extTest(scip) );
    SCIP_CALL( dheap_Test(scip) );
    SCIP_CALL( reduce_sdPcMwTest(scip) );
-   SCIP_CALL( heur_extendPcMwOuterTest(scip) );
 
    return SCIP_OKAY;
 }
@@ -2442,79 +2562,11 @@ SCIP_RETCODE dheap_Test(
 }
 
 
-SCIP_RETCODE heur_extendPcMwOuterTest(
+SCIP_RETCODE heur_extendPcMwTest(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   GRAPH* graph;
-   int* stedge;
-   STP_Bool* stvertex;
-   int nnodes = 5;
-   int nedges = 5;
-
-   assert(scip);
-
-   SCIP_CALL(graph_init(scip, &graph, nnodes, 2 * nedges, 1));
-
-   for( int i = 0; i < nnodes; i++ )
-      graph_knot_add(graph, -1);
-
-   graph->source = 0;
-
-   graph_edge_add(scip, graph, 0, 1, 2.0, 2.0);
-   graph_edge_add(scip, graph, 1, 2, 3.0, 3.0);
-   graph_edge_add(scip, graph, 1, 4, 2.0, 2.0);
-   graph_edge_add(scip, graph, 2, 3, 1.0, 1.0);
-   graph_edge_add(scip, graph, 3, 4, 1.0, 1.0);
-
-   SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
-
-   for( int i = 0; i < nnodes; i++ )
-      graph->prize[i] = 0.0;
-
-   graph->prize[0] = 0.1;
-   graph->prize[2] = 3.1;
-   graph->prize[4] = 3.0;
-
-   graph_knot_chg(graph, 4, 0);
-   graph_knot_chg(graph, 2, 0);
-   graph_knot_chg(graph, 0, 0);
-
-   SCIP_CALL(graph_pc_2pc(scip, graph));
-
-   nnodes = graph->knots;
-   nedges = graph->edges;
-
-   SCIP_CALL(graph_init_history(scip, graph));
-   SCIP_CALL(graph_path_init(scip, graph));
-
-   graph_mark(graph);
-
-   SCIP_CALL(SCIPallocBufferArray(scip, &stvertex, nnodes));
-   SCIP_CALL(SCIPallocBufferArray(scip, &stedge, nedges));
-
-   for( int i = 0; i < nedges; i++ )
-      stedge[i] = UNKNOWN;
-
-   for( int i = 0; i < nnodes; i++ )
-      stvertex[i] = FALSE;
-
-   stvertex[0] = TRUE;
-
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, stedge, stvertex) );
-
-   /* actual test */
-   SCIP_CALL( SCIPStpHeurLocalExtendPcMwOut(scip, graph, stedge, stvertex) );
-
-   assert(stvertex[0] && stvertex[1] && stvertex[2] && stvertex[3]);
-
-   /* clean up */
-
-   graph_path_exit(scip, graph);
-   graph_free(scip, &graph, TRUE);
-
-   SCIPfreeBufferArray(scip, &stedge);
-   SCIPfreeBufferArray(scip, &stvertex);
+   SCIP_CALL( localExtendPc(scip) );
 
    return SCIP_OKAY;
 }
