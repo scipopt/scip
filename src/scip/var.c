@@ -3145,6 +3145,12 @@ SCIP_RETCODE SCIPvarAddLocks(
 
          assert(!lockvar->donotmultaggr);
 
+         lockvar->nlocksdown[locktype] += addnlocksdown;
+         lockvar->nlocksup[locktype] += addnlocksup;
+
+         assert(lockvar->nlocksdown[locktype] >= 0);
+         assert(lockvar->nlocksup[locktype] >= 0);
+
          for( v = lockvar->data.multaggr.nvars - 1; v >= 0; --v )
          {
             if( lockvar->data.multaggr.scalars[v] > 0.0 )
@@ -4300,17 +4306,29 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
+   int nlocksup[NLOCKTYPES];
+   int nlocksdown[NLOCKTYPES];
    SCIP_Real multconstant;
    int multvarssize;
    int nmultvars;
    int multrequiredsize;
+   int i;
 
    assert( var != NULL );
    assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR );
    assert(var->scip == set->scip);
+
+   for( i = 0; i < NLOCKTYPES; ++i )
+   {
+      nlocksup[i] = var->nlocksup[i];
+      nlocksdown[i] = var->nlocksdown[i];
+
+      SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, (SCIP_LOCKTYPE) i, -nlocksdown[i], -nlocksup[i]) );
+   }
 
    multconstant = var->data.multaggr.constant;
    nmultvars = var->data.multaggr.nvars;
@@ -4329,7 +4347,7 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    /**@note After the flattening the multi aggregation might resolve to be in fact an aggregation (or even a fixing?).
     * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause troubles. However, one
     * may loose performance hereby, since aggregated variables are easier to handle.
-    * 
+    *
     * Note, that there are two cases where SCIPvarFlattenAggregationGraph() is called: The easier one is that it is
     * called while installing the multi-aggregation. in principle, the described issue could be handled straightforward
     * in this case by aggregating or fixing the variable instead.  The more complicated case is the one, when the
@@ -4343,6 +4361,12 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    var->data.multaggr.constant = multconstant;
    var->data.multaggr.nvars = nmultvars;
    var->data.multaggr.varssize = multvarssize;
+
+   for( i = 0; i < NLOCKTYPES; ++i )
+   {
+      SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, (SCIP_LOCKTYPE) i, nlocksdown[i], nlocksup[i]) );
+   }
+
 
    return SCIP_OKAY;
 }
