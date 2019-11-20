@@ -20,16 +20,10 @@
  * @author Ambros Gleixner
  * @author Weikun Chen
  *
- * TODO: 1. allow to add constraints @done
- *       2. checkholes: @done
- *       3. use implied bounds information @done
- *       4. knapsack constraint (unknown error) @done
- *       5. update locked number control @done
- *       6. currently, it seems impossible to aggregated a binary variable in SCIP
+ * TODO: 1. currently, it seems impossible to aggregated a binary variable in SCIP
  *          even after aggregation, the new variable is binary. This is because
  *          the aggregated variable is marked as multi-aggregated variable but the
  *          SCIPvarCompareActiveAndNegated function assert that this is wrong.
- *       7. update the fillins @done
  *
  * This presolver attempts to cancel non-zero entries of the constraint
  * matrix by adding scaled variables to other variables.
@@ -606,7 +600,7 @@ SCIP_RETCODE aggregation(
    int                   colidx1,            /**< one of the indexes of column to try nonzero cancellation for */
    int                   colidx2,            /**< one of the indexes of column to try nonzero cancellation for */
    SCIP_Bool             isimpliedfree,      /**< is the aggregated variable implied free? */
-   SCIP_Real             weight1            /**< weight variable one in the aggregated expression */
+   SCIP_Real             weight1             /**< weight variable one in the aggregated expression */
       )
 {
    SCIP_VAR* tmpvars[2];
