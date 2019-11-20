@@ -1066,9 +1066,9 @@ SCIP_DECL_PROPEXEC(propExecStp)
 #endif
    }
 
-   if( callreduce && 0  )
+   if( callreduce && !graph_pc_isPc(graph)  )
    {
-      int todo;
+      int todo; // remove && !graph_pc_isPc(graph)
       SCIP_Bool probisinfeas = FALSE;
 
       SCIPdebugMessage("use reduction techniques \n");

@@ -2361,6 +2361,117 @@ SCIP_RETCODE localInsertion2(
 }
 
 
+/** test insertion */
+static
+SCIP_RETCODE localInsertion2pc(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int* steinertree;
+   STP_Bool* steinertree_nodes;
+   int nnodes = 6;
+   int nedges = 7;
+   SCIP_Real cost0;
+   SCIP_Real cost1;
+
+   assert(scip);
+
+   SCIP_CALL(graph_init(scip, &graph, nnodes, 2 * nedges, 1));
+
+   graph->stp_type = STP_SPG;
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, -1);
+
+
+   graph->source = 0;
+
+   graph_edge_add(scip, graph, 0, 1, 2.0, 2.0); // 0,1
+   graph_edge_add(scip, graph, 1, 2, 2.0, 2.0); // 2,3
+   graph_edge_add(scip, graph, 2, 3, 2.0, 2.0);
+   graph_edge_add(scip, graph, 2, 4, 2.0, 2.0);
+
+   graph_edge_add(scip, graph, 5, 0, 1.5, 1.5);
+   graph_edge_add(scip, graph, 5, 3, 1.5, 1.5); // 10,11
+   graph_edge_add(scip, graph, 5, 4, 1.5, 1.5); // 12,13
+
+   nnodes = graph->knots;
+   nedges = graph->edges;
+
+   graph_pc_initPrizes(scip, graph, nnodes);
+
+   for( int i = 0; i < nnodes; i++ )
+      graph->prize[i] = 0.0;
+
+   graph->prize[0] = 5.0;
+   graph->prize[1] = 0.75;
+   graph->prize[2] = 2.1;
+   graph->prize[3] = 4.0;
+   graph->prize[4] = 4.0;
+
+   graph_knot_chg(graph, 0, 0);
+   graph_knot_chg(graph, 1, 0);
+   graph_knot_chg(graph, 2, 0);
+   graph_knot_chg(graph, 3, 0);
+   graph_knot_chg(graph, 4, 0);
+
+   SCIP_CALL(graph_pc_2pc(scip, graph));
+
+   nnodes = graph->knots;
+   nedges = graph->edges;
+
+   SCIP_CALL(graph_init_history(scip, graph));
+   SCIP_CALL(graph_path_init(scip, graph));
+
+   graph_mark(graph);
+
+   nnodes = graph->knots;
+   nedges = graph->edges;
+
+   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree_nodes, nnodes));
+   SCIP_CALL(SCIPallocBufferArray(scip, &steinertree, nedges));
+
+   for( int i = 0; i < nedges; i++ )
+      steinertree[i] = UNKNOWN;
+
+   for( int i = 0; i < nnodes; i++ )
+      steinertree_nodes[i] = FALSE;
+
+   steinertree_nodes[0] = TRUE;
+   steinertree_nodes[1] = TRUE;
+   steinertree_nodes[2] = TRUE;
+   steinertree_nodes[3] = TRUE;
+   steinertree_nodes[4] = TRUE;
+
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, steinertree, steinertree_nodes) );
+
+   cost0 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
+
+   /* actual test */
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
+
+   cost1 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
+
+   if( !SCIPisEQ(scip, cost1 + 0.75, cost0) )
+   {
+      printf("localInsertion2pc unit test failed \n");
+      printf("obj: new=%f, old=%f \n", cost1, cost0);
+
+      return SCIP_ERROR;
+   }
+
+   graph_path_exit(scip, graph);
+   graph_free(scip, &graph, TRUE);
+
+   SCIPfreeBufferArray(scip, &steinertree);
+   SCIPfreeBufferArray(scip, &steinertree_nodes);
+
+
+   return SCIP_OKAY;
+}
+
+
 /** test pseudo ancestors */
 SCIP_RETCODE pseudoAncestors_test(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2577,8 +2688,13 @@ SCIP_RETCODE heur_localTest(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   SCIP_CALL( localInsertion2(scip) );
    SCIP_CALL( localInsertion(scip) );
+   SCIP_CALL( localInsertion2(scip) );
+   SCIP_CALL( localInsertion2pc(scip) );
+
+   assert(0);
+
+
    SCIP_CALL( localKeyPathExchangeMw(scip) );
    SCIP_CALL( localKeyVertexPc2(scip) );
    SCIP_CALL( localKeyVertex(scip) );

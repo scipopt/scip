@@ -2329,6 +2329,8 @@ void insertionInitInsert(
 
    SCIPlinkcuttreeLink(v_lc, &linkcutNodes[candHeadInitial], initialEdge);
 
+   SCIPdebugMessage("try to insert vertex %d \n", v_insert);
+
    if( mw )
    {
       assert(!SCIPisPositive(scip, graph->prize[v_insert]));
@@ -2585,6 +2587,8 @@ void insertionReplaceChain(
    insertionDecrementSolDegree(graph, graph->tail[chainfirst->edge], insertData);
    insertionDecrementSolDegree(graph, graph->head[chainlast->edge], insertData);
 
+   SCIPdebugMessage("remove chain %d->%d \n", graph->tail[chainfirst->edge], graph->head[chainlast->edge]);
+
    insertionBlockChain(graph, chainfirst, chainlast, insertData);
 
    SCIPlinkcuttreeCut(chainfirst);
@@ -2770,6 +2774,8 @@ SCIP_RETCODE localVertexInsertion(
                continue;
             }
 
+            SCIPdebugMessage("insertHeadCurr=%d \n", insertHeadCurr);
+
             SCIPlinkcuttreeEvert(v_lc);
 
             headCurr_lc = &linkcutNodes[insertHeadCurr];
@@ -2792,6 +2798,9 @@ SCIP_RETCODE localVertexInsertion(
                      graph->head, solDegree, nodeIsBlocked, headCurr_lc,
                      (const LCNODE**) &chainfirst, (const LCNODE**) &chainlast);
 
+               SCIPdebugMessage("chainweight=%f edgecost=%f \n", chainweight, edgecosts[insertEdgeCurr]);
+
+               /* note: comparision needs to be strict to avoid (redundant) removal of current edge */
                if( SCIPisGT(scip, chainweight, edgecosts[insertEdgeCurr]) )
                {
                   diff += edgecosts[insertEdgeCurr];
@@ -3641,9 +3650,6 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    const SCIP_Real initialobj = graph_sol_getObj(graph->cost, solEdges, 0.0, graph->edges);
 #endif
 
-   int todo;
-   return SCIP_OKAY;
-
    assert(graph && solEdges);
    assert(graph_valid(scip, graph));
 
@@ -3675,6 +3681,11 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
 
+
+   if( 0 )
+   {
+      int todo;
+
    SCIP_CALL( localKeyVertexHeuristics(scip, graph, solNodes, linkcutNodes, solEdges, &success) );
 
    if( success )
@@ -3688,6 +3699,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
       SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, solEdges, solNodes) );
    }
 
+   }
 #ifndef NDEBUG
    {
       const SCIP_Real newobj = graph_sol_getObj(graph->cost, solEdges, 0.0, graph->edges);
