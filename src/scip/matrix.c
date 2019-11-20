@@ -1436,8 +1436,6 @@ SCIP_RETCODE SCIPmatrixGetParallelCols(
 #undef SCIPmatrixGetRowNMaxActNegInf
 #undef SCIPmatrixGetRowNMaxActPosInf
 #undef SCIPmatrixGetCons
-#undef SCIPmatrixUplockConflict
-#undef SCIPmatrixDownlockConflict
 
 /** get column based start pointer of values */
 SCIP_Real* SCIPmatrixGetColValPtr(
@@ -1752,7 +1750,7 @@ SCIP_Bool SCIPmatrixUplockConflict(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
 
-   return (SCIPvarGetNLocksUpType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) == matrix->nuplocks[col]);
+   return (SCIPvarGetNLocksUpType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) != matrix->nuplocks[col]);
 }
 
 /** get if conflicting downlocks of a specific variable present */
@@ -1764,5 +1762,5 @@ SCIP_Bool SCIPmatrixDownlockConflict(
    assert(matrix != NULL);
    assert(0 <= col && col < matrix->ncols);
 
-   return (SCIPvarGetNLocksDownType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) == matrix->ndownlocks[col]);
+   return (SCIPvarGetNLocksDownType(matrix->vars[col], SCIP_LOCKTYPE_MODEL) != matrix->ndownlocks[col]);
 }
