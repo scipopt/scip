@@ -558,7 +558,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
    SCIPdebugMessage("obj after prune %f \n", graph_sol_getObj(newgraph->cost, newedges, 0.0, newgraph->edges));
 
-   SCIP_CALL( SCIPStpHeurLocalRun(scip, newgraph, newgraph->cost, newedges) );
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, newgraph, newedges) );
 
    SCIPdebugMessage("obj after local %f \n", graph_sol_getObj(newgraph->cost, newedges, 0.0, newgraph->edges));
 
@@ -586,10 +586,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    for( int e = 0; e < nedges; e++ )
       newedges[e] = UNKNOWN;
 
-   if( pcmw )
-      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, g, g->cost, newedges, nodearrchar) );
-   else
-      SCIP_CALL( SCIPStpHeurTMPrune(scip, g, g->cost, 0, newedges, nodearrchar) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, g, g->cost, newedges, nodearrchar) );
 
    assert(graph_sol_valid(scip, g, newedges));
 

@@ -1801,10 +1801,10 @@ void graph_edge_addSubgraph(
    const int newhead = nodemapOrg2sub[orghead];
 
    assert(e >= 0 && e < orggraph->edges);
-   assert(orggraph->extended);
 
    if( graph_pc_isPcMw(orggraph) )
    {
+      assert(orggraph->extended);
       graph_pc_updateSubgraphEdge(orggraph, nodemapOrg2sub, e, subgraph);
    }
 
@@ -2426,10 +2426,7 @@ SCIP_RETCODE graph_sol_getOrg(
       orgsoledge[e] = UNKNOWN;
 
    /* prune solution (in original graph) */
-   if( pcmw )
-      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, orggraph, orggraph->cost, orgsoledge, orgnodearr) );
-   else
-      SCIP_CALL( SCIPStpHeurTMPrune(scip, orggraph, orggraph->cost, 0, orgsoledge, orgnodearr) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, orggraph, orggraph->cost, orgsoledge, orgnodearr) );
 
    SCIPfreeBufferArray(scip, &orgnodearr);
 
@@ -3151,7 +3148,6 @@ SCIP_RETCODE graph_copy_data(
 
    if( graph_pc_isPcMw(g_copy) )
    {
-      const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(g_copy);
       const SCIP_Bool brpcmw = (g_copy->stp_type == STP_BRMWCSP);
 
       assert(g_copy->extended && g_org->extended);
@@ -3180,7 +3176,7 @@ SCIP_RETCODE graph_copy_data(
 
 #ifndef NDEBUG
       for( int k = 0; k < g_copy->knots; k++ )
-         if( Is_term(g_org->term[k]) && (!rpcmw || !graph_pc_knotIsFixedTerm(g_org, k)) )
+         if( Is_term(g_org->term[k]) && (!graph_pc_isRootedPcMw(g_copy) || !graph_pc_knotIsFixedTerm(g_org, k)) )
             assert(g_copy->prize[k] == 0.0);
 #endif
 
@@ -3435,7 +3431,6 @@ SCIP_RETCODE graph_pack(
    const int oldnedges = graph_get_nEdges(graph);
    int nnodes = 0;
    int nedges = 0;
-   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(graph);
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    SCIP_Bool graphHasVanished = FALSE;
 
@@ -3542,7 +3537,7 @@ SCIP_RETCODE graph_pack(
 
    g_new->source = old2newNode[g_old->source];
 
-   assert(!rpcmw || FARAWAY == g_new->prize[g_new->source]);
+   assert(!graph_pc_isRootedPcMw(graph) || FARAWAY == g_new->prize[g_new->source]);
 
    SCIP_CALL( packEdges(scip, old2newNode, g_old, nnodes, g_new) );
 

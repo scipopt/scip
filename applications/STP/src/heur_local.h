@@ -44,7 +44,6 @@ SCIP_RETCODE SCIPStpIncludeHeurLocal(
 SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
-   const SCIP_Real*      cost,               /**< arc cost array */
    int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    );
 
@@ -61,7 +60,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge cost array*/
-   PATH*                 path,               /**< shortest data structure array */
    int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
    STP_Bool*             stvertex            /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
 );

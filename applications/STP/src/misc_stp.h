@@ -31,6 +31,7 @@
 extern "C" {
 #endif
 
+
 /** returns maximum of given SCIP_Real values */
 SCIP_Real misc_stp_maxReal(
    SCIP_Real*            realarr,            /**< array of reals */
@@ -53,12 +54,12 @@ typedef struct Vnoi_List_Node
    struct Vnoi_List_Node *next;
 }VLIST;
 
-/** node */
-typedef struct ST_Node
+/** link-cut_node */
+typedef struct link_cut_node
 {
    int                   edge;               /**< edge to the node       */
-   struct ST_Node        *parent;            /**< pointer to parent node */
-}NODE;
+   struct link_cut_node  *parent;            /**< pointer to parent node */
+} LCNODE;
 
 
 /** a  weighted-quick-union-path-compression union find structure */
@@ -66,25 +67,28 @@ typedef struct UnionFind_Structure
 {
    int*                  parent;             /**< parent[i] stores the parent of i                       */
    int*                  size;               /**< size[i] stores number of nodes in the tree rooted at i */
-   int                   count;              /**< number of components                                   */
-}UF;
+   int                   nComponents;        /**< number of components                                   */
+   int                   nElements;          /**< number of elements                                     */
+} UF;
+
 
 /** integer list node */
 typedef struct Int_List_Node
 {
    int                   index;              /**< int value to store     */
    struct Int_List_Node  *parent;            /**< pointer to parent node */
-}IDX;
+} IDX;
+
 
 /** Pairing heap node */
 typedef struct PHeap_Node
 {
-   int                   element;            /**< int data value        */
-   SCIP_Real             key;                /**< key value        */
    struct PHeap_Node*    child;              /**< pointer to child node */
    struct PHeap_Node*    sibling;            /**< pointer to right sibling */
    struct PHeap_Node*    prev;               /**< pointer to to previous node */
-}PHNODE;
+   SCIP_Real             key;                /**< key value        */
+   int                   element;            /**< integer data value        */
+} PHNODE;
 
 
 /**
@@ -124,42 +128,57 @@ int GNODECmpByDist(
 
 /** inits a node, setting 'parent' and 'edge' to its default values */
 void SCIPlinkcuttreeInit(
-   NODE*                 v                   /**< pointer to node representing the tree */
+   LCNODE*               v                   /**< pointer to node representing the tree */
    );
 
 /** renders w a child of v; v has to be the root of its tree */
 void SCIPlinkcuttreeLink(
-   NODE*                 v,                  /**< pointer to node representing the tree */
-   NODE*                 w,                  /**< pointer to the child */
+   LCNODE*               v,                  /**< pointer to node representing the tree */
+   LCNODE*               w,                  /**< pointer to the child */
    int                   edge                /**< link edge */
    );
 
 /** cut tree at given node */
 void SCIPlinkcuttreeCut(
-   NODE*                 v                   /**< node to cut at */
+   LCNODE*               v                   /**< node to cut at */
    );
 
-/** finds minimum weight chain between node 'start' and distinct root node **/
-SCIP_Real SCIPlinkcuttreeFindMinChain(
+/** finds minimum weight chain between node 'start' and distinct root node (for maximum-weight connected subgraph) **/
+SCIP_Real SCIPlinkcuttreeFindMinChainMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const SCIP_Real*      nodeweight,         /**< node weight array */
    const int*            head,               /**< head of an arc */
    const int*            stdeg,              /**< degree in Steiner tree */
-   const NODE*           start,              /**< the node to start at */
-   NODE**                first,              /**< first node of chain */
-   NODE**                last                /**< last node of chain */
+   const SCIP_Bool*      nodeIsBlocked,      /**< has node been blocked? */
+   const LCNODE*         start,              /**< the node to start at */
+   const LCNODE**        first,              /**< first node of chain */
+   const LCNODE**        last                /**< last node of chain */
+   );
+
+
+/** finds maximum cost chain between node 'start' and distinct root node **/
+SCIP_Real SCIPlinkcuttreeFindMaxChain(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const SCIP_Real*      edgecosts,          /**< edge cost array */
+   const SCIP_Real*      prizes,             /**< node weight array for PC/RPC */
+   const int*            heads,              /**< head of an arc */
+   const int*            nonTermDeg,         /**< degree in Steiner tree, or UNKNOWN if vertex is terminal */
+   const SCIP_Bool*      nodeIsBlocked,      /**< has node been blocked? */
+   const LCNODE*         start,              /**< the node to start at (NOT the root!) */
+   const LCNODE**        first,              /**< first node of chain */
+   const LCNODE**        last                /**< last node of chain */
    );
 
 /** finds the max value between node 'v' and the root of the tree **/
-NODE* SCIPlinkcuttreeFindMax(
+LCNODE* SCIPlinkcuttreeFindMax(
    SCIP*                 scip,               /**< SCIP data structure */
    const SCIP_Real*      cost,               /**< edge cost array */
-   NODE*                 v                   /**< the node */
+   LCNODE*               v                   /**< the node */
    );
 
 /** makes vertex v the root of the link cut tree */
 void SCIPlinkcuttreeEvert(
-   NODE*                 v                   /**< the vertex to become the root */
+   LCNODE*               v                   /**< the vertex to become the root */
    );
 
 
@@ -235,9 +254,16 @@ SCIP_RETCODE SCIPStpunionfindInit(
 /** clears the union-find structure 'uf'*/
 void SCIPStpunionfindClear(
    SCIP*                 scip,               /**< SCIP data structure */
-   UF*                   uf,                 /**< union find data structure */
-   int                   length              /**< number of components */
+   UF*                   uf                  /**< union find data structure */
    );
+
+
+/** is the union-find structure 'uf' clear? */
+SCIP_Bool SCIPStpunionfindIsClear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const UF*             uf                  /**< union find data structure */
+   );
+
 
 /** finds and returns the component identifier */
 int SCIPStpunionfindFind(

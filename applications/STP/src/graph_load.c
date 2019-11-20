@@ -1288,7 +1288,7 @@ SCIP_RETCODE graph_load(
                      else if( stp_type == STP_MWCSP )
                      {
                         assert(nodes == termcount);
-                        SCIP_CALL( graph_pc_2mw(scip, g, g->prize) );
+                        SCIP_CALL( graph_pc_2mw(scip, g) );
                      }
                      else if( stp_type == STP_BRMWCSP )
                      {

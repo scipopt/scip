@@ -1590,6 +1590,10 @@ SCIP_RETCODE redLoopPc(
                nodearrint, nodearrint2, solnode, nodearrchar, &nvslnelims, reductbound, verbose, &nvsl) );
       }
 
+
+      int todo;
+   continue;
+
       if( bred )
       {
          SCIP_CALL( execPc_BND(scip, g, vnoi, exedgearrreal, g->prize, nodearrreal, exedgearrreal2,
@@ -1598,6 +1602,7 @@ SCIP_RETCODE redLoopPc(
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
+
 
       if( da || (dualascent && extensive) )
       {
@@ -2003,7 +2008,8 @@ SCIP_RETCODE reduce(
    /* initialize shortest path algorithms */
    SCIP_CALL( graph_path_init(scip, graph) );
 
-#if 0
+//#define UNIT_TEST_STP
+#ifdef UNIT_TEST_STP
 #ifndef NDEBUG
    SCIP_CALL( testAll(scip) );
 #endif

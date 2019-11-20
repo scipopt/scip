@@ -55,8 +55,7 @@ SCIP_RETCODE SCIPcreateConsStp(
 
 /** sets graph */
 void SCIPStpConshdlrSetGraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g                   /**< graph data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** add cut corresponding to contraction */

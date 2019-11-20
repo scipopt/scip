@@ -513,12 +513,15 @@ SCIP_RETCODE graph_pc_finalizeSubgraph(
    GRAPH*                subgraph            /**< the subgraph */
    )
 {
-   assert(scip);
-   assert(subgraph->term2edge && subgraph->prize);
-   assert(subgraph->extended);
-   assert(subgraph->cost_org_pc);
-   assert(subgraph->source >= 0);
-   assert(!graph_pc_isPcMw(subgraph) || Is_term(subgraph->term[subgraph->source]));
+   if( graph_pc_isPcMw(subgraph) )
+   {
+      assert(scip);
+      assert(subgraph->term2edge && subgraph->prize);
+      assert(subgraph->extended);
+      assert(subgraph->cost_org_pc);
+      assert(subgraph->source >= 0);
+      assert(!graph_pc_isPcMw(subgraph) || Is_term(subgraph->term[subgraph->source]));
+   }
 
    return SCIP_OKAY;
 }
@@ -922,7 +925,6 @@ SCIP_Bool graph_pc_termIsNonLeafTerm(
    assert(g && g->term2edge);
    assert(term >= 0 && term < g->knots);
    assert(Is_anyTerm(g->term[term]));
-   assert(graph_pc_isPc(g));
 
    if( graph_pc_knotIsFixedTerm(g, term) )
    {
@@ -1012,11 +1014,8 @@ void graph_pc_enforceNonLeafTerm(
    int             nonleafterm         /**< the terminal */
 )
 {
-   const SCIP_Bool prize = graph->prize[nonleafterm];
-
    assert(graph_pc_isPcMw(graph) && graph->extended);
    assert(graph_pc_knotIsNonLeafTerm(graph, nonleafterm));
-   assert(prize > 0.0 && prize < FARAWAY);
 
 #if 0
    // todo that actually increases the optimal solution value!
@@ -1157,6 +1156,27 @@ void graph_pc_markOrgGraph(
 }
 
 
+/** gets original edge costs, when in extended mode */
+void graph_pc_getOrgCosts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< the graph */
+   SCIP_Real*            edgecosts           /**< original costs */
+)
+{
+   const int nedges = graph->edges;
+   const SCIP_Real* const cost_org = graph->cost_org_pc;
+
+   assert(scip && edgecosts);
+   assert(graph->extended && graph_pc_isPcMw(graph));
+
+   assert(graph_pc_transOrgAreConistent(scip, graph, TRUE));
+
+   for( int e = 0; e < nedges; ++e )
+      if( !graph_edge_isBlocked(scip, graph, e) )
+         edgecosts[e] = cost_org[e];
+}
+
+
 /** mark terminals and switch terminal property to original terminals */
 void graph_pc_2org(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1164,7 +1184,6 @@ void graph_pc_2org(
    )
 {
    const int nnodes = graph_get_nNodes(graph);
-   const int root = graph->source;
 
    assert(scip);
    assert(graph->extended && graph_pc_isPcMw(graph));
@@ -1172,15 +1191,7 @@ void graph_pc_2org(
    /* restore original edge weights */
    if( graph_pc_isPc(graph) )
    {
-      const int nedges = graph->edges;
-      SCIP_Real* RESTRICT const cost = graph->cost;
-      const SCIP_Real* const cost_org = graph->cost_org_pc;
-
-      assert(graph_pc_transOrgAreConistent(scip, graph, TRUE));
-
-      for( int e = 0; e < nedges; ++e )
-         if( !graph_edge_isBlocked(scip, graph, e) )
-            cost[e] = cost_org[e];
+      graph_pc_getOrgCosts(scip, graph, graph->cost);
    }
 
    /* swap terminal properties and mark original graph */
@@ -1194,7 +1205,7 @@ void graph_pc_2org(
       }
       else if( Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) )
       {
-         assert(k != root);
+         assert(k != graph->source);
 
          graph_knot_chg(graph, k, STP_TERM_PSEUDO);
       }
@@ -1951,20 +1962,17 @@ SCIP_RETCODE graph_pc_2rpc(
 /** alters the graph for MWCS problems */
 SCIP_RETCODE graph_pc_2mw(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph,              /**< the graph */
-   SCIP_Real*            maxweights          /**< array containing the weight of each node */
+   GRAPH*                graph               /**< the graph */
    )
 {
-   int nnodes;
    int nterms = 0;
+   const int nnodes = graph_get_nNodes(graph);
+   SCIP_Real* const maxweights = graph->prize;
 
    assert(maxweights != NULL);
    assert(scip != NULL);
-   assert(graph != NULL);
    assert(graph->cost != NULL);
    assert(graph->terms == 0);
-
-   nnodes = graph->knots;
 
    /* count number of terminals, modify incoming edges for non-terminals */
    for( int i = 0; i < nnodes; i++ )
@@ -1983,7 +1991,6 @@ SCIP_RETCODE graph_pc_2mw(
    nterms = 0;
    for( int i = 0; i < nnodes; i++ )
    {
-      graph->prize[i] = maxweights[i];
       if( Is_term(graph->term[i]) )
       {
          assert(SCIPisGE(scip, maxweights[i], 0.0));

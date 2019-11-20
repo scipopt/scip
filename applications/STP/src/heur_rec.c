@@ -513,7 +513,7 @@ SCIP_RETCODE computeReducedProbSolution(
    if( !SCIPisStopped(scip) && probtype != STP_DHCSTP && probtype != STP_DCSTP
          && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_RMWCSP && probtype != STP_NWPTSPG )
    {
-      SCIP_CALL( SCIPStpHeurLocalRun(scip, solgraph, solgraph->cost, soledges) );
+      SCIP_CALL( SCIPStpHeurLocalRun(scip, solgraph, soledges) );
       assert(graph_sol_valid(scip, solgraph, soledges));
    }
 
@@ -1733,7 +1733,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          else if( probtype == STP_DCSTP )
             SCIP_CALL( SCIPStpHeurTMBuildTreeDc(scip, graph, newsoledges, stnodes) );
          else
-            SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, newsoledges, stnodes) );
+            SCIP_CALL( SCIPStpHeurTMPruneStp(scip, graph, graph->cost, newsoledges, stnodes) );
 
          assert(graph_sol_valid(scip, graph, newsoledges) || SCIPisStopped(scip));
          pobj = graph_sol_getObj(graph->cost, newsoledges, 0.0, nedges);

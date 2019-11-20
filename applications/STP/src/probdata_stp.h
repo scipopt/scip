@@ -191,14 +191,6 @@ SCIP_RETCODE SCIPprobdataPrintGraph(
    SCIP_Bool             printsol            /**< should solution be highlighted? */
    );
 
-/** print graph (in undirected form) in GML format with given edges highlighted */
-SCIP_EXPORT
-SCIP_RETCODE SCIPprobdataPrintGraph2(
-   const GRAPH*          graph,              /**< Graph to be printed */
-   const char*           filename,           /**< Name of the output file */
-   SCIP_Bool*            edgemark            /**< Array of (undirected) edges to highlight */
-   );
-
 /** returns if 'T' model is being used */
 SCIP_EXPORT
 SCIP_Bool SCIPprobdataIsBigt(
@@ -209,13 +201,6 @@ SCIP_Bool SCIPprobdataIsBigt(
 SCIP_EXPORT
 SCIP_RETCODE SCIPprobdataWriteIntermediateSolution(
    SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** writes SPG (no variant!) to a file */
-void SCIPprobdataWriteStp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< graph data structure */
-   const char*           filename            /**< file name */
    );
 
 /** writes the best solution to a file */

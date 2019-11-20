@@ -29,7 +29,6 @@
 #include "probdata_stp.h"
 #include "graph.h"
 #include "heur_ascendprune.h"
-#include "portab.h"
 #include "scip/scip.h"
 #include "scip/misc.h"
 

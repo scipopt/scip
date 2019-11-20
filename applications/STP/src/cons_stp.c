@@ -97,10 +97,6 @@
 #define DEFAULT_OUTFLOWSEP      TRUE
 #define DEFAULT_BALANCEFLOWSEP  TRUE
 
-#define DEFAULT_DAMAXDEVIATION 0.25  /**< max deviation for dual ascent */
-#define DA_MAXDEVIATION_LOWER 0.01  /**< lower bound for max deviation for dual ascent */
-#define DA_MAXDEVIATION_UPPER 0.9  /**< upper bound for max deviation for dual ascent */
-#define DA_EPS (5e-7)
 
 /* *
 #define FLOW_FACTOR     100000
@@ -319,7 +315,6 @@ SCIP_RETCODE cut_add(
             if( capa[i] < FLOW_FACTOR )
                inccapa = TRUE;
 
-            SCIPdebugMessage("set capa[%d] from %6d to %6d\n", i, capa[i], FLOW_FACTOR);
             capa[i] = FLOW_FACTOR;
 
             if( !inccapa )
@@ -493,7 +488,6 @@ SCIP_RETCODE sep_implicationsPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
-   SCIP_CONSDATA*        consdata,           /**< constraint data */
    int                   maxcuts,            /**< maximal number of cuts */
    int*                  ncuts               /**< pointer to store number of cuts */
    )
@@ -1068,7 +1062,6 @@ SCIP_RETCODE sep_2cut(
    int     terms;
    int     nedges;
    int     nnodes;
-   int     newnnodes;
    int     newnedges;
    int     rootcutsize;
    SCIP_Bool rerun;
@@ -1206,7 +1199,6 @@ SCIP_RETCODE sep_2cut(
 
    i = 0;
    terms = 0;
-   newnnodes = 0;
 
    /* fill auxiliary adjacent vertex/edges arrays and get useable terms */
    for( k = 0; k < nnodes; k++ )
@@ -1219,7 +1211,6 @@ SCIP_RETCODE sep_2cut(
       /* non-dormant node? */
       if( w[k] == 0 )
       {
-         newnnodes++;
          edgecurr[k] = i;
          for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
@@ -1235,7 +1226,6 @@ SCIP_RETCODE sep_2cut(
          if( edgecurr[k] == i )
          {
             w[k] = 1;
-            newnnodes--;
          }
          else if( Is_term(g->term[k]) )
          {
@@ -1629,7 +1619,7 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
 
    if( graph_pc_isPcMw(g) && g->stp_type != STP_BRMWCSP )
-      SCIP_CALL( sep_implicationsPcMw(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
+      SCIP_CALL( sep_implicationsPcMw(scip, conshdlr, conshdlrdata, maxcuts, &ncuts) );
 
    /* change graph according to branch-and-bound terminal changes  */
    if( chgterms )
@@ -2002,8 +1992,7 @@ SCIP_RETCODE SCIPStpAddContractionCut(
 
 /** sets graph */
 void SCIPStpConshdlrSetGraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g                   /**< graph data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CONSDATA* consdata;

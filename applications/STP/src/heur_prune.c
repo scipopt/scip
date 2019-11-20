@@ -165,7 +165,7 @@ SCIP_RETCODE computeNewSols(
    SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, prunegraph, nodearrint, NULL, soledge, nruns,
          prunegraph->source, prunegraph->cost, prunegraph->cost, &dummyhop, NULL, 0.0, success, FALSE));
 
-   SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, prunegraph->cost, soledge) );
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, soledge) );
 
    SCIP_CALL( SCIPStpHeurPruneUpdateSols(scip, g, prunegraph, path, nodearrint, edgearrint, solnode, soledge,
          globalsoledge, nodearrchar, globalobj, incumbentgiven, success) );
@@ -568,7 +568,7 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
       SCIPdebugMessage("new global solution is better \n");
       *globalobj = objnew;
 
-      SCIP_CALL( SCIPStpHeurLocalRun(scip, g, g->cost, edgearrint) );
+      SCIP_CALL( SCIPStpHeurLocalRun(scip, g, edgearrint) );
 
       objnew = graph_sol_getObj(g->cost, edgearrint, 0.0, nedges);
 

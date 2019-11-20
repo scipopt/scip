@@ -22,7 +22,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
@@ -1066,8 +1066,9 @@ SCIP_DECL_PROPEXEC(propExecStp)
 #endif
    }
 
-   if( callreduce )
+   if( callreduce && 0  )
    {
+      int todo;
       SCIP_Bool probisinfeas = FALSE;
 
       SCIPdebugMessage("use reduction techniques \n");

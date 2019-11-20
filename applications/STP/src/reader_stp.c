@@ -123,7 +123,7 @@ SCIP_DECL_READERWRITE(readerWriteStp)
    offset = SCIPprobdataGetOffset(scip);
 
    /* save the graph in a .stp file */
-   SCIPwriteStp(scip, graph, file, offset);
+   graph_writeStp(scip, graph, file, offset);
 
    *result = SCIP_SUCCESS;
    return SCIP_OKAY;

@@ -439,6 +439,7 @@ extern void   graph_pc_2org(SCIP*, GRAPH*);
 extern void   graph_pc_2trans(SCIP*, GRAPH*);
 extern void   graph_pc_2orgcheck(SCIP*, GRAPH*);
 extern void   graph_pc_2transcheck(SCIP*, GRAPH*);
+extern void   graph_pc_getOrgCosts(SCIP*, const GRAPH*, SCIP_Real*);
 extern void   graph_pc_markOrgGraph(SCIP*, GRAPH*);
 extern void   graph_pc_adaptSap(SCIP*, SCIP_Real, GRAPH*, SCIP_Real*);
 extern void   graph_pc_presolExit(SCIP*, GRAPH*);
@@ -452,7 +453,7 @@ extern SCIP_RETCODE   graph_pc_finalizeSubgraph(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_initPrizes(SCIP*, GRAPH*, int);
 extern SCIP_RETCODE   graph_pc_2pc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rpc(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_pc_2mw(SCIP*, GRAPH*, SCIP_Real*);
+extern SCIP_RETCODE   graph_pc_2mw(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rmw(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_pcmw2rooted(SCIP*, GRAPH*, SCIP_Real);
 extern SCIP_RETCODE   graph_pc_getSap(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
@@ -497,7 +498,7 @@ extern void   graph_path_st_pcmw_reduce(SCIP*, const GRAPH*, const SCIP_Real*, S
 extern void   graph_path_st_pcmw_extend(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Bool, PATH*, STP_Bool*, SCIP_Bool*);
 extern void   graph_path_st_pcmw_extendBiased(SCIP*, GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, STP_Bool*, SCIP_Bool*);
 extern void   graph_path_st_pcmw_extendOut(SCIP*, const GRAPH*, int, STP_Bool*, SCIP_Real*, int*, STP_Bool*, DHEAP*, SCIP_Bool*);
-extern void   graph_voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, STP_Bool*, int*, PATH*);
+extern void   graph_voronoi(SCIP* scip, const GRAPH*, const SCIP_Real*, const SCIP_Real*, const STP_Bool*, int*, PATH*);
 extern void   graph_get2next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern void   graph_get3next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern void   graph_get4next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);
@@ -507,9 +508,9 @@ extern void   graph_voronoiMw(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, int*
 extern void   graph_voronoiTerms(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern void   voronoi_inout(const GRAPH*);
 extern void   voronoi_term(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int);
-extern void   heap_add(int*, int*, int*, int, PATH*);
-extern void   graph_voronoiRepair(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, PATH*, int*, int, UF*);
-extern void   graph_voronoiRepairMult(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, int*, int*, STP_Bool*, UF*, PATH*);
+extern void   heap_add(const PATH*, int, int*, int*, int*);
+extern void   graph_voronoiRepair(SCIP*, const GRAPH*, const SCIP_Real*, int*, int*, PATH*, int*, int, UF*);
+extern void   graph_voronoiRepairMult(SCIP*, const GRAPH*, const SCIP_Real*, const STP_Bool*, int*, int*, int*, int*, UF*, PATH*);
 extern void   voronoiSteinerTreeExt(SCIP*, const GRAPH*, SCIP_Real*, int*, STP_Bool*, PATH*);
 extern void   graph_sdPaths(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
 extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
@@ -547,7 +548,11 @@ extern SCIP_RETCODE graph_load(SCIP*, GRAPH**, const char*, PRESOL*);
 /* graph_save.c
  */
 extern void graph_save(SCIP*, const GRAPH*, const char*, FILETYPE);
-extern void SCIPwriteStp(SCIP*, const GRAPH*, FILE*, SCIP_Real);
+extern SCIP_RETCODE graph_writeGml(const GRAPH*, const char*, const SCIP_Bool*);
+extern SCIP_RETCODE graph_writeGmlSub(const GRAPH*, const char*, const SCIP_Bool*);
+extern void graph_writeStp(SCIP*, const GRAPH*, FILE*, SCIP_Real);
+extern void graph_writeStpOrg(SCIP*, const GRAPH*, const char*);
+
 
 /* validate.c
  */
