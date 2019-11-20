@@ -2352,8 +2352,6 @@ void insertionInitInsert(
       || (insertData->solDegreeNonTerm[v_insert] == UNKNOWN && graph_pc_isPcMw(graph)));
    assert(!insertData->nodeIsBlocked[v_insert]);
 
-
-
    insertData->nInsertions = 0;
    insertData->insertionVertex = v_insert;
    insertData->solNodes[v_insert] = TRUE;

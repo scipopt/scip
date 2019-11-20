@@ -179,6 +179,27 @@ SCIP_RETCODE initCostOrgPc(
    return SCIP_OKAY;
 }
 
+/** gets original edge costs, when in extended mode */
+static
+void setCostToOrgPc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< the graph */
+)
+{
+   const int nedges = graph->edges;
+   const SCIP_Real* const cost_org = graph->cost_org_pc;
+   SCIP_Real* const RESTRICT edgecosts = graph->cost;
+
+   assert(scip && edgecosts && cost_org);
+   assert(graph->extended && graph_pc_isPcMw(graph));
+
+   assert(graph_pc_transOrgAreConistent(scip, graph, TRUE));
+
+   for( int e = 0; e < nedges; ++e )
+      if( !graph_edge_isBlocked(scip, graph, e) )
+         edgecosts[e] = cost_org[e];
+}
+
 
 /** contract an edge of rooted prize-collecting Steiner tree problem or maximum-weight connected subgraph problem
  *  such that this edge is incident to least one fixed terminal */
@@ -1171,6 +1192,8 @@ void graph_pc_getOrgCosts(
 
    assert(graph_pc_transOrgAreConistent(scip, graph, TRUE));
 
+   BMScopyMemoryArray(edgecosts, graph->cost, nedges);
+
    for( int e = 0; e < nedges; ++e )
       if( !graph_edge_isBlocked(scip, graph, e) )
          edgecosts[e] = cost_org[e];
@@ -1191,7 +1214,7 @@ void graph_pc_2org(
    /* restore original edge weights */
    if( graph_pc_isPc(graph) )
    {
-      graph_pc_getOrgCosts(scip, graph, graph->cost);
+      setCostToOrgPc(scip, graph);
    }
 
    /* swap terminal properties and mark original graph */
