@@ -147,6 +147,8 @@ struct DecompHorizon
    int                   nblocks;            /**< the number of available variable blocks, only available after initialization */
    int*                  ndiscretevars;      /**< number of binary and integer variables in each block */
    int*                  nvars;              /**< number of variables (including continuous and implicit integers) in each block */
+   SCIP_SOL**            lastsolblock;       /**< last solution for which block was part of the sub-SCIP */
+   SCIP_Real*            potential;          /**< potential of each block */
    int                   memsize;            /**< storage size of the used arrays */
    SCIP_Bool             init;               /**< has the decomposition horizon been initialized? */
 };
@@ -287,6 +289,78 @@ SCIP_Bool checkFixingrate(
    }
 }
 
+/** get the potential of a subset of variables (distance to a reference point such as the pseudo-solution or root
+ * LP solution)
+ */
+static
+SCIP_Real getPotential(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars               /**< length of variable array */
+   )
+{
+   SCIP_Real potential;
+   int i;
+
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(sol != NULL);
+
+   if( nvars == 0 )
+      return 0.0;
+
+   potential = 0.0;
+
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_Real objdelta;
+      SCIP_VAR* var;
+      SCIP_Real referencepoint;
+      SCIP_Real varobj;
+
+      var = vars[i];
+      assert(var != NULL);
+      varobj = SCIPvarGetObj(var);
+
+      if( SCIPisZero(scip, varobj) )
+         continue;
+
+      /* determine the reference point for potential computation */
+      switch( heurdata->potential )
+      {
+         /* use difference to pseudo solution using the bound in the objective direction */
+         case 'p':
+            referencepoint = varobj > 0.0 ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
+            break;
+
+         /* use root LP solution difference */
+         case 'r':
+            referencepoint = SCIPvarGetRootSol(var);
+            break;
+
+         /* use local LP solution */
+         case 'l':
+            referencepoint = SCIPgetSolVal(scip, NULL, var);
+            break;
+         default:
+            SCIPerrorMessage("Unknown potential computation %c specified\n", heurdata->potential);
+            referencepoint = 0.0;
+            break;
+      }
+
+      if( SCIPisInfinity(scip, REALABS(referencepoint)) )
+         continue;
+
+      /* calculate the delta to the variables best bound */
+      objdelta = (SCIPgetSolVal(scip, sol, var) - referencepoint) * varobj;
+      potential += objdelta;
+   }
+
+   return potential;
+}
+
 /** create a decomp horizon data structure */
 static
 SCIP_RETCODE decompHorizonCreate(
@@ -319,6 +393,8 @@ SCIP_RETCODE decompHorizonCreate(
    SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->suitable, memsize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->ndiscretevars, memsize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->nvars, memsize) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &decomphorizonptr->lastsolblock, memsize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->potential, memsize) );
 
    /* initialize data later */
    decomphorizonptr->init = FALSE;
@@ -352,6 +428,8 @@ void decompHorizonFree(
    SCIPfreeMemoryArray(scip, &decomphorizonptr->suitable);
    SCIPfreeMemoryArray(scip, &decomphorizonptr->ndiscretevars);
    SCIPfreeMemoryArray(scip, &decomphorizonptr->nvars);
+   SCIPfreeMemoryArray(scip, &decomphorizonptr->lastsolblock);
+   SCIPfreeMemoryArray(scip, &decomphorizonptr->potential);
 
    SCIPfreeMemory(scip, decomphorizon);
 }
@@ -464,6 +542,7 @@ SCIP_RETCODE decompHorizonInitialize(
       decomphorizon->varblockend[blockpos] = currblockend;
       decomphorizon->nvars[blockpos] = currblockend - currblockstart;
       decomphorizon->ndiscretevars[blockpos] = ndiscretevars;
+
       currblockstart = currblockend;
       nstblblocks += (suitable);
 
@@ -487,14 +566,133 @@ SCIP_RETCODE decompHorizonInitialize(
    return SCIP_OKAY;
 }
 
+/** todo get the first block position of the consecutive interval with the highest potential */
+static
+int decompHorizonGetFirstPosBestPotential(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DECOMPHORIZON*        decomphorizon,      /**< decomposition horizon data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   int                   maxblocksize        /**< maximum block size in number of variables */
+   )
+{
+   SCIP_SOL* bestsol;
+   SCIP_Real intervalpotential;
+   int b;
+   int nintervalvars;
+   int b1,b2;
+   int bestpos;
+   SCIP_Real maxpotential;
+   SCIP_Bool withlinkvars;
+   SCIP_Bool linkvarsexist;
+
+
+   assert(scip != NULL);
+   assert(decomphorizon != NULL);
+   bestsol = SCIPgetBestSol(scip);
+   assert(bestsol != NULL);
+
+   linkvarsexist = decomphorizon->blocklabels[0] == SCIP_DECOMP_LINKVAR;
+   withlinkvars = FALSE;
+   nintervalvars = 0;
+   bestpos = 0;
+
+   /* recompute potential of blocks */
+   for( b = 0; b < decomphorizon->nblocks; ++b )
+   {
+      /* unsuitable blocks are left out and should not be contained in an interval */
+      if( !decomphorizon->suitable[b] )
+      {
+         withlinkvars = FALSE;
+         decomphorizon->potential[b] = SCIP_REAL_MIN;
+         continue;
+      }
+
+      /* store the potential of this block */
+      decomphorizon->potential[b] = getPotential(scip, heurdata, bestsol,
+               &decomphorizon->vars[b == 0 ? 0 : decomphorizon->varblockend[b - 1]], decomphorizon->nvars[b]);
+   }
+
+   /* compute the consecutive blocks interval with largest potential */
+   b1 = linkvarsexist ? 0 : -1;
+   b2 = -1;
+   nintervalvars = 0;
+   intervalpotential = 0.0;
+   maxpotential = 0.0;
+
+   while( b1 < decomphorizon->nblocks )
+   {
+      ++b1;
+      if( ! decomphorizon->suitable[b1] )
+      {
+         nintervalvars = 0;
+         intervalpotential = 0.0;
+         withlinkvars = FALSE;
+         b2 = b1;
+         continue;
+      }
+
+      /* interval starts at b1 */
+      if( b2 < b1 )
+      {
+         nintervalvars = decomphorizon->ndiscretevars[b1];
+         assert(nintervalvars < maxblocksize); /* otherwise, it wasn't suitable */
+         intervalpotential = decomphorizon->potential[b1];
+         withlinkvars = FALSE;
+         b2 = b1;
+      }
+      /* subtract the variables from the previous block */
+      else
+      {
+         assert(b1 > (linkvarsexist ? 1 : 0));
+         assert(decomphorizon->suitable[b1 - 1]);
+         nintervalvars -= decomphorizon->ndiscretevars[b1 - 1];
+         intervalpotential -= decomphorizon->potential[b1 - 1];
+      }
+
+      /* check if block allows to include linking variables */
+      if( ! withlinkvars && linkvarsexist && decomphorizon->ndiscretevars[0] + decomphorizon->ndiscretevars[b1] < maxblocksize )
+      {
+         withlinkvars = TRUE;
+         nintervalvars = decomphorizon->ndiscretevars[0] + decomphorizon->ndiscretevars[b1];
+         b2 = b1;
+      }
+      else if( withlinkvars && decomphorizon->ndiscretevars[0] + decomphorizon->ndiscretevars[b1] >= maxblocksize )
+      {
+         withlinkvars = FALSE;
+         nintervalvars = decomphorizon->ndiscretevars[b1];
+         b2 = b1;
+      }
+
+      /* extend the interval by further blocks, if possible */
+      while( ++b2 < decomphorizon->nblocks && decomphorizon->suitable[b2] && nintervalvars + decomphorizon->ndiscretevars[b2] < maxblocksize )
+      {
+         nintervalvars += decomphorizon->ndiscretevars[b2];
+         intervalpotential += decomphorizon->potential[b2];
+      }
+
+      /* store the start of the interval with maximum potential */
+      if( intervalpotential > maxpotential )
+      {
+         bestpos = b1; /* because pos is incremented by 1 again */
+         maxpotential = intervalpotential;
+      }
+   }
+
+   SCIPdebugMsg(scip, "Potential based selection chooses interval starting from block %d with potential %.1g\n",
+      bestpos, maxpotential);
+
+   return bestpos;
+}
+
 /** query the start and end of the next suitable block after the last @p lastblockused
  *
  *  @return TRUE if next suitable block could be found, otherwise FALSE
  */
 static
 SCIP_Bool decompHorizonNext(
+   SCIP*                 scip,               /**< SCIP data structure */
    DECOMPHORIZON*        decomphorizon,      /**< decomposition horizon data structure */
-   int                   lastblockused,      /**< label of last used block, or INT_MIN if none has been used, yet */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    int                   maxblocksize,       /**< maximum block size in number of variables */
    int*                  blockstart,         /**< pointer to store start position in variables of next suitable block */
    int*                  blockend,           /**< pointer to store start position of the block that follows next suitable block */
@@ -505,6 +703,8 @@ SCIP_Bool decompHorizonNext(
    SCIP_Bool found;
    int pos;
    int firstpos;
+   SCIP_SOL* bestsol;
+   int  lastblockused;      /**< label of last used block, or INT_MIN if none has been used, yet */
    assert(decomphorizon != NULL);
    assert(blockstart != NULL);
    assert(blockend != NULL);
@@ -518,16 +718,25 @@ SCIP_Bool decompHorizonNext(
       return FALSE;
    }
 
-   ++decomphorizon->iterations;
 
+   ++decomphorizon->iterations;
+   lastblockused = heurdata->lastblockuseddecomp;
    *fixlinkvars = TRUE;
    /* get the last block position that was used by the heuristic. Search for it, and continue with the next block. */
    found = SCIPsortedvecFindInt(decomphorizon->blocklabels, lastblockused, decomphorizon->nblocks, &firstpos);
 
+   assert(! found || (firstpos >= 0 && firstpos < decomphorizon->nblocks));
 
-   if( !found )
+   if( ! found )
       firstpos = -1;
 
+   bestsol = SCIPgetBestSol(scip);
+
+   /* choose first position based on potential; subtract -1 because we immediately increase it */
+   if( ! found || bestsol != decomphorizon->lastsolblock[firstpos] )
+      firstpos = decompHorizonGetFirstPosBestPotential(scip, decomphorizon, heurdata, maxblocksize) - 1;
+
+   /* that's why we subtract 1 from potential based position computation */
    pos = (firstpos + 1) % decomphorizon->nblocks;
 
    while( pos < decomphorizon->nblocks && !decomphorizon->suitable[pos] )
@@ -543,7 +752,7 @@ SCIP_Bool decompHorizonNext(
    assert(pos == firstpos || (0 <= pos && decomphorizon->nblocks > pos && (decomphorizon->suitable[pos] || pos == 0)));
 
    /* the next suitable block position has been discovered */
-   if( pos != firstpos && decomphorizon->suitable[pos] )
+   if( pos != firstpos && decomphorizon->suitable[pos] && bestsol != decomphorizon->lastsolblock[pos] )
    {
       int ndiscretevars;
       *blockend = decomphorizon->varblockend[pos];
@@ -561,14 +770,15 @@ SCIP_Bool decompHorizonNext(
       if( !(*fixlinkvars) )
          ndiscretevars += decomphorizon->ndiscretevars[0];
 
+      decomphorizon->lastsolblock[pos] = bestsol;
       /* extend the subproblem until maximum target fixing rate is reached */
       while( ++pos < decomphorizon->nblocks && decomphorizon->suitable[pos] && ndiscretevars + decomphorizon->ndiscretevars[pos] < maxblocksize )
       {
          *blockend = decomphorizon->varblockend[pos];
          *nextblocklabel = decomphorizon->blocklabels[pos];
          ndiscretevars += decomphorizon->ndiscretevars[pos];
+         decomphorizon->lastsolblock[pos] = bestsol;
       }
-
 
       return TRUE;
    }
@@ -580,11 +790,6 @@ SCIP_Bool decompHorizonNext(
 
       return FALSE;
    }
-
-   /* author bzfhende
-    *
-    * TODO this block could also be far too small to be processed alone; extend it by more blocks.
-    */
 }
 
 /** get the variables of this decomposition horizon */
@@ -812,78 +1017,6 @@ void rollingHorizonStoreDistances(
       if( distances[i] == -1 )
          ++rollinghorizon->nnonreachable;
    }
-}
-
-/** get the potential of a subset of variables (distance to a reference point such as the pseudo-solution or root
- * LP solution)
- */
-static
-SCIP_Real getPotential(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_SOL*             sol,                /**< solution */
-   SCIP_VAR**            vars,               /**< variable array */
-   int                   nvars               /**< length of variable array */
-   )
-{
-   SCIP_Real potential;
-   int i;
-
-   assert(scip != NULL);
-   assert(vars != NULL);
-   assert(sol != NULL);
-
-   if( nvars == 0 )
-      return 0.0;
-
-   potential = 0.0;
-
-   for( i = 0; i < nvars; ++i )
-   {
-      SCIP_Real objdelta;
-      SCIP_VAR* var;
-      SCIP_Real referencepoint;
-      SCIP_Real varobj;
-
-      var = vars[i];
-      assert(var != NULL);
-      varobj = SCIPvarGetObj(var);
-
-      if( SCIPisZero(scip, varobj) )
-         continue;
-
-      /* determine the reference point for potential computation */
-      switch( heurdata->potential )
-      {
-         /* use difference to pseudo solution using the bound in the objective direction */
-         case 'p':
-            referencepoint = varobj > 0.0 ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
-            break;
-
-         /* use root LP solution difference */
-         case 'r':
-            referencepoint = SCIPvarGetRootSol(var);
-            break;
-
-         /* use local LP solution */
-         case 'l':
-            referencepoint = SCIPgetSolVal(scip, NULL, var);
-            break;
-         default:
-            SCIPerrorMessage("Unknown potential computation %c specified\n", heurdata->potential);
-            referencepoint = 0.0;
-            break;
-      }
-
-      if( SCIPisInfinity(scip, REALABS(referencepoint)) )
-         continue;
-
-      /* calculate the delta to the variables best bound */
-      objdelta = (SCIPgetSolVal(scip, sol, var) - referencepoint) * varobj;
-      potential += objdelta;
-   }
-
-   return potential;
 }
 
 /** is the variable in the current neighborhood which is given by the breadth-first distances from a central variable? */
@@ -1576,7 +1709,8 @@ SCIP_RETCODE determineVariableFixingsDecomp(
    maxblocksize = (int)((1.0 - heurdata->minfixingrate) * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip))) - 1;
 
    /* query the next suitable block */
-   hasnext = decompHorizonNext(decomphorizon, heurdata->lastblockuseddecomp, maxblocksize, &currblockstart, &currblockend, &currblocklabel, &fixlinkvars);
+   hasnext = decompHorizonNext(scip, decomphorizon, heurdata, maxblocksize,
+            &currblockstart, &currblockend, &currblocklabel, &fixlinkvars);
 
    if( ! hasnext )
    {
