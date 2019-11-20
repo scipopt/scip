@@ -2108,6 +2108,8 @@ SCIP_RETCODE SCIPprobdataSetDefaultParams(
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/redcost/freq", -1) );
    SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/maxreliable", 1.0) );
 
+   SCIP_CALL( SCIPsetBoolParam(scip, "timing/reading", TRUE) );
+
    // todo test properly; normal dfs?
    SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/restartdfs/stdpriority", 400000) );
 
