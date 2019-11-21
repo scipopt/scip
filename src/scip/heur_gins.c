@@ -1393,6 +1393,13 @@ SCIP_RETCODE selectInitialVariableDecomposition(
             heurdata->maxdistance == -1 ? INT_MAX : heurdata->maxdistance, INT_MAX, INT_MAX) );
 
       SCIP_CALL( determineMaxDistance(scip, heurdata, distances, selvarmaxdistance) );
+
+      /* maximum distance is 0, i.e., even the size of the 1-neighborhood of this variable exceeds the fixing rate */
+      if( *selvarmaxdistance == 0 )
+      {
+         SCIPdebugMsg(scip, "1-Neighborhood of variable <%s> too large.\n", SCIPvarGetName(*selvar));
+         *selvar = NULL;
+      }
    }
 
    /* remember this solution for the next initial selection */
