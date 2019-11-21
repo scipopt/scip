@@ -3148,7 +3148,7 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
    }
 #endif
 
-   if( eventtype | SCIP_EVENTTYPE_GBDCHANGED )
+   if( eventtype & SCIP_EVENTTYPE_GBDCHANGED )
    {
       if( eventtype == SCIP_EVENTTYPE_GLBCHANGED )
       {
