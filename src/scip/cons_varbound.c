@@ -5271,35 +5271,42 @@ SCIP_ROW* SCIPgetRowVarbound(
 /** cleans up (multi-)aggregations and fixings from varbound constraints */
 SCIP_RETCODE SCIPcleanupConssVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< varbound constraint handler */
-   int*                  nchgbds,            /**< pointer to count number of bound changes */
-   int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
-   int*                  ndelcons,           /**< pointer to count number of deleted (varbound) constraints */
-   SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether the problem was detected to be infeasible */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (varbound) constraints */
+   int*                  nchgbds             /**< pointer to count number of bound changes */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_CONS** conss;
    int nconss;
    int i;
 
-   assert(strcmp(SCIPconshdlrGetName(conshdlr),CONSHDLR_NAME) == 0);
-   assert(nchgbds != NULL);
-   assert(naddcons != NULL);
-   assert(ndelcons != NULL);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   assert(infeasible != NULL);
    *infeasible = FALSE;
 
-   eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
-   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
+   assert(naddconss != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgbds != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   eventhdlr = conshdlrdata->eventhdlr;
+   nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
    conss = SCIPconshdlrGetConss(conshdlr);
 
-   /* loop backwards in case the given array is the constraint handlers constraint array
-    * since then deleted constraints do not need to be handled
-    */
+   /* loop backwards since then deleted constraints do not interfere with the loop */
    for( i = nconss - 1; i > 0; --i )
    {
-      assert(SCIPconsGetHdlr(conss[i]) == conshdlr);
-      SCIP_CALL( applyFixings(scip, conss[i], eventhdlr, infeasible, nchgbds, ndelcons, naddcons) );
+      SCIP_CALL( applyFixings(scip, conss[i], eventhdlr, infeasible, nchgbds, ndelconss, naddconss) );
 
       if( *infeasible )
          break;

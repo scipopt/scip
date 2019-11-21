@@ -694,6 +694,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
+   SCIP_Bool infeasible;
    int nrows;
    int r;
    int i;
@@ -748,18 +749,17 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   {
-      SCIP_Bool infeasible;
-      SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
-         naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
-      if( infeasible )
-      {
-         if( initialized )
-            SCIPmatrixFree(scip, &matrix);
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
+      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
 
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
+   /* if infeasibility was detected during matrix creation, return here */
+   if( infeasible )
+   {
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
    }
 
    /* we only work on pure MIPs currently */

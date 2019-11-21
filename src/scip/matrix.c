@@ -449,8 +449,8 @@ SCIP_RETCODE SCIPmatrixCreate(
    SCIP_Bool*            initialized,        /**< was the initialization successful? */
    SCIP_Bool*            complete,           /**< are all constraint represented within the matrix? */
    SCIP_Bool*            infeasible,         /**< pointer to return whether problem was detected to be infeasible during matrix creation */
-   int*                  naddcons,           /**< pointer to count number of added (linear) constraints during matrix creation */
-   int*                  ndelcons,           /**< pointer to count number of deleted specialized linear constraints during matrix creation */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints during matrix creation */
+   int*                  ndelconss,          /**< pointer to count number of deleted specialized linear constraints during matrix creation */
    int*                  nchgcoefs,          /**< pointer to count number of changed coefficients during matrix creation */
    int*                  nchgbds,            /**< pointer to count number of changed bounds during matrix creation */
    int*                  nfixedvars          /**< pointer to count number of fixed variables during matrix creation */
@@ -550,46 +550,36 @@ SCIP_RETCODE SCIPmatrixCreate(
 
    stopped = FALSE;
 
-   {
-      SCIP_CONSHDLR* conshdlr;
-      conshdlr = SCIPfindConshdlr(scip, "varbound");
-      if( conshdlr != NULL )
-      {
-         SCIP_CALL( SCIPcleanupConssVarbound(scip, conshdlr, nchgbds, naddcons, ndelcons, infeasible) );
-         if( *infeasible )
-            return SCIP_OKAY;
-      }
+   /* first, clean up aggregations and fixings in varbound costraints, since this can lead
+    * to boundchanges and the varbound constraint can get downgraded to a linear constraint
+    */
+   SCIP_CALL( SCIPcleanupConssVarbound(scip, TRUE, infeasible, naddconss, ndelconss, nchgbds ) );
+   if( *infeasible )
+      return SCIP_OKAY;
 
-      conshdlr = SCIPfindConshdlr(scip, "setppc");
-      if( conshdlr != NULL )
-      {
-         SCIP_CALL( SCIPcleanupConssSetppc(scip, conshdlr, naddcons, ndelcons, nfixedvars, nchgcoefs, infeasible) );
-         if( *infeasible )
-            return SCIP_OKAY;
-      }
+   /* next, clean up aggregations and fixings in setppc costraints, since this can lead
+    * to fixings and the setppc constraint can get downgraded to a linear constraint
+    */
+   SCIP_CALL( SCIPcleanupConssSetppc(scip, TRUE, infeasible, naddconss, ndelconss, nchgcoefs, nfixedvars ) );
+   if( *infeasible )
+      return SCIP_OKAY;
 
-      conshdlr = SCIPfindConshdlr(scip, "logicor");
-      if( conshdlr != NULL )
-      {
-         SCIP_CALL( SCIPcleanupConssLogicor(scip, conshdlr, nchgcoefs, naddcons, ndelcons) );
-      }
+   /* next, clean up aggregations and fixings in logicor costraints, since this cannot lead
+    * to further fixings but the logicor constraint can also get downgraded to a linear constraint
+    */
+   SCIP_CALL( SCIPcleanupConssLogicor(scip, TRUE, naddconss, ndelconss, nchgcoefs) );  
 
-      conshdlr = SCIPfindConshdlr(scip, "knapsack");
-      if( conshdlr != NULL )
-      {
-         SCIP_CALL( SCIPcleanupConssKnapsack(scip, conshdlr, infeasible) );
-         if( *infeasible )
-            return SCIP_OKAY;
-      }
+   /* finally, clean up aggregations and fixings in knapsack and linear constraints since now no new linaer constraints
+    * can come up due to downgrading and the remaining cleanup methods cannot fix any more variables
+    */
 
-      conshdlr = SCIPfindConshdlr(scip, "linear");
-      if( conshdlr != NULL )
-      {
-         SCIP_CALL( SCIPcleanupConssLinear(scip, conshdlr, infeasible) );
-         if( *infeasible )
-            return SCIP_OKAY;
-      }
-   }
+   SCIP_CALL( SCIPcleanupConssKnapsack(scip, TRUE, infeasible) );
+   if( *infeasible )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPcleanupConssLinear(scip, TRUE, infeasible) );
+   if( *infeasible )
+      return SCIP_OKAY;
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);

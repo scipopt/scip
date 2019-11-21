@@ -188,11 +188,11 @@ SCIP_ROW* SCIPgetRowVarbound(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcleanupConssVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< varbound constraint handler */
-   int*                  nchgbds,            /**< pointer to count number of bound changes */
-   int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
-   int*                  ndelcons,           /**< pointer to count number of deleted (varbound) constraints */
-   SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether the problem was detected to be infeasible */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (varbound) constraints */
+   int*                  nchgbds             /**< pointer to count number of bound changes */
    );
 
 /* @} */

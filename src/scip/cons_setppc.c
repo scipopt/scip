@@ -9417,38 +9417,38 @@ int SCIPgetNFixedzerosSetppc(
 /** cleans up (multi-)aggregations and fixings from setppc constraints */
 SCIP_RETCODE SCIPcleanupConssSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< setppc constraint handler */
-   int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
-   int*                  ndelcons,           /**< pointer to count number of deleted (setppc) constraints */
-   int*                  nfixedvars,         /**< pointer to count number of fixed variables */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether problem was detected to be infeasible */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (setppc) constraints */
    int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
-   SCIP_Bool*            infeasible          /**< pointer to return whether problem was detected to be infeasible */
+   int*                  nfixedvars          /**< pointer to count number of fixed variables */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** conss;
    int nconss;
    int i;
 
-   assert(strcmp(SCIPconshdlrGetName(conshdlr),CONSHDLR_NAME) == 0);
-   assert(naddcons != NULL);
-   assert(ndelcons != NULL);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   assert(naddconss != NULL);
+   assert(ndelconss != NULL);
    assert(nfixedvars != NULL);
    assert(infeasible != NULL);
    *infeasible = FALSE;
 
-   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
+   nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
    conss = SCIPconshdlrGetConss(conshdlr);
 
-   /* loop backwards in case the given array is the constraint handlers constraint array
-    * since then deleted constraints do not need to be handled
-    */
+   /* loop backwards since then deleted constraints do not interfere with the loop */
    for( i = nconss - 1; i > 0; --i )
    {
       SCIP_CONS* cons = conss[i];
 
-      assert(SCIPconsGetHdlr(cons) == conshdlr);
-
-      SCIP_CALL( applyFixings(scip, cons, naddcons, ndelcons, nfixedvars, infeasible) );
+      SCIP_CALL( applyFixings(scip, cons, naddconss, ndelconss, nfixedvars, infeasible) );
 
       if( *infeasible )
          break;
@@ -9457,7 +9457,7 @@ SCIP_RETCODE SCIPcleanupConssSetppc(
          continue;
 
       /* merging unmerged constraints */
-      SCIP_CALL( mergeMultiples(scip, cons, nfixedvars, ndelcons, nchgcoefs, infeasible) );
+      SCIP_CALL( mergeMultiples(scip, cons, nfixedvars, ndelconss, nchgcoefs, infeasible) );
 
       if( *infeasible )
          break;

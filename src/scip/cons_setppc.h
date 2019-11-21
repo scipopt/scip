@@ -310,12 +310,12 @@ int SCIPgetNFixedzerosSetppc(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcleanupConssSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< setppc constraint handler */
-   int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
-   int*                  ndelcons,           /**< pointer to count number of deleted (setppc) constraints */
-   int*                  nfixedvars,         /**< pointer to count number of fixed variables */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether problem was detected to be infeasible */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (setppc) constraints */
    int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
-   SCIP_Bool*            infeasible          /**< pointer to return whether problem was detected to be infeasible */
+   int*                  nfixedvars          /**< pointer to count number of fixed variables */
    );
 
 /* @} */

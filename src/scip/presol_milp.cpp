@@ -219,10 +219,12 @@ SCIP_DECL_PRESOLEXIT(presolExitMILP)
 static
 SCIP_DECL_PRESOLEXEC(presolExecMILP)
 {  /*lint --e{715}*/
-   SCIP_Bool initialized;
-   SCIP_Bool complete;
    SCIP_MATRIX* matrix;
    SCIP_PRESOLDATA* data;
+   SCIP_Bool initialized;
+   SCIP_Bool complete;
+   SCIP_Bool infeasible;
+   SCIP_Real timelimit;
 
    *result = SCIP_DIDNOTRUN;
 
@@ -241,21 +243,20 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
        nconss > data->lastnrows * 0.85 )
       return SCIP_OKAY;
 
-   {
-      SCIP_Bool infeasible;
-      SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
-         naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
-      if( infeasible )
-      {
-         if( initialized )
-            SCIPmatrixFree(scip, &matrix);
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
+      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
 
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
+   /* if infeasibility was detected during matrix creation, return here */
+   if( infeasible )
+   {
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
    }
 
-   /* we only work on pure MIPs */
+   /* we only work on pure MIPs, also disable to try building the matrix again if it failed once */
    if( !initialized || !complete )
    {
       data->lastncols = 0;
@@ -340,6 +341,11 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    presolve.setVerbosityLevel(VerbosityLevel::QUIET);
 #endif
 
+   /* communicate the time limit */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      presolve.getPresolveOptions().tlim = timelimit - SCIPgetSolvingTime(scip);
+
    /* call the presolving */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
@@ -368,8 +374,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          return SCIP_OKAY;
       case PresolveStatus::UNCHANGED:
          *result = SCIP_DIDNOTFIND;
-         data->lastncols = 0;
-         data->lastnrows = 0;
+         data->lastncols = nvars;
+         data->lastnrows = nconss;
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) MILP presolver found nothing\n",
                SCIPgetSolvingTime(scip));

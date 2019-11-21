@@ -491,6 +491,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualagg)
    SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
+   SCIP_Bool infeasible;
 
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
@@ -511,19 +512,17 @@ SCIP_DECL_PRESOLEXEC(presolExecDualagg)
 
    matrix = NULL;
 
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
+      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
+
+   /* if infeasibility was detected during matrix creation, return here */
+   if( infeasible )
    {
-      SCIP_Bool infeasible;
-      SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
-         naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
 
-      if( infeasible )
-      {
-         if( initialized )
-            SCIPmatrixFree(scip, &matrix);
-
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
    }
 
    /* we only work on pure MIPs currently */

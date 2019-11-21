@@ -166,10 +166,10 @@ SCIP_ROW* SCIPgetRowLogicor(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcleanupConssLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< logicor constraint handler */
-   int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
-   int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
-   int*                  ndelcons            /**< pointer to count number of deleted (logicor) constraints */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (logicor) constraints */
+   int*                  nchgcoefs           /**< pointer to count number of changed coefficients */
    );
 
 /* @} */

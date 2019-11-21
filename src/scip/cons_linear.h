@@ -370,7 +370,7 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcleanupConssLinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< linear constraint handler */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
    SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
    );
 

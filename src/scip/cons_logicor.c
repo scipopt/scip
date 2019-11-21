@@ -5397,12 +5397,13 @@ SCIP_ROW* SCIPgetRowLogicor(
 /** cleans up (multi-)aggregations and fixings from logicor constraints */
 SCIP_RETCODE SCIPcleanupConssLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< logicor constraint handler */
-   int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
-   int*                  naddcons,           /**< pointer to count number of added (linear) constraints */
-   int*                  ndelcons            /**< pointer to count number of deleted (logicor) constraints */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (logicor) constraints */
+   int*                  nchgcoefs           /**< pointer to count number of changed coefficients */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_CONS** conss;
    unsigned char* entries;
@@ -5410,21 +5411,22 @@ SCIP_RETCODE SCIPcleanupConssLogicor(
    int nentries;
    int i;
 
-   assert(strcmp(SCIPconshdlrGetName(conshdlr),CONSHDLR_NAME) == 0);
-   assert(naddcons != NULL);
-   assert(ndelcons != NULL);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   assert(naddconss != NULL);
+   assert(ndelconss != NULL);
    assert(nchgcoefs != NULL);
 
    eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
-   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
+   nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
    conss = SCIPconshdlrGetConss(conshdlr);
 
    nentries = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &entries, nentries) );
 
-   /* loop backwards in case the given array is the constraint handlers constraint array
-    * since then deleted constraints do not need to be handled
-    */
+   /* loop backwards since then deleted constraints do not interfere with the loop */
    for( i = nconss - 1; i > 0; --i )
    {
       SCIP_CONS* cons;
@@ -5433,9 +5435,7 @@ SCIP_RETCODE SCIPcleanupConssLogicor(
       cons = conss[i];
       redundant = FALSE;
 
-      assert(SCIPconsGetHdlr(cons) == conshdlr);
-
-      SCIP_CALL( applyFixings(scip, cons, eventhdlr, &redundant, nchgcoefs, naddcons, ndelcons) );
+      SCIP_CALL( applyFixings(scip, cons, eventhdlr, &redundant, nchgcoefs, naddconss, ndelconss) );
 
       if( SCIPconsIsDeleted(cons) )
          continue;
@@ -5449,7 +5449,7 @@ SCIP_RETCODE SCIPcleanupConssLogicor(
       if( redundant )
       {
          SCIP_CALL( SCIPdelCons(scip, cons) );
-         ++(*ndelcons);
+         ++(*ndelconss);
       }
    }
 
