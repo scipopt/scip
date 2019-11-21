@@ -407,7 +407,6 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
          /* look for fixable variables */
          for( v = ncols - 1; v >= 0; --v )
          {
-            SCIP_Bool infeasible;
             SCIP_Bool fixed;
             SCIP_VAR* var;
 
