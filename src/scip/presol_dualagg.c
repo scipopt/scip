@@ -555,7 +555,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualagg)
          {
             if( aggtypes[v] != NOAGG )
             {
-               SCIP_Bool infeasible;
                SCIP_Bool redundant;
                SCIP_Bool aggregated;
                SCIP_Real ub;
