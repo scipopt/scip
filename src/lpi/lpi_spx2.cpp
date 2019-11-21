@@ -3256,7 +3256,7 @@ SCIP_RETCODE SCIPlpiGetSol(
    {
       if( primsol != NULL )
       {
-#ifdef SOPLEX_APIVERSION > 10
+#if SOPLEX_APIVERSION > 10
         (void)lpi->spx->getPrimalReal(primsol, lpi->spx->numColsReal());
 #else
          Vector tmp(lpi->spx->numColsReal(), primsol);
@@ -3265,7 +3265,7 @@ SCIP_RETCODE SCIPlpiGetSol(
       }
       if( dualsol != NULL )
       {
-#ifdef SOPLEX_APIVERSION > 10
+#if SOPLEX_APIVERSION > 10
         (void)lpi->spx->getDualReal(dualsol, lpi->spx->numRowsReal());
 #else
          Vector tmp(lpi->spx->numRowsReal(), dualsol);
@@ -3274,7 +3274,7 @@ SCIP_RETCODE SCIPlpiGetSol(
       }
       if( activity != NULL )
       {
-#ifdef SOPLEX_APIVERSION > 10
+#if SOPLEX_APIVERSION > 10
         (void)lpi->spx->getSlacksReal(activity, lpi->spx->numRowsReal());  /* in SoPlex, the activities are called "slacks" */
 #else
          Vector tmp(lpi->spx->numRowsReal(), activity);
@@ -3283,7 +3283,7 @@ SCIP_RETCODE SCIPlpiGetSol(
       }
       if( redcost != NULL )
       {
-#ifdef SOPLEX_APIVERSION > 10
+#if SOPLEX_APIVERSION > 10
          (void)lpi->spx->getRedCostReal(redcost, lpi->spx->numColsReal());
 #else
          Vector tmp(lpi->spx->numColsReal(), redcost);
@@ -3321,7 +3321,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
 
    try
    {
-#ifdef SOPlEX_APIVERSION > 10
+#if SOPLEX_APIVERSION > 10
       (void)lpi->spx->getPrimalRayReal(ray, lpi->spx->numColsReal());
 #else
       Vector tmp(lpi->spx->numColsReal(), ray);
@@ -3358,7 +3358,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
 
    try
    {
-#ifdef SOPLEX_APIVERSION > 10
+#if SOPLEX_APIVERSION > 10
       (void)lpi->spx->getDualFarkasReal(dualfarkas, lpi->spx->numRowsReal());
 #else
       Vector tmp(lpi->spx->numRowsReal(), dualfarkas);
