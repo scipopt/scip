@@ -178,6 +178,7 @@ struct SCIP_HeurData
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
    SCIP_Real             rollhorizonlimfac;  /**< limiting percentage for variables already used in sub-SCIPs to terminate
                                               *   rolling horizon approach */
+   DECOMPHORIZON*        decomphorizon;      /**< decomposition horizon data structure */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator                              */
    SCIP_SOL*             lastinitsol;        /**< last solution used for selection of initial variable */
    TABOOLIST*            taboolist;          /**< taboo list of block labels that should not be used */
@@ -431,6 +432,8 @@ void decompHorizonFree(
    SCIPfreeMemoryArray(scip, &decomphorizonptr->potential);
 
    SCIPfreeMemory(scip, decomphorizon);
+
+   *decomphorizon = NULL;
 }
 
 /** check if another run should be performed within the current decomposition horizon */
@@ -565,7 +568,7 @@ SCIP_RETCODE decompHorizonInitialize(
    return SCIP_OKAY;
 }
 
-/** todo get the first block position of the consecutive interval with the highest potential */
+/** get the first block position of the consecutive interval with the highest potential */
 static
 int decompHorizonGetFirstPosBestPotential(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -618,7 +621,7 @@ int decompHorizonGetFirstPosBestPotential(
    intervalpotential = 0.0;
    maxpotential = 0.0;
 
-   while( b1 < decomphorizon->nblocks )
+   while( b1 < decomphorizon->nblocks - 1 )
    {
       ++b1;
       if( ! decomphorizon->suitable[b1] )
@@ -738,13 +741,13 @@ SCIP_Bool decompHorizonNext(
    /* that's why we subtract 1 from potential based position computation */
    pos = (firstpos + 1) % decomphorizon->nblocks;
 
-   while( pos < decomphorizon->nblocks && !decomphorizon->suitable[pos] )
+   while( pos < decomphorizon->nblocks && (! decomphorizon->suitable[pos] || decomphorizon->blocklabels[pos] == SCIP_DECOMP_LINKVAR) )
       pos++;
 
    if( pos == decomphorizon->nblocks )
    {
       pos = 0;
-      while( pos < firstpos && !decomphorizon->suitable[pos] )
+      while( pos < firstpos && (!decomphorizon->suitable[pos] || decomphorizon->blocklabels[pos] == SCIP_DECOMP_LINKVAR) )
          pos++;
    }
 
@@ -2222,6 +2225,26 @@ SCIP_DECL_HEURINIT(heurInitGins)
    return SCIP_OKAY;
 }
 
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolGins)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* it is likely that the decomposition information changes between runs, we recreate the decomposition horizon */
+   decompHorizonFree(scip, &heurdata->decomphorizon);
+   assert(heurdata->decomphorizon == NULL);
+
+   return SCIP_OKAY;
+}
+
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
 SCIP_DECL_HEUREXIT(heurExitGins)
@@ -2247,6 +2270,8 @@ SCIP_DECL_HEUREXIT(heurExitGins)
    /* free some data structures that must be reset for a new problem */
    freeTabooList(scip, &heurdata->taboolist);
    SCIPfreeRandom(scip, &heurdata->randnumgen);
+
+
    heurdata->taboolist = NULL;
    heurdata->randnumgen = NULL;
 
@@ -2329,10 +2354,11 @@ SCIP_DECL_HEUREXEC(heurExecGins)
    rollinghorizon = NULL;
    decomphorizon = NULL;
    decomp = chooseDecomp(scip, heurdata);
-   if( decomp != NULL && heurdata->usedecomp )
+   if( decomp != NULL && heurdata->usedecomp && heurdata->decomphorizon == NULL )
    {
-      SCIP_CALL( decompHorizonCreate(scip, &decomphorizon, decomp) );
+      SCIP_CALL( decompHorizonCreate(scip, &heurdata->decomphorizon, decomp) );
    }
+   decomphorizon = heurdata->decomphorizon;
    /* only create a horizon data structure if we need it */
    if( decomphorizon == NULL && heurdata->userollinghorizon )
    {
@@ -2432,7 +2458,6 @@ TERMINATE:
    {
       rollingHorizonFree(scip, &rollinghorizon);
    }
-   decompHorizonFree(scip, &decomphorizon);
 
    SCIPfreeBufferArray(scip, &fixedvals);
    SCIPfreeBufferArray(scip, &fixedvars);
@@ -2455,6 +2480,7 @@ SCIP_RETCODE SCIPincludeHeurGins(
    /* create Gins primal heuristic data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    heurdata->randnumgen = NULL;
+   heurdata->decomphorizon = NULL;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -2468,6 +2494,7 @@ SCIP_RETCODE SCIPincludeHeurGins(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeGins) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitGins) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitGins) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolGins) );
 
    /* add gins primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/nodesofs",
