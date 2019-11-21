@@ -17,6 +17,7 @@
  * @brief  nonlinear handler for second order cone constraints \f$\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (v_i^T x + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})\f$
 
  * @author Benjamin Mueller
+ * @author Fabian Wegscheider
  *
  * @todo Add row that is stored in the nonlinear handler expression data to the LP if not happened so far.
  */
@@ -28,6 +29,8 @@
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_var.h"
+#include "nlpi/nlpi_ipopt.h"
+
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "soc"
@@ -623,8 +626,6 @@ SCIP_RETCODE detectSocQuadraticSimple(
 {
    SCIP_CONSEXPR_EXPR** children;
    SCIP_VAR** vars;
-   SCIP_VAR* rhsvar;
-   SCIP_VAR* lhsvar;
    SCIP_Real* childcoefs;
    SCIP_Real* coefs;
    SCIP_Real* offsets;
@@ -668,7 +669,6 @@ SCIP_RETCODE detectSocQuadraticSimple(
    constant = SCIPgetConsExprExprSumConstant(expr);
 
    /* initialize data */
-   rhsvar = NULL;
    rhsidx = -1;
    ishyperbolic = FALSE;
    nposquadterms = 0;
@@ -827,7 +827,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
       if( SCIPisConsExprExprVar(children[i]) )
       {
          vars[nextentry] = SCIPgetConsExprExprVarVar(children[i]);
-         assert(SCIPvarIsBinary(vars[i]));
+         assert(SCIPvarIsBinary(vars[nextentry]));
       }
       else
       {
@@ -927,10 +927,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    )
 {
    SCIP_CONSEXPR_EXPR** children;
-   SCIP_VAR** occurringvars;
    SCIP_VAR** vars;
-   SCIP_VAR* rhsvar;
-   SCIP_VAR* lhsvar;
    SCIP_HASHMAP* var2idx;
    SCIP_Real* childcoefs;
    SCIP_Real* coefs;
@@ -946,17 +943,13 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_Real constant;
    SCIP_Real lhsconstant;
    int nvars;
+   int nchildren;
    int npos;
    int nneg;
-   int nposbilinterms;
-   int nnegbilinterms;
-   int rhsidx;
-   int lhsidx;
-   int negeigpos;
-   int nchildren;
+   int nextlhsterm;
+   int nexttranscoef;
+   int nrhstranscoefs;
    int ntranscoefs;
-   int nterms;
-   int nextentry;
    int i;
    int j;
    SCIP_Bool rhsissoc;
@@ -1053,17 +1046,17 @@ SCIP_RETCODE detectSocQuadraticComplex(
    /* iterate over children a second time to check whether 'linear' terms also appear quadratically */
    for( i = 0; i < nchildren; ++i )
    {
-      SCIP_VAR* auxvar;
+      SCIP_VAR* termauxvar;
 
       /* skip the already handled children */
       if( SCIPgetConsExprExprHdlr(children[i]) != SCIPgetConsExprExprHdlrPower(conshdlr)
          && SCIPgetConsExprExprHdlr(children[i]) != SCIPgetConsExprExprHdlrProduct(conshdlr)
          && !SCIPisConsExprExprVar(children[i]) )
       {
-         auxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
+         termauxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
 
          /* if the auxiliary variable was not found in any quadratic term, it is not soc-representable  */
-         if( !SCIPhashmapExists(var2idx, (void*) auxvar) )
+         if( !SCIPhashmapExists(var2idx, (void*) termauxvar) )
          {
             SCIPhashmapFree(&var2idx);
             return SCIP_OKAY;
@@ -1073,7 +1066,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &eigvecmatrix, nvars * nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &eigvals, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &occurringvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nvars) );
 
    /* iterate over children a third time to build the constraint defining matrix and vector */
@@ -1091,7 +1084,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          assert(varpos >= 0);
          assert(varpos < nvars);
 
-         occurringvars[varpos] = argvar;
+         vars[varpos] = argvar;
          eigvecmatrix[varpos * nvars + varpos] = childcoefs[i];
       }
       else if( SCIPisConsExprExprVar(children[i]) )
@@ -1103,7 +1096,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          assert(varpos >= 0);
          assert(varpos < nvars);
 
-         occurringvars[varpos] = argvar;
+         vars[varpos] = argvar;
          eigvecmatrix[varpos * nvars + varpos] = childcoefs[i];
       }
       else if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrProduct(conshdlr) )
@@ -1117,7 +1110,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          assert(varpos >= 0);
          assert(varpos < nvars);
 
-         occurringvars[varpos] = argvar;
+         vars[varpos] = argvar;
 
          argvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[1]);
          varpos2 = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
@@ -1125,7 +1118,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          assert(varpos2 < nvars);
          assert(varpos != varpos2);
 
-         occurringvars[varpos2] = argvar;
+         vars[varpos2] = argvar;
          eigvecmatrix[MIN(varpos, varpos2) * nvars + MAX(varpos, varpos2)] = childcoefs[i];
       }
       else
@@ -1153,12 +1146,19 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_CALL( SCIPallocBufferArray(scip, &bp, nvars) );
    nneg = 0;
    npos = 0;
+   ntranscoefs = 0;
 
    /* set small eigenvalues to 0 and compute b*P */
    for( i = 0; i < nvars; ++i )
    {
       for( j = 0; j < nvars; ++j )
+      {
          bp[i] += lincoefs[i] * eigvecmatrix[i * nvars + j];
+
+         /* count the number of transcoefs to be used later */
+         if( !SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
+            ++ntranscoefs;
+      }
 
       if( SCIPisZero(scip, eigvals[i]) )
       {
@@ -1208,9 +1208,20 @@ SCIP_RETCODE detectSocQuadraticComplex(
       lhsconstant = constant - SCIPvarGetUbGlobal(auxvar);
    }
 
-   /* we have lhsconstant + x^t A x + b x <= 0 and A has a single negative eigenvalue; try to build soc */
-   negeigpos = -1;
+   /* initialize remaining datastructures for nonlinear handler */
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, npos + nneg) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &offsets, npos + nneg) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, ntranscoefs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transcoefsidx, ntranscoefs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, npos + nneg) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nnonzeroes, npos + nneg) );
+
+   nextlhsterm = 0;
+   nexttranscoef = 0;
+   nrhstranscoefs = 0;
    rhsvarfound = FALSE;
+
+   /* we have lhsconstant + x^t A x + b x <= 0 and A has a single negative eigenvalue; try to build soc */
    for( i = 0; i < nvars; ++i )
    {
       if( SCIPisZero(scip, eigvals[i]) )
@@ -1218,13 +1229,148 @@ SCIP_RETCODE detectSocQuadraticComplex(
 
       if( eigvals[i] > 0.0 )
       {
-         /* @TODO: build datastructure here */
+         coefs[nextlhsterm] = sqrt(eigvals[i]);
+         offsets[nextlhsterm] = bp[i] / (2 * eigvals[i]);
+         lhsconstant -= bp[i] * bp[i] / (4 * eigvals[i]);
+
+         termbegins[nextlhsterm] = nexttranscoef;
+
+         /* set transcoefs */
+         for( j = 0; j < nvars; ++j )
+         {
+            if( !SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
+            {
+               transcoefs[nexttranscoef] = eigvecmatrix[i * nvars + j];
+               transcoefsidx[nexttranscoef] = j;
+               ++nnonzeroes[nextlhsterm];
+
+               ++nexttranscoef;
+            }
+         }
+
+         ++nextlhsterm;
       }
       else
       {
-         /* @TODO: build datastructure here */
+         SCIP_Real rhsvarlb;
+         SCIP_Real rhsvarub;
+
+         /* should enter here only once */
+         assert(rhsvarfound == FALSE);
+
+         offsets[npos + nneg - 1] = -bp[i] / (2 * eigvals[i]);
+         rhsvarlb = 0.0;
+         rhsvarub = 0.0;
+
+         /* the constraint can only be a soc if the resulting rhs var does not change var;
+          * the rhs var is going to be a multiaggregated variable, so estimate its bounds
+          */
+         for( j = 0; j < nvars; ++j )
+         {
+            SCIP_Real aux;
+
+            if( eigvecmatrix[i * nvars + j] > 0.0 )
+            {
+               aux = SCIPcomputeVarLbGlobal(scip, vars[j]);
+               assert(!SCIPisInfinity(scip, aux));
+            }
+            else
+            {
+               aux = SCIPcomputeVarUbGlobal(scip, vars[j]);
+               assert(!SCIPisInfinity(scip, -aux));
+            }
+
+            if( SCIPisInfinity(scip, aux) || SCIPisInfinity(scip, -aux) )
+            {
+               rhsvarlb = -SCIPinfinity(scip);
+               break;
+            }
+            else
+               rhsvarlb += eigvecmatrix[i * nvars + j] * aux;
+         }
+         rhsvarlb += offsets[npos + nneg - 1];
+
+         for( j = 0; j < nvars; ++j )
+         {
+            SCIP_Real aux;
+
+            if( eigvecmatrix[i * nvars + j] > 0.0 )
+            {
+               aux = SCIPcomputeVarUbGlobal(scip, vars[j]);
+               assert(!SCIPisInfinity(scip, -aux));
+            }
+            else
+            {
+               aux = SCIPcomputeVarLbGlobal(scip, vars[j]);
+               assert(!SCIPisInfinity(scip, aux));
+            }
+
+            if( SCIPisInfinity(scip, aux) || SCIPisInfinity(scip, -aux) )
+            {
+               rhsvarub = SCIPinfinity(scip);
+               break;
+            }
+            else
+               rhsvarub += eigvecmatrix[i * nvars + j] * aux;
+         }
+         rhsvarub += offsets[npos + nneg - 1];
+
+         /* since we are just interested in obtaining an interval that contains the real bounds
+          * and is tight enough so that we can identify that the rhsvar does not change sign,
+          * we swap the bounds in case of numerical troubles
+          */
+         if( rhsvarub < rhsvarlb )
+         {
+            assert(SCIPisEQ(scip, rhsvarub, rhsvarlb));
+            SCIPswapReals(&rhsvarub, &rhsvarlb);
+         }
+
+         /* check whether rhsvar changes sign */
+         if( SCIPisGE(scip, rhsvarlb, 0.0) || SCIPisLE(scip, rhsvarub, 0.0) )
+         {
+            rhsvarfound = TRUE;
+            lhsconstant += bp[i] * bp[i] / (4 * eigvals[i]);
+            coefs[npos + nneg - 1] = SCIPisLE(scip, rhsvarub, 0.0) ? -sqrt(-eigvals[i]) : sqrt(-eigvals[i]);
+
+            nrhstranscoefs = 0;
+
+            /* set transcoefs for rhs term */
+            for( j = 0; j < nvars; ++j )
+            {
+               if( !SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
+               {
+                  transcoefs[ntranscoefs - nrhstranscoefs - 1] = eigvecmatrix[i * nvars + j];
+                  transcoefsidx[ntranscoefs - nrhstranscoefs - 1] = j;
+                  ++nnonzeroes[npos + nneg - 1];
+
+                  ++nrhstranscoefs;
+               }
+            }
+            assert(nrhstranscoefs > 0);
+
+            termbegins[npos + nneg - 1] = ntranscoefs - nrhstranscoefs;
+         }
+         else
+         {
+            SCIPdebugMsg(scip, "Failed because rhsterm [%g, %g] changes sign.\n", rhsvarlb, rhsvarub);
+            goto CLEANUP;
+         }
       }
    }
+   assert(rhsvarfound);
+   assert(nextlhsterm == npos + nneg - 1);
+   assert(nexttranscoef == ntranscoefs - nrhstranscoefs);
+
+   /* if the lhs constant is negative, it is non an soc */
+   if( SCIPisNegative(scip, lhsconstant) )
+      goto CLEANUP;
+
+   /* create and store nonlinear handler expression data */
+   SCIP_CALL( createNlhdlrExprData(scip, vars, coefs, offsets, transcoefs, transcoefsidx,
+         termbegins, nnonzeroes, lhsconstant, nvars, npos + nneg, ntranscoefs, nlhdlrexprdata) );
+   assert(*nlhdlrexprdata != NULL);
+
+   *success = TRUE;
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p\n", (void*)expr);
@@ -1233,9 +1379,15 @@ SCIP_RETCODE detectSocQuadraticComplex(
 #endif
 
 CLEANUP:
+   SCIPfreeBufferArrayNull(scip, &nnonzeroes);
+   SCIPfreeBufferArrayNull(scip, &termbegins);
+   SCIPfreeBufferArrayNull(scip, &transcoefsidx);
+   SCIPfreeBufferArrayNull(scip, &transcoefs);
+   SCIPfreeBufferArrayNull(scip, &offsets);
+   SCIPfreeBufferArrayNull(scip, &coefs);
    SCIPfreeBufferArrayNull(scip, &bp);
    SCIPfreeBufferArray(scip, &lincoefs);
-   SCIPfreeBufferArray(scip, &occurringvars);
+   SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &eigvals);
    SCIPfreeBufferArray(scip, &eigvecmatrix);
    SCIPhashmapFree(&var2idx);
