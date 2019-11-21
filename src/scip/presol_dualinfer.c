@@ -129,31 +129,26 @@ typedef struct ColPair COLPAIR;
  * Local methods
  */
 
-/** returns TRUE iff both keys are equal */
+/** encode contents of a colpair as void* pointer */
 static
-SCIP_DECL_HASHKEYEQ(colPairsEqual)
-{  /*lint --e{715}*/
-   COLPAIR* colpair1;
-   COLPAIR* colpair2;
-
-   colpair1 = (COLPAIR*) key1;
-   colpair2 = (COLPAIR*) key2;
-
-   if( colpair1->col1idx == colpair2->col1idx && colpair1->col2idx == colpair2->col2idx )
-      return TRUE;
-   else
-      return FALSE;
+void*
+encodeColPair(
+   COLPAIR*              colpair             /**< pointer to colpair */
+   )
+{
+   return (void*)SCIPcombineTwoInt(colpair->col1idx, colpair->col2idx);
 }
 
-/** returns the hash value of the key */
+/** compute single int hashvalue for two ints */
 static
-SCIP_DECL_HASHKEYVAL(colPairHashval)
-{  /*lint --e{715}*/
-   COLPAIR* colpair;
-
-   colpair = (COLPAIR*) key;
-
-   return SCIPhashTwo(colpair->col1idx, colpair->col2idx);
+int
+hashIndexPair(
+   int                   idx1,               /**< first integer index */
+   int                   idx2                /**< second integer index */
+   )
+{
+   uint32_t hash = SCIPhashOne(SCIPcombineTwoInt(idx1, idx2));
+   return *((int*) &hash);
 }
 
 /** add hash/rowidx pair to hashlist/rowidxlist **/
@@ -1812,7 +1807,7 @@ SCIP_RETCODE dualBoundStrengthening(
    int block2start;
    int block2end;
 
-   SCIP_HASHTABLE* pairtable;
+   SCIP_HASHSET* pairhashset;
    SCIP_Real* colvalptr;
    int* colidxptr;
 
@@ -1843,7 +1838,15 @@ SCIP_RETCODE dualBoundStrengthening(
    for( i = 0; i < ncols; i++ )
    {
       var = SCIPmatrixGetVar(matrix, i);
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+
+      if( SCIPmatrixUplockConflict(matrix, i) || SCIPmatrixDownlockConflict(matrix, i) ||
+         (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(var) != SCIP_VARTYPE_IMPLINT) )
+      {
+         /* we don't care about integral variables or variables that have conflicting locks */
+         isubimplied[i] = FALSE;
+         islbimplied[i] = FALSE;
+      }
+      else
       {
          getImpliedBounds(scip, matrix, i, tmplbs, tmpubs, &(isubimplied[i]), &(islbimplied[i]));
 
@@ -1865,12 +1868,6 @@ SCIP_RETCODE dualBoundStrengthening(
 
          if( islbimplied[i] )
             tmplbs[i] = -SCIPinfinity(scip);
-      }
-      else
-      {
-         /* we don't care about other variables that are not continuous */
-         isubimplied[i] = FALSE;
-         islbimplied[i] = FALSE;
       }
    }
 
@@ -1941,12 +1938,12 @@ SCIP_RETCODE dualBoundStrengthening(
                   if(SCIPisPositive(scip, colvalptr[k]) )
                   {
                      SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &colidxlistpp,
-                              (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                        hashIndexPair(colidxptr[j], colidxptr[k]), implubvars[i]) ); /*lint !e702*/
                   }
                   else
                   {
                      SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &colidxlistpm,
-                              (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                        hashIndexPair(colidxptr[j], colidxptr[k]), implubvars[i]) ); /*lint !e702*/
                   }
                }
                else
@@ -1954,12 +1951,12 @@ SCIP_RETCODE dualBoundStrengthening(
                   if(SCIPisPositive(scip, colvalptr[k]) )
                   {
                      SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &colidxlistmp,
-                              (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                        hashIndexPair(colidxptr[j], colidxptr[k]), implubvars[i]) ); /*lint !e702*/
                   }
                   else
                   {
                      SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &colidxlistmm,
-                              (int)SCIPhashTwo(colidxptr[j],colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                        hashIndexPair(colidxptr[j], colidxptr[k]), implubvars[i]) ); /*lint !e702*/
                   }
                }
             }
@@ -1973,8 +1970,7 @@ SCIP_RETCODE dualBoundStrengthening(
       SCIPsortIntInt(hashlistpm, colidxlistpm, pospm);
       SCIPsortIntInt(hashlistmp, colidxlistmp, posmp);
 
-      SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, colPairsEqual,
-               colPairHashval, (void*) scip) );
+      SCIP_CALL( SCIPhashsetCreate(&pairhashset, SCIPblkmem(scip), 1) );
 
       /* Process pp and mm lists */
       if( pospp > 0 && posmm > 0 )
@@ -2021,7 +2017,7 @@ SCIP_RETCODE dualBoundStrengthening(
                         colpair.col1idx = MIN(colidxlistpp[i], colidxlistmm[j]);
                         colpair.col2idx = MAX(colidxlistpp[i], colidxlistmm[j]);
 
-                        if( SCIPhashtableRetrieve(pairtable, (void*) &colpair) == NULL )
+                        if( !SCIPhashsetExists(pairhashset, encodeColPair(&colpair)) )
                         {
                            int* colpnt1       = SCIPmatrixGetColIdxPtr(matrix, colpair.col1idx);
                            SCIP_Real* valpnt1 = SCIPmatrixGetColValPtr(matrix, colpair.col1idx);
@@ -2042,7 +2038,7 @@ SCIP_RETCODE dualBoundStrengthening(
                            else
                               combinefails++;
 
-                           SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &colpair) );
+                           SCIP_CALL( SCIPhashsetInsert(pairhashset, SCIPblkmem(scip), encodeColPair(&colpair)) );
                            ncombines++;
                            if( ncombines >= maxcombines || combinefails >= presoldata->maxcombinefails )
                               finished = TRUE;
@@ -2125,7 +2121,7 @@ SCIP_RETCODE dualBoundStrengthening(
                         colpair.col1idx = MIN(colidxlistpm[i], colidxlistmp[j]);
                         colpair.col2idx = MAX(colidxlistpm[i], colidxlistmp[j]);
 
-                        if( SCIPhashtableRetrieve(pairtable, (void*) &colpair) == NULL )
+                        if( !SCIPhashsetExists(pairhashset, encodeColPair(&colpair)) )
                         {
                            int* colpnt1       = SCIPmatrixGetColIdxPtr(matrix, colpair.col1idx);
                            SCIP_Real* valpnt1 = SCIPmatrixGetColValPtr(matrix, colpair.col1idx);
@@ -2146,7 +2142,7 @@ SCIP_RETCODE dualBoundStrengthening(
                            else
                               combinefails++;
 
-                           SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &colpair) );
+                           SCIP_CALL( SCIPhashsetInsert(pairhashset, SCIPblkmem(scip), encodeColPair(&colpair)) );
                            ncombines++;
                            if( ncombines >= maxcombines || combinefails >= presoldata->maxcombinefails )
                               finished = TRUE;
@@ -2182,7 +2178,7 @@ SCIP_RETCODE dualBoundStrengthening(
          }
       }
 
-      SCIPhashtableFree(&pairtable);
+      SCIPhashsetFree(&pairhashset, SCIPblkmem(scip));
       SCIPfreeBlockMemoryArray(scip, &colidxlistmp, listsizemp);
       SCIPfreeBlockMemoryArray(scip, &colidxlistpm, listsizepm);
       SCIPfreeBlockMemoryArray(scip, &colidxlistmm, listsizemm);
@@ -2282,6 +2278,11 @@ SCIP_RETCODE dualBoundStrengthening(
       SCIP_Real objval;
 
       var = SCIPmatrixGetVar(matrix, i);
+
+      /* do not fix variables if the locks do not match */
+      if( SCIPmatrixUplockConflict(matrix, i) || SCIPmatrixDownlockConflict(matrix, i) )
+         continue;
+
       objval = SCIPvarGetObj(var);
 
       /* c_j - sup(y^T A_{.j}) > 0 => fix x_j to its lower bound */
@@ -2396,6 +2397,18 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    SCIP_Bool initialized;
    SCIP_Bool complete;
    SCIP_PRESOLDATA* presoldata;
+   FIXINGDIRECTION* varstofix;
+   int npossiblefixings;
+   int nconvarsfixed;
+   int nintvarsfixed;
+   int nbinvarsfixed;
+   SIDECHANGE* sidestochange;
+   int npossiblesidechanges;
+   int nsideschanged;
+   int i;
+   int nrows;
+   int ncols;
+   SCIP_VAR* var;
 
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
@@ -2403,7 +2416,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) )
       return SCIP_OKAY;
 
-   if( SCIPgetNContVars(scip) == 0 )
+   if( SCIPgetNContVars(scip) + SCIPgetNImplVars(scip) == 0 )
       return SCIP_OKAY;
 
    /* the reductions made in this presolver apply to all optimal solutions because of complementary slackness */
@@ -2416,218 +2429,175 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    assert(presoldata != NULL);
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, FALSE, &initialized, &complete) );
 
-   if( initialized && complete )
+   if( !initialized )
+      return SCIP_OKAY;
+
+   npossiblefixings = 0;
+   nconvarsfixed = 0;
+   nintvarsfixed = 0;
+   nbinvarsfixed = 0;
+   npossiblesidechanges = 0;
+   nsideschanged = 0;
+
+   nrows = SCIPmatrixGetNRows(matrix);
+   ncols = SCIPmatrixGetNColumns(matrix);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &varstofix, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sidestochange, nrows) );
+
+   BMSclearMemoryArray(varstofix, ncols);
+   BMSclearMemoryArray(sidestochange, nrows);
+
+   SCIP_CALL( dualBoundStrengthening(scip, matrix, presoldata,
+         varstofix, &npossiblefixings, sidestochange, &npossiblesidechanges) );
+
+   if( npossiblefixings > 0 )
    {
-      FIXINGDIRECTION* varstofix;
-      int npossiblefixings;
-      int nconvarsfixed;
-      int nintvarsfixed;
-      int nbinvarsfixed;
-      SIDECHANGE* sidestochange;
-      int npossiblesidechanges;
-      int nsideschanged;
-      int i;
-      int nrows;
-      int ncols;
-      SCIP_Bool locksconsistent;
-      SCIP_VAR* var;
-
-      npossiblefixings = 0;
-      nconvarsfixed = 0;
-      nintvarsfixed = 0;
-      nbinvarsfixed = 0;
-      npossiblesidechanges = 0;
-      nsideschanged = 0;
-
-      nrows = SCIPmatrixGetNRows(matrix);
-      ncols = SCIPmatrixGetNColumns(matrix);
-
-      /* verify if the locks of the continuous variables are consistent */
-      locksconsistent = TRUE;
-      for(i = 0; i < ncols; i++)
+      for( i = ncols - 1; i >= 0; --i )
       {
+         SCIP_Bool infeasible;
+         SCIP_Bool fixed;
+
          var = SCIPmatrixGetVar(matrix, i);
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+
+         /* there should be no fixings for variables with inconsistent locks */
+         assert(varstofix[i] == NOFIX || (!SCIPmatrixUplockConflict(matrix, i) && !SCIPmatrixDownlockConflict(matrix, i)));
+
+         fixed = FALSE;
+
+         if( varstofix[i] == FIXATLB )
          {
-            if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNUplocks(matrix, i) ||
-               SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNDownlocks(matrix, i) )
+            SCIP_Real lb;
+            lb = SCIPvarGetLbLocal(var);
+
+            /* fix at lower bound */
+            SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
+            if( infeasible )
             {
-               locksconsistent = FALSE;
+               SCIPdebugMsg(scip, " -> infeasible fixing\n");
+               *result = SCIP_CUTOFF;
                break;
             }
+            assert(fixed);
+            (*nfixedvars)++;
+            *result = SCIP_SUCCESS;
+         }
+         else if( varstofix[i] == FIXATUB )
+         {
+            SCIP_Real ub;
+            ub = SCIPvarGetUbLocal(var);
+
+            /* fix at upper bound */
+            SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );
+            if( infeasible )
+            {
+               SCIPdebugMsg(scip, " -> infeasible fixing\n");
+               *result = SCIP_CUTOFF;
+               break;
+            }
+            assert(fixed);
+            (*nfixedvars)++;
+            *result = SCIP_SUCCESS;
+         }
+
+         /* keep a small statistic which types of variables are fixed */
+         if( fixed )
+         {
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               nconvarsfixed++;
+            else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+               nbinvarsfixed++;
+            else
+               nintvarsfixed++;
          }
       }
+   }
 
-      /* only run this presolver if the locks of the continuous variables are consistent.
-       * we need the complete information of the continuous variables so that we can
-       * propagate valid bounds on the dual variables.
-       */
-      if( locksconsistent )
+   if( npossiblesidechanges > 0 )
+   {
+      for( i = 0; i < nrows; i++ )
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &varstofix, ncols) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &sidestochange, nrows) );
+         SCIP_CONS* cons;
+         SCIP_CONSHDLR* conshdlr;
+         const char* conshdlrname;
 
-         BMSclearMemoryArray(varstofix, ncols);
-         BMSclearMemoryArray(sidestochange, nrows);
+         if( sidestochange[i] == NOCHANGE )
+            continue;
 
-         SCIP_CALL( dualBoundStrengthening(scip, matrix, presoldata,
-               varstofix, &npossiblefixings, sidestochange, &npossiblesidechanges) );
+         if( presoldata->maxrowsupport < SCIPmatrixGetRowNNonzs(matrix, i) )
+            continue;
 
-         if( npossiblefixings > 0 )
+         cons = SCIPmatrixGetCons(matrix,i);
+         conshdlr = SCIPconsGetHdlr(cons);
+         conshdlrname = SCIPconshdlrGetName(conshdlr);
+
+         if( strcmp(conshdlrname, "linear") == 0 )
          {
-            for( i = ncols - 1; i >= 0; --i )
+            SCIP_Real lhs;
+            SCIP_Real rhs;
+            SCIP_Real matrixlhs;
+            SCIP_Real matrixrhs;
+
+            lhs = SCIPgetLhsLinear(scip, cons);
+            rhs = SCIPgetRhsLinear(scip, cons);
+            matrixlhs = SCIPmatrixGetRowLhs(matrix, i);
+            matrixrhs = SCIPmatrixGetRowRhs(matrix, i);
+
+            assert(!SCIPisEQ(scip, matrixlhs, matrixrhs));
+
+            /* when creating the matrix, contraints are multiplied if necessary by (-1)
+               * to ensure that the following representation is obtained:
+               * infty >= a x >= b
+               * or
+               * c >= ax >= b (ranged rows)
+               */
+
+            /* for ranged constraints we have to distinguish between both sides */
+            if( sidestochange[i] == RHSTOLHS )
             {
-               SCIP_Bool infeasible;
-               SCIP_Bool fixed;
-
-               var = SCIPmatrixGetVar(matrix, i);
-
-               if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNUplocks(matrix, i) ||
-                  SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) != SCIPmatrixGetColNDownlocks(matrix, i) )
+               if( SCIPisEQ(scip, matrixlhs, lhs) )
                {
-                  /* no fixing for variables with inconsistent locks.
-                   * note that continuous variables as well as discrete variables are dealt with here.
-                   */
-                  continue;
+                  /* change rhs to lhs */
+                  SCIP_CALL( SCIPchgRhsLinear(scip, cons, matrixlhs) );
+               }
+               else
+               {
+                  /* consider multiplication by (-1) in the matrix */
+                  SCIP_CALL( SCIPchgLhsLinear(scip, cons, -matrixlhs) );
                }
 
-               fixed = FALSE;
-
-               if( varstofix[i] == FIXATLB )
-               {
-                  SCIP_Real lb;
-                  lb = SCIPvarGetLbLocal(var);
-
-                  /* fix at lower bound */
-                  SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
-                  if( infeasible )
-                  {
-                     SCIPdebugMsg(scip, " -> infeasible fixing\n");
-                     *result = SCIP_CUTOFF;
-                     break;
-                  }
-                  assert(fixed);
-                  (*nfixedvars)++;
-                  *result = SCIP_SUCCESS;
-               }
-               else if( varstofix[i] == FIXATUB )
-               {
-                  SCIP_Real ub;
-                  ub = SCIPvarGetUbLocal(var);
-
-                  /* fix at upper bound */
-                  SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );
-                  if( infeasible )
-                  {
-                     SCIPdebugMsg(scip, " -> infeasible fixing\n");
-                     *result = SCIP_CUTOFF;
-                     break;
-                  }
-                  assert(fixed);
-                  (*nfixedvars)++;
-                  *result = SCIP_SUCCESS;
-               }
-
-               /* keep a small statistic which types of variables are fixed */
-               if( fixed )
-               {
-                  if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-                     nconvarsfixed++;
-                  else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-                     nbinvarsfixed++;
-                  else
-                     nintvarsfixed++;
-               }
+               nsideschanged++;
+               (*nchgsides)++;
             }
-         }
-
-         if( npossiblesidechanges > 0 )
-         {
-            for( i = 0; i < nrows; i++ )
+            else if( sidestochange[i] == LHSTORHS )
             {
-               SCIP_CONS* cons;
-               SCIP_CONSHDLR* conshdlr;
-               const char* conshdlrname;
-
-               if( sidestochange[i] == NOCHANGE )
-                  continue;
-
-               if( presoldata->maxrowsupport < SCIPmatrixGetRowNNonzs(matrix, i) )
-                  continue;
-
-               cons = SCIPmatrixGetCons(matrix,i);
-               conshdlr = SCIPconsGetHdlr(cons);
-               conshdlrname = SCIPconshdlrGetName(conshdlr);
-
-               if( strcmp(conshdlrname, "linear") == 0 )
+               if( SCIPisEQ(scip, matrixrhs, rhs) )
                {
-                  SCIP_Real lhs;
-                  SCIP_Real rhs;
-                  SCIP_Real matrixlhs;
-                  SCIP_Real matrixrhs;
-
-                  lhs = SCIPgetLhsLinear(scip, cons);
-                  rhs = SCIPgetRhsLinear(scip, cons);
-                  matrixlhs = SCIPmatrixGetRowLhs(matrix, i);
-                  matrixrhs = SCIPmatrixGetRowRhs(matrix, i);
-
-                  assert(!SCIPisEQ(scip, matrixlhs, matrixrhs));
-
-                  /* when creating the matrix, contraints are multiplied if necessary by (-1)
-                   * to ensure that the following representation is obtained:
-                   * infty >= a x >= b
-                   * or
-                   * c >= ax >= b (ranged rows)
-                   */
-
-                  /* for ranged constraints we have to distinguish between both sides */
-                  if( sidestochange[i] == RHSTOLHS )
-                  {
-                     if( SCIPisEQ(scip, matrixlhs, lhs) )
-                     {
-                        /* change rhs to lhs */
-                        SCIP_CALL( SCIPchgRhsLinear(scip, cons, matrixlhs) );
-                     }
-                     else
-                     {
-                        /* consider multiplication by (-1) in the matrix */
-                        SCIP_CALL( SCIPchgLhsLinear(scip, cons, -matrixlhs) );
-                     }
-
-                     nsideschanged++;
-                     (*nchgsides)++;
-                  }
-                  else if( sidestochange[i] == LHSTORHS )
-                  {
-                     if( SCIPisEQ(scip, matrixrhs, rhs) )
-                     {
-                        /* change lhs to rhs */
-                        SCIP_CALL( SCIPchgLhsLinear(scip, cons, matrixrhs) );
-                     }
-                     else
-                     {
-                        /* consider multiplication by (-1) in the matrix */
-                        SCIP_CALL( SCIPchgRhsLinear(scip, cons, -matrixrhs) );
-                     }
-
-                     nsideschanged++;
-                     (*nchgsides)++;
-                  }
+                  /* change lhs to rhs */
+                  SCIP_CALL( SCIPchgLhsLinear(scip, cons, matrixrhs) );
                }
+               else
+               {
+                  /* consider multiplication by (-1) in the matrix */
+                  SCIP_CALL( SCIPchgRhsLinear(scip, cons, -matrixrhs) );
+               }
+
+               nsideschanged++;
+               (*nchgsides)++;
             }
-         }
-
-         SCIPfreeBufferArray(scip, &sidestochange);
-         SCIPfreeBufferArray(scip, &varstofix);
-
-         if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 || npossiblesidechanges > 0 )
-         {
-            SCIPdebugMsg(scip, "### fixed vars [cont: %d, int: %d, bin: %d], changed sides [%d]\n",
-               nconvarsfixed, nintvarsfixed, nbinvarsfixed, nsideschanged);
          }
       }
+   }
+
+   SCIPfreeBufferArray(scip, &sidestochange);
+   SCIPfreeBufferArray(scip, &varstofix);
+
+   if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 || npossiblesidechanges > 0 )
+   {
+      SCIPdebugMsg(scip, "### fixed vars [cont: %d, int: %d, bin: %d], changed sides [%d]\n",
+         nconvarsfixed, nintvarsfixed, nbinvarsfixed, nsideschanged);
    }
 
    SCIPmatrixFree(scip, &matrix);
