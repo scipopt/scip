@@ -617,7 +617,6 @@ SCIP_DECL_PRESOLEXEC(presolExecRedvub)
          {
             if( isvartoagg[v] )
             {
-               SCIP_Bool infeasible;
                SCIP_Bool redundant;
                SCIP_Bool aggregated;
 
