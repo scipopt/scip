@@ -52,7 +52,7 @@
 #define DEFAULT_ROOTRUNS 50                  /**< number of runs at the root */
 #define DEFAULT_DURINGLPFREQ 5               /**< frequency during LP solving */
 #define DEFAULT_TYPE  0                      /**< heuristic to execute */
-#define DEFAULT_BIAS  3                      /**< bias */
+#define DEFAULT_BIAS  2                      /**< bias */
 
 #define DEFAULT_RANDSEED 5                   /**< seed for pseudo-random functions */
 
@@ -69,7 +69,7 @@ int getUgRank(void);
  * Data structures
  */
 
-enum PCMW_Bias { bias_none = 0, bias_partial = 1, bias_full = 2, bias_double = 3, bias_all = 4 };
+enum PCMW_Bias { bias_none = 0, bias_full = 1, bias_both = 2 };
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -1479,7 +1479,7 @@ SCIP_RETCODE runPcMW(
 
    assert(maxruns <= nterms);
    assert(graph->extended);
-   assert(bias != bias_all && bias != bias_double);
+   assert(bias == bias_none || bias == bias_full);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &orderedprizes, nterms + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orderedprizes_id, nterms + 1) );
@@ -1496,7 +1496,7 @@ SCIP_RETCODE runPcMW(
 
    if( bias != bias_none )
    {
-      graph_pc_getBiased(scip, graph, bias == bias_full, costbiased, prizebiased);
+      graph_pc_getBiased(scip, graph, costbiased, prizebiased);
       initOrderedPrizesPcMw(graph, costbiased, prizebiased, orderedprizes, orderedprizes_id);
       assert(!prize);
    }
@@ -2765,19 +2765,13 @@ SCIP_RETCODE SCIPStpHeurTMRun(
       enum PCMW_Bias bias = heurdata->pcmwbias;
       SCIP_Real best_resultObj = FARAWAY;
 
-      if( bias == bias_none || bias == bias_all )
+      if( bias == bias_none || bias == bias_both )
       {
          SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, best,
                dijkdist, cost, nodepriority, success, pcmwfull, bias_none));
       }
 
-      if( bias == bias_double || bias == bias_all || bias == bias_partial )
-      {
-         SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, best,
-               dijkdist, cost, nodepriority, success, pcmwfull, bias_partial) );
-      }
-
-      if( bias == bias_double || bias == bias_all || bias == bias_full )
+      if( bias == bias_full || bias == bias_both )
       {
          SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, best,
                dijkdist, cost, nodepriority, success, pcmwfull, bias_full) );
@@ -3236,8 +3230,8 @@ SCIP_RETCODE SCIPStpIncludeHeurTM(
          "Heuristic: 0 automatic, 1 TM_SP, 2 TM_VORONOI, 3 TM_DIJKSTRA",
          &heurdata->type, FALSE, DEFAULT_TYPE, 0, 3, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/pcmwbias",
-         "Bias: 0 none, 1 partial, 2 full, 3 double biased 4 all",
-         &heurdata->pcmwbias, FALSE, DEFAULT_BIAS, 0, 4, NULL, NULL) );
+         "Bias: 0 none, 1 full, 2 try both",
+         &heurdata->pcmwbias, FALSE, DEFAULT_BIAS, 0, 2, NULL, NULL) );
 
    heurdata->hopfactor = DEFAULT_HOPFACTOR;
 

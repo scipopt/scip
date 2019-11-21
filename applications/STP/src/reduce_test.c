@@ -2063,13 +2063,11 @@ SCIP_RETCODE localKeyVertexPc(
    /* actual test */
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, steinertree) );
 
-   // 6 is the implicit root
 
    cost1 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
    if( !SCIPisEQ(scip, cost1 + 0.5, cost0) )
       return SCIP_ERROR;
 
-   assert(steinertree[12] == CONNECT && steinertree[14] == CONNECT);
    assert(steinertree[0] == UNKNOWN && steinertree[2] == UNKNOWN);
 
    graph_path_exit(scip, graph);
@@ -2189,7 +2187,6 @@ SCIP_RETCODE localKeyVertexPc2(
    if( !SCIPisEQ(scip, cost1 + 0.5, cost0) )
       return SCIP_ERROR;
 
-   assert(steinertree[16] == CONNECT && steinertree[18] == CONNECT);
    assert(steinertree[0] == UNKNOWN && steinertree[2] == UNKNOWN);
 
    graph_path_exit(scip, graph);
@@ -2514,10 +2511,6 @@ SCIP_RETCODE testAll(
    assert(scip);
    SCIP_CALL( heur_extendPcMwTest(scip) );
    SCIP_CALL( heur_localTest(scip) );
-
-   assert(0);
-
-
    SCIP_CALL( pseudoDel_test(scip) );
    SCIP_CALL( reduce_extTest(scip) );
    SCIP_CALL( dheap_Test(scip) );
@@ -2691,10 +2684,6 @@ SCIP_RETCODE heur_localTest(
    SCIP_CALL( localInsertion(scip) );
    SCIP_CALL( localInsertion2(scip) );
    SCIP_CALL( localInsertion2pc(scip) );
-
-   assert(0);
-
-
    SCIP_CALL( localKeyPathExchangeMw(scip) );
    SCIP_CALL( localKeyVertexPc2(scip) );
    SCIP_CALL( localKeyVertex(scip) );

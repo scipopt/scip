@@ -4529,6 +4529,7 @@ void graph_voronoiRepair(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs (possibly biased) */
+   const SCIP_Real*      cost_org,           /**< original edge costs (only needed for PC) */
    int*                  nheapelems,         /**< pointer to number of heap elements */
    int*                  vbase,              /**< array containing Voronoi base of each node */
    PATH*                 path,               /**< Voronoi paths data struture */
@@ -4537,10 +4538,11 @@ void graph_voronoiRepair(
    UF*                   uf                  /**< union find data structure */
    )
 {
+   const int nnodes = graph_get_nNodes(g);
    int boundaryedge = UNKNOWN;
-   const int nnodes = g->knots;
+   SCIP_Real boundarydist = FARAWAY;
 
-   assert(cost && scip && nheapelems && newedge);
+   assert(cost && scip && nheapelems && newedge && vbase && uf);
 
    *newedge = UNKNOWN;
 
@@ -4548,7 +4550,8 @@ void graph_voronoiRepair(
    {
       int* const heap = g->path_heap;
       int* const state = g->path_state;
-      const SCIP_Bool isMw = (g->stp_type == STP_MWCSP) || (g->stp_type == STP_RMWCSP);
+      const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
+      const SCIP_Bool isPc = graph_pc_isPc(g);
 
       assert(heap && state);
 
@@ -4596,14 +4599,27 @@ void graph_voronoiRepair(
                }
                else
                {
-                  int todo; // adapt for small prizes! maybe an extra method in graph_base? to get unbiased edge cost...try to inline?
-                  const SCIP_Real c_new = isMw? 0.0 : g->cost[e];
-                  const SCIP_Real c_old = isMw? 0.0 : g->cost[e];
-                  const SCIP_Real dist_new = path[k].dist + c_new + path[m].dist;
-                  const SCIP_Real dist_old = path[g->tail[boundaryedge]].dist + c_old + path[g->head[boundaryedge]].dist;
+                  SCIP_Real dist_new = path[k].dist + path[m].dist;
 
-                  if( dist_new < dist_old )
+                  if( isPcMw )
+                  {
+                     if( isPc )
+                     {
+                        assert(cost_org);
+                        dist_new += cost_org[e];
+                     }
+                  }
+                  else
+                  {
+                     assert(!cost_org);
+                     dist_new += cost[e];
+                  }
+
+                  if( dist_new < boundarydist )
+                  {
+                     boundarydist = dist_new;
                      boundaryedge = e;
+                  }
                }
             } /* check for boundary edge */
          }
@@ -4620,12 +4636,12 @@ void graph_voronoiRepairMult(
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
    const STP_Bool*       nodesmark,          /**< array to mark temporarily discarded nodes */
-   int*                  count,              /**< pointer to number of heap elements */
-   int*                  vbase,              /**< array containing Voronoi base of each node */
-   int*                  boundedges,         /**< boundary edges */
-   int*                  nboundedges,        /**< number of boundary edges */
-   UF*                   uf,                 /**< union find data structure */
-   PATH*                 path                /**< Voronoi paths data structure */
+   int* RESTRICT         count,              /**< pointer to number of heap elements */
+   int* RESTRICT         vbase,              /**< array containing Voronoi base of each node */
+   int* RESTRICT         boundedges,         /**< boundary edges */
+   int* RESTRICT         nboundedges,        /**< number of boundary edges */
+   UF* RESTRICT          uf,                 /**< union find data structure */
+   PATH* RESTRICT        path                /**< Voronoi paths data structure */
    )
 {
    assert(scip && g && cost && nodesmark && count && vbase && boundedges && nboundedges && uf && path);

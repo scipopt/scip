@@ -146,7 +146,8 @@ typedef struct supergraph_data
 typedef struct pcmw_data
 {
    SCIP_Real* const      prize_biased;       /**< prize */
-   SCIP_Real* const      edgecost_biased;    /**< cost */
+   SCIP_Real* const      edgecost_biased;    /**< fully biased edge costs (PC only) */
+   SCIP_Real* const      edgecost_org;       /**< original, fully unbiased, edge costs (PC only) */
    STP_Bool* const       prizemark;          /**< marked? */
    int* const            prizemarklist;      /**< list of all marked */
    int                   nprizemarks;        /**< size of list */
@@ -686,6 +687,8 @@ SCIP_Real getEdgeCostUnbiased(
    int                   edge                /**< edge */
    )
 {
+   SCIP_Real cost;
+
    assert(graph && pcmwData);
    assert(edge >= 0 && edge < graph->edges);
 
@@ -697,13 +700,21 @@ SCIP_Real getEdgeCostUnbiased(
       {
          assert(graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP);
 
-         return 0.0;
+         cost = 0.0;
       }
+      else
+      {
+         assert(pcmwData->edgecost_org);
 
-      // todo for small prizes: need to check whether head is a non-terminal leaf...and then add the original prize
+         cost = pcmwData->edgecost_org[edge];
+      }
+   }
+   else
+   {
+      cost = graph->cost[edge];
    }
 
-   return graph->cost[edge];
+   return cost;
 }
 
 
@@ -916,7 +927,6 @@ SCIP_RETCODE connectivityDataInit(
       assert(graph->path_state[k] == CONNECT || !graph->mark[k]);
 
    BMSclearMemoryArray(blists_start, nnodes);
-
 
    for( int k = 0; k < nnodes; ++k )
    {
@@ -1903,13 +1913,19 @@ void getKeyPathsStar(
 
    assert(inedgescount >= 0);
 
-   // todo for small prizes check whether non-leafterminal
-   if( inedgescount > 1 && pcmwData->isActive && !graph_pc_isPc(graph) )
+   if( inedgescount > 1 && pcmwData->isActive )
    {
       assert(graph_pc_isPcMw(graph));
 
-      /* we have implicitly subtracted the prize of the key vertex several times, need to revert */
-      keypathsData->kpcost += (SCIP_Real)(inedgescount - 1) * graph->prize[keyvertex];
+      if( !graph_pc_isPc(graph) || graph_pc_knotIsNonLeafTerm(graph, keyvertex) )
+      {
+         /* we have implicitly subtracted the prize of the key vertex several times, need to revert */
+         keypathsData->kpcost += (SCIP_Real)(inedgescount - 1) * graph->prize[keyvertex];
+      }
+      else
+      {
+         assert(0.0 == graph->prize[keyvertex]);
+      }
    }
 
    /* traverse the key-path leading to the root-component */
@@ -2914,7 +2930,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
    IDX** lvledges_start = NULL;  /* horizontal edges */
    PHNODE** boundpaths = NULL;
    SCIP_Real* memvdist = NULL;
-   SCIP_Real* edgecost_pc = NULL;
+   SCIP_Real* edgecostBiased_pc = NULL;
+   SCIP_Real* edgecostOrg_pc = NULL;
    SCIP_Real* prize_pc = NULL;
    int* vnoibase = NULL;
    int* kpedges = NULL;
@@ -2959,7 +2976,14 @@ SCIP_RETCODE localKeyVertexHeuristics(
    /* memory needed for both Key-Path Elimination and Exchange */
    if( mwpc )
    {
-      SCIP_CALL(SCIPallocBufferArray(scip, &edgecost_pc, nedges));
+      if( graph_pc_isPc(graph) )
+      {
+         SCIP_CALL(SCIPallocBufferArray(scip, &edgecostOrg_pc, nedges));
+
+         graph_pc_getOrgCosts(scip, graph, edgecostOrg_pc);
+      }
+
+      SCIP_CALL(SCIPallocBufferArray(scip, &edgecostBiased_pc, nedges));
       SCIP_CALL(SCIPallocBufferArray(scip, &prize_pc, nnodes));
       SCIP_CALL(SCIPallocBufferArray(scip, &prizemark, nnodes));
       SCIP_CALL(SCIPallocBufferArray(scip, &prizemarklist, nnodes));
@@ -2967,7 +2991,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
       for( int k = 0; k < nnodes; k++ )
          prizemark[k] = FALSE;
 
-      graph_pc_getBiased(scip, graph, TRUE, edgecost_pc, prize_pc);
+      graph_pc_getBiased(scip, graph, edgecostBiased_pc, prize_pc);
    }
    SCIP_CALL( SCIPallocBufferArray(scip, &scanned, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pheapsize, nnodes) );
@@ -3003,8 +3027,9 @@ SCIP_RETCODE localKeyVertexHeuristics(
          .nodeIsScanned = scanned, .newedges = newedges };
       SGRAPH supergraphData = { .supernodes = supernodes, .nodeIsLowSupernode = supernodesmark,
          .mst = NULL, .mstcost = 0.0, .nsupernodes = 0 };
-      PCMW pcmwData = { .prize_biased = prize_pc, .edgecost_biased = edgecost_pc, .prizemark = prizemark,
-         .prizemarklist = prizemarklist, .nprizemarks = 0, .isActive = graph_pc_isPcMw(graph), .solroot = solroot };
+      PCMW pcmwData = { .prize_biased = prize_pc, .edgecost_biased = edgecostBiased_pc, .edgecost_org = edgecostOrg_pc,
+         .prizemark = prizemark, .prizemarklist = prizemarklist, .nprizemarks = 0, .isActive = graph_pc_isPcMw(graph),
+         .solroot = solroot };
       int nstnodes = 0;
 
       localmoves = 0;
@@ -3198,7 +3223,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
             if( keypathsData.nkpnodes > 0 )
             {
                graph_voronoiRepair(scip, graph, pcmwData.isActive? pcmwData.edgecost_biased : graph->cost,
-                  &nheapelems, vnoibase, vnoipath, &newedge, crucnode, &uf);
+                  pcmwData.edgecost_org, &nheapelems, vnoibase, vnoipath, &newedge, crucnode, &uf);
             }
             else
             {
@@ -3306,7 +3331,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
    SCIPfreeBufferArrayNull(scip, &prizemarklist);
    SCIPfreeBufferArrayNull(scip, &prizemark);
    SCIPfreeBufferArrayNull(scip, &prize_pc);
-   SCIPfreeBufferArrayNull(scip, &edgecost_pc);
+   SCIPfreeBufferArrayNull(scip, &edgecostBiased_pc);
+   SCIPfreeBufferArrayNull(scip, &edgecostOrg_pc);
    SCIPfreeBufferArray(scip, &boundedges);
    SCIPfreeBufferArray(scip, &lvledges_start);
    SCIPfreeBufferArray(scip, &newedges);
@@ -3680,22 +3706,22 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
 
 
-   if( 0 )
+   if( 1 )
    {
       int todo;
 
-   SCIP_CALL( localKeyVertexHeuristics(scip, graph, solNodes, linkcutNodes, solEdges, &success) );
+      SCIP_CALL( localKeyVertexHeuristics(scip, graph, solNodes, linkcutNodes, solEdges, &success) );
 
-   if( success )
-   {
-      markSolTreeNodes(scip, graph, solEdges, linkcutNodes, solNodes);
-      SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
-   }
+      if( success )
+      {
+         markSolTreeNodes(scip, graph, solEdges, linkcutNodes, solNodes);
+         SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
+      }
 
-   if( success && mwpc )
-   {
-      SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, solEdges, solNodes) );
-   }
+      if( success && mwpc )
+      {
+         SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, solEdges, solNodes) );
+      }
 
    }
 #ifndef NDEBUG
