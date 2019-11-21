@@ -1476,8 +1476,6 @@ SCIP_RETCODE SCIPmatrixGetParallelCols(
 #undef SCIPmatrixGetRowNMaxActNegInf
 #undef SCIPmatrixGetRowNMaxActPosInf
 #undef SCIPmatrixGetCons
-#undef SCIPmatrixUplockConflict
-#undef SCIPmatrixDownlockConflict
 
 /** get column based start pointer of values */
 SCIP_Real* SCIPmatrixGetColValPtr(

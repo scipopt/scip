@@ -250,12 +250,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
     */
    if( ! valid )
    {
-      for( i = 0; i < nvars; i++ )
-      {
-         if( subvars[i] == NULL )
-            continue;
-         SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, 1, 1 ) );
-      }
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/allowweakdualreds", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/allowstrongdualreds", FALSE) );
    }
 
    SCIPdebugMsg(scip, "Copying SCIP was%s valid.\n", valid ? "" : " not");
@@ -678,20 +674,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIPfreeBufferArray(scip, &conshdlrs);
    SCIPhashmapFree(&varmapbw);
 
-   /* we are in SCIP_STAGE_SOLVED, so we need to free the transformed problem before releasing the locks */
    SCIP_CALL( SCIPfreeTransform(subscip) );
-
-   if( !valid )
-   {
-      /* remove all locks that were added to avoid dual presolving */
-      for( i = 0; i < nvars; i++ )
-      {
-         if( subvars[i] == NULL )
-            continue;
-
-         SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, -1, -1 ) );
-      }
-   }
 
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
