@@ -1357,7 +1357,7 @@ SCIP_RETCODE processWatchedVars(
    return SCIP_OKAY;
 }
 
-/** checks constraint for violation, returns TRUE iff constraint is feasible */
+/** checks constraint for violation, returns TRUE iff constraint is violated */
 static
 SCIP_Bool isConsViolated(
    SCIP*                 scip,               /**< SCIP data structure */
