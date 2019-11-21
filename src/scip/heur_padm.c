@@ -905,6 +905,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       goto TERMINATE;
    }
 
+   *result = SCIP_DIDNOTFIND;
+
    /* determine start indices of blocks in sorted conss array */
    i = 0;
    for( b = 0; b < nblocks + 1; ++b )
