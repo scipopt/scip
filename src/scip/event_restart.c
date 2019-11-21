@@ -115,6 +115,8 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define MAX_REGFORESTSIZE 10000000               /**< size limit (number of nodes) for regression forest */
 
 #define DEFAULT_REGFORESTFILENAME "-"            /**< default file name of user regression forest in RFCSV format */
+#define DEFAULT_COEFMONOPROG   0.3667            /**< coefficient of progress in monotone approximation of search completion */
+#define DEFAULT_COEFMONOSSG    0.6333            /**< coefficient of 1 - SSG in monotone approximation of search completion */
 
 
 /* computation of search completion */
@@ -226,6 +228,8 @@ struct SCIP_EventhdlrData
    SCIP_Real             restartfactor;      /**< factor by which the estimated number of nodes should exceed the current number of nodes */
    SCIP_Real             proglastreport;     /**< progress at which last report was printed */
    SCIP_Real             treeprofile_minnodesperdepth;/**< minimum average number of nodes at each depth before producing estimations */
+   SCIP_Real             coefmonoprog;       /**< coefficient of progress in monotone approximation of search completion */
+   SCIP_Real             coefmonossg;        /**< coefficient of 1 - SSG in monotone approximation of search completion */
    SCIP_Longint          minnodes;           /**< minimum number of nodes in a run before restart is triggered */
    int                   restartlimit;       /**< how often should a restart be triggered? (-1 for no limit) */
    int                   nrestartsperformed; /**< number of restarts performed so far */
@@ -2023,11 +2027,8 @@ SCIP_RETCODE getSearchCompletion(
          break;
          /* interpolate between ssg and progress */
       case COMPLETIONTYPE_MONOREG:
-         /* author bzfhende
-          *
-          * TODO make this user parameters
-          */
-         *completed = 0.5828 + 0.3667 * treedata->progress - 0.6101 * treedata->ssg->value;
+         *completed = eventhdlrdata->coefmonoprog * treedata->progress +
+            eventhdlrdata->coefmonossg * (1.0 - treedata->ssg->value);
          break;
       case COMPLETIONTYPE_PROGRESS:
          *completed = treedata->progress;
@@ -2721,6 +2722,12 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP_CALL( SCIPaddRealParam(scip, "restarts/restartfactor",
          "factor by which the estimated number of nodes should exceed the current number of nodes",
          &eventhdlrdata->restartfactor, FALSE, 2.0, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/coefmonoprog",
+         "coefficient of progress in monotone approximation of search completion",
+         &eventhdlrdata->coefmonoprog, FALSE, DEFAULT_COEFMONOPROG, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/coefmonossg",
+         "coefficient of 1 - SSG in monotone approximation of search completion",
+         &eventhdlrdata->coefmonossg, FALSE, DEFAULT_COEFMONOSSG, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/hitcounterlim", "limit on the number of successive samples to really trigger a restart",
          &eventhdlrdata->hitcounterlim, FALSE, 50, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/estimation/reportfreq",
