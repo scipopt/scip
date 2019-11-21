@@ -733,7 +733,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
          /* look for fixable variables */
          for( v = ncols - 1; v >= 0; --v )
          {
-            SCIP_Bool infeasible;
             SCIP_Bool fixed;
 
             var = SCIPmatrixGetVar(matrix, v);
