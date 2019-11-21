@@ -2413,9 +2413,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
-   if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) )
-      return SCIP_OKAY;
-
    if( SCIPgetNContVars(scip) + SCIPgetNImplVars(scip) == 0 )
       return SCIP_OKAY;
 

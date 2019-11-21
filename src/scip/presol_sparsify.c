@@ -1380,9 +1380,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) || SCIPisNLPEnabled(scip) )
-      return SCIP_OKAY;
-
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
