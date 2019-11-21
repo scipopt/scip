@@ -94,6 +94,8 @@
 #define EVENTHDLR_NAME         "cardinality"
 #define EVENTHDLR_DESC         "bound change event handler for cardinality constraints"
 
+#define EVENTHDLR_EVENT_TYPE   (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)
+
 
 /** constraint data for cardinality constraints */
 struct SCIP_ConsData
@@ -167,7 +169,7 @@ SCIP_RETCODE catchVarEventCardinality(
    (*eventdata)->pos = (unsigned int)pos;
 
    /* catch bound change events of each variable */
-   SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, *eventdata, NULL) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, eventhdlr, *eventdata, NULL) );
    SCIP_CALL( SCIPcatchVarEvent(scip, indvar, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, *eventdata, NULL) );
 
    return SCIP_OKAY;
@@ -191,7 +193,7 @@ SCIP_RETCODE dropVarEventCardinality(
    assert(eventdata != NULL);
 
    /* drop bound change events of each variable */
-   SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, *eventdata, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, eventhdlr, *eventdata, -1) );
    SCIP_CALL( SCIPdropVarEvent(scip, indvar, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, *eventdata, -1) );
 
    /* free event data of indicator variable */
@@ -346,8 +348,8 @@ SCIP_RETCODE lockVariableCardinality(
    assert(var != NULL);
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)),
-         SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
    SCIP_CALL( SCIPlockVarCons(scip, indvar, cons, TRUE, TRUE) );
 
    return SCIP_OKAY;
@@ -367,8 +369,8 @@ SCIP_RETCODE unlockVariableCardinality(
    assert(var != NULL);
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)),
-         SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
    SCIP_CALL( SCIPunlockVarCons(scip, indvar, cons, TRUE, TRUE) );
 
    return SCIP_OKAY;
@@ -2848,13 +2850,13 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
       indvar = indvars[j];
 
       /* if lower bound is negative, rounding down may violate constraint */
-      if( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
+      if( SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)) )
       {
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlockspos, nlocksneg) );
       }
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
-      if( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
+      if( SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var)) )
       {
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
       }
@@ -3145,6 +3147,32 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
       assert(i < consdata->neventdatascurrent);
    }
 #endif
+
+   if( eventtype & SCIP_EVENTTYPE_GBDCHANGED )
+   {
+      if( eventtype == SCIP_EVENTTYPE_GLBCHANGED )
+      {
+         /* global lower bound is not negative anymore -> remove down lock */
+         if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
+            SCIP_CALL( SCIPunlockVarCons(scip, var, consdata->cons, 1, 0) );
+         /* global lower bound turned negative -> add down lock */
+         else if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
+            SCIP_CALL( SCIPlockVarCons(scip, var, consdata->cons, 1, 0) );
+
+         return SCIP_OKAY;
+      }
+      if( eventtype == SCIP_EVENTTYPE_GUBCHANGED )
+      {
+         /* global upper bound is not positive anymore -> remove up lock */
+         if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
+            SCIP_CALL( SCIPunlockVarCons(scip, var, consdata->cons, 0, 1) );
+         /* global upper bound turned positive -> add up lock */
+         else if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
+            SCIP_CALL( SCIPlockVarCons(scip, var, consdata->cons, 0, 1) );
+
+         return SCIP_OKAY;
+      }
+   }
 
    /* if variable is an indicator variable */
    if( var == eventdata->indvar )
