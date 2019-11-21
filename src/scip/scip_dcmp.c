@@ -916,7 +916,13 @@ SCIP_RETCODE buildBlockGraph(
 
       /* clean up the adjacent array before freeing */
       for( i = 0; i < nblocklinkingvars; ++i )
-         adjacent[i] = FALSE;
+         adjacent[adjacentidxs[i]] = FALSE;
+
+      /* check that adjacent has been entirely cleaned up */
+#ifndef NDEBUG
+      for( i = 0; i < nlinkingvars; ++i )
+         assert(adjacent[i] == FALSE);
+#endif
 
       SCIPfreeBufferArray(scip, &adjacentidxs);
       SCIPfreeCleanBufferArray(scip, &adjacent);
