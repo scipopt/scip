@@ -2293,6 +2293,49 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    SCIP_Bool complete;
    SCIP_Bool infeasible;
    SCIP_PRESOLDATA* presoldata;
+   int oldnchgbds;
+   int oldnfixedvars;
+   int ndelcons;
+   int nrows;
+   int ncols;
+   SCIP_Real* oldlbs;
+   SCIP_Real* oldubs;
+   SCIP_Real* newlbs;
+   SCIP_Real* newubs;
+   SCIP_Bool* delcons;
+   int* rowidxptr;
+   SCIP_Real* rowvalptr;
+   SCIP_VAR* var;
+
+   int maxhashes;
+
+   int maxlen;
+   int pospp;
+   int listsizepp;
+   int posmm;
+   int listsizemm;
+   int pospm;
+   int listsizepm;
+   int posmp;
+   int listsizemp;
+
+   int* hashlistpp;
+   int* hashlistmm;
+   int* hashlistpm;
+   int* hashlistmp;
+
+   int* rowidxlistpp;
+   int* rowidxlistmm;
+   int* rowidxlistpm;
+   int* rowidxlistmp;
+
+   SCIP_Bool finiterhs;
+   int block1start;
+   int block1end;
+   int block2start;
+   int block2end;
+
+   SCIP_HASHSET* pairhashset;
 
    int i;
    int j;
@@ -2305,7 +2348,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) || SCIPisNLPEnabled(scip) )
       return SCIP_OKAY;
 
-   if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
+   if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
    presoldata = SCIPpresolGetData(presol);
@@ -2317,625 +2360,581 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, FALSE, &initialized, &complete) );
 
-   /* we only work on pure MIPs currently */
-   if( initialized && complete )
+   if( !initialized )
+      return SCIP_OKAY;
+
+   nrows = SCIPmatrixGetNRows(matrix);
+   ncols = SCIPmatrixGetNColumns(matrix);
+
+   if( nrows <= 1 )
    {
-      int oldnchgbds;
-      int oldnfixedvars;
-      int ndelcons;
-      int nrows;
-      int ncols;
-      SCIP_Real* oldlbs;
-      SCIP_Real* oldubs;
-      SCIP_Real* newlbs;
-      SCIP_Real* newubs;
-      SCIP_Bool* delcons;
-      int* rowidxptr;
-      SCIP_Real* rowvalptr;
-      SCIP_VAR* var;
+      SCIPmatrixFree(scip, &matrix);
+      return SCIP_OKAY;
+   }
 
-      int maxhashes;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hashlistpp, nrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hashlistmm, nrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hashlistpm, nrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hashlistmp, nrows) );
 
-      int maxlen;
-      int pospp;
-      int listsizepp;
-      int posmm;
-      int listsizemm;
-      int pospm;
-      int listsizepm;
-      int posmp;
-      int listsizemp;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rowidxlistpp, nrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rowidxlistmm, nrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rowidxlistpm, nrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rowidxlistmp, nrows) );
 
-      int* hashlistpp;
-      int* hashlistmm;
-      int* hashlistpm;
-      int* hashlistmp;
+   pospp = 0;
+   posmm = 0;
+   pospm = 0;
+   posmp = 0;
+   listsizepp = nrows;
+   listsizemm = nrows;
+   listsizepm = nrows;
+   listsizemp = nrows;
+   maxhashes = nrows * presoldata->maxhashfac;
 
-      int* rowidxlistpp;
-      int* rowidxlistmm;
-      int* rowidxlistpm;
-      int* rowidxlistmp;
+   /* prevent integer overflow issues */
+   if( nrows != 0 && maxhashes / nrows != presoldata->maxhashfac )
+   {
+      maxhashes = INT_MAX;
+   }
 
-      SCIP_Bool finiterhs;
-      int block1start;
-      int block1end;
-      int block2start;
-      int block2end;
+   /* skim through the problem and create hashlists for combination candidates */
+   for( i = 0; i < nrows; i++)
+   {
+      if( pospp + posmm + pospm + posmp > maxhashes )
+         break;
 
-      SCIP_HASHSET* pairhashset;
-
-      nrows = SCIPmatrixGetNRows(matrix);
-      ncols = SCIPmatrixGetNColumns(matrix);
-
-      if( nrows == 1 )
+      rowvalptr = SCIPmatrixGetRowValPtr(matrix, i);
+      rowidxptr = SCIPmatrixGetRowIdxPtr(matrix, i);
+      finiterhs = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i));
+      maxlen = MIN(presoldata->maxconsiderednonzeros, SCIPmatrixGetRowNNonzs(matrix, i)); /*lint !e666*/
+      for( j = 0; j < maxlen; j++)
       {
-         SCIPmatrixFree(scip, &matrix);
-         return SCIP_OKAY;
-      }
-
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hashlistpp, nrows) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hashlistmm, nrows) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hashlistpm, nrows) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hashlistmp, nrows) );
-
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rowidxlistpp, nrows) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rowidxlistmm, nrows) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rowidxlistpm, nrows) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &rowidxlistmp, nrows) );
-
-      pospp = 0;
-      posmm = 0;
-      pospm = 0;
-      posmp = 0;
-      listsizepp = nrows;
-      listsizemm = nrows;
-      listsizepm = nrows;
-      listsizemp = nrows;
-      maxhashes = nrows * presoldata->maxhashfac;
-
-      /* prevent integer overflow issues */
-      if( nrows != 0 && maxhashes / nrows != presoldata->maxhashfac )
-      {
-         maxhashes = INT_MAX;
-      }
-
-      /* skim through the problem and create hashlists for combination candidates */
-      for( i = 0; i < nrows; i++)
-      {
-         if( pospp + posmm + pospm + posmp > maxhashes )
-            break;
-
-         rowvalptr = SCIPmatrixGetRowValPtr(matrix, i);
-         rowidxptr = SCIPmatrixGetRowIdxPtr(matrix, i);
-         finiterhs = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i));
-         maxlen = MIN(presoldata->maxconsiderednonzeros, SCIPmatrixGetRowNNonzs(matrix, i)); /*lint !e666*/
-         for( j = 0; j < maxlen; j++)
+         for( k = j+1; k < maxlen; k++)
          {
-            for( k = j+1; k < maxlen; k++)
+            if( SCIPisPositive(scip, rowvalptr[j]) )
             {
-               if( SCIPisPositive(scip, rowvalptr[j]) )
+               if(SCIPisPositive(scip, rowvalptr[k]) )
                {
-                  if(SCIPisPositive(scip, rowvalptr[k]) )
-                  {
-                     /* right-shift is required because we want to sort the hashes later on */
-                     SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
-                     if( finiterhs )
-                        SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
-                           hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
-                  }
-                  else
-                  {
-                     SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
-                     if( finiterhs )
-                        SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
-                           hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
-                  }
-               }
-               else
-               {
-                  if(SCIPisPositive(scip, rowvalptr[k]) )
-                  {
-                     /* right-shift is required because we want to sort the hashes later on */
-                     SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
-                     if( finiterhs )
-                        SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
-                           hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
-                  }
-                  else
-                  {
+                  /* right-shift is required because we want to sort the hashes later on */
+                  SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
+                     hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+                  if( finiterhs )
                      SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
                         hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
-                     if( finiterhs )
-                        SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
-                           hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
-                  }
+               }
+               else
+               {
+                  SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
+                     hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+                  if( finiterhs )
+                     SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
+                        hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+               }
+            }
+            else
+            {
+               if(SCIPisPositive(scip, rowvalptr[k]) )
+               {
+                  /* right-shift is required because we want to sort the hashes later on */
+                  SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
+                     hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+                  if( finiterhs )
+                     SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
+                        hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+               }
+               else
+               {
+                  SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
+                     hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+                  if( finiterhs )
+                     SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
+                        hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
                }
             }
          }
       }
+   }
 
 #ifdef SCIP_DEBUG_HASHING
-      SCIPdebugMsg(scip, "pp\n");
-      for( i = 0; i < pospp; i++)
-        SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistpp[i], rowidxlistpp[i]);
-      SCIPdebugMsg(scip, "mm\n");
-      for( i = 0; i < posmm; i++)
-        SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistmm[i], rowidxlistmm[i]);
-      SCIPdebugMsg(scip, "pm\n");
-      for( i = 0; i < pospm; i++)
-        SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistpm[i], rowidxlistpm[i]);
-      SCIPdebugMsg(scip, "mp\n");
-      for( i = 0; i < posmp; i++)
-        SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistmp[i], rowidxlistmp[i]);
+   SCIPdebugMsg(scip, "pp\n");
+   for( i = 0; i < pospp; i++)
+      SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistpp[i], rowidxlistpp[i]);
+   SCIPdebugMsg(scip, "mm\n");
+   for( i = 0; i < posmm; i++)
+      SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistmm[i], rowidxlistmm[i]);
+   SCIPdebugMsg(scip, "pm\n");
+   for( i = 0; i < pospm; i++)
+      SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistpm[i], rowidxlistpm[i]);
+   SCIPdebugMsg(scip, "mp\n");
+   for( i = 0; i < posmp; i++)
+      SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistmp[i], rowidxlistmp[i]);
 #endif
-      SCIPdebugMsg(scip, "hashlist sizes: pp %d, mm %d, pm %d, mp %d \n", pospp, posmm, pospm, posmp);
+   SCIPdebugMsg(scip, "hashlist sizes: pp %d, mm %d, pm %d, mp %d \n", pospp, posmm, pospm, posmp);
 
-      SCIPsortIntInt(hashlistpp, rowidxlistpp, pospp);
-      SCIPsortIntInt(hashlistmm, rowidxlistmm, posmm);
-      SCIPsortIntInt(hashlistpm, rowidxlistpm, pospm);
-      SCIPsortIntInt(hashlistmp, rowidxlistmp, posmp);
+   SCIPsortIntInt(hashlistpp, rowidxlistpp, pospp);
+   SCIPsortIntInt(hashlistmm, rowidxlistmm, posmm);
+   SCIPsortIntInt(hashlistpm, rowidxlistpm, pospm);
+   SCIPsortIntInt(hashlistmp, rowidxlistmp, posmp);
 
 #ifdef SCIP_DEBUG_HASHING
-      SCIPdebugMsg(scip, "sorted pp\n");
-      for( i = 0; i < pospp; i++)
-        SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistpp[i], rowidxlistpp[i]);
-      SCIPdebugMsg(scip, "sorted mm\n");
-      for( i = 0; i < posmm; i++)
-        SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistmm[i], rowidxlistmm[i]);
-      SCIPdebugMsg(scip, "sorted pm\n");
-      for( i = 0; i < pospm; i++)
-        SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistpm[i], rowidxlistpm[i]);
-      SCIPdebugMsg(scip, "sorted mp\n");
-      for( i = 0; i < posmp; i++)
-        SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistmp[i], rowidxlistmp[i]);
+   SCIPdebugMsg(scip, "sorted pp\n");
+   for( i = 0; i < pospp; i++)
+      SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistpp[i], rowidxlistpp[i]);
+   SCIPdebugMsg(scip, "sorted mm\n");
+   for( i = 0; i < posmm; i++)
+      SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistmm[i], rowidxlistmm[i]);
+   SCIPdebugMsg(scip, "sorted pm\n");
+   for( i = 0; i < pospm; i++)
+      SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistpm[i], rowidxlistpm[i]);
+   SCIPdebugMsg(scip, "sorted mp\n");
+   for( i = 0; i < posmp; i++)
+      SCIPdebugMsg(scip, "%d: hash  = %d, rowidx = %d\n", i, hashlistmp[i], rowidxlistmp[i]);
 #endif
 
-      SCIP_CALL( SCIPallocCleanBufferArray(scip, &delcons, nrows) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &oldlbs, ncols) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &oldubs, ncols) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &newlbs, ncols) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &newubs, ncols) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &delcons, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &oldlbs, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &oldubs, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newlbs, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newubs, ncols) );
 
-      for( i = 0; i < SCIPmatrixGetNColumns(matrix); i++ )
+   for( i = 0; i < SCIPmatrixGetNColumns(matrix); i++ )
+   {
+      var = SCIPmatrixGetVar(matrix, i);
+      oldlbs[i] = SCIPvarGetLbLocal(var);
+      oldubs[i] = SCIPvarGetUbLocal(var);
+      newlbs[i] = oldlbs[i];
+      newubs[i] = oldubs[i];
+   }
+
+   SCIP_CALL( SCIPhashsetCreate(&pairhashset, SCIPblkmem(scip), 1) );
+
+   /* Process pp and mm hashlists */
+   if( pospp > 0 && posmm > 0 )
+   {
+      int ncombines;
+      int maxcombines;
+      SCIP_Bool finished;
+      SCIP_Bool success;
+      SCIP_Bool swaprow1;
+      SCIP_Bool swaprow2;
+      int combinefails;
+      int retrievefails;
+      ROWPAIR rowpair;
+
+      finished = FALSE;
+      block1start = 0;
+      block1end = 0;
+      block2start = 0;
+      block2end = 0;
+      maxcombines = nrows * presoldata->maxpairfac;
+
+      /* prevent overflow issues */
+      if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
       {
-         var = SCIPmatrixGetVar(matrix, i);
-         oldlbs[i] = SCIPvarGetLbLocal(var);
-         oldubs[i] = SCIPvarGetUbLocal(var);
-         newlbs[i] = oldlbs[i];
-         newubs[i] = oldubs[i];
+         maxcombines = INT_MAX;
       }
-
-      SCIP_CALL( SCIPhashsetCreate(&pairhashset, SCIPblkmem(scip), 1) );
-
-      /* Process pp and mm hashlists */
-      if( pospp > 0 && posmm > 0 )
+      ncombines = 0;
+      combinefails = 0;
+      retrievefails = 0;
+      findNextBlock(hashlistpp, pospp, &block1start, &block1end);
+      findNextBlock(hashlistmm, posmm, &block2start, &block2end);
+      SCIPdebugMsg(scip, "processing pp and mm\n");
+      while( !finished )
       {
-         int ncombines;
-         int maxcombines;
-         SCIP_Bool finished;
-         SCIP_Bool success;
-         SCIP_Bool swaprow1;
-         SCIP_Bool swaprow2;
-         int combinefails;
-         int retrievefails;
-         ROWPAIR rowpair;
-
-         finished = FALSE;
-         block1start = 0;
-         block1end = 0;
-         block2start = 0;
-         block2end = 0;
-         maxcombines = nrows * presoldata->maxpairfac;
-
-         /* prevent overflow issues */
-         if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
+         if( hashlistpp[block1start] == hashlistmm[block2start] )
          {
-            maxcombines = INT_MAX;
-         }
-         ncombines = 0;
-         combinefails = 0;
-         retrievefails = 0;
-         findNextBlock(hashlistpp, pospp, &block1start, &block1end);
-         findNextBlock(hashlistmm, posmm, &block2start, &block2end);
-         SCIPdebugMsg(scip, "processing pp and mm\n");
-         while( !finished )
-         {
-            if( hashlistpp[block1start] == hashlistmm[block2start] )
+            for( i = block1start; i < block1end; i++ )
             {
-               for( i = block1start; i < block1end; i++ )
+               for( j = block2start; j < block2end; j++ )
                {
-                  for( j = block2start; j < block2end; j++ )
+                  if( rowidxlistpp[i] != rowidxlistmm[j] )
                   {
-                     if( rowidxlistpp[i] != rowidxlistmm[j] )
+                     rowpair.row1idx = MIN(rowidxlistpp[i], rowidxlistmm[j]);
+                     rowpair.row2idx = MAX(rowidxlistpp[i], rowidxlistmm[j]);
+                     if( !SCIPhashsetExists(pairhashset, encodeRowPair(&rowpair)) )
                      {
-                        rowpair.row1idx = MIN(rowidxlistpp[i], rowidxlistmm[j]);
-                        rowpair.row2idx = MAX(rowidxlistpp[i], rowidxlistmm[j]);
-                        if( !SCIPhashsetExists(pairhashset, encodeRowPair(&rowpair)) )
+                        assert(!SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, rowpair.row1idx)));
+                        assert(!SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, rowpair.row2idx)));
+
+                        success = FALSE;
+
+                        /* apply lp-based bound tightening */
+                        if( presoldata->lpbound )
                         {
-                           assert(!SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, rowpair.row1idx)));
-                           assert(!SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, rowpair.row2idx)));
+                           swaprow1 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx));
+                           swaprow2 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx));
 
-                           success = FALSE;
-
-                           /* apply lp-based bound tightening */
-                           if( presoldata->lpbound )
-                           {
-                              swaprow1 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx));
-                              swaprow2 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx));
-
-                              SCIP_CALL( applyLPboundTightening(scip, matrix, rowpair.row1idx, rowpair.row2idx, swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
-                           }
-
-                           /* apply bound tightening on convex-combined rows */
-                           if( presoldata->convcomb )
-                           {
-                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                 FALSE, FALSE, newlbs, newubs, &success) );
-                              if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx)) )
-                                 SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                    TRUE, FALSE, newlbs, newubs, &success) );
-                              if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
-                                 SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                    FALSE, TRUE, newlbs, newubs, &success) );
-                              if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx))
-                                   && !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
-                                 SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                    TRUE, TRUE, newlbs, newubs, &success) );
-                           }
-                           if( success )
-                              combinefails = 0;
-                           else
-                              combinefails++;
-
-                           SCIP_CALL( SCIPhashsetInsert(pairhashset, SCIPblkmem(scip), encodeRowPair(&rowpair)) );
-                           ncombines++;
-                           if( ncombines >= maxcombines || combinefails >= presoldata->maxcombinefails )
-                              finished = TRUE;
-
-                           retrievefails = 0;
+                           SCIP_CALL( applyLPboundTightening(scip, matrix, rowpair.row1idx, rowpair.row2idx, swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
                         }
-                        else if( retrievefails < presoldata->maxretrievefails )
-                           retrievefails++;
+
+                        /* apply bound tightening on convex-combined rows */
+                        if( presoldata->convcomb )
+                        {
+                           SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                              FALSE, FALSE, newlbs, newubs, &success) );
+                           if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx)) )
+                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                 TRUE, FALSE, newlbs, newubs, &success) );
+                           if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
+                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                 FALSE, TRUE, newlbs, newubs, &success) );
+                           if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx))
+                                 && !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
+                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                 TRUE, TRUE, newlbs, newubs, &success) );
+                        }
+                        if( success )
+                           combinefails = 0;
                         else
+                           combinefails++;
+
+                        SCIP_CALL( SCIPhashsetInsert(pairhashset, SCIPblkmem(scip), encodeRowPair(&rowpair)) );
+                        ncombines++;
+                        if( ncombines >= maxcombines || combinefails >= presoldata->maxcombinefails )
                            finished = TRUE;
+
+                        retrievefails = 0;
                      }
-                     if( finished )
-                        break;
+                     else if( retrievefails < presoldata->maxretrievefails )
+                        retrievefails++;
+                     else
+                        finished = TRUE;
                   }
                   if( finished )
                      break;
                }
-
-               if( block1end < pospp && block2end < posmm )
-               {
-                  findNextBlock(hashlistpp, pospp, &block1start, &block1end);
-                  findNextBlock(hashlistmm, posmm, &block2start, &block2end);
-               }
-               else
-                  finished = TRUE;
+               if( finished )
+                  break;
             }
-            else if( hashlistpp[block1start] < hashlistmm[block2start] && block1end < pospp )
+
+            if( block1end < pospp && block2end < posmm )
+            {
                findNextBlock(hashlistpp, pospp, &block1start, &block1end);
-            else if( hashlistpp[block1start] > hashlistmm[block2start] && block2end < posmm )
                findNextBlock(hashlistmm, posmm, &block2start, &block2end);
+            }
             else
                finished = TRUE;
          }
+         else if( hashlistpp[block1start] < hashlistmm[block2start] && block1end < pospp )
+            findNextBlock(hashlistpp, pospp, &block1start, &block1end);
+         else if( hashlistpp[block1start] > hashlistmm[block2start] && block2end < posmm )
+            findNextBlock(hashlistmm, posmm, &block2start, &block2end);
+         else
+            finished = TRUE;
       }
+   }
 
-      /* Process pm and mp hashlists */
-      if( pospm > 0 && posmp > 0 )
+   /* Process pm and mp hashlists */
+   if( pospm > 0 && posmp > 0 )
+   {
+      int ncombines;
+      int maxcombines;
+      SCIP_Bool finished;
+      SCIP_Bool success;
+      SCIP_Bool swaprow1;
+      SCIP_Bool swaprow2;
+      int combinefails;
+      int retrievefails;
+      ROWPAIR rowpair;
+
+      finished = FALSE;
+      block1start = 0;
+      block1end = 0;
+      block2start = 0;
+      block2end = 0;
+      maxcombines = nrows * presoldata->maxpairfac;
+
+      /* prevent overflow issues */
+      if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
       {
-         int ncombines;
-         int maxcombines;
-         SCIP_Bool finished;
-         SCIP_Bool success;
-         SCIP_Bool swaprow1;
-         SCIP_Bool swaprow2;
-         int combinefails;
-         int retrievefails;
-         ROWPAIR rowpair;
-
-         finished = FALSE;
-         block1start = 0;
-         block1end = 0;
-         block2start = 0;
-         block2end = 0;
-         maxcombines = nrows * presoldata->maxpairfac;
-
-         /* prevent overflow issues */
-         if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
+         maxcombines = INT_MAX;
+      }
+      ncombines = 0;
+      combinefails = 0;
+      retrievefails = 0;
+      findNextBlock(hashlistpm, pospm, &block1start, &block1end);
+      findNextBlock(hashlistmp, posmp, &block2start, &block2end);
+      SCIPdebugMsg(scip, "processing pm and mp\n");
+      while( !finished )
+      {
+         if( hashlistpm[block1start] == hashlistmp[block2start] )
          {
-            maxcombines = INT_MAX;
-         }
-         ncombines = 0;
-         combinefails = 0;
-         retrievefails = 0;
-         findNextBlock(hashlistpm, pospm, &block1start, &block1end);
-         findNextBlock(hashlistmp, posmp, &block2start, &block2end);
-         SCIPdebugMsg(scip, "processing pm and mp\n");
-         while( !finished )
-         {
-            if( hashlistpm[block1start] == hashlistmp[block2start] )
+            for( i = block1start; i < block1end; i++ )
             {
-               for( i = block1start; i < block1end; i++ )
+               for( j = block2start; j < block2end; j++ )
                {
-                  for( j = block2start; j < block2end; j++ )
+                  if( rowidxlistpm[i] != rowidxlistmp[j] )
                   {
-                     if( rowidxlistpm[i] != rowidxlistmp[j] )
+                     rowpair.row1idx = MIN(rowidxlistpm[i], rowidxlistmp[j]);
+                     rowpair.row2idx = MAX(rowidxlistpm[i], rowidxlistmp[j]);
+                     if( ! SCIPhashsetExists(pairhashset, encodeRowPair(&rowpair)) )
                      {
-                        rowpair.row1idx = MIN(rowidxlistpm[i], rowidxlistmp[j]);
-                        rowpair.row2idx = MAX(rowidxlistpm[i], rowidxlistmp[j]);
-                        if( ! SCIPhashsetExists(pairhashset, encodeRowPair(&rowpair)) )
+                        assert(!SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, rowpair.row1idx)));
+                        assert(!SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, rowpair.row2idx)));
+
+                        success = FALSE;
+
+                        /* apply lp-based bound tightening */
+                        if( presoldata->lpbound )
                         {
-                           assert(!SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, rowpair.row1idx)));
-                           assert(!SCIPisInfinity(scip, -SCIPmatrixGetRowLhs(matrix, rowpair.row2idx)));
+                           swaprow1 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx));
+                           swaprow2 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx));
 
-                           success = FALSE;
-
-                           /* apply lp-based bound tightening */
-                           if( presoldata->lpbound )
-                           {
-                              swaprow1 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx));
-                              swaprow2 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx));
-
-                              SCIP_CALL( applyLPboundTightening(scip, matrix, rowpair.row1idx, rowpair.row2idx, swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
-                           }
-
-                           /* apply bound tightening on convex-combined rows */
-                           if( presoldata->convcomb )
-                           {
-                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                 FALSE, FALSE, newlbs, newubs, &success) );
-                              if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx)) )
-                                 SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                    TRUE, FALSE, newlbs, newubs, &success) );
-                              if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
-                                 SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                    FALSE, TRUE, newlbs, newubs, &success) );
-                              if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx))
-                                   && !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
-                                 SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
-                                    TRUE, TRUE, newlbs, newubs, &success) );
-                           }
-                           if( success )
-                              combinefails = 0;
-                           else
-                              combinefails++;
-
-                           SCIP_CALL( SCIPhashsetInsert(pairhashset, SCIPblkmem(scip), encodeRowPair(&rowpair)) );
-                           ncombines++;
-                           if( ncombines >= maxcombines || combinefails >= presoldata->maxcombinefails )
-                              finished = TRUE;
-
-                           retrievefails = 0;
+                           SCIP_CALL( applyLPboundTightening(scip, matrix, rowpair.row1idx, rowpair.row2idx, swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
                         }
-                        else if( retrievefails < presoldata->maxretrievefails )
-                           retrievefails++;
+
+                        /* apply bound tightening on convex-combined rows */
+                        if( presoldata->convcomb )
+                        {
+                           SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                              FALSE, FALSE, newlbs, newubs, &success) );
+                           if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx)) )
+                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                 TRUE, FALSE, newlbs, newubs, &success) );
+                           if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
+                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                 FALSE, TRUE, newlbs, newubs, &success) );
+                           if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx))
+                                 && !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
+                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                 TRUE, TRUE, newlbs, newubs, &success) );
+                        }
+                        if( success )
+                           combinefails = 0;
                         else
+                           combinefails++;
+
+                        SCIP_CALL( SCIPhashsetInsert(pairhashset, SCIPblkmem(scip), encodeRowPair(&rowpair)) );
+                        ncombines++;
+                        if( ncombines >= maxcombines || combinefails >= presoldata->maxcombinefails )
                            finished = TRUE;
+
+                        retrievefails = 0;
                      }
-                     if( finished )
-                        break;
+                     else if( retrievefails < presoldata->maxretrievefails )
+                        retrievefails++;
+                     else
+                        finished = TRUE;
                   }
                   if( finished )
                      break;
                }
-
-               if( block1end < pospm && block2end < posmp )
-               {
-                  findNextBlock(hashlistpm, pospm, &block1start, &block1end);
-                  findNextBlock(hashlistmp, posmp, &block2start, &block2end);
-               }
-               else
-                  finished = TRUE;
+               if( finished )
+                  break;
             }
-            else if( hashlistpm[block1start] < hashlistmp[block2start] && block1end < pospm )
+
+            if( block1end < pospm && block2end < posmp )
+            {
                findNextBlock(hashlistpm, pospm, &block1start, &block1end);
-            else if( hashlistpm[block1start] > hashlistmp[block2start] && block2end < posmp )
                findNextBlock(hashlistmp, posmp, &block2start, &block2end);
+            }
             else
                finished = TRUE;
          }
-      }
-
-      /* Apply reductions */
-      oldnchgbds = *nchgbds;
-      oldnfixedvars = *nfixedvars;
-      for( i = 0; i < SCIPmatrixGetNColumns(matrix); i++ )
-      {
-         SCIP_Bool bndwastightened;
-         SCIP_Bool fixed;
-
-         var = SCIPmatrixGetVar(matrix, i);
-
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
-            || (SCIPisEQ(scip, newlbs[i], SCIPceil(scip, newlbs[i])) && (SCIPisEQ(scip, newubs[i], SCIPfloor(scip, newubs[i])))));
-
-         if( SCIPisEQ(scip, newlbs[i], newubs[i]) )
-         {
-            SCIP_CALL( SCIPfixVar(scip, var, newlbs[i], &infeasible, &fixed) );
-
-            if( infeasible )
-            {
-               SCIPdebugMessage(" -> infeasible fixing of variable %s\n", SCIPvarGetName(var));
-               break;
-            }
-
-            if( fixed )
-            {
-               SCIPdebugMessage("variable %s fixed to %g\n", SCIPvarGetName(var), newlbs[i]);
-               (*nfixedvars)++;
-            }
-         }
-
-         if( SCIPisLT(scip, oldlbs[i], newlbs[i]) )
-         {
-            SCIP_CALL( SCIPtightenVarLb(scip, var, newlbs[i], FALSE, &infeasible, &bndwastightened) );
-
-            if( infeasible )
-            {
-               SCIPdebugMessage(" -> infeasible lower bound tightening: %s >= %g\n", SCIPvarGetName(var), newlbs[i]);
-               break;
-            }
-
-            if( bndwastightened )
-            {
-               SCIPdebugMessage("lower bound of %s changed from %g to %g\n", SCIPvarGetName(var), oldlbs[i], newlbs[i]);
-               (*nchgbds)++;
-            }
-         }
-
-         if( SCIPisGT(scip, oldubs[i], newubs[i]) )
-         {
-            SCIP_CALL( SCIPtightenVarUb(scip, var, newubs[i], FALSE, &infeasible, &bndwastightened) );
-
-            if( infeasible )
-            {
-               SCIPdebugMessage(" -> infeasible upper bound tightening: %s <= %g\n", SCIPvarGetName(var), newubs[i]);
-               break;
-            }
-
-            if( bndwastightened )
-            {
-               SCIPdebugMessage("upper bound of %s changed from %g to %g\n", SCIPvarGetName(var), oldubs[i], newubs[i]);
-               (*nchgbds)++;
-            }
-         }
-      }
-
-      /* Remove redundant constraints */
-      ndelcons = 0;
-      for( i = 0; i < nrows; i++ )
-      {
-         if( delcons[i] )
-         {
-            ndelcons++;
-            delcons[i] = FALSE; /* Remove nonzero from clean buffer array */
-            SCIPdebugMsg(scip, "removing redundant constraint %s\n", SCIPmatrixGetRowName(matrix, i));
-            SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) );
-         }
+         else if( hashlistpm[block1start] < hashlistmp[block2start] && block1end < pospm )
+            findNextBlock(hashlistpm, pospm, &block1start, &block1end);
+         else if( hashlistpm[block1start] > hashlistmp[block2start] && block2end < posmp )
+            findNextBlock(hashlistmp, posmp, &block2start, &block2end);
          else
+            finished = TRUE;
+      }
+   }
+
+   /* Apply reductions */
+   oldnchgbds = *nchgbds;
+   oldnfixedvars = *nfixedvars;
+   for( i = 0; i < SCIPmatrixGetNColumns(matrix); i++ )
+   {
+      SCIP_Bool bndwastightened;
+      SCIP_Bool fixed;
+
+      var = SCIPmatrixGetVar(matrix, i);
+
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+         || (SCIPisEQ(scip, newlbs[i], SCIPceil(scip, newlbs[i])) && (SCIPisEQ(scip, newubs[i], SCIPfloor(scip, newubs[i])))));
+
+      if( SCIPisEQ(scip, newlbs[i], newubs[i]) )
+      {
+         SCIP_CALL( SCIPfixVar(scip, var, newlbs[i], &infeasible, &fixed) );
+
+         if( infeasible )
          {
-            SCIP_Real rowinf;
-            SCIP_Real rowsup;
+            SCIPdebugMessage(" -> infeasible fixing of variable %s\n", SCIPvarGetName(var));
+            break;
+         }
 
-            rowidxptr = SCIPmatrixGetRowIdxPtr(matrix, i);
-            rowvalptr = SCIPmatrixGetRowValPtr(matrix, i);
-
-            rowinf = 0;
-            for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++ )
-            {
-               k = rowidxptr[j];
-               if( SCIPisPositive(scip, rowvalptr[j]) )
-               {
-                  if( !SCIPisInfinity(scip, -newlbs[k]) )
-                     rowinf += rowvalptr[j] * newlbs[k];
-                  else
-                  {
-                     rowinf = -SCIPinfinity(scip);
-                     break;
-                  }
-               }
-               else if( SCIPisNegative(scip, rowvalptr[j]) )
-               {
-                  if( !SCIPisInfinity(scip, newubs[k]) )
-                     rowinf += rowvalptr[j] * newubs[k];
-                  else
-                  {
-                     rowinf = -SCIPinfinity(scip);
-                     break;
-                  }
-               }
-            }
-
-            rowsup = 0;
-            for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++ )
-            {
-               k = rowidxptr[j];
-               if( SCIPisPositive(scip, rowvalptr[j]) )
-               {
-                  if( !SCIPisInfinity(scip, newubs[k]) )
-                     rowsup += rowvalptr[j] * newubs[k];
-                  else
-                  {
-                     rowsup = SCIPinfinity(scip);
-                     break;
-                  }
-               }
-               else if( SCIPisNegative(scip, rowvalptr[j]) )
-               {
-                  if( !SCIPisInfinity(scip, -newlbs[k]) )
-                     rowsup += rowvalptr[j] * newlbs[k];
-                  else
-                  {
-                     rowsup = SCIPinfinity(scip);
-                     break;
-                  }
-               }
-            }
-
-            if( !SCIPisInfinity(scip, -rowinf) )
-            {
-               if( SCIPisLE(scip, SCIPmatrixGetRowLhs(matrix, i), rowinf) )
-               {
-                  ndelcons++;
-                  SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) );
-                  SCIPdebugMsg(scip, "removing redundant cxonstraint %s\n", SCIPmatrixGetRowName(matrix, i));
-               }
-               if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i)) && SCIPisGT(scip, rowinf, SCIPmatrixGetRowRhs(matrix, i)) )
-               {
-                  SCIPdebugMsg(scip, "infeasibility detected in %s, rowinf = %g\n", SCIPmatrixGetRowName(matrix, i), rowinf);
-                  infeasible = TRUE;
-               }
-            }
-            if( !SCIPisInfinity(scip, rowsup) )
-            {
-               if( SCIPisGT(scip, SCIPmatrixGetRowLhs(matrix, i), rowsup) )
-               {
-                  SCIPdebugMsg(scip, "infeasibility detected in %s, rowsup = %g\n", SCIPmatrixGetRowName(matrix, i), rowsup);
-                  infeasible = TRUE;
-               }
-            }
+         if( fixed )
+         {
+            SCIPdebugMessage("variable %s fixed to %g\n", SCIPvarGetName(var), newlbs[i]);
+            (*nfixedvars)++;
          }
       }
-      (*ndelconss) += ndelcons;
 
-      /* set result */
-      if( *nchgbds > oldnchgbds || *nfixedvars > oldnfixedvars || ndelcons > 0 )
+      if( SCIPisLT(scip, oldlbs[i], newlbs[i]) )
       {
-         *result = SCIP_SUCCESS;
-         presoldata->nuselessruns = 0;
+         SCIP_CALL( SCIPtightenVarLb(scip, var, newlbs[i], FALSE, &infeasible, &bndwastightened) );
+
+         if( infeasible )
+         {
+            SCIPdebugMessage(" -> infeasible lower bound tightening: %s >= %g\n", SCIPvarGetName(var), newlbs[i]);
+            break;
+         }
+
+         if( bndwastightened )
+         {
+            SCIPdebugMessage("lower bound of %s changed from %g to %g\n", SCIPvarGetName(var), oldlbs[i], newlbs[i]);
+            (*nchgbds)++;
+         }
       }
-      else if( infeasible )
+
+      if( SCIPisGT(scip, oldubs[i], newubs[i]) )
       {
-         *result = SCIP_CUTOFF;
+         SCIP_CALL( SCIPtightenVarUb(scip, var, newubs[i], FALSE, &infeasible, &bndwastightened) );
+
+         if( infeasible )
+         {
+            SCIPdebugMessage(" -> infeasible upper bound tightening: %s <= %g\n", SCIPvarGetName(var), newubs[i]);
+            break;
+         }
+
+         if( bndwastightened )
+         {
+            SCIPdebugMessage("upper bound of %s changed from %g to %g\n", SCIPvarGetName(var), oldubs[i], newubs[i]);
+            (*nchgbds)++;
+         }
+      }
+   }
+
+   /* Remove redundant constraints */
+   ndelcons = 0;
+   for( i = 0; i < nrows; i++ )
+   {
+      if( delcons[i] )
+      {
+         ndelcons++;
+         delcons[i] = FALSE; /* Remove nonzero from clean buffer array */
+         SCIPdebugMsg(scip, "removing redundant constraint %s\n", SCIPmatrixGetRowName(matrix, i));
+         SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) );
       }
       else
       {
-         presoldata->nuselessruns++;
-      }
+         SCIP_Real rowinf;
+         SCIP_Real rowsup;
 
-      SCIPhashsetFree(&pairhashset, SCIPblkmem(scip));
-      SCIPfreeBufferArray(scip, &newubs);
-      SCIPfreeBufferArray(scip, &newlbs);
-      SCIPfreeBufferArray(scip, &oldubs);
-      SCIPfreeBufferArray(scip, &oldlbs);
-      SCIPfreeCleanBufferArray(scip, &delcons);
-      SCIPfreeBlockMemoryArray(scip, &rowidxlistmp, listsizemp);
-      SCIPfreeBlockMemoryArray(scip, &rowidxlistpm, listsizepm);
-      SCIPfreeBlockMemoryArray(scip, &rowidxlistmm, listsizemm);
-      SCIPfreeBlockMemoryArray(scip, &rowidxlistpp, listsizepp);
-      SCIPfreeBlockMemoryArray(scip, &hashlistmp, listsizemp);
-      SCIPfreeBlockMemoryArray(scip, &hashlistpm, listsizepm);
-      SCIPfreeBlockMemoryArray(scip, &hashlistmm, listsizemm);
-      SCIPfreeBlockMemoryArray(scip, &hashlistpp, listsizepp);
+         rowidxptr = SCIPmatrixGetRowIdxPtr(matrix, i);
+         rowvalptr = SCIPmatrixGetRowValPtr(matrix, i);
+
+         rowinf = 0;
+         for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++ )
+         {
+            k = rowidxptr[j];
+            if( SCIPisPositive(scip, rowvalptr[j]) )
+            {
+               if( !SCIPisInfinity(scip, -newlbs[k]) )
+                  rowinf += rowvalptr[j] * newlbs[k];
+               else
+               {
+                  rowinf = -SCIPinfinity(scip);
+                  break;
+               }
+            }
+            else if( SCIPisNegative(scip, rowvalptr[j]) )
+            {
+               if( !SCIPisInfinity(scip, newubs[k]) )
+                  rowinf += rowvalptr[j] * newubs[k];
+               else
+               {
+                  rowinf = -SCIPinfinity(scip);
+                  break;
+               }
+            }
+         }
+
+         rowsup = 0;
+         for( j = 0; j < SCIPmatrixGetRowNNonzs(matrix, i); j++ )
+         {
+            k = rowidxptr[j];
+            if( SCIPisPositive(scip, rowvalptr[j]) )
+            {
+               if( !SCIPisInfinity(scip, newubs[k]) )
+                  rowsup += rowvalptr[j] * newubs[k];
+               else
+               {
+                  rowsup = SCIPinfinity(scip);
+                  break;
+               }
+            }
+            else if( SCIPisNegative(scip, rowvalptr[j]) )
+            {
+               if( !SCIPisInfinity(scip, -newlbs[k]) )
+                  rowsup += rowvalptr[j] * newlbs[k];
+               else
+               {
+                  rowsup = SCIPinfinity(scip);
+                  break;
+               }
+            }
+         }
+
+         if( !SCIPisInfinity(scip, -rowinf) )
+         {
+            if( SCIPisLE(scip, SCIPmatrixGetRowLhs(matrix, i), rowinf) )
+            {
+               ndelcons++;
+               SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) );
+               SCIPdebugMsg(scip, "removing redundant cxonstraint %s\n", SCIPmatrixGetRowName(matrix, i));
+            }
+            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i)) && SCIPisGT(scip, rowinf, SCIPmatrixGetRowRhs(matrix, i)) )
+            {
+               SCIPdebugMsg(scip, "infeasibility detected in %s, rowinf = %g\n", SCIPmatrixGetRowName(matrix, i), rowinf);
+               infeasible = TRUE;
+            }
+         }
+         if( !SCIPisInfinity(scip, rowsup) )
+         {
+            if( SCIPisGT(scip, SCIPmatrixGetRowLhs(matrix, i), rowsup) )
+            {
+               SCIPdebugMsg(scip, "infeasibility detected in %s, rowsup = %g\n", SCIPmatrixGetRowName(matrix, i), rowsup);
+               infeasible = TRUE;
+            }
+         }
+      }
    }
+   (*ndelconss) += ndelcons;
+
+   /* set result */
+   if( *nchgbds > oldnchgbds || *nfixedvars > oldnfixedvars || ndelcons > 0 )
+   {
+      *result = SCIP_SUCCESS;
+      presoldata->nuselessruns = 0;
+   }
+   else if( infeasible )
+   {
+      *result = SCIP_CUTOFF;
+   }
+   else
+   {
+      presoldata->nuselessruns++;
+   }
+
+   SCIPhashsetFree(&pairhashset, SCIPblkmem(scip));
+   SCIPfreeBufferArray(scip, &newubs);
+   SCIPfreeBufferArray(scip, &newlbs);
+   SCIPfreeBufferArray(scip, &oldubs);
+   SCIPfreeBufferArray(scip, &oldlbs);
+   SCIPfreeCleanBufferArray(scip, &delcons);
+   SCIPfreeBlockMemoryArray(scip, &rowidxlistmp, listsizemp);
+   SCIPfreeBlockMemoryArray(scip, &rowidxlistpm, listsizepm);
+   SCIPfreeBlockMemoryArray(scip, &rowidxlistmm, listsizemm);
+   SCIPfreeBlockMemoryArray(scip, &rowidxlistpp, listsizepp);
+   SCIPfreeBlockMemoryArray(scip, &hashlistmp, listsizemp);
+   SCIPfreeBlockMemoryArray(scip, &hashlistpm, listsizepm);
+   SCIPfreeBlockMemoryArray(scip, &hashlistmm, listsizemm);
+   SCIPfreeBlockMemoryArray(scip, &hashlistpp, listsizepp);
+
 
    SCIPmatrixFree(scip, &matrix);
 
