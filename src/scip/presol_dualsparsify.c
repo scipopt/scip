@@ -713,7 +713,7 @@ SCIP_RETCODE cancelCol(
    SCIP_MATRIX*          matrix,             /**< the constraint matrix */
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
    SCIP_HASHTABLE*       pairtable,          /**< the hashtable containing ROWVARPAIR's of equations */
-   SCIP_Bool*            ishashingcols,     /**< array to indicates whether it is impliedfree or not */
+   SCIP_Bool*            ishashingcols,      /**< array to indicates whether it is impliedfree or not */
    SCIP_VAR**            vars,               /**< array to store the current variables */
    SCIP_Bool*            isblockedvar,       /**< array to indicates whether it is blocked or not */
    int                   colidx,             /**< index of row to try nonzero cancellation for */
@@ -1238,11 +1238,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-   if( (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING) || SCIPinProbing(scip) || SCIPisNLPEnabled(scip) )
-      return SCIP_OKAY;
-
-   if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
-      return SCIP_OKAY;
 
    if( SCIPdoNotAggr(scip) )
       return SCIP_OKAY;
@@ -1268,64 +1263,237 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, FALSE, &initialized, &complete) );
 
-   if( initialized && complete )
+   if( !initialized )
+      return SCIP_OKAY;
+
+   ncols = SCIPmatrixGetNColumns(matrix);
+   nimpliedfrees = 0;
+
+   /* sort column by row indices */
+   for( i = 0; i < ncols; i++ )
    {
-      ncols = SCIPmatrixGetNColumns(matrix);
-      nimpliedfrees = 0;
+      int* colpnt = SCIPmatrixGetColIdxPtr(matrix, i);
+      SCIP_Real* valpnt = SCIPmatrixGetColValPtr(matrix, i);
+      SCIPsortIntReal(colpnt, valpnt, SCIPmatrixGetColNNonzs(matrix, i));
+   }
 
-      /* sort column by row indices */
-      for( i = 0; i < ncols; i++ )
+   SCIP_CALL( SCIPallocBufferArray(scip, &scores, SCIPmatrixGetNRows(matrix)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, SCIPmatrixGetNRows(matrix)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ishashingcols, SCIPmatrixGetNColumns(matrix)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPmatrixGetNColumns(matrix)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &isblockedvar, SCIPmatrixGetNColumns(matrix)) );
+
+   /* loop over all columns and create column pairs */
+   conspairssize = 0;
+   nconspairs = 0;
+   conspairs = NULL;
+   SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, consPairsEqual, consPairHashval, (void*) scip) );
+
+   /* collect implied free variables and their number of nonzeros */
+   for( c = 0; c < ncols; c++ )
+   {
+      int nnonz;
+      SCIP_Bool lbimplied;
+      SCIP_Bool ubimplied;
+
+      /* if the locks do not match do not consider the column for sparsification */
+      if( SCIPmatrixDownlockConflict(matrix, c) || SCIPmatrixUplockConflict(matrix, c) )
       {
-         int* colpnt = SCIPmatrixGetColIdxPtr(matrix, i);
-         SCIP_Real* valpnt = SCIPmatrixGetColValPtr(matrix, i);
-         SCIPsortIntReal(colpnt, valpnt, SCIPmatrixGetColNNonzs(matrix, i));
+         isblockedvar[c] = TRUE;
+         ishashingcols[c] = FALSE;
+         continue;
       }
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &scores, SCIPmatrixGetNRows(matrix)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &perm, SCIPmatrixGetNRows(matrix)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &ishashingcols, SCIPmatrixGetNColumns(matrix)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPmatrixGetNColumns(matrix)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &isblockedvar, SCIPmatrixGetNColumns(matrix)) );
+      nnonz = SCIPmatrixGetColNNonzs(matrix, c);
+      lbimplied = isLowerBoundImplied(scip, matrix, c);
+      ubimplied = isUpperBoundImplied(scip, matrix, c);
+      vars[c] = SCIPmatrixGetVar(matrix, c);
+      ishashingcols[c] = FALSE;
 
-      /* loop over all columns and create column pairs */
-      conspairssize = 0;
+      if( lbimplied && ubimplied )
+      {
+         nimpliedfrees += 1;
+         ishashingcols[c] = TRUE;
+      }
+      isblockedvar[c] = FALSE;
+
+      /* only consider implied free variables
+         * skip singleton variables, because either the constraint is redundant
+         * or the variables can be canceled by variables substitution
+         */
+      if( nnonz >= 2 && (lbimplied && ubimplied) )
+      {
+         int* colinds;
+         SCIP_Real* colvals;
+         int npairs;
+         int failshift;
+
+         colinds = SCIPmatrixGetColIdxPtr(matrix, c);
+         colvals = SCIPmatrixGetColValPtr(matrix, c);
+
+         for( i = 0; i < nnonz; ++i )
+         {
+            perm[i] = i;
+            scores[i] = -SCIPmatrixGetRowNNonzs(matrix, colinds[i]) - 1.0*colinds[i]/ncols;
+         }
+
+         SCIPsortRealInt(scores, perm, nnonz);
+
+         if( presoldata->maxconsiderednonzeros >= 0 )
+            nnonz = MIN(nnonz, presoldata->maxconsiderednonzeros);
+
+         npairs = (nnonz * (nnonz - 1)) / 2;
+         if( nconspairs + npairs > conspairssize )
+         {
+            int newsize = SCIPcalcMemGrowSize(scip, nconspairs + npairs);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &conspairs, newsize) );
+            conspairssize = newsize;
+         }
+
+         /* if we are called after one or more failures, i.e., executions without finding cancellations, then we
+            * shift the section of nonzeros considered; in the case that the maxconsiderednonzeros limit is hit, this
+            * results in different variable pairs being tried and avoids trying the same useless cancellations
+            * repeatedly
+            */
+         failshift = presoldata->nfailures*presoldata->maxconsiderednonzeros;
+
+         for( i = 0; i < nnonz; ++i )
+         {
+            for( j = i + 1; j < nnonz; ++j )
+            {
+               int i1;
+               int i2;
+
+               assert(nconspairs < conspairssize);
+               assert(conspairs != NULL);
+
+               i1 = perm[(i + failshift) % nnonz];
+               i2 = perm[(j + failshift) % nnonz];
+               conspairs[nconspairs].colindex = c;
+
+               if( colinds[i1] < colinds[i2])
+               {
+                  conspairs[nconspairs].consindex1 = colinds[i1];
+                  conspairs[nconspairs].consindex2 = colinds[i2];
+                  conspairs[nconspairs].conscoef1 = colvals[i1];
+                  conspairs[nconspairs].conscoef2 = colvals[i2];
+               }
+               else
+               {
+                  conspairs[nconspairs].consindex1 = colinds[i2];
+                  conspairs[nconspairs].consindex2 = colinds[i1];
+                  conspairs[nconspairs].conscoef1 = colvals[i2];
+                  conspairs[nconspairs].conscoef2 = colvals[i1];
+               }
+               ++nconspairs;
+            }
+         }
+      }
+   }
+
+   {
+   if( SCIPpresolGetNCalls(presol) <= 0 && nimpliedfrees != 0 )
+      printf( "The number of implied free variables %d\n", nimpliedfrees );
+   }
+
+   /* insert conspairs into hash table */
+   for( c = 0; c < nconspairs; ++c )
+   {
+      SCIP_Bool insert;
+      COLCONSPAIR* otherconspair;
+
+      assert(conspairs != NULL);
+
+      insert = TRUE;
+
+      /* check if this pair is already contained in the hash table;
+         * The loop is required due to the non-transitivity of the hash functions
+         */
+      while( (otherconspair = (COLCONSPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &conspairs[c])) != NULL )
+      {
+         /* if the previous variable pair has fewer or the same number of nonzeros in the attached row
+            * we keep that pair and skip this one
+            */
+         if( SCIPmatrixGetColNNonzs(matrix, otherconspair->colindex) <= SCIPmatrixGetColNNonzs(matrix, conspairs[c].colindex) )
+         {
+            insert = FALSE;
+            break;
+         }
+
+         /* this pairs row has fewer nonzeros, so remove the other pair from the hash table and loop */
+         SCIP_CALL( SCIPhashtableRemove(pairtable, (void*) otherconspair) );
+      }
+
+      if( insert )
+      {
+         SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &conspairs[c]) );
+      }
+   }
+
+   /* sort cols according to decreasingly sparsity */
+   SCIP_CALL( SCIPallocBufferArray(scip, &colidxsorted, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &colsparsity, ncols) );
+   for( c = 0; c < ncols; ++c )
+      colidxsorted[c] = c;
+   for( c = 0; c < ncols; ++c )
+      colsparsity[c] = -SCIPmatrixGetColNNonzs(matrix, c);
+   SCIPsortIntInt(colsparsity, colidxsorted, ncols);
+
+   /* loop over the columns and cancel nonzeros until maximum number of retrieves is reached */
+   maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)ncols);
+   nuseless = 0;
+   numcancel = 0;
+   for( c = 0; c < ncols && nuseless <= maxuseless; c++ )
+   {
+      int colidx;
+
+      colidx = colidxsorted[c];
+
+      if( isblockedvar[colidx] )
+         continue;
+
+      /* since the function parameters for the max fillin are unsigned we do not need to handle the
+         * unlimited (-1) case due to implicit conversion rules */
+      SCIP_CALL( cancelCol(scip, matrix, presoldata, pairtable, ishashingcols, vars, isblockedvar, colidx, \
+            presoldata->maxcontfillin == -1 ? INT_MAX : presoldata->maxcontfillin, \
+            presoldata->maxintfillin == -1 ? INT_MAX : presoldata->maxintfillin, \
+            presoldata->maxbinfillin == -1 ? INT_MAX : presoldata->maxbinfillin, \
+            presoldata->maxconsiderednonzeros, presoldata->preserveintcoefs, \
+            &nuseless, nchgcoefs, &numcancel, &nfillin, FALSE) );
+   }
+
+   if( numcancel > 0 )
+   {
+      *result = SCIP_SUCCESS;
+   }
+   else
+   {
+      SCIPhashtableRemoveAll(pairtable);
       nconspairs = 0;
-      conspairs = NULL;
-      SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, consPairsEqual, consPairHashval, (void*) scip) );
 
-      /* collect implied free variables and their number of nonzeros */
+      /* collect large nonzero entries variables and their number of nonzeros */
       for( c = 0; c < ncols; c++ )
       {
          int nnonz;
-         SCIP_Bool lbimplied;
-         SCIP_Bool ubimplied;
-
          nnonz = SCIPmatrixGetColNNonzs(matrix, c);
-         lbimplied = isLowerBoundImplied(scip, matrix, c);
-         ubimplied = isUpperBoundImplied(scip, matrix, c);
          vars[c] = SCIPmatrixGetVar(matrix, c);
-         ishashingcols[c] = FALSE;
 
-         if( lbimplied && ubimplied )
-         {
-            nimpliedfrees += 1;
-            ishashingcols[c] = TRUE;
-         }
          isblockedvar[c] = FALSE;
 
-         /* only consider implied free variables
-          * skip singleton variables, because either the constraint is redundant
-          * or the variables can be canceled by variables substitution
-          */
-         if( nnonz >= 2 && (lbimplied && ubimplied) )
+         /* only consider large nonzero entries and nonimplied free variables (non-hashing columns in the previous step)
+            * skip singleton variables, because either the constraint is redundant
+            * or the variables can be canceled by variables substitution
+            */
+         if( nnonz >= presoldata->mineliminatednonzeros && !ishashingcols[c] )
          {
             int* colinds;
             SCIP_Real* colvals;
             int npairs;
             int failshift;
 
+            ishashingcols[c] = TRUE;
             colinds = SCIPmatrixGetColIdxPtr(matrix, c);
             colvals = SCIPmatrixGetColValPtr(matrix, c);
 
@@ -1349,10 +1517,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
             }
 
             /* if we are called after one or more failures, i.e., executions without finding cancellations, then we
-             * shift the section of nonzeros considered; in the case that the maxconsiderednonzeros limit is hit, this
-             * results in different variable pairs being tried and avoids trying the same useless cancellations
-             * repeatedly
-             */
+               * shift the section of nonzeros considered; in the case that the maxconsiderednonzeros limit is hit, this
+               * results in different variable pairs being tried and avoids trying the same useless cancellations
+               * repeatedly
+               */
             failshift = presoldata->nfailures*presoldata->maxconsiderednonzeros;
 
             for( i = 0; i < nnonz; ++i )
@@ -1369,7 +1537,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
                   i2 = perm[(j + failshift) % nnonz];
                   conspairs[nconspairs].colindex = c;
 
-                 if( colinds[i1] < colinds[i2])
+                  if( colinds[i1] < colinds[i2])
                   {
                      conspairs[nconspairs].consindex1 = colinds[i1];
                      conspairs[nconspairs].consindex2 = colinds[i2];
@@ -1387,11 +1555,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
                }
             }
          }
-      }
-
-      {
-      if( SCIPpresolGetNCalls(presol) <= 0 && nimpliedfrees != 0 )
-         printf( "The number of implied free variables %d\n", nimpliedfrees );
+         else
+         {
+            ishashingcols[c] = FALSE;
+         }
       }
 
       /* insert conspairs into hash table */
@@ -1405,13 +1572,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          insert = TRUE;
 
          /* check if this pair is already contained in the hash table;
-          * The loop is required due to the non-transitivity of the hash functions
-          */
+            * The loop is required due to the non-transitivity of the hash functions
+            */
          while( (otherconspair = (COLCONSPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &conspairs[c])) != NULL )
          {
             /* if the previous variable pair has fewer or the same number of nonzeros in the attached row
-             * we keep that pair and skip this one
-             */
+               * we keep that pair and skip this one
+               */
             if( SCIPmatrixGetColNNonzs(matrix, otherconspair->colindex) <= SCIPmatrixGetColNNonzs(matrix, conspairs[c].colindex) )
             {
                insert = FALSE;
@@ -1428,236 +1595,63 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          }
       }
 
-      /* sort cols according to decreasingly sparsity */
-      SCIP_CALL( SCIPallocBufferArray(scip, &colidxsorted, ncols) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &colsparsity, ncols) );
+      /* sort rows according to decreasingly sparsity */
+      assert(colidxsorted != NULL);
+      assert(colsparsity != NULL);
       for( c = 0; c < ncols; ++c )
          colidxsorted[c] = c;
       for( c = 0; c < ncols; ++c )
          colsparsity[c] = -SCIPmatrixGetColNNonzs(matrix, c);
       SCIPsortIntInt(colsparsity, colidxsorted, ncols);
 
+
       /* loop over the columns and cancel nonzeros until maximum number of retrieves is reached */
       maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)ncols);
       nuseless = 0;
-      numcancel = 0;
       for( c = 0; c < ncols && nuseless <= maxuseless; c++ )
       {
          int colidx;
+         int nnonz;
 
          colidx = colidxsorted[c];
+         nnonz = SCIPmatrixGetColNNonzs(matrix, colidx);
 
-         if( isblockedvar[colidx] )
+         if( isblockedvar[colidx] || nnonz < 100 )
             continue;
 
+
+
          /* since the function parameters for the max fillin are unsigned we do not need to handle the
-          * unlimited (-1) case due to implicit conversion rules */
+            * unlimited (-1) case due to implicit conversion rules */
          SCIP_CALL( cancelCol(scip, matrix, presoldata, pairtable, ishashingcols, vars, isblockedvar, colidx, \
                presoldata->maxcontfillin == -1 ? INT_MAX : presoldata->maxcontfillin, \
                presoldata->maxintfillin == -1 ? INT_MAX : presoldata->maxintfillin, \
                presoldata->maxbinfillin == -1 ? INT_MAX : presoldata->maxbinfillin, \
                presoldata->maxconsiderednonzeros, presoldata->preserveintcoefs, \
-               &nuseless, nchgcoefs, &numcancel, &nfillin, FALSE) );
+               &nuseless, nchgcoefs, &numcancel, &nfillin, TRUE) );
       }
 
       if( numcancel > 0 )
       {
          *result = SCIP_SUCCESS;
       }
-      else
-      {
-         SCIPhashtableRemoveAll(pairtable);
-         nconspairs = 0;
-
-         /* collect large nonzero entries variables and their number of nonzeros */
-         for( c = 0; c < ncols; c++ )
-         {
-            int nnonz;
-            nnonz = SCIPmatrixGetColNNonzs(matrix, c);
-            vars[c] = SCIPmatrixGetVar(matrix, c);
-
-            isblockedvar[c] = FALSE;
-
-            /* only consider large nonzero entries and nonimplied free variables (non-hashing columns in the previous step)
-             * skip singleton variables, because either the constraint is redundant
-             * or the variables can be canceled by variables substitution
-             */
-            if( nnonz >= presoldata->mineliminatednonzeros && !ishashingcols[c] )
-            {
-               int* colinds;
-               SCIP_Real* colvals;
-               int npairs;
-               int failshift;
-
-               ishashingcols[c] = TRUE;
-               colinds = SCIPmatrixGetColIdxPtr(matrix, c);
-               colvals = SCIPmatrixGetColValPtr(matrix, c);
-
-               for( i = 0; i < nnonz; ++i )
-               {
-                  perm[i] = i;
-                  scores[i] = -SCIPmatrixGetRowNNonzs(matrix, colinds[i]) - 1.0*colinds[i]/ncols;
-               }
-
-               SCIPsortRealInt(scores, perm, nnonz);
-
-               if( presoldata->maxconsiderednonzeros >= 0 )
-                  nnonz = MIN(nnonz, presoldata->maxconsiderednonzeros);
-
-               npairs = (nnonz * (nnonz - 1)) / 2;
-               if( nconspairs + npairs > conspairssize )
-               {
-                  int newsize = SCIPcalcMemGrowSize(scip, nconspairs + npairs);
-                  SCIP_CALL( SCIPreallocBufferArray(scip, &conspairs, newsize) );
-                  conspairssize = newsize;
-               }
-
-               /* if we are called after one or more failures, i.e., executions without finding cancellations, then we
-                * shift the section of nonzeros considered; in the case that the maxconsiderednonzeros limit is hit, this
-                * results in different variable pairs being tried and avoids trying the same useless cancellations
-                * repeatedly
-                */
-               failshift = presoldata->nfailures*presoldata->maxconsiderednonzeros;
-
-               for( i = 0; i < nnonz; ++i )
-               {
-                  for( j = i + 1; j < nnonz; ++j )
-                  {
-                     int i1;
-                     int i2;
-
-                     assert(nconspairs < conspairssize);
-                     assert(conspairs != NULL);
-
-                     i1 = perm[(i + failshift) % nnonz];
-                     i2 = perm[(j + failshift) % nnonz];
-                     conspairs[nconspairs].colindex = c;
-
-                    if( colinds[i1] < colinds[i2])
-                     {
-                        conspairs[nconspairs].consindex1 = colinds[i1];
-                        conspairs[nconspairs].consindex2 = colinds[i2];
-                        conspairs[nconspairs].conscoef1 = colvals[i1];
-                        conspairs[nconspairs].conscoef2 = colvals[i2];
-                     }
-                     else
-                     {
-                        conspairs[nconspairs].consindex1 = colinds[i2];
-                        conspairs[nconspairs].consindex2 = colinds[i1];
-                        conspairs[nconspairs].conscoef1 = colvals[i2];
-                        conspairs[nconspairs].conscoef2 = colvals[i1];
-                     }
-                     ++nconspairs;
-                  }
-               }
-            }
-            else
-            {
-               ishashingcols[c] = FALSE;
-            }
-         }
-
-         /* insert conspairs into hash table */
-         for( c = 0; c < nconspairs; ++c )
-         {
-            SCIP_Bool insert;
-            COLCONSPAIR* otherconspair;
-
-            assert(conspairs != NULL);
-
-            insert = TRUE;
-
-            /* check if this pair is already contained in the hash table;
-             * The loop is required due to the non-transitivity of the hash functions
-             */
-            while( (otherconspair = (COLCONSPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &conspairs[c])) != NULL )
-            {
-               /* if the previous variable pair has fewer or the same number of nonzeros in the attached row
-                * we keep that pair and skip this one
-                */
-               if( SCIPmatrixGetColNNonzs(matrix, otherconspair->colindex) <= SCIPmatrixGetColNNonzs(matrix, conspairs[c].colindex) )
-               {
-                  insert = FALSE;
-                  break;
-               }
-
-               /* this pairs row has fewer nonzeros, so remove the other pair from the hash table and loop */
-               SCIP_CALL( SCIPhashtableRemove(pairtable, (void*) otherconspair) );
-            }
-
-            if( insert )
-            {
-               SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &conspairs[c]) );
-            }
-         }
-
-         /* sort rows according to decreasingly sparsity */
-         assert(colidxsorted != NULL);
-         assert(colsparsity != NULL);
-         for( c = 0; c < ncols; ++c )
-            colidxsorted[c] = c;
-         for( c = 0; c < ncols; ++c )
-            colsparsity[c] = -SCIPmatrixGetColNNonzs(matrix, c);
-         SCIPsortIntInt(colsparsity, colidxsorted, ncols);
-
-
-         /* loop over the columns and cancel nonzeros until maximum number of retrieves is reached */
-         maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)ncols);
-         nuseless = 0;
-         for( c = 0; c < ncols && nuseless <= maxuseless; c++ )
-         {
-            int colidx;
-            int nnonz;
-
-            colidx = colidxsorted[c];
-            nnonz = SCIPmatrixGetColNNonzs(matrix, colidx);
-
-            if( isblockedvar[colidx] || nnonz < 100 )
-               continue;
-
-
-
-            /* since the function parameters for the max fillin are unsigned we do not need to handle the
-             * unlimited (-1) case due to implicit conversion rules */
-            SCIP_CALL( cancelCol(scip, matrix, presoldata, pairtable, ishashingcols, vars, isblockedvar, colidx, \
-                  presoldata->maxcontfillin == -1 ? INT_MAX : presoldata->maxcontfillin, \
-                  presoldata->maxintfillin == -1 ? INT_MAX : presoldata->maxintfillin, \
-                  presoldata->maxbinfillin == -1 ? INT_MAX : presoldata->maxbinfillin, \
-                  presoldata->maxconsiderednonzeros, presoldata->preserveintcoefs, \
-                  &nuseless, nchgcoefs, &numcancel, &nfillin, TRUE) );
-         }
-
-         if( numcancel > 0 )
-         {
-            *result = SCIP_SUCCESS;
-         }
-      }
-
-
-
-      updateFailureStatistic(presoldata, numcancel > 0);
-
-      SCIPfreeBufferArray(scip, &colsparsity);
-      SCIPfreeBufferArray(scip, &colidxsorted);
-
-      SCIPhashtableFree(&pairtable);
-      SCIPfreeBufferArrayNull(scip, &conspairs);
-
-      SCIPfreeBufferArray(scip, &isblockedvar);
-      SCIPfreeBufferArray(scip, &vars);
-      SCIPfreeBufferArray(scip, &ishashingcols);
-      SCIPfreeBufferArray(scip, &perm);
-      SCIPfreeBufferArray(scip, &scores);
-   }
-   /* if matrix construction fails once, we do not ever want to be called again */
-   else
-   {
-      updateFailureStatistic(presoldata, FALSE);
-      presoldata->nwaitingcalls = INT_MAX;
    }
 
-   if( initialized )
-      SCIPmatrixFree(scip, &matrix);
+   updateFailureStatistic(presoldata, numcancel > 0);
+
+   SCIPfreeBufferArray(scip, &colsparsity);
+   SCIPfreeBufferArray(scip, &colidxsorted);
+
+   SCIPhashtableFree(&pairtable);
+   SCIPfreeBufferArrayNull(scip, &conspairs);
+
+   SCIPfreeBufferArray(scip, &isblockedvar);
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &ishashingcols);
+   SCIPfreeBufferArray(scip, &perm);
+   SCIPfreeBufferArray(scip, &scores);
+
+   SCIPmatrixFree(scip, &matrix);
 
    return SCIP_OKAY;
 }
