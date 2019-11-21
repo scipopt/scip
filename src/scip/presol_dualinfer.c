@@ -1206,7 +1206,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
          {
             for( i = ncols - 1; i >= 0; --i )
             {
-               SCIP_Bool infeasible;
                SCIP_Bool fixed;
 
                if( varstofix[i] == FIXATLB )
