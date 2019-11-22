@@ -4324,6 +4324,26 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR );
    assert(var->scip == set->scip);
 
+   /* in order to update the locks on the active representation of the multi-aggregated variable, we remove all locks
+    * on the current representation now and re-add the locks once the variable graph has been flattened, which
+    * may lead to duplicate occurences of the same variable being merged
+    *
+    * Here is an example. Assume we have the multi-aggregation z = x + y.
+    * z occures with positive coefficient in a <= constraint c1, so it has an uplock from there.
+    * When the multi-aggregation is performed, all locks are added to the active representation,
+    * so x and y both get an uplock from c1. However, z was not yet replaced by x + y in c1.
+    * Next, a negation y = 1 - x is identified. Again, locks are moved, so that the uplock of y originating
+    * from c1 is added to x as a downlock. Thus, x has both an up- and downlock from c1.
+    * The multi-aggregation changes to z = x + 1 - x, which corresponds to the locks.
+    * However, before z is replaced by that sum, SCIPvarFlattenAggregationGraph() is called
+    * which changes z = x + y = x + 1 - x = 1, since it merges multiple occurences of the same variable.
+    * The up- and downlock of x, however, is not removed when replacing z in c1 by its active representation,
+    * because it is just 1 now. Therefore, we need to update locks when flattening the aggregation graph.
+    * For this, the multi-aggregated variable knows its locks in addition to adding them to the active
+    * representation, which corresponds to the locks from constraints where the variable was not replaced yet.
+    * By removing the locks here, based on the old representation and adding them again after flattening,
+    * we ensure that the locks are correct afterwards if coefficients were merged.
+    */
    for( i = 0; i < NLOCKTYPES; ++i )
    {
       nlocksup[i] = var->nlocksup[i];
