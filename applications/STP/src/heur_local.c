@@ -2871,7 +2871,7 @@ SCIP_RETCODE localVertexInsertion(
 
    if( newnverts > 0  )
    {
-      SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, solEdges, solNodes) );
+      SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, solEdges, solNodes) );
 
       for( int i = 0; i < nnodes; i++ )
          SCIPlinkcuttreeInit(&linkcutNodes[i]);
@@ -3576,10 +3576,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
       graph_sol_setVertexFromEdge(graph, results, steinertree);
 
-      for( int e = 0; e < nedges; e++ )
-         results[e] = UNKNOWN;
-
-      SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, results, steinertree) );
+      SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, results, steinertree) );
 
       SCIPfreeBufferArray(scip, &steinertree);
    }
@@ -3705,25 +3702,19 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
 
+   SCIP_CALL( localKeyVertexHeuristics(scip, graph, solNodes, linkcutNodes, solEdges, &success) );
 
-   if( 1 )
+   if( success )
    {
-      int todo;
-
-      SCIP_CALL( localKeyVertexHeuristics(scip, graph, solNodes, linkcutNodes, solEdges, &success) );
-
-      if( success )
-      {
-         markSolTreeNodes(scip, graph, solEdges, linkcutNodes, solNodes);
-         SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
-      }
-
-      if( success && mwpc )
-      {
-         SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, solEdges, solNodes) );
-      }
-
+      markSolTreeNodes(scip, graph, solEdges, linkcutNodes, solNodes);
+      SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
    }
+
+   if( success && mwpc )
+   {
+      SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, solEdges, solNodes) );
+   }
+
 #ifndef NDEBUG
    {
       const SCIP_Real newobj = graph_sol_getObj(graph->cost, solEdges, 0.0, graph->edges);
@@ -4012,9 +4003,9 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    /* have vertices been added? */
    if( extensions )
    {
-      for( int e = 0; e < nedges; e++ )
-         stedge[e] = UNKNOWN;
-      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, stedge, stvertex) );
+      assert(graph_pc_isPcMw(graph));
+
+      SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, stedge, stvertex) );
    }
 
    SCIPpqueueFree(&pqueue);
@@ -4137,9 +4128,9 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
    {
       graph_pc_2trans(scip, graph);
 
-      for( int e = 0; e < nedges; e++ )
-         stedge[e] = UNKNOWN;
-      SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, stedge, stvertex) );
+      assert(graph_pc_isPcMw(graph));
+
+      SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, stedge, stvertex) );
    }
 
    if( maxnode != -1 )

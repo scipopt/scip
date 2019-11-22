@@ -583,10 +583,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    if( newgraph->knots == 1 )
       nodearrchar[g->source] = TRUE;
 
-   for( int e = 0; e < nedges; e++ )
-      newedges[e] = UNKNOWN;
-
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, g, g->cost, newedges, nodearrchar) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, g, newedges, nodearrchar) );
 
    assert(graph_sol_valid(scip, g, newedges));
 

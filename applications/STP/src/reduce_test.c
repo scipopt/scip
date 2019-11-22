@@ -1486,7 +1486,7 @@ SCIP_RETCODE localExtendPc(
    steinertree_nodes[3] = TRUE;
    steinertree_nodes[4] = TRUE;
 
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, steinertree, steinertree_nodes) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, steinertree, steinertree_nodes) );
    assert(graph_sol_valid(scip, graph, steinertree));
 
    cost0 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
@@ -1649,7 +1649,7 @@ SCIP_RETCODE localKeyPathExchangePc(
 
    // 4 is the implicit root
 
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, steinertree, steinertree_nodes) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, steinertree, steinertree_nodes) );
 
    assert(graph_sol_valid(scip, graph, steinertree));
 
@@ -1752,7 +1752,7 @@ SCIP_RETCODE localKeyPathExchangePc2(
 
    // 4 is the implicit root
 
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, steinertree, steinertree_nodes) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, steinertree, steinertree_nodes) );
 
    assert(graph_sol_valid(scip, graph, steinertree));
 
@@ -1852,7 +1852,7 @@ SCIP_RETCODE localKeyPathExchangeMw(
 
    // 4 is the implicit root
 
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, steinertree, steinertree_nodes) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, steinertree, steinertree_nodes) );
 
    assert(graph_sol_valid(scip, graph, steinertree));
 
@@ -1939,7 +1939,7 @@ SCIP_RETCODE localKeyVertex(
 
    // 4 is the implicit root
 
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, steinertree, steinertree_nodes) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, steinertree, steinertree_nodes) );
    assert(graph_sol_valid(scip, graph, steinertree));
 
    cost0 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
@@ -2052,7 +2052,7 @@ SCIP_RETCODE localKeyVertexPc(
 
    // 4 is the implicit root
 
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, steinertree, steinertree_nodes) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, steinertree, steinertree_nodes) );
    assert(graph_sol_valid(scip, graph, steinertree));
 
    cost0 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
@@ -2170,7 +2170,7 @@ SCIP_RETCODE localKeyVertexPc2(
 
    // 4 is the implicit root
 
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, steinertree, steinertree_nodes) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, steinertree, steinertree_nodes) );
    assert(graph_sol_valid(scip, graph, steinertree));
 
    cost0 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
@@ -2441,7 +2441,7 @@ SCIP_RETCODE localInsertion2pc(
    steinertree_nodes[3] = TRUE;
    steinertree_nodes[4] = TRUE;
 
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, steinertree, steinertree_nodes) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, steinertree, steinertree_nodes) );
 
    cost0 = graph_sol_getObj(graph->cost, steinertree, 0.0, nedges);
 

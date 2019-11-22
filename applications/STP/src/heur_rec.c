@@ -1641,7 +1641,6 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
    const int probtype = graph->stp_type;
-   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    STP_Bool* stnodes;
 
    assert(runs >= 0);
@@ -1728,12 +1727,10 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          graph_free(scip, &solgraph, TRUE);
 
          /* prune solution (in the original graph) */
-         if( pcmw )
-            SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, newsoledges, stnodes) );
-         else if( probtype == STP_DCSTP )
+         if( probtype == STP_DCSTP )
             SCIP_CALL( SCIPStpHeurTMBuildTreeDc(scip, graph, newsoledges, stnodes) );
          else
-            SCIP_CALL( SCIPStpHeurTMPruneStp(scip, graph, graph->cost, newsoledges, stnodes) );
+            SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, newsoledges, stnodes) );
 
          assert(graph_sol_valid(scip, graph, newsoledges) || SCIPisStopped(scip));
          pobj = graph_sol_getObj(graph->cost, newsoledges, 0.0, nedges);
@@ -1993,10 +1990,9 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    SCIPfreeBufferArray(scip, &solnodes);
 
-   for( int e = 0; e < nedges; e++ )
-      newresult[e] = UNKNOWN;
+   assert(graph_pc_isPcMw(graph));
 
-   SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, newresult, stvertex) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, newresult, stvertex) );
 
    /* solution better than original one?  */
 

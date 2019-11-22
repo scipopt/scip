@@ -2422,11 +2422,8 @@ SCIP_RETCODE graph_sol_getOrg(
             orgnodearr, NULL, NULL, NULL, NULL ) );
    }
 
-   for( int e = 0; e < orggraph->edges; e++ )
-      orgsoledge[e] = UNKNOWN;
-
    /* prune solution (in original graph) */
-   SCIP_CALL( SCIPStpHeurTMPrune(scip, orggraph, orggraph->cost, orgsoledge, orgnodearr) );
+   SCIP_CALL( SCIPStpHeurTMPrune(scip, orggraph, orgsoledge, orgnodearr) );
 
    SCIPfreeBufferArray(scip, &orgnodearr);
 
