@@ -207,7 +207,7 @@ void applyBranchHistoryToGraph(
             if( graph->cost[e] < BLOCKED )
                graph->cost[e] = BLOCKED;
 
-            if( graph->cost[e] < BLOCKED )
+            if( graph->cost[flipedge(e)] < BLOCKED )
                graph->cost[flipedge(e)] = BLOCKED;
          }
       }

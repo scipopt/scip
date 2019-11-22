@@ -559,6 +559,8 @@ SCIP_RETCODE pruneSteinerTreePc(
    assert(root >= 0);
    assert(root < nnodes);
 
+   SCIPdebugMessage("(non-artificial) root=%d \n", root);
+
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nnodes) );
    graph_path_exec(scip, g, MST_MODE, root, cost, mst);
 

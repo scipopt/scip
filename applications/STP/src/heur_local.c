@@ -3826,13 +3826,6 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    const SCIP_Real initialobj = graph_sol_getObj(graph->cost, stedge, 0.0, nedges);
 #endif
 
-#ifdef NEW
-   SCIP_Real* costbiased;
-   SCIP_Real* prizebiased;
-   SCIP_CALL( SCIPallocBufferArray(scip, &costbiased, graph->edges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &prizebiased, graph->knots) );
-#endif
-
    assert(GREEDY_EXTENSIONS_MW >= greedyextensions);
    assert(scip != NULL);
    assert(graph != NULL);
@@ -3863,16 +3856,13 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
       }
    }
 
+#ifndef NDEBUG
    for( int e = 0; e < nedges; e++ )
       if( stedge[e] == CONNECT )
          assert(stvertex[graph->tail[e]]);
-
-#ifdef NEW
-   graph_pc_getBiased(scip, graph, TRUE, costbiased, prizebiased);
-   graph_path_st_pcmw_extendBiased(scip, graph, costbiased, prizebiased, path, stvertex, &extensions);
-#else
-   graph_path_st_pcmw_extend(scip, graph, cost, FALSE, path, stvertex, &extensions);
 #endif
+
+   graph_path_st_pcmw_extend(scip, graph, cost, FALSE, path, stvertex, &extensions);
 
    BMScopyMemoryArray(orgpath, path, nnodes);
 
@@ -3900,7 +3890,9 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
          bestsolval += graph->cost[orgpath[i].edge];
 
          if( Is_pseudoTerm(graph->term[i]) )
+         {
             bestsolval -= graph->prize[i];
+         }
       }
       else if( orgpath[i].edge != UNKNOWN && Is_pseudoTerm(graph->term[i]) )
       {
@@ -3943,13 +3935,9 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
                k = graph->tail[orgpath[k].edge];
                assert(k != extensioncand);
             }
-#ifdef NEW
-            assert(graph_sol_valid(scip, graph, stedge));
-            graph_path_st_pcmw_extendBiased(scip, graph, costbiased, prizebiased, path, stvertextmp, &extensionstmp);
 
-#else
             graph_path_st_pcmw_extend(scip, graph, cost, TRUE, path, stvertextmp, &extensionstmp);
-#endif
+
 
             for( int j = 0; j < nnodes; j++ )
             {
@@ -3966,24 +3954,41 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
                   newsolval += graph->cost[path[j].edge];
 
                   if( Is_pseudoTerm(graph->term[j]) )
+                  {
                      newsolval -= graph->prize[j];
+                  }
                }
             }
 
             /* new solution value better than old one? */
             if( SCIPisLT(scip, newsolval, bestsolval) )
             {
+               SCIPdebugMessage("newsolval=%f bestsolval=%f \n", newsolval, bestsolval);
+
                extensions = TRUE;
                bestsolval = newsolval;
+
+#ifdef SCIP_DEBUG
+               for( int k2 = 0; k2 < nnodes; k2++ )
+               {
+                  if( !stvertex[k2] && stvertextmp[k2] )
+                  {
+                     printf("added \n");
+                     graph_knot_printInfo(graph, k2);
+                     graph_edge_printInfo(graph, path[k2].edge);
+                  }
+               }
+#endif
+
+#ifndef NDEBUG
+               objdiff += bestsolval - newsolval;
+#endif
+
                BMScopyMemoryArray(stvertex, stvertextmp, nnodes);
                BMScopyMemoryArray(orgpath, path, nnodes);
 
                /* save greedyextensions many best unconnected nodes  */
                nextensions = 0;
-
-#ifndef NDEBUG
-               objdiff += bestsolval - newsolval;
-#endif
 
                for( int j = 0; j < nnodes; j++ )
                   if( !stvertex[j] && Is_pseudoTerm(graph->term[j]) && path[j].edge != UNKNOWN )
@@ -4007,21 +4012,18 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
       SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, stedge, stvertex) );
    }
 
+   assert(graph_sol_valid(scip, graph, stedge));
+
    SCIPpqueueFree(&pqueue);
    SCIPfreeBufferArray(scip, &path);
    SCIPfreeBufferArray(scip, &orgpath);
    SCIPfreeBufferArray(scip, &stvertextmp);
 
-#ifdef NEW
-   SCIPfreeBufferArray(scip, &prizebiased);
-   SCIPfreeBufferArray(scip, &costbiased);
-#endif
-
 #ifndef NDEBUG
    {
       const SCIP_Real newsolval = graph_sol_getObj(graph->cost, stedge, 0.0, nedges);
-      assert(SCIPisLE(scip, newsolval + objdiff, initialobj));
       SCIPdebugMessage("pcmw extend obj: initial=%f, new=%f \n", initialobj, newsolval);
+      assert(SCIPisLE(scip, newsolval + objdiff, initialobj));
    }
 #endif
 
