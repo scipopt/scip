@@ -1497,7 +1497,7 @@ SCIP_RETCODE determineBestBounds(
    for(i = 0; i < ncols; i++)
    {
       var = SCIPmatrixGetVar(matrix, i);
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
       {
          colmap[i] = numberconvars; /* start numbering with 0 */
          numberconvars++;
@@ -1560,7 +1560,7 @@ SCIP_RETCODE determineBestBounds(
    for(i = 0; i < ncols; i++)
    {
       var = SCIPmatrixGetVar(matrix, i);
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
       {
          SCIP_Real objval = SCIPvarGetObj(var);
          int cidx = colmap[i];
@@ -2212,7 +2212,8 @@ SCIP_RETCODE dualBoundStrengthening(
 
       for( i = 0; i < nimplubvars; i++ )
       {
-         assert(SCIPvarGetType(SCIPmatrixGetVar(matrix, implubvars[i])) == SCIP_VARTYPE_CONTINUOUS);
+         assert(SCIPvarGetType(SCIPmatrixGetVar(matrix, implubvars[i])) == SCIP_VARTYPE_CONTINUOUS ||
+            SCIPvarGetType(SCIPmatrixGetVar(matrix, implubvars[i])) == SCIP_VARTYPE_IMPLINT);
          calcMinColActivity(scip, matrix, implubvars[i], lbdual, ubdual, mincolact, mincolactinf);
       }
 
@@ -2502,7 +2503,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
          /* keep a small statistic which types of variables are fixed */
          if( fixed )
          {
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
                nconvarsfixed++;
             else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
                nbinvarsfixed++;
