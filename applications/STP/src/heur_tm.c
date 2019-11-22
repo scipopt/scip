@@ -1663,10 +1663,11 @@ void initCostsAndPrioLP(
       {
          if( Is_pseudoTerm(graph->term[k]) )
          {
+            int todo; // test!
             const int term = graph_pc_getTwinTerm(graph, k);
             const int rootedge = graph_pc_getRoot2PtermEdge(graph, term);
 
-            prize[k] = graph->cost[rootedge];
+            prize[k] = cost[rootedge];
          }
       }
    }
