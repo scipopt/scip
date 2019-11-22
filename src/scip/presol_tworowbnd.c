@@ -2033,8 +2033,8 @@ SCIP_RETCODE combineRows
                coef = breakpoints[i] * row1coefs[idx] + (1 - breakpoints[i]) * row2coefs[idx];
                assert(!SCIPisEQ(scip, breakpoints[i], 2.0));
 
-               /* skip if the coefficient is too close to zero as it becomes numerically unstable */
-               if( SCIPisZero(scip, coef) )
+               /* skip if the coefficient is too close to zero as computations become numerically unstable */
+               if( SCIPisFeasZero(scip, coef) )
                   continue;
 
                if( signs[idx] == POS || signs[idx] == DN )
