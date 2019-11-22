@@ -212,7 +212,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 { /*lint --e{715}*/
    SCIP_Real constant;
    SCIP_Bool* branchcand = NULL;
-   int nchildren = 0;
+   int nchildren;
    int c;
 
    assert(scip != NULL);

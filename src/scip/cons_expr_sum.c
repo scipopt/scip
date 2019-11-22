@@ -945,7 +945,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSum)
 
 static
 SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSum)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(scip != NULL);

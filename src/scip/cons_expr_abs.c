@@ -164,7 +164,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
 
 static
 SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateAbs)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* childvar;
 
@@ -243,7 +243,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateAbs)
          *constant = -lb - alpha * lb;
          *islocal = TRUE;
       }
-      else if( lb == -ub )
+      else if( lb == -ub ) /*lint !e777*/
       {
          /* alpha = 0 */
          *coefs = 0.0;

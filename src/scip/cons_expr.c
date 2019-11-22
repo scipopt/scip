@@ -5378,7 +5378,7 @@ SCIP_RETCODE enforceExprNlhdlr(
             auxvarvalue = SCIPgetSolVal(scip, sol, auxvar);
 
             /* check whether cut is weak (if f(x) not defined, then it's never weak) */
-            if( !allowweakcuts && auxvalue != SCIP_INVALID )
+            if( !allowweakcuts && auxvalue != SCIP_INVALID )  /*lint !e777*/
             {
                /* SCIP_Real estimateval; */
                /* cutviol is estimator value - auxvar value, so can restore estimator value */
@@ -5444,7 +5444,7 @@ SCIP_RETCODE enforceExprNlhdlr(
                   sepasuccess = cutviol > mincutviolation;
             }
 
-            if( sepasuccess && auxvalue != SCIP_INVALID )
+            if( sepasuccess && auxvalue != SCIP_INVALID ) /*lint !e777*/
             {
                /* check whether cut is weak now
                 * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when reconstructing estimateval from cutviol (TODO improve or remove?)
@@ -5465,7 +5465,7 @@ SCIP_RETCODE enforceExprNlhdlr(
 
                if( auxvarcoef == 0.0 ||
                    (!overestimate && ( cutviol / auxvarcoef <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
-                   ( overestimate && (-cutviol / auxvarcoef >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )
+                   ( overestimate && (-cutviol / auxvarcoef >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )  /*lint !e644*/
                {
                   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
                      auxvalue, auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
@@ -5496,7 +5496,7 @@ SCIP_RETCODE enforceExprNlhdlr(
                SCIP_Real brscore;
                int nbradded = 0;
 
-               if( auxvalue == SCIP_INVALID )
+               if( auxvalue == SCIP_INVALID )  /*lint !e777*/
                   brscore = SCIPinfinity(scip);
                else
                   brscore = REALABS(auxvalue - SCIPgetSolVal(scip, sol, auxvar));
@@ -5650,14 +5650,14 @@ SCIP_RETCODE enforceExpr(
        */
 
       /* if aux-violation is much smaller than orig-violation, then better enforce further down in the expression first */
-      if( expr->enfos[e]->auxvalue != SCIP_INVALID && REALABS(expr->enfos[e]->auxvalue - auxvarvalue) < conshdlrdata->enfoauxviolfactor * REALABS(expr->evalvalue - auxvarvalue) )
+      if( expr->enfos[e]->auxvalue != SCIP_INVALID && REALABS(expr->enfos[e]->auxvalue - auxvarvalue) < conshdlrdata->enfoauxviolfactor * REALABS(expr->evalvalue - auxvarvalue) )  /*lint !e777*/
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with auxviolation %g << origviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, expr->evalvalue - auxvarvalue, underestimate, overestimate); )
          /* TODO expr->lastenforced = conshdlrdata->enforound;  ??? */
          continue;
       }
 
-      if( !allowweakcuts && expr->enfos[e]->auxvalue != SCIP_INVALID && SCIPisFeasZero(scip, expr->enfos[e]->auxvalue - auxvarvalue) )
+      if( !allowweakcuts && expr->enfos[e]->auxvalue != SCIP_INVALID && SCIPisFeasZero(scip, expr->enfos[e]->auxvalue - auxvarvalue) )  /*lint !e777*/
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with tiny auxviolation %g under:%d over:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name, expr->enfos[e]->auxvalue - auxvarvalue, underestimate, overestimate); )
          /* TODO expr->lastenforced = conshdlrdata->enforound;  ??? */
@@ -5778,7 +5778,7 @@ SCIP_RETCODE enforceConstraint(
 
    for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
    {
-      SCIP_Bool resultexpr;
+      SCIP_RESULT resultexpr;
 
       /* we can only enforce if there is an auxvar to compare with */
       if( expr->auxvar == NULL )
@@ -6241,7 +6241,6 @@ SCIP_RETCODE enforceConstraints(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
    int                   nconss,             /**< number of constraints */
-   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
@@ -6307,7 +6306,7 @@ SCIP_RETCODE enforceConstraints(
 
    if( conshdlrdata->tightenlpfeastol && maxvarboundviol > maxauxviol && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
    {
-      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxvarboundviol / 2.0, SCIPgetLPFeastol(scip) / 2.0)));
+      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxvarboundviol / 2.0, SCIPgetLPFeastol(scip) / 2.0)));  /*lint !e666*/
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " variable bound violation %g larger than auxiliary violation %g, reducing LP feastol to %g\n", maxvarboundviol, maxauxviol, SCIPgetLPFeastol(scip)); )
       ++conshdlrdata->ntightenlp;
 
@@ -6328,7 +6327,7 @@ SCIP_RETCODE enforceConstraints(
 
    if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxvarboundviol) && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
    {
-      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxvarboundviol / 2.0, SCIPgetLPFeastol(scip) / 2.0)));
+      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxvarboundviol / 2.0, SCIPgetLPFeastol(scip) / 2.0)));  /*lint !e666*/
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " variable bounds are violated by more than eps, reduced LP feasibility tolerance to %g\n", SCIPgetLPFeastol(scip)); )
       ++conshdlrdata->ntightenlp;
 
@@ -6344,7 +6343,7 @@ SCIP_RETCODE enforceConstraints(
        * unfortunately, we do not know the current LP solution primal infeasibility, so sometimes this just repeats without effect
        * until the LP feastol reaches epsilon
        */
-      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxauxviol / 2.0, SCIPgetLPFeastol(scip) / 10.0)));
+      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxauxviol / 2.0, SCIPgetLPFeastol(scip) / 10.0)));  /*lint !e666*/
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " reduced LP feasibility tolerance to %g and hope\n", SCIPgetLPFeastol(scip)); )
       ++conshdlrdata->ndesperatetightenlp;
 
@@ -6406,7 +6405,6 @@ SCIP_RETCODE separateConstraints(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
    int                   nconss,             /**< number of constraints */
-   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
@@ -8259,7 +8257,7 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
 static
 SCIP_DECL_CONSSEPALP(consSepalpExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -8269,7 +8267,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExpr)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -8279,7 +8277,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolExpr)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -8288,7 +8286,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxExpr)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -11816,7 +11814,7 @@ SCIP_RETCODE SCIPaddConsExprExprBranchScoresAuxVars(
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_BFS, FALSE) );
 
-   for( expr = SCIPexpriteratorGetNext(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
+   for( expr = SCIPexpriteratorGetNext(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
    {
       auxvar = SCIPgetConsExprExprAuxVar(expr);
       if( auxvar == NULL )
@@ -13733,7 +13731,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(SCIPenfoConsExprNlhdlr)
          ++nlhdlr->ncutoffs;
          break;
       default: ;
-   }
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
