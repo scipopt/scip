@@ -976,6 +976,15 @@ SCIP_RETCODE detectSocQuadraticComplex(
    childcoefs = SCIPgetConsExprExprSumCoefs(expr);
    constant = SCIPgetConsExprExprSumConstant(expr);
 
+   /* initialize data */
+   coefs = NULL;
+   offsets = NULL;
+   transcoefs = NULL;
+   transcoefsidx = NULL;
+   nnonzeroes = NULL;
+   termbegins = NULL;
+   bp = NULL;
+
    /* TODO: should we initialize the hashmap with size SCIPgetNVars() so that it never has to be resized? */
    SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), nchildren) );
    nvars = 0;
@@ -1001,14 +1010,9 @@ SCIP_RETCODE detectSocQuadraticComplex(
             ++nvars;
          }
       }
-      else if( SCIPisConsExprExprVar(children[i]) )
+      else if( SCIPisConsExprExprVar(children[i])
+         && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
       {
-         if( !SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
-         {
-            SCIPhashmapFree(&var2idx);
-            return SCIP_OKAY;
-         }
-
          argvar = SCIPgetConsExprExprAuxVar(children[i]);
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
@@ -1077,7 +1081,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
 
       if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr) )
       {
-         assert(SCIPgetConsExprExprPowExponent(children[i]) != 2.0);
+         assert(SCIPgetConsExprExprPowExponent(children[i]) == 2.0);
 
          argvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
          varpos = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
@@ -1087,10 +1091,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
          vars[varpos] = argvar;
          eigvecmatrix[varpos * nvars + varpos] = childcoefs[i];
       }
-      else if( SCIPisConsExprExprVar(children[i]) )
+      else if( SCIPisConsExprExprVar(children[i]) && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
       {
-         assert(SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])));
-
          argvar = SCIPgetConsExprExprAuxVar(children[i]);
          varpos = SCIPhashmapGetImageInt(var2idx, (void*) argvar);
          assert(varpos >= 0);
@@ -1119,7 +1121,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          assert(varpos != varpos2);
 
          vars[varpos2] = argvar;
-         eigvecmatrix[MIN(varpos, varpos2) * nvars + MAX(varpos, varpos2)] = childcoefs[i];
+         eigvecmatrix[MIN(varpos, varpos2) * nvars + MAX(varpos, varpos2)] = childcoefs[i] / 2.0;
       }
       else
       {
@@ -1143,7 +1145,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
       goto CLEANUP;
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &bp, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &bp, nvars) );
    nneg = 0;
    npos = 0;
    ntranscoefs = 0;
@@ -1153,7 +1155,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    {
       for( j = 0; j < nvars; ++j )
       {
-         bp[i] += lincoefs[i] * eigvecmatrix[i * nvars + j];
+         bp[i] += lincoefs[j] * eigvecmatrix[i * nvars + j];
 
          /* count the number of transcoefs to be used later */
          if( !SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
@@ -1164,9 +1166,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
       {
          /* if there is a purely linear variable, the constraint can't be written as a SOC */
          if( !SCIPisZero(scip, bp[i]) )
-         {
             goto CLEANUP;
-         }
 
          bp[i] = 0.0;
          eigvals[i] = 0.0;
@@ -1195,7 +1195,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    if( lhsissoc )
    {
       /* lhs is potentially SOC, change signs */
-      lhsconstant = SCIPvarGetUbGlobal(auxvar) - constant;
+      lhsconstant = SCIPvarGetLbGlobal(auxvar) - constant;
 
       for( i = 0; i < nvars; ++i )
       {
@@ -1258,7 +1258,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          /* should enter here only once */
          assert(rhsvarfound == FALSE);
 
-         offsets[npos + nneg - 1] = -bp[i] / (2 * eigvals[i]);
+         offsets[npos + nneg - 1] = bp[i] / (2 * eigvals[i]);
          rhsvarlb = 0.0;
          rhsvarub = 0.0;
 
@@ -1329,7 +1329,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          if( SCIPisGE(scip, rhsvarlb, 0.0) || SCIPisLE(scip, rhsvarub, 0.0) )
          {
             rhsvarfound = TRUE;
-            lhsconstant += bp[i] * bp[i] / (4 * eigvals[i]);
+            lhsconstant -= bp[i] * bp[i] / (4 * eigvals[i]);
             coefs[npos + nneg - 1] = SCIPisLE(scip, rhsvarub, 0.0) ? -sqrt(-eigvals[i]) : sqrt(-eigvals[i]);
 
             nrhstranscoefs = 0;

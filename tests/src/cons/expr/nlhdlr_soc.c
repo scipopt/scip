@@ -131,7 +131,7 @@ void checkData(
    cr_expect_eq(nlhdlrexprdata->nvars, nvars);
    cr_expect_eq(nlhdlrexprdata->nterms, nterms);
    cr_expect_eq(nlhdlrexprdata->ntranscoefs, ntranscoefs);
-   cr_expect_eq(nlhdlrexprdata->constant, constant, "expected constant %f, but got %f\n",
+   cr_expect(SCIPisEQ(scip, nlhdlrexprdata->constant, constant), "expected constant %f, but got %f\n",
       constant, nlhdlrexprdata->constant);
 
    for( i = 0; i < nvars; ++i )
@@ -142,17 +142,26 @@ void checkData(
    }
 
    for( i = 0; i < nterms; ++i )
-      cr_expect_eq(nlhdlrexprdata->coefs[i], coefs[i]);
+   {
+      cr_expect(SCIPisEQ(scip, nlhdlrexprdata->coefs[i], coefs[i]), "expected coef %d to be %f, but got %f\n",
+         i+1, coefs[i], nlhdlrexprdata->coefs[i]);
+   }
 
    for( i = 0; i < nterms; ++i )
-      cr_expect_eq(nlhdlrexprdata->offsets[i], offsets[i]);
+   {
+      cr_expect(SCIPisEQ(scip, nlhdlrexprdata->offsets[i], offsets[i]), "expected offset %d to be %f, but got %f\n",
+         i+1, offsets[i], nlhdlrexprdata->offsets[i]);
+   }
 
    for( i = 0; i < nterms; ++i )
-      cr_expect_eq(nlhdlrexprdata->nnonzeroes[i], nnonzeroes[i]);
+   {
+      cr_expect_eq(nlhdlrexprdata->nnonzeroes[i], nnonzeroes[i], "expected nnonzeroes %d to be %d, but got %d\n",
+         i+1, nnonzeroes[i], nlhdlrexprdata->nnonzeroes[i]);
+   }
 
    for( i = 0; i < ntranscoefs; ++i )
    {
-      cr_expect_eq(nlhdlrexprdata->transcoefs[i], transcoefs[i], "expected transcoef %d to be %f, but got %f\n",
+      cr_expect(SCIPisEQ(scip, nlhdlrexprdata->transcoefs[i], transcoefs[i]), "expected transcoef %d to be %f, but got %f\n",
          i+1, transcoefs[i], nlhdlrexprdata->transcoefs[i]);
    }
 
@@ -623,7 +632,7 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
 }
 
 /* detects -1 -7x^2 + 2*u*y - 2z^2 >= 0 as soc expression */
-Test(nlhdlrsoc, detectandfree10, .description = "detects negated yperbolic quadratic expression")
+Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quadratic expression")
 {
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -667,6 +676,112 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated yperbolic quadr
 
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 6, 2);
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+/* detects x^2 + 5xy + 5xz + 2y^2 + 2yz + 3z^2 + 8 <= 0 as soc expression */
+Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic constraint")
+{
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+   int i;
+
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons,
+         (char*) "[expr] <test>: <x>^2 + 2*<y>^2 + 3*<z>^2 + 5*<x>*<y> + 5*<x>*<z> + 2*<y>*<z> + 10*<x> + 8 <= 0",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* this also creates the locks */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
+   cr_assert_not(infeasible);
+
+   expr = SCIPgetExprConsExpr(scip, cons);
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < expr->nenfos; ++i )
+   {
+      if( expr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_not_null(nlhdlrexprdata);
+
+   /* setup expected data */
+   SCIP_VAR* vars[3] = {x, y, z};
+   SCIP_Real coefs[3] = {1.221024161223004, 2.45699535030454, -1.2360121980419372};
+   SCIP_Real offsets[3] = {0.43579753197260707, 0.4739266455634833, -2.650186894292017};
+   SCIP_Real transcoefs[9] = { 0.1299461082832169,  0.7137532837947576, -0.688237065853218,
+                               0.5722025535583013,  0.5128905029681603,  0.6399434113001139,
+                              -0.3417633267618488, -0.4769691623546202,  0.8097519661250633};
+   int transcoefsidx[9] = {0, 1, 2, 0, 1, 2, 2, 1, 0};
+   int nnonzeroes[3] = {3, 3, 3};
+
+   /* check nlhdlrexprdata*/
+   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 9, 17.0909090909091);
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+/* detects -x^2 - 5xy - 5xz - 2y^2 - 2yz - 3z^2 - 8 >= 0 as soc expression */
+Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic constraint")
+{
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+   int i;
+
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons,
+         (char*) "[expr] <test>: -<x>^2 - 2*<y>^2 - 3*<z>^2 - 5*<x>*<y> - 5*<x>*<z> - 2*<y>*<z> - 10*<x> - 8 >= 0",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* this also creates the locks */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
+   cr_assert_not(infeasible);
+
+   expr = SCIPgetExprConsExpr(scip, cons);
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < expr->nenfos; ++i )
+   {
+      if( expr->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_not_null(nlhdlrexprdata);
+
+   /* setup expected data */
+   SCIP_VAR* vars[3] = {x, y, z};
+   SCIP_Real coefs[3] = {1.221024161223004, 2.45699535030454, -1.2360121980419372};
+   SCIP_Real offsets[3] = {0.43579753197260707, 0.4739266455634833, -2.650186894292017};
+   SCIP_Real transcoefs[9] = { 0.1299461082832169,  0.7137532837947576, -0.688237065853218,
+                               0.5722025535583013,  0.5128905029681603,  0.6399434113001139,
+                              -0.3417633267618488, -0.4769691623546202,  0.8097519661250633};
+   int transcoefsidx[9] = {0, 1, 2, 0, 1, 2, 2, 1, 0};
+   int nnonzeroes[3] = {3, 3, 3};
+
+   /* check nlhdlrexprdata*/
+   checkData(nlhdlrexprdata, vars, coefs, offsets, transcoefs, transcoefsidx, nnonzeroes, 3, 3, 9, 17.0909090909091);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
