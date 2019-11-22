@@ -354,7 +354,7 @@ SCIP_RETCODE SCIPcomputeVarOrbit(
             varstotest[nvarstotest++] = image;
             varadded[image] = TRUE;
 
-            if( ignoredvars == NULL || !SCIPhashsetExists(ignoredvars, (void*) (size_t) image+1) )
+            if( ignoredvars == NULL || !SCIPhashsetExists(ignoredvars, (void*) (size_t) (image+1)) )
                (*orbit)[(*orbitsize)++] = image;
          }
       }

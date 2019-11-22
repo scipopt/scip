@@ -2344,8 +2344,6 @@ SCIP_RETCODE chooseOrderOfGenerators(
    int* components;
    int* componentbegins;
    int* ntwocycles;
-   int nperms;
-   int ncomponents;
    int npermvars;
    int npermsincomp;
    int i;
@@ -2359,11 +2357,9 @@ SCIP_RETCODE chooseOrderOfGenerators(
    assert(ntwocycleperms != NULL);
 
    perms = propdata->perms;
-   nperms = propdata->nperms;
    npermvars = propdata->npermvars;
    components = propdata->components;
    componentbegins = propdata->componentbegins;
-   ncomponents = propdata->ncomponents;
    npermsincomp = componentbegins[compidx + 1] - componentbegins[compidx];
    *ntwocycleperms = npermsincomp;
 
@@ -2481,15 +2477,12 @@ SCIP_RETCODE buildSubgroupGraph(
    SCIP_DISJOINTSET* vartocomponent;
    SCIP_DISJOINTSET* comptocolor;
    SCIP_DIGRAPH* graph;
-   SCIP_VAR** permvars;
    int** perms;
    int* components;
    int* componentbegins;
    int* componentslastperm;
    SYM_SORTGRAPHCOMPVARS graphcompvartype;
-   int ncomponents;
    int npermvars;
-   int npermsincomp;
    int nextcolor;
    int nextcomp;
    int j;
@@ -2510,11 +2503,9 @@ SCIP_RETCODE buildSubgroupGraph(
    assert(!propdata->componentblocked[compidx]);
 
    perms = propdata->perms;
-   permvars = propdata->permvars;
    npermvars = propdata->npermvars;
    components = propdata->components;
    componentbegins = propdata->componentbegins;
-   ncomponents = propdata->ncomponents;
    nextcolor = 0;
    *nusedperms = 0;
 
@@ -2531,7 +2522,6 @@ SCIP_RETCODE buildSubgroupGraph(
    for( j = 0; j < ntwocycleperms; ++j )
    {
       int* perm;
-      int k;
       int firstcolor = -1;
 
       /* use given order of generators */
@@ -2837,7 +2827,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          for( j = graphcompbegins[0]; j < graphcompbegins[1]; ++j )
          {
             SCIP_CALL( SCIPhashsetInsert(usedvars, SCIPblkmem(scip),
-                  (void*) (size_t) graphcomponents[j]+1) );
+                  (void*) (size_t) (graphcomponents[j]+1)) );
          }
 
          if( SCIPhashsetGetNElements(usedvars) < propdata->npermvars )
@@ -2854,7 +2844,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             /* add weak SBCs for rest of enclosing orbit */
             for( j = 1; j < orbitsize; ++j )
             {
-               assert(!SCIPhashsetExists(usedvars, (void*) (size_t) graphcomponents[orbit[j]]+1));
+               assert(!SCIPhashsetExists(usedvars, (void*) (size_t) (graphcomponents[orbit[j]]+1)));
 
                vars[0] = propdata->permvars[graphcomponents[orbit[j]]];
 
