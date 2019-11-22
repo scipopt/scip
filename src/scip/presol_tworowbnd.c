@@ -1562,13 +1562,13 @@ SCIP_RETCODE combineRows
    {
       idx = varinds[i];
       if( signs[idx] == UP )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, UP: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, UP: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == DN )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, DN: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, DN: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == POS )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, POS: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, POS: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == NEG )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, NEG: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, NEG: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
    }
 #endif
 
@@ -1673,15 +1673,15 @@ SCIP_RETCODE combineRows
    {
       idx = varinds[i];
       if( signs[idx] == UP )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, UP: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, UP: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == DN )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, DN: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, DN: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == POS )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, POS: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, POS: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == NEG )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, NEG: %g to %g, breakpoint at %g\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, NEG: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == CLQ )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, CLQ: %g to %g, breakpoint at %g, cliquemaxind = %d\n", lbs[i], SCIPmatrixGetColName(matrix, idx), ubs[i], row2coefs[idx], row1coefs[idx], breakpoints[i], cliquemaxinds[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, CLQ: %g to %g, breakpoint at %g, cliquemaxind = %d\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i], cliquemaxinds[i]);
    }
 #endif
 
