@@ -566,13 +566,8 @@ SCIP_RETCODE SCIPprobTransform(
    for( v = 0; v < source->nvars; ++v )
    {
       SCIP_CALL( SCIPvarTransform(source->vars[v], blkmem, set, stat, source->objsense, &targetvar) );
-      /** @todo exip: wrap this */
-      if( set->misc_exactsolve && source->vars[v]->exactdata != NULL )
-      {
-         SCIP_CALL( SCIPvarCopyExactData(blkmem, targetvar, source->vars[v]) );
-         if( source->objsense == SCIP_OBJSEN_MAXIMIZE )
-            RatNegate(targetvar->exactdata->obj, targetvar->exactdata->obj);
-      }
+      /* if in exact mode copy the exact data */
+      SCIP_CALL( SCIPvarCopyExactData(set, blkmem, targetvar, source->vars[v], source->objsense == SCIP_OBJSEN_MAXIMIZE) );
 
       SCIP_CALL( SCIPprobAddVar(*target, blkmem, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
       SCIP_CALL( SCIPvarRelease(&targetvar, blkmem, set, eventqueue, NULL) );

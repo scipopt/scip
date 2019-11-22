@@ -1593,15 +1593,7 @@ SCIP_RETCODE rowexDelCoefPos(
    rowexMoveCoef(row, row->len-1, pos);
    row->len--;
 
-   /* update norms */
-   /* todo: exip do we need this? */
-   //rowexDelNorms(row, set, col, val, FALSE, TRUE, TRUE);
-
    coefChangedExact(row, col, lp);
-
-   /* issue row coefficient changed event */
-   /** @todo exip: do we need this? */
-   //   SCIP_CALL( rowexEventCoefChanged(rowex, blkmem, set, eventqueue, colex, valex, NULL) );
 
    return SCIP_OKAY;
 }
@@ -3528,12 +3520,6 @@ SCIP_RETCODE SCIPlpexCreate(
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->cutoffbound) );
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->lpiobjlim) );
 
-   //(*lp)->validsollp = stat->lpcount; /* the initial (empty) SCIP_LP is solved with primal and dual solution of zero */
-   //(*lp)->validfarkaslp = -1;
-   //(*lp)->validsoldirlp = -1;
-
-
-   /** todo: exip: set the right defaults in lp solver */
    return SCIP_OKAY;
 }
 
@@ -4152,7 +4138,6 @@ SCIP_RETCODE SCIProwexChgConstant(
          RatDiff(row->minactivity, row->minactivity, row->constant);
          RatDiff(row->maxactivity, row->maxactivity, row->constant);
       }
-      /** @todo exip do we need the changed event here? */
    }
 
    return SCIP_OKAY;

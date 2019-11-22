@@ -171,7 +171,8 @@ SCIP_RETCODE solveLpExact(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
-   SCIP_Bool             usefarkas           /**< are we aiming to prove infeasibility? */
+   SCIP_Bool             usefarkas,          /**< are we aiming to prove infeasibility? */
+   SCIP_Real*            safebound           /**< store the calculated safebound here */
    )
 {
    int* cstat;
@@ -416,7 +417,7 @@ SCIP_RETCODE psChooseS(
        * constraints are active at the solution of the exact LP at the root node)
        */
 
-      solveLpExact(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, 100, &lperror, FALSE);
+      solveLpExact(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, 100, &lperror, FALSE, &lp->lpobjval);
 
       SCIP_CALL( RatCreateBufferArray(set->buffer, &rootprimal, ncols) );
       SCIP_CALL( RatCreateBufferArray(set->buffer, &rootactivity, nrows) );
@@ -2762,7 +2763,8 @@ SCIP_RETCODE getPSdual(
    SCIP_EVENTFILTER*     eventfilter,
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Bool             usefarkas           /**< to we aim to prove infeasibility ? */
+   SCIP_Bool             usefarkas,          /**< to we aim to prove infeasibility ? */
+   SCIP_Real*            safebound           /**< store the calculated safebound here */
    )
 {
    SCIP_COL** cols;
@@ -3828,8 +3830,8 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
-   SCIP_Bool             dualfarkas,
-   SCIP_Real*            safebound
+   SCIP_Bool             dualfarkas,         /**< should infeasiblity be proven? */
+   SCIP_Real*            safebound           /**< store the calculated safebound here */
    )
 {
    char dualboundmethod;
@@ -3884,13 +3886,13 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
          SCIP_CALL( constructPSData(lp, lpex, set, stat, messagehdlr, eventqueue, eventfilter,
                         prob, blkmem) );
          SCIP_CALL( getPSdual(lp, lpex, set, stat, messagehdlr, eventqueue, eventfilter,
-                        prob, blkmem, dualfarkas) );
+                        prob, blkmem, dualfarkas, safebound) );
          break;
 #endif
       /* exact LP */
       case 'e':
          SCIP_CALL( solveLpExact(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                        prob, itlim, lperror, dualfarkas) );
+                        prob, itlim, lperror, dualfarkas, safebound) );
          break;
       default:
          SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
@@ -3901,7 +3903,7 @@ SCIP_RETCODE SCIPlpexComputeSafeBound(
    if( !lp->hasprovedbound )
    {
       SCIP_CALL( solveLpExact(lp, lpex, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                        prob, itlim, lperror, dualfarkas) );
+                        prob, itlim, lperror, dualfarkas, safebound) );
    }
 
    /* choose which bounding method should be calles and return a safe objective bound */

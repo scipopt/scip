@@ -46,6 +46,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
+#include "scip/pub_varex.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/solve.h"
@@ -761,6 +762,63 @@ void checkRowObjprod(
  * Local methods for pseudo and loose objective values
  */
 
+/* recompute the pseudo solution value from scratch, if it was marked to be unreliable before */
+static
+void recomputeSafeLooseObjectiveValue(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_INTERVAL obj;
+   SCIP_INTERVAL bnd;
+   SCIP_INTERVAL res;
+   SCIP_INTERVAL prod;
+   int nvars;
+   int v;
+
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(!lp->looseobjvalid);
+   assert(set->misc_exactsolve);
+
+   vars = prob->vars;
+   nvars = prob->nvars;
+
+   SCIPintervalSet(&res, 0.0);
+
+   /* iterate over all variables in the problem */
+   for( v = 0; v < nvars; ++v )
+   {
+      if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_LOOSE )
+      {
+         SCIPintervalSetRational(&obj, SCIPvarGetObjExact(vars[v]));
+         /* we are only interested in variables with a finite impact, because the infinity counters should be correct */
+         if( obj.sup > 0 &&
+            !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
+         {
+            SCIPintervalSet(&bnd, SCIPvarGetLbLocal(vars[v]));
+            SCIPintervalMul(SCIPsetInfinity(set), &prod, obj, bnd);
+            SCIPintervalAdd(SCIPsetInfinity(set), &res, res, prod);
+         }
+         else if( obj.inf < 0 &&
+            !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
+         {
+            SCIPintervalSet(&bnd, SCIPvarGetUbLocal(vars[v]));
+            SCIPintervalMul(SCIPsetInfinity(set), &prod, obj, bnd);
+            SCIPintervalAdd(SCIPsetInfinity(set), &res, res, prod);
+         }
+      }
+   }
+
+   /* the recomputed value is reliable */
+   lp->looseobjval = SCIPintervalGetInf(res);
+   lp->rellooseobjval = lp->looseobjval;
+   lp->looseobjvalid = TRUE;
+}
+
 /* recompute the loose objective value from scratch, if it was marked to be unreliable before */
 static
 void recomputeLooseObjectiveValue(
@@ -801,6 +859,60 @@ void recomputeLooseObjectiveValue(
    /* the recomputed value is reliable */
    lp->rellooseobjval = lp->looseobjval;
    lp->looseobjvalid = TRUE;
+}
+
+/* recompute the pseudo solution value from scratch, if it was marked to be unreliable before */
+static
+void recomputeSafePseudoObjectiveValue(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_INTERVAL obj;
+   SCIP_INTERVAL bnd;
+   SCIP_INTERVAL res;
+   SCIP_INTERVAL prod;
+   int nvars;
+   int v;
+
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(!lp->pseudoobjvalid);
+   assert(set->misc_exactsolve);
+
+   vars = prob->vars;
+   nvars = prob->nvars;
+
+   SCIPintervalSet(&res, 0.0);
+
+   /* iterate over all variables in the problem */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIPintervalSetRational(&obj, SCIPvarGetObjExact(vars[v]));
+      /* we are only interested in variables with a finite impact, because the infinity counters should be correct */
+      if( obj.sup > 0 &&
+         !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
+      {
+         SCIPintervalSet(&bnd, SCIPvarGetLbLocal(vars[v]));
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, obj, bnd);
+         SCIPintervalAdd(SCIPsetInfinity(set), &res, res, prod);
+      }
+      else if( obj.inf < 0 &&
+         !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
+      {
+         SCIPintervalSet(&bnd, SCIPvarGetUbLocal(vars[v]));
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, obj, bnd);
+         SCIPintervalAdd(SCIPsetInfinity(set), &res, res, prod);
+      }
+   }
+
+   /* the recomputed value is reliable */
+   lp->pseudoobjval = SCIPintervalGetInf(res);
+   lp->relpseudoobjval = lp->pseudoobjval;
+   lp->pseudoobjvalid = TRUE;
 }
 
 /* recompute the pseudo solution value from scratch, if it was marked to be unreliable before */
@@ -904,8 +1016,10 @@ SCIP_Real getFiniteLooseObjval(
    assert(lp->looseobjvalinf == 0);
 
    /* recalculate the loose objective value, if needed */
-   if( !lp->looseobjvalid )
+   if( !lp->looseobjvalid && !set->misc_exactsolve )
       recomputeLooseObjectiveValue(lp, set, prob);
+   if( !lp->looseobjvalid && set->misc_exactsolve )
+      recomputeSafeLooseObjectiveValue(lp, set, prob);
 
    return lp->looseobjval;
 }
@@ -2657,7 +2771,7 @@ SCIP_RETCODE lpSetObjlim(
 
    /* We disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
     * solver's objective limit handling, so we return here and do not apply the objective limit. */
-   if( lpCutoffDisabled(set) || set->misc_exactsolve )
+   if( lpCutoffDisabled(set) )
       return SCIP_OKAY;
 
    /* convert SCIP infinity value to lp-solver infinity value if necessary */
@@ -12631,7 +12745,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-         /** todo: exip: do we have to correct here?, maybe let enfolp resolve exact lp if ray not feasible? */
+         /** @todo: exip: do we have to correct here?, maybe let enfolp resolve exact lp if ray not feasible? */
          if( set->lp_checkprimfeas )
          {
             /* get unbounded LP solution and check the solution's feasibility again */
@@ -12727,6 +12841,14 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             /** @todo exip: take care here */
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
+            /* we need the lp solution to calculate a safe bound */
+            if( set->misc_exactsolve )
+               SCIP_CALL( SCIPlpGetSol(lp, set, stat, &primalfeasible, &dualfeasible) );
+
+            /* the objval has to be safe (if in exact solving mode) */
+            SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue,
+                  eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval) );
+
             /* do one additional simplex step if the computed dual solution doesn't exceed the objective limit */
             if( SCIPsetIsLT(set, objval, lp->lpiobjlim) )
             {
@@ -12758,6 +12880,10 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* get objective value */
                SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
+               /* the objval has to be safe (if in exact solving mode) */
+               SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue,
+                     eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval) );
+
                /* get solution status for the lp */
                solstat = SCIPlpGetSolstat(lp);
                assert(solstat != SCIP_LPSOLSTAT_OBJLIMIT);
@@ -12783,6 +12909,10 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                   /* get objective value */
                   SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+
+                  /* the objval has to be safe (if in exact solving mode) */
+                  SCIP_CALL( SCIPlpexComputeSafeBound(lp, lp->lpex, set, messagehdlr, blkmem, stat, eventqueue,
+                        eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval) );
 
                   /* get solution status for the lp */
                   solstat = SCIPlpGetSolstat(lp);
@@ -12846,10 +12976,18 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                    * limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
                    * this was already done in the lpSolve() method
                    */
-                  if( SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
+                  if( (!set->misc_exactsolve && SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))) ||
+                        objval >=  lp->cutoffbound - getFiniteLooseObjval(lp, set, prob) )
                   {
                      lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
                      lp->lpobjval = SCIPsetInfinity(set);
+                  }
+                  /* not cutoff without tolerances -> just disable cutoff and solve again */
+                  if( set->misc_exactsolve && objval < lp->cutoffbound - getFiniteLooseObjval(lp, set, prob) )
+                  {
+                     /** @todo exip: recover the old cutoffbound somehow after this? */
+                     lp->cutoffbound = SCIPlpiInfinity(lpi);
+                     goto SOLVEAGAIN;
                   }
 
                   /* LP solution is not feasible or objective limit was reached without the LP value really exceeding
@@ -13253,6 +13391,9 @@ SCIP_Real SCIPlpGetPseudoObjval(
       /* recalculate the pseudo solution value, if needed */
       if( !lp->pseudoobjvalid && !set->misc_exactsolve )
          recomputePseudoObjectiveValue(lp, set, prob);
+
+      if( !lp->pseudoobjvalid && set->misc_exactsolve )
+         recomputeSafePseudoObjectiveValue(lp, set, prob);
 
       /* if the pseudo objective value is smaller than -infinity, we just return -infinity */
       if( SCIPsetIsInfinity(set, -lp->pseudoobjval) )

@@ -408,7 +408,7 @@ SCIP_BOUNDTYPE SCIPvarGetWorstBoundTypeExact(
       return SCIP_BOUNDTYPE_LOWER;
 }
 
-/** @todo exip: this does not work exactly yet */
+/** @todo exip: this does not work exactly yet, needed for aggregation */
 /** retransforms given variable, scalar anqd constant to the corresponding original variable, scalar
  *  and constant, if possible; if the retransformation is impossible, NULL is returned as variable
  */
@@ -540,7 +540,7 @@ SCIP_Rational* SCIPvarGetLPexSolex_rec(
       return var->exactdata->locdom.lb;
 
    default:
-      SCIPerrorMessage("unknown variable status\n");
+      SCIPerrorMessage("aggregation, multi-aggregation, negation does not work exactly yet \n");
       SCIPABORT();
       return NULL; /*lint !e527*/
    }
@@ -587,7 +587,7 @@ SCIP_Rational* SCIPvarGetLPexSolex(
 {
    assert(var != NULL);
 
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
       return SCIPcolexGetPrimsol(var->exactdata->excol);
    else
       return SCIPvarGetLPexSolex_rec(var);
@@ -600,7 +600,8 @@ SCIP_Rational* SCIPvarGetPseudoSolex(
 {
    assert(var != NULL);
 
-   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE 
+         || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
       return SCIPvarGetBestBoundLocalExact(var);
    else
       return SCIPvarGetPseudoSolex_rec(var);
@@ -612,12 +613,15 @@ SCIP_Rational* SCIPvarGetSolex(
    SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
    )
 {
+   assert(var != NULL);
+
    if( getlpval )
       return SCIPvarGetLPexSolex(var);
    else
       return SCIPvarGetPseudoSolex(var);
 }
 
+/** @todo exip: this might not work completely atm. */
 /** adds correct bound-data to negated variable */
 SCIP_RETCODE SCIPvarNegateExactData(
    SCIP_VAR*             negvar,             /**< the negated variable */
@@ -706,20 +710,22 @@ SCIP_RETCODE SCIPvarAddExactData(
 
 /** copy exact variable data from one variable to another */
 SCIP_RETCODE SCIPvarCopyExactData(
+   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             targetvar,          /**< variable that gets the exact data */
-   SCIP_VAR*             sourcevar           /**< variable the data gets copied from */
+   SCIP_VAR*             sourcevar,          /**< variable the data gets copied from */
+   SCIP_Bool             negateobj           /**< should the objective be negated */
    )
 {
    assert(blkmem != NULL);
    assert(targetvar != NULL);
    assert(sourcevar != NULL);
 
-   /** @todo exip: what should happen here? error or just no copy? */
-   if( sourcevar->exactdata == NULL )
-   {
+   if( !set->misc_exactsolve )
       return SCIP_OKAY;
-   }
+
+   assert(sourcevar->exactdata != NULL);
+
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(targetvar->exactdata)) );
 
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->glbdom.lb, sourcevar->exactdata->glbdom.lb) );
@@ -742,6 +748,9 @@ SCIP_RETCODE SCIPvarFreeExactData(
    SCIP_LPEX*            lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    )
 {
+   assert(blkmem != NULL);
+   assert(var != NULL);
+
    if( set->misc_exactsolve )
    {
       if( SCIPvarGetStatusExact(var) ==  SCIP_VARSTATUS_COLUMN )
@@ -766,35 +775,6 @@ SCIP_RETCODE SCIPvarFreeExactData(
       assert(var->exactdata == NULL);
    }
    
-   return SCIP_OKAY;
-}
-
-/** @todo exip: this is currently a blank */
-/** appends OBJCHANGED event to the event queue */
-static
-SCIP_RETCODE varEventObjChanged(
-   SCIP_VAR*             var,                /**< problem variable to change */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_Real             oldobj,             /**< old objective value for variable */
-   SCIP_Real             newobj              /**< new objective value for variable */
-   )
-{
-   SCIP_EVENT* event;
-
-   assert(var != NULL);
-   assert(var->scip == set->scip);
-   assert(var->eventfilter != NULL);
-   assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE);
-   assert(SCIPvarIsTransformed(var));
-   assert(!SCIPsetIsEQ(set, oldobj, newobj));
-
-   //SCIP_CALL( SCIPeventCreateObjChanged(&event, blkmem, var, oldobj, newobj) );
-   //SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
-
    return SCIP_OKAY;
 }
 
@@ -886,8 +866,6 @@ SCIP_RETCODE SCIPvarChgObjExact(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          RatSet(var->exactdata->obj, newobj);
-
-         /** @todo exip SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp->fplp, eventqueue, oldobj, var->obj) ); */
          break;
 
       case SCIP_VARSTATUS_FIXED:

@@ -263,9 +263,11 @@ SCIP_RETCODE SCIPvarAddExactData(
 /** copy exact variable data from one variable to another */
 extern
 SCIP_RETCODE SCIPvarCopyExactData(
+   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             targetvar,          /**< variable that gets the exact data */
-   SCIP_VAR*             sourcevar           /**< variable the data gets copied from */
+   SCIP_VAR*             sourcevar,          /**< variable the data gets copied from */
+   SCIP_Bool             negateobj           /**< should the objective be negated */
    );
 
 /** free exact variable data, if it exists */

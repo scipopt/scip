@@ -1098,7 +1098,7 @@ SCIP_Bool RatIsFpRepresentable(
    }
    else
    {
-      rational->fpexact = (RatRoundReal(rational, SCIP_ROUND_DOWNWARDS) 
+      rational->fpexact = (RatRoundReal(rational, SCIP_ROUND_DOWNWARDS)
          == RatRoundReal(rational, SCIP_ROUND_UPWARDS)) ? SCIP_FPEXACT_TRUE : SCIP_FPEXACT_FALSE;
    }
 
