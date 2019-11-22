@@ -1781,7 +1781,7 @@ SCIP_RETCODE dualBoundStrengthening(
    int* implubvars;
    int nimplubvars;
 
-   int maxhashes;
+   SCIP_Longint maxhashes;
    int maxlen;
    int pospp;
    int listsizepp;
@@ -1911,13 +1911,7 @@ SCIP_RETCODE dualBoundStrengthening(
       listsizemm = ncols;
       listsizepm = ncols;
       listsizemp = ncols;
-      maxhashes = ncols * presoldata->maxhashfac;
-
-      /* prevent overflow issues */
-      if( nrows != 0 && maxhashes / nrows != presoldata->maxhashfac )
-      {
-         maxhashes = INT_MAX;
-      }
+      maxhashes = presoldata->maxhashfac == -1 ? SCIP_LONGINT_MAX : (((SCIP_Longint)ncols) * presoldata->maxhashfac);
 
       for( i = 0; i < nimplubvars; i++)
       {
@@ -1991,13 +1985,8 @@ SCIP_RETCODE dualBoundStrengthening(
          block1end = 0;
          block2start = 0;
          block2end = 0;
-         maxcombines = ncols * presoldata->maxpairfac;
 
-         /* prevent overflow issues */
-         if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
-         {
-            maxcombines = INT_MAX;
-         }
+         maxcombines = presoldata->maxpairfac == -1 ? SCIP_LONGINT_MAX : (((SCIP_Longint)ncols) * presoldata->maxpairfac);
 
          ncombines = 0;
          combinefails = 0;
@@ -2082,8 +2071,8 @@ SCIP_RETCODE dualBoundStrengthening(
       /* Process pm and mp lists */
       if( pospm > 0 && posmp > 0 )
       {
+         SCIP_Longint maxcombines;
          int ncombines;
-         int maxcombines;
          SCIP_Bool finished;
          SCIP_Bool success;
          int combinefails;
@@ -2095,13 +2084,9 @@ SCIP_RETCODE dualBoundStrengthening(
          block1end = 0;
          block2start = 0;
          block2end = 0;
-         maxcombines = ncols * presoldata->maxpairfac;
 
-         /* prevent overflow issues */
-         if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
-         {
-            maxcombines = INT_MAX;
-         }
+         maxcombines = presoldata->maxpairfac == -1 ? SCIP_LONGINT_MAX : (((SCIP_Longint)ncols) * presoldata->maxpairfac);
+
          ncombines = 0;
          combinefails = 0;
          retrievefails = 0;

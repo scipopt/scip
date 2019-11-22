@@ -2307,7 +2307,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    SCIP_Real* rowvalptr;
    SCIP_VAR* var;
 
-   int maxhashes;
+   SCIP_Longint maxhashes;
 
    int maxlen;
    int pospp;
@@ -2389,13 +2389,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    listsizemm = nrows;
    listsizepm = nrows;
    listsizemp = nrows;
-   maxhashes = nrows * presoldata->maxhashfac;
-
-   /* prevent integer overflow issues */
-   if( nrows != 0 && maxhashes / nrows != presoldata->maxhashfac )
-   {
-      maxhashes = INT_MAX;
-   }
+   maxhashes = presoldata->maxhashfac == -1 ? SCIP_LONGINT_MAX : (((SCIP_Longint)nrows) * presoldata->maxhashfac);
 
    /* skim through the problem and create hashlists for combination candidates */
    for( i = 0; i < nrows; i++)
@@ -2511,8 +2505,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    /* Process pp and mm hashlists */
    if( pospp > 0 && posmm > 0 )
    {
+      SCIP_Longint maxcombines;
       int ncombines;
-      int maxcombines;
       SCIP_Bool finished;
       SCIP_Bool success;
       SCIP_Bool swaprow1;
@@ -2526,13 +2520,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       block1end = 0;
       block2start = 0;
       block2end = 0;
-      maxcombines = nrows * presoldata->maxpairfac;
+      maxcombines = presoldata->maxpairfac == -1 ? SCIP_LONGINT_MAX : (((SCIP_Longint)nrows) * presoldata->maxpairfac);
 
-      /* prevent overflow issues */
-      if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
-      {
-         maxcombines = INT_MAX;
-      }
       ncombines = 0;
       combinefails = 0;
       retrievefails = 0;
@@ -2627,8 +2616,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    /* Process pm and mp hashlists */
    if( pospm > 0 && posmp > 0 )
    {
+      SCIP_Longint maxcombines;
       int ncombines;
-      int maxcombines;
       SCIP_Bool finished;
       SCIP_Bool success;
       SCIP_Bool swaprow1;
@@ -2642,13 +2631,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       block1end = 0;
       block2start = 0;
       block2end = 0;
-      maxcombines = nrows * presoldata->maxpairfac;
+      maxcombines = presoldata->maxpairfac == -1 ? SCIP_LONGINT_MAX : (((SCIP_Longint)nrows) * presoldata->maxpairfac);
 
-      /* prevent overflow issues */
-      if( nrows != 0 && maxcombines / nrows != presoldata->maxpairfac )
-      {
-         maxcombines = INT_MAX;
-      }
       ncombines = 0;
       combinefails = 0;
       retrievefails = 0;
