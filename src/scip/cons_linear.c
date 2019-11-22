@@ -18756,7 +18756,7 @@ SCIP_RETCODE SCIPcleanupConssLinear(
    *infeasible = FALSE;
 
    nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
-   conss = SCIPconshdlrGetConss(conshdlr);
+   conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
 
    for( i = 0; i < nconss; ++i )
    {

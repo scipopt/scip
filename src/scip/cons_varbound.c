@@ -5301,7 +5301,7 @@ SCIP_RETCODE SCIPcleanupConssVarbound(
 
    eventhdlr = conshdlrdata->eventhdlr;
    nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
-   conss = SCIPconshdlrGetConss(conshdlr);
+   conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
 
    /* loop backwards since then deleted constraints do not interfere with the loop */
    for( i = nconss - 1; i > 0; --i )

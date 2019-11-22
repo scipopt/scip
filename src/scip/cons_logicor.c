@@ -5421,7 +5421,7 @@ SCIP_RETCODE SCIPcleanupConssLogicor(
 
    eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
    nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
-   conss = SCIPconshdlrGetConss(conshdlr);
+   conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
 
    nentries = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &entries, nentries) );
