@@ -1916,7 +1916,7 @@ SCIP_RETCODE dualBoundStrengthening(
       for( i = 0; i < nimplubvars; i++)
       {
 
-         if( pospp + posmm + pospm + posmp > maxhashes )
+         if( ((SCIP_Longint)pospp) + posmm + pospm + posmp > maxhashes )
             break;
 
          colvalptr = SCIPmatrixGetColValPtr(matrix, implubvars[i]);
@@ -1930,30 +1930,26 @@ SCIP_RETCODE dualBoundStrengthening(
                {
                   if(SCIPisPositive(scip, colvalptr[k]) )
                   {
-                     /* right-shift is required because we want to sort the hashes later on */
                      SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &colidxlistpp,
-                        hashIndexPair(colidxptr[j], colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                        hashIndexPair(colidxptr[j], colidxptr[k]), implubvars[i]) );
                   }
                   else
                   {
-                     /* right-shift is required because we want to sort the hashes later on */
                      SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &colidxlistpm,
-                        hashIndexPair(colidxptr[j], colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                        hashIndexPair(colidxptr[j], colidxptr[k]), implubvars[i]) );
                   }
                }
                else
                {
                   if(SCIPisPositive(scip, colvalptr[k]) )
                   {
-                     /* right-shift is required because we want to sort the hashes later on */
                      SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &colidxlistmp,
-                        hashIndexPair(colidxptr[j], colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                        hashIndexPair(colidxptr[j], colidxptr[k]), implubvars[i]) );
                   }
                   else
                   {
-                     /* right-shift is required because we want to sort the hashes later on */
                      SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &colidxlistmm,
-                        hashIndexPair(colidxptr[j], colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
+                        hashIndexPair(colidxptr[j], colidxptr[k]), implubvars[i]) );
                   }
                }
             }

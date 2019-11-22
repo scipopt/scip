@@ -2394,7 +2394,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    /* skim through the problem and create hashlists for combination candidates */
    for( i = 0; i < nrows; i++)
    {
-      if( pospp + posmm + pospm + posmp > maxhashes )
+      if( ((SCIP_Longint)pospp) + posmm + pospm + posmp > maxhashes )
          break;
 
       rowvalptr = SCIPmatrixGetRowValPtr(matrix, i);
@@ -2409,40 +2409,38 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
             {
                if(SCIPisPositive(scip, rowvalptr[k]) )
                {
-                  /* right-shift is required because we want to sort the hashes later on */
                   SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
-                     hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+                     hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                   if( finiterhs )
                      SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                }
                else
                {
                   SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
-                     hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+                     hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                   if( finiterhs )
                      SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                }
             }
             else
             {
                if(SCIPisPositive(scip, rowvalptr[k]) )
                {
-                  /* right-shift is required because we want to sort the hashes later on */
                   SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &rowidxlistmp,
-                     hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+                     hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                   if( finiterhs )
                      SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &rowidxlistpm,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                }
                else
                {
                   SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &rowidxlistmm,
-                     hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+                     hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                   if( finiterhs )
                      SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &rowidxlistpp,
-                        hashIndexPair(rowidxptr[j],rowidxptr[k])>>1, i) ); /*lint !e702*/
+                        hashIndexPair(rowidxptr[j],rowidxptr[k]), i) );
                }
             }
          }
