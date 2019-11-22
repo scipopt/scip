@@ -1949,7 +1949,7 @@ SCIP_RETCODE SCIPsetCreate(
             &(*set)->misc_allowstrongdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "misc/allowweakdualsreds",
+            "misc/allowweakdualreds",
             "should weak dual reductions be allowed in propagation and presolving?",
             &(*set)->misc_allowweakdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS,
             NULL, NULL) );
