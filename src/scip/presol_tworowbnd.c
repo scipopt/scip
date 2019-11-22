@@ -2732,7 +2732,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
 
       var = SCIPmatrixGetVar(matrix, i);
 
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT
          || (SCIPisEQ(scip, newlbs[i], SCIPceil(scip, newlbs[i])) && (SCIPisEQ(scip, newubs[i], SCIPfloor(scip, newubs[i])))));
 
       if( SCIPisEQ(scip, newlbs[i], newubs[i]) )
