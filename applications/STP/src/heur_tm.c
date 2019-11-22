@@ -52,7 +52,7 @@
 #define DEFAULT_ROOTRUNS 50                  /**< number of runs at the root */
 #define DEFAULT_DURINGLPFREQ 5               /**< frequency during LP solving */
 #define DEFAULT_TYPE  0                      /**< heuristic to execute */
-#define DEFAULT_BIAS  2                      /**< bias */
+#define DEFAULT_BIAS  3                      /**< bias */
 
 #define DEFAULT_RANDSEED 5                   /**< seed for pseudo-random functions */
 
@@ -69,7 +69,8 @@ int getUgRank(void);
  * Data structures
  */
 
-enum PCMW_Bias { bias_none = 0, bias_full = 1, bias_both = 2 };
+/* bias_none is only used for PC/RPC */
+enum PCMW_Bias { bias_none = 0, bias_standard = 1, bias_full = 2, bias_all = 3 };
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -760,6 +761,7 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    const SCIP_Real*      cost,               /**< (possibly biased) edge costs */
    const SCIP_Real*      cost_org,           /**< (un-biased) edge costs, only needed for PC/RPC */
    const SCIP_Real*      prize,              /**< (possibly biased) vertex prizes */
+   SCIP_Bool             costsAreBiased,     /**< biased? */
    SCIP_Real*            dijkdist,           /**< distance array */
    int*                  result,             /**< solution array (on edges) */
    int*                  dijkedge,           /**< predecessor edge array */
@@ -772,7 +774,7 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    if( g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
       graph_path_st_rpcmw(scip, g, orderedprizes, orderedprizes_id, cost, prize, dijkdist, dijkedge, start, connected);
    else
-      graph_path_st_pcmw(scip, g, orderedprizes, orderedprizes_id, cost, prize, dijkdist, dijkedge, start, connected);
+      graph_path_st_pcmw(scip, g, orderedprizes, orderedprizes_id, cost, prize, costsAreBiased, dijkdist, dijkedge, start, connected);
 
    SCIP_CALL( pruneSteinerTree_intern(scip, g, cost_org, result, connected));
 
@@ -1821,14 +1823,14 @@ SCIP_RETCODE runPcMW(
    enum PCMW_Bias        bias                /**< bias */
 )
 {
-   SCIP_Real* terminalprio;
-   SCIP_Real* costorg;
-   SCIP_Real* costbiased;
-   SCIP_Real* prizebiased;
-   SCIP_Real* orderedprizes;
-   SCIP_Real* prize_in;
-   int* orderedprizes_id;
-   int* terminalperm;
+   SCIP_Real* terminalprio = NULL;
+   SCIP_Real* costorg = NULL;
+   SCIP_Real* costbiased = NULL;
+   SCIP_Real* prizebiased = NULL;
+   SCIP_Real* orderedprizes = NULL;
+   const SCIP_Real* const prize_in = (prize) ? prize : graph->prize;
+   int* orderedprizes_id = NULL;
+   int* terminalperm = NULL;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
    const int nterms = graph->terms;
@@ -1836,7 +1838,7 @@ SCIP_RETCODE runPcMW(
 
    assert(maxruns <= nterms);
    assert(graph->extended);
-   assert(bias == bias_none || bias == bias_full);
+   assert(bias == bias_none || bias == bias_standard || bias == bias_full);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &orderedprizes, nterms + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orderedprizes_id, nterms + 1) );
@@ -1846,23 +1848,14 @@ SCIP_RETCODE runPcMW(
    SCIP_CALL( SCIPallocBufferArray(scip, &costbiased, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &prizebiased, nnodes) );
 
-   if( prize )
-      prize_in = prize;
-   else
-      prize_in = graph->prize;
-
    if( graph_pc_isPc(graph) )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &costorg, nedges) );
 
       graph_pc_getOrgCosts(scip, graph, costorg);
    }
-   else
-   {
-      costorg = NULL;
-   }
 
-   if( bias != bias_none )
+   if( bias == bias_full )
    {
       graph_pc_getBiased(scip, graph, costbiased, prizebiased);
       initOrderedPrizesPcMw(graph, costbiased, prizebiased, orderedprizes, orderedprizes_id);
@@ -1918,12 +1911,25 @@ SCIP_RETCODE runPcMW(
       }
       else
       {
-         if( bias != bias_none )
+         if( bias == bias_full )
+         {
             SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
-                  costbiased, costorg, prizebiased, dijkdist, result, dijkedge, start, connected));
+                  costbiased, costorg, prizebiased, TRUE, dijkdist, result, dijkedge, start, connected));
+         }
+         else if( bias == bias_none )
+         {
+            assert(graph_pc_isPc(graph));
+
+            SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
+                  costorg, costorg, prize_in, FALSE, dijkdist, result, dijkedge, start, connected));
+         }
          else
+         {
+            assert(bias == bias_standard);
+
             SCIP_CALL(computeSteinerTreeDijkPcMw(scip, graph, orderedprizes, orderedprizes_id,
-                  cost, costorg, prize_in, dijkdist, result, dijkedge, start, connected));
+                  cost, costorg, prize_in, TRUE, dijkdist, result, dijkedge, start, connected));
+         }
       }
 
       /* compute objective value (wrt original costs) */
@@ -2835,13 +2841,21 @@ SCIP_RETCODE SCIPStpHeurTMRun(
       enum PCMW_Bias bias = heurdata->pcmwbias;
       SCIP_Real best_resultObj = FARAWAY;
 
-      if( bias == bias_none || bias == bias_both )
+      assert(graph_pc_isPc(graph) || bias != bias_none);
+
+      if( graph_pc_isPc(graph) && (bias == bias_none || bias == bias_all) )
       {
          SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, best,
                dijkdist, cost, nodepriority, success, pcmwfull, bias_none));
       }
 
-      if( bias == bias_full || bias == bias_both )
+      if( bias == bias_standard || bias == bias_all )
+      {
+         SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, best,
+               dijkdist, cost, nodepriority, success, pcmwfull, bias_standard));
+      }
+
+      if( bias == bias_full || bias == bias_all )
       {
          SCIP_CALL( runPcMW(scip, heurdata, graph, &best_resultObj, prize, result, best_result, dijkedge, runs, best,
                dijkdist, cost, nodepriority, success, pcmwfull, bias_full) );
@@ -3233,7 +3247,7 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
       result[e] = UNKNOWN;
 
    save = heurdata->pcmwbias;
-   heurdata->pcmwbias = 0;
+   heurdata->pcmwbias = 1;
 
    /* build a Steiner tree */
    SCIP_CALL( SCIPStpHeurTMRun(scip, heurdata, graph, NULL, prize, result, runs, heurdata->beststartnode, cost, costrev, &(heurdata->hopfactor), nodepriority, maxcost, success, FALSE));
@@ -3300,8 +3314,8 @@ SCIP_RETCODE SCIPStpIncludeHeurTM(
          "Heuristic: 0 automatic, 1 TM_SP, 2 TM_VORONOI, 3 TM_DIJKSTRA",
          &heurdata->type, FALSE, DEFAULT_TYPE, 0, 3, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/pcmwbias",
-         "Bias: 0 none, 1 full, 2 try both",
-         &heurdata->pcmwbias, FALSE, DEFAULT_BIAS, 0, 2, NULL, NULL) );
+         "Bias: 0 none, 1 standard, 2 full, 3 try all",
+         &heurdata->pcmwbias, FALSE, DEFAULT_BIAS, 0, 3, NULL, NULL) );
 
    heurdata->hopfactor = DEFAULT_HOPFACTOR;
 

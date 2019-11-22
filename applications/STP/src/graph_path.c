@@ -343,6 +343,7 @@ inline static void sdwalk_reset(
    }
 }
 
+
 /*---------------------------------------------------------------------------*/
 /*--- Name     : get NEAREST knot                                         ---*/
 /*--- Function : Holt das oberste Element vom Heap (den Knoten mit der    ---*/
@@ -826,6 +827,118 @@ inline static void utdist(
    }
    return;
 }
+
+
+/** connect given node to tree */
+static inline
+void stPcmwConnectNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   k,                  /**< the vertex */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
+   const int*            orderedprizes_id,   /**< ordered prizes ids */
+   SCIP_Real*            pathdist,           /**< distance array (on vertices) */
+   int*                  pathedge,           /**< predecessor edge array (on vertices) */
+   STP_Bool*             connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
+   int*                  maxprizeidx,        /**< index */
+   SCIP_Real*            maxprizeval,        /**< value */
+   int*                  count,              /**< for the heap */
+   int*                  nterms              /**< terminal count */
+)
+{
+   assert(k >= 0);
+
+   connected[k] = TRUE;
+   pathdist[k] = 0.0;
+   updatmaxprize(g, orderedprizes, orderedprizes_id, connected, k, maxprizeidx, maxprizeval);
+   (*nterms)++;
+
+   assert(pathedge[k] != -1);
+
+   /* connect k to current subtree */
+   for( int node = g->tail[pathedge[k]]; !connected[node]; node = g->tail[pathedge[node]] )
+   {
+      connected[node] = TRUE;
+      resetX(scip, pathdist, g->path_heap, g->path_state, count, node, 0.0);
+
+      if( Is_pseudoTerm(g->term[node]) )
+      {
+         updatmaxprize(g, orderedprizes, orderedprizes_id, connected, node, maxprizeidx, maxprizeval);
+         (*nterms)++;
+      }
+
+      assert(pathedge[node] != -1);
+   }
+}
+
+
+/** initialize */
+static inline
+void stPcmwInit(
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            pathdist,           /**< distance array (on vertices) */
+   int*                  pathedge,           /**< predecessor edge array (on vertices) */
+   STP_Bool*             connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
+   int*                  npseudoterms        /**< number of pseudo terminals */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   int ntermspos = 0;
+   int* const RESTRICT state = g->path_state;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      g->mark[k] = ((g->grad[k] > 0) && !Is_term(g->term[k]));
+      state[k] = UNKNOWN;
+      pathdist[k] = FARAWAY;
+      pathedge[k] = -1;
+      connected[k] = FALSE;
+
+      if( Is_pseudoTerm(g->term[k]) )
+         ntermspos++;
+   }
+
+   *npseudoterms = ntermspos;
+}
+
+
+/** initialize */
+static inline
+void stRpcmwInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            pathdist,           /**< distance array (on vertices) */
+   int*                  pathedge,           /**< predecessor edge array (on vertices) */
+   STP_Bool*             connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
+   int*                  nrealterms          /**< number of real terminals */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   int nrterms = 0;
+   int* const RESTRICT state = g->path_state;
+
+   /* unmark dummy terminals */
+   graph_pc_markOrgGraph(scip, g);
+   assert(graph_pc_knotIsFixedTerm(g, g->source));
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      state[k] = UNKNOWN;
+      pathdist[k] = FARAWAY;
+      pathedge[k] = -1;
+      connected[k] = FALSE;
+
+      if( graph_pc_knotIsFixedTerm(g, k) )
+      {
+         assert(g->mark[k]);
+         nrterms++;
+         assert(!Is_pseudoTerm(g->term[k]));
+      }
+   }
+
+   *nrealterms = nrterms;
+}
+
 
 /*---------------------------------------------------------------------------*/
 /*--- Name     : INIT shortest PATH algorithm                             ---*/
@@ -2549,22 +2662,22 @@ void graph_path_st(
  *  */
 void graph_path_st_pcmw(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    const SCIP_Real*      orderedprizes,      /**< ordered prizes for (pseudo) terminals */
    const int*            orderedprizes_id,   /**< ordered prizes ids */
    const SCIP_Real*      cost,               /**< edge costs */
    const SCIP_Real*      prize,              /**< (possibly biased) prize */
+   SCIP_Bool             costIsBiased,       /**< is cost biased? */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
    STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
-   int count;
    const int nnodes = g->knots;
-   int* const heap = g->path_heap;
-   int* const state = g->path_state;
-   int ntermspos;
+   int* const RESTRICT heap = g->path_heap;
+   int* const RESTRICT state = g->path_state;
+   int ntermspos = -1;
 
    assert(scip && g && orderedprizes && orderedprizes_id && cost && prize && pathdist && pathedge && connected);
    assert(start  >= 0);
@@ -2572,33 +2685,22 @@ void graph_path_st_pcmw(
    assert(g->extended);
    assert(graph_pc_isPcMw(g) && !graph_pc_isRootedPcMw(g));
 
-   count = 0;
-   ntermspos = 0;
-
    /* initialize */
-   for( int k = 0; k < nnodes; k++ )
-   {
-      g->mark[k] = ((g->grad[k] > 0) && !Is_term(g->term[k]));
-      state[k]     = UNKNOWN;
-      pathdist[k] = FARAWAY;
-      pathedge[k] = -1;
-      connected[k] = FALSE;
-
-      if( Is_pseudoTerm(g->term[k]) )
-         ntermspos++;
-   }
+   stPcmwInit(g, pathdist, pathedge, connected, &ntermspos);
 
    assert(g->mark[start]);
+   assert(ntermspos >= 0);
 
    pathdist[start] = 0.0;
    connected[start] = TRUE;
 
    if( nnodes > 1 )
    {
+      int count = 1;
       int maxprizeidx = 0;
       SCIP_Real maxprizeval = orderedprizes[0];
-
       int nterms = 0;
+      const SCIP_Bool isPc = graph_pc_isPc(g);
 
       if( Is_pseudoTerm(g->term[start]) )
       {
@@ -2607,53 +2709,61 @@ void graph_path_st_pcmw(
       }
 
       /* add start vertex to heap */
-      count = 1;
       heap[count] = start;
       state[start] = count;
 
       /* repeat until heap is empty */
       while( count > 0 )
       {
-         /* get closest node */
+         SCIP_Bool connectK = FALSE;
          const int k = nearestX(heap, state, &count, pathdist);
          state[k] = UNKNOWN;
 
          /* if k is positive vertex and close enough, connect k to current subtree */
-         if( !connected[k] && Is_pseudoTerm(g->term[k]) && (prize[k] >= pathdist[k]) )
+         if( !connected[k] && Is_pseudoTerm(g->term[k]) )
          {
-            connected[k] = TRUE;
-            pathdist[k] = 0.0;
-            updatmaxprize(g, orderedprizes, orderedprizes_id, connected, k, &maxprizeidx, &maxprizeval);
-            nterms++;
+            connectK = (prize[k] >= pathdist[k]);
 
             assert(k != start);
-            assert(pathedge[k] != -1);
 
-            /* connect k to current subtree */
-            for( int node = g->tail[pathedge[k]]; !connected[node]; node = g->tail[pathedge[node]] )
+            if( !connectK )
             {
-               connected[node] = TRUE;
-               resetX(scip, pathdist, heap, state, &count, node, 0.0);
+               SCIP_Real prizesum = 0.0;
 
-               if( Is_pseudoTerm(g->term[node]) )
+               for( int node = g->tail[pathedge[k]]; !connected[node]; node = g->tail[pathedge[node]] )
                {
-                  updatmaxprize(g, orderedprizes, orderedprizes_id, connected, node, &maxprizeidx, &maxprizeval);
-                  nterms++;
+                  if( Is_pseudoTerm(g->term[node]) )
+                  {
+                     prizesum += prize[node];
+                  }
+                  else if( isPc && !costIsBiased && graph_pc_knotIsNonLeafTerm(g, node) )
+                  {
+                     prizesum += prize[node];
+                  }
                }
 
-               assert(pathedge[node] != -1);
+               assert(prizesum >= 0.0 && SCIPisLT(scip, prizesum, FARAWAY));
+
+               connectK = (prize[k] + prizesum >= pathdist[k]);
             }
 
-            assert(nterms <= ntermspos);
-
-            /* have all biased terminals been reached? */
-            if( nterms == ntermspos )
+            if( connectK )
             {
-               SCIPdebugMessage("all terms reached \n");
-               break;
+               stPcmwConnectNode(scip, k, g, orderedprizes, orderedprizes_id, pathdist, pathedge, connected,
+                     &maxprizeidx, &maxprizeval, &count, &nterms);
+
+               assert(nterms <= ntermspos);
+
+               /* have all biased terminals been connected? */
+               if( nterms == ntermspos )
+               {
+                  SCIPdebugMessage("all terms reached \n");
+                  break;
+               }
             }
          }
-         else if( pathdist[k] > maxprizeval )
+
+         if( !connectK && pathdist[k] > maxprizeval )
          {
             break;
          }
@@ -2666,7 +2776,7 @@ void graph_path_st_pcmw(
             assert(state[m] && e != EAT_LAST);
 
             /* is m not connected, allowed and closer? */
-            if( !connected[m] && pathdist[m] > (pathdist[k] + cost[e]) && g->mark[m] )
+            if( g->mark[m] && !connected[m] && pathdist[m] > (pathdist[k] + cost[e]) )
                correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
          }
       } /* while( count > 0 ) */
@@ -3119,7 +3229,7 @@ void graph_path_st_rpcmw(
    )
 {
    const int nnodes = g->knots;
-   int nrterms;
+   int nrterms = -1;
    int* const heap = g->path_heap;
    int* const state = g->path_state;
 
@@ -3129,27 +3239,9 @@ void graph_path_st_rpcmw(
    assert(g->extended);
    assert(graph_pc_isRootedPcMw(g));
 
-   nrterms = 0;
+   stRpcmwInit(scip, g, pathdist, pathedge, connected, &nrterms);
 
-   /* unmark dummy terminals */
-   graph_pc_markOrgGraph(scip, g);
-   assert(graph_pc_knotIsFixedTerm(g, g->source));
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      state[k] = UNKNOWN;
-      pathdist[k] = FARAWAY;
-      pathedge[k] = -1;
-      connected[k] = FALSE;
-
-      if( graph_pc_knotIsFixedTerm(g, k) )
-      {
-         assert(g->mark[k]);
-         nrterms++;
-         assert(!Is_pseudoTerm(g->term[k]));
-      }
-   }
-
+   assert(nrterms >= 1);
    pathdist[start] = 0.0;
    connected[start] = TRUE;
 

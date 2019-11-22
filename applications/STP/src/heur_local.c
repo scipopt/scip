@@ -2502,7 +2502,6 @@ void insertionRestoreTree(
    const int* const cutedgesEnd = insertData->cutedgesEnd;
    const int* const graphTail = graph->tail;
    const int* const graphHead = graph->head;
-   SCIP_Bool* const nodeIsBlocked = insertData->nodeIsBlocked;
    const int v = insertData->insertionVertex;
 
    SCIPlinkcuttreeEvert(v_lc);
@@ -2557,7 +2556,7 @@ void insertionRestoreTree(
    insertData->solNodes[v] = FALSE;
 
    for( int k = 0; k < graph->knots; k++ )
-      assert(!nodeIsBlocked[k]);
+      assert(!insertData->nodeIsBlocked[k]);
 
    insertData->blockedListSize = 0;
 }
@@ -4043,13 +4042,13 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
    STP_Bool* stvertextmp;
    SCIP_Real* dist;
    int* pred;
-   const int nedges = graph->edges;
    const int nnodes = graph->knots;
    SCIP_Bool extensions = FALSE;
    int maxnode;
    const SCIP_Bool isexended = graph->extended;
 
 #ifndef NDEBUG
+   const int nedges = graph->edges;
    const SCIP_Real initialobj = graph_sol_getObj(graph->cost, stedge, 0.0, nedges);
 #endif
 
