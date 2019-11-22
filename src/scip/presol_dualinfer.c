@@ -1932,31 +1932,34 @@ SCIP_RETCODE dualBoundStrengthening(
          {
             for( k = j+1; k < maxlen; k++)
             {
-               /* right-shift is required because we want to sort the hashes later on */
                if( SCIPisPositive(scip, colvalptr[j]) )
                {
                   if(SCIPisPositive(scip, colvalptr[k]) )
                   {
+                     /* right-shift is required because we want to sort the hashes later on */
                      SCIP_CALL( addEntry(scip, &pospp, &listsizepp, &hashlistpp, &colidxlistpp,
-                        hashIndexPair(colidxptr[j], colidxptr[k]), implubvars[i]) ); /*lint !e702*/
+                        hashIndexPair(colidxptr[j], colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
                   }
                   else
                   {
+                     /* right-shift is required because we want to sort the hashes later on */
                      SCIP_CALL( addEntry(scip, &pospm, &listsizepm, &hashlistpm, &colidxlistpm,
-                        hashIndexPair(colidxptr[j], colidxptr[k]), implubvars[i]) ); /*lint !e702*/
+                        hashIndexPair(colidxptr[j], colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
                   }
                }
                else
                {
                   if(SCIPisPositive(scip, colvalptr[k]) )
                   {
+                     /* right-shift is required because we want to sort the hashes later on */
                      SCIP_CALL( addEntry(scip, &posmp, &listsizemp, &hashlistmp, &colidxlistmp,
-                        hashIndexPair(colidxptr[j], colidxptr[k]), implubvars[i]) ); /*lint !e702*/
+                        hashIndexPair(colidxptr[j], colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
                   }
                   else
                   {
+                     /* right-shift is required because we want to sort the hashes later on */
                      SCIP_CALL( addEntry(scip, &posmm, &listsizemm, &hashlistmm, &colidxlistmm,
-                        hashIndexPair(colidxptr[j], colidxptr[k]), implubvars[i]) ); /*lint !e702*/
+                        hashIndexPair(colidxptr[j], colidxptr[k])>>1, implubvars[i]) ); /*lint !e702*/
                   }
                }
             }
