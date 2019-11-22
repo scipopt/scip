@@ -139,7 +139,7 @@ encodeColPair(
    return (void*)SCIPcombineTwoInt(colpair->col1idx, colpair->col2idx);
 }
 
-/** compute single int hashvalue for two ints */
+/** compute single positive int hashvalue for two ints */
 static
 int
 hashIndexPair(
@@ -148,7 +148,7 @@ hashIndexPair(
    )
 {
    uint32_t hash = SCIPhashOne(SCIPcombineTwoInt(idx1, idx2));
-   return *((int*) &hash);
+   return (int)(hash>>1);
 }
 
 /** add hash/rowidx pair to hashlist/rowidxlist **/
