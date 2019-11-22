@@ -295,7 +295,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateDefault)
          if( !overestimate )
             violation = MAX(0.0, auxvalue - auxval);
          else
-            violation = MAX(violation, auxval - auxvalue);
+            violation = MAX(0.0, auxval - auxvalue);
       }
       assert(violation >= 0.0);
 
