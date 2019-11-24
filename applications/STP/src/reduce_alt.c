@@ -4649,6 +4649,8 @@ SCIP_RETCODE reduce_nvAdv(
       if( contract && (!pc || (SCIPisLE(scip, g->cost[edge1], pi) && SCIPisLE(scip, ttdist, pt))) )
       {
          (*nelims)++;
+         SCIPdebugMessage("nvAdv contract \n");
+
          *fixed += g->cost[edge1];
 
          if( pc )

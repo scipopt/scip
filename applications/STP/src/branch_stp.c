@@ -164,7 +164,7 @@ void applyBranchHistoryToGraph(
 
          if( Is_nonleafTerm(graph->term[k]) )
          {
-            graph_pc_enforceNonLeafTerm(graph, k);
+            graph_pc_enforceNonLeafTerm(scip, graph, k);
          }
          else if( Is_pseudoTerm(graph->term[k]) )
          {
