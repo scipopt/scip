@@ -201,6 +201,28 @@ void setCostToOrgPc(
 }
 
 
+/** is given terminal the last terminal? */
+static inline
+SCIP_Bool isLastTerm(
+   GRAPH*                g,                  /**< the graph */
+   int                   t                   /**< terminal */
+)
+{
+   assert(graph_pc_isPcMw(g));
+   assert(g && g->term2edge);
+   assert(!g->extended);
+   assert(Is_term(g->term[t]));
+   assert(!graph_pc_knotIsFixedTerm(g, t) && !graph_pc_knotIsNonLeafTerm(g, t));
+
+   if( !graph_pc_isRootedPcMw(g) && g->grad[g->source] <= 2 )
+   {
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+
 /** contract an edge of rooted prize-collecting Steiner tree problem or maximum-weight connected subgraph problem
  *  such that this edge is incident to least one fixed terminal */
 static
@@ -296,8 +318,7 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
          {
             assert(g->term2edge[t] >= 0);
 
-            graph_pc_deleteTermExtension(scip, g, t);
-            g->term2edge[t] = TERM2EDGE_NONLEAFTERM;
+            graph_pc_termToNonLeafTerm(scip, g, t, FALSE);
          }
       }
       else
@@ -812,20 +833,26 @@ void graph_pc_knotToFixedTerm(
 }
 
 
-/** change property of (non-fixed) terminal to be a non-leaf terminal */
+/** change property of (non-fixed) terminal to be a non-leaf terminal
+ *  NOTE: if force == FALSE, then nothing is done if term is the last terminal   */
 void graph_pc_termToNonLeafTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
-   int                   term                /**< terminal to be changed */
+   int                   term,               /**< terminal to be changed */
+   SCIP_Bool             force               /**< force the transformation? Should usually be FALSE */
    )
 {
+   assert(graph_pc_isPcMw(g));
    assert(g && g->term2edge);
    assert(!g->extended);
    assert(Is_term(g->term[term]));
    assert(!graph_pc_knotIsFixedTerm(g, term) && !graph_pc_knotIsNonLeafTerm(g, term));
 
-   graph_pc_deleteTermExtension(scip, g, term);
-   g->term2edge[term] = TERM2EDGE_NONLEAFTERM;
+   if( force || !isLastTerm(g, term) )
+   {
+      graph_pc_deleteTermExtension(scip, g, term);
+      g->term2edge[term] = TERM2EDGE_NONLEAFTERM;
+   }
 }
 
 
@@ -1029,33 +1056,44 @@ void graph_pc_enforcePseudoTerm(
 
 
 /** Enforces non-leaf terminal without deleting edges.
- *  I.e. the terminal is part of any optimal solution.  */
+ *  I.e. the terminal is part of any optimal solution.
+ *  todo don't use anymore! */
 void graph_pc_enforceNonLeafTerm(
+   SCIP*           scip,               /**< SCIP data */
    GRAPH*          graph,              /**< graph */
    int             nonleafterm         /**< the terminal */
 )
 {
+   assert(scip && graph);
    assert(graph_pc_isPcMw(graph) && graph->extended);
    assert(graph_pc_knotIsNonLeafTerm(graph, nonleafterm));
-
-#if 0
-   // todo that actually increases the optimal solution value!
-   for( int e = graph->inpbeg[nonleafterm]; e != EAT_LAST; e = graph->ieat[e] )
-   {
-      graph->cost[e] += prize;
-   }
-#endif
 
    if( graph_pc_isRootedPcMw(graph) )
    {
       /* make it a proper fixed terminal */
       graph_pc_knotToFixedTerm(graph, nonleafterm);
    }
-   else if( graph->prize[nonleafterm] < BLOCKED )
+   else if( SCIPisLT(scip, graph->prize[nonleafterm], BLOCKED) )
    {
+#if 0
       /* don't change because of weird prize sum in reduce_base.c */
       graph->prize[nonleafterm] = BLOCKED_MINOR; // todo quite hacky, because it destroys the invariant of non-leaf terms!
+#endif
    }
+}
+
+/** is non-leaf term enforced? */
+SCIP_Bool graph_pc_nonLeafTermIsEnforced(
+   SCIP*           scip,               /**< SCIP data */
+   const GRAPH*    graph,              /**< graph */
+   int             nonleafterm         /**< the terminal */
+)
+{
+   assert(scip && graph);
+   assert(graph_pc_isPcMw(graph) && graph->extended);
+   assert(graph_pc_knotIsNonLeafTerm(graph, nonleafterm));
+
+   return SCIPisEQ(scip, graph->prize[nonleafterm], BLOCKED_MINOR);
 }
 
 
@@ -2545,8 +2583,10 @@ SCIP_RETCODE graph_pc_contractEdge(
 
    /* get edge from t to s */
    for( ets = g->outbeg[t]; ets != EAT_LAST; ets = g->oeat[ets] )
+   {
       if( g->head[ets] == s )
          break;
+   }
 
    assert(ets != EAT_LAST);
 
@@ -2563,7 +2603,7 @@ SCIP_RETCODE graph_pc_contractEdge(
    assert(g->grad[s] == 0);
    assert(TERM2EDGE_NOTERM == g->term2edge[s]);
 
-   SCIPdebugMessage("PcMw contraction: %d into %d \n", s, t);
+   SCIPdebugMessage("PcMw contraction: %d into %d, saved in %d \n", s, t, term4offset);
 
    return SCIP_OKAY;
 }

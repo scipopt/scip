@@ -427,11 +427,12 @@ extern SCIP_Real graph_get_avgDeg(const GRAPH*);
  */
 extern void   graph_pc_knotToNonTerm(GRAPH*, int);
 extern void   graph_pc_knotToFixedTerm(GRAPH*, int);
-extern void   graph_pc_termToNonLeafTerm(SCIP*, GRAPH*, int);
+extern void   graph_pc_termToNonLeafTerm(SCIP*, GRAPH*, int, SCIP_Bool);
 extern void   graph_pc_knotChg(GRAPH*, int, int);
 extern void   graph_pc_updateSubgraphEdge(const GRAPH*, const int*, int, GRAPH*);
 extern void   graph_pc_enforcePseudoTerm(SCIP*, GRAPH*, int);
-extern void   graph_pc_enforceNonLeafTerm(GRAPH*, int);
+extern void   graph_pc_enforceNonLeafTerm(SCIP*, GRAPH*, int);
+extern SCIP_Bool graph_pc_nonLeafTermIsEnforced(SCIP*, const GRAPH*, int);
 extern void   graph_pc_enforceNode(SCIP*, GRAPH*, int);
 extern void   graph_pc_subtractPrize(SCIP*, GRAPH*, SCIP_Real, int);
 extern void   graph_pc_chgPrize(SCIP*, GRAPH*, SCIP_Real, int);

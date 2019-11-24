@@ -1867,6 +1867,7 @@ void reduce_identifyNonLeafTerms(
    assert(graph_pc_isPc(g));
    assert(!g->extended);
    assert(g->prize && g->term2edge);
+   assert(graph_valid(scip, g));
    assert(graph_pc_term2edgeIsConsistent(scip, g));
 
    /* make sure to not delete the last terminal connected to the root */
@@ -1886,7 +1887,7 @@ void reduce_identifyNonLeafTerms(
          {
             SCIPdebugMessage("transform term %d to non-leaf term \n", k);
 
-            graph_pc_termToNonLeafTerm(scip, g, k);
+            graph_pc_termToNonLeafTerm(scip, g, k, FALSE);
 
             assert(Is_term(g->term[k]));
             assert(graph_pc_knotIsNonLeafTerm(g, k));
