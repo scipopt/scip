@@ -40,7 +40,7 @@
 
 /** macro to keep control of infinity
  *
- *  Some LPIs use std::numeric_limits<SCIP_Real>::infinity() as finity value. Comparing two infinty values then yields
+ *  Some LPIs use std::numeric_limits<SCIP_Real>::infinity() as infinity value. Comparing two infinty values then yields
  *  nan. This is a workaround. */
 #define cr_assert_float_eq_inf(Actual, Expected, Epsilon) \
    if ( fabs(Actual) > 1e30 || fabs(Expected) > 1e30 )    \
