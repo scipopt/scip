@@ -1969,10 +1969,6 @@ int reducePcMw(
    }
    SCIPdebugMessage("DA: eliminations %d \n", nfixed);
 
-   for( int k = 0; k < nnodes; k++ )
-      if( graph->grad[k] == 0 && k != graph->source )
-         graph->mark[k] = FALSE;
-
    return nfixed;
 }
 
@@ -3194,8 +3190,6 @@ SCIP_RETCODE reduce_daPcMw(
    }
 
    *nelims = nfixed;
-
-   TERMINATION: // todo delete
 
    if( pool != NULL )
       SCIPStpHeurRecFreePool(scip, &pool);
