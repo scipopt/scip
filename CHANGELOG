@@ -100,6 +100,9 @@ Features
 - To save memory, it is now possible to remove all variables from the internal symmetry data structures that are
   not affected by any symmetry.
 
+- Allow to filter first variables from orbits and transfer history information to variables in orbit
+
+
 Performance improvements
 ------------------------
 
@@ -344,6 +347,11 @@ Interface changes
 - new parameter conflict/uselocalrows (default: TRUE) to incorporate locally valid cuts / rows for dual proof analysis
 
 - new parameter separating/cgmip/genprimalsols that allows to generate initial primal solutions from Gomory cuts
+
+- new parameter branching/relpscost/filtercandssym to allow filtering from orbits
+
+- new parameter branching/relpscost/transsympscost to transfer history information to orbit
+
 
 ### Data structures
 
