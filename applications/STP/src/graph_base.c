@@ -481,9 +481,44 @@ SCIP_Bool graphisValidPcMw(
 }
 
 
+/** do changes for Pc/Mw variants for vanished graph */
+static
+SCIP_RETCODE packPcMwVanished(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g_old,              /**< the old graph */
+   GRAPH*                g_new               /**< the new graph */
+   )
+{
+   int term = -1;
+   const int nnodes_old = g_old->knots;
+
+   if( graph_pc_isRootedPcMw(g_old) )
+      return SCIP_OKAY;
+
+   for( int i = 0; i < nnodes_old; ++i )
+   {
+      if( graph_pc_knotIsNonLeafTerm(g_old, i) )
+      {
+         assert(-1 == term);
+         assert(g_old->source != i);
+
+         term = i;
+         break;
+      }
+   }
+
+   assert(term >= 0);
+   assert(graph_pc_termIsNonLeafTerm(g_old, term));
+
+   SCIP_CALL( graph_fixed_addNodePc(scip, term, g_old) );
+
+   return SCIP_OKAY;
+}
+
+
 /** do changes for Pc/Mw variants */
 static
-SCIP_RETCODE packPcMwSpecifics(
+SCIP_RETCODE packPcMwInit(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nnodes_new,         /**< number of nodes */
    GRAPH*                g_old,              /**< the old graph */
@@ -499,31 +534,6 @@ SCIP_RETCODE packPcMwSpecifics(
 
    if( g_old->stp_type == STP_BRMWCSP )
       SCIP_CALL( SCIPallocMemoryArray(scip, &(g_new->costbudget), nnodes_new) );
-
-   if( nnodes_new == 1 && !graph_pc_isRootedPcMw(g_old) )
-   {
-      int term = -1;
-      const int root_old = g_old->source;
-      const int nnodes_old = g_old->knots;
-
-      for( int i = 0; i < nnodes_old; ++i )
-      {
-         if( Is_term(g_old->term[i]) && i != root_old )
-         {
-            term = i;
-            break;
-         }
-      }
-
-      assert(term >= 0);
-      assert(graph_pc_termIsNonLeafTerm(g_old, term));
-
-      SCIP_CALL( graph_fixed_addNodePc(scip, term, g_old) );
-
-      assert(0);
-
-   }
-
 
    return SCIP_OKAY;
 }
@@ -3517,6 +3527,11 @@ SCIP_RETCODE graph_pack(
 
       nnodes = 1;
       graphHasVanished = TRUE;
+
+      if( pcmw )
+      {
+         SCIP_CALL( packPcMwVanished(scip, g_old, g_new) );
+      }
    }
 
    /* count surviving edges */
@@ -3570,13 +3585,14 @@ SCIP_RETCODE graph_pack(
       return SCIP_OKAY;
    }
 
+   assert(nnodes >= 2 && nedges >= 1);
+
    SCIP_CALL( SCIPallocMemoryArray(scip, &(g_new->ancestors), nedges) );
 
    if( pcmw )
    {
-      SCIP_CALL( packPcMwSpecifics(scip, nnodes, g_old, g_new) );
+      SCIP_CALL( packPcMwInit(scip, nnodes, g_old, g_new) );
    }
-
 
    /* add nodes (of positive degree) to new graph */
    packNodes(scip, g_old, g_new);
