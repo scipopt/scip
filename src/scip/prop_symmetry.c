@@ -2375,16 +2375,6 @@ SCIP_RETCODE determineSymmetry(
          }
       }
 
-      /* free original perms matrix if no symmetry constraints are added */
-      if ( ! propdata->symconsenabled )
-      {
-         for (p = 0; p < propdata->nperms; ++p)
-         {
-            SCIPfreeBlockMemoryArray(scip, &(propdata->perms)[p], nvars);
-         }
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->perms, propdata->nmaxperms);
-      }
-
       /* prepare array for active permutations */
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->inactiveperms, propdata->nperms) );
       for (v = 0; v < propdata->nperms; ++v)
@@ -2457,6 +2447,16 @@ SCIP_RETCODE determineSymmetry(
             }
          }
       }
+   }
+
+   /* free original perms matrix if no symmetry constraints are added */
+   if ( ! propdata->symconsenabled )
+   {
+      for (p = 0; p < propdata->nperms; ++p)
+      {
+         SCIPfreeBlockMemoryArray(scip, &(propdata->perms)[p], nvars);
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->perms, propdata->nmaxperms);
    }
 
    return SCIP_OKAY;
