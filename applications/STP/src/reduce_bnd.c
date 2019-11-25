@@ -113,19 +113,23 @@ SCIP_RETCODE computeSteinerTree(
 
    SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, starts, NULL, result, runs, graph->source, cost, costrev, &obj, NULL, maxcost, success, FALSE));
 
-   obj = graph_sol_getObj(graph->cost, result, 0.0, nedges);
-
-
    if( pcmw )
    {
+      obj = graph_pc_solGetObj(scip, graph, result, 0.0);
+
       graph_pc_2org(scip, graph);
-      obj += graph_pc_getNonLeafTermOffset(scip, graph);
+
+      assert(SCIPisEQ(scip, obj, graph_pc_solGetObj(scip, graph, result, 0.0)));
 
       for( int e = 0; e < nedges; e++ )
       {
          cost[e] = graph->cost[e];
          costrev[e] = graph->cost[flipedge(e)];
       }
+   }
+   else
+   {
+      obj = graph_sol_getObj(graph, result, 0.0, nedges);
    }
 
    if( !(*success) )

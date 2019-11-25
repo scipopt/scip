@@ -2402,16 +2402,19 @@ void graph_sol_setNodeList(
 
 /** compute solution value for given edge-solution array (CONNECT/UNKNOWN) and offset */
 SCIP_Real graph_sol_getObj(
-   const SCIP_Real*      edgecost,
-   const int*            soledge,
-   SCIP_Real             offset,
-   int                   nedges
+   const GRAPH*          g,                  /**< the graph */
+   const int*            soledge,            /**< solution */
+   SCIP_Real             offset,             /**< offset */
+   int                   nedges              /**< number of edges todo delete */
    )
 {
    SCIP_Real obj = offset;
-   int e;
+   const SCIP_Real* const edgecost = g->cost;
 
-   for( e = 0; e < nedges; e++ )
+   assert(nedges == g->edges);
+   assert(!graph_pc_isPcMw(g) || g->extended);
+
+   for( int e = 0; e < nedges; e++ )
       if( soledge[e] == CONNECT )
          obj += edgecost[e];
 

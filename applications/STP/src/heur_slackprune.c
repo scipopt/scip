@@ -696,7 +696,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
                globalsoledge, nodearrchar, &globalobj, TRUE, success) );
 
          /* calculate objective value of solution */
-         obj = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
+         obj = graph_sol_getObj(prunegraph, soledge, offsetnew, nedges);
 
          /* obj <= incumbent objective value? */
          if( SCIPisLE(scip, obj, ubbest) )

@@ -556,11 +556,11 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
    assert(success && graph_sol_valid(scip, newgraph, newedges));
 
-   SCIPdebugMessage("obj after prune %f \n", graph_sol_getObj(newgraph->cost, newedges, 0.0, newgraph->edges));
+   SCIPdebugMessage("obj after prune %f \n", graph_sol_getObj(newgraph, newedges, 0.0, newgraph->edges));
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, newgraph, newedges) );
 
-   SCIPdebugMessage("obj after local %f \n", graph_sol_getObj(newgraph->cost, newedges, 0.0, newgraph->edges));
+   SCIPdebugMessage("obj after local %f \n", graph_sol_getObj(newgraph, newedges, 0.0, newgraph->edges));
 
    assert(graph_sol_valid(scip, newgraph, newedges));
    graph_path_exit(scip, newgraph);

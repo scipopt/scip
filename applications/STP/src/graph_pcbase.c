@@ -2867,6 +2867,52 @@ int graph_pc_nProperPotentialTerms(
 }
 
 
+/** compute solution value for given edge-solution array (CONNECT/UNKNOWN) and offset, takes prizes into account! */
+SCIP_Real graph_pc_solGetObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   const int*            soledge,            /**< solution */
+   SCIP_Real             offset              /**< offset */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+   const SCIP_Real* const edgecost = g->cost;
+   SCIP_Real obj = offset;
+
+   assert(graph_pc_isPcMw(g));
+
+   for( int e = 0; e < nedges; e++ )
+      if( soledge[e] == CONNECT )
+         obj += edgecost[e];
+
+   if( g->extended )
+   {
+      obj += graph_pc_getNonLeafTermOffset(scip, g);
+   }
+   else
+   {
+      STP_Bool* solnode;
+
+      SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &solnode, nnodes) );
+
+      graph_sol_setVertexFromEdge(g, soledge, solnode);
+
+      for( int i = 0; i < nnodes; ++i )
+      {
+         if( !solnode[i] && graph_pc_knotIsNonLeafTerm(g, i) )
+         {
+            assert(SCIPisGT(scip, g->prize[i], 0.0));
+            obj += g->prize[i];
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &solnode);
+   }
+
+   return obj;
+}
+
 /** get twin-terminal */
 int graph_pc_getTwinTerm(
    const GRAPH*          g,                  /**< the graph */

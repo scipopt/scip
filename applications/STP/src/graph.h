@@ -419,7 +419,7 @@ extern SCIP_Bool graph_typeIsUndirected(const GRAPH*);
 extern SCIP_Bool graph_sol_unreduced(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, const int*);
 extern SCIP_Bool graph_nw_knotIsLeaf(const GRAPH*, int);
-extern SCIP_Real graph_sol_getObj(const SCIP_Real*, const int*, SCIP_Real, int);
+extern SCIP_Real graph_sol_getObj(const GRAPH*, const int*, SCIP_Real, int);
 extern SCIP_Real graph_get_avgDeg(const GRAPH*);
 
 
@@ -483,6 +483,8 @@ extern SCIP_Bool graph_pc_isPc(const GRAPH*);
 extern SCIP_Bool graph_pc_isMw(const GRAPH*);
 extern SCIP_Bool graph_pc_isPcMw(const GRAPH*);
 extern SCIP_Bool graph_pc_isRootedPcMw(const GRAPH*);
+extern SCIP_Real graph_pc_solGetObj(SCIP*, const GRAPH*, const int*, SCIP_Real);
+
 
 
 /* graph_path.c

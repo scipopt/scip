@@ -2157,7 +2157,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          if( success )
          {
             SCIPdebugMessage("TM solution added, value %f \n",
-                  graph_sol_getObj(graph->cost, soledges, SCIPprobdataGetOffset(scip), nedges));
+                  graph_sol_getObj(graph, soledges, SCIPprobdataGetOffset(scip), nedges));
 
             *result = SCIP_FOUNDSOL;
          }
