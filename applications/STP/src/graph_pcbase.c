@@ -1416,7 +1416,7 @@ SCIP_RETCODE graph_pc_getSap(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
    GRAPH**               newgraph,           /**< the new graph */
-   SCIP_Real*            offset              /**< offset */
+   SCIP_Real*            offset              /**< offset (in/out) */
    )
 {
    SCIP_Real prizesum = 0.0;
@@ -1428,10 +1428,16 @@ SCIP_RETCODE graph_pc_getSap(
    const int stp_type = graph->stp_type;
    int pseudoroot;
 
-   assert(scip && graph && graph->prize);
+   assert(scip && graph && graph->prize && offset);
    assert(graph->knots == graph->ksize);
    assert(graph->edges == graph->esize);
    assert(graph->extended);
+   assert(*offset >= 0.0);
+
+   if( graph_pc_isPc(graph) )
+   {
+      *offset += graph_pc_getNonLeafTermOffset(scip, graph);
+   }
 
    graph->stp_type = STP_SAP;
    SCIP_CALL( graph_copy(scip, graph, newgraph) );

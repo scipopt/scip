@@ -2281,13 +2281,14 @@ SCIP_Bool graph_sol_valid(
    const int*            result              /**< solution array, indicating whether an edge is in the solution */
    )
 {
-   int* queue;
+   int* queue = NULL;
    STP_Bool* reached = NULL;
    int size;
+   int nterms;
+   int termcount;
    const int nnodes = graph_get_nNodes(graph);
    const int root = graph->source;
-   int termcount;
-   SCIP_Bool usepterms;
+   SCIP_Bool countpseudo;
 
    assert(scip && result);
    assert(root >= 0);
@@ -2297,11 +2298,17 @@ SCIP_Bool graph_sol_valid(
 
    if( graph_pc_isPcMw(graph) && !graph->extended )
    {
-      assert(0); // todo would need some adaptation because of non-leaf terminals...and is weird anyway
-      usepterms = TRUE;
+      countpseudo = TRUE;
+      nterms = graph_pc_nProperPotentialTerms(graph);
+
+      if( !graph_pc_isRootedPcMw(graph) )
+         nterms++;
    }
    else
-      usepterms = FALSE;
+   {
+      countpseudo = FALSE;
+      nterms = graph->terms;
+   }
 
    for( int i = 0; i < nnodes; i++ )
       reached[i] = FALSE;
@@ -2328,10 +2335,12 @@ SCIP_Bool graph_sol_valid(
             {
                SCIPfreeBufferArray(scip, &queue);
                SCIPfreeBufferArray(scip, &reached);
+
+               SCIPdebugMessage("solution contains a cycle ... \n");
                return FALSE;
             }
 
-            if( usepterms)
+            if( countpseudo )
             {
                if( Is_pseudoTerm(graph->term[i]) || graph_pc_knotIsFixedTerm(graph, i) )
                   termcount++;
@@ -2349,19 +2358,28 @@ SCIP_Bool graph_sol_valid(
    }
 
 #ifdef SCIP_DEBUG
-   if( termcount != graph->terms )
+   if( termcount != nterms )
    {
-      printf("termcount %d graph->terms %d \n", termcount, graph->terms);
+      printf("termcount %d graph->terms %d \n", termcount, nterms);
       printf("root %d \n", root);
 
-      for( int i = 0; i < nnodes && 0; i++ )
+      for( int i = 0; i < nnodes; i++ )
       {
-         if( Is_term(graph->term[i]) && !reached[i] )
+         const int isMandatoryTerm = countpseudo?
+               (Is_pseudoTerm(graph->term[i]) || graph_pc_knotIsFixedTerm(graph, i)) : Is_term(graph->term[i]);
+
+         if( !reached[i] && isMandatoryTerm )
          {
-            printf("fail %d grad %d\n", i, graph->grad[i]);
+            if( graph_pc_isPc(graph) && graph_pc_termIsNonLeafTerm(graph, i) )
+               continue;
+
+            printf("fail: ");
+            graph_knot_printInfo(graph, i);
+
             for( int e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
             {
-               printf("tail %d %d \n", graph->tail[e], graph->term[graph->tail[e]]);
+               printf("...neighbor: ");
+               graph_knot_printInfo(graph, graph->tail[e]);
             }
          }
       }
@@ -2371,7 +2389,7 @@ SCIP_Bool graph_sol_valid(
    SCIPfreeBufferArray(scip, &queue);
    SCIPfreeBufferArray(scip, &reached);
 
-   return (termcount == graph->terms);
+   return (termcount == nterms);
 }
 
 /** mark endpoints of edges in given list */

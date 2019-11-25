@@ -1879,6 +1879,8 @@ int reducePcMw(
 
    if( solgiven )
    {
+      assert(graph_sol_valid(scip, graph, result));
+
       graph_sol_setVertexFromEdge(graph, result, nodearrchar);
 
       if( SCIPisZero(scip, minpathcost) )
@@ -2933,6 +2935,7 @@ SCIP_RETCODE reduce_daPcMw(
    if( userec )
       SCIPdebugMessage("DA: 1. NFIXED %d \n", nfixed);
 
+   goto TERMINATION;
    assert(0);
 
 
@@ -3191,6 +3194,8 @@ SCIP_RETCODE reduce_daPcMw(
    }
 
    *nelims = nfixed;
+
+   TERMINATION: // todo delete
 
    if( pool != NULL )
       SCIPStpHeurRecFreePool(scip, &pool);
