@@ -34,7 +34,7 @@
 
 #ifndef SCIP_WITH_PRESOLVELIB
 
-/** creates the xyz presolver and includes it in SCIP */
+/** creates the MILP presolver and includes it in SCIP */
 SCIP_RETCODE SCIPincludePresolMILP(
    SCIP*                 scip                /**< SCIP data structure */
    )
