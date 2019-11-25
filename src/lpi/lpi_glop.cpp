@@ -380,12 +380,13 @@ SCIP_RETCODE SCIPlpiAddCols(
          lpi->linear_program->SetVariableBounds(col, lb[i], ub[i]);
          lpi->linear_program->SetObjectiveCoefficient(col, obj[i]);
          const int end = (nnonz == 0 || i == ncols - 1) ? nnonz : beg[i + 1];
-         while (nz < end)
+         while ( nz < end )
          {
             lpi->linear_program->SetCoefficient(RowIndex(ind[nz]), col, val[nz]);
             ++nz;
          }
       }
+      assert( nz == nnonz );
    }
    else
    {
