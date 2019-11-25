@@ -1266,7 +1266,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    ncols = SCIPmatrixGetNColumns(matrix);
    nimpliedfrees = 0;
 
-   /* sort column by row indices */
+   /* sort columns by row indices */
    for( i = 0; i < ncols; i++ )
    {
       int* colpnt = SCIPmatrixGetColIdxPtr(matrix, i);
@@ -1280,7 +1280,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPmatrixGetNColumns(matrix)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &isblockedvar, SCIPmatrixGetNColumns(matrix)) );
 
-   /* loop over all columns and create column pairs */
+   /* loop over all columns and create cons pairs */
    conspairssize = 0;
    nconspairs = 0;
    conspairs = NULL;
@@ -1312,6 +1312,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          nimpliedfrees += 1;
          ishashingcols[c] = TRUE;
       }
+
       isblockedvar[c] = FALSE;
 
       /* only consider implied free variables
@@ -1328,12 +1329,14 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          colinds = SCIPmatrixGetColIdxPtr(matrix, c);
          colvals = SCIPmatrixGetColValPtr(matrix, c);
 
+         /* sort the rows non-decreasingly by number of nonzeros
+            * if the number of nonzeros, we use the colindex as tie-breaker
+            */
          for( i = 0; i < nnonz; ++i )
          {
             perm[i] = i;
             scores[i] = -SCIPmatrixGetRowNNonzs(matrix, colinds[i]) - 1.0*colinds[i]/ncols;
          }
-
          SCIPsortRealInt(scores, perm, nnonz);
 
          if( presoldata->maxconsiderednonzeros >= 0 )
@@ -1349,7 +1352,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
          /* if we are called after one or more failures, i.e., executions without finding cancellations, then we
             * shift the section of nonzeros considered; in the case that the maxconsiderednonzeros limit is hit, this
-            * results in different variable pairs being tried and avoids trying the same useless cancellations
+            * results in different constraint pairs being tried and avoids trying the same useless cancellations
             * repeatedly
             */
          failshift = presoldata->nfailures*presoldata->maxconsiderednonzeros;
@@ -1403,7 +1406,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          */
       while( (otherconspair = (COLCONSPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &conspairs[c])) != NULL )
       {
-         /* if the previous variable pair has fewer or the same number of nonzeros in the attached row
+         /* if the previous constraint pair has fewer or the same number of nonzeros in the attached column
             * we keep that pair and skip this one
             */
          if( SCIPmatrixGetColNNonzs(matrix, otherconspair->colindex) <= SCIPmatrixGetColNNonzs(matrix, conspairs[c].colindex) )
@@ -1412,7 +1415,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
             break;
          }
 
-         /* this pairs row has fewer nonzeros, so remove the other pair from the hash table and loop */
+         /* this pairs column has fewer nonzeros, so remove the other pair from the hash table and loop */
          SCIP_CALL( SCIPhashtableRemove(pairtable, (void*) otherconspair) );
       }
 
@@ -1426,9 +1429,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    SCIP_CALL( SCIPallocBufferArray(scip, &colidxsorted, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &colsparsity, ncols) );
    for( c = 0; c < ncols; ++c )
+   {
       colidxsorted[c] = c;
-   for( c = 0; c < ncols; ++c )
       colsparsity[c] = -SCIPmatrixGetColNNonzs(matrix, c);
+   }
    SCIPsortIntInt(colsparsity, colidxsorted, ncols);
 
    /* loop over the columns and cancel nonzeros until maximum number of retrieves is reached */
@@ -1455,10 +1459,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    }
 
    if( numcancel > 0 )
-   {
       *result = SCIP_SUCCESS;
-   }
-   else
+   else /* do reductions on variables that contain larger nonzero entries */
    {
       SCIPhashtableRemoveAll(pairtable);
       nconspairs = 0;
@@ -1469,6 +1471,14 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          int nnonz;
          nnonz = SCIPmatrixGetColNNonzs(matrix, c);
          vars[c] = SCIPmatrixGetVar(matrix, c);
+
+         /* if the locks do not match do not consider the column for sparsification */
+         if( SCIPmatrixDownlockConflict(matrix, c) || SCIPmatrixUplockConflict(matrix, c) )
+         {
+            isblockedvar[c] = TRUE;
+            ishashingcols[c] = FALSE;
+            continue;
+         }
 
          isblockedvar[c] = FALSE;
 
@@ -1487,12 +1497,14 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
             colinds = SCIPmatrixGetColIdxPtr(matrix, c);
             colvals = SCIPmatrixGetColValPtr(matrix, c);
 
+            /* sort the rows non-decreasingly by number of nonzeros
+               * if the number of nonzeros, we use the colindex as tie-breaker
+               */
             for( i = 0; i < nnonz; ++i )
             {
                perm[i] = i;
                scores[i] = -SCIPmatrixGetRowNNonzs(matrix, colinds[i]) - 1.0*colinds[i]/ncols;
             }
-
             SCIPsortRealInt(scores, perm, nnonz);
 
             if( presoldata->maxconsiderednonzeros >= 0 )
@@ -1508,7 +1520,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
             /* if we are called after one or more failures, i.e., executions without finding cancellations, then we
                * shift the section of nonzeros considered; in the case that the maxconsiderednonzeros limit is hit, this
-               * results in different variable pairs being tried and avoids trying the same useless cancellations
+               * results in different constraint pairs being tried and avoids trying the same useless cancellations
                * repeatedly
                */
             failshift = presoldata->nfailures*presoldata->maxconsiderednonzeros;
@@ -1566,7 +1578,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
             */
          while( (otherconspair = (COLCONSPAIR*)SCIPhashtableRetrieve(pairtable, (void*) &conspairs[c])) != NULL )
          {
-            /* if the previous variable pair has fewer or the same number of nonzeros in the attached row
+            /* if the previous constraint pair has fewer or the same number of nonzeros in the attached column
                * we keep that pair and skip this one
                */
             if( SCIPmatrixGetColNNonzs(matrix, otherconspair->colindex) <= SCIPmatrixGetColNNonzs(matrix, conspairs[c].colindex) )
@@ -1575,7 +1587,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
                break;
             }
 
-            /* this pairs row has fewer nonzeros, so remove the other pair from the hash table and loop */
+            /* this pairs column has fewer nonzeros, so remove the other pair from the hash table and loop */
             SCIP_CALL( SCIPhashtableRemove(pairtable, (void*) otherconspair) );
          }
 
@@ -1589,9 +1601,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       assert(colidxsorted != NULL);
       assert(colsparsity != NULL);
       for( c = 0; c < ncols; ++c )
+      {
          colidxsorted[c] = c;
-      for( c = 0; c < ncols; ++c )
          colsparsity[c] = -SCIPmatrixGetColNNonzs(matrix, c);
+      }
       SCIPsortIntInt(colsparsity, colidxsorted, ncols);
 
 
@@ -1606,10 +1619,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          colidx = colidxsorted[c];
          nnonz = SCIPmatrixGetColNNonzs(matrix, colidx);
 
-         if( isblockedvar[colidx] || nnonz < 100 )
+         if( isblockedvar[colidx] || nnonz < presoldata->mineliminatednonzeros )
             continue;
-
-
 
          /* since the function parameters for the max fillin are unsigned we do not need to handle the
             * unlimited (-1) case due to implicit conversion rules */
