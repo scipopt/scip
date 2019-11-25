@@ -641,9 +641,6 @@ SCIP_RETCODE exitPresolve(
    SCIP_Bool*            infeasible          /**< pointer to store if the clique clean up detects an infeasibility */
    )
 {
-   SCIP_VAR** vars;
-   int nvars;
-   int v;
 #ifndef NDEBUG
    size_t nusedbuffers;
    size_t nusedcleanbuffers;
@@ -664,6 +661,10 @@ SCIP_RETCODE exitPresolve(
 
    if( !solved )
    {
+      SCIP_VAR** vars;
+      int nvars;
+      int v;
+
       /* flatten all variables */
       vars = SCIPgetFixedVars(scip);
       nvars = SCIPgetNFixedVars(scip);
@@ -682,7 +683,7 @@ SCIP_RETCODE exitPresolve(
 	 if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
 	 {
 	    /* flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
-	    SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set) );
+	    SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
 
 #ifndef NDEBUG
 	    multvars = SCIPvarGetMultaggrVars(var);
@@ -2017,21 +2018,6 @@ SCIP_RETCODE freeTransform(
    {
       assert(scip->reopt != NULL);
       SCIP_CALL( SCIPreoptReset(scip->reopt, scip->set, scip->mem->probmem) );
-   }
-
-   /* @todo if a variable was removed from the problem during solving, its locks were not reduced;
-    *       we might want to remove locks also in that case
-    */
-   /* remove var locks set to avoid dual reductions */
-   if( scip->set->reopt_enable || !scip->set->misc_allowstrongdualreds )
-   {
-      int v;
-
-      /* unlock all variables */
-      for(v = 0; v < scip->transprob->nvars; v++)
-      {
-         SCIP_CALL( SCIPaddVarLocksType(scip, scip->transprob->vars[v], SCIP_LOCKTYPE_MODEL, -1, -1) );
-      }
    }
 
    if( !reducedfree )

@@ -3553,7 +3553,7 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    if ( !sourcedata->ismodelcons )
    {
       *valid = FALSE;
-      
+
       return SCIP_OKAY;
    }
 
