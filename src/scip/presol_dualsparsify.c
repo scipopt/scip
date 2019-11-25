@@ -707,11 +707,11 @@ SCIP_RETCODE cancelCol(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_MATRIX*          matrix,             /**< the constraint matrix */
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
-   SCIP_HASHTABLE*       pairtable,          /**< the hashtable containing ROWVARPAIR's of equations */
+   SCIP_HASHTABLE*       pairtable,          /**< the hashtable containing COLCONSPAIR's of equations */
    SCIP_Bool*            ishashingcols,      /**< array to indicates whether it is impliedfree or not */
    SCIP_VAR**            vars,               /**< array to store the current variables */
    SCIP_Bool*            isblockedvar,       /**< array to indicates whether it is blocked or not */
-   int                   colidx,             /**< index of row to try nonzero cancellation for */
+   int                   colidx,             /**< index of column to try nonzero cancellation for */
    int                   maxcontfillin,      /**< maximal fill-in allowed for continuous variables */
    int                   maxintfillin,       /**< maximal fill-in allowed for integral variables */
    int                   maxbinfillin,       /**< maximal fill-in allowed for binary variables */
@@ -784,12 +784,14 @@ SCIP_RETCODE cancelCol(
       bestscale = 1.0;
       bestcancelrate = 0.0;
 
+      /* sort the rows non-decreasingly by number of nonzeros
+         * if the number of nonzeros, we use the colindex as tie-breaker
+         */
       for( i = 0; i < cancelcollen; ++i )
       {
          tmpinds[i] = i;
          scores[i] = -SCIPmatrixGetRowNNonzs(matrix, cancelcolinds[i]) - 1.0*cancelcolinds[i]/(ncols);
       }
-
       SCIPsortRealInt(scores, tmpinds, cancelcollen);
 
       maxlen = cancelcollen;
@@ -928,7 +930,6 @@ SCIP_RETCODE cancelCol(
                          * coefficient in a >= constraint, e.g. an uplock. If this was the only uplock we do not abort their
                          * cancelling, otherwise we abort if we had a single or no downlock and add one
                          */
-                        //TODO: we may change this
                         if( presoldata->preservegoodlocks && (SCIPmatrixGetColNUplocks(matrix, colidx) > 1 &&
                             SCIPmatrixGetColNDownlocks(matrix, colidx) <= 1) )
                         {
@@ -1015,9 +1016,6 @@ SCIP_RETCODE cancelCol(
 
             /* if a linear constraint is needed to keep the validity, we require a large nonzero cancellation */
             if( isaddedcons && (ncancel - ntotfillin < presoldata->mineliminatednonzeros) )
-               continue;
-
-            if( cancelrate < mincancelrate )
                continue;
 
             if( cancelrate > bestcancelrate )
@@ -1109,8 +1107,8 @@ SCIP_RETCODE cancelCol(
          /* update fill-in counter */
          *nfillin += bestnfillin;
 
-         /* swap the temporary arrays so that the cancelrowinds and cancelrowvals arrays, contain the new
-          * changed row, and the tmpinds and tmpvals arrays can be overwritten in the next iteration
+         /* swap the temporary arrays so that the cancelcolinds and cancelcolvals arrays, contain the new
+          * changed column, and the tmpinds and tmpvals arrays can be overwritten in the next iteration
           */
          SCIPswapPointers((void**) &tmpinds, (void**) &cancelcolinds);
          SCIPswapPointers((void**) &tmpvals, (void**) &cancelcolvals);
