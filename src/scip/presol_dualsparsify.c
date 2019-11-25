@@ -628,9 +628,6 @@ SCIP_RETCODE aggregation(
 
    constant = 0.0;
 
-   if( SCIPvarIsIntegral(vars[colidx1]) && SCIPvarIsIntegral(vars[colidx2]) )
-      printf("aggregated integral variables\n");
-
    if( weight1 > 0 )
    {
       if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx1])) ||
@@ -673,8 +670,6 @@ SCIP_RETCODE aggregation(
    SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype,
             SCIPvarIsInitial(aggregatedvar), SCIPvarIsRemovable(aggregatedvar), NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
-//   printf("%d, %d, %s, %s, %d, %8.4f\n", SCIPvarGetType(vars[colidx1]), SCIPvarGetType(vars[colidx2]), SCIPvarGetName(vars[colidx1]), SCIPvarGetName(vars[colidx2])
-//        ,newvartype, constant );
 
    tmpvars[0] = vars[colidx1];
    tmpvars[1] = newvar;
@@ -1391,11 +1386,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
             }
          }
       }
-   }
-
-   {
-   if( SCIPpresolGetNCalls(presol) <= 0 && nimpliedfrees != 0 )
-      printf( "The number of implied free variables %d\n", nimpliedfrees );
    }
 
    /* insert conspairs into hash table */
