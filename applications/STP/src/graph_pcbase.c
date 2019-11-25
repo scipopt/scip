@@ -2886,6 +2886,10 @@ SCIP_Real graph_pc_solGetObj(
       if( soledge[e] == CONNECT )
          obj += edgecost[e];
 
+   /* there are no non-leaf terminals for MWCSP, so return already */
+   if( !graph_pc_isPc(g) )
+      return obj;
+
    if( g->extended )
    {
       obj += graph_pc_getNonLeafTermOffset(scip, g);

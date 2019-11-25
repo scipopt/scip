@@ -24,7 +24,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+#define SCIP_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,6 +50,24 @@
 #define DAMAXDEVIATION_RANDOM_LOWER 0.15  /**< random upper bound for max deviation for dual ascent */
 #define DAMAXDEVIATION_RANDOM_UPPER 0.30  /**< random upper bound for max deviation for dual ascent */
 #define DAMAXDEVIATION_FAST         0.75
+
+
+/** returns solution value for given edge-solution array (CONNECT/UNKNOWN) and offset, takes prizes into account! */
+static
+SCIP_Real getSolObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   const int*            soledge             /**< solution */
+)
+{
+   SCIP_Real obj;
+   if( graph_pc_isPc(g) )
+      obj = graph_pc_solGetObj(scip, g, soledge, 0.0);
+   else
+      obj = graph_sol_getObj(g, soledge, 0.0, g->edges);
+
+   return obj;
+}
 
 
 /** computes dual solution with dual-ascent and guided solution (and possibly reroots given solution) */
@@ -141,7 +159,7 @@ SCIP_RETCODE computeSteinerTreeTM(
 
    SCIPfreeBufferArray(scip, &startstm);
 
-   obj = graph_sol_getObj(graph, result, 0.0, graph->edges);
+   obj = getSolObj(scip, graph, result);
 
    if( obj < *bestobjval )
       *bestobjval = obj;
@@ -187,7 +205,7 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
    SCIP_CALL(SCIPStpHeurLocalRun(scip, graph, result));
    assert(graph_sol_valid(scip, graph, result));
 
-   objval = graph_sol_getObj(graph, result, 0.0, nedges);
+   objval = getSolObj(scip, graph, result);
 
    if( userec )
       SCIP_CALL(SCIPStpHeurRecAddToPool(scip, objval, result, pool, &soladded));
@@ -216,7 +234,7 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
             BMScopyMemoryArray(result, sol->soledges, nedges);
 
             SCIP_CALL(SCIPStpHeurLocalRun(scip, graph, result));
-            objval = graph_sol_getObj(graph, result, 0.0, nedges);
+            objval = getSolObj(scip, graph, result);
 
             assert(SCIPisLE(scip, objval, sol->obj));
 
@@ -763,7 +781,7 @@ int reduceWithEdgeFixingBounds(
    const SCIP_Bool solgiven = (result != NULL);
 
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
-   assert(!solgiven || upperbound == graph_sol_getObj(graph, result, 0.0, graph->edges));
+   assert(!solgiven || upperbound == getSolObj(scip, graph, result));
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1420,8 +1438,7 @@ SCIP_RETCODE computeDaSolPcMw(
 
    assert(graph_sol_valid(scip, graph, result2));
 
-   /* compute objective value */
-   ub = graph_sol_getObj(graph, result2, 0.0, nedges);
+   ub = getSolObj(scip, graph, result2);
    SCIPdebugMessage("DA: first new sol value in computeDaSolPcMw: %f ... old value: %f \n", ub, *upperbound);
 
    /* try recombination? */
@@ -1432,9 +1449,7 @@ SCIP_RETCODE computeDaSolPcMw(
 
 #ifdef SCIP_DEBUG
       for( int i = 0; i < pool->size; i++ )
-      {
          printf(" %f ", pool->sols[i]->obj);
-      }
       printf("\n ");
 #endif
 
@@ -1463,7 +1478,7 @@ SCIP_RETCODE computeDaSolPcMw(
                BMScopyMemoryArray(result2, sol->soledges, nedges);
 
                SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
-               ub = graph_sol_getObj(graph, result2, 0.0, nedges);
+               ub = getSolObj(scip, graph, result2);
 
                if( SCIPisLT(scip, ub, sol->obj) )
                   SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ub, result2, pool, &success) );
@@ -1490,7 +1505,7 @@ SCIP_RETCODE computeDaSolPcMw(
    if( success )
    {
       BMScopyMemoryArray(result1, result2, nedges);
-      *upperbound = graph_sol_getObj(graph, result1, 0.0, nedges);
+      *upperbound = getSolObj(scip, graph, result1);
       SCIPdebugMessage("DA: afterLastExclusion %f \n", *upperbound);
    }
 #endif
@@ -1535,6 +1550,8 @@ SCIP_RETCODE computePertubedSol(
    const int nedges = graph->edges;
    const int transnedges = transgraph->edges;
 
+   assert(graph_pc_isPcMw(graph));
+
    graph_pc_2transcheck(scip, graph);
 
    /* pertubate the reduced cost? */
@@ -1558,7 +1575,7 @@ SCIP_RETCODE computePertubedSol(
 
          assert(graph_sol_valid(scip, graph, result2));
 
-         bound = graph_sol_getObj(graph, result2, 0.0, nedges);
+         bound = getSolObj(scip, graph, result2);
 
          if( SCIPisLE(scip, bound, *upperbound) )
          {
@@ -1846,46 +1863,24 @@ int reducePcMw(
    SCIP_Bool             solgiven            /**< is sol given? */
 )
 {
-   int nnodes;
+   const int nnodes = graph_get_nNodes(graph);
    int nfixed;
    SCIP_Real tmpcost;
    SCIP_Bool keepsol = FALSE;
 
-   assert(scip != NULL);
-   assert(graph != NULL);
-   assert(pathdist != NULL);
-   assert(result != NULL);
-   assert(cost != NULL);
-   assert(vnoi != NULL);
-
    assert(SCIPisGE(scip, minpathcost, 0.0));
-   assert(!solgiven || graph_sol_valid(scip, graph, result));
 
    if( minpathcost < 0.0 )
       minpathcost = 0.0;
 
    nfixed = 0;
-   nnodes = graph->knots;
 
    graph_pc_2orgcheck(scip, graph);
 
    if( solgiven )
    {
-      const int nedges = graph->edges;
+      graph_sol_setVertexFromEdge(graph, result, nodearrchar);
 
-      for( int k = 0; k < nnodes; k++ )
-         nodearrchar[k] = FALSE;
-
-      for( int e = 0; e < nedges; e++ )
-      {
-         if( result[e] == CONNECT )
-         {
-            assert(graph->oeat[e] != EAT_FREE);
-
-            nodearrchar[graph->head[e]] = TRUE;
-            nodearrchar[graph->tail[e]] = TRUE;
-         }
-      }
       if( SCIPisZero(scip, minpathcost) )
          keepsol = TRUE;
    }
@@ -2478,7 +2473,7 @@ SCIP_RETCODE reduce_daSlackPrune(
 
    if( solgiven || i == nnodes )
    {
-      obj = graph_sol_getObj(graph, edgearrint, 0.0, nedges);
+      obj = getSolObj(scip, graph, edgearrint);
 
       SCIP_CALL( SCIPStpDualAscent(scip, graph, cost, &lpobjval, FALSE, FALSE, gnodearr, edgearrint, edgearrint2, state, root, FALSE, -1.0) );
    }
@@ -2535,13 +2530,12 @@ SCIP_RETCODE reduce_daSlackPrune(
 
    SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, edgearrint2, vbase, root, nodearrchar, &success, FALSE) );
 
-   objprune = graph_sol_getObj(graph, edgearrint2, 0.0, nedges);
+   objprune = getSolObj(scip, graph, edgearrint2);
 
    assert(success);
 
    if( success && SCIPisLT(scip, objprune, obj ) )
    {
-
       for( i = 0; i < nnodes; i++ )
          solnode[i] = UNKNOWN;
 
@@ -2856,9 +2850,6 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_Bool apsol;
    SCIP_Bool success;
 
-   int todo; // remove
-      return SCIP_OKAY;
-
    assert(scip && nelims && nodearrchar);
 
    if( graph->terms <= 1 )
@@ -2942,6 +2933,9 @@ SCIP_RETCODE reduce_daPcMw(
    if( userec )
       SCIPdebugMessage("DA: 1. NFIXED %d \n", nfixed);
 
+   assert(0);
+
+
    /* rerun dual ascent? */
    if( solbasedda && graph->terms > 2 && SCIPisGT(scip, minpathcost, 0.0) )
    {
@@ -2955,7 +2949,7 @@ SCIP_RETCODE reduce_daPcMw(
          assert(success);
 
          SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
-         ub = graph_sol_getObj(graph, result2, 0.0, nedges);
+         ub = getSolObj(scip, graph, result2);
 
          SCIP_CALL( SCIPStpHeurRecAddToPool(scip, ub, result2, pool, &success) );
          SCIPdebugMessage("added initial TM sol to pool? %d , ub %f \n", success, ub);
@@ -2966,7 +2960,7 @@ SCIP_RETCODE reduce_daPcMw(
             transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &apsol, offset, extnedges, 0) );
 
       assert(graph_sol_valid(scip, graph, result));
-      assert(!apsol || SCIPisEQ(scip, graph_sol_getObj(graph, result, 0.0, nedges), upperbound));
+      assert(!apsol || SCIPisEQ(scip, getSolObj(scip, graph, result), upperbound));
 
       graph_pc_2orgcheck(scip, graph);
 
@@ -2999,7 +2993,7 @@ SCIP_RETCODE reduce_daPcMw(
          apsol = apsol && graph_sol_unreduced(scip, graph, result);
          assert(!apsol || graph_sol_valid(scip, graph, result));
 
-         assert(SCIPisEQ(scip, upperbound, graph_sol_getObj(graph, result, 0.0, nedges)));
+         assert(SCIPisEQ(scip, upperbound, getSolObj(scip, graph, result)));
 
          /* try to improve both dual and primal bound */
          SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, gnodearr, cost, costrev, bestcost, pathdist, state, vbase, pathedge, result, result2,

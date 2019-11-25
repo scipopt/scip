@@ -2439,8 +2439,14 @@ void graph_sol_setVertexFromEdge(
    solnode[g->source] = TRUE;
 
    for( int e = 0; e < nedges; e++ )
+   {
       if( result[e] == CONNECT )
+      {
+         assert(g->oeat[e] != EAT_FREE);
+
          solnode[g->head[e]] = TRUE;
+      }
+   }
 
 #ifndef NDEBUG
    for( int e = 0; e < nedges; e++ )

@@ -489,7 +489,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    nnewedges = newgraph->edges;
    newgraph->norgmodeledges = nnewedges;
 
-   assert(!pcmw || TERM2EDGE_NOTERM == newgraph->term2edge[newgraph->source]);
+   assert(!pcmw || TERM2EDGE_FIXEDTERM == newgraph->term2edge[newgraph->source]);
 
    SCIP_CALL( graph_pc_finalizeSubgraph(scip, newgraph) );
 

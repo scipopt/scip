@@ -1610,8 +1610,6 @@ SCIP_RETCODE redLoopPc(
       }
 
 
-      int todo;
-   continue;
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -1641,6 +1639,10 @@ SCIP_RETCODE redLoopPc(
 
       if( degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims + sdstarnelims <= reductbound_global )
          rerun = FALSE;
+
+      int todo;
+   continue;
+
 
       if( !rerun && advancedrun && g->terms > 2 )
       {
