@@ -1077,8 +1077,8 @@ SCIP_Longint SCIPgetNConflictConssFound(
       + SCIPconflictGetNStrongbranchReconvergenceConss(scip->conflict)
       + SCIPconflictGetNPseudoConflictConss(scip->conflict)
       + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict)
-      + SCIPconflictGetNDualrayBndGlobal(scip->conflict)
-      + SCIPconflictGetNDualrayInfGlobal(scip->conflict);
+      + SCIPconflictGetNDualproofsBndGlobal(scip->conflict)
+      + SCIPconflictGetNDualproofsInfGlobal(scip->conflict);
 }
 
 /** get number of conflict constraints found so far at the current node
@@ -1150,7 +1150,7 @@ SCIP_Longint SCIPgetNConflictDualproofsApplied(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNConflictDualproofsApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPconflictGetNDualrayInfSuccess(scip->conflict) + SCIPconflictGetNDualrayBndSuccess(scip->conflict);
+   return SCIPconflictGetNDualproofsInfSuccess(scip->conflict) + SCIPconflictGetNDualproofsBndSuccess(scip->conflict);
 }
 
 /** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
@@ -2828,10 +2828,10 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNInfeasibleLPReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict) : 0,
-      SCIPconflictGetNDualrayInfSuccess(scip->conflict),
-      SCIPconflictGetNDualrayInfSuccess(scip->conflict) > 0
-      ? (SCIP_Real)SCIPconflictGetNDualrayInfNonzeros(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNDualrayInfSuccess(scip->conflict) : 0,
+      SCIPconflictGetNDualproofsInfSuccess(scip->conflict),
+      SCIPconflictGetNDualproofsInfSuccess(scip->conflict) > 0
+      ? (SCIP_Real)SCIPconflictGetNDualproofsInfNonzeros(scip->conflict)
+      / (SCIP_Real)SCIPconflictGetNDualproofsInfSuccess(scip->conflict) : 0,
       SCIPconflictGetNInfeasibleLPIterations(scip->conflict));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  bound exceed. LP : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT "\n",
       SCIPconflictGetBoundexceedingLPTime(scip->conflict),
@@ -2845,10 +2845,10 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNBoundexceedingLPReconvergenceConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNBoundexceedingLPReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNBoundexceedingLPReconvergenceConss(scip->conflict) : 0,
-      SCIPconflictGetNDualrayBndSuccess(scip->conflict),
-      SCIPconflictGetNDualrayBndSuccess(scip->conflict) > 0
-      ? (SCIP_Real)SCIPconflictGetNDualrayBndNonzeros(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNDualrayBndSuccess(scip->conflict) : 0,
+      SCIPconflictGetNDualproofsBndSuccess(scip->conflict),
+      SCIPconflictGetNDualproofsBndSuccess(scip->conflict) > 0
+      ? (SCIP_Real)SCIPconflictGetNDualproofsBndNonzeros(scip->conflict)
+      / (SCIP_Real)SCIPconflictGetNDualproofsBndSuccess(scip->conflict) : 0,
       SCIPconflictGetNBoundexceedingLPIterations(scip->conflict));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  strong branching : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f          -          - %10" SCIP_LONGINT_FORMAT "\n",
       SCIPconflictGetStrongbranchTime(scip->conflict),
@@ -2882,15 +2882,14 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNAppliedGlobalConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedGlobalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedGlobalConss(scip->conflict) : 0,
-      SCIPconflictGetNDualrayInfGlobal(scip->conflict) + SCIPconflictGetNDualrayBndGlobal(scip->conflict));
+      SCIPconflictGetNDualproofsInfGlobal(scip->conflict) + SCIPconflictGetNDualproofsBndGlobal(scip->conflict));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  applied locally  :          -          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.1f          -          - %10" SCIP_LONGINT_FORMAT "          -          -\n",
       SCIPconflictGetNLocalChgBds(scip->conflict),
       SCIPconflictGetNAppliedLocalConss(scip->conflict),
       SCIPconflictGetNAppliedLocalConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0,
-      SCIPconflictGetNDualrayInfSuccess(scip->conflict) + SCIPconflictGetNDualrayBndSuccess(scip->conflict)
-      - SCIPconflictGetNDualrayInfGlobal(scip->conflict) - SCIPconflictGetNDualrayBndGlobal(scip->conflict));
+      SCIPconflictGetNDualproofsInfLocal(scip->conflict) + SCIPconflictGetNDualproofsBndLocal(scip->conflict));
 }
 
 /** outputs separator statistics

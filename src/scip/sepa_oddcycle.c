@@ -2666,12 +2666,12 @@ SCIP_RETCODE separateHeur(
                SCIPfreeBufferArray(scip, &incycle);
                SCIPfreeBufferArray(scip, &pred);
 
-               if ( *result == SCIP_CUTOFF )
+               if ( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
                   break;
             }
          }
 
-         if ( *result == SCIP_CUTOFF )
+         if ( *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM )
             break;
 
          /* copy new level to current one */

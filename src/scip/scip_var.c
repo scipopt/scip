@@ -1703,7 +1703,8 @@ SCIP_RETCODE SCIPflattenVarAggregationGraph(
    assert( var != NULL );
    SCIP_CALL( SCIPcheckStage(scip, "SCIPflattenVarAggregationGraph", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
+
    return SCIP_OKAY;
 }
 

@@ -556,7 +556,7 @@ SCIP_RETCODE collectBinaryVars(
       if( endtime > curtime )
       {
          SCIP_VAR** binvars;
-         int* vals;
+         SCIP_Real* vals;
          int nbinvars;
          int start;
          int end;
@@ -8153,7 +8153,7 @@ SCIP_RETCODE createCoverCutsTimepoint(
    for( j = 0; j < nflexible; ++j )
    {
       SCIP_VAR** binvars;
-      int* vals;
+      SCIP_Real* vals;
       int nbinvars;
       int idx;
       int start;
@@ -8242,7 +8242,7 @@ SCIP_RETCODE createCoverCutsTimepoint(
       for( j = j + 1; j < nflexible; ++j )
       {
          SCIP_VAR** binvars;
-         int* vals;
+         SCIP_Real* vals;
          int nbinvars;
          int idx;
          int start;

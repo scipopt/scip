@@ -1458,6 +1458,18 @@ void SCIPintervalPower(
       return;
    }
 
+   /* log([..,0]) will give an empty interval below, but we want [0,0]^exponent to be 0
+    * if 0 is in exponent, then resultant should also contain 1 (the case exponent == [0,0] is handled above)
+    */
+   if( operand1.sup == 0.0 )
+   {
+      if( operand2.inf <= 0.0 && operand2.sup >= 0.0 )
+         SCIPintervalSetBounds(resultant, 0.0, 1.0);
+      else
+         SCIPintervalSet(resultant, 0.0);
+      return;
+   }
+
    /* resultant := log(op1) */
    SCIPintervalLog(infinity, resultant, operand1);
    if( SCIPintervalIsEmpty(infinity, *resultant) )
