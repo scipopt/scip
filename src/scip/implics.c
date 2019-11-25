@@ -3379,7 +3379,7 @@ unsigned int SCIPcliqueGetId(
 
    assert(clique != NULL);
 
-   id = clique->id;
+   id = clique->id; /*lint !e732*/
 
    return id;
 }
