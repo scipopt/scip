@@ -119,7 +119,7 @@ struct SCIP_LPi
 /** uncomment to turn off scaling */
 /* #define NOSCALING */
 
-/**< define feasibility check to possibly reoptimize: 0: no check, 1: completely new check, 2: check unscaled variable and activity values */
+/** define feasibility check to possibly reoptimize: 0: no check, 1: completely new check, 2: check unscaled variable and activity values */
 #ifdef NOSCALING
 #define UNSCALEDFEAS_CHECK 0
 #else
@@ -1268,18 +1268,18 @@ void updateScaledLP(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-  if ( ! lpi->lp_modified_since_last_solve )
-     return;
+   if ( ! lpi->lp_modified_since_last_solve )
+      return;
 
-  lpi->scaled_lp->PopulateFromLinearProgram(*lpi->linear_program);
-  lpi->scaled_lp->AddSlackVariablesWhereNecessary(false);
+   lpi->scaled_lp->PopulateFromLinearProgram(*lpi->linear_program);
+   lpi->scaled_lp->AddSlackVariablesWhereNecessary(false);
 
-  /* @todo: Avoid doing a copy if there is no scaling. */
-  /* @todo: Avoid rescaling if not much changed. */
-  if ( lpi->parameters->use_scaling() )
-     lpi->scaler->Scale(lpi->scaled_lp);
-  else
-     lpi->scaler->Clear();
+   /* @todo: Avoid doing a copy if there is no scaling. */
+   /* @todo: Avoid rescaling if not much changed. */
+   if ( lpi->parameters->use_scaling() )
+      lpi->scaler->Scale(lpi->scaled_lp);
+   else
+      lpi->scaler->Clear();
 }
 
 /** check primal feasibility */
@@ -1339,9 +1339,9 @@ bool checkUnscaledPrimalFeasibility(
 /** common function between the two LPI Solve() functions */
 static
 SCIP_RETCODE SolveInternal(
-   SCIP_LPI*             lpi,                 /**< LP interface structure */
-   bool                  recursive,           /**< Is this a recursive call? */
-   std::unique_ptr<TimeLimit>& time_limit     /**< time limit */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   bool                  recursive,          /**< Is this a recursive call? */
+   std::unique_ptr<TimeLimit>& time_limit    /**< time limit */
    )
 {
    assert( lpi != NULL );
@@ -1478,7 +1478,9 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
 
 /** determine whether the dual bound is valid */
 static
-bool IsDualBoundValid(ProblemStatus status)
+bool IsDualBoundValid(
+   ProblemStatus         status              /**< status to be checked */
+   )
 {
    return status == ProblemStatus::OPTIMAL || status == ProblemStatus::DUAL_FEASIBLE || status == ProblemStatus::DUAL_UNBOUNDED;
 }
