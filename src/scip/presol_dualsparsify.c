@@ -1226,7 +1226,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    int j;
    int nconspairs;
    int conspairssize;
-   int nimpliedfrees;
    int numcancel;
    int nfillin;
 
@@ -1264,7 +1263,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       return SCIP_OKAY;
 
    ncols = SCIPmatrixGetNColumns(matrix);
-   nimpliedfrees = 0;
 
    /* sort columns by row indices */
    for( i = 0; i < ncols; i++ )
@@ -1308,10 +1306,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       ishashingcols[c] = FALSE;
 
       if( lbimplied && ubimplied )
-      {
-         nimpliedfrees += 1;
          ishashingcols[c] = TRUE;
-      }
 
       isblockedvar[c] = FALSE;
 
@@ -1483,9 +1478,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          isblockedvar[c] = FALSE;
 
          /* only consider large nonzero entries and nonimplied free variables (non-hashing columns in the previous step)
-            * skip singleton variables, because either the constraint is redundant
-            * or the variables can be canceled by variables substitution
-            */
+          * skip singleton variables, because either the constraint is redundant
+          * or the variables can be canceled by variables substitution
+          */
          if( nnonz >= presoldata->mineliminatednonzeros && !ishashingcols[c] )
          {
             int* colinds;
