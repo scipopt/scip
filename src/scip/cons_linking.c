@@ -2389,12 +2389,10 @@ SCIP_DECL_CONSPROP(consPropLinking)
    {
       SCIP_Bool addcut;
       SCIP_Bool mustcheck;
-      int nchgbdslocal = 0;
 
       SCIP_CALL( processRealBoundChg(scip, conss[c], &cutoff, &nchgbds, &mustcheck) );
       SCIP_CALL( processBinvarFixings(scip, conss[c], &cutoff, &nchgbds, &addcut, &mustcheck) );
-      nchgbds += nchgbdslocal;
-   } /*lint !e438*/
+   }
 
    /* return the correct result */
    if( cutoff )
