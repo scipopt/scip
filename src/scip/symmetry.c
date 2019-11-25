@@ -291,6 +291,135 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
 }
 
 
+/** compute non-trivial orbits of symmetry group
+ *
+ *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
+ *  consecutively in the orbits array. The variables of the i-th orbit have indices
+ *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
+ *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
+ *
+ *  This function is adapted from computeGroupOrbitsFilter().
+ */
+SCIP_RETCODE SCIPcomputeOrbitsComponentsSym(
+   SCIP*                 scip,               /**< SCIP instance */
+   int                   npermvars,          /**< length of a permutation array */
+   int**                 permstrans,         /**< transposed matrix containing in each column a permutation of the symmetry group */
+   int                   nperms,             /**< number of permutations encoded in perms */
+   int*                  components,         /**< array containing the indices of permutations sorted by components */
+   int*                  componentbegins,    /**< array containing in i-th position the first position of component i in components array */
+   int*                  vartocomponent,     /**< array containing for each permvar the index of the component it is
+                                              *   contained in (-1 if not affected) */
+   int                   ncomponents,        /**< number of components of symmetry group */
+   int*                  orbits,             /**< array of non-trivial orbits */
+   int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
+   int*                  norbits,            /**< pointer to number of orbits currently stored in orbits */
+   int*                  varorbitmap         /**< array for storing the orbits for each variable */
+   )
+{
+   SCIP_Shortbool* varadded;
+   int orbitidx = 0;
+   int i;
+
+   assert( scip != NULL );
+   assert( permstrans != NULL );
+   assert( nperms > 0 );
+   assert( npermvars > 0 );
+   assert( components != NULL );
+   assert( componentbegins != NULL );
+   assert( vartocomponent != NULL );
+   assert( ncomponents > 0 );
+   assert( orbits != NULL );
+   assert( orbitbegins != NULL );
+   assert( norbits != NULL );
+   assert( varorbitmap != NULL );
+
+   /* init data structures */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varadded, npermvars) );
+
+   /* initially, every variable is contained in no orbit */
+   for (i = 0; i < npermvars; ++i)
+   {
+      varadded[i] = FALSE;
+      varorbitmap[i] = -1;
+   }
+
+   /* find variable orbits */
+   *norbits = 0;
+   for (i = 0; i < npermvars; ++i)
+   {
+      int beginorbitidx;
+      int componentidx;
+      int j;
+
+      /* skip unaffected variables - note that we also include blocked components */
+      componentidx = vartocomponent[i];
+      if ( componentidx < 0 )
+         continue;
+
+      /* skip variable already contained in an orbit of a previous variable */
+      if ( varadded[i] )
+         continue;
+
+      /* store first variable */
+      beginorbitidx = orbitidx;
+      orbits[orbitidx++] = i;
+      varadded[i] = TRUE;
+      varorbitmap[i] = *norbits;
+
+      /* iterate over variables in curorbit and compute their images */
+      j = beginorbitidx;
+      while ( j < orbitidx )
+      {
+         int* pt;
+         int curelem;
+         int image;
+         int p;
+
+         curelem = orbits[j];
+
+         pt = permstrans[curelem];
+         for (p = componentbegins[componentidx]; p < componentbegins[componentidx + 1]; ++p)
+         {
+            int perm;
+
+            perm = components[p];
+            image = pt[perm];
+            assert( vartocomponent[image] == componentidx );
+
+            /* found new element of the orbit of i */
+            if ( ! varadded[image] )
+            {
+               orbits[orbitidx++] = image;
+               assert( orbitidx <= npermvars );
+               varadded[image] = TRUE;
+               varorbitmap[image] = *norbits;
+            }
+         }
+         ++j;
+      }
+
+      /* if the orbit is trivial, reset storage, otherwise store orbit */
+      if ( orbitidx <= beginorbitidx + 1 )
+      {
+         orbitidx = beginorbitidx;
+         varorbitmap[i] = -1;
+      }
+      else
+         orbitbegins[(*norbits)++] = beginorbitidx;
+   }
+
+   /* store end in "last" orbitbegins entry */
+   assert( *norbits < npermvars );
+   orbitbegins[*norbits] = orbitidx;
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &varadded);
+
+   return SCIP_OKAY;
+}
+
+
 /** check whether a permutation is a composition of 2-cycles of binary variables and in this case determine the number of 2-cycles */
 SCIP_RETCODE SCIPgetPropertiesPerm(
    int*                  perm,               /**< permutation */
