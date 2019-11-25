@@ -389,6 +389,7 @@ Miscellaneous
   (heuristic, relaxation handler, LP relaxation, strong branching, pseudo solution) of every new incumbent solution. Together with this change,
   heuristic display characters have been unified to represent the type of the heuristic
   (diving, Large neighborhood search, propagation, etc.), see also type_heur.h.
+- added assert that ensures that the locks of a variable have been decreased to 0 when it is freed
 
 Known bugs
 ----------

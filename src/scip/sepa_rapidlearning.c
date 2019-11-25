@@ -246,7 +246,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
     *
     * If the copy is not valid, it should be a relaxation of the problem (constraints might have failed to be copied,
     * but no variables should be missing because we stop earlier anyway if pricers are present).
-    * By disabling dual presolving, conflicts found in a relaxation are still valid for the original problem.
+    * By disabling dual presolving, conflicts and bound changes found in a relaxation are still valid for the original problem.
     */
    if( ! valid )
    {
@@ -351,9 +351,10 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP_CALL( SCIPtransformProb(subscip) );
    for( i = 0; i < nvars; ++i)
    {
-      if( subvars[i] == NULL )
-         continue;
-      SCIP_CALL( SCIPhashmapInsert(varmapbw, SCIPvarGetTransVar(subvars[i]), vars[i]) );
+      if( subvars[i] != NULL )
+      {
+         SCIP_CALL( SCIPhashmapInsert(varmapbw, SCIPvarGetTransVar(subvars[i]), vars[i]) );
+      }
    }
 
    /* allocate memory for constraints storage. Each constraint that will be created from now on will be a conflict.
@@ -673,8 +674,6 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIPfreeBufferArray(scip, &oldnconss);
    SCIPfreeBufferArray(scip, &conshdlrs);
    SCIPhashmapFree(&varmapbw);
-
-   SCIP_CALL( SCIPfreeTransform(subscip) );
 
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);

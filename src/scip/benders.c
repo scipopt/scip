@@ -1914,6 +1914,12 @@ SCIP_RETCODE SCIPbendersExit(
        */
       if( benders->auxiliaryvars[i] != NULL )
       {
+         /* we need to remove the locks from the auxiliary variables. This will be called always for the highest priority
+          * Benders' plugin and others if the auxiliary variables are not shared
+          */
+         if( !benders->iscopy && SCIPvarGetNLocksDown(benders->auxiliaryvars[i]) > 0 )
+            SCIP_CALL( SCIPaddVarLocksType(set->scip, benders->auxiliaryvars[i], SCIP_LOCKTYPE_MODEL, -1, 0) );
+
          SCIP_CALL( SCIPreleaseVar(set->scip, &benders->auxiliaryvars[i]) );
       }
    }

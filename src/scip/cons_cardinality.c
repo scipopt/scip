@@ -3180,15 +3180,10 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
       assert(SCIPvarIsBinary(var));
       assert(consdata->cons != NULL);
 
-      if( eventtype == SCIP_EVENTTYPE_LBTIGHTENED || eventtype == SCIP_EVENTTYPE_LBRELAXED )
-      {
-         if( eventtype == SCIP_EVENTTYPE_LBTIGHTENED )
-            ++(consdata->ntreatnonzeros);
-         else if( eventtype == SCIP_EVENTTYPE_LBRELAXED )
-            --(consdata->ntreatnonzeros);
-
-         assert(0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars);
-      }
+      if( eventtype == SCIP_EVENTTYPE_LBTIGHTENED )
+         ++(consdata->ntreatnonzeros);
+      else if( eventtype == SCIP_EVENTTYPE_LBRELAXED )
+         --(consdata->ntreatnonzeros);
       else if( eventtype == SCIP_EVENTTYPE_UBTIGHTENED && ! eventdata->indvarmarked )
       {
          assert(oldbound == 1.0 && newbound == 0.0 );
@@ -3201,6 +3196,7 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
          assert(consdata->neventdatascurrent <= 4 * consdata->maxvars);
          assert(var == eventdata->indvar );
       }
+      assert(0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars);
    }
 
    /* if variable is an implied variable,
