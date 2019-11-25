@@ -252,7 +252,8 @@ SCIP_RETCODE reduce_bound(
    r = -1.0;
    for( int k = 1; k < nterms; k++ )
    {
-      assert(adjgraph->path_state[k] == CONNECT);
+      assert(adjgraph->path_state[k] == CONNECT); /* basically asserts that adjgraph is connected */
+
       e = mst[k].edge;
       assert(e >= 0);
       tmpcost = adjgraph->cost[e];

@@ -35,6 +35,7 @@
 #define STP_RED_EXFACTOR   2
 #define STP_RED_GLBFACTOR  1
 #define STP_RED_EDGELIMIT 200000
+#define STP_BND_THRESHOLD 0.03
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -379,10 +380,16 @@ SCIP_RETCODE level0(
    {
       if( !nodevisited[k] && (g->grad[k] > 0) )
       {
-         assert(!Is_term(g->term[k]));
+         if( Is_term(g->term[k]) )
+         {
+            assert(graph_pc_isPc(g));
+            assert(graph_pc_termIsNonLeafTerm(g, k));
+            graph_pc_deleteTerm(scip, g, k);
 
-         while( g->inpbeg[k] != EAT_LAST )
-            graph_edge_del(scip, g, g->inpbeg[k], TRUE);
+            continue;
+         }
+
+         graph_knot_del(scip, g, k, TRUE);
       }
    }
 
@@ -673,8 +680,8 @@ SCIP_RETCODE reducePc(
    int     nedges;
    int     extnedges;
    int     reductbound;
-   STP_Bool*   nodearrchar;
-   SCIP_Bool    bred = FALSE;
+   STP_Bool* nodearrchar;
+   SCIP_Bool bred = FALSE;
 
    assert(scip != NULL);
    assert(g != NULL);
@@ -705,8 +712,13 @@ SCIP_RETCODE reducePc(
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes + 1) );
 
-   if( SCIPisLE(scip, (double) nterms / (double) nnodes, 0.03) )
+   if( SCIPisLE(scip, (double) nterms / (double) nnodes, STP_BND_THRESHOLD) )
+   {
       bred = TRUE;
+
+      if( SCIPisGT(scip, (double) (nterms + graph_pc_nNonLeafTerms(g)) / (double) nnodes, STP_BND_THRESHOLD ) )
+         bred = FALSE;
+   }
 
    if( bred || advanced )
    {
