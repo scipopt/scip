@@ -2933,6 +2933,8 @@ SCIP_RETCODE reduce_daPcMw(
 
    nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, TRUE);
 
+   assert(!graph->extended);
+
    /* edges from result might have been deleted! */
    apsol = apsol && graph_sol_unreduced(scip, graph, result);
    assert(!apsol || graph_sol_valid(scip, graph, result));

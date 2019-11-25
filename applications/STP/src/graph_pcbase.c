@@ -1788,7 +1788,6 @@ SCIP_Real graph_pc_getNonLeafTermOffset(
 
    assert(scip);
    assert(graph_pc_isPcMw(graph));
-   assert(graph->extended);
 
    for( int i = 0; i < nnodes; ++i )
    {

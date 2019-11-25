@@ -41,6 +41,10 @@
 /* do depth-first search */
 #define DFS
 
+#ifndef RESTRICT
+#define RESTRICT restrict
+#endif
+
 #ifdef BITFIELDSARRAY
 #define ARRLENGTH 32
 #define SetBit(Arr, pos)     ( Arr[(pos/ARRLENGTH)] |= (1 << (pos%ARRLENGTH)) )
@@ -131,7 +135,7 @@ SCIP_RETCODE initDualAscent(
                int a;
 
                for( a = g->inpbeg[i]; a != EAT_LAST; a = g->ieat[a] )
-                  if( g->cost[a] == 0.0 )
+                  if( SCIPisZero(scip, g->cost[a]) )
                      break;
 
                if( a != EAT_LAST )
@@ -143,7 +147,7 @@ SCIP_RETCODE initDualAscent(
                   {
                      SCIP_Bool zeroedge = FALSE;
                      for( a = g->inpbeg[tail]; a != EAT_LAST; a = g->ieat[a] )
-                        if( g->cost[a] == 0.0 )
+                        if( SCIPisZero(scip, g->cost[a]) )
                         {
                            zeroedge = TRUE;
                            gnodearr[k]->dist += g->grad[g->tail[a]] - 1;
@@ -163,7 +167,7 @@ SCIP_RETCODE initDualAscent(
                            prizearc = start[i];
 
                         prize = rescap[prizearc];
-                        assert(prize > 0.0);
+                        assert(SCIPisGT(scip, prize, 0.0));
 
                         for( j = start[tail], end = start[tail + 1]; j != end; j++ )
                            if( rescap[j] < prize )
@@ -171,6 +175,8 @@ SCIP_RETCODE initDualAscent(
 
                         if( j == end )
                         {
+                           assert(0 && "should not happen anymore?");
+
                            warmstart = TRUE;
                            *dualobj += prize;
                            rescap[prizearc] = 0.0;

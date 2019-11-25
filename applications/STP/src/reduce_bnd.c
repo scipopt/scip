@@ -60,12 +60,15 @@ SCIP_RETCODE computeSteinerTree(
 {
    int* starts = NULL;
    SCIP_Real maxcost = 0.0;
-   const SCIP_Bool mw = graph_pc_isMw(graph);
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    int runs;
    SCIP_Real obj;
    const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
+
+   SCIPdebugMessage("compute Steiner tree \n");
+
+   assert(!graph_pc_isMw(graph));
 
    runs = 0;
    *upperbound = -FARAWAY;
@@ -98,37 +101,48 @@ SCIP_RETCODE computeSteinerTree(
    }
 
    if( pcmw )
+   {
       graph_pc_2trans(scip, graph);
+
+      for( int e = 0; e < nedges; e++ )
+      {
+         cost[e] = graph->cost[e];
+         costrev[e] = graph->cost[flipedge(e)];
+      }
+   }
 
    SCIP_CALL( SCIPStpHeurTMRun(scip, NULL, graph, starts, NULL, result, runs, graph->source, cost, costrev, &obj, NULL, maxcost, success, FALSE));
 
+   obj = graph_sol_getObj(graph->cost, result, 0.0, nedges);
+
+
    if( pcmw )
+   {
       graph_pc_2org(scip, graph);
+      obj += graph_pc_getNonLeafTermOffset(scip, graph);
+
+      for( int e = 0; e < nedges; e++ )
+      {
+         cost[e] = graph->cost[e];
+         costrev[e] = graph->cost[flipedge(e)];
+      }
+   }
 
    if( !(*success) )
       return SCIP_OKAY;
 
-   obj = 0.0;
+
+   if( graph_pc_isPc(graph) && !graph->extended )
 
    for( int e = 0; e < nedges; e++ )
    {
       if( result[e] == CONNECT )
       {
          const int head = graph->head[e];
-         if( mw )
-         {
-            if( graph->mark[head] )
-            {
-               assert(stnode[head] == FALSE);
-               obj += graph->prize[head];
-            }
-         }
-         else
-         {
-            obj += graph->cost[e];
-            stnode[head] = TRUE;
-            stnode[graph->tail[e]] = TRUE;
-         }
+         const int tail = graph->tail[e];
+
+         stnode[head] = TRUE;
+         stnode[tail] = TRUE;
       }
    }
 
@@ -340,11 +354,21 @@ SCIP_RETCODE reduce_bound(
    assert(SCIPisLT(scip, obj, FARAWAY));
 
    if( SCIPisGT(scip, radiim2, mstobj) )
+   {
+      SCIPdebugMessage("select radii bound \n");
+
       bound = radiim2;
+   }
    else
+   {
+      SCIPdebugMessage("select MST bound \n");
+
       bound = mstobj;
+   }
 
    SCIPdebugMessage("bound=%f obj=%f \n", bound, obj);
+
+   assert(SCIPisLE(scip, bound, obj));
 
    /* traverse all node, try to eliminate each node or incident edges */
    for( int k = 0; k < nnodes; k++ )
