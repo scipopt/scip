@@ -1453,7 +1453,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    SCIPerrorMessage("SCIPlpiSolveBarrier - Not supported.\n");
 
-  return SCIP_LPERROR;
+  return SCIP_NOTIMPLEMENTED;
 }
 
 /** start strong branching */
