@@ -1591,14 +1591,15 @@ SCIP_RETCODE redLoopPc(
       }
 
 
-      int todo;
-   continue;
-
       if( bred )
       {
          SCIP_CALL( execPc_BND(scip, g, vnoi, exedgearrreal, g->prize, nodearrreal, exedgearrreal2,
                &fix, heap, state, vbase, &brednelims, reductbound, verbose, &bred) );
       }
+
+
+      int todo;
+   continue;
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;

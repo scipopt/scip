@@ -350,11 +350,13 @@ SCIP_Bool graphisValidPcMw(
 
    assert(graph_pc_term2edgeIsConsistent(scip, g));
 
+#if 0
    if( !isRooted && g->grad[g->source] < 2 )
    {
       SCIPdebugMessage("only artificial root left \n");
       return FALSE;
    }
+#endif
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -476,6 +478,54 @@ SCIP_Bool graphisValidPcMw(
    }
 
    return TRUE;
+}
+
+
+/** do changes for Pc/Mw variants */
+static
+SCIP_RETCODE packPcMwSpecifics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nnodes_new,         /**< number of nodes */
+   GRAPH*                g_old,              /**< the old graph */
+   GRAPH*                g_new               /**< the new graph */
+   )
+{
+   assert(nnodes_new > 0);
+   assert(graph_pc_isPcMw(g_old));
+
+   assert(g_new->ksize == nnodes_new);
+
+   SCIP_CALL( graph_pc_initSubgraph(scip, g_new) );
+
+   if( g_old->stp_type == STP_BRMWCSP )
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(g_new->costbudget), nnodes_new) );
+
+   if( nnodes_new == 1 && !graph_pc_isRootedPcMw(g_old) )
+   {
+      int term = -1;
+      const int root_old = g_old->source;
+      const int nnodes_old = g_old->knots;
+
+      for( int i = 0; i < nnodes_old; ++i )
+      {
+         if( Is_term(g_old->term[i]) && i != root_old )
+         {
+            term = i;
+            break;
+         }
+      }
+
+      assert(term >= 0);
+      assert(graph_pc_termIsNonLeafTerm(g_old, term));
+
+      SCIP_CALL( graph_fixed_addNodePc(scip, term, g_old) );
+
+      assert(0);
+
+   }
+
+
+   return SCIP_OKAY;
 }
 
 /** add nodes to new graph during graph packing */
@@ -3524,13 +3574,9 @@ SCIP_RETCODE graph_pack(
 
    if( pcmw )
    {
-      assert(g_new->ksize == nnodes);
-
-      SCIP_CALL( graph_pc_initSubgraph(scip, g_new) );
-
-      if( g_old->stp_type == STP_BRMWCSP )
-         SCIP_CALL( SCIPallocMemoryArray(scip, &(g_new->costbudget), nnodes) );
+      SCIP_CALL( packPcMwSpecifics(scip, nnodes, g_old, g_new) );
    }
+
 
    /* add nodes (of positive degree) to new graph */
    packNodes(scip, g_old, g_new);
