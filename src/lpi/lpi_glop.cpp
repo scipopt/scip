@@ -995,27 +995,25 @@ SCIP_RETCODE SCIPlpiGetCols(
    assert( (lb != NULL && ub != NULL) || (lb == NULL && ub == NULL) );
    assert( (nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL) );
 
-   if ( nnonz != NULL )
-      *nnonz = 0;
-
    const DenseRow& tmplb = lpi->linear_program->variable_lower_bounds();
    const DenseRow& tmpub = lpi->linear_program->variable_upper_bounds();
 
-   int index = 0;
-   for (ColIndex col(firstcol); col <= ColIndex(lastcol); ++col)
+   if ( nnonz != NULL )
    {
-      if ( lb != NULL )
-         lb[index] = tmplb[col];
-      if ( ub != NULL )
-         ub[index] = tmpub[col];
+      assert( beg != NULL );
+      assert( ind != NULL );
+      assert( val != NULL );
 
-      if ( nnonz != NULL )
+      *nnonz = 0;
+      int index = 0;
+      for (ColIndex col(firstcol); col <= ColIndex(lastcol); ++col, ++index)
       {
-         assert( beg != NULL );
-         assert( ind != NULL );
-         assert( val != NULL );
-         beg[index] = *nnonz;
+         if ( lb != NULL )
+            lb[index] = tmplb[col];
+         if ( ub != NULL )
+            ub[index] = tmpub[col];
 
+         beg[index] = *nnonz;
          const SparseColumn& column = lpi->linear_program->GetSparseColumn(col);
          for (const SparseColumn::Entry& entry : column)
          {
@@ -1025,7 +1023,17 @@ SCIP_RETCODE SCIPlpiGetCols(
             ++(*nnonz);
          }
       }
-      ++index;
+   }
+   else
+   {
+      int index = 0;
+      for (ColIndex col(firstcol); col <= ColIndex(lastcol); ++col, ++index)
+      {
+         if ( lb != NULL )
+            lb[index] = tmplb[col];
+         if ( ub != NULL )
+            ub[index] = tmpub[col];
+      }
    }
 
    return SCIP_OKAY;
