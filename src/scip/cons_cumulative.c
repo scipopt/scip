@@ -383,7 +383,7 @@ SCIP_RETCODE computeImpliedEst(
    SCIP_HASHMAP*         addedvars,          /**< hash map containig the variable which are already added */
    int*                  est                 /**< pointer to store the implied earliest start time */
    )
-{
+{  /*lint --e{715}*/
 #if 0
    SCIP_VAR** vbdvars;
    SCIP_VAR* vbdvar;
@@ -452,7 +452,7 @@ SCIP_RETCODE computeImpliedLct(
    SCIP_HASHMAP*         addedvars,          /**< hash map containig the variable which are already added */
    int*                  lct                 /**< pointer to store the implied latest completion time */
    )
-{
+{  /*lint --e{715}*/
 #if 0
    SCIP_VAR** vbdvars;
    SCIP_VAR* vbdvar;

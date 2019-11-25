@@ -561,7 +561,6 @@ SCIP_RETCODE propagateDomains(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
@@ -639,7 +638,6 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< LP data */
@@ -656,7 +654,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_Bool postpone;
 
    /* apply domain propagation */
-   SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, depth, maxproprounds, TRUE, timingmask, cutoff, &postpone) );
+   SCIP_CALL( propagateDomains(blkmem, set, stat, tree, depth, maxproprounds, TRUE, timingmask, cutoff, &postpone) );
 
    /* flush the conflict set storage */
    SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable) );
@@ -2426,7 +2424,7 @@ SCIP_RETCODE priceAndCutLoop(
 
                SCIPsetDebugMsg(set, " -> LP solved: call propagators that are applicable during LP solving loop\n");
 
-               SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE,
+               SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE,
                      SCIP_PROPTIMING_DURINGLPLOOP, cutoff, &postpone) );
                assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
                assert(!postpone);
@@ -3746,7 +3744,7 @@ SCIP_RETCODE propAndSolve(
       /* call after LP propagators */
       if( ((*afterlpproplps) < stat->nnodelps && (*lpsolved)) || (*relaxcalled) )
       {
-         SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
+         SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
                SCIP_PROPTIMING_AFTERLPLOOP, cutoff, postpone) );
          assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
@@ -3759,7 +3757,7 @@ SCIP_RETCODE propAndSolve(
       /* call before LP propagators */
       if( propagate && !(*cutoff) )
       {
-         SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
+         SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
                SCIP_PROPTIMING_BEFORELP, cutoff, postpone) );
          assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
       }

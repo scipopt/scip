@@ -263,7 +263,7 @@ void toString(
    char**                buffer,             /**< pointer to buffer for storing the string */
    int                   buffersize          /**< length of the buffer */
    )
-{
+{  /*lint --e{715}*/
 #ifdef SCIP_WITH_GMP
    (void) mpz_get_str(*buffer, 10, value);
 #else
