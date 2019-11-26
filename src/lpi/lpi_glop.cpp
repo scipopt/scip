@@ -1534,45 +1534,70 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    int num_iterations = 0;
    lpi->parameters->set_use_dual_simplex(true);
    lpi->solver->SetParameters(*(lpi->parameters));
-
-   /* Down branch. */
    const Fractional eps = lpi->parameters->primal_feasibility_tolerance();
-   lpi->scaled_lp->SetVariableBounds(col, lb, EPSCEIL(value - 1.0, eps));
+
    std::unique_ptr<TimeLimit> time_limit = TimeLimit::FromParameters(*lpi->parameters);
 
-   if ( lpi->solver->Solve(*(lpi->scaled_lp), time_limit.get()).ok() )
+   /* Down branch. */
+   const Fractional newub = EPSCEIL(value - 1.0, eps);
+   if ( newub >= lb - 0.5 )
    {
-      num_iterations += (int) lpi->solver->GetNumberOfIterations();
-      *down = lpi->solver->GetObjectiveValue();
-      *downvalid = IsDualBoundValid(lpi->solver->GetProblemStatus()) ? TRUE : FALSE;
+      lpi->scaled_lp->SetVariableBounds(col, lb, newub);
 
-      SCIPdebugMessage("down: itlim=%d col=%d [%f,%f] obj=%f status=%d iter=%ld.\n", itlim, col_index, lb, EPSCEIL(value - 1.0, eps),
-         lpi->solver->GetObjectiveValue(), (int) lpi->solver->GetProblemStatus(), lpi->solver->GetNumberOfIterations());
+      if ( lpi->solver->Solve(*(lpi->scaled_lp), time_limit.get()).ok() )
+      {
+         num_iterations += (int) lpi->solver->GetNumberOfIterations();
+         *down = lpi->solver->GetObjectiveValue();
+         *downvalid = IsDualBoundValid(lpi->solver->GetProblemStatus()) ? TRUE : FALSE;
+
+         SCIPdebugMessage("down: itlim=%d col=%d [%f,%f] obj=%f status=%d iter=%ld.\n", itlim, col_index, lb, EPSCEIL(value - 1.0, eps),
+            lpi->solver->GetObjectiveValue(), (int) lpi->solver->GetProblemStatus(), lpi->solver->GetNumberOfIterations());
+      }
+      else
+      {
+         SCIPerrorMessage("error during solve");
+         *down = 0.0;
+         *downvalid = FALSE;
+      }
    }
    else
    {
-      SCIPerrorMessage("error during solve");
-      *down = 0.0;
-      *downvalid = FALSE;
+      if ( lpi->linear_program->IsMaximizationProblem() )
+         *down = lpi->parameters->objective_lower_limit();
+      else
+         *down = lpi->parameters->objective_upper_limit();
+      *downvalid = TRUE;
    }
 
    /* Up branch. */
-   lpi->scaled_lp->SetVariableBounds(col, EPSFLOOR(value + 1.0, eps), ub);
-
-   if ( lpi->solver->Solve(*(lpi->scaled_lp), time_limit.get()).ok() )
+   const Fractional newlb = EPSFLOOR(value + 1.0, eps);
+   if ( newlb <= ub + 0.5 )
    {
-      num_iterations += (int) lpi->solver->GetNumberOfIterations();
-      *up = lpi->solver->GetObjectiveValue();
-      *upvalid = IsDualBoundValid(lpi->solver->GetProblemStatus()) ? TRUE : FALSE;
+      lpi->scaled_lp->SetVariableBounds(col, newlb, ub);
 
-      SCIPdebugMessage("up: itlim=%d col=%d [%f,%f] obj=%f status=%d iter=%ld.\n", itlim, col_index, EPSFLOOR(value + 1.0, eps), ub,
-         lpi->solver->GetObjectiveValue(), (int) lpi->solver->GetProblemStatus(), lpi->solver->GetNumberOfIterations());
+      if ( lpi->solver->Solve(*(lpi->scaled_lp), time_limit.get()).ok() )
+      {
+         num_iterations += (int) lpi->solver->GetNumberOfIterations();
+         *up = lpi->solver->GetObjectiveValue();
+         *upvalid = IsDualBoundValid(lpi->solver->GetProblemStatus()) ? TRUE : FALSE;
+
+         SCIPdebugMessage("up: itlim=%d col=%d [%f,%f] obj=%f status=%d iter=%ld.\n", itlim, col_index, EPSFLOOR(value + 1.0, eps), ub,
+            lpi->solver->GetObjectiveValue(), (int) lpi->solver->GetProblemStatus(), lpi->solver->GetNumberOfIterations());
+      }
+      else
+      {
+         SCIPerrorMessage("error during solve");
+         *up = 0.0;
+         *upvalid = FALSE;
+      }
    }
    else
    {
-      SCIPerrorMessage("error during solve");
-      *up = 0.0;
-      *upvalid = FALSE;
+      if (lpi->linear_program->IsMaximizationProblem())
+         *up = lpi->parameters->objective_lower_limit();
+      else
+         *up = lpi->parameters->objective_upper_limit();
+      *upvalid = TRUE;
    }
 
    /*  Restore bound. */
