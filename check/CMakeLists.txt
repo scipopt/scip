@@ -381,7 +381,6 @@ set(instances_Stochastic
 set(instances_Benders
     "instances/Stochastic/4node1.smps\;480.9"
     "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
-    "instances/Stochastic/sslp_5_25_50_LB.smps\;-121.6"
    )
 
 set(instances_BendersLB
@@ -523,7 +522,7 @@ add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
 add_instancetests(instances_Or settings_Or "Or")
-add_decompinstancetests(instances_BendersLB settings_BendersLB "BendersLB")
+add_instancetests(instances_BendersLB settings_BendersLB "BendersLB")
 add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
 
 #
