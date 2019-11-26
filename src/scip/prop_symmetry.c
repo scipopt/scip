@@ -2481,7 +2481,7 @@ SCIP_RETCODE detectOrbitopes(
 {
    SCIP_VAR** permvars;
    int** perms;
-   int nbinpermvars;
+   int npermvars;
    int i;
 
    assert( scip != NULL );
@@ -2498,6 +2498,7 @@ SCIP_RETCODE detectOrbitopes(
    assert( propdata->nperms > 0 );
    assert( propdata->perms != NULL );
    assert( propdata->nbinpermvars >= 0 );
+   assert( propdata->npermvars >= 0 );
    assert( propdata->permvars != NULL );
 
    /* exit if no symmetry on binary variables is present */
@@ -2508,7 +2509,7 @@ SCIP_RETCODE detectOrbitopes(
    }
 
    perms = propdata->perms;
-   nbinpermvars = propdata->nbinpermvars;
+   npermvars = propdata->npermvars;
    permvars = propdata->permvars;
 
    /* iterate over components */
@@ -2540,7 +2541,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_Bool allvarsbinary = TRUE;
          int ntwocyclesperm = 0;
 
-         SCIP_CALL( SCIPgetPropertiesPerm(perms[components[j]], permvars, nbinpermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
+         SCIP_CALL( SCIPgetPropertiesPerm(perms[components[j]], permvars, npermvars, &iscompoftwocycles, &ntwocyclesperm, &allvarsbinary) );
 
          /* if we are checking the first permutation */
          if ( ntwocyclescomp == INT_MAX )
@@ -2580,11 +2581,11 @@ SCIP_RETCODE detectOrbitopes(
          columnorder[j] = npermsincomponent + 2;
 
       /* count how often an element was used in the potential orbitope */
-      SCIP_CALL( SCIPallocClearBufferArray(scip, &nusedelems, nbinpermvars) );
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &nusedelems, npermvars) );
 
       /* fill first two columns of orbitopevaridx matrix */
       row = 0;
-      for (j = 0; j < nbinpermvars; ++j)
+      for (j = 0; j < npermvars; ++j)
       {
          int permidx;
 
@@ -2694,7 +2695,7 @@ SCIP_RETCODE detectOrbitopes(
 
       /* prepare variable matrix (reorder columns of orbitopevaridx) */
       infeasibleorbitope = FALSE;
-      SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent + 1, permvars, nbinpermvars,
+      SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent + 1, permvars, npermvars,
             orbitopevaridx, columnorder, nusedelems, &infeasibleorbitope) );
 
       if ( ! infeasibleorbitope )
@@ -2750,7 +2751,7 @@ SCIP_RETCODE addSymresackConss(
    SCIP_Bool conssaddlp;
    int** perms;
    int nsymresackcons = 0;
-   int nbinpermvars;
+   int npermvars;
    int i;
    int p;
 
@@ -2759,6 +2760,7 @@ SCIP_RETCODE addSymresackConss(
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+   assert( propdata->npermvars >= 0 );
    assert( propdata->nbinpermvars >= 0 );
 
    /* if no symmetries on binary variables are present */
@@ -2770,12 +2772,12 @@ SCIP_RETCODE addSymresackConss(
 
    perms = propdata->perms;
    permvars = propdata->permvars;
-   nbinpermvars = propdata->nbinpermvars;
+   npermvars = propdata->npermvars;
    conssaddlp = propdata->conssaddlp;
 
    assert( propdata->nperms <= 0 || perms != NULL );
    assert( permvars != NULL );
-   assert( nbinpermvars > 0 );
+   assert( npermvars > 0 );
    assert( ncomponents > 0 );
 
    /* if components have not been computed */
@@ -2791,7 +2793,7 @@ SCIP_RETCODE addSymresackConss(
          char name[SCIP_MAXSTRLEN];
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_perm%d", p);
-         SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[p], permvars, nbinpermvars, FALSE,
+         SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[p], permvars, npermvars, FALSE,
                conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -2821,7 +2823,7 @@ SCIP_RETCODE addSymresackConss(
             permidx = components[p];
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symbreakcons_component%d_perm%d", i, permidx);
-            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[permidx], permvars, nbinpermvars, FALSE,
+            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[permidx], permvars, npermvars, FALSE,
                   conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
