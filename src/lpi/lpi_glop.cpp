@@ -1689,9 +1689,9 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
    assert( downvalid != NULL );
    assert( upvalid != NULL );
 
-   SCIPerrorMessage("SCIPlpiStrongbranchInt - not implemented.\n");
+   SCIP_CALL( strongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
 
-   return SCIP_NOTIMPLEMENTED;
+   return SCIP_OKAY;
 }
 
 /** performs strong branching iterations on given candidates with @b integral values */
