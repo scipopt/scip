@@ -8144,7 +8144,7 @@ SCIP_RETCODE computeInteriorPoint(
    /* initializing the subproblem */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_subquad", SCIPgetProbName(scip));
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &prob, probname) );
-   if(prob == NULL)
+   if( prob == NULL )
    {
 #ifdef SCIP_DEBUG_INT
       SCIPinfoMessage(scip, NULL, "Creation of interior point problem failed..\n");
