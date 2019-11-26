@@ -141,12 +141,10 @@ SCIP_RETCODE SCIPStpValidateSol(
 		     )
 {
    int* connected;
-   int   ret       = TRUE;
-   int   i;
+   int isValid = TRUE;
    int   layer;
-   int   deg;
-   int   e;
-   assert(g         != NULL);
+
+   assert(scip && g && xval && feasible);
 
    if( g->knots == 1 )
    {
@@ -154,29 +152,32 @@ SCIP_RETCODE SCIPStpValidateSol(
       return SCIP_OKAY;
    }
 
-   assert(xval      != NULL);
-
    SCIP_CALL( SCIPallocClearBufferArray(scip, &connected, g->knots) );
 
    *feasible = FALSE;
-   for(layer = 0; ret && (layer < g->layers); layer++)
+
+   for(layer = 0; isValid && (layer < g->layers); layer++)
    {
+      const int nnodes = graph_get_nNodes(g);
+
       trail(g, g->source, xval + layer * g->edges, -1,
          connected,
          0, 1000000000);
 
-      for(i = 0; i < g->knots; i++)
+      for( int i = 0; i < nnodes; i++ )
       {
          if( g->stp_type == STP_DCSTP )
          {
-            deg = 0;
-            for( e = g->outbeg[i]; e != EAT_LAST ; e = g->oeat[e] )
+            int deg = 0;
+            for( int e = g->outbeg[i]; e != EAT_LAST ; e = g->oeat[e] )
+            {
                if( EQ(xval[e], 1.0) || EQ(xval[flipedge(e)], 1.0) )
                   deg++;
+            }
 
             if( deg > g->maxdeg[i] )
             {
-               ret = FALSE;
+               isValid = FALSE;
                SCIPdebugMessage("deg condition violated \n");
                break;
             }
@@ -185,41 +186,40 @@ SCIP_RETCODE SCIPStpValidateSol(
          /* circle? */
          if( connected[i] >= 2)
          {
-            ret = FALSE;
+            isValid = FALSE;
             break;
          }
 
          /* vertex not reached? */
          if ((g->grad[i] > 0) && (g->term[i] == layer) && !connected[i])
          {
-            ret = FALSE;
+            isValid = FALSE;
             break;
          }
       }
    }
    SCIPfreeBufferArray(scip, &connected);
 
-   if( ret )
-      ret = nail(g, xval);
+   if( isValid )
+      isValid = nail(g, xval);
 
    /* SCIP-Heuristiken können (z.B. durch Runden) Lösungen konstruieren, die einen Kreis aus Steiner-Knoten enthalten, der
     * nicht zum Baum gehört
     */
-#if 0
 #ifndef NDEBUG
    /* Test ob alle Kanten nur in eine Richtung benutzt werden.
     */
-   if (ret)
+   if (isValid)
    {
-      int e;
-
-      for(e = 0; e < g->edges; e += 2)
+      for( int e = 0; e < g->edges; e += 2)
+      {
          if ((xval[e] > EPSILON) && (xval[e + 1] > EPSILON))
             /* CONSTCOND */
             assert(FALSE);
+      }
    }
 #endif
-#endif
-   *feasible = (SCIP_Bool) ret;
+
+   *feasible = (SCIP_Bool) isValid;
    return SCIP_OKAY;
 }

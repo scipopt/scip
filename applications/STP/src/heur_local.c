@@ -3450,20 +3450,21 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    SCIP_PROBDATA* probdata;
    GRAPH* graph;                             /* graph structure */
    SCIP_SOL* newsol;                         /* new solution */
-   SCIP_SOL* impsol;                         /* new improved solution */
    SCIP_SOL** sols;                          /* solutions */
    SCIP_VAR** vars;                          /* SCIP variables */
-   SCIP_Real pobj;
    SCIP_Real* nval;
    SCIP_Real* xval;
    int v;
-   int min;
+   int nActiveSols;
    int nvars;
    int nsols;                                /* number of all solutions found so far */
    int nedges;
    int* results;
    int* lastsolindices;
    SCIP_Bool feasible;
+#ifndef NDEBUG
+   SCIP_Real initialobj;
+#endif
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -3502,29 +3503,29 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    assert(heurdata->maxnsols >= 0);
 
-   min = MIN(heurdata->maxnsols, nsols);
+   nActiveSols = MIN(heurdata->maxnsols, nsols);
 
    /* only process each solution once */
-   for( v = 0; v < min; v++ )
+   for( v = 0; v < nActiveSols; v++ )
    {
       if( SCIPsolGetIndex(sols[v]) != lastsolindices[v] )
       {
          /* shift all solution indices right of the new solution index */
-         for( int i = min - 1; i >= v + 1; i-- )
+         for( int i = nActiveSols - 1; i >= v + 1; i-- )
             lastsolindices[i] = lastsolindices[i - 1];
          break;
       }
    }
 
    /* no new solution available? */
-   if( v == min )
+   if( v == nActiveSols )
       return SCIP_OKAY;
 
    newsol = sols[v];
    lastsolindices[v] = SCIPsolGetIndex(newsol);
 
    /* solution not good enough? */
-   if( (v > heurdata->nbestsols && !(heurdata->maxfreq)) && graph->stp_type != STP_MWCSP )
+   if( (v > heurdata->nbestsols && !(heurdata->maxfreq)) )
       return SCIP_OKAY;
 
    /* has the new solution been found by this very heuristic? */
@@ -3563,6 +3564,10 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       return SCIP_OKAY;
    }
 
+#ifndef NDEBUG
+   initialobj = graph_sol_getObj(graph, results, 0.0, nedges);
+#endif
+
    /* pruning necessary? */
    if( SCIPsolGetHeur(newsol) == NULL ||
       !(strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "rec") == 0 ||
@@ -3578,6 +3583,15 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, results, steinertree) );
 
       SCIPfreeBufferArray(scip, &steinertree);
+
+#ifndef NDEBUG
+      {
+          const SCIP_Real initialobj_pruned = graph_sol_getObj(graph, results, 0.0, nedges);
+          assert(SCIPisLE(scip, initialobj_pruned, initialobj));
+
+          initialobj = initialobj_pruned;
+      }
+#endif
    }
 
    /* execute local heuristics */
@@ -3596,24 +3610,43 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, &feasible) );
 
+   assert(feasible);
+
    /* solution feasible? */
    if( feasible )
    {
+      SCIP_Real pobj;
+      SCIP_Bool solIsBetter;
+
+#ifndef NDEBUG
+      const SCIP_Real newobj = graph_sol_getObj(graph, results, 0.0, nedges);
+      const SCIP_Bool solIsBetter_debug = SCIPisGT(scip, initialobj, newobj);
+
+      assert(SCIPisGE(scip, initialobj, newobj));
       assert(nedges == nvars);
+#endif
 
       pobj = 0.0;
 
       for( v = 0; v < nedges; v++ )
          pobj += graph->cost[v] * nval[v];
 
+      solIsBetter = SCIPisGT(scip, SCIPgetSolOrigObj(scip, newsol) - SCIPprobdataGetOffset(scip), pobj);
+
+#ifndef NDEBUG
+      assert(solIsBetter_debug == solIsBetter);
+#endif
+
       /* has solution been improved? */
-      if( SCIPisGT(scip, SCIPgetSolOrigObj(scip, newsol) - SCIPprobdataGetOffset(scip), pobj) )
+      if( solIsBetter )
       {
          SCIP_SOL* bestsol;
+         SCIP_SOL* impsol;
          SCIP_Bool success;
 
          bestsol = sols[0];
          impsol = NULL;
+
          SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, impsol, heur, &success) );
 
          if( success )
