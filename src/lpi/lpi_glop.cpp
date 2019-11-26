@@ -1488,7 +1488,6 @@ SCIP_RETCODE SCIPlpiEndStrongbranch(
    return SCIP_OKAY;
 }
 
-
 /** determine whether the dual bound is valid */
 static
 bool IsDualBoundValid(
@@ -1498,8 +1497,9 @@ bool IsDualBoundValid(
    return status == ProblemStatus::OPTIMAL || status == ProblemStatus::DUAL_FEASIBLE || status == ProblemStatus::DUAL_UNBOUNDED;
 }
 
-/** performs strong branching iterations on one @b fractional candidate */
-SCIP_RETCODE SCIPlpiStrongbranchFrac(
+/** performs strong branching iterations */
+static
+SCIP_RETCODE strongbranch(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   col_index,          /**< column to apply strong branching on */
    SCIP_Real             psol,               /**< fractional current primal solution value of column */
@@ -1520,7 +1520,7 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    assert( downvalid != NULL );
    assert( upvalid != NULL );
 
-   SCIPdebugMessage("calling strongbranching on fractional variable %d (%d iterations)\n", col_index, itlim);
+   SCIPdebugMessage("calling strongbranching on variable %d (%d iterations)\n", col_index, itlim);
 
    /* We work on the scaled problem. */
    const ColIndex col(col_index);
@@ -1604,6 +1604,35 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    lpi->scaled_lp->SetVariableBounds(col, lb, ub);
    if ( iter != NULL )
       *iter = num_iterations;
+
+   return SCIP_OKAY;
+}
+
+/** performs strong branching iterations on one @b fractional candidate */
+SCIP_RETCODE SCIPlpiStrongbranchFrac(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   col_index,          /**< column to apply strong branching on */
+   SCIP_Real             psol,               /**< fractional current primal solution value of column */
+   int                   itlim,              /**< iteration limit for strong branchings */
+   SCIP_Real*            down,               /**< stores dual bound after branching column down */
+   SCIP_Real*            up,                 /**< stores dual bound after branching column up */
+   SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                              *   otherwise, it can only be used as an estimate value */
+   int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
+   )
+{
+   assert( lpi != NULL );
+   assert( lpi->scaled_lp != NULL );
+   assert( down != NULL );
+   assert( up != NULL );
+   assert( downvalid != NULL );
+   assert( upvalid != NULL );
+
+   SCIPdebugMessage("calling strongbranching on fractional variable %d (%d iterations)\n", col_index, itlim);
+
+   SCIP_CALL( strongbranch(lpi, col_index, psol, itlim, down, up, downvalid, upvalid, iter) );
 
    return SCIP_OKAY;
 }
