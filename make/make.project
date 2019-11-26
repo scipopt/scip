@@ -452,7 +452,7 @@ endif
 # define flags for Glop
 ifeq ($(LPS),glop)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/shared/ortools -I$(LIBDIR)/shared/ortools/ortools/gen -I$(LIBDIR)/shared/ortools/dependencies/install/include
+FLAGS		+=	-I$(LIBDIR)/shared/ortools -I$(LIBDIR)/shared/ortools/ortools/gen -I$(LIBDIR)/shared/ortools/dependencies/install/include -I$(LIBDIR)/shared/ortools/include
 LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared/ortools/lib $(LINKCC_l)ortools \
 			$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared/ortools/dependencies/install/lib $(LINKCC_l)glog
 LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/ortools/lib/libortools.$(SHAREDLIBEXT) \

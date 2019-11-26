@@ -7,6 +7,7 @@ set(GLOP_INCLUDE_DIRS
     ${GLOP_INCLUDE_DIRS}
     ${GLOP_INCLUDE_DIRS}/ortools/gen
     ${GLOP_INCLUDE_DIRS}/dependencies/install/include
+    ${GLOP_INCLUDE_DIRS}/include
     )
 
 # todo: enable recursive search
@@ -18,6 +19,7 @@ find_library(GLOP_LIBRARY
 find_library(GLOG_LIBRARY
     NAMES glog
     HINTS ${GLOP_DIR}/dependencies/install/lib $ENV{GLOP_DIR}/dependencies/install/lib
+    HINTS ${GLOP_DIR} $ENV{GLOP_DIR}
     PATH_SUFFIXES lib)
 
 set(GLOP_LIBRARIES ${GLOP_LIBRARY} ${GLOG_LIBRARY})
