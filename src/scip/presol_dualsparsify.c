@@ -738,7 +738,6 @@ SCIP_RETCODE cancelCol(
    SCIP_Real* colvalptr;
    int nchgcoef;
    int nretrieves;
-   SCIP_Real mincancelrate;
    SCIP_Bool colishashing;
    SCIP_VAR* cancelvar;
    SCIP_Real ncols;
@@ -761,8 +760,6 @@ SCIP_RETCODE cancelCol(
    }
    else
       maxfillin = maxcontfillin;
-
-   mincancelrate = 0.0;
 
    SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelcolinds, colidxptr, cancelcollen) );
    SCIP_CALL( SCIPduplicateBufferArray(scip, &cancelcolvals, colvalptr, cancelcollen) );
