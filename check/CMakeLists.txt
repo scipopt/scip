@@ -151,6 +151,10 @@ set(settings_Benders
     "usebenders-cutstrengthen"
    )
 
+set(settings_BendersLB
+    "usebenders"
+   )
+
 set(settings_BendersQP
     "benders-qp"
    )
@@ -380,6 +384,10 @@ set(instances_Benders
     "instances/Stochastic/sslp_5_25_50_LB.smps\;-121.6"
    )
 
+set(instances_BendersLB
+    "instances/Stochastic/sslp_5_25_50_LB.smps\;-121.6"
+   )
+
 set(instances_BendersQP
     "instances/Benders/classical_20_0.mps.gz\;instances/Benders/classical_20.dec\;-8.22960761981176e-02"
     "instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec\;-7.98150796362468e-02"
@@ -515,6 +523,7 @@ add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
 add_instancetests(instances_Or settings_Or "Or")
+add_decompinstancetests(instances_BendersLB settings_BendersLB "BendersLB")
 add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
 
 #

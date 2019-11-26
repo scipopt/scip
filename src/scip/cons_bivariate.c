@@ -7536,7 +7536,7 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
 
       /* check which constraint side we want to upgrade and whether to keep some
        * we want to upgrade those that are nonconvex */
-      SCIP_CALL( SCIPcheckCurvatureQuadratic(scip, cons, NULL) );
+      SCIP_CALL( SCIPcheckCurvatureQuadratic(scip, cons) );
       upgdlhs = FALSE;
       upgdrhs = FALSE;
       keeporig = FALSE;

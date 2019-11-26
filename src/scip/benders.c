@@ -1631,12 +1631,12 @@ SCIP_RETCODE checkSubproblemConvexity(
       /* if cons_quadratic (and conshdlr_quadratic != NULL), then check whether convex */
       if( conshdlr == conshdlr_quadratic )
       {
+         SCIP_Bool isconvex;
          isnonlinear = TRUE;
 
-         SCIP_CALL( SCIPcheckCurvatureQuadratic(subproblem, cons, assumevarfixed) );
+         SCIP_CALL( SCIPisConvexConsQuadratic(subproblem, cons, assumevarfixed, &isconvex) );
 
-         if( (SCIPisInfinity(subproblem, -SCIPgetLhsQuadratic(subproblem, cons)) || SCIPisConcaveQuadratic(subproblem, cons)) &&
-             (SCIPisInfinity(subproblem,  SCIPgetRhsQuadratic(subproblem, cons)) || SCIPisConvexQuadratic(subproblem, cons)) )
+         if( isconvex )
          {
 #ifdef SCIP_MOREDEBUG
             SCIPdebugMsg(subproblem, "subproblem <%s>: quadratic constraint <%s> is convex\n", SCIPgetProbName(subproblem), SCIPconsGetName(cons));

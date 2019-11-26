@@ -5244,7 +5244,6 @@ static
 SCIP_RETCODE checkCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< quadratic constraint */
-   SCIP_HASHMAP*         assumevarfixed,     /**< variables to be assumed to be fixed, or NULL */
    SCIP_Bool             checkmultivariate   /**< whether curvature should also be checked for multivariate functions */
    )
 {
@@ -5259,11 +5258,11 @@ SCIP_RETCODE checkCurvature(
    if( consdata->iscurvchecked )
       return SCIP_OKAY;
 
-   checkCurvatureEasy(scip, cons, assumevarfixed, &determined, checkmultivariate, &isconvex, &isconcave,
+   checkCurvatureEasy(scip, cons, NULL, &determined, checkmultivariate, &isconvex, &isconcave,
       &consdata->maxnonconvexity);
    if( !determined && checkmultivariate )
    {
-      SCIP_CALL( checkCurvatureExpensive(scip, cons, assumevarfixed, &isconvex, &isconcave,
+      SCIP_CALL( checkCurvatureExpensive(scip, cons, NULL, &isconvex, &isconcave,
             &consdata->maxnonconvexity) );
    }
 
@@ -7758,7 +7757,7 @@ SCIP_RETCODE generateCut(
    /* if constraint is not factorable or failed to generate cut, try default method */
    if( !success )
    {
-      SCIP_CALL( checkCurvature(scip, cons, NULL, checkcurvmultivar) );
+      SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar) );
 
       if( (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave) || (violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex) )
       {
@@ -9183,7 +9182,7 @@ SCIP_RETCODE generateCutUnboundedLP(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( checkCurvature(scip, cons, NULL, checkcurvmultivar) );
+   SCIP_CALL( checkCurvature(scip, cons, checkcurvmultivar) );
    if( (!consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) ||
       (!consdata->isconcave && violside == SCIP_SIDETYPE_LEFT) )
    {
@@ -9494,7 +9493,7 @@ SCIP_RETCODE addLinearizationCuts(
       if( SCIPconsIsLocal(conss[c]) || !SCIPconsIsEnabled(conss[c]) )  /*lint !e613 */
          continue;
 
-      SCIP_CALL( checkCurvature(scip, conss[c], NULL, conshdlrdata->checkcurvature) );  /*lint !e613 */
+      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613 */
       assert(consdata != NULL);
@@ -12225,7 +12224,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
          if( consdata->nlrow == NULL )
          {
             /* compute curvature for the quadratic constraint if not done yet */
-            SCIP_CALL( checkCurvature(scip, conss[c], NULL, conshdlrdata->checkcurvature) );
+            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );
 
             SCIP_CALL( createNlRow(scip, conss[c]) );
             assert(consdata->nlrow != NULL);
@@ -12262,7 +12261,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       /* compute gauge function using interior points per constraint, only when there are quadratic variables */
       if( conshdlrdata->gaugecuts && SCIPgetSubscipDepth(scip) == 0 && consdata->nquadvars > 0 )
       {
-         SCIP_CALL( checkCurvature(scip, conss[c], NULL, conshdlrdata->checkcurvature) );  /*lint !e613 */
+         SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
          if( (consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
                (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)) )
          {
@@ -12273,7 +12272,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       /* compute eigendecomposition for convex quadratics */
       if( conshdlrdata->projectedcuts && SCIPgetSubscipDepth(scip) == 0 && consdata->nquadvars > 0 )
       {
-         SCIP_CALL( checkCurvature(scip, conss[c], NULL, conshdlrdata->checkcurvature) );  /*lint !e613 */
+         SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
          if( (consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
                (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)) )
          {
@@ -12488,7 +12487,7 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
       if( !SCIPconsIsEnabled(conss[c]) )  /*lint !e613 */
          continue;
 
-      SCIP_CALL( checkCurvature(scip, conss[c], NULL, conshdlrdata->checkcurvature) );  /*lint !e613 */
+      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613 */
       assert(consdata != NULL);
@@ -12721,7 +12720,7 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
                continue;
 
             /* make sure curvature has been checked */
-            SCIP_CALL( checkCurvature(scip, conss[c], NULL, conshdlrdata->checkcurvature) );  /*lint !e613 */
+            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
 
             if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && consdata->isconvex) ||
                ( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && consdata->isconcave) )
@@ -15086,13 +15085,12 @@ int SCIPgetLinvarMayIncreaseQuadratic(
 /** Check the quadratic function of a quadratic constraint for its semi-definiteness, if not done yet. */
 SCIP_RETCODE SCIPcheckCurvatureQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_HASHMAP*         assumevarfixed      /**< a hashmap containing variables that are assumed to be fixed */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
 
-   SCIP_CALL( checkCurvature(scip, cons, assumevarfixed, TRUE) );
+   SCIP_CALL( checkCurvature(scip, cons, TRUE) );
 
    return SCIP_OKAY;
 }

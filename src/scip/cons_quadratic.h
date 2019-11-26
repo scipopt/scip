@@ -516,8 +516,7 @@ int SCIPgetLinvarMayIncreaseQuadratic(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcheckCurvatureQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_HASHMAP*         assumevarfixed      /**< a hashmap containing variables that are assumed to be fixed */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Indicates whether the quadratic function of a quadratic constraint is (known to be) convex.
