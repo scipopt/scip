@@ -707,6 +707,8 @@ SCIP_RETCODE SCIPlpiChgCoef(
 {
    assert( lpi != NULL );
    assert( lpi->linear_program != NULL );
+   assert( 0 <= row && row < lpi->linear_program->num_constraints().value() );
+   assert( 0 <= col && col < lpi->linear_program->num_variables().value() );
 
    SCIPdebugMessage("Set coefficient (%d,%d) to %f.\n", row, col, newval);
    lpi->linear_program->SetCoefficient(RowIndex(row), ColIndex(col), newval);
