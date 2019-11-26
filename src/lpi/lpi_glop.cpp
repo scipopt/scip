@@ -2356,17 +2356,36 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    const ColIndex size = lpi->tmp_row->values.size();
    assert( size.value() == lpi->linear_program->num_constraints() );
 
-   /* if we want a sparse vector and sparsity information is available */
-   if ( ninds != NULL && inds != NULL && ! lpi->tmp_row->non_zeros.empty() )
+   /* if we want a sparse vector */
+   if ( ninds != NULL && inds != NULL )
    {
       *ninds = 0;
-      ScatteredRowIterator end = lpi->tmp_row->end();
-      for (ScatteredRowIterator iter = lpi->tmp_row->begin(); iter != end; ++iter)
+      /* Vectors in Glop might be stored in dense or sparse format depending on the values. If non_zeros are given, we
+       * can directly loop over the non_zeros, otherwise we have to collect the nonzeros. */
+      if ( ! lpi->tmp_row->non_zeros.empty() )
       {
-         int idx = (*iter).column().value();
-         assert( 0 <= idx && idx < lpi->linear_program->num_constraints() );
-         coef[idx] = (*iter).coefficient();
-         inds[(*ninds)++] = idx;
+         ScatteredRowIterator end = lpi->tmp_row->end();
+         for (ScatteredRowIterator iter = lpi->tmp_row->begin(); iter != end; ++iter)
+         {
+            int idx = (*iter).column().value();
+            assert( 0 <= idx && idx < lpi->linear_program->num_constraints() );
+            coef[idx] = (*iter).coefficient();
+            inds[(*ninds)++] = idx;
+         }
+      }
+      else
+      {
+         /* use dense access to tmp_row */
+         const Fractional eps = lpi->parameters->primal_feasibility_tolerance();
+         for (ColIndex col(0); col < size; ++col)
+         {
+            SCIP_Real val = (*lpi->tmp_row)[col];
+            if ( fabs(val) >= eps )
+            {
+               coef[col.value()] = val;
+               inds[(*ninds)++] = col.value();
+            }
+         }
       }
       return SCIP_OKAY;
    }
@@ -2527,17 +2546,36 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 
    const RowIndex num_rows = lpi->tmp_column->values.size();
 
-   /* if we want a sparse vector and sparsity information is available */
-   if ( ninds != NULL && inds != NULL && ! lpi->tmp_column->non_zeros.empty() )
+   /* if we want a sparse vector */
+   if ( ninds != NULL && inds != NULL )
    {
       *ninds = 0;
-      ScatteredColumnIterator end = lpi->tmp_column->end();
-      for (ScatteredColumnIterator iter = lpi->tmp_column->begin(); iter != end; ++iter)
+      /* Vectors in Glop might be stored in dense or sparse format depending on the values. If non_zeros are given, we
+       * can directly loop over the non_zeros, otherwise we have to collect the nonzeros. */
+      if ( ! lpi->tmp_column->non_zeros.empty() )
       {
-         int idx = (*iter).row().value();
-         assert( 0 <= idx && idx < num_rows );
-         coef[idx] = (*iter).coefficient();
-         inds[(*ninds)++] = idx;
+         ScatteredColumnIterator end = lpi->tmp_column->end();
+         for (ScatteredColumnIterator iter = lpi->tmp_column->begin(); iter != end; ++iter)
+         {
+            int idx = (*iter).row().value();
+            assert( 0 <= idx && idx < num_rows );
+            coef[idx] = (*iter).coefficient();
+            inds[(*ninds)++] = idx;
+         }
+      }
+      else
+      {
+         /* use dense access to tmp_column */
+         const Fractional eps = lpi->parameters->primal_feasibility_tolerance();
+         for (RowIndex row(0); row < num_rows; ++row)
+         {
+            SCIP_Real val = (*lpi->tmp_column)[row];
+            if ( fabs(val) > eps )
+            {
+               coef[row.value()] = val;
+               inds[(*ninds)++] = row.value();
+            }
+         }
       }
       return SCIP_OKAY;
    }
