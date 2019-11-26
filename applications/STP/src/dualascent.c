@@ -108,6 +108,7 @@ SCIP_RETCODE initDualAscent(
 )
 {
    const int nnodes = g->knots;
+
    *dualobj = 0.0;
    *augmentingcomponent = -1;
 
@@ -115,95 +116,63 @@ SCIP_RETCODE initDualAscent(
       rescap[i] = g->cost[edgearr[i]];
 
    /* mark terminals as active, add all except root to pqueue */
-   for( int i = 0, k = 0; i < nnodes; i++ )
+   for( int i = 0, termcount = 0; i < nnodes; i++ )
    {
-      if( Is_term(g->term[i]) )
+      if( !Is_term(g->term[i]) )
       {
-         active[i] = 0;
-         assert(g->grad[i] > 0);
-         if( i != root )
+         active[i] = -1;
+         continue;
+      }
+
+      active[i] = 0;
+      assert(g->grad[i] > 0);
+
+      if( i != root )
+      {
+         assert(termcount < g->terms - 1);
+
+         gnodearr[termcount]->number = i;
+         gnodearr[termcount]->dist = g->grad[i];
+
+         /* for variants with dummy terminals */
+         if( g->grad[i] == 2 )
          {
-            SCIP_Real warmstart = FALSE;
-            assert(k < g->terms - 1);
+            int a;
 
-            gnodearr[k]->number = i;
-            gnodearr[k]->dist = g->grad[i];
+            for( a = g->inpbeg[i]; a != EAT_LAST; a = g->ieat[a] )
+               if( SCIPisZero(scip, g->cost[a]) )
+                  break;
 
-            /* for variants with dummy terminals */
-            if( g->grad[i] == 2 )
+            if( a != EAT_LAST )
             {
-               int a;
+               const int tail = g->tail[a];
+               gnodearr[termcount]->dist += g->grad[tail] - 1;
 
-               for( a = g->inpbeg[i]; a != EAT_LAST; a = g->ieat[a] )
-                  if( SCIPisZero(scip, g->cost[a]) )
-                     break;
-
-               if( a != EAT_LAST )
+               if( is_pseudoroot )
                {
-                  const int tail = g->tail[a];
-                  gnodearr[k]->dist += g->grad[tail] - 1;
-
-                  if( is_pseudoroot )
+                  for( a = g->inpbeg[tail]; a != EAT_LAST; a = g->ieat[a] )
                   {
-                     SCIP_Bool zeroedge = FALSE;
-                     for( a = g->inpbeg[tail]; a != EAT_LAST; a = g->ieat[a] )
-                        if( SCIPisZero(scip, g->cost[a]) )
-                        {
-                           zeroedge = TRUE;
-                           gnodearr[k]->dist += g->grad[g->tail[a]] - 1;
-                        }
-
-                     /* warmstart possible? */
-                     if( !zeroedge )
+                     if( SCIPisZero(scip, g->cost[a]) )
                      {
-                        int j;
-                        int end;
-                        int prizearc;
-                        SCIP_Real prize;
-
-                        if( rescap[start[i]] == 0.0 )
-                           prizearc = start[i] + 1;
-                        else
-                           prizearc = start[i];
-
-                        prize = rescap[prizearc];
-                        assert(SCIPisGT(scip, prize, 0.0));
-
-                        for( j = start[tail], end = start[tail + 1]; j != end; j++ )
-                           if( rescap[j] < prize )
-                              break;
-
-                        if( j == end )
-                        {
-                           assert(0 && "should not happen anymore?");
-
-                           warmstart = TRUE;
-                           *dualobj += prize;
-                           rescap[prizearc] = 0.0;
-                           for( j = start[tail], end = start[tail + 1]; j != end; j++ )
-                              rescap[j] -= prize;
-                        }
+                        gnodearr[termcount]->dist += g->grad[g->tail[a]] - 1;
                      }
                   }
                }
+            }
 
-               assert(gnodearr[k]->dist > 0);
-            }
-            if( !warmstart )
-               SCIP_CALL(SCIPpqueueInsert(pqueue, gnodearr[k]));
-            else if( *augmentingcomponent == -1 )
-            {
-               SCIP_CALL(SCIPpqueueInsert(pqueue, gnodearr[k]));
-               *augmentingcomponent = i;
-            }
-            k++;
+            assert(gnodearr[termcount]->dist > 0);
          }
-      }
-      else
-      {
-         active[i] = -1;
+
+         SCIP_CALL(SCIPpqueueInsert(pqueue, gnodearr[termcount]));
+
+         if( *augmentingcomponent == -1 )
+            *augmentingcomponent = i;
+
+         termcount++;
       }
    }
+
+   assert(*augmentingcomponent >= 0);
 
    for( int i = 0; i < nnodes + 1; i++ )
       gmark[i] = FALSE;

@@ -2821,10 +2821,10 @@ SCIP_RETCODE reduce_daPcMw(
 )
 {
    STPSOLPOOL* pool = NULL;
-   GRAPH* transgraph;
-   SCIP_Real* bestcost;
-   SCIP_Real* edgefixingbounds;
-   SCIP_Real* nodefixingbounds;
+   GRAPH* transgraph = NULL;
+   SCIP_Real* bestcost = NULL;
+   SCIP_Real* edgefixingbounds = NULL;
+   SCIP_Real* nodefixingbounds = NULL;
    SCIP_Real ub;
    SCIP_Real offset;
    SCIP_Real lpobjval;
@@ -2832,11 +2832,11 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_Real upperbound;
    SCIP_Real minpathcost;
    const SCIP_Real damaxdeviation = fastmode ? DAMAXDEVIATION_FAST : -1.0;
-   int* roots;
-   int* result;
-   int* result2;
-   int* transresult;
-   STP_Bool* marked;
+   int* roots = NULL;
+   int* result = NULL;
+   int* result2 = NULL;
+   int* transresult = NULL;
+   STP_Bool* marked = NULL;
    int nroots = 0;
    int nfixed = 0;
    int nusedroots;
@@ -2932,7 +2932,7 @@ SCIP_RETCODE reduce_daPcMw(
       SCIPdebugMessage("DA: 1. NFIXED %d \n", nfixed);
 
    goto TERMINATION;
-   assert(0);
+assert(0);
 
 
    /* rerun dual ascent? */
@@ -3035,15 +3035,13 @@ SCIP_RETCODE reduce_daPcMw(
       if( nroots > 0 && varyroot )
          SCIP_CALL( daOrderRoots(scip, graph, roots, nroots, TRUE, randnumgen) );
    }
-   else
-   {
-      roots = NULL;
-   }
 
    if( varyroot )
       nusedroots = MIN(DEFAULT_NMAXROOTS, nroots);
    else
       nusedroots = -1;
+
+   TERMINATION:
 
    graph_path_exit(scip, transgraph);
    graph_free(scip, &transgraph, TRUE);
