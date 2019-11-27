@@ -2210,7 +2210,6 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
    )
 {
    int e;
-   int p;
    int newroot;
    int maxgrad;
    int nfixedterms;
@@ -2238,40 +2237,26 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
       const int enext = graph->oeat[e];
       if( SCIPisGE(scip, graph->cost[e], prizesum) )
       {
-         int e2;
-         const int k = graph->head[e];
+         const int dummyterm = graph->head[e];
+         const int pseudoterm = graph_pc_getTwinTerm(graph, dummyterm);
 
-         assert(Is_term(graph->term[k]));
-         assert(graph->grad[k] == 2);
+         assert(Is_term(graph->term[dummyterm]));
+         assert(graph->grad[dummyterm] == 2);
+         assert(Is_pseudoTerm(graph->term[pseudoterm]));
+         assert(SCIPisGE(scip, graph->prize[pseudoterm], prizesum));
 
-         graph->cost[e] = FARAWAY;
+         graph_knot_chg(graph, dummyterm, STP_TERM_NONE);
+         graph->term2edge[dummyterm] = TERM2EDGE_NOTERM;
+         graph_knot_del(scip, graph, dummyterm, TRUE);
 
-         for( e2 = graph->outbeg[k]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
-            if( graph->head[e2] != root )
-               break;
+         graph_pc_knotToFixedTerm(graph, pseudoterm);
 
-         p = graph->head[e2];
-         assert(e2 == graph->term2edge[k]);
-         assert(Is_pseudoTerm(graph->term[p]));
-         assert(SCIPisGE(scip, graph->prize[p], prizesum));
-
-         graph->prize[p] = FARAWAY;
-
-         /* delete terminal */
-         graph_knot_chg(graph, k, -1);
-         while( graph->outbeg[k] != EAT_LAST )
-            graph_edge_del(scip, graph, graph->outbeg[k], TRUE);
-
-         graph->term2edge[k] = TERM2EDGE_NOTERM;
-         graph->term2edge[p] = TERM2EDGE_NOTERM;
-
-         graph_knot_chg(graph, p, 0);
-
-         if( graph->grad[p] > maxgrad )
+         if( graph->grad[pseudoterm] > maxgrad )
          {
-            newroot = p;
-            maxgrad = graph->grad[p];
+            newroot = pseudoterm;
+            maxgrad = graph->grad[pseudoterm];
          }
+
          nfixedterms++;
       }
       e = enext;
@@ -2290,6 +2275,7 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
       {
          const int enext = graph->oeat[e];
          const int k = graph->head[e];
+
          if( Is_term(graph->term[k]) && !SCIPisZero(scip, graph->cost[e]) )
          {
             (void) graph_edge_redirect(scip, graph, e, newroot, k, graph->cost[e], TRUE, TRUE);
@@ -2299,9 +2285,9 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
       }
 
       /* delete old root */
-      graph_knot_chg(graph, root, -1);
-      while( graph->outbeg[root] != EAT_LAST )
-         graph_edge_del(scip, graph, graph->outbeg[root], TRUE);
+      graph_knot_chg(graph, root, STP_TERM_NONE);
+      graph->term2edge[root] = TERM2EDGE_NOTERM;
+      graph_knot_del(scip, graph, root, TRUE);
 
       if( pc )
       {

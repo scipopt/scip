@@ -68,6 +68,16 @@ typedef struct reduce_costs_data
 } REDCOST;
 
 
+/** reduced cost reduction parameters */
+typedef struct reduce_costs_parameters
+{
+   int                   prevrounds;         /**< number of reduction rounds that have been performed already */
+   SCIP_Bool             userec;             /**< use recombination heuristic? */
+   SCIP_Bool             extended;           /**< use extended tests? */
+   SCIP_Bool             nodereplacing;      /**< should node replacement (by edges) be performed? */
+} RPDA;
+
+
 /* reduce.c
  */
 extern SCIP_RETCODE level0(SCIP*, GRAPH*);
@@ -124,7 +134,7 @@ extern SCIP_RETCODE    reduce_boundHopRc(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_
 
 /* reduce_da.c
  */
-extern SCIP_RETCODE    reduce_da(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, STP_Bool*, int*, int, SCIP_RANDNUMGEN*, SCIP_Bool, SCIP_Bool, SCIP_Bool);
+extern SCIP_RETCODE    reduce_da(SCIP*, GRAPH*, const RPDA*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, STP_Bool*, int*, SCIP_RANDNUMGEN*);
 extern SCIP_RETCODE    reduce_daSlackPrune(SCIP*, SCIP_VAR**, GRAPH*, PATH*, GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*, int*, STP_Bool*, STP_Bool*, int*, int, SCIP_Bool);
 extern SCIP_RETCODE    reduce_daPcMw(SCIP*, GRAPH*, PATH*, GNODE**, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*, SCIP_Bool, SCIP_Bool, SCIP_Bool, SCIP_Bool, SCIP_Bool, SCIP_RANDNUMGEN*, SCIP_Real, SCIP_Bool);
 

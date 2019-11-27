@@ -2160,11 +2160,12 @@ SCIP_RETCODE graph_sol_reroot(
    int* queue;
    int* gmark;
    int size;
-   const int nnodes = g->knots;
+   const int nnodes = graph_get_nNodes(g);
 
    assert(scip != NULL);
    assert(g != NULL);
    assert(result != NULL);
+   assert(newroot >= 0 && newroot < nnodes);
    assert(Is_term(g->term[newroot]));
 
    if( g->grad[newroot] == 0 )
@@ -2249,6 +2250,15 @@ SCIP_RETCODE graph_sol_reroot(
 
    SCIPfreeBufferArray(scip, &queue);
    SCIPfreeBufferArray(scip, &gmark);
+
+#ifndef NDEBUG
+   {
+      const int realroot = g->source;
+      g->source = newroot;
+      assert(graph_sol_valid(scip, g, result));
+      g->source = realroot;
+   }
+#endif
 
    return SCIP_OKAY;
 }
