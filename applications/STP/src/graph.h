@@ -519,7 +519,7 @@ extern void   graph_sdPaths(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, i
 extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
 extern void   graph_voronoiWithRadiusMw(SCIP* scip, const GRAPH*, PATH*, const SCIP_Real*, SCIP_Real*, int*, int*, int*);
 extern void   graph_sdStar(SCIP*, const GRAPH*, SCIP_Bool, int, int, int*, SCIP_Real*, int*, int*, DHEAP*, STP_Bool*, SCIP_Bool*);
-extern SCIP_Bool   graph_sdWalksConnected(SCIP*, const GRAPH*, const int*, const SCIP_Real*, const STP_Bool*, int, int, SCIP_Real*, int*, int*, int*, int*, STP_Bool*, SCIP_Bool);
+extern SCIP_Bool   graph_sdWalksConnected(SCIP*, const GRAPH*, const int*, const SCIP_Real*, const STP_Bool*, int, int, SCIP_Real*, int*, int*, STP_Bool*, SCIP_Bool);
 extern SCIP_RETCODE   graph_voronoiExtend(SCIP*, const GRAPH*, SCIP_Real*, PATH*, SCIP_Real**, int**, int**, STP_Bool*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_voronoiWithDist(SCIP*, const GRAPH*, SCIP_Real*, double*, int*, int*, int*, int*, int*, int*, PATH*);

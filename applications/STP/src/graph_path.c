@@ -2041,20 +2041,20 @@ SCIP_Bool graph_sdWalksConnected(
    int                   start,              /**< start vertex */
    int                   edgelimit,          /**< maximum number of edges to consider during execution */
    SCIP_Real*            dist,               /**< distances array, initially set to FARAWAY */
-   int*                  heap,               /**< array representing a heap */
-   int*                  state,              /**< array to indicate whether a node has been scanned */
    int*                  visitlist,          /**< stores all visited nodes */
    int*                  nvisits,            /**< number of visited nodes */
    STP_Bool*             visited,            /**< stores whether a node has been visited */
    SCIP_Bool             resetarrays         /**< should arrays be reset? */
    )
 {
+   int* const heap = g->path_heap;
+   int* const state = g->path_state;
    int count;
    int nchecks;
    const SCIP_Real prize = g->prize[start];
 
-   assert(g != NULL);
    assert(heap != NULL);
+   assert(state != NULL);
    assert(dist != NULL);
    assert(cost != NULL);
    assert(visitlist != NULL);

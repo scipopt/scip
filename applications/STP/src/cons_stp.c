@@ -215,7 +215,7 @@ SCIP_RETCODE init_pcmwimplications(
       assert(i != g->source);
       assert(g->path_heap && g->path_state);
 
-      (void) graph_sdWalksConnected(scip, g, termmark, g->cost, NULL, i, 1000, dist, g->path_heap, g->path_state, visitlist, &nvisits, visited, TRUE);
+      (void) graph_sdWalksConnected(scip, g, termmark, g->cost, NULL, i, 1000, dist, visitlist, &nvisits, visited, TRUE);
 
       assert(nvisits >= 1 && visitlist[0] == i);
       assert(nspares >= 0);

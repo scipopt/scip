@@ -846,7 +846,6 @@ void findRootsMark(
    STP_Bool*             isfixedterm,        /**< bool array to indicate fixed terminals */
    int*                  roots,              /**< root array */
    int*                  rootscount,         /**< number of roots */
-   int*                  state,              /**< array */
    int*                  pathedge,           /**< array */
    STP_Bool*             visited,            /**< stores whether a node has been visited */
    SCIP_Real*            dist                /**< distances array, initially set to FARAWAY */
@@ -874,6 +873,7 @@ void findRootsMark(
             assert(pseudoedge == e2); /* that holds because of correspondence between graph and transgraph for the pseudo-terminal edge */
       }
    }
+
    assert(realterm >= 0 && graph->mark[realterm]);
    assert(realterm != graph->source && realterm != transgraph->source);
    assert(Is_pseudoTerm(transgraph->term[realterm]) && Is_term(graph->term[realterm]));
@@ -893,12 +893,12 @@ void findRootsMark(
       double bestcostsum = bestcost[pseudoedge];
 
       assert(graph->path_heap != NULL);
-      mark = graph_sdWalksConnected(scip, graph, termmark, graph->cost, isfixedterm, realterm, 1500, dist, graph->path_heap, state, pathedge, &nvisits,
+      mark = graph_sdWalksConnected(scip, graph, termmark, graph->cost, isfixedterm, realterm, 1500, dist, pathedge, &nvisits,
             visited, TRUE);
 
 #ifndef NDEBUG
       for( int k = 0; k < graph->knots; k++ )
-         assert(state[k] == UNKNOWN && visited[k] == FALSE && dist[k] == FARAWAY);
+         assert(graph->path_state[k] == UNKNOWN && visited[k] == FALSE && dist[k] == FARAWAY);
 #endif
 
       if( !mark )
@@ -907,10 +907,9 @@ void findRootsMark(
          {
             const int node = pathedge[k];
 
-            if( graph_pc_termIsNonLeafTerm(graph, node) )
-               continue;
+            assert((termmark[node] == 2) == (Is_term(graph->term[node]) && !graph_pc_termIsNonLeafTerm(graph, node)));
 
-            if( Is_term(graph->term[node]) && node != realterm )
+            if( termmark[node] == 2 && node != realterm )
             {
                const int nodepterm = graph_pc_getTwinTerm(graph, node);
                const int rootedge = graph_pc_getRoot2PtermEdge(graph, nodepterm);
@@ -958,7 +957,6 @@ SCIP_RETCODE daPcFindRoots(
    SCIP_Bool             rerun,              /**< not the first run? */
    SCIP_Bool             probrooted,         /**< is transgraph a rooted RMW or RPC? */
    PATH*                 vnoi,               /**< SP array */
-   int*                  state,              /**< array */
    int*                  pathedge,           /**< array */
    int*                  vbase,              /**< array */
    STP_Bool*             isfixedterm,        /**< bool array */
@@ -969,11 +967,16 @@ SCIP_RETCODE daPcFindRoots(
    SCIP_Real* dist;
    STP_Bool* visited;
    int* termmark;
+   int* const state = graph->path_state;
    const int root = graph->source;
    const int nnodes = graph->knots;
    const SCIP_Bool graphextended = graph->extended;
    int nroots = *rootscount;
    int nvisits;
+
+   assert(state);
+   assert(graph_pc_isPcMw(graph));
+   assert(!graph_pc_isRootedPcMw(graph));
 
    SCIP_CALL(SCIPallocBufferArray(scip, &dist, nnodes));
    SCIP_CALL(SCIPallocBufferArray(scip, &visited, nnodes));
@@ -1002,8 +1005,10 @@ SCIP_RETCODE daPcFindRoots(
    BMSclearMemoryArray(isfixedterm, nnodes);
 
    if( rerun )
+   {
       for( int i = 0; i < nroots; i++ )
          isfixedterm[roots[i]] = TRUE;
+   }
 
    SCIPdebugMessage("before findDaRootsMark: all roots: %d, nodes: %d edges: %d terms: %d \n",
          nroots, nnodes, graph->edges, graph->terms);
@@ -1020,8 +1025,10 @@ SCIP_RETCODE daPcFindRoots(
          const int pseudoterm = transgraph->head[e];
 
          if( Is_term(transgraph->term[pseudoterm]) && transgraph->term2edge[pseudoterm] >= 0 )
+         {
             findRootsMark(scip, graph, transgraph, termmark, cost, bestcost, lpobjval, bestlpobjval, upperbound, rerun, probrooted, pseudoterm, e,
-                  isfixedterm, roots, &nroots, state, pathedge, visited, dist);
+                  isfixedterm, roots, &nroots, pathedge, visited, dist);
+         }
       }
    }
    /* transgraph has artificial root, so no arcs to pseudo-terminals */
@@ -1032,8 +1039,10 @@ SCIP_RETCODE daPcFindRoots(
          const int pseudoterm = graph->head[e];
 
          if( Is_pseudoTerm(graph->term[pseudoterm]) )
+         {
             findRootsMark(scip, graph, transgraph, termmark, cost, bestcost, lpobjval, bestlpobjval, upperbound, rerun, probrooted, pseudoterm, e,
-                  isfixedterm, roots, &nroots, state, pathedge, visited, dist);
+                  isfixedterm, roots, &nroots, pathedge, visited, dist);
+         }
       }
    }
 
@@ -1055,11 +1064,11 @@ SCIP_RETCODE daPcFindRoots(
          for( int i = 0; i < nnodes; i++ )
          {
             SCIP_Bool connected;
+
             if( !Is_term(graph->term[i]) || isfixedterm[i] || graph_pc_knotIsFixedTerm(graph, i) )
                continue;
 
-            assert(graph->path_heap != NULL);
-            connected = graph_sdWalksConnected(scip, graph, termmark, graph->cost, isfixedterm, i, 1500, dist, graph->path_heap, state, pathedge, &nvisits,
+            connected = graph_sdWalksConnected(scip, graph, termmark, graph->cost, isfixedterm, i, 1500, dist, pathedge, &nvisits,
                   visited, TRUE);
 
             if( connected )
@@ -2344,6 +2353,9 @@ SCIP_RETCODE reduce_daSlackPrune(
    assert(nodearrchar != NULL);
    assert(edgearrchar != NULL);
 
+   // todo would need to adapt the objectives for PC variants, add non-leaf offset
+   assert(!graph_pc_isPcMw(graph));
+
    /* 1. step: initialize */
 
    rpc = (graph->stp_type == STP_RPCSPG);
@@ -2931,10 +2943,6 @@ SCIP_RETCODE reduce_daPcMw(
    if( userec )
       SCIPdebugMessage("DA: 1. NFIXED %d \n", nfixed);
 
-   goto TERMINATION;
-assert(0);
-
-
    /* rerun dual ascent? */
    if( solbasedda && graph->terms > 2 && SCIPisGT(scip, minpathcost, 0.0) )
    {
@@ -3026,7 +3034,7 @@ assert(0);
       SCIP_CALL( SCIPallocBufferArray(scip, &roots, graph->terms) );
 
       SCIP_CALL( daPcFindRoots(scip, graph, transgraph, cost, bestcost, lpobjval, bestlpobjval, upperbound, FALSE, FALSE,
-            vnoi, state, pathedge, vbase, nodearrchar, roots, &nroots));
+            vnoi, pathedge, vbase, nodearrchar, roots, &nroots));
 
       /* should prize of terminals be changed? */
       if( nroots > 0 && markroots  )
@@ -3040,8 +3048,6 @@ assert(0);
       nusedroots = MIN(DEFAULT_NMAXROOTS, nroots);
    else
       nusedroots = -1;
-
-   TERMINATION:
 
    graph_path_exit(scip, transgraph);
    graph_free(scip, &transgraph, TRUE);
@@ -3059,6 +3065,12 @@ assert(0);
 
       if( graph->terms <= 2 )
          break;
+
+      if( graph_pc_knotIsNonLeafTerm(graph, tmproot) )
+      {
+         assert(0); // might happen!
+
+      }
 
       SCIP_CALL( graph_pc_getRsap(scip, graph, &transgraph, roots, nroots, tmproot) );
 
@@ -3130,7 +3142,7 @@ assert(0);
       {
          const int oldnroots = nroots;
          SCIP_CALL( daPcFindRoots(scip, graph, transgraph, cost, cost, lpobjval, lpobjval, upperbound, TRUE, TRUE,
-               vnoi, state, pathedge, vbase, nodearrchar, roots, &nroots) );
+               vnoi, pathedge, vbase, nodearrchar, roots, &nroots) );
 
          /* should prize of terminals be changed? */
          if( nroots > oldnroots  )
