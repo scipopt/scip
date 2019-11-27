@@ -149,7 +149,7 @@ struct SCIP_BranchruleData
    int*                  orbits;             /**< array of non-trivial orbits */
    int*                  orbitbegins;        /**< array containing begin positions of new orbits in orbits array */
    int                   norbits;            /**< pointer to number of orbits currently stored in orbits */
-   int*                  varorbitmap;        /**< array for storing the orbits for each variable */
+   int*                  varorbitmap;        /**< array for storing indices of the containing orbit for each variable */
    int*                  orbitrep;           /**< representative variable of each orbit */
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
    int                   npermvars;          /**< number of variables for permutations */
