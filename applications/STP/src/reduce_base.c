@@ -411,12 +411,15 @@ SCIP_RETCODE level0RpcRmwInfeas(
    SCIP_Bool* gmark;
    int stacksize;
    const int nnodes = g->knots;
+   const SCIP_Bool isExtended = g->extended;
 
    assert(scip != NULL);
    assert(g != NULL);
    assert(offsetp != NULL);
    assert(graph_pc_isRootedPcMw(g));
-   assert(g->extended);
+
+   if( !isExtended )
+      graph_pc_2trans(scip, g);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &gmark, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &stackarr, nnodes) );
@@ -466,6 +469,10 @@ SCIP_RETCODE level0RpcRmwInfeas(
          {
             *infeas = TRUE;
             SCIPfreeBufferArray(scip, &gmark);
+
+            if( !isExtended )
+               graph_pc_2org(scip, g);
+
             return SCIP_OKAY;
          }
          else if( graph_pc_termIsNonLeafTerm(g, k) )
@@ -498,6 +505,9 @@ SCIP_RETCODE level0RpcRmwInfeas(
    }
 
    SCIPfreeBufferArray(scip, &gmark);
+
+   if( !isExtended )
+      graph_pc_2org(scip, g);
 
    return SCIP_OKAY;
 }
@@ -1437,13 +1447,13 @@ SCIP_RETCODE redLoopMw(
 
    SCIP_CALL( reduce_simple_mw(scip, g, solnode, fixed, &degelims) );
 
+   if( tryrmw && g->terms > 2 )
+      SCIP_CALL( graph_pc_pcmw2rooted(scip, g, prizesum) );
+
    /* go back to the extended graph */
    graph_pc_2trans(scip, g);
 
    SCIP_CALL( level0(scip, g) );
-
-   if( tryrmw && g->terms > 2 )
-      SCIP_CALL( graph_pc_pcmw2rooted(scip, g, prizesum) );
 
    SCIPfreeRandom(scip, &randnumgen);
 
@@ -1687,7 +1697,6 @@ SCIP_RETCODE redLoopPc(
       if( (!rerun || rounds == (STP_RED_MAXNROUNDS - 1)) && !rpc && tryrpc && g->terms > 2 )
       {
          assert(graph_pc_term2edgeIsConsistent(scip, g));
-         graph_pc_2trans(scip, g);
 
          SCIP_CALL(graph_pc_pcmw2rooted(scip, g, prizesum));
 
@@ -1706,8 +1715,6 @@ SCIP_RETCODE redLoopPc(
             advancedrun = dualascent;
             rounds = 1;
          }
-
-         graph_pc_2org(scip, g);
       }
    } /* main reduction loop */
 

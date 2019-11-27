@@ -2220,7 +2220,7 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
    assert(scip != NULL);
    assert(graph != NULL);
    assert(graph->term2edge != NULL);
-   assert(graph->extended);
+   assert(!graph->extended);
    assert(pc || graph->stp_type == STP_MWCSP);
 
    newroot = -1;
@@ -2240,9 +2240,9 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
          const int dummyterm = graph->head[e];
          const int pseudoterm = graph_pc_getTwinTerm(graph, dummyterm);
 
-         assert(Is_term(graph->term[dummyterm]));
+         assert(Is_pseudoTerm(graph->term[dummyterm]));
          assert(graph->grad[dummyterm] == 2);
-         assert(Is_pseudoTerm(graph->term[pseudoterm]));
+         assert(Is_term(graph->term[pseudoterm]));
          assert(SCIPisGE(scip, graph->prize[pseudoterm], prizesum));
 
          graph_knot_chg(graph, dummyterm, STP_TERM_NONE);
