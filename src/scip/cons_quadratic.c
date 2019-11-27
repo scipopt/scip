@@ -15115,7 +15115,6 @@ SCIP_Bool SCIPisConvexQuadratic(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
-   assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
