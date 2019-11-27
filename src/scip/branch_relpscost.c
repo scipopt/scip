@@ -1796,8 +1796,8 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolRelpscost)
 
    SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->orbitrep, branchruledata->npermvars);
    SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->varorbitmap, branchruledata->npermvars);
-   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->orbits, branchruledata->npermvars);
    SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->orbitbegins, branchruledata->npermvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->orbits, branchruledata->npermvars);
    branchruledata->nosymmetry = FALSE;
    branchruledata->norbits = 0;
    branchruledata->permvars = NULL;
