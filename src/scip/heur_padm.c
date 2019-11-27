@@ -641,6 +641,77 @@ SCIP_RETCODE reuseSolution(
    return SCIP_OKAY;
 }
 
+/** rescales the penalty parameters
+ *
+ *  A sigmoid function is a function with an "S"-shaped graph, e.g. S(x) = x/(1+|x|).
+ *  In order to avoid numerical instabilities due to large penalty parameters we rescale them
+ *  using the sigmoid function
+ *  S(x) = (x - shift)/(flatness + |x - shift|) * (range/2) + offset.
+ *  The parameters are mapped into the more controllable interval [lowestslack, range + lowestslack].
+ */
+static
+SCIP_RETCODE scalePenalties(
+   SCIP*                 scip,               /**< SCIP data structure */
+   PROBLEM*              problem,            /**< block structure */
+   SET*                  linkvartoblocks,    /**< linking variable to blocks set */
+   SET*                  blocktolinkvars,    /**< block to linking variable set */
+   SCIP_HASHTABLE*       htable,             /**< hashtable containing blockinfo*/
+   SCIP_Real             maxpenalty          /**< maximum penalty parameter */
+   )
+{
+   SCIP_Real shift;
+   SCIP_Real lowestslack;
+   SCIP_Real range;
+   SCIP_Real offset;
+   SCIP_Real flatness;
+   int b;
+   int i;
+   int k;
+
+   shift = maxpenalty / 2.0;
+   lowestslack = 0.1;
+   range = 10.0;
+   offset = range / 2.0 + lowestslack;
+   flatness = maxpenalty / 10.0;
+
+   for( b = 0; b < problem->nblocks; b++ )
+   {
+      for( i = 0; i < blocktolinkvars[b].size; i++ )
+      {
+         int linkvaridx;
+         linkvaridx = blocktolinkvars[b].indexes[i];
+
+         for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
+         {
+            int b2;
+            b2 = linkvartoblocks[linkvaridx].indexes[k];
+
+            if( b2 != b )
+            {
+               BLOCKINFO binfo;
+               BLOCKINFO* binfoout;
+               SCIP_Real oldcoeff;
+
+               binfo.block = b;
+               binfo.otherblock = b2;
+               binfo.linkVarIdx = linkvaridx;
+               binfoout = (BLOCKINFO*) SCIPhashtableRetrieve(htable, (void*) &binfo);
+               assert(binfoout != NULL);
+
+               /* scale coefficient of positive slack variable */
+               oldcoeff = binfoout->slackPosObjCoeff;
+               binfoout->slackPosObjCoeff = ((oldcoeff - shift) / (flatness + REALABS(oldcoeff - shift))) * range / 2.0 + offset;
+
+               /* scale coefficient of negative slack variable */
+               oldcoeff = binfoout->slackNegObjCoeff;
+               binfoout->slackNegObjCoeff = ((oldcoeff - shift) / (flatness + REALABS(oldcoeff - shift))) * range / 2.0 + offset;
+            }
+         }
+      }
+   }
+   return SCIP_OKAY;
+}
+
 /** returns the available time limit that is left */
 static
 SCIP_Real getTimeLeft(
@@ -758,7 +829,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Bool* varonlyobj;
    SCIP_Real* tmpcouplingcoef;
    SCIP_Real gap;
-   SCIP_Real maxslack;
+   SCIP_Real maxpenalty;
    SCIP_Real slackthreshold;
    SCIP_Real memory; /* in MB */
    SCIP_STATUS status;
@@ -1390,7 +1461,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       doScaling = FALSE;
       solved = TRUE;
       increasedslacks = 0;
-      maxslack = SCIP_REAL_MIN;
+      maxpenalty = SCIP_REAL_MIN;
       for( b = 0; b < problem->nblocks; b++ )
       {
          for( i = 0; i < blocktolinkvars[b].size; i++ )
@@ -1429,8 +1500,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                      if( binfoout->slackPosObjCoeff > slackthreshold )
                         doScaling = TRUE;
 
-                     if( binfoout->slackPosObjCoeff > maxslack )
-                        maxslack = binfoout->slackPosObjCoeff;
+                     if( binfoout->slackPosObjCoeff > maxpenalty )
+                        maxpenalty = binfoout->slackPosObjCoeff;
 
                      solved = FALSE;
                      increasedslacks++;
@@ -1444,8 +1515,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                      if( binfoout->slackNegObjCoeff > slackthreshold )
                         doScaling = TRUE;
 
-                     if( binfoout->slackNegObjCoeff > maxslack )
-                        maxslack = binfoout->slackNegObjCoeff;
+                     if( binfoout->slackNegObjCoeff > maxpenalty )
+                        maxpenalty = binfoout->slackNegObjCoeff;
 
                      solved = FALSE;
                      increasedslacks++;
@@ -1455,58 +1526,16 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
 
-      /* should sigmoid scaling be applied? */
+      /* should sigmoid scaling be applied to the penalty parameters? */
       if( doScaling && heurdata->scaling )
       {
-         SCIP_Real shift;
-         SCIP_Real lowestslack;
-         SCIP_Real range;
-         SCIP_Real offset;
-         SCIP_Real flatness;
+         SCIPdebugMsg(scip, "rescale penalty parameters\n");
 
-         shift = maxslack / 2.0;
-         lowestslack = 0.1;
-         range = 10.0;
-         offset = range / 2.0 + lowestslack;
-         flatness = maxslack / 10.0;
-
+         /* reset counter */
          increasedslacks = 0;
 
-         for( b = 0; b < problem->nblocks; b++ )
-         {
-            for( i = 0; i < blocktolinkvars[b].size; i++ )
-            {
-               int linkvaridx;
-               linkvaridx = blocktolinkvars[b].indexes[i];
-
-               for( k = 0; k < linkvartoblocks[linkvaridx].size; k++ )
-               {
-                  int b2;
-                  b2 = linkvartoblocks[linkvaridx].indexes[k];
-
-                  if( b2 != b )
-                  {
-                     BLOCKINFO binfo;
-                     BLOCKINFO* binfoout;
-                     SCIP_Real oldcoeff;
-
-                     binfo.block = b;
-                     binfo.otherblock = b2;
-                     binfo.linkVarIdx = linkvaridx;
-                     binfoout = (BLOCKINFO*) SCIPhashtableRetrieve(htable, (void*) &binfo);
-                     assert(binfoout != NULL);
-
-                     /* scale coefficient of positive slack variable */
-                     oldcoeff = binfoout->slackPosObjCoeff;
-                     binfoout->slackPosObjCoeff = ((oldcoeff - shift) / (flatness + REALABS(oldcoeff - shift))) * range / 2.0 + offset;
-
-                     /* scale coefficient of negative slack variable */
-                     oldcoeff = binfoout->slackNegObjCoeff;
-                     binfoout->slackNegObjCoeff = ((oldcoeff - shift) / (flatness + REALABS(oldcoeff - shift))) * range / 2.0 + offset;
-                  }
-               }
-            }
-         }
+         /* rescale penalty parameters */
+         SCIP_CALL( scalePenalties( scip, problem, linkvartoblocks, blocktolinkvars, htable, maxpenalty) );
       }
 
       /* adapt in some cases the gap parameter */
