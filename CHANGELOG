@@ -100,7 +100,7 @@ Features
 - To save memory, it is now possible to remove all variables from the internal symmetry data structures that are
   not affected by any symmetry.
 
-- Allow to filter first variables from orbits and transfer history information to variables in orbit
+- Allow to filter first variables from orbits and transfer pseudo cost information to variables in orbit
 
 
 Performance improvements
