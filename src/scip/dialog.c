@@ -189,8 +189,6 @@ SCIP_RETCODE addHistory(
    const char*           s                   /**< string to add to the command history */
    )
 {  /*lint --e{715}*/
-   assert(s != NULL);
-
    /* nothing to do here */
    return SCIP_OKAY;
 }
