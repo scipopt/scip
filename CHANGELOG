@@ -159,6 +159,7 @@ Interface changes
   + now for all lp interfaces consistent requirements on SCIP_LPPAR:
     LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
+  + add interface to Glop
 - Symmetry:
   + removed method SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
@@ -342,7 +343,10 @@ Interface changes
 
 - new parameter conflict/uselocalrows (default: TRUE) to incorporate locally valid cuts / rows for dual proof analysis
 
+- new return code SCIP_NOTIMPLEMENTED for functions, e.g., in the LPI that have not been implemented (yet)
+
 - new parameter separating/cgmip/genprimalsols that allows to generate initial primal solutions from Gomory cuts
+
 
 ### Data structures
 

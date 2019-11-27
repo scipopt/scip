@@ -254,6 +254,15 @@ LPIINSTMSG	=	"  -> \"grbinc\" is the path to the Gurobi \"include\" directory, e
 LPIINSTMSG	+=	" -> \"libgurobi.*\" is the path to the Gurobi library, e.g., \"<Gurobi-path>/lib/libgurobi.so\""
 endif
 
+# glop only supports shared libraries
+LPSOPTIONS	+=	glop
+ifeq ($(LPS),glop)
+LPILIBOBJ	=	lpi/lpi_glop.o scip/bitencode.o scip/rbtree.o scip/message.o
+LPILIBSRC  	=	$(SRCDIR)/lpi/lpi_glop.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
+SOFTLINKS	+=	$(LIBDIR)/shared/ortools
+LPIINSTMSG	=	"  -> \"ortools\" is the path to the OR-Tools directory.\n"
+endif
+
 LPSOPTIONS	+=	none
 ifeq ($(LPS),none)
 LPILIBOBJ	=	lpi/lpi_none.o blockmemshell/memory.o scip/rbtree.o scip/message.o
@@ -1112,6 +1121,9 @@ $(LIBDIR)/shared: $(LIBDIR)
 $(LIBDIR)/include: $(LIBDIR)
 		@-mkdir -p $(LIBDIR)/include
 
+$(LIBDIR)/src: $(LIBDIR)
+		@-mkdir -p $(LIBDIR)/src
+
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
@@ -1580,10 +1592,11 @@ help:
 		@echo
 		@echo "  General options:"
 		@echo "  - OPT={dbg|opt}: Use debug or optimized (default) mode, respectively."
-		@echo "  - LPS={clp|cpx|grb|msk|qso|spx|xprs|none}: Determine LP-solver."
+		@echo "  - LPS={clp|cpx|grb|glop|msk|qso|spx|xprs|none}: Determine LP-solver."
 		@echo "      clp: COIN-OR Clp LP-solver"
 		@echo "      cpx: CPLEX LP-solver"
-		@echo "      grb: Gurobi LP-solver (interface is in beta stage)"
+		@echo "      glop: Glop LP-solver"
+		@echo "      grb: Gurobi LP-solver"
 		@echo "      msk: Mosek LP-solver"
 		@echo "      qso: QSopt LP-solver"
 		@echo "      spx: old SoPlex LP-solver (for versions < 2)"
