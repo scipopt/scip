@@ -183,7 +183,7 @@ SCIP_RETCODE readLine(
    return SCIP_OKAY;
 }
 
-/** puts the given string on the command history */
+/** puts the given string on the command history */ /*lint -e715*/
 static
 SCIP_RETCODE addHistory(
    const char*           s                   /**< string to add to the command history */
