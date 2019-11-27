@@ -195,7 +195,7 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValCons)
    assert(hashdata->nvars == 2);
 
    /* if we have only two variables we store at each 16 bits of the hash value the index of a variable */
-   hashval = ((unsigned int)SCIPvarGetIndex(hashdata->vars[1]) << 16) + (unsigned) SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
+   hashval = ((unsigned int)SCIPvarGetIndex(hashdata->vars[1]) << 16) + (unsigned int) SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
 
    return hashval;
 }
