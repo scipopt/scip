@@ -2399,7 +2399,6 @@ unsigned int getScore(
    assert(bound != NULL);
    assert(nlcount >= 0);
    assert(maxnlcount >= nlcount);
-   assert(maxnlcount > 0);
 
    /* score = ( nlcount * ( BASE - 1 ) / maxnlcount ) * BASE^2 + vartype * BASE + boundtype */
    score = (unsigned int) ( nlcount > 0 ? (OBBT_SCOREBASE * nlcount * ( OBBT_SCOREBASE - 1 )) / maxnlcount : 0 );
