@@ -118,7 +118,7 @@ typedef struct set
 typedef struct blockinfo
 {
    int                   block;              /**< index of this block */
-   int                   otherblock;         /**< index of the other conntected block */
+   int                   otherblock;         /**< index of the other connected block */
    int                   linkVarIdx;         /**< linking variable index */
    SCIP_Real             linkVarVal;         /**< value of linking variable */
    SCIP_VAR*             linkVar;            /**< linking variable */
@@ -560,7 +560,7 @@ SCIP_RETCODE reuseSolution(
    SCIP_SOL* newsol;
    SCIP_VAR** blockvars;
    SCIP_VAR** consvars;
-   double* blockvals;
+   SCIP_Real* blockvals;
    int nsols;
    int nvars;
    int c;
@@ -569,7 +569,7 @@ SCIP_RETCODE reuseSolution(
    assert(subscip != NULL);
    assert(block != NULL);
 
-   nsols = SCIPgetNSols( subscip );
+   nsols = SCIPgetNSols(subscip);
 
    /* no solution in solution candidate storage found */
    if( nsols == 0 )
@@ -577,7 +577,7 @@ SCIP_RETCODE reuseSolution(
    
    SCIP_CALL( SCIPallocBufferArray(subscip, &consvars, COUPLINGSIZE) );
 
-   sols = SCIPgetSols( subscip );
+   sols = SCIPgetSols(subscip);
    sol = sols[nsols - 1];
 
    /* copy the solution */
@@ -593,9 +593,9 @@ SCIP_RETCODE reuseSolution(
       adapt slack variables so that constraint is feasible */
    for( c = 0; c < block->ncoupling; c++ )
    {
-      double solval; /* old solution values of variables; [0] original variable, [1] slackpos, [2] slackneg */
-      double side; /* current right hand side */
-      double diff;
+      SCIP_Real solval; /* old solution values of variables; [0] original variable, [1] slackpos, [2] slackneg */
+      SCIP_Real side; /* current right hand side */
+      SCIP_Real diff;
 
       SCIP_CALL( SCIPgetConsVars(subscip, block->couplingcons[c], consvars, COUPLINGSIZE, &success) );
       solval = SCIPgetSolVal(subscip, sol, consvars[0]);
@@ -926,7 +926,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memory) );
    if( ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * nblocks >= memory )
    {
-      SCIPdebugMsg(scip, "The estimated memory usage is too large.\n");
+      SCIPdebugMsg(scip, "The estimated memory usage for %d blocks is too large.\n", nblocks);
       goto TERMINATE;
    }
 
@@ -1211,6 +1211,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          solutionsdiffer = FALSE;
          SCIPdebugMsg(scip, "%d\t%d\t%d\t%s\n", pIter, aIter, increasedslacks, info);
 
+         /* Loop through the blocks and solve each sub-SCIP, potentially multiple times */
          for( b = 0; b < problem->nblocks; b++ )
          {
             for( i = 0; i < blocktolinkvars[b].size; i++ )
@@ -1238,6 +1239,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                      binfo.linkVarIdx = linkvaridx;
 
                      binfoout = (BLOCKINFO*) SCIPhashtableRetrieve(htable, (void *)&binfo);
+                     assert(binfoout != NULL);
                      couplingcons = binfoout->couplingCons;
 
                      /* interchange blocks b and b2 for getting new right hand side */
@@ -1245,6 +1247,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                      binfo2.otherblock = b;
                      binfo2.linkVarIdx = linkvaridx;
                      binfo2out = (BLOCKINFO*) SCIPhashtableRetrieve(htable, (void*) &binfo2);
+                     assert(binfo2out != NULL);
                      newRhs = binfo2out->linkVarVal;
 
                      /* change side of coupling constraint equation with linking variable value of the other block */
@@ -1269,7 +1272,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
                SCIP_CALL( SCIPsetRealParam((problem->blocks[b]).subscip, "limits/gap", gap) );
 
-               /* reuse old solution if available*/
+               /* reuse old solution if available */
                SCIP_CALL( reuseSolution((problem->blocks[b]).subscip, &problem->blocks[b]) );
 
                /* update time limit of subproblem */
@@ -1280,14 +1283,13 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                                              getMemLeft(scip, problem, (problem->blocks[b]).subscip)) );
 
                /* solve block */
-
                SCIP_CALL( SCIPsolve((problem->blocks[b]).subscip) );
                status = SCIPgetStatus((problem->blocks[b]).subscip);
 
                /* check solution if one of the three cases occurs
                 * - solution is optimal
                 * - solution reached gaplimit
-                * - time limit is reached but best solution needs no slack variables (no dual solution avaiable)
+                * - time limit is reached but best solution needs no slack variables (no dual solution available)
                 */
                if( status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_GAPLIMIT || 
                    (status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
@@ -1316,6 +1318,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                            binfo.otherblock = b2;
                            binfo.linkVarIdx = linkvaridx;
                            binfoout = (BLOCKINFO *)SCIPhashtableRetrieve(htable, (void *)&binfo);
+                           assert(binfoout != NULL);
 
                            sol = SCIPgetBestSol((problem->blocks[b]).subscip);
                            var = binfoout->linkVar;
@@ -1351,6 +1354,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                            binfo.otherblock = b2;
                            binfo.linkVarIdx = linkvaridx;
                            binfoout = (BLOCKINFO*) SCIPhashtableRetrieve(htable, (void*) &binfo);
+                           assert(binfoout != NULL);
 
                            /* increase penalty coefficients to obtain a bounded subproblem */
                            binfoout->slackPosObjCoeff *= 10.0;
@@ -1363,7 +1367,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                }
                else if( status == SCIP_STATUS_TIMELIMIT )
                {
-                  SCIPdebugMsg(scip, "Block reached time limit. No optimal solution avaiable.\n");
+                  SCIPdebugMsg(scip, "Block reached time limit. No optimal solution available.\n");
                   goto TERMINATE;
                }
                else
@@ -1411,6 +1415,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                   binfo.otherblock = b2;
                   binfo.linkVarIdx = linkvaridx;
                   binfoout = (BLOCKINFO*) SCIPhashtableRetrieve(htable, (void*) &binfo);
+                  assert(binfoout != NULL);
 
                   sol = SCIPgetBestSol((problem->blocks[b]).subscip);
                   slackPosVal = SCIPgetSolVal((problem->blocks[b]).subscip, sol, binfoout->slackPosVar);
@@ -1489,6 +1494,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                      binfo.otherblock = b2;
                      binfo.linkVarIdx = linkvaridx;
                      binfoout = (BLOCKINFO*) SCIPhashtableRetrieve(htable, (void*) &binfo);
+                     assert(binfoout != NULL);
 
                      /* scale coefficient of positive slack variable */
                      oldcoeff = binfoout->slackPosObjCoeff;
@@ -1569,7 +1575,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       {
          if( varonlyobj[i] == TRUE )
          {
-            double fixedvalue;
+            SCIP_Real fixedvalue;
             if( SCIPvarGetObj(linkvars[i]) < 0 )
             {
                fixedvalue = SCIPvarGetUbLocal(linkvars[i]);
