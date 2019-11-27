@@ -2137,7 +2137,7 @@ SCIP_RETCODE reduce_da(
    else
       damaxdeviation = -1.0;
 
-   if( rpc ) graph_pc_2trans(scip, graph);
+   assert(!rpc || graph->extended);
 
    for( int outerrounds = 0; outerrounds < 2; outerrounds++ )
    {
