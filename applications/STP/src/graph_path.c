@@ -3260,15 +3260,17 @@ void graph_path_st_rpcmw(
       state[start] = count;
 
       if( Is_anyTerm(g->term[start]) )
+      {
+         updatmaxprize(g, orderedprizes, orderedprizes_id, connected, start, &maxprizeidx, &maxprizeval);
+
          termscount++;
+      }
 
       if( Is_term(g->term[start]) )
       {
          assert(graph_pc_knotIsFixedTerm(g, start));
          rtermscount++;
       }
-
-      updatmaxprize(g, orderedprizes, orderedprizes_id, connected, start, &maxprizeidx, &maxprizeval);
 
       /* repeat until heap is empty */
       while( count > 0 )
@@ -3286,8 +3288,11 @@ void graph_path_st_rpcmw(
             assert(k != start);
             assert(pathedge[k] != -1);
             assert(!graph_pc_knotIsDummyTerm(g, k));
+            assert(graph_pc_knotIsFixedTerm(g, k) || SCIPisGE(scip, prize[k], pathdist[k]));
 
-            termscount++;
+            if( !graph_pc_knotIsNonLeafTerm(g, k) )
+               termscount++;
+
             if( Is_term(g->term[k]) )
             {
                assert(graph_pc_knotIsFixedTerm(g, k));
@@ -3300,7 +3305,6 @@ void graph_path_st_rpcmw(
 
             connected[k] = TRUE;
             pathdist[k] = 0.0;
-            updatmaxprize(g, orderedprizes, orderedprizes_id, connected, k, &maxprizeidx, &maxprizeval);
 
             node = k;
 
@@ -3332,6 +3336,8 @@ void graph_path_st_rpcmw(
          }
          else if( rtermscount >= nrterms && pathdist[k] > maxprizeval )
          {
+            SCIPdebugMessage("all fixed terminals reached \n");
+
             assert(rtermscount == nrterms);
             break;
          }
@@ -3352,8 +3358,12 @@ void graph_path_st_rpcmw(
 
 #ifndef NDEBUG
    for( int k = 0; k < nnodes; k++ )
+   {
       if( graph_pc_knotIsFixedTerm(g, k) )
+      {
          assert(connected[k]);
+      }
+   }
 #endif
 }
 
