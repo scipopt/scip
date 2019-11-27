@@ -264,11 +264,11 @@ SCIP_RETCODE filterSymmetricVariables(
    for(i = 0; i < norigbranchcands; ++i)
    {
       int orbitidx = -1;
-      int varidx = -1;
+      int varidx;
 
-      if( SCIPhashmapExists(branchruledata->permvarmap, (void*) origbranchcands[i]) )
+      varidx = SCIPhashmapGetImageInt(branchruledata->permvarmap, (void*) origbranchcands[i]);
+      if( varidx != INT_MAX )
       {
-         varidx = SCIPhashmapGetImageInt(branchruledata->permvarmap, (void*) origbranchcands[i]);
          assert( 0 <= varidx && varidx < branchruledata->npermvars );
          orbitidx = branchruledata->varorbitmap[varidx];
       }
