@@ -1064,21 +1064,17 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       goto TERMINATE;
    }
 
-   /* init block to linking variables set */
-   for( b = 0; b < problem->nblocks; b++ )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &(blocktolinkvars[b].indexes), numlinkvars) );
-      blocktolinkvars[b].size = 0;
-   }
-
    /* init varonlyobj; true if variable is only part of the objective function */
    SCIP_CALL( SCIPallocBufferArray(scip, &varonlyobj, numlinkvars) );
    for( i = 0; i < numlinkvars; ++i)
       varonlyobj[i] = TRUE;
 
-   /* fill block to linking variables set */
+   /* init and fill block to linking variables set */
    for( b = 0; b < problem->nblocks; b++ )
    {
+      SCIP_CALL( SCIPallocBufferArray(scip, &(blocktolinkvars[b].indexes), numlinkvars) );
+      blocktolinkvars[b].size = 0;
+
       k = 0;
       for( i = 0; i < numlinkvars; i++ )
       {
