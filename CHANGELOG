@@ -131,6 +131,8 @@ Performance improvements
 
 - variable fixings of LP face heuristic are now computed earlier; subproblem creation is skipped if not enough variables are fixed.
 
+- Improved domcol presolver to not require a complete representation of all constraints in the matrix
+
 
 Examples and applications
 -------------------------
