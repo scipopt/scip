@@ -7226,7 +7226,8 @@ SCIP_RETCODE applyFixings(
 
                if( !SCIPvarIsBinary(aggrvars[i]) )
                {
-                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-binary variable <%s>\n", aggrvars[i]);
+                  SCIPerrorMessage("try to resolve a multi-aggregation with a non-binary %svariable <%s> with bounds [%g,%g]\n",
+                     SCIPvarIsIntegral(aggrvars[i]) ? "integral " : "", SCIPvarGetName(aggrvars[i]),  SCIPvarGetLbGlobal(aggrvars[i]), SCIPvarGetUbGlobal(aggrvars[i]));
                   return SCIP_ERROR;
                }
                if( !SCIPisIntegral(scip, weight * aggrscalars[i]) )
@@ -13726,4 +13727,37 @@ SCIP_ROW* SCIPgetRowKnapsack(
    assert(consdata != NULL);
 
    return consdata->row;
+}
+
+/** cleans up (multi-)aggregations and fixings from knapsack constraints */
+SCIP_RETCODE SCIPcleanupConssKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   int nconss;
+   int i;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   assert(infeasible != NULL);
+   *infeasible = FALSE;
+
+   nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
+   conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
+
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CALL( applyFixings(scip, conss[i], infeasible) );
+
+      if( *infeasible )
+         break;
+   }
+
+   return SCIP_OKAY;
 }

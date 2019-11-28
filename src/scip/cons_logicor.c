@@ -5391,3 +5391,66 @@ SCIP_ROW* SCIPgetRowLogicor(
    return consdata->row;
 }
 
+/** cleans up (multi-)aggregations and fixings from logicor constraints */
+SCIP_RETCODE SCIPcleanupConssLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (logicor) constraints */
+   int*                  nchgcoefs           /**< pointer to count number of changed coefficients */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_CONS** conss;
+   unsigned char* entries;
+   int nconss;
+   int nentries;
+   int i;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   assert(naddconss != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgcoefs != NULL);
+
+   eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
+   nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
+   conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
+
+   nentries = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &entries, nentries) );
+
+   /* loop backwards since then deleted constraints do not interfere with the loop */
+   for( i = nconss - 1; i > 0; --i )
+   {
+      SCIP_CONS* cons;
+      SCIP_Bool redundant;
+
+      cons = conss[i];
+      redundant = FALSE;
+
+      SCIP_CALL( applyFixings(scip, cons, eventhdlr, &redundant, nchgcoefs, naddconss, ndelconss) );
+
+      if( SCIPconsIsDeleted(cons) )
+         continue;
+
+      /* merge constraint */
+      if( !redundant )
+      {
+         SCIP_CALL( mergeMultiples(scip, cons, eventhdlr, &entries, &nentries, &redundant, nchgcoefs) );
+      }
+
+      if( redundant )
+      {
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &entries);
+
+   return SCIP_OKAY;
+}

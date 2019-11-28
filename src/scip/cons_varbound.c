@@ -5282,4 +5282,51 @@ SCIP_ROW* SCIPgetRowVarbound(
    return consdata->row;
 }
 
+/** cleans up (multi-)aggregations and fixings from varbound constraints */
+SCIP_RETCODE SCIPcleanupConssVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether the problem was detected to be infeasible */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (varbound) constraints */
+   int*                  nchgbds             /**< pointer to count number of bound changes */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_CONS** conss;
+   int nconss;
+   int i;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   assert(infeasible != NULL);
+   *infeasible = FALSE;
+
+   assert(naddconss != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgbds != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   eventhdlr = conshdlrdata->eventhdlr;
+   nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
+   conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
+
+   /* loop backwards since then deleted constraints do not interfere with the loop */
+   for( i = nconss - 1; i > 0; --i )
+   {
+      SCIP_CALL( applyFixings(scip, conss[i], eventhdlr, infeasible, nchgbds, ndelconss, naddconss) );
+
+      if( *infeasible )
+         break;
+   }
+
+   return SCIP_OKAY;
+}
+
 /**@} */
