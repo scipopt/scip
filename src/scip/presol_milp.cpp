@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 /* default parameter values */
 #define DEFAULT_THREADS            1         /**< maximum number of threads presolving may use (0: automatic) */
-#define DEFAULT_MAXFILLINPERSUBST  8         /**< maximal possible fillin for substitutions to be considered */
+#define DEFAULT_MAXFILLINPERSUBST  0         /**< maximal possible fillin for substitutions to be considered */
 #define DEFAULT_MODIFYCONSFAC      0.0       /**< modify SCIP constraints when the number of nonzeros is at most this
                                               *   factor times the number of nonzeros before presolving */
 #define DEFAULT_ENABLEPARALLELROWS TRUE      /**< should the parallel rows presolver be enabled within the presolve library? */
