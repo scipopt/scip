@@ -1820,7 +1820,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    SCIP_Real* filteredlpcandssol;
    SCIP_Real* filteredlpcandsfrac;
    SCIP_Bool runfiltering;
-   SCIP_Bool allocated = FALSE;
    int* filteredlpcandsorbitidx = NULL;
    int nfilteredlpcands;
    int nlpcands;
@@ -1857,47 +1856,33 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    }
 
    /* determine fractional variables (possibly filter by using symmetries) */
-   if( runfiltering )
+   if( runfiltering && branchruledata->norbits != 0 )
    {
-      /* if no symmetry is left then use all fractional variables */
-      if( branchruledata->norbits == 0 )
-      {
-         filteredlpcands = lpcands;
-         filteredlpcandssol = lpcandssol;
-         filteredlpcandsfrac = lpcandsfrac;
-         nfilteredlpcands = nlpcands;
-      }
-      else
-      {
-         SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcands, nlpcands) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcandssol, nlpcands) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcandsfrac, nlpcands) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcandsorbitidx, nlpcands) );
-         allocated = TRUE;
+      SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcands, nlpcands) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcandssol, nlpcands) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcandsfrac, nlpcands) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcandsorbitidx, nlpcands) );
 
-         /* determine filtered fractional variables */
-         SCIP_CALL( filterSymmetricVariables(scip, branchruledata, lpcands, lpcandssol, lpcandsfrac, nlpcands,
-               filteredlpcands, filteredlpcandssol, filteredlpcandsfrac, filteredlpcandsorbitidx, &nfilteredlpcands) );
-      }
+      /* determine filtered fractional variables */
+      SCIP_CALL( filterSymmetricVariables(scip, branchruledata, lpcands, lpcandssol, lpcandsfrac, nlpcands,
+            filteredlpcands, filteredlpcandssol, filteredlpcandsfrac, filteredlpcandsorbitidx, &nfilteredlpcands) );
    }
    else
    {
-      filteredlpcands = lpcands;
-      filteredlpcandssol = lpcandssol;
-      filteredlpcandsfrac = lpcandsfrac;
+      /* No orbits available. Copy all (unfiltered) branching candidates, because they will be updated w.r.t. the strong branching LP solution */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &filteredlpcands, lpcands, nlpcands) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &filteredlpcandssol, lpcandssol, nlpcands) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &filteredlpcandsfrac, lpcandsfrac, nlpcands) );
       nfilteredlpcands = nlpcands;
    }
 
    /* execute branching rule */
    SCIP_CALL( execRelpscost(scip, branchrule, filteredlpcands, filteredlpcandssol, filteredlpcandsfrac, filteredlpcandsorbitidx, nfilteredlpcands, TRUE, result) );
 
-   if( allocated )
-   {
-      SCIPfreeBufferArray(scip, &filteredlpcandsorbitidx);
-      SCIPfreeBufferArray(scip, &filteredlpcandsfrac);
-      SCIPfreeBufferArray(scip, &filteredlpcandssol);
-      SCIPfreeBufferArray(scip, &filteredlpcands);
-   }
+   SCIPfreeBufferArrayNull(scip, &filteredlpcandsorbitidx);
+   SCIPfreeBufferArray(scip, &filteredlpcandsfrac);
+   SCIPfreeBufferArray(scip, &filteredlpcandssol);
+   SCIPfreeBufferArray(scip, &filteredlpcands);
 
    return SCIP_OKAY;
 }
