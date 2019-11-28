@@ -16,7 +16,7 @@
 /**@file   type_concurrent.h
  * @ingroup TYPEDEFINITIONS
  * @brief  type definition of concurrent data
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  */
 

@@ -293,9 +293,9 @@ static char blissname[100];
 const char* SYMsymmetryGetName(void)
 {
 #ifdef BLISS_PATCH_PRESENT
-   sprintf(blissname, "bliss %sp", bliss::version);
+   (void) snprintf(blissname, 100, "bliss %sp", bliss::version);
 #else
-   sprintf(blissname, "bliss %s", bliss::version);
+   (void) snprintf(blissname, 100, "bliss %s", bliss::version);
 #endif
    return blissname;
 }

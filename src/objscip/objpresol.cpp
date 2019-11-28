@@ -249,6 +249,7 @@ scip::ObjPresol* SCIPgetObjPresol(
 {
    SCIP_PRESOLDATA* presoldata;
 
+   assert(scip != NULL);
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
