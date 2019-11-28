@@ -2481,16 +2481,12 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 static
 SCIP_DECL_CONSDELETE(consDeleteComponents)
 {  /*lint --e{715}*/
-   PROBLEM* problem;
-
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
-   problem = (PROBLEM*)(*consdata);
-
-   SCIP_CALL( freeProblem(&problem) );
+   SCIP_CALL( freeProblem((PROBLEM**) consdata) );
 
    return SCIP_OKAY;
 }
