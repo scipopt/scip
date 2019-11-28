@@ -2053,8 +2053,8 @@ SCIP_RETCODE SCIPincludePresolQPKKTref(
          &presoldata->addkktbinary, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "presolving/" PRESOL_NAME "/updatequadbounded",
-         "if TRUE then only apply the update to QPs with bounded variables; if the variables are not bounded then a \
-         finite optimal solution might not exist and the KKT conditions would then be invalid",
+         "if TRUE then only apply the update to QPs with bounded variables; if the variables are not bounded then a "
+         "finite optimal solution might not exist and the KKT conditions would then be invalid",
          &presoldata->updatequadbounded, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "presolving/" PRESOL_NAME "/updatequadindef",

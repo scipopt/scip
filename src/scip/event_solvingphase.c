@@ -919,7 +919,7 @@ SCIP_RETCODE changeParametersUsingSettingsFiles(
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e593*/
 
 /** fix/unfix relevant solving parameters that should not accidentally be set to default values */
 static

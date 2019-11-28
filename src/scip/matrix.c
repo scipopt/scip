@@ -1104,6 +1104,8 @@ void SCIPmatrixPrintRow(
    SCIP_Real val;
    SCIP_Real* valpnt;
 
+   SCIP_UNUSED(scip);
+
    rowpnt = matrix->rowmatind + matrix->rowmatbeg[row];
    rowend = rowpnt + matrix->rowmatcnt[row];
    valpnt = matrix->rowmatval + matrix->rowmatbeg[row];

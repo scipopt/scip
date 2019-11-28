@@ -297,8 +297,7 @@ void rowCalculateGauss(
       varmean = 0.0;
       varvariance = 0.0;
       varindex = SCIPvarGetProbindex(colvar);
-      assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
-            == (heurdata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
+      assert((heurdata->currentlbs[varindex] == SCIP_INVALID) == (heurdata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
 
       /* variable bounds need to be watched from now on */
       if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 doesn't like comparing floats for equality */
@@ -609,7 +608,6 @@ SCIP_RETCODE heurdataFreeArrays(
  */
 static
 void heurdataAddBoundChangeVar(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_VAR*             var                 /**< the variable whose bound changes need to be processed */
    )
@@ -637,8 +635,7 @@ void heurdataAddBoundChangeVar(
    }
 
    /* if none of the variables rows was calculated yet, variable needs not to be watched */
-   assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
-      == (heurdata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
+   assert((heurdata->currentlbs[varindex] == SCIP_INVALID) == (heurdata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
 
    /* we don't need to enqueue the variable if it hasn't been watched so far */
    if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 see above */
@@ -655,7 +652,6 @@ void heurdataAddBoundChangeVar(
 /** returns the next unprocessed variable (last in, first out) with pending bound changes, or NULL */
 static
 SCIP_VAR* heurdataPopBoundChangeVar(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
@@ -758,8 +754,7 @@ SCIP_RETCODE varProcessBoundChanges(
       {
          SCIP_Real coeff;
          SCIP_Real coeffsquared;
-         assert(heurdata->rowvariances[rowpos] != SCIP_INVALID
-               && SCIPisFeasGE(scip, heurdata->rowvariances[rowpos], 0.0)); /*lint !e777 */
+         assert(heurdata->rowvariances[rowpos] != SCIP_INVALID && SCIPisFeasGE(scip, heurdata->rowvariances[rowpos], 0.0)); /*lint !e777 */
 
          coeff = colvals[r];
          coeffsquared = SQUARED(coeff);
@@ -916,7 +911,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
       SCIP_VAR* nextvar;
 
       /* pop the next variable from the queue and process its bound changes */
-      nextvar = heurdataPopBoundChangeVar(scip, heurdata);
+      nextvar = heurdataPopBoundChangeVar(heurdata);
       assert(nextvar != NULL);
       SCIP_CALL( varProcessBoundChanges(scip, heurdata, nextvar) );
    }
@@ -943,12 +938,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
    assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand)));
    assert(0 <= varindex && varindex < heurdata->varpossmemsize);
 
-   assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
-      == (heurdata->currentubs[varindex] == SCIP_INVALID));/*lint !e777 doesn't like comparing floats for equality */
-   assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
-      || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(cand), heurdata->currentlbs[varindex])); /*lint !e777 */
-   assert((heurdata->currentubs[varindex] == SCIP_INVALID)
-      || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(cand), heurdata->currentubs[varindex])); /*lint !e777 */
+   assert((heurdata->currentlbs[varindex] == SCIP_INVALID) == (heurdata->currentubs[varindex] == SCIP_INVALID));/*lint !e777 doesn't like comparing floats for equality */
+   assert((heurdata->currentlbs[varindex] == SCIP_INVALID) || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(cand), heurdata->currentlbs[varindex])); /*lint !e777 */
+   assert((heurdata->currentubs[varindex] == SCIP_INVALID) || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(cand), heurdata->currentubs[varindex])); /*lint !e777 */
 
    /* if the heuristic has not captured the variable bounds yet, this can be done now */
    if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 */
@@ -1030,7 +1022,7 @@ SCIP_DECL_EVENTEXEC(eventExecDistribution)
    var = SCIPeventGetVar(event);
 
    /* add the variable to the queue of unprocessed variables; method itself ensures that every variable is added at most once */
-   heurdataAddBoundChangeVar(scip, heurdata, var);
+   heurdataAddBoundChangeVar(heurdata, var);
 
    return SCIP_OKAY;
 }

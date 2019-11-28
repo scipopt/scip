@@ -1690,7 +1690,7 @@ SCIP_RETCODE GUBconsCreate(
 
 /** frees GUB constraint */
 static
-SCIP_RETCODE GUBconsFree(
+void GUBconsFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_GUBCONS**        gubcons             /**< pointer to GUB constraint data structure */
    )
@@ -1704,8 +1704,6 @@ SCIP_RETCODE GUBconsFree(
    SCIPfreeBufferArray(scip, &(*gubcons)->gubvarsstatus);
    SCIPfreeBufferArray(scip, &(*gubcons)->gubvars);
    SCIPfreeBuffer(scip, gubcons);
-
-   return SCIP_OKAY;
 }
 
 /** adds variable to given GUB constraint */
@@ -1836,7 +1834,7 @@ SCIP_RETCODE GUBsetMoveVar(
 #endif
 
       /* free old GUB constraint */
-      SCIP_CALL( GUBconsFree(scip, &gubset->gubconss[oldgubcons]) );
+      GUBconsFree(scip, &gubset->gubconss[oldgubcons]);
 
       /* if empty GUB was not the last one in GUB set data structure, replace it by last GUB constraint */
       if( oldgubcons != gubset->ngubconss-1 )
@@ -1962,7 +1960,7 @@ SCIP_RETCODE GUBsetCreate(
 
 /** frees GUB set data structure */
 static
-SCIP_RETCODE GUBsetFree(
+void GUBsetFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_GUBSET**         gubset              /**< pointer to GUB set data structure */
    )
@@ -1980,7 +1978,7 @@ SCIP_RETCODE GUBsetFree(
    for( i = (*gubset)->ngubconss-1; i >= 0; --i )
    {
       assert((*gubset)->gubconss[i] != NULL);
-      SCIP_CALL( GUBconsFree(scip, &(*gubset)->gubconss[i]) );
+      GUBconsFree(scip, &(*gubset)->gubconss[i]);
    }
 
    /* free allocated memory */
@@ -1989,8 +1987,6 @@ SCIP_RETCODE GUBsetFree(
    SCIPfreeBufferArray( scip, &(*gubset)->gubconsstatus );
    SCIPfreeBufferArray( scip, &(*gubset)->gubconss );
    SCIPfreeBuffer(scip, gubset);
-
-   return SCIP_OKAY;
 }
 
 #ifndef NDEBUG
@@ -3038,10 +3034,9 @@ SCIP_RETCODE getLiftingSequenceGUB(
    }
 
    /* sorts C1, F, C2 and R */
-   if( nvarsC1 > 0 )
-   {
-      SCIPsortRealInt(sortkeysC1, varsC1, nvarsC1);
-   }
+   assert(nvarsC1 > 0);
+   SCIPsortRealInt(sortkeysC1, varsC1, nvarsC1);
+
    if( nvarsC2 > 0 )
    {
       SCIPsortDownRealInt(sortkeysC2, varsC2, nvarsC2);
@@ -5597,7 +5592,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
          SCIPdebugMsg(scip, "   LMCI1-GUB terminated by no variable with fractional LP value.\n");
 
          /* frees memory for GUB set data structure */
-         SCIP_CALL( GUBsetFree(scip, &gubset) );
+         GUBsetFree(scip, &gubset);
 
          goto TERMINATE;
       }
@@ -5629,7 +5624,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
       }
 
       /* frees memory for GUB set data structure */
-      SCIP_CALL( GUBsetFree(scip, &gubset) );
+      GUBsetFree(scip, &gubset);
    }
    else
    {
@@ -6050,7 +6045,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
     *  - scale a~_j = a_j * intscalar
     *  - substitute x~_j = 1 - x_j if a~_j < 0
     */
-   rhs = rhs*intscalar;
+   rhs = rhs * intscalar;
 
    SCIPdebugMsg(scip, " -> rhs = %.15g\n", rhs);
    minact = 0;
@@ -6060,7 +6055,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
       SCIP_VAR* var;
       SCIP_Longint val;
 
-      val = (SCIP_Longint)SCIPfloor(scip, binvals[i]*intscalar);
+      val = (SCIP_Longint)SCIPfloor(scip, binvals[i] * intscalar);
       if( val == 0 )
          continue;
 
@@ -6075,7 +6070,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          assert(val < 0);
 
          SCIP_CALL( SCIPgetNegatedVar(scip, binvars[i], &var) );
-         val = -val;
+         val = -val;  /*lint !e2704*/
          rhs += val;
          SCIPdebugMsg(scip, " -> negative scaled binary variable %+" SCIP_LONGINT_FORMAT "<%s> (unscaled %.15g): substituted by (1 - <%s>) (rhs=%.15g)\n",
             -val, SCIPvarGetName(binvars[i]), binvals[i], SCIPvarGetName(var), rhs);
@@ -11885,7 +11880,7 @@ SCIP_RETCODE createNormalizedKnapsack(
       else
       {
          SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &transvars[v]) );
-         weights[v] = -weight;
+         weights[v] = -weight; /*lint !e2704*/
          capacity -= weight;
       }
       assert(transvars[v] != NULL);
@@ -12448,7 +12443,7 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
    else
       *result = SCIP_DIDNOTFIND;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** presolving method of constraint handler */
@@ -13518,6 +13513,7 @@ SCIP_RETCODE SCIPaddCoefKnapsack(
    )
 {
    assert(var != NULL);
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13537,6 +13533,8 @@ SCIP_Longint SCIPgetCapacityKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13562,6 +13560,8 @@ SCIP_RETCODE SCIPchgCapacityKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13591,6 +13591,8 @@ int SCIPgetNVarsKnapsack(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
@@ -13611,6 +13613,8 @@ SCIP_VAR** SCIPgetVarsKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13633,6 +13637,8 @@ SCIP_Longint* SCIPgetWeightsKnapsack(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a knapsack constraint\n");
@@ -13653,6 +13659,8 @@ SCIP_Real SCIPgetDualsolKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13677,6 +13685,8 @@ SCIP_Real SCIPgetDualfarkasKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13703,6 +13713,8 @@ SCIP_ROW* SCIPgetRowKnapsack(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

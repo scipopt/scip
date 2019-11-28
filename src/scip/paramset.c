@@ -64,6 +64,7 @@ SCIP_RETCODE paramTestFixed(
    )
 {  /*lint --e{715}*/
    assert(param != NULL);
+   assert(messagehdlr != NULL);
 
    if( param->isfixed )
    {
@@ -84,6 +85,7 @@ SCIP_RETCODE paramTestBool(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_BOOL);
+   assert(messagehdlr != NULL);
 
    if( value != TRUE && value != FALSE )
    {
@@ -104,6 +106,7 @@ SCIP_RETCODE paramTestInt(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_INT);
+   assert(messagehdlr != NULL);
 
    if( value < param->data.intparam.minvalue || value > param->data.intparam.maxvalue )
    {
@@ -125,6 +128,7 @@ SCIP_RETCODE paramTestLongint(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_LONGINT);
+   assert(messagehdlr != NULL);
 
    if( value < param->data.longintparam.minvalue || value > param->data.longintparam.maxvalue )
    {
@@ -146,6 +150,7 @@ SCIP_RETCODE paramTestReal(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_REAL);
+   assert(messagehdlr != NULL);
 
    if( value < param->data.realparam.minvalue || value > param->data.realparam.maxvalue )
    {
@@ -167,6 +172,7 @@ SCIP_RETCODE paramTestChar(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_CHAR);
+   assert(messagehdlr != NULL);
 
    if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
    {
@@ -205,6 +211,7 @@ SCIP_RETCODE paramTestString(
 
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_STRING);
+   assert(messagehdlr != NULL);
 
    if( value == NULL )
    {
@@ -235,6 +242,7 @@ SCIP_RETCODE paramWrite(
    )
 {
    assert(param != NULL);
+   assert(messagehdlr != NULL);
 
    /* write parameters at default values only, if the onlychanged flag is not set or if the parameter is fixed */
    if( onlychanged && SCIPparamIsDefault(param) && !SCIPparamIsFixed(param) )
@@ -2942,7 +2950,7 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
       if( SCIPheurUsesSubscip(heurs[i]) )
       {
          char paramname[SCIP_MAXSTRLEN];
-         sprintf(paramname, "heuristics/%s/freq", SCIPheurGetName(heurs[i]));
+         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heurs[i]));
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, -1, quiet) );
       }
    }
@@ -4268,6 +4276,7 @@ SCIP_Bool SCIPparamIsValidBool(
    SCIP_Bool             value               /**< value to check */
    )
 {  /*lint --e{715}*/
+   assert(param != NULL);
    return ( value == TRUE || value == FALSE );
 }
 
@@ -4337,6 +4346,8 @@ SCIP_Bool SCIPparamIsValidString(
    )
 {  /*lint --e{715}*/
    unsigned int i;
+
+   assert(param != NULL);
 
    for( i = 0; i < (unsigned int) strlen(value); ++i )
    {

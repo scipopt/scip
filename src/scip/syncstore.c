@@ -16,7 +16,7 @@
 /**@file   syncstore.c
  * @ingroup PARALLEL
  * @brief  the function definitions of the synchronization store
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stephen J. Maher
  */
 
