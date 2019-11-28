@@ -1352,7 +1352,7 @@ SCIP_RETCODE nodeRepropagate(
 
    /* propagate the domains again */
    oldnboundchgs = stat->nboundchgs;
-   SCIP_CALL( SCIPpropagateDomains(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
+   SCIP_CALL( SCIPpropagateDomains(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
          eventqueue, conflict, cliquetable, SCIPnodeGetDepth(node), 0, SCIP_PROPTIMING_ALWAYS, cutoff) );
    assert(!node->reprop || *cutoff);
    assert(node->parent == NULL || node->repropsubtreemark == node->parent->repropsubtreemark);
@@ -4281,6 +4281,7 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(tree != NULL);
    assert(!SCIPtreeProbing(tree));
    assert(lp != NULL);
+   assert(conflictstore != NULL);
    assert(cutoff != NULL);
 
    SCIPsetDebugMsg(set, "focusing node #%" SCIP_LONGINT_FORMAT " of type %d in depth %d\n",

@@ -100,6 +100,8 @@ Features
 - To save memory, it is now possible to remove all variables from the internal symmetry data structures that are
   not affected by any symmetry.
 
+- Add integration of external MILP presolve library as a SCIP presolver plugin that runs on MILP problems
+
 Performance improvements
 ------------------------
 
@@ -159,6 +161,7 @@ Interface changes
   + now for all lp interfaces consistent requirements on SCIP_LPPAR:
     LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
+  + add interface to Glop
 - Symmetry:
   + removed method SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
@@ -182,6 +185,7 @@ Interface changes
   - removed SCIPbenderscutGetNAddedCuts() and SCIPbenderscutGetAddedCutData()
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
+  and new arguments to count statistics when doing a clean-up of inactive variables in the constraints before building the matrix
 
 - new argument "threadsafe" in SCIPcopy(), SCIPcopyConsCompression(), SCIPcopyOrig(), SCIPcopyOrigConsCompression and
   SCIPcopyBenders(). This argument must only be set to TRUE if the source and target SCIP instances are to be solved in
@@ -238,6 +242,7 @@ Interface changes
 - new API function SCIPisConvexConsQuadratic() to check whether a quadratic constraint is convex when a given set of variables would be fixed
 - new API functions SCIPgetLPFeastol(), SCIPsetLPFeastol(), and SCIPresetLPFeastol() to get, set, and reset (to the default), respectively, the primal
   feasibility tolerance for the LP relaxation
+- new API functions SCIPcleanupConss{Linear,Varbound,Setppc,Logicor,Knapsack}() to clean up inactive variables from those types of linear constraints
 
 
 ### Command line interface
@@ -342,7 +347,10 @@ Interface changes
 
 - new parameter conflict/uselocalrows (default: TRUE) to incorporate locally valid cuts / rows for dual proof analysis
 
+- new return code SCIP_NOTIMPLEMENTED for functions, e.g., in the LPI that have not been implemented (yet)
+
 - new parameter separating/cgmip/genprimalsols that allows to generate initial primal solutions from Gomory cuts
+
 
 ### Data structures
 

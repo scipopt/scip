@@ -619,7 +619,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
 
    SCIPdebugMsg(scip, "objpscostdiving heuristic finished\n");
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 

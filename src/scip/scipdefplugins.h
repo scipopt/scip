@@ -152,6 +152,9 @@
 #include "scip/presol_gateextraction.h"
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
+#ifdef SCIP_WITH_PRESOLVELIB
+#include "scip/presol_milp.h"
+#endif
 #include "scip/presol_redvub.h"
 #include "scip/presol_qpkktref.h"
 #include "scip/presol_trivial.h"

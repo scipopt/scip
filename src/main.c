@@ -38,6 +38,7 @@
 #include "scip/scipshell.h"
 #include "scip/interrupt.h"
 
+/** callback function for handling signals */ /*lint -e715*/
 static
 void handleSigterm(
    int                   signum              /**< signal code */

@@ -95,9 +95,7 @@ SCIP_RETCODE constructValidSolution(
    int nsubproblems;
    int i;
    int j;
-   SCIP_Bool success;
-
-   success = TRUE;
+   SCIP_Bool success = TRUE;
 
    /* don't propose new solutions if not in presolve or solving */
    if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
@@ -119,18 +117,18 @@ SCIP_RETCODE constructValidSolution(
    {
       switch( type )
       {
-         case SCIP_BENDERSENFOTYPE_LP:
-            SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
-            break;
-         case SCIP_BENDERSENFOTYPE_PSEUDO:
-            SCIP_CALL( SCIPcreatePseudoSol(scip, &newsol, NULL) );
-            break;
-         case SCIP_BENDERSENFOTYPE_RELAX:
-            SCIP_CALL( SCIPcreateRelaxSol(scip, &newsol, NULL) );
-            break;
-         default:
-            SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
-            break;
+      case SCIP_BENDERSENFOTYPE_LP:
+         SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+         break;
+      case SCIP_BENDERSENFOTYPE_PSEUDO:
+         SCIP_CALL( SCIPcreatePseudoSol(scip, &newsol, NULL) );
+         break;
+      case SCIP_BENDERSENFOTYPE_RELAX:
+         SCIP_CALL( SCIPcreateRelaxSol(scip, &newsol, NULL) );
+         break;
+      default:
+         SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+         break;
       }  /*lint !e788*/
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
@@ -166,7 +164,7 @@ SCIP_RETCODE constructValidSolution(
    }
 
    /* if setting the variable values was successful, then we try to add the solution */
-   if( success )
+   if( success ) /*lint !e774*/
    {
       /* checking the size of the checkedsols array and extending it is there is not enough memory */
       assert(conshdlrdata->ncheckedsols <= conshdlrdata->checkedsolssize);
