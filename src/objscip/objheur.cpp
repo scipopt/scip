@@ -247,6 +247,7 @@ scip::ObjHeur* SCIPgetObjHeur(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 

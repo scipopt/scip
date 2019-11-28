@@ -2895,7 +2895,7 @@ SCIP_RETCODE collectCliqueConss(
       }
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 /** creating all necessary data in array structure, collect all clique constraint variables and occurrences,
@@ -6439,7 +6439,7 @@ SCIP_RETCODE fixAdditionalVars(
 
       assert(v1 < consdata1->nvars);
       index0 = SCIPvarGetIndex(consdata0->vars[v0]);
-      for( ; SCIPvarGetIndex(consdata1->vars[v1]) < index0 && !(*cutoff); ++v1 )
+      for( ; SCIPvarGetIndex(consdata1->vars[v1]) < index0 && !(*cutoff); ++v1 ) /*lint !e445*/
       {
          SCIP_Bool fixed;
 
@@ -8024,7 +8024,7 @@ SCIP_DECL_CONSPROP(consPropSetppc)
    else if( nfixedvars > 0 )
       *result = SCIP_REDUCEDDOM;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 
@@ -9246,6 +9246,8 @@ int SCIPgetNVarsSetppc(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
@@ -9266,6 +9268,8 @@ SCIP_VAR** SCIPgetVarsSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9288,6 +9292,8 @@ SCIP_SETPPCTYPE SCIPgetTypeSetppc(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
@@ -9307,6 +9313,8 @@ SCIP_Real SCIPgetDualsolSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9331,6 +9339,8 @@ SCIP_Real SCIPgetDualfarkasSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9358,6 +9368,8 @@ SCIP_ROW* SCIPgetRowSetppc(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
@@ -9378,6 +9390,8 @@ int SCIPgetNFixedonesSetppc(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -9401,6 +9415,8 @@ int SCIPgetNFixedzerosSetppc(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
@@ -9413,4 +9429,3 @@ int SCIPgetNFixedzerosSetppc(
 
    return consdata->nfixedzeros;
 }
-

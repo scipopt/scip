@@ -930,7 +930,7 @@ int branch(
          nVcurrent = selectadjnodes(tcliquegraph, branchingnode, V, nValive, Vcurrent);
 
          /* process the selected subtree */
-         backtracklevel = branch(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph, newsol, tcliquedata,
+         backtracklevel = branch(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph, newsol, tcliquedata, /*lint !e838*/
             mem, cliquehash, buffer,
             level, Vcurrent, nVcurrent, Vzero, nVzero, gsd, iscolored, K, weightK,
             maxcliquenodes, nmaxcliquenodes, maxcliqueweight,
@@ -1135,4 +1135,4 @@ void tcliqueMaxClique(
    BMSfreeMemoryArray(&buffer);
    if( newsol != NULL )
       freeCliquehash(&cliquehash);
-}
+}  /*lint !e438*/

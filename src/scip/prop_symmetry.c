@@ -180,8 +180,8 @@
 #define COMPRESSNVARSLB             25000    /**< lower bound on the number of variables above which compression could be performed */
 
 /* macros for getting activeness of symmetry handling methods */
-#define ISSYMRETOPESACTIVE(x)      ((x & SYM_HANDLETYPE_SYMBREAK) != 0)
-#define ISORBITALFIXINGACTIVE(x)   ((x & SYM_HANDLETYPE_ORBITALFIXING) != 0)
+#define ISSYMRETOPESACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_SYMBREAK) != 0)
+#define ISORBITALFIXINGACTIVE(x)   (((unsigned) x & SYM_HANDLETYPE_ORBITALFIXING) != 0)
 
 
 
@@ -529,7 +529,6 @@ SCIP_DECL_SORTINDCOMP(SYMsortMatCoef)
 /** checks that symmetry data is all freed */
 static
 SCIP_Bool checkSymmetryDataFree(
-   SCIP*                 scip,               /**< SCIP pointer */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
@@ -714,7 +713,7 @@ SCIP_RETCODE freeSymmetryData(
    }
    propdata->nperms = -1;
 
-   assert( checkSymmetryDataFree(scip, propdata) );
+   assert( checkSymmetryDataFree(propdata) );
 
    propdata->computedsymmetry = FALSE;
    propdata->compressed = FALSE;
@@ -2111,7 +2110,7 @@ SCIP_RETCODE determineSymmetry(
    int maxgenerators;
    int nhandleconss;
    int nconss;
-   int type = 0;
+   unsigned int type = 0;
    int nvars;
    int j;
    int p;
@@ -2271,7 +2270,7 @@ SCIP_RETCODE determineSymmetry(
    /* return if not successful */
    if ( ! successful )
    {
-      assert( checkSymmetryDataFree(scip, propdata) );
+      assert( checkSymmetryDataFree(propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) could not compute symmetry\n", SCIPgetSolvingTime(scip));
 
       propdata->ofenabled = FALSE;
@@ -2283,7 +2282,7 @@ SCIP_RETCODE determineSymmetry(
    /* return if no symmetries found */
    if ( propdata->nperms == 0 )
    {
-      assert( checkSymmetryDataFree(scip, propdata) );
+      assert( checkSymmetryDataFree(propdata) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present\n", SCIPgetSolvingTime(scip));
 
       propdata->ofenabled = FALSE;
@@ -2640,7 +2639,7 @@ SCIP_RETCODE detectOrbitopes(
             ++nusedperms;
             coltoextend = nfilledcols;
             columnorder[nfilledcols++] = -1; /* mark column to be filled from the left */
-            j = 0; /* reset j since previous permutations can now intersect with the latest added column */
+            j = 0; /*lint !e850*/ /* reset j since previous permutations can now intersect with the latest added column */
          }
       }
 
@@ -2674,7 +2673,7 @@ SCIP_RETCODE detectOrbitopes(
             coltoextend = nfilledcols;
             columnorder[nfilledcols] = 1; /* mark column to be filled from the right */
             ++nfilledcols;
-            j = 0; /* reset j since previous permutations can now intersect with the latest added column */
+            j = 0; /*lint !e850*/ /* reset j since previous permutations can now intersect with the latest added column */
          }
       }
 

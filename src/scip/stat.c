@@ -857,6 +857,8 @@ void SCIPstatDebugMessagePrint(
 {  /*lint --e{715}*/
    va_list ap;
 
+   assert(stat != NULL);
+
    va_start(ap, formatstr); /*lint !e838*/
    printf(formatstr, ap);
    va_end(ap);
