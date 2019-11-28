@@ -28,7 +28,6 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
-#include "scip/dcmp.h"
 #include "scip/debug.h"
 #include "scip/heur_padm.h"
 #include "scip/heuristics.h"
@@ -958,7 +957,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    {
       /* create new decomposition; don't change the decompositions in the decompstore */
       SCIP_DECOMP* newdecomp = NULL;
-      SCIP_CALL( SCIPdecompCreate(&newdecomp, SCIPblkmem(scip), nblocks, heurdata->original, SCIPdecompUseBendersLabels(decomp)) );
+      SCIP_CALL( SCIPcreateDecomp(scip, &newdecomp, nblocks, heurdata->original, SCIPdecompUseBendersLabels(decomp)) );
 
       SCIP_CALL( assignLinking(scip, decomp, newdecomp, vars, sortedconss, varlabels, conslabels, nvars, nconss) );
       decomp = newdecomp;
@@ -967,7 +966,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       nblocks = SCIPdecompGetNBlocks(decomp);
 
       /* new decomp can already be deleted here because we don't need it anymore */
-      SCIPdecompFree(&newdecomp, SCIPblkmem(scip));
+      SCIPfreeDecomp(scip, &newdecomp);
    }
 
    if( conslabels[0] == SCIP_DECOMP_LINKCONS )
