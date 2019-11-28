@@ -157,8 +157,8 @@ SCIP_DECL_HASHKEYVAL(indexesHashval)
    BLOCKINFO* binfo;
    binfo = (BLOCKINFO*) key;
 
-   return SCIPhashFour(SCIPrealHashCode(binfo->block), SCIPrealHashCode(binfo->otherblock),
-                        SCIPrealHashCode(binfo->linkVarIdx), SCIPrealHashCode(binfo->linkVarIdx));
+   return SCIPhashFour(SCIPrealHashCode((double)binfo->block), SCIPrealHashCode((double)binfo->otherblock),
+                        SCIPrealHashCode((double)binfo->linkVarIdx), SCIPrealHashCode((double)binfo->linkVarIdx));
 }
 
 /** primal heuristic data */
@@ -600,7 +600,7 @@ SCIP_RETCODE reuseSolution(
       solval = SCIPgetSolVal(subscip, sol, consvars[0]);
 
       side = SCIPgetRhsLinear(subscip, block->couplingcons[c]);
-      assert(SCIPgetRhsLinear(subscip, block->couplingcons[c]) == SCIPgetLhsLinear(subscip, block->couplingcons[c]));
+      assert(SCIPisEQ(subscip, SCIPgetRhsLinear(subscip, block->couplingcons[c]), SCIPgetLhsLinear(subscip, block->couplingcons[c])));
 
       diff = side - solval;
 
