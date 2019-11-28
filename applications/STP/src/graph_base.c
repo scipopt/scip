@@ -2269,15 +2269,16 @@ SCIP_Bool graph_sol_unreduced(
    const int*            result              /**< solution array, indicating whether an edge is in the solution */
    )
 {
-   const int nedges = graph->edges;
+   const int nedges = graph_get_nEdges(graph);
 
    assert(scip != NULL);
-   assert(graph != NULL);
    assert(result != NULL);
 
    for( int i = 0; i < nedges; i++ )
+   {
       if( result[i] == CONNECT && graph->oeat[i] == EAT_FREE )
          return FALSE;
+   }
 
    return TRUE;
 }
@@ -3845,6 +3846,7 @@ SCIP_Bool graph_valid(
          && g->stp_type != STP_PCSPG && g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP )
       {
          isValid = FALSE;
+         graph_knot_printInfo(g, k);
          SCIPdebugMessage("*** Graph invalid: Knot %d not connected\n", k);
 
          goto EXIT;

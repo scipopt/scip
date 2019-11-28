@@ -24,7 +24,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -100,7 +100,7 @@ SCIP_RETCODE computeDualSolutionGuided(
 
    if( STP_RPCSPG == graph->stp_type )
    {
-      printf("RPC: add %f to dual objective \n", graph_pc_getNonLeafTermOffset(scip, graph));
+      SCIPdebugMessage("RPC: add %f to dual objective \n", graph_pc_getNonLeafTermOffset(scip, graph));
 
       *dualobjval += graph_pc_getNonLeafTermOffset(scip, graph);
    }
@@ -127,7 +127,7 @@ SCIP_RETCODE computeDualSolution(
 
    if( STP_RPCSPG == graph->stp_type )
    {
-      printf("RPC: add %f to dual objective \n", graph_pc_getNonLeafTermOffset(scip, graph));
+      SCIPdebugMessage("RPC: add %f to dual objective \n", graph_pc_getNonLeafTermOffset(scip, graph));
 
       *dualobjval += graph_pc_getNonLeafTermOffset(scip, graph);
    }
@@ -565,6 +565,7 @@ SCIP_RETCODE updateNodeReplaceBounds(
    return SCIP_OKAY;
 }
 
+
 /** updates edge fixing bounds for reduced cost fixings */
 static
 void updateEdgeFixingBounds(
@@ -573,7 +574,7 @@ void updateEdgeFixingBounds(
    const SCIP_Real*      cost,               /**< reduced costs */
    const SCIP_Real*      pathdist,           /**< shortest path distances  */
    const PATH*           vnoi,               /**< Voronoi paths  */
-   SCIP_Real             lpobjval,            /**< LP objective  */
+   SCIP_Real             lpobjval,           /**< LP objective  */
    int                   extnedges,          /**< number of edges for extended problem */
    SCIP_Bool             initialize,         /**< initialize fixing bounds? */
    SCIP_Bool             undirected          /**< only consider undirected edges */
@@ -647,7 +648,7 @@ int reduceWithNodeFixingBounds(
 )
 {
    int nfixed = 0;
-   int nnodes = graph->knots;
+   const int nnodes = graph->knots;
 
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
 
@@ -661,12 +662,15 @@ int reduceWithNodeFixingBounds(
       if( SCIPisLT(scip, upperbound, fixingbounds[k]) )
       {
          SCIPdebugMessage("delete knot %d %f < %f %d\n", k, upperbound, fixingbounds[k], graph->grad[k]);
+         nfixed++;
 
          graph_knot_del(scip, graph, k, TRUE);
+
          if( transgraph != NULL )
             graph_knot_del(scip, transgraph, k, FALSE);
       }
    }
+
    return nfixed;
 }
 
@@ -814,7 +818,7 @@ int reduceWithEdgeFixingBounds(
             if( !solgiven || result[e] == CONNECT || result[erev] == CONNECT )
                delete = (SCIPisLT(scip, upperbound, fixingbounds[e]) && SCIPisLT(scip, upperbound, fixingbounds[erev]));
             else
-               delete = (upperbound <= fixingbounds[e] && upperbound <= fixingbounds[erev]);
+               delete = (SCIPisLE(scip, upperbound, fixingbounds[e]) && SCIPisLE(scip, upperbound, fixingbounds[erev]));
 
             if( delete )
             {
@@ -823,8 +827,10 @@ int reduceWithEdgeFixingBounds(
                SCIPdebugMessage("delete edge %d \n", e);
 
                graph_edge_del(scip, graph, e, TRUE);
+
                if( transgraph != NULL )
                   graph_edge_del(scip, transgraph, e, FALSE);
+
                nfixed++;
             }
          }
@@ -1739,7 +1745,6 @@ SCIP_RETCODE reduceRootedProb(
 )
 {
    int* incidents = NULL;
-   const int nedges = graph->edges;
    const int nnodes = graph->knots;
    const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
    const SCIP_Bool keepsol = (solgiven && SCIPisZero(scip, minpathcost));
@@ -1747,26 +1752,22 @@ SCIP_RETCODE reduceRootedProb(
    if( rpc )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &incidents, nnodes) );
+
 #ifndef NDEBUG
       assert(!graph->extended);
       for( int k = 0; k < nnodes; k++ )
+      {
          if( Is_pseudoTerm(graph->term[k]) )
             assert(!graph->mark[k] && graph->grad[k] == 2);
+         else
+            assert(graph->mark[k] || graph->grad[k] == 0);
+      }
 #endif
    }
 
    if( solgiven )
    {
-      for( int k = 0; k < nnodes; k++ )
-         nodearrchar[k] = FALSE;
-      for( int e = 0; e < nedges; e++ )
-      {
-         if( result[e] == CONNECT )
-         {
-            nodearrchar[graph->tail[e]] = TRUE;
-            nodearrchar[graph->head[e]] = TRUE;
-         }
-      }
+      graph_sol_setVertexFromEdge(graph, result, nodearrchar);
    }
 
    /* main loop: try to reduce */
@@ -1785,6 +1786,9 @@ SCIP_RETCODE reduceRootedProb(
       if( rpc && Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) && !graph_pc_termIsNonLeafTerm(graph, k)
          && SCIPisGT(scip, redcost, minpathcost) )
       {
+#if 1
+         graph_pc_deleteTerm(scip, graph, k);
+#else
          const int twinterm = graph_pc_getTwinTerm(graph, k);
          int incidcount = 0;
 
@@ -1813,9 +1817,11 @@ SCIP_RETCODE reduceRootedProb(
          }
 
          assert(graph->grad[k] == 1 && graph->outbeg[k] == graph->term2edge[k] && twinterm == graph_pc_getTwinTerm(graph, k));
+#endif
          continue;
       }
 
+      /* note: if we want to keep the solution we cannot just delete vertices */
       if( !Is_term(graph->term[k]) && !keepsol &&
          (SCIPisGT(scip, redcost, minpathcost) || (solgiven && SCIPisEQ(scip, redcost, minpathcost) && !nodearrchar[k])) )
       {
@@ -1857,13 +1863,9 @@ SCIP_RETCODE reduceRootedProb(
       }
    }
 
-   for( int k = 0; k < nnodes; k++ )
-      if( graph->grad[k] == 0 && k != root )
-         graph->mark[k] = FALSE;
-
    SCIPfreeBufferArrayNull(scip, &incidents);
 
-   return SCIP_OKAY;;
+   return SCIP_OKAY;
 }
 
 /** reduce PCSTP or MWCS graph based on information from dual ascent and given upper bound  */
@@ -2087,6 +2089,8 @@ SCIP_RETCODE reduce_da(
 
    assert(ub && scip && graph && nelims && nodearrint);
    assert(graph_valid_ancestors(scip, graph));
+   assert(graph_valid(scip, graph));
+
    assert(!rpc || !graph->extended);
 
    if( graph->terms <= 2 )
@@ -2176,7 +2180,7 @@ SCIP_RETCODE reduce_da(
          minpathcost = upperbound - lpobjval;
          assert(SCIPisGE(scip, minpathcost, 0.0));
 
-         SCIPdebugMessage("upper: %f lower: %f \n", upperbound, lpobjval);
+         SCIPdebugMessage("upper=%f lower=%f (round=%d, outerround=%d)\n", upperbound, lpobjval, run, outerrounds);
 
          if( rpc )
             graph_pc_2org(scip, graph);
@@ -2196,6 +2200,7 @@ SCIP_RETCODE reduce_da(
          if( !SCIPisZero(scip, minpathcost) )
          {
             ndeletions += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
+            havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
             ndeletions += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havenewsol ? result : NULL), upperbound);
          }
 
@@ -2206,7 +2211,7 @@ SCIP_RETCODE reduce_da(
        //     printf("newly fixedFIRST =%d \n", extfixed);
          }
 
-         if( extended )
+         if( extended && 0 )
          {
             int todo;
             int extfixed;
@@ -2237,8 +2242,15 @@ SCIP_RETCODE reduce_da(
                   lpobjval, upperbound, daroot, (run == 0), extended && !rpc));
 
          if( ndeletions > 0 )
+         {
             SCIP_CALL(level0(scip, graph));
 
+            if( rpc )
+            {
+               int dummy;
+               SCIP_CALL( reduce_simple_pc(scip, NULL, graph, offsetp, &dummy, NULL, NULL) );
+            }
+         }
          assert(graph_valid(scip, graph));
 
          if( !rpc )
@@ -2248,7 +2260,7 @@ SCIP_RETCODE reduce_da(
 
       } /* root loop */
 
-      if( !directed && !SCIPisZero(scip, minpathcost) && nodereplacing )
+      if( !directed && !SCIPisZero(scip, minpathcost) && nodereplacing && 0 )
       {
          const int nreplacings = reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
          ndeletions += nreplacings;

@@ -2474,9 +2474,12 @@ int graph_pc_deleteTerm(
 {
    int grad = g->grad[term];
 
-   assert(g && scip && g->term2edge);
+   assert(g && scip);
+   assert(g->term2edge && g->prize);
    assert(graph_pc_isPcMw(g));
    assert(Is_term(g->term[term]));
+   assert(!graph_pc_knotIsFixedTerm(g, term));
+
    assert(term != g->source);
 
    if( !g->extended && graph_pc_termIsNonLeafTerm(g, term) )
@@ -2491,29 +2494,35 @@ int graph_pc_deleteTerm(
 
       /* delete terminal */
 
-      graph_pc_knotToNonTermProperty(g, term);
-      g->mark[term] = FALSE;
-
       while( (e = g->outbeg[term]) != EAT_LAST )
       {
          const int i1 = g->head[e];
 
          if( Is_pseudoTerm(g->term[i1]) && g->source != i1 )
             twin = g->head[e];
+
          graph_edge_del(scip, g, e, TRUE);
       }
 
       assert(g->grad[term] == 0);
       assert(twin != UNKNOWN);
+      assert(twin == graph_pc_getTwinTerm(g, term));
 
-      /* delete artificial terminal */
+      graph_pc_knotToNonTermProperty(g, term);
+
+      /* delete twin */
 
       graph_pc_knotToNonTermProperty(g, twin);
       g->mark[twin] = FALSE;
       grad += g->grad[twin] - 1;
 
       graph_knot_del(scip, g, twin, TRUE);
+
+      g->prize[twin] = 0.0;
    }
+
+   g->mark[term] = FALSE;
+   g->prize[term] = 0.0;
 
    return grad;
 }

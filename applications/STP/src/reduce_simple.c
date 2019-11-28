@@ -1279,6 +1279,26 @@ SCIP_RETCODE reduce_simple_pc(
    if( !pc )
       g->mark[g->source] = FALSE;
 
+
+#if 0
+   for( int i = 0; i < nnodes; i++ )
+   {
+      assert(!(g->mark[i] && Is_pseudoTerm(g->term[i])));
+
+      if( (!g->mark[i] || g->grad[i] == 0) && !graph_pc_knotIsNonLeafTerm(g, i) && i != g->source )
+      {
+         if( Is_term(g->term[i]) )
+         {
+            graph_knot_printInfo(g, i);
+            graph_printInfo(g);
+            printf("g->mark[i]=%d \n", g->mark[i]);
+         }
+
+      }
+   }
+#endif
+
+
    /* main loop */
    while( rerun )
    {
