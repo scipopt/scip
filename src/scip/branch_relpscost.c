@@ -256,12 +256,12 @@ SCIP_RETCODE filterSymmetricVariables(
    assert( branchruledata->norbits < branchruledata->npermvars );
 
    /* init representatives (used to see whether variable is the first in an orbit) */
-   for(i = 0; i < branchruledata->norbits; ++i)
+   for( i = 0; i < branchruledata->norbits; ++i )
       branchruledata->orbitrep[i] = -1;
 
    /* loop through branching variables, determine orbit and whether they are the first ones */
    *nbranchcands = 0;
-   for(i = 0; i < norigbranchcands; ++i)
+   for( i = 0; i < norigbranchcands; ++i )
    {
       int orbitidx = -1;
       int varidx;
@@ -342,7 +342,7 @@ SCIP_RETCODE SCIPupdateVarPseudocostSymmetric(
    assert( 0 <= orbitidx && orbitidx < branchruledata->norbits );
 
    /* loop through orbit containing variable and update pseudo costs for all variables */
-   for(j = branchruledata->orbitbegins[orbitidx]; j < branchruledata->orbitbegins[orbitidx+1]; ++j)
+   for( j = branchruledata->orbitbegins[orbitidx]; j < branchruledata->orbitbegins[orbitidx+1]; ++j )
    {
       SCIP_VAR* var;
       int idx;
