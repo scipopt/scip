@@ -350,7 +350,7 @@ Interface changes
 
 - new parameter branching/relpscost/filtercandssym to allow filtering from orbits
 
-- new parameter branching/relpscost/transsympscost to transfer history information to orbit
+- new parameter branching/relpscost/transsympscost to transfer pseudo cost information to orbit
 
 
 ### Data structures
