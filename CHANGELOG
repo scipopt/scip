@@ -350,6 +350,8 @@ Interface changes
 
 ### Data structures
 
+- small changes in constants of hash functions
+
 ### Build system
 
 - The default value for DFLAGS in the non-cmake buildsystem has changed from -MM to -MMD. This will break the
