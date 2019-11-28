@@ -96,7 +96,7 @@
 
 /* symmetry handling */
 #define DEFAULT_FILTERCANDSSYM   FALSE       /**< Use symmetry to filter branching candidates? */
-#define DEFAULT_TRANSSYMPSCOST   FALSE       /**< Transfer pscost information to symmetric variables? */
+#define DEFAULT_TRANSSYMPSCOST   FALSE       /**< Transfer pscost information to symmetric variables if filtering is performed? */
 
 /** branching rule data */
 struct SCIP_BranchruleData
