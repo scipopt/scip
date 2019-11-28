@@ -359,7 +359,7 @@ void pcmwReduceTerm0Prize(
    {
       assert(graph_pc_isPcMw(g));
 
-      graph_pc_knotToNonTerm(g, i);
+      graph_pc_knotToNonTermProperty(g, i);
    }
    else
    {
@@ -379,7 +379,7 @@ void pcmwReduceTerm0Prize(
       assert(g->head[g->term2edge[i]] == t);
 
       /* i is not a terminal anymore */
-      graph_pc_knotToNonTerm(g, i);
+      graph_pc_knotToNonTermProperty(g, i);
 
       if( g->stp_type != STP_RPCSPG )
       {
@@ -388,7 +388,7 @@ void pcmwReduceTerm0Prize(
       }
 
       /* delete artificial terminal */
-      graph_pc_knotToNonTerm(g, t);
+      graph_pc_knotToNonTermProperty(g, t);
       graph_knot_del(scip, g, t, TRUE);
    }
 
@@ -488,7 +488,7 @@ SCIP_RETCODE pcmwReduceTermDeg1(
             assert(e2 != UNKNOWN);
 
             /* delete artificial terminal */
-            graph_pc_knotToNonTerm(g, t);
+            graph_pc_knotToNonTermProperty(g, t);
             while (g->outbeg[t] != EAT_LAST)
             {
                e = g->outbeg[t];
@@ -501,7 +501,7 @@ SCIP_RETCODE pcmwReduceTermDeg1(
             assert(g->grad[t] == 0);
 
             /* i is not a terminal anymore */
-            graph_pc_knotToNonTerm(g, i);
+            graph_pc_knotToNonTermProperty(g, i);
             graph_edge_del(scip, g, e2, TRUE);
 
             for (e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e])

@@ -173,14 +173,14 @@ void applyBranchHistoryToGraph(
          else if( graph_pc_isRootedPcMw(graph) )
          {
             assert(graph->term2edge[k] == TERM2EDGE_NOTERM);
-            graph_pc_knotToFixedTerm(graph, k);
+            graph_pc_knotToFixedTermProperty(graph, k);
          }
       }
       else if( nodestatenew[k] == BRANCH_STP_VERTEX_KILLED )
       {
          if( pcmw && Is_nonleafTerm(graph->term[k]) )
          {
-            graph_pc_knotToNonTerm(graph, k);
+            graph_pc_knotToNonTermProperty(graph, k);
             graph->prize[k] = 0.0;
          }
 

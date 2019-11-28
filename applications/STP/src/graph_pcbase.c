@@ -201,6 +201,67 @@ void setCostToOrgPc(
 }
 
 
+
+/* deletes dummy terminal to given node and edge from pseudo-root (if existent).
+ * Furthermore, makes i a non-terminal, if makeNonTerminal is set */
+static
+void termDeleteExtension(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int                   i,                  /**< index of the terminal */
+   SCIP_Bool             makeNonTerminal     /**< make i a non-terminal?*/
+   )
+{
+   int e;
+   int dummyterm;
+   const SCIP_Bool has_pseudoroot = !graph_pc_isRootedPcMw(g);
+
+   assert(g && scip);
+   assert(g->term2edge && g->prize);
+   assert((!g->extended && Is_term(g->term[i])) || (g->extended && Is_pseudoTerm(g->term[i])));
+   assert(!graph_pc_knotIsFixedTerm(g, i));
+   assert(i != g->source);
+
+   /* get edge from i to its artificial terminal */
+   e = g->term2edge[i];
+   assert(e >= 0);
+
+   dummyterm = g->head[e];
+   assert(dummyterm != g->source);
+   assert(g->grad[dummyterm] == 2);
+
+   /* delete edge and unmark artificial terminal */
+   graph_knot_chg(g, dummyterm, STP_TERM_NONE);
+   graph_edge_del(scip, g, e, TRUE);
+   g->term2edge[dummyterm] = TERM2EDGE_NOTERM;
+
+   /* delete remaining incident edge of artificial terminal */
+   e = g->inpbeg[dummyterm];
+
+   assert(e != EAT_LAST);
+   assert(g->source == g->tail[e]);
+   assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
+
+   graph_edge_del(scip, g, e, TRUE);
+
+   assert(g->inpbeg[dummyterm] == EAT_LAST && g->grad[dummyterm] == 0);
+
+   if( has_pseudoroot )
+   {
+      const int edgeRoot2i = graph_pc_getRoot2PtermEdge(g, i);
+
+      assert(SCIPisEQ(scip, g->cost[edgeRoot2i], 0.0));
+      graph_edge_del(scip, g, edgeRoot2i, TRUE);
+   }
+
+   if( makeNonTerminal )
+   {
+      graph_knot_chg(g, i, STP_TERM_NONE);
+      g->term2edge[i] = TERM2EDGE_NOTERM;
+      g->prize[i] = 0.0;
+   }
+}
+
 /** is given terminal the last terminal? */
 static inline
 SCIP_Bool isLastTerm(
@@ -238,6 +299,7 @@ SCIP_RETCODE contractEdgeWithFixedEnd(
    assert(ets >= 0);
    assert(g->tail[ets] == t && g->head[ets] == s);
    assert(graph_pc_isRootedPcMw(g));
+   assert(!g->extended);
    assert(graph_pc_knotIsFixedTerm(g, s) || graph_pc_knotIsFixedTerm(g, t));
 
    SCIP_CALL(graph_fixed_moveNodePc(scip, s, g));
@@ -246,21 +308,25 @@ SCIP_RETCODE contractEdgeWithFixedEnd(
    if( !graph_pc_knotIsFixedTerm(g, s) )
    {
       assert(graph_pc_knotIsFixedTerm(g, t));
+
       if( Is_term(g->term[s]) )
-         graph_pc_deleteTermExtension(scip, g, s);
+         graph_pc_termToNonTerm(scip, g, s);
    }
-   else if( !graph_pc_knotIsFixedTerm(g, t) )
+   else
    {
-      /* need to make t a fixed term */
-      assert(g->source != t);
-      graph_pc_deleteTermExtension(scip, g, t);
-      assert(g->prize[s] == FARAWAY);
-      g->prize[t] = FARAWAY;
+      if( !graph_pc_knotIsFixedTerm(g, t) )
+      {
+         assert(g->source != t);
+         assert(SCIPisEQ(scip, g->prize[s], FARAWAY));
+
+         graph_pc_knotTofixedTerm(scip, g, t);
+      }
+
+      graph_pc_fixedTermToNonTerm(scip, g, s);
    }
 
    /* contract s into t */
    SCIP_CALL(graph_knot_contract(scip, g, solnode, t, s));
-   g->term2edge[t] = TERM2EDGE_FIXEDTERM;
 
    return SCIP_OKAY;
 }
@@ -290,11 +356,12 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
    /* are both end-points of the edge to be contracted terminals? */
    if( Is_term(g->term[t]) && Is_term(g->term[s]) )
    {
-      if( !graph_pc_termIsNonLeafTerm(g, s) )
-         graph_pc_deleteTermExtension(scip, g, s);
+      const SCIP_Real prize_s = g->prize[s];
+
+      graph_pc_termToNonTerm(scip, g, s);
 
       if( !graph_pc_knotIsFixedTerm(g, term4offset) )
-         graph_pc_subtractPrize(scip, g, g->cost[ets] - g->prize[s], term4offset);
+         graph_pc_subtractPrize(scip, g, g->cost[ets] - prize_s, term4offset);
    }
    else
    {
@@ -305,6 +372,9 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
          else
             graph_pc_subtractPrize(scip, g, -(g->prize[s]), term4offset);
       }
+
+      if( Is_term(g->term[s]) )
+         graph_pc_termToNonTerm(scip, g, s);
    }
 
    /* contract s into t */
@@ -331,8 +401,6 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
    {
       assert(g->term2edge[t] == TERM2EDGE_NOTERM);
    }
-
-   g->term2edge[s] = TERM2EDGE_NOTERM;
 
    return SCIP_OKAY;
 }
@@ -799,7 +867,7 @@ SCIP_Bool graph_pc_transOrgAreConistent(
 
 
 /** change property of node to be a non-terminal; prize is not changed! */
-void graph_pc_knotToNonTerm(
+void graph_pc_knotToNonTermProperty(
    GRAPH*                g,                  /**< the graph */
    int                   node                /**< node to be changed */
    )
@@ -816,8 +884,8 @@ void graph_pc_knotToNonTerm(
 }
 
 
-/** change property of node to be a terminal; prize is changed! */
-void graph_pc_knotToFixedTerm(
+/** change property of node to be a terminal; prize is changed, but no edges are deleted! */
+void graph_pc_knotToFixedTermProperty(
    GRAPH*                g,                  /**< the graph */
    int                   node                /**< node to be changed */
    )
@@ -830,6 +898,86 @@ void graph_pc_knotToFixedTerm(
    g->prize[node] = FARAWAY;
 
    graph_knot_chg(g, node, STP_TERM);
+}
+
+
+/** Makes a node a fixed terminal */
+void graph_pc_knotTofixedTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int                   node                /**< node */
+   )
+{
+   assert(scip && g);
+   assert(g->prize && g->term2edge);
+   assert(node != g->source);
+   assert(!graph_pc_knotIsFixedTerm(g, node));
+
+   if( Is_term(g->term[node]) )
+   {
+      assert(!g->extended);
+
+      if( !graph_pc_termIsNonLeafTerm(g, node) )
+         termDeleteExtension(scip, g, node, TRUE);
+   }
+   else if( Is_pseudoTerm(g->term[node]) )
+   {
+      assert(g->extended);
+
+      termDeleteExtension(scip, g, node, TRUE);
+   }
+
+   graph_knot_chg(g, node, STP_TERM);
+   g->prize[node] = FARAWAY;
+   g->term2edge[node] = TERM2EDGE_FIXEDTERM;
+
+   assert(graph_pc_knotIsFixedTerm(g, node));
+}
+
+
+/** Makes a non-fixed terminal a non-terminal */
+void graph_pc_termToNonTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int                   term                /**< terminal to be unfixed */
+   )
+{
+   assert(graph_pc_isPcMw(g));
+   assert(term != g->source);
+   assert(!graph_pc_knotIsFixedTerm(g, term));
+   assert(!g->extended);
+   assert(Is_anyTerm(g->term[term]));
+
+   if( !graph_pc_termIsNonLeafTerm(g, term) )
+   {
+      termDeleteExtension(scip, g, term, FALSE);
+   }
+
+   graph_pc_knotToNonTermProperty(g, term);
+
+   g->prize[term] = 0.0;
+
+   assert(!Is_anyTerm(g->term[term]));
+}
+
+
+/** Makes a fixed terminal a non-terminal */
+void graph_pc_fixedTermToNonTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int                   term                /**< terminal to be unfixed */
+   )
+{
+   assert(graph_pc_isPcMw(g));
+   assert(term != g->source);
+   assert(graph_pc_knotIsFixedTerm(g, term));
+
+   graph_knot_chg(g, term, STP_TERM_NONE);
+   g->term2edge[term] = TERM2EDGE_NOTERM;
+   g->prize[term] = 0.0;
+
+   assert(!graph_pc_knotIsFixedTerm(g, term));
+   assert(!Is_anyTerm(g->term[term]));
 }
 
 
@@ -850,7 +998,7 @@ void graph_pc_termToNonLeafTerm(
 
    if( force || !isLastTerm(g, term) )
    {
-      graph_pc_deleteTermExtension(scip, g, term);
+      termDeleteExtension(scip, g, term, FALSE);
       g->term2edge[term] = TERM2EDGE_NONLEAFTERM;
    }
 }
@@ -864,8 +1012,7 @@ SCIP_Bool graph_pc_knotIsFixedTerm(
 {
    assert(g);
    assert(node >= 0 && node < g->knots);
-   assert(graph_pc_isPcMw(g));
-   assert(g->term2edge);
+   assert(g->term2edge && g->prize);
 
 #ifndef NDEBUG
    if( TERM2EDGE_FIXEDTERM == g->term2edge[node] )
@@ -1071,7 +1218,7 @@ void graph_pc_enforceNonLeafTerm(
    if( graph_pc_isRootedPcMw(graph) )
    {
       /* make it a proper fixed terminal */
-      graph_pc_knotToFixedTerm(graph, nonleafterm);
+      graph_pc_knotToFixedTermProperty(graph, nonleafterm);
    }
    else if( SCIPisLT(scip, graph->prize[nonleafterm], BLOCKED) )
    {
@@ -1117,7 +1264,7 @@ void graph_pc_enforceNode(
       graph_pc_enforcePseudoTerm(scip, graph, term);
 
    if( graph_pc_isRootedPcMw(graph) )
-      graph_pc_knotToFixedTerm(graph, term);
+      graph_pc_knotToFixedTermProperty(graph, term);
 }
 
 
@@ -1654,7 +1801,7 @@ SCIP_RETCODE graph_pc_getRsap(
          }
          assert(e != EAT_LAST && head >= 0);
 
-         graph_pc_knotToFixedTerm(p, rootcand);
+         graph_pc_knotToFixedTermProperty(p, rootcand);
       }
       graph_pc_presolExit(scip, p);
    }
@@ -2245,11 +2392,11 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
          assert(Is_term(graph->term[pseudoterm]));
          assert(SCIPisGE(scip, graph->prize[pseudoterm], prizesum));
 
-         graph_knot_chg(graph, dummyterm, STP_TERM_NONE);
-         graph->term2edge[dummyterm] = TERM2EDGE_NOTERM;
+         graph_pc_knotToNonTermProperty(graph, dummyterm);
+
          graph_knot_del(scip, graph, dummyterm, TRUE);
 
-         graph_pc_knotToFixedTerm(graph, pseudoterm);
+         graph_pc_knotToFixedTermProperty(graph, pseudoterm);
 
          if( graph->grad[pseudoterm] > maxgrad )
          {
@@ -2284,9 +2431,10 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
          e = enext;
       }
 
-      /* delete old root */
+      /* delete old root (cannot use default function) */
       graph_knot_chg(graph, root, STP_TERM_NONE);
       graph->term2edge[root] = TERM2EDGE_NOTERM;
+      graph->prize[root] = 0.0;
       graph_knot_del(scip, graph, root, TRUE);
 
       if( pc )
@@ -2316,66 +2464,6 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
    return SCIP_OKAY;
 }
 
-/* deletes dummy terminal to given node and edge from pseudo-root (if existent) */
-void graph_pc_deleteTermExtension(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   int                   i                   /**< index of the terminal */
-   )
-{
-   int e;
-   int dummyterm;
-   const SCIP_Bool has_pseudoroot = !graph_pc_isRootedPcMw(g);
-
-   assert(g != NULL && g->pcancestors != NULL && g->term2edge != NULL);
-   assert(graph_pc_isPcMw(g) && !g->extended);
-   assert(Is_term(g->term[i]));
-   assert(!graph_pc_knotIsFixedTerm(g, i) && !graph_pc_knotIsNonLeafTerm(g, i));
-   assert(i != g->source);
-
-   /* get edge from i to its artificial terminal */
-   e = g->term2edge[i];
-   assert(e >= 0);
-
-   dummyterm = g->head[e];
-   assert(dummyterm != g->source && !g->mark[dummyterm]);
-
-#ifndef NDEBUG
-   {
-      int e2;
-      for( e2 = g->outbeg[i]; e2 != EAT_LAST; e2 = g->oeat[e2] )
-         if( Is_pseudoTerm(g->term[g->head[e2]]) )
-            break;
-      assert(e2 == e);
-   }
-#endif
-
-   /* delete edge and unmark artificial terminal */
-   graph_knot_chg(g, dummyterm, STP_TERM_NONE);
-   graph_edge_del(scip, g, e, TRUE);
-   g->term2edge[dummyterm] = TERM2EDGE_NOTERM;
-
-   /* delete remaining incident edge of artificial terminal */
-   e = g->inpbeg[dummyterm];
-
-   assert(e != EAT_LAST);
-   assert(g->source == g->tail[e]);
-   assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
-
-   graph_edge_del(scip, g, e, TRUE);
-
-   g->term2edge[i] = TERM2EDGE_NOTERM;
-   assert(g->inpbeg[dummyterm] == EAT_LAST && g->grad[dummyterm] == 0);
-
-   if( has_pseudoroot )
-   {
-      const int edgeRoot2i = graph_pc_getRoot2PtermEdge(g, i);
-
-      assert(g->cost[edgeRoot2i] == 0.0);
-      graph_edge_del(scip, g, edgeRoot2i, TRUE);
-   }
-}
-
 
 /** delete a terminal for a (rooted) prize-collecting problem */
 int graph_pc_deleteTerm(
@@ -2393,7 +2481,7 @@ int graph_pc_deleteTerm(
 
    if( !g->extended && graph_pc_termIsNonLeafTerm(g, term) )
    {
-      graph_pc_knotToNonTerm(g, term);
+      graph_pc_knotToNonTermProperty(g, term);
       graph_knot_del(scip, g, term, TRUE);
    }
    else
@@ -2403,7 +2491,7 @@ int graph_pc_deleteTerm(
 
       /* delete terminal */
 
-      graph_pc_knotToNonTerm(g, term);
+      graph_pc_knotToNonTermProperty(g, term);
       g->mark[term] = FALSE;
 
       while( (e = g->outbeg[term]) != EAT_LAST )
@@ -2420,7 +2508,7 @@ int graph_pc_deleteTerm(
 
       /* delete artificial terminal */
 
-      graph_pc_knotToNonTerm(g, twin);
+      graph_pc_knotToNonTermProperty(g, twin);
       g->mark[twin] = FALSE;
       grad += g->grad[twin] - 1;
 
@@ -2593,6 +2681,8 @@ SCIP_RETCODE graph_pc_contractEdge(
 
    assert(g->grad[s] == 0);
    assert(TERM2EDGE_NOTERM == g->term2edge[s]);
+   assert(!Is_anyTerm(g->term[s]));
+   assert(SCIPisEQ(scip, g->prize[s], 0.0));
 
    SCIPdebugMessage("PcMw contraction: %d into %d, saved in %d \n", s, t, term4offset);
 

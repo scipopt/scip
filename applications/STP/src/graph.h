@@ -425,9 +425,12 @@ extern SCIP_Real graph_get_avgDeg(const GRAPH*);
 
 /* graph_pcbase.c
  */
-extern void   graph_pc_knotToNonTerm(GRAPH*, int);
-extern void   graph_pc_knotToFixedTerm(GRAPH*, int);
+extern void   graph_pc_knotToNonTermProperty(GRAPH*, int);
+extern void   graph_pc_knotToFixedTermProperty(GRAPH*, int);
 extern void   graph_pc_termToNonLeafTerm(SCIP*, GRAPH*, int, SCIP_Bool);
+extern void   graph_pc_termToNonTerm(SCIP*, GRAPH*, int);
+extern void   graph_pc_fixedTermToNonTerm(SCIP*, GRAPH*, int);
+extern void   graph_pc_knotTofixedTerm(SCIP*, GRAPH*, int);
 extern void   graph_pc_updateSubgraphEdge(const GRAPH*, const int*, int, GRAPH*);
 extern void   graph_pc_enforcePseudoTerm(SCIP*, GRAPH*, int);
 extern void   graph_pc_enforceNonLeafTerm(SCIP*, GRAPH*, int);
@@ -443,7 +446,6 @@ extern void   graph_pc_getOrgCosts(SCIP*, const GRAPH*, SCIP_Real*);
 extern void   graph_pc_markOrgGraph(SCIP*, GRAPH*);
 extern void   graph_pc_adaptSap(SCIP*, SCIP_Real, GRAPH*, SCIP_Real*);
 extern void   graph_pc_presolExit(SCIP*, GRAPH*);
-extern void   graph_pc_deleteTermExtension(SCIP*, GRAPH*, int);
 extern void   graph_pc_getBiased(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*);
 extern void   graph_pc_termMarkProper(const GRAPH*, int*);
 extern SCIP_Real graph_pc_getNonLeafTermOffset(SCIP*, const GRAPH*);
