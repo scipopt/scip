@@ -385,6 +385,7 @@ Fixed bugs
 - fix wrongly skipping strong branching call and using old information if LP was solved with 0 iterations
 - fix minor bug in cut score calculation
 - fixed several bugs related to rounding locks of variables not being updated correctly
+- small fix in cons_varbound.c to skip changing bounds of multi-aggregated variables in separation callback
 
 Miscellaneous
 -------------
