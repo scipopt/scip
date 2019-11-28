@@ -1054,10 +1054,9 @@ SCIP_RETCODE detectSocQuadraticComplex(
 
       /* skip the already handled children */
       if( SCIPgetConsExprExprHdlr(children[i]) != SCIPgetConsExprExprHdlrPower(conshdlr)
-         && SCIPgetConsExprExprHdlr(children[i]) != SCIPgetConsExprExprHdlrProduct(conshdlr)
-         && !SCIPisConsExprExprVar(children[i]) )
+         && SCIPgetConsExprExprHdlr(children[i]) != SCIPgetConsExprExprHdlrProduct(conshdlr) )
       {
-         termauxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
+         termauxvar = SCIPgetConsExprExprAuxVar(children[i]);
 
          /* if the auxiliary variable was not found in any quadratic term, it is not soc-representable  */
          if( !SCIPhashmapExists(var2idx, (void*) termauxvar) )
@@ -1140,7 +1139,10 @@ SCIP_RETCODE detectSocQuadraticComplex(
    if( LapackDsyev(TRUE, nvars, eigvecmatrix, eigvals) != SCIP_OKAY )
    {
       SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors for expression:\n");
+
+#ifdef SCIP_DEBUG
       SCIPdismantleConsExprExpr(scip, expr);
+#endif
 
       goto CLEANUP;
    }
