@@ -43,8 +43,7 @@
  * PRINTNODECONS: prints the binary constraints added
  * SCIP_DEBUG: prints detailed execution information
  * SCIP_STATISTIC: prints some statistics after the branching rule is freed */
-//#define SCIP_DEBUG
-#define SCIP_STATISTIC
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
@@ -2148,11 +2147,6 @@ void addLowerBound(
 
    lowerbound = SCIPadjustedVarLb(scip, var, lowerbound);
 
-   // LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH,
-   //    "add lower bound change: <%s> >= %g (%d proof nodes); stored so far: %g (%d proof nodes)\n",
-   //    SCIPvarGetName(var), lowerbound, nproofnodes, domainreductions->lowerbounds[varindex],
-   //    domainreductions->lowerboundnproofs[varindex]);
-
    if( SCIPisLT(scip, domainreductions->lowerbounds[varindex], lowerbound) )
    {
       /* the new lower bound is stronger (greater) than the old one,
@@ -2217,11 +2211,6 @@ void addUpperBound(
    varindex = SCIPvarGetProbindex(var);
 
    upperbound = SCIPadjustedVarUb(scip, var, upperbound);
-
-   // LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH,
-   //    "add upper bound change: <%s> <= %g (%d proof nodes); stored so far: %g (%d proof nodes)\n",
-   //    SCIPvarGetName(var), upperbound, nproofnodes, domainreductions->upperbounds[varindex],
-   //    domainreductions->upperboundnproofs[varindex]);
 
    if( SCIPisLE(scip, domainreductions->upperbounds[varindex], upperbound) )
    {
@@ -2426,7 +2415,6 @@ SCIP_RETCODE applyDomainReductions(
 
    /* initially we have no cutoff */
    *domredcutoff = FALSE;
-   *domred = FALSE;
 
    /* as the bounds are tracked for all vars we have to iterate over all vars */
    probvars = SCIPgetVars(scip);
@@ -4532,10 +4520,6 @@ SCIP_RETCODE executeBranchingRecursive(
 
    if( solvedlp )
    {
-      // LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started %s branching on var <%s> with 'val > %g' and bounds [<%g>..<%g>]\n",
-      //    downbranching ? "down" : "up", SCIPvarGetName(branchvar), branchval, SCIPvarGetLbLocal(branchvar),
-      //    SCIPvarGetUbLocal(branchvar));
-
       SCIP_CALL( executeBranching(scip, config, downbranching, candidate, branchingresult, baselpsol, domainreductions,
             status) );
 
@@ -4632,18 +4616,13 @@ SCIP_RETCODE executeBranchingRecursive(
 
             SCIP_CALL( branchingDecisionCreate(scip, &deeperdecision) );
 
-#if 1
 #ifdef SCIP_STATISTIC
-            /* if FSB identifies a cutoff, we always have 2 proof nodes */
-            //deeperlocalstats->ncutoffproofnodes = 2;
-
             SCIP_CALL( filterCandidates(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
                deeperdecision, scorecontainer, level2data, recursiondepth, deeperlpobjval,
                statistics, localstats) );
 #else
             SCIP_CALL( filterCandidates(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
                deeperdecision, scorecontainer, level2data, recursiondepth, deeperlpobjval) );
-#endif
 #endif
             if( deeperstatus->lperror )
             {
@@ -4848,7 +4827,6 @@ SCIP_RETCODE selectVarRecursive(
 
    bestscorelowerbound = SCIPvarGetLbLocal(decision->branchvar);
    bestscoreupperbound = SCIPvarGetUbLocal(decision->branchvar);
-   //assert(!SCIPisEQ(scip, bestscorelowerbound, bestscoreupperbound)); ?????????
 
    SCIP_CALL( branchingResultDataCreate(scip, &downbranchingresult) );
    SCIP_CALL( branchingResultDataCreate(scip, &upbranchingresult) );
@@ -5176,9 +5154,6 @@ SCIP_RETCODE selectVarRecursive(
 
             if( newscore > bestscore )
             {
-               // printf("####### update best score from %.9g to %.9g (down=%.9g, up=%.9g, proven=%.9g)\n", bestscore, newscore,
-               //    decision->downdb, decision->updb, decision->proveddb);
-
                bestscore = newscore;
 
                if( bestscoreptr != NULL )
@@ -5242,26 +5217,23 @@ SCIP_RETCODE selectVarRecursive(
                SCIPvarGetName(decision->branchvar), bestscorelowerbound, bestscoreupperbound, bestscore);
          }
 
-         //if( !upbranchingresult->cutoff && !downbranchingresult->cutoff )
-         {
 #ifdef SCIP_DEBUG
-            LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> cand %d/%d var <%s> (solval=%.9g, downgain=%.9g->%.9g, upgain=%.9g->%.9g,"
-               " score=%.9g) -- best: <%s> (%.9g)\n", c, nlpcands, SCIPvarGetName(branchvar), branchval,
-               MAX(downbranchingresult->objval - scoringlpobjval, 0), MAX(downbranchingresult->dualbound - scoringlpobjval, 0),
-               MAX(upbranchingresult->objval - scoringlpobjval, 0), MAX(upbranchingresult->dualbound - scoringlpobjval, 0),
-               score, SCIPvarGetName(decision->branchvar), bestscore);
+         LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> cand %d/%d var <%s> (solval=%.9g, downgain=%.9g->%.9g, upgain=%.9g->%.9g,"
+            " score=%.9g) -- best: <%s> (%.9g)\n", c, nlpcands, SCIPvarGetName(branchvar), branchval,
+            MAX(downbranchingresult->objval - scoringlpobjval, 0), MAX(downbranchingresult->dualbound - scoringlpobjval, 0),
+            MAX(upbranchingresult->objval - scoringlpobjval, 0), MAX(upbranchingresult->dualbound - scoringlpobjval, 0),
+            score, SCIPvarGetName(decision->branchvar), bestscore);
 #endif
 
-            if( config->inscoring )
-            {
-               assert(scorecontainer != NULL);
-               /* only for abbreviated lookahead branching: we are in the FSB filtering step and store the score for this
-                * variable and the warm starting basis to reuse it in the subsequent lookahead evaluation of the best
-                * candidates
-                */
-               SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, candidate, score,
-                     downbranchingresult->dualbound - scoringlpobjval, upbranchingresult->dualbound - scoringlpobjval) );
-            }
+         if( config->inscoring )
+         {
+            assert(scorecontainer != NULL);
+            /* only for abbreviated lookahead branching: we are in the FSB filtering step and store the score for this
+             * variable and the warm starting basis to reuse it in the subsequent lookahead evaluation of the best
+             * candidates
+             */
+            SCIP_CALL( scoreContainerSetScore(scip, scorecontainer, candidate, score,
+                  downbranchingresult->dualbound - scoringlpobjval, upbranchingresult->dualbound - scoringlpobjval) );
          }
 
          if( probingdepth == 0 && (binconsdata != NULL || domainreductions != NULL) && !useoldbranching
@@ -5676,66 +5648,6 @@ SCIP_RETCODE selectVarStart(
             if( chosencandnr >= 0 )
             {
                ++statistics->chosenfsbcand[chosencandnr];
-               // printf("node %lld chose candidate %d score %16.9g vs %16.9g FSB: %16.9g vs %16.9g\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), chosencandnr,
-               //    scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)],
-               //    scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
-               //    bestscore, firstscore);
-
-               if( FALSE && candidatelist->ncandidates > 1 )
-               {
-                  SCIP_Real bestmin, bestmax;
-                  SCIP_Real newmin, newmax;
-                  printf("##### %lld,%d,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f",
-                     SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), chosencandnr,
-                     scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
-                     scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
-                     scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)],
-                     bestscore, firstscore, SCIPgetCutoffbound(scip) - lpobjval, lpobjval, SCIPgetFirstLPLowerboundRoot(scip),
-                     scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
-                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
-                     scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
-                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)]
-                     );
-                  bestmin = MIN(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
-                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)]);
-                  bestmax = MAX(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)],
-                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[1]->branchvar)]);
-                  if( candidatelist->ncandidates > 3 )
-                  {
-                     printf(",%.9f,%.9f,%.9f,%.9f",
-                        scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)],
-                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)],
-                        scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[3]->branchvar)],
-                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[3]->branchvar)]
-                        );
-
-                     newmin = MIN(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[3]->branchvar)],
-                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[3]->branchvar)]);
-                     newmax = MAX(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[3]->branchvar)],
-                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[3]->branchvar)]);
-                     bestmin = MAX(bestmin, newmin);
-                     bestmax = MAX(bestmax, newmax);
-                  }
-                  else if( candidatelist->ncandidates > 2 )
-                  {
-                     printf(",%.9f,%.9f,-2,0,-2.0",
-                        scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)],
-                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)]
-                        );
-
-                     newmin = MIN(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)],
-                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)]);
-                     newmax = MAX(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)],
-                        scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[2]->branchvar)]);
-                     bestmin = MAX(bestmin, newmin);
-                     bestmax = MAX(bestmax, newmax);
-
-                  }
-                  else
-                     printf(",-2,0,-2.0,-2,0,-2.0");
-
-                  printf(",%.9f,%.9f,%d\n", bestmin, bestmax, candidatelist->ncandidates);
-               }
             }
             else
                assert(!performedlab);
@@ -5949,8 +5861,6 @@ SCIP_DECL_BRANCHCOPY(branchCopyLookahead)
    assert(scip != NULL);
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
-
-   //SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
 
    return SCIP_OKAY;
 }
