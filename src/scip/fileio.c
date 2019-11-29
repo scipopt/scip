@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   fileio.c
+ * @ingroup OTHER_CFILES
  * @brief  wrapper functions to map file i/o to standard or zlib file i/o
  * @author Tobias Achterberg
  */
@@ -28,7 +29,7 @@
 
 #define BUFFER_LEN 8192
 
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
 
 /* file i/o using zlib */
 #include <zlib.h>

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   primal.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for collecting primal CIP solutions and primal informations
  * @author Tobias Achterberg
  */
@@ -35,6 +36,7 @@
 #include "scip/tree.h"
 #include "scip/reopt.h"
 #include "scip/disp.h"
+#include "scip/struct_event.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
 
@@ -773,7 +775,7 @@ SCIP_RETCODE primalAddSol(
 
       SCIPsetDebugMsg(set, "original solution %p was successfully transferred to the transformed problem space\n",
          (void*)sol);
-   }
+   }  /*lint !e438*/
 
    return SCIP_OKAY;
 }
@@ -834,7 +836,6 @@ SCIP_RETCODE primalAddOrigSol(
 static
 SCIP_RETCODE primalAddOrigPartialSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< original problem data */
    SCIP_SOL*             sol                 /**< primal CIP solution */
@@ -1294,7 +1295,7 @@ SCIP_RETCODE SCIPprimalAddOrigSol(
       /* create a copy of the solution */
       SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
 
-      SCIP_CALL( primalAddOrigPartialSol(primal, blkmem, set, prob, solcopy) );
+      SCIP_CALL( primalAddOrigPartialSol(primal, set, prob, solcopy) );
 
       *stored = TRUE;
    }
@@ -1343,7 +1344,7 @@ SCIP_RETCODE SCIPprimalAddOrigSolFree(
    if( SCIPsolIsPartial(*sol) )
    {
       /* insert solution into solution storage */
-      SCIP_CALL( primalAddOrigPartialSol(primal, blkmem, set, prob, *sol) );
+      SCIP_CALL( primalAddOrigPartialSol(primal, set, prob, *sol) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */
       *sol = NULL;

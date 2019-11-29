@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,7 +16,7 @@
 /**@file   boundstore.h
  * @ingroup PARALLEL
  * @brief  the interface of the boundstore structure
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -31,7 +31,7 @@
 #define __SCIP_BOUNDSTORE_H__
 
 /** create bound store data structure */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPboundstoreCreate(
    SCIP*                 scip,               /**< scip main datastructure */
    SCIP_BOUNDSTORE**     boundstore,         /**< pointer to store the bound store datastructure */
@@ -39,14 +39,14 @@ SCIP_RETCODE SCIPboundstoreCreate(
    );
 
 /** free bound store data structure */
-EXTERN
+SCIP_EXPORT
 void SCIPboundstoreFree(
    SCIP*                 scip,               /**< scip main datastructure */
    SCIP_BOUNDSTORE**     boundstore          /**< pointer to the bound store datastructure */
    );
 
 /** add bound change to bound store data structure */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPboundstoreAdd(
    SCIP*                 scip,               /**< scip main datastructure */
    SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
@@ -57,7 +57,7 @@ SCIP_RETCODE SCIPboundstoreAdd(
    );
 
 /** add all bound changes of source to target */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPboundstoreMerge(
    SCIP*                 scip,               /**< scip main datastructure for target boundstore   */
    SCIP_BOUNDSTORE*      target,             /**< the bound store datastructure where the bounds get merged in */
@@ -65,34 +65,34 @@ SCIP_RETCODE SCIPboundstoreMerge(
    );
 
 /** remove all boundchanges from bound store */
-EXTERN
+SCIP_EXPORT
 void SCIPboundstoreClear(
    SCIP_BOUNDSTORE*      boundstore          /**< the bound store datastructure */
    );
 
 /** gets variable index of the i'th stored boundchange */
-EXTERN
+SCIP_EXPORT
 int SCIPboundstoreGetChgVaridx(
    SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
    int                   i                   /**< the index of the bound change */
    );
 
 /** gets the type of the i'th stored boundchange */
-EXTERN
+SCIP_EXPORT
 SCIP_BOUNDTYPE SCIPboundstoreGetChgType(
    SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
    int                   i                   /**< the index of the bound change */
    );
 
 /** gets the bound value of the i'th stored boundchange */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPboundstoreGetChgVal(
    SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
    int                   i                   /**< the index of the bound change */
    );
 
 /** gets the number of stored bound changes */
-EXTERN
+SCIP_EXPORT
 int SCIPboundstoreGetNChgs(
    SCIP_BOUNDSTORE*      boundstore          /**< the bound store datastructure */
    );

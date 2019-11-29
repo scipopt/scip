@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -41,25 +41,6 @@
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -75,7 +56,7 @@ extern "C" {
  *        callback is added in future releases; consider using SCIPincludeBranchruleBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of branching rule */
@@ -104,7 +85,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeBranchrule() instead
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE**     branchruleptr,      /**< pointer to branching rule, or NULL */
@@ -119,7 +100,7 @@ SCIP_RETCODE SCIPincludeBranchruleBasic(
    );
 
 /** sets copy method of branching rule */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBranchruleCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -127,7 +108,7 @@ SCIP_RETCODE SCIPsetBranchruleCopy(
    );
 
 /** sets destructor method of branching rule */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBranchruleFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -135,7 +116,7 @@ SCIP_RETCODE SCIPsetBranchruleFree(
    );
 
 /** sets initialization method of branching rule */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBranchruleInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -143,7 +124,7 @@ SCIP_RETCODE SCIPsetBranchruleInit(
    );
 
 /** sets deinitialization method of branching rule */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBranchruleExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -151,7 +132,7 @@ SCIP_RETCODE SCIPsetBranchruleExit(
    );
 
 /** sets solving process initialization method of branching rule */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBranchruleInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -159,7 +140,7 @@ SCIP_RETCODE SCIPsetBranchruleInitsol(
    );
 
 /** sets solving process deinitialization method of branching rule */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBranchruleExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -167,7 +148,7 @@ SCIP_RETCODE SCIPsetBranchruleExitsol(
    );
 
 /** sets branching execution method for fractional LP solutions */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBranchruleExecLp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -175,7 +156,7 @@ SCIP_RETCODE SCIPsetBranchruleExecLp(
    );
 
 /** sets branching execution method for external candidates  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBranchruleExecExt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -183,7 +164,7 @@ SCIP_RETCODE SCIPsetBranchruleExecExt(
    );
 
 /** sets branching execution method for not completely fixed pseudo solutions */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBranchruleExecPs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -191,26 +172,26 @@ SCIP_RETCODE SCIPsetBranchruleExecPs(
    );
 
 /** returns the branching rule of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_BRANCHRULE* SCIPfindBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of branching rule */
    );
 
 /** returns the array of currently available branching rules */
-EXTERN
+SCIP_EXPORT
 SCIP_BRANCHRULE** SCIPgetBranchrules(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available branching rules */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNBranchrules(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of a branching rule */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBranchrulePriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -218,7 +199,7 @@ SCIP_RETCODE SCIPsetBranchrulePriority(
    );
 
 /** sets maximal depth level, up to which this branching rule should be used (-1 for no limit) */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBranchruleMaxdepth(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -226,7 +207,7 @@ SCIP_RETCODE SCIPsetBranchruleMaxdepth(
    );
 
 /** sets maximal relative distance from current node's dual bound to primal bound for applying branching rule */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBranchruleMaxbounddist(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -257,7 +238,7 @@ SCIP_RETCODE SCIPsetBranchruleMaxbounddist(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLPBranchCands(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
@@ -277,7 +258,7 @@ SCIP_RETCODE SCIPgetLPBranchCands(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNLPBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -291,7 +272,7 @@ int SCIPgetNLPBranchCands(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPrioLPBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -312,7 +293,7 @@ int SCIPgetNPrioLPBranchCands(
  *  @note Candidate variables with maximal priority are ordered: binaries first, then integers, implicit integers and
  *        continuous last.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetExternBranchCands(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           externcands,        /**< pointer to store the array of extern branching candidates, or NULL */
@@ -335,7 +316,7 @@ SCIP_RETCODE SCIPgetExternBranchCands(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -349,7 +330,7 @@ int SCIPgetNExternBranchCands(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPrioExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -363,7 +344,7 @@ int SCIPgetNPrioExternBranchCands(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPrioExternBranchBins(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -377,7 +358,7 @@ int SCIPgetNPrioExternBranchBins(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPrioExternBranchInts(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -391,7 +372,7 @@ int SCIPgetNPrioExternBranchInts(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPrioExternBranchImpls(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -405,7 +386,7 @@ int SCIPgetNPrioExternBranchImpls(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPrioExternBranchConts(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -421,7 +402,7 @@ int SCIPgetNPrioExternBranchConts(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddExternBranchCand(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to insert */
@@ -436,7 +417,7 @@ SCIP_RETCODE SCIPaddExternBranchCand(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPclearExternBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -450,7 +431,7 @@ void SCIPclearExternBranchCands(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPcontainsExternBranchCand(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to look for */
@@ -467,7 +448,7 @@ SCIP_Bool SCIPcontainsExternBranchCand(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetPseudoBranchCands(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           pseudocands,        /**< pointer to store the array of pseudo branching candidates, or NULL */
@@ -485,7 +466,7 @@ SCIP_RETCODE SCIPgetPseudoBranchCands(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPseudoBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -500,7 +481,7 @@ int SCIPgetNPseudoBranchCands(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPrioPseudoBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -514,7 +495,7 @@ int SCIPgetNPrioPseudoBranchCands(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPrioPseudoBranchBins(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -528,7 +509,7 @@ int SCIPgetNPrioPseudoBranchBins(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPrioPseudoBranchInts(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -542,7 +523,7 @@ int SCIPgetNPrioPseudoBranchInts(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNPrioPseudoBranchImpls(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -556,7 +537,7 @@ int SCIPgetNPrioPseudoBranchImpls(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetBranchScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
@@ -573,7 +554,7 @@ SCIP_Real SCIPgetBranchScore(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetBranchScoreMultiple(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
@@ -592,7 +573,7 @@ SCIP_Real SCIPgetBranchScoreMultiple(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetBranchingPoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable, of which the branching point should be computed */
@@ -609,7 +590,7 @@ SCIP_Real SCIPgetBranchingPoint(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPcalcNodeselPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable on which the branching is applied */
@@ -630,7 +611,7 @@ SCIP_Real SCIPcalcNodeselPriority(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPcalcChildEstimate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable on which the branching is applied */
@@ -647,7 +628,7 @@ SCIP_Real SCIPcalcChildEstimate(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateChild(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE**           node,               /**< pointer to node data structure */
@@ -672,7 +653,7 @@ SCIP_RETCODE SCIPcreateChild(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPbranchVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to branch on */
@@ -691,7 +672,7 @@ SCIP_RETCODE SCIPbranchVar(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPbranchVarHole(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to branch on */
@@ -717,7 +698,7 @@ SCIP_RETCODE SCIPbranchVarHole(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPbranchVarVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to branch on */
@@ -753,7 +734,7 @@ SCIP_RETCODE SCIPbranchVarVal(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPbranchVarValNary(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to branch on */
@@ -776,7 +757,7 @@ SCIP_RETCODE SCIPbranchVarValNary(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPbranchLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
@@ -792,7 +773,7 @@ SCIP_RETCODE SCIPbranchLP(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPbranchExtern(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
@@ -808,7 +789,7 @@ SCIP_RETCODE SCIPbranchExtern(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPbranchPseudo(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */

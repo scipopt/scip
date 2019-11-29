@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -68,9 +68,10 @@ then
 fi
 
 # if permutation counter is positive add permutation seed (0 = default)
-if test $p -gt 0
+PERM=$(($p + $STARTPERM))
+if test $PERM -gt 0
 then
-    echo set randomization permutationseed $p   >> $TMPFILE
+    echo set randomization permutationseed $PERM   >> $TMPFILE
 fi
 
 # set random seed shift
@@ -120,8 +121,8 @@ then
         if test ""$OBJECTIVEVAL != ""
         then
             echo set limits objective $OBJECTIVEVAL >> $TMPFILE
-            echo set heur emph off                 >> $TMPFILE
         fi
+        echo set heur emph off                 >> $TMPFILE
     fi
 
     echo display parameters                >> $TMPFILE

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,7 +17,7 @@
  * @ingroup TASKINTERFACE
  * @brief  a TPI implementation using tinycthreads
  * @author Stephen J. Maher
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -516,9 +516,7 @@ SCIP_JOBSTATUS checkJobQueue(
    return SCIP_JOB_DOESNOTEXIST;
 }
 
-
-
-/* returns whether the job id is running */
+/** returns whether the job id is running */
 static
 SCIP_Bool isJobRunning(
    SCIP_JOBQUEUE*        currentjobs,
@@ -563,8 +561,7 @@ SCIP_RETCODE SCIPtpiExit(
    return SCIP_OKAY;
 }
 
-
-/** creates a job for parallel processing*/
+/** creates a job for parallel processing */
 SCIP_RETCODE SCIPtpiCreateJob(
    SCIP_JOB**            job,                /**< pointer to the job that will be created */
    int                   jobid,              /**< the id for the current job */
@@ -597,8 +594,7 @@ int SCIPtpiGetNewJobID(
    return id;
 }
 
-/** submit a job for parallel processing
- *  the return is a globally defined status */
+/** submit a job for parallel processing the return is a globally defined status */
 SCIP_RETCODE SCIPtpiSumbitJob(
    SCIP_JOB*             job,                /**< pointer to the job to be submitted */
    SCIP_SUBMITSTATUS*    status              /**< pointer to store the job's submit status */
@@ -614,7 +610,6 @@ SCIP_RETCODE SCIPtpiSumbitJob(
    return SCIP_OKAY;
 }
 
-
 /** blocks until all jobs of the given jobid have finished
  *  and then returns the smallest SCIP_RETCODE of all the jobs
  */
@@ -628,8 +623,7 @@ SCIP_RETCODE SCIPtpiCollectJobs(
 
    SCIP_CALL( SCIPtpiAcquireLock(&(_threadpool->poollock)) );
 
-   while( isJobRunning(_threadpool->currentjobs, jobid) ||
-          isJobRunning(_threadpool->jobqueue, jobid) )
+   while( isJobRunning(_threadpool->currentjobs, jobid) || isJobRunning(_threadpool->jobqueue, jobid) )
    {
       SCIP_CALL( SCIPtpiWaitCondition(&_threadpool->jobfinished, &_threadpool->poollock) );
    }

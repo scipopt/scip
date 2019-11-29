@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_and.c
+ * @ingroup DEFPLUGINS_CONS
+ * @ingroup CONSHDLRS
  * @brief  Constraint handler for AND-constraints,  \f$r = x_1 \wedge x_2 \wedge \dots  \wedge x_n\f$
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -218,7 +220,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
 /** frees constraint handler data */
 static
-SCIP_RETCODE conshdlrdataFree(
+void conshdlrdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
    )
@@ -227,8 +229,6 @@ SCIP_RETCODE conshdlrdataFree(
    assert(*conshdlrdata != NULL);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
-
-   return SCIP_OKAY;
 }
 
 /** catches events for the watched variable at given position */
@@ -929,7 +929,7 @@ SCIP_RETCODE createRelaxation(
 
    /* create additional row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_add", SCIPconsGetName(cons));
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[0], SCIPconsGetHdlr(cons), rowname, -consdata->nvars + 1.0, SCIPinfinity(scip),
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[0], cons, rowname, -consdata->nvars + 1.0, SCIPinfinity(scip),
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[0], consdata->resvar, 1.0) );
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[0], nvars, consdata->vars, -1.0) );
@@ -938,7 +938,7 @@ SCIP_RETCODE createRelaxation(
    for( i = 0; i < nvars; ++i )
    {
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), i);
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[i+1], SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rows[i+1], cons, rowname, -SCIPinfinity(scip), 0.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i+1], consdata->resvar, 1.0) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i+1], consdata->vars[i], -1.0) );
@@ -975,7 +975,7 @@ SCIP_RETCODE addRelaxation(
       char rowname[SCIP_MAXSTRLEN];
 
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_operators", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->aggrrow, SCIPconsGetHdlr(cons), rowname, -SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->aggrrow, cons, rowname, -SCIPinfinity(scip), 0.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->aggrrow, consdata->resvar, (SCIP_Real) consdata->nvars) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->aggrrow, consdata->nvars, consdata->vars, -1.0) );
@@ -3436,6 +3436,7 @@ SCIP_RETCODE detectRedundantConstraints(
          if( redundant )
          {
             /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+            /* coverity[swapped_arguments] */
             SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
 
 	    /* also take the check when upgrade flag over if necessary */
@@ -3891,7 +3892,7 @@ SCIP_DECL_CONSFREE(consFreeAnd)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( conshdlrdataFree(scip, &conshdlrdata) );
+   conshdlrdataFree(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -4049,9 +4050,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    int ncontvars;
    int v;
    int c;
-   unsigned int resid;
-   unsigned int varid;
-   unsigned int id = 1;
+   int resid;
+   int varid;
+   int id = 1;
 
    /* no AND-constraints available */
    if( nconss == 0 )
@@ -4107,12 +4108,14 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
       activevar = SCIPvarGetProbvar(consdata->resvar);
 
       /* check if we already found this variables */
-      resid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activevar);
+      resid = SCIPhashmapGetImageInt(hashmap, activevar);
+      assert(resid >= 0);
+
       if( resid == 0 )
       {
          resid = id;
          ++id;
-         SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activevar, (void*)(size_t)resid) );
+         SCIP_CALL( SCIPhashmapInsertInt(hashmap, (void*)activevar, resid) );
 
          /* write new gml node for new resultant */
          SCIPgmlWriteNode(gmlfile, resid, SCIPvarGetName(activevar), NULL, NULL, NULL);
@@ -4127,12 +4130,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
       for( v = consdata->nvars - 1; v >= 0; --v )
       {
          /* check if we already found this variables */
-         varid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activeconsvars[v]);
+         varid = SCIPhashmapGetImageInt(hashmap, activeconsvars[v]);
          if( varid == 0 )
          {
             varid = id;
             ++id;
-            SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activeconsvars[v], (void*)(size_t)varid) );
+            SCIP_CALL( SCIPhashmapInsertInt(hashmap, (void*)activeconsvars[v], varid) );
 
             /* write new gml node for new operand */
             SCIPgmlWriteNode(gmlfile, varid, SCIPvarGetName(activeconsvars[v]), NULL, NULL, NULL);
@@ -4151,12 +4154,14 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    {
       activevar = SCIPvarGetProbvar(vars[v]);
 
-      varid = (unsigned int)(size_t) SCIPhashmapGetImage(hashmap, activevar);
+      varid = SCIPhashmapGetImageInt(hashmap, activevar);
+      assert(varid >= 0);
+
       if( varid == 0 )
       {
 	 varid = id;
 	 ++id;
-	 SCIP_CALL( SCIPhashmapInsert(hashmap, (void*)activeconsvars[v], (void*)(size_t)varid) );
+	 SCIP_CALL( SCIPhashmapInsertInt(hashmap, (void*)activeconsvars[v], varid) );
 
 	 /* write new gml node for new operand */
 	 SCIPgmlWriteNode(gmlfile, varid, SCIPvarGetName(activevar), NULL, NULL, NULL);
@@ -4541,7 +4546,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    }
 
    /* perform dual presolving on AND-constraints */
-   if( conshdlrdata->dualpresolving && !cutoff && !SCIPisStopped(scip) && SCIPallowDualReds(scip))
+   if( conshdlrdata->dualpresolving && !cutoff && !SCIPisStopped(scip) && SCIPallowStrongDualReds(scip))
    {
       SCIP_CALL( dualPresolve(scip, conss, nconss, conshdlrdata->eventhdlr, &entries, &nentries, &cutoff, nfixedvars, naggrvars, nchgcoefs, ndelconss, nupgdconss, naddconss) );
    }
@@ -5156,7 +5161,7 @@ SCIP_VAR** SCIPgetVarsAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
@@ -5176,7 +5181,7 @@ SCIP_VAR** SCIPgetVarsAnd(
 }
 
 
-/** gets the resultant variable in AND-constraint */
+/** gets the resultant variable in AND-constraint */   /*lint -e715*/
 SCIP_VAR* SCIPgetResultantAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

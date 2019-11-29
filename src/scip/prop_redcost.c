@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_redcost.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  propagator using the LP reduced cost and the cutoff bound
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -69,7 +70,7 @@
  */
 
 #define DEFAULT_CONTINUOUS        FALSE /**< should reduced cost fixing be also applied to continuous variables? */
-#define DEFAULT_USEIMPLICS         TRUE /**< should implications be used to strength the reduced cost for binary variables? */
+#define DEFAULT_USEIMPLICS        FALSE /**< should implications be used to strength the reduced cost for binary variables? */
 #define DEFAULT_FORCE             FALSE /**< should the propagator be forced even if active pricer are present? Note that
                                          *   the reductions are always valid, but installing an upper bound on priced
                                          *   variables may lead to problems in pricing (existing variables at their upper
@@ -117,6 +118,7 @@ SCIP_RETCODE propagateRootRedcostBinvar(
    SCIP_Real rootsol;
    SCIP_Real rootlpobjval;
 
+   assert(scip != NULL);
    assert(SCIPgetDepth(scip) == 0);
 
    /* skip binary variable if it is locally fixed */
@@ -605,7 +607,7 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
       return SCIP_OKAY;
 
    /* do not run if propagation w.r.t. objective is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* get current cutoff bound */

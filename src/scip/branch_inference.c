@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_inference.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  inference history branching rule
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -254,7 +255,6 @@ SCIP_Real getAggrScore(
 /** return an aggregated score for the given variable using the conflict score and cutoff score */
 static
 SCIP_Real getValueScore(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             conflictweight,     /**< weight in score calculations for conflict score */
    SCIP_Real             cutoffweight,       /**< weight in score calculations for cutoff score */
@@ -359,7 +359,7 @@ SCIP_RETCODE performBranching(
          bestval = SCIP_UNKNOWN;
 
          /* get domain value score for the first candidate */
-         bestvaluescore = getValueScore(scip, cands[0], conflictweight, cutoffweight, reliablescore, &bestbranchpoint, &bestbranchdir);
+         bestvaluescore = getValueScore(cands[0], conflictweight, cutoffweight, reliablescore, &bestbranchpoint, &bestbranchdir);
          SCIPdebugMsg(scip, "current best value candidate <%s>[%g,%g] %s <%g> (value %g)\n",
             SCIPvarGetName(bestvaluecand), SCIPvarGetLbLocal(bestvaluecand), SCIPvarGetUbLocal(bestvaluecand),
             bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS ? "<=" : ">=", bestbranchpoint, bestvaluescore);
@@ -388,7 +388,7 @@ SCIP_RETCODE performBranching(
             val = SCIP_UNKNOWN;
 
             /* get domain value score for the candidate */
-            valuescore = getValueScore(scip, cand, conflictweight, cutoffweight, reliablescore, &branchpoint, &branchdir);
+            valuescore = getValueScore(cand, conflictweight, cutoffweight, reliablescore, &branchpoint, &branchdir);
 
             /* evaluate the candidate against the currently best candidate w.r.t. domain value score */
             evaluateValueCand(cand, valuescore, branchpoint, branchdir, &bestvaluecand, &bestvaluescore, &bestbranchpoint, &bestbranchdir);
@@ -403,8 +403,9 @@ SCIP_RETCODE performBranching(
          /* get aggregated score for the candidate */
          aggrscore = getAggrScore(scip, cand, conflictweight, inferenceweight, cutoffweight, reliablescore);
 
+         /*lint -e777*/
          SCIPdebugMsg(scip, " -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
-            val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore); /*lint !e777*/
+            val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore);
 
          /* evaluate the candidate against the currently best candidate w.r.t. aggregated score */
          evaluateAggrCand(cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval);

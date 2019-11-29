@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    prop_obbt.c
- * @ingroup PROPAGATORS
+ * @ingroup DEFPLUGINS_PROP
  * @brief   optimization-based bound tightening propagator
  * @author  Stefan Weltge
  * @author  Benjamin Mueller
@@ -907,7 +907,7 @@ SCIP_RETCODE filterExistingLP(
                SCIP_CALL( createGenVBound(scip, propdata, bound, &found) );
 
                SCIPdebugMsg(scip, "found genvbound during trivial filtering? %u\n", found);
-            }
+            } /*lint !e438*/
 
             /* restore objective function */
             SCIP_CALL( setObjProbing(scip, propdata, bound, 0.0) );
@@ -1095,7 +1095,7 @@ SCIP_RETCODE filterRound(
                assert(!error);
                SCIP_CALL( createGenVBound(scip, propdata, bound, &found) );
                SCIPdebugMsg(scip, "found genvbound during aggressive filtering? %u\n", found);
-            }
+            } /*lint !e438*/
 
             /* restore objective function */
             for( j = 0; j < nobjcoefs; ++j )
@@ -1524,7 +1524,7 @@ int nextBound(
       }
    }
 
-   return bestidx;
+   return bestidx;  /*lint !e438*/
 }
 
 /** try to separate the solution of the last OBBT LP in order to learn better variable bounds; we apply additional
@@ -1590,7 +1590,7 @@ SCIP_RETCODE applySeparation(
       {
          SCIP_Bool found;
          SCIP_CALL( createGenVBound(scip, propdata, currbound, &found) );
-      }
+      }  /*lint !e438*/
 
       /* try to tight the variable bound */
       tightened = FALSE;
@@ -1741,7 +1741,7 @@ SCIP_RETCODE findNewBounds(
             SCIP_Bool found;
 
             SCIP_CALL( createGenVBound(scip, propdata, currbound, &found) );
-         }
+         } /*lint !e438*/
 
          /* try to tighten bound in probing mode */
          success = FALSE;
@@ -2267,11 +2267,14 @@ SCIP_RETCODE applyObbtBilinear(
       SCIP_CALL( SCIPchgVarObjProbing(scip, vars[i], 0.0) );
    }
 
+   /* 4. tighten LP feasibility tolerance to be at most feastol/10.0 */
+   oldfeastol = SCIPchgRelaxfeastol(scip, SCIPfeastol(scip) / 10.0);
+
    /* we need to solve the probing LP before creating new probing nodes in solveBilinearLP() */
    SCIP_CALL( SCIPsolveProbingLP(scip, (int)nleftiterations, &lperror, NULL) );
 
-   /* 4. tighten LP feasibility tolerance to be at most feastol/10.0 */
-   oldfeastol = SCIPchgRelaxfeastol(scip, SCIPfeastol(scip) / 10.0);
+   if( lperror )
+      goto TERMINATE;
 
    /* 5. main loop */
    for( i = propdata->lastbilinidx; i < propdata->nbilinbounds
@@ -2364,8 +2367,8 @@ SCIP_RETCODE applyObbtBilinear(
    /* remember last unprocessed bilinear term */
    propdata->lastbilinidx = i;
 
+  TERMINATE:
    /* end probing */
-   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) ); /* TODO necessary to solve LP here again? */
    SCIP_CALL( SCIPendProbing(scip) );
 
    /* release cutoff row if there is one */
@@ -2975,7 +2978,7 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    *result = SCIP_DIDNOTRUN;
 
    /* do not run in: presolving, repropagation, probing mode, if no objective propagation is allowed  */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip) || SCIPinProbing(scip) || !SCIPallowObjProp(scip) )
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip) || SCIPinProbing(scip) || !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* do not run propagator in a sub-SCIP */
@@ -2998,7 +3001,7 @@ SCIP_DECL_PROPEXEC(propExecObbt)
       return SCIP_OKAY;
    }
 
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */

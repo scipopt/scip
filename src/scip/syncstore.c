@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,7 +16,7 @@
 /**@file   syncstore.c
  * @ingroup PARALLEL
  * @brief  the function definitions of the synchronization store
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stephen J. Maher
  */
 
@@ -47,6 +47,7 @@ int getNSyncdata(
    )
 {
    int maxnsyncdelay;
+
    SCIP_CALL_ABORT( SCIPgetIntParam(scip, "concurrent/sync/maxnsyncdelay", &maxnsyncdelay) );
 
    return 2 * (maxnsyncdelay + 1);
@@ -546,7 +547,6 @@ int SCIPsyncstoreGetNSolvers(
    return syncstore->nsolvers;
 }
 
-
 /** read amount total memory used from synchronization data */
 SCIP_Longint SCIPsyncdataGetMemTotal(
    SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
@@ -705,8 +705,8 @@ void SCIPsyncdataGetSolutionBuffer(
                                               *   if the buffer is not NULL */
    )
 {
-   int                  pos;
-   int                  i;
+   int pos;
+   int i;
 
    assert(syncstore != NULL);
    assert(syncstore->initialized);

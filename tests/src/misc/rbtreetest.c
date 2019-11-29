@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,7 +15,7 @@
 
 /**@file   select.c
  * @brief  unit tests for red black tree datastructure
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 #include "scip/misc.h"

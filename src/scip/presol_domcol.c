@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    presol_domcol.c
- * @ingroup PRESOLVERS
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief   dominated column presolver
  * @author  Dieter Weninger
  * @author  Gerald Gamrath
@@ -31,6 +31,8 @@
  *       indicate in which constraint type (<=, >=, or ranged row / ==) they are existing. Then sort the variables (and
  *       corresponding data) after the ranged row/equation hashvalue and only try to derive dominance on variables with
  *       the same hashvalue on ranged row/equation and fitting hashvalues for the other constraint types.
+ * @todo run on incomplete matrices; in order to do so, check at the time when dominance is detected that the locks are
+ *       consistent; probably, it is sufficient to check one lock direction for each of the two variables
  *
  */
 
@@ -2000,6 +2002,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
+   SCIP_Bool infeasible;
 
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
@@ -2010,7 +2013,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    presoldata = SCIPpresolGetData(presol);
@@ -2023,7 +2026,18 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
+      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
+
+   /* if infeasibility was detected during matrix creation, return here */
+   if( infeasible )
+   {
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
 
    if( initialized && complete )
    {
@@ -2304,7 +2318,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 
          for( v = ncols - 1; v >= 0; --v )
          {
-            SCIP_Bool infeasible;
             SCIP_Bool fixed;
             SCIP_VAR* var;
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,7 +60,7 @@ public:
     *  @note This function can be activated by calling SCIPsetStaticErrorPrintingMessagehdlr().
     *
     *  @see SCIP_DECL_ERRORPRINTING(x) in @ref type_message.h
-    */
+    */ /*lint -e715*/
    virtual void scip_error(
       SCIP_MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
       FILE*              file,               /**< file stream to print into (NULL for stderr) */
@@ -73,7 +73,7 @@ public:
    /** warning message print method of message handler
     *
     *  @see SCIP_DECL_MESSAGEWARNING(x) in @ref type_message.h
-    */
+    */ /*lint -e715*/
    virtual SCIP_DECL_MESSAGEWARNING(scip_warning)
    { /*lint --e{715}*/
 
@@ -82,7 +82,7 @@ public:
    /** dialog message print method of message handler
     *
     *  @see SCIP_DECL_MESSAGEDIALOG(x) in @ref type_message.h
-    */
+    */ /*lint -e715*/
    virtual SCIP_DECL_MESSAGEDIALOG(scip_dialog)
    { /*lint --e{715}*/
 
@@ -91,7 +91,7 @@ public:
    /** info message print method of message handler
     *
     *  @see SCIP_DECL_MESSAGEINFO(x) in @ref type_message.h
-    */
+    */ /*lint -e715*/
    virtual SCIP_DECL_MESSAGEINFO(scip_info)
    { /*lint --e{715}*/
 
@@ -100,7 +100,7 @@ public:
    /** destructor of message handler to free message handler data
     *
     *  @see SCIP_DECL_MESSAGEHDLRFREE(x) in @ref type_message.h
-    */
+    */ /*lint -e715*/
    virtual SCIP_DECL_MESSAGEHDLRFREE(scip_free)
    { /*lint --e{715}*/
       return SCIP_OKAY;
@@ -112,7 +112,7 @@ public:
 
 
 /** creates the message handler for the given message handler object */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateObjMessagehdlr(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
    scip::ObjMessagehdlr* objmessagehdlr,     /**< message handler object */
@@ -120,13 +120,13 @@ SCIP_RETCODE SCIPcreateObjMessagehdlr(
    );
 
 /** returns the message handler object for the given message handler */
-EXTERN
+SCIP_EXPORT
 scip::ObjMessagehdlr* SCIPgetObjMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** set static error output function to the corresponding function of message handler */
-EXTERN
+SCIP_EXPORT
 void SCIPsetStaticErrorPrintingMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );

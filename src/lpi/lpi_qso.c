@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpi_qso.c
+ * @ingroup OTHER_CFILES
  * @brief  LP interface for QSopt version >= 070303
  * @author Daniel Espinoza
  * @author Marc Pfetsch
@@ -2980,7 +2981,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3027,7 +3028,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3551,6 +3552,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
+      /* The maximum number of pivots allowed in the algorithm can be set with the QS_PARAM_SIMPLEX_MAX_ITERATIONS parameter.
+       * ival can be any positive integer, 0 stopping immediately */
+      assert( ival >= 0 );
       QS_CONDRET( QSset_param(lpi->prob, QS_PARAM_SIMPLEX_MAX_ITERATIONS, ival) );
       break;
    default:
@@ -3618,6 +3622,12 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_LPTILIM:
+      assert( dval > 0.0 );
+
+      /* qso requires dval >= 0
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
       QS_CONDRET( QSset_param_double(lpi->prob, QS_PARAM_SIMPLEX_MAX_TIME, dval) );
       break;
    case SCIP_LPPAR_OBJLIM:

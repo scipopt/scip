@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -42,25 +42,6 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -71,33 +52,33 @@ extern "C" {
  */
 
 /** includes an NLPI in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlpi(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi                /**< NLPI data structure */
    );
 
 /** returns the NLPI of the given name, or NULL if not existing */
-EXTERN
+SCIP_EXPORT
 SCIP_NLPI* SCIPfindNlpi(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of NLPI */
    );
 
 /** returns the array of currently available NLPIs (sorted by priority) */
-EXTERN
+SCIP_EXPORT
 SCIP_NLPI** SCIPgetNlpis(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of currently available NLPIs */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNNlpis(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the priority of an NLPI */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNlpiPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< NLPI */
@@ -126,7 +107,7 @@ SCIP_RETCODE SCIPsetNlpiPriority(
  *
  *  @see SCIPenableNLP
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisNLPEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -145,7 +126,7 @@ SCIP_Bool SCIPisNLPEnabled(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 void SCIPenableNLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -156,7 +137,7 @@ void SCIPenableNLP(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisNLPConstructed(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -167,7 +148,7 @@ SCIP_Bool SCIPisNLPConstructed(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasNLPContinuousNonlinearity(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -178,7 +159,7 @@ SCIP_Bool SCIPhasNLPContinuousNonlinearity(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNLPVarsData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to store the array of NLP variables, or NULL */
@@ -191,7 +172,7 @@ SCIP_RETCODE SCIPgetNLPVarsData(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR** SCIPgetNLPVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -202,7 +183,7 @@ SCIP_VAR** SCIPgetNLPVars(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNNLPVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -213,7 +194,7 @@ int SCIPgetNNLPVars(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNLPVarsNonlinearity(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
@@ -225,7 +206,7 @@ SCIP_RETCODE SCIPgetNLPVarsNonlinearity(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* SCIPgetNLPVarsLbDualsol(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -236,7 +217,7 @@ SCIP_Real* SCIPgetNLPVarsLbDualsol(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* SCIPgetNLPVarsUbDualsol(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -247,7 +228,7 @@ SCIP_Real* SCIPgetNLPVarsUbDualsol(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNLPNlRowsData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW***         nlrows,             /**< pointer to store the array of NLP nonlinear rows, or NULL */
@@ -260,7 +241,7 @@ SCIP_RETCODE SCIPgetNLPNlRowsData(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_NLROW** SCIPgetNLPNlRows(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -271,7 +252,7 @@ SCIP_NLROW** SCIPgetNLPNlRows(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNNLPNlRows(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -282,7 +263,7 @@ int SCIPgetNNLPNlRows(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow               /**< nonlinear row to add to NLP */
@@ -294,7 +275,7 @@ SCIP_RETCODE SCIPaddNlRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPflushNLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -308,7 +289,7 @@ SCIP_RETCODE SCIPflushNLP(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNLPInitialGuess(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            initialguess        /**< values of initial guess (corresponding to variables from SCIPgetNLPVarsData), or NULL to use no start point */
@@ -323,7 +304,7 @@ SCIP_RETCODE SCIPsetNLPInitialGuess(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNLPInitialGuessSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< solution which values should be taken as initial guess, or NULL for LP solution */
@@ -338,7 +319,7 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -349,7 +330,7 @@ SCIP_RETCODE SCIPsolveNLP(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_NLPSOLSTAT SCIPgetNLPSolstat(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -360,7 +341,7 @@ SCIP_NLPSOLSTAT SCIPgetNLPSolstat(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_NLPTERMSTAT SCIPgetNLPTermstat(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -374,7 +355,7 @@ SCIP_NLPTERMSTAT SCIPgetNLPTermstat(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNLPStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
@@ -386,7 +367,7 @@ SCIP_RETCODE SCIPgetNLPStatistics(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetNLPObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -398,7 +379,7 @@ SCIP_Real SCIPgetNLPObjval(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPhasNLPSolution(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -412,7 +393,7 @@ SCIP_Bool SCIPhasNLPSolution(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNLPFracVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           fracvars,           /**< pointer to store the array of NLP fractional variables, or NULL */
@@ -431,7 +412,7 @@ SCIP_RETCODE SCIPgetNLPFracVars(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNLPIntPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
@@ -447,7 +428,7 @@ SCIP_RETCODE SCIPgetNLPIntPar(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNLPIntPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
@@ -463,7 +444,7 @@ SCIP_RETCODE SCIPsetNLPIntPar(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNLPRealPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
@@ -479,7 +460,7 @@ SCIP_RETCODE SCIPgetNLPRealPar(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNLPRealPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
@@ -495,7 +476,7 @@ SCIP_RETCODE SCIPsetNLPRealPar(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNLPStringPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
@@ -511,7 +492,7 @@ SCIP_RETCODE SCIPgetNLPStringPar(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNLPStringPar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         type,               /**< parameter number */
@@ -527,7 +508,7 @@ SCIP_RETCODE SCIPsetNLPStringPar(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name */
@@ -552,7 +533,7 @@ SCIP_RETCODE SCIPwriteNLP(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNLPI(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI**           nlpi,               /**< pointer to store the NLP solver interface */
@@ -574,7 +555,7 @@ SCIP_RETCODE SCIPgetNLPI(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPstartDiveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -590,7 +571,7 @@ SCIP_RETCODE SCIPstartDiveNLP(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPendDiveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -604,7 +585,7 @@ SCIP_RETCODE SCIPendDiveNLP(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarObjDiveNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable which coefficient to change */
@@ -620,7 +601,7 @@ SCIP_RETCODE SCIPchgVarObjDiveNLP(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarBoundsDiveNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable which bounds to change */
@@ -637,7 +618,7 @@ SCIP_RETCODE SCIPchgVarBoundsDiveNLP(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarsBoundsDiveNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables which bounds to changes */
@@ -655,7 +636,7 @@ SCIP_RETCODE SCIPchgVarsBoundsDiveNLP(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveDiveNLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -677,7 +658,7 @@ SCIP_RETCODE SCIPsolveDiveNLP(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
@@ -706,7 +687,7 @@ SCIP_RETCODE SCIPcreateNlRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateEmptyNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW**          nlrow,              /**< pointer to nonlinear row */
@@ -725,7 +706,7 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateNlRowFromRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW**          nlrow,              /**< pointer to nonlinear row */
@@ -742,7 +723,7 @@ SCIP_RETCODE SCIPcreateNlRowFromRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcaptureNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow               /**< nonlinear row to capture */
@@ -759,7 +740,7 @@ SCIP_RETCODE SCIPcaptureNlRow(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreleaseNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW**          nlrow               /**< pointer to nonlinear row */
@@ -775,7 +756,7 @@ SCIP_RETCODE SCIPreleaseNlRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgNlRowLhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
@@ -792,7 +773,7 @@ SCIP_RETCODE SCIPchgNlRowLhs(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgNlRowRhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
@@ -809,7 +790,7 @@ SCIP_RETCODE SCIPchgNlRowRhs(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgNlRowConstant(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -826,7 +807,7 @@ SCIP_RETCODE SCIPchgNlRowConstant(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddLinearCoefToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -844,7 +825,7 @@ SCIP_RETCODE SCIPaddLinearCoefToNlRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -866,7 +847,7 @@ SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgNlRowLinearCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -886,7 +867,7 @@ SCIP_RETCODE SCIPchgNlRowLinearCoef(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddQuadVarToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -905,7 +886,7 @@ SCIP_RETCODE SCIPaddQuadVarToNlRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddQuadVarsToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -925,7 +906,7 @@ SCIP_RETCODE SCIPaddQuadVarsToNlRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddQuadElementToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -944,7 +925,7 @@ SCIP_RETCODE SCIPaddQuadElementToNlRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddQuadElementsToNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -965,7 +946,7 @@ SCIP_RETCODE SCIPaddQuadElementsToNlRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgNlRowQuadElement(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -982,7 +963,7 @@ SCIP_RETCODE SCIPchgNlRowQuadElement(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNlRowExprtree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -999,7 +980,7 @@ SCIP_RETCODE SCIPsetNlRowExprtree(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNlRowExprtreeParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -1017,7 +998,7 @@ SCIP_RETCODE SCIPsetNlRowExprtreeParam(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetNlRowExprtreeParams(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -1034,7 +1015,7 @@ SCIP_RETCODE SCIPsetNlRowExprtreeParams(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrecalcNlRowNLPActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
@@ -1049,7 +1030,7 @@ SCIP_RETCODE SCIPrecalcNlRowNLPActivity(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNlRowNLPActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
@@ -1065,7 +1046,7 @@ SCIP_RETCODE SCIPgetNlRowNLPActivity(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNlRowNLPFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
@@ -1081,7 +1062,7 @@ SCIP_RETCODE SCIPgetNlRowNLPFeasibility(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrecalcNlRowPseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
@@ -1096,7 +1077,7 @@ SCIP_RETCODE SCIPrecalcNlRowPseudoActivity(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNlRowPseudoActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
@@ -1112,7 +1093,7 @@ SCIP_RETCODE SCIPgetNlRowPseudoActivity(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNlRowPseudoFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
@@ -1128,7 +1109,7 @@ SCIP_RETCODE SCIPgetNlRowPseudoFeasibility(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrecalcNlRowActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
@@ -1143,7 +1124,7 @@ SCIP_RETCODE SCIPrecalcNlRowActivity(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNlRowActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
@@ -1159,7 +1140,7 @@ SCIP_RETCODE SCIPgetNlRowActivity(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNlRowFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
@@ -1175,7 +1156,7 @@ SCIP_RETCODE SCIPgetNlRowFeasibility(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNlRowSolActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
@@ -1192,7 +1173,7 @@ SCIP_RETCODE SCIPgetNlRowSolActivity(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNlRowSolFeasibility(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
@@ -1210,7 +1191,7 @@ SCIP_RETCODE SCIPgetNlRowSolFeasibility(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetNlRowActivityBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
@@ -1228,7 +1209,7 @@ SCIP_RETCODE SCIPgetNlRowActivityBounds(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */

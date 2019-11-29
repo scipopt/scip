@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -44,7 +44,7 @@ function isEQ(a, b)
 }
 
 BEGIN {
-   timegeomshift = 10.0;
+   timegeomshift = 1.0;
    nodegeomshift = 100.0;
    onlyinsolufile = 0;       # should only instances be reported that are included in the .solu file?
    writesolufile = 0;        # should a solution file be created from the results
@@ -102,6 +102,11 @@ BEGIN {
 #18 NumberOfNodes
 
 $3 == solver || $3 == "EXAMINER2" {
+   # with GAMS >= 26, the full filename is written to the trace file
+   # we remove some extensions for easier matching with solu file entries
+   sub("\\.gms.gz", "", $1);
+   sub("\\.gms", "", $1);
+
    model[nprobs] = $1;
    type[nprobs] = $2;
    maxobj[nprobs] = ( $5 == 1 ? 1 : 0 );
@@ -292,22 +297,16 @@ END {
             timeouttime += tottime;
             timeouts++;
          }
-         else if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
+         else if( abs(pb - db) <= abstol || abs(pb - db) <= max(reltol, 1.05*gaplimit) * max(abs(pb),abs(db)) )
          {
-            # found and proven optimal value
-            status = "ok";
-            pass++;
-         }
-         else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
-         {
-            # found and proven optimal value w.r.t. gaplimit
+            # found and proven optimal value (w.r.t. tolerances/gaplimit)
             status = "ok";
             pass++;
          }
          else
          {
             # gap not closed, but no timeout
-            status = "fail (gap)";
+            status = sprintf("fail (gap=%e)", gap);
             failtime += tottime;
             fail++;
          }
@@ -344,22 +343,16 @@ END {
                timeouts++;
             }
          }
-         else if( abs(pb - db) <= max(abstol, reltol) )
+         else if( abs(pb - db) <= abstol || abs(pb - db) <= max(reltol, 1.05*gaplimit) * max(abs(pb),abs(db)) )
          {
-            # proven optimal
-            status = "solved not verified";
-            pass++;
-         }
-         else if( (gap <= 105*gaplimit) && abs(pb - sol[prob])/max(abs(pb),abs(sol[prob])) <= 1.05*gaplimit )
-         {
-            # proven optimal w.r.t. gap
+            # proven optimal (w.r.t. tolerances/gaplimit)
             status = "solved not verified";
             pass++;
          }
          else
          {
             # gap not closed, but also no timeout
-            status = "fail (gap)";
+            status = sprintf("fail (gap=%e)", gap);
             failtime += tottime;
             fail++;
          }
@@ -425,12 +418,30 @@ END {
                pass++;
             }
          }
-         else
+         else if( (!maxobj[m] && pb < infty) || (maxobj[m] && pb > -infty) )
          {
             # feasible for an infeasible problem
             status = "fail (infeas.)";
             failtime += tottime;
             fail++;
+         }
+         else
+         {
+            # no feasible solution
+            if( timeout )
+            {
+               # time or node limit reached
+               status = "timeout";
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+              # gap not closed, but no timeout
+              status = "fail (gap)";
+              failtime += tottime;
+              fail++;
+            }
          }
       }
       else

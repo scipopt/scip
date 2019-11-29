@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_octane.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
  * @author Timo Berthold
  */
@@ -42,7 +43,7 @@
 
 #define HEUR_NAME             "octane"
 #define HEUR_DESC             "octane primal heuristic for pure {0;1}-problems based on Balas et al."
-#define HEUR_DISPCHAR         'O'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ROUNDING
 #define HEUR_PRIORITY         -1008000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
@@ -282,6 +283,7 @@ SCIP_RETCODE generateAverageRay(
          {
             tableaurowind = tableaurowinds[j][i];
             rownorm[tableaurowind] += tableaurows[j][tableaurowind] * tableaurows[j][tableaurowind];
+            assert(usedrowids != NULL);  /* for lint */
             if( !usedrowids[tableaurowind] )
             {
                usedrowids[tableaurowind] = TRUE;
@@ -503,7 +505,7 @@ SCIP_RETCODE generateAverageNBRay(
 
 /** generates the starting point for the shooting ray in original coordinates */
 static
-SCIP_RETCODE generateStartingPoint(
+void generateStartingPoint(
    SCIP*                 scip,               /**< SCIP data structure                   */
    SCIP_Real*            rayorigin,          /**< origin of the shooting ray            */
    SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
@@ -518,8 +520,6 @@ SCIP_RETCODE generateStartingPoint(
 
    for( v = nsubspacevars - 1; v >= 0; --v )
       rayorigin[v] = SCIPvarGetLPSol(subspacevars[v]);
-
-   return SCIP_OKAY;
 }
 
 /** translates the inner point of the LP to an inner point rayorigin of the unit hyper octahedron and
@@ -930,7 +930,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       usefracspace ? "fractional" : "all", nsubspacevars, f_max, (heurdata->lastrule+1)%5);
 
    /* generate starting point in original coordinates */
-   SCIP_CALL( generateStartingPoint(scip, rayorigin, subspacevars, nsubspacevars) );
+   generateStartingPoint(scip, rayorigin, subspacevars, nsubspacevars);
    for( i = nsubspacevars - 1; i >= 0; --i )
       rayorigin[i] -= 0.5;
 

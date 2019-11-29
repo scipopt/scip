@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_gateextraction.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  gateextraction presolver
  * @author Michael Winkler
  */
@@ -194,7 +195,7 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValCons)
    assert(hashdata->nvars == 2);
 
    /* if we have only two variables we store at each 16 bits of the hash value the index of a variable */
-   hashval = ((unsigned int)SCIPvarGetIndex(hashdata->vars[1]) << 16) + SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
+   hashval = ((unsigned int)SCIPvarGetIndex(hashdata->vars[1]) << 16) + (unsigned int) SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
 
    return hashval;
 }
@@ -1373,7 +1374,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
    {
       if( paramvalue )
       {
-	 SCIPwarningMessage(scip, "Gate-presolving is the 'counterpart' of linearizing all and-constraints, so enabling both presolving steps at ones does not make sense.\n");
+	 SCIPwarningMessage(scip, "Gate-presolving is the 'counterpart' of linearizing all and-constraints, so enabling both presolving steps simultaneously does not make sense.\n");
       }
    }
    *result = SCIP_DIDNOTFIND;
@@ -1743,11 +1744,11 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
           *
           * find set-packing constraints:  (~x + ~y >= 1 and ~x + ~z >= 1)  <=>  (x + y <= 1 and x + z <= 1)
           *
-          * - these three constraints are aquivalent to: x = ~y * ~z (x = AND(~y,~z))
+          * - these three constraints are equivalent to: x = ~y * ~z (x = AND(~y,~z))
           *
           * if an additional set-packing constraint exists: y + z <= 1
           *
-          * - these four constraints are aquivalent to: x + y + z = 1
+          * - these four constraints are equivalent to: x + y + z = 1
           */
          SCIP_CALL( extractGates(scip, presoldata, c, varmap, gateconss, activevars, posresultants, &hashdata, ndelconss, naddconss) );
       }

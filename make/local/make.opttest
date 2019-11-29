@@ -1,0 +1,35 @@
+# Call with "make testcluster"
+#
+# Runs distributed tests on the cluster via SLURM.
+#
+# The SLURM "mip" queue consists of 9 nodes (opt210 - opt218). Each node
+# provides 2 Intel Xeon X5672 CPUs @ 3.2 GHz each with 4 cores, 12 MB cache and
+# 50 GB memory. This gives a total of 9 * 2 * 4 = 72 cores.
+#
+# The "mip-dbg" queue consists of some cores collected from workstations in our
+# Integer Programming group.
+#
+# In case of time measuring you should use the flag EXCLUSIVE=true to enforce
+# that only one process is running on any node you use.
+#
+# To cancel all your jobs of a testset MyTestSet you can call
+# "make cancelcluster TEST=MyTestSet".
+#
+# To get the result files call "./evalcheck_cluster.sh
+# results/check.$TSTNAME.$BINNMAE.$SETNAME.eval in directory check/
+# This leads to result files
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.out
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.res
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.err
+#
+
+QUEUETYPE	=	srun
+QUEUE		=	M620v2
+PPN 		=	-1
+CLIENTTMPDIR	=	/local/tmp
+NOWAITCLUSTER   =       1
+EXCLUSIVE	=	false
+
+.PHONY: cancelcluster
+cancelcluster:
+	scancel --user=$(USER)

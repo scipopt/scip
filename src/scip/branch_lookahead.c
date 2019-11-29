@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_lookahead.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @ingroup BRANCHINGRULES
  * @brief  lookahead LP branching rule
  * @author Christoph Schubert
@@ -1503,7 +1504,7 @@ SCIP_RETCODE binaryVarListCreate(
 
 /** Appends a binary variable to the list, reallocating the list if necessary. */
 static
-SCIP_RETCODE binaryVarListAppend(
+void binaryVarListAppend(
    SCIP*                 scip,               /**< SCIP data structure */
    BINARYVARLIST*        list,               /**< The list to add the var to. */
    SCIP_VAR*             vartoadd            /**< The binary var to add to the list. */
@@ -1518,8 +1519,6 @@ SCIP_RETCODE binaryVarListAppend(
    /* Set the new var at the first unused place, which is the length used as index */
    list->binaryvars[list->nbinaryvars] = vartoadd;
    list->nbinaryvars++;
-
-   return SCIP_OKAY;
 }
 
 /** Remove the last element from the list. */
@@ -4455,7 +4454,7 @@ SCIP_RETCODE executeBranchingRecursive(
 
          assert(negbranchvar != NULL);
 
-         SCIP_CALL( binaryVarListAppend(scip, binconsdata->binaryvars, negbranchvar) );
+         binaryVarListAppend(scip, binconsdata->binaryvars, negbranchvar);
       }
       else
       {
@@ -4465,7 +4464,7 @@ SCIP_RETCODE executeBranchingRecursive(
           * UpBranching on a binary variable x means: x >= 1
           * When this cutoff occurs we have that: x <= 0
           */
-         SCIP_CALL( binaryVarListAppend(scip, binconsdata->binaryvars, branchvar) );
+         binaryVarListAppend(scip, binconsdata->binaryvars, branchvar);
       }
    }
 
@@ -5244,6 +5243,7 @@ SCIP_RETCODE selectVarRecursive(
 
             if( binconsdata != NULL )
             {
+               assert(binconsdata != NULL); /* for lint */
                nbincons = binconsdata->conslist->nviolatedcons;
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found %d binary constraints (%d violated by the LP solution)\n",
                   binconsdata->conslist->nelements, nbincons);
@@ -5258,6 +5258,7 @@ SCIP_RETCODE selectVarRecursive(
 
             if( domainreductions != NULL )
             {
+               assert(domainreductions != NULL); /* for lint */
                ndomreds = domainreductions->nviolatedvars;
                if( config->prefersimplebounds && ndomreds > domainreductions->nsimplebounds )
                   ndomreds = domainreductions->nsimplebounds;

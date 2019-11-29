@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   retcode.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for return codes for SCIP methods
  * @author Tobias Achterberg
  */
@@ -90,6 +91,9 @@ void SCIPretcodePrint(
    case SCIP_BRANCHERROR:
       SCIPmessageFPrintInfo(messagehdlr, file, "branching could not be performed (e.g. too large values in variable domain)");
       break;
+   case SCIP_NOTIMPLEMENTED:
+      SCIPmessageFPrintInfo(messagehdlr, file, "function not implemented");
+      break;
    default:
       SCIPmessageFPrintInfo(messagehdlr, file, "unknown error code");
       break;
@@ -159,6 +163,9 @@ void SCIPretcodePrintError(
       break;
    case SCIP_BRANCHERROR:
       SCIPmessagePrintError("branching could not be performed (e.g. too large values in variable domain)");
+      break;
+   case SCIP_NOTIMPLEMENTED:
+      SCIPmessagePrintError("function not implemented");
       break;
    default:
       SCIPmessagePrintError("unknown error code");

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -21,7 +21,7 @@
 
 #include "nlpi/nlpi_worhp.h"
 
-/** create solver interface for Worhp solver */
+/** create solver interface for Worhp solver */ /*lint -e715*/
 SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */

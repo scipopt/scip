@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -57,7 +57,7 @@ extern "C" {
  */
 
 /** creates and resets an Exp.3 bandit algorithm using \p scip pointer */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateBanditExp3(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BANDIT**         exp3,               /**< pointer to store bandit algorithm */
@@ -69,21 +69,21 @@ SCIP_RETCODE SCIPcreateBanditExp3(
    );
 
 /** set gamma parameter of Exp.3 bandit algorithm to increase weight of uniform distribution */
-EXTERN
+SCIP_EXPORT
 void SCIPsetGammaExp3(
    SCIP_BANDIT*          exp3,               /**< bandit algorithm */
    SCIP_Real             gammaparam          /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
    );
 
 /** set beta parameter of Exp.3 bandit algorithm to increase gain offset for actions that were not played */
-EXTERN
+SCIP_EXPORT
 void SCIPsetBetaExp3(
    SCIP_BANDIT*          exp3,               /**< bandit algorithm */
    SCIP_Real             beta                /**< gain offset between 0 and 1 at every observation */
    );
 
 /** returns probability to play an action */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetProbabilityExp3(
    SCIP_BANDIT*          exp3,               /**< bandit algorithm */
    int                   action              /**< index of the requested action */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -41,25 +41,6 @@
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -70,7 +51,7 @@ extern "C" {
  */
 
 /** computes coefficients of linearization of a square term in a reference point */
-EXTERN
+SCIP_EXPORT
 void SCIPaddSquareLinearization(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             sqrcoef,            /**< coefficient of square term */
@@ -82,7 +63,7 @@ void SCIPaddSquareLinearization(
    );
 
 /** computes coefficients of secant of a square term */
-EXTERN
+SCIP_EXPORT
 void SCIPaddSquareSecant(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             sqrcoef,            /**< coefficient of square term */
@@ -95,7 +76,7 @@ void SCIPaddSquareSecant(
    );
 
 /** computes coefficients of linearization of a bilinear term in a reference point */
-EXTERN
+SCIP_EXPORT
 void SCIPaddBilinLinearization(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
@@ -108,7 +89,7 @@ void SCIPaddBilinLinearization(
    );
 
 /** computes coefficients of McCormick under- or overestimation of a bilinear term */
-EXTERN
+SCIP_EXPORT
 void SCIPaddBilinMcCormick(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
@@ -131,7 +112,7 @@ void SCIPaddBilinMcCormick(
  *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
  *        by Marco Locatelli
  */
-EXTERN
+SCIP_EXPORT
 void SCIPcomputeBilinEnvelope1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
@@ -158,7 +139,7 @@ void SCIPcomputeBilinEnvelope1(
  *        by Marco Locatelli
  *
  */
-EXTERN
+SCIP_EXPORT
 void SCIPcomputeBilinEnvelope2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
@@ -186,7 +167,7 @@ void SCIPcomputeBilinEnvelope2(
  *
  *  @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
  **/
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateNlpiProb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
@@ -203,7 +184,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    );
 
 /** updates bounds of each variable and the cutoff row in the nlpiproblem */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPupdateNlpiProb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
@@ -215,7 +196,7 @@ SCIP_RETCODE SCIPupdateNlpiProb(
    );
 
 /** adds linear rows to the NLP relaxation */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddNlpiProbRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_gms.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  GAMS file writer
  * @author Ambros Gleixner
  * @author Stefan Vigerske
@@ -189,7 +190,7 @@ void appendLine(
     * because of overlapping memory areas in memcpy used in sprintf.
     */
    len = strlen(linebuffer);
-   strncat(linebuffer, extension, GMS_MAX_PRINTLEN - len);
+   (void) strncat(linebuffer, extension, GMS_MAX_PRINTLEN - len);
 
    (*linecnt) += (int) strlen(extension);
 
@@ -475,6 +476,9 @@ SCIP_RETCODE printLinearRow(
 
    for( v = 0; v < nvars; ++v )
    {
+      assert(vars != NULL);  /* for lint */
+      assert(vals != NULL);
+
       var = vars[v];
       assert( var != NULL );
 
@@ -1046,7 +1050,7 @@ SCIP_RETCODE printIndicatorCons(
  *
  * write as
  * Set name_sosset /1*nvars/;
- * SOS1/2 Variable name_sosvar(name_sosset);
+ * SOS1/2 Variable name_sosvar(name_sosset); name_sosvar.lo(name_sosset) = -inf;
  * Equation name_sosequ(e1_sosset);
  * name_sosequ(name_sosset).. name_sosvar(e1_sosset) =e=
  * vars[0]$sameas(name_sosset, '1') + vars[1]$sameas(name_sosset, '2') + ... + vars[nvars-1]$sameas(name_sosset, nvars);

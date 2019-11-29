@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -36,25 +36,6 @@
 #include "scip/type_paramset.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -70,7 +51,7 @@ extern "C" {
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -87,7 +68,7 @@ SCIP_RETCODE SCIPaddBoolParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddIntParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -106,7 +87,7 @@ SCIP_RETCODE SCIPaddIntParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddLongintParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -125,7 +106,7 @@ SCIP_RETCODE SCIPaddLongintParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddRealParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -144,7 +125,7 @@ SCIP_RETCODE SCIPaddRealParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddCharParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -162,7 +143,7 @@ SCIP_RETCODE SCIPaddCharParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddStringParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -178,7 +159,7 @@ SCIP_RETCODE SCIPaddStringParam(
  *
  *  @return TRUE if the parameter is fixed to a value, otherwise FALSE.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisParamFixed(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of the parameter */
@@ -188,7 +169,7 @@ SCIP_Bool SCIPisParamFixed(
  *
  *  @return pointer to the parameter with the given name
  */
-EXTERN
+SCIP_EXPORT
 SCIP_PARAM* SCIPgetParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of the parameter */
@@ -199,7 +180,7 @@ SCIP_PARAM* SCIPgetParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -211,7 +192,7 @@ SCIP_RETCODE SCIPgetBoolParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetIntParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -223,7 +204,7 @@ SCIP_RETCODE SCIPgetIntParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetLongintParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -235,7 +216,7 @@ SCIP_RETCODE SCIPgetLongintParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetRealParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -247,7 +228,7 @@ SCIP_RETCODE SCIPgetRealParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetCharParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -259,7 +240,7 @@ SCIP_RETCODE SCIPgetCharParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetStringParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -274,7 +255,7 @@ SCIP_RETCODE SCIPgetStringParam(
  *  @note: Be careful with this method! Some general settings, e.g., the time or node limit, should not be fixed because
  *         they have to be changed for sub-SCIPs.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPfixParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of the parameter */
@@ -285,7 +266,7 @@ SCIP_RETCODE SCIPfixParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPunfixParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of the parameter */
@@ -296,7 +277,7 @@ SCIP_RETCODE SCIPunfixParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -308,7 +289,7 @@ SCIP_RETCODE SCIPsetParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -320,7 +301,7 @@ SCIP_RETCODE SCIPchgBoolParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -328,7 +309,7 @@ SCIP_RETCODE SCIPsetBoolParam(
    );
 
 /** checks whether the value of an existing SCIP_Bool parameter is valid */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisBoolParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -340,7 +321,7 @@ SCIP_Bool SCIPisBoolParamValid(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgIntParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -352,7 +333,7 @@ SCIP_RETCODE SCIPchgIntParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetIntParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -360,7 +341,7 @@ SCIP_RETCODE SCIPsetIntParam(
    );
 
 /** checks whether the value of an existing int parameter is valid */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisIntParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -372,7 +353,7 @@ SCIP_Bool SCIPisIntParamValid(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgLongintParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -384,7 +365,7 @@ SCIP_RETCODE SCIPchgLongintParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetLongintParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -392,7 +373,7 @@ SCIP_RETCODE SCIPsetLongintParam(
    );
 
 /** checks whether parameter value of an existing SCIP_Longint paramter is valid */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisLongintParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -404,7 +385,7 @@ SCIP_Bool SCIPisLongintParamValid(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgRealParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -416,7 +397,7 @@ SCIP_RETCODE SCIPchgRealParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetRealParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -424,7 +405,7 @@ SCIP_RETCODE SCIPsetRealParam(
    );
 
 /** checks whether parameter value of an existing SCIP_Real paramter is valid */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisRealParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -436,7 +417,7 @@ SCIP_Bool SCIPisRealParamValid(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgCharParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -448,7 +429,7 @@ SCIP_RETCODE SCIPchgCharParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetCharParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -456,7 +437,7 @@ SCIP_RETCODE SCIPsetCharParam(
    );
 
 /** checks whether parameter value for a given SCIP_Real parameter is valid */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisCharParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -468,7 +449,7 @@ SCIP_Bool SCIPisCharParamValid(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgStringParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -480,7 +461,7 @@ SCIP_RETCODE SCIPchgStringParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetStringParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
@@ -488,7 +469,7 @@ SCIP_RETCODE SCIPsetStringParam(
    );
 
 /** checks whether parameter value for a given string parameter is valid */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisStringParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -500,7 +481,7 @@ SCIP_Bool SCIPisStringParamValid(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadParams(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name */
@@ -511,7 +492,7 @@ SCIP_RETCODE SCIPreadParams(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
@@ -527,7 +508,7 @@ SCIP_RETCODE SCIPwriteParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteParams(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< file name, or NULL for stdout */
@@ -542,7 +523,7 @@ SCIP_RETCODE SCIPwriteParams(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPresetParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of the parameter */
@@ -553,7 +534,7 @@ SCIP_RETCODE SCIPresetParam(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPresetParams(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -575,7 +556,7 @@ SCIP_RETCODE SCIPresetParams(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetEmphasis(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter settings */
@@ -590,7 +571,7 @@ SCIP_RETCODE SCIPsetEmphasis(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSubscipsOff(
    SCIP*                 scip,               /**< (auxiliary) SCIP data structure */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
@@ -606,7 +587,7 @@ SCIP_RETCODE SCIPsetSubscipsOff(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHeuristics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
@@ -623,7 +604,7 @@ SCIP_RETCODE SCIPsetHeuristics(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetPresolving(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
@@ -640,7 +621,7 @@ SCIP_RETCODE SCIPsetPresolving(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSeparating(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
@@ -651,7 +632,7 @@ SCIP_RETCODE SCIPsetSeparating(
  *
  *  @return SCIP_PARAM* array, containing all SCIP parameters.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_PARAM** SCIPgetParams(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -660,8 +641,17 @@ SCIP_PARAM** SCIPgetParams(
  *
  *  @return number of all SCIP parameters.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNParams(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether plugins with sub-SCIPs that could cause recursion have been disabled
+ *
+ *  @return the value of the variable set->subscipsoff
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPgetSubscipsOff(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

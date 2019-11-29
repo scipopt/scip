@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,7 +38,7 @@ extern "C" {
  *
  * @ingroup PropagatorIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropVbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -49,13 +49,13 @@ SCIP_RETCODE SCIPincludePropVbounds(
   */
 
 /** returns TRUE if the propagator has the status that all variable lower and upper bounds are propagated */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisPropagatedVbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** performs propagation of variables lower and upper bounds */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPexecPropVbounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */

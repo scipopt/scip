@@ -1,0 +1,65 @@
+STATISTICS
+    Problem name     : 4sHB
+    Variables        : 48 (32 binary, 0 integer, 0 implicit integer, 16 continuous)
+    Constraints      : 8
+OBJECTIVE
+    Sense            : minimize
+VARIABLES
+    [binary] <R2_1>: obj=0, original bounds = [0,1]
+    [binary] <R2_2>: obj=0, original bounds = [0,1]
+    [binary] <R2_3>: obj=0, original bounds = [0,1]
+    [binary] <R2_4>: obj=0, original bounds = [0,1]
+    [binary] <R2_5>: obj=0, original bounds = [0,1]
+    [binary] <R2_6>: obj=0, original bounds = [0,1]
+    [binary] <R2_7>: obj=0, original bounds = [0,1]
+    [binary] <R2_8>: obj=0, original bounds = [0,1]
+    [binary] <R2_9>: obj=0, original bounds = [0,1]
+    [binary] <R2_10>: obj=0, original bounds = [0,1]
+    [binary] <R_1>: obj=0, original bounds = [0,1]
+    [binary] <R_2>: obj=0, original bounds = [0,1]
+    [binary] <R_3>: obj=0, original bounds = [0,1]
+    [binary] <R_4>: obj=0, original bounds = [0,1]
+    [binary] <R_5>: obj=0, original bounds = [0,1]
+    [binary] <R_6>: obj=0, original bounds = [0,1]
+    [binary] <R_7>: obj=0, original bounds = [0,1]
+    [binary] <R_8>: obj=0, original bounds = [0,1]
+    [binary] <R_9>: obj=0, original bounds = [0,1]
+    [binary] <R_10>: obj=0, original bounds = [0,1]
+    [binary] <XR2_1>: obj=0, original bounds = [0,1]
+    [binary] <XR2_2>: obj=0, original bounds = [0,1]
+    [binary] <XR2_3>: obj=0, original bounds = [0,1]
+    [binary] <XR2_4>: obj=0, original bounds = [0,1]
+    [binary] <XR2_5>: obj=0, original bounds = [0,1]
+    [binary] <XR2_6>: obj=0, original bounds = [0,1]
+    [binary] <XR_1>: obj=0, original bounds = [0,1]
+    [binary] <XR_2>: obj=0, original bounds = [0,1]
+    [binary] <XR_3>: obj=0, original bounds = [0,1]
+    [binary] <XR_4>: obj=0, original bounds = [0,1]
+    [binary] <XR_5>: obj=0, original bounds = [0,1]
+    [binary] <XR_6>: obj=0, original bounds = [0,1]
+    [continuous] <XDP_1>: obj=1, original bounds = [0, inf]
+    [continuous] <XDP_2>: obj=1, original bounds = [0, inf]
+    [continuous] <XDN_1>: obj=-1, original bounds = [-inf, 0]
+    [continuous] <XDN_2>: obj=-1, original bounds = [-inf, 0]
+    [continuous] <XDP2_1>: obj=1, original bounds = [0, inf]
+    [continuous] <XDP2_2>: obj=1, original bounds = [0, inf]
+    [continuous] <XDN2_1>: obj=-1, original bounds = [-inf, 0]
+    [continuous] <XDN2_2>: obj=-1, original bounds = [-inf, 0]
+    [continuous] <DP_1>: obj=1, original bounds = [0, inf]
+    [continuous] <DP_2>: obj=1, original bounds = [0, inf]
+    [continuous] <DN_1>: obj=-1, original bounds = [-inf, 0]
+    [continuous] <DN_2>: obj=-1, original bounds = [-inf, 0]
+    [continuous] <DP2_1>: obj=1, original bounds = [0, inf]
+    [continuous] <DP2_2>: obj=1, original bounds = [0, inf]
+    [continuous] <DN2_1>: obj=-1, original bounds = [-inf, 0]
+    [continuous] <DN2_2>: obj=-1, original bounds = [-inf, 0]
+CONSTRAINTS
+    [linear] <P2_1>:  +14 <R2_1>[B] +66 <R2_2>[B] +36 <R2_3>[B] +85 <R2_4>[B] +5 <R2_5>[B] +91 <R2_6>[B] +34 <R2_7>[B] +43 <R2_8>[B] +62 <R2_9>[B] +82 <R2_10>[B] + <DP2_1>[C] + <DN2_1>[C] == 259;
+    [linear] <P2_2>:  +8 <R2_1>[B] +23 <R2_2>[B] +26 <R2_3>[B] +47 <R2_4>[B] +33 <R2_5>[B] +70 <R2_6>[B] +88 <R2_7>[B] +21 <R2_8>[B] +60 <R2_9>[B] +72 <R2_10>[B] + <DP2_2>[C] + <DN2_2>[C] == 224;
+    [linear] <P_1>:  +66 <R_1>[B] +68 <R_2>[B] +6 <R_3>[B] +13 <R_4>[B] +44 <R_5>[B] +27 <R_6>[B] +91 <R_7>[B] +21 <R_8>[B] +28 <R_9>[B] +83 <R_10>[B] + <DP_1>[C] + <DN_1>[C] == 223;
+    [linear] <P_2>:  +34 <R_1>[B] +99 <R_2>[B] +3 <R_3>[B] +95 <R_4>[B] +78 <R_5>[B] +79 <R_6>[B] +57 <R_7>[B] +36 <R_8>[B] +52 <R_9>[B] +9 <R_10>[B] + <DP_2>[C] + <DN_2>[C] == 271;
+    [linear] <XP2_1>:  +54 <XR2_1>[B] +96 <XR2_2>[B] +19 <XR2_3>[B] +56 <XR2_4>[B] +96 <XR2_5>[B] +71 <XR2_6>[B] + <XDP2_1>[C] + <XDN2_1>[C] == 196;
+    [linear] <XP2_2>:  +26 <XR2_1>[B] +9 <XR2_2>[B] +23 <XR2_3>[B] +10 <XR2_4>[B] +5 <XR2_5>[B] +56 <XR2_6>[B] + <XDP2_2>[C] + <XDN2_2>[C] == 64;
+    [linear] <XP_1>:  +10 <XR_1>[B] +92 <XR_2>[B] +16 <XR_3>[B] +90 <XR_4>[B] +22 <XR_5>[B] +55 <XR_6>[B] + <XDP_1>[C] + <XDN_1>[C] == 142;
+    [linear] <XP_2>:  +34 <XR_1>[B] +94 <XR_2>[B] +90 <XR_3>[B] +49 <XR_4>[B] +84 <XR_5>[B] +16 <XR_6>[B] + <XDP_2>[C] + <XDN_2>[C] == 183;
+END

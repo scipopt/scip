@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dialog.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for user interface dialog
  * @author Tobias Achterberg
  */
@@ -24,12 +25,6 @@
 #include <string.h>
 #include <ctype.h>
 
-#ifdef WITH_READLINE
-#include <stdio.h>
-#include <readline/readline.h>
-#include <readline/history.h>
-#endif
-
 #include "scip/scip.h"
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -39,6 +34,11 @@
 
 #include "scip/struct_dialog.h"
 
+#ifdef SCIP_WITH_READLINE
+#include <stdio.h>
+#include <readline/readline.h>
+#include <readline/history.h>
+#endif
 
 
 
@@ -46,7 +46,7 @@
  * read line methods
  */
 
-#ifdef WITH_READLINE
+#ifdef SCIP_WITH_READLINE
 
 /** reads a line of input from stdin */
 static
@@ -183,7 +183,7 @@ SCIP_RETCODE readLine(
    return SCIP_OKAY;
 }
 
-/** puts the given string on the command history */
+/** puts the given string on the command history */ /*lint -e715*/
 static
 SCIP_RETCODE addHistory(
    const char*           s                   /**< string to add to the command history */
@@ -202,7 +202,7 @@ int getHistoryLength(
    return 0;
 }
 
-/** removes a single element from the history list */
+/** removes a single element from the history list */ /*lint -e715*/
 static
 SCIP_RETCODE removeHistory(
    int                   pos                 /**< list position of history entry to remove */
@@ -219,6 +219,8 @@ SCIP_RETCODE writeHistory(
    const char*           filename            /**< name of file to (over)write history to */
    )
 {  /*lint --e{715}*/
+   assert(filename != NULL);
+
    /* nothing to do here */
    return SCIP_OKAY;
 }
@@ -327,10 +329,11 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
    )
 {  /*lint --e{715}*/
-#ifdef WITH_READLINE
+#ifdef SCIP_WITH_READLINE
    char readlineversion[20];
 #endif
 
+   assert(set != NULL);
    assert(dialoghdlr != NULL);
 
    SCIP_ALLOC( BMSallocMemory(dialoghdlr) );
@@ -343,7 +346,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
 
    SCIPdialoghdlrClearBuffer(*dialoghdlr);
 
-#ifdef WITH_READLINE
+#ifdef SCIP_WITH_READLINE
    (void) SCIPsnprintf(readlineversion, sizeof(readlineversion), "Readline %s", rl_library_version);
    SCIP_CALL( SCIPsetIncludeExternalCode(set, readlineversion, "GNU library for command line editing (gnu.org/s/readline)") );
 #endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,7 +51,7 @@ extern "C" {
 /** returns whether the solving process will be / was stopped before proving optimality;
  *  if the solving process was stopped, stores the reason as status in stat
  */
-extern
+SCIP_EXPORT
 SCIP_Bool SCIPsolveIsStopped(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -59,14 +59,12 @@ SCIP_Bool SCIPsolveIsStopped(
    );
 
 /** applies domain propagation on current node and flushes the conflict store afterwards */
-extern
 SCIP_RETCODE SCIPpropagateDomains(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< LP data */
@@ -81,7 +79,6 @@ SCIP_RETCODE SCIPpropagateDomains(
    );
 
 /** puts all constraints with initial flag TRUE into the LP */
-extern
 SCIP_RETCODE SCIPinitConssLP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -103,7 +100,6 @@ SCIP_RETCODE SCIPinitConssLP(
    );
 
 /** constructs the LP of the current node, but does not load the LP state and warmstart information  */
-extern
 SCIP_RETCODE SCIPconstructCurrentLP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -125,7 +121,6 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    );
 
 /** calls primal heuristics */
-extern
 SCIP_RETCODE SCIPprimalHeuristics(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -142,7 +137,6 @@ SCIP_RETCODE SCIPprimalHeuristics(
    );
 
 /** applies one round of separation on the given primal solution or on the LP solution */
-extern
 SCIP_RETCODE SCIPseparationRound(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -164,7 +158,6 @@ SCIP_RETCODE SCIPseparationRound(
    );
 
 /** solves the current LP completely with pricing in new variables */
-extern
 SCIP_RETCODE SCIPpriceLoop(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -195,7 +188,6 @@ SCIP_RETCODE SCIPpriceLoop(
    );
 
 /** main solving loop */
-extern
 SCIP_RETCODE SCIPsolveCIP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */

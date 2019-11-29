@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,6 +35,14 @@
 #include <limits.h>
 #include <float.h>
 #include <assert.h>
+
+/*
+ * include build configuration flags
+ */
+#ifndef NO_CONFIG_HEADER
+#include "scip/config.h"
+#include "scip/scip_export.h"
+#endif
 
 /*
  * GNU COMPILER VERSION define
@@ -71,27 +79,29 @@
 #endif
 
 /*
- * Define the marco EXTERN and some functions depending if the OS is Windows or not
+ * Add some macros for differing functions on Windows
  */
 #if defined(_WIN32) || defined(_WIN64)
 
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #define getcwd _getcwd
-
-#ifndef EXTERN
-#define EXTERN __declspec(dllexport)
 #endif
 
+/*
+ * Define the marco SCIP_EXPORT if it is not included from the generated header
+ */
+#ifndef SCIP_EXPORT
+#if defined(_WIN32) || defined(_WIN64)
+#define SCIP_EXPORT __declspec(dllexport)
 #else
-#ifndef EXTERN
-#define EXTERN extern
+#define SCIP_EXPORT
 #endif
 #endif
 
 /* define INLINE */
 #ifndef INLINE
-#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
+#if defined(_WIN32) || defined(__STDC__)
 #define INLINE                 __inline
 #else
 #define INLINE                 inline
@@ -108,10 +118,10 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                600 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               0 /**< SCIP sub version number */
-#define SCIP_APIVERSION              33 /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2018 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                602 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               4 /**< SCIP sub version number */
+#define SCIP_APIVERSION              63 /**< SCIP API version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2019 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -157,7 +167,7 @@ extern "C" {
 #define SCIP_DEFAULT_SUMEPSILON       1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL          1e-06  /**< default feasibility tolerance for constraints */
 #define SCIP_DEFAULT_CHECKFEASTOLFAC    1.0  /**< default factor to change the feasibility tolerance when testing the best solution for feasibility (after solving process) */
-#define SCIP_DEFAULT_LPFEASTOL        1e-06  /**< default primal feasibility tolerance of LP solver */
+#define SCIP_DEFAULT_LPFEASTOLFACTOR    1.0  /**< default factor w.r.t. primal feasibility tolerance that determines default (and maximal) primal feasibility tolerance of LP solver */
 #define SCIP_DEFAULT_DUALFEASTOL      1e-07  /**< default feasibility tolerance for reduced costs */
 #define SCIP_DEFAULT_BARRIERCONVTOL   1e-10  /**< default convergence tolerance used in barrier algorithm */
 #define SCIP_DEFAULT_BOUNDSTREPS       0.05  /**< default minimal relative improve for strengthening bounds */
@@ -402,12 +412,14 @@ extern "C" {
  * Define to mark deprecated API functions
  */
 
+#ifndef SCIP_DEPRECATED
 #if defined(_MSC_VER)
 #  define SCIP_DEPRECATED __declspec(deprecated)
 #elif defined(__GNUC__)
 #  define SCIP_DEPRECATED __attribute__ ((deprecated))
 #else
 #  define SCIP_DEPRECATED
+#endif
 #endif
 
 #ifdef __cplusplus

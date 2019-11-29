@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    heur_subnlp.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief   NLP local search primal heuristic using sub-SCIPs
  * @author  Stefan Vigerske
  * 
@@ -24,6 +25,7 @@
 
 #include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
+#include "nlpi/nlpi_ipopt.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -61,7 +63,7 @@
 
 #define HEUR_NAME        "subnlp"
 #define HEUR_DESC        "primal heuristic that performs a local search in an NLP after fixing integer variables and presolving"
-#define HEUR_DISPCHAR    'q'
+#define HEUR_DISPCHAR    SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY    -2000000
 #define HEUR_FREQ        1
 #define HEUR_FREQOFS     0
@@ -162,6 +164,7 @@ SCIP_RETCODE createSubSCIP(
    static const SCIP_Bool copydisplays = FALSE;
    static const SCIP_Bool copyreader = FALSE;
 #endif
+   SCIP_NLPI* ipopt;
 
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
@@ -243,16 +246,10 @@ SCIP_RETCODE createSubSCIP(
 
    SCIP_CALL( SCIPgetVarsData(heurdata->subscip, &subvars, &heurdata->nsubvars, NULL, NULL, NULL, NULL) );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->var_subscip2scip, heurdata->nsubvars) );
-#ifndef NDEBUG
-   BMSclearMemoryArray(heurdata->var_subscip2scip, heurdata->nsubvars);
-#endif
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &heurdata->var_subscip2scip, heurdata->nsubvars) );
 
    heurdata->nvars = nvars;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->var_scip2subscip, heurdata->nvars) );
-#ifndef NDEBUG
-   BMSclearMemoryArray(heurdata->var_scip2subscip, heurdata->nvars);
-#endif
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &heurdata->var_scip2subscip, heurdata->nvars) );
 
    /* we need to get all subscip variables, also those which are copies of fixed variables from the main scip
     * therefore we iterate over the hashmap
@@ -265,7 +262,7 @@ SCIP_RETCODE createSubSCIP(
       {
          var    = (SCIP_VAR*) SCIPhashmapEntryGetOrigin(entry);
          subvar = (SCIP_VAR*) SCIPhashmapEntryGetImage(entry);
-
+         assert(subvar != NULL);
          assert(SCIPvarGetProbindex(subvar) >= 0);
          assert(SCIPvarGetProbindex(subvar) <= heurdata->nsubvars);
 
@@ -278,22 +275,28 @@ SCIP_RETCODE createSubSCIP(
 
          assert(heurdata->var_subscip2scip[SCIPvarGetProbindex(subvar)] == NULL);  /* assert that we have no mapping for this subvar yet */
          heurdata->var_subscip2scip[SCIPvarGetProbindex(subvar)] = var;
-
-         SCIP_CALL( SCIPcaptureVar(scip, var) );
-         SCIP_CALL( SCIPcaptureVar(heurdata->subscip, subvar) );
-
-         assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetLbGlobal(subvar)));
-         assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), SCIPvarGetUbGlobal(subvar)));
-
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, NULL) );
       }
+   }
+
+   for( i = 0; i < heurdata->nsubvars; ++i )
+   {
+      subvar = SCIPgetVars(heurdata->subscip)[i];
+      assert(SCIPvarGetProbindex(subvar) == i);
+      var = heurdata->var_subscip2scip[i];
+
+      SCIP_CALL( SCIPcaptureVar(scip, var) );
+      SCIP_CALL( SCIPcaptureVar(heurdata->subscip, subvar) );
+
+      assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetLbGlobal(subvar)));
+      assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(var), SCIPvarGetUbGlobal(subvar)));
+
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, NULL) );
    }
 
 #ifndef NDEBUG
    for( i = 0; i < heurdata->nvars; ++i )
    {
-      assert(heurdata->var_scip2subscip[i] != NULL);
-      assert((SCIP_VAR*)SCIPhashmapGetImage(varsmap, (void*)vars[i]) == heurdata->var_scip2subscip[i]);
+      assert(heurdata->var_scip2subscip[i] == NULL || (SCIP_VAR*)SCIPhashmapGetImage(varsmap, (void*)vars[i]) == heurdata->var_scip2subscip[i]);
    }
    for( i = 0; i < heurdata->nsubvars; ++i )
    {
@@ -343,6 +346,11 @@ SCIP_RETCODE createSubSCIP(
    /* for debugging, enable SCIP output */
    SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", 5) );
 #endif
+
+   /* enable infeasible problem heuristic in Ipopt */
+   ipopt = SCIPfindNlpi(heurdata->subscip, "ipopt");
+   if( ipopt != NULL )
+      SCIPsetModifiedDefaultSettingsIpopt(ipopt, "expect_infeasible_problem yes\n", TRUE);
 
    return SCIP_OKAY;
 }
@@ -884,8 +892,11 @@ SCIP_RETCODE createSolFromNLP(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_VAR**     vars;
+   int            nvars;
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
+   SCIP_Real      solval;
    int            i;
 
    assert(scip != NULL);
@@ -904,22 +915,33 @@ SCIP_RETCODE createSolFromNLP(
       SCIPsolSetHeur(*sol, authorheur);
    }
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */ 
-   assert(heurdata->nsubvars <= SCIPgetNOrigVars(heurdata->subscip));
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   for( i = 0; i < heurdata->nsubvars; ++i )
+   assert(nvars >= heurdata->nvars);
+   for( i = 0; i < heurdata->nvars; ++i )
    {
-      var = heurdata->var_subscip2scip[i];
-      if( var == NULL || !SCIPvarIsActive(var) )
-         continue;
+      var = vars[i];
+      assert(var != NULL);
+      assert(SCIPvarIsActive(var));  /* SCIPgetVarsData should have given us only active vars */
 
-      subvar = SCIPgetOrigVars(heurdata->subscip)[i];
-      assert(subvar != NULL);
+      subvar = heurdata->var_scip2subscip[i];
+      if( subvar == NULL )
+         solval = MIN(MAX(0.0, SCIPvarGetLbLocal(var)), SCIPvarGetUbLocal(var));  /*lint !e666*/
+      else
+         solval = SCIPvarGetNLPSol(subvar);
 
-      assert(SCIPvarGetNLPSol(subvar) != SCIP_INVALID);  /*lint !e777*/
-      SCIP_CALL( SCIPsetSolVal(scip, *sol, var, SCIPvarGetNLPSol(subvar)) );
+      assert(solval != SCIP_INVALID);  /*lint !e777*/
+      SCIP_CALL( SCIPsetSolVal(scip, *sol, var, solval) );
+   }
+
+   for( ; i < nvars; ++i )
+   {
+      var = vars[i];
+      assert(var != NULL);
+      assert(SCIPvarIsActive(var));  /* SCIPgetVarsData should have given us only active vars */
+
+      solval = MIN(MAX(0.0, SCIPvarGetLbLocal(var)), SCIPvarGetUbLocal(var));  /*lint !e666*/
+      SCIP_CALL( SCIPsetSolVal(scip, *sol, var, solval) );
    }
 
    return SCIP_OKAY;
@@ -936,6 +958,11 @@ SCIP_RETCODE createSolFromSubScipSol(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_VAR**     vars;
+   int            nvars;
+   SCIP_VAR*      var;
+   SCIP_VAR*      subvar;
+   SCIP_Real      solval;
    int            i;
 
    assert(scip != NULL);
@@ -955,13 +982,37 @@ SCIP_RETCODE createSolFromSubScipSol(
       SCIPsolSetHeur(*sol, authorheur);
    }
 
-   assert(heurdata->nsubvars == SCIPgetNOrigVars(heurdata->subscip));
-   for( i = 0; i < heurdata->nsubvars; ++i )
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   assert(nvars >= heurdata->nvars);
+   for( i = 0; i < heurdata->nvars; ++i )
    {
-      if( heurdata->var_subscip2scip[i] == NULL || !SCIPvarIsActive(heurdata->var_subscip2scip[i]) )
+      var = vars[i];
+      assert(var != NULL);
+
+      if( !SCIPvarIsActive(var) )
          continue;
-      SCIP_CALL( SCIPsetSolVal(scip, *sol, heurdata->var_subscip2scip[i],
-            SCIPgetSolVal(heurdata->subscip, subsol, SCIPgetOrigVars(heurdata->subscip)[i])) );
+
+      subvar = heurdata->var_scip2subscip[i];
+      if( subvar == NULL )
+         solval = MIN(MAX(0.0, SCIPvarGetLbLocal(var)), SCIPvarGetUbLocal(var));  /*lint !e666*/
+      else
+         solval = SCIPgetSolVal(heurdata->subscip, subsol, subvar);
+
+      assert(solval != SCIP_INVALID);  /*lint !e777*/
+      SCIP_CALL( SCIPsetSolVal(scip, *sol, var, solval) );
+   }
+
+   for( ; i < nvars; ++i )
+   {
+      var = vars[i];
+      assert(var != NULL);
+
+      if( !SCIPvarIsActive(var) )
+         continue;
+
+      solval = MIN(MAX(0.0, SCIPvarGetLbLocal(var)), SCIPvarGetUbLocal(var));  /*lint !e666*/
+      SCIP_CALL( SCIPsetSolVal(scip, *sol, var, solval) );
    }
 
    return SCIP_OKAY;
@@ -1205,9 +1256,9 @@ SCIP_RETCODE solveSubNLP(
    case SCIP_STATUS_GAPLIMIT:
    case SCIP_STATUS_SOLLIMIT:
    case SCIP_STATUS_BESTSOLLIMIT:
-      /* these should not happen, but if one does, it's save to go to CLEANUP */
-      SCIPABORT();
-   case SCIP_STATUS_OPTIMAL: 
+      /* these should not happen, but if one does, it's safe to go to CLEANUP */
+      SCIPABORT();    /*lint -fallthrough*/
+   case SCIP_STATUS_OPTIMAL:
    case SCIP_STATUS_INFEASIBLE: 
    case SCIP_STATUS_USERINTERRUPT:
    case SCIP_STATUS_TIMELIMIT:
@@ -1398,7 +1449,7 @@ SCIP_RETCODE solveSubNLP(
             /* free transformed problem */
             SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
 
-            SCIP_CALL( solveSubNLP(scip, heur, result, heurdata->resolvefromscratch ? refpoint : sol, itercontingent, timelimit, iterused, TRUE, resultsol) );
+            SCIP_CALL( solveSubNLP(scip, heur, result, heurdata->resolvefromscratch ? refpoint : sol, itercontingent, timelimit, iterused, TRUE, NULL) );
          }
          else
          {
@@ -1482,7 +1533,7 @@ SCIP_RETCODE solveSubNLP(
          sol = NULL;
          SCIP_CALL( createSolFromNLP(scip, heur, &sol, authorheur) );
 
-         SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "subnlp solution is infeasbile\n");
+         SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "subnlp solution is infeasible\n");
 
          /* print the infeasibilities to stdout */
          SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, FALSE, TRUE, &feasible) );
@@ -1645,7 +1696,7 @@ SCIP_RETCODE forbidFixation(
 
          fixval = SCIPvarGetLbGlobal(subvar);
          assert(fixval == SCIPvarGetUbGlobal(subvar)); /* variable should be fixed in sub-SCIP */   /*lint !e777*/
-         assert((int)fixval == fixval); /* we have rounded values before fixing */
+         assert((int)fixval == fixval); /*lint !e777*/ /* we have rounded values before fixing */
          assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetLbGlobal(var) == fixval || SCIPvarGetUbGlobal(var) == fixval); /* for binaries, the fixval should be either 0.0 or 1.0 */  /*lint !e777*/ 
 
          if( SCIPvarGetLbGlobal(var) < fixval )
@@ -1675,9 +1726,9 @@ SCIP_RETCODE forbidFixation(
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, nconsvars, consvars, boundtypes, bounds,
             FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-      SCIPfreeBufferArray(scip, &consvars);
-      SCIPfreeBufferArray(scip, &boundtypes);
       SCIPfreeBufferArray(scip, &bounds);
+      SCIPfreeBufferArray(scip, &boundtypes);
+      SCIPfreeBufferArray(scip, &consvars);
    }
 
    /* add and release constraint if created successfully */
@@ -2470,8 +2521,8 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* we do not have a sub-SCIP, so we also do not need a starting point */
-   if( heurdata->subscip == NULL )
+   /* if we do not have a sub-SCIP, but tried to set one up before or will never create a subSCIP, then do not need a starting point */
+   if( heurdata->subscip == NULL && (heurdata->triedsetupsubscip || !runHeuristic(scip) || SCIPheurGetFreq(heur) < 0) )
       return SCIP_OKAY;
 
    /* if the solution is the one we created (last), then it is useless to use it as starting point again
@@ -2510,6 +2561,7 @@ SCIP* SCIPgetSubScipHeurSubNlp(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
@@ -2527,6 +2579,7 @@ SCIP_VAR** SCIPgetVarMappingScip2SubScipHeurSubNlp(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
@@ -2544,6 +2597,7 @@ SCIP_VAR** SCIPgetVarMappingSubScip2ScipHeurSubNlp(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
@@ -2561,6 +2615,7 @@ SCIP_SOL* SCIPgetStartCandidateHeurSubNlp(
 {
    SCIP_HEURDATA* heurdata;
 
+   assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 

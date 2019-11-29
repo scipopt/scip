@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_bandit.c
+ * @ingroup OTHER_CFILES
  * @brief  public functions for bandit algorithms
  * @author Gregor Hendel
  */
@@ -21,6 +22,12 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/bandit.h"
+#include "scip/pub_message.h"
+#include "scip/scip_bandit.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/set.h"
+#include "scip/struct_scip.h"
 #include "scip/pub_message.h"
 #include "scip/scip_bandit.h"
 #include "scip/scip_mem.h"

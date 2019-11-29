@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_vbounds.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  variable upper and lower bound propagator
  * @author Stefan Heinz
  * @author Jens Schulz
@@ -274,7 +275,6 @@ INFERINFO getInferInfo(
    INFERINFO inferinfo;
 
    assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
-   assert((int)boundtype >= 0 && (int)boundtype <= 1); /*lint !e685 !e568q*/
    assert(pos >= 0);
 
    inferinfo.val.asbits.pos = (unsigned int) pos; /*lint !e732*/
@@ -294,9 +294,9 @@ int varGetLbIndex(
    SCIP_VAR*             var                 /**< variable to get the index for */
    )
 {
-   assert(SCIPhashmapExists(propdata->varhashmap, var) == ((size_t)SCIPhashmapGetImage(propdata->varhashmap, var) > 0));
+   assert(SCIPhashmapExists(propdata->varhashmap, var) == (SCIPhashmapGetImageInt(propdata->varhashmap, var) > 0));
 
-   return getLbIndex((int)(size_t)SCIPhashmapGetImage(propdata->varhashmap, var) - 1);
+   return getLbIndex(SCIPhashmapGetImageInt(propdata->varhashmap, var) - 1);
 }
 
 /* returns the upper bound index of a variable */
@@ -306,9 +306,9 @@ int varGetUbIndex(
    SCIP_VAR*             var                 /**< variable to get the index for */
    )
 {
-   assert(SCIPhashmapExists(propdata->varhashmap, var) == ((size_t)SCIPhashmapGetImage(propdata->varhashmap, var) > 0));
+   assert(SCIPhashmapExists(propdata->varhashmap, var) == (SCIPhashmapGetImageInt(propdata->varhashmap, var) > 0));
 
-   return getUbIndex((int)(size_t)SCIPhashmapGetImage(propdata->varhashmap, var) - 1);
+   return getUbIndex(SCIPhashmapGetImageInt(propdata->varhashmap, var) - 1);
 }
 
 /** reset propagation data */
@@ -1206,7 +1206,7 @@ SCIP_RETCODE initData(
 
    for( v = 0; v < nvars; ++v )
    {
-      SCIP_CALL( SCIPhashmapInsert(propdata->varhashmap, propdata->vars[v], (void*)(size_t)(v + 1)) );
+      SCIP_CALL( SCIPhashmapInsertInt(propdata->varhashmap, propdata->vars[v], v + 1) );
    }
 
    /* allocate memory for the arrays of the propdata */
@@ -1877,6 +1877,7 @@ SCIP_RETCODE propagateVbounds(
     */
    while( SCIPpqueueNElems(propdata->propqueue) > 0 )
    {
+      /* coverity[pointer_conversion_loses_bits] */
       topopos = ((int)(size_t)SCIPpqueueRemove(propdata->propqueue)) - 1;
       assert(propdata->inqueue[topopos]);
       startpos = propdata->topoorder[topopos];
@@ -2576,6 +2577,7 @@ SCIP_RETCODE tarjan(
       /* in a pure dfs, the node would now leave the stack, add it to the array of nodes in reverse topological order */
       if( topoorder != NULL && (stacksize > 0 || label > *startindex + 1) )
       {
+         assert(nordered != NULL);
          topoorder[*nordered] = curridx;
          ++(*nordered);
       }
@@ -3031,6 +3033,7 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
    propdata = (SCIP_PROPDATA*)SCIPeventhdlrGetData(eventhdlr);
    assert(propdata != NULL);
 
+   /* coverity[pointer_conversion_loses_bits] */
    idx = (int) (size_t) eventdata;
    assert(idx >= 0);
 

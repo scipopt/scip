@@ -3,7 +3,7 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+//*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 //*                            fuer Informationstechnik Berlin                */
 //*                                                                           */
 //*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -190,6 +190,7 @@
 
 // turn off unusual use of 'SYM'
 -emacro(866,BMSallocBlockMemoryArray)
+-emacro(866,BMSreallocBlockMemoryArray)
 -emacro(866,BMSduplicateMemoryArray)
 -emacro(866,BMSfreeBlockMemoryArray)
 -emacro(866,BMSfreeBlockMemoryArrayNull)

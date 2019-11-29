@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_smps.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  SMPS file reader - smps files list the cor, tim and sto files for a single instance
  * @author Stephen J. Maher
  */
@@ -398,6 +399,7 @@ SCIP_DECL_READERREAD(readerReadSmps)
                "has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
                nvars, nbinvars, nintvars, nimplintvars, ncontvars, SCIPgetNOrigConss(scip));
             break;
+         /* coverity[dead_error_begin] */
          default:
             SCIPerrorMessage("This should not happen. Aborting.\n");
             SCIPABORT();

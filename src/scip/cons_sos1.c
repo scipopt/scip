@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_sos1.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for SOS type 1 constraints
  * @author Tobias Fischer
  * @author Marc Pfetsch
@@ -73,7 +74,6 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
-#include "scip/misc.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
 #include "scip/pub_heur.h"
@@ -177,6 +177,8 @@
 /* event handler properties */
 #define EVENTHDLR_NAME         "SOS1"
 #define EVENTHDLR_DESC         "bound change event handler for SOS1 constraints"
+
+#define EVENTHDLR_EVENT_TYPE   (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)
 
 /* defines */
 #define DIVINGCUTOFFVALUE     1e6
@@ -554,7 +556,7 @@ int varGetNodeSOS1(
    if ( ! SCIPhashmapExists(conshdlrdata->varhash, var) )
       return -1;
 
-   return (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+   return SCIPhashmapGetImageInt(conshdlrdata->varhash, var);
 }
 
 
@@ -746,7 +748,8 @@ SCIP_RETCODE lockVariableSOS1(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
 
    return SCIP_OKAY;
 }
@@ -765,7 +768,8 @@ SCIP_RETCODE unlockVariableSOS1(
    assert( var != NULL );
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)),
+         SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var))) );
 
    return SCIP_OKAY;
 }
@@ -825,7 +829,7 @@ SCIP_RETCODE handleNewVariableSOS1(
       assert( conshdlrdata->eventhdlr != NULL );
 
       /* catch bound change events of variable */
-      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
             (SCIP_EVENTDATA*)cons, NULL) ); /*lint !e740*/
 
       /* if the variable if fixed to nonzero */
@@ -1022,6 +1026,7 @@ SCIP_RETCODE appendVarSOS1(
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
+   assert( consdata->nvars >= 0 );
 
    /* are we in the transformed problem? */
    transformed = SCIPconsIsTransformed(cons);
@@ -1034,13 +1039,24 @@ SCIP_RETCODE appendVarSOS1(
    assert( var != NULL );
    assert( transformed == SCIPvarIsTransformed(var) );
 
-   SCIP_CALL( consdataEnsurevarsSizeSOS1(scip, consdata, consdata->nvars + 1, FALSE) );
+   if ( consdata->weights != NULL )
+   {
+      SCIP_CALL( consdataEnsurevarsSizeSOS1(scip, consdata, consdata->nvars + 1, TRUE) );
+   }
+   else
+   {
+      SCIP_CALL( consdataEnsurevarsSizeSOS1(scip, consdata, consdata->nvars + 1, FALSE) );
+   }
 
    /* insert variable */
    consdata->vars[consdata->nvars] = var;
-   assert( consdata->weights != NULL || consdata->nvars > 0 );
-   if ( consdata->weights != NULL && consdata->nvars > 0 )
-      consdata->weights[consdata->nvars] = consdata->weights[consdata->nvars-1] + 1.0;
+   if ( consdata->weights != NULL )
+   {
+      if ( consdata->nvars > 0 )
+         consdata->weights[consdata->nvars] = consdata->weights[consdata->nvars-1] + 1.0;
+      else
+         consdata->weights[consdata->nvars] = 0.0;
+   }
    ++consdata->nvars;
 
    /* handle the new variable */
@@ -1068,7 +1084,7 @@ SCIP_RETCODE deleteVarSOS1(
    SCIP_CALL( unlockVariableSOS1(scip, cons, consdata->vars[pos]) );
 
    /* drop events on variable */
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
 
    /* delete variable - need to copy since order is important */
    for (j = pos; j < consdata->nvars-1; ++j)
@@ -1244,7 +1260,7 @@ SCIP_RETCODE extensionOperatorSOS1(
          /* save new clique */
          assert( cliquesizes[*ncliques] >= 0 && cliquesizes[*ncliques] <= nsos1vars );
          assert( *ncliques < MAX(1, conshdlrdata->maxextensions) * nconss );
-         SCIP_CALL( SCIPallocBufferArray(scip, &(cliques[*ncliques]), cliquesizes[*ncliques]) );/*lint !e866*/
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(cliques[*ncliques]), cliquesizes[*ncliques]) );/*lint !e866*/
          for (j = 0 ; j < cliquesizes[*ncliques]; ++j)
          {
             vars[j] = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, newclique[j]);
@@ -1528,7 +1544,7 @@ SCIP_RETCODE getSOS1Implications(
    assert( implnodes != NULL );
    assert( node >= 0 );
    assert( vars[node] != NULL );
-   assert( (int) (size_t) SCIPhashmapGetImage(implhash, vars[node]) == node );
+   assert( SCIPhashmapGetImageInt(implhash, vars[node]) == node );
 
    /* get node of variable in the conflict graph (-1 if variable is no SOS1 variable) */
    sos1node = varGetNodeSOS1(conshdlrdata, vars[node]);
@@ -1639,8 +1655,8 @@ SCIP_RETCODE presolRoundConsSOS1(
       if ( SCIPisZero(scip, constant) && ! SCIPisZero(scip, scalar) && var != vars[j] )
       {
          SCIPdebugMsg(scip, "substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
-         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) ); /*lint !e740*/
+         SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[j], EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
+         SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTHDLR_EVENT_TYPE, eventhdlr, (SCIP_EVENTDATA*)cons, NULL) ); /*lint !e740*/
 
          /* change the rounding locks */
          SCIP_CALL( unlockVariableSOS1(scip, cons, consdata->vars[j]) );
@@ -1795,6 +1811,8 @@ SCIP_RETCODE presolRoundConsSOS1(
  *  we perform the following additional presolving steps
  *
  *  - Search for larger SOS1 constraints in the conflict graph
+ *
+ *  @todo Use one long array for storing cliques.
  */
 static
 SCIP_RETCODE presolRoundConssSOS1(
@@ -1847,12 +1865,14 @@ SCIP_RETCODE presolRoundConssSOS1(
    /* allocate buffer arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nsos1vars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consweights, nsos1vars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cliquesizes, csize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &newclique, nsos1vars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &indconss, csize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lengthconss, csize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &comsucc, MAX(nsos1vars, csize)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cliques, csize) );
+
+   /* Use block memory for cliques, because sizes might be quite different and allocation interfers with workingset. */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cliquesizes, csize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cliques, csize) );
 
    /* get constraint indices and sort them in descending order of their lengths */
    for (c = 0; c < nconss; ++c)
@@ -2028,7 +2048,7 @@ SCIP_RETCODE presolRoundConssSOS1(
                /* add directed edges to the vertex-clique graph */
                assert( cliquesize >= 0 && cliquesize <= nsos1vars );
                assert( ncliques < csize );
-               SCIP_CALL( SCIPallocBufferArray(scip, &cliques[ncliques], cliquesize) );/*lint !e866*/
+               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cliques[ncliques], cliquesize) );/*lint !e866*/
                for (j = 0; j < cliquesize; ++j)
                {
                   cliques[ncliques][j] = newclique[j];
@@ -2044,13 +2064,14 @@ SCIP_RETCODE presolRoundConssSOS1(
 
    /* free buffer arrays */
    for (c = ncliques-1; c >= 0; --c)
-      SCIPfreeBufferArrayNull(scip, &cliques[c]);
-   SCIPfreeBufferArrayNull(scip, &cliques);
+      SCIPfreeBlockMemoryArray(scip, &cliques[c], cliquesizes[c]);
+   SCIPfreeBlockMemoryArrayNull(scip, &cliques, csize);
+   SCIPfreeBlockMemoryArrayNull(scip, &cliquesizes, csize);
+
    SCIPfreeBufferArrayNull(scip, &comsucc);
    SCIPfreeBufferArrayNull(scip, &lengthconss);
    SCIPfreeBufferArrayNull(scip, &indconss);
    SCIPfreeBufferArrayNull(scip, &newclique);
-   SCIPfreeBufferArrayNull(scip, &cliquesizes);
    SCIPfreeBufferArrayNull(scip, &consweights);
    SCIPfreeBufferArrayNull(scip, &consvars);
    SCIPdigraphFree(&vertexcliquegraph);
@@ -2162,7 +2183,7 @@ SCIP_RETCODE performImplicationGraphAnalysis(
    }
 
    /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
-   assert( nonznode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, nonznode)) );
+   assert( nonznode == SCIPhashmapGetImageInt(implhash, SCIPnodeGetVarSOS1(conflictgraph, nonznode)) );
    succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, nonznode);
    nsucc = SCIPdigraphGetNSuccessors(implgraph, nonznode);
    succ = SCIPdigraphGetSuccessors(implgraph, nonznode);
@@ -2186,7 +2207,7 @@ SCIP_RETCODE performImplicationGraphAnalysis(
 	if ( varGetNodeSOS1(conshdlrdata, totalvars[succnode]) >= 0 && ! implnodes[succnode] && SCIPisFeasPositive(scip, data->lbimpl) )
 	{
 	   /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
-	   assert( succnode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
+	   assert( succnode == SCIPhashmapGetImageInt(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
 	   implnodes[succnode] = TRUE; /* in order to avoid cycling */
 	   SCIP_CALL( performImplicationGraphAnalysis(scip, conshdlrdata, conflictgraph, totalvars, implgraph, implhash, adjacencymatrix, givennode, succnode, impllbs, implubs, implnodes, naddconss, probingdepth, infeasible) );
 	   *probingdepth = oldprobingdepth;
@@ -2206,7 +2227,7 @@ SCIP_RETCODE performImplicationGraphAnalysis(
 	if ( varGetNodeSOS1(conshdlrdata, totalvars[succnode]) >= 0 && ! implnodes[succnode] && SCIPisFeasNegative(scip, data->ubimpl) )
 	{
 	   /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
-	   assert( succnode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
+	   assert( succnode == SCIPhashmapGetImageInt(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
 	   implnodes[succnode] = TRUE; /* in order to avoid cycling */
 	   SCIP_CALL( performImplicationGraphAnalysis(scip, conshdlrdata, conflictgraph, totalvars, implgraph, implhash, adjacencymatrix, givennode, succnode, impllbs, implubs, implnodes, naddconss, probingdepth, infeasible) );
 	   *probingdepth = oldprobingdepth;
@@ -2309,15 +2330,15 @@ SCIP_RETCODE updateArcData(
    }
 
    /* get successor information */
-   indv = (int) (size_t) SCIPhashmapGetImage(implhash, varv); /* get index of x_v in implication graph */
-   assert( (int) (size_t) SCIPhashmapGetImage(implhash, totalvars[indv]) == indv );
+   indv = SCIPhashmapGetImageInt(implhash, varv); /* get index of x_v in implication graph */
+   assert( SCIPhashmapGetImageInt(implhash, totalvars[indv]) == indv );
    succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, indv);
    nsucc = SCIPdigraphGetNSuccessors(implgraph, indv);
    succ = SCIPdigraphGetSuccessors(implgraph, indv);
 
    /* search for nodew in existing successors. If this is the case then check whether the lower implication bound may be updated ... */
-   indw = (int) (size_t) SCIPhashmapGetImage(implhash, varw);
-   assert( (int) (size_t) SCIPhashmapGetImage(implhash, totalvars[indw]) == indw );
+   indw = SCIPhashmapGetImageInt(implhash, varw);
+   assert( SCIPhashmapGetImageInt(implhash, totalvars[indw]) == indw );
    for (s = 0; s < nsucc; ++s)
    {
       if ( succ[s] == indw )
@@ -2719,9 +2740,12 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
       SCIP_DIGRAPH* conflictgraphlin;
       int** cliquecovers = NULL;           /* clique covers of indices of variables in linear constraint */
       int* cliquecoversizes = NULL;        /* size of each cover */
-      int ncliquecovers;
+      SCIP_VAR* sosvar = NULL;
       SCIP_Real* cliquecovervals = NULL;
+      SCIP_Real constant;
       int* varincover = NULL;              /* varincover[i] = cover of SOS1 index i */
+      int ncliquecovers;
+      int requiredsize;
 
       int v;
       int i;
@@ -2731,140 +2755,91 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
       if ( c < nlinearconss )
       {
          SCIP_VAR** origlinvars;
-         int noriglinvars;
          SCIP_Real* origlinvals;
-         SCIP_Real origrhs;
-         SCIP_Real origlhs;
-         SCIP_Real constant;
-         int requiredsize;
 
          /* get data of linear constraint */
-         noriglinvars = SCIPgetNVarsLinear(scip, linearconss[c]);
+         ntrafolinvars = SCIPgetNVarsLinear(scip, linearconss[c]);
+         if ( ntrafolinvars < 1 )
+            continue;
+
          origlinvars = SCIPgetVarsLinear(scip, linearconss[c]);
          origlinvals = SCIPgetValsLinear(scip, linearconss[c]);
-         origrhs = SCIPgetRhsLinear(scip, linearconss[c]);
-         origlhs = SCIPgetLhsLinear(scip, linearconss[c]);
-
-         if ( noriglinvars < 1 )
-            continue;
          assert( origlinvars != NULL );
          assert( origlinvals != NULL );
 
          /* copy variables and coefficients of linear constraint */
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvars, origlinvars, noriglinvars) );
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvals, origlinvals, noriglinvars) );
-         ntrafolinvars = noriglinvars;
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvars, origlinvars, ntrafolinvars) );
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvals, origlinvals, ntrafolinvars) );
 
-         /* transform linear constraint */
-         constant = 0.0;
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, noriglinvars, &constant, &requiredsize, TRUE) );
-         if( requiredsize > ntrafolinvars )
-         {
-            SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvars, requiredsize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvals, requiredsize) );
-
-            SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, requiredsize, &constant, &requiredsize, TRUE) );
-            assert( requiredsize <= ntrafolinvars );
-         }
-         trafolhs = origlhs - constant;
-         traforhs = origrhs - constant;
+         trafolhs = SCIPgetLhsLinear(scip, linearconss[c]);
+         traforhs = SCIPgetRhsLinear(scip, linearconss[c]);
       }
       else
       {
-         SCIP_VAR* var;
+         sosvar = SCIPnodeGetVarSOS1(conflictgraph, c - nlinearconss);
 
-         var = SCIPnodeGetVarSOS1(conflictgraph, c-nlinearconss);
-
-         if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
-         {
-            SCIP_Real constant;
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, 2) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, 2) );
-
-            constant = SCIPvarGetAggrConstant(var);
-            trafolinvars[0] = SCIPvarGetAggrVar(var);
-            trafolinvals[0] = SCIPvarGetAggrScalar(var);
-            trafolinvars[1] = var;
-            trafolinvals[1] = -1.0;
-            trafolhs = -constant;
-            traforhs = -constant;
-            ntrafolinvars = 2;
-         }
-         else if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
-         {
-            SCIP_Real* scalars;
-            SCIP_VAR** agrvars;
-            SCIP_Real constant;
-            int nagrvars;
-
-            nagrvars = SCIPvarGetMultaggrNVars(var);
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, nagrvars+1) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, nagrvars+1) );
-
-            agrvars = SCIPvarGetMultaggrVars(var);
-            scalars = SCIPvarGetMultaggrScalars(var);
-            constant = SCIPvarGetMultaggrConstant(var);
-
-            for (v = 0; v < nagrvars; ++v)
-            {
-               trafolinvars[v] = agrvars[v];
-               trafolinvals[v] = scalars[v];
-            }
-            trafolinvars[nagrvars] = var;
-            trafolinvals[nagrvars] = -1.0;
-            trafolhs = -constant;
-            traforhs = -constant;
-            ntrafolinvars = nagrvars + 1;
-         }
-         else if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED )
-         {
-            SCIP_VAR* negvar;
-            SCIP_Real negcons;
-
-            /* get negation variable and negation offset */
-            negvar = SCIPvarGetNegationVar(var);
-            negcons = SCIPvarGetNegationConstant(var);
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, 2) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, 2) );
-
-            trafolinvars[0] = negvar;
-            trafolinvars[1] = var;
-            trafolinvals[0] = 1.0;
-            trafolinvals[1] = 1.0;
-            trafolhs = negcons;
-            traforhs = negcons;
-            ntrafolinvars = 2;
-         }
-         else
+         if ( SCIPvarGetStatus(sosvar) != SCIP_VARSTATUS_AGGREGATED
+            && SCIPvarGetStatus(sosvar) != SCIP_VARSTATUS_MULTAGGR
+            && SCIPvarGetStatus(sosvar) != SCIP_VARSTATUS_NEGATED )
             continue;
+
+         /* store variable so it will be transformed to active variables below */
+         ntrafolinvars = 1;
+         SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, ntrafolinvars + 1) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, ntrafolinvars + 1) );
+
+         trafolinvars[0] = sosvar;
+         trafolinvals[0] = 1.0;
+
+         trafolhs = 0.0;
+         traforhs = 0.0;
       }
+      assert( ntrafolinvars >= 1 );
+
+      /* transform linear constraint */
+      constant = 0.0;
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, ntrafolinvars, &constant, &requiredsize, TRUE) );
+      if( requiredsize > ntrafolinvars )
+      {
+         SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvars, requiredsize + 1) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvals, requiredsize + 1) );
+
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, requiredsize, &constant, &requiredsize, TRUE) );
+         assert( requiredsize <= ntrafolinvars );
+      }
+      if( !SCIPisInfinity(scip, -trafolhs) )
+         trafolhs -= constant;
+      if( !SCIPisInfinity(scip,  traforhs) )
+         traforhs -= constant;
 
       if ( ntrafolinvars == 0 )
       {
-         SCIPfreeBufferArray(scip, &trafolinvars);
          SCIPfreeBufferArray(scip, &trafolinvals);
+         SCIPfreeBufferArray(scip, &trafolinvars);
          continue;
+      }
+
+      /* possibly add sos1 variable to create aggregation/multiaggregation/negation equality */
+      if ( sosvar != NULL )
+      {
+         trafolinvals[ntrafolinvars] = -1.0;
+         trafolinvars[ntrafolinvars] = sosvar;
+         ++ntrafolinvars;
       }
 
       /* compute lower and upper bounds of each term a_i * x_i of transformed constraint */
       for (v = 0; v < ntrafolinvars; ++v)
       {
-         SCIP_Real lb = SCIPvarGetLbLocal(trafolinvars[v]);
-         SCIP_Real ub = SCIPvarGetUbLocal(trafolinvars[v]);
+         SCIP_Real lb;
+         SCIP_Real ub;
+
+         lb = SCIPvarGetLbLocal(trafolinvars[v]);
+         ub = SCIPvarGetUbLocal(trafolinvars[v]);
 
          if ( trafolinvals[v] < 0.0 )
-         {
-            SCIP_Real temp;
+            SCIPswapReals(&lb, &ub);
 
-            temp = lb;
-            lb = ub;
-            ub = temp;
-         }
-
-         assert(!SCIPisInfinity(scip, REALABS(trafolinvals[v])));
+         assert( ! SCIPisInfinity(scip, REALABS(trafolinvals[v])) );
 
          if ( SCIPisInfinity(scip, REALABS(lb)) || SCIPisInfinity(scip, REALABS(lb * trafolinvals[v])) )
             trafolbs[v] = -SCIPinfinity(scip);
@@ -3016,7 +2991,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          /* determine incidence vector of implication variables */
          for (w = 0; w < nsos1vars; ++w)
             implnodes[w] = FALSE;
-         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, totalvars, implgraph, implhash, implnodes, (int) (size_t) SCIPhashmapGetImage(implhash, var)) );
+         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, totalvars, implgraph, implhash, implnodes, SCIPhashmapGetImageInt(implhash, var)) );
 
          /* compute new bound */
          for (i = 0; i < ncliquecovers; ++i)
@@ -3216,7 +3191,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          /* determine incidence vector of implication variables (i.e., which SOS1 variables are nonzero if x_v is nonzero) */
          for (w = 0; w < nsos1vars; ++w)
             implnodes[w] = FALSE;
-         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, totalvars, implgraph, implhash, implnodes, (int) (size_t) SCIPhashmapGetImage(implhash, var)) );
+         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, totalvars, implgraph, implhash, implnodes, SCIPhashmapGetImageInt(implhash, var)) );
 
          /* compute new bound */
          for (i = 0; i < ncliquecovers; ++i)
@@ -3361,12 +3336,12 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
    } /* end for every linear constraint */
 
    /* free buffer arrays */
-   SCIPfreeBufferArrayNull(scip, &sos1linvars);
    SCIPfreeBufferArrayNull(scip, &trafolbs);
    SCIPfreeBufferArrayNull(scip, &trafoubs);
    SCIPfreeBufferArrayNull(scip, &coveredvars);
    SCIPfreeBufferArrayNull(scip, &varindincons);
    SCIPfreeBufferArrayNull(scip, &implnodes);
+   SCIPfreeBufferArrayNull(scip, &sos1linvars);
 
    return SCIP_OKAY;
 }
@@ -3417,8 +3392,8 @@ SCIP_RETCODE presolRoundVarsSOS1(
 
       /* insert node number to hash map */
       assert( ! SCIPhashmapExists(implhash, var) );
-      SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) ntotalvars) );/*lint !e571*/
-      assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+      SCIP_CALL( SCIPhashmapInsertInt(implhash, var, ntotalvars) );
+      assert( ntotalvars == SCIPhashmapGetImageInt(implhash, var) );
       totalvars[ntotalvars++] = var;
    }
 
@@ -3430,8 +3405,8 @@ SCIP_RETCODE presolRoundVarsSOS1(
       /* insert node number to hash map if not existent */
       if ( ! SCIPhashmapExists(implhash, var) )
       {
-         SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) ntotalvars) );/*lint !e571*/
-         assert( ntotalvars == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+         SCIP_CALL( SCIPhashmapInsertInt(implhash, var, ntotalvars) );
+         assert( ntotalvars == SCIPhashmapGetImageInt(implhash, var) );
          totalvars[ntotalvars++] = var;
       }
    }
@@ -3844,7 +3819,7 @@ SCIP_RETCODE initImplGraphSOS1(
    nimplnodes = 0;
 
    /* create implication graph */
-   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->implgraph, SCIPblkmem(scip), nsos1vars + nprobvars) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->implgraph, nsos1vars + nprobvars) );
 
    /* create hashmap */
    SCIP_CALL( SCIPhashmapCreate(&implhash, SCIPblkmem(scip), nsos1vars + nprobvars) );
@@ -3860,8 +3835,8 @@ SCIP_RETCODE initImplGraphSOS1(
 
       /* insert node number to hash map */
       assert( ! SCIPhashmapExists(implhash, var) );
-      SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) nimplnodes) );/*lint !e571*/
-      assert( nimplnodes == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+      SCIP_CALL( SCIPhashmapInsertInt(implhash, var, nimplnodes) );
+      assert( nimplnodes == SCIPhashmapGetImageInt(implhash, var) );
       implvars[nimplnodes++] = var;
    }
 
@@ -3873,8 +3848,8 @@ SCIP_RETCODE initImplGraphSOS1(
       /* insert node number to hash map if not existent */
       if ( ! SCIPhashmapExists(implhash, var) )
       {
-         SCIP_CALL( SCIPhashmapInsert(implhash, var, (void*) (size_t) nimplnodes) );/*lint !e571*/
-         assert( nimplnodes == (int) (size_t) SCIPhashmapGetImage(implhash, var) );
+         SCIP_CALL( SCIPhashmapInsertInt(implhash, var, nimplnodes) );
+         assert( nimplnodes == SCIPhashmapGetImageInt(implhash, var) );
          implvars[nimplnodes++] = var;
       }
    }
@@ -4272,12 +4247,14 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
 
    bestprior = -SCIPinfinity(scip);
 
+   /* make sure data is initialized */
+   if ( vertexbestprior != NULL )
+      *vertexbestprior = -1;
+
    for (i = 0; i < nsos1vars; ++i)
    {
       SCIP_Real prior;
       SCIP_Real solval;
-      SCIP_Real sum1;
-      SCIP_Real sum2;
       int nfixingsnode1;
       int nfixingsnode2;
       int nsucc;
@@ -4291,12 +4268,13 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
       {
          SCIP_Bool iszero1 = TRUE;
          SCIP_Bool iszero2 = TRUE;
+         SCIP_Real sum1 = 0.0;
+         SCIP_Real sum2 = 0.0;
 
          /* get vertices of variables that will be fixed to zero for each strong branching execution */
          assert( ! verticesarefixed[i] );
          SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, i, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
 
-         sum1 = 0.0;
          for (j = 0; j < nfixingsnode1; ++j)
          {
             solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode1[j]));
@@ -4307,7 +4285,6 @@ SCIP_RETCODE getBranchingPrioritiesSOS1(
             }
          }
 
-         sum2 = 0.0;
          for (j = 0; j < nfixingsnode2; ++j)
          {
             solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, fixingsnode2[j]));
@@ -4544,6 +4521,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
    if ( relsolfeas )
    {
       SCIPdebugMsg(scip, "all the SOS1 constraints are feasible.\n");
+      *vertexbestprior = -1;
       *result = SCIP_FEASIBLE;
 
       /* free memory */
@@ -4593,6 +4571,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
    /* determine branching variable by strong branching or reduce domain */
    ndomainfixings = 0;
    lastscorechange = -1;
+   assert( nsos1vars > 0 );
    *vertexbestprior = indsos1vars[0]; /* for the case that nstrongrounds = 0 */
    bestscore = -SCIPinfinity(scip);
    *bestobjval1 = -SCIPinfinity(scip);
@@ -4619,7 +4598,8 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
 
          /* get vertices of variables that will be fixed to zero for each strong branching execution */
          assert( ! verticesarefixed[testvertex] );
-         SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, testvertex, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
+         SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, testvertex,
+               fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
 
          /* get information for first strong branching execution */
          SCIP_CALL( performStrongbranchSOS1(scip, conflictgraph, fixingsnode1, nfixingsnode1, fixingsnode2, nfixingsnode2,
@@ -4653,7 +4633,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
             /* if domain has not been reduced in this for-loop */
             if ( ndomainfixings == 0 )
             {
-               score = MAX( REALABS( objval1 - lpobjval ), SCIPfeastol(scip) ) * MAX( REALABS( objval2 - lpobjval ), SCIPfeastol(scip) );/*lint !e666*/
+               score = MAX( REALABS(objval1 - lpobjval), SCIPfeastol(scip) ) * MAX( REALABS(objval2 - lpobjval), SCIPfeastol(scip) );/*lint !e666*/
 
                if ( SCIPisPositive(scip, score - bestscore) )
                {
@@ -5133,7 +5113,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                      {
                         if ( localconflicts == NULL )
                         {
-                           SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), nsos1vars) );
+                           SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->localconflicts, nsos1vars) );
                            localconflicts = conshdlrdata->localconflicts;
                         }
                         SCIP_CALL( SCIPdigraphAddArc(localconflicts, vertex1, vertex2, NULL) );
@@ -5399,6 +5379,13 @@ SCIP_RETCODE enforceConflictgraph(
    /* get number of SOS1 variables */
    nsos1vars = conshdlrdata->nsos1vars;
 
+   /* exit for trivial cases */
+   if ( nsos1vars == 0 || nconss == 0 )
+   {
+      *result = SCIP_FEASIBLE;
+      return SCIP_OKAY;
+   }
+
    /* get conflict graph */
    conflictgraph = conshdlrdata->conflictgraph;
    assert( ! conshdlrdata->isconflocal ); /* conflictgraph should be the one of the root node */
@@ -5408,7 +5395,8 @@ SCIP_RETCODE enforceConflictgraph(
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
-      SCIP_Bool cutoff;int ngen;
+      SCIP_Bool cutoff;
+      int ngen = 0;
 
       cons = conss[c];
       assert( cons != NULL );
@@ -5420,7 +5408,6 @@ SCIP_RETCODE enforceConflictgraph(
          continue;
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
-      ngen = 0;
       SCIP_CALL( propConsSOS1(scip, cons, consdata, &cutoff, &ngen) );
       SCIPdebugMsg(scip, "propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, ngen);
       if ( cutoff )
@@ -5445,7 +5432,7 @@ SCIP_RETCODE enforceConflictgraph(
 
          if ( conshdlrdata->localconflicts == NULL )
          {
-            SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), nsos1vars ) );
+            SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->localconflicts, nsos1vars) );
          }
 
          vars = consdata->vars;
@@ -5565,7 +5552,8 @@ SCIP_RETCODE enforceConflictgraph(
       SCIP_Bool relsolfeas;
 
       /* get branching vertex using most infeasible branching */
-      SCIP_CALL( getBranchingPrioritiesSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, verticesarefixed, bipbranch, fixingsnode1, fixingsnode2, NULL, &branchvertex, &relsolfeas) );
+      SCIP_CALL( getBranchingPrioritiesSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, verticesarefixed,
+            bipbranch, fixingsnode1, fixingsnode2, NULL, &branchvertex, &relsolfeas) );
 
       /* if LP relaxation solution is feasible */
       if ( relsolfeas )
@@ -5593,8 +5581,9 @@ SCIP_RETCODE enforceConflictgraph(
    else
    {
       /* get branching vertex using strong branching */
-      SCIP_CALL( getBranchingDecisionStrongbranchSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, lpobjval, bipbranch, nstrongrounds, verticesarefixed,
-            fixingsnode1, fixingsnode2, &branchvertex, &bestobjval1, &bestobjval2, result) );
+      SCIP_CALL( getBranchingDecisionStrongbranchSOS1(scip, conshdlrdata, conflictgraph, sol, nsos1vars, lpobjval,
+            bipbranch, nstrongrounds, verticesarefixed, fixingsnode1, fixingsnode2, &branchvertex, &bestobjval1,
+            &bestobjval2, result) );
 
       if ( *result == SCIP_CUTOFF || *result == SCIP_FEASIBLE || *result == SCIP_REDUCEDDOM )
       {
@@ -5614,7 +5603,7 @@ SCIP_RETCODE enforceConflictgraph(
       }
    }
 
-   /* if we shouldleave branching decision to branching rules */
+   /* if we should leave branching decision to branching rules */
    if ( ! conshdlrdata->branchsos )
    {
       /* remove local conflicts from conflict graph */
@@ -5624,6 +5613,12 @@ SCIP_RETCODE enforceConflictgraph(
 	 conshdlrdata->isconflocal = FALSE;
       }
 
+      /* free memory */
+      SCIPfreeBufferArrayNull(scip, &fixingsnode2);
+      SCIPfreeBufferArrayNull(scip, &fixingsnode1);
+      SCIPfreeBufferArrayNull(scip, &verticesarefixed);
+
+      assert( branchvertex >= 0 && branchvertex < nsos1vars );
       if ( SCIPvarIsBinary(SCIPnodeGetVarSOS1(conflictgraph, branchvertex)) )
       {
          *result = SCIP_INFEASIBLE;
@@ -5641,7 +5636,8 @@ SCIP_RETCODE enforceConflictgraph(
    /* get vertices of variables that will be fixed to zero for each node */
    assert( branchvertex >= 0 && branchvertex < nsos1vars );
    assert( ! verticesarefixed[branchvertex] );
-   SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, branchvertex, fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
+   SCIP_CALL( getBranchingVerticesSOS1(scip, conflictgraph, sol, verticesarefixed, bipbranch, branchvertex,
+         fixingsnode1, &nfixingsnode1, fixingsnode2, &nfixingsnode2) );
 
    /* calculate node selection and objective estimate for node 1 */
    nodeselest = 0.0;
@@ -5700,6 +5696,7 @@ SCIP_RETCODE enforceConflictgraph(
          }
       }
    }
+
    for (j = 0; j < nfixingsnode1; ++j)
    {
       /* fix variable to zero */
@@ -5893,7 +5890,7 @@ SCIP_RETCODE enforceConssSOS1(
                weight += 1.0;
             else
             {
-               if ( conshdlrdata->branchweight )
+               if ( conshdlrdata->branchweight && consdata->weights != NULL )
                {
                   /* choose maximum nonzero-variable weight */
                   if ( consdata->weights[j] > weight )
@@ -6413,7 +6410,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                useboundvar = FALSE;
 
                /* restart 'for'-loop */
-               j = -1;
+               j = -1;  /*lint !e850*/
                cnt = 0;
                continue;
             }
@@ -6460,7 +6457,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
 
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowub, conshdlr, name, -SCIPinfinity(scip), 0.0, localubs, FALSE, removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
          }
@@ -6468,7 +6465,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          {
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sosub#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowub, conshdlr, name, -SCIPinfinity(scip), rhs, localubs, FALSE, removable) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
          }
@@ -6479,12 +6476,11 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
    if ( rowlb != NULL )
    {
       SCIP_Bool useboundvar;
-      int cnt;
+      int cnt = 0;
       int j;
 
       /* loop through all variables. We check whether all bound variables (if existent) are equal; if this is the
        * case then the bound constraint can be strengthened */
-      cnt = 0;
       locallbs = local;
       useboundvar = strengthen;
       for (j = 0; j < nnodes; ++j)
@@ -6513,7 +6509,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                if ( ! global && ! SCIPisFeasEQ(scip, val, SCIPvarGetLbLocal(var)) )
                {
                   locallbs = TRUE;
-                  val = SCIPvarGetUbLocal(var);
+                  val = SCIPvarGetLbLocal(var);
                }
             }
          }
@@ -6537,7 +6533,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                useboundvar = FALSE;
 
                /* restart 'for'-loop */
-               j = -1;
+               j = -1;  /*lint !e850*/
                cnt = 0;
                continue;
             }
@@ -6584,7 +6580,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
 
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), 0.0, locallbs, FALSE, TRUE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
          }
@@ -6592,7 +6588,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          {
             /* create upper bound inequality if at least two of the bounds are finite and nonzero */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soslb#%s", nameext);
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), rhs, locallbs, FALSE, TRUE) );
             SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, cnt, vars, vals) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
          }
@@ -6739,7 +6735,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          }
          else
             *stopsolving = TRUE;
-      }
+      } /*lint !e438*/
    }
 }
 
@@ -7156,7 +7152,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                {
                   if ( SCIPisFeasGT(scip, solval * (bound2-impl) + solvalsucc * bound1, lhsrhs) )
                   {
-                     SCIP_CALL( SCIPcreateEmptyRowCons(scip, &cut, conshdlr, "", -SCIPinfinity(scip), lhsrhs, FALSE, FALSE, TRUE) );
+                     SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &cut, conshdlr, "", -SCIPinfinity(scip), lhsrhs, FALSE, FALSE, TRUE) );
                   }
                   else
                      continue;
@@ -7165,7 +7161,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                {
                   if ( SCIPisFeasLT(scip, solval * (bound2-impl) + solvalsucc * bound1, lhsrhs) )
                   {
-                     SCIP_CALL( SCIPcreateEmptyRowCons(scip, &cut, conshdlr, "", lhsrhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+                     SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &cut, conshdlr, "", lhsrhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
                   }
                   else
                      continue;
@@ -7679,6 +7675,7 @@ SCIP_RETCODE makeSOS1conflictgraphFeasible(
    assert( conshdlr != NULL );
    assert( sol != NULL );
    assert( changed != NULL );
+   assert( allroundable != NULL );
 
    *allroundable = TRUE;
    *changed = FALSE;
@@ -7807,6 +7804,7 @@ SCIP_RETCODE makeSOS1constraintsFeasible(
    assert( conshdlr != NULL );
    assert( sol != NULL );
    assert( changed != NULL );
+   assert( allroundable != NULL );
 
    *allroundable = TRUE;
    *changed = FALSE;
@@ -8758,7 +8756,7 @@ SCIP_RETCODE initConflictgraph(
       nodecreated[i] = FALSE;
 
    /* create conflict graph */
-   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->conflictgraph, SCIPblkmem(scip), cntsos) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->conflictgraph, cntsos) );
 
    /* set up hash map */
    SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), cntsos) );
@@ -8801,8 +8799,8 @@ SCIP_RETCODE initConflictgraph(
 
                /* insert node number to hash map */
                assert( ! SCIPhashmapExists(conshdlrdata->varhash, var) );
-               SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) (size_t) cntsos) );/*lint !e571*/
-               assert( cntsos == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) );
+               SCIP_CALL( SCIPhashmapInsertInt(conshdlrdata->varhash, var, cntsos) );
+               assert( cntsos == SCIPhashmapGetImageInt(conshdlrdata->varhash, var) );
                assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
 
                /* create node data */
@@ -8991,7 +8989,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        /* create local conflict graph if needed */
        if ( conshdlrdata->addcomps )
        {
-          SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), conshdlrdata->nsos1vars) );
+          SCIP_CALL( SCIPcreateDigraph(scip, &conshdlrdata->localconflicts, conshdlrdata->nsos1vars) );
        }
 
        /* initialize stack of variables fixed to nonzero (memory may be already allocated in consTransSOS1()) */
@@ -9103,7 +9101,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOS1)
 
       for (j = 0; j < (*consdata)->nvars; ++j)
       {
-         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+         SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
                (SCIP_EVENTDATA*)cons, -1) ); /*lint !e737 !e740*/
       }
    }
@@ -9177,7 +9175,9 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
    consdata->rowlb = NULL;
    consdata->nfixednonzeros = 0;
    consdata->local = sourcedata->local;
+
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars, consdata->nvars) );
+
    /* if weights were used */
    if ( sourcedata->weights != NULL )
    {
@@ -9208,7 +9208,7 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
    /* catch bound change events on variable */
    for (j = 0; j < consdata->nvars; ++j)
    {
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[j], EVENTHDLR_EVENT_TYPE, conshdlrdata->eventhdlr,
             (SCIP_EVENTDATA*)*targetcons, NULL) ); /*lint !e740*/
    }
 
@@ -9708,7 +9708,7 @@ SCIP_DECL_CONSRESPROP(consRespropSOS1)
       assert( inferinfo >= -conshdlrdata->nsos1vars );
       assert( inferinfo <= -1 );
 
-      var = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, -inferinfo - 1);
+      var = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, -inferinfo - 1);  /*lint !e2704*/
    }
    else
    {
@@ -9783,13 +9783,13 @@ SCIP_DECL_CONSLOCK(consLockSOS1)
       var = vars[j];
 
       /* if lower bound is negative, rounding down may violate constraint */
-      if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
+      if ( SCIPisFeasNegative(scip, SCIPvarGetLbGlobal(var)) )
       {
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlockspos, nlocksneg) );
       }
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
-      if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
+      if ( SCIPisFeasPositive(scip, SCIPvarGetUbGlobal(var)) )
       {
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
       }
@@ -9836,8 +9836,7 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
    SCIP_CONSDATA* sourceconsdata;
    SCIP_VAR** sourcevars;
    SCIP_VAR** targetvars;
-   SCIP_Real* sourceweights;
-   SCIP_Real* targetweights;
+   SCIP_Real* targetweights = NULL;
    const char* consname;
    int nvars;
    int v;
@@ -9846,6 +9845,7 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
    assert( sourcescip != NULL );
    assert( sourcecons != NULL );
    assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0 );
+   assert( valid != NULL );
 
    *valid = TRUE;
 
@@ -9861,35 +9861,33 @@ SCIP_DECL_CONSCOPY(consCopySOS1)
 
    /* get variables and weights of the source constraint */
    nvars = sourceconsdata->nvars;
+   assert( nvars >= 0 );
 
-   if ( nvars == 0 )
-      return SCIP_OKAY;
-
-   sourcevars = sourceconsdata->vars;
-   assert( sourcevars != NULL );
-   sourceweights = sourceconsdata->weights;
-   assert( sourceweights != NULL );
-
-   /* duplicate variable array */
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvars, nvars) );
-   SCIP_CALL( SCIPduplicateBufferArray(sourcescip, &targetweights, sourceweights, nvars) );
+   /* duplicate weights array */
+   if ( sourceconsdata->weights != NULL )
+   {
+      SCIP_CALL( SCIPduplicateBufferArray(sourcescip, &targetweights, sourceconsdata->weights, nvars) );
+   }
 
    /* get copied variables in target SCIP */
-   for( v = 0; v < nvars && *valid; ++v )
+   sourcevars = sourceconsdata->vars;
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvars, nvars) );
+   for (v = 0; v < nvars && *valid; ++v)
    {
+      assert( sourcevars != NULL );
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &(targetvars[v]), varmap, consmap, global, valid) );
    }
 
-    /* only create the target constraint, if all variables could be copied */
-   if( *valid )
+   /* only create the target constraint, if all variables were be copied */
+   if ( *valid )
    {
       SCIP_CALL( SCIPcreateConsSOS1(scip, cons, consname, nvars, targetvars, targetweights,
             initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
    }
 
    /* free buffer array */
-   SCIPfreeBufferArray(sourcescip, &targetweights);
    SCIPfreeBufferArray(sourcescip, &targetvars);
+   SCIPfreeBufferArrayNull(sourcescip, &targetweights);
 
    return SCIP_OKAY;
 }
@@ -10012,6 +10010,7 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_CONS* cons;
+   SCIP_VAR* var;
    SCIP_Real oldbound;
    SCIP_Real newbound;
 
@@ -10085,6 +10084,30 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
       /* if variable is not fixed to be nonzero anymore */
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
          --(consdata->nfixednonzeros);
+      break;
+
+   case SCIP_EVENTTYPE_GLBCHANGED:
+      var = SCIPeventGetVar(event);
+      assert(var != NULL);
+
+      /* global lower bound is not negative anymore -> remove down lock */
+      if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, 1, 0) );
+      /* global lower bound turned negative -> add down lock */
+      else if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, 1, 0) );
+      break;
+
+   case SCIP_EVENTTYPE_GUBCHANGED:
+      var = SCIPeventGetVar(event);
+      assert(var != NULL);
+
+      /* global upper bound is not positive anymore -> remove up lock */
+      if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
+         SCIP_CALL( SCIPunlockVarCons(scip, var, cons, 0, 1) );
+      /* global upper bound turned positive -> add up lock */
+      else if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, 0, 1) );
       break;
 
    default:
@@ -10813,7 +10836,7 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
       SCIP_CALL( makeSOS1conflictgraphFeasible(scip, conshdlr, sol, changed, &allroundable) );
    }
 
-   if ( ! allroundable )
+   if ( ! allroundable ) /*lint !e774*/
       return SCIP_OKAY;
 
    /* check whether objective value of rounded solution is good enough */

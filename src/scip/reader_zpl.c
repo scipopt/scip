@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_zpl.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  ZIMPL model file reader
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -23,7 +24,7 @@
 
 #include "scip/reader_zpl.h"
 
-#ifdef WITH_ZIMPL
+#ifdef SCIP_WITH_ZIMPL
 
 #include <unistd.h>
 #include <stdbool.h>
@@ -544,11 +545,11 @@ SCIP_RETCODE addConsTerm(
                   polyvars[npolyvars] = (SCIP_VAR*)mono_get_var(monomial, j);  /*lint !e826*/
                   ++npolyvars;
                   varpos = npolyvars-1;
-                  SCIP_CALL( SCIPhashmapInsert(polyvarmap, (void*)mono_get_var(monomial, j), (void*)(size_t)varpos) );  /*lint !e826*/
+                  SCIP_CALL( SCIPhashmapInsertInt(polyvarmap, (void*)mono_get_var(monomial, j), varpos) );  /*lint !e826*/
                }
                else
                {
-                  varpos = (int)(size_t)SCIPhashmapGetImage(polyvarmap, (void*)mono_get_var(monomial, j));  /*lint !e826*/
+                  varpos = SCIPhashmapGetImageInt(polyvarmap, (void*)mono_get_var(monomial, j));  /*lint !e826*/
                }
                assert(polyvars != NULL);
                assert(polyvars[varpos] == (SCIP_VAR*)mono_get_var(monomial, j));
@@ -680,11 +681,11 @@ SCIP_RETCODE addConsTerm(
                   vars[nvars] = (SCIP_VAR*)mono_get_var(monomial, j);  /*lint !e826*/
                   ++nvars;
                   varpos = nvars-1;
-                  SCIP_CALL( SCIPhashmapInsert(varmap, (void*)mono_get_var(monomial, j), (void*)(size_t)varpos) );  /*lint !e826*/
+                  SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)mono_get_var(monomial, j), varpos) );  /*lint !e826*/
                }
                else
                {
-                  varpos = (int)(size_t)SCIPhashmapGetImage(varmap, (void*)mono_get_var(monomial, j));  /*lint !e826*/
+                  varpos = SCIPhashmapGetImageInt(varmap, (void*)mono_get_var(monomial, j));  /*lint !e826*/
                }
                assert(vars != NULL);
                assert(vars[varpos] == (SCIP_VAR*)mono_get_var(monomial, j));
@@ -749,11 +750,11 @@ SCIP_RETCODE addConsTerm(
                vars[nvars] = polyvars[i];  /*lint !e613*/
                ++nvars;
                varpos = nvars-1;
-               SCIP_CALL( SCIPhashmapInsert(varmap, (void*)polyvars[i], (void*)(size_t)varpos) );  /*lint !e613*/
+               SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)polyvars[i], varpos) );  /*lint !e613*/
             }
             else
             {
-               varpos = (int)(size_t)SCIPhashmapGetImage(varmap, (void*)polyvars[i]);  /*lint !e613*/
+               varpos = SCIPhashmapGetImageInt(varmap, (void*)polyvars[i]);  /*lint !e613*/
             }
             assert(vars[varpos] == polyvars[i]);  /*lint !e613*/
 
@@ -1602,7 +1603,9 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-#ifdef WITH_ZIMPL
+   assert(scip != NULL);
+
+#ifdef SCIP_WITH_ZIMPL
 #if (ZIMPL_VERSION >= 320)
    SCIP_READERDATA* readerdata;
    SCIP_READER* reader;

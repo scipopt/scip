@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -230,7 +230,8 @@ SCIP_DECL_BENDERSPRESUBSOLVE(bendersPresubsolveObj)
    assert(bendersdata->objbenders != NULL);
 
    /* call virtual method of benders object */
-   SCIP_CALL( bendersdata->objbenders->scip_presubsolve(scip, benders, sol, type, checkint, skipsolve, result) );
+   SCIP_CALL( bendersdata->objbenders->scip_presubsolve(scip, benders, sol, type, checkint, infeasible, auxviol,
+         skipsolve, result) );
 
    return SCIP_OKAY;
 }
@@ -386,6 +387,7 @@ scip::ObjBenders* SCIPgetObjBenders(
 {
    SCIP_BENDERSDATA* bendersdata;
 
+   assert(scip != NULL);
    bendersdata = SCIPbendersGetData(benders);
    assert(bendersdata != NULL);
 

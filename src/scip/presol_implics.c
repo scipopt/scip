@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_implics.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  implics presolver
  * @author Tobias Achterberg
  */
@@ -145,7 +146,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
                index0 = -1;
                break;
             }
-            index0 = SCIPvarGetIndex(implvars[0][i0]);
+            index0 = SCIPvarGetIndex(implvars[0][i0]); /*lint !e838*/
          }
          while( index1 < index0 )
          {
@@ -155,7 +156,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
                index1 = -1;
                break;
             }
-            index1 = SCIPvarGetIndex(implvars[1][i1]);
+            index1 = SCIPvarGetIndex(implvars[1][i1]); /*lint !e838*/
          }
          /**@todo for all implied binary variables y, check the cliques of x == !varfixing if y is contained */
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_probing.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  probing propagator
  * @author Tobias Achterberg
  * @author Matthias Miltenberger
@@ -127,7 +128,6 @@ struct SCIP_PropData
 /** initializes the propagator data */
 static
 SCIP_RETCODE initPropdata(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
@@ -764,7 +764,7 @@ SCIP_DECL_PROPINIT(propInitProbing)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   SCIP_CALL( initPropdata(scip, propdata) );
+   SCIP_CALL( initPropdata(propdata) );
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen,
@@ -1089,7 +1089,8 @@ SCIP_DECL_PROPEXEC(propExecProbing)
 
    /* start probing on found variables */
    SCIP_CALL( applyProbing(scip, propdata, binvars, nbinvars, nbinvars, &startidx, &nfixedvars, &naggrvars, &nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
-   SCIPdebugMsg(scip, "probing propagation found %d fixings, %d aggregation, %d nchgbds, and %d implications\n", nfixedvars, naggrvars, nchgbds, (propdata->nimplications) - oldnimplications);
+   SCIPdebugMsg(scip, "probing propagation found %d fixings, %d aggregation, %d nchgbds, and %d implications\n",
+      nfixedvars, naggrvars, nchgbds, (propdata->nimplications) - oldnimplications);
 
    if( delay )
    {
@@ -1106,7 +1107,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
  TERMINATE:
    SCIPfreeBufferArray(scip, &binvars);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 
@@ -1134,7 +1135,7 @@ SCIP_RETCODE SCIPincludePropProbing(
 
    /* create probing propagator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
-   SCIP_CALL( initPropdata(scip, propdata) );
+   SCIP_CALL( initPropdata(propdata) );
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,

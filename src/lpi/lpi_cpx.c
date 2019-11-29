@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1009,9 +1009,9 @@ const char* SCIPlpiGetSolverName(
    )
 {
 #ifdef CPX_VERSION_VERSION
-   sprintf(cpxname, "CPLEX %d.%d.%d.%d", CPX_VERSION_VERSION, CPX_VERSION_RELEASE, CPX_VERSION_MODIFICATION, CPX_VERSION_FIX);
+   (void) snprintf(cpxname, 100, "CPLEX %d.%d.%d.%d", CPX_VERSION_VERSION, CPX_VERSION_RELEASE, CPX_VERSION_MODIFICATION, CPX_VERSION_FIX);
 #else
-   sprintf(cpxname, "CPLEX %d.%d.%d.%d", CPX_VERSION/100, (CPX_VERSION%100)/10, CPX_VERSION%10, CPX_SUBVERSION);
+   (void) sprintf(cpxname, 100, "CPLEX %d.%d.%d.%d", CPX_VERSION/100, (CPX_VERSION%100)/10, CPX_VERSION%10, CPX_SUBVERSION);
 #endif
    return cpxname;
 }
@@ -1035,7 +1035,7 @@ void* SCIPlpiGetSolverPointer(
    return (void*) lpi->cpxlp;
 }
 
-/** pass integrality information to LP solver */
+/** pass integrality information to LP solver */ /*lint -e{715}*/
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
@@ -2252,7 +2252,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    SCIPdebugMessage("calling CPXprimopt()\n");
    retval = CPXprimopt(lpi->cpxenv, lpi->cpxlp);
-   lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
 
 #if CPX_VERSION == 12070100
    /* restore previous value for presolving */
@@ -2274,7 +2273,15 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
+
+   /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
+   if( lpi->solstat != CPX_STAT_INForUNBD )
+      lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
+   else
+      lpi->iterations = 0;
+
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
 
@@ -2316,9 +2323,12 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
             return SCIP_LPERROR;
          }
 
-         lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
          lpi->instabilityignored = FALSE;
+         assert( lpi->solstat != CPX_STAT_INForUNBD );
+
+         lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
+
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
          /* switch on preprocessing again */
@@ -2328,28 +2338,15 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       if( lpi->solstat == CPX_STAT_INForUNBD )
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
-         SCIPerrorMessage("CPLEX primal simplex returned CPX_STAT_INForUNBD after presolving was turned off\n");
+         SCIPerrorMessage("CPLEX primal simplex returned CPX_STAT_INForUNBD after presolving was turned off.\n");
       }
    }
 
    /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
-    * also for some pathological cases of infeasibility, e.g., contradictory bounds
-    */
-   if( lpi->solstat == CPX_STAT_OPTIMAL )
-   {
-#ifdef NDEBUG
-      lpi->solisbasic = TRUE;
-#else
-      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
-      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
-      assert(lpi->solisbasic);
-#endif
-   }
-   else
-   {
-      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
-      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
-   }
+    * also for some pathological cases of infeasibility, e.g., contradictory bounds */
+   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+   lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+   assert( lpi->solisbasic || lpi->solstat != CPX_STAT_OPTIMAL );
 
    return SCIP_OKAY;
 }
@@ -2389,7 +2386,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    SCIPdebugMessage("calling CPXdualopt()\n");
    retval = CPXdualopt(lpi->cpxenv, lpi->cpxlp);
-   lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
    switch( retval  )
    {
    case 0:
@@ -2400,11 +2396,17 @@ SCIP_RETCODE SCIPlpiSolveDual(
       return SCIP_LPERROR;
    }
 
-   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
-
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
+
+   /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
+   if( lpi->solstat != CPX_STAT_INForUNBD )
+      lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
+   else
+      lpi->iterations = 0;
+
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
 
@@ -2432,10 +2434,13 @@ SCIP_RETCODE SCIPlpiSolveDual(
             return SCIP_LPERROR;
          }
 
-         lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
          lpi->instabilityignored = FALSE;
+         assert( lpi->solstat != CPX_STAT_INForUNBD );
+
+         lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
          CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
          /* switch on preprocessing again */
@@ -2452,21 +2457,9 @@ SCIP_RETCODE SCIPlpiSolveDual(
    /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
     * also for some pathological cases of infeasibility, e.g., contradictory bounds
     */
-   if( lpi->solstat == CPX_STAT_OPTIMAL )
-   {
-#ifdef NDEBUG
-      lpi->solisbasic = TRUE;
-#else
-      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
-      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
-      assert(lpi->solisbasic);
-#endif
-   }
-   else
-   {
-      CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
-      lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
-   }
+   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
+   lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
+   assert( lpi->solisbasic || lpi->solstat != CPX_STAT_OPTIMAL );
 
 #ifdef SCIP_DISABLED_CODE
    /* this fixes the strange behavior of CPLEX, that in case of the objective limit exceedance, it returns the
@@ -2573,7 +2566,6 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    SCIPdebugMessage("calling CPXhybaropt()\n");
    retval = CPXhybbaropt(lpi->cpxenv, lpi->cpxlp, crossover ? 0 : CPX_ALG_NONE);
-   lpi->iterations = CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
    switch( retval  )
    {
    case 0:
@@ -2589,6 +2581,12 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
+
+   if( lpi->solstat != CPX_STAT_INForUNBD )
+      lpi->iterations = CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
+   else
+      lpi->iterations = 0;
+
    SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
    if( lpi->solstat == CPX_STAT_INForUNBD )
@@ -2614,16 +2612,12 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
       lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
-      lpi->iterations += CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
       lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
       lpi->instabilityignored = FALSE;
-      SCIPdebugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+      assert( lpi->solstat != CPX_STAT_INForUNBD );
 
-      if( lpi->solstat == CPX_STAT_INForUNBD )
-      {
-         /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
-         SCIPerrorMessage("CPLEX barrier returned CPX_STAT_INForUNBD after presolving was turned off\n");
-      }
+      lpi->iterations += CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
+      SCIPdebugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
 
       setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
    }
@@ -3234,6 +3228,11 @@ SCIP_Bool SCIPlpiIsStable(
 
    SCIPdebugMessage("checking for stability: CPLEX solstat = %d\n", lpi->solstat);
 
+#ifdef SCIP_DISABLED_CODE
+   /* The following workaround is not needed anymore for SCIP, since it tries to heuristically construct a feasible
+    * solution or automatically resolves the problem if the status is "unbounded"; see SCIPlpGetUnboundedSol().
+    */
+
    /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
     * result as instability, s.t. the problem is resolved from scratch
@@ -3247,6 +3246,7 @@ SCIP_Bool SCIPlpiIsStable(
       if( !primalfeasible )
          return FALSE;
    }
+#endif
 
    /* If the condition number of the basis should be checked, everything above the specified threshold is counted
     * as instable.
@@ -3645,7 +3645,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
  *        see also the explanation in lpi.h.
- */
+ */ /*lint -e{715}*/
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
@@ -3717,7 +3717,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
  *        see also the explanation in lpi.h.
- */
+ */ /*lint -e{715}*/
 SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
@@ -3791,12 +3791,12 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
  *        see also the explanation in lpi.h.
- */
+ */ /*lint -e{715}*/
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3849,10 +3849,12 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
       /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
       if( rowsense == 'G' || rowsense == 'R' )
       {
-         int i;
+         int ncols;
+         int j;
 
-         for( i = 0; i < nrows; i++ )
-            coef[i] *= -1.0;
+         ncols = CPXgetnumcols(lpi->cpxenv, lpi->cpxlp);
+         for( j = 0; j < ncols; j++ )
+            coef[j] *= -1.0;
       }
    }
 
@@ -3864,11 +3866,11 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
  *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
  *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
  *        see also the explanation in lpi.h.
- */
+ *//*lint -e{715}*/
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -4414,6 +4416,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          setIntParam(lpi, CPX_PARAM_SCRIND, CPX_OFF);
       break;
    case SCIP_LPPAR_LPITLIM:
+      assert( ival >= 0 );
+      /* 0 <= ival, 0 stopping immediately */
 #if (CPX_VERSION <= 1230)
       ival = MIN(ival, CPX_INT_MAX);
 #endif
@@ -4501,25 +4505,56 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      assert( dval > 0.0 );
+      /* 1e-09 <= dval <= 1e-04 */
+      if( dval < 1e-09 )
+         dval = 1e-09;
+      else if( dval > 1e-04 )
+         dval = 1e-04;
+
       setDblParam(lpi, CPX_PARAM_EPRHS, dval);
       lpi->feastol = dval;
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      assert( dval > 0.0 );
+      /* 1e-09 <= dval <= 1e-04 */
+      if( dval < 1e-09 )
+         dval = 1e-09;
+      else if( dval > 1e-04 )
+         dval = 1e-04;
+
       setDblParam(lpi, CPX_PARAM_EPOPT, dval);
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
+      /* 1e-10 <= dval */
+      assert( dval >= 0.0 );
+      if( dval < 1e-10 )
+         dval = 1e-10;
+
       setDblParam(lpi, CPX_PARAM_BAREPCOMP, dval);
       break;
    case SCIP_LPPAR_OBJLIM:
+      /* Cplex poses no restriction on dval */
       if ( CPXgetobjsen(lpi->cpxenv, lpi->cpxlp) == CPX_MIN )
          setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
       else
          setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      assert( dval > 0.0 );
+      /* Cplex requires dval non-negative
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
       setDblParam(lpi, CPX_PARAM_TILIM, dval);
       break;
    case SCIP_LPPAR_MARKOWITZ:
+      /* 1e-04 <= dval <= .99999 */
+      if( dval < 1e-04 )
+         dval = 1e-04;
+      else if( dval > .99999 )
+         dval = .99999;
+
       setDblParam(lpi, CPX_PARAM_EPMRK, dval);
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:

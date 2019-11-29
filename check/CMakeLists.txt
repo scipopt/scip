@@ -50,6 +50,7 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
+
     #constraints
     "indicatorlogicorsepa"
     "indicatoralterlp"
@@ -57,17 +58,20 @@ set(settings_MIP
     #presolving and branching
     "convertinttobin_mostinf"
     "setppclifting_leastinf"
-    #branching and propagation
 
+    #branching and propagation
     "pscost_proporbitope"
+
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
 
     #separation and heuristics
     "oddcycleliftheur_feaspump20"
+
+    #heuristics and branching
     "heurlprows"
-    "lns_epsgreedy"
+    "lns_epsgreedy_vanilla"
     "lns_exp3"
 #    "dynamic"
     "intobj"
@@ -77,24 +81,30 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
-)
+    )
+#
+# settings for the componentshandler test
+#
+set(settings_compHandlerTest
+    "components_during_solve"
+    )
 #
 # settings to run a reduced MIP test
 #
 set(settings_fastMIP
-    "vbcvisualization"
-    "bakvisualization"
-    "alldisp"
-    "fullstrongbfs"
-    "allfull"
     "all_aggressive"
+    "alldisp"
+    "allfull"
+    "bakvisualization"
+    "fullstrongbfs"
     "cgmip"
     "cgmipstrong"
     "cgmipviol"
-    "presolving_off"
-    "separating_off"
     "lookahead-abbrev-bincons"
     "lookahead-addclique-scaledcutoffscore"
+    "presolving_off"
+    "separating_off"
+    "vbcvisualization"
   )
 set(settings_MINLP
     "minlp"
@@ -124,6 +134,7 @@ set(settings_Symmetry
     "orbitalfixing-timing2"
     "orbitopes-timing0"
     "orbitopes-timing2"
+    "orbitopes-timing2-static"
     "packingorbitopes-timing0"
     "packingorbitopes-timing2"
     "symresacks-timing0"
@@ -136,8 +147,29 @@ set(settings_sparsify
 
 set(settings_Benders
     "usebenders"
+    "usebenders-tr"
+    "usebenders-cutstrengthen"
+   )
+   
+set(settings_Indicator
+    "default"
+    "indicatorrestart"
+    "indicatorperspective"
+    "indicatorlogicorsepa"
+    "indicatorcoupling"
+    "indicatorconflict"
+    "indicatoralterlp"
+    "indicatorupgrade"
    )
 
+set(settings_reopt
+    "reopt-test-settings-usesplitcons-TRUE"
+    "reopt-test-settings-varorderinterdiction-d"
+    "reopt-test-settings-varorderinterdiction-i"
+    "reopt-test-settings-varorderinterdiction-r"
+    )
+
+   
 #
 # Indicator instances
 #
@@ -150,6 +182,12 @@ set(settings_Cardinality
     "default"
 #    "upgdcardinality"
 )
+
+set(settings_Or
+    "default"
+    "presolving_separating_heuristics_off_randombranching"
+)
+
 
 set(instances_Readertest
     "instances/MIP/bell5.mps\;8966406.49"
@@ -189,7 +227,13 @@ set(instances_MIP
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
     )
-
+#
+# Instances for component handler test
+#
+set(instances_compHandlerTest
+    "instances/MIP/lseu_dcmulti.cip\;189302"
+    "instances/MIP/4sHB.cip\;67"
+    )
 #
 # Reduced set of MIP instances for more expensive settings
 #
@@ -323,12 +367,18 @@ set(instances_Stochastic
    "instances/Stochastic/pltexpA2_6.smps\;-9.479354404641"
    "instances/Stochastic/pltexpA2_16.smps\;-9.663308373027"
    "instances/Stochastic/pltexpA4_6.smps\;-19.5994173819041"
+    "instances/Stochastic/sslp_5_25_5.smps\;-100.6"
    )
 
 set(instances_Benders
     "instances/Stochastic/4node1.smps\;480.9"
     "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
+    "instances/Stochastic/sslp_5_25_50_LB.smps\;-121.6"
    )
+
+set(instances_Or
+    "instances/Or/or_constraint.cip\;18"
+    )
 
 #
 # available reader file extensions for SCIP readers
@@ -389,11 +439,13 @@ macro(add_instancetests instances settings prefix)
             # treat the instance as a tuple (list) of two values
             #
             add_test(NAME ${prefix}-${setting}-${basename}
-                    COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/coverage/settings/${setting}.set -o ${optval} ${optval}
+                    COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
                     )
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
+                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
         endforeach(setting)
@@ -401,8 +453,9 @@ macro(add_instancetests instances settings prefix)
 endmacro(add_instancetests)
 
 add_instancetests(instances_CP settings_default "CP")
-add_instancetests(instances_Indicator settings_default "Indicator")
+add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
+add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
@@ -417,6 +470,7 @@ add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
+add_instancetests(instances_Or settings_Or "Or")
 
 #
 # test writing and reading solutions
@@ -438,6 +492,22 @@ foreach(instance ${instances_MINLP})
 endforeach(instance)
 
 #
+# test reading .cip files for indicator instances
+#
+foreach(instance ${instances_Indicator})
+    split_instance(instance)
+    #
+    # configure the batch file for this test by substituting placeholders in the in.file
+    #
+    configure_file(interactiveshell/solvecip.bat.in interactiveshell/solvecip-${basename}.bat)
+    add_test(NAME Indicator-solvecip-${basename}
+            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solvecip-${basename}.bat
+            )
+    set_tests_properties(Indicator-solvecip-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+endforeach(instance)
+
+
+#
 # the following instances are not pure binary and hence cannot be written out in opb format
 #
 set(basenames_opb_wrongformat
@@ -450,6 +520,8 @@ set(basenames_opb_wrongformat
     misc03.mps
     rgn.mps
     vpm2.fzn
+    lseu_dcmulti.cip
+    lseu_dcmulti_sHB.cip
     )
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 
@@ -569,6 +641,31 @@ set_tests_properties(write_and_read_settings
                         FAIL_REGULAR_EXPRESSION "ERROR"
                         DEPENDS scip-build
                     )
+
+#
+# reopt test.
+# We substitute first path placeholders in the .in file, which creates a new file under the binary directory
+# Then run SCIP to execute the list of commands defined there.
+#
+
+set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
+file(MAKE_DIRECTORY ${shell_tmp_dir})
+
+# disabled reopt on FullIns_3 until #2758 is dealt with
+# foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
+foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl)
+    foreach(setting ${settings_reopt})
+        configure_file(interactiveshell/${testname}.bat.in interactiveshell/${testname}-${setting}.bat)
+        add_test(NAME ${testname}-${setting}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/${testname}-${setting}.bat
+                )
+        set_tests_properties(${testname}-${setting} PROPERTIES
+                                            PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                            FAIL_REGULAR_EXPRESSION "Validation         : Fail")
+        endforeach()
+
+endforeach()
+
 
 #
 # define sets of linear classification results
