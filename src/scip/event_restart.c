@@ -2794,7 +2794,7 @@ SCIP_Real SCIPgetTreesizeEstimation(
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    TSPOS tspos = TSPOS_NONE;
-   SCIP_Real estim;
+   SCIP_Real estim = -1.0;
 
    assert(scip != NULL);
 
@@ -2848,5 +2848,5 @@ SCIP_Real SCIPgetTreesizeEstimation(
    }
 
    assert(tspos != TSPOS_NONE);
-   return timeseriesEstimate(eventhdlrdata->timeseries[TSPOS_SSG], eventhdlrdata->treedata);
+   return timeseriesEstimate(eventhdlrdata->timeseries[tspos], eventhdlrdata->treedata);
 }
