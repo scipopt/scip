@@ -100,6 +100,8 @@ Features
 - To save memory, it is now possible to remove all variables from the internal symmetry data structures that are
   not affected by any symmetry.
 
+- Allow to filter first variables from orbits and transfer pseudo cost information to variables in orbit
+
 - Add integration of external MILP presolve library as a SCIP presolver plugin that runs on MILP problems
 
 Performance improvements
@@ -174,7 +176,8 @@ Interface changes
   + the function SCIPgetSymmetry() no longer accepts the parameter recompute, but has parameter permvarmap as new input
   + removed SCIPgetPermvarsObjSymmetry(), SCIPsetSymmetryComponentblocked(), SCIPgetSymmetryComponentblocked(),
     SCIPgetSyminfoGloballyFixedVars(), SCIPcomputeGroupOrbitsSymbreak, SCIPincludePresolSymmetry(),SCIPincludePresolSymbreak(),
-    and SCIPincludePropOrbitalfixing()
+	and SCIPincludePropOrbitalfixing()
+  + add function SCIPcomputeOrbitsComponentsSym() to compute orbits without filtering permutations and indices of orbits for each variable
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 - Benders' decomposition
   + changed SCIPstoreBenderscutCut() in scip_benders.c to SCIPstoreBendersCut(). Where this function used to take a
@@ -350,6 +353,10 @@ Interface changes
 - new return code SCIP_NOTIMPLEMENTED for functions, e.g., in the LPI that have not been implemented (yet)
 
 - new parameter separating/cgmip/genprimalsols that allows to generate initial primal solutions from Gomory cuts
+
+- new parameter branching/relpscost/filtercandssym to allow filtering from orbits
+
+- new parameter branching/relpscost/transsympscost to transfer pseudo cost information to orbit
 
 
 ### Data structures
