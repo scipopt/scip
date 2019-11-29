@@ -147,6 +147,7 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define TREEPRROFILE_MINSIZE    512               /**< minimum size (depth) that tree profile can hold */
 #define DEFAULT_TREEPROFILE_ENABLED FALSE         /**< should the event handler collect data? */
 #define DEFAULT_TREEPROFILE_MINNODESPERDEPTH 20.0 /**< minimum average number of nodes at each depth before producing estimations */
+#define SSG_STARTPRIMBOUND  SCIP_INVALID          /**< initial value of primal bound used within SSG */
 
 /** double exponential smoothing data structure */
 struct DoubleExpSmooth
@@ -245,6 +246,7 @@ struct SCIP_EventhdlrData
    SCIP_Bool             countonlyleaves;    /**< should only leaves count for the minnodes parameter? */
    SCIP_Bool             useleafts;          /**< use leaf nodes as basic observations for time series, or all nodes? */
    SCIP_Bool             treeprofile_enabled;/**< should the event handler collect treeprofile data? */
+   SCIP_Bool             treeisbinary;       /**< internal flag if all branching decisions produced 2 children */
 };
 
 typedef struct SubtreeSumGap SUBTREESUMGAP;
@@ -414,7 +416,6 @@ SCIP_RETCODE SCIPregforestFromFile(
    const char*           filename            /**< name of file with the regression forest data */
    )
 {
-
    SCIP_FILE* file;
    SCIP_REGFOREST* regforestptr;
    char buffer[SCIP_MAXSTRLEN];
@@ -855,7 +856,7 @@ SCIP_RETCODE subtreesumgapReset(
    ssg->scalingfactor = 1.0;
    ssg->nsubtrees = 1;
    ssg->subtreepqueues = NULL;
-   ssg->pblastsplit = SCIP_INVALID;
+   ssg->pblastsplit = SSG_STARTPRIMBOUND;
 
    return SCIP_OKAY;
 }
@@ -1993,19 +1994,31 @@ SCIP_RETCODE getSearchCompletion(
    treedata = eventhdlrdata->treedata;
    completiontype = eventhdlrdata->completiontypeparam;
 
-   /* infer automatic completion type */
+   /* infer automatic completion type
+    *
+    *  use regression forest if available,
+    *  or
+    *  use monotone regression if both SSG and progress are meaningful;
+    *  or
+    *  use progress or ssg, depending which one is available,
+    *  or
+    *  use gap, which is always available
+    */
    if( completiontype == COMPLETIONTYPE_AUTO )
    {
-      /* use regression forest if available, or use monotone regression */
+      SCIP_Bool useprogress = eventhdlrdata->treeisbinary;
+      SCIP_Bool usessg = treedata->ssg->pblastsplit != SSG_STARTPRIMBOUND;/*lint !e777*/
+
       if( eventhdlrdata->regforest != NULL )
          completiontype = COMPLETIONTYPE_REGFOREST;
-      else
+      else if( useprogress && usessg )
          completiontype = COMPLETIONTYPE_MONOREG;
-
-      /* author bzfhende
-       *
-       * TODO use SSG if tree is nonbinary
-       */
+      else if( useprogress )
+         completiontype = COMPLETIONTYPE_PROGRESS;
+      else if( usessg )
+         completiontype = COMPLETIONTYPE_SSG;
+      else
+         completiontype = COMPLETIONTYPE_GAP;
    }
 
    /* compute the search tree completion based on the selected method */
@@ -2515,6 +2528,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolRestart)
       SCIP_CALL( createTreeprofile(scip, &eventhdlrdata->treeprofile) );
    }
 
+   eventhdlrdata->treeisbinary = TRUE;
 
    return SCIP_OKAY;
 }
@@ -2566,7 +2580,13 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       int nchildren = 0;
 
       if( eventtype == SCIP_EVENTTYPE_NODEBRANCHED )
+      {
          nchildren = SCIPgetNChildren(scip);
+
+         /* update whether the tree is still binary */
+         if( nchildren != 2 )
+            eventhdlrdata->treeisbinary = FALSE;
+      }
 
       eventnode = SCIPeventGetNode(event);
       SCIP_CALL( updateTreedata(scip, treedata, eventnode, nchildren) );
