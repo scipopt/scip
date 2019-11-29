@@ -685,10 +685,9 @@ typedef struct
    unsigned int          valid:1;            /**< is the lpobjval a valid dual bound? */
 } LEVEL2RESULT;
 
-/** a container to hold the result of second-level LP */
+/** a container to hold the results of all second-level LPs */
 typedef struct
 {
-   SCIP_HASHMAP*         level2map;          /**< hash map for level2 results */
    LEVEL2RESULT**        level2results;      /**< array with all level2 results */
    SCIP_Real             branchval1;         /**< new bound for first branching variable */
    SCIP_Real             branchval2;         /**< new bound for second branching variable */
@@ -850,7 +849,6 @@ SCIP_RETCODE level2dataCreate(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, data) );
 
-   (*data)->level2map = NULL;
    (*data)->level2results = NULL;
    (*data)->branchval1 = -SCIPinfinity(scip);
    (*data)->branchval2 = -SCIPinfinity(scip);
@@ -5518,7 +5516,7 @@ SCIP_RETCODE selectVarStart(
 
          persistent->oldntotalnodes = SCIPgetNTotalNodes(scip);
          persistent->oldnnodelpiterations = SCIPgetNNodeLPIterations(scip);
-         persistent->oldnnodelps = SCIPgetNNodeLPs(scip);
+         persistent->oldnnodelps = SCIPgetNNodeLPs(scip) + SCIPgetNNodeZeroIterationLPs(scip);
          branchingDecisionCopy(decision, persistent->olddecision);
       }
 
@@ -5699,12 +5697,12 @@ SCIP_Bool isUsePreviousResult(
       branchingDecisionIsValid(persistent->olddecision),
       SCIPgetNTotalNodes(scip), persistent->oldntotalnodes,
       SCIPgetNNodeLPIterations(scip), persistent->oldnnodelpiterations,
-      SCIPgetNNodeLPs(scip), persistent->oldnnodelps);
+      SCIPgetNNodeLPs(scip) + SCIPgetNNodeZeroIterationLPs(scip), persistent->oldnnodelps);
 
    return branchingDecisionIsValid(persistent->olddecision)
       && (persistent->oldntotalnodes == SCIPgetNTotalNodes(scip))
       && (persistent->oldnnodelpiterations == SCIPgetNNodeLPIterations(scip))
-      && (persistent->oldnnodelps == SCIPgetNNodeLPs(scip));
+      && (persistent->oldnnodelps == SCIPgetNNodeLPs(scip) + SCIPgetNNodeZeroIterationLPs(scip));
 }
 
 /**

@@ -284,6 +284,7 @@ void SCIPstatReset(
    stat->ndualresolvelps = 0;
    stat->nlexdualresolvelps = 0;
    stat->nnodelps = 0;
+   stat->nnodezeroitlps = 0;
    stat->nisstoppedcalls = 0;
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
