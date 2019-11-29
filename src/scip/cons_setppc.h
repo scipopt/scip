@@ -306,6 +306,18 @@ int SCIPgetNFixedzerosSetppc(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** cleans up (multi-)aggregations and fixings from setppc constraints */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcleanupConssSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether problem was detected to be infeasible */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (setppc) constraints */
+   int*                  nchgcoefs,          /**< pointer to count number of changed coefficients */
+   int*                  nfixedvars          /**< pointer to count number of fixed variables */
+   );
+
 /* @} */
 
 /* @} */

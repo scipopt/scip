@@ -15,7 +15,7 @@
 
 /**@file   dbldblarith.h
  * @brief  defines macros for basic operations in double-double arithmetic giving roughly twice the precision of a double
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  */
 

@@ -1333,11 +1333,11 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 
          assert(SCIPsetIsGT(set, conflictstore->dualprimalbnds[i], cutoffbound));
 
-         rhs = SCIPgetRhsLinear(NULL, dualproof);
+         rhs = SCIPgetRhsLinear(set->scip, dualproof);
 
          if( !SCIPsetIsInfinity(set, rhs) )
          {
-            assert(SCIPsetIsInfinity(set, -SCIPgetLhsLinear(NULL, dualproof)));
+            assert(SCIPsetIsInfinity(set, -SCIPgetLhsLinear(set->scip, dualproof)));
             assert(SCIPsetIsPositive(set, conflictstore->scalefactors[i]));
 
             /* get unscaled rhs */
@@ -1352,7 +1352,9 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
          }
          else
          {
-            SCIP_Real lhs = SCIPgetLhsLinear(NULL, dualproof);
+            SCIP_Real lhs;
+
+            lhs = SCIPgetLhsLinear(set->scip, dualproof);
             assert(!SCIPsetIsInfinity(set, -lhs));
             assert(SCIPsetIsNegative(set, conflictstore->scalefactors[i]));
 

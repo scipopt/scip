@@ -285,6 +285,8 @@ void printRow(
 
    for( i = 0; i < nvars; ++i )
    {
+      assert(vars != NULL); /* for lint */
+
       v = SCIPvarGetProbindex(vars[i]);
       if( v != -1 )
       {
@@ -645,5 +647,5 @@ SCIP_RETCODE SCIPwritePbm(
 
    *result = SCIP_SUCCESS;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
