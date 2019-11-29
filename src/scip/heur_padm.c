@@ -729,44 +729,6 @@ SCIP_Real getTimeLeft(
       return SCIPinfinity(scip);
 }
 
-/** returns the available memory limit that is left */
-static
-SCIP_Real getMemLeft(
-   SCIP*                 scip,               /**< main SCIP data structure */
-   PROBLEM*              problem,            /**< contains all subscips */
-   SCIP*                 subscip             /**< exclude this subscip (or NULL) */
-   )
-{
-   SCIP_Real memlim;
-   int b;
-
-   assert(scip != NULL);
-   assert(problem != NULL);
-
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memlim) );
-
-   if( !SCIPisInfinity(scip, memlim) )
-   {
-      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-      memlim -= SCIPgetMemUsed(scip)/1048576.0;
-      memlim -= SCIPgetMemExternEstim(scip)/1048576.0;
-
-      /* substract the memory already used by all other subSCIPs and the estimated memory usage of external software */
-      for( b = 0; b < problem->nblocks; b++ )
-      {
-         if( (problem->blocks[b]).subscip == subscip )
-            continue;
-
-         memlim -= SCIPgetMemUsed((problem->blocks[b]).subscip)/1048576.0;
-         memlim -= SCIPgetMemExternEstim((problem->blocks[b]).subscip)/1048576.0;
-      }
-
-      return MAX(0.0, memlim);
-   }
-   else
-      return SCIPinfinity(scip);
-}
-
 /*
  * Callback methods of primal heuristic
  */
@@ -1056,10 +1018,10 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       }
    }
 
-   /* check whether there is enough time and memory left */
-   if( getTimeLeft(scip) <= 0 || getMemLeft(scip, problem, NULL) <= 10)
+   /* check whether there is enough time left */
+   if( getTimeLeft(scip) <= 0 )
    {
-      SCIPdebugMsg(scip, "no time or memory left\n");
+      SCIPdebugMsg(scip, "no time left\n");
       goto TERMINATE;
    }
 
@@ -1248,10 +1210,10 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* ------------------------------------------------------------------------------------------------- */
 
-   /* check whether there is enough time and memory left */
-   if( getTimeLeft(scip) <= 0 || getMemLeft(scip, problem, NULL) <= 10)
+   /* check whether there is enough time left */
+   if( getTimeLeft(scip) <= 0 )
    {
-      SCIPdebugMsg(scip, "no time or memory left\n");
+      SCIPdebugMsg(scip, "no time left\n");
       goto TERMINATE;
    }
 
@@ -1341,12 +1303,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                /* reuse old solution if available */
                SCIP_CALL( reuseSolution((problem->blocks[b]).subscip, &problem->blocks[b]) );
 
-               /* update time limit of subproblem */
-               SCIP_CALL( SCIPsetRealParam((problem->blocks[b]).subscip, "limits/time", getTimeLeft(scip)) );
-
-               /* update memory limit of subproblem */
-               SCIP_CALL( SCIPsetRealParam((problem->blocks[b]).subscip, "limits/memory", 
-                                             getMemLeft(scip, problem, (problem->blocks[b]).subscip)) );
+               /* update time and memory limit of subproblem */
+               SCIP_CALL( SCIPcopyLimits(scip, (problem->blocks[b]).subscip) );
 
                /* solve block */
                SCIP_CALL( SCIPsolve((problem->blocks[b]).subscip) );
