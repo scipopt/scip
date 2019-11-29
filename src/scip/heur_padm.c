@@ -166,11 +166,12 @@ struct SCIP_HeurData
 {
    int                   admiterations;      /**< maximal number of ADM iterations in each penalty loop */
    int                   penaltyiterations;  /**< maximal number of penalty iterations */
+   int                   timing;             /**< should the heuristic run before or after the processing of the node?
+                                                  (0: before, 1: after, 2: both) */
    SCIP_Real             gap;                /**< mipgap at start */
    SCIP_Bool             scaling;            /**< enable sigmoid rescaling of penalty parameters */
    SCIP_Bool             assignlinking;      /**< should linking constraints be assigned? */
    SCIP_Bool             original;           /**< should the original problem be used? */
-   SCIP_Bool             afternode;          /**< should the heuristic also run after the processing of the node? */
 };
 
 /*
@@ -839,11 +840,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    gap = heurdata->gap;
 
-   if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
+   if( (heurtiming & SCIP_HEURTIMING_BEFORENODE) && heurdata->timing !=1 )
    {
       SCIPdebugMsg(scip, "Initialize padm heuristic before node\n");
    }
-   else if( (heurtiming & SCIP_HEURTIMING_AFTERNODE) && heurdata->afternode )
+   else if( (heurtiming & SCIP_HEURTIMING_AFTERNODE) && heurdata->timing >=1 )
    {
       SCIPdebugMsg(scip, "Initialize padm heuristic after node\n");
    }
@@ -1756,8 +1757,9 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/original",
       "should the original problem be used?", &heurdata->original, FALSE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/afternode",
-      "should the heuristic also run after the processing of the node?", &heurdata->afternode, FALSE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/timing",
+      "should the heuristic run before or after the processing of the node? (0: before, 1: after, 2: both)",
+      &heurdata->timing, FALSE, 0, 0, 2, NULL, NULL) );
 
    return SCIP_OKAY;
 }
