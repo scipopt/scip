@@ -1123,7 +1123,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                binfo->block = b;
                binfo->otherblock = b2;
                binfo->linkVarIdx = linkvaridx;
-               binfo->linkVarVal = 0.0;
                binfo->linkVar = SCIPfindVar((problem->blocks[b]).subscip, SCIPvarGetName(linkvars[linkvaridx]));
                j = (problem->blocks[b]).ncoupling;
 
@@ -1159,19 +1158,34 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                             SCIPvarGetName(linkvars[linkvaridx]), b2);
                (problem->blocks[b]).couplingcons[j] = NULL;
 
-               /* create linking constraint with initial side equal to zero */
+               /* create linking constraint with initial side equal to zero (or lower bound of linking variable)*/
                if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
                {
+                  SCIP_Real initval;
+
+                  initval = MAX(SCIPvarGetLbOriginal(binfo->linkVar), 0.0);
+                  
                   SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
-                                                   name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, 0.0, 0.0) );
+                                                   name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, initval, initval) );
+
+                  /* set initial value of linking variable */
+                  binfo->linkVarVal = initval;
                }
 
-               /* create linking constraint with initial side equal to LP solution */
+               /* create linking constraint with initial side equal to LP solution (rounded if variable is integer)*/
                if( heurtiming & SCIP_HEURTIMING_AFTERNODE )
                {
+                  SCIP_Real initval;
+
+                  initval = SCIPvarGetLPSol(linkvars[linkvaridx]);
+                  if( SCIPvarGetType(binfo->linkVar) != SCIP_VARTYPE_CONTINUOUS )
+                     initval = SCIPround(scip, initval);
+
                   SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
-                                                   name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef,
-                                                   SCIPvarGetLPSol(linkvars[linkvaridx]), SCIPvarGetLPSol(linkvars[linkvaridx])) );
+                                                   name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, initval, initval) );
+
+                  /* set initial value of linking variable */
+                  binfo->linkVarVal = initval;
                }
 
                SCIP_CALL( SCIPaddCons((problem->blocks[b]).subscip, (problem->blocks[b]).couplingcons[j]) );
