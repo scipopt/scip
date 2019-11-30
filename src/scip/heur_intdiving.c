@@ -650,7 +650,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
 
    SCIPdebugMsg(scip, "intdiving heuristic finished\n");
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 

@@ -1590,6 +1590,8 @@ SCIP_RETCODE findLexMinFace(
 
       if ( resprop )
       {
+         assert( minfixedrowlexmin != NULL );
+
          /* store minimum fixed row */
          if ( minfixed == -1 )
             minfixedrowlexmin[j] = nrowsused - 1;
@@ -1704,6 +1706,8 @@ SCIP_RETCODE findLexMaxFace(
 
       if ( resprop )
       {
+         assert( minfixedrowlexmax != NULL );
+
          /* store minimum fixed row */
          if ( minfixed == -1 )
             minfixedrowlexmax[j] = nrowsused - 1;
@@ -1944,9 +1948,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler of the corresponding constraint */
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
-   SCIP_VAR*             infervar,           /**< variable that was deduced */
    int                   inferinfo,          /**< inference information */
-   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
@@ -2136,9 +2138,7 @@ static
 SCIP_RETCODE resolvePropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
-   SCIP_VAR*             infervar,           /**< variable that was deduced */
    int                   inferinfo,          /**< inference information */
-   SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
@@ -3404,11 +3404,11 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitope)
    /* resolution for full orbitopes not availabe yet */
    if ( orbitopetype == SCIP_ORBITOPETYPE_PACKING || orbitopetype == SCIP_ORBITOPETYPE_PARTITIONING )
    {
-      SCIP_CALL( resolvePropagation(scip, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+      SCIP_CALL( resolvePropagation(scip, cons, inferinfo, bdchgidx, result) );
    }
    else
    {
-      SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx, result) );
+      SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, inferinfo, bdchgidx, result) );
    }
 
    return SCIP_OKAY;
@@ -3553,7 +3553,7 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    if ( !sourcedata->ismodelcons )
    {
       *valid = FALSE;
-      
+
       return SCIP_OKAY;
    }
 

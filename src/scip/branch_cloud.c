@@ -665,7 +665,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       branchruledata->useunion = FALSE;
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 /*

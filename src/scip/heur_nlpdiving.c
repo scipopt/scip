@@ -2710,7 +2710,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
    SCIPdebugMsg(scip, "nlpdiving heuristic finished\n");
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 

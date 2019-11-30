@@ -428,6 +428,7 @@ SCIP_RETCODE SCIPsolTransform(
 
    assert(sol != NULL);
    assert(transsol != NULL);
+   assert(set != NULL);
    assert(SCIPsolIsOriginal(sol));
    assert(sol->primalindex > -1);
 
