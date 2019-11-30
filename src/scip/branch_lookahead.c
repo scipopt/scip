@@ -3625,8 +3625,8 @@ SCIP_Real calculateScoreFromDeeperscoreAndCutoffs(
    downscore = sqrt(totaldowngains/ntotaldowngains);
    upscore = sqrt(totalupgains/ntotalupgains);
 
-   downscore = MAX(downscore, SCIPsumepsilon(scip));
-   upscore = MAX(upscore, SCIPsumepsilon(scip));
+   downscore = MAX(downscore, SCIPsumepsilon(scip)); /*lint !e666*/
+   upscore = MAX(upscore, SCIPsumepsilon(scip)); /*lint !e666*/
 
 
    score += SCIPgetBranchScore(scip, branchvar, downscore, upscore)*nlowestlevelcutoffs;
@@ -3828,7 +3828,9 @@ SCIP_Real calculateRelCutoffScore(
 
    nlowestlevelcutoffs = (1.0 * downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs)/(1 + downbranchingresult->ndeepestnodes + upbranchingresult->ndeepestnodes);
 
-   factor = 1.0 * MIN(SCIPgetNLPRows(scip), SCIPgetNPseudoBranchCands(scip));
+   factor = 1.0 SCIPgetNPseudoBranchCands(scip);
+   if( factor > 1.0 * SCIPgetNLPRows(scip) )
+      factor = 1.0 * SCIPgetNLPRows(scip);
    factor = factor * factor;
 
    /* the gain is the difference of the dualbound of a child and the reference objective value;
@@ -4292,7 +4294,7 @@ SCIP_RETCODE filterCandidates(
          {
             SCIP_Real maxgain;
             SCIP_Real bestmaxgain = MAX(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
-               scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)]);
+               scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)]); /*lint !e666*/
 
             if( bestmaxgain == 0.0 )
                nusedcands = 1;
@@ -4301,7 +4303,7 @@ SCIP_RETCODE filterCandidates(
                for( i = nusedcands - 1; i >= 1; --i )
                {
                   maxgain = MAX(scorecontainer->downgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)],
-                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)]);
+                     scorecontainer->upgains[SCIPvarGetProbindex(candidatelist->candidates[i]->branchvar)]); /*lint !e666*/
 
                   if( SCIPisSumLE(scip, maxgain / bestmaxgain, 1.0) )
                   {
