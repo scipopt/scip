@@ -3828,9 +3828,9 @@ SCIP_Real calculateRelCutoffScore(
 
    nlowestlevelcutoffs = (1.0 * downbranchingresult->ndeepestcutoffs + upbranchingresult->ndeepestcutoffs)/(1 + downbranchingresult->ndeepestnodes + upbranchingresult->ndeepestnodes);
 
-   factor = 1.0 SCIPgetNPseudoBranchCands(scip);
-   if( factor > 1.0 * SCIPgetNLPRows(scip) )
-      factor = 1.0 * SCIPgetNLPRows(scip);
+   factor = SCIPgetNPseudoBranchCands(scip);
+   if( factor > SCIPgetNLPRows(scip) )
+      factor = SCIPgetNLPRows(scip);
    factor = factor * factor;
 
    /* the gain is the difference of the dualbound of a child and the reference objective value;
@@ -4094,7 +4094,6 @@ SCIP_RETCODE ensureScoresPresent(
    BRANCHINGDECISION*    decision,           /**< struct to store the final decision */
    SCORECONTAINER*       scorecontainer,     /**< container to retrieve already calculated scores; or NULL */
    LEVEL2DATA*           level2data,         /**< level 2 LP results data */
-   int                   recursiondepth,     /**< remaining recursion depth */
    SCIP_Real             lpobjval            /**< base LP objective value */
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics          /**< general statistical data */
@@ -4227,7 +4226,6 @@ SCIP_RETCODE filterCandidates(
    BRANCHINGDECISION*    decision,           /**< struct to store the final decision */
    SCORECONTAINER*       scorecontainer,     /**< container to retrieve already calculated scores; or NULL */
    LEVEL2DATA*           level2data,         /**< level 2 LP results data */
-   int                   recursiondepth,     /**< remaining recursion depth */
    SCIP_Real             lpobjval            /**< base LP objective value */
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics          /**< general statistical data */
@@ -4255,10 +4253,10 @@ SCIP_RETCODE filterCandidates(
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "%s", "Ensuring that all candidates have a score.\n");
 #ifdef SCIP_STATISTIC
       SCIP_CALL( ensureScoresPresent(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
-            decision, scorecontainer, level2data, recursiondepth, lpobjval, statistics, localstats) );
+            decision, scorecontainer, level2data, lpobjval, statistics, localstats) );
 #else
       SCIP_CALL( ensureScoresPresent(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
-            decision, scorecontainer, level2data, recursiondepth, lpobjval) );
+            decision, scorecontainer, level2data, lpobjval) );
 #endif
 
       /* if we didn't find any domreds or constraints during the FSB scoring, we branch on */
@@ -4576,11 +4574,11 @@ SCIP_RETCODE executeBranchingRecursive(
 
 #ifdef SCIP_STATISTIC
             SCIP_CALL( filterCandidates(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
-               deeperdecision, scorecontainer, level2data, recursiondepth, deeperlpobjval,
+               deeperdecision, scorecontainer, level2data, deeperlpobjval,
                statistics, localstats) );
 #else
             SCIP_CALL( filterCandidates(scip, deeperstatus, deeperpersistent, config, baselpsol, domainreductions, binconsdata, candidatelist,
-               deeperdecision, scorecontainer, level2data, recursiondepth, deeperlpobjval) );
+               deeperdecision, scorecontainer, level2data, deeperlpobjval) );
 #endif
             if( deeperstatus->lperror )
             {
@@ -5417,11 +5415,11 @@ SCIP_RETCODE selectVarStart(
 
 #ifdef SCIP_STATISTIC
    SCIP_CALL( filterCandidates(scip, status, persistent, config, baselpsol, domainreductions, NULL, candidatelist,
-            decision, scorecontainer, level2data, recursiondepth, lpobjval,
+            decision, scorecontainer, level2data, lpobjval,
             statistics, localstats) );
 #else
    SCIP_CALL( filterCandidates(scip, status, persistent, config, baselpsol, domainreductions, NULL, candidatelist,
-            decision, scorecontainer, level2data, recursiondepth, lpobjval) );
+            decision, scorecontainer, level2data, lpobjval) );
 #endif
 
    if( candidatelist->ncandidates == 1 )
