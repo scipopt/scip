@@ -4494,8 +4494,9 @@ SCIP_RETCODE executeBranchingRecursive(
          if( result != NULL )
          {
             solvedlp = FALSE;
+#ifdef SCIP_STATISTIC
             statistics->nduplicatelps[probingdepth]++;
-
+#endif
             branchingresult->objval = result->lpobjval;
             branchingresult->dualbound = result->lpobjval;
             branchingresult->dualboundvalid = result->valid;
@@ -5014,8 +5015,10 @@ SCIP_RETCODE selectVarRecursive(
          SCIP_Real score = calculateScore(scip, config, branchvar, downbranchingresult, upbranchingresult,
             scoringlpobjval, baselpobjval);
 
+#ifdef SCIP_STATISTIC
          if( i == 0 && firstscoreptr != NULL )
             *firstscoreptr = score;
+#endif
 
          if( bestgain != NULL && !config->inscoring && SCIPgetProbingDepth(scip) == 1 && !useoldbranching )
          {
@@ -5153,9 +5156,10 @@ SCIP_RETCODE selectVarRecursive(
             {
                bestscore = newscore;
 
+#ifdef SCIP_STATISTIC
                if( bestscoreptr != NULL )
                   *bestscoreptr = newscore;
-
+#endif
                decision->score = newscore;
                decision->downdb = bestdownbranchingresult->dualbound;
                decision->updb = bestupbranchingresult->dualbound;
@@ -5173,9 +5177,10 @@ SCIP_RETCODE selectVarRecursive(
 
             bestscore = score;
 
+#ifdef SCIP_STATISTIC
             if( bestscoreptr != NULL )
                *bestscoreptr = score;
-
+#endif
             decision->branchvar = candidate->branchvar;
             decision->branchval = candidate->branchval;
             decision->downdb = downbranchingresult->dualbound;
@@ -5369,10 +5374,10 @@ SCIP_RETCODE selectVarStart(
    LEVEL2DATA* level2data = NULL;
    SCIP_SOL* baselpsol = NULL;
    SCIP_Real lpobjval;
+#ifdef SCIP_STATISTIC
    SCIP_Real firstscore = -1.0;
    SCIP_Real bestscore = -1.0;
    int chosencandnr = -1;
-#ifdef SCIP_STATISTIC
    SCIP_Bool performedlab = FALSE;
 #endif
 
@@ -5647,6 +5652,12 @@ SCIP_RETCODE selectVarStart(
             if( chosencandnr >= 0 )
             {
                ++statistics->chosenfsbcand[chosencandnr];
+
+               LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "node %lld chose candidate %d score %16.9g vs %16.9g FSB: %16.9g vs %16.9g\n",
+                  SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), chosencandnr,
+                  scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)],
+                  scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
+                  bestscore, firstscore);
             }
             else
                assert(!performedlab);
@@ -5946,15 +5957,13 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
 static
 SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 {  /*lint --e{715}*/
-   SCIP_BRANCHRULEDATA* branchruledata;
 #ifdef SCIP_STATISTIC
+   SCIP_BRANCHRULEDATA* branchruledata;
    STATISTICS* statistics;
-#endif
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-#ifdef SCIP_STATISTIC
    statistics = branchruledata->statistics;
    assert(statistics != NULL);
 
