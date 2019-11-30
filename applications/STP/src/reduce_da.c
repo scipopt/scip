@@ -2260,7 +2260,7 @@ SCIP_RETCODE reduce_da(
 
       } /* root loop */
 
-      if( !directed && !SCIPisZero(scip, minpathcost) && nodereplacing && 0 )
+      if( !directed && !SCIPisZero(scip, minpathcost) && nodereplacing )
       {
          const int nreplacings = reduceWithNodeReplaceBounds(scip, graph, vnoi, pathdist, cost, nodereplacebounds, nodearrint, lpobjval, upperbound);
          ndeletions += nreplacings;

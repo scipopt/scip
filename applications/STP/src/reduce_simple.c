@@ -1418,8 +1418,8 @@ SCIP_RETCODE reduce_simple_pc(
                   SCIP_CALL( graph_edge_reinsert(scip, g, e0, nodes2[1], nodes2[0], g->cost[e0] + g->cost[e1] - g->prize[i],
                         i, &ancestors1, &ancestors0, &newedge, &conflict) );
 
-                  (*countnew) += graph_pc_deleteTerm(scip, g, i);
                   (*fixed) += g->prize[i];
+                  (*countnew) += graph_pc_deleteTerm(scip, g, i);
 
                   graph_singletonAncestors_freeMembers(scip, &(ancestors0));
                   graph_singletonAncestors_freeMembers(scip, &(ancestors1));

@@ -506,8 +506,8 @@ SCIP_RETCODE reduce_bound(
             if( SCIPisGT(scip, tmpcost, obj) )
             {
                SCIPdebugMessage("alternative bnd elimination! \n\n");
-               (*nelims) += graph_pc_deleteTerm(scip, graph, k);
                (*offset) += graph->prize[k];
+               (*nelims) += graph_pc_deleteTerm(scip, graph, k);
             }
             else
             {

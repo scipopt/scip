@@ -2465,7 +2465,8 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
 }
 
 
-/** delete a terminal for a (rooted) prize-collecting problem */
+/** Deletes a terminal for a (rooted) prize-collecting problem.
+ *  Note that the prize of the terminal is also set to 0! */
 int graph_pc_deleteTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
