@@ -703,6 +703,7 @@ SCIP_Bool SCIPhistoryIsRatioValid(
    )
 {
    assert(history != NULL);
+
    return history->ratiovalid;
 }
 
@@ -713,6 +714,7 @@ SCIP_Real SCIPhistoryGetLastRatio(
 {
    assert(history != NULL);
    assert(history->ratiovalid);
+
    return history->ratio;
 }
 
@@ -723,6 +725,7 @@ SCIP_Real SCIPhistoryGetLastBalance(
 {
    assert(history != NULL);
    assert(history->ratiovalid);
+
    return history->balance;
 }
 
@@ -732,9 +735,10 @@ void SCIPhistorySetRatioHistory(
    SCIP_Bool            valid,
    SCIP_Real            ratio,
    SCIP_Real            balance
-)
+   )
 {
    assert(history != NULL);
+
    history->ratiovalid = valid;
    history->ratio = ratio;
    history->balance = balance;

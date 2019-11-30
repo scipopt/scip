@@ -92,8 +92,6 @@
                                               *   infeasible and objective leaf counters? */
 #define DEFAULT_DEGENERACYAWARE  1           /**< should degeneracy be taken into account to update weights and skip strong branching? (0: off, 1: after root, 2: always)*/
 
-#define _unused(x) ((void)(x))               /**< prevent Clang static analysis from flagging dead assignment */
-
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -1568,7 +1566,7 @@ SCIP_RETCODE execRelpscost(
          SCIPgetVarPseudocostCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS),
          SCIPgetVarPseudocostCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS),
          SCIPgetVarPseudocostScoreCurrentRun(scip, var, branchcandssol[bestcand]));
-      _unused(bestisstrongbranch);
+      SCIP_UNUSED(bestisstrongbranch);
       SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
       assert(downchild != NULL);
       assert(upchild != NULL);
