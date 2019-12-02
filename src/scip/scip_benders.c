@@ -898,7 +898,6 @@ SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
          SCIPgetStage(scip));
       SCIPinfoMessage(scip, NULL, "  The optimal flag will be returned as FALSE.\n");
 
-      (*optimal) = FALSE;
       return SCIP_OKAY;
    }
 
@@ -908,7 +907,7 @@ SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    }
 
-   (*optimal) = SCIPbendersCheckSubproblemOptimality(benders, scip->set, sol, probnumber);
+   (*optimal) = SCIPbendersSubproblemIsOptimal(benders, scip->set, sol, probnumber);
 
    return SCIP_OKAY;
 }

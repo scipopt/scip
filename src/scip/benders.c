@@ -2960,7 +2960,7 @@ SCIP_RETCODE solveBendersSubproblems(
                   {
                      SCIP_Bool subproboptimal;
 
-                     subproboptimal = SCIPbendersCheckSubproblemOptimality(benders, set, sol, i);
+                     subproboptimal = SCIPbendersSubproblemIsOptimal(benders, set, sol, i);
 
                      if( subproboptimal )
                         (*substatus)[i] = SCIP_BENDERSSUBSTATUS_OPTIMAL;
@@ -4608,7 +4608,7 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
 }
 
 /** compares the subproblem objective value with the auxiliary variable value for optimality */
-SCIP_Bool SCIPbendersCheckSubproblemOptimality(
+SCIP_Bool SCIPbendersSubproblemIsOptimal(
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
