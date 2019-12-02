@@ -138,13 +138,8 @@ SCIP_DECL_HASHKEYEQ(indexesEqual)
    binfo1 = (BLOCKINFO*) key1;
    binfo2 = (BLOCKINFO*) key2;
 
-   if( binfo1->block != binfo2->block )
-      return FALSE;
-
-   if( binfo1->otherblock != binfo2->otherblock )
-      return FALSE;
-
-   if( binfo1->linkvaridx != binfo2->linkvaridx )
+   if( binfo1->block != binfo2->block || binfo1->otherblock != binfo2->otherblock ||
+         binfo1->linkvaridx != binfo2->linkvaridx )
       return FALSE;
 
    return TRUE;
@@ -322,13 +317,13 @@ SCIP_RETCODE createSubscip(
    return SCIP_OKAY;
 }
 
-/** copies the given variables and constraints to the given sub-SCIP */
+/** copies the given constraints and the corresponding variables to the given sub-SCIP */
 static
 SCIP_RETCODE copyToSubscip(
    SCIP*                 scip,               /**< source SCIP */
    SCIP*                 subscip,            /**< target SCIP */
    const char*           name,               /**< name for copied problem */
-   SCIP_CONS**           conss,              /**< constraint to copy */
+   SCIP_CONS**           conss,              /**< constraints to copy */
    SCIP_HASHMAP*         varmap,             /**< hashmap used for the copy process of variables */
    SCIP_HASHMAP*         consmap,            /**< hashmap used for the copy process of constraints */
    int                   nconss,             /**< number of constraints to copy */
@@ -902,6 +897,14 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       goto TERMINATE;
    }
 
+   /* estimate required memory for all blocks and terminate if not enough memory is available */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memory) );
+   if( ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * nblocks >= memory )
+   {
+      SCIPdebugMsg(scip, "The estimated memory usage for %d blocks is too large.\n", nblocks);
+      goto TERMINATE;
+   }
+
    /* don't change problem by sorting constraints */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &sortedconss, conss, nconss) );
 
@@ -953,14 +956,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          ++i;
       }
       while( i < nconss && conslabels[i] == conslabels[i-1] );
-   }
-
-   /* estimate required memory for all blocks and terminate if not enough memory is available */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memory) );
-   if( ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * nblocks >= memory )
-   {
-      SCIPdebugMsg(scip, "The estimated memory usage for %d blocks is too large.\n", nblocks);
-      goto TERMINATE;
    }
 
    /* create blockproblems */
