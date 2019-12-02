@@ -3667,10 +3667,6 @@ SCIP_RETCODE addSchreierSimsConss(
    SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, vars, nvars, FALSE,
          permvarmap, &conflictgraphcreated) );
 
-   /* if sucess == FALSE, conflictgraph has not been created and needs not be freed */
-   if ( ! success )
-      return SCIP_OKAY;
-
    /* allocate data structures necessary for orbit computations and conflict graph */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &inactiveperms, nperms) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
