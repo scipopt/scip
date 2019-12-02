@@ -505,6 +505,7 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
    int nvars;
    int c;
    int nskipconsslocal;
+   int defaultlabel;
 
    assert(scip != NULL);
    assert(decomp != NULL);
@@ -513,6 +514,10 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+
+   SCIPdecompGetVarsLabels(decomp, vars, varslabels, nvars);
+   SCIPsortIntPtr(varslabels, (void **)vars, nvars);
+   defaultlabel = varslabels[nvars-1];
 
    nskipconsslocal = 0;
    for( c = 0; c < nconss; c++ )
@@ -533,8 +538,13 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
       SCIPdecompGetVarsLabels(decomp, vars, varslabels, nconsvars);
 
       SCIPsortIntPtr(varslabels, (void **)vars, nconsvars);
+      /* constraint contains no (active) variables */
+      if( nconsvars == 0 )
+      {
+         SCIP_CALL( SCIPdecompSetConsLabels(decomp, &conss[c], &defaultlabel, 1) );
+      }
       /* constraint contains only linking variables */
-      if( varslabels[nconsvars - 1] == SCIP_DECOMP_LINKVAR )
+      else if( varslabels[nconsvars - 1] == SCIP_DECOMP_LINKVAR )
       {
          nskipconsslocal++;
 
