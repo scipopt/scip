@@ -93,6 +93,36 @@ int getVarbufSize(
    return 2 * MAX(norigvars, ntransvars);
 }
 
+/** get variables and constraints of the original or transformed problem, to which the decomposition corresponds */
+static
+void getDecompVarsConssData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   SCIP_VAR***           vars,               /**< pointer to store original/transformed variables array, or NULL */
+   SCIP_CONS***          conss,              /**< pointer to store original/transformed constraints array, or NULL */
+   int*                  nvars,              /**< pointer to store original/transformed variables array's length, or NULL */
+   int*                  nconss              /**< pointer to store original/transformed constraints array's length, or NULL */
+   )
+{
+   SCIP_Bool original;
+   assert(scip != NULL);
+   assert(decomp != NULL);
+
+   original = SCIPdecompIsOriginal(decomp);
+
+   if( vars )
+      *vars = original ? SCIPgetOrigVars(scip) : SCIPgetVars(scip);
+
+   if( nvars )
+         *nvars = original ? SCIPgetNOrigVars(scip) : SCIPgetNVars(scip);
+
+   if( conss )
+      *conss = original ? SCIPgetOrigConss(scip) : SCIPgetConss(scip);
+
+   if( nconss )
+      *nconss = original ? SCIPgetNOrigConss(scip) : SCIPgetNConss(scip);
+}
+
 /** query the constraints active variables and their labels */
 static
 SCIP_RETCODE decompGetConsVarsAndLabels(
@@ -517,35 +547,26 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
    int* varslabels;
    int requiredsize;
    int nconsvars;
-   int nvars;
+   int varbufsize;
    int c;
    int nskipconsslocal;
 
    assert(scip != NULL);
    assert(decomp != NULL);
 
-   nvars = SCIPgetNVars(scip);
+   varbufsize = getVarbufSize(scip);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, varbufsize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varbufsize) );
 
    nskipconsslocal = 0;
    for( c = 0; c < nconss; c++ )
    {
       SCIP_Bool success;
 
-      SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &nconsvars, &success) );
-      assert(success);
-      SCIP_CALL( SCIPgetConsVars(scip, conss[c], vars, nvars, &success) );
-      assert(success);
-
-      if( ! SCIPdecompIsOriginal(decomp) )
-      {
-         SCIP_CALL( SCIPgetActiveVars(scip, vars, &nconsvars, nconsvars, &requiredsize) );
-         assert(requiredsize <= nvars);
-      }
-
-      SCIPdecompGetVarsLabels(decomp, vars, varslabels, nconsvars);
+      SCIP_CALL( decompGetConsVarsAndLabels(scip, decomp, conss[c], vars, varslabels, varbufsize,
+               &nconsvars, &requiredsize, &success) );
+      SCIP_CALL( ensureCondition(success) );
 
       SCIPsortIntPtr(varslabels, (void **)vars, nconsvars);
       /* constraint contains only linking variables */
@@ -659,9 +680,9 @@ SCIP_RETCODE computeModularity(
    int b;
 
    /* allocate buffer arrays to hold constraint and variable labels, and store within-edges and total community degrees */
+   getDecompVarsConssData(scip, decomp, NULL, &conss, NULL, &nconss);
    varbufsize = getVarbufSize(scip);
-   conss = SCIPgetConss(scip);
-   nconss = SCIPgetNConss(scip);
+
 
    SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, varbufsize) );
@@ -673,7 +694,7 @@ SCIP_RETCODE computeModularity(
    SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
 
    /*
-    * loop over all nonzeroes, consider the labels of the incident nodes (cons and variable)
+    * loop over all nonzeros, consider the labels of the incident nodes (cons and variable)
     * and increase the corresponding counters
     */
    for( c = 0; c < nconss; ++c )
@@ -765,8 +786,10 @@ void computeAreaScore(
    )
 {
    SCIP_Real areascore = 1.0;
-   int nvars = SCIPgetNVars(scip);
-   int nconss = SCIPgetNConss(scip);
+   int nvars;
+   int nconss;
+
+   getDecompVarsConssData(scip, decomp, NULL, NULL, &nvars, &nconss);
 
    if( nvars > 0 && nconss > 0 )
    {
@@ -837,11 +860,8 @@ SCIP_RETCODE buildBlockGraph(
       return SCIP_OKAY;
    }
 
-   vars = SCIPgetVars(scip);
+   getDecompVarsConssData(scip, decomp, &vars, &conss, &nvars, &nconss);
    varbufsize = getVarbufSize(scip);
-   nvars = SCIPgetNVars(scip);
-   conss = SCIPgetConss(scip);
-   nconss = SCIPgetNConss(scip);
    nblocks = SCIPdecompGetNBlocks(decomp);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
@@ -1088,9 +1108,7 @@ SCIP_RETCODE SCIPcomputeDecompStats(
    assert(scip != NULL);
    assert(decomp != NULL);
 
-   /* store variable and constraint labels in buffer arrays */
-   nvars = SCIPgetNVars(scip);
-   nconss = SCIPgetNConss(scip);
+   getDecompVarsConssData(scip, decomp, &vars, &conss, &nvars, &nconss);
 
   /* return if problem is empty
    *
@@ -1100,9 +1118,8 @@ SCIP_RETCODE SCIPcomputeDecompStats(
   {
      return SCIP_OKAY;
   }
-  conss = SCIPgetConss(scip);
-  vars = SCIPgetVars(scip);
 
+   /* store variable and constraint labels in buffer arrays */
   SCIP_CALL( SCIPduplicateBufferArray(scip, &conssarray, conss, nconss) );
   SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
   SCIP_CALL( SCIPduplicateBufferArray(scip, &varsarray, vars, nvars) );
