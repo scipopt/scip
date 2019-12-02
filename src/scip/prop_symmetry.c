@@ -3195,7 +3195,7 @@ SCIP_RETCODE addSymresackConss(
 static
 SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph or NULL */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
    SCIP_VAR**            permvars,           /**< permvars array */
    int*                  orbits,             /**< symmetry orbits */
@@ -3204,7 +3204,8 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    int                   orbitleaderidx,     /**< index of leader variable for Schreier Sims cuts */
    SCIP_Shortbool*       orbitvarinconflict, /**< indicator whether orbitvar is in conflict with orbit leader */
    int                   norbitvarinconflict, /**< number of variables in conflict with orbit leader */
-   int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
+   int*                  nchgbds,            /**< pointer to store number of bound changes (or NULL) */
+   SCIP_Bool             useconflictgraph    /**< whether conflict graph shall be used */
    )
 {
    SCIP_CONS* cons;
@@ -3218,7 +3219,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    int i;
 
    assert( scip != NULL );
-   assert( conflictgraph != NULL );
+   assert( conflictgraph != NULL || ! useconflictgraph );
    assert( propdata != NULL );
    assert( permvars != NULL );
    assert( orbits != NULL );
@@ -3280,6 +3281,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
       {
          assert( SCIPvarIsBinary(vars[1]) );
          assert( SCIPvarGetLbLocal(vars[1]) < 0.5 );
+         assert( useconflictgraph );
 
          if ( SCIPvarGetUbLocal(vars[1]) > 0.5 )
          {
@@ -3318,7 +3320,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
 static
 SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph or NULL */
    SCIP_VAR**            graphvars,          /**< variables encoded in conflict graph */
    int                   ngraphvars,         /**< number of variables encoded in conflict graph */
    SCIP_HASHMAP*         varmap,             /**< map from variable to node label in conflict graph */
@@ -3334,6 +3336,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    int*                  leaderidx,          /**< pointer to leader in orbit */
    SCIP_Shortbool*       orbitvarinconflict, /**< array to store whether a var in the orbit is conflicting with leader */
    int*                  norbitvarinconflict, /**< pointer to store number of vars in the orbit in conflict with leader */
+   SCIP_Bool             useconflictgraph,   /**< whether conflict graph shall be used */
    SCIP_Bool*            success             /**< pointer to store whether orbit cut be selected successfully */
    )
 {
@@ -3350,7 +3353,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    int j;
 
    assert( scip != NULL );
-   assert( conflictgraph != NULL );
+   assert( conflictgraph != NULL || ! useconflictgraph );
    assert( graphvars != NULL );
    assert( ngraphvars > 0 );
    assert( varmap != NULL );
@@ -3369,6 +3372,13 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    *leaderidx = 0;
    *norbitvarinconflict = 0;
    *success = FALSE;
+
+   /* possibly adapt the leader and tie-break rule */
+   if ( (leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT || leaderrule == SCIP_LEADERRULE_MAXCONFLICTS)
+      && ! useconflictgraph )
+      leaderrule = SCIP_LEADERRULE_FIRSTINORBIT;
+   if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT && ! useconflictgraph )
+      tiebreakrule = SCIP_LEADERTIEBREAKRULE_MAXORBIT;
 
    /* select the leader and its orbit */
    if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT || leaderrule == SCIP_LEADERRULE_LASTINORBIT )
@@ -3593,6 +3603,7 @@ SCIP_RETCODE addSchreierSimsConss(
    int leaderrule;
    int tiebreakrule;
    int leadervartype;
+   SCIP_Bool conflictgraphcreated = FALSE;
    SCIP_Bool success;
 
    int c;
@@ -3654,7 +3665,7 @@ SCIP_RETCODE addSchreierSimsConss(
    nvars = SCIPgetNVars(scip);
 
    SCIP_CALL( createConflictGraphSchreierSims(scip, &conflictgraph, vars, nvars, FALSE,
-         permvarmap, &success) );
+         permvarmap, &conflictgraphcreated) );
 
    /* if sucess == FALSE, conflictgraph has not been created and needs not be freed */
    if ( ! success )
@@ -3704,13 +3715,16 @@ SCIP_RETCODE addSchreierSimsConss(
             componentblocked, ncomponents, nmovedpermvars) );
 
       /* update symmetry information of conflict graph */
-      SCIP_CALL( updateSymInfoConflictGraphSchreierSims(scip, conflictgraph, vars, nvars, permvars, npermvars, FALSE,
-            varmap, orbits, orbitbegins, norbits) );
+      if ( conflictgraphcreated )
+      {
+         SCIP_CALL( updateSymInfoConflictGraphSchreierSims(scip, conflictgraph, vars, nvars, permvars, npermvars, FALSE,
+               varmap, orbits, orbitbegins, norbits) );
+      }
 
       /* select orbit and leader */
       SCIP_CALL( selectOrbitLeaderSchreierSimsConss(scip, conflictgraph, vars, nvars, varmap,
             permvars, npermvars, orbits, orbitbegins, norbits, leaderrule, tiebreakrule, leadervartype,
-            &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, &success) );
+            &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, conflictgraphcreated, &success) );
 
       if ( ! success )
          break;
@@ -3719,7 +3733,7 @@ SCIP_RETCODE addSchreierSimsConss(
 
       /* add Schreier Sims cuts */
       SCIP_CALL( SCIPaddSchreierSimsConssOrbit(scip, conflictgraph, propdata, permvars,
-            orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges) );
+            orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges, conflictgraphcreated) );
 
       if ( nchgbds != NULL )
          *nchgbds += nchanges;
@@ -3743,7 +3757,10 @@ SCIP_RETCODE addSchreierSimsConss(
    SCIPfreeBufferArray(scip, &orbitvarinconflict);
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
-   SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, nvars) );
+   if ( conflictgraphcreated )
+   {
+      SCIP_CALL( freeConflictGraphSchreierSims(scip, conflictgraph, nvars) );
+   }
    SCIPfreeBufferArray(scip, &inactiveperms);
 
    return SCIP_OKAY;
