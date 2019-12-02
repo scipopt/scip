@@ -5101,7 +5101,6 @@ SCIP_RETCODE SCIProwCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
    const char*           name,               /**< name of row */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COL**            cols,               /**< array with columns of row entries */
@@ -11946,6 +11945,7 @@ SCIP_RETCODE lpSolveStable(
             {
                SCIP_CALL( lpSetDualfeastol(lp, SCIPsetDualfeastol(set), &success) );
             }
+            SCIP_UNUSED(success);
          }
       }
    }
@@ -13036,6 +13036,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       SCIP_Bool success;
       (void) lpSetFromscratch(lp, FALSE, &success);
       SCIPsetDebugMsg(set, "resetting parameter SCIP_LPPARAM_FROMSCRATCH to FALSE %s\n", success ? "" : "failed");
+      SCIP_UNUSED(success);
    }
 
    return retcode;

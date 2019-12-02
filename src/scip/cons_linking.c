@@ -197,7 +197,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
 /** frees constraint handler data for linking constraint handler */
 static
-SCIP_RETCODE conshdlrdataFree(
+void conshdlrdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
    )
@@ -211,8 +211,6 @@ SCIP_RETCODE conshdlrdataFree(
 
    /* free memory of constraint handler data */
    SCIPfreeBlockMemory(scip, conshdlrdata);
-
-   return SCIP_OKAY;
 }
 
 /** prints linking constraint to file stream */
@@ -1967,7 +1965,7 @@ SCIP_DECL_CONSFREE(consFreeLinking)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( conshdlrdataFree(scip, &conshdlrdata) );
+   conshdlrdataFree(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -2375,10 +2373,8 @@ SCIP_DECL_CONSCHECK(consCheckLinking)
 static
 SCIP_DECL_CONSPROP(consPropLinking)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
-   SCIP_Bool addcut;
-   SCIP_Bool mustcheck;
-   int nchgbds;
+   SCIP_Bool cutoff = FALSE;
+   int nchgbds = 0;
    int c;
 
    assert(conshdlr != NULL);
@@ -2388,14 +2384,12 @@ SCIP_DECL_CONSPROP(consPropLinking)
 
    SCIPdebugMsg(scip, "propagating %d/%d " CONSHDLR_NAME " constraints\n", nusefulconss, nconss);
 
-   cutoff = FALSE;
-   nchgbds = 0;
-   addcut = FALSE;
-   mustcheck = TRUE;
-
    /* propagate all useful set partitioning / packing / covering constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
+      SCIP_Bool addcut;
+      SCIP_Bool mustcheck;
+
       SCIP_CALL( processRealBoundChg(scip, conss[c], &cutoff, &nchgbds, &mustcheck) );
       SCIP_CALL( processBinvarFixings(scip, conss[c], &cutoff, &nchgbds, &addcut, &mustcheck) );
    }
@@ -2778,7 +2772,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
    else if( oldndelconss < *ndelconss || oldnfixedvars < *nfixedvars || oldnchgbds < *nchgbds || oldnaggrvars < *naggrvars)
       *result = SCIP_SUCCESS;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 
@@ -3505,6 +3499,8 @@ SCIP_VAR* SCIPgetLinkvarLinking(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
@@ -3527,6 +3523,8 @@ SCIP_RETCODE SCIPgetBinvarsLinking(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -3570,6 +3568,8 @@ int SCIPgetNBinvarsLinking(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
@@ -3590,6 +3590,8 @@ SCIP_Real* SCIPgetValsLinking(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

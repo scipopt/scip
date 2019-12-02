@@ -195,6 +195,8 @@ SCIP_RETCODE freeScenarioTree(
    int i;
 
    assert(scip != NULL);
+   assert(scenariotree != NULL);
+   assert(*scenariotree != NULL);
 
    SCIPdebugMessage("Freeing scenario <%s> in stage <%s>\n", (*scenariotree)->name,
       (*scenariotree)->stagename);

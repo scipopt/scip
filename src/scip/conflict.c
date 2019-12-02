@@ -7477,7 +7477,7 @@ SCIP_RETCODE separateAlternativeProofs(
       {
          proofsetFree(&alternativeproofset, blkmem);
       }
-   }
+   }  /*lint !e438*/
 
    SCIPsetFreeBufferArray(set, &cutinds);
    SCIPsetFreeBufferArray(set, &cutcoefs);
