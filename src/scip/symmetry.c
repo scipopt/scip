@@ -297,17 +297,18 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
  *
  * @pre orbit is an initialized array of size propdata->npermvars
  */
-SCIP_RETCODE SCIPcomputeVarOrbit(
+SCIP_RETCODE SCIPcomputeOrbitVar(
    SCIP*                 scip,               /**< SCIP instance */
    int                   npermvars,          /**< number of variables in permvars */
    int**                 perms,              /**< the generators of the permutation group */
    int                   nperms,             /**< number of permutations */
    int*                  components,         /**< the components of the permutation group */
    int*                  componentbegins,    /**< array containing the starting index of each component */
-   SCIP_HASHSET*         ignoredvars,        /**< hashset containing variables that should be ignored (or NULL) */
+   SCIP_HASHSET*         ignoredvars,        /**< hashset containing variable indices (shifted by +1)
+                                               *  that should be ignored (or NULL) */
    int                   varidx,             /**< index of variable for which the orbit is requested */
    int                   component,          /**< component that var is in */
-   int**                 orbit,              /**< buffer to store the orbit */
+   int*                  orbit,              /**< array in which the orbit should be stored */
    int*                  orbitsize           /**< buffer to store the size of the orbit */
    )
 {
@@ -334,7 +335,7 @@ SCIP_RETCODE SCIPcomputeVarOrbit(
    SCIP_CALL( SCIPallocClearBufferArray(scip, &varstotest, npermvars) );
 
    /* compute and store orbit if it is non-trivial */
-   (*orbit)[0] = varidx;
+   orbit[0] = varidx;
    varstotest[0] = varidx;
    *orbitsize = 1;
    nvarstotest = 1;
@@ -348,14 +349,14 @@ SCIP_RETCODE SCIPcomputeVarOrbit(
          int* perm = perms[components[p]];
          image = perm[varstotest[j]];
 
-         /* found new element of the orbit of i */
+         /* found new element of the orbit of varidx */
          if( !varadded[image] )
          {
             varstotest[nvarstotest++] = image;
             varadded[image] = TRUE;
 
             if( ignoredvars == NULL || !SCIPhashsetExists(ignoredvars, (void*) (size_t) (image+1)) )
-               (*orbit)[(*orbitsize)++] = image;
+               orbit[(*orbitsize)++] = image;
          }
       }
    }
@@ -368,8 +369,8 @@ SCIP_RETCODE SCIPcomputeVarOrbit(
 }
 
 
-/** check whether a permutation is a composition of 2-cycles and this case determine the number of 2-cycles
- *  @p allvarsbinary can be used to restrict to permutations that swap binary variables
+/** Check whether a permutation is a composition of 2-cycles and in this case determine the number
+ *  of 2-cycles. @p allvarsbinary can be used to restrict to permutations that swap binary variables.
  */
 SCIP_RETCODE SCIPgetPropertiesPerm(
    int*                  perm,               /**< permutation */

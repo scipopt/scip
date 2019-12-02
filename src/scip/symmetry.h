@@ -96,18 +96,25 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
                                               *   that is handled by orbital fixing */
    );
 
+/** Compute orbit of a given variable and store it in @p orbit. The first entry of orbit will
+ *  be the given variable index and the rest is filled with the remaining variables excluding
+ *  the ones specified in @p ignoredvars (note that it should contain the variable indices+1).
+ *
+ * @pre orbit is an initialized array of size propdata->npermvars
+ */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeVarOrbit(
+SCIP_RETCODE SCIPcomputeOrbitVar(
    SCIP*                 scip,               /**< SCIP instance */
    int                   npermvars,          /**< number of variables in permvars */
    int**                 perms,              /**< the generators of the permutation group */
    int                   nperms,             /**< number of permutations */
    int*                  components,         /**< the components of the permutation group */
    int*                  componentbegins,    /**< array containing the starting index of each component */
-   SCIP_HASHSET*         ignoredvars,        /**< hashset containing variables that should be ignored (or NULL) */
+   SCIP_HASHSET*         ignoredvars,        /**< hashset containing variable indices (shifted by +1)
+                                               *  that should be ignored (or NULL) */
    int                   varidx,             /**< index of variable for which the orbit is requested */
    int                   component,          /**< component that var is in */
-   int**                 orbit,              /**< buffer to store the orbit */
+   int *                 orbit,              /**< array in which the orbit should be stored */
    int*                  orbitsize           /**< buffer to store the size of the orbit */
    );
 

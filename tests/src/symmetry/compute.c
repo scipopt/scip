@@ -859,7 +859,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    int perm6[10] = {6,7,2,8,9,5,0,1,3,4};
    int components[6] = {0,1,2,3,4,5};
    int componentbegins[2] = {0,6};
-   SCIP_Shortbool componentblocked[2] = {FALSE, FALSE};
+   SCIP_Shortbool componentblocked = FALSE;
    int* graphcomponents;
    int* graphcompbegins;
    int* compcolorbegins;
@@ -884,7 +884,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symetric subgroup
    propdata.ncomponents = 1;
    propdata.components = components;
    propdata.componentbegins = componentbegins;
-   propdata.componentblocked = componentblocked;
+   propdata.componentblocked = &componentblocked;
 
    /* check canonical order */
 
@@ -975,7 +975,7 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symetric subgroup
    int perm6[10] = {0,1,2,3,4,5,6,7,9,8};
    int components[6] = {0,1,2,3,4,5};
    int componentbegins[2] = {0,6};
-   SCIP_Shortbool componentblocked[2] = {FALSE, FALSE};
+   SCIP_Shortbool componentblocked = FALSE;
    int* permorder;
    int* graphcomponents;
    int* graphcompbegins;
@@ -1003,7 +1003,7 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symetric subgroup
    propdata.ncomponents = 1;
    propdata.components = components;
    propdata.componentbegins = componentbegins;
-   propdata.componentblocked = componentblocked;
+   propdata.componentblocked = &componentblocked;
 
    /* check sorted order */
 
