@@ -165,6 +165,7 @@
 #define DEFAULT_SCHREIERSIMSTIEBREAKRULE 1   /**< Should an orbit of maximum size be used for Schreier Sims cuts? */
 #define DEFAULT_SCHREIERSIMSLEADERRULE  1    /**< Should the first element in the orbit be selected as leader? */
 #define DEFAULT_SCHREIERSIMSLEADERVARTYPE 0  /**< variable type of leader in orbit */
+#define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
 
 /* event handler properties */
 #define EVENTHDLR_SYMMETRY_NAME    "symmetry"
@@ -270,6 +271,7 @@ struct SCIP_PropData
    int*                  leaders;            /**< index of orbit leaders in permvars */
    int                   nleaders;           /**< number of orbit leaders in leaders array */
    int                   maxnleaders;        /**< maximum number of leaders in leaders array */
+   SCIP_Bool             addconflictcuts;    /**< Should Schreier Sims cuts be added if we use a conflict based rule? */
 };
 
 /** node data of a given node in the conflict graph */
@@ -3217,6 +3219,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    int poscur;
    int ncuts;
    int i;
+   SCIP_Bool addcuts;
 
    assert( scip != NULL );
    assert( conflictgraph != NULL || ! useconflictgraph );
@@ -3233,7 +3236,14 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
    orbitsize = orbitbegins[orbitidx + 1] - orbitbegins[orbitidx];
 
    /* variables in conflict with leader are fixed and not treated by a cut; trailing -1 to not count the leader */
-   ncuts = orbitsize - norbitvarinconflict - 1;
+   ncuts = 0;
+   addcuts = TRUE;
+   if ( propdata->schreiersimsleaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT
+      || propdata->schreiersimsleaderrule == SCIP_LEADERRULE_MAXCONFLICTS
+      || propdata->schreiersimstiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT )
+      addcuts = propdata->addconflictcuts;
+   if ( addcuts )
+      ncuts = orbitsize - norbitvarinconflict - 1;
 
    /* (re-)allocate memory for Schreier Sims cuts and leaders */
    if ( propdata->nschreiersimsconss == 0 && ncuts > 0 )
@@ -3309,7 +3319,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
             /* reset value */
             orbitvarinconflict[i] = FALSE;
          }
-         else
+         else if ( addcuts )
          {
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SchreierSimscut_%d_%d", orbits[posleader], orbits[poscur]);
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, - SCIPinfinity(scip), 0.0,
@@ -4916,6 +4926,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/schreiersimsleadervartype",
          "variable type of leader in orbit",
          &propdata->schreiersimsleadervartype, TRUE, DEFAULT_SCHREIERSIMSLEADERVARTYPE, 0, 3, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/addconflictcuts",
+         "Should Schreier Sims cuts be added if we use a conflict based rule?",
+         &propdata->addconflictcuts, TRUE, DEFAULT_ADDCONFLICTCUTS, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
