@@ -838,16 +838,21 @@ SCIP_RETCODE buildBlockGraph(
    int nlinkingvars = 0;
    int nconsvars;
    int conspos;
-   int nsuccblk, nsuccvar;
-   int tempmin, tempmax;
-   int i, j, v, n, z;
+   int tempmin;
+   int tempmax;
+   int nblockgraphedges;
    int blocknodeidx;
+   int i;
+   int j;
+   int v;
+   int n;
 
    if( maxgraphedge == -1 )
       maxgraphedge = INT_MAX;
 
    assert(scip != NULL);
    assert(decomp != NULL);
+   assert(decomp->statscomplete == FALSE);
 
    /* capture the trivial case that no linking variables are present */
    if( decomp->varssize[0] == 0 || decomp->nblocks == 0 )
@@ -857,6 +862,7 @@ SCIP_RETCODE buildBlockGraph(
       decomp->nedges = 0;
       decomp->ncomponents = SCIPdecompGetNBlocks(decomp);
       decomp->narticulations = 0;
+      decomp->statscomplete = TRUE;
 
       return SCIP_OKAY;
    }
@@ -970,44 +976,11 @@ SCIP_RETCODE buildBlockGraph(
 
    SCIPfreeBufferArray(scip, &consscopy);
 
-/* the code below is too slow because it uses digraphAddArcSafe, which runs over all neighbors first to check if the arc already exists */
-#ifdef SCIP_DISABLED_CODE
-   for( i = 0; i < nconss; ++i )
-   {
-      int requiredsize;
-      /* linking constraints are skipped in this checking step */
-      if( conslabels[i] == SCIP_DECOMP_LINKCONS )
-         continue;
-
-      SCIP_CALL( decompGetConsVarsAndLabels(scip, decomp, conss[i], consvars, varlabels,
-            varbufsize, &nconsvars, &requiredsize, &success) );
-      SCIP_CALL( ensureCondition(success) );
-
-      /* adding double-direction arcs between blocks and corresponding linking variables */
-      for( j = 0; j < nconsvars; ++j )
-      {
-         assert(consvars[j] != NULL);
-         if( varlabels[j] == SCIP_DECOMP_LINKVAR )
-         {
-            int linkingvarnodeidx = linkvaridx[SCIPvarGetProbindex(consvars[j])];
-            int blocknodeidx;
-
-            assert(linkingvarnodeidx >= 0);
-            /* find the position of the constraint label. Subtract later by 1 to get the node index as the 1st block is reserved for linking constraints */
-            blocknodeidx = findLabelIdx(decomp, conslabels[i]);
-
-            SCIP_CALL( SCIPdigraphAddArcSafe(blocklinkingvargraph, nblocks + linkingvarnodeidx, blocknodeidx - 1, NULL) );
-            SCIP_CALL( SCIPdigraphAddArcSafe(blocklinkingvargraph, blocknodeidx - 1, nblocks + linkingvarnodeidx, NULL) );
-         }
-      }
-   }
-#endif
-
-
    assert(SCIPdigraphGetNNodes(blocklinkingvargraph) > 0);
    /* check first if any of the linking variables is connected with all blocks -> block graph is complete and connected */
    for( n = nblocks; n < SCIPdigraphGetNNodes(blocklinkingvargraph); ++n )
    {
+      int nsuccvar;
       nsuccvar = (int) SCIPdigraphGetNSuccessors(blocklinkingvargraph, n);
 
       if( nsuccvar == nblocks )
@@ -1016,6 +989,7 @@ SCIP_RETCODE buildBlockGraph(
          decomp->mindegree = decomp->maxdegree = nblocks - 1;
          decomp->narticulations = 0;
          decomp->ncomponents = 1;
+         decomp->statscomplete = TRUE;
 
          goto TERMINATE;
       }
@@ -1024,26 +998,34 @@ SCIP_RETCODE buildBlockGraph(
    /* from the information of the above bipartite graph, build the block-decomposition graph: nodes -> blocks and double-direction arcs -> linking variables */
    SCIP_CALL( SCIPcreateDigraph(scip, &blockgraph, nblocks) );
 
-   for( n = 0; n < nblocks - 1 && SCIPdigraphGetNArcs(blockgraph) / 2 <= maxgraphedge; ++n )
+   /* we count the number of block graph edges manually, because SCIPdigraphGetNArcs() iterates over all nodes */
+   nblockgraphedges = 0;
+   for( n = 0; n < nblocks - 1 && nblockgraphedges < maxgraphedge; ++n )
    {
       SCIP_Bool* adjacent; /* an array to mark the adjacent blocks to the current block */
       int* adjacentidxs;
+      int nsuccblk;
       int nadjacentblks = 0;
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &adjacent, nblocks) );
       SCIP_CALL( SCIPallocBufferArray(scip, &adjacentidxs, nblocks) );
 
       assert(n < SCIPdigraphGetNNodes(blocklinkingvargraph));
+
+      /* loop over the connected linking variables to the current block and their connected blocks to update the adjacency array */
       nsuccblk = SCIPdigraphGetNSuccessors(blocklinkingvargraph, n);
       succnodesblk = SCIPdigraphGetSuccessors(blocklinkingvargraph, n);
-      /* loop over the connected linking variables to the current block and their connected blocks to update the adjacency array */
       for( i = 0; i < nsuccblk && nadjacentblks < nblocks - (n + 1); ++i )
       {
          SCIP_Bool found;
          int startpos;
+         int nsuccvar;
+
          assert(succnodesblk[i] < SCIPdigraphGetNNodes(blocklinkingvargraph));
+
          nsuccvar = SCIPdigraphGetNSuccessors(blocklinkingvargraph, succnodesblk[i]);
          succnodesvar = SCIPdigraphGetSuccessors(blocklinkingvargraph, succnodesblk[i]);
-         /* previously visited blocks are skipped in this step */
+
+         /* previously visited blocks can be skipped in this step */
          found = SCIPsortedvecFindInt(succnodesvar, n, nsuccvar, &startpos);
          assert(found);
          for( j = startpos + 1; j < nsuccvar; ++j )
@@ -1057,49 +1039,38 @@ SCIP_RETCODE buildBlockGraph(
             }
          }
       }
+
       /* double-direction arcs are added in this step between the current block and its adjacent block nodes */
-      for( i = 0; i < nadjacentblks && SCIPdigraphGetNArcs(blockgraph) / 2 <= maxgraphedge; ++i )
+      for( i = 0; i < nadjacentblks && nblockgraphedges < maxgraphedge; ++i )
       {
           SCIP_CALL( SCIPdigraphAddArc(blockgraph, n, adjacentidxs[i], NULL) );
           SCIP_CALL( SCIPdigraphAddArc(blockgraph, adjacentidxs[i], n, NULL) );
+
+          ++nblockgraphedges;
       }
+
+
       /* clean up the adjacent array and free it */
       for( i = 0; i < nadjacentblks; ++i )
          adjacent[adjacentidxs[i]] = FALSE;
+
       SCIPfreeBufferArray(scip, &adjacentidxs);
       SCIPfreeCleanBufferArray(scip, &adjacent);
    }
-/* the code below creates a performance bottleneck with large instances because of the 2 nested loops over the blocks that call SCIPdigraphAddArcSafe */
-#ifdef SCIP_DISABLED_CODE
-   for( n = nblocks; n < SCIPdigraphGetNNodes(blocklinkingvargraph) && SCIPdigraphGetNArcs(blockgraph) <= maxgraphedge; ++n )
-   {
-      nsucc = (int) SCIPdigraphGetNSuccessors(blocklinkingvargraph, n);
-
-      succnodes = (int*) SCIPdigraphGetSuccessors(blocklinkingvargraph, n);
-      for( succ1 = 0; succ1 < nsucc && SCIPdigraphGetNArcs(blockgraph) <= maxgraphedge; ++succ1 )
-      {
-         for( succ2 = 0; succ2 < nsucc && SCIPdigraphGetNArcs(blockgraph) <= maxgraphedge; ++succ2 )
-         {
-            if( succnodes[succ1] != succnodes[succ2] ) /* no self-loops */
-            {
-               SCIP_CALL( SCIPdigraphAddArcSafe(blockgraph, succnodes[succ1], succnodes[succ2], NULL) );
-            }
-         }
-      }
-   }
-#endif
 
    assert(SCIPdigraphGetNNodes(blockgraph) > 0);
 
    /* Get the number of edges in the block-decomposition graph.*/
-   decomp->nedges = SCIPdigraphGetNArcs(blockgraph) / 2;
+   decomp->nedges = nblockgraphedges;
+   decomp->statscomplete = nblockgraphedges < maxgraphedge;
 
    /* Get the minimum and maximum degree of the block-decomposition graph */
    tempmin = (int) SCIPdigraphGetNSuccessors(blockgraph, 0);
    tempmax = (int) SCIPdigraphGetNSuccessors(blockgraph, 0);
    for( n = 1; n < SCIPdigraphGetNNodes(blockgraph); ++n )
    {
-      nsuccblk = (int) SCIPdigraphGetNSuccessors(blockgraph, n);
+      int nsuccblk = SCIPdigraphGetNSuccessors(blockgraph, n);
+
       if( nsuccblk < tempmin )
          tempmin = nsuccblk;
       else if( nsuccblk > tempmax )
@@ -1167,6 +1138,8 @@ SCIP_RETCODE SCIPcomputeDecompStats(
   {
      return SCIP_OKAY;
   }
+
+  decomp->statscomplete = FALSE;
 
    /* store variable and constraint labels in buffer arrays */
   SCIP_CALL( SCIPduplicateBufferArray(scip, &conssarray, conss, nconss) );
