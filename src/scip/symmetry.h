@@ -95,6 +95,32 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
                                               *   that is handled by orbital fixing */
    );
 
+/** compute non-trivial orbits of symmetry group
+ *
+ *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
+ *  consecutively in the orbits array. The variables of the i-th orbit have indices
+ *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
+ *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
+ *
+ *  This function is adapted from SCIPcomputeOrbitsFilterSym().
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeOrbitsComponentsSym(
+   SCIP*                 scip,               /**< SCIP instance */
+   int                   npermvars,          /**< length of a permutation array */
+   int**                 permstrans,         /**< transposed matrix containing in each column a permutation of the symmetry group */
+   int                   nperms,             /**< number of permutations encoded in perms */
+   int*                  components,         /**< array containing the indices of permutations sorted by components */
+   int*                  componentbegins,    /**< array containing in i-th position the first position of component i in components array */
+   int*                  vartocomponent,     /**< array containing for each permvar the index of the component it is
+                                              *   contained in (-1 if not affected) */
+   int                   ncomponents,        /**< number of components of symmetry group */
+   int*                  orbits,             /**< array of non-trivial orbits */
+   int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
+   int*                  norbits,            /**< pointer to number of orbits currently stored in orbits */
+   int*                  varorbitmap         /**< array for storing the orbits for each variable */
+   );
 
 /** check whether a permutation is a composition of 2-cycles of binary variables and in this case determine the number of 2-cycles */
 SCIP_EXPORT
