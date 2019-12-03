@@ -317,7 +317,7 @@ SCIP_RETCODE SCIPvboundsDel(
    if( (*vbounds)->len == 0 )
       SCIPvboundsFree(vbounds, blkmem);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** reduces the number of variable bounds stored in the given variable bounds data structure */
@@ -901,7 +901,7 @@ void SCIPimplicsGetVarImplics(
 
    *haslowerimplic = (poslower >= 0);
    *hasupperimplic = (posupper >= 0);
-}
+}  /*lint !e438*/
 
 /** returns whether an implication y <= b or y >= b is contained in implications for x == 0 or x == 1 */
 SCIP_Bool SCIPimplicsContainsImpl(
@@ -916,7 +916,7 @@ SCIP_Bool SCIPimplicsContainsImpl(
    int posadd;
 
    return implicsSearchImplic(implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
-}
+}  /*lint !e638*/
 
 
 
@@ -3375,13 +3375,13 @@ unsigned int SCIPcliqueGetId(
    SCIP_CLIQUE*          clique              /**< clique data structure */
    )
 {
-   int id;
+   unsigned int id;
 
    assert(clique != NULL);
 
-   id = clique->id;
+   id = clique->id; /*lint !e732*/
 
-   return (unsigned int)id;
+   return id;
 }
 
 /** gets index of the clique in the clique table */

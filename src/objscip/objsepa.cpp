@@ -261,6 +261,7 @@ scip::ObjSepa* SCIPgetObjSepa(
 {
    SCIP_SEPADATA* sepadata;
 
+   assert(scip != NULL);
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 

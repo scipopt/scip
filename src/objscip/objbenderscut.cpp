@@ -255,6 +255,7 @@ scip::ObjBenderscut* SCIPgetObjBenderscut(
 {
    SCIP_BENDERSCUTDATA* benderscutdata;
 
+   assert(scip != NULL);
    benderscutdata = SCIPbenderscutGetData(benderscut);
    assert(benderscutdata != NULL);
 

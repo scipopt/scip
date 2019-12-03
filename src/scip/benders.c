@@ -1338,7 +1338,7 @@ SCIP_RETCODE initialiseLPSubproblem(
    /* calling an initial solve to put the problem into probing mode */
    SCIP_CALL( initialiseSubproblem(benders, set, probnumber, &success) );
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** checks whether the convex relaxation of the subproblem is sufficient to solve the original problem to optimality
@@ -1762,8 +1762,8 @@ SCIP_RETCODE createAndAddTransferredCut(
 {
    SCIP_BENDERS* sourcebenders;     /* the Benders' decomposition of the source SCIP */
    SCIP_CONSHDLR* consbenders;      /* a helper variable for the Benders' decomposition constraint handler */
-   SCIP_CONS* transfercons;         /* the constraint that is generated to transfer the constraints/cuts */
-   SCIP_ROW* transfercut;           /* the cut that is generated to transfer the constraints/cuts */
+   SCIP_CONS* transfercons = NULL;  /* the constraint that is generated to transfer the constraints/cuts */
+   SCIP_ROW* transfercut = NULL;    /* the cut that is generated to transfer the constraints/cuts */
    SCIP_VAR* sourcevar;             /* the source variable that will be added to the transferred cut */
    SCIP_VAR* origvar;
    SCIP_Real scalar;
@@ -1826,10 +1826,12 @@ SCIP_RETCODE createAndAddTransferredCut(
 
       if( sourcebenders->cutsasconss )
       {
+         assert( transfercons != NULL );
          SCIP_CALL( SCIPaddCoefLinear(sourcescip, transfercons, sourcevar, vals[i]) );    /*lint !e644*/
       }
       else
       {
+         assert( transfercut != NULL );
          SCIP_CALL( SCIPaddVarToRow(sourcescip, transfercut, sourcevar, vals[i]) );       /*lint !e644*/
       }
    }
