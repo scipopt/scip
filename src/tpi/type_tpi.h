@@ -16,7 +16,7 @@
 /**@file   type_tpi.h
  * @ingroup TASKINTERFACE
  * @brief  the type definitions for the task processing interface
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stephen J. Maher
  */
 

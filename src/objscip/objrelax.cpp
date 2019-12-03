@@ -245,6 +245,7 @@ scip::ObjRelax* SCIPgetObjRelax(
 {
    SCIP_RELAXDATA* relaxdata;
 
+   assert(scip != NULL);
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
 

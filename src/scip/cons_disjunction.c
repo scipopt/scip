@@ -770,6 +770,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
       *success = FALSE;
       goto TERMINATE;
    }
+   assert(saveptr != NULL); /* for lint */
 
    /* skip '(' */
    ++saveptr;

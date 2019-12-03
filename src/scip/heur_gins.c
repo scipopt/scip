@@ -1003,7 +1003,6 @@ SCIP_Bool rollingHorizonRunAgain(
 /** store the distances from the selected variable permanently for the rolling horizon approach */
 static
 void rollingHorizonStoreDistances(
-   SCIP*                 scip,               /**< SCIP data structure */
    ROLLINGHORIZON*       rollinghorizon,     /**< rolling horizon data structure */
    int*                  distances           /**< breadth-first distances indexed by Probindex of variables */
    )
@@ -1906,7 +1905,7 @@ SCIP_RETCODE determineVariableFixings(
       {
          /* collect distances in the variable graph of all variables to the selected variable */
          SCIP_CALL( SCIPvariablegraphBreadthFirst(scip, vargraph, &selvar, 1, distances, INT_MAX, INT_MAX, INT_MAX) );
-         rollingHorizonStoreDistances(scip, rollinghorizon, distances);
+         rollingHorizonStoreDistances(rollinghorizon, distances);
          rollinghorizon->lastmaxdistance = selvarmaxdistance;
       }
    }

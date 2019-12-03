@@ -16,7 +16,7 @@
 /**@file   event_globalbnd.h
  * @ingroup EVENTS
  * @brief  eventhdlr for storing all global bound changes
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  * the bound changes are stored so that they can be shared with other threads
  * in a concurrent solve.

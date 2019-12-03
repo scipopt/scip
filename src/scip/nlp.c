@@ -2716,7 +2716,7 @@ SCIP_RETCODE SCIPnlrowChgExprtree(
       {
          SCIP_Bool dummy;
          SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, set, &dummy, NULL, NULL) );
-      }
+      }  /*lint !e438*/
    }
 
    /* notify row about the change */
@@ -5053,6 +5053,7 @@ SCIP_RETCODE SCIPnlpInclude(
    SCIP_EVENTHDLR* eventhdlr;
 
    assert(set != NULL);
+   assert(blkmem != NULL);
    assert(set->stage == SCIP_STAGE_INIT);
 
    /* check whether event handler is already present */
@@ -5295,6 +5296,7 @@ SCIP_Bool SCIPnlpHasCurrentNodeNLP(
    SCIP_NLP*             nlp                 /**< NLP data */
    )
 {
+   assert(nlp != NULL);
    return TRUE;
 } /*lint !e715*/
 
