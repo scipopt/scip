@@ -17,7 +17,7 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for managing events
  * @author Tobias Achterberg
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  *  This file defines the interface for event handler implemented in C.
  *

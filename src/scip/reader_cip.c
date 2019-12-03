@@ -193,6 +193,8 @@ void getStart(
 {
    char* buf;
 
+   assert(scip != NULL);
+
    buf = cipinput->strbuf;
 
    if( strncmp(buf, "STATISTICS", 9) == 0 )

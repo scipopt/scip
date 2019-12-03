@@ -1054,13 +1054,13 @@ SCIP_RETCODE domchgMakeDynamic(
          SCIP_ALLOC( BMSreallocBlockMemorySize(blkmem, domchg, sizeof(SCIP_DOMCHGBOUND), sizeof(SCIP_DOMCHGDYN)) );
          (*domchg)->domchgdyn.nholechgs = 0;
          (*domchg)->domchgdyn.holechgs = NULL;
-         (*domchg)->domchgdyn.boundchgssize = (*domchg)->domchgdyn.nboundchgs;
+         (*domchg)->domchgdyn.boundchgssize = (int) (*domchg)->domchgdyn.nboundchgs;
          (*domchg)->domchgdyn.holechgssize = 0;
          (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_DYNAMIC; /*lint !e641*/
          break;
       case SCIP_DOMCHGTYPE_BOTH:
          SCIP_ALLOC( BMSreallocBlockMemorySize(blkmem, domchg, sizeof(SCIP_DOMCHGBOTH), sizeof(SCIP_DOMCHGDYN)) );
-         (*domchg)->domchgdyn.boundchgssize = (*domchg)->domchgdyn.nboundchgs;
+         (*domchg)->domchgdyn.boundchgssize = (int) (*domchg)->domchgdyn.nboundchgs;
          (*domchg)->domchgdyn.holechgssize = (*domchg)->domchgdyn.nholechgs;
          (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_DYNAMIC; /*lint !e641*/
          break;
@@ -2680,6 +2680,8 @@ SCIP_RETCODE varFree(
    assert(SCIPvarGetStatus(*var) != SCIP_VARSTATUS_COLUMN || &(*var)->data.col->var != var);
    assert((*var)->nuses == 0);
    assert((*var)->probindex == -1);
+   assert((*var)->nlocksup[SCIP_LOCKTYPE_MODEL] == 0);
+   assert((*var)->nlocksdown[SCIP_LOCKTYPE_MODEL] == 0);
 
    SCIPsetDebugMsg(set, "free variable <%s> with status=%d\n", (*var)->name, SCIPvarGetStatus(*var));
 
@@ -2867,7 +2869,6 @@ void printBounds(
 /** prints hole list to file stream */
 static
 void printHolelist(
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_HOLELIST*        holelist,           /**< hole list pointer to hole of interest */
@@ -2960,7 +2961,7 @@ SCIP_RETCODE SCIPvarPrint(
          printBounds(set, messagehdlr, file, lb, ub, "lazy bounds");
 
       holelist = SCIPvarGetHolelistOriginal(var);
-      printHolelist(set, messagehdlr, file, holelist, "original holes");
+      printHolelist(messagehdlr, file, holelist, "original holes");
    }
    else
    {
@@ -2984,11 +2985,11 @@ SCIP_RETCODE SCIPvarPrint(
 
       /* global hole list */
       holelist = SCIPvarGetHolelistGlobal(var);
-      printHolelist(set, messagehdlr, file, holelist, "global holes");
+      printHolelist(messagehdlr, file, holelist, "global holes");
 
       /* local hole list */
       holelist = SCIPvarGetHolelistLocal(var);
-      printHolelist(set, messagehdlr, file, holelist, "local holes");
+      printHolelist(messagehdlr, file, holelist, "local holes");
    }
 
    /* fixings and aggregations */
@@ -3075,7 +3076,7 @@ SCIP_RETCODE SCIPvarAddLocks(
    SCIP_VAR* lockvar;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
    assert(var->nlocksup[locktype] >= 0);
    assert(var->nlocksdown[locktype] >= 0);
    assert(var->scip == set->scip);
@@ -3145,6 +3146,12 @@ SCIP_RETCODE SCIPvarAddLocks(
 
          assert(!lockvar->donotmultaggr);
 
+         lockvar->nlocksdown[locktype] += addnlocksdown;
+         lockvar->nlocksup[locktype] += addnlocksup;
+
+         assert(lockvar->nlocksdown[locktype] >= 0);
+         assert(lockvar->nlocksup[locktype] >= 0);
+
          for( v = lockvar->data.multaggr.nvars - 1; v >= 0; --v )
          {
             if( lockvar->data.multaggr.scalars[v] > 0.0 )
@@ -3191,7 +3198,7 @@ int SCIPvarGetNLocksDownType(
    int i;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
    assert(var->nlocksdown[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
@@ -3248,7 +3255,7 @@ int SCIPvarGetNLocksUpType(
    int i;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568q*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
    assert(var->nlocksup[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
@@ -4301,17 +4308,49 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
+   int nlocksup[NLOCKTYPES];
+   int nlocksdown[NLOCKTYPES];
    SCIP_Real multconstant;
    int multvarssize;
    int nmultvars;
    int multrequiredsize;
+   int i;
 
    assert( var != NULL );
    assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR );
    assert(var->scip == set->scip);
+
+   /* in order to update the locks on the active representation of the multi-aggregated variable, we remove all locks
+    * on the current representation now and re-add the locks once the variable graph has been flattened, which
+    * may lead to duplicate occurences of the same variable being merged
+    *
+    * Here is an example. Assume we have the multi-aggregation z = x + y.
+    * z occures with positive coefficient in a <= constraint c1, so it has an uplock from there.
+    * When the multi-aggregation is performed, all locks are added to the active representation,
+    * so x and y both get an uplock from c1. However, z was not yet replaced by x + y in c1.
+    * Next, a negation y = 1 - x is identified. Again, locks are moved, so that the uplock of y originating
+    * from c1 is added to x as a downlock. Thus, x has both an up- and downlock from c1.
+    * The multi-aggregation changes to z = x + 1 - x, which corresponds to the locks.
+    * However, before z is replaced by that sum, SCIPvarFlattenAggregationGraph() is called
+    * which changes z = x + y = x + 1 - x = 1, since it merges multiple occurences of the same variable.
+    * The up- and downlock of x, however, is not removed when replacing z in c1 by its active representation,
+    * because it is just 1 now. Therefore, we need to update locks when flattening the aggregation graph.
+    * For this, the multi-aggregated variable knows its locks in addition to adding them to the active
+    * representation, which corresponds to the locks from constraints where the variable was not replaced yet.
+    * By removing the locks here, based on the old representation and adding them again after flattening,
+    * we ensure that the locks are correct afterwards if coefficients were merged.
+    */
+   for( i = 0; i < NLOCKTYPES; ++i )
+   {
+      nlocksup[i] = var->nlocksup[i];
+      nlocksdown[i] = var->nlocksdown[i];
+
+      SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, (SCIP_LOCKTYPE) i, -nlocksdown[i], -nlocksup[i]) );
+   }
 
    multconstant = var->data.multaggr.constant;
    nmultvars = var->data.multaggr.nvars;
@@ -4330,7 +4369,7 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    /**@note After the flattening the multi aggregation might resolve to be in fact an aggregation (or even a fixing?).
     * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause troubles. However, one
     * may loose performance hereby, since aggregated variables are easier to handle.
-    * 
+    *
     * Note, that there are two cases where SCIPvarFlattenAggregationGraph() is called: The easier one is that it is
     * called while installing the multi-aggregation. in principle, the described issue could be handled straightforward
     * in this case by aggregating or fixing the variable instead.  The more complicated case is the one, when the
@@ -4344,6 +4383,12 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    var->data.multaggr.constant = multconstant;
    var->data.multaggr.nvars = nmultvars;
    var->data.multaggr.varssize = multvarssize;
+
+   for( i = 0; i < NLOCKTYPES; ++i )
+   {
+      SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, (SCIP_LOCKTYPE) i, nlocksdown[i], nlocksup[i]) );
+   }
+
 
    return SCIP_OKAY;
 }
@@ -5030,12 +5075,12 @@ SCIP_RETCODE tryAggregateIntVars(
 
    /* search upwards from ysol = 0 */
    ysol = 0;
-   currentclass = c%a;
+   currentclass = c % a;
    if( currentclass < 0 )
       currentclass += a;
    assert(0 <= currentclass && currentclass < a);
 
-   classstep = (-b)%a;
+   classstep = (-b) % a;
 
    if( classstep < 0 )
       classstep += a;
@@ -5050,7 +5095,7 @@ SCIP_RETCODE tryAggregateIntVars(
       ysol++;
    }
    assert(ysol < a);
-   assert(((c - b*ysol)%a) == 0);
+   assert(((c - b*ysol) % a) == 0);
 
    xsol = (c - b*ysol)/a;
 
@@ -5092,7 +5137,7 @@ SCIP_RETCODE tryAggregateIntVars(
    SCIP_CALL( SCIPvarRelease(&aggvar, blkmem, set, eventqueue, lp) );
 
    return SCIP_OKAY;
-}
+}  /*lint !e438*/
 
 /** performs second step of SCIPaggregateVars():
  *  the variable to be aggregated is chosen among active problem variables x' and y', preferring a less strict variable

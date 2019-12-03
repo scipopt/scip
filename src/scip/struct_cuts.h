@@ -16,7 +16,7 @@
 /**@file   struct_cuts.h
  * @ingroup PUBLICCOREAPI
  * @brief  struct definitions for cuts
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  */
 

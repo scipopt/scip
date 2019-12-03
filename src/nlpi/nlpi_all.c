@@ -159,8 +159,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemAll)
    assert(data != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, problem) );
-   if( *problem == NULL )
-      return SCIP_NOMEMORY;
 
    /* initialize problem */
    BMSclearMemory((*problem));

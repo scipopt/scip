@@ -16,7 +16,7 @@
 /**@file   type_cuts.h
  * @ingroup PUBLICCOREAPI
  * @brief  type definitions for cuts
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  */
 

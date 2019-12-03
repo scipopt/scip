@@ -212,7 +212,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
 /** frees constraint handler data for logic or constraint handler */
 static
-SCIP_RETCODE conshdlrdataFree(
+void conshdlrdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
    )
@@ -221,8 +221,6 @@ SCIP_RETCODE conshdlrdataFree(
    assert(*conshdlrdata != NULL);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
-
-   return SCIP_OKAY;
 }
 
 /** ensures, that the vars array can store at least num entries */
@@ -1058,6 +1056,7 @@ SCIP_RETCODE applyFixings(
             SCIP_CALL( SCIPdelCons(scip, cons) );
             if( ndelconss != NULL && naddconss != NULL )
             {
+               assert( naddconss != NULL );  /* for lint */
                ++(*ndelconss);
                ++(*naddconss);
             }
@@ -1523,11 +1522,10 @@ SCIP_RETCODE processWatchedVars(
 
 /** checks constraint for violation, returns TRUE iff constraint is feasible */
 static
-SCIP_RETCODE checkCons(
+SCIP_Bool isConsViolated(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< logic or constraint to be checked */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool*            violated            /**< pointer to store whether the given solution violates the constraint */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1537,9 +1535,6 @@ SCIP_RETCODE checkCons(
    int nvars;
    int v;
 
-   assert(violated != NULL);
-
-   *violated = FALSE;
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -1558,8 +1553,6 @@ SCIP_RETCODE checkCons(
       sum += solval;
    }
 
-   *violated = SCIPisFeasLT(scip, sum, 1.0);
-
    /* calculate constraint violation and update it in solution */
    if( sol != NULL ){
       SCIP_Real absviol = 1.0 - sum;
@@ -1567,7 +1560,7 @@ SCIP_RETCODE checkCons(
       SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
    }
 
-   return SCIP_OKAY;
+   return SCIPisFeasLT(scip, sum, 1.0);
 }
 
 /** creates an LP row in a logic or constraint data object */
@@ -1686,7 +1679,7 @@ SCIP_RETCODE separateCons(
       }
       else
       {
-         SCIP_CALL( checkCons(scip, cons, sol, &addcut) );
+         addcut = isConsViolated(scip, cons, sol);
       }
    }
 
@@ -1738,12 +1731,9 @@ SCIP_RETCODE enforcePseudo(
 
    if( mustcheck )
    {
-      SCIP_Bool violated;
-
       assert(!addcut);
 
-      SCIP_CALL( checkCons(scip, cons, NULL, &violated) );
-      if( violated )
+      if( isConsViolated(scip, cons, NULL) )
       {
          /* constraint was infeasible -> reset age */
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -3955,7 +3945,7 @@ SCIP_DECL_CONSFREE(consFreeLogicor)
    assert(conshdlrdata != NULL);
 
    /* free constraint handler data */
-   SCIP_CALL( conshdlrdataFree(scip, &conshdlrdata) );
+   conshdlrdataFree(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -4323,10 +4313,7 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
       assert(consdata != NULL);
       if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
       {
-         SCIP_Bool violated;
-
-         SCIP_CALL( checkCons(scip, cons, sol, &violated) );
-         if( violated )
+         if( isConsViolated(scip, cons, sol) )
          {
             /* constraint is violated */
             *result = SCIP_INFEASIBLE;
@@ -4396,7 +4383,7 @@ SCIP_DECL_CONSPROP(consPropLogicor)
    else
       *result = SCIP_DIDNOTFIND;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 /** presolving method of constraint handler */
@@ -5289,6 +5276,8 @@ int SCIPgetNVarsLogicor(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
@@ -5310,6 +5299,8 @@ SCIP_VAR** SCIPgetVarsLogicor(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
@@ -5330,6 +5321,8 @@ SCIP_Real SCIPgetDualsolLogicor(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5354,6 +5347,8 @@ SCIP_Real SCIPgetDualfarkasLogicor(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -5381,6 +5376,8 @@ SCIP_ROW* SCIPgetRowLogicor(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a logic or constraint\n");
@@ -5394,3 +5391,66 @@ SCIP_ROW* SCIPgetRowLogicor(
    return consdata->row;
 }
 
+/** cleans up (multi-)aggregations and fixings from logicor constraints */
+SCIP_RETCODE SCIPcleanupConssLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (logicor) constraints */
+   int*                  nchgcoefs           /**< pointer to count number of changed coefficients */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_CONS** conss;
+   unsigned char* entries;
+   int nconss;
+   int nentries;
+   int i;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+      return SCIP_OKAY;
+
+   assert(naddconss != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgcoefs != NULL);
+
+   eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
+   nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
+   conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
+
+   nentries = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &entries, nentries) );
+
+   /* loop backwards since then deleted constraints do not interfere with the loop */
+   for( i = nconss - 1; i > 0; --i )
+   {
+      SCIP_CONS* cons;
+      SCIP_Bool redundant;
+
+      cons = conss[i];
+      redundant = FALSE;
+
+      SCIP_CALL( applyFixings(scip, cons, eventhdlr, &redundant, nchgcoefs, naddconss, ndelconss) );
+
+      if( SCIPconsIsDeleted(cons) )
+         continue;
+
+      /* merge constraint */
+      if( !redundant )
+      {
+         SCIP_CALL( mergeMultiples(scip, cons, eventhdlr, &entries, &nentries, &redundant, nchgcoefs) );
+      }
+
+      if( redundant )
+      {
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &entries);
+
+   return SCIP_OKAY;
+}

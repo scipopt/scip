@@ -430,7 +430,8 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 /** return for given variables all their active counterparts; all active variables will be pairwise different */

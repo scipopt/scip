@@ -746,7 +746,7 @@ void SCIPvisualFoundSolution(
             printTime(visual, stat, FALSE);
             SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "integer %d %d %c %f\n", nodenum, parentnodenum, t, obj);
          }
-      }
+      }  /*lint !e438*/
       else
       {
          printTime(visual, stat, FALSE);

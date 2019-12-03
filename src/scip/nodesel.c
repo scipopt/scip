@@ -100,6 +100,7 @@ SCIP_RETCODE SCIPnodepqCreate(
    )
 {  /*lint --e{715}*/
    assert(nodepq != NULL);
+   assert(set != NULL);
 
    SCIP_ALLOC( BMSallocMemory(nodepq) );
    (*nodepq)->nodesel = nodesel;

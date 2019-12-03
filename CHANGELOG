@@ -97,6 +97,18 @@ Features
 
 - Linking variables in the linking constraint handler (cons_linking.{ch}) can now be integer or continuous. The coefficients of the binary variables are therefore now stored as SCIP_Real.
 
+- To save memory, it is now possible to remove all variables from the internal symmetry data structures that are
+  not affected by any symmetry.
+
+- Allow to filter first variables from orbits and transfer pseudo cost information to variables in orbit
+
+- Add integration of external MILP presolve library as a SCIP presolver plugin that runs on MILP problems
+
+- Parallelisation can be used when applying Benders' decomposition. There are two different forms of parallelisation
+  available. The first is applying Benders' decomposition within a parallel branch-and-bound. This is achieved through
+  the integration with the UG framework. The second is the use of shared memory parallelisation for solving the Benders'
+  decomposition subproblems. A priority queue has been added to help with load balancing.
+
 Performance improvements
 ------------------------
 
@@ -122,9 +134,14 @@ Performance improvements
 
 - allow rapid learning at local nodes
 
+- allow to recompute cut without using fractional values for sepa_cgmip
+
 - restrict the number of the clique table nonzeros relative to the number of problem nonzeros, which could be a performance bottleneck.
 
 - variable fixings of LP face heuristic are now computed earlier; subproblem creation is skipped if not enough variables are fixed.
+
+- Improved domcol presolver to not require a complete representation of all constraints in the matrix
+
 
 Examples and applications
 -------------------------
@@ -153,6 +170,7 @@ Interface changes
   + now for all lp interfaces consistent requirements on SCIP_LPPAR:
     LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
+  + add interface to Glop
 - Symmetry:
   + removed method SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
@@ -165,7 +183,8 @@ Interface changes
   + the function SCIPgetSymmetry() no longer accepts the parameter recompute, but has parameter permvarmap as new input
   + removed SCIPgetPermvarsObjSymmetry(), SCIPsetSymmetryComponentblocked(), SCIPgetSymmetryComponentblocked(),
     SCIPgetSyminfoGloballyFixedVars(), SCIPcomputeGroupOrbitsSymbreak, SCIPincludePresolSymmetry(),SCIPincludePresolSymbreak(),
-    and SCIPincludePropOrbitalfixing()
+	and SCIPincludePropOrbitalfixing()
+  + add function SCIPcomputeOrbitsComponentsSym() to compute orbits without filtering permutations and indices of orbits for each variable
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 - Benders' decomposition
   + changed SCIPstoreBenderscutCut() in scip_benders.c to SCIPstoreBendersCut(). Where this function used to take a
@@ -176,6 +195,7 @@ Interface changes
   - removed SCIPbenderscutGetNAddedCuts() and SCIPbenderscutGetAddedCutData()
 
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
+  and new arguments to count statistics when doing a clean-up of inactive variables in the constraints before building the matrix
 
 - new argument "threadsafe" in SCIPcopy(), SCIPcopyConsCompression(), SCIPcopyOrig(), SCIPcopyOrigConsCompression and
   SCIPcopyBenders(). This argument must only be set to TRUE if the source and target SCIP instances are to be solved in
@@ -206,6 +226,10 @@ Interface changes
   - changed return value of SCIPgetValsLinking() from int* to SCIP_Real*.
   - new method SCIPgetBinvarsDataLinking().
 
+- SCIPbendersCheckSubproblemOptimality() now returns a boolean indicating whether the subproblem is optimal or not.
+  Previously this result was returned through a parameter. The change was required to facilitate the integration with
+  the UG framework.
+
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
@@ -232,7 +256,9 @@ Interface changes
 - new API function SCIPisConvexConsQuadratic() to check whether a quadratic constraint is convex when a given set of variables would be fixed
 - new API functions SCIPgetLPFeastol(), SCIPsetLPFeastol(), and SCIPresetLPFeastol() to get, set, and reset (to the default), respectively, the primal
   feasibility tolerance for the LP relaxation
-
+- new API functions SCIPcleanupConss{Linear,Varbound,Setppc,Logicor,Knapsack}() to clean up inactive variables from those types of linear constraints
+- new API function SCIPsetBendersSubproblemComp() used to add a custom comparison method for ordering the Benders'
+  decomposition subproblem solves. The comparison method is used to help with load balancing.
 
 ### Command line interface
 
@@ -329,10 +355,24 @@ Interface changes
   - new parameter "propagating/symmetry/performpresolving"
   - new parameter "propagating/symmetry/recomputerestart"
   - new parameter "constraints/symresack/checkmonotonicity"
+  - new parameter "propagating/symmetry/compresssymmetries"
+  - new parameter "propagating/symmetry/compressthreshold"
+
+- new parameter for enabling shared memory parallelisation for solving Benders' decomposition subproblems. The parameter
+  benders/<bendersname>/numthreads sets the number of threads used for parallel subproblem solving.
 
 - new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
 
 - new parameter conflict/uselocalrows (default: TRUE) to incorporate locally valid cuts / rows for dual proof analysis
+
+- new return code SCIP_NOTIMPLEMENTED for functions, e.g., in the LPI that have not been implemented (yet)
+
+- new parameter separating/cgmip/genprimalsols that allows to generate initial primal solutions from Gomory cuts
+
+- new parameter branching/relpscost/filtercandssym to allow filtering from orbits
+
+- new parameter branching/relpscost/transsympscost to transfer pseudo cost information to orbit
+
 
 ### Data structures
 
@@ -369,6 +409,9 @@ Fixed bugs
 - fix and improve memory handling in symmetry computation
 - fix shown number of applied conflicts in solving statistics
 - fix wrongly skipping strong branching call and using old information if LP was solved with 0 iterations
+- fix minor bug in cut score calculation
+- fixed several bugs related to rounding locks of variables not being updated correctly
+- small fix in cons_varbound.c to skip changing bounds of multi-aggregated variables in separation callback
 
 Miscellaneous
 -------------
@@ -377,6 +420,7 @@ Miscellaneous
   (heuristic, relaxation handler, LP relaxation, strong branching, pseudo solution) of every new incumbent solution. Together with this change,
   heuristic display characters have been unified to represent the type of the heuristic
   (diving, Large neighborhood search, propagation, etc.), see also type_heur.h.
+- added assert that ensures that the locks of a variable have been decreased to 0 when it is freed
 
 Known bugs
 ----------
@@ -465,6 +509,7 @@ Fixed bugs
 - fixed bug in interval evaluation with power-operator in certain situations
 - fixed behavior of SCIPmatrixCreate() regarding memory management and column generation
 - SCIPmatrixCreate() returns complete=FALSE when locks do not add up
+- fixed bug in sepa_oddcylce when variables are fixed
 
 Miscellaneous
 -------------

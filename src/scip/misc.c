@@ -1576,7 +1576,7 @@ int SCIPcalcMultihashSize(
    int pos;
 
    (void) SCIPsortedvecFindInt(primetable, minsize, primetablesize, &pos);
-   assert(pos < primetablesize);
+   assert(0 <= pos && pos < primetablesize);
 
    return primetable[pos];
 }
@@ -6960,7 +6960,7 @@ SCIP_RETCODE SCIPprofileDeleteCore(
    SCIP_CALL( profileUpdate(profile, left, right, -demand, &pos, &infeasible) );
    assert(!infeasible);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** returns TRUE if the core (given by its demand and during) can be inserted at the given time point; otherwise FALSE */

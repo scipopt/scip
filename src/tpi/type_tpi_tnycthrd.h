@@ -16,7 +16,7 @@
 /**@file   type_tpi_tnycthrd.h
  * @ingroup TASKINTERFACE
  * @brief  the type definitions for the the locks and condition variables for the tinycthreads implementation of the TPI
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stephen J. Maher
  */
 

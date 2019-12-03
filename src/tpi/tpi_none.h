@@ -16,7 +16,7 @@
 /**@file   tpi_none.h
  * @ingroup TASKINTERFACE
  * @brief  the dummy implementation defines all functions as macros
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stephen J. Maher
  */
 

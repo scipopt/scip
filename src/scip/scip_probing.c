@@ -19,7 +19,7 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -625,7 +625,7 @@ SCIP_RETCODE SCIPpropagateProbing(
       *ndomredsfound = -(scip->stat->nprobboundchgs + scip->stat->nprobholechgs);
 
    SCIP_CALL( SCIPpropagateDomains(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->conflict, scip->cliquetable,
+         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->conflict, scip->cliquetable,
          SCIPgetDepth(scip), maxproprounds, SCIP_PROPTIMING_ALWAYS, cutoff) );
 
    if( ndomredsfound != NULL )

@@ -15,7 +15,7 @@
 
 /**@file   dbldblarith.c
  * @brief  unit tests for double double arithmetic
- * @author Robert Lion Gottwald;
+ * @author Leona Gottwald;
  */
 
 #include "scip/dbldblarith.h"

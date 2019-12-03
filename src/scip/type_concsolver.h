@@ -16,7 +16,7 @@
 /**@file   type_concsolver.h
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for concurrent solvers
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  *  This file defines the interface for concurrent solvers.
  *

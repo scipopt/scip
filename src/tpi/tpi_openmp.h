@@ -16,7 +16,7 @@
 /**@file   tpi_openmp.h
  * @ingroup TASKINTERFACE
  * @brief  the tpi_openmp redefines the lock functionality and some condition functionality as macros
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stephen J. Maher
  */
 
