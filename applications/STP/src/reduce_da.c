@@ -1133,6 +1133,12 @@ SCIP_RETCODE daPcFindRoots(
             if( !Is_term(graph->term[i]) || isfixedterm[i] || graph_pc_knotIsFixedTerm(graph, i) )
                continue;
 
+            if( graph->grad[i] == 0 )
+            {
+               assert(graph_pc_isPcMw(graph) && graph_pc_knotIsNonLeafTerm(graph, i));
+               continue;
+            }
+
             connected = graph_sdWalksConnected(scip, graph, termmark, graph->cost, isfixedterm, i, 1500, dist, pathedge, &nvisits,
                   visited, TRUE);
 
