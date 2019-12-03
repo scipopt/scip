@@ -258,7 +258,7 @@ struct TreeData
    SCIP_Longint          ninner;             /**< the number of inner nodes */
    SCIP_Longint          nleaves;            /**< the number of final leaf nodes */
    SCIP_Longint          nvisited;           /**< the number of visited nodes */
-   SCIP_Real             progress;           /**< the current progress (sum of leaf weights) */
+   long double           progress;           /**< the current progress (sum of leaf weights) */
    SUBTREESUMGAP*        ssg;                /**< subtree sum gap data structure */
 };
 
@@ -691,7 +691,7 @@ SCIP_RETCODE updateTreeprofile(
    /* is this level full explored? We assume binary branching */
    if( (unsigned int)nodedepth < 8*sizeof(int) && nodedepthcnt == (1U << nodedepth) )/*lint !e647*/
    {
-      SCIPdebugMsg(scip, "Level %d fully explored: %lld nodes\n", nodedepth, nodedepthcnt);
+      SCIPdebugMsg(scip, "Level %d fully explored: %" SCIP_LONGINT_FORMAT " nodes\n", nodedepth, nodedepthcnt);
 
       treeprofile->stats.lastfulldepth = nodedepth;
    }
@@ -708,7 +708,8 @@ SCIP_RETCODE updateTreeprofile(
    if( nodedepthcnt > maxnodes )
    {
       treeprofile->stats.minwaistdepth = treeprofile->stats.maxwaistdepth = nodedepth;
-      SCIPdebugMsg(scip, "Updating depth of tree waist: %d (%lld nodes)\n", treeprofile->stats.minwaistdepth, nodedepthcnt);
+      SCIPdebugMsg(scip, "Updating depth of tree waist: %d (%" SCIP_LONGINT_FORMAT " nodes)\n",
+         treeprofile->stats.minwaistdepth, nodedepthcnt);
    }
    else if( nodedepthcnt == maxnodes )
    {
@@ -951,7 +952,7 @@ SCIP_RETCODE subtreesumgapStoreNode(
    nodeinfo->pos = -1;
    nodeinfo->lowerbound = SCIPnodeGetLowerbound(node);
 
-   SCIPdebugMsg(scip, "Inserting label %d for node number %lld (%p)\n",
+   SCIPdebugMsg(scip, "Inserting label %d for node number %" SCIP_LONGINT_FORMAT " (%p)\n",
       subtreeidx, SCIPnodeGetNumber(node), (void*)node);
 
    assert(!SCIPhashmapExists(ssg->nodes2info, (void*)node));
@@ -1160,7 +1161,8 @@ SCIP_RETCODE subtreesumGapInsertChildren(
    {
       assert(SCIPnodeGetParent(children[n]) == focusnode);
 
-      SCIPdebugMsg(scip, "Inserting label %d for node number %lld (parent %lld)\n",
+      SCIPdebugMsg(scip,
+         "Inserting label %d for node number %" SCIP_LONGINT_FORMAT " (parent %" SCIP_LONGINT_FORMAT ")\n",
          focusnodelabel, SCIPnodeGetNumber(children[n]), SCIPnodeGetNumber(focusnode));
 
       SCIP_CALL( subtreesumgapStoreNode(scip, ssg, children[n], focusnodelabel) );
@@ -1478,7 +1480,7 @@ SCIP_Real getTreedataWBE(
    if( treedata->progress <= 0.0 || treedata->nleaves == 0 )
       return -1.0;
 
-   return 2.0 * treedata->nleaves / treedata->progress - 1.0;
+   return 2.0 * treedata->nleaves / (SCIP_Real)treedata->progress - 1.0;
 }
 
 #ifdef SCIP_DEBUG
@@ -1490,7 +1492,12 @@ char* treedataPrint(
    )
 {
    sprintf(strbuf,
-      "Tree Data: %lld nodes (%lld visited, %lld inner, %lld leaves, %lld open), progress: %.4f, ssg %.4f",
+      "Tree Data: %" SCIP_LONGINT_FORMAT " nodes ("
+      "%" SCIP_LONGINT_FORMAT " visited, "
+      "%" SCIP_LONGINT_FORMAT " inner, "
+      "%" SCIP_LONGINT_FORMAT " leaves, "
+      "%" SCIP_LONGINT_FORMAT " open), "
+      "progress: %.4Lf, ssg %.4f",
       treedata->nnodes,
       treedata->nvisited,
       treedata->ninner,
@@ -2037,11 +2044,11 @@ SCIP_RETCODE getSearchCompletion(
          break;
          /* interpolate between ssg and progress */
       case COMPLETIONTYPE_MONOREG:
-         *completed = eventhdlrdata->coefmonoprog * treedata->progress +
+         *completed = eventhdlrdata->coefmonoprog * (SCIP_Real)treedata->progress +
             eventhdlrdata->coefmonossg * (1.0 - treedata->ssg->value);
          break;
       case COMPLETIONTYPE_PROGRESS:
-         *completed = treedata->progress;
+         *completed = (SCIP_Real)treedata->progress;
          break;
       case COMPLETIONTYPE_GAP:
          *completed = timeseriesGet(eventhdlrdata->timeseries[TSPOS_GAP]); /* gap is stored as 1 - gap */
@@ -2125,7 +2132,7 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateGap)
 static
 DECL_TIMESERIESUPDATE(timeseriesUpdateProgress)
 { /*lint --e{715}*/
-   *value = treedata->progress;
+   *value = (SCIP_Real)treedata->progress;
 
    return SCIP_OKAY;
 }
@@ -2294,7 +2301,7 @@ SCIP_Bool shouldApplyRestartEstimation(
    if( estimation > eventhdlrdata->treedata->nnodes * eventhdlrdata->restartfactor )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-         "Estimation %g exceeds number of estimation tree nodes %lld by a factor of %.1f\n",
+         "Estimation %g exceeds number of estimation tree nodes %" SCIP_LONGINT_FORMAT " by a factor of %.1f\n",
          estimation, eventhdlrdata->treedata->nnodes, estimation / eventhdlrdata->treedata->nnodes);
       return TRUE;
    }
@@ -2350,7 +2357,7 @@ SCIP_RETCODE updateTimeseries(
 
 #ifdef SCIP_MORE_DEBUG
       SCIPdebugMsg(scip,
-         "Update of time series '%s', current value %.4f (%lld observations)\n",
+         "Update of time series '%s', current value %.4f (%" SCIP_LONGINT_FORMAT " observations)\n",
          timeseriesGetName(tss[t]), timeseriesGet(tss[t]), tss[t]->nobs);
 #endif
    }
@@ -2385,7 +2392,12 @@ char* printReport(
    completed = MAX(0.0, completed);
    /* print tree data */
    ptr += sprintf(ptr,
-         "%-19s: %lld nodes (%lld visited, %lld inner, %lld leaves, %lld open), progress: %.4f completed %.4f\n",
+         "%-19s: %" SCIP_LONGINT_FORMAT " nodes ("
+         "%" SCIP_LONGINT_FORMAT " visited, "
+         "%" SCIP_LONGINT_FORMAT " inner, "
+         "%" SCIP_LONGINT_FORMAT " leaves, "
+         "%" SCIP_LONGINT_FORMAT " open), "
+         "progress: %.4Lf completed %.4f\n",
          "Estimation Tree",
          treedata->nnodes,
          treedata->nvisited,
@@ -2610,7 +2622,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
          if( eventhdlrdata->reportfreq > 0 )
             eventhdlrdata->proglastreport = 1 / (SCIP_Real)eventhdlrdata->reportfreq * (int)(treedata->progress * eventhdlrdata->reportfreq);
          else
-            eventhdlrdata->proglastreport = treedata->progress;
+            eventhdlrdata->proglastreport = (SCIP_Real)treedata->progress;
       }
    }
 
