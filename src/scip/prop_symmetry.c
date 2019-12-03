@@ -3357,8 +3357,8 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    int*                  orbits,             /**< orbits of stabilizer subgroup */
    int*                  orbitbegins,        /**< array storing the begin position of each orbit in orbits */
    int                   norbits,            /**< number of orbits */
-   SCIP_LEADERRULE       leaderrule,         /**< rule to select leader */
-   SCIP_LEADERTIEBREAKRULE tiebreakrule,     /**< tie break rule to select leader */
+   int*                  leaderrule,         /**< pointer to rule to select leader */
+   int*                  tiebreakrule,    /**< pointer to tie break rule to select leader */
    SCIP_VARTYPE          leadervartype,      /**< variable type of leader */
    int*                  orbitidx,           /**< pointer to index of selected orbit */
    int*                  leaderidx,          /**< pointer to leader in orbit */
@@ -3402,14 +3402,14 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
    *success = FALSE;
 
    /* possibly adapt the leader and tie-break rule */
-   if ( (leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT || leaderrule == SCIP_LEADERRULE_MAXCONFLICTS)
+   if ( (*leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT || *leaderrule == SCIP_LEADERRULE_MAXCONFLICTS)
       && ! useconflictgraph )
-      leaderrule = SCIP_LEADERRULE_FIRSTINORBIT;
-   if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT && ! useconflictgraph )
-      tiebreakrule = SCIP_LEADERTIEBREAKRULE_MAXORBIT;
+      *leaderrule = SCIP_LEADERRULE_FIRSTINORBIT;
+   if ( *tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT && ! useconflictgraph )
+      *tiebreakrule = SCIP_LEADERTIEBREAKRULE_MAXORBIT;
 
    /* select the leader and its orbit */
-   if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT || leaderrule == SCIP_LEADERRULE_LASTINORBIT )
+   if ( *leaderrule == SCIP_LEADERRULE_FIRSTINORBIT || *leaderrule == SCIP_LEADERRULE_LASTINORBIT )
    {
       /* iterate over orbits and select the first one that meets the tiebreak rule */
       for (i = 0; i < norbits; ++i)
@@ -3418,16 +3418,16 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
          if ( SCIPvarGetType(permvars[orbits[orbitbegins[i]]]) != leadervartype )
             continue;
 
-         if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MINORBIT )
+         if ( *tiebreakrule == SCIP_LEADERTIEBREAKRULE_MINORBIT )
             curcriterion = orbitbegins[i] - orbitbegins[i + 1];
-         else if ( tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXORBIT )
+         else if ( *tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXORBIT )
             curcriterion = orbitbegins[i + 1] - orbitbegins[i];
          else
          {
             varidx = -1;
 
             /* get first or last active variable in orbit */
-            if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT )
+            if ( *leaderrule == SCIP_LEADERRULE_FIRSTINORBIT )
             {
                int cnt = orbitbegins[i];
 
@@ -3466,7 +3466,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
             *orbitidx = i;
             *success = TRUE;
 
-            if ( leaderrule == SCIP_LEADERRULE_FIRSTINORBIT )
+            if ( *leaderrule == SCIP_LEADERRULE_FIRSTINORBIT )
                *leaderidx = 0;
             else
                *leaderidx = orbitbegins[i + 1] - orbitbegins[i] - 1;
@@ -3474,7 +3474,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
       }
 
       /* store variables in conflict with leader */
-      if ( *success && tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT )
+      if ( *success && *tiebreakrule == SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT )
       {
          orbitsize = orbitbegins[*orbitidx + 1] - orbitbegins[*orbitidx];
          leader = SCIPhashmapGetImageInt(varmap, permvars[orbits[orbitbegins[*orbitidx] + *leaderidx]]);
@@ -3531,7 +3531,7 @@ SCIP_RETCODE selectOrbitLeaderSchreierSimsConss(
          if ( nodedata->orbitidx == -1 )
             continue;
 
-         if ( leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT )
+         if ( *leaderrule == SCIP_LEADERRULE_MAXCONFLICTSINORBIT )
             curcriterion = nodedata->nconflictinorbit;
          else
             curcriterion = SCIPdigraphGetNSuccessors(conflictgraph, i);
@@ -3755,7 +3755,7 @@ SCIP_RETCODE addSchreierSimsConss(
 
       /* select orbit and leader */
       SCIP_CALL( selectOrbitLeaderSchreierSimsConss(scip, conflictgraph, vars, nvars, varmap,
-            permvars, npermvars, orbits, orbitbegins, norbits, leaderrule, tiebreakrule, leadervartype,
+            permvars, npermvars, orbits, orbitbegins, norbits, &propdata->schreiersimsleaderrule, &propdata->schreiersimstiebreakrule, leadervartype,
             &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, conflictgraphcreated, &success) );
 
       if ( ! success )
