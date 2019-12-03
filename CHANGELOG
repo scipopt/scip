@@ -104,6 +104,11 @@ Features
 
 - Add integration of external MILP presolve library as a SCIP presolver plugin that runs on MILP problems
 
+- Parallelisation can be used when applying Benders' decomposition. There are two different forms of parallelisation
+  available. The first is applying Benders' decomposition within a parallel branch-and-bound. This is achieved through
+  the integration with the UG framework. The second is the use of shared memory parallelisation for solving the Benders'
+  decomposition subproblems. A priority queue has been added to help with load balancing.
+
 Performance improvements
 ------------------------
 
@@ -219,6 +224,10 @@ Interface changes
   - changed return value of SCIPgetValsLinking() from int* to SCIP_Real*.
   - new method SCIPgetBinvarsDataLinking().
 
+- SCIPbendersCheckSubproblemOptimality() now returns a boolean indicating whether the subproblem is optimal or not.
+  Previously this result was returned through a parameter. The change was required to facilitate the integration with
+  the UG framework.
+
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
@@ -246,7 +255,8 @@ Interface changes
 - new API functions SCIPgetLPFeastol(), SCIPsetLPFeastol(), and SCIPresetLPFeastol() to get, set, and reset (to the default), respectively, the primal
   feasibility tolerance for the LP relaxation
 - new API functions SCIPcleanupConss{Linear,Varbound,Setppc,Logicor,Knapsack}() to clean up inactive variables from those types of linear constraints
-
+- new API function SCIPsetBendersSubproblemComp() used to add a custom comparison method for ordering the Benders'
+  decomposition subproblem solves. The comparison method is used to help with load balancing.
 
 ### Command line interface
 
@@ -345,6 +355,9 @@ Interface changes
   - new parameter "constraints/symresack/checkmonotonicity"
   - new parameter "propagating/symmetry/compresssymmetries"
   - new parameter "propagating/symmetry/compressthreshold"
+
+- new parameter for enabling shared memory parallelisation for solving Benders' decomposition subproblems. The parameter
+  benders/<bendersname>/numthreads sets the number of threads used for parallel subproblem solving.
 
 - new parameter presolving/clqtablefac (default value 2.0) as limit on number of entries in clique table relative to number of problem nonzeros
 
