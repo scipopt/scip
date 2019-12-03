@@ -793,6 +793,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Bool solutionsdiffer;
    SCIP_Bool solved;
    SCIP_Bool doscaling;
+   SCIP_Bool timeleft;
    int ndecomps;
    int nconss;
    int nvars;
@@ -1234,16 +1235,17 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    increasedslacks = 0;
    (void) SCIPsnprintf(info, SCIP_MAXSTRLEN, "-");
    solved = FALSE;
+   timeleft = TRUE;
 
    /* Penalty loop */
-   while( !solved && piter < heurdata->penaltyiterations )
+   while( !solved && piter < heurdata->penaltyiterations && timeleft)
    {
       piter++;
       solutionsdiffer = TRUE;
       aiter = 0;
 
       /*  Alternating direction method loop */
-      while( solutionsdiffer && aiter < heurdata->admiterations )
+      while( solutionsdiffer && aiter < heurdata->admiterations && timeleft)
       {
          aiter++;
          solutionsdiffer = FALSE;
@@ -1327,9 +1329,16 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                 */
                if( status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_GAPLIMIT || 
                    (status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
-                    SCIPisEQ(scip, SCIPsolGetOrigObj(SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) )
+                    SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) )
                {
-                  SCIPdebugMsg(scip, "Block is optimal or reached gaplimit or reached time limit with at least one feasible solution.\n");
+                  SCIPdebugMsg(scip, "Block is optimal or reached gaplimit.\n");
+
+                  if( status == SCIP_STATUS_TIMELIMIT )
+                  {
+                     SCIPdebugMsg(scip, "Block reached time limit with at least one feasible solution.\n");
+                     timeleft = FALSE;
+                  }
+
                   for( i = 0; i < blocktolinkvars[b].size; i++ )
                   {
                      int linkvaridx;
@@ -1416,7 +1425,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
             }
             while( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_GAPLIMIT &&
                    !(status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
-                    SCIPisEQ(scip, SCIPsolGetOrigObj(SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ));
+                    SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) );
          }
       }
 
