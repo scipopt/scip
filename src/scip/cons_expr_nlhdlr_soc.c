@@ -219,8 +219,8 @@ SCIP_RETCODE createDisaggr(
    for( i = 0; i < nterms-1; ++i )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%p_%d", (void*) expr, i);
-      SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[i], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
-            NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[i], name, 0.0, SCIPinfinity(scip),
+            0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[i]) );
 
       vars[nvars] = nlhdlrexprdata->disvars[i];
@@ -232,8 +232,8 @@ SCIP_RETCODE createDisaggr(
    if( !SCIPisZero(scip, nlhdlrexprdata->constant) )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_const_%p", (void*) expr);
-      SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[size - 1], name, 0.0, SCIPinfinity(scip), 0.0,
-            SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(scip, &nlhdlrexprdata->disvars[size - 1], name, 0.0, SCIPinfinity(scip),
+            0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, nlhdlrexprdata->disvars[size - 1]) );
 
       vars[nvars] = nlhdlrexprdata->disvars[size - 1];
@@ -657,9 +657,9 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    *success = FALSE;
 
-   /* check whether expression is a sum with at least 3 quadratic children */
+   /* check whether expression is a sum with at least 2 quadratic children */
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr)
-      || SCIPgetConsExprExprNChildren(expr) < 3 )
+      || SCIPgetConsExprExprNChildren(expr) < 2 )
       return SCIP_OKAY;
 
    /* get children of the sum */
@@ -1160,7 +1160,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
          bp[i] += lincoefs[j] * eigvecmatrix[i * nvars + j];
 
          /* count the number of transcoefs to be used later */
-         if( !SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
+         if( !SCIPisZero(scip, eigvals[i]) && !SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
             ++ntranscoefs;
       }
 
@@ -1179,10 +1179,9 @@ SCIP_RETCODE detectSocQuadraticComplex(
          nneg++;
    }
 
-   /* a proper SOC constraint needs at least 3 variables */
-   if( npos + nneg < 3 )
+   /* a proper SOC constraint needs at least 2 variables */
+   if( npos + nneg < 2 )
       goto CLEANUP;
-
 
    /* determine whether rhs or lhs of cons is potentially SOC, if any */
    rhsissoc = (nneg == 1 && SCIPgetConsExprExprNLocksPos(expr) > 0);
@@ -1264,12 +1263,15 @@ SCIP_RETCODE detectSocQuadraticComplex(
          rhsvarlb = 0.0;
          rhsvarub = 0.0;
 
-         /* the constraint can only be a soc if the resulting rhs var does not change var;
-          * the rhs var is going to be a multiaggregated variable, so estimate its bounds
+         /* the expression can only be an soc if the resulting rhs term does not change sign;
+          * the rhs term is a linear combination of variables, so estimate its bounds
           */
          for( j = 0; j < nvars; ++j )
          {
             SCIP_Real aux;
+
+            if( SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
+               continue;
 
             if( eigvecmatrix[i * nvars + j] > 0.0 )
             {
@@ -1295,6 +1297,9 @@ SCIP_RETCODE detectSocQuadraticComplex(
          for( j = 0; j < nvars; ++j )
          {
             SCIP_Real aux;
+
+            if( SCIPisZero(scip, eigvecmatrix[i * nvars + j]) )
+               continue;
 
             if( eigvecmatrix[i * nvars + j] > 0.0 )
             {
