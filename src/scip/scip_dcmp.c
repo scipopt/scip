@@ -1016,7 +1016,6 @@ SCIP_RETCODE buildBlockGraph(
       succnodesblk = SCIPdigraphGetSuccessors(blocklinkingvargraph, n);
       for( i = 0; i < nsuccblk && nadjacentblks < nblocks - (n + 1); ++i )
       {
-         SCIP_Bool found;
          int startpos;
          int nsuccvar;
 
@@ -1026,8 +1025,8 @@ SCIP_RETCODE buildBlockGraph(
          succnodesvar = SCIPdigraphGetSuccessors(blocklinkingvargraph, succnodesblk[i]);
 
          /* previously visited blocks can be skipped in this step */
-         found = SCIPsortedvecFindInt(succnodesvar, n, nsuccvar, &startpos);
-         assert(found);
+         if( ! SCIPsortedvecFindInt(succnodesvar, n, nsuccvar, &startpos) )
+            SCIPABORT();
          for( j = startpos + 1; j < nsuccvar; ++j )
          {
             assert( succnodesvar[j] > n );
