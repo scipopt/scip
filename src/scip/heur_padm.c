@@ -998,8 +998,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    /* fill linking variable to blocks set */
    for( i = 0; i < numlinkvars; i++ )
    {
-      SCIP_VAR *var;
-      const char *vname;
+      SCIP_VAR* var;
+      const char* vname;
 
       vname = SCIPvarGetName(linkvars[i]);
       k = 0;
@@ -1036,8 +1036,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       k = 0;
       for( i = 0; i < numlinkvars; i++ )
       {
-         SCIP_VAR *var;
-         const char *vname;
+         SCIP_VAR* var;
+         const char* vname;
 
          vname = SCIPvarGetName(linkvars[i]);
          var = SCIPfindVar((problem->blocks[b]).subscip, vname);
@@ -1081,14 +1081,14 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &blockinfolist, nentries) );
-   SCIP_CALL( SCIPhashtableCreate(&htable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, indexesEqual, indexesHashval, (void *)scip) );
+   SCIP_CALL( SCIPhashtableCreate(&htable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, indexesEqual, indexesHashval, (void*) scip) );
    blockinfolistfill = 0;
 
    /* extend submips */
    SCIPdebugMsg(scip, "Extending %d block models\n", problem->nblocks);
    for( b = 0; b < problem->nblocks; b++ )
    {
-      SCIP_VAR **blockvars;
+      SCIP_VAR** blockvars;
       int nblockvars;
 
       blockvars = SCIPgetVars((problem->blocks[b]).subscip);
@@ -1114,7 +1114,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
             /* handle different blocks with common linking variable */
             if( b2 != b )
             {
-               BLOCKINFO *binfo;
+               BLOCKINFO* binfo;
                binfo = &blockinfolist[blockinfolistfill];
                blockinfolistfill++;
                binfo->block = b;
@@ -1155,7 +1155,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                             SCIPvarGetName(linkvars[linkvaridx]), b2);
                (problem->blocks[b]).couplingcons[j] = NULL;
 
-               /* create linking constraint with initial side equal to zero (or lower bound of linking variable)*/
+               /* create linking constraint with initial side equal to zero (or lower bound of linking variable) */
                if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
                {
                   SCIP_Real initval;
@@ -1169,7 +1169,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                   binfo->linkvarval = initval;
                }
 
-               /* create linking constraint with initial side equal to LP solution (rounded if variable is integer)*/
+               /* create linking constraint with initial side equal to LP solution (rounded if variable is integer) */
                if( heurtiming & SCIP_HEURTIMING_AFTERNODE )
                {
                   SCIP_Real initval;
@@ -1562,7 +1562,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
          for( i = 0; i < nblockvars; i++ )
          {
-            SCIP_VAR *origvar;
+            SCIP_VAR* origvar;
             SCIP_Real solval;
 
             origvar = SCIPfindVar(scip, SCIPvarGetName(blockvars[i]));
