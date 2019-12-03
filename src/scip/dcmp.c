@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dcmp.c
- * @brief  methods for working with decompositions
+ * @brief  internal methods for decompositions and the decomposition store
  * @author Gregor Hendel
  */
 
