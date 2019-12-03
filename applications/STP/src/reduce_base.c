@@ -384,7 +384,6 @@ SCIP_RETCODE level0(
          {
             assert(graph_pc_isPc(g));
             assert(graph_pc_termIsNonLeafTerm(g, k));
-            graph_pc_deleteTerm(scip, g, k);
 
             continue;
          }
@@ -487,8 +486,7 @@ SCIP_RETCODE level0RpcRmwInfeas(
             assert(g->term2edge[k] >= 0);
             assert(!gmark[pterm]);
 
-            *offsetp += g->prize[pterm];
-            graph_pc_deleteTerm(scip, g, k);
+            graph_pc_deleteTerm(scip, g, k, offsetp);
          }
       }
    }

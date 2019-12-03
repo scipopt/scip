@@ -369,7 +369,8 @@ SCIP_RETCODE propgraphApplyBoundchanges(
    int*                  edgestate,          /**< edge state */
    GRAPH*                propgraph,          /**< propagator graph */
    int*                  nfixed,             /**< pointer to number of fixed edges */
-   SCIP_Bool*            probisinfeas        /**< is problem infeasible? */
+   SCIP_Bool*            probisinfeas,       /**< is problem infeasible? */
+   SCIP_Real*            offset              /**< pointer to the offset */
    )
 {
    const int nedges = g->edges;
@@ -474,7 +475,7 @@ SCIP_RETCODE propgraphApplyBoundchanges(
             /* fixed to 1? Then delete terminal */
             else if( SCIPvarGetLbLocal(vars[root2term]) > 0.5 )
             {
-               graph_pc_deleteTerm(scip, propgraph, twinterm);
+               graph_pc_deleteTerm(scip, propgraph, twinterm, offset);
             }
          }
       }
@@ -485,7 +486,7 @@ SCIP_RETCODE propgraphApplyBoundchanges(
    {
       /* ... then modify the graph according to vertex kills/fixes during branch-and-bound
          MIGHT CHANGE OFFSET FOR PCSPG/RPCSPG! */
-      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, NULL, propgraph) );
+      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, NULL, propgraph, offset) );
    }
 
    SCIP_CALL( graph_path_init(scip, propgraph) );
@@ -531,7 +532,7 @@ SCIP_RETCODE propgraphApplyBoundchanges(
                   assert(!Is_term(propgraph->term[vert]) && !Is_term(g->term[vert]));
 
                   if( Is_pseudoTerm(propgraph->term[vert]) )
-                     graph_pc_deleteTerm(scip, propgraph, graph_pc_getTwinTerm(propgraph, vert));
+                     graph_pc_deleteTerm(scip, propgraph, graph_pc_getTwinTerm(propgraph, vert), offset);
                   else
                      graph_knot_del(scip, propgraph, vert, TRUE);
                }
@@ -825,7 +826,7 @@ SCIP_RETCODE fixVarsRedbased(
    SCIP_CALL( updatePropgraph(scip, graph, propdata) );
    propgraph = propdata->propgraph;
 
-   SCIP_CALL( propgraphApplyBoundchanges(scip, vars, graph, remain, edgestate, propgraph, nfixed, probisinfeas) );
+   SCIP_CALL( propgraphApplyBoundchanges(scip, vars, graph, remain, edgestate, propgraph, nfixed, probisinfeas, &offset) );
 
    if( *probisinfeas )
        goto TERMINATE;

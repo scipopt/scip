@@ -1899,7 +1899,11 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          if( (!Is_term(graph->term[i])) )
             newgraph->prize[j] = graph->prize[i];
          else
+         {
+            assert(SCIPisZero(scip, graph->prize[i]));
+
             newgraph->prize[j] = 0.0;
+         }
 
          graph_knot_add(newgraph, graph->term[i]);
          unodemap[j] = i;

@@ -3842,9 +3842,13 @@ SCIP_Bool graph_valid(
          goto EXIT;
       }
 
-      if( !nodevisited[k] && ((g->grad[k] > 0) || (Is_term(g->term[k])))
-         && g->stp_type != STP_PCSPG && g->stp_type != STP_MWCSP && g->stp_type != STP_RMWCSP )
+      if( !nodevisited[k] && ((g->grad[k] > 0) || (Is_term(g->term[k]))) )
       {
+         if( graph_pc_isPcMw(g) && !graph_pc_knotIsFixedTerm(g, k) )
+         {
+            continue;
+         }
+
          isValid = FALSE;
          graph_knot_printInfo(g, k);
          SCIPdebugMessage("*** Graph invalid: Knot %d not connected\n", k);

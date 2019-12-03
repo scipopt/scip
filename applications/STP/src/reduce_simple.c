@@ -430,9 +430,10 @@ SCIP_RETCODE pcmwReduceTermDeg1(
 
       if( (i1 < i) && (Is_term(g->term[i1]) || g->grad[i1] == 2 || g->grad[i1] == 3) )
          (*rerun) = TRUE;
+
       SCIPdebugMessage("Delete (degree 1) terminal %d \n", i);
-      (*offset) += g->prize[i];
-      (*count) += graph_pc_deleteTerm(scip, g, i);
+
+      (*count) += graph_pc_deleteTerm(scip, g, i, offset);
    }
    else if( edgestate == NULL || edgestate[iout] != EDGE_BLOCKED )
    {
@@ -1177,8 +1178,8 @@ SCIP_RETCODE reduce_simple_mw(
             if( !isMaxprizeTerm(scip, g, i, &maxprize) )
             {
                SCIPdebugMessage("delete degree 0 term %d prize: %f count:%d\n ", i, g->prize[i], localcount);
-               (*fixed) += g->prize[i];
-               localcount += graph_pc_deleteTerm(scip, g, i);
+
+               localcount += graph_pc_deleteTerm(scip, g, i, fixed);
             }
          }
          /* terminal of (real) degree 1? */
@@ -1363,8 +1364,8 @@ SCIP_RETCODE reduce_simple_pc(
             if( !isMaxprizeTerm(scip, g, i, &maxprize) )
             {
                SCIPdebugMessage("delete 0 term %d prize: %f countnew:%d\n ", i, g->prize[i], *countnew);
-               (*fixed) += g->prize[i];
-               (*countnew) += graph_pc_deleteTerm(scip, g, i);
+
+               (*countnew) += graph_pc_deleteTerm(scip, g, i, fixed);
             }
          }
          /* terminal of (real) degree 1? */
@@ -1418,8 +1419,7 @@ SCIP_RETCODE reduce_simple_pc(
                   SCIP_CALL( graph_edge_reinsert(scip, g, e0, nodes2[1], nodes2[0], g->cost[e0] + g->cost[e1] - g->prize[i],
                         i, &ancestors1, &ancestors0, &newedge, &conflict) );
 
-                  (*fixed) += g->prize[i];
-                  (*countnew) += graph_pc_deleteTerm(scip, g, i);
+                  (*countnew) += graph_pc_deleteTerm(scip, g, i, fixed);
 
                   graph_singletonAncestors_freeMembers(scip, &(ancestors0));
                   graph_singletonAncestors_freeMembers(scip, &(ancestors1));

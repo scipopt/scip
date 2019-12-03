@@ -935,7 +935,8 @@ void graph_pc_knotTofixedTerm(
 }
 
 
-/** Makes a non-fixed terminal a non-terminal */
+/** Makes a non-fixed terminal a non-terminal.
+ *  Also sets the prize to 0.0! */
 void graph_pc_termToNonTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
@@ -2466,16 +2467,17 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
 
 
 /** Deletes a terminal for a (rooted) prize-collecting problem.
- *  Note that the prize of the terminal is also set to 0! */
+ *  Note that the prize of the terminal is not changed! */
 int graph_pc_deleteTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   int                   term                /**< terminal to be deleted */
+   int                   term,               /**< terminal to be deleted */
+   SCIP_Real*            offset              /**< pointer to the offset */
    )
 {
    int grad = g->grad[term];
 
-   assert(g && scip);
+   assert(g && scip && offset);
    assert(g->term2edge && g->prize);
    assert(graph_pc_isPcMw(g));
    assert(Is_term(g->term[term]));
@@ -2485,8 +2487,10 @@ int graph_pc_deleteTerm(
 
    if( !g->extended && graph_pc_termIsNonLeafTerm(g, term) )
    {
+      *offset += g->prize[term];
       graph_pc_knotToNonTermProperty(g, term);
       graph_knot_del(scip, g, term, TRUE);
+      g->prize[term] = 0.0;
    }
    else
    {
@@ -2509,6 +2513,21 @@ int graph_pc_deleteTerm(
       assert(twin != UNKNOWN);
       assert(twin == graph_pc_getTwinTerm(g, term));
 
+      if( g->extended )
+      {
+         assert(SCIPisZero(scip, g->prize[term]));
+
+         *offset += g->prize[twin];
+         g->prize[twin] = 0.0;
+      }
+      else
+      {
+         assert(SCIPisZero(scip, g->prize[twin]));
+
+         *offset += g->prize[term];
+         g->prize[term] = 0.0;
+      }
+
       graph_pc_knotToNonTermProperty(g, term);
 
       /* delete twin */
@@ -2518,12 +2537,11 @@ int graph_pc_deleteTerm(
       grad += g->grad[twin] - 1;
 
       graph_knot_del(scip, g, twin, TRUE);
-
-      g->prize[twin] = 0.0;
    }
 
    g->mark[term] = FALSE;
-   g->prize[term] = 0.0;
+
+   assert(SCIPisZero(scip, g->prize[term]));
 
    return grad;
 }

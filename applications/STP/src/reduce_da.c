@@ -391,7 +391,9 @@ void updateNodeFixingBounds(
       fixbnd = pathdist[k] + vnoi[k].dist + lpobjval;
 
       if( fixbnd > fixingbounds[k] )
+      {
          fixingbounds[k] = fixbnd;
+      }
    }
 }
 
@@ -824,7 +826,7 @@ int reduceWithEdgeFixingBounds(
             {
                assert(graph->cost[e] == graph->cost[erev]);
 
-               SCIPdebugMessage("delete edge %d \n", e);
+               SCIPdebugMessage("delete edge %d (upperbound=%f fixingbound=%f) \n", e, upperbound, fixingbounds[e]);
 
                graph_edge_del(scip, graph, e, TRUE);
 
@@ -957,6 +959,49 @@ void findRootsMark(
       roots[(*rootscount)++] = realterm;
       isfixedterm[realterm] = TRUE;
    }
+}
+
+
+/** special method for RPC does deletes incident edges of terminal, but not the terminal and the extension itself */
+static
+void daRpcDeleteTermIncidents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const PATH*           vnoi,               /**< Voronoi data structure */
+   int                   term,               /**< the terminal */
+   GRAPH*                graph,              /**< graph data structure */
+   int*                  incidents,          /**< int array */
+   int*                  nfixedp             /**< number of fixed edges pointer */
+)
+{
+   const int twinterm = graph_pc_getTwinTerm(graph, term);
+   int incidcount = 0;
+
+#ifndef NDEBUG
+   const int termedge = graph->term2edge[term];
+   assert(termedge >= 0 && Is_pseudoTerm(graph->term[twinterm]) && graph->cost[termedge] == 0.0);
+   assert(vnoi[twinterm].dist == 0.0);
+#endif
+
+   for( int e = graph->outbeg[term]; e != EAT_LAST; e = graph->oeat[e] )
+      incidents[incidcount++] = e;
+
+   assert(incidcount == graph->grad[term]);
+   (*nfixedp) += graph->grad[term] - 1;
+
+   for( int e = 0; e < incidcount; e++ )
+   {
+      const int edge = incidents[e];
+
+      assert(graph->tail[edge] == term);
+
+      if( graph->head[edge] == twinterm )
+         continue;
+
+      graph_edge_del(scip, graph, edge, TRUE);
+   }
+
+   assert(graph->grad[term] == 1);
+   assert(graph->outbeg[term] == graph->term2edge[term] && twinterm == graph_pc_getTwinTerm(graph, term));
 }
 
 /** find roots for PC and MW during DA reduction */
@@ -1786,38 +1831,7 @@ SCIP_RETCODE reduceRootedProb(
       if( rpc && Is_term(graph->term[k]) && !graph_pc_knotIsFixedTerm(graph, k) && !graph_pc_termIsNonLeafTerm(graph, k)
          && SCIPisGT(scip, redcost, minpathcost) )
       {
-#if 1
-         graph_pc_deleteTerm(scip, graph, k);
-#else
-         const int twinterm = graph_pc_getTwinTerm(graph, k);
-         int incidcount = 0;
-
-#ifndef NDEBUG
-         const int termedge = graph->term2edge[k];
-         assert(termedge >= 0 && Is_pseudoTerm(graph->term[twinterm]) && graph->cost[termedge] == 0.0);
-         assert(vnoi[twinterm].dist == 0.0);
-#endif
-
-         for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-            incidents[incidcount++] = e;
-
-         assert(incidcount == graph->grad[k]);
-         (*nfixedp) += graph->grad[k] - 1;
-
-         for( e = 0; e < incidcount; e++ )
-         {
-            const int edge = incidents[e];
-
-            assert(graph->tail[edge] == k);
-
-            if( graph->head[edge] == twinterm )
-               continue;
-
-            graph_edge_del(scip, graph, edge, TRUE);
-         }
-
-         assert(graph->grad[k] == 1 && graph->outbeg[k] == graph->term2edge[k] && twinterm == graph_pc_getTwinTerm(graph, k));
-#endif
+         daRpcDeleteTermIncidents(scip, vnoi, k, graph, incidents, nfixedp);
          continue;
       }
 
@@ -2197,10 +2211,11 @@ SCIP_RETCODE reduce_da(
 
          SCIP_CALL( reduceRootedProb(scip, graph, marked, nodearrchar, vnoi, cost, pathdist, result, minpathcost, daroot, havenewsol, &ndeletions) );
 
+         // havenewsol = havenewsol &&  graph_sol_unreduced(scip, graph, result); todo necessary?
+
          if( !SCIPisZero(scip, minpathcost) )
          {
             ndeletions += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
-            havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
             ndeletions += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havenewsol ? result : NULL), upperbound);
          }
 
@@ -2241,16 +2256,6 @@ SCIP_RETCODE reduce_da(
             SCIP_CALL( updateNodeReplaceBounds(scip, nodereplacebounds, graph, cost, pathdist, vnoi, vbase, nodearrint,
                   lpobjval, upperbound, daroot, (run == 0), extended && !rpc));
 
-         if( ndeletions > 0 )
-         {
-            SCIP_CALL(level0(scip, graph));
-
-            if( rpc )
-            {
-               int dummy;
-               SCIP_CALL( reduce_simple_pc(scip, NULL, graph, offsetp, &dummy, NULL, NULL) );
-            }
-         }
          assert(graph_valid(scip, graph));
 
          if( !rpc )

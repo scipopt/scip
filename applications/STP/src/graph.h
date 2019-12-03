@@ -464,7 +464,7 @@ extern SCIP_RETCODE   graph_pc_contractNodeAncestors(SCIP*, GRAPH*, int, int, in
 extern SCIP_RETCODE   graph_pc_contractEdge(SCIP*, GRAPH*, int*, int, int, int);
 extern SCIP_RETCODE   graph_pc_contractEdgeUnordered(SCIP*, GRAPH*, int*, int, int);
 extern SCIP_RETCODE   graph_sol_markPcancestors(SCIP*, IDX**, const int*, const int*, int, STP_Bool*, STP_Bool*, int*, int*, int*);
-extern int    graph_pc_deleteTerm(SCIP*, GRAPH*, int);
+extern int    graph_pc_deleteTerm(SCIP*, GRAPH*, int, SCIP_Real*);
 extern int    graph_pc_realDegree(const GRAPH*, int, SCIP_Bool);
 extern int    graph_pc_getRoot2PtermEdge(const GRAPH*, int);
 extern int    graph_pc_nFixedTerms(const GRAPH*);

@@ -178,11 +178,7 @@ void applyBranchHistoryToGraph(
       }
       else if( nodestatenew[k] == BRANCH_STP_VERTEX_KILLED )
       {
-         if( pcmw && Is_nonleafTerm(graph->term[k]) )
-         {
-            graph_pc_knotToNonTermProperty(graph, k);
-            graph->prize[k] = 0.0;
-         }
+         assert(!pcmw || !graph_pc_knotIsFixedTerm(graph, k));
 
          for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
@@ -239,7 +235,10 @@ SCIP_RETCODE selectBranchingVertexByDegree(
 
    /* get vertex changes from branch-and-bound */
    if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) != 0 )
-      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestate, NULL) );
+   {
+      SCIP_Real offset = 0.0;
+      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestate, NULL, &offset) );
+   }
 
    ptermselected = FALSE;
    for( int k = 0; k < nnodes; k++ )
@@ -341,7 +340,10 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
    /* get vertex changes from branch-and-bound and apply them to graph */
    if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) != 0 )
-      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestatenew, NULL) );
+   {
+      SCIP_Real offset = 0.0;
+      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestatenew, NULL, &offset) );
+   }
 
    applyBranchHistoryToGraph(scip, nodestatenew, graph);
 
@@ -479,7 +481,10 @@ SCIP_RETCODE selectBranchingVertexByLp2Flow(
 
    /* get vertex changes from branch-and-bound */
    if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) != 0 )
-      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestate, NULL) );
+   {
+      SCIP_Real offset = 0.0;
+      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestate, NULL, &offset) );
+   }
 
    edgevars = SCIPprobdataGetEdgeVars(scip);
    assert(edgevars != NULL);
@@ -781,7 +786,8 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
    int*                  vertexchgs,         /**< array to store changes or NULL */
    GRAPH*                graph,              /**< graph to modify or NULL */
    const char*           consname,           /**< constraint name */
-   SCIP_Bool             freeancestors       /**< free edge ancestors? */
+   SCIP_Bool             freeancestors,      /**< free edge ancestors? */
+   SCIP_Real*            offset              /**< pointer to the offset */
 )
 {
 
@@ -832,7 +838,7 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
          if( Is_pseudoTerm(graph->term[vert]) )
          {
             assert(graph_pc_isPcMw(graph));
-            graph_pc_deleteTerm(scip, graph, graph_pc_getTwinTerm(graph, vert));
+            graph_pc_deleteTerm(scip, graph, graph_pc_getTwinTerm(graph, vert), offset);
          }
          else
          {
@@ -879,7 +885,8 @@ void SCIPStpBranchruleInitNodeState(
 SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  vertexchgs,         /**< array to store changes or NULL */
-   GRAPH*                graph               /**< graph to apply changes on or NULL */
+   GRAPH*                graph,              /**< graph to apply changes on or NULL */
+   SCIP_Real*            offset              /**< pointer to the offset */
    )
 {
    SCIP_CONS* parentcons;
@@ -923,7 +930,7 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
       SCIPnodeGetAddedConss(node, &parentcons, &naddedconss, 1);
       consname = (char*) SCIPconsGetName(parentcons);
 
-      SCIP_CALL( STPStpBranchruleParseConsname(scip, vertexchgs, graph, consname, TRUE) );
+      SCIP_CALL( STPStpBranchruleParseConsname(scip, vertexchgs, graph, consname, TRUE, offset) );
    }
 
    return SCIP_OKAY;

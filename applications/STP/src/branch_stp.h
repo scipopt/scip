@@ -45,7 +45,8 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
    int*                  vertexchgs,         /**< array to store changes or NULL */
    GRAPH*                graph,              /**< graph to modify or NULL */
    const char*           consname,           /**< constraint name */
-   SCIP_Bool             freeancestors       /**< free edge ancestors? */
+   SCIP_Bool             freeancestors,      /**< free edge ancestors? */
+   SCIP_Real*            offset              /**< pointer to the offset */
    );
 
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
@@ -53,7 +54,8 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  vertexchgs,         /**< array to store changes or NULL */
-   GRAPH*                graph               /**< graph to apply changes on or NULL */
+   GRAPH*                graph,              /**< graph to apply changes on or NULL */
+   SCIP_Real*            offset              /**< pointer to the offset */
    );
 
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */

@@ -506,8 +506,8 @@ SCIP_RETCODE reduce_bound(
             if( SCIPisGT(scip, tmpcost, obj) )
             {
                SCIPdebugMessage("alternative bnd elimination! \n\n");
-               (*offset) += graph->prize[k];
-               (*nelims) += graph_pc_deleteTerm(scip, graph, k);
+
+               (*nelims) += graph_pc_deleteTerm(scip, graph, k, offset);
             }
             else
             {
@@ -525,8 +525,7 @@ SCIP_RETCODE reduce_bound(
                   if( e == EAT_LAST )
                   {
                      SCIPdebugMessage("second elimination! prize: %f \n\n", graph->prize[k]);
-                     (*offset) += graph->prize[k];
-                     (*nelims) += graph_pc_deleteTerm(scip, graph, k);
+                     (*nelims) += graph_pc_deleteTerm(scip, graph, k, offset);
                   }
                }
             }
