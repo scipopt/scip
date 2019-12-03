@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   pub_decomp.h
+/**@file   pub_dcmp.h
  * @ingroup TODO
  * @brief  public methods for decompositions
  * @author Gregor Hendel
