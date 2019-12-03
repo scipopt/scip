@@ -2398,6 +2398,8 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
 
          graph_pc_knotToFixedTermProperty(graph, pseudoterm);
 
+         SCIPdebugMessage("fix terminal %d (delete %d)\n", pseudoterm, dummyterm);
+
          if( graph->grad[pseudoterm] > maxgrad )
          {
             newroot = pseudoterm;
@@ -2423,7 +2425,7 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
          const int enext = graph->oeat[e];
          const int k = graph->head[e];
 
-         if( Is_term(graph->term[k]) && !SCIPisZero(scip, graph->cost[e]) )
+         if( Is_pseudoTerm(graph->term[k]) )
          {
             (void) graph_edge_redirect(scip, graph, e, newroot, k, graph->cost[e], TRUE, TRUE);
             graph->cost[flipedge(e)] = FARAWAY;
@@ -2438,20 +2440,18 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
       graph_knot_del(scip, graph, root, TRUE);
 
       if( pc )
-      {
          graph->stp_type = STP_RPCSPG;
-#ifndef WITH_UG
-         printf("...transformed PC to RPC; fixed %d out of %d terminals \n", nfixedterms, orgnterms - 1);
-#endif
-
-      }
       else
-      {
          graph->stp_type = STP_RMWCSP;
+
+      assert(graph_valid(scip, graph));
+
 #ifndef WITH_UG
+      if( pc )
+         printf("...transformed PC to RPC; fixed %d out of %d terminals \n", nfixedterms, orgnterms - 1);
+      else
          printf("...transformed MW to RMW; fixed %d out of %d terminals \n", nfixedterms, orgnterms - 1);
 #endif
-      }
 
       assert(orgnterms - 1 == graph->terms);
    }
