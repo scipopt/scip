@@ -1267,7 +1267,7 @@ int calcCliqueMaximums(
          {
             assert(SCIPisPositive(scip, row2coefs[varinds[cliquevarpos[maxpos]]]));
             assert(cliquemaxinds[cliquevarpos[firstmaxpos]] < 0);
-            assert(firstmaxpos != -1); // cheesy use of firstmaxpos as breakpoint dummy variable for the negative segment
+            assert(firstmaxpos != -1); /* use firstmaxpos as breakpoint dummy variable for the negative segment */
             breakpoints[cliquevarpos[firstmaxpos]] = -row2coefs[maxidx] / gradients[maxpos]; /* lambda where old maxcoef hits zero */
             maxidx = -1;
             (*nbreakpoints)++;
@@ -1613,15 +1613,16 @@ SCIP_RETCODE combineRows
    SCIPdebugMsg(scip, "breakpoints without cliques: %d\n", nbreakpoints);
 #endif
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &currentmaxinds, ncliques+1) ); // The entry at index 0 is a dummy to prevent excessive index shifting in the code
+   SCIP_CALL( SCIPallocBufferArray(scip, &currentmaxinds, ncliques+1) ); /* the entry at index 0 is a dummy to prevent excessive index shifting in the code */
 
    /* remove cliques containing a single variable and compute clique maximums */
-   shift = 0;
+   shift = 0; /* we discard cliques by shifing their values (binvarpos, cliquepartition) and overwriting unnecessary entries, this simplifies handling of these arrays */
    for( i = 0; i < nbinvars; )
    {
 #ifdef SCIP_DEBUG_CLIQUE
       SCIPdebugMsg(scip, "checking clique of var_%d\n", i);
 #endif
+      /* clique is of size >= 2, calculate its maximum */
       if( i + 1 < nbinvars && cliquepartition[i] == cliquepartition[i+1] )
       {
          int currentclique = cliquepartition[i];
@@ -1643,7 +1644,7 @@ SCIP_RETCODE combineRows
          SCIPdebugMsg(scip, "breakpoints before checking maximums of clique %d: %d\n", cliquepartition[binvarpos[i]], nbreakpoints);
 #endif
          /* size of current clique equals j - i */
-         idx = cliquepartition[i-shift]; // we enumerated the relevant cliques only
+         idx = cliquepartition[i-shift]; /* cliquepartition values have been shifted */
          currentmaxinds[idx] = calcCliqueMaximums(scip, varinds, &binvarpos[i-shift], j - i, row1coefs, row2coefs, &nbreakpoints, breakpoints, cliquemaxinds, gradients);
 #ifdef SCIP_DEBUG_CLIQUE
          SCIPdebugMsg(scip, "breakpoints after checking maximums of clique %d: %d, firstmaxidx = %d\n", idx, nbreakpoints, currentmaxinds[idx]);
@@ -1651,6 +1652,7 @@ SCIP_RETCODE combineRows
 
          i = j;
       }
+      /* clique is of size one, increase shift to discard it in the next iteration */
       else
       {
          shift++;
