@@ -246,6 +246,7 @@ scip::ObjDisp* SCIPgetObjDisp(
 {
    SCIP_DISPDATA* dispdata;
 
+   assert(scip != NULL);
    dispdata = SCIPdispGetData(disp);
    assert(dispdata != NULL);
 

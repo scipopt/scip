@@ -387,6 +387,7 @@ scip::ObjBenders* SCIPgetObjBenders(
 {
    SCIP_BENDERSDATA* bendersdata;
 
+   assert(scip != NULL);
    bendersdata = SCIPbendersGetData(benders);
    assert(bendersdata != NULL);
 

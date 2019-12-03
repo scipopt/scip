@@ -2251,9 +2251,13 @@ SCIP_RETCODE SCIPeventqueueAdd(
 
    if( !eventqueue->delayevents )
    {
+      SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
+
       /* immediately process event */
       SCIP_CALL( SCIPeventProcess(*event, set, primal, lp, branchcand, eventfilter) );
       SCIP_CALL( SCIPeventFree(event, blkmem) );
+
+      SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, primal, lp, branchcand, eventfilter) );
    }
    else
    {

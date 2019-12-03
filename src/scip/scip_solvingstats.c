@@ -19,7 +19,7 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -4137,7 +4137,7 @@ int SCIPgetNImplications(
  *
  *  @deprecated because binary implications are now stored as cliques, please use SCIPwriteCliqueGraph() instead
  *
- */
+ */ /*lint -e715*/
 SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name, or NULL for stdout */

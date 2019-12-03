@@ -385,6 +385,7 @@ SCIP_RETCODE processNlRow(
                }
 
                /* nonzero diagonal element of the Hessian: fix */
+               assert(hessiandata->sparsity != NULL);  /* for lint */
                if( hessiandata->sparsity[idx1*nexprtreevars + idx1]
                   && !termIsConstant(scip, exprtreevars[idx1], 1.0, globalbounds) )
                {

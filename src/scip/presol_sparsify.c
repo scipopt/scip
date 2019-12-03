@@ -17,7 +17,7 @@
  * @ingroup DEFPLUGINS_PRESOL
  * @brief  cancel non-zeros of the constraint matrix
  * @author Dieter Weninger
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Ambros Gleixner
  *
  * This presolver attempts to cancel non-zero entries of the constraint
@@ -694,6 +694,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
+   SCIP_Bool infeasible;
    int nrows;
    int r;
    int i;
@@ -748,7 +749,18 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
+      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
+
+   /* if infeasibility was detected during matrix creation, return here */
+   if( infeasible )
+   {
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
 
    /* we only work on pure MIPs currently */
    if( initialized && complete )
