@@ -1070,7 +1070,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_CALL( SCIPallocClearBufferArray(scip, &eigvecmatrix, nvars * nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &eigvals, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &lincoefs, nvars) );
 
    /* iterate over children a third time to build the constraint defining matrix and vector */
    for( i = 0; i < nchildren; ++i )
