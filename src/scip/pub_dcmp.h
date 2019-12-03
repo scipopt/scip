@@ -79,7 +79,7 @@ int SCIPdecompGetNBlocks(
 
 /** gets area score of this decomposition */
 SCIP_EXPORT
-SCIP_Real SCIPdecompGetAreascore(
+SCIP_Real SCIPdecompGetAreaScore(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
