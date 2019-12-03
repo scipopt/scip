@@ -3329,7 +3329,7 @@ SCIP_RETCODE SCIPaddSchreierSimsConssOrbit(
             propdata->schreiersimsconss[propdata->nschreiersimsconss++] = cons;
          }
       }
-      else
+      else if ( addcuts )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SchreierSimscut_%d_%d", orbits[posleader], orbits[poscur]);
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, - SCIPinfinity(scip), 0.0,
