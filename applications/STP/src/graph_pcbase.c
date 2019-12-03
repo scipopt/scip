@@ -779,7 +779,7 @@ SCIP_Bool graph_pc_term2edgeIsConsistent(
          for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
          {
             k = g->head[e];
-            if( Is_term(g->term[k]) && k != root )
+            if( Is_term(g->term[k]) && !graph_pc_knotIsFixedTerm(g, k) )
                break;
          }
          assert(e != EAT_LAST);
@@ -3017,8 +3017,9 @@ int graph_pc_getTwinTerm(
 {
    assert(g && g->term2edge);
    assert(graph_pc_isPcMw(g));
-   assert(g->term2edge[vertex] >= 0);
    assert(Is_anyTerm(g->term[vertex]));
+   assert(g->term2edge[vertex] >= 0);
+   assert(g->tail[g->term2edge[vertex]] == vertex);
 
    return g->head[g->term2edge[vertex]];
 }
