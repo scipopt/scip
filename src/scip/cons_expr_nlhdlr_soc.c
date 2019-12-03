@@ -244,8 +244,10 @@ SCIP_RETCODE createDisaggr(
    /* consider RHS variables */
    for( i = 0; i < nrhsvars; ++i)
    {
-      int idx = nlhdlrexprdata->ntranscoefs - i - 1;
-      vars[nvars] = nlhdlrexprdata->vars[idx];
+      int idx;
+
+      idx = nlhdlrexprdata->ntranscoefs - i - 1;
+      vars[nvars] = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[idx]];
       coefs[nvars] = -nlhdlrexprdata->transcoefs[idx] * nlhdlrexprdata->coefs[nterms-1];
       ++nvars;
    }
