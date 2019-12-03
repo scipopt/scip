@@ -386,9 +386,6 @@ char* SCIPdecompPrintStats(
       decomp->statscomplete ? "" :
                "(approximately: graph construction hit size limit)");
 
-
-
-
    return strbuf;
 }
 
