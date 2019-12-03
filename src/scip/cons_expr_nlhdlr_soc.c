@@ -36,6 +36,7 @@
 #define NLHDLR_NAME         "soc"
 #define NLHDLR_DESC         "soc nonlinear handler"
 #define NLHDLR_PRIORITY     100
+#define DEFAULT_ALLOWEIGENVALUECOMPS TRUE
 
 /*
  * Data structures
@@ -57,13 +58,13 @@ struct SCIP_ConsExpr_NlhdlrExprData
    int                   ntranscoefs;        /**< total number of entries in transcoefs */
 
    /* variables for cone disaggregation */
-   SCIP_VAR**            disvars;           /**< disaggregation variables for each expression; entry (nexprs + 1) corresponds to the constant term */
-   SCIP_ROW*             row;               /**< disaggregation row */
+   SCIP_VAR**            disvars;            /**< disaggregation variables for each expression; entry (nexprs + 1) corresponds to the constant term */
+   SCIP_ROW*             row;                /**< disaggregation row */
 };
 
-/** nonlinear handler data */
 struct SCIP_ConsExpr_NlhdlrData
 {
+   SCIP_Bool alloweigenvaluecomps;           /**< whether Eigenvalue computations should be done to detect complex cases */
 };
 
 /*
@@ -956,7 +957,6 @@ SCIP_RETCODE detectSocQuadraticComplex(
    int j;
    SCIP_Bool rhsissoc;
    SCIP_Bool lhsissoc;
-   SCIP_Bool rhsvarfound;
 
    assert(conshdlr != NULL);
    assert(expr != NULL);
@@ -1222,7 +1222,6 @@ SCIP_RETCODE detectSocQuadraticComplex(
    nextlhsterm = 0;
    nexttranscoef = 0;
    nrhstranscoefs = 0;
-   rhsvarfound = FALSE;
 
    /* we have lhsconstant + x^t A x + b x <= 0 and A has a single negative eigenvalue; try to build soc */
    for( i = 0; i < nvars; ++i )
@@ -1257,9 +1256,6 @@ SCIP_RETCODE detectSocQuadraticComplex(
       {
          SCIP_Real rhsvarlb;
          SCIP_Real rhsvarub;
-
-         /* should enter here only once */
-         assert(rhsvarfound == FALSE);
 
          offsets[npos + nneg - 1] = bp[i] / (2 * eigvals[i]);
          rhsvarlb = 0.0;
@@ -1337,7 +1333,6 @@ SCIP_RETCODE detectSocQuadraticComplex(
          /* check whether rhsvar changes sign */
          if( SCIPisGE(scip, rhsvarlb, 0.0) || SCIPisLE(scip, rhsvarub, 0.0) )
          {
-            rhsvarfound = TRUE;
             lhsconstant -= bp[i] * bp[i] / (4 * eigvals[i]);
             coefs[npos + nneg - 1] = SCIPisLE(scip, rhsvarub, 0.0) ? -sqrt(-eigvals[i]) : sqrt(-eigvals[i]);
 
@@ -1366,7 +1361,6 @@ SCIP_RETCODE detectSocQuadraticComplex(
          }
       }
    }
-   assert(rhsvarfound);
    assert(nextlhsterm == npos + nneg - 1);
    assert(nexttranscoef == ntranscoefs - nrhstranscoefs);
 
@@ -1415,6 +1409,7 @@ SCIP_RETCODE detectSOC(
    )
 {
    SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
    assert(expr != NULL);
    assert(auxvar != NULL);
@@ -1429,6 +1424,9 @@ SCIP_RETCODE detectSOC(
       return SCIP_OKAY;
    }
 
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(SCIPfindConsExprNlhdlr(conshdlr, NLHDLR_NAME));
+   assert(nlhdlrdata != NULL);
+
    /* check whether expression is given as norm */
    SCIP_CALL( detectSocNorm(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
 
@@ -1438,7 +1436,7 @@ SCIP_RETCODE detectSOC(
       SCIP_CALL( detectSocQuadraticSimple(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
    }
 
-   if( !(*success) )
+   if( !(*success) && nlhdlrdata->alloweigenvaluecomps )
    {
       /* check whether expression is a more complex soc-respresentable quadratic expression */
       SCIP_CALL( detectSocQuadraticComplex(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
@@ -1466,19 +1464,16 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrSoc)
 #endif
 
 /** callback to free data of handler */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataSoc)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(nlhdlrdata != NULL);
+
+   SCIPfreeBlockMemory(scip, nlhdlrdata);
 
    return SCIP_OKAY;
-}
-#else
-#define nlhdlrFreehdlrdataSoc NULL
-#endif
 
+}
 
 /** callback to free expression specific data */
 static
@@ -1761,7 +1756,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
    assert(consexprhdlr != NULL);
 
    /* create nonlinear handler data */
-   nlhdlrdata = NULL;
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
 
    /* TODO: create and store nonlinear handler specific data here */
 
@@ -1776,6 +1771,11 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalSoc, nlhdlrReversepropSoc);
    SCIPsetConsExprNlhdlrBranchscore(scip, nlhdlr, nlhdlrBranchscoreSoc);
    SCIPsetConsExprNlhdlrReformulate(scip, nlhdlr, nlhdlrReformulateSoc);
+
+   /* add soc nlhdlr parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/alloweigenvaluecomps",
+         "Should Eigenvalue computations be done to detect complex cases in quadratic constraints?",
+         &nlhdlrdata->alloweigenvaluecomps, FALSE, DEFAULT_ALLOWEIGENVALUECOMPS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
