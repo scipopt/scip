@@ -1930,9 +1930,6 @@ SCIP_Real getEnsembleEstimation(
    assert(eventhdlrdata != NULL);
    treedata = eventhdlrdata->treedata;
 
-   /* combine time series estimations */
-   estim = 0.0;
-
    /* assign coeffs based on stage */
    if( treedata->progress <= 0.3 )
    {
@@ -2437,7 +2434,7 @@ char* printReport(
    }
 
    if( reportnum > 0 )
-      ptr += sprintf(ptr, "End of Report %d\n", reportnum);
+      (void) sprintf(ptr, "End of Report %d\n", reportnum);
 
    return strbuf;
 }
