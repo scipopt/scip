@@ -4217,10 +4217,13 @@ SCIP_RETCODE reduce_sl(
          {
             if( pc )
             {
-               assert(g->prize[i] == 0.0 && !Is_anyTerm(g->term[i]));
-               g->prize[i] = FARAWAY;
+               assert(SCIPisZero(scip, g->prize[i]) && !Is_anyTerm(g->term[i]));
+               graph_pc_knotTofixedTerm(scip, g, i);
             }
-            graph_knot_chg(g, i, 0);
+            else
+            {
+               graph_knot_chg(g, i, STP_TERM);
+            }
          }
    }
 

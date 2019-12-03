@@ -696,7 +696,8 @@ int reduceWithNodeReplaceBounds(
    const int nnodes = graph->knots;
    const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
 
-   assert(!rpc || graph->extended);
+   if( rpc )
+      graph_pc_2org(scip, graph);
 
    for( int k = 0; k < nnodes; k++ )
       nodetouched[k] = 0;
@@ -778,6 +779,9 @@ int reduceWithNodeReplaceBounds(
          }
       }
    }
+
+   if( rpc )
+      graph_pc_2trans(scip, graph);
 
    return nfixed;
 }
@@ -2156,6 +2160,8 @@ SCIP_RETCODE reduce_da(
       damaxdeviation = -1.0;
 
    assert(!rpc || graph->extended);
+
+
 
    for( int outerrounds = 0; outerrounds < 2; outerrounds++ )
    {
