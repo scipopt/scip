@@ -50,6 +50,7 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
+
     #constraints
     "indicatorlogicorsepa"
     "indicatoralterlp"
@@ -57,17 +58,20 @@ set(settings_MIP
     #presolving and branching
     "convertinttobin_mostinf"
     "setppclifting_leastinf"
-    #branching and propagation
 
+    #branching and propagation
     "pscost_proporbitope"
+
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
 
     #separation and heuristics
     "oddcycleliftheur_feaspump20"
+
+    #heuristics and branching
     "heurlprows"
-    "lns_epsgreedy"
+    "lns_epsgreedy_vanilla"
     "lns_exp3"
 #    "dynamic"
     "intobj"

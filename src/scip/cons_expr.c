@@ -1015,13 +1015,23 @@ SCIP_RETCODE forwardPropExpr(
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
 
+   /* if value is valid and empty, then we cannot improve, so do nothing */
+   if( rootexpr->activitytag >= conshdlrdata->lastboundrelax && SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rootexpr->activity) )
+   {
+      SCIPdebugMsg(scip, "stored activity of root expr is empty and valid (activitytag >= lastboundrelax (%u)), skip forwardPropExpr -> cutoff\n", conshdlrdata->lastboundrelax);
+
+      if( infeasible != NULL )
+         *infeasible = TRUE;
+
+      return SCIP_OKAY;
+   }
+
    /* if value is up-to-date, then nothing to do */
    if( rootexpr->activitytag == conshdlrdata->curboundstag )
    {
       SCIPdebugMsg(scip, "activitytag of root expr equals curboundstag (%u), skip forwardPropExpr\n", conshdlrdata->curboundstag);
 
-      if( infeasible != NULL && SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rootexpr->activity) )
-         *infeasible = TRUE;
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, rootexpr->activity)); /* handled in previous if() */
 
       return SCIP_OKAY;
    }
@@ -8023,10 +8033,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 
       consdata = SCIPconsGetData(conss[c]);
       if( consdata->lhsviol > SCIPfeastol(scip) || consdata->rhsviol > SCIPfeastol(scip) )
-      {
          *result = SCIP_INFEASIBLE;
-         break;
-      }
    }
 
    if( *result == SCIP_FEASIBLE )
@@ -12485,6 +12492,7 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for signed power expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrSignpower(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "signpower") == 0);
+   conshdlrdata->exprsignpowhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 
    /* include handler for entropy expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrEntropy(scip, conshdlr) );
@@ -13628,6 +13636,9 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_Real midval;
+      SCIP_Real feastol;
+
+      feastol = SCIPgetStage(scip) == SCIP_STAGE_SOLVING ? SCIPgetLPFeastol(scip) : SCIPfeastol(scip);
 
       /* evaluate function in middle point to get some idea for a scaling */
       for( j = 0; j < nvars; ++j )
@@ -13640,7 +13651,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedral(
       assert(conshdlrdata != NULL);
 
       /* there seem to be numerical problems if the error is too large; in this case we reject the facet */
-      if( maxfaceterror > conshdlrdata->vp_adjfacetthreshold * SCIPlpfeastol(scip) * fabs(midval) )
+      if( maxfaceterror > conshdlrdata->vp_adjfacetthreshold * feastol * fabs(midval) )
       {
          SCIPdebugMsg(scip, "ignoring facet due to instability, it cuts off a vertex by %g (midval=%g).\n", maxfaceterror, midval);
          *success = FALSE;

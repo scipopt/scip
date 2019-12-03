@@ -3463,7 +3463,8 @@ SCIP_RETCODE enforceConstraints(
          break;
 
       case SCIP_SOLVELP:
-         assert(!SCIPtreeHasFocusNodeLP(tree));
+         /* either LP was not solved, or it is not solved anymore (e.g., because feastol has been tightened by some constraint handler) */
+         assert(!SCIPtreeHasFocusNodeLP(tree) || !lp->solved);
          assert(tree->nchildren == 0);
          assert(SCIPsepastoreGetNCuts(sepastore) == 0);
          *infeasible = TRUE;
@@ -4193,7 +4194,11 @@ SCIP_RETCODE solveNode(
 
          /* time or solution limit was hit and we already created a dummy child node to terminate fast */
          if( *stopped )
+         {
+            /* reset LP feastol to normal value, in case someone tightened it during node solving */
+            SCIPlpResetFeastol(lp, set);
             return SCIP_OKAY;
+         }
       }
       fullseparation = FALSE;
 
@@ -4660,6 +4665,9 @@ SCIP_RETCODE solveNode(
       /* add the observation to the regression */
       SCIPregressionAddObservation(stat->regressioncandsobjval, (SCIP_Real)nlpbranchcands, lpobjval);
    }
+
+   /* reset LP feastol to normal value, in case someone tightened it during node solving */
+   SCIPlpResetFeastol(lp, set);
 
    return SCIP_OKAY;
 }
@@ -5241,7 +5249,7 @@ SCIP_RETCODE SCIPsolveCIP(
    /* update the primal-dual integral if node or time limits were hit or an interruption signal was called */
    if( SCIPsolveIsStopped(set, stat, TRUE) )
    {
-      SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), -SCIPsetInfinity(set));
+      SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), -SCIPsetInfinity(set));
    }
 
    assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);

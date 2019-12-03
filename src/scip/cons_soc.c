@@ -1199,7 +1199,7 @@ SCIP_RETCODE separatePoint(
 
    *success = FALSE;
 
-   minefficacy = inenforcement ? SCIPlpfeastol(scip) : SCIPgetSepaMinEfficacy(scip);
+   minefficacy = inenforcement ? SCIPgetLPFeastol(scip) : SCIPgetSepaMinEfficacy(scip);
 
    for( c = 0; c < nconss; ++c )
    {

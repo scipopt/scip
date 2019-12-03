@@ -1796,6 +1796,7 @@
  * - adding an additional constraint that resolves the infeasibility (result SCIP_CONSADDED),
  * - reducing the domain of a variable (result SCIP_REDUCEDDOM),
  * - adding a cutting plane (result SCIP_SEPARATED),
+ * - tightening the LP primal feasibility tolerance and requesting to solve the LP again (result SCIP_SOLVELP),
  * - performing a branching (result SCIP_BRANCHED).
  *
  * However, the solution is not given as a SCIP_SOL* data structure.
