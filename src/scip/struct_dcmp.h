@@ -13,9 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_decomp.h
+/**@file   struct_dcmp.h
  * @ingroup INTERNALAPI
- * @brief  data structures for decomposition
+ * @brief  data structures for a decomposition and a decomposition store
  * @author Gregor Hendel
  */
 
