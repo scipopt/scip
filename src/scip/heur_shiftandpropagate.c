@@ -2196,6 +2196,12 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          }
 #endif
 
+         /* print probing stats before LP */
+         {
+            char strbuf[SCIP_MAXSTRLEN];
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+               SCIPsprintfProbingStats(scip, strbuf));
+         }
          SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
 #ifdef SCIP_DEBUG

@@ -192,6 +192,13 @@ SCIP_RETCODE applyBoundHeur(
       SCIPdebugMsg(scip, "starting solving bound-heur LP at time %g, LP iterations: %" SCIP_LONGINT_FORMAT "\n",
          SCIPgetSolvingTime(scip), SCIPgetNLPIterations(scip));
 
+      /* print probing stats before LP */
+      {
+         char strbuf[SCIP_MAXSTRLEN];
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+            SCIPsprintfProbingStats(scip, strbuf));
+      }
+
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
        * heuristic.  hence in optimized mode, the return code is caught and a warning is printed, only in debug mode,
        * SCIP will stop.

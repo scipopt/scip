@@ -1023,6 +1023,78 @@ SCIP_RETCODE SCIPsolveProbingRelax(
    return SCIP_OKAY;
 }
 
+/** print statistics of probing */
+char* SCIPsprintfProbingStats(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 strbuf              /**< string buffer */
+   )
+{
+   char* ptr = strbuf;
+   const int nvartypes = 4;
+
+   assert(scip != NULL);
+   assert(strbuf != NULL);
+
+   if( SCIPinProbing(scip) )
+   {
+      SCIP_VAR** vars;
+      int vartypeend[] = {
+          SCIPgetNBinVars(scip),
+          SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip),
+          SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip),
+          SCIPgetNVars(scip)
+      };
+      char* vartypenames[] = {
+               "binary",
+               "integer",
+               "implicit integer",
+               "continuous"
+      };
+      int nvartypefixed[nvartypes];
+      int nvarsfixed = 0;
+      int depth;
+      int probingdepth;
+      int vartypestart = 0;
+      int v;
+      int p;
+
+      vars = SCIPgetVars(scip);
+      BMSclearMemoryArray(nvartypefixed, nvartypes);
+
+      /* loop over vartypes and count fixings */
+      for( p = 0; p < nvartypes; ++p )
+      {
+         for( v = vartypestart; v < vartypeend[p]; ++v )
+         {
+            if( SCIPisEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v])) )
+               ++nvartypefixed[p];
+         }
+         nvarsfixed += nvartypefixed[p];
+         vartypestart = vartypeend[p];
+      }
+
+      depth = SCIPgetDepth(scip);
+      probingdepth = SCIPgetProbingDepth(scip);
+
+      ptr += sprintf(ptr, "Depth: (%d total, %d probing) ", depth, probingdepth);
+      ptr += sprintf(ptr, "Fixed/Variables: %d / %d (", nvarsfixed, vartypeend[nvartypes - 1]);
+
+      for( p = 0; p < nvartypes; ++p )
+      {
+         int ntypevars = vartypeend[p] - (p == 0 ? 0 : vartypeend[p - 1]);
+         ptr += sprintf(ptr, "%d / %d %s%s", nvartypefixed[p], ntypevars, vartypenames[p], p < (nvartypes - 1) ? ", " : ")");
+      }
+
+   }
+   else
+   {
+      (void) sprintf(strbuf, "Not in probing");
+   }
+
+   return strbuf;
+
+}
+
 /** gets the candidate score and preferred rounding direction for a candidate variable */
 SCIP_RETCODE SCIPgetDivesetScore(
    SCIP*                 scip,               /**< SCIP data structure */
