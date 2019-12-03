@@ -1055,7 +1055,7 @@ SCIP_Real calcGap(
    SCIP_Real absdb;
    SCIP_Real gap;
 
-   if( SCIPisInfinity(scip, lowerbound) )
+   if( SCIPisInfinity(scip, lowerbound) || lowerbound >= SCIPgetUpperbound(scip) )
       return 0.0;
 
    if( SCIPisInfinity(scip, SCIPgetUpperbound(scip)) )
