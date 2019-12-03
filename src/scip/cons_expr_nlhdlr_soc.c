@@ -753,7 +753,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    ishyperbolic = (nposbilinterms + nnegbilinterms > 0);
 
    /* detect case and store lhs/rhs information */
-   if( nposquadterms > 1)
+   if( nnegquadterms + nnegbilinterms <= 1)
    {
       /* if rhs is infinity, it can't be soc */
       if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
@@ -965,9 +965,9 @@ SCIP_RETCODE detectSocQuadraticComplex(
 
    *success = FALSE;
 
-   /* check whether expression is a sum with at least 3 quadratic children */
+   /* check whether expression is a sum with at least 2 quadratic children */
    if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr)
-      || SCIPgetConsExprExprNChildren(expr) < 3 )
+      || SCIPgetConsExprExprNChildren(expr) < 2 )
    {
       return SCIP_OKAY;
    }
