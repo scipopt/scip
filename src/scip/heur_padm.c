@@ -1660,7 +1660,7 @@ TERMINATE:
    if( varonlyobj != NULL )
       SCIPfreeBufferArray(scip, &varonlyobj);
 
-   if( blocktolinkvars != NULL )
+   if( problem != NULL && blocktolinkvars != NULL )
    {
       for( b = problem->nblocks -1; b >= 0; b-- )
       {
