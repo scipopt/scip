@@ -147,7 +147,7 @@ hashIndexPair(
    int                   idx2                /**< second integer index */
    )
 {
-   uint32_t hash = SCIPhashOne(SCIPcombineTwoInt(idx1, idx2));
+   uint32_t hash = SCIPhashTwo(idx1, idx2);
    return (int)(hash>>1);
 }
 
