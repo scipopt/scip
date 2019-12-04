@@ -985,9 +985,8 @@ SCIP_RETCODE subtreesumgapSplit(
 {
    SCIP_NODE** opennodes[3];
    int nopennodes[3];
-
-   int t;
    int label;
+   int t;
 
    assert(scip != NULL);
    assert(ssg != NULL);
@@ -1155,6 +1154,7 @@ SCIP_RETCODE subtreesumGapInsertChildren(
    assert(SCIPhashmapExists(ssg->nodes2info, (void *)focusnode));
    focusnodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void *)focusnode);
    focusnodelabel = focusnodeinfo->subtreeidx;
+
    /* loop over children and insert the focus node label */
    for( n = 0; n < nchildren; ++n )
    {
@@ -1282,8 +1282,8 @@ SCIP_RETCODE subtreesumgapComputeFromScratchEfficiently(
    )
 {
    SCIP_Real gapsum = 0.0;
-
    int l;
+
    /* treat trivial cases: only 1 subtree, no incumbent solution */
    if( SCIPisInfinity(scip, SCIPgetUpperbound(scip)) )
    {
@@ -1735,7 +1735,7 @@ void timeseriesUpdateSmoothEstimation(
       timeseries->smoothestimation = estimation;
    else
    {
-      timeseries->smoothestimation *= (1 - SESCOEFF);
+      timeseries->smoothestimation *= (1.0 - SESCOEFF);
       timeseries->smoothestimation += SESCOEFF * estimation;
    }
 }
@@ -2383,6 +2383,7 @@ char* printReport(
 
    completed = MIN(1.0, completed);
    completed = MAX(0.0, completed);
+
    /* print tree data */
    ptr += sprintf(ptr,
          "%-19s: %" SCIP_LONGINT_FORMAT " nodes ("
