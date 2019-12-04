@@ -531,7 +531,7 @@ SCIP_RETCODE SCIPregforestFromFile(
       ++pos;
    }
 
-CLOSEFILE:
+ CLOSEFILE:
    SCIPfclose(file);
 
    if( error )
@@ -602,9 +602,12 @@ SCIP_RETCODE extendMemoryTreeprofile(
    }
    else
    {
-      int newsize = SCIPcalcMemGrowSize(scip, mindepth + 1);
-      int nnewelems = newsize - treeprofile->profilesize;
+      int newsize;
+      int nnewelems;
       SCIP_Longint* newprofile;
+
+      newsize = SCIPcalcMemGrowSize(scip, mindepth + 1);
+      nnewelems = newsize - treeprofile->profilesize;
       assert(newsize > treeprofile->profilesize);
 
       SCIP_CALL( SCIPreallocMemoryArray(scip, &treeprofile->profile, newsize) );
@@ -689,7 +692,7 @@ SCIP_RETCODE updateTreeprofile(
 
    nodedepthcnt = ++treeprofile->profile[nodedepth];
 
-   /* is this level full explored? We assume binary branching */
+   /* Is this level full explored? We assume binary branching. */
    if( (unsigned int)nodedepth < 8*sizeof(int) && nodedepthcnt == (1U << nodedepth) )/*lint !e647*/
    {
       SCIPdebugMsg(scip, "Level %d fully explored: %" SCIP_LONGINT_FORMAT " nodes\n", nodedepth, nodedepthcnt);
@@ -1980,6 +1983,7 @@ SCIP_RETCODE getSearchCompletion(
    TREEDATA* treedata;
    char completiontype;
 
+   assert(eventhdlrdata != NULL);
    treedata = eventhdlrdata->treedata;
    completiontype = eventhdlrdata->completiontypeparam;
 
@@ -2013,42 +2017,46 @@ SCIP_RETCODE getSearchCompletion(
    /* compute the search tree completion based on the selected method */
    switch (completiontype)
    {
-      /* use regression forest */
-      case COMPLETIONTYPE_REGFOREST:
-         values[6] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_GAP]);
-         values[7] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_GAP]->des);
-         values[2] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_SSG]);
-         values[3] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_SSG]->des);
-         values[0] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_PROG]);
-         values[1] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_PROG]->des);
-         values[4] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_LFREQ]);
-         values[5] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_LFREQ]->des);
-         values[8] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_OPEN]->des) < 0 ? 1.0 : 0.0;
+   /* use regression forest */
+   case COMPLETIONTYPE_REGFOREST:
+      values[6] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_GAP]);
+      values[7] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_GAP]->des);
+      values[2] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_SSG]);
+      values[3] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_SSG]->des);
+      values[0] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_PROG]);
+      values[1] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_PROG]->des);
+      values[4] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_LFREQ]);
+      values[5] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_LFREQ]->des);
+      values[8] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_OPEN]->des) < 0 ? 1.0 : 0.0;
 
-         *completed = SCIPregforestPredict(eventhdlrdata->regforest, values);
-         break;
-         /* interpolate between ssg and progress */
-      case COMPLETIONTYPE_MONOREG:
-         *completed = eventhdlrdata->coefmonoprog * (SCIP_Real)treedata->progress +
-            eventhdlrdata->coefmonossg * (1.0 - treedata->ssg->value);
-         break;
-      case COMPLETIONTYPE_PROGRESS:
-         *completed = (SCIP_Real)treedata->progress;
-         break;
-      case COMPLETIONTYPE_GAP:
-         *completed = timeseriesGet(eventhdlrdata->timeseries[TSPOS_GAP]); /* gap is stored as 1 - gap */
-         break;
-      case COMPLETIONTYPE_SSG:
-         *completed = 1.0 - treedata->ssg->value; /* ssg is decreasing */
-         break;
-      default:
-         SCIPerrorMessage("Unsupported completion type '%c'\n", completiontype);
-         SCIPABORT();
-         return SCIP_PARAMETERWRONGVAL;
+      *completed = SCIPregforestPredict(eventhdlrdata->regforest, values);
+      break;
+
+   /* interpolate between ssg and progress */
+   case COMPLETIONTYPE_MONOREG:
+      *completed = eventhdlrdata->coefmonoprog * (SCIP_Real)treedata->progress +
+         eventhdlrdata->coefmonossg * (1.0 - treedata->ssg->value);
+      break;
+
+   case COMPLETIONTYPE_PROGRESS:
+      *completed = (SCIP_Real)treedata->progress;
+      break;
+
+   case COMPLETIONTYPE_GAP:
+      *completed = timeseriesGet(eventhdlrdata->timeseries[TSPOS_GAP]); /* gap is stored as 1 - gap */
+      break;
+
+   case COMPLETIONTYPE_SSG:
+      *completed = 1.0 - treedata->ssg->value; /* ssg is decreasing */
+      break;
+
+   default:
+      SCIPerrorMessage("Unsupported completion type '%c'\n", completiontype);
+      SCIPABORT();
+      return SCIP_PARAMETERWRONGVAL;
    }
    return SCIP_OKAY;
 }
-
 
 /** tree size estimation based on search tree completion */
 static
@@ -2301,6 +2309,7 @@ SCIP_Bool shouldApplyRestart(
    )
 {
    SCIP_Bool applyrestart = FALSE;
+
    switch (getRestartPolicy(eventhdlrdata))
    {
    case RESTARTPOLICY_ALWAYS:
@@ -2545,7 +2554,7 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolRestart)
 static
 SCIP_DECL_EVENTEXEC(eventExecRestart)
 {  /*lint --e{715}*/
-   SCIP_EVENTHDLRDATA*   eventhdlrdata;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_Bool isleaf;
    SCIP_EVENTTYPE eventtype;
    TREEDATA* treedata;
@@ -2685,7 +2694,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
    completed = MIN(completed, 1.0);
 
    if( treedata->progress >= 0.005 && completed > 0 )
-      SCIPinfoMessage(scip, file, "%7.2f%%", 100 * completed);
+      SCIPinfoMessage(scip, file, "%7.2f%%", 100.0 * completed);
    else
       SCIPinfoMessage(scip, file, " unknown");
 
@@ -2706,9 +2715,6 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
 
    SCIP_CALL( createTreedata(scip, &eventhdlrdata->treedata) );
 
-   /* use SCIPincludeEventhdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecRestart, eventhdlrdata) );
    assert(eventhdlr != NULL);
@@ -2776,8 +2782,7 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
 
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
-         NULL, NULL, NULL, NULL,
-         NULL, NULL, tableOutputRestart,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputRestart,
          NULL, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
 
    /* include time series into event handler */
@@ -2785,9 +2790,7 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
 
    /* include display column */
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME, DISP_DESC, DISP_HEADER, SCIP_DISPSTATUS_AUTO,
-         NULL,
-         NULL, NULL, NULL,
-         NULL, NULL, dispOutputCompleted,
+         NULL, NULL, NULL, NULL, NULL, NULL, dispOutputCompleted,
          NULL, DISP_WIDTH, DISP_PRIORITY, DISP_POSITION, DISP_STRIPLINE) );
 
    return SCIP_OKAY;
@@ -2813,6 +2816,7 @@ SCIP_Real SCIPgetTreesizeEstimation(
    }
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
 
    switch (eventhdlrdata->estimationparam)
    {
@@ -2846,8 +2850,7 @@ SCIP_Real SCIPgetTreesizeEstimation(
 
    /* tree profile estimation */
    case ESTIMMETHOD_TPROF:
-      return predictTotalSizeTreeprofile(scip, eventhdlrdata->treeprofile,
-         eventhdlrdata->treeprofile_minnodesperdepth);
+      return predictTotalSizeTreeprofile(scip, eventhdlrdata->treeprofile, eventhdlrdata->treeprofile_minnodesperdepth);
 
    /* Weighted backtrack estimation */
    case ESTIMMETHOD_WBE:
