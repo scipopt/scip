@@ -74,8 +74,7 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define RESTARTPOLICY_CHAR_COMPLETION   'c'
 #define RESTARTPOLICY_CHAR_ESTIMATION   'e'
 
-#define DEFAULT_REPORTFREQ                -1  /**< report frequency on estimation: -1: never, 0: always, k >= 1: k times evenly during search */
-#define DEFAULT_DES_USETRENDINLEVEL      TRUE /**< Should the trend be used in the level update? */
+#define DES_USETRENDINLEVEL              TRUE /**< Should the trend be used in the level update? */
 
 /* constants for the table estimation */
 #define TABLE_NAME              "restart"
@@ -110,13 +109,9 @@ typedef enum RestartPolicy RESTARTPOLICY;
 
 #define DES_ALPHA_OPENNODES 0.6
 #define DES_BETA_OPENNODES  0.15
-#define DEFAULT_USELEAFTS   TRUE                 /**< Use leaf nodes as basic observations for time series, or all nodes? */
 
 #define MAX_REGFORESTSIZE 10000000               /**< size limit (number of nodes) for regression forest */
 
-#define DEFAULT_REGFORESTFILENAME "-"            /**< default file name of user regression forest in RFCSV format */
-#define DEFAULT_COEFMONOPROG   0.3667            /**< coefficient of progress in monotone approximation of search completion */
-#define DEFAULT_COEFMONOSSG    0.6333            /**< coefficient of 1 - SSG in monotone approximation of search completion */
 
 
 /* computation of search completion */
@@ -127,7 +122,6 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define COMPLETIONTYPE_SSG       's'             /**< use SSG value as approximation of search tree completion */
 #define COMPLETIONTYPE_GAP       'g'             /**< use gap value as approximation of search tree completion */
 
-#define DEFAULT_COMPLETIONTYPE COMPLETIONTYPE_AUTO /**< default computation of search tree completion */
 
 /* tree size estimation method */
 #define ESTIMMETHOD_COMPL        'c'             /**< estimation based on projection of current search completion */
@@ -140,13 +134,10 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define ESTIMMETHOD_TPROF        't'             /**< estimation based on tree profile method */
 #define ESTIMMETHOD_WBE          'w'             /**< weighted backtrack estimation */
 
-#define DEFAULT_ESTIMMETHOD ESTIMMETHOD_COMPL    /**< default tree size estimation method */
 #define ESTIMMETHODS "ceglopstw"
 
 /* constants and default values for treeprofile parameters */
 #define TREEPRROFILE_MINSIZE    512               /**< minimum size (depth) that tree profile can hold */
-#define DEFAULT_TREEPROFILE_ENABLED FALSE         /**< Should the event handler collect data? */
-#define DEFAULT_TREEPROFILE_MINNODESPERDEPTH 20.0 /**< minimum average number of nodes at each depth before producing estimations */
 #define SSG_STARTPRIMBOUND  SCIP_INVALID          /**< initial value of primal bound used within SSG */
 
 /** double exponential smoothing data structure */
@@ -217,6 +208,23 @@ struct TreeProfile
 };
 
 typedef struct TreeProfile TREEPROFILE;
+
+/* default values of user parameters */
+#define DEFAULT_USELEAFTS            TRUE    /**< Use leaf nodes as basic observations for time series, or all nodes? */
+#define DEFAULT_REPORTFREQ           -1      /**< report frequency on estimation: -1: never, 0: always, k >= 1: k times evenly during search */
+#define DEFAULT_REGFORESTFILENAME    "-"     /**< default file name of user regression forest in RFCSV format */
+#define DEFAULT_COEFMONOPROG         0.3667  /**< coefficient of progress in monotone approximation of search completion */
+#define DEFAULT_COEFMONOSSG          0.6333  /**< coefficient of 1 - SSG in monotone approximation of search completion */
+#define DEFAULT_COMPLETIONTYPE       COMPLETIONTYPE_AUTO /**< default computation of search tree completion */
+#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_COMPL    /**< default tree size estimation method */
+#define DEFAULT_TREEPROFILE_ENABLED  FALSE   /**< Should the event handler collect data? */
+#define DEFAULT_TREEPROFILE_MINNODESPERDEPTH 20.0 /**< minimum average number of nodes at each depth before producing estimations */
+#define DEFAULT_RESTARTPOLICY        'n'     /**< default restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever */
+#define DEFAULT_RESTARTLIMIT          1      /**< default restart limit */
+#define DEFAULT_MINNODES             1000L   /**< minimum number of nodes before restart */
+#define DEFAULT_COUNTONLYLEAVES      FALSE   /**< should only leaves count for the minnodes parameter? */
+#define DEFAULT_RESTARTFACTOR        2.0     /**< factor by which the estimated number of nodes should exceed the current number of nodes */
+#define DEFAULT_HITCOUNTERLIM        50      /**< limit on the number of successive samples to really trigger a restart */
 
 /** event handler data */
 struct SCIP_EventhdlrData
@@ -1533,7 +1541,7 @@ void doubleexpsmoothInit(
    des->level = x1;
    des->trend = x1 - des->initialvalue;
 
-   des->usetrendinlevel = DEFAULT_DES_USETRENDINLEVEL;
+   des->usetrendinlevel = DES_USETRENDINLEVEL;
 
    return;
 }
@@ -2730,23 +2738,23 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
 
    /* add restart event handler parameters */
    SCIP_CALL( SCIPaddCharParam(scip, "restarts/restartpolicy", "restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever",
-         &eventhdlrdata->restartpolicyparam, FALSE, 'n', "acen", NULL, NULL) );
+         &eventhdlrdata->restartpolicyparam, FALSE, DEFAULT_RESTARTPOLICY, "acen", NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "restarts/estimation/method", "select estimation method",
          &eventhdlrdata->estimationparam, FALSE, DEFAULT_ESTIMMETHOD, ESTIMMETHODS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/restartlimit", "restart limit",
-         &eventhdlrdata->restartlimit, FALSE, 1, -1, INT_MAX, NULL, NULL) );
+         &eventhdlrdata->restartlimit, FALSE, DEFAULT_RESTARTLIMIT, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip, "restarts/minnodes", "minimum number of nodes before restart",
-         &eventhdlrdata->minnodes, FALSE, 1000L, -1L, SCIP_LONGINT_MAX, NULL, NULL) );
+         &eventhdlrdata->minnodes, FALSE, DEFAULT_MINNODES, -1L, SCIP_LONGINT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "restarts/countonlyleaves", "should only leaves count for the minnodes parameter?",
-         &eventhdlrdata->countonlyleaves, FALSE, FALSE, NULL, NULL) );
+         &eventhdlrdata->countonlyleaves, DEFAULT_COUNTONLYLEAVES, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "restarts/restartfactor",
          "factor by which the estimated number of nodes should exceed the current number of nodes",
-         &eventhdlrdata->restartfactor, FALSE, 2.0, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+         &eventhdlrdata->restartfactor, FALSE, DEFAULT_RESTARTFACTOR, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/coefmonoprog",
          "coefficient of progress in monotone approximation of search completion",
@@ -2757,7 +2765,7 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
          &eventhdlrdata->coefmonossg, FALSE, DEFAULT_COEFMONOSSG, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/hitcounterlim", "limit on the number of successive samples to really trigger a restart",
-         &eventhdlrdata->hitcounterlim, FALSE, 50, 1, INT_MAX, NULL, NULL) );
+         &eventhdlrdata->hitcounterlim, FALSE, DEFAULT_HITCOUNTERLIM, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "restarts/estimation/reportfreq",
          "report frequency on estimation: -1: never, 0:always, k >= 1: k times evenly during search",
@@ -2771,7 +2779,8 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
          &eventhdlrdata->completiontypeparam, FALSE, DEFAULT_COMPLETIONTYPE, "agpmrs", NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "restarts/estimation/treeprofile/enabled",
-         "should the event handler collect data?", &eventhdlrdata->treeprofile_enabled, FALSE, DEFAULT_TREEPROFILE_ENABLED, NULL, NULL) );
+         "should the event handler collect data?",
+         &eventhdlrdata->treeprofile_enabled, FALSE, DEFAULT_TREEPROFILE_ENABLED, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "restarts/estimation/treeprofile/minnodesperdepth",
          "minimum average number of nodes at each depth before producing estimations",
