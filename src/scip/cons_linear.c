@@ -10529,8 +10529,8 @@ SCIP_Bool consdataIsResidualIntegral(
    return TRUE;
 }
 
-/* check if lhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i 
- * check if rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i 
+/* check if lhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i
+ * check if rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i
  */
 static
 void calculateMinvalAndMaxval(
@@ -10580,6 +10580,7 @@ void calculateMinvalAndMaxval(
 static
 SCIP_RETCODE dualPresolve(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< linear constraint handler data */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  nfixedvars,         /**< pointer to count number of fixed variables */
@@ -10592,6 +10593,8 @@ SCIP_RETCODE dualPresolve(
    SCIP_Bool rhsexists;
    SCIP_Bool bestisint;
    SCIP_Bool bestislhs;
+   SCIP_Real minabsval;
+   SCIP_Real maxabsval;
    int bestpos;
    int i;
    int maxotherlocks;
@@ -10632,7 +10635,7 @@ SCIP_RETCODE dualPresolve(
     *   six nonzeros (two variables per substitution).
     * - If there at most four variables in the constraint, multi-aggregation in two additional constraints will remove
     *   six nonzeros (four from the constraint and the two entries of the multi-aggregated variable) and add
-    *   six nonzeros (three variables per substitution). God exists! 
+    *   six nonzeros (three variables per substitution). God exists!
     */
    if( consdata->nvars <= 2 )
       maxotherlocks = INT_MAX;
@@ -10647,16 +10650,32 @@ SCIP_RETCODE dualPresolve(
    if( lhsexists && rhsexists && maxotherlocks < INT_MAX )
       maxotherlocks++;
 
+   minabsval = SCIPinfinity(scip);
+   maxabsval = -1.0;
    for( i = 0; i < consdata->nvars && bestisint; ++i )
    {
       SCIP_VAR* var;
       SCIP_Bool isint;
       SCIP_Real val;
+      SCIP_Real absval;
       SCIP_Real obj;
       SCIP_Real lb;
       SCIP_Real ub;
       SCIP_Bool agglhs;
       SCIP_Bool aggrhs;
+
+      val = consdata->vals[i];
+      absval = REALABS(val);
+
+      /* calculate minimal and maximal absolute value */
+      if( absval < minabsval )
+         minabsval = absval;
+      if( absval > maxabsval )
+         maxabsval = absval;
+
+      /* do not try to multi aggregate, when numerical bad */
+      if( maxabsval / minabsval > conshdlrdata->maxmultiaggrquot )
+         return SCIP_OKAY;
 
       var = consdata->vars[i];
       isint = (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
@@ -10678,6 +10697,10 @@ SCIP_RETCODE dualPresolve(
       obj = SCIPvarGetObj(var);
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
+
+      /* due to numerics, if bounds are huge, we do not perform multi-aggregation */
+      if( SCIPisHugeValue(scip, ub) || SCIPisHugeValue(scip, lb) )
+         return SCIP_OKAY;
 
       /* lhs <= a_0 * x_0 + a_1 * x_1 + ... + a_{n-1} * x_{n-1} <= rhs
        *
@@ -16380,7 +16403,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          /* apply dual presolving for variables that appear in only one constraint */
          if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
          {
-            SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+            SCIP_CALL( dualPresolve(scip, conshdlrdata, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
          }
 
          /* check if an inequality is parallel to the objective function */
