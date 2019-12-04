@@ -2321,6 +2321,11 @@ SCIP_RETCODE emphasisParse(
       SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_OPTIMALITY, FALSE) );
       globalemphasis = TRUE;
    }
+   else if ( strcmp(paramname, "numerics") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_NUMERICS, FALSE) );
+      globalemphasis = TRUE;
+   }
 
    /* check whether rest of line is clean */
    if ( globalemphasis )
