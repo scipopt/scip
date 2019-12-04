@@ -211,6 +211,10 @@ SCIP_RETCODE freeBlock(
 
    block->ncoupling = 0;
 
+   if( block->subvars != NULL )
+   {
+      SCIPfreeBufferArray(block->problem->scip, &(block->subvars));
+   }
    if( block->subscip != NULL )
    {
       SCIP_CALL( SCIPfree(&block->subscip) );
@@ -252,7 +256,8 @@ SCIP_RETCODE initProblem(
 /** frees subproblem structure */
 static
 SCIP_RETCODE freeProblem(
-   PROBLEM**             problem             /**< pointer to problem to free */
+   PROBLEM**             problem,            /**< pointer to problem to free */
+   int                   nblocks             /**< number of blocks in decomposition */
    )
 {
    SCIP* scip;
@@ -265,13 +270,13 @@ SCIP_RETCODE freeProblem(
    assert(scip != NULL);
 
    /* free all blocks */
-   for( c = (*problem)->nblocks - 1; c >= 0; --c )
+   for( c = nblocks - 1; c >= 0; --c )
    {
       SCIP_CALL( freeBlock(&(*problem)->blocks[c]) );
    }
    if( (*problem)->blocks != NULL )
    {
-      SCIPfreeBlockMemoryArray(scip, &(*problem)->blocks, (*problem)->nblocks);
+      SCIPfreeBlockMemoryArray(scip, &(*problem)->blocks, nblocks);
    }
 
    /* free problem name */
@@ -407,18 +412,20 @@ SCIP_RETCODE blockCreateSubscip(
 
       SCIP_CALL( copyToSubscip(scip, block->subscip, name, conss, varmap, consmap, nconss, success) );
 
-      /* save variables of subscip (without slack variables) */
-      nsubscipvars = SCIPgetNOrigVars(block->subscip);
-      subscipvars = SCIPgetOrigVars(block->subscip);
-      SCIP_CALL( SCIPallocBufferArray(scip, &(block->subvars), nsubscipvars) );
-      block->nsubvars = nsubscipvars;
-      for( i = 0; i < nsubscipvars; i++ )
-         block->subvars[i] = subscipvars[i];
-
       if( !(*success) )
       {
          SCIP_CALL( SCIPfree(&block->subscip) );
          block->subscip = NULL;
+      }
+      else
+      {
+         /* save variables of subscip (without slack variables) */
+         nsubscipvars = SCIPgetNOrigVars(block->subscip);
+         subscipvars = SCIPgetOrigVars(block->subscip);
+         SCIP_CALL( SCIPallocBufferArray(scip, &(block->subvars), nsubscipvars) );
+         block->nsubvars = nsubscipvars;
+         for( i = 0; i < nsubscipvars; i++ )
+            block->subvars[i] = subscipvars[i];
       }
    }
    else
@@ -436,7 +443,8 @@ SCIP_RETCODE createAndSplitProblem(
    SCIP_CONS**           sortedconss,        /**< array of (checked) constraints sorted by blocks */
    int*                  blockstartsconss,   /**< start points of blocks in sortedconss array */
    int                   nblocks,            /**< number of blocks */
-   PROBLEM**             problem             /**< pointer to store problem structure */
+   PROBLEM**             problem,            /**< pointer to store problem structure */
+   SCIP_Bool*            success             /**< pointer to store whether the process was successful */
    )
 {
    BLOCK* block;
@@ -445,7 +453,8 @@ SCIP_RETCODE createAndSplitProblem(
    SCIP_CONS** blockconss;
    int nblockconss;
    int b;
-   SCIP_Bool success = TRUE;
+
+   (*success) = TRUE;
 
    /* init subproblem data structure */
    SCIP_CALL( initProblem(scip, problem, nblocks) );
@@ -454,12 +463,14 @@ SCIP_RETCODE createAndSplitProblem(
    /* hashmap mapping from original constraints to constraints in the sub-SCIPs (for performance reasons) */
    SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), blockstartsconss[nblocks]) );
 
-   /* loop over all blocks */
    for( b = 0; b < nblocks; b++ )
    {
       SCIP_CALL( initBlock(*problem) );
-      assert((*problem)->nblocks == b + 1);
+   }
 
+   /* loop over all blocks and create subscips */
+   for( b = 0; b < nblocks; b++ )
+   {
       block = &(*problem)->blocks[b];
 
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
@@ -469,21 +480,24 @@ SCIP_RETCODE createAndSplitProblem(
       nblockconss = blockstartsconss[b + 1] - blockstartsconss[b];
 
       /* build subscip for block */
-      SCIP_CALL( blockCreateSubscip(block, varmap, consmap, blockconss, nblockconss, &success) );
+      SCIP_CALL( blockCreateSubscip(block, varmap, consmap, blockconss, nblockconss, success) );
 
       SCIPhashmapFree(&varmap);
 
-      if( !success )
+      if( !(*success) )
          break;
    }
-   assert(nblocks == (*problem)->nblocks);
 
    SCIPhashmapFree(&consmap);
 
-   if( !success )
+   if( !(*success) )
    {
       /* free subproblem data structure since not all blocks could be copied */
-      SCIP_CALL( freeProblem(problem) );
+      if( block->subvars != NULL )
+      {
+         SCIPfreeBufferArray(block->problem->scip, &(block->subvars));
+      }
+      SCIP_CALL( freeProblem(problem, nblocks) );
    }
 
    return SCIP_OKAY;
@@ -794,6 +808,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Bool solved;
    SCIP_Bool doscaling;
    SCIP_Bool timeleft;
+   SCIP_Bool success;
    int ndecomps;
    int nconss;
    int nvars;
@@ -960,7 +975,13 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    }
 
    /* create blockproblems */
-   SCIP_CALL( createAndSplitProblem(scip, sortedconss, blockstartsconss, nblocks, &problem) );
+   SCIP_CALL( createAndSplitProblem(scip, sortedconss, blockstartsconss, nblocks, &problem, &success) );
+
+   if( !success )
+   {
+      SCIPdebugMsg(scip, "Some subscips could not be created successfully.\n");
+      goto TERMINATE;
+   }
 
    /* count linking variables */
    for( i = 0; i < nvars; i++ )
@@ -1539,7 +1560,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    if( solved )
    {
       SCIP_SOL* newsol;
-      SCIP_Bool success;
       SCIP_Real* blocksolvals;
 
       assert(increasedslacks == 0);
@@ -1681,14 +1701,6 @@ TERMINATE:
    if( linkvartoblocks != NULL )
       SCIPfreeBufferArray(scip, &linkvartoblocks);
 
-   if( problem != NULL )
-   {
-      for( b = problem->nblocks - 1; b >= 0; b-- )
-      {
-         SCIPfreeBufferArray(scip, &problem->blocks[b].subvars);
-      }
-   }
-
    if( blockstartsconss != NULL )
       SCIPfreeBufferArray(scip, &blockstartsconss);
 
@@ -1703,7 +1715,7 @@ TERMINATE:
 
    if( problem != NULL )
    {
-      SCIP_CALL( freeProblem(&problem) );
+      SCIP_CALL( freeProblem(&problem, nblocks) );
    }
 
    SCIPdebugMsg(scip, "Leave padm heuristic\n");
