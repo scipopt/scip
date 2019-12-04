@@ -3933,10 +3933,23 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
       /* huge val is used as a threshold in multiaggregation; decreasing it leads to safer multiaggregations */
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "numerics/hugeval", 1e+10, quiet) );
-      /* author bzfhende
-       *
-       * TODO fill in some parameters from the related issues. also explain in a comment why this is useful
-       */
+      /* The higher the Markowitz Parameter is, more sparse pivots will be ignored and the numerically
+      more stable ones will be used as pivot */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "lp/minmarkowitz", 0.999 , quiet) );
+      /* Added parameters as suggested here: https://git.zib.de/integer/scip/issues/2002#note_92716 */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/fastmip", 0, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/scaling", 2, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "lp/presolving", FALSE, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/refactorinterval", 20, quiet) );
+      /* To prevent numerically bad multiaggregations in dualPresolve() and convertLongEquality() set maxmultiaggrqout small*/
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/linear/maxmultiaggrquot", 10, quiet) );
+      /* When upgrading constr with knapsack/setppc causes problems */
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/knapsack" , 0, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/setppc" , 0, quiet) );
+      /* For numerical stability turn rangedrowpropagation, simplifyInequalities and extractCliques off */
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/rangedrowpropagation" , 0, quiet) );
+      /* SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/extractcliques" , 0, quiet) ); */
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities" , 0, quiet) );
 
       break;
 
