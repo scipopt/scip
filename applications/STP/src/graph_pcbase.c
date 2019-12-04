@@ -1204,8 +1204,7 @@ void graph_pc_enforcePseudoTerm(
 
 
 /** Enforces non-leaf terminal without deleting edges.
- *  I.e. the terminal is part of any optimal solution.
- *  todo don't use anymore! */
+ *  I.e. the terminal is part of any optimal solution. */
 void graph_pc_enforceNonLeafTerm(
    SCIP*           scip,               /**< SCIP data */
    GRAPH*          graph,              /**< graph */
@@ -1220,13 +1219,19 @@ void graph_pc_enforceNonLeafTerm(
    {
       /* make it a proper fixed terminal */
       graph_pc_knotToFixedTermProperty(graph, nonleafterm);
+
+      if( graph_pc_isPc(graph) )
+      {
+         assert(graph->cost_org_pc);
+
+         for( int e = graph->inpbeg[nonleafterm]; e != EAT_LAST; e = graph->ieat[e] )
+            graph->cost[e] = graph->cost_org_pc[e];
+      }
    }
    else if( SCIPisLT(scip, graph->prize[nonleafterm], BLOCKED) )
    {
-#if 0
       /* don't change because of weird prize sum in reduce_base.c */
-      graph->prize[nonleafterm] = BLOCKED_MINOR; // todo quite hacky, because it destroys the invariant of non-leaf terms!
-#endif
+      // graph->prize[nonleafterm] = BLOCKED_MINOR; // todo quite hacky, because it destroys the invariant of non-leaf terms!
    }
 }
 

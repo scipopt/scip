@@ -2057,8 +2057,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIP_PROBDATA* probdata;
    SCIP_HEURDATA* heurdata;
    GRAPH* graph;
-   SCIP_Real* cost;
-   SCIP_Real* costrev;
    int* soledges;
    int runs;
    int nedges;
@@ -2129,14 +2127,12 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    nedges = graph->edges;
 
    /* allocate memory */
-   SCIP_CALL(SCIPallocBufferArray(scip, &cost, nedges));
-   SCIP_CALL(SCIPallocBufferArray(scip, &costrev, nedges));
    SCIP_CALL(SCIPallocBufferArray(scip, &soledges, nedges));
 
    *result = SCIP_DIDNOTFIND;
 
    /* call the actual heuristic */
-   SCIP_CALL( SCIPStpHeurTMRunLP(scip, graph, heur, soledges, runs, cost, costrev, &success) );
+   SCIP_CALL( SCIPStpHeurTMRunLP(scip, graph, heur, soledges, runs, &success) );
 
    if( success )
    {
@@ -2167,8 +2163,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
    heurdata->nlpiterations = SCIPgetNLPIterations(scip);
    SCIPfreeBufferArray(scip, &soledges);
-   SCIPfreeBufferArray(scip, &costrev);
-   SCIPfreeBufferArray(scip, &cost);
 
    return SCIP_OKAY;
 }
@@ -3132,30 +3126,27 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    SCIP_HEUR*            heur,               /**< heuristic or NULL */
-   int*                  result,             /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   int*                  result,             /**< (uninitialized) array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    int                   runs,               /**< number of runs */
-   SCIP_Real*            cost,               /**< arc costs (uninitialized) */
-   SCIP_Real*            costrev,            /**< reversed arc costs (uninitialized) */
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
    )
 {
-   SCIP_VAR** vars;
-   SCIP_HEURDATA* heurdata;
-   SCIP_Real* xval;
+   SCIP_VAR** vars = NULL;
+   SCIP_HEURDATA* heurdata = NULL;
+   SCIP_Real* xval = NULL;
    SCIP_Real* nodepriority = NULL;
    SCIP_Real* prize = NULL;
+   SCIP_Real* cost = NULL;
+   SCIP_Real* costrev = NULL;
    SCIP_Real maxcost = 0.0;
-   const int nedges = graph->edges;
-   const int nnodes = graph->knots;
-   int save;
    SCIP_Real randupper;
    SCIP_Real randlower;
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
+   int save;
 
    assert(scip != NULL);
-   assert(graph != NULL);
    assert(result != NULL);
-   assert(cost != NULL);
-   assert(costrev != NULL);
    assert(success != NULL);
 
    assert(SCIPfindHeur(scip, "TM") != NULL);
@@ -3166,6 +3157,9 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
 
    randupper = SCIPrandomGetReal(heurdata->randnumgen, 1.1, 2.5);
    randlower = SCIPrandomGetReal(heurdata->randnumgen, 1.1, randupper);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
 
    /* LP was not solved */
    if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
@@ -3259,6 +3253,9 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
 
    SCIPfreeBufferArrayNull(scip, &prize);
    SCIPfreeBufferArrayNull(scip, &nodepriority);
+
+   SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &cost);
 
    return SCIP_OKAY;
 }

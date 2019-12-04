@@ -801,7 +801,7 @@ int reduceWithEdgeFixingBounds(
    const SCIP_Bool solgiven = (result != NULL);
 
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
-   assert(!solgiven || upperbound == getSolObj(scip, graph, result));
+   assert(!solgiven || SCIPisEQ(scip, upperbound, getSolObj(scip, graph, result)));
 
    for( int k = 0; k < nnodes; k++ )
    {

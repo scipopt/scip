@@ -52,6 +52,7 @@
 #define BRANCH_STP_ON_DEGREE  3
 
 
+
 /*
  * Data structures
  */
@@ -158,7 +159,7 @@ void applyBranchHistoryToGraph(
 
          if( !pcmw )
          {
-            graph_knot_chg(graph, k, 0);
+            graph_knot_chg(graph, k, STP_TERM);
             continue;
          }
 
@@ -281,54 +282,59 @@ SCIP_RETCODE selectBranchingVertexBySol(
    )
 {
    GRAPH* graph = SCIPprobdataGetGraph2(scip);
-   SCIP_Real* cost = NULL;
    SCIP_Real* costorg = NULL;
-   SCIP_Real* costrev = NULL;
+   SCIP_Real* costorg_pc = NULL;
    SCIP_Real* prizeorg = NULL;
    int* soledges = NULL;
    int* nodestatenew = NULL;
    int* termorg = NULL;
    int* term2edgeorg = NULL;
-   SCIP_Bool pcmw;
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
+   const int ntermsorg = graph->terms;
    SCIP_Bool success;
-   int nedges;
-   int nnodes;
-   int ntermsorg;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
-   assert(vertex != NULL);
+   assert(scip && vertex);
+   assert(!pcmw || graph->extended);
+   assert(graph_valid(scip, graph));
+
    *vertex = UNKNOWN;
 
    /* check whether LP solution is available */
    if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
-   assert(graph);
-   assert(!graph_pc_isPcMw(graph) || graph->extended);
-
-   pcmw = graph_pc_isPcMw(graph);
-   nedges = graph->edges;
-   nnodes = graph->knots;
-   ntermsorg = graph->terms;
-
    SCIP_CALL( SCIPallocBufferArray(scip, &costorg, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &soledges, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodestatenew, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &termorg, nnodes) );
 
+   BMScopyMemoryArray(costorg, graph->cost, nedges);
+   BMScopyMemoryArray(termorg, graph->term, nnodes);
+
    if( pcmw )
    {
       assert(graph->prize && graph->term2edge);
+
+      if( graph_pc_isPc(graph) )
+      {
+         assert(graph->cost_org_pc);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &costorg_pc, nedges) );
+         BMScopyMemoryArray(costorg_pc, graph->cost_org_pc, nedges);
+      }
+      else
+      {
+         assert(!graph->cost_org_pc);
+      }
+
       SCIP_CALL( SCIPallocBufferArray(scip, &prizeorg, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &term2edgeorg, nnodes) );
 
       BMScopyMemoryArray(prizeorg, graph->prize, nnodes);
       BMScopyMemoryArray(term2edgeorg, graph->term2edge, nnodes);
    }
-
-   BMScopyMemoryArray(costorg, graph->cost, nedges);
-   BMScopyMemoryArray(termorg, graph->term, nnodes);
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -348,7 +354,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
    applyBranchHistoryToGraph(scip, nodestatenew, graph);
 
    /* compute locally feasible solution (SPH + local) */
-   SCIP_CALL( SCIPStpHeurTMRunLP(scip, graph, NULL, soledges, BRANCHRULE_TMRUNS, cost, costrev, &success) );
+   SCIP_CALL( SCIPStpHeurTMRunLP(scip, graph, NULL, soledges, BRANCHRULE_TMRUNS, &success) );
    assert(success);
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, soledges) );
@@ -366,6 +372,9 @@ SCIP_RETCODE selectBranchingVertexBySol(
    {
       BMScopyMemoryArray(graph->prize, prizeorg, nnodes);
       BMScopyMemoryArray(graph->term2edge, term2edgeorg, nnodes);
+
+      if( graph_pc_isPc(graph) )
+         BMScopyMemoryArray(graph->cost_org_pc, costorg_pc, nedges);
    }
 
    assert(graph_sol_valid(scip, graph, soledges));
@@ -379,9 +388,9 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
       /* use cost array to store solution */
       for( int e = 0; e < nvars; e++ )
-         cost[e] = (CONNECT == soledges[e]) ? 1.0 : 0.0;
+         costorg[e] = (CONNECT == soledges[e]) ? 1.0 : 0.0;
 
-      SCIP_CALL( SCIPprobdataAddNewSol(scip, cost, sol, NULL, &success) );
+      SCIP_CALL( SCIPprobdataAddNewSol(scip, costorg, sol, NULL, &success) );
       SCIPdebugMessage("solution added? %d \n", success);
    }
 
@@ -389,18 +398,14 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
    SCIPfreeBufferArrayNull(scip, &term2edgeorg);
    SCIPfreeBufferArrayNull(scip, &prizeorg);
+   SCIPfreeBufferArrayNull(scip, &costorg_pc);
    SCIPfreeBufferArray(scip, &termorg);
    SCIPfreeBufferArray(scip, &nodestatenew);
    SCIPfreeBufferArray(scip, &soledges);
-   SCIPfreeBufferArray(scip, &costrev);
-   SCIPfreeBufferArray(scip, &cost);
    SCIPfreeBufferArray(scip, &costorg);
 
-   if( graph->terms != ntermsorg )
-   {
-      printf("wrong terminal number %d != %d", graph->terms, ntermsorg);
-      return SCIP_ERROR;
-   }
+   assert(graph->terms == ntermsorg);
+   assert(graph_valid(scip, graph));
 
    return SCIP_OKAY;
 }
@@ -686,22 +691,30 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
 
    branchruletype = branchruledata->branchtype;
 
-   /* get vertex to branch on */
    if( graph_pc_isPcMw(g) && (branchruletype == BRANCH_STP_ON_LP || branchruletype == BRANCH_STP_ON_LP2) )
+   {
+      branchruletype = BRANCH_STP_ON_SOL; // todo do this properly
+   }
+
+   /* get vertex to branch on */
+   if( branchruletype == BRANCH_STP_ON_LP )
+   {
+      SCIP_CALL( selectBranchingVertexByLp(scip, &branchvertex, g) );
+   }
+   else if( branchruletype == BRANCH_STP_ON_LP2 )
+   {
+      SCIP_CALL( selectBranchingVertexByLp2Flow(scip, &branchvertex, g) );
+   }
+   else if( branchruletype == BRANCH_STP_ON_SOL )
    {
       SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
    }
 
-   if( branchruletype == BRANCH_STP_ON_LP )
-      SCIP_CALL( selectBranchingVertexByLp(scip, &branchvertex, g) );
-   else if( branchruletype == BRANCH_STP_ON_LP2 )
-      SCIP_CALL( selectBranchingVertexByLp2Flow(scip, &branchvertex, g) );
-   else if( branchruletype == BRANCH_STP_ON_SOL )
-      SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
-
    /* fall-back strategy */
    if( branchvertex == UNKNOWN )
+   {
       SCIP_CALL( selectBranchingVertexByDegree(scip, &branchvertex, g) );
+   }
 
    /* we should only have terminals in this case */
    if( branchvertex == UNKNOWN )

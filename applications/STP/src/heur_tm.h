@@ -82,8 +82,6 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    SCIP_HEUR*            heur,               /**< heuristic or NULL */
    int*                  result,             /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    int                   runs,               /**< number of runs */
-   SCIP_Real*            cost,               /**< arc costs (uninitialized) */
-   SCIP_Real*            costrev,            /**< reversed arc costs (uninitialized) */
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
    );
 
