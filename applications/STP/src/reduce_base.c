@@ -481,10 +481,8 @@ SCIP_RETCODE level0RpcRmwInfeas(
          }
          else
          {
-            const int pterm = graph_pc_getTwinTerm(g, k);
-
             assert(g->term2edge[k] >= 0);
-            assert(!gmark[pterm]);
+            assert(!gmark[graph_pc_getTwinTerm(g, k)]);
 
             graph_pc_deleteTerm(scip, g, k, offsetp);
          }

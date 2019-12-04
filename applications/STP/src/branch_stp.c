@@ -291,7 +291,9 @@ SCIP_RETCODE selectBranchingVertexBySol(
    int* term2edgeorg = NULL;
    const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
+#ifndef NDEBUG
    const int ntermsorg = graph->terms;
+#endif
    SCIP_Bool success;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 

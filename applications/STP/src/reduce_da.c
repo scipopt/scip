@@ -149,7 +149,6 @@ SCIP_RETCODE computeSteinerTreeTM(
 )
 {
    SCIP_Bool success;
-   const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
    const SCIP_Bool directed = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
    const int nnodes = graph->knots;
    SCIP_Real obj;
@@ -158,7 +157,7 @@ SCIP_RETCODE computeSteinerTreeTM(
    int runstm = BND_TMHEUR_NRUNS / (directed ? 1 : 5);
    int* startstm = NULL;
 
-   assert(!rpc || !graph->extended);
+   assert(graph->stp_type != STP_RPCSPG || !graph->extended);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &startstm, nnodes) );
 
@@ -2238,9 +2237,8 @@ SCIP_RETCODE reduce_da(
        //     printf("newly fixedFIRST =%d \n", extfixed);
          }
 
-         if( extended && 0 )
+         if( extended )
          {
-            int todo;
             int extfixed;
             REDCOST redcostdata = { .redEdgeCost = cost, .rootToNodeDist = pathdist, .nodeTo3TermsPaths = vnoi,
                .nodeTo3TermsBases = vbase, .cutoff = minpathcost, .redCostRoot = daroot};
