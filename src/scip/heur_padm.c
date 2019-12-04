@@ -131,7 +131,7 @@ typedef struct blockinfo
 /** returns TRUE iff both keys are equal */
 static
 SCIP_DECL_HASHKEYEQ(indexesEqual)
-{
+{  /*lint --e{715}*/
    BLOCKINFO* binfo1;
    BLOCKINFO* binfo2;
 
@@ -148,7 +148,7 @@ SCIP_DECL_HASHKEYEQ(indexesEqual)
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(indexesHashval)
-{ /*lint --e{715}*/
+{  /*lint --e{715}*/
    BLOCKINFO* binfo;
    binfo = (BLOCKINFO*) key;
 
@@ -719,20 +719,25 @@ SCIP_RETCODE scalePenalties(
 
 /** returns the available time limit that is left */
 static
-SCIP_Real getTimeLeft(
-   SCIP*                 scip                /**< SCIP data structure */
+SCIP_RETCODE getTimeLeft(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            time                /**< pointer to store remaining time */
    )
 {
    SCIP_Real timelim;
+   SCIP_Real solvingtime;
 
    assert(scip != NULL);
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
+   solvingtime = SCIPgetSolvingTime(scip);
 
    if( !SCIPisInfinity(scip, timelim) )
-      return MAX(0.0, (timelim - SCIPgetSolvingTime(scip)));
+      *time = MAX(0.0, (timelim - solvingtime));
    else
-      return SCIPinfinity(scip);
+      *time = SCIPinfinity(scip);
+
+   return SCIP_OKAY;
 }
 
 /*
@@ -773,7 +778,7 @@ SCIP_DECL_HEURFREE(heurFreePADM)
 
 /** execution method of primal heuristic */
 static SCIP_DECL_HEUREXEC(heurExecPADM)
-{ /*lint --e{715}*/
+{  /*lint --e{715}*/
    char name[SCIP_MAXSTRLEN];
    char info[SCIP_MAXSTRLEN];
    SCIP_HEURDATA* heurdata;
@@ -799,11 +804,12 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Real maxpenalty;
    SCIP_Real slackthreshold;
    SCIP_Real memory; /* in MB */
+   SCIP_Real timeleft;
    SCIP_STATUS status;
    SCIP_Bool solutionsdiffer;
    SCIP_Bool solved;
    SCIP_Bool doscaling;
-   SCIP_Bool timeleft;
+   SCIP_Bool istimeleft;
    SCIP_Bool success;
    int ndecomps;
    int nconss;
@@ -1033,7 +1039,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    }
 
    /* check whether there is enough time left */
-   if( getTimeLeft(scip) <= 0 )
+   SCIP_CALL( getTimeLeft(scip, &timeleft) );
+   if( timeleft <= 0 )
    {
       SCIPdebugMsg(scip, "no time left\n");
       goto TERMINATE;
@@ -1176,8 +1183,10 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
                {
                   SCIP_Real initval;
+                  SCIP_Real lb;
 
-                  initval = MAX(SCIPvarGetLbOriginal(binfo->linkvar), 0.0);
+                  lb = SCIPvarGetLbOriginal(binfo->linkvar);
+                  initval = MAX(lb, 0.0);
                   
                   SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
                                                    name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, initval, initval) );
@@ -1239,7 +1248,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    /* ------------------------------------------------------------------------------------------------- */
 
    /* check whether there is enough time left */
-   if( getTimeLeft(scip) <= 0 )
+   SCIP_CALL( getTimeLeft(scip, &timeleft) );
+   if( timeleft <= 0 )
    {
       SCIPdebugMsg(scip, "no time left\n");
       goto TERMINATE;
@@ -1252,17 +1262,17 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    increasedslacks = 0;
    (void) SCIPsnprintf(info, SCIP_MAXSTRLEN, "-");
    solved = FALSE;
-   timeleft = TRUE;
+   istimeleft = TRUE;
 
    /* Penalty loop */
-   while( !solved && piter < heurdata->penaltyiterations && timeleft)
+   while( !solved && piter < heurdata->penaltyiterations && istimeleft)
    {
       piter++;
       solutionsdiffer = TRUE;
       aiter = 0;
 
       /*  Alternating direction method loop */
-      while( solutionsdiffer && aiter < heurdata->admiterations && timeleft)
+      while( solutionsdiffer && aiter < heurdata->admiterations && istimeleft)
       {
          aiter++;
          solutionsdiffer = FALSE;
@@ -1353,7 +1363,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                   if( status == SCIP_STATUS_TIMELIMIT )
                   {
                      SCIPdebugMsg(scip, "Block reached time limit with at least one feasible solution.\n");
-                     timeleft = FALSE;
+                     istimeleft = FALSE;
                   }
 
                   for( i = 0; i < blocktolinkvars[b].size; i++ )
