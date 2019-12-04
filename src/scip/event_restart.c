@@ -341,9 +341,9 @@ char* real2String(
    )
 {
    if( num == SCIP_INVALID )/*lint !e777*/
-      (void) sprintf(buf, "-");
+      (void) SCIPsnprintf(buf, 1, "-");
    else
-      (void) sprintf(buf, "%11.*f", digits, num);
+      (void) SCIPsnprintf(buf, SCIP_MAXSTRLEN, "%11.*f", digits, num);
 
    return buf;
 }
@@ -414,12 +414,10 @@ SCIP_Real SCIPregforestPredict(
    return value / (SCIP_Real)(regforest->ntrees);
 }
 
-/* author bzfhende
+/** read a regression forest from an rfcsv file
  *
- * TODO pimp this parser to fail if the regression forest dimension is wrong, or other unexpected things happen
+ *  TODO improve this parser to better capture wrong user input, e.g., if the dimension is wrong
  */
-
-/** read a regression forest from an rfcsv file */
 static
 SCIP_RETCODE SCIPregforestFromFile(
    SCIP_REGFOREST**      regforest,          /**< regression forest data structure */
@@ -466,10 +464,7 @@ SCIP_RETCODE SCIPregforestFromFile(
 
    SCIPdebugMessage("Read ntrees=%d, dim=%d, size=%d (return value %d)\n", ntrees, dim, size, sscanret);
 
-   /* author bzfhende
-    *
-    * check if the tree is too big, or numbers are negative
-    */
+   /* check if the tree is too big, or numbers are negative */
    if( size > MAX_REGFORESTSIZE )
    {
       error = TRUE;
@@ -550,7 +545,7 @@ SCIP_RETCODE SCIPregforestFromFile(
 
 /** compare two tree profile statistics for equality */
 static
-SCIP_Bool isEqualTreeprofilestats(
+SCIP_Bool isEqualTreeprofileStats(
    TREEPROFILESTATS*     stats,              /**< first tree profile statistics */
    TREEPROFILESTATS*     other               /**< other tree profile statistics */
    )
@@ -566,7 +561,7 @@ SCIP_Bool isEqualTreeprofilestats(
 
 /** copy source tree profile into destination */
 static
-void copyTreeprofilestats(
+void copyTreeprofileStats(
    TREEPROFILESTATS*     dest,               /**< destination tree profile statistics */
    TREEPROFILESTATS*     src                 /**< source tree profile statistics */
    )
@@ -582,7 +577,7 @@ void copyTreeprofilestats(
 
 /** reset tree profile statistics */
 static
-void resetTreeprofilestats(
+void resetTreeprofileStats(
    TREEPROFILESTATS*     treeprofilestats    /**< tree profile statistics */
    )
 {
@@ -643,8 +638,8 @@ SCIP_RETCODE createTreeprofile(
    (*treeprofile)->profilesize = 0;
    SCIP_CALL( extendMemoryTreeprofile(scip, *treeprofile, TREEPRROFILE_MINSIZE) );
 
-   resetTreeprofilestats(&(*treeprofile)->stats);
-   resetTreeprofilestats(&(*treeprofile)->lastestimatestats);
+   resetTreeprofileStats(&(*treeprofile)->stats);
+   resetTreeprofileStats(&(*treeprofile)->lastestimatestats);
 
    (*treeprofile)->lastestimate = -1.0;
 
@@ -745,7 +740,7 @@ SCIP_Real predictTotalSizeTreeprofile(
    )
 {
    SCIP_Real estimate;
-   SCIP_Real gamma_prod;
+   SCIP_Real growthfac;
    int d;
    int waist;
 
@@ -758,16 +753,17 @@ SCIP_Real predictTotalSizeTreeprofile(
       return -1.0;
 
    /* reuse previous estimation if tree profile hasn't changed */
-   if( isEqualTreeprofilestats(&treeprofile->lastestimatestats, &treeprofile->stats) )
+   if( isEqualTreeprofileStats(&treeprofile->lastestimatestats, &treeprofile->stats) )
    {
       SCIPdebugMsg(scip, "Reusing previous estimation result %g\n", treeprofile->lastestimate);
 
       return treeprofile->lastestimate;
    }
 
+   /* compute the (depth of the) waist as convex combination between the minimum and maximum waist depths */
    waist = (2 * treeprofile->stats.maxwaistdepth + treeprofile->stats.minwaistdepth) / 3;
 
-   gamma_prod = 2;
+   growthfac = 2;
    estimate = 1;
 
    /* loop over all full levels */
@@ -775,8 +771,8 @@ SCIP_Real predictTotalSizeTreeprofile(
    {
       SCIP_Real gamma_d = 2.0;
 
-      estimate += gamma_prod;
-      gamma_prod *= gamma_d;
+      estimate += growthfac;
+      growthfac *= gamma_d;
    }
 
    /* loop until the waist is reached */
@@ -785,8 +781,8 @@ SCIP_Real predictTotalSizeTreeprofile(
       SCIP_Real gamma_d = 2.0 - (d - treeprofile->stats.lastfulldepth + 1.0)/(waist - treeprofile->stats.lastfulldepth + 1.0);
 
       assert(1.0 <= gamma_d && gamma_d <= 2.0);
-      estimate += gamma_prod;
-      gamma_prod *= gamma_d;
+      estimate += growthfac;
+      growthfac *= gamma_d;
    }
 
    /* loop over the remaining levels */
@@ -795,12 +791,12 @@ SCIP_Real predictTotalSizeTreeprofile(
       SCIP_Real gamma_d = (1.0 - (d - waist + 1.0)/(treeprofile->stats.maxdepth - waist + 1.0));
       assert(0.0 <= gamma_d && gamma_d <= 1.0);
 
-      estimate += gamma_prod;
-      gamma_prod *= gamma_d;
+      estimate += growthfac;
+      growthfac *= gamma_d;
    }
 
    /* copy tree profile statistics */
-   copyTreeprofilestats(&treeprofile->lastestimatestats, &treeprofile->stats);
+   copyTreeprofileStats(&treeprofile->lastestimatestats, &treeprofile->stats);
 
    treeprofile->lastestimate = estimate;
 
@@ -1496,7 +1492,7 @@ char* treedataPrint(
    char*                 strbuf              /**< string buffer */
    )
 {
-   sprintf(strbuf,
+   (void )SCIPsnprintf(strbuf, SCIP_MAXSTRLEN,
       "Tree Data: %" SCIP_LONGINT_FORMAT " nodes ("
       "%" SCIP_LONGINT_FORMAT " visited, "
       "%" SCIP_LONGINT_FORMAT " inner, "
@@ -2383,9 +2379,11 @@ char* printReport(
 
    /* print report number */
    if( reportnum > 0 )
-      ptr += sprintf(ptr, "Report %d\nTime Elapsed: %.2f\n", reportnum, SCIPgetSolvingTime(scip));
+      ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "Report %d\nTime Elapsed: %.2f\n", reportnum, SCIPgetSolvingTime(scip));
 
-   ptr += sprintf(ptr, "Estim. Tree Size   :%11" SCIP_LONGINT_FORMAT "\n", (SCIP_Longint)SCIPgetTreesizeEstimation(scip));
+   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
+            "Estim. Tree Size   :%11" SCIP_LONGINT_FORMAT "\n",
+            (SCIP_Longint)SCIPgetTreesizeEstimation(scip));
 
    SCIP_CALL_ABORT( getSearchCompletion(eventhdlrdata, &completed) );
 
@@ -2393,7 +2391,7 @@ char* printReport(
    completed = MAX(0.0, completed);
 
    /* print tree data */
-   ptr += sprintf(ptr,
+   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
          "%-19s: %" SCIP_LONGINT_FORMAT " nodes ("
          "%" SCIP_LONGINT_FORMAT " visited, "
          "%" SCIP_LONGINT_FORMAT " inner, "
@@ -2411,12 +2409,13 @@ char* printReport(
          );
 
    /* print estimations */
-   ptr += sprintf(ptr, "Estimations        : %10s %10s %10s %10s %10s", "estim", "value", "trend", "resolution", "smooth");
-   ptr += sprintf(ptr, "\n");
+   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "Estimations        : %10s %10s %10s %10s %10s",
+            "estim", "value", "trend", "resolution", "smooth");
+   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "\n");
 
-   ptr += sprintf(ptr, "  wbe              : %10.0f %10s %10s %10s %10s\n",
+   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  wbe              : %10.0f %10s %10s %10s %10s\n",
             getTreedataWBE(eventhdlrdata->treedata), "-", "-", "-", "-");
-   ptr += sprintf(ptr, "  tree-profile     : %10.0f %10s %10s %10s %10s\n",
+   ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  tree-profile     : %10.0f %10s %10s %10s %10s\n",
             predictTotalSizeTreeprofile(scip, eventhdlrdata->treeprofile, eventhdlrdata->treeprofile_minnodesperdepth),
             "-", "-", "-", "-");
 
@@ -2432,7 +2431,7 @@ char* printReport(
       trend = doubleexpsmoothGetTrend(&ts->des);
       smoothestim = timeseriesGetSmoothEstimation(ts);
 
-      ptr += sprintf(ptr, "  %-17s: %10.0f %10.5f %10s %10d %10s\n",
+      ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  %-17s: %10.0f %10.5f %10s %10d %10s\n",
             timeseriesGetName(ts),
             timeseriesEstimate(ts, eventhdlrdata->treedata),
             timeseriesGet(ts),
@@ -2442,7 +2441,7 @@ char* printReport(
    }
 
    if( reportnum > 0 )
-      (void) sprintf(ptr, "End of Report %d\n", reportnum);
+      (void) SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "End of Report %d\n", reportnum);
 
    return strbuf;
 }
@@ -2622,7 +2621,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s\n", printReport(scip, eventhdlrdata, strbuf, ++eventhdlrdata->nreports));
 
          if( eventhdlrdata->reportfreq > 0 )
-            eventhdlrdata->proglastreport = 1 / (SCIP_Real)eventhdlrdata->reportfreq * (int)(treedata->progress * eventhdlrdata->reportfreq);
+            eventhdlrdata->proglastreport = 1 / (SCIP_Real)eventhdlrdata->reportfreq * SCIPfloor(scip, (treedata->progress * eventhdlrdata->reportfreq));
          else
             eventhdlrdata->proglastreport = (SCIP_Real)treedata->progress;
       }
