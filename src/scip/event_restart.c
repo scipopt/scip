@@ -333,9 +333,9 @@ char* real2String(
    )
 {
    if( num == SCIP_INVALID )/*lint !e777*/
-      sprintf(buf, "-");
+      (void) sprintf(buf, "-");
    else
-      sprintf(buf, "%11.*f", digits, num);
+      (void) sprintf(buf, "%11.*f", digits, num);
 
    return buf;
 }
@@ -1033,7 +1033,7 @@ SCIP_RETCODE subtreesumgapSplit(
    if( addfocusnode )
    {
       assert(SCIPgetFocusNode(scip) != NULL);
-      SCIP_CALL( subtreesumgapStoreNode(scip, ssg, SCIPgetFocusNode(scip), label++) );
+      SCIP_CALL( subtreesumgapStoreNode(scip, ssg, SCIPgetFocusNode(scip), label) );
    }
 
    return SCIP_OKAY;
@@ -2218,7 +2218,6 @@ RESTARTPOLICY getRestartPolicy(
 /** check conditions before applying restart policy */
 static
 SCIP_Bool checkConditions(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
@@ -2616,7 +2615,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       return SCIP_OKAY;
 
    /* check if all conditions are met such that the event handler should run */
-   if( ! checkConditions(scip, eventhdlrdata) )
+   if( ! checkConditions(eventhdlrdata) )
       return SCIP_OKAY;
 
    /* test if a restart should be applied */
