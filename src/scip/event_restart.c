@@ -190,8 +190,8 @@ struct TreeProfileStats
 {
    int                   maxdepth;           /**< maximum node depth encountered */
    int                   lastfulldepth;      /**< deepest layer for which all nodes have been explored */
-   int                   minwaistdepth;      /**< minimum depth of the waist, ie the widest part of the tree */
-   int                   maxwaistdepth;      /**< maximum depth of the waist, ie the widest part of the tree */
+   int                   minwaistdepth;      /**< minimum depth of the waist, i.e. the widest part of the tree */
+   int                   maxwaistdepth;      /**< maximum depth of the waist, i.e. the widest part of the tree */
 };
 
 typedef struct TreeProfileStats TREEPROFILESTATS;
@@ -273,7 +273,7 @@ struct TreeData
 struct SubtreeSumGap
 {
    SCIP_Real             value;              /**< the current subtree sum gap */
-   SCIP_HASHMAP*         nodes2info;      /**< map between nodes and their subtree indices */
+   SCIP_HASHMAP*         nodes2info;         /**< map between nodes and their subtree indices */
    SCIP_PQUEUE**         subtreepqueues;     /**< array of priority queues, one for each subtree */
    int                   nsubtrees;          /**< the current number n of subtrees labeled 0 .. n - 1 */
    SCIP_Real             scalingfactor;      /**< the current scaling factor */
@@ -1334,7 +1334,7 @@ SCIP_RETCODE subtreesumgapComputeFromScratchEfficiently(
    return SCIP_OKAY;
 }
 
-/** update the subtree sum gap after a node event (branching or deletion of a node */
+/** update the subtree sum gap after a node event (branching or deletion of a node) */
 static
 SCIP_RETCODE subtreesumGapUpdate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1518,10 +1518,10 @@ void doubleexpsmoothReset(
    SCIP_Real             initialvalue        /**< the initial value */
    )
 {
-  des->n = 0;
-  des->level = SCIP_INVALID;
-  des->trend = SCIP_INVALID;
-  des->initialvalue = initialvalue;
+   des->n = 0;
+   des->level = SCIP_INVALID;
+   des->trend = SCIP_INVALID;
+   des->initialvalue = initialvalue;
 }
 
 /** initialize a double exponential smoothing data structure */
@@ -1715,7 +1715,8 @@ SCIP_Real timeseriesEstimate(
       return treedata->nnodes;
 
    trend = doubleexpsmoothGetTrend(&timeseries->des);
-   /* get current value and trend. The linear trend estimation may point into the wrong direction
+
+   /* Get current value and trend. The linear trend estimation may point into the wrong direction
     * In this case, we use the fallback mechanism that we will need twice as many nodes.
     */
    if( (targetval > val && trend < 1e-6) || (targetval < val && trend > -1e-6) )
@@ -1900,7 +1901,7 @@ SCIP_Real getEnsembleEstimation(
       TSPOS_OPEN
    };
 
-   /* coefficients for the early stage (tree progress <= 0.3)*/
+   /* coefficients for the early stage (tree progress <= 0.3) */
    SCIP_Real coeffs_early[] = {
       0.002, /* gap */
       0.381, /* progress */
@@ -1909,7 +1910,7 @@ SCIP_Real getEnsembleEstimation(
       0.004  /* open-nodes */
    };
 
-   /* coefficients for the intermediate stage (0.3 < tree progress <= 0.6)*/
+   /* coefficients for the intermediate stage (0.3 < tree progress <= 0.6) */
    SCIP_Real coeffs_intermediate[] = {
       0.011, /* gap */
       0.193, /* progress */
@@ -1918,7 +1919,7 @@ SCIP_Real getEnsembleEstimation(
       0.051  /* open-nodes */
    };
 
-   /* coefficients for the late stage (tree progress > 0.6)*/
+   /* coefficients for the late stage (tree progress > 0.6) */
    SCIP_Real coeffs_late[] = {
       0.000, /* gap */
       0.033, /* progress */
@@ -2488,8 +2489,7 @@ SCIP_DECL_EVENTINIT(eventInitRestart)
    /* test if user specified a regression forest */
    if( 0 != strncmp(eventhdlrdata->regforestfilename, DEFAULT_REGFORESTFILENAME, strlen(DEFAULT_REGFORESTFILENAME)) )
    {
-      SCIP_CALL( SCIPregforestFromFile(&eventhdlrdata->regforest,
-               eventhdlrdata->regforestfilename) );
+      SCIP_CALL( SCIPregforestFromFile(&eventhdlrdata->regforest, eventhdlrdata->regforestfilename) );
    }
 
    eventhdlrdata->lastrestartrun = 0;
