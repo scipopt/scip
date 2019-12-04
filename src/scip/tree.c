@@ -1036,7 +1036,7 @@ SCIP_Bool SCIPtreeWasNodeLastBranchParent(
    )
 {
    node = node == NULL ? tree->focusnode : node;
-   if( node != NULL && node->number == tree->lastbranchparentid)
+   if( node != NULL && node->number == tree->lastbranchparentid )
       return TRUE;
 
    return FALSE;
