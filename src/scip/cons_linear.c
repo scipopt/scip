@@ -155,6 +155,7 @@
 #define DEFAULT_MULTAGGRREMOVE      FALSE /**< should multi-aggregations only be performed if the constraint can be
                                            *   removed afterwards? */
 #define DEFAULT_MAXMULTIAGGRQUOT    1e+03 /**< maximum coefficient dynamism (ie. maxabsval / minabsval) for multiaggregation */
+#define DEFAULT_EXTRACTCLIQUES       TRUE /**< should cliques be extracted? */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF                   0 /**< maximal coefficient value after scaling */
@@ -314,6 +315,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             multaggrremove;     /**< should multi-aggregations only be performed if the constraint can be
                                               *   removed afterwards? */
    SCIP_Real             maxmultiaggrquot;   /**< maximum coefficient dynamism (ie. maxabsval / minabsval) for multiaggregation */
+   SCIP_Bool             extractcliques;     /**< should cliques be extracted? */
 };
 
 /** linear constraint update method */
@@ -16342,7 +16344,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          }
 
          /* extract cliques from constraint */
-         if( !cutoff && SCIPconsIsActive(cons) )
+         if( conshdlrdata->extractcliques && !cutoff && SCIPconsIsActive(cons) )
          {
             SCIP_CALL( extractCliques(scip, cons, conshdlrdata->maxeasyactivitydelta, conshdlrdata->sortvars,
                   nfixedvars, nchgbds, &cutoff) );
@@ -17580,6 +17582,10 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/" CONSHDLR_NAME "/maxmultiaggrquot",
          "maximum coefficient dynamism (ie. maxabsval / minabsval) for multiaggregation",
          &conshdlrdata->maxmultiaggrquot, TRUE, DEFAULT_MAXMULTIAGGRQUOT, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/extractcliques",
+         "should Cliques be extracted?",
+         &conshdlrdata->extractcliques, TRUE, DEFAULT_EXTRACTCLIQUES, NULL, NULL) );
 
    return SCIP_OKAY;
 }
