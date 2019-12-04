@@ -3948,7 +3948,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/setppc" , 0, quiet) );
       /* For numerical stability turn rangedrowpropagation, simplifyInequalities and extractCliques off */
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/rangedrowpropagation" , 0, quiet) );
-      /* SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/extractcliques" , 0, quiet) ); */
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/extractcliques" , 0, quiet) );
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities" , 0, quiet) );
 
       break;
