@@ -2675,7 +2675,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRestart)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPinfoMessage(scip, file, "%s\n", printReport(scip, eventhdlrdata, strbuf, 0));
+   SCIPinfoMessage(scip, file, "%s", printReport(scip, eventhdlrdata, strbuf, 0));
 
    return SCIP_OKAY;
 }
