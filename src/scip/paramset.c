@@ -3924,10 +3924,21 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "branching/relpscost/dynamicweights", TRUE, quiet) );
       break;
 
+   case SCIP_PARAMEMPHASIS_NUMERICS:
+
+      /* huge val is used as a threshold in multiaggregation; decreasing it leads to safer multiaggregations */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "numerics/hugeval", 1e+10, quiet) );
+      /* author bzfhende
+       *
+       * TODO fill in some parameters from the related issues. also explain in a comment why this is useful
+       */
+
+      break;
+
    default:
       SCIPerrorMessage("the parameter setting <%d> is not allowed for emphasis call\n", paramemphasis);
       return SCIP_INVALIDCALL;
-   }  
+   }
    return SCIP_OKAY;
 }
 
