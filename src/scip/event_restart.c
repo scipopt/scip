@@ -1760,18 +1760,20 @@ void timeseriesResample(
    TIMESERIES*           timeseries          /**< time series */
    )
 {
+   DOUBLEEXPSMOOTH* des;
    int i;
 
    assert(timeseries->nvals % 2 == 0);
 
-   doubleexpsmoothReset(&timeseries->des, timeseries->initialvalue);
+   des = &timeseries->des;
+   doubleexpsmoothReset(des, timeseries->initialvalue);
 
    /* compress vals array to store only every second entry */
    for( i = 0; i < timeseries->nvals / 2; ++i )
    {
       timeseries->vals[i] = timeseries->vals[2 * i];
       timeseries->estimation[i] = timeseries->estimation[2 * i];
-      doubleexpsmoothUpdate(&timeseries->des, timeseries->vals[i]);
+      doubleexpsmoothUpdate(des, timeseries->vals[i]);
       timeseriesUpdateSmoothEstimation(timeseries, timeseries->estimation[i]);
    }
 
