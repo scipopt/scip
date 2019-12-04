@@ -493,10 +493,6 @@ SCIP_RETCODE createAndSplitProblem(
    if( !(*success) )
    {
       /* free subproblem data structure since not all blocks could be copied */
-      if( block->subvars != NULL )
-      {
-         SCIPfreeBufferArray(block->problem->scip, &(block->subvars));
-      }
       SCIP_CALL( freeProblem(problem, nblocks) );
    }
 
