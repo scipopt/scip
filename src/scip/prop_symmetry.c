@@ -2558,7 +2558,7 @@ SCIP_RETCODE buildSubgroupGraph(
          img = perm[k];
          assert(perm[img] == k);
 
-         if( img == k )
+         if( img >= k )
             continue;
 
          comp1 = SCIPdisjointsetFind(vartocomponent, k);
@@ -2578,22 +2578,24 @@ SCIP_RETCODE buildSubgroupGraph(
             break;
 
          componentslastperm[comp1] = j;
+         componentslastperm[comp2] = j;
 
          if( firstcolor == -1 )
             firstcolor = color1;
 
-         /* in case of success, both directions for each pair will be added, since perm consists of 2-cycles */
+         /* add the edges for this swap to the graph */
          SCIP_CALL( SCIPdigraphAddArc(graph, k, img, NULL) );
+         SCIP_CALL( SCIPdigraphAddArc(graph, img, k, NULL) );
       }
 
-      /* if the new graph is not acyclic, delete the newly added edges */
+      /* if the generator is invalid or the new graph is not acyclic, delete the newly added edges */
       if( k < npermvars || !isAcyclicGraph(scip, graph) )
       {
          int l;
 
          for( l = 0; l < k; ++l )
          {
-            if( perm[l] != l )
+            if( perm[l] < l )
             {
                SCIP_CALL( SCIPdigraphSetNSuccessors(graph, l, SCIPdigraphGetNSuccessors(graph, l) - 1) );
             }
@@ -2618,17 +2620,16 @@ SCIP_RETCODE buildSubgroupGraph(
          img = perm[k];
          assert(perm[img] == k);
 
-         if( img == k )
+         if( img >= k )
             continue;
 
          comp1 = SCIPdisjointsetFind(vartocomponent, k);
          comp2 = SCIPdisjointsetFind(vartocomponent, img);
+
+         assert(comp1 != comp2);
+
          color1 = SCIPdisjointsetFind(comptocolor, comp1);
          color2 = SCIPdisjointsetFind(comptocolor, comp2);
-
-         /* if the swapped variables lie in the same component, it means we've already dealt with the inverse edge */
-         if( comp1 == comp2 )
-            continue;
 
          assert(color1 != color2);
 
