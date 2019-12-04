@@ -2446,7 +2446,9 @@ SCIP_DECL_EVENTCOPY(eventCopyRestart)
 static
 SCIP_DECL_EVENTFREE(eventFreeRestart)
 {  /*lint --e{715}*/
-   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
    freeTreedata(scip, &eventhdlrdata->treedata);
@@ -2462,9 +2464,9 @@ SCIP_DECL_EVENTFREE(eventFreeRestart)
 static
 SCIP_DECL_EVENTINIT(eventInitRestart)
 {  /*lint --e{715}*/
-   assert(eventhdlr != NULL);
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
-   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
    /* test if user specified a regression forest */
@@ -2483,9 +2485,9 @@ SCIP_DECL_EVENTINIT(eventInitRestart)
 static
 SCIP_DECL_EVENTEXIT(eventExitRestart)
 {  /*lint --e{715}*/
-   assert(eventhdlr != NULL);
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
-   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
    SCIPregforestFree(&eventhdlrdata->regforest);
@@ -2497,9 +2499,9 @@ SCIP_DECL_EVENTEXIT(eventExitRestart)
 static
 SCIP_DECL_EVENTINITSOL(eventInitsolRestart)
 {  /*lint --e{715}*/
-   assert(eventhdlr != NULL);
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
-   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
    eventhdlrdata->restarthitcounter = 0;
@@ -2527,9 +2529,10 @@ SCIP_DECL_EVENTINITSOL(eventInitsolRestart)
 static
 SCIP_DECL_EVENTEXITSOL(eventExitsolRestart)
 {  /*lint --e{715}*/
-   assert(eventhdlr != NULL);
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
-   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
 
    if( eventhdlrdata->treeprofile != NULL )
       freeTreeprofile(scip, &eventhdlrdata->treeprofile);
@@ -2644,11 +2647,15 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputRestart)
 {  /*lint --e{715}*/
-   SCIP_EVENTHDLR* eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
    char strbuf[SCIP_MAXSTRLEN];
 
+   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    assert(eventhdlr != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
 
    SCIPinfoMessage(scip, file, "%s\n", printReport(scip, eventhdlrdata, strbuf, 0));
 
@@ -2669,7 +2676,9 @@ SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
    assert(scip != NULL);
 
    eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   assert(eventhdlr != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
    treedata = eventhdlrdata->treedata;
 
    SCIP_CALL( getSearchCompletion(eventhdlrdata, &completed) );
@@ -2689,18 +2698,14 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
-   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata = NULL;
+   SCIP_EVENTHDLR* eventhdlr = NULL;
 
    /* create restart event handler data */
-   eventhdlrdata = NULL;
-
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    BMSclearMemory(eventhdlrdata);
 
    SCIP_CALL( createTreedata(scip, &eventhdlrdata->treedata) );
-
-   eventhdlr = NULL;
 
    /* use SCIPincludeEventhdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
