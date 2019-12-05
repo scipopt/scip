@@ -35,31 +35,31 @@
  * \f{eqnarray*}{
  *   L = \min \{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S \geq b_i \}\\
  *   U = \max \{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S \geq b_i \}
- * \f}
+ * \f} // the lps dont seem to be correct - probably x should still satisfy all bounds
  * and use \f$L\f$ and \f$U\f$ for getting bounds on \f$x_T\f$.
  *
  * If \f$L + \mbox{infimum}(A_{kT}x_T) \geq b_k\f$, then the second constraint above is redundant.
  *
- *
  * 2. ConvComb with clique-extension
  * Given two constraints
- * \begin{equation}
- *   \begin{array}{c}
- *     A_{r\cdot} x \geq b_r \\
+ * \f{eqnarray*}{
+ *     A_{r\cdot} x \geq b_r \\ // r and s should be defined properly
  *     A_{s\cdot} x \geq b_s \\
  *     \ell \leq x \leq u \\
- *   \end{array}
- * \end{equation}
- * this method determines promising values for $\lambda in (0,1)$ and
- * applies feasibility-based bound tightening on the convex combinations
+ * \f}
+ * this method determines promising values for $\lambda \in (0,1)$ and
+ * applies feasibility-based bound tightening to the convex combinations
  *
- * (\lambda A_{r\cdot} + (1 - \lambda) A_{s\cdot}) x \geq \lambda b_r + (1 - \lambda) b_s$.
+ * $(\lambda A_{r\cdot} + (1 - \lambda) A_{s\cdot}) x \geq \lambda b_r + (1 - \lambda) b_s$.
  *
  * Additionally, cliques drawn from the SCIPcliqueTable are used
  * to further strengthen the above bound tightening.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+// some lines are longer than 120
+// many of the function comments are not SCIP style (e.g. beginning lower case, /** ... */ )
 
 /*
  * Additional debug defines in this presolver
@@ -124,8 +124,8 @@ struct SCIP_PresolData
 /** structure representing a pair of row indices; used for lookup in a hashtable */
 struct RowPair
 {
-   int row1idx; /**< first row index */
-   int row2idx; /**< second row index */
+   int row1idx;               /**< first row index */
+   int row2idx;               /**< second row index */
 };
 
 typedef struct RowPair ROWPAIR;
@@ -137,8 +137,7 @@ typedef struct RowPair ROWPAIR;
 
 /** encode contents of a rowpair as void* pointer */
 static
-void*
-encodeRowPair(
+void* encodeRowPair(
    ROWPAIR*              rowpair             /**< pointer to rowpair */
    )
 {
@@ -147,8 +146,7 @@ encodeRowPair(
 
 /** compute single positive int hashvalue for two ints */
 static
-int
-hashIndexPair(
+int hashIndexPair(
    int                   idx1,               /**< first integer index */
    int                   idx2                /**< second integer index */
    )
@@ -157,18 +155,17 @@ hashIndexPair(
    return (int)(hash>>1);
 }
 
-/** add hash/rowidx pair to hashlist/rowidxlist **/
+/** add hash/rowidx pair to hashlist/rowidxlist */
 static
-SCIP_RETCODE addEntry
-(
- SCIP* scip,                  /**< SCIP datastructure */
- int* pos,                    /**< position of last entry added */
- int* listsize,               /**< size of hashlist and rowidxlist */
- int** hashlist,              /**< block memory array containing hashes */
- int** rowidxlist,            /**< block memory array containing row indices */
- int hash,                    /**< hash to be inserted */
- int rowidx                   /**< row index to be inserted */
-)
+SCIP_RETCODE addEntry(
+   SCIP*                 scip,               /**< SCIP datastructure */
+   int*                  pos,                /**< position of last entry added */
+   int*                  listsize,           /**< size of hashlist and rowidxlist */
+   int**                 hashlist,           /**< block memory array containing hashes */
+   int**                 rowidxlist,         /**< block memory array containing row indices */
+   int                   hash,               /**< hash to be inserted */
+   int                   rowidx              /**< row index to be inserted */
+   )
 {
    if( (*pos) >= (*listsize) )
    {
@@ -185,20 +182,20 @@ SCIP_RETCODE addEntry
    return SCIP_OKAY;
 }
 
+// refactor comment SCIP style
 /** Within a sorted list, get next block with same value
  *  E.g. for [h1, h1, h1, h2, h2, h2, h2, h3,...] and end = 0
  *  returns start = 0, end = 3
  *  and on a second call with end = 3 on the same list
  *  returns start = 3, end = 7.
- **/
+ */
 static
-void findNextBlock
-(
-   int*                 list,    /**< list of integers */
-   int                  len,     /**< length of list */
-   int*                 start,   /**< variable to contain start index of found block */
-   int*                 end      /**< variable to contain end index of found block */
-)
+void findNextBlock(
+   int*                  list,               /**< list of integers */
+   int                   len,                /**< length of list */
+   int*                  start,              /**< variable to contain start index of found block */
+   int*                  end                 /**< variable to contain end index of found block */
+   )
 {
    int i;
    (*start) = (*end);
@@ -209,6 +206,7 @@ void findNextBlock
    (*end) = i;
 }
 
+// refactor comment SCIP style
 /** Solve single-row LP of the form
  *  min c^T x
  *  s.t. a^T x >= b
@@ -370,12 +368,13 @@ SCIP_RETCODE solveSingleRowLP(
       assert(!SCIPisInfinity(scip, -lb));
       assert(!SCIPisInfinity(scip, ub));
 
-      /** At this point the variable has finite bounds and a[i],c[i] are both positive or both negative.
+      /* At this point the variable has finite bounds and a[i],c[i] are both positive or both negative.
        * Normalize variable such that
        *  1. x_i \in [0,1]
        *  2. a[i] > 0
        *  3. c[i] >= 0
-       * and calculate its "unit price" c[i]/a[i]. */
+       * and calculate its "unit price" c[i]/a[i]. 
+       */
       if( SCIPisNegative(scip, a[i]) )
       {
          c[i] = -c[i];
@@ -384,7 +383,7 @@ SCIP_RETCODE solveSingleRowLP(
          ub = -lbs[i];
       }
 
-      assert(SCIPisPositive(scip, a[i]) && SCIPisPositive(scip, c[i]));
+      assert(SCIPisPositive(scip, a[i]) && SCIPisPositive(scip, c[i])); // !SCIPisNegative(scip, c[i]) ?
 
       /* Adjust objective offset and b to shift lower bound to zero */
       (*obj) += c[i] * lb;
@@ -402,10 +401,11 @@ SCIP_RETCODE solveSingleRowLP(
    SCIPdebugMsg(scip, "After preprocessing: obj = %g, b = %g, nvars = %d, mincost = %g, maxgain = %g\n", (*obj), b, nvars, mincost, maxgain);
 #endif
 
-   /** Actual solving starts here.
+   /* Actual solving starts here.
     * If maxgain > 0 holds, we have a variable that can relax the constraint to an arbitrary degree while yielding
     * a certain profit per unit. This will be called downslack. If mincost < inf holds, we have a variable that can
-    * always satisfy the constraint at a certain unit price. This will be called upslack. */
+    * always satisfy the constraint at a certain unit price. This will be called upslack. 
+    */
 
    /* Problem is unbounded since the downslack variable yields higher gains than the upslack variable costs */
    if( SCIPisLT(scip, mincost, maxgain) )
@@ -429,8 +429,8 @@ SCIP_RETCODE solveSingleRowLP(
       (*obj) += mincost * b;
       return SCIP_OKAY;
    }
-   /** mincost > maxgain
-    *  In this case we need to solve the problem for the remaining variables with mincost > c[i] > maxgain.
+   /* mincost > maxgain
+    * In this case we need to solve the problem for the remaining variables with mincost > c[i] > maxgain.
     */
    else
    {
@@ -556,7 +556,7 @@ SCIP_RETCODE solveSingleRowLP(
    }
 }
 
-/* Transforms rows as required, solves the individual single-row LPs and then tightens bounds */
+/** transforms rows as required, solves the individual single-row LPs and then tightens bounds */ // this description is not that helpful when trying to understandt the code 
 static
 SCIP_RETCODE transformAndSolve(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -618,7 +618,7 @@ SCIP_RETCODE transformAndSolve(
    row1valptr = SCIPmatrixGetRowValPtr(matrix, row1idx);
    row2valptr = SCIPmatrixGetRowValPtr(matrix, row2idx);
 
-   /* getting bounds for row1 */
+   /* getting bounds for row1 */ // the documentation of the first part of this could be clearer
    i = 0;
    j = 0;
    nvars = 0;
@@ -672,7 +672,7 @@ SCIP_RETCODE transformAndSolve(
                minact -= row1valptr[i] * ubs[idx1];
 
             cangetbnd[idx1] = TRUE;
-         }
+         } // can't we stop early once we have discovered that maxinf and mininf >= 2 ?
          i++;
 #ifdef SCIP_DEBUG_2RB
          SCIPdebugMsg(scip, "%g <= (%s) <= %g has coefs %g and 0.0, minact = %g, maxact = %g\n", lbs[idx1], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx1)), ubs[idx1], row1valptr[i], minact, maxact);
@@ -837,7 +837,6 @@ SCIP_RETCODE transformAndSolve(
          (*success) = TRUE;
          return SCIP_OKAY;
       }
-
       /* strengthen bounds of all variables outside overlap */
       else if( maxinfs == 0 )
       {
@@ -936,6 +935,7 @@ SCIP_RETCODE transformAndSolve(
          }
       }
    }
+   // also this seems to me like code duplication - the two tightenings are basically the same except for signs and names
 
    /* redundancy check */
    if( mininfs == 0 && !swaprow1 )
@@ -1075,7 +1075,7 @@ SCIP_RETCODE transformAndSolve(
 }
 
 
-/* Create required buffer arrays and apply LP-based bound tightening in both directions */
+/** create required buffer arrays and apply LP-based bound tightening in both directions */
 static
 SCIP_RETCODE applyLPboundTightening(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1151,19 +1151,19 @@ SCIP_RETCODE applyLPboundTightening(
    return SCIP_OKAY;
 }
 
-/* calculate clique breakpoints and mark in which cliques the variables have a maximum */
+/** calculate clique breakpoints and mark in which cliques the variables have a maximum */
 static
 int calcCliqueMaximums(
-   SCIP*                scip,
-   int*                 varinds,             /**< variable index array */
-   int*                 cliquevarpos,        /**< positions of clique variables in index array */
-   int                  cliquesize,          /**< size of current clique */
-   SCIP_Real*           row1coefs,           /**< coefficients of first row */
-   SCIP_Real*           row2coefs,           /**< coefficients of second row */
-   int*                 nbreakpoints,        /**< number of breakpoints between 0 and 1 */
-   SCIP_Real*           breakpoints,         /**< variable breakpoints */
-   int*                 cliquemaxinds,       /**< array containing in which clique this variable has a maximum */
-   SCIP_Real*           gradients            /**< buffer array the function can use for handling the gradients */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  varinds,            /**< variable index array */
+   int*                  cliquevarpos,       /**< positions of clique variables in index array */
+   int                   cliquesize,         /**< size of current clique */
+   SCIP_Real*            row1coefs,          /**< coefficients of first row */
+   SCIP_Real*            row2coefs,          /**< coefficients of second row */
+   int*                  nbreakpoints,       /**< number of breakpoints between 0 and 1 */
+   SCIP_Real*            breakpoints,        /**< variable breakpoints */
+   int*                  cliquemaxinds,      /**< array containing in which clique this variable has a maximum */
+   SCIP_Real*            gradients           /**< buffer array the function can use for handling the gradients */
    )
 {
    int i;
@@ -1313,19 +1313,19 @@ int calcCliqueMaximums(
       return varinds[cliquevarpos[firstmaxpos]];
 }
 
-/** try two-row combine for given rows */
+/** try two-row combine for given rows */ // i feel that - given the length of the method - this comment could be way more explanatory
 static
 SCIP_RETCODE combineRows
 (
-   SCIP*                scip,                /**< SCIP datastructure */
-   SCIP_MATRIX*         matrix,              /**< the constraint matrix */
-   int                  row1,                /**< index of first row */
-   int                  row2,                /**< index of second row */
-   SCIP_Bool            swaprow1,            /**< should row1 <= rhs be used instead of lhs <= row1 */
-   SCIP_Bool            swaprow2,            /**< should row2 <= rhs be used instead of lhs <= row2 */
-   SCIP_Real*           lbs,                 /**< lower variable bounds */
-   SCIP_Real*           ubs,                 /**< upper variable bounds */
-   SCIP_Bool*           success              /**< we return (success ||  found better bounds") */
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_MATRIX*          matrix,             /**< the constraint matrix */
+   int                   row1,               /**< index of first row */
+   int                   row2,               /**< index of second row */
+   SCIP_Bool             swaprow1,           /**< should row1 <= rhs be used instead of lhs <= row1 */
+   SCIP_Bool             swaprow2,           /**< should row2 <= rhs be used instead of lhs <= row2 */
+   SCIP_Real*            lbs,                /**< lower variable bounds */
+   SCIP_Real*            ubs,                /**< upper variable bounds */
+   SCIP_Bool*            success             /**< we return (success ||  found better bounds") */
 )
 {
    int i;
@@ -1744,7 +1744,7 @@ SCIP_RETCODE combineRows
       }
 
       /* calculate activity contributions of cliques, ignore dummy entry at index 0 */
-      for( i = 1; i < ncliques+1; i++ )
+      for( i = 1; i < ncliques + 1; i++ )
       {
          if( currentmaxinds[i] != -1 )
          {
@@ -1826,7 +1826,7 @@ SCIP_RETCODE combineRows
 
 #ifdef SCIP_DEBUG_CLIQUE
       SCIPdebugMsg(scip, "currentmaxinds[0] = dummy\n");
-      for( i = 1; i < ncliques+1; i++ )
+      for( i = 1; i < ncliques + 1; i++ )
          if( currentmaxinds[i] >= 0 )
             SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (%s)\n", i, currentmaxinds[i], SCIPmatrixGetColName(matrix, currentmaxinds[i]));
          else
@@ -1990,7 +1990,7 @@ SCIP_RETCODE combineRows
                   signs[idx] = NEG;
             }
 
-            if( j+1 >= nbreakpoints || !SCIPisEQ(scip, breakpoints[j], breakpoints[j+1]) )
+            if( j + 1 >= nbreakpoints || !SCIPisEQ(scip, breakpoints[j], breakpoints[j + 1]) )
                updated = TRUE;
 
             shift++;
@@ -2356,7 +2356,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    if( presoldata->nuselessruns >= 5 )
       return SCIP_OKAY;
 
-   *result = SCIP_DIDNOTFIND;
+   *result = SCIP_DIDNOTFIND; // duplication with line 2343?
 
    matrix = NULL;
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
@@ -2624,6 +2624,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
       }
    }
 
+   // this (the two comparison loops including the if) looks like duplicate code - can/should this be put into an extra method?
    /* Process pm and mp hashlists */
    if( pospm > 0 && posmp > 0 )
    {
@@ -2948,7 +2949,7 @@ SCIP_RETCODE SCIPincludePresolTworowbnd(
 
    /* create tworowbnd presolver data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
-   /* TODO: (optional) create presolver specific data here */
+   /* TODO: (optional) create presolver specific data here */ // can this TODO be removed?
 
    presol = NULL;
 

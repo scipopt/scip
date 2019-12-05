@@ -18,7 +18,7 @@
  * @brief  do bound tightening by using two rows
  * @author Dieter Weninger
  */
-
+// I am not sure here - should there be documentation in the head file?
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_PRESOL_TWOROWBND_H__
