@@ -230,8 +230,11 @@ struct SCIP_PropData
    SCIP_Bool             conssaddlp;         /**< Should the symmetry breaking constraints be added to the LP? */
    SCIP_Bool             addsymresacks;      /**< Add symresack constraints for each generator? */
    int                   addconsstiming;     /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
-   SCIP_CONS**           genconss;           /**< list of generated constraints */
-   int                   ngenconss;          /**< number of generated constraints */
+   SCIP_CONS**           genorbconss;        /**< list of generated orbitope/orbisack/symresack constraints */
+   SCIP_CONS**           genlinconss;        /**< list of generated linear constraints */
+   int                   ngenorbconss;       /**< number of generated orbitope/orbisack/symresack constraints */
+   int                   ngenlinconss;       /**< number of generated linear constraints */
+   int                   genlinconsssize;    /**< size of linear constraints array */
    int                   nsymresacks;        /**< number of symresack constraints */
    SCIP_Bool             detectorbitopes;    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
    SCIP_Bool             detectsubgroups;    /**< Should we try to detect symmetric subgroups of the symmetry group? */
@@ -575,7 +578,8 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->bg1 == NULL );
    assert( propdata->nbg0 == 0 );
    assert( propdata->nbg1 == 0 );
-   assert( propdata->genconss == NULL );
+   assert( propdata->genorbconss == NULL );
+   assert( propdata->genlinconss == NULL );
 
    assert( propdata->permvars == NULL );
    assert( propdata->permvarsobj == NULL );
@@ -682,21 +686,39 @@ SCIP_RETCODE freeSymmetryData(
       SCIPfreeBlockMemoryArray(scip, &propdata->permstrans, propdata->npermvars);
    }
 
-   /* free data of added constraints */
-   if ( propdata->genconss != NULL )
+   /* free data of added orbitope/orbisack/symresack constraints */
+   if ( propdata->genorbconss != NULL )
    {
-      assert( propdata->ngenconss > 0 || (ISORBITALFIXINGACTIVE(propdata->usesymmetry) && propdata->norbitopes == 0) );
+      assert( propdata->ngenorbconss > 0 || (ISORBITALFIXINGACTIVE(propdata->usesymmetry) && propdata->norbitopes == 0) );
 
       /* release constraints */
-      for (i = 0; i < propdata->ngenconss; ++i)
+      for (i = 0; i < propdata->ngenorbconss; ++i)
       {
-         assert( propdata->genconss[i] != NULL );
-         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genconss[i]) );
+         assert( propdata->genorbconss[i] != NULL );
+         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genorbconss[i]) );
       }
 
       /* free pointers to symmetry group and binary variables */
-      SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
-      propdata->ngenconss = 0;
+      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms);
+      propdata->ngenorbconss = 0;
+   }
+
+   /* free data of added constraints */
+   if ( propdata->genlinconss != NULL )
+   {
+      assert( propdata->ngenlinconss > 0 );
+
+      /* release constraints */
+      for (i = 0; i < propdata->ngenlinconss; ++i)
+      {
+         assert( propdata->genlinconss[i] != NULL );
+         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genlinconss[i]) );
+      }
+
+      /* free pointers to symmetry group and binary variables */
+      SCIPfreeBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize);
+      propdata->ngenlinconss = 0;
+      propdata->genlinconsssize = 0;
    }
 
    /* free components */
@@ -765,30 +787,58 @@ SCIP_RETCODE delSymConss(
    assert( scip != NULL );
    assert( propdata != NULL );
 
-   if ( propdata->ngenconss == 0 )
+   if ( propdata->ngenorbconss == 0 )
    {
-      if ( propdata->genconss != NULL )
-         SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
+      if ( propdata->genorbconss != NULL )
+         SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms);
+      propdata->triedaddconss = FALSE;
+   }
+   else
+   {
+      assert( propdata->genorbconss != NULL );
+      assert( propdata->nperms > 0 );
+      assert( propdata->nperms >= propdata->ngenorbconss );
+
+      for (i = 0; i < propdata->ngenorbconss; ++i)
+      {
+         assert( propdata->genorbconss[i] != NULL );
+
+         SCIP_CALL( SCIPdelCons(scip, propdata->genorbconss[i]) );
+         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genorbconss[i]) );
+      }
+
+      /* free pointers to symmetry group and binary variables */
+      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms);
+      propdata->ngenorbconss = 0;
+      propdata->triedaddconss = FALSE;
+   }
+
+   if ( propdata->ngenlinconss == 0 )
+   {
+      if ( propdata->genlinconss != NULL )
+         SCIPfreeBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize);
       propdata->triedaddconss = FALSE;
 
       return SCIP_OKAY;
    }
-   assert( propdata->genconss != NULL );
-   assert( propdata->nperms > 0 );
-   assert( propdata->nperms >= propdata->ngenconss );
-
-   for (i = 0; i < propdata->ngenconss; ++i)
+   else
    {
-      assert( propdata->genconss[i] != NULL );
+      assert( propdata->genlinconss != NULL );
+      assert( propdata->nperms > 0 );
 
-      SCIP_CALL( SCIPdelCons(scip, propdata->genconss[i]) );
-      SCIP_CALL( SCIPreleaseCons(scip, &propdata->genconss[i]) );
+      for (i = 0; i < propdata->ngenlinconss; ++i)
+      {
+         assert( propdata->genlinconss[i] != NULL );
+
+         SCIP_CALL( SCIPdelCons(scip, propdata->genlinconss[i]) );
+         SCIP_CALL( SCIPreleaseCons(scip, &propdata->genlinconss[i]) );
+      }
+
+      /* free pointers to symmetry group and binary variables */
+      SCIPfreeBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize);
+      propdata->ngenlinconss = 0;
+      propdata->triedaddconss = FALSE;
    }
-
-   /* free pointers to symmetry group and binary variables */
-   SCIPfreeBlockMemoryArray(scip, &propdata->genconss, propdata->nperms);
-   propdata->ngenconss = 0;
-   propdata->triedaddconss = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2837,8 +2887,19 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-            propdata->genconss[propdata->ngenconss] = cons;
-            ++propdata->ngenconss;
+            if ( propdata->ngenlinconss >= propdata->genlinconsssize )    /* check whether we need to resize */
+            {
+               int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
+               assert( newsize >= propdata->ngenlinconss );
+
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
+                  propdata->genlinconsssize, newsize) );
+
+               propdata->genlinconsssize = newsize;
+            }
+
+            propdata->genlinconss[propdata->ngenlinconss] = cons;
+            ++propdata->ngenlinconss;
          }
       }
 
@@ -2897,8 +2958,19 @@ SCIP_RETCODE detectAndHandleSubgroups(
                SCIPinfoMessage(scip, NULL, "\n");
    #endif
 
-               propdata->genconss[propdata->ngenconss] = cons;
-               ++propdata->ngenconss;
+               if ( propdata->ngenlinconss >= propdata->genlinconsssize )    /* check whether we need to resize */
+               {
+                  int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
+                  assert( newsize >= propdata->ngenlinconss );
+
+                  SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
+                     propdata->genlinconsssize, newsize) );
+
+                  propdata->genlinconsssize = newsize;
+               }
+
+               propdata->genlinconss[propdata->ngenlinconss] = cons;
+               ++propdata->ngenlinconss;
             }
 
             SCIPfreeBufferArray(scip, &orbit);
@@ -3151,7 +3223,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
-         propdata->genconss[propdata->ngenconss++] = cons;
+         propdata->genorbconss[propdata->ngenorbconss++] = cons;
          ++propdata->norbitopes;
 
          propdata->componentblocked[i] = TRUE;
@@ -3233,7 +3305,7 @@ SCIP_RETCODE addSymresackConss(
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
-         propdata->genconss[propdata->ngenconss++] = cons;
+         propdata->genorbconss[propdata->ngenorbconss++] = cons;
          ++propdata->nsymresacks;
          ++nsymresackcons;
       }
@@ -3263,7 +3335,7 @@ SCIP_RETCODE addSymresackConss(
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
             /* do not release constraint here - will be done later */
-            propdata->genconss[propdata->ngenconss++] = cons;
+            propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->nsymresacks;
             ++nsymresackcons;
          }
@@ -3315,7 +3387,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( propdata->binvaraffected );
    propdata->triedaddconss = TRUE;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genconss, propdata->nperms) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms) );
 
    if ( propdata->detectorbitopes )
    {
@@ -3328,6 +3400,9 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    if ( !propdata->ofenabled && propdata->detectsubgroups )
    {
+      propdata->genlinconsssize = propdata->nperms;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genlinconss, propdata->genlinconsssize) );
+
       SCIP_CALL( detectAndHandleSubgroups(scip, propdata) );
    }
 
@@ -3969,7 +4044,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       if ( SCIPisStopped(scip) )
          return SCIP_OKAY;
 
-      noldngenconns = propdata->ngenconss;
+      noldngenconns = propdata->ngenorbconss + propdata->ngenlinconss;
 
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, &earlyterm) );
 
@@ -3979,7 +4054,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
          *result = SCIP_DIDNOTFIND;
 
          /* if symmetry handling constraints have been added, presolve each */
-         if ( propdata->ngenconss > 0 )
+         if ( propdata->ngenorbconss > 0 || propdata->ngenlinconss )
          {
             /* at this point, the symmetry group should be computed and nontrivial */
             assert( propdata->nperms > 0 );
@@ -3988,24 +4063,26 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
             /* we have added at least one symmetry handling constraints, i.e., we were successful */
             *result = SCIP_SUCCESS;
 
-            *naddconss += propdata->ngenconss - noldngenconns;
-            SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n", propdata->ngenconss - noldngenconns);
+            *naddconss += propdata->ngenorbconss + propdata->ngenlinconss - noldngenconns;
+            SCIPdebugMsg(scip, "Added symmetry breaking constraints: %d.\n",
+               propdata->ngenorbconss + propdata->ngenlinconss - noldngenconns);
 
             /* if constraints have been added, loop through generated constraints and presolve each */
-            for (i = 0; i < propdata->ngenconss; ++i)
+            for (i = 0; i < propdata->ngenorbconss + propdata->ngenlinconss; ++i)
             {
-               SCIP_CALL( SCIPpresolCons(scip, propdata->genconss[i], nrounds, SCIP_PROPTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
+               SCIP_CALL( SCIPpresolCons(scip, propdata->genorbconss[i], nrounds, SCIP_PROPTIMING_ALWAYS, nnewfixedvars, nnewaggrvars, nnewchgvartypes,
                      nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars,
                      nchgvartypes, nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
                /* exit if cutoff or unboundedness has been detected */
                if ( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
                {
-                  SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(propdata->genconss[i]));
+                  SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n", SCIPconsGetName(propdata->genorbconss[i]));
                   return SCIP_OKAY;
                }
             }
-            SCIPdebugMsg(scip, "Presolved %d generated constraints.\n", propdata->ngenconss);
+            SCIPdebugMsg(scip, "Presolved %d generated constraints.\n",
+               propdata->ngenorbconss + propdata->ngenlinconss);
          }
       }
    }
@@ -4233,8 +4310,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->usesymmetry = -1;
    propdata->symconsenabled = FALSE;
    propdata->triedaddconss = FALSE;
-   propdata->genconss = NULL;
-   propdata->ngenconss = 0;
+   propdata->genorbconss = NULL;
+   propdata->genlinconss = NULL;
+   propdata->ngenorbconss = 0;
+   propdata->ngenlinconss = 0;
+   propdata->genlinconsssize = 0;
    propdata->nsymresacks = 0;
    propdata->norbitopes = 0;
 
