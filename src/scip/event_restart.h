@@ -13,16 +13,33 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_restart.h
+/**@file   event_estim.h
  * @ingroup EVENTS 
- * @brief  eventhdlr for restart event
+ * @brief  event handler for tree size estimation and restarts
+ *
+ * This event handler plugin provides different methods for approximating the current fraction of the search
+ * that has already been completed and for estimating the total tree size at completion.
+ * It can trigger restarts of the current run if the current run seems hopeless.
+ *
+ * For details about the available approximations of search completion, please see
+ *
+ * Anderson, Hendel, Le Bodic, Pfetsch
+ * Estimating The Size of Branch-and-Bound Trees
+ * under preparation
+ *
+ * This code is a largely enriched version of a code that was used for clairvoyant restarts, see
+ *
+ * Anderson, Hendel, Le Bodic, Viernickel
+ * Clairvoyant Restarts in Branch-and-Bound Search Using Online Tree-Size Estimation
+ * AAAI-19: Proceedings of the Thirty-Third AAAI Conference on Artificial Intelligence, 2018
+ *
  * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_EVENT_RESTART_H__
-#define __SCIP_EVENT_RESTART_H__
+#ifndef __SCIP_EVENT_ESTIM_H__
+#define __SCIP_EVENT_ESTIM_H__
 
 
 #include "scip/type_scip.h"
@@ -32,9 +49,9 @@
 extern "C" {
 #endif
 
-/** creates event handler for restart event */
+/** creates event handler for estim event */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeEventHdlrRestart(
+SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

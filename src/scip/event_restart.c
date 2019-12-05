@@ -13,8 +13,25 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_restart.c
- * @brief  event handler for restart event
+/**@file   event_estim.c
+ * @brief  event handler for tree size estimation and restarts
+ *
+ * This event handler plugin provides different methods for approximating the current fraction of the search
+ * that has already been completed and for estimating the total tree size at completion.
+ * It can trigger restarts of the current run if the current run seems hopeless.
+ *
+ * For details about the available approximations of search completion, please see
+ *
+ * Anderson, Hendel, Le Bodic, Pfetsch
+ * Estimating The Size of Branch-and-Bound Trees
+ * under preparation
+ *
+ * This code is a largely enriched version of a code that was used for clairvoyant restarts, see
+ *
+ * Anderson, Hendel, Le Bodic, Viernickel
+ * Clairvoyant Restarts in Branch-and-Bound Search Using Online Tree-Size Estimation
+ * AAAI-19: Proceedings of the Thirty-Third AAAI Conference on Artificial Intelligence, 2018
+ *
  * @author Gregor Hendel
  */
 
@@ -50,9 +67,9 @@
 #include "scip/type_stat.h"
 #include "scip/type_table.h"
 
-#define EVENTHDLR_NAME         "restart"
-#define EVENTHDLR_DESC         "event handler for restart event"
-#define EVENTTYPE_RESTART      (SCIP_EVENTTYPE_NODEDELETE | SCIP_EVENTTYPE_NODEBRANCHED)
+#define EVENTHDLR_NAME         "estim"
+#define EVENTHDLR_DESC         "event handler for tree size estimation and restarts"
+#define EVENTTYPE_ESTIM      (SCIP_EVENTTYPE_NODEDELETE | SCIP_EVENTTYPE_NODEBRANCHED)
 
 /*
  * Data structures
@@ -77,7 +94,7 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define DES_USETRENDINLEVEL              TRUE /**< Should the trend be used in the level update? */
 
 /* constants for the table estimation */
-#define TABLE_NAME              "restart"
+#define TABLE_NAME              "estim"
 #define TABLE_DESC              "tree size estimations statistics table"
 #define TABLE_POSITION          18500           /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE    SCIP_STAGE_INIT /**< output of the statistics table is only printed from this stage onwards */
@@ -695,8 +712,10 @@ SCIP_RETCODE updateTreeprofile(
 
    nodedepthcnt = ++treeprofile->profile[nodedepth];
 
-   /* Is this level full explored? We assume binary branching. */
-   if( (unsigned int)nodedepth < 8*sizeof(int) && nodedepthcnt == (1U << nodedepth) )/*lint !e647*/
+   /* Is this level full explored? We assume binary branching. The first condition ensures that the bit shift operation
+    * of the second condition represents a feasible power of unsigned int. The largest power of 2 representable
+    * by unsigned int is 2^{8*sizeof(unsigned int) - 1} */
+   if( (unsigned int)nodedepth < 8*sizeof(unsigned int) && nodedepthcnt == (1U << nodedepth) )/*lint !e647*/
    {
       SCIPdebugMsg(scip, "Level %d fully explored: %" SCIP_LONGINT_FORMAT " nodes\n", nodedepth, nodedepthcnt);
 
@@ -1702,6 +1721,7 @@ SCIP_Real timeseriesEstimate(
    SCIP_Real targetval;
    SCIP_Real trend;
    SCIP_Real estimated;
+   const SCIP_Real tolerance = 1e-6;
 
    /* if no observations have been made yet, return infinity */
    if( timeseries->nobs == 0L )
@@ -1711,7 +1731,7 @@ SCIP_Real timeseriesEstimate(
    targetval = timeseriesGetTargetValue(timeseries);
 
    /* if the value has reached the target value already, return the number of observations */
-   if( EPSZ(val - targetval, 1e-6) )
+   if( EPSZ(val - targetval, tolerance) )
       return treedata->nnodes;
 
    trend = doubleexpsmoothGetTrend(&timeseries->des);
@@ -1719,7 +1739,7 @@ SCIP_Real timeseriesEstimate(
    /* Get current value and trend. The linear trend estimation may point into the wrong direction
     * In this case, we use the fallback mechanism that we will need twice as many nodes.
     */
-   if( (targetval > val && trend < 1e-6) || (targetval < val && trend > -1e-6) )
+   if( (targetval > val && trend < tolerance) || (targetval < val && trend > -tolerance) )
    {
       return 2.0 * treedata->nvisited;
    }
@@ -1883,7 +1903,7 @@ void freeTimeseries(
 /** get ensemble tree size estimation as a combination of the individual time series estimations
  *
  *  the coefficients have been computed based on a nonlinear fit on a broad set of publicly available
- *  MIP instances
+ *  MIP instances; please refer to the publication at the top of this file for further details.
  */
 static
 SCIP_Real getEnsembleEstimation(
@@ -2026,14 +2046,14 @@ SCIP_RETCODE getSearchCompletion(
    {
    /* use regression forest */
    case COMPLETIONTYPE_REGFOREST:
-      values[6] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_GAP]);
-      values[7] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_GAP]->des);
-      values[2] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_SSG]);
-      values[3] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_SSG]->des);
       values[0] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_PROG]);
       values[1] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_PROG]->des);
+      values[2] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_SSG]);
+      values[3] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_SSG]->des);
       values[4] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_LFREQ]);
       values[5] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_LFREQ]->des);
+      values[6] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_GAP]);
+      values[7] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_GAP]->des);
       values[8] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_OPEN]->des) < 0 ? 1.0 : 0.0;
 
       *completed = SCIPregforestPredict(eventhdlrdata->regforest, values);
@@ -2230,9 +2250,9 @@ RESTARTPOLICY getRestartPolicy(
    return RESTARTPOLICY_NEVER;
 }
 
-/** check conditions before applying restart policy */
+/** check if a restart is applicable considering limit and threshold user parameters */
 static
-SCIP_Bool checkConditions(
+SCIP_Bool isRestartApplicable(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
@@ -2452,18 +2472,18 @@ char* printReport(
 
 /** copy method for event handler plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_EVENTCOPY(eventCopyRestart)
+SCIP_DECL_EVENTCOPY(eventCopyEstim)
 {  /*lint --e{715}*/
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPincludeEventHdlrRestart(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrEstim(scip) );
 
    return SCIP_OKAY;
 }
 
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_EVENTFREE(eventFreeRestart)
+SCIP_DECL_EVENTFREE(eventFreeEstim)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
@@ -2481,7 +2501,7 @@ SCIP_DECL_EVENTFREE(eventFreeRestart)
 
 /** initialization method of event handler (called after problem was transformed) */
 static
-SCIP_DECL_EVENTINIT(eventInitRestart)
+SCIP_DECL_EVENTINIT(eventInitEstim)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
@@ -2501,7 +2521,7 @@ SCIP_DECL_EVENTINIT(eventInitRestart)
 
 /** deinitialization method of event handler (called before transformed problem is freed) */
 static
-SCIP_DECL_EVENTEXIT(eventExitRestart)
+SCIP_DECL_EVENTEXIT(eventExitEstim)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
@@ -2515,7 +2535,7 @@ SCIP_DECL_EVENTEXIT(eventExitRestart)
 
 /** solving process initialization method of event handler (called when branch and bound process is about to begin) */
 static
-SCIP_DECL_EVENTINITSOL(eventInitsolRestart)
+SCIP_DECL_EVENTINITSOL(eventInitsolEstim)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
@@ -2531,7 +2551,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolRestart)
 
    resetTimeseries(eventhdlrdata);
 
-   SCIP_CALL( SCIPcatchEvent(scip, EVENTTYPE_RESTART, eventhdlr, NULL, NULL) );
+   SCIP_CALL( SCIPcatchEvent(scip, EVENTTYPE_ESTIM, eventhdlr, NULL, NULL) );
 
    if( eventhdlrdata->treeprofile_enabled )
    {
@@ -2545,7 +2565,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolRestart)
 
 /** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
 static
-SCIP_DECL_EVENTEXITSOL(eventExitsolRestart)
+SCIP_DECL_EVENTEXITSOL(eventExitsolEstim)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
@@ -2555,19 +2575,20 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolRestart)
    if( eventhdlrdata->treeprofile != NULL )
       freeTreeprofile(scip, &eventhdlrdata->treeprofile);
 
-   SCIP_CALL( SCIPdropEvent(scip, EVENTTYPE_RESTART, eventhdlr, NULL, -1) );
+   SCIP_CALL( SCIPdropEvent(scip, EVENTTYPE_ESTIM, eventhdlr, NULL, -1) );
 
    return SCIP_OKAY;
 }
 
 /** execution method of event handler */
 static
-SCIP_DECL_EVENTEXEC(eventExecRestart)
+SCIP_DECL_EVENTEXEC(eventExecEstim)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_Bool isleaf;
    SCIP_EVENTTYPE eventtype;
    TREEDATA* treedata;
+   char strbuf[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
@@ -2605,10 +2626,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       SCIP_CALL( updateTreeprofile(scip, eventhdlrdata->treeprofile, eventnode) );
 
 #ifdef SCIP_DEBUG
-      {
-         char strbuf[SCIP_MAXSTRLEN];
-         SCIPdebugMsg(scip, "%s\n", treedataPrint(treedata, strbuf));
-      }
+      SCIPdebugMsg(scip, "%s\n", treedataPrint(treedata, strbuf));
 #endif
 
       SCIP_CALL( updateTimeseries(scip, eventhdlrdata, treedata, nchildren == 0) );
@@ -2618,12 +2636,10 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
          (eventhdlrdata->reportfreq == 0
          || treedata->progress >= eventhdlrdata->proglastreport + 1.0 / (SCIP_Real)eventhdlrdata->reportfreq) )
       {
-         char strbuf[SCIP_MAXSTRLEN];
-
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%s\n", printReport(scip, eventhdlrdata, strbuf, ++eventhdlrdata->nreports));
 
          if( eventhdlrdata->reportfreq > 0 )
-            eventhdlrdata->proglastreport = 1 / (SCIP_Real)eventhdlrdata->reportfreq * SCIPfloor(scip, (treedata->progress * eventhdlrdata->reportfreq));
+            eventhdlrdata->proglastreport = 1 / (SCIP_Real)eventhdlrdata->reportfreq * SCIPfloor(scip, ((SCIP_Real)treedata->progress * eventhdlrdata->reportfreq));
          else
             eventhdlrdata->proglastreport = (SCIP_Real)treedata->progress;
       }
@@ -2634,7 +2650,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
       return SCIP_OKAY;
 
    /* check if all conditions are met such that the event handler should run */
-   if( ! checkConditions(eventhdlrdata) )
+   if( ! isRestartApplicable(eventhdlrdata) )
       return SCIP_OKAY;
 
    /* test if a restart should be applied */
@@ -2663,7 +2679,7 @@ SCIP_DECL_EVENTEXEC(eventExecRestart)
 
 /** output method of statistics table to output file stream 'file' */
 static
-SCIP_DECL_TABLEOUTPUT(tableOutputRestart)
+SCIP_DECL_TABLEOUTPUT(tableOutputEstim)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
@@ -2711,33 +2727,33 @@ SCIP_DECL_DISPOUTPUT(dispOutputCompleted)
    return SCIP_OKAY;
 }
 
-/** creates event handler for restart event */
-SCIP_RETCODE SCIPincludeEventHdlrRestart(
+/** creates event handler for estim event */
+SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata = NULL;
    SCIP_EVENTHDLR* eventhdlr = NULL;
 
-   /* create restart event handler data */
+   /* create estim event handler data */
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    BMSclearMemory(eventhdlrdata);
 
    SCIP_CALL( createTreedata(scip, &eventhdlrdata->treedata) );
 
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         eventExecRestart, eventhdlrdata) );
+         eventExecEstim, eventhdlrdata) );
    assert(eventhdlr != NULL);
 
    /* set non fundamental callbacks via setter functions */
-   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopyRestart) );
-   SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeRestart) );
-   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitRestart) );
-   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitRestart) );
-   SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolRestart) );
-   SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventExitsolRestart) );
+   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopyEstim) );
+   SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeEstim) );
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitEstim) );
+   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitEstim) );
+   SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolEstim) );
+   SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventExitsolEstim) );
 
-   /* add restart event handler parameters */
+   /* add estim event handler parameters */
    SCIP_CALL( SCIPaddCharParam(scip, "restarts/restartpolicy", "restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever",
          &eventhdlrdata->restartpolicyparam, FALSE, DEFAULT_RESTARTPOLICY, "acen", NULL, NULL) );
 
@@ -2793,7 +2809,7 @@ SCIP_RETCODE SCIPincludeEventHdlrRestart(
 
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputRestart,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputEstim,
          NULL, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
 
    /* include time series into event handler */
