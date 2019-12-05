@@ -824,13 +824,12 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
             }
             else if( graph_pc_isRootedPcMw(graph) )
             {
-               graph->prize[term] = FARAWAY;
-               graph_knot_chg(graph, term, 0);
+               graph_pc_knotTofixedTerm(scip, graph, term);
             }
          }
          else
          {
-            graph_knot_chg(graph, term, 0);
+            graph_knot_chg(graph, term, STP_TERM);
          }
       }
 
