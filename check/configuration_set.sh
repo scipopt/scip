@@ -42,6 +42,18 @@ function stripversion {
     echo $NAMENOVERSION
 }
 
+# format time in seconds into format  dd-hh:mm:ss
+function formattime {
+  local T=$1
+  local D=$((T/60/60/24))
+  local H=$((T/60/60%24))
+  local M=$((T/60%60))
+  local S=$((T%60))
+  local F="%02d"
+  printf -v PRETTYTIME "${F}-${F}:${F}:${F}" $D $H $M $S
+  echo ${PRETTYTIME}
+}
+
 # input environment - these environment variables should be set before invoking this script
 BINNAME=$1       # name of the binary
 TSTNAME=$2       # name of the test set
@@ -203,23 +215,8 @@ do
     if test $TIMEFORMAT = "format"
     then
         #format is (d-)HH:MM:SS
-        TMP=`expr $HARDTIMELIMIT`
-        HARDTIMELIMIT=""
-        DIVISORS=(60 60 24)
-        for((i=0; i<=2; i++))
-        do
-            printf -v HARDTIMELIMIT "%02d${HARDTIMELIMIT}" `expr ${TMP} % ${DIVISORS[i]}`
-            # separate the numbers by colons except for the last (HH hours)
-            if test $i -lt 2
-            then
-                HARDTIMELIMIT=":${HARDTIMELIMIT}"
-            fi
-            TMP=`expr ${TMP} / ${DIVISORS[i]}`
-        done
-        if test ${TMP} -gt 0
-        then
-            HARDTIMELIMIT=${TMP}-${HARDTIMELIMIT}
-        fi
+        HARDTIMELIMIT=$(formattime $HARDTIMELIMIT)
+        echo $(formattime $HARDTIMELIMIT)
     fi
     HARDTIMELIMLIST[$COUNT]=$HARDTIMELIMIT
     COUNT=$(( $COUNT + 1 ))
