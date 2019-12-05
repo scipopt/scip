@@ -58,9 +58,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-// some lines are longer than 120
-// many of the function comments are not SCIP style (e.g. beginning lower case, /** ... */ )
-
 /*
  * Additional debug defines in this presolver
  * SCIP_DEBUG_HASHING
@@ -182,8 +179,7 @@ SCIP_RETCODE addEntry(
    return SCIP_OKAY;
 }
 
-// refactor comment SCIP style
-/** Within a sorted list, get next block with same value
+/*  Within a sorted list, get next block with same value
  *  E.g. for [h1, h1, h1, h2, h2, h2, h2, h3,...] and end = 0
  *  returns start = 0, end = 3
  *  and on a second call with end = 3 on the same list
@@ -206,8 +202,7 @@ void findNextBlock(
    (*end) = i;
 }
 
-// refactor comment SCIP style
-/** Solve single-row LP of the form
+/*  Solve single-row LP of the form
  *  min c^T x
  *  s.t. a^T x >= b
  *  lbs <= x <= ubs
@@ -624,7 +619,7 @@ SCIP_RETCODE transformAndSolve(
    row1valptr = SCIPmatrixGetRowValPtr(matrix, row1idx);
    row2valptr = SCIPmatrixGetRowValPtr(matrix, row2idx);
 
-   /** Preprocess rows:
+   /*  Preprocess rows:
     *  1. Calculate minimal and maximal activity of variables not appearing in both rows,
     *     as this represents the right-hand sides of the single-row LPs to be solved.
     *  2. Transform rows into format required by solveSingleRowLP where
@@ -652,7 +647,9 @@ SCIP_RETCODE transformAndSolve(
          cangetbnd[idx1] = FALSE;
          nvars++;
 #ifdef SCIP_DEBUG_2RB
-         SCIPdebugMsg(scip, "%g <= (%s) <= %g  has coefs %g and %g, %d LP vars\n", lbs[idx1], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx1)), ubs[idx1], row1valptr[i], row2valptr[j], nvars);
+         SCIPdebugMsg(scip, "%g <= (%s) <= %g  has coefs %g and %g, %d LP vars\n",
+                      lbs[idx1], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx1)),
+                      ubs[idx1], row1valptr[i], row2valptr[j], nvars);
 #endif
          i++;
          j++;
@@ -692,7 +689,9 @@ SCIP_RETCODE transformAndSolve(
          }
          i++;
 #ifdef SCIP_DEBUG_2RB
-         SCIPdebugMsg(scip, "%g <= (%s) <= %g has coefs %g and 0.0, minact = %g, maxact = %g\n", lbs[idx1], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx1)), ubs[idx1], row1valptr[i], minact, maxact);
+         SCIPdebugMsg(scip, "%g <= (%s) <= %g has coefs %g and 0.0, minact = %g, maxact = %g\n",
+                      lbs[idx1], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx1)),
+                      ubs[idx1], row1valptr[i], minact, maxact);
 #endif
       }
       else
@@ -704,7 +703,9 @@ SCIP_RETCODE transformAndSolve(
          cangetbnd[idx2] = FALSE;
          nvars++;
 #ifdef SCIP_DEBUG_2RB
-         SCIPdebugMsg(scip, "%g <= (%s) <= %g has coefs 0.0 and %g, %d LP vars\n", lbs[idx2], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx2)), ubs[idx2], row2valptr[j], nvars);
+         SCIPdebugMsg(scip, "%g <= (%s) <= %g has coefs 0.0 and %g, %d LP vars\n",
+                      lbs[idx2], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx2)),
+                      ubs[idx2], row2valptr[j], nvars);
 #endif
          j++;
       }
@@ -738,7 +739,9 @@ SCIP_RETCODE transformAndSolve(
       }
       cangetbnd[idx1] = TRUE;
 #ifdef SCIP_DEBUG_2RB
-      SCIPdebugMsg(scip, "%g <= (%s) <= %g  has coefs %g and 0.0, minact = %g, maxact = %g\n", lbs[idx1], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx1)), ubs[idx1], row1valptr[i], minact, maxact);
+      SCIPdebugMsg(scip, "%g <= (%s) <= %g  has coefs %g and 0.0, minact = %g, maxact = %g\n",
+                   lbs[idx1], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx1)),
+                   ubs[idx1], row1valptr[i], minact, maxact);
 #endif
       i++;
    }
@@ -751,13 +754,16 @@ SCIP_RETCODE transformAndSolve(
       newubsoriginal[nvars] = ubs[idx2];
       nvars++;
 #ifdef SCIP_DEBUG_2RB
-      SCIPdebugMsg(scip, "%g <= (%s) <= %g has coefs 0.0 and %g, %d LP vars\n", lbs[idx2], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx2)), ubs[idx2], row2valptr[j], nvars);
+      SCIPdebugMsg(scip, "%g <= (%s) <= %g has coefs 0.0 and %g, %d LP vars\n",
+                   lbs[idx2], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx2)),
+                   ubs[idx2], row2valptr[j], nvars);
 #endif
       j++;
    }
 
 #ifdef SCIP_DEBUG_2RB
-   SCIPdebugMsg(scip, "right hand sides: %g and %g\n", SCIPmatrixGetRowLhs(matrix, row1idx), SCIPmatrixGetRowLhs(matrix, row2idx));
+   SCIPdebugMsg(scip, "right hand sides: %g and %g\n",
+                SCIPmatrixGetRowLhs(matrix, row1idx), SCIPmatrixGetRowLhs(matrix, row2idx));
 #endif
 
    /* solve single-row LPs */
@@ -775,7 +781,8 @@ SCIP_RETCODE transformAndSolve(
          newlbscopy[i] = newlbsoriginal[i];
          newubscopy[i] = newubsoriginal[i];
       }
-      SCIP_CALL( solveSingleRowLP(scip, acopy, SCIPmatrixGetRowLhs(matrix, row2idx), ccopy, newlbscopy, newubscopy, nvars, &maxobj, &maxsolvable) );
+      SCIP_CALL( solveSingleRowLP(scip, acopy, SCIPmatrixGetRowLhs(matrix, row2idx),
+                                  ccopy, newlbscopy, newubscopy, nvars, &maxobj, &maxsolvable) );
 #ifdef SCIP_DEBUG_2RB
       SCIPdebugMsg(scip, "max-LP solved: obj = %g\n", maxobj);
 #endif
@@ -792,7 +799,8 @@ SCIP_RETCODE transformAndSolve(
          newlbscopy[i] = newlbsoriginal[i];
          newubscopy[i] = newubsoriginal[i];
       }
-      SCIP_CALL( solveSingleRowLP(scip, acopy, SCIPmatrixGetRowLhs(matrix, row2idx), ccopy, newlbscopy, newubscopy, nvars, &minobj, &minsolvable) );
+      SCIP_CALL( solveSingleRowLP(scip, acopy, SCIPmatrixGetRowLhs(matrix, row2idx),
+                                  ccopy, newlbscopy, newubscopy, nvars, &minobj, &minsolvable) );
 #ifdef SCIP_DEBUG_2RB
       SCIPdebugMsg(scip, "min-LP solved: obj = %g\n", minobj);
 #endif
@@ -811,7 +819,8 @@ SCIP_RETCODE transformAndSolve(
             newlbscopy[i] = newlbsoriginal[i];
             newubscopy[i] = newubsoriginal[i];
          }
-         SCIP_CALL( solveSingleRowLP(scip, acopy, -SCIPmatrixGetRowRhs(matrix, row2idx), ccopy, newlbscopy, newubscopy, nvars, &maxswapobj, &maxswapsolvable) );
+         SCIP_CALL( solveSingleRowLP(scip, acopy, -SCIPmatrixGetRowRhs(matrix, row2idx),
+                                     ccopy, newlbscopy, newubscopy, nvars, &maxswapobj, &maxswapsolvable) );
 #ifdef SCIP_DEBUG_2RB
          SCIPdebugMsg(scip, "maxswap-LP solved: obj = %g\n", maxswapobj);
 #endif
@@ -828,7 +837,8 @@ SCIP_RETCODE transformAndSolve(
             newlbscopy[i] = newlbsoriginal[i];
             newubscopy[i] = newubsoriginal[i];
          }
-         SCIP_CALL( solveSingleRowLP(scip, acopy, -SCIPmatrixGetRowRhs(matrix, row2idx), ccopy, newlbscopy, newubscopy, nvars, &minswapobj, &minswapsolvable) );
+         SCIP_CALL( solveSingleRowLP(scip, acopy, -SCIPmatrixGetRowRhs(matrix, row2idx),
+                                     ccopy, newlbscopy, newubscopy, nvars, &minswapobj, &minswapsolvable) );
 #ifdef SCIP_DEBUG_2RB
          SCIPdebugMsg(scip, "minswap-LP solved: obj = %g\n", minswapobj);
 #endif
@@ -874,7 +884,8 @@ SCIP_RETCODE transformAndSolve(
                   if( SCIPisGT(scip, newbnd, lbs[idx1]) )
                   {
 #ifdef SCIP_DEBUG_BOUNDS
-                     SCIPdebugMsg(scip, "%g <= %g <= %s <= %g\n", lbs[idx1], newbnd, SCIPmatrixGetColName(matrix, idx1), ubs[idx1]);
+                     SCIPdebugMsg(scip, "%g <= %g <= %s <= %g\n",
+                                  lbs[idx1], newbnd, SCIPmatrixGetColName(matrix, idx1), ubs[idx1]);
 #endif
                      lbs[idx1] = newbnd;
                      (*success) = TRUE;
@@ -893,7 +904,8 @@ SCIP_RETCODE transformAndSolve(
                   if( SCIPisLT(scip, newbnd, ubs[idx1]) )
                   {
 #ifdef SCIP_DEBUG_BOUNDS
-                     SCIPdebugMsg(scip, "%g <= %s <= %g <= %g\n", lbs[idx1], SCIPmatrixGetColName(matrix, idx1), newbnd, ubs[idx1]);
+                     SCIPdebugMsg(scip, "%g <= %s <= %g <= %g\n",
+                                  lbs[idx1], SCIPmatrixGetColName(matrix, idx1), newbnd, ubs[idx1]);
 #endif
                      ubs[idx1] = newbnd;
                      (*success) = TRUE;
@@ -923,7 +935,8 @@ SCIP_RETCODE transformAndSolve(
                   if( SCIPisGT(scip, newbnd, lbs[idx1]) )
                   {
 #ifdef SCIP_DEBUG_BOUNDS
-                     SCIPdebugMsg(scip, "%g <= %g <= %s <= %g\n", lbs[idx1], newbnd, SCIPmatrixGetColName(matrix, idx1), ubs[idx1]);
+                     SCIPdebugMsg(scip, "%g <= %g <= %s <= %g\n",
+                                  lbs[idx1], newbnd, SCIPmatrixGetColName(matrix, idx1), ubs[idx1]);
 #endif
                      lbs[idx1] = newbnd;
                      (*success) = TRUE;
@@ -942,7 +955,8 @@ SCIP_RETCODE transformAndSolve(
                   if( SCIPisLT(scip, newbnd, ubs[idx1]) )
                   {
 #ifdef SCIP_DEBUG_BOUNDS
-                     SCIPdebugMsg(scip, "%g <= %s <= %g <= %g\n", lbs[idx1], SCIPmatrixGetColName(matrix, idx1), newbnd, ubs[idx1]);
+                     SCIPdebugMsg(scip, "%g <= %s <= %g <= %g\n",
+                                  lbs[idx1], SCIPmatrixGetColName(matrix, idx1), newbnd, ubs[idx1]);
 #endif
                      ubs[idx1] = newbnd;
                      (*success) = TRUE;
@@ -1007,7 +1021,8 @@ SCIP_RETCODE transformAndSolve(
                      if( SCIPisGT(scip, newbnd, lbs[idx1]) )
                      {
 #ifdef SCIP_DEBUG_BOUNDS
-                        SCIPdebugMsg(scip, "%g <= %g <= %s <= %g\n", lbs[idx1], newbnd, SCIPmatrixGetColName(matrix, idx1), ubs[idx1]);
+                        SCIPdebugMsg(scip, "%g <= %g <= %s <= %g\n",
+                                     lbs[idx1], newbnd, SCIPmatrixGetColName(matrix, idx1), ubs[idx1]);
 #endif
                         lbs[idx1] = newbnd;
                         (*success) = TRUE;
@@ -1015,7 +1030,8 @@ SCIP_RETCODE transformAndSolve(
                   }
                   else
                   {
-                     assert(SCIPisPositive(scip, row1valptr[i])); /* since we look at the swapped case, this represents a negative coefficient */
+                     /* since we look at the swapped case, this represents a negative coefficient */
+                     assert(SCIPisPositive(scip, row1valptr[i]));
                      if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
                          || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
                          || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_IMPLINT )
@@ -1026,7 +1042,8 @@ SCIP_RETCODE transformAndSolve(
                      if( SCIPisLT(scip, newbnd, ubs[idx1]) )
                      {
 #ifdef SCIP_DEBUG_BOUNDS
-                        SCIPdebugMsg(scip, "%g <= %s <= %g <= %g\n", lbs[idx1], SCIPmatrixGetColName(matrix, idx1), newbnd, ubs[idx1]);
+                        SCIPdebugMsg(scip, "%g <= %s <= %g <= %g\n",
+                                     lbs[idx1], SCIPmatrixGetColName(matrix, idx1), newbnd, ubs[idx1]);
 #endif
                         ubs[idx1] = newbnd;
                         (*success) = TRUE;
@@ -1044,7 +1061,8 @@ SCIP_RETCODE transformAndSolve(
                idx1 = row1idxptr[i];
                if( cangetbnd[idx1] )
                {
-                  if( SCIPisNegative(scip, row1valptr[i]) && SCIPisInfinity(scip, ubs[idx1]) ) /* since we look at the swapped case, this represents a positive coefficient */
+                  /* since we look at the swapped case, this represents a positive coefficient */
+                  if( SCIPisNegative(scip, row1valptr[i]) && SCIPisInfinity(scip, ubs[idx1]) )
                   {
                      if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
                          || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
@@ -1064,7 +1082,8 @@ SCIP_RETCODE transformAndSolve(
                   }
                   else if( SCIPisInfinity(scip, -lbs[idx1]) )
                   {
-                     assert(SCIPisPositive(scip, row1valptr[i])); /* since we look at the swapped case, this represents a negative coefficient */
+                     /* since we look at the swapped case, this represents a negative coefficient */
+                     assert(SCIPisPositive(scip, row1valptr[i]));
                      if( SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_BINARY
                          || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_INTEGER
                          || SCIPvarGetType(SCIPmatrixGetVar(matrix, idx1)) == SCIP_VARTYPE_IMPLINT )
@@ -1075,7 +1094,8 @@ SCIP_RETCODE transformAndSolve(
                      if( SCIPisLT(scip, newbnd, ubs[idx1]) )
                      {
 #ifdef SCIP_DEBUG_BOUNDS
-                        SCIPdebugMsg(scip, "%g <= %s <= %g <= %g\n", lbs[idx1], SCIPmatrixGetColName(matrix, idx1), newbnd, ubs[idx1]);
+                        SCIPdebugMsg(scip, "%g <= %s <= %g <= %g\n",
+                                     lbs[idx1], SCIPmatrixGetColName(matrix, idx1), newbnd, ubs[idx1]);
 #endif
                         ubs[idx1] = newbnd;
                         (*success) = TRUE;
@@ -1120,7 +1140,8 @@ SCIP_RETCODE applyLPboundTightening(
    SCIP_Bool infeasible;
 
 #ifdef SCIP_DEBUG_2RB
-   SCIPdebugMsg(scip, "combining rows %d (%s) and %d (%s)\n", row1, SCIPmatrixGetRowName(matrix, row1), row2, SCIPmatrixGetRowName(matrix, row2));
+   SCIPdebugMsg(scip, "combining rows %d (%s) and %d (%s)\n",
+                row1, SCIPmatrixGetRowName(matrix, row1), row2, SCIPmatrixGetRowName(matrix, row2));
 #endif
 
    SCIP_CALL( SCIPallocBufferArray(scip, &aoriginal, SCIPmatrixGetNColumns(matrix)) );
@@ -1134,12 +1155,16 @@ SCIP_RETCODE applyLPboundTightening(
    SCIP_CALL( SCIPallocBufferArray(scip, &cangetbnd, SCIPmatrixGetNColumns(matrix)) );
 
    /* Sort matrix rows */
-   SCIPsortIntReal(SCIPmatrixGetRowIdxPtr(matrix, row1), SCIPmatrixGetRowValPtr(matrix, row1), SCIPmatrixGetRowNNonzs(matrix, row1));
-   SCIPsortIntReal(SCIPmatrixGetRowIdxPtr(matrix, row2), SCIPmatrixGetRowValPtr(matrix, row2), SCIPmatrixGetRowNNonzs(matrix, row2));
+   SCIPsortIntReal(SCIPmatrixGetRowIdxPtr(matrix, row1), SCIPmatrixGetRowValPtr(matrix, row1),
+                   SCIPmatrixGetRowNNonzs(matrix, row1));
+   SCIPsortIntReal(SCIPmatrixGetRowIdxPtr(matrix, row2), SCIPmatrixGetRowValPtr(matrix, row2),
+                   SCIPmatrixGetRowNNonzs(matrix, row2));
 
    /* Use row2 to strengthen row1 */
    infeasible = FALSE;
-   SCIP_CALL( transformAndSolve(scip, matrix, row1, row2, swaprow1, swaprow2, aoriginal, acopy, coriginal, ccopy, cangetbnd, lbs, ubs, newlbsoriginal, newlbscopy, newubsoriginal, newubscopy, success, &row1redundant, &infeasible) );
+   SCIP_CALL( transformAndSolve(scip, matrix, row1, row2, swaprow1, swaprow2, aoriginal, acopy,
+                                coriginal, ccopy, cangetbnd, lbs, ubs, newlbsoriginal, newlbscopy,
+                                newubsoriginal, newubscopy, success, &row1redundant, &infeasible) );
 
    if( row1redundant )
    {
@@ -1147,7 +1172,9 @@ SCIP_RETCODE applyLPboundTightening(
    }
 
    /* Switch roles and use row1 to strengthen row2 */
-   SCIP_CALL( transformAndSolve(scip, matrix, row2, row1, swaprow2, swaprow1, aoriginal, acopy, coriginal, ccopy, cangetbnd, lbs, ubs, newlbsoriginal, newlbscopy, newubsoriginal, newubscopy, success, &row2redundant, &infeasible) );
+   SCIP_CALL( transformAndSolve(scip, matrix, row2, row1, swaprow2, swaprow1, aoriginal, acopy,
+                                coriginal, ccopy, cangetbnd, lbs, ubs, newlbsoriginal, newlbscopy,
+                                newubsoriginal, newubscopy, success, &row2redundant, &infeasible) );
 
    if( row2redundant && !row1redundant )
    {
@@ -1219,13 +1246,16 @@ int calcCliqueMaximums(
    }
 
    /* variable is relevant only if its coefficient is non-negative, if all coefs are negative we set firstmaxpos to -1 */
-   if( SCIPisPositive(scip, row2coefs[varinds[cliquevarpos[maxpos]]]) || (SCIPisZero(scip, row2coefs[varinds[cliquevarpos[maxpos]]]) && SCIPisPositive(scip, gradients[maxpos])) )
+   if( SCIPisPositive(scip, row2coefs[varinds[cliquevarpos[maxpos]]])
+       || (SCIPisZero(scip, row2coefs[varinds[cliquevarpos[maxpos]]])
+           && SCIPisPositive(scip, gradients[maxpos])) )
       firstmaxpos = maxpos;
    else
       firstmaxpos = -1;
 
 #ifdef SCIP_DEBUG_CLIQUE
-   SCIPdebugMsg(scip, "first maxvar: var_%d at coef(0) = %g, firstmaxpos = %d\n", maxpos, row2coefs[varinds[cliquevarpos[maxpos]]], firstmaxpos);
+   SCIPdebugMsg(scip, "first maxvar: var_%d at coef(0) = %g, firstmaxpos = %d\n",
+                maxpos, row2coefs[varinds[cliquevarpos[maxpos]]], firstmaxpos);
 #endif
 
    /* find next maximum */
@@ -1316,9 +1346,11 @@ int calcCliqueMaximums(
 
 #ifdef SCIP_DEBUG_CLIQUE
          if( maxidx == -1)
-            SCIPdebugMsg(scip, "next maxvar: firstmaxvar as dummy for negative clique, cliquemaxinds[%d] = %d\n", varinds[cliquevarpos[firstmaxpos]], cliquemaxinds[varinds[cliquevarpos[firstmaxpos]]]);
+            SCIPdebugMsg(scip, "next maxvar: firstmaxvar as dummy for negative clique, cliquemaxinds[%d] = %d\n",
+                         varinds[cliquevarpos[firstmaxpos]], cliquemaxinds[varinds[cliquevarpos[firstmaxpos]]]);
          else
-            SCIPdebugMsg(scip, "next maxvar: var_%d at coef(%g) = %g, cliquemaxinds[%d] = %d, \n", maxpos, minlambda, breakpointval, maxidx, cliquemaxinds[maxidx]);
+            SCIPdebugMsg(scip, "next maxvar: var_%d at coef(%g) = %g, cliquemaxinds[%d] = %d, \n",
+                         maxpos, minlambda, breakpointval, maxidx, cliquemaxinds[maxidx]);
 #endif
       }
    }
@@ -1399,7 +1431,8 @@ SCIP_RETCODE applyConvComb
 
 #ifdef SCIP_DEBUG
    /* swap = 0 means that lhs <= cons is used for bound tightening */
-   SCIPdebugMsg(scip, "combining rows %d (%s) and %d (%s) with swaps %d/%d\n", row1, SCIPmatrixGetRowName(matrix, row1), row2, SCIPmatrixGetRowName(matrix, row2), swaprow1, swaprow2);
+   SCIPdebugMsg(scip, "combining rows %d (%s) and %d (%s) with swaps %d/%d\n",
+                row1, SCIPmatrixGetRowName(matrix, row1), row2, SCIPmatrixGetRowName(matrix, row2), swaprow1, swaprow2);
    SCIPinfoMessage(scip, NULL, "Cons1: \n");
    SCIPprintCons(scip, SCIPmatrixGetCons(matrix, row1), NULL);
    SCIPinfoMessage(scip, NULL, "\n");
@@ -1578,13 +1611,21 @@ SCIP_RETCODE applyConvComb
    {
       idx = varinds[i];
       if( signs[idx] == UP )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, UP: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, UP: %g to %g, breakpoint at %g\n",
+                      lbs[idx], SCIPmatrixGetColName(matrix, idx),
+                      ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == DN )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, DN: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, DN: %g to %g, breakpoint at %g\n",
+                      lbs[idx], SCIPmatrixGetColName(matrix, idx),
+                      ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == POS )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, POS: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, POS: %g to %g, breakpoint at %g\n",
+                      lbs[idx], SCIPmatrixGetColName(matrix, idx),
+                      ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == NEG )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, NEG: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, NEG: %g to %g, breakpoint at %g\n",
+                      lbs[idx], SCIPmatrixGetColName(matrix, idx),
+                      ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
    }
 #endif
 
@@ -1624,15 +1665,18 @@ SCIP_RETCODE applyConvComb
 #ifdef SCIP_DEBUG_CLIQUE
    SCIPdebugMsg(scip, "ncliques = %d, nbinvars = %d\n", ncliques, nbinvars);
    for( i = 0; i < nbinvars; i++ )
-      SCIPdebugMsg(scip, "%s (%d) is in clique %d\n", SCIPmatrixGetColName(matrix, varinds[binvarpos[i]]), varinds[binvarpos[i]], cliquepartition[i]);
+      SCIPdebugMsg(scip, "%s (%d) is in clique %d\n",
+                   SCIPmatrixGetColName(matrix, varinds[binvarpos[i]]), varinds[binvarpos[i]], cliquepartition[i]);
 
    SCIPdebugMsg(scip, "breakpoints without cliques: %d\n", nbreakpoints);
 #endif
 
    SCIP_CALL( SCIPallocBufferArray(scip, &currentmaxinds, ncliques+1) ); /* the entry at index 0 is a dummy to prevent excessive index shifting in the code */
 
-   /* remove cliques containing a single variable and compute clique maximums */
-   shift = 0; /* we discard cliques by shifing their values (binvarpos, cliquepartition) and overwriting unnecessary entries, this simplifies handling of these arrays */
+   /* remove cliques containing a single variable and compute clique maximums
+    * Note about shift: we discard cliques by shifing their values (binvarpos, cliquepartition)
+    * and overwriting unnecessary entries, this simplifies handling of these arrays */
+   shift = 0;
    for( i = 0; i < nbinvars; )
    {
 #ifdef SCIP_DEBUG_CLIQUE
@@ -1646,8 +1690,10 @@ SCIP_RETCODE applyConvComb
          {
             signs[varinds[binvarpos[j]]] = CLQ;
             binvarpos[j-shift] = binvarpos[j];
-            cliquepartition[j-shift] = cliquepartition[j] - shift + 1; /* +1 ensures that all clique IDs are >0 such that we can use -ID to signal an all-negative clique */
-            cliquemaxinds[binvarpos[j]] = -cliquepartition[j-shift]; /* negative sign implies that this variable does not assume the maximum in this clique, will be adjusted in calcCliqueMaximums */
+            /* +1 ensures that all clique IDs are >0 such that we can use -ID to signal an all-negative clique */
+            cliquepartition[j-shift] = cliquepartition[j] - shift + 1;
+            /* negative sign implies that this variable does not assume the maximum in this clique, will be adjusted in calcCliqueMaximums */
+            cliquemaxinds[binvarpos[j]] = -cliquepartition[j-shift];
             /* variables in cliques have either a clique-breakpoint or no breakpoint at all */
             if( !SCIPisEQ(scip, breakpoints[binvarpos[j]], 2.0) )
             {
@@ -1661,7 +1707,8 @@ SCIP_RETCODE applyConvComb
 #endif
          /* size of current clique equals j - i */
          idx = cliquepartition[i-shift]; /* cliquepartition values have been shifted */
-         currentmaxinds[idx] = calcCliqueMaximums(scip, varinds, &binvarpos[i-shift], j - i, row1coefs, row2coefs, &nbreakpoints, breakpoints, cliquemaxinds, gradients);
+         currentmaxinds[idx] = calcCliqueMaximums(scip, varinds, &binvarpos[i-shift], j - i, row1coefs, row2coefs,
+                                                  &nbreakpoints, breakpoints, cliquemaxinds, gradients);
 #ifdef SCIP_DEBUG_CLIQUE
          SCIPdebugMsg(scip, "breakpoints after checking maximums of clique %d: %d, firstmaxidx = %d\n", idx, nbreakpoints, currentmaxinds[idx]);
 #endif
@@ -1679,9 +1726,12 @@ SCIP_RETCODE applyConvComb
 
 #ifdef SCIP_DEBUG_CLIQUE
    nbinvars -= shift;
-   SCIPdebugMsg(scip, "after clearing single variable cliques: ncliques = %d, nbinvars = %d, nbreakpoints = %d\n", ncliques, nbinvars, nbreakpoints);
+   SCIPdebugMsg(scip, "after clearing single variable cliques: ncliques = %d, nbinvars = %d, nbreakpoints = %d\n",
+                ncliques, nbinvars, nbreakpoints);
    for( i = 0; i < nbinvars; i++ )
-      SCIPdebugMsg(scip, "%s (%d) is in clique %d with breakpoint %g\n", SCIPmatrixGetColName(matrix, varinds[binvarpos[i]]), varinds[binvarpos[i]], cliquepartition[i], breakpoints[binvarpos[i]]);
+      SCIPdebugMsg(scip, "%s (%d) is in clique %d with breakpoint %g\n",
+                   SCIPmatrixGetColName(matrix, varinds[binvarpos[i]]), varinds[binvarpos[i]],
+                   cliquepartition[i], breakpoints[binvarpos[i]]);
 #endif
 
 #ifdef SCIP_DEBUG_BREAKPOINTS
@@ -1691,18 +1741,27 @@ SCIP_RETCODE applyConvComb
    {
       idx = varinds[i];
       if( signs[idx] == UP )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, UP: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, UP: %g to %g, breakpoint at %g\n",
+                      lbs[idx], SCIPmatrixGetColName(matrix, idx),
+                      ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == DN )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, DN: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, DN: %g to %g, breakpoint at %g\n",
+                      lbs[idx], SCIPmatrixGetColName(matrix, idx),
+                      ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == POS )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, POS: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, POS: %g to %g, breakpoint at %g\n",
+                      lbs[idx], SCIPmatrixGetColName(matrix, idx),
+                      ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == NEG )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, NEG: %g to %g, breakpoint at %g\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, NEG: %g to %g, breakpoint at %g\n",
+                      lbs[idx], SCIPmatrixGetColName(matrix, idx),
+                      ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i]);
       else if( signs[idx] == CLQ )
-         SCIPdebugMsg(scip, "%g <= %s <= %g, CLQ: %g to %g, breakpoint at %g, cliquemaxind = %d\n", lbs[idx], SCIPmatrixGetColName(matrix, idx), ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i], cliquemaxinds[i]);
+         SCIPdebugMsg(scip, "%g <= %s <= %g, CLQ: %g to %g, breakpoint at %g, cliquemaxind = %d\n",
+                      lbs[idx], SCIPmatrixGetColName(matrix, idx),
+                      ubs[idx], row2coefs[idx], row1coefs[idx], breakpoints[i], cliquemaxinds[i]);
    }
 #endif
-
 
    /* The obvious preconditions for bound tightenings are met, so we try to calculate new bounds. */
    if( nbreakpoints >= 1 )
@@ -1733,7 +1792,8 @@ SCIP_RETCODE applyConvComb
          idx = varinds[i];
          if( signs[idx] == UP || signs[idx] == NEG )
          {
-            assert(SCIPisNegative(scip, row2coefs[idx]) || (SCIPisZero(scip, row2coefs[idx]) && SCIPisNegative(scip, row1coefs[idx])));
+            assert(SCIPisNegative(scip, row2coefs[idx]) || (SCIPisZero(scip, row2coefs[idx])
+                                                            && SCIPisNegative(scip, row1coefs[idx])));
             if( !SCIPisInfinity(scip, -lbs[idx]) )
             {
                l1 -= row1coefs[idx] * lbs[idx];
@@ -1746,7 +1806,8 @@ SCIP_RETCODE applyConvComb
          }
          else if( signs[idx] == DN || signs[idx] == POS )
          {
-            assert(SCIPisPositive(scip, row2coefs[idx]) || (SCIPisZero(scip, row2coefs[idx]) && SCIPisPositive(scip, row1coefs[idx])));
+            assert(SCIPisPositive(scip, row2coefs[idx]) || (SCIPisZero(scip, row2coefs[idx])
+                                                            && SCIPisPositive(scip, row1coefs[idx])));
             if( !SCIPisInfinity(scip, ubs[idx]) )
             {
                l1 -= row1coefs[idx] * ubs[idx];
@@ -1844,7 +1905,8 @@ SCIP_RETCODE applyConvComb
       SCIPdebugMsg(scip, "currentmaxinds[0] = dummy\n");
       for( i = 1; i < ncliques + 1; i++ )
          if( currentmaxinds[i] >= 0 )
-            SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (%s)\n", i, currentmaxinds[i], SCIPmatrixGetColName(matrix, currentmaxinds[i]));
+            SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (%s)\n",
+                         i, currentmaxinds[i], SCIPmatrixGetColName(matrix, currentmaxinds[i]));
          else
             SCIPdebugMsg(scip, "currentmaxinds[%d] = %d (no maximal variable)\n", i, currentmaxinds[i]);
 #endif
@@ -1869,7 +1931,8 @@ SCIP_RETCODE applyConvComb
                newubs[i] = MIN(newubs[i], l2 / row2coefs[idx]);
 #ifdef SCIP_DEBUG_BOUNDS
             if( !SCIPisEQ(scip, oldlb, newlbs[i]) || !SCIPisEQ(scip, oldub, newubs[i]) )
-               SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n", oldlb, newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], oldub);
+               SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n",
+                            oldlb, newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], oldub);
 #endif
          }
       }
@@ -1914,7 +1977,8 @@ SCIP_RETCODE applyConvComb
             }
 #ifdef SCIP_DEBUG_BOUNDS
             if( !SCIPisEQ(scip, oldlb, newlbs[i]) || !SCIPisEQ(scip, oldub, newubs[i]) )
-               SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n", oldlb, newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], oldub);
+               SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n",
+                            oldlb, newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], oldub);
 #endif
          }
       }
@@ -2058,14 +2122,16 @@ SCIP_RETCODE applyConvComb
                if( signs[idx] == POS || signs[idx] == DN )
                {
                   if( ninfs == 0 )
-                     newlbs[j] = MAX(newlbs[j], (breakpoints[i] * l1 + (1 - breakpoints[i]) * l2 + coef * ubs[idx]) / coef);
+                     newlbs[j] = MAX(newlbs[j],
+                                     (breakpoints[i] * l1 + (1 - breakpoints[i]) * l2 + coef * ubs[idx]) / coef);
                   else if( SCIPisInfinity(scip, ubs[idx]) )
                      newlbs[j] = MAX(newlbs[j], (breakpoints[i] * l1 + (1 - breakpoints[i]) * l2) / coef);
                }
                else if ( signs[idx] == NEG || signs[idx] == UP )
                {
                   if( ninfs == 0 )
-                     newubs[j] = MIN(newubs[j], (breakpoints[i] * l1 + (1 - breakpoints[i]) * l2 + coef * lbs[idx]) / coef);
+                     newubs[j] = MIN(newubs[j],
+                                     (breakpoints[i] * l1 + (1 - breakpoints[i]) * l2 + coef * lbs[idx]) / coef);
                   else if( SCIPisInfinity(scip, -lbs[idx]) )
                      newubs[j] = MIN(newubs[j], (breakpoints[i] * l1 + (1 - breakpoints[i]) * l2) / coef);
                }
@@ -2081,7 +2147,10 @@ SCIP_RETCODE applyConvComb
 
                      if(currentmaxinds[cliqueidx] == -1)
                         newubs[j] = MIN(newubs[j], (breakpoints[i] * l1 + (1 - breakpoints[i]) * l2) / coef);
-                     else if(SCIPisLT(scip, (breakpoints[i] * (l1 + row1coefs[currentmaxinds[cliqueidx]]) + (1 - breakpoints[i]) * (l2 + row2coefs[currentmaxinds[cliqueidx]])) / coef, 1.0) )
+                     else if(SCIPisLT(scip,
+                                      (breakpoints[i] * (l1 + row1coefs[currentmaxinds[cliqueidx]])
+                                       + (1 - breakpoints[i]) * (l2 + row2coefs[currentmaxinds[cliqueidx]])) / coef,
+                                      1.0) )
                         newubs[j] = MIN(newubs[j], 0.0);
                   }
                   else
@@ -2090,7 +2159,8 @@ SCIP_RETCODE applyConvComb
 
 #ifdef SCIP_DEBUG_BOUNDS
                if( !SCIPisEQ(scip, oldlb, newlbs[j]) || !SCIPisEQ(scip, oldub, newubs[j]) )
-                  SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n", oldlb, newlbs[j], SCIPmatrixGetColName(matrix, idx), newubs[j], oldub);
+                  SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n",
+                               oldlb, newlbs[j], SCIPmatrixGetColName(matrix, idx), newubs[j], oldub);
 #endif
             }
          }
@@ -2136,7 +2206,8 @@ SCIP_RETCODE applyConvComb
                newubs[i] = MIN(newubs[i], l1 / row1coefs[idx]);
 #ifdef SCIP_DEBUG_BOUNDS
             if( !SCIPisEQ(scip, oldlb, newlbs[i]) || !SCIPisEQ(scip, oldub, newubs[i]) )
-               SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n", oldlb, newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], oldub);
+               SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n",
+                            oldlb, newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], oldub);
 #endif
          }
       }
@@ -2184,7 +2255,8 @@ SCIP_RETCODE applyConvComb
             }
 #ifdef SCIP_DEBUG_BOUNDS
             if( !SCIPisEQ(scip, oldlb, newlbs[i]) || !SCIPisEQ(scip, oldub, newubs[i]) )
-               SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n", oldlb, newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], oldub);
+               SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n",
+                            oldlb, newlbs[i], SCIPmatrixGetColName(matrix, idx), newubs[i], oldub);
 #endif
          }
       }
@@ -2198,7 +2270,8 @@ SCIP_RETCODE applyConvComb
          idx = varinds[i];
          var = SCIPmatrixGetVar(matrix, idx);
 
-         SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n", lbs[idx], newlbs[i], SCIPvarGetName(var), newubs[i], ubs[idx]);
+         SCIPdebugMsg(scip, "%g <= %g <= %s <= %g <= %g\n",
+                      lbs[idx], newlbs[i], SCIPvarGetName(var), newubs[i], ubs[idx]);
          assert(SCIPisLE(scip, lbs[idx], newlbs[i]));
          assert(SCIPisGE(scip, ubs[idx], newubs[i]));
 
@@ -2211,7 +2284,9 @@ SCIP_RETCODE applyConvComb
          {
             (*success) = TRUE;
 
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
+                || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER
+                || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
             {
                lbs[idx] = SCIPceil(scip, newlbs[i]);
                ubs[idx] = SCIPfloor(scip, newubs[i]);
@@ -2322,7 +2397,8 @@ SCIP_RETCODE processHashlists(
                         swaprow1 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx));
                         swaprow2 = !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx));
 
-                        SCIP_CALL( applyLPboundTightening(scip, matrix, rowpair.row1idx, rowpair.row2idx, swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
+                        SCIP_CALL( applyLPboundTightening(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                                                          swaprow1, swaprow2, newlbs, newubs, delcons, &success) );
                      }
 
                      /* apply bound tightening on convex-combined rows */
@@ -2666,7 +2742,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    {
      SCIPdebugMsg(scip, "processing pp and mm\n");
      SCIP_CALL( processHashlists(scip, presoldata, matrix, hashlistpp, hashlistmm, pospp, posmm, rowidxlistpp,
-				 rowidxlistmm, newlbs, newubs, delcons) );
+                                 rowidxlistmm, newlbs, newubs, delcons) );
    }
 
    /* Process pm and mp hashlists */
@@ -2674,7 +2750,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    {
      SCIPdebugMsg(scip, "processing pm and mp\n");
      SCIP_CALL( processHashlists(scip, presoldata, matrix, hashlistpm, hashlistmp, pospm, posmp, rowidxlistpm,
-				 rowidxlistmp, newlbs, newubs, delcons) );
+                                 rowidxlistmp, newlbs, newubs, delcons) );
    }
 
    /* Apply reductions */
@@ -2821,9 +2897,11 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) );
                SCIPdebugMsg(scip, "removing redundant cxonstraint %s\n", SCIPmatrixGetRowName(matrix, i));
             }
-            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i)) && SCIPisGT(scip, rowinf, SCIPmatrixGetRowRhs(matrix, i)) )
+            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, i))
+                && SCIPisGT(scip, rowinf, SCIPmatrixGetRowRhs(matrix, i)) )
             {
-               SCIPdebugMsg(scip, "infeasibility detected in %s, rowinf = %g\n", SCIPmatrixGetRowName(matrix, i), rowinf);
+               SCIPdebugMsg(scip, "infeasibility detected in %s, rowinf = %g\n",
+                            SCIPmatrixGetRowName(matrix, i), rowinf);
                infeasible = TRUE;
             }
          }
@@ -2831,7 +2909,8 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
          {
             if( SCIPisGT(scip, SCIPmatrixGetRowLhs(matrix, i), rowsup) )
             {
-               SCIPdebugMsg(scip, "infeasibility detected in %s, rowsup = %g\n", SCIPmatrixGetRowName(matrix, i), rowsup);
+               SCIPdebugMsg(scip, "infeasibility detected in %s, rowsup = %g\n",
+                            SCIPmatrixGetRowName(matrix, i), rowsup);
                infeasible = TRUE;
             }
          }
