@@ -5085,11 +5085,11 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    }
 
    /* set estimate */
-   if( !SCIPdialogHasEntry(setmenu, "restarts") )
+   if( !SCIPdialogHasEntry(setmenu, "estimation") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &submenu,
             NULL, SCIPdialogExecMenu, NULL, NULL,
-            "restarts", "change parameters for restarts and tree size estimation", TRUE, NULL) );
+            "estimation", "change parameters for restarts and tree size estimation", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }

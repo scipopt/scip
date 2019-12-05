@@ -49,7 +49,7 @@
 extern "C" {
 #endif
 
-/** creates event handler for estim event */
+/** creates event handler for tree size estimation */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP*                 scip                /**< SCIP data structure */
