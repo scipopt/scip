@@ -29,13 +29,13 @@
  *   A_{kR} x_R              + A_{kT} x_T \geq b_k
  * \f}
  * with \f$N\f$ the set of variable indexes, \f$R \subseteq N\f$, \f$S \subseteq N\f$, \f$T \subseteq N\f$,
- * \f$R \cap S = \emptyset\f$, \f$R \cap T = \emptyset\f$, \f$S \cap T = \emptyset\f$ and \f$i \not= k\f$.
+ * \f$R \cap S = \emptyset\f$, \f$R \cap T = \emptyset\f$, \f$S \cap T = \emptyset\f$ and row indices \f$i \not= k\f$.
  *
- * Solve the following two LPs
+ * Let $\ell$ and $u$ be bound vectors for x and solve the following two LPs
  * \f{eqnarray*}{
- *   L = \min \{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S \geq b_i \}\\
- *   U = \max \{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S \geq b_i \}
- * \f} // the lps dont seem to be correct - probably x should still satisfy all bounds
+ *   L = \min \{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S \geq b_i, \ell \leq x \leq u \}\\
+ *   U = \max \{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S \geq b_i, \ell \leq x \leq u \}
+ * \f}
  * and use \f$L\f$ and \f$U\f$ for getting bounds on \f$x_T\f$.
  *
  * If \f$L + \mbox{infimum}(A_{kT}x_T) \geq b_k\f$, then the second constraint above is redundant.
@@ -43,14 +43,14 @@
  * 2. ConvComb with clique-extension
  * Given two constraints
  * \f{eqnarray*}{
- *     A_{r\cdot} x \geq b_r \\ // r and s should be defined properly
- *     A_{s\cdot} x \geq b_s \\
+ *     A_{i\cdot} x \geq b_i \\
+ *     A_{k\cdot} x \geq b_k \\
  *     \ell \leq x \leq u \\
  * \f}
  * this method determines promising values for $\lambda \in (0,1)$ and
  * applies feasibility-based bound tightening to the convex combinations
  *
- * $(\lambda A_{r\cdot} + (1 - \lambda) A_{s\cdot}) x \geq \lambda b_r + (1 - \lambda) b_s$.
+ * $(\lambda A_{i\cdot} + (1 - \lambda) A_{k\cdot}) x \geq \lambda b_i + (1 - \lambda) b_k$.
  *
  * Additionally, cliques drawn from the SCIPcliqueTable are used
  * to further strengthen the above bound tightening.
@@ -383,7 +383,8 @@ SCIP_RETCODE solveSingleRowLP(
          ub = -lbs[i];
       }
 
-      assert(SCIPisPositive(scip, a[i]) && SCIPisPositive(scip, c[i])); // !SCIPisNegative(scip, c[i]) ?
+      /* All variables with a <= 0 have been handled and variables with a[i] = 0, c[i] = 0 ignored */
+      assert(SCIPisPositive(scip, a[i]) && SCIPisPositive(scip, c[i]));
 
       /* Adjust objective offset and b to shift lower bound to zero */
       (*obj) += c[i] * lb;
@@ -556,7 +557,12 @@ SCIP_RETCODE solveSingleRowLP(
    }
 }
 
-/** transforms rows as required, solves the individual single-row LPs and then tightens bounds */ // this description is not that helpful when trying to understandt the code 
+/** Transform rows into single row LPs, solve them and and tighten bounds
+ *
+ *  During transformation, create coefficient arrays where variables with a zero coefficient in both rows are ignored
+ *  and bring the LP in the form min c^T x, s.t. a^T x >= b, lbs <= x <= ubs.
+ *  These LPs are then solved and bounds tightened as described in LP-bound (see above).
+ */
 static
 SCIP_RETCODE transformAndSolve(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -618,7 +624,13 @@ SCIP_RETCODE transformAndSolve(
    row1valptr = SCIPmatrixGetRowValPtr(matrix, row1idx);
    row2valptr = SCIPmatrixGetRowValPtr(matrix, row2idx);
 
-   /* getting bounds for row1 */ // the documentation of the first part of this could be clearer
+   /** Preprocess rows:
+    *  1. Calculate minimal and maximal activity of variables not appearing in both rows,
+    *     as this represents the right-hand sides of the single-row LPs to be solved.
+    *  2. Transform rows into format required by solveSingleRowLP where
+    *     first row represents the objective vector c and second row represents the constraint vector a.
+    *  3. Determine for which variables new bounds can be calculated.
+    */
    i = 0;
    j = 0;
    nvars = 0;
@@ -672,7 +684,12 @@ SCIP_RETCODE transformAndSolve(
                minact -= row1valptr[i] * ubs[idx1];
 
             cangetbnd[idx1] = TRUE;
-         } // can't we stop early once we have discovered that maxinf and mininf >= 2 ?
+         }
+         if( maxinfs > 1 && mininfs > 1 )
+         {
+            (*success) = FALSE;
+            return SCIP_OKAY;
+         }
          i++;
 #ifdef SCIP_DEBUG_2RB
          SCIPdebugMsg(scip, "%g <= (%s) <= %g has coefs %g and 0.0, minact = %g, maxact = %g\n", lbs[idx1], SCIPvarGetName(SCIPmatrixGetVar(matrix, idx1)), ubs[idx1], row1valptr[i], minact, maxact);
@@ -935,7 +952,6 @@ SCIP_RETCODE transformAndSolve(
          }
       }
    }
-   // also this seems to me like code duplication - the two tightenings are basically the same except for signs and names
 
    /* redundancy check */
    if( mininfs == 0 && !swaprow1 )
@@ -1313,9 +1329,9 @@ int calcCliqueMaximums(
       return varinds[cliquevarpos[firstmaxpos]];
 }
 
-/** try two-row combine for given rows */ // i feel that - given the length of the method - this comment could be way more explanatory
+/** apply ConvComb with clique extension to given rows */
 static
-SCIP_RETCODE combineRows
+SCIP_RETCODE applyConvComb
 (
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_MATRIX*          matrix,             /**< the constraint matrix */
@@ -2231,6 +2247,7 @@ SCIP_RETCODE combineRows
    return SCIP_OKAY;
 }
 
+
 /*
  * Callback methods of presolver
  */
@@ -2356,7 +2373,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    if( presoldata->nuselessruns >= 5 )
       return SCIP_OKAY;
 
-   *result = SCIP_DIDNOTFIND; // duplication with line 2343?
+   *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
@@ -2570,17 +2587,17 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                         /* apply bound tightening on convex-combined rows */
                         if( presoldata->convcomb )
                         {
-                           SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                           SCIP_CALL( applyConvComb(scip, matrix, rowpair.row1idx, rowpair.row2idx,
                               FALSE, FALSE, newlbs, newubs, &success) );
                            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx)) )
-                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                              SCIP_CALL( applyConvComb(scip, matrix, rowpair.row1idx, rowpair.row2idx,
                                  TRUE, FALSE, newlbs, newubs, &success) );
                            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
-                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                              SCIP_CALL( applyConvComb(scip, matrix, rowpair.row1idx, rowpair.row2idx,
                                  FALSE, TRUE, newlbs, newubs, &success) );
                            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx))
                                  && !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
-                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                              SCIP_CALL( applyConvComb(scip, matrix, rowpair.row1idx, rowpair.row2idx,
                                  TRUE, TRUE, newlbs, newubs, &success) );
                         }
                         if( success )
@@ -2682,17 +2699,17 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
                         /* apply bound tightening on convex-combined rows */
                         if( presoldata->convcomb )
                         {
-                           SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                           SCIP_CALL( applyConvComb(scip, matrix, rowpair.row1idx, rowpair.row2idx,
                               FALSE, FALSE, newlbs, newubs, &success) );
                            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx)) )
-                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                              SCIP_CALL( applyConvComb(scip, matrix, rowpair.row1idx, rowpair.row2idx,
                                  TRUE, FALSE, newlbs, newubs, &success) );
                            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
-                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                              SCIP_CALL( applyConvComb(scip, matrix, rowpair.row1idx, rowpair.row2idx,
                                  FALSE, TRUE, newlbs, newubs, &success) );
                            if( !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row1idx))
                                  && !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, rowpair.row2idx)) )
-                              SCIP_CALL( combineRows(scip, matrix, rowpair.row1idx, rowpair.row2idx,
+                              SCIP_CALL( applyConvComb(scip, matrix, rowpair.row1idx, rowpair.row2idx,
                                  TRUE, TRUE, newlbs, newubs, &success) );
                         }
                         if( success )
@@ -2949,7 +2966,6 @@ SCIP_RETCODE SCIPincludePresolTworowbnd(
 
    /* create tworowbnd presolver data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
-   /* TODO: (optional) create presolver specific data here */ // can this TODO be removed?
 
    presol = NULL;
 
