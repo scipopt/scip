@@ -295,12 +295,14 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
  *  be the given variable index and the rest is filled with the remaining variables excluding
  *  the ones specified in @p ignoredvars (note that it should contain the variable indices+1).
  *
- * @pre orbit is an initialized array of size propdata->npermvars
+ *  @pre orbit is an initialized array of size propdata->npermvars
+ *  @pre at least one of @p perms and @p permstrans has to be not NULL
  */
 SCIP_RETCODE SCIPcomputeOrbitVar(
    SCIP*                 scip,               /**< SCIP instance */
    int                   npermvars,          /**< number of variables in permvars */
-   int**                 perms,              /**< the generators of the permutation group */
+   int**                 perms,              /**< the generators of the permutation group (or NULL) */
+   int**                 permstrans,         /**< the transposed matrix of generators (or NULL) */
    int                   nperms,             /**< number of permutations */
    int*                  components,         /**< the components of the permutation group */
    int*                  componentbegins,    /**< array containing the starting index of each component */
@@ -315,12 +317,11 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    SCIP_Shortbool* varadded;
    int* varstotest;
    int nvarstotest;
-   int image;
    int j;
    int p;
 
    assert(scip != NULL);
-   assert(perms != NULL);
+   assert(perms != NULL || permstrans != NULL);
    assert(components != NULL);
    assert(componentbegins != NULL);
    assert(orbit != NULL);
@@ -344,10 +345,21 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    /* iterate over variables in orbit and compute their images */
    for( j = 0; j < nvarstotest; ++j )
    {
+      int currvar;
+
+      currvar = varstotest[j];
+
       for( p = componentbegins[component]; p < componentbegins[component+1]; ++p )
       {
-         int* perm = perms[components[p]];
-         image = perm[varstotest[j]];
+         int image;
+         int comp;
+
+         comp = components[p];
+
+         if (permstrans == NULL)
+            image = perms[comp][currvar];
+         else
+            image = permstrans[currvar][comp];
 
          /* found new element of the orbit of varidx */
          if( !varadded[image] )

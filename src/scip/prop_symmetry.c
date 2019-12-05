@@ -2868,8 +2868,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIP_CALL( SCIPallocBufferArray(scip, &orbit, propdata->npermvars) );
 
             SCIP_CALL( SCIPcomputeOrbitVar(scip, propdata->npermvars, propdata->perms,
-                  propdata->nperms, propdata->components, propdata->componentbegins,
-                  usedvars, graphcomponents[0], i, orbit, &orbitsize) );
+                  propdata->permstrans, propdata->nperms, propdata->components,
+                  propdata->componentbegins, usedvars, graphcomponents[0], i, orbit, &orbitsize) );
 
             assert(orbit[0] == graphcomponents[0]);
             vars[1] = propdata->permvars[orbit[0]];
