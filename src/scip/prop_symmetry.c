@@ -2795,6 +2795,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int* graphcomponents;
       int* graphcompbegins;
       int* compcolorbegins;
+      int* chosencomppercolor;
       int ngraphcomponents;
       int ncompcolors;
       int ntwocycleperms;
@@ -2835,10 +2836,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       SCIPdebugMsg(scip, "number of colors: %d\n", ncompcolors);
 
+      SCIP_CALL( SCIPallocBufferArray(scip, &chosencomppercolor, ncompcolors) );
+
       for( j = 0; j < ncompcolors; ++j )
       {
          SCIP_VAR* vars[2];
-         SCIP_Real vals[2] = {1,-1};
+         SCIP_Real vals[2] = {1, -1};
          SCIP_CONS* cons;
          int chosencomp = -1;
          int chosencompsize = 0;
@@ -2861,6 +2864,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
          assert(chosencomp >= 0);
          assert(chosencomp < ngraphcomponents);
+         assert(chosencompsize > 0);
+
+         chosencomppercolor[j] = chosencomp;
 
          SCIPdebugMsg(scip, "choosing component %d with %d variables\n", chosencomp+1,
             graphcompbegins[chosencomp+1] - graphcompbegins[chosencomp]);
@@ -2909,78 +2915,102 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIP_CONS* cons;
          SCIP_HASHSET* usedvars;
          SCIP_VAR* vars[2];
-         SCIP_Real vals[2] = {1,-1};
-         int* orbit;
-         int orbitsize;
-
-         /* @TODO first component could be a trivial one! make different choice */
+         SCIP_Real vals[2] = {1, -1};
+         SCIP_Shortbool* varfound;
+         int* orbit[2];
+         int orbitsize[2];
+         int activeorb = 0;
 
          SCIP_CALL( SCIPhashsetCreate(&usedvars, SCIPblkmem(scip), 2 * npermsincomp) );
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &varfound, propdata->npermvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &orbit[0], propdata->npermvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &orbit[1], propdata->npermvars) );
 
-         /* mark all variables that have been used in strong SBCs */
-         for( j = graphcompbegins[0]; j < graphcompbegins[1]; ++j )
+         for( j = 0; j < ncompcolors; ++j )
          {
-            SCIP_CALL( SCIPhashsetInsert(usedvars, SCIPblkmem(scip),
-                  (void*) (size_t) (graphcomponents[j]+1)) );
-         }
+            int graphcomp;
+            int graphcompsize;
+            int firstvaridx;
+            int k;
 
-         if( SCIPhashsetGetNElements(usedvars) < propdata->npermvars )
-         {
-            SCIP_CALL( SCIPallocBufferArray(scip, &orbit, propdata->npermvars) );
+            graphcomp = chosencomppercolor[j];
+            graphcompsize = graphcompbegins[graphcomp+1] - graphcompbegins[graphcomp];
+            firstvaridx = graphcomponents[graphcompbegins[graphcomp]];
+
+            /* if the first variable was already contained in another orbit
+             * or if there are no variables left anyway, skip the component */
+            if( varfound[firstvaridx] || graphcompsize == propdata->npermvars )
+               continue;
+
+            SCIPhashsetRemoveAll(usedvars);
+
+            /* mark all variables that have been used in strong SBCs */
+            for( k = graphcompbegins[graphcomp]; k < graphcompbegins[graphcomp+1]; ++k )
+            {
+               SCIP_CALL( SCIPhashsetInsert(usedvars, SCIPblkmem(scip),
+                     (void*) (size_t) (graphcomponents[k]+1)) );
+            }
 
             SCIP_CALL( SCIPcomputeOrbitVar(scip, propdata->npermvars, propdata->perms,
                   propdata->permstrans, propdata->nperms, propdata->components,
-                  propdata->componentbegins, usedvars, graphcomponents[0], i, orbit, &orbitsize) );
+                  propdata->componentbegins, usedvars, varfound, graphcomponents[0],
+                  i, orbit[activeorb], &orbitsize[activeorb]) );
 
-            assert(orbit[0] == graphcomponents[0]);
-            vars[1] = propdata->permvars[orbit[0]];
+            assert(orbit[activeorb][0] == firstvaridx);
 
-            /* add weak SBCs for rest of enclosing orbit */
-            for( j = 1; j < orbitsize; ++j )
-            {
-               char name[SCIP_MAXSTRLEN];
-
-               assert(!SCIPhashsetExists(usedvars, (void*) (size_t) (graphcomponents[orbit[j]]+1)));
-
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "weak_sbcs_%d_%d_%d",
-                  i, orbit[0], orbit[j]);
-
-               vars[0] = propdata->permvars[orbit[j]];
-
-               SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
-                     SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
-                     FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-               SCIP_CALL( SCIPaddCons(scip, cons) );
-
-   #ifdef SCIP_DEBUG
-               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-               SCIPinfoMessage(scip, NULL, "\n");
-   #endif
-
-               if ( propdata->ngenlinconss >= propdata->genlinconsssize )    /* check whether we need to resize */
-               {
-                  int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
-                  assert( newsize >= propdata->ngenlinconss );
-
-                  SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
-                     propdata->genlinconsssize, newsize) );
-
-                  propdata->genlinconsssize = newsize;
-               }
-
-               propdata->genlinconss[propdata->ngenlinconss] = cons;
-               ++propdata->ngenlinconss;
-            }
-
-            SCIPfreeBufferArray(scip, &orbit);
+            if( orbitsize[activeorb] > orbitsize[!activeorb] )
+               activeorb = !activeorb;
          }
 
+         activeorb = !activeorb;
+
+         vars[1] = propdata->permvars[orbit[activeorb][0]];
+
+         /* add weak SBCs for rest of enclosing orbit */
+         for( j = 1; j < orbitsize[activeorb]; ++j )
+         {
+            char name[SCIP_MAXSTRLEN];
+
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "weak_sbcs_%d_%d_%d",
+               i, orbit[0], orbit[j]);
+
+            vars[0] = propdata->permvars[orbit[activeorb][j]];
+
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
+                  SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
+                  FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+
+#ifdef SCIP_DEBUG
+            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+            if ( propdata->ngenlinconss >= propdata->genlinconsssize )    /* check whether we need to resize */
+            {
+               int newsize = SCIPcalcMemGrowSize(scip, propdata->ngenlinconss + 1);
+               assert( newsize >= propdata->ngenlinconss );
+
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &propdata->genlinconss,
+                  propdata->genlinconsssize, newsize) );
+
+               propdata->genlinconsssize = newsize;
+            }
+
+            propdata->genlinconss[propdata->ngenlinconss] = cons;
+            ++propdata->ngenlinconss;
+         }
+
+         SCIPfreeBufferArray(scip, &orbit[0]);
+         SCIPfreeBufferArray(scip, &orbit[1]);
+         SCIPfreeBufferArray(scip, &varfound);
          SCIPhashsetFree(&usedvars, SCIPblkmem(scip));
       }
 
       propdata->componentblocked[i] = TRUE;
 
+      SCIPfreeBufferArrayNull(scip, &chosencomppercolor);
       SCIPfreeBlockMemoryArrayNull(scip, &compcolorbegins, ncompcolors + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcompbegins, ngraphcomponents + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcomponents, propdata->npermvars);

@@ -114,6 +114,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    int*                  componentbegins,    /**< array containing the starting index of each component */
    SCIP_HASHSET*         ignoredvars,        /**< hashset containing variable indices (shifted by +1)
                                                *  that should be ignored (or NULL) */
+   SCIP_Shortbool*       varfound,           /**< bitmap to mark which variables have been added (or NULL) */
    int                   varidx,             /**< index of variable for which the orbit is requested */
    int                   component,          /**< component that var is in */
    int *                 orbit,              /**< array in which the orbit should be stored */
