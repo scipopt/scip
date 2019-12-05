@@ -242,6 +242,9 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_COUNTONLYLEAVES      FALSE   /**< should only leaves count for the minnodes parameter? */
 #define DEFAULT_RESTARTFACTOR        2.0     /**< factor by which the estimated number of nodes should exceed the current number of nodes */
 #define DEFAULT_HITCOUNTERLIM        50      /**< limit on the number of successive samples to really trigger a restart */
+#define DEFAULT_SSG_NMAXSUBTREES     -1      /**< the maximum number of individual SSG subtrees; the old split is kept if
+                                               *  a new split exceeds this number of subtrees ; -1: no limit */
+#define DEFAULT_SSG_NMINNODESLASTSPLIT   0   /**< minimum number of nodes to process between two consecutive SSG splits */
 
 /** event handler data */
 struct SCIP_EventhdlrData
@@ -292,9 +295,13 @@ struct SubtreeSumGap
    SCIP_Real             value;              /**< the current subtree sum gap */
    SCIP_HASHMAP*         nodes2info;         /**< map between nodes and their subtree indices */
    SCIP_PQUEUE**         subtreepqueues;     /**< array of priority queues, one for each subtree */
-   int                   nsubtrees;          /**< the current number n of subtrees labeled 0 .. n - 1 */
    SCIP_Real             scalingfactor;      /**< the current scaling factor */
    SCIP_Real             pblastsplit;        /**< primal bound when last split occurred */
+   SCIP_Longint          nodelastsplit;      /**< last node at which a subtree split occurred */
+   SCIP_Longint          nminnodeslastsplit; /**< minimum number of nodes to process between two consecutive SSG splits */
+   int                   nmaxsubtrees;       /**< the maximum number of individual SSG subtrees; the old split is kept if
+                                               *  a new split exceeds this number of subtrees ; -1: no limit */
+   int                   nsubtrees;          /**< the current number n of subtrees labeled 0 .. n - 1 */
 };
 
 /** update callback of time series */
@@ -881,6 +888,7 @@ SCIP_RETCODE subtreeSumGapReset(
    ssg->nsubtrees = 1;
    ssg->subtreepqueues = NULL;
    ssg->pblastsplit = SSG_STARTPRIMBOUND;
+   ssg->nodelastsplit = -1L;
 
    return SCIP_OKAY;
 }
@@ -1012,9 +1020,15 @@ SCIP_RETCODE subtreeSumGapSplit(
    int nopennodes[3];
    int label;
    int t;
+   int nnewsubtrees;
 
    assert(scip != NULL);
    assert(ssg != NULL);
+
+   /* query the open nodes of SCIP */
+   SCIP_CALL( SCIPgetOpenNodesData(scip, &opennodes[0], &opennodes[1], &opennodes[2], &nopennodes[0], &nopennodes[1], &nopennodes[2]) );
+
+   nnewsubtrees = nopennodes[0] + nopennodes[1] + nopennodes[2] + (addfocusnode ? 1 : 0);
 
    /* clear hash map from entries */
    SCIP_CALL( SCIPhashmapRemoveAll(ssg->nodes2info) );
@@ -1022,11 +1036,7 @@ SCIP_RETCODE subtreeSumGapSplit(
    /* delete all subtrees */
    subtreeSumGapDelSubtrees(scip, ssg);
 
-   /* query the open nodes of SCIP */
-   SCIP_CALL( SCIPgetOpenNodesData(scip, &opennodes[0], &opennodes[1], &opennodes[2], &nopennodes[0], &nopennodes[1], &nopennodes[2]) );
-
-   ssg->nsubtrees = nopennodes[0] + nopennodes[1] + nopennodes[2] + (addfocusnode ? 1 : 0);
-
+   ssg->nsubtrees = nnewsubtrees;
    SCIPdebugMsg(scip, "Splitting tree into %d subtrees\n", ssg->nsubtrees);
 
    /* create priority queue array */
@@ -1049,7 +1059,7 @@ SCIP_RETCODE subtreeSumGapSplit(
       int nnodes = nopennodes[t];
       int n;
 
-      /* label sibling nodes */
+      /* label each open node as new, separate subtree */
       for( n = 0; n < nnodes; ++n )
       {
          SCIP_NODE* node = nodes[n];
@@ -1150,6 +1160,9 @@ SCIP_RETCODE subtreeSumGapRemoveNode(
    }
 
    SCIP_CALL( SCIPhashmapRemove(ssg->nodes2info, (void*)node) );
+
+   SCIPdebugMsg(scip, "Removed node %" SCIP_LONGINT_FORMAT " from open nodes of SSG\n",
+      SCIPnodeGetNumber(node));
 
    SCIPfreeBlockMemory(scip, &nodeinfo);
 
@@ -1367,10 +1380,12 @@ SCIP_RETCODE subtreeSumGapUpdate(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP*        ssg,                /**< subtree sum gap data structure */
    SCIP_NODE*            node,               /**< the corresponding node */
-   int                   nchildren           /**< number of children */
+   int                   nchildren,          /**< number of children */
+   SCIP_Longint          nsolvednodes        /**< number of solved nodes so far, used as a time stamp */
    )
 {
    SCIP_Bool updatescaling = FALSE;
+   SCIP_Bool insertchildren = (ssg->nsubtrees > 1 && nchildren > 0);
 
    /* if the instance is solved, the ssg is 0 */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED )
@@ -1383,18 +1398,47 @@ SCIP_RETCODE subtreeSumGapUpdate(
    /* make a new tree split if the primal bound has changed. */
    if( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && ! SCIPisEQ(scip, SCIPgetPrimalbound(scip), ssg->pblastsplit) )
    {
-      SCIP_Bool addfocusnode = SCIPgetFocusNode(scip) != NULL && SCIPgetNChildren(scip) == 0 && !SCIPwasNodeLastBranchParent(scip, SCIPgetFocusNode(scip));
-      SCIP_CALL( subtreeSumGapSplit(scip, ssg, addfocusnode) );
+      int nnewsubtrees;
+      SCIP_Bool addfocusnode;
+
+      addfocusnode = SCIPgetFocusNode(scip) != NULL && SCIPgetNChildren(scip) == 0 && !SCIPwasNodeLastBranchParent(scip, SCIPgetFocusNode(scip));
+      nnewsubtrees = SCIPgetNSiblings(scip) + SCIPgetNLeaves(scip) + SCIPgetNChildren(scip) + (addfocusnode ? 1 : 0);
+
+      /* check if number of new subtrees does not exceed maximum number of subtrees; always split if no split happened, yet */
+      if( ssg->nsubtrees <= 1 ||
+               ((ssg->nmaxsubtrees == -1 || nnewsubtrees <= ssg->nmaxsubtrees) &&
+               (nsolvednodes - ssg->nodelastsplit >= ssg->nminnodeslastsplit)) )
+      {
+         SCIP_CALL( subtreeSumGapSplit(scip, ssg, addfocusnode) );
+
+         /* remember time stamp */
+         ssg->nodelastsplit = nsolvednodes;
+      }
+      else
+      {
+         if( ssg->nmaxsubtrees != -1 && nnewsubtrees >= ssg->nmaxsubtrees )
+            SCIPdebugMsg(scip, "Keep split into %d subtrees because new split into %d subtrees exceeds limit %d\n",
+               ssg->nsubtrees, nnewsubtrees, ssg->nmaxsubtrees);
+         else
+            SCIPdebugMsg(scip, "Keep split into %d subtrees from %" SCIP_LONGINT_FORMAT " nodes ago\n",
+               ssg->nsubtrees, nsolvednodes - ssg->nodelastsplit);
+
+         /* no new split has happened; insert the new children to their SSG subtree */
+         if( insertchildren )
+         {
+            SCIP_CALL( subtreeSumGapInsertChildren(scip, ssg) );
+         }
+      }
 
       ssg->pblastsplit = SCIPgetPrimalbound(scip);
 
       updatescaling = TRUE;
 
-      /* compute the current SSG value */
+      /* compute the current SSG value from scratch */
       SCIP_CALL( subtreeSumGapComputeFromScratchEfficiently(scip, ssg, updatescaling) );
    }
    /* otherwise, if new children have been created, label them */
-   else if( ssg->nsubtrees > 1 && nchildren > 0 )
+   else if( insertchildren )
    {
       SCIP_CALL( subtreeSumGapInsertChildren(scip, ssg) );
    }
@@ -1493,7 +1537,7 @@ SCIP_RETCODE updateTreeData(
    /* update the subtree sum gap */
    if( ! SCIPisInRestart(scip) )
    {
-      SCIP_CALL( subtreeSumGapUpdate(scip, treedata->ssg, node, nchildren) );
+      SCIP_CALL( subtreeSumGapUpdate(scip, treedata->ssg, node, nchildren, treedata->nvisited) );
    }
 
    return SCIP_OKAY;
@@ -2814,6 +2858,15 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP_CALL( SCIPaddBoolParam(scip, "restarts/estimation/useleafts",
          "use leaf nodes as basic observations for time series, or all nodes?",
          &eventhdlrdata->useleafts, FALSE, DEFAULT_USELEAFTS, NULL, NULL) );
+
+   /* SSG parameters */
+   SCIP_CALL( SCIPaddIntParam(scip, "restarts/estimation/ssg/nmaxsubtrees",
+         "the maximum number of individual SSG subtrees; -1: no limit",
+         &eventhdlrdata->treedata->ssg->nmaxsubtrees, FALSE, DEFAULT_SSG_NMAXSUBTREES, -1, INT_MAX / 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip, "restarts/estimation/ssg/nminnodeslastsplit",
+         "minimum number of nodes to process between two consecutive SSG splits",
+         &eventhdlrdata->treedata->ssg->nminnodeslastsplit, FALSE, DEFAULT_SSG_NMINNODESLASTSPLIT, 0, SCIP_LONGINT_MAX, NULL, NULL) );
 
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
