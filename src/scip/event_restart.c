@@ -991,9 +991,11 @@ SCIP_RETCODE subtreeSumGapStoreNode(
       SCIP_CALL( SCIPpqueueCreate(&ssg->subtreepqueues[subtreeidx], 5, 1.2, compareNodeInfos, elemChgPosNodeInfo) );
    }
 
+   /* insert node and ensure that its position is up to date */
    SCIP_CALL( SCIPpqueueInsert(ssg->subtreepqueues[subtreeidx], (void*)nodeinfo) );
-
-//   assert(SCIPpqueueFind(ssg->subtreepqueues[subtreeidx], (void*)nodeinfo) == nodeinfo->pos);
+   assert(0 <= nodeinfo->pos);
+   assert(SCIPpqueueNElems(ssg->subtreepqueues[subtreeidx]) > nodeinfo->pos);
+   assert(SCIPpqueueElems(ssg->subtreepqueues[subtreeidx])[nodeinfo->pos] == (void*)nodeinfo);
 
    return SCIP_OKAY;
 }
@@ -1117,12 +1119,16 @@ SCIP_RETCODE subtreeSumGapRemoveNode(
    if( nodeinfo == NULL )
       return SCIP_OKAY;
 
+   /* get open nodes of this subtree stored as priority queue */
    subtreeidx = nodeinfo->subtreeidx;
    pqueue = ssg->subtreepqueues[subtreeidx];
    assert(pqueue != NULL);
-   assert(SCIPpqueueFind(pqueue, (void *)nodeinfo) == nodeinfo->pos);
 
+   /* delete the element from the priority queue */
    pos = nodeinfo->pos;
+   assert(pos >= 0);
+   assert(pos < SCIPpqueueNElems(pqueue));
+   assert(SCIPpqueueElems(pqueue)[pos] == (void *)nodeinfo);
    SCIPpqueueDelPos(pqueue, pos);
 
    /* update ssg if removed node was the lower bound defining node of its subtree */
@@ -1138,6 +1144,8 @@ SCIP_RETCODE subtreeSumGapRemoveNode(
       newgap = calcGap(scip, nodeinfofirst != NULL ? nodeinfofirst->lowerbound : SCIPinfinity(scip) );
 
       assert(newgap <= oldgap);
+
+      /* the SSG value is always up-to-date because it is recomputed when the primal bound changes */
       ssg->value += ssg->scalingfactor * (newgap - oldgap);
    }
 
