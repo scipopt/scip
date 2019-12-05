@@ -1691,7 +1691,7 @@ void timeSeriesFree(
 
 /** get current value of time series */
 static
-SCIP_Real timeSeriesGet(
+SCIP_Real timeSeriesGetValue(
    TIMESERIES*           timeseries          /**< time series */
    )
 {
@@ -1735,7 +1735,7 @@ SCIP_Real timeSeriesEstimate(
    if( timeseries->nobs == 0L )
       return -1.0;
 
-   val = timeSeriesGet(timeseries);
+   val = timeSeriesGetValue(timeseries);
    targetval = timeSeriesGetTargetValue(timeseries);
 
    /* if the value has reached the target value already, return the number of observations */
@@ -2054,13 +2054,13 @@ SCIP_RETCODE getSearchCompletion(
    {
    /* use regression forest */
    case COMPLETIONTYPE_REGFOREST:
-      values[0] = timeSeriesGet(eventhdlrdata->timeseries[TSPOS_PROG]);
+      values[0] = timeSeriesGetValue(eventhdlrdata->timeseries[TSPOS_PROG]);
       values[1] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_PROG]->des);
-      values[2] = timeSeriesGet(eventhdlrdata->timeseries[TSPOS_SSG]);
+      values[2] = timeSeriesGetValue(eventhdlrdata->timeseries[TSPOS_SSG]);
       values[3] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_SSG]->des);
-      values[4] = timeSeriesGet(eventhdlrdata->timeseries[TSPOS_LFREQ]);
+      values[4] = timeSeriesGetValue(eventhdlrdata->timeseries[TSPOS_LFREQ]);
       values[5] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_LFREQ]->des);
-      values[6] = timeSeriesGet(eventhdlrdata->timeseries[TSPOS_GAP]);
+      values[6] = timeSeriesGetValue(eventhdlrdata->timeseries[TSPOS_GAP]);
       values[7] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_GAP]->des);
       values[8] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_OPEN]->des) < 0 ? 1.0 : 0.0;
 
@@ -2078,7 +2078,7 @@ SCIP_RETCODE getSearchCompletion(
       break;
 
    case COMPLETIONTYPE_GAP:
-      *completed = timeSeriesGet(eventhdlrdata->timeseries[TSPOS_GAP]); /* gap is stored as 1 - gap */
+      *completed = timeSeriesGetValue(eventhdlrdata->timeseries[TSPOS_GAP]); /* gap is stored as 1 - gap */
       break;
 
    case COMPLETIONTYPE_SSG:
@@ -2129,7 +2129,7 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateGap)
    /* avoid to call SCIPgetDualbound during a restart where the queue is simply emptied */
    if( SCIPisInRestart(scip) )
    {
-      *value = timeSeriesGet(ts);
+      *value = timeSeriesGetValue(ts);
 
       return SCIP_OKAY;
    }
@@ -2387,7 +2387,7 @@ SCIP_RETCODE updateTimeseries(
 #ifdef SCIP_MORE_DEBUG
       SCIPdebugMsg(scip,
          "Update of time series '%s', current value %.4f (%" SCIP_LONGINT_FORMAT " observations)\n",
-         timeSeriesGetName(tss[t]), timeSeriesGet(tss[t]), tss[t]->nobs);
+         timeSeriesGetName(tss[t]), timeSeriesGetValue(tss[t]), tss[t]->nobs);
 #endif
    }
 
@@ -2465,7 +2465,7 @@ char* printReport(
       ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  %-17s: %10.0f %10.5f %10s %10d %10s\n",
             timeSeriesGetName(ts),
             timeSeriesEstimate(ts, eventhdlrdata->treedata),
-            timeSeriesGet(ts),
+            timeSeriesGetValue(ts),
             real2String(trend, trendstr, 5),
             timeSeriesGetResolution(ts),
             real2String(smoothestim, smoothestimstr, 0));
