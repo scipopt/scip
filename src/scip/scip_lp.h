@@ -1454,7 +1454,7 @@ SCIP_Real SCIPgetRowSolFeasibility(
 
 /** returns the parallelism of row with objective function
  *
- *  @return 1 is returned if the row is parallel to the objective function, and 0 if it is orthogonal objective function
+ *  @return 1 is returned if the row is parallel to the objective function and 0 if it is orthogonal
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
