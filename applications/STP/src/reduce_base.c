@@ -476,11 +476,21 @@ SCIP_RETCODE level0RpcRmwInfeas(
          }
          else if( graph_pc_termIsNonLeafTerm(g, k) )
          {
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("delete: \n");
+            graph_knot_printInfo(g, k);
+#endif
+
             /* offset is not necessary, because graph is in extended mode */
             graph_knot_del(scip, g, k, TRUE);
          }
          else
          {
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("delete: \n");
+            graph_knot_printInfo(g, k);
+#endif
+
             assert(g->term2edge[k] >= 0);
             assert(!gmark[graph_pc_getTwinTerm(g, k)]);
 
@@ -1658,6 +1668,7 @@ SCIP_RETCODE redLoopPc(
          danelims = 0;
          degnelims = 0;
          advancedrun = FALSE;
+
          if( rpc )
          {
             SCIP_Real ub = -1.0;

@@ -2166,8 +2166,6 @@ SCIP_RETCODE reduce_da(
 
    assert(!rpc || graph->extended);
 
-
-
    for( int outerrounds = 0; outerrounds < 2; outerrounds++ )
    {
       SCIP_Real minpathcost = -1.0;
@@ -2213,7 +2211,7 @@ SCIP_RETCODE reduce_da(
             graph_mark(graph);
 
          for( int e = 0; e < nedges; e++ )
-              marked[e] = FALSE;
+            marked[e] = FALSE;
 
          daInitializeDistances(scip, graph, daroot, cost, vnoi, pathdist, costrev, vbase, pathedge, state);
 
@@ -2222,11 +2220,10 @@ SCIP_RETCODE reduce_da(
 
          SCIP_CALL( reduceRootedProb(scip, graph, marked, nodearrchar, vnoi, cost, pathdist, result, minpathcost, daroot, havenewsol, &ndeletions) );
 
-         // havenewsol = havenewsol &&  graph_sol_unreduced(scip, graph, result); todo necessary?
-
          if( !SCIPisZero(scip, minpathcost) )
          {
             ndeletions += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
+            havenewsol = havenewsol && graph_sol_unreduced(scip, graph, result);
             ndeletions += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havenewsol ? result : NULL), upperbound);
          }
 
@@ -2237,11 +2234,16 @@ SCIP_RETCODE reduce_da(
        //     printf("newly fixedFIRST =%d \n", extfixed);
          }
 
-         if( extended )
+         if( extended && !SCIPisZero(scip, minpathcost) && 0 )
          {
+            int todo;
             int extfixed;
+
             REDCOST redcostdata = { .redEdgeCost = cost, .rootToNodeDist = pathdist, .nodeTo3TermsPaths = vnoi,
                .nodeTo3TermsBases = vbase, .cutoff = minpathcost, .redCostRoot = daroot};
+
+            if( rpc )
+               reduce_removeDeg0NonLeafTerms(scip, graph, offsetp);
 
             reduce_extendedEdge2(scip, &redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed);
             ndeletions += extfixed;

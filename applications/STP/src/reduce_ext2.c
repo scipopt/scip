@@ -2236,6 +2236,7 @@ SCIP_RETCODE reduce_extendedEdge2(
    if( pcmw )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &pcSdToNode, nnodes) );
+
       for( int k = 0; k < nnodes; k++ )
          pcSdToNode[k] = -1.0;
    }

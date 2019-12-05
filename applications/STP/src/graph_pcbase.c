@@ -3041,7 +3041,7 @@ int graph_pc_getTwinTerm(
    assert(g && g->term2edge);
    assert(graph_pc_isPcMw(g));
    assert(Is_anyTerm(g->term[vertex]));
-   assert(g->term2edge[vertex] >= 0 && g->term2edge[vertex] < g->knots);
+   assert(g->term2edge[vertex] >= 0 && g->term2edge[vertex] < g->edges);
    assert(g->tail[g->term2edge[vertex]] == vertex);
 
    return g->head[g->term2edge[vertex]];

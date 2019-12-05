@@ -243,10 +243,10 @@ SCIP_Bool isMaxprizeTerm(
    assert(i >= 0 && i < nnodes);
    assert(Is_term(g->term[i]) && g->prize[i] > 0.0);
 
-   if( g->stp_type == STP_RPCSPG && i != root)
-      return FALSE;
-   else if( g->stp_type == STP_RPCSPG && i == root )
-      return TRUE;
+   if( g->stp_type == STP_RPCSPG )
+   {
+      return (i == root);
+   }
 
    max = *maxprize;
 
@@ -1280,26 +1280,6 @@ SCIP_RETCODE reduce_simple_pc(
    if( !pc )
       g->mark[g->source] = FALSE;
 
-
-#if 0
-   for( int i = 0; i < nnodes; i++ )
-   {
-      assert(!(g->mark[i] && Is_pseudoTerm(g->term[i])));
-
-      if( (!g->mark[i] || g->grad[i] == 0) && !graph_pc_knotIsNonLeafTerm(g, i) && i != g->source )
-      {
-         if( Is_term(g->term[i]) )
-         {
-            graph_knot_printInfo(g, i);
-            graph_printInfo(g);
-            printf("g->mark[i]=%d \n", g->mark[i]);
-         }
-
-      }
-   }
-#endif
-
-
    /* main loop */
    while( rerun )
    {
@@ -1916,4 +1896,28 @@ void reduce_identifyNonLeafTerms(
    }
 
    assert(graph_pc_term2edgeIsConsistent(scip, g));
+}
+
+/** reduction test for PCSPG */
+void
+reduce_removeDeg0NonLeafTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offsetp             /**< pointer to offset value */
+   )
+{
+   SCIP_Real maxprize = -1.0;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(scip && offsetp);
+   assert(graph_pc_isPc(g));
+   assert(!g->extended);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( g->grad[k] == 0 && graph_pc_knotIsNonLeafTerm(g, k) && !isMaxprizeTerm(scip, g, k, &maxprize) )
+      {
+         graph_pc_deleteTerm(scip, g, k, offsetp);
+      }
+   }
 }
