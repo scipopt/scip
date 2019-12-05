@@ -1452,7 +1452,7 @@ SCIP_RETCODE combineRows
    nbreakpoints = 0;
    while( i < row1len && j < row2len )
    {
-      assert(i+1 == row1len || row1idxptr[i] < row1idxptr[i+1]);
+      assert(i+1 == row1len || row1idxptr[i] < row1idxptr[i+1]); // spaces around operators
       assert(j+1 == row2len || row2idxptr[j] < row2idxptr[j+1]);
 
       idx1 = row1idxptr[i];

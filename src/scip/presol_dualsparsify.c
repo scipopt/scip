@@ -26,10 +26,13 @@
  *          SCIPvarCompareActiveAndNegated function assert that this is wrong.
  *
  * This presolver attempts to cancel non-zero entries of the constraint
- * matrix by adding scaled variables to other variables.
+ * matrix by adding scaled variables to other variables. // this does not match the description in the .h file
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+// there are line longer than 120
+// I recommended the use of SCIPisLT/GT and SCIPisPositive/Negative sometimes
 
 #include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
@@ -105,7 +108,7 @@ struct SCIP_PresolData
 /** structure representing a pair of constraints in a column; used for lookup in a hashtable */
 struct ColConsPair
 {
-   int colindex;
+   int colindex; // should this be commented?
    int consindex1;
    int consindex2;
    SCIP_Real conscoef1;
@@ -194,13 +197,16 @@ SCIP_Real getMaxActivitySingleRowWithoutCol(
       if( val > 0.0 )
       {
          ub = SCIPmatrixGetColUb(matrix, c);
-         assert(!SCIPisInfinity(scip, ub));
+         assert(!SCIPisInfinity(scip, ub)); // Why does this hold? That condition seems to be enforced by the way you call
+                                            // this method and not by the method itself. Only if I happen to have no unbounded 
+                                            // variables or if I happen to exclude exatly the one unbounded var. I think this 
+                                            // method should still be returning =- inf for the cases where this is the case
          maxactivity += val * ub;
       }
       else if( val < 0.0 )
       {
          lb = SCIPmatrixGetColLb(matrix, c);
-         assert(!SCIPisInfinity(scip, -lb));
+         assert(!SCIPisInfinity(scip, -lb)); // same as before
          maxactivity += val * lb;
       }
    }
@@ -246,13 +252,13 @@ SCIP_Real getMinActivitySingleRowWithoutCol(
       if( val > 0.0 )
       {
          lb = SCIPmatrixGetColLb(matrix, c);
-         assert(!SCIPisInfinity(scip, -lb));
+         assert(!SCIPisInfinity(scip, -lb)); // same comment as in getMaxActivity
          minactivity += val * lb;
       }
       else if( val < 0.0 )
       {
          ub = SCIPmatrixGetColUb(matrix, c);
-         assert(!SCIPisInfinity(scip, ub));
+         assert(!SCIPisInfinity(scip, ub)); // same comment as in getMaxActivity
          minactivity += val * ub;
       }
    }
@@ -416,7 +422,7 @@ void getVarUpperBoundOfRow(
    SCIP_Real maxresactivity;
    SCIP_Real lhs;
    SCIP_Real rhs;
-
+   // assert val is not zero (SCIPisZero) ?
    assert(rowub != NULL);
    assert(ubfound != NULL);
 
@@ -429,19 +435,19 @@ void getVarUpperBoundOfRow(
    lhs = SCIPmatrixGetRowLhs(matrix, row);
    rhs = SCIPmatrixGetRowRhs(matrix, row);
 
-   if( val > 0.0 )
+   if( val > 0.0 ) // SCIPisPositive
    {
       if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) )
       {
-         *rowub = (rhs - minresactivity)/val;
+         *rowub = (rhs - minresactivity)/val; // should we watch out for possible nuermical issues when val is very small compared to (rhs-minresactivity)?
          *ubfound = TRUE;
       }
    }
-   else
+   else // if SCIPisNegative
    {
       if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) )
       {
-         *rowub = (lhs - maxresactivity)/val;
+         *rowub = (lhs - maxresactivity)/val; // same as above
          *ubfound = TRUE;
       }
    }
@@ -466,7 +472,7 @@ void getVarLowerBoundOfRow(
    SCIP_Real maxresactivity;
    SCIP_Real lhs;
    SCIP_Real rhs;
-
+   // assert val is not zero (SCIPisZero) ? 
    assert(rowlb != NULL);
    assert(lbfound != NULL);
 
@@ -479,19 +485,19 @@ void getVarLowerBoundOfRow(
    lhs = SCIPmatrixGetRowLhs(matrix, row);
    rhs = SCIPmatrixGetRowRhs(matrix, row);
 
-   if( val < 0.0 )
+   if( val < 0.0 ) // SCIPisNegative
    {
       if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) )
       {
-         *rowlb = (rhs - minresactivity)/val;
+         *rowlb = (rhs - minresactivity)/val; // same ase in getVarUpperBoundOfRow
          *lbfound = TRUE;
       }
    }
-   else
+   else // if SCIPisPositive (because asserting nonzero will not stay in optimized code)
    {
       if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) )
       {
-         *rowlb = (lhs - maxresactivity)/val;
+         *rowlb = (lhs - maxresactivity)/val; // same ase in getVarUpperBoundOfRow
          *lbfound = TRUE;
       }
    }
@@ -534,7 +540,7 @@ SCIP_Bool isUpperBoundImplied(
 
       getVarUpperBoundOfRow(scip, matrix, col, *colpnt, *valpnt, &rowub, &ubfound);
 
-      if( ubfound && (rowub < impliedub) )
+      if( ubfound && (rowub < impliedub) ) // SCIPisGT
          impliedub = rowub;
    }
 
@@ -543,7 +549,7 @@ SCIP_Bool isUpperBoundImplied(
 
    return ubimplied;
 }
-
+// I would have merged the two methods into something like isBoundImplied(scip, matrix, col, check_upper) - but at this size the duplication might be fine
 /** detect whether variable lower bound is implied */
 static
 SCIP_Bool isLowerBoundImplied(
@@ -580,7 +586,7 @@ SCIP_Bool isLowerBoundImplied(
 
       getVarLowerBoundOfRow(scip, matrix, col, *colpnt, *valpnt, &rowlb, &lbfound);
 
-      if( lbfound && (rowlb > impliedlb) )
+      if( lbfound && (rowlb > impliedlb) ) // SCIPisLT
          impliedlb = rowlb;
    }
 
@@ -591,17 +597,17 @@ SCIP_Bool isLowerBoundImplied(
 }
 
 
-/* y = weght1*var[colidx1] + var[colidx2] */
+/** y = weight1 * var[colidx1] + var[colidx2] */
 static
 SCIP_RETCODE aggregation(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
-   SCIP_VAR**            vars,               /**< the current variables*/
+   SCIP_VAR**            vars,               /**< the current variables */
    int                   colidx1,            /**< one of the indexes of column to try nonzero cancellation for */
    int                   colidx2,            /**< one of the indexes of column to try nonzero cancellation for */
    SCIP_Bool             isimpliedfree,      /**< is the aggregated variable implied free? */
    SCIP_Real             weight1             /**< weight variable one in the aggregated expression */
-      )
+   )
 {
    SCIP_VAR* tmpvars[2];
    SCIP_Real coefs[2];
@@ -628,34 +634,33 @@ SCIP_RETCODE aggregation(
 
    constant = 0.0;
 
-   if( weight1 > 0 )
+   if( weight1 > 0.0 ) // SCIPisPositive i would not do anything for nearly zero values and the assert will not stay in Release mode
    {
       if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx1])) ||
             SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])) )
          newlb = -SCIPinfinity(scip);
       else
-         newlb = weight1*SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetLbGlobal(vars[colidx2]);
+         newlb = weight1 * SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetLbGlobal(vars[colidx2]);
 
       if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx1])) ||
             SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx2])) )
          newub = SCIPinfinity(scip);
       else
-         newub = weight1*SCIPvarGetUbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
+         newub = weight1 * SCIPvarGetUbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
    }
-
-   else
+   else // if SCIPisNegative
    {
       if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx1])) ||
             SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])) )
          newlb = -SCIPinfinity(scip);
       else
-         newlb = weight1*SCIPvarGetUbGlobal(vars[colidx1]) + SCIPvarGetLbGlobal(vars[colidx2]);
+         newlb = weight1 * SCIPvarGetUbGlobal(vars[colidx1]) + SCIPvarGetLbGlobal(vars[colidx2]);
 
       if( SCIPisInfinity(scip, SCIPvarGetLbGlobal(vars[colidx1])) ||
             SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx2])) )
          newub = SCIPinfinity(scip);
       else
-         newub = weight1*SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
+         newub = weight1 * SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
    }
 
    if( SCIPvarIsIntegral(aggregatedvar) )
@@ -674,7 +679,7 @@ SCIP_RETCODE aggregation(
    tmpvars[0] = vars[colidx1];
    tmpvars[1] = newvar;
    coefs[0] = -weight1;
-   coefs[1] = 1;
+   coefs[1] = 1.0;
 
    SCIP_CALL( SCIPmultiaggregateVar(scip, aggregatedvar, 2, tmpvars, coefs, constant, &infeasible, &aggregated) );
 
@@ -787,7 +792,7 @@ SCIP_RETCODE cancelCol(
       for( i = 0; i < cancelcollen; ++i )
       {
          tmpinds[i] = i;
-         scores[i] = -SCIPmatrixGetRowNNonzs(matrix, cancelcolinds[i]) - 1.0*cancelcolinds[i]/(ncols);
+         scores[i] = -SCIPmatrixGetRowNNonzs(matrix, cancelcolinds[i]) - 1.0 * cancelcolinds[i] / (ncols);
       }
       SCIPsortRealInt(scores, tmpinds, cancelcollen);
 
@@ -860,7 +865,7 @@ SCIP_RETCODE cancelCol(
             hashingcolub = SCIPvarGetUbGlobal(hashingcolvar);
             hashingcolisbin = ((SCIPvarGetType(hashingcolvar) == SCIP_VARTYPE_BINARY) ||
                               (SCIPvarIsIntegral(hashingcolvar) && SCIPisZero(scip, hashingcollb) && SCIPisEQ(scip, hashingcolub, 1.0)));
-            scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1;
+            scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1; //assert nonzero ?
 
             if( REALABS(scale) > MAXSCALE )
                continue;
@@ -921,7 +926,7 @@ SCIP_RETCODE cancelCol(
                      rowrhs = SCIPmatrixGetRowRhs(matrix, cancelcolinds[a]);
                      rowlhs = SCIPmatrixGetRowLhs(matrix, cancelcolinds[a]);
                      if( (cancelcolvals[a] > 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
-                         (cancelcolvals[a] < 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
+                         (cancelcolvals[a] < 0.0 && ! SCIPisInfinity(scip, -rowlhs)) ) // SCIPisGT/LT?
                      {
                         /* if we get into this case the variable had a positive coefficient in a <= constraint or a negative
                          * coefficient in a >= constraint, e.g. an uplock. If this was the only uplock we do not abort their
@@ -936,7 +941,7 @@ SCIP_RETCODE cancelCol(
                      }
 
                      if( (cancelcolvals[a] < 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
-                         (cancelcolvals[a] > 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
+                         (cancelcolvals[a] > 0.0 && ! SCIPisInfinity(scip, -rowlhs)) ) // SCIPisGT/LT?
                      {
                         /* symmetric case where the variable had a downlock */
                         if( presoldata->preservegoodlocks && (SCIPmatrixGetColNDownlocks(matrix, colidx) > 1 &&
@@ -963,7 +968,7 @@ SCIP_RETCODE cancelCol(
                   rowrhs = SCIPmatrixGetRowRhs(matrix, hashingcolinds[b]);
                   rowlhs = SCIPmatrixGetRowLhs(matrix, hashingcolinds[b]);
 
-                  if( (newcoef > 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
+                  if( (newcoef > 0.0 && ! SCIPisInfinity(scip, rowrhs)) || // SCIPisPos SCIPisNeg
                       (newcoef < 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
                   {
                      if( presoldata->preservegoodlocks && SCIPmatrixGetColNUplocks(matrix, colidx) <= 1 )
@@ -974,7 +979,7 @@ SCIP_RETCODE cancelCol(
                      }
                   }
 
-                  if( (newcoef < 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
+                  if( (newcoef < 0.0 && ! SCIPisInfinity(scip, rowrhs)) || // SCIPisPos SCIPisNeg
                       (newcoef > 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
                   {
                      if( presoldata->preservegoodlocks && SCIPmatrixGetColNDownlocks(matrix, colidx) <= 1 )
@@ -1196,7 +1201,10 @@ SCIP_DECL_PRESOLCOPY(presolCopyDualsparsify)
 }
 
 
-/** execution method of presolver */
+/** execution method of presolver */ 
+// I think there should be more documentation here 
+// this seems to be the main method and I'm not sure what to expect - also because of the rather short header documentation
+// probably short summary of what is done in the method
 static
 SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 {  /*lint --e{715}*/
@@ -1307,8 +1315,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       }
 
       nnonz = SCIPmatrixGetColNNonzs(matrix, c);
-      lbimplied = isLowerBoundImplied(scip, matrix, c);
-      ubimplied = isUpperBoundImplied(scip, matrix, c);
+      lbimplied = isLowerBoundImplied(scip, matrix, c); // i think one can save some code duplication and some computational effort by merging the upper/lower bound stuff
+      ubimplied = isUpperBoundImplied(scip, matrix, c); // one would save some underlying calls to getMinActivitySingleRowWithoutCol and getMaxActivitySingleRowWithoutCol 
+                                                        // i did not fine a place where the two are being called seperately - might be the case though
+                                                        // also this change might not be worth it since it would require some work and testing I guess
       vars[c] = SCIPmatrixGetVar(matrix, c);
       ishashingcols[c] = FALSE;
 
@@ -1319,7 +1329,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
       /* only consider implied free variables
          * skip singleton variables, because either the constraint is redundant
-         * or the variables can be canceled by variables substitution
+         * or the variables can be canceled by variable substitution
          */
       if( nnonz >= 2 && (lbimplied && ubimplied) )
       {
@@ -1332,12 +1342,12 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          colvals = SCIPmatrixGetColValPtr(matrix, c);
 
          /* sort the rows non-decreasingly by number of nonzeros
-            * if the number of nonzeros, we use the colindex as tie-breaker
+            * if the number of nonzeros, we use the colindex as tie-breaker // this sentence is unclear
             */
          for( i = 0; i < nnonz; ++i )
          {
             perm[i] = i;
-            scores[i] = -SCIPmatrixGetRowNNonzs(matrix, colinds[i]) - 1.0*colinds[i]/ncols;
+            scores[i] = -SCIPmatrixGetRowNNonzs(matrix, colinds[i]) - 1.0  *colinds[i] / ncols;
          }
          SCIPsortRealInt(scores, perm, nnonz);
 
@@ -1427,7 +1437,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
       }
    }
 
-   /* sort cols according to decreasingly sparsity */
+   /* sort cols according to decreasing sparsity */
    SCIP_CALL( SCIPallocBufferArray(scip, &colidxsorted, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &colsparsity, ncols) );
    for( c = 0; c < ncols; ++c )
@@ -1505,7 +1515,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
             for( i = 0; i < nnonz; ++i )
             {
                perm[i] = i;
-               scores[i] = -SCIPmatrixGetRowNNonzs(matrix, colinds[i]) - 1.0*colinds[i]/ncols;
+               scores[i] = -SCIPmatrixGetRowNNonzs(matrix, colinds[i]) - 1.0 * colinds[i] / ncols;
             }
             SCIPsortRealInt(scores, perm, nnonz);
 

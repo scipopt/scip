@@ -876,6 +876,15 @@ void getRowInfData(
 
    if( *nminactneginf + *nminactposinf > 0 )
       *minactivity = -SCIPinfinity(scip);
+
+   // iff the whole method is not redundant anyways the follwoing comment applies:
+   // I think it is more efficient to not do this and not set the bounds to plus/minus infinity - this is just getting rid of info that is needed for bound tightening
+   // What you do is compute the partial activity - then overwirte it with infinity and then if you see there is only one unbounded variable you recompute the whole activity - without that one variable
+   // I tink on should rather compute the partial activity and hand it back and then outside of the method do something like 
+   // if there is only one unbounded variable in the row (for min or max act) i can actually use the partial act to tigthen that vars bounds and no recomputation is needed
+   // this would imo also get rid of getMaxActivitySingleRowWithoutCol and getMinActivitySingleRowWithoutCol
+   // this would probably also apply to matix.c where this seems to be copied from or to
+   // it would save some time to be able to get some sort of partial activity from the matrix
 }
 
 
@@ -912,6 +921,16 @@ void getMinMaxActivityResiduals(
    *isminsettoinfinity = FALSE;
    *ismaxsettoinfinity = FALSE;
 
+   // why to we need this? in dual sparsify
+   // nmaxactneginf = SCIPmatrixGetRowNMaxActNegInf(matrix, row);
+   // nmaxactposinf = SCIPmatrixGetRowNMaxActPosInf(matrix, row);
+   // nminactneginf = SCIPmatrixGetRowNMinActNegInf(matrix, row);
+   // nminactposinf = SCIPmatrixGetRowNMinActPosInf(matrix, row);
+   //
+   // maxactivity = SCIPmatrixGetRowMaxActivity(matrix, row);
+   // minactivity = SCIPmatrixGetRowMinActivity(matrix, row);
+   //
+   // is used
    getRowInfData(scip, matrix, row, lbs, ubs,
       &nmaxactneginf, &nmaxactposinf, &nminactneginf, &nminactposinf,
       &maxactivity, &minactivity);
