@@ -246,7 +246,7 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_HITCOUNTERLIM        50      /**< limit on the number of successive samples to really trigger a restart */
 #define DEFAULT_SSG_NMAXSUBTREES     -1      /**< the maximum number of individual SSG subtrees; the old split is kept if
                                                *  a new split exceeds this number of subtrees ; -1: no limit */
-#define DEFAULT_SSG_NMINNODESLASTSPLIT   0   /**< minimum number of nodes to process between two consecutive SSG splits */
+#define DEFAULT_SSG_NMINNODESLASTSPLIT   0L  /**< minimum number of nodes to process between two consecutive SSG splits */
 
 /** event handler data */
 struct SCIP_EventhdlrData
@@ -2873,7 +2873,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
 
    SCIP_CALL( SCIPaddLongintParam(scip, "estimation/ssg/nminnodeslastsplit",
          "minimum number of nodes to process between two consecutive SSG splits",
-         &eventhdlrdata->treedata->ssg->nminnodeslastsplit, FALSE, DEFAULT_SSG_NMINNODESLASTSPLIT, 0, SCIP_LONGINT_MAX, NULL, NULL) );
+         &eventhdlrdata->treedata->ssg->nminnodeslastsplit, FALSE, DEFAULT_SSG_NMINNODESLASTSPLIT, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
 
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
