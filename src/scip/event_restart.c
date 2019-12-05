@@ -367,7 +367,7 @@ char* real2String(
 
 /** free a regression forest data structure */
 static
-void SCIPregforestFree(
+void SCIPregForestFree(
    SCIP_REGFOREST**      regforest           /**< regression forest data structure */
    )
 {
@@ -389,7 +389,7 @@ void SCIPregforestFree(
 
 /** make a prediction with regression forest */
 static
-SCIP_Real SCIPregforestPredict(
+SCIP_Real SCIPregForestPredict(
    SCIP_REGFOREST*       regforest,          /**< regression forest data structure */
    SCIP_Real*            datapoint           /**< a data point that matches the dimension of this regression forest */
    )
@@ -436,7 +436,7 @@ SCIP_Real SCIPregforestPredict(
  *  TODO improve this parser to better capture wrong user input, e.g., if the dimension is wrong
  */
 static
-SCIP_RETCODE SCIPregforestFromFile(
+SCIP_RETCODE SCIPregForestFromFile(
    SCIP_REGFOREST**      regforest,          /**< regression forest data structure */
    const char*           filename            /**< name of file with the regression forest data */
    )
@@ -562,7 +562,7 @@ SCIP_RETCODE SCIPregforestFromFile(
 
 /** compare two tree profile statistics for equality */
 static
-SCIP_Bool isEqualTreeprofileStats(
+SCIP_Bool isEqualTreeProfileStats(
    TREEPROFILESTATS*     stats,              /**< first tree profile statistics */
    TREEPROFILESTATS*     other               /**< other tree profile statistics */
    )
@@ -578,7 +578,7 @@ SCIP_Bool isEqualTreeprofileStats(
 
 /** copy source tree profile into destination */
 static
-void copyTreeprofileStats(
+void copyTreeProfileStats(
    TREEPROFILESTATS*     dest,               /**< destination tree profile statistics */
    TREEPROFILESTATS*     src                 /**< source tree profile statistics */
    )
@@ -594,7 +594,7 @@ void copyTreeprofileStats(
 
 /** reset tree profile statistics */
 static
-void resetTreeprofileStats(
+void resetTreeProfileStats(
    TREEPROFILESTATS*     treeprofilestats    /**< tree profile statistics */
    )
 {
@@ -606,7 +606,7 @@ void resetTreeprofileStats(
 
 /** extend tree profile to deeper tree */
 static
-SCIP_RETCODE extendMemoryTreeprofile(
+SCIP_RETCODE extendMemoryTreeProfile(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEPROFILE*          treeprofile,        /**< tree profile data structure */
    int                   mindepth            /**< minimum depth that the tree profile should hold */
@@ -641,7 +641,7 @@ SCIP_RETCODE extendMemoryTreeprofile(
 
 /** create a tree profile */
 static
-SCIP_RETCODE createTreeprofile(
+SCIP_RETCODE createTreeProfile(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEPROFILE**         treeprofile         /**< pointer to store tree profile data structure */
    )
@@ -653,10 +653,10 @@ SCIP_RETCODE createTreeprofile(
 
    (*treeprofile)->profile = NULL;
    (*treeprofile)->profilesize = 0;
-   SCIP_CALL( extendMemoryTreeprofile(scip, *treeprofile, TREEPRROFILE_MINSIZE) );
+   SCIP_CALL( extendMemoryTreeProfile(scip, *treeprofile, TREEPRROFILE_MINSIZE) );
 
-   resetTreeprofileStats(&(*treeprofile)->stats);
-   resetTreeprofileStats(&(*treeprofile)->lastestimatestats);
+   resetTreeProfileStats(&(*treeprofile)->stats);
+   resetTreeProfileStats(&(*treeprofile)->lastestimatestats);
 
    (*treeprofile)->lastestimate = -1.0;
 
@@ -665,7 +665,7 @@ SCIP_RETCODE createTreeprofile(
 
 /** free a tree profile */
 static
-void freeTreeprofile(
+void freeTreeProfile(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEPROFILE**         treeprofile         /**< pointer to tree profile data structure */
    )
@@ -685,7 +685,7 @@ void freeTreeprofile(
 
 /** update tree profile */
 static
-SCIP_RETCODE updateTreeprofile(
+SCIP_RETCODE updateTreeProfile(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEPROFILE*          treeprofile,        /**< tree profile data structure */
    SCIP_NODE*            node                /**< node that should be added to the profile */
@@ -708,7 +708,7 @@ SCIP_RETCODE updateTreeprofile(
       maxnodes == treeprofile->profile[treeprofile->stats.maxwaistdepth]);
 
    /* ensure that the memory can hold at least this depth */
-   SCIP_CALL( extendMemoryTreeprofile(scip, treeprofile, nodedepth) );
+   SCIP_CALL( extendMemoryTreeProfile(scip, treeprofile, nodedepth) );
 
    nodedepthcnt = ++treeprofile->profile[nodedepth];
 
@@ -752,7 +752,7 @@ SCIP_RETCODE updateTreeprofile(
 
 /** make a prediction of the total tree size based on the current tree profile */
 static
-SCIP_Real predictTotalSizeTreeprofile(
+SCIP_Real predictTotalSizeTreeProfile(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEPROFILE*          treeprofile,        /**< tree profile data structure */
    SCIP_Real             minnodesperdepth    /**< minimum number of average nodes per depth to make a prediction */
@@ -772,7 +772,7 @@ SCIP_Real predictTotalSizeTreeprofile(
       return -1.0;
 
    /* reuse previous estimation if tree profile hasn't changed */
-   if( isEqualTreeprofileStats(&treeprofile->lastestimatestats, &treeprofile->stats) )
+   if( isEqualTreeProfileStats(&treeprofile->lastestimatestats, &treeprofile->stats) )
    {
       SCIPdebugMsg(scip, "Reusing previous estimation result %g\n", treeprofile->lastestimate);
 
@@ -815,7 +815,7 @@ SCIP_Real predictTotalSizeTreeprofile(
    }
 
    /* copy tree profile statistics */
-   copyTreeprofileStats(&treeprofile->lastestimatestats, &treeprofile->stats);
+   copyTreeProfileStats(&treeprofile->lastestimatestats, &treeprofile->stats);
 
    treeprofile->lastestimate = estimate;
 
@@ -824,7 +824,7 @@ SCIP_Real predictTotalSizeTreeprofile(
 
 /** clean subtrees stored as priority queues */
 static
-void subtreesumgapDelSubtrees(
+void subtreeSumGapDelSubtrees(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP*        ssg                 /**< subtree sum gap data structure */
    )
@@ -864,7 +864,7 @@ void subtreesumgapDelSubtrees(
 
 /** reset subtree sum gap */
 static
-SCIP_RETCODE subtreesumgapReset(
+SCIP_RETCODE subtreeSumGapReset(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP*        ssg                 /**< subtree sum gap data structure */
    )
@@ -874,7 +874,7 @@ SCIP_RETCODE subtreesumgapReset(
 
    SCIP_CALL( SCIPhashmapRemoveAll(ssg->nodes2info) );
 
-   subtreesumgapDelSubtrees(scip, ssg);
+   subtreeSumGapDelSubtrees(scip, ssg);
 
    ssg->value = 1.0;
    ssg->scalingfactor = 1.0;
@@ -887,7 +887,7 @@ SCIP_RETCODE subtreesumgapReset(
 
 /** create a subtree sum gap */
 static
-SCIP_RETCODE subtreesumgapCreate(
+SCIP_RETCODE subtreeSumGapCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP**       ssg                 /**< pointer to store subtree sum gap data structure */
    )
@@ -903,14 +903,14 @@ SCIP_RETCODE subtreesumgapCreate(
    (*ssg)->nsubtrees = 0;
 
    /* reset ssg */
-   SCIP_CALL( subtreesumgapReset(scip, *ssg) );
+   SCIP_CALL( subtreeSumGapReset(scip, *ssg) );
 
    return SCIP_OKAY;
 }
 
 /** free a subtree sum gap */
 static
-void subtreesumgapFree(
+void subtreeSumGapFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP**       ssg                 /**< pointer to store subtree sum gap data structure */
    )
@@ -921,14 +921,14 @@ void subtreesumgapFree(
    SCIPhashmapFree(&(*ssg)->nodes2info);
 
    /* delete all subtree data */
-   subtreesumgapDelSubtrees(scip, *ssg);
+   subtreeSumGapDelSubtrees(scip, *ssg);
 
    SCIPfreeMemory(scip, ssg);
 }
 
 /** compare two node infos by comparing their lower bound */
 static
-SCIP_DECL_SORTPTRCOMP(compareNodeinfos)
+SCIP_DECL_SORTPTRCOMP(compareNodeInfos)
 {
    NODEINFO* nodeinfo1 = (NODEINFO*)elem1;
    NODEINFO* nodeinfo2 = (NODEINFO*)elem2;
@@ -943,7 +943,7 @@ SCIP_DECL_SORTPTRCOMP(compareNodeinfos)
 
 /** position change callback of element in priority queue */
 static
-SCIP_DECL_PQUEUEELEMCHGPOS(elemChgPosNodeinfo)
+SCIP_DECL_PQUEUEELEMCHGPOS(elemChgPosNodeInfo)
 {
    NODEINFO* nodeinfo = (NODEINFO*)elem;
 
@@ -953,7 +953,7 @@ SCIP_DECL_PQUEUEELEMCHGPOS(elemChgPosNodeinfo)
 
 /** store node in SSG data structure */
 static
-SCIP_RETCODE subtreesumgapStoreNode(
+SCIP_RETCODE subtreeSumGapStoreNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP*        ssg,                /**< subtree sum gap data structure */
    SCIP_NODE*            node,               /**< node that should be stored */
@@ -988,7 +988,7 @@ SCIP_RETCODE subtreesumgapStoreNode(
 
    if( ssg->subtreepqueues[subtreeidx] == NULL )
    {
-      SCIP_CALL( SCIPpqueueCreate(&ssg->subtreepqueues[subtreeidx], 5, 1.2, compareNodeinfos, elemChgPosNodeinfo) );
+      SCIP_CALL( SCIPpqueueCreate(&ssg->subtreepqueues[subtreeidx], 5, 1.2, compareNodeInfos, elemChgPosNodeInfo) );
    }
 
    SCIP_CALL( SCIPpqueueInsert(ssg->subtreepqueues[subtreeidx], (void*)nodeinfo) );
@@ -1000,7 +1000,7 @@ SCIP_RETCODE subtreesumgapStoreNode(
 
 /** split the open nodes of the current tree */
 static
-SCIP_RETCODE subtreesumgapSplit(
+SCIP_RETCODE subtreeSumGapSplit(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP*        ssg,                /**< subtree sum gap data structure */
    SCIP_Bool             addfocusnode        /**< should the focus node be a subtree, too? */
@@ -1018,7 +1018,7 @@ SCIP_RETCODE subtreesumgapSplit(
    SCIP_CALL( SCIPhashmapRemoveAll(ssg->nodes2info) );
 
    /* delete all subtrees */
-   subtreesumgapDelSubtrees(scip, ssg);
+   subtreeSumGapDelSubtrees(scip, ssg);
 
    /* query the open nodes of SCIP */
    SCIP_CALL( SCIPgetOpenNodesData(scip, &opennodes[0], &opennodes[1], &opennodes[2], &nopennodes[0], &nopennodes[1], &nopennodes[2]) );
@@ -1051,14 +1051,14 @@ SCIP_RETCODE subtreesumgapSplit(
       for( n = 0; n < nnodes; ++n )
       {
          SCIP_NODE* node = nodes[n];
-         SCIP_CALL( subtreesumgapStoreNode(scip, ssg, node, label++) );
+         SCIP_CALL( subtreeSumGapStoreNode(scip, ssg, node, label++) );
       }
    }
 
    if( addfocusnode )
    {
       assert(SCIPgetFocusNode(scip) != NULL);
-      SCIP_CALL( subtreesumgapStoreNode(scip, ssg, SCIPgetFocusNode(scip), label) );
+      SCIP_CALL( subtreeSumGapStoreNode(scip, ssg, SCIPgetFocusNode(scip), label) );
    }
 
    return SCIP_OKAY;
@@ -1099,7 +1099,7 @@ SCIP_Real calcGap(
 
 /** remove node from the subtree sum gap (because it has been solved by branching or is a leaf) */
 static
-SCIP_RETCODE subtreesumgapRemoveNode(
+SCIP_RETCODE subtreeSumGapRemoveNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP*        ssg,                /**< subtree sum gap data structure */
    SCIP_NODE*            node                /**< node that should be removed */
@@ -1150,7 +1150,7 @@ SCIP_RETCODE subtreesumgapRemoveNode(
 
 /** insert children into subtree sum gap */
 static
-SCIP_RETCODE subtreesumGapInsertChildren(
+SCIP_RETCODE subtreeSumGapInsertChildren(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP*        ssg                 /**< subtree sum gap data structure */
    )
@@ -1187,11 +1187,11 @@ SCIP_RETCODE subtreesumGapInsertChildren(
          "Inserting label %d for node number %" SCIP_LONGINT_FORMAT " (parent %" SCIP_LONGINT_FORMAT ")\n",
          focusnodelabel, SCIPnodeGetNumber(children[n]), SCIPnodeGetNumber(focusnode));
 
-      SCIP_CALL( subtreesumgapStoreNode(scip, ssg, children[n], focusnodelabel) );
+      SCIP_CALL( subtreeSumGapStoreNode(scip, ssg, children[n], focusnodelabel) );
    }
 
    /* remove focus node from hash map */
-   SCIP_CALL( subtreesumgapRemoveNode(scip, ssg, focusnode) );
+   SCIP_CALL( subtreeSumGapRemoveNode(scip, ssg, focusnode) );
 
    return SCIP_OKAY;
 }
@@ -1298,7 +1298,7 @@ SCIP_RETCODE subtreesumgapComputeFromScratch(
 
 /** compute subtree sum gap from scratch efficiently (linear effort in the number of subtrees) */
 static
-SCIP_RETCODE subtreesumgapComputeFromScratchEfficiently(
+SCIP_RETCODE subtreeSumGapComputeFromScratchEfficiently(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP*        ssg,                /**< subtree sum gap data structure */
    SCIP_Bool             updatescaling       /**< should the scaling factor be updated? */
@@ -1355,7 +1355,7 @@ SCIP_RETCODE subtreesumgapComputeFromScratchEfficiently(
 
 /** update the subtree sum gap after a node event (branching or deletion of a node) */
 static
-SCIP_RETCODE subtreesumGapUpdate(
+SCIP_RETCODE subtreeSumGapUpdate(
    SCIP*                 scip,               /**< SCIP data structure */
    SUBTREESUMGAP*        ssg,                /**< subtree sum gap data structure */
    SCIP_NODE*            node,               /**< the corresponding node */
@@ -1376,25 +1376,25 @@ SCIP_RETCODE subtreesumGapUpdate(
    if( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) && ! SCIPisEQ(scip, SCIPgetPrimalbound(scip), ssg->pblastsplit) )
    {
       SCIP_Bool addfocusnode = SCIPgetFocusNode(scip) != NULL && SCIPgetNChildren(scip) == 0 && !SCIPwasNodeLastBranchParent(scip, SCIPgetFocusNode(scip));
-      SCIP_CALL( subtreesumgapSplit(scip, ssg, addfocusnode) );
+      SCIP_CALL( subtreeSumGapSplit(scip, ssg, addfocusnode) );
 
       ssg->pblastsplit = SCIPgetPrimalbound(scip);
 
       updatescaling = TRUE;
 
       /* compute the current SSG value */
-      SCIP_CALL( subtreesumgapComputeFromScratchEfficiently(scip, ssg, updatescaling) );
+      SCIP_CALL( subtreeSumGapComputeFromScratchEfficiently(scip, ssg, updatescaling) );
    }
    /* otherwise, if new children have been created, label them */
    else if( ssg->nsubtrees > 1 && nchildren > 0 )
    {
-      SCIP_CALL( subtreesumGapInsertChildren(scip, ssg) );
+      SCIP_CALL( subtreeSumGapInsertChildren(scip, ssg) );
    }
 
    /* remove the node from the hash map if it is a leaf */
    if( nchildren == 0 )
    {
-      SCIP_CALL( subtreesumgapRemoveNode(scip, ssg, node) );
+      SCIP_CALL( subtreeSumGapRemoveNode(scip, ssg, node) );
    }
 
    return SCIP_OKAY;
@@ -1402,7 +1402,7 @@ SCIP_RETCODE subtreesumGapUpdate(
 
 /** reset tree data */
 static
-SCIP_RETCODE resetTreedata(
+SCIP_RETCODE resetTreeData(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEDATA*             treedata            /**< tree data */
    )
@@ -1415,14 +1415,14 @@ SCIP_RETCODE resetTreedata(
    treedata->nnodes = 1;
    treedata->nopen = 1;
 
-   SCIP_CALL( subtreesumgapReset(scip, treedata->ssg) );
+   SCIP_CALL( subtreeSumGapReset(scip, treedata->ssg) );
 
    return SCIP_OKAY;
 }
 
 /** create tree data structure */
 static
-SCIP_RETCODE createTreedata(
+SCIP_RETCODE createTreeData(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEDATA**            treedata            /**< pointer to store tree data */
    )
@@ -1432,16 +1432,16 @@ SCIP_RETCODE createTreedata(
 
    SCIP_CALL( SCIPallocMemory(scip, treedata) );
 
-   SCIP_CALL( subtreesumgapCreate(scip, &(*treedata)->ssg) );
+   SCIP_CALL( subtreeSumGapCreate(scip, &(*treedata)->ssg) );
 
-   SCIP_CALL( resetTreedata(scip, *treedata) );
+   SCIP_CALL( resetTreeData(scip, *treedata) );
 
    return SCIP_OKAY;
 }
 
 /** free tree data structure */
 static
-void freeTreedata(
+void freeTreeData(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEDATA**            treedata            /**< pointer to tree data */
    )
@@ -1449,7 +1449,7 @@ void freeTreedata(
    assert(scip != NULL);
    assert(treedata != NULL);
 
-   subtreesumgapFree(scip, &(*treedata)->ssg);
+   subtreeSumGapFree(scip, &(*treedata)->ssg);
 
    SCIPfreeMemory(scip, treedata);
    *treedata = NULL;
@@ -1457,7 +1457,7 @@ void freeTreedata(
 
 /** update tree data structure after a node has been solved/is about to be deleted */
 static
-SCIP_RETCODE updateTreedata(
+SCIP_RETCODE updateTreeData(
    SCIP*                 scip,               /**< SCIP data structure */
    TREEDATA*             treedata,           /**< tree data */
    SCIP_NODE*            node,               /**< the corresponding node */
@@ -1485,7 +1485,7 @@ SCIP_RETCODE updateTreedata(
    /* update the subtree sum gap */
    if( ! SCIPisInRestart(scip) )
    {
-      SCIP_CALL( subtreesumGapUpdate(scip, treedata->ssg, node, nchildren) );
+      SCIP_CALL( subtreeSumGapUpdate(scip, treedata->ssg, node, nchildren) );
    }
 
    return SCIP_OKAY;
@@ -1493,7 +1493,7 @@ SCIP_RETCODE updateTreedata(
 
 /** get weighted backtrack estimation from this tree data */
 static
-SCIP_Real getTreedataWBE(
+SCIP_Real treeDataGetWbe(
    TREEDATA*             treedata            /**< tree data */
    )
 {
@@ -1506,7 +1506,7 @@ SCIP_Real getTreedataWBE(
 #ifdef SCIP_DEBUG
 /* print method for tree data */
 static
-char* treedataPrint(
+char* treeDataPrint(
    TREEDATA*             treedata,           /**< tree data */
    char*                 strbuf              /**< string buffer */
    )
@@ -1532,7 +1532,7 @@ char* treedataPrint(
 
 /** reset double exponential smoothing */
 static
-void doubleexpsmoothReset(
+void doubleExpSmoothReset(
    DOUBLEEXPSMOOTH*      des,                /**< double exponential smoothing data structure */
    SCIP_Real             initialvalue        /**< the initial value */
    )
@@ -1545,7 +1545,7 @@ void doubleexpsmoothReset(
 
 /** initialize a double exponential smoothing data structure */
 static
-void doubleexpsmoothInit(
+void doubleExpSmoothInit(
    DOUBLEEXPSMOOTH*      des,                /**< double exponential smoothing data structure */
    SCIP_Real             x1                  /**< the first sample value */
    )
@@ -1563,13 +1563,13 @@ void doubleexpsmoothInit(
 
 /** update a double exponential smoothing data structure */
 static
-void doubleexpsmoothUpdate(
+void doubleExpSmoothUpdate(
    DOUBLEEXPSMOOTH*      des,                /**< double exponential smoothing data structure */
    SCIP_Real             xnew                /**< new sample value */
    )
 {
    if( des->n == 0 )
-      doubleexpsmoothInit(des, xnew);
+      doubleExpSmoothInit(des, xnew);
    else
    {
       SCIP_Real newlevel;
@@ -1585,7 +1585,7 @@ void doubleexpsmoothUpdate(
 
 /** get the current trend (slope) computed by this double exponential smoothing */
 static
-SCIP_Real doubleexpsmoothGetTrend(
+SCIP_Real doubleExpSmoothGetTrend(
    DOUBLEEXPSMOOTH*      des                 /**< double exponential smoothing data structure */
    )
 {
@@ -1599,7 +1599,7 @@ SCIP_Real doubleexpsmoothGetTrend(
 
 /** reset time series */
 static
-void timeseriesReset(
+void timeSeriesReset(
    TIMESERIES*           timeseries          /**< pointer to store time series */
    )
 {
@@ -1609,12 +1609,12 @@ void timeseriesReset(
    timeseries->currentvalue = timeseries->initialvalue;
    timeseries->smoothestimation = SCIP_INVALID;
 
-   doubleexpsmoothReset(&timeseries->des, timeseries->initialvalue);
+   doubleExpSmoothReset(&timeseries->des, timeseries->initialvalue);
 }
 
 /** create a time series object */
 static
-SCIP_RETCODE timeseriesCreate(
+SCIP_RETCODE timeSeriesCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    TIMESERIES**          timeseries,         /**< pointer to store time series */
    const char*           name,               /**< name of this time series */
@@ -1651,7 +1651,7 @@ SCIP_RETCODE timeseriesCreate(
    SCIP_CALL( SCIPallocMemoryArray(scip, &timeseriesptr->vals, timeseriesptr->valssize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &timeseriesptr->estimation, timeseriesptr->valssize) );
 
-   timeseriesReset(timeseriesptr);
+   timeSeriesReset(timeseriesptr);
 
    timeseriesptr->des.alpha = alpha;
    timeseriesptr->des.beta = beta;
@@ -1663,7 +1663,7 @@ SCIP_RETCODE timeseriesCreate(
 
 /** free a time series */
 static
-void timeseriesFree(
+void timeSeriesFree(
    SCIP*                 scip,               /**< SCIP data structure */
    TIMESERIES**          timeseries          /**< pointer to time series */
    )
@@ -1683,7 +1683,7 @@ void timeseriesFree(
 
 /** get current value of time series */
 static
-SCIP_Real timeseriesGet(
+SCIP_Real timeSeriesGet(
    TIMESERIES*           timeseries          /**< time series */
    )
 {
@@ -1694,7 +1694,7 @@ SCIP_Real timeseriesGet(
 
 /** get target value (which this time series reaches at the end of the solution process) */
 static
-SCIP_Real timeseriesGetTargetValue(
+SCIP_Real timeSeriesGetTargetValue(
    TIMESERIES*           timeseries          /**< time series */
    )
 {
@@ -1703,7 +1703,7 @@ SCIP_Real timeseriesGetTargetValue(
 
 /** get resolution of time series */
 static
-int timeseriesGetResolution(
+int timeSeriesGetResolution(
    TIMESERIES*           timeseries          /**< time series */
    )
 {
@@ -1712,7 +1712,7 @@ int timeseriesGetResolution(
 
 /** estimate tree size at which time series reaches target value */
 static
-SCIP_Real timeseriesEstimate(
+SCIP_Real timeSeriesEstimate(
    TIMESERIES*           timeseries,         /**< time series */
    TREEDATA*             treedata            /**< tree data for fallback estimation */
    )
@@ -1727,14 +1727,14 @@ SCIP_Real timeseriesEstimate(
    if( timeseries->nobs == 0L )
       return -1.0;
 
-   val = timeseriesGet(timeseries);
-   targetval = timeseriesGetTargetValue(timeseries);
+   val = timeSeriesGet(timeseries);
+   targetval = timeSeriesGetTargetValue(timeseries);
 
    /* if the value has reached the target value already, return the number of observations */
    if( EPSZ(val - targetval, tolerance) )
       return treedata->nnodes;
 
-   trend = doubleexpsmoothGetTrend(&timeseries->des);
+   trend = doubleExpSmoothGetTrend(&timeseries->des);
 
    /* Get current value and trend. The linear trend estimation may point into the wrong direction
     * In this case, we use the fallback mechanism that we will need twice as many nodes.
@@ -1745,13 +1745,13 @@ SCIP_Real timeseriesEstimate(
    }
 
    /* compute after how many additional steps the current trend reaches the target value; multiply by resolution */
-   estimated = timeseriesGetResolution(timeseries) * (timeseries->nvals + (targetval - val) / (SCIP_Real)trend);
+   estimated = timeSeriesGetResolution(timeseries) * (timeseries->nvals + (targetval - val) / (SCIP_Real)trend);
    return timeseries->useleafts ? 2.0 * estimated - 1.0 : estimated;
 }
 
 /** update time series smoothened estimation */
 static
-void timeseriesUpdateSmoothEstimation(
+void timeSeriesUpdateSmoothEstimation(
    TIMESERIES*           timeseries,         /**< time series */
    SCIP_Real             estimation          /**< estimation value */
    )
@@ -1767,7 +1767,7 @@ void timeseriesUpdateSmoothEstimation(
 
 /** get smooth estimation of time series */
 static
-SCIP_Real timeseriesGetSmoothEstimation(
+SCIP_Real timeSeriesGetSmoothEstimation(
    TIMESERIES*           timeseries          /**< time series */
    )
 {
@@ -1776,7 +1776,7 @@ SCIP_Real timeseriesGetSmoothEstimation(
 
 /** resample to lower resolution */
 static
-void timeseriesResample(
+void timeSeriesResample(
    TIMESERIES*           timeseries          /**< time series */
    )
 {
@@ -1786,15 +1786,15 @@ void timeseriesResample(
    assert(timeseries->nvals % 2 == 0);
 
    des = &timeseries->des;
-   doubleexpsmoothReset(des, timeseries->initialvalue);
+   doubleExpSmoothReset(des, timeseries->initialvalue);
 
    /* compress vals array to store only every second entry */
    for( i = 0; i < timeseries->nvals / 2; ++i )
    {
       timeseries->vals[i] = timeseries->vals[2 * i];
       timeseries->estimation[i] = timeseries->estimation[2 * i];
-      doubleexpsmoothUpdate(des, timeseries->vals[i]);
-      timeseriesUpdateSmoothEstimation(timeseries, timeseries->estimation[i]);
+      doubleExpSmoothUpdate(des, timeseries->vals[i]);
+      timeSeriesUpdateSmoothEstimation(timeseries, timeseries->estimation[i]);
    }
 
    timeseries->resolution *= 2;
@@ -1803,7 +1803,7 @@ void timeseriesResample(
 
 /** update time series */
 static
-SCIP_RETCODE timeseriesUpdate(
+SCIP_RETCODE timeSeriesUpdate(
    SCIP*                 scip,               /**< SCIP data structure */
    TIMESERIES*           timeseries,         /**< time series */
    TREEDATA*             treedata,           /**< tree data */
@@ -1837,22 +1837,22 @@ SCIP_RETCODE timeseriesUpdate(
       assert(timeseries->nvals < timeseries->valssize);
       tspos = timeseries->nvals++;
       timeseries->vals[tspos] = value;
-      doubleexpsmoothUpdate(&timeseries->des, value);
-      estimate = timeseriesEstimate(timeseries, treedata);
+      doubleExpSmoothUpdate(&timeseries->des, value);
+      estimate = timeSeriesEstimate(timeseries, treedata);
       timeseries->estimation[tspos] = estimate;
-      timeseriesUpdateSmoothEstimation(timeseries, estimate);
+      timeSeriesUpdateSmoothEstimation(timeseries, estimate);
    }
 
    /* if the time series has reached its capacity, resample and increase the resolution */
    if( timeseries->nvals == timeseries->valssize )
-      timeseriesResample(timeseries);
+      timeSeriesResample(timeseries);
 
    return SCIP_OKAY;
 }
 
 /** get name of time series */
 static
-char* timeseriesGetName(
+char* timeSeriesGetName(
    TIMESERIES*           timeseries          /**< time series */
    )
 {
@@ -1861,7 +1861,7 @@ char* timeseriesGetName(
 
 /** reset all time series */
 static
-void resetTimeseries(
+void resetTimeSeries(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
@@ -1872,7 +1872,7 @@ void resetTimeseries(
    for( t = 0; t < NTIMESERIES; ++t )
    {
       assert(tss[t] != NULL);
-      timeseriesReset(tss[t]);
+      timeSeriesReset(tss[t]);
 
       tss[t]->useleafts = eventhdlrdata->useleafts;
    }
@@ -1884,7 +1884,7 @@ void resetTimeseries(
 
 /** free all time series */
 static
-void freeTimeseries(
+void freeTimeSeries(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
@@ -1896,7 +1896,7 @@ void freeTimeseries(
    for( t = 0; t < NTIMESERIES; ++t )
    {
       assert(tss[t] != NULL);
-      timeseriesFree(scip, &tss[t]);
+      timeSeriesFree(scip, &tss[t]);
    }
 }
 
@@ -1968,7 +1968,7 @@ SCIP_Real getEnsembleEstimation(
       assert(sizeof(coeffs_intermediate)/sizeof(SCIP_Real) == NTIMESERIES);
 
       /* initialize by intermediate WBE coefficient */
-      estim = 0.156 * getTreedataWBE(treedata);
+      estim = 0.156 * treeDataGetWbe(treedata);
    }
    else
    {
@@ -1977,7 +1977,7 @@ SCIP_Real getEnsembleEstimation(
       assert(sizeof(coeffs_late)/sizeof(SCIP_Real) == NTIMESERIES);
 
       /* initialize by late WBE coefficient */
-      estim = 0.579 * getTreedataWBE(treedata);
+      estim = 0.579 * treeDataGetWbe(treedata);
    }
 
    /* combine estimation using the stage-dependent coefficients */
@@ -1985,7 +1985,7 @@ SCIP_Real getEnsembleEstimation(
    {
       SCIP_Real testim;
       TSPOS tspos = tsposs[t];
-      testim = timeseriesEstimate(eventhdlrdata->timeseries[tspos], treedata);
+      testim = timeSeriesEstimate(eventhdlrdata->timeseries[tspos], treedata);
 
       if( testim < 0.0 )
          testim = treedata->nnodes;
@@ -2046,17 +2046,17 @@ SCIP_RETCODE getSearchCompletion(
    {
    /* use regression forest */
    case COMPLETIONTYPE_REGFOREST:
-      values[0] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_PROG]);
-      values[1] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_PROG]->des);
-      values[2] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_SSG]);
-      values[3] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_SSG]->des);
-      values[4] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_LFREQ]);
-      values[5] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_LFREQ]->des);
-      values[6] = timeseriesGet(eventhdlrdata->timeseries[TSPOS_GAP]);
-      values[7] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_GAP]->des);
-      values[8] = doubleexpsmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_OPEN]->des) < 0 ? 1.0 : 0.0;
+      values[0] = timeSeriesGet(eventhdlrdata->timeseries[TSPOS_PROG]);
+      values[1] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_PROG]->des);
+      values[2] = timeSeriesGet(eventhdlrdata->timeseries[TSPOS_SSG]);
+      values[3] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_SSG]->des);
+      values[4] = timeSeriesGet(eventhdlrdata->timeseries[TSPOS_LFREQ]);
+      values[5] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_LFREQ]->des);
+      values[6] = timeSeriesGet(eventhdlrdata->timeseries[TSPOS_GAP]);
+      values[7] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_GAP]->des);
+      values[8] = doubleExpSmoothGetTrend(&eventhdlrdata->timeseries[TSPOS_OPEN]->des) < 0 ? 1.0 : 0.0;
 
-      *completed = SCIPregforestPredict(eventhdlrdata->regforest, values);
+      *completed = SCIPregForestPredict(eventhdlrdata->regforest, values);
       break;
 
    /* interpolate between ssg and progress */
@@ -2070,7 +2070,7 @@ SCIP_RETCODE getSearchCompletion(
       break;
 
    case COMPLETIONTYPE_GAP:
-      *completed = timeseriesGet(eventhdlrdata->timeseries[TSPOS_GAP]); /* gap is stored as 1 - gap */
+      *completed = timeSeriesGet(eventhdlrdata->timeseries[TSPOS_GAP]); /* gap is stored as 1 - gap */
       break;
 
    case COMPLETIONTYPE_SSG:
@@ -2121,7 +2121,7 @@ DECL_TIMESERIESUPDATE(timeseriesUpdateGap)
    /* avoid to call SCIPgetDualbound during a restart where the queue is simply emptied */
    if( SCIPisInRestart(scip) )
    {
-      *value = timeseriesGet(ts);
+      *value = timeSeriesGet(ts);
 
       return SCIP_OKAY;
    }
@@ -2204,23 +2204,23 @@ SCIP_RETCODE includeTimeseries(
    assert(eventhdlrdata != NULL);
 
    /* include gap time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_GAP], "gap", 1.0, 0.0,
+   SCIP_CALL( timeSeriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_GAP], "gap", 1.0, 0.0,
             DES_ALPHA_GAP, DES_BETA_GAP, timeseriesUpdateGap) );
 
    /* include progress time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_PROG], "progress", 1.0, 0.0,
+   SCIP_CALL( timeSeriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_PROG], "progress", 1.0, 0.0,
             DES_ALPHA_PROGRESS, DES_BETA_PROGRESS, timeseriesUpdateProgress) );
 
    /* include leaf time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_LFREQ], "leaf-frequency", 0.5, -0.5,
+   SCIP_CALL( timeSeriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_LFREQ], "leaf-frequency", 0.5, -0.5,
             DES_ALPHA_LEAFFREQUENCY, DES_BETA_LEAFFREQUENCY, timeseriesUpdateLeaffreq) );
 
    /* include SSG time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_SSG], "ssg", 0.0, 1.0,
+   SCIP_CALL( timeSeriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_SSG], "ssg", 0.0, 1.0,
             DES_ALPHA_SSG, DES_BETA_SSG, timeseriesUpdateSsg) );
 
    /* include open nodes time series */
-   SCIP_CALL( timeseriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_OPEN], "open-nodes", 0.0, 0.0,
+   SCIP_CALL( timeSeriesCreate(scip, &eventhdlrdata->timeseries[TSPOS_OPEN], "open-nodes", 0.0, 0.0,
             DES_ALPHA_OPENNODES, DES_BETA_OPENNODES, timeseriesUpdateOpenNodes) );
 
    return SCIP_OKAY;
@@ -2374,12 +2374,12 @@ SCIP_RETCODE updateTimeseries(
    for( t = 0; t < NTIMESERIES; ++t )
    {
       assert(tss[t] != NULL);
-      SCIP_CALL( timeseriesUpdate(scip, tss[t], treedata, isleaf) );
+      SCIP_CALL( timeSeriesUpdate(scip, tss[t], treedata, isleaf) );
 
 #ifdef SCIP_MORE_DEBUG
       SCIPdebugMsg(scip,
          "Update of time series '%s', current value %.4f (%" SCIP_LONGINT_FORMAT " observations)\n",
-         timeseriesGetName(tss[t]), timeseriesGet(tss[t]), tss[t]->nobs);
+         timeSeriesGetName(tss[t]), timeSeriesGet(tss[t]), tss[t]->nobs);
 #endif
    }
 
@@ -2437,9 +2437,9 @@ char* printReport(
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "\n");
 
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  wbe              : %10.0f %10s %10s %10s %10s\n",
-            getTreedataWBE(eventhdlrdata->treedata), "-", "-", "-", "-");
+            treeDataGetWbe(eventhdlrdata->treedata), "-", "-", "-", "-");
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  tree-profile     : %10.0f %10s %10s %10s %10s\n",
-            predictTotalSizeTreeprofile(scip, eventhdlrdata->treeprofile, eventhdlrdata->treeprofile_minnodesperdepth),
+            predictTotalSizeTreeProfile(scip, eventhdlrdata->treeprofile, eventhdlrdata->treeprofile_minnodesperdepth),
             "-", "-", "-", "-");
 
    /* print time series forecasts */
@@ -2451,15 +2451,15 @@ char* printReport(
       char trendstr[SCIP_MAXSTRLEN];
       char smoothestimstr[SCIP_MAXSTRLEN];
 
-      trend = doubleexpsmoothGetTrend(&ts->des);
-      smoothestim = timeseriesGetSmoothEstimation(ts);
+      trend = doubleExpSmoothGetTrend(&ts->des);
+      smoothestim = timeSeriesGetSmoothEstimation(ts);
 
       ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN, "  %-17s: %10.0f %10.5f %10s %10d %10s\n",
-            timeseriesGetName(ts),
-            timeseriesEstimate(ts, eventhdlrdata->treedata),
-            timeseriesGet(ts),
+            timeSeriesGetName(ts),
+            timeSeriesEstimate(ts, eventhdlrdata->treedata),
+            timeSeriesGet(ts),
             real2String(trend, trendstr, 5),
-            timeseriesGetResolution(ts),
+            timeSeriesGetResolution(ts),
             real2String(smoothestim, smoothestimstr, 0));
    }
 
@@ -2490,9 +2490,9 @@ SCIP_DECL_EVENTFREE(eventFreeEstim)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   freeTreedata(scip, &eventhdlrdata->treedata);
+   freeTreeData(scip, &eventhdlrdata->treedata);
 
-   freeTimeseries(scip, eventhdlrdata);
+   freeTimeSeries(scip, eventhdlrdata);
 
    SCIPfreeMemory(scip, &eventhdlrdata);
 
@@ -2511,7 +2511,7 @@ SCIP_DECL_EVENTINIT(eventInitEstim)
    /* test if user specified a regression forest */
    if( 0 != strncmp(eventhdlrdata->regforestfilename, DEFAULT_REGFORESTFILENAME, strlen(DEFAULT_REGFORESTFILENAME)) )
    {
-      SCIP_CALL( SCIPregforestFromFile(&eventhdlrdata->regforest, eventhdlrdata->regforestfilename) );
+      SCIP_CALL( SCIPregForestFromFile(&eventhdlrdata->regforest, eventhdlrdata->regforestfilename) );
    }
 
    eventhdlrdata->lastrestartrun = 0;
@@ -2528,7 +2528,7 @@ SCIP_DECL_EVENTEXIT(eventExitEstim)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPregforestFree(&eventhdlrdata->regforest);
+   SCIPregForestFree(&eventhdlrdata->regforest);
 
    return SCIP_OKAY;
 }
@@ -2547,15 +2547,15 @@ SCIP_DECL_EVENTINITSOL(eventInitsolEstim)
    eventhdlrdata->nreports = 0;
 
    /* reset tree data */
-   SCIP_CALL( resetTreedata(scip, eventhdlrdata->treedata) );
+   SCIP_CALL( resetTreeData(scip, eventhdlrdata->treedata) );
 
-   resetTimeseries(eventhdlrdata);
+   resetTimeSeries(eventhdlrdata);
 
    SCIP_CALL( SCIPcatchEvent(scip, EVENTTYPE_ESTIM, eventhdlr, NULL, NULL) );
 
    if( eventhdlrdata->treeprofile_enabled )
    {
-      SCIP_CALL( createTreeprofile(scip, &eventhdlrdata->treeprofile) );
+      SCIP_CALL( createTreeProfile(scip, &eventhdlrdata->treeprofile) );
    }
 
    eventhdlrdata->treeisbinary = TRUE;
@@ -2573,7 +2573,7 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolEstim)
    assert(eventhdlrdata != NULL);
 
    if( eventhdlrdata->treeprofile != NULL )
-      freeTreeprofile(scip, &eventhdlrdata->treeprofile);
+      freeTreeProfile(scip, &eventhdlrdata->treeprofile);
 
    SCIP_CALL( SCIPdropEvent(scip, EVENTTYPE_ESTIM, eventhdlr, NULL, -1) );
 
@@ -2622,11 +2622,11 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       }
 
       eventnode = SCIPeventGetNode(event);
-      SCIP_CALL( updateTreedata(scip, treedata, eventnode, nchildren) );
-      SCIP_CALL( updateTreeprofile(scip, eventhdlrdata->treeprofile, eventnode) );
+      SCIP_CALL( updateTreeData(scip, treedata, eventnode, nchildren) );
+      SCIP_CALL( updateTreeProfile(scip, eventhdlrdata->treeprofile, eventnode) );
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "%s\n", treedataPrint(treedata, strbuf));
+      SCIPdebugMsg(scip, "%s\n", treeDataPrint(treedata, strbuf));
 #endif
 
       SCIP_CALL( updateTimeseries(scip, eventhdlrdata, treedata, nchildren == 0) );
@@ -2739,7 +2739,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    BMSclearMemory(eventhdlrdata);
 
-   SCIP_CALL( createTreedata(scip, &eventhdlrdata->treedata) );
+   SCIP_CALL( createTreeData(scip, &eventhdlrdata->treedata) );
 
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecEstim, eventhdlrdata) );
@@ -2877,11 +2877,11 @@ SCIP_Real SCIPgetTreesizeEstimation(
 
    /* tree profile estimation */
    case ESTIMMETHOD_TPROF:
-      return predictTotalSizeTreeprofile(scip, eventhdlrdata->treeprofile, eventhdlrdata->treeprofile_minnodesperdepth);
+      return predictTotalSizeTreeProfile(scip, eventhdlrdata->treeprofile, eventhdlrdata->treeprofile_minnodesperdepth);
 
    /* Weighted backtrack estimation */
    case ESTIMMETHOD_WBE:
-      return getTreedataWBE(eventhdlrdata->treedata);
+      return treeDataGetWbe(eventhdlrdata->treedata);
 
    default:
       SCIPerrorMessage("Unknown estimation '%c' method specified, should be one of [%s]\n",
@@ -2891,5 +2891,5 @@ SCIP_Real SCIPgetTreesizeEstimation(
    }
 
    assert(tspos != TSPOS_NONE);
-   return timeseriesEstimate(eventhdlrdata->timeseries[tspos], eventhdlrdata->treedata);
+   return timeSeriesEstimate(eventhdlrdata->timeseries[tspos], eventhdlrdata->treedata);
 }
