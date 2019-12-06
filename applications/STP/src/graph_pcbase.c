@@ -1027,6 +1027,33 @@ SCIP_Bool graph_pc_knotIsFixedTerm(
 }
 
 
+/** check whether node is proper potential terminal */
+SCIP_Bool graph_pc_knotIsPropPotTerm(
+   const GRAPH*          g,                  /**< the graph */
+   int                   node                /**< node to be checked */
+   )
+{
+   assert(g);
+   assert(graph_pc_isPcMw(g));
+   assert(node >= 0 && node < g->knots);
+   assert(g->term2edge && g->prize);
+
+   if( g->extended )
+   {
+      return Is_pseudoTerm(g->term[node]);
+   }
+
+   if( g->term2edge[node] >= 0 && Is_term(g->term[node]) )
+   {
+      assert(!graph_pc_knotIsDummyTerm(g, node));
+
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+
 /** check whether node is a dummy (pseudo) terminal */
 SCIP_Bool graph_pc_knotIsDummyTerm(
    const GRAPH*          g,                  /**< the graph */
@@ -1063,34 +1090,6 @@ SCIP_Bool graph_pc_knotIsDummyTerm(
    }
 
    return FALSE;
-}
-
-/** check whether terminal is not a leaf in at least one optimal tree */
-void graph_pc_termMarkProper(
-   const GRAPH*          g,                  /**< the graph */
-   int*                  termmark            /**< terminal mark (2 for proper terminal, 1 for non-proper terminal, 0 otherwise) */
-)
-{
-   const int nnodes = g->knots;
-
-   assert(!g->extended);
-
-   assert(g && termmark);
-
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( Is_term(g->term[i]) )
-      {
-         if( graph_pc_termIsNonLeafTerm(g, i) )
-            termmark[i] = 1;
-         else
-            termmark[i] = 2;
-      }
-      else
-      {
-         termmark[i] = 0;
-      }
-   }
 }
 
 
@@ -1179,6 +1178,35 @@ SCIP_Bool graph_pc_evalTermIsNonLeaf(
 }
 
 
+/** check whether terminal is not a leaf in at least one optimal tree */
+void graph_pc_termMarkProper(
+   const GRAPH*          g,                  /**< the graph */
+   int*                  termmark            /**< terminal mark (2 for proper terminal, 1 for non-proper terminal, 0 otherwise) */
+)
+{
+   const int nnodes = g->knots;
+
+   assert(!g->extended);
+
+   assert(g && termmark);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) )
+      {
+         if( graph_pc_termIsNonLeafTerm(g, i) )
+            termmark[i] = 1;
+         else
+            termmark[i] = 2;
+      }
+      else
+      {
+         termmark[i] = 0;
+      }
+   }
+}
+
+
 /** Enforces given pseudo-terminal without deleting edges.
  *  I.e. the terminal is part of any optimal solution. */
 void graph_pc_enforcePseudoTerm(
@@ -1187,11 +1215,13 @@ void graph_pc_enforcePseudoTerm(
    int             pterm               /**< the pseudo-terminal */
 )
 {
-   const int term = graph_pc_getTwinTerm(graph, pterm);
-   const int root2term = graph_pc_getRoot2PtermEdge(graph, term);
+   const int dummyterm = graph_pc_getTwinTerm(graph, pterm);
+   const int root2term = graph_pc_getRoot2PtermEdge(graph, dummyterm);
 
-   assert(scip && graph && Is_pseudoTerm(graph->term[pterm]));
-   assert(Is_term(graph->term[term]));
+   assert(scip && graph);
+   assert(!graph_pc_knotIsDummyTerm(graph, pterm));
+   assert(graph_pc_knotIsDummyTerm(graph, dummyterm));
+   assert(graph_pc_knotIsPropPotTerm(graph, pterm));
    assert(SCIPisEQ(scip, graph->cost[root2term], graph->prize[pterm]));
 
    /* don't change because of weird prize sum in reduce.c */
@@ -1260,17 +1290,49 @@ void graph_pc_enforceNode(
 )
 {
    assert(graph_pc_isPcMw(graph));
-   assert(graph->extended);
 
-   /* nothing to enforce? */
-   if( Is_term(graph->term[term]) )
-      return;
+   if( graph->extended )
+   {
+      /* nothing to enforce? */
+      if( Is_term(graph->term[term]) )
+         return;
 
-   if( Is_pseudoTerm(graph->term[term]) )
-      graph_pc_enforcePseudoTerm(scip, graph, term);
+      if( Is_pseudoTerm(graph->term[term]) )
+      {
+         graph_pc_enforcePseudoTerm(scip, graph, term);
+      }
+      else if( graph_pc_isRootedPcMw(graph) && !graph_pc_knotIsNonLeafTerm(graph, term) )
+      {
+         graph_pc_knotToFixedTermProperty(graph, term);
+      }
+   }
+   else
+   {
+      if( graph_pc_knotIsFixedTerm(graph, term) )
+         return;
 
-   if( graph_pc_isRootedPcMw(graph) )
-      graph_pc_knotToFixedTermProperty(graph, term);
+      if( graph_pc_knotIsNonLeafTerm(graph, term) )
+      {
+         if( graph_pc_isRootedPcMw(graph) )
+            graph_pc_knotToFixedTermProperty(graph, term);
+
+         return;
+      }
+
+      if( Is_term(graph->term[term]) )
+      {
+         assert(graph_pc_knotIsPropPotTerm(graph, term));
+
+         graph_pc_enforcePseudoTerm(scip, graph, term);
+      }
+      else if( graph_pc_isRootedPcMw(graph) )
+      {
+         assert(!Is_term(graph->term[term]));
+         assert(!graph_pc_knotIsDummyTerm(graph, term));
+
+         graph_pc_knotToFixedTermProperty(graph, term);
+      }
+   }
 }
 
 
@@ -2359,7 +2421,7 @@ SCIP_RETCODE graph_pc_2rmw(
 SCIP_RETCODE graph_pc_pcmw2rooted(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
-   SCIP_Real             prizesum            /**< sum of positive prizes */
+   SCIP_Real             fixprize            /**< prize at which to make terminals */
    )
 {
    int e;
@@ -2388,7 +2450,7 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
    while( e != EAT_LAST )
    {
       const int enext = graph->oeat[e];
-      if( SCIPisGE(scip, graph->cost[e], prizesum) )
+      if( SCIPisGE(scip, graph->cost[e], fixprize) )
       {
          const int dummyterm = graph->head[e];
          const int pseudoterm = graph_pc_getTwinTerm(graph, dummyterm);
@@ -2396,7 +2458,7 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
          assert(Is_pseudoTerm(graph->term[dummyterm]));
          assert(graph->grad[dummyterm] == 2);
          assert(Is_term(graph->term[pseudoterm]));
-         assert(SCIPisGE(scip, graph->prize[pseudoterm], prizesum));
+         assert(SCIPisGE(scip, graph->prize[pseudoterm], fixprize));
 
          graph_pc_knotToNonTermProperty(graph, dummyterm);
 
@@ -2592,44 +2654,24 @@ void graph_pc_subtractPrize(
 void graph_pc_chgPrize(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
-   SCIP_Real             newprize,           /**< prize to be subtracted */
-   int                   i                   /**< the terminal */
+   SCIP_Real             newprize,           /**< new prize */
+   int                   pterm               /**< the terminal */
    )
 {
-   int e;
-   int j;
+   const int twin = graph_pc_getTwinTerm(g, pterm);
+   const int root2edge = graph_pc_getRoot2PtermEdge(g, twin);
 
-   assert(scip != NULL);
-   assert(g != NULL);
+   assert(scip);
    assert(newprize > 0.0);
+   assert(graph_pc_isPcMw(g));
+   assert(graph_pc_knotIsPropPotTerm(g, pterm));
+   assert(SCIPisEQ(scip, g->prize[pterm], g->cost[root2edge]));
 
-   if( g->stp_type == STP_RPCSPG && i == g->source )
-      return;
+   g->prize[pterm] = newprize;
+   g->cost[root2edge] = newprize;
 
-   g->prize[i] = newprize;
-   for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-      if( Is_pseudoTerm(g->term[g->head[e]]) )
-         break;
-
-   assert(e != EAT_LAST);
-
-   j = g->head[e];
-
-   assert(j != g->source);
-   assert(!g->mark[j]);
-
-   for( e = g->inpbeg[j]; e != EAT_LAST; e = g->ieat[e] )
-      if( g->source == g->tail[e] )
-         break;
-
-   assert(e != EAT_LAST);
-   assert(!g->mark[g->tail[e]] || g->stp_type == STP_RPCSPG);
-
-   g->cost[e] = newprize;
-
-   assert(g->stp_type == STP_MWCSP  || g->stp_type == STP_RMWCSP || SCIPisGE(scip, g->prize[i], 0.0));
-   assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
-   assert(SCIPisGE(scip, g->prize[i], 0.0) || g->stp_type == STP_MWCSP);
+   assert(g->stp_type == STP_MWCSP  || g->stp_type == STP_RMWCSP || SCIPisGE(scip, g->prize[pterm], 0.0));
+   assert(SCIPisGE(scip, g->prize[pterm], 0.0) || g->stp_type == STP_MWCSP);
 }
 
 

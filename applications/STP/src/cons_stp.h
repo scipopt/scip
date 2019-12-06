@@ -73,6 +73,10 @@ int* SCIPStpGetPcImplStarts(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns number implications starts */
+int SCIPStpGetPcImplNstarts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 /** returns implications vertices array */
 extern

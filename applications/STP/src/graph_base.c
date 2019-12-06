@@ -3869,6 +3869,16 @@ SCIP_Bool graph_valid(
    return isValid;
 }
 
+/** is the given graph a variant that is effectively an STP?? */
+SCIP_Bool graph_typeIsSpgLike(
+   const GRAPH*          g                   /**< the graph */
+   )
+{
+   const int type = g->stp_type;
+   assert(g);
+
+   return (type == STP_SPG || type == STP_RSMT || type == STP_GSTP);
+}
 
 /** is the given graph undirected? */
 SCIP_Bool graph_typeIsUndirected(

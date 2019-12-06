@@ -1614,7 +1614,7 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    nterms = g->terms;
 #endif
 
-   chgterms = (!atrootnode && (g->stp_type == STP_SPG || g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG) );
+   chgterms = (!atrootnode && (graph_typeIsSpgLike(g) || graph_pc_isPcMw(g)));
 
    SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
 
@@ -1624,7 +1624,6 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    /* change graph according to branch-and-bound terminal changes  */
    if( chgterms )
    {
-      SCIP_Real offset = 0.0;
       const int nnodes = g->knots;
 
       SCIP_CALL(SCIPallocBufferArray(scip, &nodestatenew, nnodes));
@@ -1632,11 +1631,13 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
       BMScopyMemoryArray(termorg, g->term, nnodes);
 
       SCIPStpBranchruleInitNodeState(g, nodestatenew);
-      SCIP_CALL( SCIPStpBranchruleApplyVertexChgs(scip, nodestatenew, NULL, &offset) );
+      SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestatenew) );
 
       for( int k = 0; k < nnodes; k++ )
+      {
          if( nodestatenew[k] == BRANCH_STP_VERTEX_TERM && !Is_term(g->term[k]) )
             graph_knot_chg(g, k, STP_TERM);
+      }
    }
 
    SCIP_CALL( sep_2cut(scip, conshdlr, conshdlrdata, consdata, termorg, maxcuts, &ncuts) );
@@ -1647,9 +1648,13 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    /* restore graph */
    if( chgterms )
    {
-      for( int k = 0; k < g->knots; k++ )
+      const int nnodes = g->knots;
+
+      for( int k = 0; k < nnodes; k++ )
+      {
          if( g->term[k] != termorg[k] )
             graph_knot_chg(g, k, termorg[k]);
+      }
    }
 
 #ifndef NDEBUG
@@ -2025,6 +2030,22 @@ int* SCIPStpGetPcImplStarts(
 
    return conshdlrdata->pcimplstart;
 }
+
+/** returns number implications starts */
+int SCIPStpGetPcImplNstarts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLR* conshdlr = NULL;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlr = SCIPfindConshdlr(scip, "stp");
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->pcimplnppterms;
+}
+
 
 /** returns implications vertices array */
 int* SCIPStpGetPcImplVerts(
