@@ -471,7 +471,6 @@ SCIP_RETCODE decompHorizonInitialize(
 {
    SCIP_VAR** vars;
    SCIP_VAR** varscopy;
-   SCIP_SOL* sol;
    int* varlabels;
    int nvars;
    int currblockstart;
@@ -487,11 +486,9 @@ SCIP_RETCODE decompHorizonInitialize(
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   sol = SCIPgetBestSol(scip);
    ncontvarsscip = SCIPgetNContVars(scip) + SCIPgetNImplVars(scip);
 
    assert(vars != NULL);
-   assert(sol != NULL);
 
    /* get variable labels from decomposition */
    SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, nvars) );
@@ -2087,12 +2084,12 @@ SCIP_RETCODE determineLimits(
    SCIP_Real maxnnodesr;
    SCIP_Real confidence;
    SCIP_Longint maxnnodes;
+   SCIP_Bool copylimits;
+
    assert(scip != NULL);
    assert(heur != NULL);
    assert(solvelimits != NULL);
    assert(runagain != NULL);
-
-   SCIP_Bool copylimits;
 
    heurdata = SCIPheurGetData(heur);
 
