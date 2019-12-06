@@ -55,7 +55,7 @@
 | mmm_gt_1hour               |          31 | -           | -                                                                                  | -       |
 | mmm_old                    |         163 | -           | -                                                                                  | -       |
 | MMMshort                   |         123 | -           | -                                                                                  | -       |
-| numerics                   |           7 | -           | -                                                                                  | -       |
+| numerics                   |          27 | -           | -                                                                                  | -       |
 | PBALL-DEC-SMALLINT-LIN     |         725 | -           | -                                                                                  | -       |
 | PBALL-DEC-SMALLINT-NLC     |         100 | -           | -                                                                                  | -       |
 | PBALL-OPT-SMALLINT-LIN     |        1994 | -           | -                                                                                  | -       |
