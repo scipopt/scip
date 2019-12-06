@@ -108,7 +108,7 @@ set(settings_fastMIP
     "vbcvisualization"
   )
 set(settings_MINLP
-    "emphasis_numerics"
+#    "emphasis_numerics"
     "minlp"
     "undercover1"
     "undercover2"
