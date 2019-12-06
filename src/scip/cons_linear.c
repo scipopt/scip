@@ -154,7 +154,7 @@
 
 #define DEFAULT_MULTAGGRREMOVE      FALSE /**< should multi-aggregations only be performed if the constraint can be
                                            *   removed afterwards? */
-#define DEFAULT_MAXMULTIAGGRQUOT    1e+03 /**< maximum coefficient dynamism (ie. maxabsval / minabsval) for multiaggregation */
+#define DEFAULT_MAXMULTAGGRQUOT    1e+03  /**< maximum coefficient dynamism (ie. maxabsval / minabsval) for multiaggregation */
 #define DEFAULT_EXTRACTCLIQUES       TRUE /**< should cliques be extracted? */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
@@ -314,7 +314,7 @@ struct SCIP_ConshdlrData
    int                   rangedrowfreq;      /**< frequency for applying ranged row propagation */
    SCIP_Bool             multaggrremove;     /**< should multi-aggregations only be performed if the constraint can be
                                               *   removed afterwards? */
-   SCIP_Real             maxmultiaggrquot;   /**< maximum coefficient dynamism (ie. maxabsval / minabsval) for multiaggregation */
+   SCIP_Real             maxmultaggrquot;    /**< maximum coefficient dynamism (ie. maxabsval / minabsval) for multiaggregation */
    SCIP_Bool             extractcliques;     /**< should cliques be extracted? */
 };
 
@@ -9740,7 +9740,7 @@ SCIP_RETCODE convertLongEquality(
          maxabsval = absval;
 
       /* do not try to multi aggregate, when numerical bad */
-      if( maxabsval / minabsval > conshdlrdata->maxmultiaggrquot )
+      if( maxabsval / minabsval > conshdlrdata->maxmultaggrquot )
          return SCIP_OKAY;
 
       slacktype = SCIPvarGetType(var);
@@ -10674,7 +10674,7 @@ SCIP_RETCODE dualPresolve(
          maxabsval = absval;
 
       /* do not try to multi aggregate, when numerical bad */
-      if( maxabsval / minabsval > conshdlrdata->maxmultiaggrquot )
+      if( maxabsval / minabsval > conshdlrdata->maxmultaggrquot )
          return SCIP_OKAY;
 
       var = consdata->vars[i];
@@ -17602,9 +17602,9 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "should multi-aggregations only be performed if the constraint can be removed afterwards?",
          &conshdlrdata->multaggrremove, TRUE, DEFAULT_MULTAGGRREMOVE, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/" CONSHDLR_NAME "/maxmultiaggrquot",
+         "constraints/" CONSHDLR_NAME "/maxmultaggrquot",
          "maximum coefficient dynamism (ie. maxabsval / minabsval) for multiaggregation",
-         &conshdlrdata->maxmultiaggrquot, TRUE, DEFAULT_MAXMULTIAGGRQUOT, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+         &conshdlrdata->maxmultaggrquot, TRUE, DEFAULT_MAXMULTAGGRQUOT, 1.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/extractcliques",
          "should Cliques be extracted?",
