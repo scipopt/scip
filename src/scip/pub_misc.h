@@ -1380,6 +1380,16 @@ void** SCIPdigraphGetSuccessorsData(
    int                   node                /**< node for which the data corresponding to the outgoing arcs is returned */
    );
 
+/** identifies the articulation points in a given directed graph
+ *  uses the helper recursive function findArticulationPointsUtil
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdigraphGetArticulationPoints(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int**                 articulations,      /**< array to store the sorted node indices of the computed articulation points, or NULL */
+   int*                  narticulations      /**< number of the computed articulation points, or NULL */
+   );
+
 /** Compute undirected connected components on the given graph.
  *
  *  @note For each arc, its reverse is added, so the graph does not need to be the directed representation of an

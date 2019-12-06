@@ -64,6 +64,7 @@ struct SCIP_Benders
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub));/**< the solving method for the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve));/**< called after the subproblems are solved. */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub));/**< the freeing method for the Benders' decomposition subproblems */
+   SCIP_DECL_SORTPTRCOMP((*benderssubcomp)); /**< a comparator for defining the solving order of the subproblems */
    SCIP_BENDERSDATA*     bendersdata;        /**< Benders' decomposition local data */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this Benders' decomposition for the next stages */
    SCIP_CLOCK*           bendersclock;       /**< Benders' decomposition execution time */
@@ -90,6 +91,8 @@ struct SCIP_Benders
    SCIP_Bool             auxvarsimplint;     /**< if subproblem objective is integer, then set the auxiliary variables as implint */
    SCIP_Bool             cutcheck;           /**< should cuts be generated while checking solutions? */
    SCIP_Bool             threadsafe;         /**< has the copy been created requiring thread safety */
+   SCIP_Real             solutiontol;        /**< storing the tolerance for optimality in Benders' decomposition */
+   int                   numthreads;         /**< the number of threads to use when solving the subproblem */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
@@ -99,6 +102,8 @@ struct SCIP_Benders
    /* the subproblem information */
    SCIP**                subproblems;        /**< the Benders' decomposition subproblems */
    SCIP_VAR**            auxiliaryvars;      /**< the auxiliary variables for the Benders' optimality cuts */
+   SCIP_PQUEUE*          subprobqueue;       /**< the priority queue for the subproblems */
+   SCIP_SUBPROBLEMSOLVESTAT** solvestat;     /**< storing the solving statistics of all the subproblems */
    SCIP_Real*            subprobobjval;      /**< the objective value of the subproblem in the current iteration */
    SCIP_Real*            bestsubprobobjval;  /**< the best objective value of the subproblem */
    SCIP_Real*            subproblowerbound;  /**< a lower bound on the subproblem - used for the integer cuts */
@@ -114,8 +119,6 @@ struct SCIP_Benders
    SCIP_Bool*            indepsubprob;       /**< flag to indicate if a subproblem is independent of the master prob */
    SCIP_Bool*            subprobenabled;     /**< flag to indicate whether the subproblem is enabled */
    int                   nactivesubprobs;    /**< the number of active subproblems */
-   int                   firstchecked;       /**< the subproblem index first checked in the current iteration */
-   int                   lastchecked;        /**< the subproblem index last checked in the current iteration */
 
    /* cut strengthening details */
    SCIP_SOL*             corepoint;          /**< the point that is separated for stabilisation */
@@ -149,6 +152,14 @@ struct SCIP_Benders
    int                   storedcutssize;     /**< the size of the added cuts array */
    int                   nstoredcuts;        /**< the number of the added cuts */
 
+};
+
+/** statistics for solving the subproblems. Used for prioritising the solving of the subproblem */
+struct SCIP_SubproblemSolveStat
+{
+   int                   idx;                /**< the index of the subproblem */
+   int                   ncalls;             /**< the number of times this subproblems has been solved */
+   SCIP_Real             avgiter;            /**< the average number of LP/NLP iterations performed */
 };
 
 /** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored

@@ -40,9 +40,7 @@
 #include "scip/pub_benders.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/scip_benders.h"
-#include "scip/scip_cons.h"
-#include "scip/scip_prob.h"
+#include "scip/scip.h"
 #include "scip/set.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
@@ -456,6 +454,30 @@ SCIP_RETCODE SCIPsetBendersPostsolve(
    return SCIP_OKAY;
 }
 
+/** sets the subproblem comparison method for determining the solving order in Benders' decomposition
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPsetBendersSubproblemComp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_SORTPTRCOMP((*benderssubcomp))  /**< a comparator for defining the solving order of the subproblems */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetBendersSubproblemComp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(benders != NULL);
+
+   SCIPbendersSetSubproblemComp(benders, benderssubcomp);
+
+   return SCIP_OKAY;
+}
+
 /** returns the Benders' decomposition of the given name, or NULL if not existing */
 SCIP_BENDERS* SCIPfindBenders(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -848,11 +870,8 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
+ *  @pre This method can be called in any SCIP stage; however, it is necessary that the Benders' auxiliary variables
+ *  exist. If they don't exist, then the optimal flag is returned as FALSE.
  *
  *  @pre This method can be called if requested subproblem is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -870,8 +889,17 @@ SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
-   /* check stages for both, SCIP and the requested subproblem data structure */
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcheckBendersSubproblemOptimality", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   (*optimal) = FALSE;
+
+   if( SCIPbendersGetAuxiliaryVar(benders, probnumber) == NULL )
+   {
+      SCIPinfoMessage(scip, NULL, "Benders' decomposition: The auxiliary variable for subproblem <%d> doesn't exist. "
+         "SCIPcheckBendersSubproblemOptimality can not be currently called at stage <%d>.\n", probnumber,
+         SCIPgetStage(scip));
+      SCIPinfoMessage(scip, NULL, "  The optimal flag will be returned as FALSE.\n");
+
+      return SCIP_OKAY;
+   }
 
    if( SCIPbendersSubproblem(benders, probnumber) != NULL )
    {
@@ -879,7 +907,7 @@ SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    }
 
-   SCIP_CALL( SCIPbendersCheckSubproblemOptimality(benders, scip->set, sol, probnumber, optimal) );
+   (*optimal) = SCIPbendersSubproblemIsOptimal(benders, scip->set, sol, probnumber);
 
    return SCIP_OKAY;
 }
