@@ -388,9 +388,9 @@ set(instances_BendersLB
    )
 
 set(instances_BendersQP
-    "instances/Benders/classical_20_0.mps.gz\;instances/Benders/classical_20.dec\;-8.22960761981176e-02"
-    "instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec\;-7.98150796362468e-02"
-    "instances/Benders/classical_30_15.mps.gz\;instances/Benders/classical_30.dec\;-7.34740783553289e-02"
+    "instances/Benders/classical_20_0.mps.gz\;instances/Benders/classical_20.dec.gz\;-8.22960761981176e-02"
+    "instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.98150796362468e-02"
+    "instances/Benders/classical_30_15.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.34740783553289e-02"
    )
 
 set(instances_Or

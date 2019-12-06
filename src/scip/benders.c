@@ -3732,9 +3732,9 @@ SCIP_RETCODE SCIPbendersExec(
    }
 
    /* allocating memory for the infeasible subproblem array */
-   SCIP_CALL( SCIPallocClearBufferArray(set->scip, &subprobsolved, nsubproblems) );
-   SCIP_CALL( SCIPallocClearBufferArray(set->scip, &substatus, nsubproblems) );
-   SCIP_CALL( SCIPallocClearBufferArray(set->scip, &mergecands, nsubproblems) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(set->scip, &subprobsolved, nsubproblems) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(set->scip, &substatus, nsubproblems) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(set->scip, &mergecands, nsubproblems) );
    npriomergecands = 0;
    nmergecands = 0;
 
