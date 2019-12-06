@@ -37,7 +37,7 @@
 #include "scip/benders.h"
 #include "scip/cons_linear.h"
 #include "scip/debug.h"
-#include "scip/decomp.h"
+#include "scip/dcmp.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"

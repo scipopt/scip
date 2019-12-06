@@ -27,7 +27,7 @@
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/clock.h"
-#include "scip/decomp.h"
+#include "scip/dcmp.h"
 #include "scip/paramset.h"
 #include "scip/lp.h"
 #include "scip/prob.h"
