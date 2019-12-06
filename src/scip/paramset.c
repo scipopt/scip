@@ -3942,7 +3942,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "lp/presolving", FALSE, quiet) );
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/refactorinterval", 20, quiet) );
       /* To prevent numerically bad multiaggregations in dualPresolve() and convertLongEquality() set maxmultiaggrqout small*/
-      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/linear/maxmultiaggrquot", 10.0, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/linear/maxmultaggrquot", 10.0, quiet) );
       /* When upgrading constr with knapsack/setppc causes problems */
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/knapsack" , 0, quiet) );
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/setppc" , 0, quiet) );
