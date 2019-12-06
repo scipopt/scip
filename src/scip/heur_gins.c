@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   heur_gins.c
  * @ingroup DEFPLUGINS_HEUR
  * @brief  LNS heuristic that tries to delimit the search region to a neighborhood in the constraint graph
@@ -212,7 +212,6 @@ struct SCIP_HeurData
 #endif
    int                   nrelaxedconstraints; /**< number of constraints that were relaxed */
    int                   nfailures;           /**< counter for the number of unsuccessful runs of this heuristic */
-   int                   lastblockuseddecomp; /**< last block label used from decomposition */
    SCIP_Longint          nextnodenumber;      /**< the next node number at which the heuristic should be called again */
 };
 
@@ -396,6 +395,8 @@ SCIP_RETCODE decompHorizonCreate(
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &decomphorizonptr->lastsolblock, memsize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->potential, memsize) );
 
+   decomphorizonptr->lastblocklabel = INT_MIN; /* cannot use -1 because this is defined for linking variables */
+
    /* initialize data later */
    decomphorizonptr->init = FALSE;
    decomphorizonptr->vars = NULL;
@@ -473,8 +474,8 @@ SCIP_RETCODE decompHorizonInitialize(
    SCIP_SOL* sol;
    int* varlabels;
    int nvars;
-   int currblockstart = 0;
-   int blockpos = 0;
+   int currblockstart;
+   int blockpos;
    int nstblblocks;
    int ncontvarsscip;
 
@@ -546,7 +547,7 @@ SCIP_RETCODE decompHorizonInitialize(
       decomphorizon->ndiscretevars[blockpos] = ndiscretevars;
 
       currblockstart = currblockend;
-      nstblblocks += (suitable);
+      nstblblocks += (suitable ? 1 : 0);
 
       blockpos++;
    }
@@ -595,7 +596,6 @@ int decompHorizonGetFirstPosBestPotential(
 
    linkvarsexist = decomphorizon->blocklabels[0] == SCIP_DECOMP_LINKVAR;
    withlinkvars = FALSE;
-   nintervalvars = 0;
    bestpos = 0;
 
    /* recompute potential of blocks */
@@ -722,7 +722,7 @@ SCIP_Bool decompHorizonNext(
 
 
    ++decomphorizon->iterations;
-   lastblockused = heurdata->lastblockuseddecomp;
+   lastblockused = decomphorizon->lastblocklabel;
    *fixlinkvars = TRUE;
    /* get the last block position that was used by the heuristic. Search for it, and continue with the next block. */
    found = SCIPsortedvecFindInt(decomphorizon->blocklabels, lastblockused, decomphorizon->nblocks, &firstpos);
@@ -1233,9 +1233,11 @@ SCIP_RETCODE selectInitialVariableDecomposition(
    int nbinvars;
    int nintvars;
    int nvars;
-   int currblockstart = 0;
+   int currblockstart;
    int bestvaridx;
    int cntmessages;
+   int nblocks;
+   TABOOLIST* taboolist;
 
    assert(scip != NULL);
    assert(heurdata != NULL);
@@ -1247,47 +1249,58 @@ SCIP_RETCODE selectInitialVariableDecomposition(
 
    sol = SCIPgetBestSol(scip);
    assert(sol != NULL);
-
+   nblocks = SCIPdecompGetNBlocks(decomp);
    /* create a taboo list for recently used block labels at the first initial variable selection */
    if( heurdata->taboolist == NULL )
    {
       SCIPdebugMsg(scip, "Creating taboo list\n");
-      SCIP_CALL( createTabooList(scip, &heurdata->taboolist, SCIPdecompGetNBlocks(decomp)) );
+      SCIP_CALL( createTabooList(scip, &heurdata->taboolist, nblocks) );
    }
+
+   taboolist = heurdata->taboolist;
+   assert(taboolist != NULL);
 
    /* reset taboo list if a new solution has been found since the last initialization call */
    if( sol != heurdata->lastinitsol )
    {
       int nblockstokeep = 3;
-      int* labelstokeep;
       int e;
+      int ntaboolistelems;
+      ntaboolistelems = taboolistgetNElems(heurdata->taboolist);
 
       /* keep the last 3 blocks except for border cases of very coarse decomposition, or too few taboo elements */
       if( taboolistgetNElems(heurdata->taboolist) > 0 )
       {
-         nblockstokeep = MIN(nblockstokeep, SCIPdecompGetNBlocks(decomp) - 1);
-         nblockstokeep = MIN(nblockstokeep, MAX(1, taboolistgetNElems(heurdata->taboolist) - 1));
+         nblockstokeep = MIN(nblockstokeep, nblocks - 1);
+         nblockstokeep = MIN(nblockstokeep, MAX(1, ntaboolistelems - 1));
          nblockstokeep = MAX(nblockstokeep, 0);
       }
       else
          nblockstokeep = 0;
 
-      if( nblockstokeep > 0 )
-      {
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &labelstokeep, tabooListGetLastK(heurdata->taboolist, nblockstokeep), nblockstokeep) );
-      }
-
       SCIPdebugMsg(scip, "Resetting taboo list, keeping %d elements\n", nblockstokeep);
-      tabooListReset(heurdata->taboolist);
-
-      /* reinstall the last 3 elements into the taboo list */
-      for( e = 0; e < nblockstokeep; ++e )
-      {
-         SCIP_CALL( tabooListAdd(scip, heurdata->taboolist, labelstokeep[e]) );
-      }
-
       if( nblockstokeep > 0 )
+      {
+         int* labelstokeep;
+         int* taboolistlastk;
+         taboolistlastk = tabooListGetLastK(taboolist, nblockstokeep);
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &labelstokeep, taboolistlastk, nblockstokeep) );
+
+         tabooListReset(taboolist);
+
+         /* reinstall the last 3 elements into the taboo list */
+         for( e = 0; e < nblockstokeep; ++e )
+         {
+            SCIP_CALL( tabooListAdd(scip, taboolist, labelstokeep[e]) );
+         }
+
+
          SCIPfreeBufferArray(scip, &labelstokeep);
+      }
+      else if( ntaboolistelems > 0 )
+      {
+         tabooListReset(taboolist);
+      }
 
       heurdata->allblocksunsuitable = FALSE;
    }
@@ -1329,7 +1342,7 @@ SCIP_RETCODE selectInitialVariableDecomposition(
       currblockend = currblockstart + countLabel(varlabels, currblockstart, nvars);
 
       /* this block was recently used and should be skipped */
-      if( tabooListFind(heurdata->taboolist, label) )
+      if( tabooListFind(taboolist, label) )
       {
          if( cntmessages++ < 3 )
             SCIPdebugMsg(scip, "Skipping block <%d> from taboo list\n", label);
@@ -1374,7 +1387,7 @@ SCIP_RETCODE selectInitialVariableDecomposition(
       *selvar = varscopy[bestvaridx];
 
       /* save block label in taboo list to not use it again too soon */
-      SCIP_CALL( tabooListAdd(scip, heurdata->taboolist, varlabels[bestvaridx]) );
+      SCIP_CALL( tabooListAdd(scip, taboolist, varlabels[bestvaridx]) );
 
       SCIPdebugMsg(scip, "Select initial variable <%s> from block <%d>\n", SCIPvarGetName(*selvar), varlabels[bestvaridx]);
    }
@@ -1716,14 +1729,14 @@ SCIP_RETCODE determineVariableFixingsDecomp(
 
    maxblocksize = (int)((1.0 - heurdata->minfixingrate) * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip))) - 1;
 
-   /* query the next suitable block */
+   /* query the next suitable interval of blocks */
    hasnext = decompHorizonNext(scip, decomphorizon, heurdata, maxblocksize,
             &currblockstart, &currblockend, &currblocklabel, &fixlinkvars);
 
    if( ! hasnext )
    {
       SCIPdebugMsg(scip, "Could not find a suitable block that follows %d\n",
-               heurdata->lastblockuseddecomp);
+               decomphorizon->lastblocklabel);
 
       *success = FALSE;
    }
@@ -1770,7 +1783,7 @@ SCIP_RETCODE determineVariableFixingsDecomp(
 
       *success = checkFixingrate(scip, heurdata, *nfixings);
 
-      heurdata->lastblockuseddecomp = currblocklabel;
+      decomphorizon->lastblocklabel = currblocklabel;
    }
 
    return SCIP_OKAY;
@@ -1779,8 +1792,7 @@ SCIP_RETCODE determineVariableFixingsDecomp(
 /** choose a decomposition from the store or return NULL if none exists/no decomposition was suitable */
 static
 SCIP_DECOMP* chooseDecomp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_DECOMP** decomps;
@@ -1815,7 +1827,7 @@ SCIP_RETCODE determineVariableFixings(
    )
 {
    SCIP_VAR** vars;
-   SCIP_SOL* sol;                            /* pool of solutions */
+   SCIP_SOL* sol;
    int* distances;
    SCIP_VGRAPH* vargraph;
    SCIP_VAR* selvar;
@@ -1881,7 +1893,7 @@ SCIP_RETCODE determineVariableFixings(
       /* choose the initial variable based on a user decomposition, if available */
       if( heurdata->usedecomprollhorizon )
       {
-         SCIP_DECOMP* decomp = chooseDecomp(scip, heurdata);
+         SCIP_DECOMP* decomp = chooseDecomp(scip);
          if( decomp != NULL )
          {
             SCIP_CALL( selectInitialVariableDecomposition(scip, heurdata, decomp, vargraph,
@@ -2217,7 +2229,6 @@ SCIP_DECL_HEURINIT(heurInitGins)
    heurdata->nsubmips = 0;
    heurdata->nfailures = 0;
    heurdata->nextnodenumber = 0;
-   heurdata->lastblockuseddecomp = INT_MIN; /* cannot use -1 because this is defined for linking variables */
    heurdata->lastinitsol = NULL;
    heurdata->allblocksunsuitable = FALSE;
    heurdata->taboolist = NULL;
@@ -2358,8 +2369,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
    SCIP_CALL( SCIPallocBufferArray(scip, &fixedvals, nvars) );
 
    rollinghorizon = NULL;
-   decomphorizon = NULL;
-   decomp = chooseDecomp(scip, heurdata);
+   decomp = chooseDecomp(scip);
    if( decomp != NULL && heurdata->usedecomp && heurdata->decomphorizon == NULL )
    {
       SCIP_CALL( decompHorizonCreate(scip, &heurdata->decomphorizon, decomp) );
