@@ -1749,11 +1749,9 @@ SCIP_DECL_HASHKEYVAL(hashkeyvalClique)
 
    clique = (SCIP_CLIQUE*)key;
 
-   return clique->nvars == 0 ? 0 : SCIPhashTwo(SCIPcombineTwoInt(SCIPvarGetIndex(clique->vars[0]), \
-                                                                 SCIPvarGetIndex(clique->vars[clique->nvars-1])), \
-                                               SCIPcombineThreeInt(clique->nvars, \
-                                                                   clique->values[0], \
-                                                                   clique->values[clique->nvars-1]));
+   return clique->nvars == 0 ? 0 : SCIPhashFour(SCIPvarGetIndex(clique->vars[0]), \
+                                                SCIPvarGetIndex(clique->vars[clique->nvars-1]), \
+                                                clique->nvars, 2*clique->values[0] +  clique->values[clique->nvars-1]);
 }
 
 #define HASHTABLE_CLIQUETABLE_SIZE 100
