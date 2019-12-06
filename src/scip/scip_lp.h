@@ -1459,6 +1459,7 @@ SCIP_Real SCIPgetRowSolFeasibility(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
+SCIP_EXPORT
 SCIP_Real SCIPgetRowObjParallelism(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
