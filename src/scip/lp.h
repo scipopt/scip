@@ -306,7 +306,6 @@ SCIP_RETCODE SCIProwCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
    const char*           name,               /**< name of row */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COL**            cols,               /**< array with columns of row entries */

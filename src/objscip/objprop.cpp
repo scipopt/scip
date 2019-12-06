@@ -318,6 +318,7 @@ scip::ObjProp* SCIPgetObjProp(
 {
    SCIP_PROPDATA* propdata;
 
+   assert(scip != NULL);
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 

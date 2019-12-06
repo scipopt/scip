@@ -71,6 +71,7 @@ typedef enum SCIP_BendersSubType SCIP_BENDERSSUBTYPE;
 
 typedef struct SCIP_Benders SCIP_BENDERS;           /**< Benders' decomposition data */
 typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders' decomposition data */
+typedef struct SCIP_SubproblemSolveStat SCIP_SUBPROBLEMSOLVESTAT; /**< the solving statistics of the subproblems */
 
 
 /** copy method for Benders' decomposition plugins (called when SCIP copies plugins). If there is an active Benders'

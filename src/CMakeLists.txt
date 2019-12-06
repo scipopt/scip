@@ -74,7 +74,7 @@ set(scipsources
     scip/cons_symresack.c
     scip/cons_varbound.c
     scip/cons_xor.c
-    scip/decomp.c
+    scip/dcmp.c
     scip/dialog_default.c
     scip/event_globalbnd.c
     scip/event_softtimelimit.c
@@ -145,6 +145,7 @@ set(scipsources
     scip/nodesel_hybridestim.c
     scip/nodesel_restartdfs.c
     scip/nodesel_uct.c
+    scip/presol_milp.cpp
     scip/presol_boundshift.c
     scip/presol_convertinttobin.c
     scip/presol_domcol.c
@@ -275,6 +276,7 @@ set(scipsources
     scip/scip_cut.c
     scip/scip_datastructures.c
     scip/scip_debug.c
+    scip/scip_dcmp.c
     scip/scip_dialog.c
     scip/scip_disp.c
     scip/scip_event.c
@@ -506,7 +508,7 @@ set(scipheaders
     scip/cuts.h
     scip/dbldblarith.h
     scip/debug.h
-    scip/decomp.h
+    scip/dcmp.h
     scip/def.h
     scip/dialog_default.h
     scip/dialog.h
@@ -595,6 +597,7 @@ set(scipheaders
     scip/nodesel_uct.h
     scip/paramset.h
     scip/presol_boundshift.h
+    scip/presol_milp.h
     scip/presol_convertinttobin.h
     scip/presol_domcol.h
     scip/presol_dualagg.h
@@ -638,6 +641,7 @@ set(scipheaders
     scip/pub_conflict.h
     scip/pub_cons.h
     scip/pub_cutpool.h
+    scip/pub_dcmp.h
     scip/pub_dialog.h
     scip/pub_disp.h
     scip/pub_event.h
@@ -713,6 +717,7 @@ set(scipheaders
     scip/scip_cut.h
     scip/scip_datastructures.h
     scip/scip_debug.h
+    scip/scip_dcmp.h
     scip/scip_dialog.h
     scip/scip_disp.h
     scip/scip_event.h
@@ -781,7 +786,7 @@ set(scipheaders
     scip/struct_cons.h
     scip/struct_cutpool.h
     scip/struct_cuts.h
-    scip/struct_decomp.h
+    scip/struct_dcmp.h
     scip/struct_dialog.h
     scip/struct_disp.h
     scip/struct_event.h
@@ -834,7 +839,7 @@ set(scipheaders
     scip/type_cons.h
     scip/type_cutpool.h
     scip/type_cuts.h
-    scip/type_decomp.h
+    scip/type_dcmp.h
     scip/type_dialog.h
     scip/type_disp.h
     scip/type_event.h
@@ -948,7 +953,8 @@ target_link_libraries(libscip PRIVATE
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
-    ${SYM_LIBRARIES})
+    ${SYM_LIBRARIES}
+    ${PRESOLVELIB_IMPORTED_TARGETS})
 
 if(SHARED)
     set(SOPLEX_NEEDED 0)
@@ -972,7 +978,7 @@ if(CMAKE_BUILD_TYPE EQUAL "Debug")
 endif()
 
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
-   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
+   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES} ${PRESOLVELIB_IMPORTED_TARGETS})
 
 add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)

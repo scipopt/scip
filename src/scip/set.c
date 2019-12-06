@@ -346,6 +346,7 @@
 /* Decomposition */
 #define SCIP_DEFAULT_DECOMP_BENDERSLABELS FALSE /**< should the variables be labelled for the application of Benders' decomposition */
 #define SCIP_DEFAULT_DECOMP_APPLYBENDERS  FALSE /**< if a decomposition exists, should Benders' decomposition be applied? */
+#define SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE  10000 /**< maximum number of edges in block graph computation, or -1 for no limit */
 
 /* Benders' decomposition */
 #define SCIP_DEFAULT_BENDERS_SOLTOL        1e-6 /**< the tolerance used to determine optimality in Benders' decomposition */
@@ -1953,7 +1954,7 @@ SCIP_RETCODE SCIPsetCreate(
             &(*set)->misc_allowstrongdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "misc/allowweakdualsreds",
+            "misc/allowweakdualreds",
             "should weak dual reductions be allowed in propagation and presolving?",
             &(*set)->misc_allowweakdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS,
             NULL, NULL) );
@@ -2178,6 +2179,11 @@ SCIP_RETCODE SCIPsetCreate(
          "decomposition/applybenders",
          "if a decomposition exists, should Benders' decomposition be applied?",
          &(*set)->decomp_applybenders, FALSE, SCIP_DEFAULT_DECOMP_APPLYBENDERS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "decomposition/maxgraphedge",
+         "maximum number of edges in block graph computation, or -1 for no limit",
+         &(*set)->decomp_maxgraphedge, FALSE, SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE, -1, INT_MAX,
          NULL, NULL) );
 
    /* Benders' decomposition parameters */

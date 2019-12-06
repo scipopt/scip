@@ -19,7 +19,7 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -39,7 +39,7 @@
 #include "scip/concurrent.h"
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
-#include "scip/decomp.h"
+#include "scip/dcmp.h"
 #include "scip/debug.h"
 #include "scip/lp.h"
 #include "scip/pricer.h"
@@ -139,7 +139,7 @@ SCIP_RETCODE SCIPcreateProb(
    /* initialize reoptimization structure, if needed */
    SCIP_CALL( SCIPenableReoptimization(scip, scip->set->reopt_enable) );
 
-   SCIP_CALL( SCIPdecompstoreCreate(&scip->decompstore, SCIPblkmem(scip), 10) );
+   SCIP_CALL( SCIPdecompstoreCreate(&scip->decompstore, SCIPblkmem(scip), SCIP_DECOMPSTORE_CAPA) );
 
    return SCIP_OKAY;
 }

@@ -775,7 +775,7 @@ SCIP_RETCODE primalAddSol(
 
       SCIPsetDebugMsg(set, "original solution %p was successfully transferred to the transformed problem space\n",
          (void*)sol);
-   }
+   }  /*lint !e438*/
 
    return SCIP_OKAY;
 }
@@ -836,7 +836,6 @@ SCIP_RETCODE primalAddOrigSol(
 static
 SCIP_RETCODE primalAddOrigPartialSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< original problem data */
    SCIP_SOL*             sol                 /**< primal CIP solution */
@@ -1296,7 +1295,7 @@ SCIP_RETCODE SCIPprimalAddOrigSol(
       /* create a copy of the solution */
       SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
 
-      SCIP_CALL( primalAddOrigPartialSol(primal, blkmem, set, prob, solcopy) );
+      SCIP_CALL( primalAddOrigPartialSol(primal, set, prob, solcopy) );
 
       *stored = TRUE;
    }
@@ -1345,7 +1344,7 @@ SCIP_RETCODE SCIPprimalAddOrigSolFree(
    if( SCIPsolIsPartial(*sol) )
    {
       /* insert solution into solution storage */
-      SCIP_CALL( primalAddOrigPartialSol(primal, blkmem, set, prob, *sol) );
+      SCIP_CALL( primalAddOrigPartialSol(primal, set, prob, *sol) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */
       *sol = NULL;

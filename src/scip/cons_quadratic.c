@@ -8035,7 +8035,6 @@ SCIP_RETCODE computeInteriorPoint(
    if( SCIPgetNNlpis(scip) == 0 )
       return SCIP_OKAY;
 
-   nlpi = NULL;
    prob = NULL;
    lbs = NULL;
    ubs = NULL;
@@ -8125,10 +8124,13 @@ SCIP_RETCODE computeInteriorPoint(
    if( method == 'a' && ((consdata->isconvex && SCIPisGE(scip, nlpiside, 0.0))
             || (consdata->isconcave && SCIPisLE(scip, nlpiside, 0.0))) )
    {
-      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
+#ifdef SCIP_DEBUG_INT
+      SCIPinfoMessage(scip, NULL, "Computation successful, 0 is interior point.\n");
+#endif
 
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
       *success = TRUE;
-      goto TERMINATE;
+      return SCIP_OKAY;
    }
 
    /* build nlrow */
@@ -8144,6 +8146,13 @@ SCIP_RETCODE computeInteriorPoint(
    /* initializing the subproblem */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_subquad", SCIPgetProbName(scip));
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &prob, probname) );
+   if( prob == NULL )
+   {
+#ifdef SCIP_DEBUG_INT
+      SCIPinfoMessage(scip, NULL, "Creation of interior point problem failed..\n");
+#endif
+      return SCIP_OKAY;
+   }
    assert(prob != NULL);
 
 #ifdef SCIP_DEBUG_INT
@@ -8317,22 +8326,11 @@ TERMINATE:
 
    if( *success )
    {
-      if( prob == NULL )
+      printf("Computation successful, NLP soltat: %d, termstat: %d\nPoint found:\n",
+         SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
+      for( i = 0; i < nquadvars; i++ )
       {
-         printf("Computation successful, 0 is interior point.\n");
-         for( i = 0; i < nquadvars; i++ )
-         {
-            assert(consdata->interiorpoint[i] == 0.0);
-         }
-      }
-      else
-      {
-         printf("Computation successful, NLP soltat: %d, termstat: %d\nPoint found:\n",
-               SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
-         for( i = 0; i < nquadvars; i++ )
-         {
-            printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), consdata->interiorpoint[i]);
-         }
+         printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), consdata->interiorpoint[i]);
       }
    }
    else
@@ -8353,11 +8351,7 @@ TERMINATE:
    SCIPfreeBufferArrayNull(scip, &ubs);
    SCIPfreeBufferArrayNull(scip, &lininds);
    SCIPfreeBufferArrayNull(scip, &lincoefs);
-
-   if( prob != NULL )
-   {
-      SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &prob) );
-   }
+   SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &prob) );
 
    return SCIP_OKAY;
 }
@@ -14898,6 +14892,7 @@ int SCIPgetNLinearVarsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14912,6 +14907,7 @@ SCIP_VAR** SCIPgetLinearVarsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14926,6 +14922,7 @@ SCIP_Real* SCIPgetCoefsLinearVarsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14939,6 +14936,7 @@ int SCIPgetNQuadVarTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14953,6 +14951,7 @@ SCIP_QUADVARTERM* SCIPgetQuadVarTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14965,6 +14964,7 @@ SCIP_RETCODE SCIPsortQuadVarTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -14984,6 +14984,7 @@ SCIP_RETCODE SCIPfindQuadVarTermQuadratic(
    int*                  pos                 /**< buffer to store position of quadvarterm for var, or -1 if not found */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
    assert(var != NULL);
@@ -15000,6 +15001,7 @@ int SCIPgetNBilinTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -15014,6 +15016,7 @@ SCIP_BILINTERM* SCIPgetBilinTermsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -15026,6 +15029,7 @@ SCIP_Real SCIPgetLhsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -15038,6 +15042,7 @@ SCIP_Real SCIPgetRhsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -15052,6 +15057,7 @@ int SCIPgetLinvarMayDecreaseQuadratic(
 {
    SCIP_CONSDATA*     consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -15071,6 +15077,7 @@ int SCIPgetLinvarMayIncreaseQuadratic(
 {
    SCIP_CONSDATA*     consdata;
 
+   assert(scip != NULL);
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -15088,6 +15095,7 @@ SCIP_RETCODE SCIPcheckCurvatureQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
 
    SCIP_CALL( checkCurvature(scip, cons, TRUE) );
@@ -15106,7 +15114,9 @@ SCIP_Bool SCIPisConvexQuadratic(
    SCIP_Bool isconvex;
    SCIP_Bool isconcave;
 
+   assert(scip != NULL);
    assert(cons != NULL);
+   assert(SCIPconsGetData(cons) != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -15137,7 +15147,9 @@ SCIP_Bool SCIPisConcaveQuadratic(
    SCIP_Bool isconvex;
    SCIP_Bool isconcave;
 
+   assert(scip != NULL);
    assert(cons != NULL);
+   assert(SCIPconsGetData(cons) != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -15246,7 +15258,7 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
 
    *violation = MAX(consdata->lhsviol, consdata->rhsviol);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 /** Indicates whether the quadratic constraint is local w.r.t. the current local bounds.
@@ -15562,7 +15574,7 @@ SCIP_RETCODE SCIPgetFeasibilityQuadratic(
       *feasibility = MIN( consdata->rhs - consdata->activity, consdata->activity - consdata->lhs );
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** gets the activity of the quadratic constraint in the given solution */
@@ -15593,7 +15605,7 @@ SCIP_RETCODE SCIPgetActivityQuadratic(
 
    *activity = consdata->activity;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** changes the linear coefficient value for a given quadratic variable in a quadratic constraint data; if not

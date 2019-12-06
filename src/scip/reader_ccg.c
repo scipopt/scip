@@ -412,6 +412,7 @@ SCIP_RETCODE SCIPwriteCcg(
    SparseGraph G;
 
    assert( scip != NULL );
+   assert( vars != NULL );
    assert( nvars >= 0 );
 
    /* initialize graph */

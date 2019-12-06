@@ -29,7 +29,7 @@
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_clock.h"
-#include "scip/type_decomp.h"
+#include "scip/type_dcmp.h"
 #include "scip/type_event.h"
 #include "scip/type_interrupt.h"
 #include "scip/type_mem.h"

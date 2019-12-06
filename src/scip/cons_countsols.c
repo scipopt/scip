@@ -256,7 +256,7 @@ void multInt(
 }
 
 
-/** method for creating a string out of an Int which is a mpz_t or SCIP_Longint */
+/** method for creating a string out of an Int which is a mpz_t or SCIP_Longint */   /*lint -e{715}*/
 static
 void toString(
    Int                   value,              /**< number */

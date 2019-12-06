@@ -16,7 +16,7 @@
 /**@file   tpi_tnycthrd.h
  * @ingroup TASKINTERFACE
  * @brief  the tinycthreads implementation defines the lock and condition functionality as macros
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stephen J. Maher
  */
 

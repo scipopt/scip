@@ -697,17 +697,13 @@ SCIP_RETCODE newsolCliqueAddRow(
    SCIP_SEPA*            sepa,               /**< the cut separator itself */
    SCIP_SEPADATA*        sepadata,           /**< data of separator */
    int                   ncliquenodes,       /**< number of nodes in clique */
-   int*                  cliquenodes,        /**< nodes in clique */
-   SCIP_Bool*            cutoff              /**< whether a cutoff has been detected */
+   int*                  cliquenodes         /**< nodes in clique */
    )
 {
    SCIP_VAR** vars;
    SCIP_ROW* cut;
    char cutname[SCIP_MAXSTRLEN];
    int i;
-
-   assert( cutoff != NULL );
-   *cutoff = FALSE;
 
    vars = sepadata->tcliquegraph->vars;
    assert(sepadata->tcliquegraph->nnodes > 0);
@@ -778,7 +774,6 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
       SCIP_SEPA* sepa;
       SCIP_Real* varsolvals;
       SCIP_Real unscaledweight;
-      SCIP_Bool cutoff;
       int i;
 
       scip = sepadata->scip;
@@ -796,30 +791,20 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          SCIP_RETCODE retcode;
 
          /* explicitly handle return code */
-         retcode = newsolCliqueAddRow(scip, sepa, sepadata, ncliquenodes, cliquenodes, &cutoff);
+         retcode = newsolCliqueAddRow(scip, sepa, sepadata, ncliquenodes, cliquenodes);
          if ( retcode == SCIP_OKAY )
          {
-            if ( cutoff )
-            {
-               sepadata->cutoff = TRUE;
-               *acceptsol = FALSE;
-               *stopsolving = TRUE;
-            }
-            else
-            {
-               SCIPdebugMsg(scip, " -> found clique cut (act=%g)\n", unscaledweight);
-               sepadata->ncuts++;
+            SCIPdebugMsg(scip, " -> found clique cut (act=%g)\n", unscaledweight);
+            sepadata->ncuts++;
 
-               /* if we found more than half the cuts we are allowed to generate, we accept the clique as new incumbent,
-                * such that only more violated cuts are generated afterwards
-                */
-               if( sepadata->maxsepacuts >= 0 )
-               {
-                  if( sepadata->ncuts > sepadata->maxsepacuts/2 )
-                     *acceptsol = TRUE;
-                  if( sepadata->ncuts >= sepadata->maxsepacuts )
-                     *stopsolving = TRUE;
-               }
+            /* if we found more than half the cuts we are allowed to generate, we accept the clique as new incumbent,
+             * such that only more violated cuts are generated afterwards */
+            if( sepadata->maxsepacuts >= 0 )
+            {
+               if( sepadata->ncuts > sepadata->maxsepacuts/2 )
+                  *acceptsol = TRUE;
+               if( sepadata->ncuts >= sepadata->maxsepacuts )
+                  *stopsolving = TRUE;
             }
          }
          else

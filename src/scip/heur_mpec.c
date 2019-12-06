@@ -151,7 +151,6 @@ SCIP_RETCODE createNLP(
 /** frees the data structures for the NLP relaxation */
 static
 SCIP_RETCODE freeNLP(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
@@ -710,7 +709,7 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
    /* call MPEC method */
    SCIP_CALL( createNLP(scip, heurdata) );
    SCIP_CALL( heurExec(scip, heur, heurdata, result) );
-   SCIP_CALL( freeNLP(scip, heurdata) );
+   SCIP_CALL( freeNLP(heurdata) );
 
    /* update number of unsuccessful calls */
    heurdata->nunsucc = (*result == SCIP_FOUNDSOL) ? 0 : heurdata->nunsucc + 1;

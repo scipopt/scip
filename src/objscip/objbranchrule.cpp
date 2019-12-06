@@ -281,6 +281,7 @@ scip::ObjBranchrule* SCIPgetObjBranchrule(
 {
    SCIP_BRANCHRULEDATA* branchruledata;
 
+   assert(scip != NULL);
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
