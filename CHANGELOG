@@ -259,6 +259,8 @@ Interface changes
 - new API functions SCIPcleanupConss{Linear,Varbound,Setppc,Logicor,Knapsack}() to clean up inactive variables from those types of linear constraints
 - new API function SCIPsetBendersSubproblemComp() used to add a custom comparison method for ordering the Benders'
   decomposition subproblem solves. The comparison method is used to help with load balancing.
+- new API function SCIPgetRowObjParallelism to get the objective parallelism of a row
+- new API function SCIPcolGetAge to get the age of a column
 
 ### Command line interface
 
