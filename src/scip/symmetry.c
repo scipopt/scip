@@ -321,16 +321,16 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    int j;
    int p;
 
-   assert(scip != NULL);
-   assert(perms != NULL || permstrans != NULL);
-   assert(components != NULL);
-   assert(componentbegins != NULL);
-   assert(orbit != NULL);
-   assert(orbitsize != NULL);
-   assert(varidx >= 0);
-   assert(varidx <= npermvars);
-   assert(component >= 0);
-   assert(npermvars > 0);
+   assert( scip != NULL );
+   assert( perms != NULL || permstrans != NULL );
+   assert( components != NULL );
+   assert( componentbegins != NULL );
+   assert( orbit != NULL );
+   assert( orbitsize != NULL );
+   assert( varidx >= 0 );
+   assert( varidx <= npermvars );
+   assert( component >= 0 );
+   assert( npermvars > 0 );
 
    /* init data structures*/
    SCIP_CALL( SCIPallocClearBufferArray(scip, &varadded, npermvars) );
@@ -343,17 +343,17 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    nvarstotest = 1;
    varadded[varidx] = TRUE;
 
-   if( varfound != NULL )
+   if ( varfound != NULL )
       varfound[varidx] = TRUE;
 
    /* iterate over variables in orbit and compute their images */
-   for( j = 0; j < nvarstotest; ++j )
+   for (j = 0; j < nvarstotest; ++j)
    {
       int currvar;
 
       currvar = varstotest[j];
 
-      for( p = componentbegins[component]; p < componentbegins[component+1]; ++p )
+      for (p = componentbegins[component]; p < componentbegins[component+1]; ++p)
       {
          int image;
          int comp;
@@ -366,16 +366,16 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
             image = permstrans[currvar][comp];
 
          /* found new element of the orbit of varidx */
-         if( !varadded[image] )
+         if ( !varadded[image] )
          {
             varstotest[nvarstotest++] = image;
             varadded[image] = TRUE;
 
-            if( ignoredvars == NULL || !SCIPhashsetExists(ignoredvars, (void*) (size_t) (image+1)) )
+            if ( ignoredvars == NULL || !SCIPhashsetExists(ignoredvars, (void*) (size_t) (image+1)) )
             {
                orbit[(*orbitsize)++] = image;
 
-               if( varfound != NULL )
+               if ( varfound != NULL )
                   varfound[image] = TRUE;
             }
          }
