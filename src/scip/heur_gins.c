@@ -111,9 +111,7 @@
  * Data structures
  */
 
-/** rolling horizon data structure to control multiple LNS heuristic runs away from an original source variable
- *
- */
+/** rolling horizon data structure to control multiple LNS heuristic runs away from an original source variable */
 struct RollingHorizon
 {
    SCIP_VGRAPH*          variablegraph;      /**< variable graph data structure for breadth-first-search neighborhoods */
@@ -138,18 +136,19 @@ struct DecompHorizon
 {
    SCIP_DECOMP*          decomp;             /**< decomposition data structure used for this horizon */
    SCIP_VAR**            vars;               /**< variables sorted by block indices */
+   SCIP_SOL**            lastsolblock;       /**< last solution for which block was part of the sub-SCIP */
+   SCIP_Real*            potential;          /**< potential of each block */
    int*                  blocklabels;        /**< sorted block labels of all variable blocks that satisfy the requirements */
    int*                  varblockend;        /**< block end indices in sorted variables array (position of first variable of next block) */
+   int*                  ndiscretevars;      /**< number of binary and integer variables in each block */
+   int*                  nvars;              /**< number of variables (including continuous and implicit integers) in each block */
    SCIP_Bool*            suitable;           /**< TRUE if a block is suitable */
    int                   iterations;         /**< the number of iterations with this decomp horizon */
    int                   nsuitableblocks;    /**< the total number of suitable blocks */
    int                   lastblocklabel;     /**< label of last block used */
    int                   nblocks;            /**< the number of available variable blocks, only available after initialization */
-   int*                  ndiscretevars;      /**< number of binary and integer variables in each block */
-   int*                  nvars;              /**< number of variables (including continuous and implicit integers) in each block */
-   SCIP_SOL**            lastsolblock;       /**< last solution for which block was part of the sub-SCIP */
-   SCIP_Real*            potential;          /**< potential of each block */
    int                   memsize;            /**< storage size of the used arrays */
+   int                   varsmemsize;        /**< storage size of the vars array */
    SCIP_Bool             init;               /**< has the decomposition horizon been initialized? */
 };
 typedef struct DecompHorizon DECOMPHORIZON;
@@ -381,25 +380,26 @@ SCIP_RETCODE decompHorizonCreate(
    assert(nblocks >= 1);
    /* account for the border and an additional */
 
-   SCIP_CALL( SCIPallocMemory(scip, decomphorizon) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, decomphorizon) );
    decomphorizonptr = *decomphorizon;
    decomphorizonptr->decomp = decomp;
    decomphorizonptr->memsize = memsize = nblocks + 1;
 
    /* allocate storage for block related information */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->blocklabels, memsize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->varblockend, memsize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->suitable, memsize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->ndiscretevars, memsize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->nvars, memsize) );
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &decomphorizonptr->lastsolblock, memsize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &decomphorizonptr->potential, memsize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decomphorizonptr->blocklabels, memsize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decomphorizonptr->varblockend, memsize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decomphorizonptr->suitable, memsize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decomphorizonptr->ndiscretevars, memsize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decomphorizonptr->nvars, memsize) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &decomphorizonptr->lastsolblock, memsize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &decomphorizonptr->potential, memsize) );
 
    decomphorizonptr->lastblocklabel = INT_MIN; /* cannot use -1 because this is defined for linking variables */
 
    /* initialize data later */
    decomphorizonptr->init = FALSE;
    decomphorizonptr->vars = NULL;
+   decomphorizonptr->varsmemsize = 0;
 
    return SCIP_OKAY;
 }
@@ -420,19 +420,18 @@ void decompHorizonFree(
    if( *decomphorizon == NULL )
       return;
 
-
    decomphorizonptr = *decomphorizon;
-   SCIPfreeMemoryArrayNull(scip, &decomphorizonptr->vars);
+   SCIPfreeBlockMemoryArrayNull(scip, &decomphorizonptr->vars, decomphorizonptr->varsmemsize);
 
-   SCIPfreeMemoryArray(scip, &decomphorizonptr->blocklabels);
-   SCIPfreeMemoryArray(scip, &decomphorizonptr->varblockend);
-   SCIPfreeMemoryArray(scip, &decomphorizonptr->suitable);
-   SCIPfreeMemoryArray(scip, &decomphorizonptr->ndiscretevars);
-   SCIPfreeMemoryArray(scip, &decomphorizonptr->nvars);
-   SCIPfreeMemoryArray(scip, &decomphorizonptr->lastsolblock);
-   SCIPfreeMemoryArray(scip, &decomphorizonptr->potential);
+   SCIPfreeBlockMemoryArray(scip, &decomphorizonptr->blocklabels, decomphorizonptr->memsize);
+   SCIPfreeBlockMemoryArray(scip, &decomphorizonptr->varblockend, decomphorizonptr->memsize);
+   SCIPfreeBlockMemoryArray(scip, &decomphorizonptr->suitable, decomphorizonptr->memsize);
+   SCIPfreeBlockMemoryArray(scip, &decomphorizonptr->ndiscretevars, decomphorizonptr->memsize);
+   SCIPfreeBlockMemoryArray(scip, &decomphorizonptr->nvars, decomphorizonptr->memsize);
+   SCIPfreeBlockMemoryArray(scip, &decomphorizonptr->lastsolblock, decomphorizonptr->memsize);
+   SCIPfreeBlockMemoryArray(scip, &decomphorizonptr->potential, decomphorizonptr->memsize);
 
-   SCIPfreeMemory(scip, decomphorizon);
+   SCIPfreeBlockMemory(scip, decomphorizon);
 
    *decomphorizon = NULL;
 }
@@ -492,13 +491,14 @@ SCIP_RETCODE decompHorizonInitialize(
 
    /* get variable labels from decomposition */
    SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, nvars) );
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &varscopy, vars, nvars) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &varscopy, vars, nvars) );
 
    SCIPdecompGetVarsLabels(decomp, varscopy, varlabels, nvars);
 
    /*  sort labels and variables */
    SCIPsortIntPtr(varlabels, (void **)varscopy, nvars);
    decomphorizon->vars = varscopy;
+   decomphorizon->varsmemsize = nvars;
 
    blockpos = 0;
    currblockstart = 0;
@@ -849,10 +849,10 @@ SCIP_RETCODE createTabooList(
    assert(scip != NULL);
    assert(taboolist != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, taboolist) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, taboolist) );
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*taboolist)->taboolabels, initialsize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*taboolist)->sortedlabels, initialsize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*taboolist)->taboolabels, initialsize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*taboolist)->sortedlabels, initialsize) );
    (*taboolist)->memsize = initialsize;
    tabooListReset(*taboolist);
 
@@ -872,10 +872,9 @@ void freeTabooList(
    if( *taboolist == NULL )
       return;
 
-   SCIPfreeMemoryArray(scip, &(*taboolist)->sortedlabels);
-   SCIPfreeMemoryArray(scip, &(*taboolist)->taboolabels);
-
-   SCIPfreeMemory(scip, taboolist);
+   SCIPfreeBlockMemoryArray(scip, &(*taboolist)->sortedlabels, (*taboolist)->memsize);
+   SCIPfreeBlockMemoryArray(scip, &(*taboolist)->taboolabels, (*taboolist)->memsize);
+   SCIPfreeBlockMemory(scip, taboolist);
 }
 
 /** add an element to the taboo list */
@@ -894,8 +893,8 @@ SCIP_RETCODE tabooListAdd(
       int newsize = SCIPcalcMemGrowSize(scip, taboolist->ntaboolabels + 1);
       assert(newsize >= taboolist->ntaboolabels + 1);
 
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &taboolist->taboolabels, newsize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &taboolist->sortedlabels, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &taboolist->taboolabels, taboolist->memsize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &taboolist->sortedlabels, taboolist->memsize, newsize) );
 
       taboolist->memsize = newsize;
    }
