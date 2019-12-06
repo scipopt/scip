@@ -67,7 +67,7 @@ struct SCIP_Treemodel
 struct SCIP_Ratio
 {
    SCIP_Real             upratio;           /**< "UnPowered" ratio, i.e. the ratio of the characteristic polynomia with gains (1, rightgain/leftgain) */
-   SCIP_Real             invleft;           /**< "INVverse left gain, i.e. 1/leftgain */
+   SCIP_Real             invleft;           /**< "INVerse left gain, i.e. 1/leftgain */
    SCIP_Bool             valid;             /**< True iff the ratio computed is valid */
 };
 typedef struct SCIP_Ratio SCIP_RATIO;
