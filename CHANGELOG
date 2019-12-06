@@ -219,6 +219,9 @@ Interface changes
   - changed return value of SCIPgetValsLinking() from int* to SCIP_Real*.
   - new method SCIPgetBinvarsDataLinking().
 
+- deleted SCIPcombineTwoInt(), SCIPcombineThreeInt(), SCIPcombineFourInt(); use the appropriate SCIPhashTwo(), ..., SCIPhashSeven() method instead
+
+
 ### New API functions
 
 - SCIPallowWeakDualReds() and SCIPallowStrongDualReds() replace the deprecated SCIPallowObjProp() and SCIPallowDualReds(), respectively
@@ -246,7 +249,8 @@ Interface changes
 - new API functions SCIPgetLPFeastol(), SCIPsetLPFeastol(), and SCIPresetLPFeastol() to get, set, and reset (to the default), respectively, the primal
   feasibility tolerance for the LP relaxation
 - new API functions SCIPcleanupConss{Linear,Varbound,Setppc,Logicor,Knapsack}() to clean up inactive variables from those types of linear constraints
-
+- added SCIPhashThree(), SCIPhashFive(), SCIPhashSix(), and SCIPhashSeven() that complement SCIPhashTwo(), SCIPhashFour() to combine 32bit integers to
+  a 32bit hash value
 
 ### Command line interface
 
@@ -362,6 +366,7 @@ Interface changes
 ### Data structures
 
 - small changes in constants of hash functions
+- added fast 2-universal hash functions for two to seven 32bit elements with 32bit output
 
 ### Build system
 
