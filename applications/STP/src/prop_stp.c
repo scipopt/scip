@@ -744,8 +744,6 @@ SCIP_RETCODE propgraphApplyImplicationsPcMw(
             {
                const int vert = verts[j];
 
-               assert(graph_pc_knotIsFixedTerm(propgraph, vert) || !Is_term(propgraph->term[vert]) || graph_pc_knotIsNonLeafTerm(g, vert));
-
                assert(SCIPisLT(scip, propgraph->prize[vert], BLOCKED_MINOR) || graph_pc_knotIsFixedTerm(propgraph, i) );
 
                /* is 'vert' fixed? */
