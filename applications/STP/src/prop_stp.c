@@ -155,13 +155,17 @@ void getBoundchangesPcMW(
          {
             nodestate[k] = BRANCH_STP_VERTEX_TERM;
          }
-         /* edge fixed to 1? Then delete terminal */
+         /* edge fixed to 1? Then delete proper potential terminal */
          else if( SCIPvarGetLbLocal(vars[root2term]) > 0.5 )
          {
             nodestate[k] = BRANCH_STP_VERTEX_KILLED;
          }
       }
    }
+#ifndef NDEBUG
+   for( int k = 0; k < nnodes; k++ )
+      assert(!(BRANCH_STP_VERTEX_TERM == nodestate[k] && graph_pc_knotIsDummyTerm(propgraph, k)));
+#endif
 }
 
 
@@ -175,15 +179,17 @@ SCIP_RETCODE getBoundchanges(
    int*                  edgestate           /**< edge state (uninitialized)*/
 )
 {
+   const int nnodes = graph_get_nNodes(propgraph);
    const int nedges = graph_get_nEdges(propgraph);
    const SCIP_Bool pcmw = graph_pc_isPcMw(propgraph);
 
    assert(!pcmw || propgraph->extended);
 
-   SCIPStpBranchruleInitNodeState(propgraph, nodestate);
+   for( int k = 0; k < nnodes; k++ )
+      nodestate[k] = BRANCH_STP_VERTEX_UNSET;
 
    for( int e = 0; e < nedges; e++ )
-       edgestate[e] = PROP_STP_EDGE_UNSET;
+      edgestate[e] = PROP_STP_EDGE_UNSET;
 
    for( int e = 0; e < nedges; e += 2 )
    {
@@ -192,14 +198,22 @@ SCIP_RETCODE getBoundchanges(
       /* e OR its anti-parallel edge fixed to 1? */
       if( SCIPvarGetLbLocal(vars[e]) > 0.5 || SCIPvarGetLbLocal(vars[erev]) > 0.5 )
       {
+         const int tail = propgraph->tail[e];
+         const int head = propgraph->head[e];
+
          edgestate[e] = PROP_STP_EDGE_FIXED;
          edgestate[erev] = PROP_STP_EDGE_FIXED;
-         nodestate[propgraph->tail[e]] = BRANCH_STP_VERTEX_TERM;
-         nodestate[propgraph->head[e]] = BRANCH_STP_VERTEX_TERM;
-      }
 
+         if( !pcmw || !graph_pc_knotIsDummyTerm(propgraph, tail) )
+            nodestate[tail] = BRANCH_STP_VERTEX_TERM;
+
+         if( !pcmw || !graph_pc_knotIsDummyTerm(propgraph, head) )
+            nodestate[head] = BRANCH_STP_VERTEX_TERM;
+
+         assert(!( SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 ));
+      }
       /* both e AND its anti-parallel edge fixed to 0? */
-      if( SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 )
+      else if( SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 )
       {
          assert(SCIPvarGetLbLocal(vars[e]) < 0.5 && SCIPvarGetLbLocal(vars[erev]) < 0.5);
 
@@ -476,10 +490,11 @@ void propgraphFixNode(
    graph_knot_printInfo(propgraph, node);
 #endif
 
+   assert(propgraph->grad[node] > 0 || propgraph->source == node);
+
    if( graph_pc_isPcMw(propgraph) )
    {
-      if( graph_pc_knotIsDummyTerm(propgraph, node) )
-         return;
+      assert(!graph_pc_knotIsDummyTerm(propgraph, node));
 
       if( graph_pc_isRootedPcMw(propgraph) )
       {
@@ -525,9 +540,7 @@ void propgraphDeleteNode(
 
    if( graph_pc_isPcMw(propgraph) )
    {
-      if( graph_pc_knotIsDummyTerm(propgraph, node) )
-         return;
-
+      assert(!graph_pc_knotIsDummyTerm(propgraph, node));
       assert(!propgraph->extended);
       assert(!graph_pc_knotIsFixedTerm(propgraph, node));
 

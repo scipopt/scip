@@ -33,6 +33,7 @@
 extern "C" {
 #endif
 
+#define BRANCH_STP_VERTEX_UNSET       -2
 #define BRANCH_STP_VERTEX_KILLED      -1
 #define BRANCH_STP_VERTEX_NONTERM      0
 #define BRANCH_STP_VERTEX_TERM         1

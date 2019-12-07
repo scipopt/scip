@@ -796,6 +796,8 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
 
       SCIPdebugMessage("mark terminal %d \n", term);
 
+      assert(vertexchgs[term] != BRANCH_STP_VERTEX_KILLED); // todo might happen, but should then set a conflict flag...
+
       vertexchgs[term] = BRANCH_STP_VERTEX_TERM;
    }
    /* node removal constraint? */
@@ -805,6 +807,8 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
       const int vert = (int) strtol(consname + 7, &tailptr, 10);
 
       SCIPdebugMessage("mark deleted node %d \n", vert);
+
+      assert(vertexchgs[vert] != BRANCH_STP_VERTEX_TERM); // todo might happen, but should then set a conflict flag...
 
       vertexchgs[vert] = BRANCH_STP_VERTEX_KILLED;
    }
