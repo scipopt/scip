@@ -146,7 +146,7 @@ SCIP_DECL_HASHKEYVAL(varPairHashval)
 
    varpair = (ROWVARPAIR*) key;
 
-   return SCIPhashTwo(SCIPcombineTwoInt(varpair->varindex1, varpair->varindex2),
+   return SCIPhashThree(varpair->varindex1, varpair->varindex2,
                       SCIPrealHashCode(varpair->varcoef2 / varpair->varcoef1));
 }
 

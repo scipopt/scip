@@ -3340,8 +3340,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   return SCIPhashTwo(SCIPcombineTwoInt(consdata->nvars, minidx),
-                      SCIPcombineTwoInt(mididx, maxidx));
+   return SCIPhashFour(consdata->nvars, minidx, mididx, maxidx);
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
