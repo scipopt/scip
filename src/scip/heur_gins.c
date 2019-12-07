@@ -774,15 +774,17 @@ SCIP_Bool decompHorizonNext(
    /* that's why we subtract 1 from potential based position computation */
    pos = (firstpos + 1) % decomphorizon->nblocks;
 
-   while( pos < decomphorizon->nblocks && (! decomphorizon->suitable[pos] || decomphorizon->blocklabels[pos] == SCIP_DECOMP_LINKVAR)
-      && decompHorizonBlockUsedRecently(scip, decomphorizon, pos) )
+   while( pos < decomphorizon->nblocks &&
+      (! decomphorizon->suitable[pos] || decomphorizon->blocklabels[pos] == SCIP_DECOMP_LINKVAR ||
+         decompHorizonBlockUsedRecently(scip, decomphorizon, pos)) )
       pos++;
 
    if( pos == decomphorizon->nblocks )
    {
       pos = 0;
-      while( pos < firstpos && (!decomphorizon->suitable[pos] || decomphorizon->blocklabels[pos] == SCIP_DECOMP_LINKVAR) &&
-         decompHorizonBlockUsedRecently(scip, decomphorizon, pos) )
+      while( pos < firstpos &&
+         (! decomphorizon->suitable[pos] || decomphorizon->blocklabels[pos] == SCIP_DECOMP_LINKVAR ||
+            decompHorizonBlockUsedRecently(scip, decomphorizon, pos)) )
          pos++;
    }
 
@@ -1828,7 +1830,7 @@ SCIP_RETCODE determineVariableFixingsDecomp(
       {
          decomphorizon->lastsolblock[solstamppos] = sol;
 
-         if( decomphorizon->varblockend[solstamppos] >= storelabelpos )
+         if( decomphorizon->varblockend[solstamppos] > storelabelpos )
          {
             assert(decomphorizon->blocklabels[solstamppos] == decomphorizon->lastblocklabel);
             break;
@@ -2488,7 +2490,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
          SCIPgetSolvingTime(subscip), SCIPgetNTotalNodes(subscip), SCIPgetStatus(subscip));
 
       /* increase target nodes if a (stall) node limit was reached; this will immediately affect the next run */
-      if( SCIPgetStatus(scip) == SCIP_STATUS_NODELIMIT || SCIP_STATUS_STALLNODELIMIT )
+      if( SCIPgetStatus(scip) == SCIP_STATUS_NODELIMIT || SCIPgetStatus(scip) == SCIP_STATUS_STALLNODELIMIT )
       {
          heurdata->targetnodes = (SCIP_Longint)(1.05 * heurdata->targetnodes) + 10L;
 
