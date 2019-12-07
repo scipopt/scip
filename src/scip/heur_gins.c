@@ -215,6 +215,7 @@ struct SCIP_HeurData
    int                   nrelaxedconstraints; /**< number of constraints that were relaxed */
    int                   nfailures;           /**< counter for the number of unsuccessful runs of this heuristic */
    SCIP_Longint          nextnodenumber;      /**< the next node number at which the heuristic should be called again */
+   SCIP_Longint          targetnodes;         /**< number of target nodes, slightly increasing if (stall) node limit is hit */
 };
 
 /** represents limits for the sub-SCIP solving process */
@@ -2171,10 +2172,10 @@ SCIP_RETCODE determineLimits(
    solvelimits->nodelimit = MIN(solvelimits->nodelimit, heurdata->maxnodes);
 
    /* check whether we have enough nodes left to call subproblem solving */
-   if( solvelimits->nodelimit < heurdata->minnodes )
+   if( solvelimits->nodelimit < heurdata->targetnodes )
       *runagain = FALSE;
 
-   solvelimits->stallnodelimit = heurdata->minnodes;
+   solvelimits->stallnodelimit = heurdata->targetnodes;
 
    return SCIP_OKAY;
 }
@@ -2286,6 +2287,7 @@ SCIP_DECL_HEURINIT(heurInitGins)
    heurdata->lastinitsol = NULL;
    heurdata->allblocksunsuitable = FALSE;
    heurdata->taboolist = NULL;
+   heurdata->targetnodes = heurdata->minnodes;
 
 #ifdef SCIP_STATISTIC
    resetHistogram(heurdata->conscontvarshist);
@@ -2484,6 +2486,15 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
       SCIPdebugMsg(scip, "GINS subscip stats: %.2f sec., %" SCIP_LONGINT_FORMAT " nodes, status:%d\n",
          SCIPgetSolvingTime(subscip), SCIPgetNTotalNodes(subscip), SCIPgetStatus(subscip));
+
+      /* increase target nodes if a (stall) node limit was reached; this will immediately affect the next run */
+      if( SCIPgetStatus(scip) == SCIP_STATUS_NODELIMIT || SCIP_STATUS_STALLNODELIMIT )
+      {
+         heurdata->targetnodes = (SCIP_Longint)(1.05 * heurdata->targetnodes) + 10L;
+
+         /* but not too far */
+         heurdata->targetnodes = MIN(heurdata->targetnodes, heurdata->maxnodes / 2);
+      }
 
       /* transfer variable statistics from sub-SCIP */
       SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
