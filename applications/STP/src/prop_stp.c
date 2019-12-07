@@ -143,6 +143,7 @@ void getBoundchangesPcMW(
    {
       if( graph_pc_knotIsPropPotTerm(propgraph, k) )
       {
+         const int pterm2term = propgraph->term2edge[k];
          const int twinterm = graph_pc_getTwinTerm(propgraph, k);
          const int root2term = graph_pc_getRoot2PtermEdge(propgraph, twinterm);
 
@@ -150,15 +151,30 @@ void getBoundchangesPcMW(
          assert(graph_pc_knotIsDummyTerm(propgraph, twinterm));
          assert(SCIPisEQ(scip, propgraph->prize[k], propgraph->cost[root2term]));
 
-         /* edge fixed to 0? Then take terminal */
+         /* root->dummyterm edge fixed to 0? Then take terminal */
          if( SCIPvarGetUbLocal(vars[root2term]) < 0.5 )
          {
             nodestate[k] = BRANCH_STP_VERTEX_TERM;
          }
-         /* edge fixed to 1? Then delete proper potential terminal */
+         /* root->dummyterm edge fixed to 1? Then delete terminal */
          else if( SCIPvarGetLbLocal(vars[root2term]) > 0.5 )
          {
             nodestate[k] = BRANCH_STP_VERTEX_KILLED;
+         }
+
+         /* term->dummyterm edge fixed to 0? Then delete terminal */
+         if( SCIPvarGetUbLocal(vars[pterm2term]) < 0.5 )
+         {
+            assert(BRANCH_STP_VERTEX_TERM != nodestate[k]);
+
+            nodestate[k] = BRANCH_STP_VERTEX_KILLED;
+         }
+         /* term->dummyterm edge fixed to 1? Then take terminal */
+         else if( SCIPvarGetLbLocal(vars[pterm2term]) > 0.5 )
+         {
+            assert(BRANCH_STP_VERTEX_KILLED != nodestate[k]);
+
+            nodestate[k] = BRANCH_STP_VERTEX_TERM;
          }
       }
    }
@@ -195,6 +211,15 @@ SCIP_RETCODE getBoundchanges(
    {
       const int erev = e + 1;
 
+      if( pcmw )
+      {
+         const int tail = propgraph->tail[e];
+         const int head = propgraph->head[e];
+
+         if( graph_pc_knotIsDummyTerm(propgraph, tail) || graph_pc_knotIsDummyTerm(propgraph, head) )
+            continue;
+      }
+
       /* e OR its anti-parallel edge fixed to 1? */
       if( SCIPvarGetLbLocal(vars[e]) > 0.5 || SCIPvarGetLbLocal(vars[erev]) > 0.5 )
       {
@@ -204,11 +229,8 @@ SCIP_RETCODE getBoundchanges(
          edgestate[e] = PROP_STP_EDGE_FIXED;
          edgestate[erev] = PROP_STP_EDGE_FIXED;
 
-         if( !pcmw || !graph_pc_knotIsDummyTerm(propgraph, tail) )
-            nodestate[tail] = BRANCH_STP_VERTEX_TERM;
-
-         if( !pcmw || !graph_pc_knotIsDummyTerm(propgraph, head) )
-            nodestate[head] = BRANCH_STP_VERTEX_TERM;
+         nodestate[tail] = BRANCH_STP_VERTEX_TERM;
+         nodestate[head] = BRANCH_STP_VERTEX_TERM;
 
          assert(!( SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 ));
       }
