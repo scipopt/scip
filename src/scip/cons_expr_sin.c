@@ -316,7 +316,7 @@ SCIP_Bool computeLeftMidTangentSin(
    if( COS(lb) < 0.0 )
    {
       /* in [pi/2,pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
-      if( SIN(lb) <= 0.0 )
+      if( SCIPisLE(scip, SIN(lb), 0.0) )
          return FALSE;
       else
          startingpoint = lb + 1.25*M_PI - lbmodpi;
@@ -324,7 +324,7 @@ SCIP_Bool computeLeftMidTangentSin(
    else
    {
       /* in ascending area, take the midpoint of the possible area in descending part */
-      if( SIN(lb) < 0.0 )
+      if( SCIPisLT(scip, SIN(lb), 0.0) )
          startingpoint = lb + 2.25*M_PI - lbmodpi;
       else
          startingpoint = lb + 1.25*M_PI - lbmodpi;
@@ -350,7 +350,7 @@ SCIP_Bool computeLeftMidTangentSin(
       *issecant = TRUE;
    }
 
-   if( tangentpoint == lb )  /*lint !e777 */
+   if( SCIPisEQ(scip, tangentpoint, lb) )  /*lint !e777 */
       return FALSE;
 
    /* compute secant between lower bound and connection point */
@@ -401,16 +401,16 @@ SCIP_Bool computeRightMidTangentSin(
    /* choose starting point for Newton procedure */
    if( COS(ub) > 0.0 )
    {
-      /* in [pi/2,pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
-      if( SIN(ub) <= 0.0 )
+      /* in [3*pi/2,2*pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
+      if( SCIPisLE(scip, SIN(ub), 0.0) )
          return FALSE;
       else
          startingpoint = ub - M_PI_4 - ubmodpi;
    }
    else
    {
-      /* in ascending area, take the midpoint of the possible area in descending part */
-      if( SIN(ub) < 0.0 )
+      /* in descending area, take the midpoint of the possible area in ascending part */
+      if( SCIPisLE(scip, SIN(ub), 0.0) )
          startingpoint = ub - 1.25*M_PI - ubmodpi;
       else
          startingpoint = ub - M_PI_4 - ubmodpi;
@@ -436,7 +436,7 @@ SCIP_Bool computeRightMidTangentSin(
       *issecant = TRUE;
    }
 
-   if( tangentpoint == ub )  /*lint !e777 */
+   if( SCIPisEQ(scip, tangentpoint, ub) )  /*lint !e777 */
       return FALSE;
 
    /* compute secant between lower bound and connection point */
@@ -888,15 +888,11 @@ static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySin)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
-   SCIP_CONSHDLR* conshdlr;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
@@ -984,9 +980,10 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
-
-   SCIPintervalSin(SCIP_INTERVAL_INFINITY, interval, childinterval);
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+      SCIPintervalSetEmpty(interval);
+   else
+      SCIPintervalSin(SCIP_INTERVAL_INFINITY, interval, childinterval);
 
    return SCIP_OKAY;
 }
@@ -1159,14 +1156,24 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSin)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(childcurv != NULL);
+   assert(success != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
    childinterval = SCIPgetConsExprExprActivity(scip, child);
 
-   *curvature = SCIPcomputeCurvatureSin(SCIPgetConsExprExprCurvature(child), childinterval.inf, childinterval.sup);
+   /* TODO rewrite SCIPcomputeCurvatureSin so it provides the reverse operation */
+   *success = TRUE;
+   if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_CONVEX, childinterval.inf, childinterval.sup) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_CONVEX;
+   else if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_CONCAVE, childinterval.inf, childinterval.sup) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_CONCAVE;
+   if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_LINEAR, childinterval.inf, childinterval.sup) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_LINEAR;
+   else
+      *success = FALSE;
 
    return SCIP_OKAY;
 }

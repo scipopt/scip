@@ -30,6 +30,7 @@ Test(estimation, tangent, .description = "test computation of tangent")
    SCIP_Real slope;
    SCIP_Real xref;
    SCIP_Bool success;
+   unsigned int signpower;
 
    SCIP_CALL( SCIPcreate(&scip) );
 
@@ -38,31 +39,44 @@ Test(estimation, tangent, .description = "test computation of tangent")
       if( exponent == 0.0 )
          continue;
 
-      for( xref = -2.0; xref <= 2.0; xref += 1.0 )
+      for( signpower = 0; signpower <= 1; ++signpower )
       {
-         /* skip negative reference points when exponent is fractional */
-         if( xref < 0.0 && !EPSISINT(exponent, 0.0) )
-            continue;
-
-         /* skip zero reference point when exponent is negative */
-         if( xref == 0.0 && exponent < 0.0 )
-            continue;
-
-         success = FALSE;
-         constant = DBL_MAX;
-         slope = DBL_MAX;
-
-         computeTangent(scip, exponent, xref, &constant, &slope, &success);
-
-         /* x^p -> x0^p + p*x0^{p-1} (x-x0) */
-
-         /* computeTangent must fail iff xref is 0 and exponent < 1 (infinite gradient in reference point) */
-         cr_assert(success != (xref == 0.0 && exponent < 1.0));
-
-         if( success )
+         for( xref = -2.0; xref <= 2.0; xref += 1.0 )
          {
-            cr_assert(SCIPisEQ(scip, slope, exponent * pow(xref, exponent-1.0)));
-            cr_assert(SCIPisEQ(scip, constant, pow(xref, exponent) - slope * xref));
+            /* skip negative reference points when exponent is fractional and not signpower */
+            if( xref < 0.0 && !EPSISINT(exponent, 0.0) && !signpower )
+               continue;
+
+            /* skip zero reference point when exponent is negative */
+            if( xref == 0.0 && exponent < 0.0 )
+               continue;
+
+            success = FALSE;
+            constant = DBL_MAX;
+            slope = DBL_MAX;
+
+            computeTangent(scip, signpower, exponent, xref, &constant, &slope, &success);
+
+            /* normal: x^p -> x0^p + p*x0^{p-1} (x-x0)
+             * signpower with x0 < 0: x^p -> -(-x0)^p + p*(-x0)^{p-1} (x-x0)
+             */
+
+            /* computeTangent must fail iff xref is 0 and exponent < 1 (infinite gradient in reference point) */
+            cr_assert(success != (xref == 0.0 && exponent < 1.0));
+
+            if( success )
+            {
+               if( !signpower )
+               {
+                  cr_assert(SCIPisEQ(scip, slope, exponent * pow(xref, exponent-1.0)));
+                  cr_assert(SCIPisEQ(scip, constant, pow(xref, exponent) - slope * xref));
+               }
+               else
+               {
+                  cr_assert(SCIPisEQ(scip, slope, exponent * pow(REALABS(xref), exponent-1.0)));
+                  cr_assert(SCIPisEQ(scip, constant, SIGN(xref) * pow(REALABS(xref), exponent) - slope * xref));
+               }
+            }
          }
       }
    }
@@ -79,6 +93,7 @@ Test(estimation, secant, .description = "test computation of secant")
    SCIP_Real xlb;
    SCIP_Real xub;
    SCIP_Bool success;
+   unsigned int signpower;
 
    SCIP_CALL( SCIPcreate(&scip) );
 
@@ -87,29 +102,40 @@ Test(estimation, secant, .description = "test computation of secant")
       if( exponent == 0.0 || exponent == 1.0 )
          continue;
 
-      for( xlb = -2.0; xlb <= 2.0; xlb += 1.0 )
+      for( signpower = 0; signpower <= 1; ++signpower )
       {
-         for( xub = xlb + 1.0; xub <= 3.0; xub += 1.0 )
+         for( xlb = -2.0; xlb <= 2.0; xlb += 1.0 )
          {
-            /* skip negative lower bound when exponent is fractional */
-            if( xlb < 0.0 && !EPSISINT(exponent, 0.0) )
-               continue;
-
-            success = FALSE;
-            constant = DBL_MAX;
-            slope = DBL_MAX;
-
-            computeSecant(scip, exponent, xlb, xub, &constant, &slope, &success);
-
-            /* x^p -> xlb^p + (xub^p - xlb^p) / (xub - xlb) * (x - xlb) */
-
-            /* computeSecant must fail iff xlb or xub is 0 and exponent < 0 (pole at boundary) */
-            cr_assert(success != ((xlb == 0.0 || xub == 0.0) && exponent < 0.0));
-
-            if( success )
+            for( xub = xlb + 1.0; xub <= 3.0; xub += 1.0 )
             {
-               cr_assert(SCIPisEQ(scip, slope, (pow(xub, exponent) - pow(xlb, exponent)) / (xub - xlb)));
-               cr_assert(SCIPisEQ(scip, constant, pow(xlb, exponent) - slope * xlb));
+               /* skip negative lower bound when exponent is fractional */
+               if( xlb < 0.0 && !EPSISINT(exponent, 0.0) )
+                  continue;
+
+               success = FALSE;
+               constant = DBL_MAX;
+               slope = DBL_MAX;
+
+               computeSecant(scip, signpower, exponent, xlb, xub, &constant, &slope, &success);
+
+               /* f(x) -> f(xlb) + (f(xub) - f(xlb)) / (xub - xlb) * (x - xlb) */
+
+               /* computeSecant must fail iff xlb or xub is 0 and exponent < 0 (pole at boundary) */
+               cr_assert(success != ((xlb == 0.0 || xub == 0.0) && exponent < 0.0));
+
+               if( success )
+               {
+                  if( !signpower )
+                  {
+                     cr_assert(SCIPisEQ(scip, slope, (pow(xub, exponent) - pow(xlb, exponent)) / (xub - xlb)));
+                     cr_assert(SCIPisEQ(scip, constant, pow(xlb, exponent) - slope * xlb));
+                  }
+                  else
+                  {
+                     cr_assert(SCIPisEQ(scip, slope, (SIGN(xub) * pow(REALABS(xub), exponent) - SIGN(xlb) * pow(REALABS(xlb), exponent)) / (xub - xlb)));
+                     cr_assert(SCIPisEQ(scip, constant, SIGN(xlb) * pow(REALABS(xlb), exponent) - slope * xlb));
+                  }
+               }
             }
          }
       }
@@ -132,7 +158,7 @@ Test(estimation, secant, .description = "test computation of secant")
    /* in double precision, xlb^exponent looks the same as xub^exponent */
    /* cr_assert_eq(pow(xlb, exponent), pow(xub, exponent)); */ /* assert fails only on some architectures */
 
-   computeSecant(scip, exponent, xlb, xub, &constant, &slope, &success);
+   computeSecant(scip, FALSE, exponent, xlb, xub, &constant, &slope, &success);
 
    /* computeSecant should either fail or produce a positive slope */
    cr_assert(!success || (slope > 0.0));
@@ -235,7 +261,7 @@ Test(estimation, signpower_root, .description = "test calculation of roots for s
    SCIP_CALL( SCIPfree(&scip) );
 }
 
-/* test estimateSignpower */
+/* test estimateSignedpower */
 Test(estimation, signpower, .description = "test computation of signpower estimators")
 {
    SCIP_Real exponent;
@@ -265,7 +291,7 @@ Test(estimation, signpower, .description = "test computation of signpower estima
          success = FALSE;
          islocal = FALSE;
          slope = constant = -5;
-         estimateSignpower(scip, exponent, root, FALSE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
+         estimateSignedpower(scip, exponent, root, FALSE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
          cr_assert(success);
          cr_assert(islocal);
          cr_assert(SCIPisEQ(scip, -pow(-xlb, exponent), constant + slope * xlb));
@@ -274,7 +300,7 @@ Test(estimation, signpower, .description = "test computation of signpower estima
          success = FALSE;
          islocal = TRUE;
          slope = constant = -5;
-         estimateSignpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
+         estimateSignedpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
          cr_assert(success);
          cr_assert(!islocal);
          cr_assert(SCIPisEQ(scip, slope, exponent * pow(-xref, exponent - 1.0)));
@@ -283,14 +309,14 @@ Test(estimation, signpower, .description = "test computation of signpower estima
          /* if global upper bound is small enough (< -xref/root), then overestimator should still be global */
          success = FALSE;
          islocal = TRUE;
-         estimateSignpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, - xref/root / 2.0 , &constant, &slope, &islocal, &success);
+         estimateSignedpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, - xref/root / 2.0 , &constant, &slope, &islocal, &success);
          cr_assert(success);
          cr_assert(!islocal);
 
          /* if global upper bound is too large (> -xref/root), then overestimator is only locally valid */
          success = FALSE;
          islocal = FALSE;
-         estimateSignpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, - xref/root * 2.0 , &constant, &slope, &islocal, &success);
+         estimateSignedpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, - xref/root * 2.0 , &constant, &slope, &islocal, &success);
          cr_assert(success);
          cr_assert(islocal);
       }
@@ -303,7 +329,7 @@ Test(estimation, signpower, .description = "test computation of signpower estima
          success = FALSE;
          islocal = !(xref < -xlb * root);
          slope = constant = -5;
-         estimateSignpower(scip, exponent, root, FALSE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
+         estimateSignedpower(scip, exponent, root, FALSE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
          cr_assert(success);
          if( xref < -xlb * root )
          {
@@ -324,7 +350,7 @@ Test(estimation, signpower, .description = "test computation of signpower estima
          success = FALSE;
          islocal = !(xref > -xub * root);
          slope = constant = -5;
-         estimateSignpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
+         estimateSignedpower(scip, exponent, root, TRUE, xlb, xub, xref, xlb, xub, &constant, &slope, &islocal, &success);
          cr_assert(success);
          if( xref > -xub * root )
          {

@@ -1,0 +1,6 @@
+read "${PROJECT_SOURCE_DIR}"/check/"${path}"
+write problem temp/${basename}.cip
+read temp/${basename}.cip
+optimize
+validatesolve "${optval}" "${optval}"
+quit

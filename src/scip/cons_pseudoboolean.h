@@ -61,7 +61,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
  * \f[
  * \mbox{lhs} \leq \sum_{k=0}^m c_k \cdot x_k  +  \sum_{i=0}^n c_i \cdot \prod_{j \in I_i} x_j \leq \mbox{rhs}
  * \f]
- * where all \f$x\f$ are binary and all \f$c\f$ are integer.
+ * where all \f$x\f$ are binary.
  */
 
 /** solution status after solving LP */
@@ -80,7 +80,10 @@ enum SCIP_LinearConsType
 };
 typedef enum SCIP_LinearConsType SCIP_LINEARCONSTYPE;
 
-/** creates and captures a pseudoboolean constraint, with given linear and and-constraints */
+/** creates and captures a pseudoboolean constraint, with given linear and and-constraints
+ *
+ *  @note intvar must currently be NULL
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -135,6 +138,8 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
  *        respectively
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *
+ *  @note intvar must currently be NULL
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsPseudoboolean(
@@ -188,6 +193,8 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
  *  @see SCIPcreateConsPseudoboolean() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *
+ *  @note intvar must currently be NULL
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(

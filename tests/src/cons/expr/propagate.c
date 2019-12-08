@@ -919,8 +919,8 @@ Test(propagate, forwardprop_common_subexpressions)
 
 struct expr_results
 {
-   const char* cons1;
-   const char* cons2;
+   const char cons1[1000];
+   const char cons2[1000];
    SCIP_Real xlb;
    SCIP_Real xub;
 };
@@ -934,6 +934,7 @@ ParameterizedTestParameters(propagate, propConss)
       {"exp(<t_x>) - <t_y>", "4.0 * <t_x>^(1.5) - <t_y>", 0.58687228932071, 3.06767359040726},
       {"log(abs(<t_x> + 1)) - <t_y>", "abs(<t_x>)^1.5 - <t_y>", 0.0,  0.6096527513}
    };
+
    return cr_make_param_array(const struct expr_results, data, sizeof(data)/sizeof(struct expr_results));
 }
 

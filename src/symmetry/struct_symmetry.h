@@ -38,6 +38,7 @@ struct SYM_Vartype
    SCIP_Real             lb;                 /**< lower bound of variable */
    SCIP_Real             ub;                 /**< upper bound of variable */
    SCIP_VARTYPE          type;               /**< type of variable */
+   int                   nconss;             /**< number of conss a variable is contained in */
    int                   color;              /**< store color */
 };
 
@@ -57,14 +58,6 @@ struct SYM_Consttype
 };
 
 /** data of coefficients that have the same value */
-struct SYM_Coeftype
-{
-   SCIP_Real             coefficient;        /**< value of constant */
-   int                   varidx;             /**< index of variable */
-   int                   color;              /**< store color */
-};
-
-/** data of coefficients that have the same value */
 struct SYM_Rhstype
 {
    SCIP_Real             lhs;                /**< value of left-hand-side */
@@ -72,7 +65,7 @@ struct SYM_Rhstype
    int                   color;              /**< store color */
 };
 
-/** data for symmetry group computation */
+/** data for symmetry group computation on linear constraints */
 struct SYM_Matrixdata
 {
    SCIP_Real*            matcoef;            /**< nonzero coefficients appearing in the matrix */
@@ -93,6 +86,14 @@ struct SYM_Matrixdata
    int                   nuniquevars;        /**< number of unique variable types */
    int                   nuniquerhs;         /**< number of unique rhs types */
    int                   nuniquemat;         /**< number of unique matrix coefficients */
+};
+
+/** data for symmetry group computation on nonlinear constraints */
+struct SYM_Exprdata
+{
+   int                   nuniqueconstants;   /**< number of unique constaints */
+   int                   nuniqueoperators;   /**< number of unique operators */
+   int                   nuniquecoefs;       /**< number of unique coefficients */
 };
 
 #ifdef __cplusplus

@@ -541,6 +541,15 @@ SCIP_Bool SCIPisConcaveQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** Checks and indicates whether the quadratic constraint is convex. */
+SCIP_EXPORT
+SCIP_RETCODE SCIPisConvexConsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_Bool*            result              /**< buffer where to store whether constraint is convex (under given variable fixing) */
+   );
+
 /** Gets the violation of a constraint by a solution. */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetViolationQuadratic(
@@ -736,6 +745,15 @@ void SCIPprintRowprep(
    FILE*                 file                /**< file to print to, or NULL for stdout */
 );
 
+/** prints a rowprep and values in solution */
+SCIP_EXPORT
+void SCIPprintRowprepSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
+   SCIP_SOL*             sol,                /**< solution for activity */
+   FILE*                 file                /**< file to print to, or NULL for stdout */
+);
+
 /** adds a term coef*var to a rowprep */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddRowprepTerm(
@@ -787,9 +805,20 @@ void SCIPaddRowprepConstant(
 SCIP_EXPORT
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
    SCIP_Bool*            reliable            /**< buffer to store whether computed violation is reliable (numerically), or NULL if not of interest */
+);
+
+/** computes violation of cut in a given solution and reports whether that value seem numerically reliable
+ *
+ * @see SCIPgetRowprepViolation
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPisRowprepViolationReliable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
 );
 
 /** Merge terms that use same variable and eliminate zero coefficients.

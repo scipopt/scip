@@ -233,8 +233,11 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    for( i = implstart; i < implend; i++ )
    {
       SCIP_Bool infeasible;
-      assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT);
 
+      if( subvars[i] == NULL )
+         continue;
+
+      assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT);
       SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
       assert(!infeasible);
    }
@@ -249,6 +252,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    {
       for( i = 0; i < nvars; i++ )
       {
+         if( subvars[i] == NULL )
+            continue;
          SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, 1, 1 ) );
       }
    }
@@ -350,6 +355,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP_CALL( SCIPtransformProb(subscip) );
    for( i = 0; i < nvars; ++i)
    {
+      if( subvars[i] == NULL )
+         continue;
       SCIP_CALL( SCIPhashmapInsert(varmapbw, SCIPvarGetTransVar(subvars[i]), vars[i]) );
    }
 
@@ -426,9 +433,8 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    disabledualreductions = FALSE;
 
    /* check, whether a solution was found */
-   if( sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPfindHeur(scip, "trysol") != NULL )
+   if( sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 )
    {
-      SCIP_HEUR* heurtrysol;
       SCIP_SOL** subsols;
       int nsubsols;
 
@@ -438,12 +444,14 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       nsubsols = SCIPgetNSols(subscip);
       subsols = SCIPgetSols(subscip);
       soladded = FALSE;
-      heurtrysol = SCIPfindHeur(scip, "trysol");
 
-      /* sequentially add solutions to trysol heuristic */
+      /* try adding solution from subSCIP to SCIP, until finding one that is accepted */
       for( i = 0; i < nsubsols && !soladded; ++i )
       {
-         SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heurtrysol, subvars, &soladded) );
+         SCIP_SOL* newsol;
+
+         SCIP_CALL( SCIPtranslateSubSol(scip, subscip, subsols[i], NULL, subvars, &newsol) );
+         SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &soladded) );
       }
       if( !soladded || !SCIPisEQ(scip, SCIPgetSolOrigObj(subscip, subsols[i-1]), SCIPgetSolOrigObj(subscip, subsols[0])) )
          disabledualreductions = TRUE;
@@ -541,6 +549,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       {
          SCIP_Bool tightened;
 
+         if( subvars[i] == NULL )
+            continue;
+
          assert(SCIPisLE(scip, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetLbGlobal(subvars[i])));
          assert(SCIPisLE(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])));
          assert(SCIPisLE(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPvarGetUbGlobal(vars[i])));
@@ -612,6 +623,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
          SCIP_Real downconflen;
          SCIP_Real upconflen;
 
+         if( subvars[i] == NULL )
+            continue;
+
          /* copy downwards branching statistics */
          downvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
          downconflen = SCIPgetVarAvgConflictlength(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
@@ -672,6 +686,9 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       /* remove all locks that were added to avoid dual presolving */
       for( i = 0; i < nvars; i++ )
       {
+         if( subvars[i] == NULL )
+            continue;
+
          SCIP_CALL( SCIPaddVarLocksType(subscip, subvars[i], SCIP_LOCKTYPE_MODEL, -1, -1 ) );
       }
    }

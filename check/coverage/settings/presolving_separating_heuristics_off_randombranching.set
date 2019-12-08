@@ -1,0 +1,6 @@
+emphasis:presolving off
+emphasis:separating off
+emphasis:heuristics off
+
+branching/random/priority = 1000000
+constraints/or/sepafreq = 1

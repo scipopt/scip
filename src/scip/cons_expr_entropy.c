@@ -150,49 +150,57 @@ SCIP_RETCODE reverseProp(
    /*
     * check whether lower bound of child can be improved
     */
-   SCIPintervalSetBounds(&tmp, childinf, childinf);
+   SCIPintervalSet(&tmp, childinf);
    SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, &tmp, tmp);
 
    /* entropy(childinf) < intersection.inf -> consider [childinf, MIN(childsup, extremum)] */
-   if( SCIPisLT(scip, SCIPintervalGetSup(tmp), SCIPintervalGetInf(intersection)) )
+   if( SCIPintervalGetInf(intersection) > -SCIP_INTERVAL_INFINITY && SCIPintervalGetSup(tmp) - SCIPintervalGetInf(intersection) < -SCIPepsilon(scip) )
    {
       boundinf = reversePropBinarySearch(scip, childinf, MIN(extremum, childsup), TRUE,
          SCIPintervalGetInf(intersection));
    }
    /* entropy(childinf) > intersection.sup -> consider [MAX(childinf,extremum), childsup] */
-   else if( SCIPisGT(scip, SCIPintervalGetInf(tmp), SCIPintervalGetSup(intersection)) )
+   else if( SCIPintervalGetSup(intersection) < SCIP_INTERVAL_INFINITY && SCIPintervalGetInf(tmp) - SCIPintervalGetSup(intersection) > SCIPepsilon(scip) )
    {
-      boundinf = reversePropBinarySearch(scip, MAX(childinf,extremum), childsup, FALSE,
+      boundinf = reversePropBinarySearch(scip, MAX(childinf, extremum), childsup, FALSE,
          SCIPintervalGetSup(intersection));
    }
+   /* using a strict greater-than here because we expect a tightening because we saw an at-least-epsilon-potential above */
+   assert(boundinf == SCIP_INVALID || boundinf > childinf); /*lint !e777*/
+
 
    /*
     * check whether upper bound of child can be improved
     */
-   SCIPintervalSetBounds(&tmp, childsup, childsup);
-   SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, &tmp, tmp);
+   if( childsup < SCIP_INTERVAL_INFINITY )
+   {
+      SCIPintervalSet(&tmp, childsup);
+      SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, &tmp, tmp);
+   }
+   else
+      SCIPintervalSetBounds(&tmp, -SCIP_INTERVAL_INFINITY, -SCIP_INTERVAL_INFINITY);  /* entropy(inf) = -inf */
 
    /* entropy(childsup) < intersection.inf -> consider [MAX(childinf,extremum), childsup] */
-   if( SCIPisLT(scip, SCIPintervalGetSup(tmp), SCIPintervalGetInf(intersection)) )
+   if( SCIPintervalGetInf(intersection) > -SCIP_INTERVAL_INFINITY && SCIPintervalGetSup(tmp) - SCIPintervalGetInf(intersection) < -SCIPepsilon(scip) )
    {
-      boundsup = reversePropBinarySearch(scip, MAX(childinf,extremum), childsup, FALSE,
+      boundsup = reversePropBinarySearch(scip, MAX(childinf, extremum), childsup, FALSE,
          SCIPintervalGetInf(intersection));
    }
    /* entropy(childsup) > intersection.sup -> consider [childinf, MIN(childsup,extremum)] */
-   else if( SCIPisGT(scip, SCIPintervalGetInf(tmp), SCIPintervalGetSup(intersection)) )
+   else if( SCIPintervalGetSup(intersection) < SCIP_INTERVAL_INFINITY && SCIPintervalGetInf(tmp) - SCIPintervalGetSup(intersection) > SCIPepsilon(scip) )
    {
-      boundsup = reversePropBinarySearch(scip, childinf, MIN(childsup,extremum), TRUE,
+      boundsup = reversePropBinarySearch(scip, childinf, MIN(childsup, extremum), TRUE,
          SCIPintervalGetSup(intersection));
    }
+   /* using a strict smaller-than here because we expect a tightening because we saw an at-least-epsilon-potential above */
+   assert(boundsup == SCIP_INVALID || boundsup < childsup); /*lint !e777*/
 
    if( boundinf != SCIP_INVALID ) /*lint !e777*/
    {
-      assert(boundinf > childinf);
       childinf = MAX(childinf, boundinf);
    }
    if( boundsup != SCIP_INVALID ) /*lint !e777*/
    {
-      assert(boundsup < childsup);
       childsup = boundsup;
    }
    assert(childinf <= childsup); /* infeasible case has been handled already */
@@ -222,15 +230,12 @@ static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyEntropy)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
-   SCIP_CONSHDLR* conshdlr;
 
    assert(scip != NULL);
+   assert(conshdlr != NULL);
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
@@ -379,9 +384,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalEntropy)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
-   SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, interval, childinterval);
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+      SCIPintervalSetEmpty(interval);
+   else
+      SCIPintervalEntropy(SCIP_INTERVAL_INFINITY, interval, childinterval);
 
    return SCIP_OKAY;
 }
@@ -515,21 +522,20 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashEntropy)
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureEntropy)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
-
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(childcurv != NULL);
+   assert(success != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-
-   /* expression is concave if child is concave */
-   if( (int)(SCIPgetConsExprExprCurvature(child) & SCIP_EXPRCURV_CONCAVE) != 0 )
-      *curvature = SCIP_EXPRCURV_CONCAVE;
+   /* to be concave, the child needs to be concave, too; we cannot be convex or linear */
+   if( exprcurvature == SCIP_EXPRCURV_CONCAVE )
+   {
+      *childcurv = SCIP_EXPRCURV_CONCAVE;
+      *success = TRUE;
+   }
    else
-      *curvature = SCIP_EXPRCURV_UNKNOWN;
+      *success = FALSE;
 
    return SCIP_OKAY;
 }

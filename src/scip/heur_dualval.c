@@ -1113,7 +1113,8 @@ SCIP_RETCODE createSubSCIP(
       heurdata->integervars[j++] = vars[i];
 
       var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
-      assert( var != NULL );
+      if( var == NULL )
+         continue;
 
       /* in this case our variable is an indicator variable */
       if( SCIPhashmapGetImage(heurdata->indicators, SCIPhashmapGetImage(heurdata->varsubsciptoscip, var)) != NULL )
@@ -1288,7 +1289,7 @@ SCIP_RETCODE createSubSCIP(
          /* relax the old indicator variables*/
          for( k = 0; k < nvars; k++ )
          {
-            if( SCIPhashmapGetImage(heurdata->indicators, vars[i]) == NULL )
+            if( SCIPhashmapGetImage(heurdata->indicators, vars[k]) == NULL )
                continue;
 
             tmpvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, vars[k]);
@@ -1364,7 +1365,7 @@ SCIP_RETCODE createSubSCIP(
       }
    }
 
-   /* set up relaxation constraints for continous variables */
+   /* set up relaxation constraints for continuous variables */
    if( heurdata->relaxcontvars )
    {
       for( i = 0; i < nvars; ++i )
@@ -1385,7 +1386,8 @@ SCIP_RETCODE createSubSCIP(
             continue;
 
          var = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
-         assert( var != NULL );
+         if( var == NULL )
+            continue;
 
          /* in this case, we have a normal variable */
          (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "relax_ub_%s", SCIPvarGetName(var));
@@ -1446,7 +1448,8 @@ SCIP_RETCODE createSubSCIP(
          continue;
 
       subvar = (SCIP_VAR*)SCIPhashmapGetImage(heurdata->varsciptosubscip, var);
-      assert( subvar != NULL );
+      if( subvar == NULL )
+         continue;
 
       SCIP_CALL( SCIPaddCoefLinear(heurdata->subscip, cons, subvar, SCIPvarGetObj(var)) );
 

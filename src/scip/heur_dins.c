@@ -339,6 +339,10 @@ SCIP_RETCODE reboundIntegerVariables(
    {
       SCIP_Real lb;
       SCIP_Real ub;
+
+      if( subvars[i] == NULL )
+         continue;
+
       computeIntegerVariableBounds(scip, vars[i], &lb, &ub);
 
       /* change variable bounds in the DINS subproblem; if bounds coincide, variable should already be fixed */
@@ -369,6 +373,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
    SCIP_VAR** vars;
    SCIP_SOL* bestsol;
 
+   SCIP_VAR** consvars;
    SCIP_Real* consvals;
    SCIP_Real solval;
    SCIP_Real lhs;
@@ -378,6 +383,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
 
    int nbinvars;
    int i;
+   int nconsvars;
 
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_dinsLBcons", SCIPgetProbName(scip));
 
@@ -388,6 +394,8 @@ SCIP_RETCODE addLocalBranchingConstraint(
 
    /* memory allocation */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nbinvars) );
+   nconsvars = 0;
 
    /* set initial left and right hand sides of local branching constraint */
    lhs = 0.0;
@@ -396,12 +404,12 @@ SCIP_RETCODE addLocalBranchingConstraint(
    /* create the distance function of the binary variables (to incumbent solution) */
    for( i = 0; i < nbinvars; i++ )
    {
+      if( subvars[i] == NULL )
+         continue;
+
       assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_BINARY);
       if( SCIPvarGetUbGlobal(subvars[i]) - SCIPvarGetLbGlobal(subvars[i]) < 0.5 )
-      {
-         consvals[i]=0.0;
          continue;
-      }
 
       solval = SCIPgetSolVal(scip, bestsol, vars[i]);
       assert(SCIPisFeasIntegral(scip, solval));
@@ -409,72 +417,25 @@ SCIP_RETCODE addLocalBranchingConstraint(
       /* is variable i part of the binary support of the current solution? */
       if( SCIPisFeasEQ(scip, solval, 1.0) )
       {
-         consvals[i] = -1.0;
+         consvals[nconsvars] = -1.0;
          rhs -= 1.0;
          lhs -= 1.0;
       }
       else
-         consvals[i] = 1.0;
+         consvals[nconsvars] = 1.0;
+      consvars[nconsvars++] = subvars[i];
    }
 
    /* creates local branching constraint and adds it to subscip */
-   SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, consname, nbinvars, subvars, consvals,
+   SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, consname, nconsvars, consvars, consvals,
          lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
    SCIP_CALL( SCIPaddCons(subscip, cons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
 
    /* free local memory */
+   SCIPfreeBufferArray(scip, &consvars);
    SCIPfreeBufferArray(scip, &consvals);
 
-   return SCIP_OKAY;
-}
-
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure                        */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< DINS heuristic structure                            */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
-   SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-   )
-{
-   SCIP_VAR** vars;                          /* the original problem's variables                */
-   int        nvars;
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-   SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
-
-   assert(scip != NULL);
-   assert(heur != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-   assert(subsol != NULL);
-
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
-   /* create new solution for the original problem */
-   SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
-   /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-   if( *success )
-   {
-      SCIPdebugMsg(scip, "DINS successfully found new solution\n");
-   }
-
-   SCIPfreeBufferArray(scip, &subsolvals);
    return SCIP_OKAY;
 }
 
@@ -685,17 +646,13 @@ SCIP_RETCODE wrapperDins(
    /* check, whether a  (new) solution was found */
    if( nsubsols > 0 )
    {
-      SCIP_SOL** subsols;
-
       /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted */
-      subsols = SCIPgetSols(subscip);
-      success = FALSE;
-      for( i = 0; i < nsubsols && !success; ++i )
-      {
-         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
-      }
+      SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, NULL) );
       if( success )
+      {
+         SCIPdebugMsg(scip, "DINS successfully found new solution\n");
          *result = SCIP_FOUNDSOL;
+      }
    }
 
    /* free subproblem */

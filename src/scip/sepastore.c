@@ -39,6 +39,7 @@
 #include "scip/debug.h"
 #include "scip/scip.h"
 #include "scip/cuts.h"
+#include "scip/struct_event.h"
 #include "scip/struct_sepastore.h"
 #include "scip/misc.h"
 

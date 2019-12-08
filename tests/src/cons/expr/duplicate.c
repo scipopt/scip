@@ -72,7 +72,7 @@ Test(duplicate, duplicate, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
 
    /* duplicate expression */
-   SCIP_CALL( SCIPduplicateConsExprExpr(scip, conshdlr, expr, &duplicate) );
+   SCIP_CALL( SCIPduplicateConsExprExpr(scip, conshdlr, expr, &duplicate, TRUE) );
 
    /* check that they are the same */
    cr_assert_eq(SCIPcompareConsExprExprs(expr, duplicate), 0);

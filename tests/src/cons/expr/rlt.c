@@ -106,7 +106,6 @@ void setup(void)
    sepadata->conshdlr = conshdlr;
    sepadata->maxusedvars = 3;
    sepadata->maxunknownterms = 1;
-   sepadata->maxnonzeroprop = 1;
    sepadata->onlyinitial = FALSE;
    sepadata->onlycontrows = TRUE;
    sepadata->onlyeqrows = FALSE;
@@ -236,7 +235,7 @@ Test(rlt, separation)
    /*
     * cut for row1 and (x-0)
     */
-   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, x, 3, &result) );
+   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, x, &result) );
    cr_expect(result);
    cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutlhs, row1, NULL, x, &success, TRUE, TRUE, TRUE, FALSE), SCIP_OKAY);
    cr_assert(success);
@@ -280,7 +279,7 @@ Test(rlt, separation)
    SCIP_CALL( SCIPreleaseRow(scip, &cutrhs) );
 
    /* check for not acceptable row */
-   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, y, 1, &result) );
+   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, y, &result) );
    cr_expect(!result);
    SCIP_CALL( SCIPreleaseRow(scip, &row1) );
 

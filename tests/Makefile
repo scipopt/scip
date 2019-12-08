@@ -153,7 +153,7 @@ FLAGS 		+= 	-I.
 # Criterion Framework
 #-----------------------------------------------------------------------------
 CR_INC		=	$(wildcard Criterion/include)
-CR_LIBDIR	=	$(wildcard Criterion/build)
+CR_LIBDIR	=	$(wildcard Criterion/lib)
 CR_LIB		=	criterion
 
 #-----------------------------------------------------------------------------
@@ -264,17 +264,14 @@ $(OBJDIR)/%.o:	%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(DFLAGS) -c $< $(CXX_o)$@
 
-# TODO: checkout v2.3.0 when it becomes available
 Criterion:
 	@echo -n "Criterion not found, downloading and building it in"
 	@for (( count=3; $$count ; count-- )) do echo -n " $$count" ; sleep 1 ; done ; echo
-	git clone --depth 1 -b v2.2.2 https://github.com/Snaipe/Criterion
+	git clone --depth 1 -b v2.3.3 https://github.com/Snaipe/Criterion
 	cd Criterion; \
 	mkdir build; \
 	cd build; \
-	cmake ..; \
-	cd ../dependencies/klib; \
-	git checkout cdb7e9236dc47abf8da7ebd702cc6f7f21f0c502; \
-	cd ../../build; \
-	make
+	cmake .. -DCMAKE_INSTALL_PREFIX=..; \
+	make; \
+	make install
 #---- EOF --------------------------------------------------------------------

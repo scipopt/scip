@@ -210,7 +210,7 @@ void updateBilinearRelaxation(
    for( i = 0; i < nineqs; ++i )
    {
       constshift[i] = MAX(0.0, ineqs[3*i] * refx - ineqs[3*i+1] * refy - ineqs[3*i+2]);
-      SCIPdebugMsg(scip, "constant shift of inequality %d = %.16f\n", constshift[i]);
+      SCIPdebugMsg(scip, "constant shift of inequality %d = %.16f\n", i, constshift[i]);
    }
 
    /* try to use both inequalities */
@@ -603,6 +603,14 @@ SCIP_INTERVAL intevalBilinear(
       return interval;
    }
 
+   /* x or y has empty interval -> empty */
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0])) ||
+       SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[1])) )
+   {
+      SCIPintervalSetEmpty(&interval);
+      return interval;
+   }
+
    /* compute all feasible points */
    getFeasiblePointsBilinear(scip, expr, underineqs, nunderineqs, overineqs, noverineqs, FALSE, xs, ys, &npoints);
 
@@ -610,7 +618,7 @@ SCIP_INTERVAL intevalBilinear(
    if( npoints == 0 )
    {
       SCIPintervalSetEmpty(&interval);
-       return interval;
+      return interval;
    }
 
    /* compute the minimum and maximum over all computed points */

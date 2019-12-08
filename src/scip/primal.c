@@ -36,6 +36,7 @@
 #include "scip/tree.h"
 #include "scip/reopt.h"
 #include "scip/disp.h"
+#include "scip/struct_event.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
 

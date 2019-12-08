@@ -48,13 +48,8 @@
 #ifdef NDEBUG
 #include "scip/struct_scip.h"
 #include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
+#include "scip/struct_set.h"
 #include "scip/solve.h"
-#include "scip/debug.h"
 #endif
 
 #ifdef __cplusplus

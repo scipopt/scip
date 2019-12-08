@@ -69,12 +69,11 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
    int varssize;
    int requsize;
    int i;
-   SCIP_CONSHDLR* consexprhdlr;
    SCIP_CONSEXPR_EXPR* sumexpr;
 
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrVar(conshdlr));
 
    var = SCIPgetConsExprExprVarVar(expr);
    assert(var != NULL);
@@ -108,24 +107,26 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
       assert(requsize <= nvars);
    }
 
-   /* FIXME this should disappear when we finally remove the conshdlr argument from createConsExpr* */
-   consexprhdlr = SCIPfindConshdlr(scip, "expr");
-   assert(consexprhdlr != NULL);
-
    /* create expression for constant + sum coefs_i vars_i */
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr, 0, NULL, NULL, constant) );
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, 0, NULL, NULL, constant) );
 
    for( i = 0; i < nvars; ++i )
    {
       SCIP_CONSEXPR_EXPR* child;
 
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &child, vars[i]) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &child, vars[i]) );
       SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sumexpr, child, coefs[i]) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
    }
 
    /* simplify since it might not really be a sum */
-   SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, sumexpr, simplifiedexpr) );
+   SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, conshdlr, sumexpr, simplifiedexpr) );
+
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "expr_var simplify: <%s> := ", SCIPvarGetName(var));
+   SCIPprintConsExprExpr(scip, conshdlr, *simplifiedexpr, NULL);
+   SCIPinfoMessage(scip, NULL, "\n");
+#endif
 
    /* release no longer used sumexpr */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
@@ -323,10 +324,11 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureVar)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(success != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 0);
 
-   *curvature = SCIP_EXPRCURV_LINEAR;
+   /* x -> x is linear, convex, and concave */
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

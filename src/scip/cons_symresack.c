@@ -31,9 +31,9 @@
  *
  * Polytopes Associated with Symmetry Handling@n
  * Christopher Hojny and Marc E. Pfetsch,@n
- * (2017), preprint available at http://www.optimization-online.org/DB_HTML/2017/01/5835.html
+ * Mathematical Programming 175, No. 1, 197-240, 2019
  *
- * This paper describes an almost linear time separation routine for so-called cove
+ * This paper describes an almost linear time separation routine for so-called cover
  * inequalities of symresacks. In our implementation, however, we use a separation routine with
  * quadratic worst case running time.
  *
@@ -53,6 +53,7 @@
 #include "scip/cons_symresack.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "scip/pub_var.h"
 #include "scip/scip.h"
 #include "scip/scip_branch.h"
@@ -89,6 +90,7 @@
 #define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_EXHAUSTIVE
 
 #define DEFAULT_PPSYMRESACK        TRUE /**< whether we allow upgrading to packing/partitioning symresacks */
+#define DEFAULT_CHECKMONOTONICITY  TRUE /**< check whether permutation is monotone when upgrading to packing/partitioning symresacks */
 
 /* macros for getting bounds of pseudo solutions in propagation */
 #define ISFIXED0(x)   (SCIPvarGetUbLocal(x) < 0.5 ? TRUE : FALSE)
@@ -103,6 +105,7 @@
 struct SCIP_ConshdlrData
 {
    SCIP_Bool             checkppsymresack;   /**< whether we allow upgrading to packing/partitioning symresacks */
+   SCIP_Bool             checkmonotonicity;  /**< check whether permutation is monotone when upgrading to packing/partitioning symresacks */
    int                   maxnvars;           /**< maximal number of variables in a symresack constraint */
 };
 
@@ -123,6 +126,8 @@ struct SCIP_ConsData
    /* data for upgraded symresack constraints */
    int                   ncycles;            /**< number of cycles in permutation */
    int**                 cycledecomposition; /**< cycle decomposition */
+   int                   ndescentpoints;     /**< number of descent points in perm (only used if perm is not monotone) */
+   int*                  descentpoints;      /**< descent points in perm (only used if perm is not monotone) */
 };
 
 
@@ -147,9 +152,22 @@ SCIP_RETCODE consdataFree(
 
    if ( nvars == 0 )
    {
+      assert( (*consdata)->vars == NULL );
+      assert( (*consdata)->perm == NULL );
+      assert( (*consdata)->invperm == NULL );
+      assert( (*consdata)->ncycles == 0 );
+      assert( (*consdata)->cycledecomposition == NULL );
+
       SCIPfreeBlockMemory(scip, consdata);
 
       return SCIP_OKAY;
+   }
+
+   if ( (*consdata)->ndescentpoints > 0 )
+   {
+      assert( (*consdata)->descentpoints != NULL );
+
+      SCIPfreeBlockMemoryArray(scip, &((*consdata)->descentpoints), (*consdata)->ndescentpoints);
    }
 
    if ( (*consdata)->ppupgrade )
@@ -184,6 +202,7 @@ SCIP_RETCODE packingUpgrade(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< variables affected by permutation */
    int                   nvars,              /**< length of permutation */
+   SCIP_Bool             checkmonotonicity,  /**< check whether permutation is monotone */
    SCIP_Bool*            upgrade             /**< pointer to store whether upgrade was successful */
    )
 {
@@ -202,6 +221,8 @@ SCIP_RETCODE packingUpgrade(
    int c;
    int i;
    int j;
+   int ndescentpoints = 0;
+   int* descentpoints;
 
    assert( scip != NULL );
    assert( perm != NULL );
@@ -216,7 +237,7 @@ SCIP_RETCODE packingUpgrade(
    for (i = 0; i < nvars; ++i)
       covered[i] = FALSE;
 
-   /* check wether permutation is monotone */
+   /* get number of cycles in permutation */
    for (i = 0; i < nvars; ++i)
    {
       /* skip checked indices */
@@ -233,9 +254,11 @@ SCIP_RETCODE packingUpgrade(
 
          if ( perm[j] < j )
          {
+            ++ndescentpoints;
+
             if ( ! descent )
                descent = TRUE;
-            else
+            else if ( checkmonotonicity )
                break;
          }
 
@@ -243,9 +266,10 @@ SCIP_RETCODE packingUpgrade(
       }
       while ( j != i );
 
-      /* if cycle is not monotone */
+      /* if cycle is not monotone and we require the cycle to be monotone */
       if ( j != i )
       {
+         assert( checkmonotonicity );
          SCIPfreeBufferArray(scip, &covered);
 
          return SCIP_OKAY;
@@ -253,13 +277,15 @@ SCIP_RETCODE packingUpgrade(
    }
    assert( ncycles <= nvars / 2 );
 
-   /* each cycle is monotone; check for packing/partitioning type */
+   /* check for packing/partitioning type */
    for (i = 0; i < nvars; ++i)
       covered[i] = FALSE;
 
    /* compute cycle decomposition: row i stores in entry 0 the length of the cycle,
-    * the remaining entries are the coordinates in the cycle */
+    * the remaining entries are the coordinates in the cycle;
+    * store descent points as well if permutation is not monotone */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cycledecomposition, ncycles) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &descentpoints, ndescentpoints) );
    for (i = 0; i < ncycles; ++i)
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cycledecomposition[i], nvars + 1) );
@@ -267,6 +293,7 @@ SCIP_RETCODE packingUpgrade(
 
    curcycle = 0;
    maxcyclelength = 0;
+   c = 0;
    for (i = 0; i < nvars; ++i)
    {
       int cyclelength = 0;
@@ -278,6 +305,9 @@ SCIP_RETCODE packingUpgrade(
       j = i;
       do
       {
+         if ( perm[j] < j )
+            descentpoints[c++] = j;
+
          covered[j] = TRUE;
          cycledecomposition[curcycle][++cyclelength] = j;
          j = perm[j];
@@ -290,6 +320,7 @@ SCIP_RETCODE packingUpgrade(
       if ( maxcyclelength < cyclelength )
          maxcyclelength = cyclelength;
    }
+   assert( c == ndescentpoints );
 
    /* permutation can be upgraded -> check whether the symresack is of packing/partitioning type */
    setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
@@ -386,12 +417,16 @@ SCIP_RETCODE packingUpgrade(
    {
       (*consdata)->ncycles = ncycles;
       (*consdata)->cycledecomposition = cycledecomposition;
+      (*consdata)->ndescentpoints = ndescentpoints;
+      (*consdata)->descentpoints = descentpoints;
+      SCIPdebugMsg(scip, "added monotone PP symresack.\n");
 
       SCIPfreeBufferArray(scip, &indicesincycle);
       SCIPfreeBufferArray(scip, &covered);
    }
    else
    {
+      SCIPfreeBlockMemoryArray(scip, &descentpoints, ndescentpoints);
       SCIPfreeBufferArray(scip, &indicesincycle);
       SCIPfreeBufferArray(scip, &covered);
       for (i = 0; i < ncycles; ++i)
@@ -407,12 +442,13 @@ SCIP_RETCODE packingUpgrade(
 
 /** creates symresack constraint data
  *
- *  If the input data contain non-binary variables of fixed
+ *  If the input data contains non-binary variables or fixed
  *  points, we delete these variables in a preprocessing step.
  */
 static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< symresack constraint handler */
    SCIP_CONSDATA**       consdata,           /**< pointer to store constraint data */
    SCIP_VAR*const*       inputvars,          /**< input variables of the constraint handler */
    int                   inputnvars,         /**< input number of variables of the constraint handler*/
@@ -421,7 +457,6 @@ SCIP_RETCODE consdataCreate(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** vars;
    SCIP_Bool upgrade;
    int* indexcorrection;
@@ -432,12 +467,17 @@ SCIP_RETCODE consdataCreate(
    int j = 0;
 
    assert( consdata != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
-#ifdef SCI_DEBUG
-   consdata->debugcnt = 0;
+#ifdef SCIP_DEBUG
+   (*consdata)->debugcnt = 0;
 #endif
+
+   (*consdata)->ndescentpoints = 0;
+   (*consdata)->descentpoints = NULL;
 
    /* count the number of binary variables which are affected by the permutation */
    SCIP_CALL( SCIPallocBufferArray(scip, &indexcorrection, inputnvars) );
@@ -465,6 +505,14 @@ SCIP_RETCODE consdataCreate(
    if ( naffectedvariables == 0 )
    {
       SCIPfreeBufferArrayNull(scip, &indexcorrection);
+
+      (*consdata)->vars = NULL;
+      (*consdata)->perm = NULL;
+      (*consdata)->invperm = NULL;
+      (*consdata)->ppupgrade = FALSE;
+      (*consdata)->ncycles = 0;
+      (*consdata)->cycledecomposition = NULL;
+
       return SCIP_OKAY;
    }
 
@@ -496,29 +544,20 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->perm = perm;
    (*consdata)->ismodelcons = ismodelcons;
 
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &invperm, naffectedvariables) );
    for (i = 0; i < naffectedvariables; ++i)
    {
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[i]) );
-   }
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &invperm, naffectedvariables) );
-   for (i = 0; i < naffectedvariables; ++i)
       invperm[perm[i]] = i;
+   }
    (*consdata)->invperm = invperm;
 
    /* check for upgrade to packing/partitioning symresacks*/
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   if ( conshdlr == NULL )
-   {
-      SCIPerrorMessage("symresack constraint handler not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
    upgrade = FALSE;
    if ( conshdlrdata->checkppsymresack )
    {
-      SCIP_CALL( packingUpgrade(scip, consdata, perm, vars, naffectedvariables, &upgrade) );
+      SCIP_CALL( packingUpgrade(scip, consdata, perm, vars, naffectedvariables, conshdlrdata->checkmonotonicity, &upgrade) );
    }
 
    (*consdata)->ppupgrade = upgrade;
@@ -552,6 +591,7 @@ static
 SCIP_RETCODE initLP(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             checkmonotonicity,  /**< has it been checked whether permutation is monotone for packing/partitioning symresacks? */
    SCIP_Bool*            infeasible          /**< pointer to store whether we detected infeasibility */
    )
 {
@@ -604,68 +644,141 @@ SCIP_RETCODE initLP(
    /* check whether we have a packing/partioning symresack */
    if ( consdata->ppupgrade && ! *infeasible )
    {
-      SCIP_VAR** varsincons;
-      SCIP_Real* coeffs;
-      int** cycledecomposition;
-      int ncycles;
-      int nvarsincons;
-      int nvarsincycle;
-      int firstelemincycle;
-
-      ncycles = consdata->ncycles;
-      cycledecomposition = consdata->cycledecomposition;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &varsincons, nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &coeffs, nvars) );
-
-      coeffs[0] = 1.0;
-
-      /* add packing/partitioning symresack constraints */
-      for (i = 0; i < ncycles; ++i)
+      if ( checkmonotonicity )
       {
-         assert( cycledecomposition[i][0] > 0 );
+         SCIP_VAR** varsincons;
+         SCIP_Real* coeffs;
+         int** cycledecomposition;
+         int ncycles;
+         int nvarsincons;
+         int nvarsincycle;
+         int firstelemincycle;
 
-         nvarsincycle = cycledecomposition[i][0];
-         varsincons[0] = vars[cycledecomposition[i][nvarsincycle]];
-         firstelemincycle = cycledecomposition[i][1];
+         ncycles = consdata->ncycles;
+         cycledecomposition = consdata->cycledecomposition;
 
-         assert( firstelemincycle == consdata->perm[cycledecomposition[i][nvarsincycle]] );
+         SCIP_CALL( SCIPallocBufferArray(scip, &varsincons, nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &coeffs, nvars) );
 
-         nvarsincons = 1;
+         coeffs[0] = 1.0;
 
-         /* add variables of other cycles to the constraint */
-         for (j = 0; j < i; ++j)
+         /* add packing/partitioning symresack constraints */
+         for (i = 0; i < ncycles; ++i)
          {
-            nvarsincycle = cycledecomposition[j][0];
-            for (k = 1; k <= nvarsincycle; ++k)
+            assert( cycledecomposition[i][0] > 0 );
+
+            nvarsincycle = cycledecomposition[i][0];
+            varsincons[0] = vars[cycledecomposition[i][nvarsincycle]];
+            firstelemincycle = cycledecomposition[i][1];
+
+            assert( firstelemincycle == consdata->perm[cycledecomposition[i][nvarsincycle]] );
+
+            nvarsincons = 1;
+
+            /* add variables of other cycles to the constraint */
+            for (j = 0; j < i; ++j)
             {
-               if ( cycledecomposition[j][k] < firstelemincycle )
+               nvarsincycle = cycledecomposition[j][0];
+               for (k = 1; k <= nvarsincycle; ++k)
                {
-                  varsincons[nvarsincons] = vars[cycledecomposition[j][k]];
-                  coeffs[nvarsincons++] = -1.0;
+                  if ( cycledecomposition[j][k] < firstelemincycle )
+                  {
+                     varsincons[nvarsincons] = vars[cycledecomposition[j][k]];
+                     coeffs[nvarsincons++] = -1.0;
+                  }
+                  else
+                     continue;
                }
-               else
-                  continue;
             }
-         }
 
 #ifdef SCIP_DEBUG
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ppSymresack_%d_%s", i, SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ppSymresack_%d_%s", i, SCIPconsGetName(cons));
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #else
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
 #endif
-         SCIP_CALL( SCIPaddVarsToRow(scip, row, nvarsincons, varsincons, coeffs) );
+            SCIP_CALL( SCIPaddVarsToRow(scip, row, nvarsincons, varsincons, coeffs) );
 
-         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
-         if ( *infeasible )
-            break;
+            if ( *infeasible )
+               break;
+         }
+
+         SCIPfreeBufferArray(scip, &coeffs);
+         SCIPfreeBufferArray(scip, &varsincons);
       }
+      else
+      {
+         SCIP_Real* coeffs;
+         SCIP_VAR** varsincons;
+         int* imgdescentpoints;
+         int* descentpoints;
+         int* perm;
+         int ndescentpoints;
+         int lastascent = 0;
+         int newlastascent = 0;
+         int nvarsincons = 1;
 
-      SCIPfreeBufferArray(scip, &coeffs);
-      SCIPfreeBufferArray(scip, &varsincons);
+         descentpoints = consdata->descentpoints;
+         ndescentpoints = consdata->ndescentpoints;
+         perm = consdata->perm;
+
+         assert( descentpoints != NULL );
+         assert( ndescentpoints > 0 );
+         assert( perm != NULL );
+         assert( vars != NULL );
+         assert( nvars > 0 );
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &imgdescentpoints, ndescentpoints) );
+
+         /* get images of descentpoints */
+         for (j = 0; j < ndescentpoints; ++j)
+            imgdescentpoints[j] = perm[descentpoints[j]];
+
+         /* sort descent points increasingly w.r.t. the corresponding image */
+         SCIPsortIntInt(imgdescentpoints, descentpoints, ndescentpoints);
+
+         /* iteratively generate coefficient vector: the first entry is the descent point j and the remaining entries
+          * are the corresponding ascent points less than perm[j]
+          */
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &coeffs, nvars) );
+         SCIP_CALL( SCIPallocClearBufferArray(scip, &varsincons, nvars) );
+         coeffs[0] = 1.0;
+         for (j = 0; j < ndescentpoints; ++j)
+         {
+            varsincons[0] = vars[descentpoints[j]];
+            for (i = lastascent; i < imgdescentpoints[j]; ++i)
+            {
+               if ( perm[i] > i )
+               {
+                  coeffs[nvarsincons] = -1.0;
+                  varsincons[nvarsincons++] = vars[i];
+                  newlastascent = i;
+               }
+            }
+            lastascent = newlastascent;
+
+#ifdef SCIP_DEBUG
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "ppSymresack_%d_%s", j, SCIPconsGetName(cons));
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+#else
+            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+#endif
+            SCIP_CALL( SCIPaddVarsToRow(scip, row, nvarsincons, varsincons, coeffs) );
+
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+            if ( *infeasible )
+               break;
+         }
+
+         SCIPfreeBufferArray(scip, &varsincons);
+         SCIPfreeBufferArray(scip, &coeffs);
+         SCIPfreeBufferArray(scip, &imgdescentpoints);
+      }
    }
 
    return SCIP_OKAY;
@@ -700,7 +813,6 @@ SCIP_RETCODE propVariables(
    /* get data of constraint */
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->nvars > 0 );
    nvars = consdata->nvars;
 
    /* avoid trivial problems */
@@ -893,7 +1005,7 @@ SCIP_RETCODE separateSymresackCovers(
    assert( scip != NULL );
    assert( consdata != NULL );
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
       return SCIP_OKAY;
 
@@ -1121,6 +1233,7 @@ SCIP_RETCODE separateSymresackCovers(
 }
 
 
+/** check whether solution is feasible for symresacks */
 static
 SCIP_RETCODE checkSymresackSolution(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1140,7 +1253,7 @@ SCIP_RETCODE checkSymresackSolution(
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL);
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
       return SCIP_OKAY;
 
@@ -1436,13 +1549,15 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
    assert( sourcedata != NULL);
-   assert( sourcedata->nvars != 0 );
-   assert( sourcedata->vars != NULL );
-   assert( sourcedata->perm != NULL );
-   assert( sourcedata->invperm != NULL );
+
+   /* constraint might be empty and not deleted if no presolving took place */
+   assert( sourcedata->nvars == 0 || sourcedata->vars != NULL );
+   assert( sourcedata->nvars == 0 || sourcedata->perm != NULL );
+   assert( sourcedata->nvars == 0 || sourcedata->invperm != NULL );
 #ifndef NDEBUG
    if ( sourcedata->ppupgrade )
    {
+      assert( sourcedata->nvars > 0 );
       assert( sourcedata->ncycles != 0 );
       assert( sourcedata->cycledecomposition != NULL );
       for (i = 0; i < sourcedata->ncycles; ++i)
@@ -1488,6 +1603,14 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
          }
       }
    }
+   else
+   {
+      consdata->perm = NULL;
+      consdata->invperm = NULL;
+      consdata->ppupgrade = FALSE;
+      consdata->ncycles = 0;
+      consdata->cycledecomposition = NULL;
+   }
 
    /* create transformed constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, consdata,
@@ -1506,6 +1629,7 @@ static
 SCIP_DECL_CONSINITLP(consInitlpSymresack)
 {
    int c;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( infeasible != NULL );
    *infeasible = FALSE;
@@ -1514,6 +1638,9 @@ SCIP_DECL_CONSINITLP(consInitlpSymresack)
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
    {
@@ -1521,7 +1648,7 @@ SCIP_DECL_CONSINITLP(consInitlpSymresack)
 
       SCIPdebugMsg(scip, "Generating initial symresack cut for constraint <%s> ...\n", SCIPconsGetName(conss[c]));
 
-      SCIP_CALL( initLP(scip, conss[c], infeasible) );
+      SCIP_CALL( initLP(scip, conss[c], conshdlrdata->checkmonotonicity, infeasible) );
       if ( *infeasible )
          break;
    }
@@ -1613,6 +1740,9 @@ SCIP_DECL_CONSSEPALP(consSepalpSymresack)
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
 
+      if ( consdata->nvars == 0 )
+         continue;
+
       /* get solution */
       assert( consdata->nvars <= maxnvars );
       SCIP_CALL( SCIPgetSolVals(scip, NULL, consdata->nvars, consdata->vars, vals) );
@@ -1679,6 +1809,9 @@ SCIP_DECL_CONSSEPASOL(consSepasolSymresack)
       /* get data of constraint */
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
+
+      if ( consdata->nvars == 0 )
+         continue;
 
       /* get solution */
       assert( consdata->nvars <= maxnvars );
@@ -1758,6 +1891,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpSymresack)
 
          /* do not enforce non-model constraints */
          if ( !consdata->ismodelcons )
+            continue;
+
+         if ( consdata->nvars == 0 )
             continue;
 
          /* get solution */
@@ -1876,6 +2012,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxSymresack)
 
          /* do not enforce non-model constraints */
          if ( !consdata->ismodelcons )
+            continue;
+
+         if ( consdata->nvars == 0 )
             continue;
 
           /* get solution */
@@ -2073,7 +2212,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
       return SCIP_OKAY;
 
@@ -2184,7 +2323,7 @@ SCIP_DECL_CONSLOCK(consLockSymresack)
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
       return SCIP_OKAY;
 
@@ -2247,7 +2386,7 @@ SCIP_DECL_CONSCOPY(consCopySymresack)
    if ( !sourcedata->ismodelcons )
    {
       *valid = FALSE;
-      
+
       return SCIP_OKAY;
    }
 
@@ -2304,7 +2443,7 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 
    SCIPdebugMsg(scip, "Printing method for symresack constraint handler\n");
 
-   /* we don't have to take care of trivial constraints */
+   /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
    {
       SCIPinfoMessage(scip, file, "symresack()");
@@ -2439,6 +2578,12 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
          "Upgrade symresack constraints to packing/partioning symresacks?",
          &conshdlrdata->checkppsymresack, TRUE, DEFAULT_PPSYMRESACK, NULL, NULL) );
 
+   /* whether we check for monotonicity of perm when upgrading to packing/partioning symresacks */
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkmonotonicity",
+         "Check whether permutation is monotone when upgrading to packing/partioning symresacks?",
+         &conshdlrdata->checkmonotonicity, TRUE, DEFAULT_CHECKMONOTONICITY, NULL, NULL) );
+
+   
    return SCIP_OKAY;
 }
 
@@ -2502,7 +2647,7 @@ SCIP_RETCODE SCIPcreateConsSymresack(
    }
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, vars, nvars, perm, ismodelcons) );
+   SCIP_CALL( consdataCreate(scip, conshdlr, &consdata, vars, nvars, perm, ismodelcons) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate && (! consdata->ppupgrade), enforce, check, propagate,

@@ -29,6 +29,8 @@
 #  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.out
 #  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.res
 #  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.err
+#
+# To get verbose output from Slurm, have SRUN_FLAGS="-v -v" set in your environment.
 
 TSTNAME=$1
 BINNAME=$2
@@ -52,13 +54,14 @@ EXCLUSIVE=${19}
 PERMUTE=${20}
 SEEDS=${21}
 GLBSEEDSHIFT=${22}
-DEBUGTOOL=${23}
-REOPT=${24}
-OPTCOMMAND=${25}
-SETCUTOFF=${26}
-VISUALIZE=${27}
-CLUSTERNODES=${28}
-SLURMACCOUNT=${29}
+STARTPERM=${23}
+DEBUGTOOL=${24}
+REOPT=${25}
+OPTCOMMAND=${26}
+SETCUTOFF=${27}
+VISUALIZE=${28}
+CLUSTERNODES=${29}
+SLURMACCOUNT=${30}
 
 # check if all variables defined (by checking the last one)
 if test -z $CLUSTERNODES
@@ -86,6 +89,7 @@ then
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
     echo "GLBSEEDSHIFT  = $GLBSEEDSHIFT"
+    echo "STARTPERM     = $STARTPERM"
     echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
@@ -161,7 +165,7 @@ do
 		# infer the names of all involved files from the arguments
 		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
 		#                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
-		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s $THREADS $GLBSEEDSHIFT
+		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s $THREADS $GLBSEEDSHIFT $STARTPERM
 
 		# skip instance if log file is present and we want to continue a previously launched test run
 		if test "$SKIPINSTANCE" = "true"
@@ -207,7 +211,7 @@ do
 		    export SETFILE
 		    export TIMELIMIT
 		    # the space at the end is necessary
-		    export SRUN="srun --cpu_bind=cores -v -v "
+		    export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
 
                     if test "$SLURMACCOUNT" == ""
 	            then

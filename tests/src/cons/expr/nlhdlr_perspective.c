@@ -22,7 +22,6 @@
 
 #include <string.h>
 
-#define SCIP_PRIVATE_ROWPREP
 #include "scip/cons_expr.c"
 #include "scip/cons_expr_nlhdlr_perspective.c"
 
@@ -54,8 +53,6 @@ void setup(void)
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* include cons_expr: this adds the operator handlers and nonlinear handlers; get perspective handler and conshdlr */
-   SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
-
    SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
 
    conshdlr = SCIPfindConshdlr(scip, "expr");

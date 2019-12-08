@@ -133,6 +133,7 @@ SCIP_RETCODE addLocalbranchingConstraintAndObjcutoff(
    SCIP_SOL* bestsol;
 
    int nbinvars;
+   int nconsvars;
    int i;
    SCIP_Real lhs;
    SCIP_Real rhs;
@@ -159,6 +160,7 @@ SCIP_RETCODE addLocalbranchingConstraintAndObjcutoff(
    /* memory allocation */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nbinvars) );
+   nconsvars = 0;
 
    /* set initial left and right hand sides of local branching constraint */
    lhs = (SCIP_Real)heurdata->emptyneighborhoodsize + 1.0;
@@ -169,24 +171,30 @@ SCIP_RETCODE addLocalbranchingConstraintAndObjcutoff(
    {
       SCIP_Real solval;
 
+      if( subvars[i] == NULL )
+         continue;
+
       solval = SCIPgetSolVal(scip, bestsol, vars[i]);
-      assert( SCIPisFeasIntegral(scip,solval) );
+      assert( SCIPisFeasIntegral(scip, solval) );
 
       /* is variable i  part of the binary support of bestsol? */
-      if( SCIPisFeasEQ(scip,solval,1.0) )
+      if( SCIPisFeasEQ(scip, solval, 1.0) )
       {
-         consvals[i] = -1.0;
+         consvals[nconsvars] = -1.0;
          rhs -= 1.0;
          lhs -= 1.0;
       }
       else
-         consvals[i] = 1.0;
-      consvars[i] = subvars[i];
-      assert( SCIPvarGetType(consvars[i]) == SCIP_VARTYPE_BINARY );
+         consvals[nconsvars] = 1.0;
+
+      consvars[nconsvars] = subvars[i];
+      assert( SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY );
+
+      ++nconsvars;
    }
 
    /* creates localbranching constraint and adds it to subscip */
-   SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, consname, nbinvars, consvars, consvals,
+   SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, consname, nconsvars, consvars, consvals,
          lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
    SCIP_CALL( SCIPaddCons(subscip, cons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
@@ -415,7 +423,7 @@ SCIP_RETCODE setupAndSolveSubscipLocalbranching(
       SCIPgetNNodes(subscip), nsubnodes);
 
    /* checks the solutions of the sub SCIP and adds them to the main SCIP if feasible */
-   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success) );
+   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, NULL) );
 
    if( success )
       *result = SCIP_FOUNDSOL;

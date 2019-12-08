@@ -36,7 +36,12 @@
 #include "scip/type_branch.h"
 #include "scip/pub_event.h"
 
+/* In optimized mode, some function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms. For this, we need to include struct_event.h.
+ */
+#ifdef NDEBUG
 #include "scip/struct_event.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -282,6 +287,15 @@ SCIP_RETCODE SCIPeventCreateImplAdded(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             var                 /**< variable that was fixed */
+   );
+
+/** creates an event for a changeing the type of a variable */
+SCIP_RETCODE SCIPeventCreateTypeChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose objective value changed */
+   SCIP_VARTYPE          oldtype,            /**< old variable type */
+   SCIP_VARTYPE          newtype             /**< new variable type */
    );
 
 /** creates an event for the addition of a linear row to the separation storage */

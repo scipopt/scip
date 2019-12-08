@@ -160,6 +160,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
       *nlhdlrexprdata = (SCIP_CONSEXPR_NLHDLREXPRDATA*)(size_t)mymethods;
       /* augment mymethods in enforcemethods */
       *enforcemethods |= mymethods;
+
+      /* since this is the default handler, it should always enforce, even if none of the stronger enforcement methods (estimate/separate) are available
+       * this allows to handle value-expressions, for example
+       */
+      *enforcedbelow = TRUE;
+      *enforcedabove = TRUE;
    }
 
    return SCIP_OKAY;
@@ -212,15 +218,22 @@ SCIP_DECL_CONSEXPR_NLHDLRSEPA(nlhdlrSepaDefault)
 
    /* if we did not say that we will separate on this side, then stand by it */
    if( !overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) == 0 )
+   {
+      SCIPdebugMsg(scip, "nlhdlrSepaDefault %p: skip as not sepa on underestimator\n", (void*)expr);
       return SCIP_OKAY;
+   }
    if(  overestimate && ((SCIP_CONSEXPR_EXPRENFO_METHOD)(size_t)nlhdlrexprdata & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) == 0 )
+   {
+      SCIPdebugMsg(scip, "nlhdlrSepaDefault %p: skip as not sepa on overestimator\n", (void*)expr);
       return SCIP_OKAY;
+   }
 
    if( separated )
    {
       /* don't do anything if someone already separated */
       *result = SCIP_DIDNOTFIND;
       *ncuts = 0;
+      SCIPdebugMsg(scip, "nlhdlrSepaDefault %p: skip as already separated\n", (void*)expr);
 
       return SCIP_OKAY;
    }
@@ -331,6 +344,7 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
    SCIP_Real auxval; /* value of expression in aux. variables */
    SCIP_Real violation;
    SCIP_CONSEXPR_EXPRENFO_METHOD enfomethods;
+   int c;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -345,14 +359,10 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
       return SCIP_OKAY;
    }
 
-   /* call the branching callback of the expression handler */
-   SCIP_CALL( SCIPbranchscoreConsExprExprHdlr(scip, expr, sol, auxvalue, brscoretag, success) );
-
-   if( *success )
-      return SCIP_OKAY;
-
-   /* fallback: register violation w.r.t. values in auxiliary variables as branching score for each child */
-
+   /* check which side is violated by how much
+    * NOTE: we are only interested in a violation on the side for which we also separate (or estimate)
+    * if we do not separate, then how would we know which variables to branch on to close the convexification gap?
+    */
    if( auxvalue == SCIP_INVALID ) /*lint !e777*/
    {
       /* if cannot evaluate, then always branch */
@@ -374,23 +384,32 @@ SCIP_DECL_CONSEXPR_NLHDLRBRANCHSCORE(nlhdlrBranchscoreDefault)
       if( enfomethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE )
          violation = MAX(violation, auxval - auxvalue);
    }
+   assert(violation >= 0.0);
 
-   /* if there is a violation, then register it as branching score for each child */
-   if( violation > 0.0 )
+   SCIPdebugMsg(scip, "nlhdlrBranchscoreDefault %p: violation on sepa side: %g\n");
+
+   if( violation == 0.0 ) /*lint !e777*/
    {
-      int c;
-
-      /* add violation as branching score to all children */
-      for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-         SCIPaddConsExprExprBranchScore(scip, SCIPgetConsExprExprChildren(expr)[c], brscoretag, REALABS(violation));
-
-      *success = TRUE;
-
-      /* count this branchscore as belonging to the exprhdlr, too
-       * thus, it will be counted for the default nlhdlr, but also for this exprhdlr
-       */
-      SCIPincrementConsExprExprHdlrNBranchScore(SCIPgetConsExprExprHdlr(expr));
+      *success = FALSE;
+      return SCIP_OKAY;
    }
+
+   /* call the branching callback of the expression handler */
+   SCIP_CALL( SCIPbranchscoreConsExprExprHdlr(scip, expr, sol, auxvalue, brscoretag, success) );
+
+   if( *success )
+      return SCIP_OKAY;
+
+   /* fallback: add violation w.r.t. values in auxiliary variables as branching score for each child */
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+      SCIPaddConsExprExprBranchScore(scip, SCIPgetConsExprExprChildren(expr)[c], brscoretag, REALABS(violation));
+
+   *success = TRUE;
+
+   /* count this branchscore as belonging to the exprhdlr, too
+    * thus, it will be counted for the default nlhdlr, but also for this exprhdlr
+    */
+   SCIPincrementConsExprExprHdlrNBranchScore(SCIPgetConsExprExprHdlr(expr));
 
    return SCIP_OKAY;
 }

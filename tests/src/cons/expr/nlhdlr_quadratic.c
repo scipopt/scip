@@ -62,12 +62,15 @@ void setup(void)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    cr_assert_not_null(conshdlrdata);
 
-   /* get nlhdlr */
+   /* get quadratic nlhdlr, disable all others except for default */
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
       if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "quadratic") == 0 )
       {
          nlhdlr = conshdlrdata->nlhdlrs[h];
-         break;
+      }
+      else if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "default") != 0 )
+      {
+         conshdlrdata->nlhdlrs[h]->enabled = FALSE;
       }
    cr_assert_not_null(nlhdlr);
 
@@ -195,7 +198,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert(success);
 
    success = FALSE;
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, &infeasible, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_assert(!infeasible);
 
    /* get expr and work with it */
@@ -284,7 +287,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_assert(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* this adds locks which are needed for detectNlhdlrs */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, &infeasible, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_assert_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */

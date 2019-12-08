@@ -276,7 +276,7 @@ struct SCIP_Var
    unsigned int          branchdirection:2;  /**< preferred branching direction of the variable (downwards, upwards, auto) */
    unsigned int          eventqueueimpl:1;   /**< is an IMPLADDED event on this variable currently in the event queue? */
    unsigned int          delglobalstructs:1; /**< is variable marked to be removed from global structures (cliques etc.)? */
-   unsigned int          invalidrestart:1;   /**< TRUE if each cut containing this variable must not be used after a restart */
+   unsigned int          relaxationonly:1;   /**< TRUE if variable has been introduced only to define a relaxation */
 };
 
 #ifdef __cplusplus

@@ -53,15 +53,11 @@ static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyExp)
 {
    SCIP_CONSEXPR_EXPR* child;
-   SCIP_CONSHDLR* conshdlr;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
@@ -176,9 +172,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
    childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval));
 
-   SCIPintervalExp(SCIP_INTERVAL_INFINITY, interval, childinterval);
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+      SCIPintervalSetEmpty(interval);
+   else
+      SCIPintervalExp(SCIP_INTERVAL_INFINITY, interval, childinterval);
 
    return SCIP_OKAY;
 }
@@ -274,21 +272,20 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashExp)
 static
 SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureExp)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
-
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
+   assert(childcurv != NULL);
+   assert(success != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-
-   /* expression is convex if child is convex */
-   if( (int)(SCIPgetConsExprExprCurvature(child) & SCIP_EXPRCURV_CONVEX) != 0 )
-      *curvature = SCIP_EXPRCURV_CONVEX;
+   /* expression is convex if child is convex; expression cannot be concave or linear */
+   if( exprcurvature == SCIP_EXPRCURV_CONVEX )
+   {
+      *success = TRUE;
+      *childcurv = SCIP_EXPRCURV_CONVEX;
+   }
    else
-      *curvature = SCIP_EXPRCURV_UNKNOWN;
+      *success = FALSE;
 
    return SCIP_OKAY;
 }

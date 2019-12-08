@@ -27,6 +27,7 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
+#include "scip/type_reopt.h"
 #include "scip/type_retcode.h"
 #include "scip/type_result.h"
 #include "scip/type_set.h"
