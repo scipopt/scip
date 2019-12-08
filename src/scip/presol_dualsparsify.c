@@ -20,19 +20,16 @@
  * @author Ambros Gleixner
  * @author Weikun Chen
  *
- * TODO: 1. currently, it seems impossible to aggregated a binary variable in SCIP
- *          even after aggregation, the new variable is binary. This is because
- *          the aggregated variable is marked as multi-aggregated variable but the
- *          SCIPvarCompareActiveAndNegated function assert that this is wrong.
- *
  * This presolver attempts to cancel non-zero entries of the constraint
- * matrix by adding scaled variables to other variables. // this does not match the description in the .h file @done
+ * matrix by adding scaled columns to other columns. // this does not match the description in the .h file @done
+ *
+ * @todo add infrastructure to SCIP for handling aggregated binary variables
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 // there are line longer than 120 @done
-// I recommended the use of SCIPisLT/GT and SCIPisPositive/Negative sometimes
+// I recommended the use of SCIPisLT/GT and SCIPisPositive/Negative sometimes @done
 
 #include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
@@ -108,11 +105,11 @@ struct SCIP_PresolData
 /** structure representing a pair of constraints in a column; used for lookup in a hashtable */
 struct ColConsPair
 {
-   int colindex; // should this be commented?
-   int consindex1;
-   int consindex2;
-   SCIP_Real conscoef1;
-   SCIP_Real conscoef2;
+   int colindex;                             /**< index of the column */ //should this be commented? @done
+   int consindex1;                           /**< index of the first constraint */
+   int consindex2;                           /**< index of the second constraint */
+   SCIP_Real conscoef1;                      /**< coefficient of the first constraint */
+   SCIP_Real conscoef2;                      /**< coefficient of the second constriant */
 };
 
 typedef struct ColConsPair COLCONSPAIR;
@@ -201,12 +198,14 @@ SCIP_Real getMaxActivitySingleRowWithoutCol(
                                             // this method and not by the method itself. Only if I happen to have no unbounded 
                                             // variables or if I happen to exclude exatly the one unbounded var. I think this 
                                             // method should still be returning =- inf for the cases where this is the case
+                                            // @done
          maxactivity += val * ub;
       }
       else if( val < 0.0 )
       {
          lb = SCIPmatrixGetColLb(matrix, c);
          assert(!SCIPisInfinity(scip, -lb)); // same as before
+                                             // @done
          maxactivity += val * lb;
       }
    }
@@ -253,12 +252,14 @@ SCIP_Real getMinActivitySingleRowWithoutCol(
       {
          lb = SCIPmatrixGetColLb(matrix, c);
          assert(!SCIPisInfinity(scip, -lb)); // same comment as in getMaxActivity
+                                             // @done
          minactivity += val * lb;
       }
       else if( val < 0.0 )
       {
          ub = SCIPmatrixGetColUb(matrix, c);
          assert(!SCIPisInfinity(scip, ub)); // same comment as in getMaxActivity
+                                            // @done
          minactivity += val * ub;
       }
    }
@@ -422,7 +423,8 @@ void getVarUpperBoundOfRow(
    SCIP_Real maxresactivity;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   // assert val is not zero (SCIPisZero) ?
+   // assert val is not zero (SCIPisZero) ? @done
+   assert( !SCIPisZero(scip, val) );
    assert(rowub != NULL);
    assert(ubfound != NULL);
 
@@ -435,15 +437,15 @@ void getVarUpperBoundOfRow(
    lhs = SCIPmatrixGetRowLhs(matrix, row);
    rhs = SCIPmatrixGetRowRhs(matrix, row);
 
-   if( val > 0.0 ) // SCIPisPositive
+   if( val > 0.0 ) // SCIPisPositive @done follow the suggestion by Gerald
    {
       if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) )
       {
-         *rowub = (rhs - minresactivity)/val; // should we watch out for possible nuermical issues when val is very small compared to (rhs-minresactivity)?
+         *rowub = (rhs - minresactivity)/val; // should we watch out for possible nuermical issues when val is very small compared to (rhs-minresactivity)? @done
          *ubfound = TRUE;
       }
    }
-   else // if SCIPisNegative
+   else // if SCIPisNegative @done
    {
       if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) )
       {
@@ -472,7 +474,8 @@ void getVarLowerBoundOfRow(
    SCIP_Real maxresactivity;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   // assert val is not zero (SCIPisZero) ? 
+   // assert val is not zero (SCIPisZero) ? @done
+   assert( !SCIPisZero(scip, val) );
    assert(rowlb != NULL);
    assert(lbfound != NULL);
 
@@ -485,19 +488,19 @@ void getVarLowerBoundOfRow(
    lhs = SCIPmatrixGetRowLhs(matrix, row);
    rhs = SCIPmatrixGetRowRhs(matrix, row);
 
-   if( val < 0.0 ) // SCIPisNegative
+   if( val < 0.0 ) // SCIPisNegative @done
    {
       if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) )
       {
-         *rowlb = (rhs - minresactivity)/val; // same ase in getVarUpperBoundOfRow
+         *rowlb = (rhs - minresactivity)/val; // same ase in getVarUpperBoundOfRow @done
          *lbfound = TRUE;
       }
    }
-   else // if SCIPisPositive (because asserting nonzero will not stay in optimized code)
+   else // if SCIPisPositive (because asserting nonzero will not stay in optimized code) @done
    {
       if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) )
       {
-         *rowlb = (lhs - maxresactivity)/val; // same ase in getVarUpperBoundOfRow
+         *rowlb = (lhs - maxresactivity)/val; // same ase in getVarUpperBoundOfRow @done
          *lbfound = TRUE;
       }
    }
@@ -586,7 +589,7 @@ SCIP_Bool isLowerBoundImplied(
 
       getVarLowerBoundOfRow(scip, matrix, col, *colpnt, *valpnt, &rowlb, &lbfound);
 
-      if( lbfound && (rowlb > impliedlb) ) // SCIPisLT
+      if( lbfound && (rowlb > impliedlb) ) // SCIPisLT @done follow by the suggestion by Gerald
          impliedlb = rowlb;
    }
 
@@ -635,6 +638,7 @@ SCIP_RETCODE aggregation(
    constant = 0.0;
 
    if( weight1 > 0.0 ) // SCIPisPositive i would not do anything for nearly zero values and the assert will not stay in Release mode
+                       // @done I have assert that !SCIPisZero(scip, weight1)
    {
       if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx1])) ||
             SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])) )
@@ -648,7 +652,7 @@ SCIP_RETCODE aggregation(
       else
          newub = weight1 * SCIPvarGetUbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
    }
-   else // if SCIPisNegative
+   else // if SCIPisNegative @done the same as weight1 > 0.0
    {
       if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx1])) ||
             SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])) )
@@ -869,7 +873,10 @@ SCIP_RETCODE cancelCol(
             hashingcolisbin = (SCIPvarGetType(hashingcolvar) == SCIP_VARTYPE_BINARY) ||
                (SCIPvarIsIntegral(hashingcolvar) && SCIPisZero(scip, hashingcollb) &&
                SCIPisEQ(scip, hashingcolub, 1.0));
-            scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1; //assert nonzero ?
+            scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1; //assert nonzero ? @done
+
+            if( SCIPisZero(scip, scale) )
+               continue;
 
             if( REALABS(scale) > MAXSCALE )
                continue;
@@ -933,7 +940,7 @@ SCIP_RETCODE cancelCol(
                      rowrhs = SCIPmatrixGetRowRhs(matrix, cancelcolinds[a]);
                      rowlhs = SCIPmatrixGetRowLhs(matrix, cancelcolinds[a]);
                      if( (cancelcolvals[a] > 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
-                         (cancelcolvals[a] < 0.0 && ! SCIPisInfinity(scip, -rowlhs)) ) // SCIPisGT/LT?
+                         (cancelcolvals[a] < 0.0 && ! SCIPisInfinity(scip, -rowlhs)) ) // SCIPisGT/LT? @done followed by presol_sparsify.c
                      {
                         /* if we get into this case the variable had a positive coefficient in a <= constraint or
                          * a negative coefficient in a >= constraint, e.g. an uplock. If this was the only uplock
@@ -949,7 +956,7 @@ SCIP_RETCODE cancelCol(
                      }
 
                      if( (cancelcolvals[a] < 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
-                         (cancelcolvals[a] > 0.0 && ! SCIPisInfinity(scip, -rowlhs)) ) // SCIPisGT/LT?
+                         (cancelcolvals[a] > 0.0 && ! SCIPisInfinity(scip, -rowlhs)) ) // SCIPisGT/LT? @done
                      {
                         /* symmetric case where the variable had a downlock */
                         if( presoldata->preservegoodlocks && (SCIPmatrixGetColNDownlocks(matrix, colidx) > 1 &&
@@ -976,7 +983,7 @@ SCIP_RETCODE cancelCol(
                   rowrhs = SCIPmatrixGetRowRhs(matrix, hashingcolinds[b]);
                   rowlhs = SCIPmatrixGetRowLhs(matrix, hashingcolinds[b]);
 
-                  if( (newcoef > 0.0 && ! SCIPisInfinity(scip, rowrhs)) || // SCIPisPos SCIPisNeg
+                  if( (newcoef > 0.0 && ! SCIPisInfinity(scip, rowrhs)) || // SCIPisPos SCIPisNeg @done the same reason as cancelcolvals[a] > 0.0
                       (newcoef < 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
                   {
                      if( presoldata->preservegoodlocks && SCIPmatrixGetColNUplocks(matrix, colidx) <= 1 )
@@ -987,7 +994,7 @@ SCIP_RETCODE cancelCol(
                      }
                   }
 
-                  if( (newcoef < 0.0 && ! SCIPisInfinity(scip, rowrhs)) || // SCIPisPos SCIPisNeg
+                  if( (newcoef < 0.0 && ! SCIPisInfinity(scip, rowrhs)) || // SCIPisPos SCIPisNeg @done 
                       (newcoef > 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
                   {
                      if( presoldata->preservegoodlocks && SCIPmatrixGetColNDownlocks(matrix, colidx) <= 1 )
@@ -1351,7 +1358,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          colvals = SCIPmatrixGetColValPtr(matrix, c);
 
          /* sort the rows non-decreasingly by number of nonzeros
-            * if the number of nonzeros, we use the colindex as tie-breaker // this sentence is unclear
+            * if the number of nonzeros is equal, we use the colindex as tie-breaker // this sentence is unclear @done
             */
          for( i = 0; i < nnonz; ++i )
          {

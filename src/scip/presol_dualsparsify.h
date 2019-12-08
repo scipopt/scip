@@ -21,7 +21,7 @@
  * @author Weikun Chen
  *
  * This presolver attempts to cancel non-zero entries of the constraint
- * matrix by adding scaled variable to other variables.
+ * matrix by adding scaled columns to other columns.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
