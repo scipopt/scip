@@ -111,7 +111,9 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
    )
 {
    SCIP_NLPSOLSTAT nlpsolstat;
+#ifdef SCIP_DEBUG
    SCIP_NLPTERMSTAT nlptermstat;
+#endif
 #ifdef SCIP_MOREDEBUG
    SCIP_SOL* nlpsol;
 #endif
@@ -140,8 +142,10 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
    SCIP_CALL( SCIPsolveNLP(subproblem) );
 
    nlpsolstat = SCIPgetNLPSolstat(subproblem);
+#ifdef SCIP_DEBUG
    nlptermstat = SCIPgetNLPTermstat(subproblem);
    SCIPdebugMsg(subproblem, "NLP solstat %d termstat %d\n", nlpsolstat, nlptermstat);
+#endif
 
    if( nlpsolstat == SCIP_NLPSOLSTAT_LOCOPT || nlpsolstat == SCIP_NLPSOLSTAT_GLOBOPT
       || nlpsolstat == SCIP_NLPSOLSTAT_FEASIBLE )
