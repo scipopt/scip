@@ -23,16 +23,16 @@
  * This presolver attempts to cancel non-zero entries of the constraint
  * matrix by adding scaled columns to other columns.
  *
- * In more detail, for two columns A_{j.} and A_{k.}, suppose for a given value s, we have 
- *                  
+ * In more detail, for two columns A_{j.} and A_{k.}, suppose for a given value s, we have
+ *
  *                  | A_{j.} | - | A_{j.} - s*A_{k.} | > eta,
  *
  * where eta is an nonnegative integer. Then we introduce a new variable y := s*x_j + x_k
- * and aggregate the variable x_k = y - s*x_j. After aggregation, the column of the variable 
- * x_j is A_{j.} + s*A_{j.} which is sparser than A_{j.}. In the case that x_k is nonimplied 
+ * and aggregate the variable x_k = y - s*x_j. After aggregation, the column of the variable
+ * x_j is A_{j.} + s*A_{j.} which is sparser than A_{j.}. In the case that x_k is nonimplied
  * free variable, we need to add a new constraint l_k <= y - weight*x_j <= u_k into the problem
  * to keep the bounds constraints of variable x_k.
- * 
+ *
  * @todo add infrastructure to SCIP for handling aggregated binary variables
  */
 
