@@ -216,9 +216,12 @@ struct SCIP_Digraph
    int*                  nsuccessors;        /**< number of successors stored in the adjacency lists of the nodes */
    int*                  components;         /**< array to store the node indices of the components, one component after the other */
    int*                  componentstarts;    /**< array to store the start indices of the components in the components array */
+   int*                  articulations;      /**< array  of size narticulations to store the node indices of the articulation points */
    int                   ncomponents;        /**< number of undirected components stored */
    int                   componentstartsize; /**< size of array componentstarts */
    int                   nnodes;             /**< number of nodes, nodes should be numbered from 0 to nnodes-1 */
+   int                   narticulations;     /**< number of articulation points among the graph nodes */
+   SCIP_Bool             articulationscheck; /**< TRUE if the (computed) articulation nodes are up-to-date and FALSE otherwise */
 };
 
 /** binary node data structure for binary tree */
