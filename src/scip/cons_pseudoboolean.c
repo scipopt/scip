@@ -388,8 +388,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndConsDatas)
    maxidx = SCIPvarGetIndex(cdata->vars[cdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   return SCIPhashTwo(SCIPcombineTwoInt(cdata->nvars, minidx),
-                      SCIPcombineTwoInt(mididx, maxidx)); /*lint !e701*/
+   return SCIPhashFour(cdata->nvars, minidx, mididx, maxidx);
 }
 
 /** initializes the hashmap and -table used in this constraint handler data for artificial variables and specific

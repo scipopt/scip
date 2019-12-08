@@ -257,9 +257,9 @@ SCIP_DECL_HASHKEYVAL(setppcHashdataKeyValCons)
    assert(hashdata->vars != NULL);
    assert(hashdata->nvars >= 2);
 
-   return SCIPhashTwo(SCIPcombineTwoInt(hashdata->nvars, SCIPvarGetIndex(hashdata->vars[0])), \
-                      SCIPcombineTwoInt(SCIPvarGetIndex(hashdata->vars[hashdata->nvars/2]), \
-                                        SCIPvarGetIndex(hashdata->vars[hashdata->nvars-1])));
+   return SCIPhashFour(hashdata->nvars, SCIPvarGetIndex(hashdata->vars[0]), \
+                     SCIPvarGetIndex(hashdata->vars[hashdata->nvars/2]), \
+                     SCIPvarGetIndex(hashdata->vars[hashdata->nvars-1]));
 }
 
 /** initialize gateextraction presolver data */
