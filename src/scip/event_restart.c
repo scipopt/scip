@@ -1183,8 +1183,9 @@ SCIP_RETCODE subtreeSumGapInsertChildren(
    int nchildren;
    SCIP_NODE** children;
    SCIP_NODE* focusnode;
-   NODEINFO* focusnodeinfo;
-   int focusnodelabel;
+   SCIP_NODE* parentnode;
+   NODEINFO* parentnodeinfo;
+   int parentnodelabel;
    int n;
 
    assert(scip != NULL);
@@ -1199,9 +1200,20 @@ SCIP_RETCODE subtreeSumGapInsertChildren(
       return SCIP_OKAY;
 
    focusnode = SCIPgetFocusNode(scip);
-   assert(SCIPhashmapExists(ssg->nodes2info, (void *)focusnode));
-   focusnodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void *)focusnode);
-   focusnodelabel = focusnodeinfo->subtreeidx;
+
+   /* a rare case: the search has been stopped at some point, and the current focus node is the only descendant
+    * of its parent node
+    */
+   if( !SCIPhashmapExists(ssg->nodes2info, (void*)focusnode) )
+   {
+      parentnode = SCIPnodeGetParent(focusnode);
+      assert(SCIPhashmapExists(ssg->nodes2info, (void *)parentnode));
+   }
+   else
+      parentnode = focusnode;
+
+   parentnodeinfo = (NODEINFO*)SCIPhashmapGetImage(ssg->nodes2info, (void *)parentnode);
+   parentnodelabel = parentnodeinfo->subtreeidx;
 
    /* loop over children and insert the focus node label */
    for( n = 0; n < nchildren; ++n )
@@ -1210,13 +1222,13 @@ SCIP_RETCODE subtreeSumGapInsertChildren(
 
       SCIPdebugMsg(scip,
          "Inserting label %d for node number %" SCIP_LONGINT_FORMAT " (parent %" SCIP_LONGINT_FORMAT ")\n",
-         focusnodelabel, SCIPnodeGetNumber(children[n]), SCIPnodeGetNumber(focusnode));
+         parentnodelabel, SCIPnodeGetNumber(children[n]), SCIPnodeGetNumber(parentnode));
 
-      SCIP_CALL( subtreeSumGapStoreNode(scip, ssg, children[n], focusnodelabel) );
+      SCIP_CALL( subtreeSumGapStoreNode(scip, ssg, children[n], parentnodelabel) );
    }
 
    /* remove focus node from hash map */
-   SCIP_CALL( subtreeSumGapRemoveNode(scip, ssg, focusnode) );
+   SCIP_CALL( subtreeSumGapRemoveNode(scip, ssg, parentnode) );
 
    return SCIP_OKAY;
 }
