@@ -32,7 +32,7 @@
  * x_j is A_{j.} + s*A_{j.} which is sparser than A_{j.}. In the case that x_k is nonimplied
  * free variable, we need to add a new constraint l_k <= y - weight*x_j <= u_k into the problem
  * to keep the bounds constraints of variable x_k.
- * 
+ *
  * @todo add infrastructure to SCIP for handling aggregated binary variables
  */
 
