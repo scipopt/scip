@@ -1055,7 +1055,6 @@ SCIP_RETCODE SCIPnodeFree(
    )
 {
    SCIP_Bool isroot;
-   SCIP_EVENT event;
 
    assert(node != NULL);
    assert(*node != NULL);
@@ -1065,10 +1064,15 @@ SCIP_RETCODE SCIPnodeFree(
 
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
-   /* trigger a node deletion event */
-   SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEDELETE) );
-   SCIP_CALL( SCIPeventChgNode(&event, *node) );
-   SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+   if( SCIPnodeGetType(*node) != SCIP_NODETYPE_PROBINGNODE )
+   {
+      SCIP_EVENT event;
+
+      /* trigger a node deletion event */
+      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEDELETE) );
+      SCIP_CALL( SCIPeventChgNode(&event, *node) );
+      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+   }
 
    /* inform solution debugger, that the node has been freed */
    SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, *node) );
