@@ -250,6 +250,8 @@ Interface changes
   Previously this result was returned through a parameter. The change was required to facilitate the integration with
   the UG framework.
 
+- deleted SCIPcombineTwoInt(), SCIPcombineThreeInt(), SCIPcombineFourInt(); use the appropriate SCIPhashTwo(), ..., SCIPhashSeven() method instead
+
 - SCIPsetupBendersSubproblem takes a parameter of the enforcement type.
 
 - SCIPcreateNlpiProb takes a hashmap to store the map between the nlrows and the index in the nlrow array.
@@ -283,6 +285,10 @@ Interface changes
 - new API functions SCIPcleanupConss{Linear,Varbound,Setppc,Logicor,Knapsack}() to clean up inactive variables from those types of linear constraints
 - new API function SCIPsetBendersSubproblemComp() used to add a custom comparison method for ordering the Benders'
   decomposition subproblem solves. The comparison method is used to help with load balancing.
+- new API function SCIPgetRowObjParallelism to get the objective parallelism of a row
+- new API function SCIPcolGetAge to get the age of a column
+- added SCIPhashThree(), SCIPhashFive(), SCIPhashSix(), and SCIPhashSeven() that complement SCIPhashTwo(), SCIPhashFour() to combine 32bit integers to
+  a 32bit hash value
 - new API function SCIPgenerateAndApplyBendersOptCut is used to generate a Benders' optimality cut using the dual
   solutions. This function can be supplied vectors for the primal and dual solution for generating an optimality cut.
   This avoids the need for a SCIP instance to solve the Benders' decomposition subproblem and generating cuts.
@@ -426,6 +432,9 @@ Interface changes
 
 
 ### Data structures
+
+- small changes in constants of hash functions
+- added fast 2-universal hash functions for two to seven 32bit elements with 32bit output
 
 ### Build system
 
