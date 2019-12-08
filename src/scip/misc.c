@@ -1351,6 +1351,7 @@ SCIP_RETCODE SCIPpqueueInsert(
    parentpos = PQ_PARENT(pos);
    while( pos > 0 && (*pqueue->ptrcomp)(elem, pqueue->slots[parentpos]) < 0 )
    {
+      assert((*pqueue->ptrcomp)(pqueue->slots[parentpos], elem) >= 0);
       pqueueElemChgPos(pqueue, pqueue->slots[parentpos], parentpos, pos);
 
       pos = parentpos;
@@ -1360,7 +1361,9 @@ SCIP_RETCODE SCIPpqueueInsert(
    /* insert element at the found position */
    pqueueElemChgPos(pqueue, elem, -1, pos);
 
-   /*assert(pqueueHasHeapProperty(pqueue));*/
+#ifdef SCIP_MORE_DEBUG
+   assert(pqueueHasHeapProperty(pqueue));
+#endif
 
    return SCIP_OKAY;
 }
@@ -1404,7 +1407,7 @@ void SCIPpqueueDelPos(
       int brotherpos = PQ_RIGHTCHILD(pos);
 
       /* determine better of the two children */
-      if( brotherpos <= pqueue->len && (*pqueue->ptrcomp)(pqueue->slots[brotherpos], pqueue->slots[childpos]) < 0 )
+      if( brotherpos < pqueue->len && (*pqueue->ptrcomp)(pqueue->slots[brotherpos], pqueue->slots[childpos]) < 0 )
          childpos = brotherpos;
 
       if( (*pqueue->ptrcomp)(last, pqueue->slots[childpos]) <= 0 )
@@ -1421,7 +1424,9 @@ void SCIPpqueueDelPos(
 
    pqueueElemChgPos(pqueue, last, pqueue->len, pos);
 
-   /*assert(pqueueHasHeapProperty(pqueue));*/
+#ifdef SCIP_MORE_DEBUG
+   assert(pqueueHasHeapProperty(pqueue));
+#endif
 }
 
 /** removes and returns best element from the priority queue */
