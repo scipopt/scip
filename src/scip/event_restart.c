@@ -736,7 +736,6 @@ SCIP_RETCODE updateTreeProfile(
    /* update maximum depth */
    if( treeprofile->stats.maxdepth < nodedepth )
    {
-      assert(treeprofile->stats.maxdepth == nodedepth - 1);
       treeprofile->stats.maxdepth = nodedepth;
       SCIPdebugMsg(scip, "Maximum depth increased to %d\n", treeprofile->stats.maxdepth);
    }
