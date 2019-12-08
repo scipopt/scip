@@ -23,6 +23,16 @@
  * This presolver attempts to cancel non-zero entries of the constraint
  * matrix by adding scaled columns to other columns.
  *
+ * In more detail, for two columns A_{j.} and A_{k.}, suppose for a given value s, we have 
+ *                  
+ *                  | A_{j.} | - | A_{j.} - s*A_{k.} | > eta,
+ *
+ * where eta is an nonnegative integer. Then we introduce a new variable y := s*x_j + x_k
+ * and aggregate the variable x_k = y - s*x_j. After aggregation, the column of the variable 
+ * x_j is A_{j.} + s*A_{j.} which is sparser than A_{j.}. In the case that x_k is nonimplied 
+ * free variable, we need to add a new constraint l_k <= y - weight*x_j <= u_k into the problem
+ * to keep the bounds constraints of variable x_k.
+ * 
  * @todo add infrastructure to SCIP for handling aggregated binary variables
  */
 
@@ -418,8 +428,7 @@ SCIP_RETCODE aggregation(
 
    constant = 0.0;
 
-   if( weight1 > 0.0 ) // SCIPisPositive i would not do anything for nearly zero values and the assert will not stay in Release mode
-                       // @done I have assert that !SCIPisZero(scip, weight1)
+   if( weight1 > 0.0 )
    {
       if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx1])) ||
             SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])) )
@@ -433,7 +442,7 @@ SCIP_RETCODE aggregation(
       else
          newub = weight1 * SCIPvarGetUbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
    }
-   else // if SCIPisNegative @done the same as weight1 > 0.0
+   else
    {
       if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[colidx1])) ||
             SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[colidx2])) )
@@ -654,7 +663,7 @@ SCIP_RETCODE cancelCol(
             hashingcolisbin = (SCIPvarGetType(hashingcolvar) == SCIP_VARTYPE_BINARY) ||
                (SCIPvarIsIntegral(hashingcolvar) && SCIPisZero(scip, hashingcollb) &&
                SCIPisEQ(scip, hashingcolub, 1.0));
-            scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1; //assert nonzero ? @done
+            scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1;
 
             if( SCIPisZero(scip, scale) )
                continue;
@@ -721,7 +730,7 @@ SCIP_RETCODE cancelCol(
                      rowrhs = SCIPmatrixGetRowRhs(matrix, cancelcolinds[a]);
                      rowlhs = SCIPmatrixGetRowLhs(matrix, cancelcolinds[a]);
                      if( (cancelcolvals[a] > 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
-                         (cancelcolvals[a] < 0.0 && ! SCIPisInfinity(scip, -rowlhs)) ) // SCIPisGT/LT? @done followed by presol_sparsify.c
+                         (cancelcolvals[a] < 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
                      {
                         /* if we get into this case the variable had a positive coefficient in a <= constraint or
                          * a negative coefficient in a >= constraint, e.g. an uplock. If this was the only uplock
@@ -737,7 +746,7 @@ SCIP_RETCODE cancelCol(
                      }
 
                      if( (cancelcolvals[a] < 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
-                         (cancelcolvals[a] > 0.0 && ! SCIPisInfinity(scip, -rowlhs)) ) // SCIPisGT/LT? @done
+                         (cancelcolvals[a] > 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
                      {
                         /* symmetric case where the variable had a downlock */
                         if( presoldata->preservegoodlocks && (SCIPmatrixGetColNDownlocks(matrix, colidx) > 1 &&
@@ -764,7 +773,7 @@ SCIP_RETCODE cancelCol(
                   rowrhs = SCIPmatrixGetRowRhs(matrix, hashingcolinds[b]);
                   rowlhs = SCIPmatrixGetRowLhs(matrix, hashingcolinds[b]);
 
-                  if( (newcoef > 0.0 && ! SCIPisInfinity(scip, rowrhs)) || // SCIPisPos SCIPisNeg @done the same reason as cancelcolvals[a] > 0.0
+                  if( (newcoef > 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
                       (newcoef < 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
                   {
                      if( presoldata->preservegoodlocks && SCIPmatrixGetColNUplocks(matrix, colidx) <= 1 )
@@ -775,7 +784,7 @@ SCIP_RETCODE cancelCol(
                      }
                   }
 
-                  if( (newcoef < 0.0 && ! SCIPisInfinity(scip, rowrhs)) || // SCIPisPos SCIPisNeg @done
+                  if( (newcoef < 0.0 && ! SCIPisInfinity(scip, rowrhs)) ||
                       (newcoef > 0.0 && ! SCIPisInfinity(scip, -rowlhs)) )
                   {
                      if( presoldata->preservegoodlocks && SCIPmatrixGetColNDownlocks(matrix, colidx) <= 1 )
@@ -998,9 +1007,6 @@ SCIP_DECL_PRESOLCOPY(presolCopyDualsparsify)
 
 
 /** execution method of presolver */ 
-// I think there should be more documentation here 
-// this seems to be the main method and I'm not sure what to expect - also because of the rather short header documentation
-// probably short summary of what is done in the method
 static
 SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 {  /*lint --e{715}*/
@@ -1115,10 +1121,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
       getImpliedBounds(scip, matrix, c, &lbimplied, &ubimplied);
 
-      /*lbimplied = isLowerBoundImplied(scip, matrix, c); // i think one can save some code duplication and some computational effort by merging the upper/lower bound stuff
-      ubimplied = isUpperBoundImplied(scip, matrix, c); // one would save some underlying calls to getMinActivitySingleRowWithoutCol and getMaxActivitySingleRowWithoutCol 
-                                                        // i did not fine a place where the two are being called seperately - might be the case though
-                                                        // also this change might not be worth it since it would require some work and testing I guess */
       vars[c] = SCIPmatrixGetVar(matrix, c);
       ishashingcols[c] = FALSE;
 
@@ -1142,7 +1144,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          colvals = SCIPmatrixGetColValPtr(matrix, c);
 
          /* sort the rows non-decreasingly by number of nonzeros
-            * if the number of nonzeros is equal, we use the colindex as tie-breaker // this sentence is unclear @done
+            * if the number of nonzeros is equal, we use the colindex as tie-breaker
             */
          for( i = 0; i < nnonz; ++i )
          {
