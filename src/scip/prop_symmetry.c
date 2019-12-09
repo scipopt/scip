@@ -1666,6 +1666,10 @@ SCIP_RETCODE computeSymmetryGroup(
       SCIP_CALL( SCIPhashsetCreate(&auxvars, SCIPblkmem(scip), nexprconss) );
       SCIP_CALL( SCIPexpriteratorCreate(&it, exprconshdlr, SCIPblkmem(scip)) );
    }
+   else
+   {
+      *isnonlinvar = NULL;
+   }
 
    /* allocate memory for getting the number of constraints that contain a variable */
    if ( usecolumnsparsity )
@@ -2269,6 +2273,7 @@ SCIP_RETCODE computeSymmetryGroup(
       }
       else
       {
+         SCIPfreeBlockMemoryArrayNull(scip, isnonlinvar, nvars);
          SCIPfreeBlockMemoryArray(scip, &vars, nvars);
       }
    }
