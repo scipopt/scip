@@ -411,12 +411,47 @@ SCIP_RETCODE applyEdgestateToProb(
 }
 
 
+/** can edge be excluded? */
+static
+SCIP_Bool edgestateEdgeIsExcludedPcMw(
+   const GRAPH*          graph,              /**< graph structure */
+   int                   e,                  /**< edge */
+   const int*            nodestate           /**< node state array */
+   )
+{
+   int dummyterm = -1;
+   const int tail = graph->tail[e];
+   const int head = graph->head[e];
+
+   assert(graph_pc_isPcMw(graph));
+
+   if( head != graph->source && graph_pc_knotIsDummyTerm(graph, head) )
+      dummyterm = head;
+   else if( tail != graph->source && graph_pc_knotIsDummyTerm(graph, tail) )
+      dummyterm = tail;
+
+   if( dummyterm != -1 )
+   {
+      const int twin = graph_pc_getTwinTerm(graph, dummyterm);
+      assert(graph_pc_knotIsDummyTerm(graph, dummyterm));
+
+      if( BRANCH_STP_VERTEX_TERM == nodestate[twin] || BRANCH_STP_VERTEX_KILLED == nodestate[twin] )
+      {
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+
 /** update method for reduction based variable fixings */
 static
 void updateEdgestateFromRed(
    const GRAPH*          graph,              /**< graph structure */
    const GRAPH*          propgraph,          /**< propagator graph */
    SCIP_VAR**            vars,               /**< variables */
+   const int*            nodestate,          /**< node state array */
    int*                  edgestate,          /**< edge state array */
    SCIP_Bool*            error               /**< error during update? */
 )
@@ -424,10 +459,15 @@ void updateEdgestateFromRed(
    const int nedges = graph_get_nEdges(graph);
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
+   assert(graph_pc_isPcMw(graph) == graph_pc_isPcMw(propgraph));
+
    *error = FALSE;
 
    if( pcmw )
+   {
+      assert(graph->extended);
       setEdgestate(propgraph, propgraph->pcancestors[propgraph->source], edgestate);
+   }
 
    for( int e = 0; e < nedges; e++ )
    {
@@ -450,6 +490,9 @@ void updateEdgestateFromRed(
    {
       if( (edgestate[e] == PROP_STP_EDGE_UNSET || edgestate[e] == PROP_STP_EDGE_KILLED) && (SCIPvarGetLbLocal(vars[e]) > 0.5) )
       {
+         if( pcmw && edgestateEdgeIsExcludedPcMw(graph, e, nodestate) )
+            continue;
+
          graph_edge_printInfo(propgraph, e);
          printf("1-fixed arc deleted by reduction methods ... can't propagate  \n \n \n");
          *error = TRUE;
@@ -837,6 +880,7 @@ SCIP_RETCODE propgraphApplyBoundchanges(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variables */
    const GRAPH*          g,                  /**< graph data structure */
+   int*                  nodestate,          /**< node state (uninitialized) */
    int*                  edgestate,          /**< edge state (uninitialized) */
    GRAPH*                propgraph,          /**< propagator graph */
    int*                  nfixed,             /**< pointer to number of fixed edges */
@@ -844,24 +888,20 @@ SCIP_RETCODE propgraphApplyBoundchanges(
    SCIP_Real*            offset              /**< pointer to the offset */
    )
 {
-   int* nodestate = NULL;
    const int nnodes = graph_get_nNodes(propgraph);
    const int nedges = graph_get_nEdges(propgraph);
    const SCIP_Bool pcmw = graph_pc_isPcMw(propgraph);
 
-   assert(scip && vars && g && edgestate && nfixed && probisinfeas && offset);
+   assert(scip && vars && g && edgestate && nodestate && nfixed && probisinfeas && offset);
    assert(g->stp_type == propgraph->stp_type);
    assert(propgraph->knots == g->knots);
    assert(propgraph->edges == g->edges);
    assert(!(*probisinfeas));
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodestate, nnodes) );
-
    SCIP_CALL( getBoundchanges(scip, vars, propgraph, nodestate, edgestate, probisinfeas) );
 
    if( *probisinfeas )
    {
-      SCIPfreeBufferArray(scip, &nodestate);
       return SCIP_OKAY;
    }
 
@@ -923,8 +963,6 @@ SCIP_RETCODE propgraphApplyBoundchanges(
 
       graph_pc_2trans(scip, propgraph);
    }
-
-   SCIPfreeBufferArray(scip, &nodestate);
 
    return SCIP_OKAY;
 }
@@ -1191,18 +1229,19 @@ SCIP_RETCODE fixVarsRedbased(
    SCIP_Bool*            probisinfeas        /**< is problem infeasible? */
    )
 {
-   GRAPH* propgraph;
+   GRAPH* propgraph = NULL;
+   int* nodestate = NULL;
+   int* edgestate = NULL;
    SCIP_Real offset;
-   int* edgestate;
+   const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
    SCIP_Bool error;
-   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
    assert(graph->stp_type != STP_MWCSP);
    assert(graph->stp_type != STP_RMWCSP); // todo implement! especially reduction techniques for rooted
 
    assert(propdata && scip && vars && probisinfeas && nfixed);
-   assert(!pcmw || graph->extended);
+   assert(!graph_pc_isPcMw(graph) || graph->extended);
 
    SCIPdebugMessage("start redbasedVarfixing, fixings: %d \n", *nfixed);
 
@@ -1211,13 +1250,14 @@ SCIP_RETCODE fixVarsRedbased(
    /* don't use it for pcmw! */
    offset = -1.0;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodestate, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgestate, nedges) );
 
    SCIP_CALL( updatePropgraph(scip, graph, propdata) );
    propgraph = propdata->propgraph;
 
    /* note: graph type might change (from PC/MW to RPC/RMW) */
-   SCIP_CALL( propgraphApplyBoundchanges(scip, vars, graph, edgestate, propgraph, nfixed, probisinfeas, &offset) );
+   SCIP_CALL( propgraphApplyBoundchanges(scip, vars, graph, nodestate, edgestate, propgraph, nfixed, probisinfeas, &offset) );
 
    if( *probisinfeas )
    {
@@ -1260,7 +1300,7 @@ SCIP_RETCODE fixVarsRedbased(
    assert(graph_valid(scip, propgraph));
 
    /* mark surviving original edges of propgraph reductions in array edgestate */
-   updateEdgestateFromRed(graph, propgraph, vars, edgestate, &error);
+   updateEdgestateFromRed(graph, propgraph, vars, nodestate, edgestate, &error);
 
    if( error )
       goto TERMINATE;
@@ -1288,6 +1328,7 @@ SCIP_RETCODE fixVarsRedbased(
 TERMINATE:
    graph_path_exit(scip, propgraph);
    SCIPfreeBufferArray(scip, &edgestate);
+   SCIPfreeBufferArray(scip, &nodestate);
 
    return SCIP_OKAY;
 }
