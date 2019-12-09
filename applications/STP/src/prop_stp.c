@@ -916,7 +916,7 @@ SCIP_RETCODE propgraphApplyBoundchanges(
       {
          assert(!graph_pc_isRootedPcMw(propgraph));
 
-         graph_pc_pcmw2rooted(scip, propgraph, BLOCKED_MINOR);
+         graph_pc_pcmw2rooted(scip, propgraph, BLOCKED_MINOR, FALSE);
 
          assert(graph_pc_isRootedPcMw(propgraph));
       }

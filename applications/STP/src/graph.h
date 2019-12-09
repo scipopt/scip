@@ -458,7 +458,7 @@ extern SCIP_RETCODE   graph_pc_2pc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rpc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2mw(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_pc_2rmw(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_pc_pcmw2rooted(SCIP*, GRAPH*, SCIP_Real);
+extern SCIP_RETCODE   graph_pc_pcmw2rooted(SCIP*, GRAPH*, SCIP_Real, SCIP_Bool);
 extern SCIP_RETCODE   graph_pc_getSap(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
 extern SCIP_RETCODE   graph_pc_getRsap(SCIP*, GRAPH*, GRAPH**, const int*, int, int);
 extern SCIP_RETCODE   graph_pc_contractNodeAncestors(SCIP*, GRAPH*, int, int, int);

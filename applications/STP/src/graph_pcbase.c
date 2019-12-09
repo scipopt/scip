@@ -2421,7 +2421,8 @@ SCIP_RETCODE graph_pc_2rmw(
 SCIP_RETCODE graph_pc_pcmw2rooted(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
-   SCIP_Real             fixprize            /**< prize at which to make terminals */
+   SCIP_Real             fixprize,           /**< prize at which to make terminals */
+   SCIP_Bool             verbose             /**< be verbose? */
    )
 {
    int e;
@@ -2441,9 +2442,8 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
    newroot = -1;
    maxgrad = -1;
 
-#ifndef WITH_UG
-   printf("attempt transformation to rooted problem \n");
-#endif
+   if( verbose )
+      printf("attempt transformation to rooted problem \n");
 
    nfixedterms = 0;
    e = graph->outbeg[root];
@@ -2514,20 +2514,22 @@ SCIP_RETCODE graph_pc_pcmw2rooted(
 
       assert(graph_valid(scip, graph));
 
-#ifndef WITH_UG
-      if( pc )
-         printf("...transformed PC to RPC; fixed %d out of %d terminals \n", nfixedterms, orgnterms - 1);
-      else
-         printf("...transformed MW to RMW; fixed %d out of %d terminals \n", nfixedterms, orgnterms - 1);
-#endif
+      if( verbose )
+      {
+         if( pc )
+            printf("...transformed PC to RPC; fixed %d out of %d terminals \n", nfixedterms, orgnterms - 1);
+         else
+            printf("...transformed MW to RMW; fixed %d out of %d terminals \n", nfixedterms, orgnterms - 1);
+      }
 
       assert(orgnterms - 1 == graph->terms);
    }
 
-#ifndef WITH_UG
-   if( !graph_pc_isRootedPcMw(graph) )
-      printf("...failed \n");
-#endif
+   if( verbose )
+   {
+      if( !graph_pc_isRootedPcMw(graph) )
+         printf("...failed \n");
+   }
 
    return SCIP_OKAY;
 }

@@ -48,7 +48,8 @@
 #define   DEFAULT_REDUCTION    2             /**< reduction mode to apply */
 #define   DEFAULT_SYMCONS      2             /**< symmetry constraints */
 #define   DEFAULT_CYCLECONS    2             /**< cycle constraints */
-#define   DEFAULT_SDEXT        3                 /**< sd extended */
+#define   DEFAULT_DACUTS       1             /**< always use dual-ascent cuts */
+#define   DEFAULT_SDEXT        3             /**< sd extended */
 #define   DEFAULT_MINELIMS     3             /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
 #define   DEFAULT_PRETIMELIMIT -1.0          /**< presolving time limit */
 
@@ -162,6 +163,11 @@ SCIP_RETCODE SCIPStpReaderIncludeParams(
          "stp/usecyclecons",
          "Use 2-cycle constraints (PC): 0 never, 1 always, 2 problem specific",
          NULL, FALSE, DEFAULT_CYCLECONS, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/usedacuts",
+         "Use initial dual ascent cuts: 0 never, 1 always, 2 problem specific",
+         NULL, FALSE, DEFAULT_DACUTS, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/minelims",

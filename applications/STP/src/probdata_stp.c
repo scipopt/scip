@@ -75,7 +75,7 @@
 
 #define CUT_MAXNTERMINALS 500
 #define CUT_MAXNEDGES     10000
-#define CUT_MAXTOTNEDGES     50000
+#define CUT_MAXTOTNEDGES  50000
 
 #ifdef WITH_UG
 const char*
@@ -2459,6 +2459,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_Bool printGraph;
    int symcons;
    int cyclecons;
+   int usedacuts;
    int reduction;
    int compcentral;
    char mode;
@@ -2486,6 +2487,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/usesymcons", &(symcons)) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/usecyclecons", &(cyclecons)) );
+   SCIP_CALL( SCIPgetIntParam(scip, "stp/usedacuts", &(usedacuts)) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/minelims", &(probdata->minelims)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/emitgraph", &(probdata->emitgraph)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/bigt", &(probdata->bigt)) );
@@ -2589,9 +2591,10 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPwriteOrigProblem(scip, presolvefilename, NULL, FALSE) );
 #endif
 
-   if( probdata->mode == MODE_CUT && 0)
+   if( probdata->mode == MODE_CUT && usedacuts != 0 )
    {
-      int todo; // && 0
+      assert(usedacuts == 1 || usedacuts == 2);
+
       SCIP_CALL( createInitialCuts(scip, probdata) );
    }
 
