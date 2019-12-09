@@ -618,8 +618,8 @@ void propgraphFixEdge(
       return;
    }
 
-   assert(!pcmw || !(Is_term(propgraph->term[tail]) && !graph_pc_knotIsFixedTerm(propgraph, tail)));
-   assert(!pcmw || !(Is_term(propgraph->term[head]) && !graph_pc_knotIsFixedTerm(propgraph, head)));
+   assert(!pcmw || !graph_pc_knotIsDummyTerm(propgraph, tail));
+   assert(!pcmw || !graph_pc_knotIsDummyTerm(propgraph, head));
 
    assert(SCIPisEQ(scip, propgraph->cost[e], propgraph->cost[erev]));
 
