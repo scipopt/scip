@@ -623,6 +623,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
+   SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
@@ -639,6 +641,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
    SCIP_Real constant;
    SCIP_Real sideconstant;
    SCIP_Real signfactor;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
    int nposquadterms;
    int nnegquadterms;
    int nposbilinterms;
@@ -678,6 +682,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
    nnegquadterms = 0;
    nposbilinterms = 0;
    nnegbilinterms = 0;
+   lhs = (conslhs == SCIP_INVALID ? SCIPvarGetLbGlobal(auxvar) : conslhs);
+   rhs = (consrhs == SCIP_INVALID ? SCIPvarGetUbGlobal(auxvar) : consrhs);
 
    /* check if all children are quadratic or binary linear and count number of positive and negative terms */
    for( i = 0; i < nchildren; ++i )
@@ -787,12 +793,12 @@ SCIP_RETCODE detectSocQuadraticSimple(
             return SCIP_OKAY;
    }
 
-   sideconstant = (signfactor == 1.0 ? constant - SCIPvarGetUbGlobal(auxvar) : constant - SCIPvarGetLbGlobal(auxvar));
+   sideconstant = (signfactor == 1.0 ? constant - rhs : constant - lhs);
 
    if( ishyperbolic )
       sideconstant *= 4.0 / -childcoefs[specialtermidx] * signfactor;
 
-   if( sideconstant * signfactor < 0.0 )
+   if( SCIPisNegative(scip, sideconstant * signfactor) )
       return SCIP_OKAY;
 
    /**
@@ -925,6 +931,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
+   SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
@@ -945,6 +953,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
    int* nnonzeroes;
    SCIP_Real constant;
    SCIP_Real lhsconstant;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
    int nvars;
    int nchildren;
    int npos;
@@ -986,6 +996,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
    nnonzeroes = NULL;
    termbegins = NULL;
    bp = NULL;
+   lhs = (conslhs == SCIP_INVALID ? SCIPvarGetLbGlobal(auxvar) : conslhs);
+   rhs = (consrhs == SCIP_INVALID ? SCIPvarGetUbGlobal(auxvar) : consrhs);
 
    /* TODO: should we initialize the hashmap with size SCIPgetNVars() so that it never has to be resized? */
    SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), nchildren) );
@@ -1198,7 +1210,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    if( lhsissoc )
    {
       /* lhs is potentially SOC, change signs */
-      lhsconstant = SCIPvarGetLbGlobal(auxvar) - constant;
+      lhsconstant = lhs - constant;
 
       for( i = 0; i < nvars; ++i )
       {
@@ -1208,7 +1220,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    }
    else
    {
-      lhsconstant = constant - SCIPvarGetUbGlobal(auxvar);
+      lhsconstant = constant - rhs;
    }
 
    /* initialize remaining datastructures for nonlinear handler */
@@ -1376,7 +1388,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    *success = TRUE;
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "found SOC structure for expression %p\n", (void*)expr);
+   SCIPdebugMsg(scip, "found SOC structure for expression %p:\n", (void*)expr);
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
    SCIPinfoMessage(scip, NULL, " <= %s\n", SCIPvarGetName(auxvar));
 #endif
@@ -1404,6 +1416,8 @@ SCIP_RETCODE detectSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
+   SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
@@ -1433,13 +1447,15 @@ SCIP_RETCODE detectSOC(
    if( !(*success) )
    {
       /* check whether expression is a simple soc-respresentable quadratic expression */
-      SCIP_CALL( detectSocQuadraticSimple(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
+      SCIP_CALL( detectSocQuadraticSimple(scip, conshdlr, expr, auxvar, conslhs, consrhs,
+            nlhdlrexprdata, success) );
    }
 
    if( !(*success) && nlhdlrdata->alloweigenvaluecomps )
    {
       /* check whether expression is a more complex soc-respresentable quadratic expression */
-      SCIP_CALL( detectSocQuadraticComplex(scip, conshdlr, expr, auxvar, nlhdlrexprdata, success) );
+      SCIP_CALL( detectSocQuadraticComplex(scip, conshdlr, expr, auxvar, conslhs, consrhs,
+            nlhdlrexprdata, success) );
    }
 
    return SCIP_OKAY;
@@ -1522,6 +1538,8 @@ static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
 { /*lint --e{715}*/
    SCIP_VAR* auxvar;
+   SCIP_Real conslhs;
+   SCIP_Real consrhs;
 
    assert(expr != NULL);
 
@@ -1532,7 +1550,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
-   SCIP_CALL( detectSOC(scip, expr, auxvar, nlhdlrexprdata, success) );
+   conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsConsExpr(scip, cons));
+   consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsConsExpr(scip, cons));
+
+   SCIP_CALL( detectSOC(scip, expr, auxvar, conslhs, consrhs, nlhdlrexprdata, success) );
 
    return SCIP_OKAY;
 }
