@@ -43,14 +43,16 @@ extern "C" {
 SCIP_EXPORT
 SCIP_RETCODE STPStpBranchruleParseConsname(
    int*                  vertexchgs,         /**< array to store changes */
-   const char*           consname            /**< constraint name */
+   const char*           consname,           /**< constraint name */
+   SCIP_Bool*            conflictFound       /**< conflict with existing vertex changes found? */
    );
 
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
 SCIP_EXPORT
 SCIP_RETCODE SCIPStpBranchruleGetVertexChgs(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  vertexchgs          /**< array to store changes */
+   int*                  vertexchgs,         /**< array to store changes */
+   SCIP_Bool*            conflictFound       /**< conflict with existing vertex changes found? */
    );
 
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */

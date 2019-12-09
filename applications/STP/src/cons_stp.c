@@ -1624,6 +1624,7 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    /* change graph according to branch-and-bound terminal changes  */
    if( chgterms )
    {
+      SCIP_Bool conflict = FALSE;
       const int nnodes = g->knots;
 
       SCIP_CALL(SCIPallocBufferArray(scip, &nodestatenew, nnodes));
@@ -1631,7 +1632,9 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
       BMScopyMemoryArray(termorg, g->term, nnodes);
 
       SCIPStpBranchruleInitNodeState(g, nodestatenew);
-      SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestatenew) );
+      SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestatenew, &conflict) );
+
+      assert(!conflict);
 
       for( int k = 0; k < nnodes; k++ )
       {

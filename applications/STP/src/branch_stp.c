@@ -237,7 +237,11 @@ SCIP_RETCODE selectBranchingVertexByDegree(
    /* get vertex changes from branch-and-bound */
    if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) != 0 )
    {
-      SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestate) );
+      SCIP_Bool conflict = FALSE;
+
+      SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestate, &conflict) );
+
+      assert(!conflict);
    }
 
    ptermselected = FALSE;
@@ -342,7 +346,11 @@ SCIP_RETCODE selectBranchingVertexBySol(
    /* get vertex changes from branch-and-bound and apply them to graph */
    if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) != 0 )
    {
-      SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestatenew) );
+      SCIP_Bool conflict = FALSE;
+
+      SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestatenew, &conflict) );
+
+      assert(!conflict);
    }
 
    applyBranchHistoryToGraph(scip, nodestatenew, graph);
@@ -475,7 +483,11 @@ SCIP_RETCODE selectBranchingVertexByLp2Flow(
    /* get vertex changes from branch-and-bound */
    if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) != 0 )
    {
-      SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestate) );
+      SCIP_Bool conflict = FALSE;
+
+      SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestate, &conflict) );
+
+      assert(!conflict);
    }
 
    edgevars = SCIPprobdataGetEdgeVars(scip);
@@ -783,10 +795,13 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
 /** parse constraint name and apply changes to graph or array */
 SCIP_RETCODE STPStpBranchruleParseConsname(
    int*                  vertexchgs,         /**< array to store changes */
-   const char*           consname            /**< constraint name */
+   const char*           consname,           /**< constraint name */
+   SCIP_Bool*            conflictFound       /**< conflict with existing vertex changes found? */
 )
 {
-   assert(vertexchgs && consname);
+   assert(vertexchgs && consname && conflictFound);
+
+   *conflictFound = FALSE;
 
    /* terminal inclusion constraint? */
    if( strncmp(consname, "consin", 6) == 0 )
@@ -796,7 +811,11 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
 
       SCIPdebugMessage("mark terminal %d \n", term);
 
-      assert(vertexchgs[term] != BRANCH_STP_VERTEX_KILLED); // todo might happen, but should then set a conflict flag...
+      if( BRANCH_STP_VERTEX_KILLED == vertexchgs[term] )
+      {
+         SCIPdebugMessage("conflict found for vertex %d: try to fix deleted vertex \n", term);
+         *conflictFound = TRUE;
+      }
 
       vertexchgs[term] = BRANCH_STP_VERTEX_TERM;
    }
@@ -808,7 +827,11 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
 
       SCIPdebugMessage("mark deleted node %d \n", vert);
 
-      assert(vertexchgs[vert] != BRANCH_STP_VERTEX_TERM); // todo might happen, but should then set a conflict flag...
+      if( BRANCH_STP_VERTEX_TERM == vertexchgs[vert] )
+      {
+         SCIPdebugMessage("conflict found for vertex %d: try to delete terminal \n", vert);
+         *conflictFound = TRUE;
+      }
 
       vertexchgs[vert] = BRANCH_STP_VERTEX_KILLED;
    }
@@ -847,7 +870,8 @@ void SCIPStpBranchruleInitNodeState(
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
 SCIP_RETCODE SCIPStpBranchruleGetVertexChgs(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  vertexchgs          /**< array to store changes */
+   int*                  vertexchgs,         /**< array to store changes */
+   SCIP_Bool*            conflictFound       /**< conflict with existing vertex changes found? */
    )
 {
    SCIP_CONS* parentcons;
@@ -855,9 +879,9 @@ SCIP_RETCODE SCIPStpBranchruleGetVertexChgs(
    SCIP_BRANCHRULEDATA* branchruledata;
    int naddedconss;
 
-   assert(scip != NULL);
-   assert(vertexchgs != NULL);
+   assert(scip && vertexchgs && conflictFound);
 
+   *conflictFound = FALSE;
    branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -882,6 +906,7 @@ SCIP_RETCODE SCIPStpBranchruleGetVertexChgs(
    /* move up branch-and-bound path and check constraints */
    for( SCIP_NODE* node = SCIPgetCurrentNode(scip); SCIPnodeGetDepth(node) > 0; node = SCIPnodeGetParent(node) )
    {
+      SCIP_Bool localconflict = FALSE;
       char* consname;
 
       assert(SCIPnodeGetNAddedConss(node) == 1);
@@ -893,7 +918,10 @@ SCIP_RETCODE SCIPStpBranchruleGetVertexChgs(
       SCIPnodeGetAddedConss(node, &parentcons, &naddedconss, 1);
       consname = (char*) SCIPconsGetName(parentcons);
 
-      SCIP_CALL( STPStpBranchruleParseConsname(vertexchgs, consname) );
+      SCIP_CALL( STPStpBranchruleParseConsname(vertexchgs, consname, &localconflict) );
+
+      if( localconflict )
+         *conflictFound = TRUE;
    }
 
    return SCIP_OKAY;
