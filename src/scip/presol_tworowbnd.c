@@ -138,7 +138,9 @@ void* encodeRowPair(
    ROWPAIR*              rowpair             /**< pointer to rowpair */
    )
 {
-   return (void*)SCIPcombineTwoInt(rowpair->row1idx, rowpair->row2idx);
+   uint64_t a = (uint64_t)rowpair->row1idx;
+   uint64_t b = (uint64_t)rowpair->row2idx;
+   return (void*)((a << 32) | b);
 }
 
 /** compute single positive int hashvalue for two ints */

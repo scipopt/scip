@@ -155,8 +155,7 @@ SCIP_DECL_HASHKEYVAL(consPairHashval)
 
    conspair = (COLCONSPAIR*) key;
 
-   return SCIPhashTwo(SCIPcombineTwoInt(conspair->consindex1, conspair->consindex2),
-                      SCIPrealHashCode(conspair->conscoef2 / conspair->conscoef1));
+   return SCIPhashThree(conspair->consindex1, conspair->consindex2, SCIPrealHashCode(conspair->conscoef2 / conspair->conscoef1));
 }
 
 /** calculate maximal activity of one row without one specific column */
