@@ -922,9 +922,7 @@ SCIP_RETCODE setupAndSolve(
    case SCIP_STATUS_MEMLIMIT:
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (memory limit exceeded)\n");
       break;
-   default:
-      break;
-   }
+   } /*lint !e787*/
 
 TERMINATE:
    SCIPfreeBufferArray(scip, &subvars);
