@@ -745,10 +745,12 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
       if( SCIPgetNContVars(scip) > 0 )
       {
+         int nminfixings;
+         int nfixedvars = 0;
+
          nvars = SCIPgetNVars(scip);
          vars = SCIPgetVars(scip);
-         int nminfixings = (int)(SCIPceil(scip, heurdata->minfixingratelp * nvars));
-         int nfixedvars = 0;
+         nminfixings = (int)(SCIPceil(scip, heurdata->minfixingratelp * nvars));
 
          /* count fixed variables */
          for( i = 0; i < nvars && nfixedvars < nminfixings; ++i )

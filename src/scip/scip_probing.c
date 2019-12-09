@@ -1039,17 +1039,21 @@ char* SCIPsnprintfProbingStats(
    if( SCIPinProbing(scip) )
    {
       SCIP_VAR** vars;
+      int nbinvars = SCIPgetNBinVars(scip);
+      int nintvars = SCIPgetNIntVars(scip);
+      int nimplvars = SCIPgetNImplVars(scip);
+      int nvars = SCIPgetNVars(scip);
       int vartypeend[] = {
-          SCIPgetNBinVars(scip),
-          SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip),
-          SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip),
-          SCIPgetNVars(scip)
+            nbinvars,
+            nbinvars + nintvars,
+            nbinvars + nintvars + nimplvars,
+            nvars
       };
       const char* vartypenames[] = {
-               "binary",
-               "integer",
-               "implicit integer",
-               "continuous"
+            "binary",
+            "integer",
+            "implicit integer",
+            "continuous"
       };
       int nvartypefixed[nvartypes];
       int nvarsfixed = 0;
