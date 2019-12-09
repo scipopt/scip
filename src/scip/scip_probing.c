@@ -1055,7 +1055,7 @@ char* SCIPsnprintfProbingStats(
             "implicit integer",
             "continuous"
       };
-      int nvartypefixed[nvartypes];
+      int nvartypefixed[4];
       int nvarsfixed = 0;
       int depth;
       int probingdepth;
