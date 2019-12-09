@@ -136,7 +136,9 @@ encodeColPair(
    COLPAIR*              colpair             /**< pointer to colpair */
    )
 {
-   return (void*)SCIPcombineTwoInt(colpair->col1idx, colpair->col2idx);
+   uint64_t a = (uint64_t)colpair->col1idx;
+   uint64_t b = (uint64_t)colpair->col2idx;
+   return (void*)((a << 32) | b);
 }
 
 /** compute single positive int hashvalue for two ints */
