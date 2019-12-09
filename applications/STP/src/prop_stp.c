@@ -147,6 +147,7 @@ void getBoundchangesPcMW(
          const int twinterm = graph_pc_getTwinTerm(propgraph, k);
          const int root2term = graph_pc_getRoot2PtermEdge(propgraph, twinterm);
 
+         assert(pterm2term >= 0);
          assert(root2term >= 0);
          assert(graph_pc_knotIsDummyTerm(propgraph, twinterm));
          assert(SCIPisEQ(scip, propgraph->prize[k], propgraph->cost[root2term]));
@@ -419,11 +420,16 @@ SCIP_Bool edgestateEdgeIsExcludedPcMw(
    const int*            nodestate           /**< node state array */
    )
 {
-   int dummyterm = -1;
    const int tail = graph->tail[e];
    const int head = graph->head[e];
 
    assert(graph_pc_isPcMw(graph));
+
+   if( graph_pc_knotIsDummyTerm(graph, tail) || graph_pc_knotIsDummyTerm(graph, head) )
+      return TRUE;
+
+#if 0
+   int dummyterm = -1;
 
    if( head != graph->source && graph_pc_knotIsDummyTerm(graph, head) )
       dummyterm = head;
@@ -440,6 +446,7 @@ SCIP_Bool edgestateEdgeIsExcludedPcMw(
          return TRUE;
       }
    }
+#endif
 
    return FALSE;
 }
@@ -1303,7 +1310,10 @@ SCIP_RETCODE fixVarsRedbased(
    updateEdgestateFromRed(graph, propgraph, vars, nodestate, edgestate, &error);
 
    if( error )
-      goto TERMINATE;
+   {
+      return SCIP_ERROR;
+   //   goto TERMINATE; // todo check!
+   }
 
 #ifdef SCIP_DEBUG
    /* has potentially 0-fixed edge been contracted? */
