@@ -2789,6 +2789,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
    /* create array for permutation order */
    SCIP_CALL( SCIPallocBufferArray(scip, &genorder, propdata->nperms) );
 
+   SCIPdebugMsg(scip, "starting subgroup detection routine for %d components\n", propdata->ncomponents);
+
    /* iterate over components */
    for (i = 0; i < propdata->ncomponents; ++i)
    {
@@ -2805,7 +2807,10 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       /* if component is blocked, skip it */
       if ( propdata->componentblocked[i] )
+      {
+         SCIPdebugMsg(scip, "component %d has already been handled and will be skipped\n", i);
          continue;
+      }
 
       npermsincomp = propdata->componentbegins[i + 1] - propdata->componentbegins[i];
 
@@ -2817,6 +2822,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       assert( ntwocycleperms >= 0 );
       assert( ntwocycleperms <= npermsincomp );
+
+      SCIPdebugMsg(scip, "component %d has %d permutations consisting of 2-cycles\n", i, ntwocycleperms);
 
       if ( ntwocycleperms < 2 )
          continue;
@@ -2953,7 +2960,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             SCIP_CALL( SCIPcomputeOrbitVar(scip, propdata->npermvars, propdata->perms,
                   propdata->permstrans, propdata->nperms, propdata->components,
-                  propdata->componentbegins, usedvars, varfound, graphcomponents[0],
+                  propdata->componentbegins, usedvars, varfound, firstvaridx,
                   i, orbit[activeorb], &orbitsize[activeorb]) );
 
             assert( orbit[activeorb][0] == firstvaridx );
@@ -2965,6 +2972,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
          activeorb = !activeorb;
 
          vars[1] = propdata->permvars[orbit[activeorb][0]];
+
+         SCIPdebugMsg(scip, "adding weak sbcs for enclosing orbit\n");
 
          /* add weak SBCs for rest of enclosing orbit */
          for (j = 1; j < orbitsize[activeorb]; ++j)
