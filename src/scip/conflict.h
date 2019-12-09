@@ -519,33 +519,43 @@ SCIP_Real SCIPconflictGetStrongbranchTime(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of successful calls to infeasible dualray analysis */
-SCIP_Longint SCIPconflictGetNDualrayInfSuccess(
+/** gets number of successful calls to dual proof analysis derived from infeasible LPs */
+SCIP_Longint SCIPconflictGetNDualproofsInfSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of globally valid dualray constraints */
-SCIP_Longint SCIPconflictGetNDualrayInfGlobal(
+/** gets number of globally valid dual proof constraints derived from infeasible LPs */
+SCIP_Longint SCIPconflictGetNDualproofsInfGlobal(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets average length of infeasible dualrays */
-SCIP_Longint SCIPconflictGetNDualrayInfNonzeros(
+/** gets number of locally valid dual proof constraints derived from infeasible LPs */
+SCIP_Longint SCIPconflictGetNDualproofsInfLocal(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of successfully analyzed dual proofs of boundexceeding LPs */
-SCIP_Longint SCIPconflictGetNDualrayBndSuccess(
+/** gets average length of dual proof constraints derived from infeasible LPs */
+SCIP_Longint SCIPconflictGetNDualproofsInfNonzeros(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of globally applied dual proofs of boundexceeding LPs */
-SCIP_Longint SCIPconflictGetNDualrayBndGlobal(
+/** gets number of successfully analyzed dual proofs derived from bound exceeding LPs */
+SCIP_Longint SCIPconflictGetNDualproofsBndSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets average length of dual proofs of boundexceeding LPs */
-SCIP_Longint SCIPconflictGetNDualrayBndNonzeros(
+/** gets number of globally applied dual proofs derived from bound exceeding LPs */
+SCIP_Longint SCIPconflictGetNDualproofsBndGlobal(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of locally applied dual proofs derived from bound exceeding LPs */
+SCIP_Longint SCIPconflictGetNDualproofsBndLocal(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets average length of dual proofs derived from bound exceeding LPs */
+SCIP_Longint SCIPconflictGetNDualproofsBndNonzeros(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

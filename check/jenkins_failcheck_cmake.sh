@@ -454,9 +454,9 @@ elif [ "${PERFORMANCE}" == "mergerequest" ]; then
 
   COMPAREIDS=""
 
-  COUNT_S=${GLBSEEDSHIFT}
+  COUNT_S=0
   while [ "${COUNT_S}" -le "${SEEDSBND}" ]; do
-    COUNT_P=${STARTPERM}
+    COUNT_P=0
     while [ "${COUNT_P}" -le "${PERMUTEBND}" ]; do
       RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${FULLGITHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB} | grep -P "p=${COUNT_P} s=${COUNT_S}")
       if [ "${RBDB_STRS}" != "" ]; then

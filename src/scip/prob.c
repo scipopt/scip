@@ -988,12 +988,6 @@ SCIP_RETCODE SCIPprobAddVar(
       /* update the number of variables with non-zero objective coefficient */
       SCIPprobUpdateNObjVars(prob, set, 0.0, SCIPvarGetObj(var));
 
-      /* set varlocks to ensure that no dual reduction can be performed */
-      if( set->reopt_enable || !set->misc_allowstrongdualreds )
-      {
-         SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, SCIP_LOCKTYPE_MODEL, 1, 1) );
-      }
-
       /* SCIP assumes that the status of objisintegral does not change after transformation. Thus, the objective of all
        * new variables beyond that stage has to be compatible. */
       assert( SCIPsetGetStage(set) == SCIP_STAGE_TRANSFORMING || ! prob->objisintegral || SCIPsetIsZero(set, SCIPvarGetObj(var)) ||
@@ -1853,7 +1847,7 @@ void SCIPprobUpdateBestRootSol(
    }
 }
 
-/** informs problem, that the presolving process was finished, and updates all internal data structures */
+/** informs problem, that the presolving process was finished, and updates all internal data structures */ /*lint -e715*/
 SCIP_RETCODE SCIPprobExitPresolve(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set                 /**< global SCIP settings */

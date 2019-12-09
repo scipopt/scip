@@ -884,7 +884,7 @@ void SCIPtreeMarkProbingObjChanged(
 #define SCIPtreeGetProbingRoot(tree)    (tree)->probingroot
 #define SCIPtreeGetProbingDepth(tree)   (SCIPtreeGetCurrentDepth(tree) - SCIPnodeGetDepth((tree)->probingroot))
 #define SCIPtreeGetFocusNode(tree)      (tree)->focusnode
-#define SCIPtreeGetFocusDepth(tree)     ((tree)->focusnode != NULL ? (tree)->focusnode->depth : -1)
+#define SCIPtreeGetFocusDepth(tree)     ((tree)->focusnode != NULL ? (int)(tree)->focusnode->depth : -1)
 #define SCIPtreeHasFocusNodeLP(tree)    (tree)->focusnodehaslp
 #define SCIPtreeSetFocusNodeLP(tree,solvelp)  ((tree)->focusnodehaslp = solvelp)
 #define SCIPtreeIsFocusNodeLPConstructed(tree) (tree)->focuslpconstructed

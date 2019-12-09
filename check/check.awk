@@ -373,6 +373,8 @@ BEGIN {
       lpsname = "qso";
    else if( $13 == "Xpress" )
       lpsname = "xprs";
+   else if( $13 == "Glop" )
+      lpsname = "glop";
 
     # get LP solver version
    if( NF >= 16 )

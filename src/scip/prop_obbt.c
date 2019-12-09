@@ -1018,7 +1018,6 @@ SCIP_RETCODE filterExistingLP(
                   propdata->ngenvboundstrivfil += 1;
                   SCIPdebugMsg(scip, "found genvbound during trivial filtering\n");
                }
-            }
 
             /* restore objective function */
             SCIP_CALL( setObjProbing(scip, propdata, bound, 0.0) );
@@ -1218,7 +1217,6 @@ SCIP_RETCODE filterRound(
                   SCIPdebugMsg(scip, "found genvbound during aggressive filtering\n");
                }
 
-            }
 
             /* restore objective function */
             for( j = 0; j < nobjcoefs; ++j )
@@ -1648,7 +1646,7 @@ int nextBound(
       }
    }
 
-   return bestidx;
+   return bestidx;  /*lint !e438*/
 }
 
 /** try to separate the solution of the last OBBT LP in order to learn better variable bounds; we apply additional
@@ -1715,7 +1713,6 @@ SCIP_RETCODE applySeparation(
          SCIP_Bool found;
          SCIP_CALL( createGenVBound(scip, propdata, currbound, &found) );
          propdata->ngenvboundsprobing += found ? 1 : 0;
-      }
 
       /* try to tight the variable bound */
       tightened = FALSE;
@@ -1874,7 +1871,6 @@ SCIP_RETCODE findNewBounds(
 
             if( found )
                propdata->ngenvboundsprobing += 1;
-         }
 
          /* try to tighten bound in probing mode */
          success = FALSE;

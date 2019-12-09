@@ -194,6 +194,7 @@ scip::ObjReader* SCIPgetObjReader(
 {
    SCIP_READERDATA* readerdata;
 
+   assert(scip != NULL);
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
 
