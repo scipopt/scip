@@ -105,7 +105,8 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValOptype)
    else
       exponent = 1.0;
 
-   return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(exponent), k->level), (uint64_t) SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(k->expr)));
+   return SCIPhashTwo(SCIPrealHashCode(exponent), k->level),
+      (uint64_t) SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(k->expr));
 }
 
 /* ------------------- map for constant types ------------------- */
@@ -180,7 +181,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValRhstype)
 
    k = (SYM_RHSTYPE*) key;
 
-   return SCIPcombineTwoInt(SCIPrealHashCode(k->lhs), SCIPrealHashCode(k->rhs));
+   return SCIPhashTwo(SCIPrealHashCode(k->lhs), SCIPrealHashCode(k->rhs));
 }
 
 /** callback function for bliss */
