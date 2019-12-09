@@ -609,6 +609,24 @@ SCIP_DECL_SORTPTRCOMP(benderssubcompdefault)
    solvestat1 = (SCIP_SUBPROBLEMSOLVESTAT*)elem1;
    solvestat2 = (SCIP_SUBPROBLEMSOLVESTAT*)elem2;
 
+   /* prefer subproblems with fewer calls, using the index as tie breaker */
+   if( MAX(solvestat1->ncalls, solvestat2->ncalls) == 0 )
+      return solvestat1->idx - solvestat2->idx;
+   else if( solvestat1->ncalls != solvestat2->ncalls )
+      return solvestat1->ncalls - solvestat2->ncalls;
+   else
+   {
+      /* prefer the harder problem (with more average iterations) */
+      int avgiterdiff = (int)solvestat2->avgiter - (int)solvestat1->avgiter;
+
+      if( avgiterdiff != 0 )
+         return avgiterdiff;
+
+      return solvestat1->idx - solvestat2->idx;
+   }
+
+/* the code below does not give a total order of the elements */
+#ifdef SCIP_DISABLED_CODE
    if( solvestat1->ncalls == 0 )
       if( solvestat2->ncalls == 0 )
          if( solvestat1->idx < solvestat2->idx )
@@ -634,6 +652,7 @@ SCIP_DECL_SORTPTRCOMP(benderssubcompdefault)
             return -1;
       }
    }
+#endif
 }
 
 /* Local methods */
