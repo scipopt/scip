@@ -853,7 +853,7 @@ SCIP_RETCODE propgraphApplyBoundchanges(
    assert(g->stp_type == propgraph->stp_type);
    assert(propgraph->knots == g->knots);
    assert(propgraph->edges == g->edges);
-   assert(*probisinfeas);
+   assert(!(*probisinfeas));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nodestate, nnodes) );
 
