@@ -1024,9 +1024,10 @@ SCIP_RETCODE SCIPsolveProbingRelax(
 }
 
 /** print statistics of probing */
-char* SCIPsprintfProbingStats(
+char* SCIPsnprintfProbingStats(
    SCIP*                 scip,               /**< SCIP data structure */
-   char*                 strbuf              /**< string buffer */
+   char*                 strbuf,             /**< string buffer */
+   int                   len                 /**< length of string buffer */
    )
 {
    char* ptr = strbuf;
@@ -1044,7 +1045,7 @@ char* SCIPsprintfProbingStats(
           SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip),
           SCIPgetNVars(scip)
       };
-      char* vartypenames[] = {
+      const char* vartypenames[] = {
                "binary",
                "integer",
                "implicit integer",
@@ -1076,19 +1077,19 @@ char* SCIPsprintfProbingStats(
       depth = SCIPgetDepth(scip);
       probingdepth = SCIPgetProbingDepth(scip);
 
-      ptr += sprintf(ptr, "Depth: (%d total, %d probing) ", depth, probingdepth);
-      ptr += sprintf(ptr, "Fixed/Variables: %d / %d (", nvarsfixed, vartypeend[nvartypes - 1]);
+      ptr += SCIPsnprintf(ptr, len, "Depth: (%d total, %d probing) ", depth, probingdepth);
+      ptr += SCIPsnprintf(ptr, len, "Fixed/Variables: %d / %d (", nvarsfixed, vartypeend[nvartypes - 1]);
 
       for( p = 0; p < nvartypes; ++p )
       {
          int ntypevars = vartypeend[p] - (p == 0 ? 0 : vartypeend[p - 1]);
-         ptr += sprintf(ptr, "%d / %d %s%s", nvartypefixed[p], ntypevars, vartypenames[p], p < (nvartypes - 1) ? ", " : ")");
+         ptr += SCIPsnprintf(ptr, len, "%d / %d %s%s", nvartypefixed[p], ntypevars, vartypenames[p], p < (nvartypes - 1) ? ", " : ")");
       }
 
    }
    else
    {
-      (void) sprintf(strbuf, "Not in probing");
+      (void) SCIPsnprintf(strbuf, len, "Not in probing");
    }
 
    return strbuf;

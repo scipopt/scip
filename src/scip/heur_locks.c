@@ -76,6 +76,8 @@
 #define DEFAULT_USEFINALSUBMIP TRUE                      /**< should a final sub-MIP be solved to construct a feasible
                                                           *   solution if the LP was not roundable? */
 #define DEFAULT_RANDSEED      73                         /**< initial random seed */
+#define DEFAULT_MINFIXINGRATELP 0.1                      /**< minimum fixing rate over all variables (including continuous)
+                                                          *   to solve LP */
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -87,6 +89,7 @@ struct SCIP_HeurData
    SCIP_Longint          usednodes;          /**< nodes already used by locks heuristic in earlier calls */
    SCIP_Real             roundupprobability; /**< probability for rounding a variable up in case of ties */
    SCIP_Real             minfixingrate;      /**< minimum percentage of variables that have to be fixed */
+   SCIP_Real             minfixingratelp;    /**< minimum fixing rate over all variables (including continuous) to solve LP */
    SCIP_Real             minimprove;         /**< factor by which locks heuristic should at least improve the incumbent */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
    int                   maxproprounds;      /**< maximum number of propagation rounds during probing */
@@ -738,14 +741,36 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    }
    else
    {
-      SCIPdebugMsg(scip, "starting solving locks-lp at time %g\n", SCIPgetSolvingTime(scip));
+      char strbuf[SCIP_MAXSTRLEN];
+
+      if( SCIPgetNContVars(scip) > 0 )
+      {
+         nvars = SCIPgetNVars(scip);
+         vars = SCIPgetVars(scip);
+         int nminfixings = (int)(SCIPceil(scip, heurdata->minfixingratelp * nvars));
+         int nfixedvars = 0;
+
+         /* count fixed variables */
+         for( i = 0; i < nvars && nfixedvars < nminfixings; ++i )
+         {
+            if( SCIPisEQ(scip, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
+               ++nfixedvars;
+         }
+
+         SCIPdebugMsg(scip, "Fixed %d of %d (%.1f %%) variables after probing -> %s\n",
+            nfixedvars, nvars, (100.0 * nfixedvars / (SCIP_Real)nvars),
+         nfixedvars >= nminfixings ? "continue and solve LP for remaining variables" : "terminate without LP");
+
+         if( nfixedvars < nminfixings )
+            goto TERMINATE;
+
+      }
 
       /* print probing stats before LP */
-      {
-         char strbuf[SCIP_MAXSTRLEN];
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
-            SCIPsprintfProbingStats(scip, strbuf));
-      }
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+         SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
+
+      SCIPdebugMsg(scip, "starting solving locks-lp at time %g\n", SCIPgetSolvingTime(scip));
       /* solve LP;
        * errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
@@ -1101,6 +1126,10 @@ SCIP_RETCODE SCIPincludeHeurLocks(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/updatelocks",
          "should the locks be updated based on LP rows?",
          &heurdata->updatelocks, TRUE, DEFAULT_UPDATELOCKS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingratelp",
+         "minimum fixing rate over all variables (including continuous) to solve LP",
+         &heurdata->minfixingratelp, TRUE, DEFAULT_MINFIXINGRATELP, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

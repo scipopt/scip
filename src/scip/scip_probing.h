@@ -410,9 +410,10 @@ SCIP_RETCODE SCIPsolveProbingRelax(
 
 /** print statistics of probing */
 SCIP_EXPORT
-char* SCIPsprintfProbingStats(
+char* SCIPsnprintfProbingStats(
    SCIP*                 scip,               /**< SCIP data structure */
-   char*                 strbuf              /**< string buffer */
+   char*                 strbuf,             /**< string buffer */
+   int                   len                 /**< length of string buffer */
    );
 
 /** stores the candidate score and preferred rounding direction for a candidate variable */
