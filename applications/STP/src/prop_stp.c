@@ -590,7 +590,6 @@ void propgraphFixNode(
    graph_knot_printInfo(propgraph, node);
 #endif
 
-   assert(propgraph->grad[node] > 0 || propgraph->source == node);
 
    if( graph_pc_isPcMw(propgraph) )
    {
@@ -909,6 +908,7 @@ SCIP_RETCODE propgraphApplyBoundchanges(
 
    if( *probisinfeas )
    {
+      SCIP_CALL( graph_path_init(scip, propgraph) );
       return SCIP_OKAY;
    }
 
@@ -928,6 +928,8 @@ SCIP_RETCODE propgraphApplyBoundchanges(
          assert(graph_pc_isRootedPcMw(propgraph));
       }
    }
+
+   SCIP_CALL( graph_path_init(scip, propgraph) );
 
    for( int e = 0; e < nedges; e += 2 )
    {
@@ -960,14 +962,12 @@ SCIP_RETCODE propgraphApplyBoundchanges(
       }
    }
 
-   SCIP_CALL( graph_path_init(scip, propgraph) );
-
    *probisinfeas = FALSE;
+
 
    if( pcmw )
    {
       SCIP_CALL( propgraphApplyImplicationsPcMw(scip, g, vars, propgraph, nfixed, probisinfeas, offset) );
-
       graph_pc_2trans(scip, propgraph);
    }
 
