@@ -197,7 +197,7 @@ void findNextBlock(
    int i;
    (*start) = (*end);
    i = (*end) + 1;
-   while( i < len && list[i] == list[i-1] )
+   while( i < len && list[i] == list[i - 1] )
       i++;
 
    (*end) = i;
@@ -205,7 +205,7 @@ void findNextBlock(
 
 /**
  * The algorithm described in Belotti P. "Bound reduction using pairs of linear inequalities"
- * tries to derive upper and lower bounds via convex combination for all variables from given rows.
+ * tries to derive upper and lower bounds via convex combination for all variables from given rows. // the for all variables seems to reference the via convex combiniation
  * We apply Belotti's algorithm to pairs of columns of continuous variables.
  */
 static
@@ -224,7 +224,7 @@ SCIP_RETCODE combineCols(
    SCIP_Bool             swaprow2,           /**< should the sense of the second row be swapped to <= ? */
    SCIP_Real*            lbs,                /**< lower bound array */
    SCIP_Real*            ubs,                /**< upper bound array */
-   SCIP_Bool*            success             /**< we return (success ||  found better bounds") */
+   SCIP_Bool*            success             /**< we return (success || found better bounds") */
    )
 {
    int i;
@@ -291,14 +291,14 @@ SCIP_RETCODE combineCols(
    nbreakpoints = 0;
    while( i < row1len && j < row2len )
    {
-      assert(i+1 == row1len || row1idxptr[i] < row1idxptr[i+1]);
-      assert(j+1 == row2len || row2idxptr[j] < row2idxptr[j+1]);
+      assert(i + 1 == row1len || row1idxptr[i] < row1idxptr[i + 1]);
+      assert(j + 1 == row2len || row2idxptr[j] < row2idxptr[j + 1]);
 
       idx1 = row1idxptr[i];
       idx2 = row2idxptr[j];
 
       /* We use 2.0 as default value for "no cancellation". For cancellations, this will be replaced by values in (0,1).
-       * A value larger than 1.0 is used because we sort the array and want to put non-cancellations at the end. */
+       * A value larger than 1.0 is used because we sort the array and want to put non-cancellations to the end. */
       breakpoints[nvars] = 2.0;
 
       if( idx1 == idx2 )
@@ -311,7 +311,7 @@ SCIP_RETCODE combineCols(
             else
                signs[idx1] = DN;
 
-            breakpoints[nvars] = row2coefs[idx2]/(row2coefs[idx2] - row1coefs[idx1]);
+            breakpoints[nvars] = row2coefs[idx2] / (row2coefs[idx2] - row1coefs[idx1]);
             nbreakpoints++;
          }
          else if( SCIPisPositive(scip, row1coefs[idx1]) )
@@ -460,6 +460,7 @@ SCIP_RETCODE combineCols(
 
       /* TODO Implement a check that skips all further computation if ninfs >= maxcancel + 2
        * where maxcancel is the maximum number of variables that can be cancelled at once */
+      // should this be done before merging?
 
       /* Calculate bounds for lambda = 0 */
 #ifdef SCIP_MORE_DEBUG
@@ -557,7 +558,7 @@ SCIP_RETCODE combineCols(
             else
                signs[idx] = NEG;
 
-            if( j+1 >= nbreakpoints || !SCIPisEQ(scip, breakpoints[j], breakpoints[j+1]) )
+            if( j + 1 >= nbreakpoints || !SCIPisEQ(scip, breakpoints[j], breakpoints[j + 1]) )
                updated = TRUE;
 
             shift++;
@@ -839,13 +840,13 @@ void getVarBoundsOfRow(
    {
       if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) )
       {
-         *rowub = (rhs - minresactivity)/val;
+         *rowub = (rhs - minresactivity) / val; // maybe one wants some kind of numerical guard of check that values is not too small for all these
          *ubfound = TRUE;
       }
 
       if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) )
       {
-         *rowlb = (lhs - maxresactivity)/val;
+         *rowlb = (lhs - maxresactivity) / val;
          *lbfound = TRUE;
       }
    }
@@ -853,13 +854,13 @@ void getVarBoundsOfRow(
    {
       if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) )
       {
-         *rowub = (lhs - maxresactivity)/val;
+         *rowub = (lhs - maxresactivity) / val;
          *ubfound = TRUE;
       }
 
       if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) )
       {
-         *rowlb = (rhs - minresactivity)/val;
+         *rowlb = (rhs - minresactivity) / val;
          *lbfound = TRUE;
       }
    }
@@ -926,8 +927,6 @@ void getImpliedBounds(
       (!SCIPisInfinity(scip, -lbs[col]) && SCIPisGE(scip, impliedlb, lbs[col])) )
       *lbimplied = TRUE;
 }
-
-
 
 
 /** calculate minimal column activity from one variable without one row */
@@ -1367,8 +1366,8 @@ SCIP_RETCODE determineBestBounds(
          /* consider dual variable for a lower bound */
          if(SCIPisGT(scip, SCIPvarGetLbGlobal(var), -SCIPinfinity(scip)))
          {
-            assert(variables[nrows + 2*cidx] != NULL);
-            tmpvars[fillcnt] = variables[nrows + 2*cidx];
+            assert(variables[nrows + 2 * cidx] != NULL);
+            tmpvars[fillcnt] = variables[nrows + 2 * cidx];
             tmpcoef[fillcnt] = 1.0;
             fillcnt++;
          }
@@ -1376,8 +1375,8 @@ SCIP_RETCODE determineBestBounds(
          /* consider dual variable for an upper bound */
          if(SCIPisLT(scip, SCIPvarGetUbGlobal(var), SCIPinfinity(scip)))
          {
-            assert(variables[nrows + 2*cidx+1] != NULL);
-            tmpvars[fillcnt] = variables[nrows + 2*cidx+1];
+            assert(variables[nrows + 2 * cidx + 1] != NULL);
+            tmpvars[fillcnt] = variables[nrows + 2 * cidx + 1];
             tmpcoef[fillcnt] = -1.0;
             fillcnt++;
          }
@@ -1670,7 +1669,7 @@ SCIP_RETCODE dualBoundStrengthening(
       else
       {
          /* dual variable for >= inequality */
-         lbdual[i] = 0;
+         lbdual[i] = 0.0;
          ubdual[i] = SCIPinfinity(scip);
       }
    }
@@ -1709,7 +1708,7 @@ SCIP_RETCODE dualBoundStrengthening(
          maxlen = MIN(presoldata->maxconsiderednonzeros, SCIPmatrixGetColNNonzs(matrix, implubvars[i])); /*lint !e666*/
          for( j = 0; j < maxlen; j++)
          {
-            for( k = j+1; k < maxlen; k++)
+            for( k = j + 1; k < maxlen; k++)
             {
                if( SCIPisPositive(scip, colvalptr[j]) )
                {
@@ -1777,6 +1776,9 @@ SCIP_RETCODE dualBoundStrengthening(
 #ifdef SCIP_MORE_DEBUG
          SCIPdebugMsg(scip, "processing pp and mm\n");
 #endif
+
+         // same as in the rworowbnd presolver - both while loops to basically the same with one using pp and mm and the other pm and mp
+         // I would write an additional function and remove the code duplication
          while( !finished )
          {
             if( hashlistpp[block1start] == hashlistmm[block2start] )
@@ -1853,7 +1855,7 @@ SCIP_RETCODE dualBoundStrengthening(
       if( pospm > 0 && posmp > 0 )
       {
          SCIP_Longint maxcombines;
-         int ncombines;
+         int ncombines; // SCIP_Longint
          SCIP_Bool finished;
          SCIP_Bool success;
          int combinefails;

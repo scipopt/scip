@@ -151,7 +151,7 @@ int hashIndexPair(
    )
 {
    uint32_t hash = SCIPhashTwo(idx1, idx2);
-   return (int)(hash>>1);
+   return (int)(hash >> 1);
 }
 
 /** add hash/rowidx pair to hashlist/rowidxlist */
@@ -198,7 +198,7 @@ void findNextBlock(
    int i;
    (*start) = (*end);
    i = (*end) + 1;
-   while( i < len && list[i] == list[i-1] )
+   while( i < len && list[i] == list[i - 1] )
       i++;
 
    (*end) = i;
@@ -287,8 +287,8 @@ SCIP_RETCODE solveSingleRowLP(
          }
          else
          {
-            mincost = MIN(mincost, c[i]/a[i]);
-            maxgain = MAX(maxgain, c[i]/a[i]);
+            mincost = MIN(mincost, c[i] / a[i]);
+            maxgain = MAX(maxgain, c[i] / a[i]);
          }
          continue;
       }
@@ -327,7 +327,7 @@ SCIP_RETCODE solveSingleRowLP(
          /* a[i] < 0, c[i] < 0 */
          else if( SCIPisNegative(scip, c[i]) )
          {
-            maxgain = MAX(maxgain, c[i]/a[i]);
+            maxgain = MAX(maxgain, c[i] / a[i]);
          }
          /* a[i] < 0, c[i] >= 0 results in dual fixing of this variable, which is included in the bound shift below */
 
@@ -1503,8 +1503,8 @@ SCIP_RETCODE applyConvComb
    nbreakpoints = 0;
    while( i < row1len && j < row2len )
    {
-      assert(i+1 == row1len || row1idxptr[i] < row1idxptr[i+1]); // spaces around operators
-      assert(j+1 == row2len || row2idxptr[j] < row2idxptr[j+1]);
+      assert(i + 1 == row1len || row1idxptr[i] < row1idxptr[i + 1]);
+      assert(j + 1 == row2len || row2idxptr[j] < row2idxptr[j + 1]);
 
       idx1 = row1idxptr[i];
       idx2 = row2idxptr[j];
