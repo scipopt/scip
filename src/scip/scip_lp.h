@@ -1452,6 +1452,19 @@ SCIP_Real SCIPgetRowSolFeasibility(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** returns the parallelism of row with objective function
+ *
+ *  @return 1 is returned if the row is parallel to the objective function and 0 if it is orthogonal
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetRowObjParallelism(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
 /** output row to file stream via the message handler system
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

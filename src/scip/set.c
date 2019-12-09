@@ -343,6 +343,10 @@
 #define SCIP_DEFAULT_PRICE_DELVARSROOT    FALSE /**< should variables created at the root node be deleted when the root is solved
                                                  *   in case they are not present in the LP anymore? */
 
+/* Decomposition */
+#define SCIP_DEFAULT_DECOMP_BENDERSLABELS FALSE /**< should the variables be labelled for the application of Benders' decomposition */
+#define SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE  10000 /**< maximum number of edges in block graph computation, or -1 for no limit */
+
 /* Benders' decomposition */
 #define SCIP_DEFAULT_BENDERS_SOLTOL        1e-6 /**< the tolerance used to determine optimality in Benders' decomposition */
 #define SCIP_DEFAULT_BENDERS_CUTLPSOL      TRUE /**< should Benders' cuts be generated from the LP solution? */
@@ -2162,6 +2166,18 @@ SCIP_RETCODE SCIPsetCreate(
          "pricing/delvarsroot",
          "should variables created at the root node be deleted when the root is solved in case they are not present in the LP anymore?",
          &(*set)->price_delvarsroot, FALSE, SCIP_DEFAULT_PRICE_DELVARSROOT,
+         NULL, NULL) );
+
+   /* Decomposition parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "decomposition/benderslabels",
+         "should the variables be labelled for the application of Benders' decomposition?",
+         &(*set)->decomp_benderslabels, FALSE, SCIP_DEFAULT_DECOMP_BENDERSLABELS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "decomposition/maxgraphedge",
+         "maximum number of edges in block graph computation, or -1 for no limit",
+         &(*set)->decomp_maxgraphedge, FALSE, SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE, -1, INT_MAX,
          NULL, NULL) );
 
    /* Benders' decomposition parameters */
