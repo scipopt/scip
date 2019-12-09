@@ -431,6 +431,7 @@ Miscellaneous
   heuristic display characters have been unified to represent the type of the heuristic
   (diving, Large neighborhood search, propagation, etc.), see also type_heur.h.
 - added assert that ensures that the locks of a variable have been decreased to 0 when it is freed
+- added more output for completing a partial solution
 
 Known bugs
 ----------
