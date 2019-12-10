@@ -908,23 +908,26 @@ SCIP_RETCODE setupAndSolve(
       nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 );
 
    /* print message if the completion of a partial solution failed */
-   switch( SCIPgetStatus(subscip) )
+   if( *result != SCIP_FOUNDSOL )
    {
-   case SCIP_STATUS_INFEASIBLE:
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (subproblem is infeasible)\n");
-      break;
-   case SCIP_STATUS_NODELIMIT:
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (node limit exceeded)\n");
-      break;
-   case SCIP_STATUS_TIMELIMIT:
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (time limit exceeded)\n");
-      break;
-   case SCIP_STATUS_MEMLIMIT:
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (memory limit exceeded)\n");
-      break;
-   default:
-      break;
-   } /*lint !e788*/
+      switch( SCIPgetStatus(subscip) )
+      {
+      case SCIP_STATUS_INFEASIBLE:
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (subproblem is infeasible)\n");
+         break;
+      case SCIP_STATUS_NODELIMIT:
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (node limit exceeded)\n");
+         break;
+      case SCIP_STATUS_TIMELIMIT:
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (time limit exceeded)\n");
+         break;
+      case SCIP_STATUS_MEMLIMIT:
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "completion of a partial solution failed (memory limit exceeded)\n");
+         break;
+      default:
+         break;
+      } /*lint !e788*/
+   }
 
 TERMINATE:
    SCIPfreeBufferArray(scip, &subvars);
