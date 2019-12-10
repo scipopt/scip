@@ -50,6 +50,7 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
+
     #constraints
     "indicatorlogicorsepa"
     "indicatoralterlp"
@@ -57,17 +58,20 @@ set(settings_MIP
     #presolving and branching
     "convertinttobin_mostinf"
     "setppclifting_leastinf"
-    #branching and propagation
 
+    #branching and propagation
     "pscost_proporbitope"
+
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
 
     #separation and heuristics
     "oddcycleliftheur_feaspump20"
+
+    #heuristics and branching
     "heurlprows"
-    "lns_epsgreedy"
+    "lns_epsgreedy_vanilla"
     "lns_exp3"
 #    "dynamic"
     "intobj"
@@ -77,6 +81,12 @@ set(settings_MIP
 #    "cloud"
     "uct_breadth_dualval"
     "conflictdiving"
+    )
+#
+# settings for the componentshandler test
+#
+set(settings_compHandlerTest
+    "components_during_solve"
     )
 #
 # settings to run a reduced MIP test
@@ -124,6 +134,7 @@ set(settings_Symmetry
     "orbitalfixing-timing2"
     "orbitopes-timing0"
     "orbitopes-timing2"
+    "orbitopes-timing2-static"
     "packingorbitopes-timing0"
     "packingorbitopes-timing2"
     "symresacks-timing0"
@@ -136,6 +147,8 @@ set(settings_sparsify
 
 set(settings_Benders
     "usebenders"
+    "usebenders-tr"
+    "usebenders-cutstrengthen"
    )
    
 set(settings_Indicator
@@ -214,7 +227,13 @@ set(instances_MIP
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
     )
-
+#
+# Instances for component handler test
+#
+set(instances_compHandlerTest
+    "instances/MIP/lseu_dcmulti.cip\;189302"
+    "instances/MIP/4sHB.cip\;67"
+    )
 #
 # Reduced set of MIP instances for more expensive settings
 #
@@ -354,6 +373,7 @@ set(instances_Stochastic
 set(instances_Benders
     "instances/Stochastic/4node1.smps\;480.9"
     "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
+    "instances/Stochastic/sslp_5_25_50_LB.smps\;-121.6"
    )
 
 set(instances_Or
@@ -435,6 +455,7 @@ endmacro(add_instancetests)
 add_instancetests(instances_CP settings_default "CP")
 add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
+add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
@@ -499,6 +520,8 @@ set(basenames_opb_wrongformat
     misc03.mps
     rgn.mps
     vpm2.fzn
+    lseu_dcmulti.cip
+    lseu_dcmulti_sHB.cip
     )
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 
@@ -628,7 +651,9 @@ set_tests_properties(write_and_read_settings
 set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
 file(MAKE_DIRECTORY ${shell_tmp_dir})
 
-foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
+# disabled reopt on FullIns_3 until #2758 is dealt with
+# foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
+foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl)
     foreach(setting ${settings_reopt})
         configure_file(interactiveshell/${testname}.bat.in interactiveshell/${testname}-${setting}.bat)
         add_test(NAME ${testname}-${setting}

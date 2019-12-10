@@ -14,11 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_benders.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for Benders decomposition
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -34,10 +35,12 @@
 
 #include "scip/benderscut.h"
 #include "scip/benders.h"
+#include "scip/cons_linear.h"
 #include "scip/debug.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_message.h"
-#include "scip/scip_benders.h"
+#include "scip/pub_misc.h"
+#include "scip/scip.h"
 #include "scip/set.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
@@ -451,6 +454,30 @@ SCIP_RETCODE SCIPsetBendersPostsolve(
    return SCIP_OKAY;
 }
 
+/** sets the subproblem comparison method for determining the solving order in Benders' decomposition
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPsetBendersSubproblemComp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_DECL_SORTPTRCOMP((*benderssubcomp))  /**< a comparator for defining the solving order of the subproblems */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetBendersSubproblemComp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(benders != NULL);
+
+   SCIPbendersSetSubproblemComp(benders, benderssubcomp);
+
+   return SCIP_OKAY;
+}
+
 /** returns the Benders' decomposition of the given name, or NULL if not existing */
 SCIP_BENDERS* SCIPfindBenders(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -596,7 +623,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
    assert(scip->set != NULL);
    assert(benders != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveBendersSubproblems", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveBendersSubproblems", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbendersExec(benders, scip->set, sol, result, infeasible, auxviol, type, checkint) );
 
@@ -692,7 +719,12 @@ int SCIPgetBendersNSubproblems(
    return SCIPbendersGetNSubproblems(benders);
 }
 
-/** registers the Benders' decomposition subproblem with the Benders' decomposition struct
+/** registers the Benders' decomposition subproblem with the Benders' decomposition struct.
+ *
+ *  If a custom subproblem solving method is used and no internal cut generation methods will be employed, then the
+ *  subproblem parameter can be set to NULL. By setting subproblem to NULL will inform the Benders' decomposition core
+ *  that a custom solving method is used. This will ensure that no internal solving methods are invoked during the
+ *  solution process.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -703,12 +735,11 @@ int SCIPgetBendersNSubproblems(
 SCIP_RETCODE SCIPaddBendersSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
-   SCIP*                 subproblem          /**< Benders' decomposition subproblem */
+   SCIP*                 subproblem          /**< Benders' decomposition subproblem, can be NULL */
    )
 {
    assert(scip != NULL);
    assert(benders != NULL);
-   assert(subproblem != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddBendersSubproblem", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -778,7 +809,6 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL for the current LP/Pseudo solution */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
-   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
    SCIP_Bool             solvecip,           /**< directly solve the CIP subproblem */
    SCIP_Real*            objective           /**< the objective function value of the subproblem, can be NULL */
    )
@@ -790,7 +820,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveBendersSubproblem", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-  SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, type, solvecip, objective) );
+  SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, solvecip, objective) );
 
    return SCIP_OKAY;
 }
@@ -840,11 +870,8 @@ SCIP_RETCODE SCIPfreeBendersSubproblem(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
+ *  @pre This method can be called in any SCIP stage; however, it is necessary that the Benders' auxiliary variables
+ *  exist. If they don't exist, then the optimal flag is returned as FALSE.
  *
  *  @pre This method can be called if requested subproblem is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -862,12 +889,25 @@ SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
-   /* check stages for both, SCIP and the requested subproblem data structure */
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcheckBendersSubproblemOptimality", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPcheckStage(SCIPbendersSubproblem(benders, probnumber), "SCIPcheckBendersSubproblemOptimality",
-         FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   (*optimal) = FALSE;
 
-   SCIP_CALL( SCIPbendersCheckSubproblemOptimality(benders, scip->set, sol, probnumber, optimal) );
+   if( SCIPbendersGetAuxiliaryVar(benders, probnumber) == NULL )
+   {
+      SCIPinfoMessage(scip, NULL, "Benders' decomposition: The auxiliary variable for subproblem <%d> doesn't exist. "
+         "SCIPcheckBendersSubproblemOptimality can not be currently called at stage <%d>.\n", probnumber,
+         SCIPgetStage(scip));
+      SCIPinfoMessage(scip, NULL, "  The optimal flag will be returned as FALSE.\n");
+
+      return SCIP_OKAY;
+   }
+
+   if( SCIPbendersSubproblem(benders, probnumber) != NULL )
+   {
+      SCIP_CALL( SCIPcheckStage(SCIPbendersSubproblem(benders, probnumber), "SCIPcheckBendersSubproblemOptimality",
+            FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   }
+
+   (*optimal) = SCIPbendersSubproblemIsOptimal(benders, scip->set, sol, probnumber);
 
    return SCIP_OKAY;
 }
@@ -1263,9 +1303,9 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPstoreBenderscutCut(
+SCIP_RETCODE SCIPstoreBendersCut(
    SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_VAR**            vars,               /**< the variables that have non-zero coefficients in the cut */
    SCIP_Real*            vals,               /**< the coefficients of the variables in the cut */
    SCIP_Real             lhs,                /**< the left hand side of the cut */
@@ -1274,13 +1314,94 @@ SCIP_RETCODE SCIPstoreBenderscutCut(
    )
 {
    assert(scip != NULL);
-   assert(benderscut != NULL);
+   assert(benders != NULL);
    assert(vars != NULL);
    assert(vals != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPstoreBenderscutCut", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPstoreBendersCut", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbenderscutStoreCut(benderscut, scip->set, vars, vals, lhs, rhs, nvars) );
+   SCIP_CALL( SCIPbendersStoreCut(benders, scip->set, vars, vals, lhs, rhs, nvars) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a constraint in the input SCIP instance that corresponds to the given vars and vals arrays */
+static
+SCIP_RETCODE createAndApplyStoredBendersCut(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_VAR**            vars,               /**< the variables from the source constraint */
+   SCIP_Real*            vals,               /**< the coefficients of the variables in the source constriant */
+   SCIP_Real             lhs,                /**< the LHS of the source constraint */
+   SCIP_Real             rhs,                /**< the RHS of the source constraint */
+   int                   nvars,              /**< the number of variables in the source constraint */
+   int                   consindex           /**< the store index for the constraint */
+   )
+{
+   SCIP_CONS* cons;
+   char consname[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
+
+   /* setting the name of the transferred cut */
+   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "transferredbenderscut_%d", consindex);
+
+   /* creating a linear constraint given the input parameters */
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, consname, nvars, vars, vals, lhs, rhs) );
+   SCIP_CALL( SCIPsetConsRemovable(scip, cons, TRUE) );
+
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   return SCIP_OKAY;
+}
+
+/** applies the Benders' decomposition cuts in storage to the input SCIP instance
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPapplyBendersStoredCuts(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int naddedcuts;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   /* retrieving the number of stored Benders' cuts */
+   naddedcuts =  SCIPbendersGetNStoredCuts(benders);
+
+   /* looping over all added cuts to construct the cut for the input SCIP instance */
+   for( i = 0; i < naddedcuts; i++ )
+   {
+      /* collecting the variable information from the constraint */
+      SCIP_CALL( SCIPbendersGetStoredCutData(benders, i, &vars, &vals, &lhs, &rhs, &nvars) );
+
+      if( nvars > 0 )
+      {
+         /* create and apply the cut to be transferred from the sub SCIP to the source SCIP */
+         SCIP_CALL( createAndApplyStoredBendersCut(scip, vars, vals, lhs, rhs, nvars, i) );
+      }
+   }
 
    return SCIP_OKAY;
 }

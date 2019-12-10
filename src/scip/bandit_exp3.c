@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   bandit_exp3.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for Exp.3 bandit selection
  * @author Gregor Hendel
  */
@@ -318,7 +319,7 @@ SCIP_RETCODE SCIPcreateBanditExp3(
    }
 
    SCIP_CALL( SCIPbanditCreateExp3(SCIPblkmem(scip), SCIPbuffer(scip), vtable, exp3,
-         priorities, gammaparam, beta, nactions, SCIPinitializeRandomSeed(scip, (int)(initseed % INT_MAX))) );
+         priorities, gammaparam, beta, nactions, SCIPinitializeRandomSeed(scip, initseed)) );
 
    return SCIP_OKAY;
 }

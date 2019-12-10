@@ -379,7 +379,7 @@ SCIP_RETCODE GamsScip::setupSCIP()
          nlpiipopt = SCIPfindNlpi(scip, "ipopt");
          if( nlpiipopt != NULL )
          {
-            SCIPsetModifiedDefaultSettingsIpopt(nlpiipopt, "linear_solver ma27\nlinear_system_scaling mc19\n");
+            SCIPsetModifiedDefaultSettingsIpopt(nlpiipopt, "linear_solver ma27\nlinear_system_scaling mc19\n", TRUE);
             SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "HSL MA27 and MC19", "Harwell Subroutine Libraries (www.hsl.rl.ac.uk) from commercially supported Ipopt") );
          }
       }

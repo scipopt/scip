@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for node selectors
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -99,6 +100,7 @@ SCIP_RETCODE SCIPnodepqCreate(
    )
 {  /*lint --e{715}*/
    assert(nodepq != NULL);
+   assert(set != NULL);
 
    SCIP_ALLOC( BMSallocMemory(nodepq) );
    (*nodepq)->nodesel = nodesel;

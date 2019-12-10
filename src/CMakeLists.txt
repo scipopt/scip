@@ -38,6 +38,7 @@ set(scipsources
     scip/branch_pscost.c
     scip/branch_random.c
     scip/branch_relpscost.c
+    scip/branch_vanillafullstrong.c
     scip/cons_abspower.c
     scip/compr_largestrepr.c
     scip/compr_weakcompr.c
@@ -73,12 +74,14 @@ set(scipsources
     scip/cons_symresack.c
     scip/cons_varbound.c
     scip/cons_xor.c
+    scip/dcmp.c
     scip/dialog_default.c
     scip/event_globalbnd.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
     scip/disp_default.c
     scip/heur_actconsdiving.c
+    scip/heur_adaptivediving.c
     scip/heur_bound.c
     scip/heur_clique.c
     scip/heur_coefdiving.c
@@ -126,6 +129,7 @@ set(scipsources
     scip/heur_sync.c
     scip/heur_trivial.c
     scip/heur_trivialnegation.c
+    scip/heur_trustregion.c
     scip/heur_trysol.c
     scip/heur_twoopt.c
     scip/heur_undercover.c
@@ -141,6 +145,7 @@ set(scipsources
     scip/nodesel_hybridestim.c
     scip/nodesel_restartdfs.c
     scip/nodesel_uct.c
+    scip/presol_milp.cpp
     scip/presol_boundshift.c
     scip/presol_convertinttobin.c
     scip/presol_domcol.c
@@ -154,19 +159,17 @@ set(scipsources
     scip/presol_redvub.c
     scip/presol_sparsify.c
     scip/presol_stuffing.c
-    scip/presol_symbreak.c
-    scip/presol_symmetry.c
     scip/presol_trivial.c
     scip/presol_tworowbnd.c
     scip/prop_dualfix.c
     scip/prop_genvbounds.c
     scip/prop_nlobbt.c
     scip/prop_obbt.c
-    scip/prop_orbitalfixing.c
     scip/prop_probing.c
     scip/prop_pseudoobj.c
     scip/prop_redcost.c
     scip/prop_rootredcost.c
+    scip/prop_symmetry.c
     scip/prop_vbounds.c
     scip/prop_sync.c
     scip/reader_bnd.c
@@ -174,6 +177,7 @@ set(scipsources
     scip/reader_cip.c
     scip/reader_cnf.c
     scip/reader_cor.c
+    scip/reader_dec.c
     scip/reader_diff.c
     scip/reader_fix.c
     scip/reader_fzn.c
@@ -270,6 +274,7 @@ set(scipsources
     scip/scip_cut.c
     scip/scip_datastructures.c
     scip/scip_debug.c
+    scip/scip_dcmp.c
     scip/scip_dialog.c
     scip/scip_disp.c
     scip/scip_event.c
@@ -312,6 +317,7 @@ set(scipsources
     scip/sol.c
     scip/solve.c
     scip/stat.c
+    scip/symmetry.c
     scip/syncstore.c
     scip/table.c
     scip/tree.c
@@ -452,6 +458,7 @@ set(scipheaders
     scip/branch_pscost.h
     scip/branch_random.h
     scip/branch_relpscost.h
+    scip/branch_vanillafullstrong.h
     scip/clock.h
     scip/compr.h
     scip/compr_largestrepr.h
@@ -498,6 +505,7 @@ set(scipheaders
     scip/cuts.h
     scip/dbldblarith.h
     scip/debug.h
+    scip/dcmp.h
     scip/def.h
     scip/dialog_default.h
     scip/dialog.h
@@ -508,6 +516,7 @@ set(scipheaders
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/heur_actconsdiving.h
+    scip/heur_adaptivediving.h
     scip/heur_bound.h
     scip/heur_clique.h
     scip/heur_coefdiving.h
@@ -557,6 +566,7 @@ set(scipheaders
     scip/heur_sync.h
     scip/heur_trivial.h
     scip/heur_trivialnegation.h
+    scip/heur_trustregion.h
     scip/heur_trysol.h
     scip/heur_twoopt.h
     scip/heur_undercover.h
@@ -584,6 +594,7 @@ set(scipheaders
     scip/nodesel_uct.h
     scip/paramset.h
     scip/presol_boundshift.h
+    scip/presol_milp.h
     scip/presol_convertinttobin.h
     scip/presol_domcol.h
     scip/presol_dualagg.h
@@ -597,8 +608,6 @@ set(scipheaders
     scip/presol_redvub.h
     scip/presol_sparsify.h
     scip/presol_stuffing.h
-    scip/presol_symbreak.h
-    scip/presol_symmetry.h
     scip/presol_trivial.h
     scip/presol_tworowbnd.h
     scip/presolve.h
@@ -611,11 +620,11 @@ set(scipheaders
     scip/prop.h
     scip/prop_nlobbt.h
     scip/prop_obbt.h
-    scip/prop_orbitalfixing.h
     scip/prop_probing.h
     scip/prop_pseudoobj.h
     scip/prop_redcost.h
     scip/prop_rootredcost.h
+    scip/prop_symmetry.h
     scip/prop_sync.h
     scip/prop_vbounds.h
     scip/pub_branch.h
@@ -629,6 +638,7 @@ set(scipheaders
     scip/pub_conflict.h
     scip/pub_cons.h
     scip/pub_cutpool.h
+    scip/pub_dcmp.h
     scip/pub_dialog.h
     scip/pub_disp.h
     scip/pub_event.h
@@ -663,6 +673,7 @@ set(scipheaders
     scip/reader_cip.h
     scip/reader_cnf.h
     scip/reader_cor.h
+    scip/reader_dec.h
     scip/reader_diff.h
     scip/reader_fix.h
     scip/reader_fzn.h
@@ -702,6 +713,7 @@ set(scipheaders
     scip/scip_cut.h
     scip/scip_datastructures.h
     scip/scip_debug.h
+    scip/scip_dcmp.h
     scip/scip_dialog.h
     scip/scip_disp.h
     scip/scip_event.h
@@ -770,6 +782,7 @@ set(scipheaders
     scip/struct_cons.h
     scip/struct_cutpool.h
     scip/struct_cuts.h
+    scip/struct_dcmp.h
     scip/struct_dialog.h
     scip/struct_disp.h
     scip/struct_event.h
@@ -804,6 +817,7 @@ set(scipheaders
     scip/struct_tree.h
     scip/struct_var.h
     scip/struct_visual.h
+    scip/symmetry.h
     scip/syncstore.h
     scip/table_default.h
     scip/table.h
@@ -821,6 +835,7 @@ set(scipheaders
     scip/type_cons.h
     scip/type_cutpool.h
     scip/type_cuts.h
+    scip/type_dcmp.h
     scip/type_dialog.h
     scip/type_disp.h
     scip/type_event.h
@@ -934,7 +949,8 @@ target_link_libraries(libscip PRIVATE
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
-    ${SYM_LIBRARIES})
+    ${SYM_LIBRARIES}
+    ${PRESOLVELIB_IMPORTED_TARGETS})
 
 if(SHARED)
     set(SOPLEX_NEEDED 0)
@@ -958,7 +974,7 @@ if(CMAKE_BUILD_TYPE EQUAL "Debug")
 endif()
 
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
-   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
+   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES} ${PRESOLVELIB_IMPORTED_TARGETS})
 
 add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)

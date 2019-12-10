@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_nodereopt.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  branching rule to reconstruct the search tree
  * @author Jakob Witzig
  */

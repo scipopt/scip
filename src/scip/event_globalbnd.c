@@ -14,8 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_globalbnd.c
+ * @ingroup DEFPLUGINS_EVENT
  * @brief  eventhandler for storing all global bound changes
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  * the bound changes are stored so that they can be shared with other threads
  * in a concurrent solve.

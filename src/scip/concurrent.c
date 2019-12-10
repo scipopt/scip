@@ -16,7 +16,7 @@
 /**@file   concurrent.c
  * @ingroup PARALLEL
  * @brief  helper functions for concurrent SCIP solvers
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -751,8 +751,12 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    target->stat->mincopytime = MIN(source->stat->mincopytime, target->stat->mincopytime);
    target->stat->firstlptime = source->stat->firstlptime;
    target->stat->lastbranchvalue = source->stat->lastbranchvalue;
+   target->stat->dualrefintegral = source->stat->dualrefintegral;
+   target->stat->primalrefintegral = source->stat->primalrefintegral;
    target->stat->primaldualintegral = source->stat->primaldualintegral;
    target->stat->previousgap = source->stat->previousgap;
+   target->stat->previousdualrefgap = source->stat->previousdualrefgap;
+   target->stat->previousprimalrefgap = source->stat->previousprimalrefgap;
    target->stat->previntegralevaltime = source->stat->previntegralevaltime;
    target->stat->lastprimalbound = SCIPprobExternObjval(source->transprob, source->origprob, source->set, source->stat->lastprimalbound);
    target->stat->lastdualbound = SCIPprobExternObjval(source->transprob, source->origprob, source->set, source->stat->lastdualbound);

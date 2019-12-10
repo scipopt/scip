@@ -243,6 +243,7 @@ scip::ObjTable* SCIPgetObjTable(
 {
    SCIP_TABLEDATA* tabledata;
 
+   assert(scip != NULL);
    tabledata = SCIPtableGetData(table);
    assert(tabledata != NULL);
 

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_dualfix.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  fixing roundable variables to best bound
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -87,8 +88,8 @@ SCIP_RETCODE performDualfix(
       if( SCIPvarIsDeleted(var) )
          continue;
 
-      /* ignore already fixed variables (use feasibility tolerance since this is used in SCIPfixVar() */
-      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+      /* ignore already fixed variables */
+      if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          continue;
 
       obj = SCIPvarGetObj(var);
@@ -199,8 +200,11 @@ SCIP_RETCODE performDualfix(
          return SCIP_OKAY;
       }
 
-      assert(fixed || (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisFeasEQ(scip, bound, SCIPvarGetLbLocal(var))
-            && SCIPisFeasEQ(scip, bound, SCIPvarGetUbLocal(var))));
+      /* SCIPfixVar only changes bounds if not already feaseq.
+       * Only if in presolve and not probing, variables will always be fixed.
+       */
+      assert(fixed || (SCIPisFeasEQ(scip, bound, SCIPvarGetLbLocal(var))
+         && SCIPisFeasEQ(scip, bound, SCIPvarGetUbLocal(var))));
       (*nfixedvars)++;
    }
 
@@ -242,7 +246,7 @@ SCIP_DECL_PROPPRESOL(propPresolDualfix)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( !SCIPallowDualReds(scip) )
+   if( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    cutoff = FALSE;
@@ -282,7 +286,7 @@ SCIP_DECL_PROPEXEC(propExecDualfix)
     *
     *  do not run if propagation w.r.t. current objective is not allowed
     */
-   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) || !SCIPallowDualReds(scip) )
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) || !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    cutoff = FALSE;

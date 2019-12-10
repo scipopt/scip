@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_diff.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  DIFF file reader
  * @author Jakob Witzig
  *
@@ -1044,6 +1045,9 @@ SCIP_RETCODE SCIPreadDiff(
 {  /*lint --e{715}*/
    LPINPUT lpinput;
    int i;
+
+   assert(scip != NULL);
+   assert(reader != NULL);
 
    /* initialize LP input data */
    lpinput.file = NULL;

@@ -1,5 +1,0 @@
-$(LIBOBJDIR)/tpi/tpi_none.o: src/tpi/tpi_none.c src/tpi/tpi.h src/scip/def.h \
- src/scip/type_retcode.h src/scip/type_message.h src/scip/pub_message.h \
- src/tpi/def_openmp.h src/tpi/type_tpi.h src/tpi/type_tpi_openmp.h \
- src/tpi/type_tpi_tnycthrd.h src/tpi/type_tpi_none.h src/tpi/tpi_openmp.h \
- src/tpi/tpi_tnycthrd.h src/tpi/tpi_none.h

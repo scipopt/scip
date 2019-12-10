@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_cnf.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  CNF file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
@@ -61,6 +62,7 @@ void readError(
    const char*           errormsg            /**< error message */
    )
 {
+   assert( scip != NULL );
    SCIPerrorMessage("read error in line <%d>: %s\n", linecount, errormsg);
 }
 

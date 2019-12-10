@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_shiftandpropagate.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  shiftandpropagate primal heuristic
  * @author Timo Berthold
  * @author Gregor Hendel
@@ -50,7 +51,7 @@
 
 #define HEUR_NAME             "shiftandpropagate"
 #define HEUR_DESC             "Pre-root heuristic to expand an auxiliary branch-and-bound tree and apply propagation techniques"
-#define HEUR_DISPCHAR         'T'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         1000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
@@ -366,7 +367,7 @@ void relaxVar(
 
       SCIPdebugMsg(scip, "Row <%s> changed:Coefficient <%g>, LHS <%g> --> <%g>, RHS <%g> --> <%g>\n",
          SCIProwGetName(colrow), colval, lhs, matrix->lhs[rowindex], rhs, matrix->rhs[rowindex]);
-   }
+   } /*lint !e438*/
 }
 
 /** transforms bounds of a given variable s.t. its lower bound equals zero afterwards.
@@ -1204,7 +1205,7 @@ SCIP_RETCODE updateTransformation(
          /* violations have to be rechecked for rows in which variable appears */
          checkviolations = TRUE;
 
-         assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || TRANSFORMSTATUS_NEG);
+         assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
          assert(SCIPisLE(scip, ABS(lb), ABS(ub)) || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
       }
       break;

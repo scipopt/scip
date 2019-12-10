@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_tworowbnd.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  do bound tightening by using two rows
  * @author Dieter Weninger
  *
@@ -229,7 +230,7 @@ void writeLPs(
  *
  * minact = min{a2x : a1x + a3y >= b1}
  * maxact = max{a2x : a1x + a3y >= b1}
- */
+ */ /*lint -e715*/
 static
 void getActivities(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -959,7 +960,6 @@ void applyTightening(
 /** extract coefficients from matrix */
 static
 void getCoefficients(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   baserow,            /**< base row index */
    int                   otherrow,           /**< other row index */
@@ -1057,7 +1057,6 @@ void getCoefficients(
 /** calculate overlap-size */
 static
 void getNumOverlap(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   baserow,            /**< base row index */
    int                   otherrow,           /**< other row index */
@@ -1116,7 +1115,6 @@ void getNumOverlap(
 
 static
 void getOverlapBaseOrdered(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   baserow,            /**< base row index */
    int                   otherrow,           /**< other row index */
@@ -1276,7 +1274,7 @@ SCIP_RETCODE calcTwoRowBnds(
                continue;
 
             /* determine overlap-size */
-            getNumOverlap(scip, matrix, baserows[br], *colpnt,
+            getNumOverlap(matrix, baserows[br], *colpnt,
                countings, clearinfo, &numoverlap, olapidxotherorder);
 
             if( numoverlap == 0 )
@@ -1288,10 +1286,10 @@ SCIP_RETCODE calcTwoRowBnds(
             /* verify if overlap-size is ok */
             if( SUPPORT_THRESHOLD <= threshold && numoverlap < rowcnt )
             {
-               getOverlapBaseOrdered(scip, matrix, baserows[br], *colpnt,
+               getOverlapBaseOrdered(matrix, baserows[br], *colpnt,
                   countings, clearinfo, numoverlap, olapidxbaseorder);
 
-               getCoefficients(scip, matrix, baserows[br], *colpnt, numoverlap,
+               getCoefficients(matrix, baserows[br], *colpnt, numoverlap,
                   olapidxbaseorder, olapidxotherorder, othernonoverlapidx, basenonoverlapidx,
                   coefbaseoverlap, coefotheroverlap, coefbasenonoverlap, coefothernonoverlap);
 
@@ -1428,6 +1426,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
+   SCIP_Bool infeasible;
 
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
@@ -1441,7 +1440,18 @@ SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
+      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
+
+    /* if infeasibility was detected during matrix creation, return here */
+   if( infeasible )
+   {
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
 
    if( initialized && complete )
    {

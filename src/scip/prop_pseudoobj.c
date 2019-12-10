@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_pseudoobj.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  Pseudo objective propagator
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -202,7 +203,6 @@ void checkImplicsApplied(
 /** check if the global fixed indices are correct */
 static
 void checkGlbfirstnonfixed(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
@@ -684,7 +684,6 @@ SCIP_RETCODE dropVarEvents(
 /** reset propagatore data structure */
 static
 void propdataReset(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
@@ -745,7 +744,7 @@ SCIP_RETCODE propdataExit(
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->objintvars, propdata->objintvarssize);
 
    /* reset propagator data structure */
-   propdataReset(scip, propdata);
+   propdataReset(propdata);
 
    return SCIP_OKAY;
 }
@@ -1949,6 +1948,8 @@ SCIP_RETCODE addConflictBinvar(
    SCIP_Real ub;
    SCIP_Bool foundimplics;
 
+   assert(objimplics != NULL);
+
    assert(SCIPvarIsBinary(var));
 
    if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5 )
@@ -2034,7 +2035,6 @@ SCIP_RETCODE adjustCutoffbound(
    if( inferinfo != -1 )
    {
       SCIP_OBJIMPLICS* objimplics;
-      SCIP_Bool foundimplics;
       int start;
       int end;
 
@@ -2052,7 +2052,6 @@ SCIP_RETCODE adjustCutoffbound(
 
       /* get the objective contribution if we would fix the binary inference variable to its other bound */
       (*cutoffbound) -= getVarObjchg(var, SCIPvarGetBestBoundType(var), boundtype);
-      foundimplics = FALSE;
 
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
@@ -2067,8 +2066,9 @@ SCIP_RETCODE adjustCutoffbound(
 
       if( addedvars != NULL )
       {
+         SCIP_Bool foundimplics = FALSE;
          SCIP_CALL( getConflictImplics(scip, objimplics->objvars, start, end, bdchgidx, addedvars, cutoffbound, &foundimplics) );
-      }
+      } /*lint !e438*/
    }
    else
    {
@@ -2197,7 +2197,7 @@ SCIP_RETCODE resolvePropagation(
       assert(minactimpls != NULL);
 
 #ifndef NDEBUG
-      checkGlbfirstnonfixed(scip, propdata);
+      checkGlbfirstnonfixed(propdata);
 #endif
 
       if( infinity )
@@ -2497,7 +2497,7 @@ SCIP_RETCODE propagateCutoffboundGlobally(
    nobjintvars = propdata->nobjintvars;
 
 #ifndef NDEBUG
-   checkGlbfirstnonfixed(scip, propdata);
+   checkGlbfirstnonfixed(propdata);
 #endif
 
    *cutoff = FALSE;
@@ -2635,7 +2635,7 @@ SCIP_RETCODE propagateCutoffboundBinvars(
 
 #ifndef NDEBUG
    /* check that the variables before glbfirstnonfixed are globally fixed */
-   checkGlbfirstnonfixed(scip, propdata);
+   checkGlbfirstnonfixed(propdata);
 
    /* check that the variables before firstnonfixed are locally fixed */
    for( v = propdata->glbfirstnonfixed; v < propdata->firstnonfixed; ++v )
@@ -3251,7 +3251,7 @@ SCIP_RETCODE propagateLowerbound(
 
 #ifndef NDEBUG
    /* check that the global indices are correct */
-   checkGlbfirstnonfixed(scip, propdata);
+   checkGlbfirstnonfixed(propdata);
 #endif
 
    /* if the maximum pseudo objective activity is smaller than the lower bound the problem is infeasible */
@@ -3503,7 +3503,7 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
       return SCIP_OKAY;
 
    /* do nothing if objective propagation is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    pseudoobjval = SCIPgetGlobalPseudoObjval(scip);
@@ -3584,7 +3584,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
       return SCIP_OKAY;
 
    /* do not run if propagation w.r.t. objective is not allowed */
-   if( !SCIPallowObjProp(scip) )
+   if( !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
 
    /* check if enough new variable are added (due to column generation to reinitialized the propagator data) */
@@ -3706,7 +3706,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
 
    /* reset propagator data structure */
-   propdataReset(scip, propdata);
+   propdataReset(propdata);
 
    propdata->eventhdlr = NULL;
    /* include event handler for gloabl bound change events and variable added event (in case of pricing) */

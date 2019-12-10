@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_solvingphase.c
+ * @ingroup DEFPLUGINS_EVENT
  * @brief  event handler for solving phase dependent parameter adjustment
  * @author Gregor Hendel
  *
@@ -918,7 +919,7 @@ SCIP_RETCODE changeParametersUsingSettingsFiles(
    }
 
    return SCIP_OKAY;
-}
+} /*lint !e593*/
 
 /** fix/unfix relevant solving parameters that should not accidentally be set to default values */
 static

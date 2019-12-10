@@ -14,11 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_prob.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for global and local (sub)problems
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -38,6 +39,7 @@
 #include "scip/concurrent.h"
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
+#include "scip/dcmp.h"
 #include "scip/debug.h"
 #include "scip/lp.h"
 #include "scip/pricer.h"
@@ -136,6 +138,8 @@ SCIP_RETCODE SCIPcreateProb(
 
    /* initialize reoptimization structure, if needed */
    SCIP_CALL( SCIPenableReoptimization(scip, scip->set->reopt_enable) );
+
+   SCIP_CALL( SCIPdecompstoreCreate(&scip->decompstore, SCIPblkmem(scip), SCIP_DECOMPSTORE_CAPA) );
 
    return SCIP_OKAY;
 }
@@ -741,6 +745,7 @@ SCIP_RETCODE SCIPfreeProb(
       {
          SCIP_CALL( SCIPreoptFree(&scip->reopt, scip->set, scip->origprimal, scip->mem->probmem) );
       }
+      SCIPdecompstoreFree(&scip->decompstore, SCIPblkmem(scip));
       SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
       SCIP_CALL( SCIPprimalFree(&scip->origprimal, scip->mem->probmem) );
       SCIP_CALL( SCIPprobFree(&scip->origprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
@@ -3228,7 +3233,6 @@ SCIP_RETCODE SCIPaddConflict(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(scip->conflictstore != NULL);
-   assert(conftype != SCIP_CONFTYPE_UNKNOWN);
    assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || iscutoffinvolved);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflict", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );

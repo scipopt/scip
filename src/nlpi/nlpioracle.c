@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpioracle.c
+ * @ingroup OTHER_CFILES
  * @brief   implementation of NLPI oracle interface
  * @author  Stefan Vigerske
  *

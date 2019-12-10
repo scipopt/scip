@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_cloud.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  cloud branching rule
  * @author Timo Berthold
  * @author Domenico Salvagnin
@@ -664,7 +665,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       branchruledata->useunion = FALSE;
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 /*

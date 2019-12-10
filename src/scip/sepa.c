@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for separators
  * @author Tobias Achterberg
  * @author Timo Berthold

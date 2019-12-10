@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_fullstrong.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  full strong LP branching rule
  * @author Tobias Achterberg
  * @author Gerald Gamrath
@@ -343,7 +344,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          }
          else
          {
-            SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, lpcands[c], INT_MAX,
+            SCIP_CALL( SCIPgetVarStrongbranchFrac(scip, lpcands[c], INT_MAX, FALSE,
                   skipdown[i] ? NULL : &down, skipup[i] ? NULL : &up, &downvalid, &upvalid, &downinf, &upinf,
                   &downconflict, &upconflict, &lperror) );
          }

@@ -14,11 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_param.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for SCIP parameter handling
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -1005,4 +1006,18 @@ int SCIPgetNParams(
    assert(scip->set != NULL);
 
    return SCIPsetGetNParams(scip->set);
+}
+
+/** returns whether plugins with sub-SCIPs that could cause recursion have been disabled
+ *
+ *  @return the value of the variable set->subscipsoff
+ */
+SCIP_Bool SCIPgetSubscipsOff(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetGetSubscipsOff(scip->set);
 }

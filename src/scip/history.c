@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   history.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for branching and inference history
  * @author Tobias Achterberg
  */
@@ -302,7 +303,7 @@ SCIP_RETCODE SCIPvaluehistoryFind(
       SCIPsortedvecInsertRealPtr(valuehistory->values, (void**)valuehistory->histories, value, (void*)(*history), &valuehistory->nvalues, NULL);
    }
    else
-      (*history) = valuehistory->histories[pos];
+      (*history) = valuehistory->histories[pos]; /*lint !e530*/
 
    assert(*history != NULL);
 

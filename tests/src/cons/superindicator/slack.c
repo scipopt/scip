@@ -40,6 +40,7 @@ enum SCIP_SlackType
 };
 typedef enum SCIP_SlackType SCIP_SLACKTYPE;
 
+#ifndef NDEBUG
 /** find the position of a variable in an array of variables; returns -1 if not found */
 static
 int findvarpos(
@@ -61,6 +62,7 @@ int findvarpos(
 
    return -1;
 }
+#endif
 
 /** copies an array of variables and objective values */
 static
@@ -807,7 +809,7 @@ SCIP_RETCODE SCIPsolveSlack(
    {
       SCIP_Bool stored;
 
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "solving the realaxed original problem with original objective function\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "solving the relaxed original problem with original objective function\n");
 
       /* adding the last set of solutions */
       for(c = 0; c < nsols; ++c)

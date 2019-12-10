@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   interrupt.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for catching the user CTRL-C interrupt
  * @author Tobias Achterberg
  */
@@ -62,7 +63,9 @@ static
 void interruptHandler(
    int                   signum              /**< interrupt signal number */
    )
-{ /*lint --e{715}*/
+{
+   SCIP_UNUSED(signum);
+
    ninterrupts++;
    if( ninterrupts >= 5 )
    {

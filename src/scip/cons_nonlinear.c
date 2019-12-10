@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_nonlinear.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for nonlinear constraints \f$\textrm{lhs} \leq \sum_{i=1}^n a_ix_i + \sum_{j=1}^m c_jf_j(x) \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  * @author Ingmar Vierhaus (consparse)
@@ -178,7 +179,6 @@ struct SCIP_ConshdlrData
 
    SCIP_Real             cutmaxrange;        /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linfeasshift;       /**< whether to make solutions in check feasible if possible */
-   SCIP_Bool             checkconvexexpensive;/**< whether to apply expensive curvature checking methods */
    SCIP_Bool             assumeconvex;       /**< whether functions in inequalities should be assumed to be convex */
    int                   maxproprounds;      /**< limit on number of propagation rounds for a single constraint within one round of SCIP propagation */
    SCIP_Bool             reformulate;        /**< whether to reformulate expression graph */
@@ -2116,6 +2116,7 @@ SCIP_RETCODE presolveUpgrade(
       if( nupgdconss_ > 0 )
       {
          /* got upgrade */
+         SCIP_CONSDATA* consdata;
          int j;
 
          SCIPdebugMsg(scip, " -> upgraded to %d constraints:\n", nupgdconss_);
@@ -2139,6 +2140,12 @@ SCIP_RETCODE presolveUpgrade(
          SCIPdebugMsg(scip, "delete constraint <%s> after upgrade\n", SCIPconsGetName(cons));
          SCIP_CALL( SCIPdelCons(scip, cons) );
 
+         /* make sure node is disabled now, so that reformulation within this presolve round does not work on it */
+         consdata = SCIPconsGetData(cons);
+         assert(consdata != NULL);
+         if( consdata->exprgraphnode != NULL )
+            SCIPexprgraphDisableNode(conshdlrdata->exprgraph, consdata->exprgraphnode);
+
          break;
       }
    }
@@ -2153,7 +2160,6 @@ static
 SCIP_RETCODE checkCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< nonlinear constraint */
-   SCIP_Bool             expensivechecks,    /**< whether also expensive checks should be executed */
    SCIP_Bool             assumeconvex        /**< whether to assume convexity in inequalities */
    )
 {
@@ -2243,7 +2249,7 @@ SCIP_RETCODE checkCurvature(
 
 /* replaces a node by another node in expression graph
  * moves all parents of node to replacement
- * replaces all exprgraphnode's in constraints that are node by replacement
+ * replaces all exprgraphnode's in constraints that use node by replacement, except for the last "update constraints" many, because they may use node on purpose
  * node may be freed, if captured only by given constraints
  */
 static
@@ -2251,8 +2257,8 @@ SCIP_RETCODE reformReplaceNode(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
    SCIP_EXPRGRAPHNODE**  node,               /**< pointer to node to be replaced in expression graph */
    SCIP_EXPRGRAPHNODE*   replacement,        /**< node which takes node's place */
-   SCIP_CONS**           conss,              /**< constraints */
-   int                   nconss              /**< number of constraints */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   int                   nskipupdatecons     /**< number of last update constraints to be skipped in check */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -2262,7 +2268,8 @@ SCIP_RETCODE reformReplaceNode(
    assert(node != NULL);
    assert(*node != NULL);
    assert(replacement != NULL);
-   assert(conss != NULL || nconss == 0);
+   assert(conshdlr != NULL);
+   assert(nskipupdatecons <= SCIPconshdlrGetNUpdateConss(conshdlr));
 
    SCIP_CALL( SCIPexprgraphMoveNodeParents(exprgraph, node, replacement) );
 
@@ -2271,15 +2278,23 @@ SCIP_RETCODE reformReplaceNode(
       return SCIP_OKAY;
 
    /* if node still exists, then because it is captured by some constraint (it should not have parents anymore)
-    * thus, look into the given constraints and replace their exprgraphnode by replacement
-    * @todo may be expensive when this is done more often, esp. when we know that node will not be freed due to an added auxiliary constraint
+    * thus, look into all active constraints and also those that have been just added during reformulation (delayed activation)
+    * and replace their exprgraphnode by replacement
+    * @todo may be expensive when this is done more often
     */
    assert(*node == NULL || SCIPexprgraphGetNodeNParents(*node) == 0);
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < SCIPconshdlrGetNActiveConss(conshdlr) + SCIPconshdlrGetNUpdateConss(conshdlr) - nskipupdatecons; ++c )
    {
-      assert(conss[c] != NULL);  /*lint !e613*/
+      SCIP_CONS* cons;
 
-      consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+      if( c < SCIPconshdlrGetNActiveConss(conshdlr) )
+         cons = SCIPconshdlrGetConss(conshdlr)[c];
+      else
+         cons = SCIPconshdlrGetUpdateConss(conshdlr)[c-SCIPconshdlrGetNActiveConss(conshdlr)];
+
+      assert(cons != NULL);  /*lint !e613*/
+
+      consdata = SCIPconsGetData(cons);  /*lint !e613*/
       assert(consdata != NULL);
 
       if( consdata->exprgraphnode == *node )
@@ -2305,8 +2320,7 @@ SCIP_RETCODE reformNode2Var(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
    SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
-   SCIP_CONS**           conss,              /**< constraints where to update exprgraphnode */
-   int                   nconss,             /**< number of constraints */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    int*                  naddcons,           /**< counter to increase when constraint is added */
    SCIP_Bool             donotmultaggr       /**< whether to mark auxiliary variable as not to multiaggregate */
    )
@@ -2362,7 +2376,7 @@ SCIP_RETCODE reformNode2Var(
 
    /* move parents of node in expression graph to auxvarnode
     * replace node by auxvarnode in constraints that use node */
-   SCIP_CALL( reformReplaceNode(exprgraph, &node, auxvarnode, conss, nconss) );
+   SCIP_CALL( reformReplaceNode(exprgraph, &node, auxvarnode, conshdlr, 1) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
    SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
@@ -2379,8 +2393,7 @@ SCIP_RETCODE reformEnsureChildrenMinCurvature(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
    SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
    SCIP_EXPRCURV         mincurv,            /**< minimal desired curvature */
-   SCIP_CONS**           conss,              /**< constraints to check whether they use one of the replaced nodes */
-   int                   nconss,             /**< number of constraints to check */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    int*                  naddcons            /**< counter to increase when constraint is added */
    )
 {
@@ -2407,7 +2420,7 @@ SCIP_RETCODE reformEnsureChildrenMinCurvature(
          SCIPdebugMsg(scip, "add auxiliary variable for child %p(%d,%d) with curvature %s\n",
             (void*)child, SCIPexprgraphGetNodeDepth(child), SCIPexprgraphGetNodePosition(child), SCIPexprcurvGetName(SCIPexprgraphGetNodeCurvature(child)) );
 
-         SCIP_CALL( reformNode2Var(scip, exprgraph, child, conss, nconss, naddcons, FALSE) );
+         SCIP_CALL( reformNode2Var(scip, exprgraph, child, conshdlr, naddcons, FALSE) );
          needupdate = TRUE;
 
          /* i'th child of node should now be a variable */
@@ -2840,6 +2853,7 @@ SCIP_RETCODE reformulate(
          {
             if( conshdlrdata->nlconsupgrades[u]->nodereform != NULL && conshdlrdata->nlconsupgrades[u]->active )
             {
+               int nupdateconsbefore = SCIPconshdlrGetNUpdateConss(conshdlr);
                SCIP_CALL( conshdlrdata->nlconsupgrades[u]->nodereform(scip, exprgraph, node, naddcons, &reformnode) );
                if( reformnode == NULL )
                   continue;
@@ -2847,7 +2861,8 @@ SCIP_RETCODE reformulate(
                SCIPdebugMsg(scip, "external nodereform reformulated node %p(%d,%d), replace by %p\n",
                   (void*)node, SCIPexprgraphGetNodeDepth(node), SCIPexprgraphGetNodePosition(node), (void*)reformnode);
 
-               SCIP_CALL( reformReplaceNode(exprgraph, &node, reformnode, conss, nconss) );
+               /* do not replace node in nonlinear update constraints that may have been added by reformulation */
+               SCIP_CALL( reformReplaceNode(exprgraph, &node, reformnode, conshdlr, SCIPconshdlrGetNUpdateConss(conshdlr) - nupdateconsbefore) );
                SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(reformnode, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
                assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(reformnode)));
 
@@ -2918,7 +2933,7 @@ SCIP_RETCODE reformulate(
              * thus, turn node into variable, if it has nonlinear parents */
             if( havenonlinparent )
             {
-               SCIP_CALL( reformNode2Var(scip, exprgraph, node, conss, nconss, naddcons, FALSE) );
+               SCIP_CALL( reformNode2Var(scip, exprgraph, node, conshdlr, naddcons, FALSE) );
                assert(node != NULL);
                assert(SCIPexprgraphGetNodeNParents(node) == 0); /* node should now be at top of graph */
             }
@@ -2936,7 +2951,7 @@ SCIP_RETCODE reformulate(
              * however, that will not work for user-expressions, so we should also ensure that they are none (@todo as they are linear, they could actually be replaced by a regular linear expression)
              */
             SCIPdebugMessage("ensure children are linear\n");
-            SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conss, nconss, naddcons) );
+            SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conshdlr, naddcons) );
 
             needupdate = FALSE;  /* whether we need to update curvature of node */
             for( c = 0; c < SCIPexprgraphGetNodeNChildren(node); ++c )
@@ -2949,7 +2964,7 @@ SCIP_RETCODE reformulate(
                   SCIPdebugMessage("add auxiliary variable for child %p(%d,%d) with curvature %s operator %s\n",
                      (void*)child, SCIPexprgraphGetNodeDepth(child), SCIPexprgraphGetNodePosition(child), SCIPexprcurvGetName(SCIPexprgraphGetNodeCurvature(child)), SCIPexpropGetName(SCIPexprgraphGetNodeOperator(child)) );
 
-                  SCIP_CALL( reformNode2Var(scip, exprgraph, child, conss, nconss, naddcons, FALSE) );
+                  SCIP_CALL( reformNode2Var(scip, exprgraph, child, conshdlr, naddcons, FALSE) );
                   needupdate = TRUE;
 
                   /* c'th child of node should now be a variable */
@@ -2978,7 +2993,7 @@ SCIP_RETCODE reformulate(
              */
             if( havenonlinparent || SCIPexprgraphHasNodeSibling(node) )
             {
-               SCIP_CALL( reformNode2Var(scip, exprgraph, node, conss, nconss, naddcons, FALSE) );
+               SCIP_CALL( reformNode2Var(scip, exprgraph, node, conshdlr, naddcons, FALSE) );
                assert(node != NULL);
                assert(SCIPexprgraphGetNodeNParents(node) == 0); /* node should now be at top of graph, so it can be upgraded by cons_quadratic */
                break;
@@ -3047,7 +3062,7 @@ SCIP_RETCODE reformulate(
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
 
             /* replace node by auxvarnode in graph and constraints that use it */
-            SCIP_CALL( reformReplaceNode(exprgraph, &node, auxvarnode, conss, nconss) );
+            SCIP_CALL( reformReplaceNode(exprgraph, &node, auxvarnode, conshdlr, 1) );
 
             SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
             SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
@@ -3061,7 +3076,7 @@ SCIP_RETCODE reformulate(
          case SCIP_EXPR_MIN:
          {
             /* make sure that both children are concave, because min of concave functions is concave */
-            SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_CONCAVE, conss, nconss, naddcons) );
+            SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_CONCAVE, conshdlr, naddcons) );
             assert(SCIPexprgraphGetNodeCurvature(node) & SCIP_EXPRCURV_CONCAVE);
             ++i;
             break;
@@ -3070,7 +3085,7 @@ SCIP_RETCODE reformulate(
          case SCIP_EXPR_MAX:
          {
             /* make sure that both children are convex, because max of convex functions is convex */
-            SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_CONVEX, conss, nconss, naddcons) );
+            SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_CONVEX, conshdlr, naddcons) );
             assert(SCIPexprgraphGetNodeCurvature(node) & SCIP_EXPRCURV_CONVEX);
             ++i;
             break;
@@ -3085,12 +3100,14 @@ SCIP_RETCODE reformulate(
             {
                SCIP_EXPRGRAPHNODE* auxvarnode;
                SCIP_Real exponent;
+               int naddconsbefore = *naddcons;
 
                /* if we have something like x^(-3) with mixed sign for x, then add auxvar and reform as auxvar*x^3 = 1 via reformMonomial */
                exponent = (SCIP_Real)SCIPexprgraphGetNodeIntPowerExponent(node);
                SCIP_CALL( reformMonomial(scip, exprgraph, 1, children, &exponent, &auxvarnode, TRUE, SCIPexprgraphGetNodeDepth(node), naddcons) );
+
                /* replace node by auxvarnode */
-               SCIP_CALL( reformReplaceNode(exprgraph, &node, auxvarnode, conss, nconss) );
+               SCIP_CALL( reformReplaceNode(exprgraph, &node, auxvarnode, conshdlr, *naddcons - naddconsbefore) );
                break;
             }
 
@@ -3111,7 +3128,7 @@ SCIP_RETCODE reformulate(
          {
             assert(nchildren == 1);
 
-            SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conss, nconss, naddcons) );
+            SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conshdlr, naddcons) );
 
             if( SCIPexprgraphGetNodeCurvature(node) == SCIP_EXPRCURV_UNKNOWN )
             {
@@ -3139,7 +3156,7 @@ SCIP_RETCODE reformulate(
                assert(SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_SIGNPOWER || SCIPexprgraphGetNodeSignPowerExponent(node) > 1.0);
                if( havenonlinparent )
                {
-                  SCIP_CALL( reformNode2Var(scip, exprgraph, node, conss, nconss, naddcons, FALSE) );
+                  SCIP_CALL( reformNode2Var(scip, exprgraph, node, conshdlr, naddcons, FALSE) );
                   assert(node != NULL); /* it should be used by some auxiliary constraint now */
                   assert(SCIPexprgraphGetNodeNParents(node) == 0); /* node should now be at top of graph (and used by new auxiliary constraint) */
                }
@@ -3162,8 +3179,9 @@ SCIP_RETCODE reformulate(
 
          case SCIP_EXPR_PRODUCT:
          {
+            int naddconsbefore;
             /* ensure all children are linear */
-            SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conss, nconss, naddcons) );
+            SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conshdlr, naddcons) );
             if( SCIPexprgraphGetNodeCurvature(node) != SCIP_EXPRCURV_UNKNOWN )
             {
                ++i;
@@ -3172,10 +3190,11 @@ SCIP_RETCODE reformulate(
 
             /* if curvature is still unknown (quite likely), then turn into a cascade of bilinear terms
              * if node has parents, then ensure that it has a known curvature, otherwise we are also fine with a node that is a product of two (aux)variables */
+            naddconsbefore = *naddcons;
             SCIP_CALL( reformMonomial(scip, exprgraph, nchildren, children, NULL, &reformnode, havenonlinparent, SCIPexprgraphGetNodeDepth(node), naddcons) );
 
             /* replace node by reformnode in graph and in all constraints that use it */
-            SCIP_CALL( reformReplaceNode(exprgraph, &node, reformnode, conss, nconss) );
+            SCIP_CALL( reformReplaceNode(exprgraph, &node, reformnode, conshdlr, *naddcons - naddconsbefore) );
 
             /* do not increase i, since node was removed and not necessarily replaced here */
             break;
@@ -3344,7 +3363,7 @@ SCIP_RETCODE reformulate(
                SCIPfreeBufferArray(scip, &monomialnodes);
 
                /* replace node by sumnode, and we are done */
-               SCIP_CALL( reformReplaceNode(exprgraph, &node, sumnode, conss, nconss) );
+               SCIP_CALL( reformReplaceNode(exprgraph, &node, sumnode, conshdlr, 0) );
 
                SCIPdebugMsg(scip, "splitup polynomial into sum of %d nodes\n", nmonomialnodes);
 
@@ -3379,7 +3398,7 @@ SCIP_RETCODE reformulate(
                {
                   assert(childcurv != SCIP_EXPRCURV_LINEAR);
                   SCIPdebugMsg(scip, "reform child %d (univar. monomial) with curv %s into var\n", childidxs[0], SCIPexprcurvGetName(childcurv));
-                  SCIP_CALL( reformNode2Var(scip, exprgraph, children[childidxs[0]], conss, nconss, naddcons, FALSE) );  /*lint !e613*/
+                  SCIP_CALL( reformNode2Var(scip, exprgraph, children[childidxs[0]], conshdlr, naddcons, FALSE) );  /*lint !e613*/
                   modified = TRUE;
                }
             }
@@ -3408,7 +3427,7 @@ SCIP_RETCODE reformulate(
                   if( childcurv == SCIP_EXPRCURV_UNKNOWN )
                   {
                      SCIPdebugMessage("reform child %d with unknown curvature into var\n", c);
-                     SCIP_CALL( reformNode2Var(scip, exprgraph, children[c], conss, nconss, naddcons, FALSE) );  /*lint !e613*/
+                     SCIP_CALL( reformNode2Var(scip, exprgraph, children[c], conshdlr, naddcons, FALSE) );  /*lint !e613*/
                      modified = TRUE;
                   }
                }
@@ -3508,7 +3527,7 @@ SCIP_RETCODE reformulate(
                      {
                         SCIPdebugMsg(scip, "reform child %d (factor %d) with curv %s into var\n",
                            childidxs[f], f, SCIPexprcurvGetName(SCIPexprgraphGetNodeCurvature(children[childidxs[f]])));  /*lint !e613*/
-                        SCIP_CALL( reformNode2Var(scip, exprgraph, children[childidxs[f]], conss, nconss, naddcons, FALSE) );  /*lint !e613*/
+                        SCIP_CALL( reformNode2Var(scip, exprgraph, children[childidxs[f]], conshdlr, naddcons, FALSE) );  /*lint !e613*/
                         modified = TRUE;
                      }
                   }
@@ -3544,6 +3563,7 @@ SCIP_RETCODE reformulate(
             {
                SCIP_EXPRGRAPHNODE* auxnode;
                SCIP_EXPRGRAPHNODE** factors;
+               int naddconsbefore = *naddcons;
 
                if( nfactors > 1 )
                {
@@ -3577,7 +3597,7 @@ SCIP_RETCODE reformulate(
                }
 
                /* replace node by auxnode and refresh its curvature */
-               SCIP_CALL( reformReplaceNode(exprgraph, &node, auxnode, conss, nconss) );
+               SCIP_CALL( reformReplaceNode(exprgraph, &node, auxnode, conshdlr, *naddcons - naddconsbefore) );
                SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(auxnode, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
                assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(auxnode)));
 
@@ -3595,7 +3615,7 @@ SCIP_RETCODE reformulate(
          case SCIP_EXPR_USER:
          {
             /* ensure all children are linear */
-            SCIP_CALL( reformEnsureChildrenMinCurvature( scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conss, nconss, naddcons ) );
+            SCIP_CALL( reformEnsureChildrenMinCurvature( scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conshdlr, naddcons ) );
 
             /* unknown curvature can be handled by user estimator callback or interval gradient */
             /*
@@ -3686,7 +3706,7 @@ SCIP_RETCODE reformulate(
                   SCIPdebugMsg(scip, "replace linear multivariate node %p(%d,%d) in expression of cons <%s> by auxvar\n",
                      (void*)multivarnode, SCIPexprgraphGetNodeDepth(multivarnode), SCIPexprgraphGetNodePosition(multivarnode), SCIPconsGetName(conss[c]));  /*lint !e613*/
                   SCIPdebugPrintCons(scip, conss[c], NULL);  /*lint !e613*/
-                  SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conss, nconss, naddcons, TRUE) );
+                  SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conshdlr, naddcons, TRUE) );
                }
             }
          }
@@ -3726,7 +3746,7 @@ SCIP_RETCODE reformulate(
             SCIPdebugMsg(scip, "replace linear multivariate node %p(%d,%d) in expression of cons <%s> by auxvar\n",
                (void*)multivarnode, SCIPexprgraphGetNodeDepth(multivarnode), SCIPexprgraphGetNodePosition(multivarnode), SCIPconsGetName(conss[c]));  /*lint !e613*/
             SCIPdebugPrintCons(scip, conss[c], NULL);  /*lint !e613*/
-            SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conss, nconss, naddcons, TRUE) );
+            SCIP_CALL( reformNode2Var(scip, exprgraph, multivarnode, conshdlr, naddcons, TRUE) );
          }
       }
    }
@@ -5366,7 +5386,6 @@ SCIP_RETCODE generateCut(
    SCIP_ROW**            row,                /**< storage for cut */
    SCIP_Real             minviol,            /**< minimal absolute violation we try to achieve */
    SCIP_Real             maxrange,           /**< maximal range allowed */
-   SCIP_Bool             expensivecurvchecks,/**< whether also expensive checks should be executed */
    SCIP_Bool             assumeconvex        /**< whether to assume convexity in inequalities */
    )
 {
@@ -5382,7 +5401,7 @@ SCIP_RETCODE generateCut(
 
    SCIPdebugMsg(scip, "constructing cut for %s hand side of constraint <%s>\n", side == SCIP_SIDETYPE_LEFT ? "left" : "right", SCIPconsGetName(cons));
 
-   SCIP_CALL( checkCurvature(scip, cons, expensivecurvchecks, assumeconvex) );
+   SCIP_CALL( checkCurvature(scip, cons, assumeconvex) );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5393,7 +5412,7 @@ SCIP_RETCODE generateCut(
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%u", SCIPconsGetName(cons), ++(consdata->ncuts));
 
       /* if we are actually linear, add the constraint as row to the LP */
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), rowname, consdata->lhs, consdata->rhs, SCIPconsIsLocal(cons), FALSE , TRUE) );
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, cons, rowname, consdata->lhs, consdata->rhs, SCIPconsIsLocal(cons), FALSE , TRUE) );
       SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
       return SCIP_OKAY;
    }
@@ -5497,7 +5516,7 @@ SCIP_RETCODE generateCut(
 
    if( success )
    {
-      SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, cons) );
    }
    else
       *row = NULL;
@@ -5571,7 +5590,7 @@ SCIP_RETCODE separatePoint(
       /* generate cut
        * if function is defined at sol (activity<infinity) and constraint is violated, then expression interpreter should have evaluated at sol to get gradient before
        */
-      SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], NULL, sol, newsol || SCIPisInfinity(scip, consdata->activity), violside, &row, minefficacy, conshdlrdata->cutmaxrange, conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+      SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], NULL, sol, newsol || SCIPisInfinity(scip, consdata->activity), violside, &row, minefficacy, conshdlrdata->cutmaxrange, conshdlrdata->assumeconvex) );
 
       if( row == NULL ) /* failed to generate cut */
          continue;
@@ -5664,7 +5683,7 @@ SCIP_RETCODE addLinearizationCuts(
       if( SCIPconsIsLocal(conss[c]) )  /*lint !e613*/
          continue;
 
-      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );  /*lint !e613*/
+      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->assumeconvex) );  /*lint !e613*/
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
@@ -5676,7 +5695,7 @@ SCIP_RETCODE addLinearizationCuts(
 
       SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], NULL, ref, TRUE,
             (consdata->curvature & SCIP_EXPRCURV_CONVEX) ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT,
-            &row, minefficacy, conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
+            &row, minefficacy, conshdlrdata->cutmaxrange, FALSE) );  /*lint !e613*/
 
       if( row == NULL )
          continue;
@@ -7122,10 +7141,10 @@ SCIP_RETCODE enforceConstraint(
    /* find branching candidates */
    SCIP_CALL( registerBranchingVariables(scip, conshdlr, conss, nconss, &nnotify) );
 
-   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPlpfeastol(scip) )
+   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPgetLPFeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, SCIPlpfeastol(scip), TRUE, &separateresult, &sepaefficacy) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, SCIPgetLPFeastol(scip), TRUE, &separateresult, &sepaefficacy) );
       if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
       {
          *result = separateresult;
@@ -7471,7 +7490,7 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
          if( consdata->nlrow == NULL )
          {
             /* compute curvature for the nonlinear constraint if not done yet */
-            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->assumeconvex) );
 
             SCIP_CALL( createNlRow(scip, conss[c]) );
             assert(consdata->nlrow != NULL);
@@ -7641,7 +7660,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
-      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );  /*lint !e613*/
+      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->assumeconvex) );  /*lint !e613*/
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
@@ -7652,7 +7671,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
       {
          assert(consdata->exprgraphnode == NULL);
          /* if we are actually linear, add the constraint as row to the LP */
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conss[c], SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613*/
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
          SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
@@ -7706,7 +7725,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
       if( !SCIPisInfinity(scip,  consdata->rhs) && ((consdata->curvature & SCIP_EXPRCURV_CONVEX)  || !haveunboundedvar) )
       {
          SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], x, NULL, TRUE, SCIP_SIDETYPE_RIGHT, &row,
-               -SCIPinfinity(scip), conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
+               -SCIPinfinity(scip), conshdlrdata->cutmaxrange, FALSE) );  /*lint !e613*/
 
          if( row != NULL )
          {
@@ -7720,7 +7739,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
          ((consdata->curvature & SCIP_EXPRCURV_CONCAVE) || !haveunboundedvar) )
       {
          SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], x, NULL, TRUE, SCIP_SIDETYPE_LEFT, &row,
-            -SCIPinfinity(scip), conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
+            -SCIPinfinity(scip), conshdlrdata->cutmaxrange, FALSE) );  /*lint !e613*/
 
          if( row != NULL )
          {
@@ -7802,7 +7821,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
                continue;
 
             /* make sure curvature has been checked */
-            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );  /*lint !e613*/
+            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->assumeconvex) );  /*lint !e613*/
 
             if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
                ( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) )
@@ -9216,12 +9235,6 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          "whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)",
          &conshdlrdata->linfeasshift, FALSE, TRUE, NULL, NULL) );
 
-#if 0 /* don't have any expensive checks yet, so we disable this parameter for now */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkconvexexpensive",
-         "whether to apply expensive curvature checking methods",
-         &conshdlrdata->checkconvexexpensive, FALSE, TRUE, NULL, NULL) );
-#endif
-
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/assumeconvex",
          "whether to assume that nonlinear functions in inequalities (<=) are convex (disables reformulation)",
          &conshdlrdata->assumeconvex, TRUE, FALSE, NULL, NULL) );
@@ -9693,6 +9706,7 @@ int SCIPgetNLinearVarsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -9705,6 +9719,7 @@ SCIP_VAR** SCIPgetLinearVarsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -9717,6 +9732,7 @@ SCIP_Real* SCIPgetLinearCoefsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -9729,6 +9745,7 @@ int SCIPgetNExprtreesNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
@@ -9742,6 +9759,7 @@ SCIP_EXPRTREE** SCIPgetExprtreesNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
@@ -9755,6 +9773,7 @@ SCIP_Real* SCIPgetExprtreeCoefsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
@@ -9768,6 +9787,7 @@ SCIP_EXPRGRAPHNODE* SCIPgetExprgraphNodeNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -9780,6 +9800,7 @@ SCIP_Real SCIPgetLhsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -9792,6 +9813,7 @@ SCIP_Real SCIPgetRhsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -9815,7 +9837,7 @@ SCIP_RETCODE SCIPcheckCurvatureNonlinear(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+   SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->assumeconvex) );
 
    return SCIP_OKAY;
 }
@@ -9846,7 +9868,7 @@ SCIP_RETCODE SCIPgetCurvatureNonlinear(
 
    if( checkcurv && !consdata->iscurvchecked )
    {
-      SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+      SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->assumeconvex) );
    }
 
    *curvature = consdata->curvature;
@@ -9883,7 +9905,7 @@ SCIP_RETCODE SCIPgetExprtreeCurvaturesNonlinear(
 
    if( checkcurv && !consdata->iscurvchecked )
    {
-      SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+      SCIP_CALL( checkCurvature(scip, cons, conshdlrdata->assumeconvex) );
    }
 
    *curvatures = consdata->curvatures;
@@ -10074,7 +10096,7 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
 
       /* solve the linear problem */
       SCIP_CALL( SCIPsolveLinearProb(3, m, rhs, x, &success) );
-      assert(success);
+      /* assert(success); */
 
       *delta  = rhs[0];
       *alpha  = x[0];

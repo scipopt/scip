@@ -72,7 +72,6 @@ MAINCXXOBJ	= 	main.o \
 
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINSRC		+=	$(addprefix $(SRCDIR)/,$(MAINCXXOBJ:.o=.cpp))
-MAINDEP		=	$(SRCDIR)/depend.main.$(OPT)
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINFILE	=	$(BINDIR)/$(MAIN)
@@ -160,7 +159,7 @@ test:		$(MAINFILE) $(CHECKDIR)
 clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
 		@-rm -f $(LASTSETTINGS)
-		@-(rm -f $(OBJDIR)/*.o && rmdir $(OBJDIR));
+		@-(rm -f $(OBJDIR)/*.o $(OBJDIR)/*.d && rmdir $(OBJDIR));
 		@echo "-> remove main objective files"
 endif
 		@-rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
@@ -172,9 +171,6 @@ tags:
 
 .PHONY: depend
 depend:		$(SCIPDIR)
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z\_]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		>$(MAINDEP)'
 		@echo `grep -l "WITH_CPOPTIMIZER" $(MAINSRC)` >$(CPOPTDEP)
 
 
@@ -189,7 +185,7 @@ endif
 		@echo "LAST_CPOPT=$(CPOPT)" >> $(LASTSETTINGS)
 
 
--include	$(MAINDEP)
+-include	$(MAINOBJFILES:.o=.d)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) touchexternal $(MAINOBJFILES)
 		@echo "-> linking $@"
@@ -197,10 +193,10 @@ $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) tou
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(DFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(DFLAGS) -c $< $(CXX_o)$@
 
 #---- EOF --------------------------------------------------------------------

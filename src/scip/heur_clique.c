@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_clique.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  LNS heuristic using a clique partition to restrict the search neighborhood
  * @brief  clique primal heuristic
  * @author Stefan Heinz
@@ -65,7 +66,7 @@
 
 #define HEUR_NAME             "clique"
 #define HEUR_DESC             "LNS heuristic using a clique partition to restrict the search neighborhood"
-#define HEUR_DISPCHAR         'Q'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         5000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
@@ -500,56 +501,6 @@ SCIP_RETCODE applyCliqueFixings(
    return SCIP_OKAY;
 }
 
-/** creates a new solution for the original problem by copying the solution of the subproblem */
-static
-SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_SOL*             newsol,             /**< working solution */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem */
-   SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-   )
-{
-   SCIP_VAR** vars;                          /* the original problem's variables */
-   int nvars;
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem */
-
-   assert(scip != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-   assert(subsol != NULL);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
-   if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsol)) )
-      return SCIP_OKAY;
-
-   /* get variables' data */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-
-   /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
-
-   SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
-   /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
-
-   SCIPfreeBufferArray(scip, &subsolvals);
-
-   return SCIP_OKAY;
-}
-
 /*
  * Callback methods of primal heuristic
  */
@@ -634,8 +585,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    SCIP_Longint nstallnodes;
 
-   SCIP_SOL* sol;
-
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
@@ -680,7 +629,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    oldnpscands = SCIPgetNPseudoBranchCands(scip);
    onefixvars = NULL;
    onefixvals = NULL;
-   sol = NULL;
 
    /* disable conflict analysis, because we can it better than SCIP itself, cause we have more information */
    SCIP_CALL( SCIPgetBoolParam(scip, "conflict/enable", &enabledconflicts) );
@@ -718,9 +666,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 #ifdef COLLECTSTATISTICS
    SCIPenableVarHistory(scip);
 #endif
-
-   /* create a solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
 
    /* allocate memory for all variables which will be fixed to one during probing */
    SCIP_CALL(SCIPallocBufferArray(scip, &onefixvars, nbinvars) );
@@ -810,6 +755,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* check if this is a feasible solution */
    if( lpstatus == SCIP_LPSOLSTAT_OPTIMAL && !lperror )
    {
+      SCIP_SOL* sol;
       SCIP_Bool stored;
       SCIP_Bool success;
 
@@ -817,7 +763,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       lowerbound = SCIPgetLPObjval(scip);
 
-      /* copy the current LP solution to the working solution */
+      /* create a solution from the current LP solution */
+      SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
       SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
       SCIP_CALL( SCIProundSol(scip, sol, &success) );
@@ -844,9 +791,13 @@ SCIP_DECL_HEUREXEC(heurExecClique)
             *result = SCIP_FOUNDSOL;
          }
 
+         SCIP_CALL( SCIPfreeSol(scip, &sol) );
+
          /* we found a solution, so we are done */
          goto TERMINATE;
       }
+
+      SCIP_CALL( SCIPfreeSol(scip, &sol) );
    }
    /*************************** END Probing LP Solving ***************************/
 
@@ -907,7 +858,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
-      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_clique", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_clique", NULL, NULL, 0, FALSE, FALSE, FALSE,
+            TRUE, &valid) );
 
       if( heurdata->copycuts )
       {
@@ -1011,9 +963,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
        */
       if( ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars) >= heurdata->minmipfixingrate )
       {
-         SCIP_SOL** subsols;
          SCIP_Bool success;
-         int nsubsols;
 
          SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
 
@@ -1024,16 +974,10 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->
           * try all solutions until one was accepted
           */
-         nsubsols = SCIPgetNSols(subscip);
-         subsols = SCIPgetSols(subscip);
-         success = FALSE;
-
-         for( i = 0; i < nsubsols && !success; ++i )
-         {
-            SCIP_CALL( createNewSol(scip, subscip, subvars, sol, subsols[i], &success) );
-         }
+         SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, NULL) );
          if( success )
             *result = SCIP_FOUNDSOL;
+
 #ifndef NOCONFLICT
          /* if subscip was infeasible, add a conflict */
          if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
@@ -1083,12 +1027,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* free conflict variables */
    SCIPfreeBufferArrayNull(scip, &onefixvals);
    SCIPfreeBufferArrayNull(scip, &onefixvars);
-
-   /* freeing solution */
-   if( sol != NULL )
-   {
-      SCIP_CALL( SCIPfreeSol(scip, &sol) );
-   }
 
    /* end probing */
    if( SCIPinProbing(scip) )

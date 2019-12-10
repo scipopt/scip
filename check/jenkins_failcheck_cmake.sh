@@ -188,16 +188,22 @@ elif [ "${PERFORMANCE}" == "mergerequest" ]; then
   touch $RBDB
 fi
 
-SEED=0
-while [ ${SEED} -le ${SEEDS} ]; do
+: ${GLBSEEDSHIFT:=0}
+: ${STARTPERM:=0}
+
+SEEDSBND=$(expr ${SEEDS} + ${GLBSEEDSHIFT})
+PERMUTEBND=$(expr ${PERMUTE} + ${STARTPERM})
+
+SEED=${GLBSEEDSHIFT}
+while [ "${SEED}" -le "${SEEDSBND}" ]; do
   # get ending given by seed
   if [ "${SEED}" == "0" ]; then
     SEED_ENDING=""
   else
     SEED_ENDING="-s${SEED}"
   fi
-  PERM=0
-  while [ ${PERM} -le ${PERMUTE} ]; do
+  PERM=${STARTPERM}
+  while [ "${PERM}" -le "${PERMUTEBND}" ]; do
     # get ending given by permutation
     if [ "${PERM}" == "0" ]; then
       PERM_ENDING=""
@@ -329,6 +335,9 @@ ${SCIP_HEADER}
 
 SETTINGS FILE:
 ${SETFILE}
+
+BINARY:
+${PWD}/${EXECUTABLE}
 \`\`\`
 
 Here is a list of the instances and the assertion that fails (fails with _fail (abort)_), if any:
@@ -411,8 +420,8 @@ if [ "${PERFORMANCE}" == "performance" ]; then
 ")
 
   # add a comparison for all permutations
-  PERM=0
-  while [ $PERM -le $PERMUTE ]; do
+  PERM=${STARTPERM}
+  while [ ${PERM} -le ${PERMUTEBND} ]; do
     LASTWEEK=$(grep -e ${OLDTIMESTAMP} ${RBDB}|grep -P "p=${PERM}($| )" |cut -d ' ' -f 2)
     THISWEEK=$(grep -e ${NEWTIMESTAMP} ${RBDB}|grep -P "p=${PERM}($| )" |cut -d ' ' -f 2)
 
@@ -444,10 +453,11 @@ elif [ "${PERFORMANCE}" == "mergerequest" ]; then
   MAINRBDB="/nfs/OPTI/adm_timo/databases/rbdb/${GITBRANCH}_${MODE}_${TESTSET}_*_${SCIP_BUILDDIR}_rbdb.txt"
 
   COMPAREIDS=""
+
   COUNT_S=0
-  while [ $COUNT_S -le $SEEDS ]; do
+  while [ "${COUNT_S}" -le "${SEEDSBND}" ]; do
     COUNT_P=0
-    while [ $COUNT_P -le $PERMUTE ]; do
+    while [ "${COUNT_P}" -le "${PERMUTEBND}" ]; do
       RBDB_STRS=$(grep -e "\(${COMPAREHASH}\|${FULLGITHASH}\|${NEWTIMESTAMP}\)" ${RBDB} ${MAINRBDB} | grep -P "p=${COUNT_P} s=${COUNT_S}")
       if [ "${RBDB_STRS}" != "" ]; then
         if [ 2 -le $(echo "${RBDB_STRS}" |wc -l) ]; then
@@ -472,6 +482,8 @@ ${RBDB_STRS}"
 
   PERF_MAIL_ESC=${PERF_MAIL//
 /\\n}
+  SUBJECT_ESC=${SUBJECT//
+/\\n}
 
-  curl -X POST https://git.zib.de/api/v4/projects/${gitlabMergeRequestTargetProjectId}/merge_requests/${gitlabMergeRequestIid}/notes -H "Content-Type: application/json" -d '{"body":"'"${PERF_MAIL_ESC}"'"}'  --header "PRIVATE-TOKEN: ${gitlabPrivateToken}"
+  curl -X POST https://git.zib.de/api/v4/projects/${gitlabMergeRequestTargetProjectId}/merge_requests/${gitlabMergeRequestIid}/notes -H "Content-Type: application/json" -d '{"body":"'"${SUBJECT_ESC}${PERF_MAIL_ESC}"'"}'  --header "PRIVATE-TOKEN: ${gitlabPrivateToken}"
 fi

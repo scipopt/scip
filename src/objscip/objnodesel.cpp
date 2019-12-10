@@ -261,6 +261,7 @@ scip::ObjNodesel* SCIPgetObjNodesel(
 {
    SCIP_NODESELDATA* nodeseldata;
 
+   assert(scip != NULL);
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
 

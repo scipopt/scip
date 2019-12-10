@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file cons_disjunction.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for disjunction constraints
  * @author Stefan Heinz
  * @author Michael Winkler
@@ -769,6 +770,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
       *success = FALSE;
       goto TERMINATE;
    }
+   assert(saveptr != NULL); /* for lint */
 
    /* skip '(' */
    ++saveptr;

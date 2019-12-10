@@ -3758,6 +3758,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          lpi->clp->setLogLevel(0);
       break;
    case SCIP_LPPAR_LPITLIM:
+      /* ival >= 0, 0 stop immediately */
+      assert( ival >= 0 );
       lpi->clp->setMaximumIterations(ival);
       break;
    case SCIP_LPPAR_FASTMIP:
@@ -3828,18 +3830,43 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
+      assert( dval > 0.0 );
+      /* 0 < dval < 1e10 */
+      if( dval > 1e+10 )
+      {
+         /* however dval is required to be strictly less than 1e+10 */
+         dval = 9e+9;
+      }
+
       lpi->clp->setPrimalTolerance(dval);
       break;
    case SCIP_LPPAR_DUALFEASTOL:
+      assert( dval > 0.0 );
+      /* 0 < dval < 1e10 */
+      if( dval > 1e+10 )
+      {
+         /* however dval is required to be strictly less than 1e+10 */
+         dval = 9e+9;
+      }
+
       lpi->clp->setDualTolerance(dval);
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
       /* @todo add BARRIERCONVTOL parameter */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_OBJLIM:
+      /* no restriction on dval */
+
       lpi->clp->setDualObjectiveLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
+      assert( dval > 0.0 );
+      /* clp poses no restrictions on dval
+       * (it handles the case dval < 0 internally and sets param to -1 meaning no time limit.)
+       *
+       * However for consistency we assert the timelimit to be strictly positive.
+       */
+
       lpi->clp->setMaximumSeconds(dval);
       break;
    default:

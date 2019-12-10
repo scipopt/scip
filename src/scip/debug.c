@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   debug.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for debugging
  * @author Tobias Achterberg
  */
@@ -887,10 +888,10 @@ SCIP_RETCODE SCIPdebugCheckRow(
       SCIProwGetName(row), lhs, minactivity, maxactivity, rhs);
 
    /* check row for violation, using absolute LP feasibility tolerance (as LP solver should do) */
-   if( maxactivity + SCIPsetLpfeastol(set) < lhs || minactivity - SCIPsetLpfeastol(set) > rhs )
+   if( maxactivity + SCIPgetLPFeastol(set->scip) < lhs || minactivity - SCIPgetLPFeastol(set->scip) > rhs )
    {
       printf("***** debug: row <%s> violates debugging solution (lhs=%.15g, rhs=%.15g, activity=[%.15g,%.15g], local=%u, lpfeastol=%g)\n",
-         SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row), SCIPsetLpfeastol(set));
+         SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row), SCIPgetLPFeastol(set->scip));
       SCIProwPrint(row, SCIPgetMessagehdlr(set->scip), NULL);
 
       /* output row with solution values */
@@ -2338,4 +2339,3 @@ SCIP_RETCODE SCIPcheckStage(
    }
 }
 #endif
-

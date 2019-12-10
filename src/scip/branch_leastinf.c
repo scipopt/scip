@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch_leastinf.c
+ * @ingroup DEFPLUGINS_BRANCH
  * @brief  least infeasible LP branching rule
  * @author Tobias Achterberg
  * @author Stefan Vigerske

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presolve.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for presolving
  * @author Michael Winkler
  */

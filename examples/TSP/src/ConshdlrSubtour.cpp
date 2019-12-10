@@ -168,8 +168,7 @@ SCIP_RETCODE sepaSubtour(
          for(int i = 0; i < ncuts && *result != SCIP_CUTOFF; ++i)
          {
             SCIP_ROW* row;
-
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "subtour", 2.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "subtour", 2.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -463,7 +462,7 @@ SCIP_DECL_CONSCHECK(ConshdlrSubtour::scip_check)
       assert(graph != NULL);
 
       // if a subtour is found, the solution must be infeasible
-      found = findSubtour(scip, graph, sol);      
+      found = findSubtour(scip, graph, sol);
       if( found )
       {
          *result = SCIP_INFEASIBLE;

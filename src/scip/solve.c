@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   solve.c
+ * @ingroup OTHER_CFILES
  * @brief  main solving loop and node processing
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -391,7 +392,6 @@ SCIP_RETCODE propagationRound(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
@@ -561,7 +561,6 @@ SCIP_RETCODE propagateDomains(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
@@ -606,13 +605,13 @@ SCIP_RETCODE propagateDomains(
       propround++;
 
       /* perform the propagation round by calling the propagators and constraint handlers */
-      SCIP_CALL( propagationRound(blkmem, set, stat, primal, tree, depth, fullpropagation, FALSE, &delayed, &propagain, timingmask, cutoff, postpone) );
+      SCIP_CALL( propagationRound(blkmem, set, stat, tree, depth, fullpropagation, FALSE, &delayed, &propagain, timingmask, cutoff, postpone) );
 
       /* if the propagation will be terminated, call the delayed propagators */
       while( delayed && (!propagain || propround >= maxproprounds) && !(*cutoff) )
       {
          /* call the delayed propagators and constraint handlers */
-         SCIP_CALL( propagationRound(blkmem, set, stat, primal, tree, depth, fullpropagation, TRUE, &delayed, &propagain, timingmask, cutoff, postpone) );
+         SCIP_CALL( propagationRound(blkmem, set, stat, tree, depth, fullpropagation, TRUE, &delayed, &propagain, timingmask, cutoff, postpone) );
       }
 
       /* if a reduction was found, we want to do another full propagation round (even if the propagator only claimed
@@ -639,7 +638,6 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< LP data */
@@ -656,7 +654,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_Bool postpone;
 
    /* apply domain propagation */
-   SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, depth, maxproprounds, TRUE, timingmask, cutoff, &postpone) );
+   SCIP_CALL( propagateDomains(blkmem, set, stat, tree, depth, maxproprounds, TRUE, timingmask, cutoff, &postpone) );
 
    /* flush the conflict set storage */
    SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable) );
@@ -793,7 +791,7 @@ SCIP_RETCODE updatePseudocost(
             int nboundchgs;
 
             boundchgs = node->domchg->domchgbound.boundchgs;
-            nboundchgs = node->domchg->domchgbound.nboundchgs;
+            nboundchgs = (int) node->domchg->domchgbound.nboundchgs;
             for( i = 0; i < nboundchgs; ++i )
             {
                var = boundchgs[i].var;
@@ -2208,7 +2206,7 @@ SCIP_RETCODE SCIPpriceLoop(
 
       /* if the lower bound is already higher than the cutoff bound, we can stop pricing */
       mustprice = mustprice && SCIPsetIsLT(set, SCIPnodeGetLowerbound(currentnode), primal->cutoffbound);
-   }
+   }  /*lint !e438*/
    assert(lp->flushed);
    assert(lp->solved || *lperror);
 
@@ -2426,7 +2424,7 @@ SCIP_RETCODE priceAndCutLoop(
 
                SCIPsetDebugMsg(set, " -> LP solved: call propagators that are applicable during LP solving loop\n");
 
-               SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE,
+               SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE,
                      SCIP_PROPTIMING_DURINGLPLOOP, cutoff, &postpone) );
                assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
                assert(!postpone);
@@ -2503,7 +2501,7 @@ SCIP_RETCODE priceAndCutLoop(
             assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
             *lperror = *lperror || lp->resolvelperror;
-         }
+         } /*lint !e438*/
       }
       assert(lp->flushed || *cutoff || *unbounded);
       assert(lp->solved || *lperror || *cutoff || *unbounded);
@@ -2734,7 +2732,7 @@ SCIP_RETCODE priceAndCutLoop(
 
                         stalllpobjval = lpobjval;
                         stallnfracs = nfracs;
-                     }
+                     }  /*lint !e438*/
                      else
                      {
                         stalling = (stalllpsolstat == SCIPlpGetSolstat(lp));
@@ -2832,7 +2830,7 @@ SCIP_RETCODE priceAndCutLoop(
       (*cutoff || *unbounded) ? SCIPsetInfinity(set) : *lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set, transprob));
 
    return SCIP_OKAY;
-}
+}  /*lint !e438*/
 
 /** updates the current lower bound with the pseudo objective value, cuts off node by bounding, and applies conflict
  *  analysis if the pseudo objective lead to the cutoff
@@ -3200,7 +3198,7 @@ SCIP_RETCODE solveNodeRelax(
 
       lowerbound = -SCIPsetInfinity(set);
 
-      SCIP_CALL( SCIPrelaxExec(set->relaxs[r], set, stat, depth, &lowerbound, &result) );
+      SCIP_CALL( SCIPrelaxExec(set->relaxs[r], set, tree, stat, depth, &lowerbound, &result) );
 
       switch( result )
       {
@@ -3466,7 +3464,8 @@ SCIP_RETCODE enforceConstraints(
          break;
 
       case SCIP_SOLVELP:
-         assert(!SCIPtreeHasFocusNodeLP(tree));
+         /* either LP was not solved, or it is not solved anymore (e.g., because feastol has been tightened by some constraint handler) */
+         assert(!SCIPtreeHasFocusNodeLP(tree) || !lp->solved);
          assert(tree->nchildren == 0);
          assert(SCIPsepastoreGetNCuts(sepastore) == 0);
          *infeasible = TRUE;
@@ -3745,7 +3744,7 @@ SCIP_RETCODE propAndSolve(
       /* call after LP propagators */
       if( ((*afterlpproplps) < stat->nnodelps && (*lpsolved)) || (*relaxcalled) )
       {
-         SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
+         SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
                SCIP_PROPTIMING_AFTERLPLOOP, cutoff, postpone) );
          assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
@@ -3758,7 +3757,7 @@ SCIP_RETCODE propAndSolve(
       /* call before LP propagators */
       if( propagate && !(*cutoff) )
       {
-         SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
+         SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
                SCIP_PROPTIMING_BEFORELP, cutoff, postpone) );
          assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
       }
@@ -4057,7 +4056,7 @@ SCIP_RETCODE solveNode(
    int actdepth;
    int nlperrors;
    int nloops;
-   SCIP_Bool foundsol = FALSE;
+   SCIP_Bool foundsol;
    SCIP_Bool focusnodehaslp;
    SCIP_Bool lpsolved;
    SCIP_Bool initiallpsolved;
@@ -4196,7 +4195,11 @@ SCIP_RETCODE solveNode(
 
          /* time or solution limit was hit and we already created a dummy child node to terminate fast */
          if( *stopped )
+         {
+            /* reset LP feastol to normal value, in case someone tightened it during node solving */
+            SCIPlpResetFeastol(lp, set);
             return SCIP_OKAY;
+         }
       }
       fullseparation = FALSE;
 
@@ -4663,6 +4666,9 @@ SCIP_RETCODE solveNode(
       /* add the observation to the regression */
       SCIPregressionAddObservation(stat->regressioncandsobjval, (SCIP_Real)nlpbranchcands, lpobjval);
    }
+
+   /* reset LP feastol to normal value, in case someone tightened it during node solving */
+   SCIPlpResetFeastol(lp, set);
 
    return SCIP_OKAY;
 }
@@ -5244,7 +5250,7 @@ SCIP_RETCODE SCIPsolveCIP(
    /* update the primal-dual integral if node or time limits were hit or an interruption signal was called */
    if( SCIPsolveIsStopped(set, stat, TRUE) )
    {
-      SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), -SCIPsetInfinity(set));
+      SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), -SCIPsetInfinity(set));
    }
 
    assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);

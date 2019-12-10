@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_gauge.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  gauge separator
  * @author Felipe Serrano
  *

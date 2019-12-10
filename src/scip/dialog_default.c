@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dialog_default.c
+ * @ingroup OTHER_CFILES
  * @brief  default user interface dialog
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -1559,9 +1560,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubproblem)
                subidx = i;
 
             subproblem = SCIPbendersSubproblem(benders[idx], subidx);
-            assert(subproblem != NULL);
 
-            if( SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
+            if( subproblem != NULL && SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
             {
                SCIPdialogMessage(scip, NULL, "\n");
                SCIPdialogMessage(scip, NULL, "Subproblem %d\n", subidx);
@@ -1711,16 +1711,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
                subidx = i;
 
             subproblem = SCIPbendersSubproblem(benders[idx], subidx);
-            assert(subproblem != NULL);
 
-            if( SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
+            if( subproblem != NULL && SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
             {
                /* setting up the subproblem with the best solution to the master problem */
                SCIP_CALL( SCIPsetupBendersSubproblem(scip, benders[idx], bestsol, subidx) );
 
                /* solving the subproblem using the best solution to the master problem */
                SCIP_CALL( SCIPsolveBendersSubproblem(scip, benders[idx], bestsol, subidx, &infeasible,
-                     SCIP_BENDERSENFOTYPE_CHECK, TRUE, NULL) );
+                     TRUE, NULL) );
 
                if( infeasible )
                   SCIPdialogMessage(scip, NULL, "subproblem %d is infeasible.\n", subidx);
@@ -3467,7 +3466,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
          SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
          fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3514,17 +3513,16 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMIPStart)
          if( sol == NULL )
          {
             SCIPdialogMessage(scip, NULL, "no mip start available\n");
-            fclose(file);
          }
          else
          {
             SCIP_CALL_FINALLY( SCIPprintMIPStart(scip, sol, file), fclose(file) );
 
             SCIPdialogMessage(scip, NULL, "written mip start information to file <%s>\n", filename);
-            fclose(file);
          }
+         fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3644,7 +3642,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
 
          fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3688,7 +3686,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
          SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
          fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3770,7 +3768,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
          else if( ! SCIPparseReal(scip, refstrs[i], &refvals[i], &endptr) )
          {
             SCIPdialogMessage(scip, NULL, "Could not parse value '%s', please try again or type 'q' to quit\n", refstrs[i]);
-            --i;
+            --i; /*lint !e850*/
          }
       }
 

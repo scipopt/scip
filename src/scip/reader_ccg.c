@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_ccg.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  Graph file reader (actually, only a writer)
  * @author Marc Pfetsch
  *
@@ -411,6 +412,7 @@ SCIP_RETCODE SCIPwriteCcg(
    SparseGraph G;
 
    assert( scip != NULL );
+   assert( vars != NULL );
    assert( nvars >= 0 );
 
    /* initialize graph */

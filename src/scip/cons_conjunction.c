@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_conjunction.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for conjunction constraints
  * @author Tobias Achterberg
  */
@@ -537,6 +538,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
       *success = FALSE;
       goto TERMINATE;
    }
+   assert(saveptr != NULL); /* for lint */
 
    /* skip '(' */
    ++saveptr;
@@ -602,7 +604,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
 
 	       SCIP_CALL( SCIPreallocBufferArray(scip, &conss, sconss) );
 	    }
-
+            assert(nexttokenstart != NULL); /* for lint */
 	    assert(saveptr > nexttokenstart);
 
 	    /* extract token for parsing */

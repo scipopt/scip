@@ -202,7 +202,7 @@ SCIP_RETCODE cut_add(
    assert(g != NULL);
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "twocut", 1.0, SCIPinfinity(scip), local, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "twocut", 1.0, SCIPinfinity(scip), local, FALSE, TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -449,7 +449,7 @@ SCIP_RETCODE sep_flow(
             {
                SCIP_Bool infeasible;
 
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "term", 1.0,
+               SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "term", 1.0,
                      1.0, FALSE, FALSE, TRUE) );
 
                SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -499,7 +499,7 @@ SCIP_RETCODE sep_flow(
             {
                SCIP_Bool infeasible;
 
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "flow", 0.0, SCIPinfinity(scip),
+               SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "flow", 0.0, SCIPinfinity(scip),
                      FALSE, FALSE, TRUE) );
 
                SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -550,7 +550,7 @@ SCIP_RETCODE sep_flow(
          {
             SCIP_Bool infeasible;
 
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "infl", -SCIPinfinity(scip),
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "infl", -SCIPinfinity(scip),
                   1.0, FALSE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -597,7 +597,7 @@ SCIP_RETCODE sep_flow(
          {
             SCIP_Bool infeasible;
 
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "bala", 0.0,
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "bala", 0.0,
                   (g->terms == 2) ? 0.0 : SCIPinfinity(scip), FALSE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -1531,7 +1531,9 @@ SCIP_DECL_CONSLOCK(consLockStp)
    nvars = SCIPprobdataGetNVars(scip);
 
    for( v = 0; v < nvars; ++v )
-      SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, 1, 1) );
+   {
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], locktype, nlockspos, nlocksneg) );
+   }
 
    return SCIP_OKAY;
 }
@@ -2032,7 +2034,7 @@ SCIP_RETCODE SCIPStpDualAscent(
                }
                else
                {
-                  SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "da", 1.0,
+                  SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "da", 1.0,
                         SCIPinfinity(scip), FALSE, FALSE, TRUE) );
 
                   SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -2565,7 +2567,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
                }
                else
                {
-                  SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "da", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE));
+                  SCIP_CALL(SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "da", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE));
                   SCIP_CALL(SCIPcacheRowExtensions(scip, row));
                }
             }

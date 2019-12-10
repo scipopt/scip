@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   bitencode.c
+ * @ingroup OTHER_CFILES
  * @brief  packing single and dual bit values
  * @author Thorsten Koch
  * @author Tobias Achterberg
@@ -109,6 +110,7 @@ void SCIPencodeSingleBit(
 
       assert(inp != NULL);
       assert(out != NULL);
+      assert(rest <= (int) SCIP_SINGLEPACKETSIZE);
 
       for( int i = 0; i < rest; i++ )
          m |= mask[i][inp[i]];
@@ -143,69 +145,69 @@ void SCIPdecodeSingleBit(
 
       m = *inp++;
 
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       m >>= 1;
-      *out++ = m & 1;
+      *out++ = (int)m & 1;
       assert(m >> 1 == 0);
    }
 
@@ -217,7 +219,7 @@ void SCIPdecodeSingleBit(
       m = *inp;
       for( i = 0; i < rest; i++ )
       {
-         *out++ = m & 1;
+         *out++ = (int)m & 1;
          m >>= 1;
       }
    }
@@ -260,7 +262,7 @@ void SCIPencodeDualBit(
    rest = count % dualpacketsize;
    nfull = count - rest;
 
-   for( int i = 0; i < nfull; i += dualpacketsize, inp += dualpacketsize )
+   for( int i = 0; i < nfull; i += dualpacketsize, inp += dualpacketsize ) /*lint !e679*/
    {
       assert(inp != NULL);
       assert(out != NULL);
@@ -285,6 +287,7 @@ void SCIPencodeDualBit(
 
       assert(inp != NULL);
       assert(out != NULL);
+      assert(rest <= (int) SCIP_DUALPACKETSIZE);
 
       for( int i = 0; i < rest; i++ )
          m |= mask[i][inp[i]];
@@ -319,37 +322,37 @@ void SCIPdecodeDualBit(
 
       m = *inp++;
 
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       m >>= 2;
-      *out++ = m & 3;
+      *out++ = (int)m & 3;
       assert(m >> 2 == 0);
    }
 
@@ -361,7 +364,7 @@ void SCIPdecodeDualBit(
       m = *inp;
       for( i = 0; i < rest; i++ )
       {
-         *out++ = m & 3;
+         *out++ = (int)m & 3;
          m >>= 2;
       }
    }

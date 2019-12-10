@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_cip.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  CIP file reader
  * @author Stefan Heinz
  * @author Marc Pfetsch
@@ -191,6 +192,8 @@ void getStart(
    )
 {
    char* buf;
+
+   assert(scip != NULL);
 
    buf = cipinput->strbuf;
 

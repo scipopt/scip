@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_mcf.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  multi-commodity-flow network cut separator
  * @author Tobias Achterberg
  * @author Christian Raack
@@ -1196,6 +1197,7 @@ SCIP_RETCODE extractCapacityRows(
 
          c = SCIPcolGetLPPos(rowcols[i]);
          assert(0 <= c && c < SCIPgetNLPCols(scip));
+         assert(colcommodity != NULL);  /* for lint */
 
          /* check if this is a flow variable */
          k = colcommodity[c];
@@ -2303,6 +2305,11 @@ SCIP_RETCODE extractCapacities(
       assert(0 <= r && r < nrows );
       capacityrow = rows[r];
 
+      assert(capacityrowsigns != NULL); /* for lint */
+      assert(capacityrowscores != NULL);
+      assert(rowcommodity != NULL);
+      assert(flowrowsigns != NULL);
+
       /* row must be a capacity candidate */
       assert((capacityrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) != 0);
       assert((capacityrowsigns[r] & DISCARDED) == 0);
@@ -2325,6 +2332,7 @@ SCIP_RETCODE extractCapacities(
       {
          c = SCIPcolGetLPPos(rowcols[k]);
          assert(0 <= c && c < ncols);
+         assert(colcommodity != NULL); /* for lint */
 
          assert(-1 <= colcommodity[c] && colcommodity[c] < mcfdata->ncommodities);
          assert(-1 <= colarcid[c] && colarcid[c] < mcfdata->narcs);
@@ -2386,6 +2394,7 @@ SCIP_RETCODE extractCapacities(
       {
          int rowc = SCIPcolGetLPPos(rowcols[k]);
          assert(0 <= rowc && rowc < ncols);
+         assert(colcommodity != NULL); /* for lint */
 
          /* due to aggregations in preprocessing it may happen that a flow variable appears in multiple capacity constraints;
           * in this case, assign it to the first that has been found
@@ -2766,6 +2775,7 @@ SCIP_RETCODE extractNodes(
       assert(flowcands != NULL);
       r = flowcands[n];
       assert(0 <= r && r < nrows);
+      assert(rowcommodity != NULL);
 
       /* ignore rows that are not used as flow conservation constraint */
       basecommodity = rowcommodity[r];
@@ -2800,6 +2810,9 @@ SCIP_RETCODE extractNodes(
       rowcols = SCIProwGetCols(rows[r]);
       rowvals = SCIProwGetVals(rows[r]);
       rowlen = SCIProwGetNLPNonz(rows[r]);
+
+      assert(commoditysigns != NULL);
+
       if( (flowrowsigns[r] & RHSASSIGNED) != 0 )
          rowscale = +1;
       else
@@ -2857,6 +2870,7 @@ SCIP_RETCODE extractNodes(
          int collen;
          int j;
 
+         assert(newcols != NULL);
          c = newcols[i];
          assert(0 <= c && c < ncols);
          assert(mcfdata->colcommodity[c] >= 0);
@@ -2961,7 +2975,6 @@ SCIP_RETCODE extractNodes(
 /** if there are still undecided commodity signs, fix them to +1 */
 static
 void fixCommoditySigns(
-   SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
    )
 {
@@ -4371,7 +4384,7 @@ SCIP_RETCODE mcfnetworkExtract(
 
       /* 8. postprocessing */
       /* 8.a if there are still undecided commodity signs, fix them to +1 */
-      fixCommoditySigns(scip, &mcfdata);
+      fixCommoditySigns(&mcfdata);
 
       /* 8.b clean up the network: get rid of commodities without arcs or with at most one node */
       SCIP_CALL( cleanupNetwork(scip, &mcfdata) );
@@ -4457,6 +4470,7 @@ SCIP_RETCODE mcfnetworkExtract(
             SCIP_CALL( mcfnetworkFill(scip, mcfnetwork, &mcfdata, compnodeid, compnodes, ncompnodes, comparcs, ncomparcs) );
 
             /* insert in sorted network list */
+            assert(*mcfnetworks != NULL);
             for( i = *nmcfnetworks; i > 0 && mcfnetwork->nnodes > (*mcfnetworks)[i-1]->nnodes; i-- )
                (*mcfnetworks)[i] = (*mcfnetworks)[i-1];
             (*mcfnetworks)[i] = mcfnetwork;
@@ -4842,7 +4856,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValNodepairs)
    assert(target >=0 && target < mcfnetwork->nnodes);
    assert(source <= target);
 
-   hashval = (source << 16) + target; /*lint !e701*/
+   hashval = (unsigned)((source << 16) + target); /*lint !e701*/
 
    return hashval;
 }

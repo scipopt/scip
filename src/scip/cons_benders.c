@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_benders.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for Benders' decomposition
  * @author Stephen J. Maher
  *
@@ -94,9 +95,7 @@ SCIP_RETCODE constructValidSolution(
    int nsubproblems;
    int i;
    int j;
-   SCIP_Bool success;
-
-   success = TRUE;
+   SCIP_Bool success = TRUE;
 
    /* don't propose new solutions if not in presolve or solving */
    if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
@@ -118,18 +117,18 @@ SCIP_RETCODE constructValidSolution(
    {
       switch( type )
       {
-         case SCIP_BENDERSENFOTYPE_LP:
-            SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
-            break;
-         case SCIP_BENDERSENFOTYPE_PSEUDO:
-            SCIP_CALL( SCIPcreatePseudoSol(scip, &newsol, NULL) );
-            break;
-         case SCIP_BENDERSENFOTYPE_RELAX:
-            SCIP_CALL( SCIPcreateRelaxSol(scip, &newsol, NULL) );
-            break;
-         default:
-            SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
-            break;
+      case SCIP_BENDERSENFOTYPE_LP:
+         SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+         break;
+      case SCIP_BENDERSENFOTYPE_PSEUDO:
+         SCIP_CALL( SCIPcreatePseudoSol(scip, &newsol, NULL) );
+         break;
+      case SCIP_BENDERSENFOTYPE_RELAX:
+         SCIP_CALL( SCIPcreateRelaxSol(scip, &newsol, NULL) );
+         break;
+      default:
+         SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+         break;
       }  /*lint !e788*/
    }
    SCIP_CALL( SCIPunlinkSol(scip, newsol) );
@@ -165,7 +164,7 @@ SCIP_RETCODE constructValidSolution(
    }
 
    /* if setting the variable values was successful, then we try to add the solution */
-   if( success )
+   if( success ) /*lint !e774*/
    {
       /* checking the size of the checkedsols array and extending it is there is not enough memory */
       assert(conshdlrdata->ncheckedsols <= conshdlrdata->checkedsolssize);
@@ -630,10 +629,73 @@ SCIP_DECL_CONSPRESOL(consPresolBenders)
    return SCIP_OKAY;
 }
 
-/** variable rounding lock method of constraint handler */
+/** variable rounding lock method of constraint handler
+ *  The auxiliary variables and the master problem variables need to lock added by the Benders' decomposition
+ *  constraint. The auxiliary variables require a down lock. The master problem variable need both up and down lock.
+ *  The master problem variables require locks in both directions because the coefficients in all potential Benders'
+ *  cuts are not known in general.
+ */
 static
 SCIP_DECL_CONSLOCK(consLockBenders)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_BENDERS** benders;
+   SCIP_VAR** vars;
+   int nactivebenders;
+   int nsubproblems;
+   int nvars;
+   int i;
+   int j;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(locktype == SCIP_LOCKTYPE_MODEL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* the locks should only be added if the Benders' decomposition constraint handler has been activated */
+   if( conshdlrdata->active )
+   {
+      benders = SCIPgetBenders(scip);
+      nactivebenders = SCIPgetNActiveBenders(scip);
+
+      /* retrieving the master problem variables */
+      SCIP_CALL( SCIPgetOrigVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+      /* need to compute the lower bound for all active Benders' decompositions */
+      for( i = 0; i < nactivebenders; i++ )
+      {
+         nsubproblems = SCIPbendersGetNSubproblems(benders[i]);
+
+         /* if the auxiliary variable exists, then we need to add a down lock. Initially, a down lock is added to all
+          * auxiliary variables during creating. This is because the creation of auxiliary variable occurs after
+          * CONS_LOCK is called. The inclusion of the auxiliary variables in this function is to cover the case if locks
+          * are added or removed after presolving.
+          */
+         for( j = 0; j < nsubproblems; j++ )
+         {
+            SCIP_VAR* auxvar;
+
+            auxvar = SCIPbendersGetAuxiliaryVar(benders[i], j);
+
+            if( auxvar != NULL )
+            {
+               SCIP_CALL( SCIPaddVarLocksType(scip, auxvar, locktype, nlockspos, nlocksneg) );
+            }
+         }
+
+         /* adding up and down locks for all master problem variables. Since the locks for all constraint handlers
+          * without constraints, no auxiliary variables have been added. As such, all variables are master variables.
+          */
+         for( j = 0; j < nvars; j++ )
+         {
+            SCIP_CALL( SCIPaddVarLocksType(scip, vars[j], locktype, (nlockspos + nlocksneg)*nsubproblems,
+                  (nlockspos + nlocksneg)*nsubproblems) );
+         }
+      }
+   }
+
    return SCIP_OKAY;
 }
 

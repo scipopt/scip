@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   memory.c
+ * @ingroup OTHER_CFILES
  * @brief  memory allocation routines
  * @author Tobias Achterberg
  * @author Gerald Gamrath
@@ -1100,47 +1101,49 @@ int createChunk(
 /** destroys a chunk without updating the chunk lists */
 static
 void destroyChunk(
-   CHUNK*                chunk,              /**< memory chunk */
+   CHUNK**               chunk,              /**< memory chunk */
    long long*            memsize             /**< pointer to total size of allocated memory (or NULL) */
    )
 {
    assert(chunk != NULL);
+   assert(*chunk != NULL);
 
-   debugMessage("destroying chunk %p\n", (void*)chunk);
+   debugMessage("destroying chunk %p\n", (void*)*chunk);
 
    if( memsize != NULL )
-      (*memsize) -= ((long long)sizeof(CHUNK) + (long long)chunk->storesize * chunk->elemsize);
+      (*memsize) -= ((long long)sizeof(CHUNK) + (long long)(*chunk)->storesize * (*chunk)->elemsize);
 
    /* free chunk header and store (allocated in one call) */
-   BMSfreeMemory(&chunk);
+   BMSfreeMemory(chunk);
 }
 
 /** removes a completely unused chunk, i.e. a chunk with all elements in the eager free list */
 static
 void freeChunk(
-   CHUNK*                chunk,              /**< memory chunk */
+   CHUNK**               chunk,              /**< memory chunk */
    long long*            memsize             /**< pointer to total size of allocated memory (or NULL) */
    )
 {
    assert(chunk != NULL);
-   assert(chunk->store != NULL);
-   assert(chunk->eagerfree != NULL);
-   assert(chunk->chkmem != NULL);
-   assert(chunk->chkmem->rootchunk != NULL);
-   assert(chunk->chkmem->firsteager != NULL);
-   assert(chunk->eagerfreesize == chunk->storesize);
+   assert(*chunk != NULL);
+   assert((*chunk)->store != NULL);
+   assert((*chunk)->eagerfree != NULL);
+   assert((*chunk)->chkmem != NULL);
+   assert((*chunk)->chkmem->rootchunk != NULL);
+   assert((*chunk)->chkmem->firsteager != NULL);
+   assert((*chunk)->eagerfreesize == (*chunk)->storesize);
 
-   debugMessage("freeing chunk %p of chunk block %p [elemsize: %d]\n", (void*)chunk, (void*)chunk->chkmem, chunk->chkmem->elemsize);
+   debugMessage("freeing chunk %p of chunk block %p [elemsize: %d]\n", (void*)*chunk, (void*)(*chunk)->chkmem, (*chunk)->chkmem->elemsize);
 
    /* count the deleted eager free slots */
-   chunk->chkmem->eagerfreesize -= chunk->eagerfreesize;
-   assert(chunk->chkmem->eagerfreesize >= 0);
+   (*chunk)->chkmem->eagerfreesize -= (*chunk)->eagerfreesize;
+   assert((*chunk)->chkmem->eagerfreesize >= 0);
 
    /* remove chunk from eager chunk list */
-   unlinkEagerChunk(chunk);
+   unlinkEagerChunk(*chunk);
 
    /* remove chunk from chunk list */
-   unlinkChunk(chunk);
+   unlinkChunk(*chunk);
 
    /* destroy the chunk */
    destroyChunk(chunk, memsize);
@@ -1269,7 +1272,7 @@ void clearChkmem(
    FOR_EACH_NODE(CHUNK*, chunk, chkmem->rootchunk,
    {
       SCIPrbtreeDelete(&chkmem->rootchunk, chunk);
-      destroyChunk(chunk, memsize);
+      destroyChunk(&chunk, memsize);
    })
 
    chkmem->lazyfree = NULL;
@@ -1403,7 +1406,7 @@ void garbagecollectChkmem(
 #ifndef NDEBUG
 	 chkmem->ngarbagefrees++;
 #endif
-	 freeChunk(chunk, memsize);
+	 freeChunk(&chunk, memsize);
       }
       chunk = nexteager;
    }

@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -643,6 +643,15 @@ SCIP_PARAM** SCIPgetParams(
  */
 SCIP_EXPORT
 int SCIPgetNParams(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether plugins with sub-SCIPs that could cause recursion have been disabled
+ *
+ *  @return the value of the variable set->subscipsoff
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPgetSubscipsOff(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

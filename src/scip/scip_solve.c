@@ -14,11 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_solve.c
+ * @ingroup OTHER_CFILES
  * @brief  public solving methods
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -42,6 +43,7 @@
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
 #include "scip/cutpool.h"
+#include "scip/dcmp.h"
 #include "scip/debug.h"
 #include "scip/event.h"
 #include "scip/implics.h"
@@ -640,9 +642,6 @@ SCIP_RETCODE exitPresolve(
    SCIP_Bool*            infeasible          /**< pointer to store if the clique clean up detects an infeasibility */
    )
 {
-   SCIP_VAR** vars;
-   int nvars;
-   int v;
 #ifndef NDEBUG
    size_t nusedbuffers;
    size_t nusedcleanbuffers;
@@ -663,6 +662,10 @@ SCIP_RETCODE exitPresolve(
 
    if( !solved )
    {
+      SCIP_VAR** vars;
+      int nvars;
+      int v;
+
       /* flatten all variables */
       vars = SCIPgetFixedVars(scip);
       nvars = SCIPgetNFixedVars(scip);
@@ -681,7 +684,7 @@ SCIP_RETCODE exitPresolve(
 	 if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
 	 {
 	    /* flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
-	    SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set) );
+	    SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
 
 #ifndef NDEBUG
 	    multvars = SCIPvarGetMultaggrVars(var);
@@ -747,7 +750,7 @@ SCIP_RETCODE exitPresolve(
       /* we need to update the primal dual integral here to update the last{upper/dual}bound values after a restart */
       if( scip->set->misc_calcintegral )
       {
-         SCIPstatUpdatePrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
+         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
       }
    }
 
@@ -1638,6 +1641,9 @@ SCIP_RETCODE initSolve(
    /* inform the transformed problem that the branch and bound process starts now */
    SCIP_CALL( SCIPprobInitSolve(scip->transprob, scip->set) );
 
+   /* transform the decomposition storage */
+   SCIP_CALL( SCIPtransformDecompstore(scip) );
+
    /* inform plugins that the branch and bound process starts now */
    SCIP_CALL( SCIPsetInitsolPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
@@ -1732,7 +1738,7 @@ SCIP_RETCODE freeSolve(
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
    /* cleanup the conflict storage */
-   SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
+   SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->reopt) );
 
    /* inform plugins that the branch and bound process is finished */
    SCIP_CALL( SCIPsetExitsolPlugins(scip->set, scip->mem->probmem, scip->stat, restart) );
@@ -1759,6 +1765,8 @@ SCIP_RETCODE freeSolve(
     * subroots have to be released
     */
    SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+
+   SCIPexitSolveDecompstore(scip);
 
    /* deinitialize transformed problem */
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, restart) );
@@ -1897,7 +1905,7 @@ SCIP_RETCODE freeReoptSolve(
    else
    {
       /* even if statistics are not completely reset, a partial reset of the primal-dual integral is necessary */
-      SCIPstatResetPrimalDualIntegral(scip->stat, scip->set, TRUE);
+      SCIPstatResetPrimalDualIntegrals(scip->stat, scip->set, TRUE);
    }
 
    /* reset objective limit */
@@ -2018,21 +2026,6 @@ SCIP_RETCODE freeTransform(
       SCIP_CALL( SCIPreoptReset(scip->reopt, scip->set, scip->mem->probmem) );
    }
 
-   /* @todo if a variable was removed from the problem during solving, its locks were not reduced;
-    *       we might want to remove locks also in that case
-    */
-   /* remove var locks set to avoid dual reductions */
-   if( scip->set->reopt_enable || !scip->set->misc_allowdualreds )
-   {
-      int v;
-
-      /* unlock all variables */
-      for(v = 0; v < scip->transprob->nvars; v++)
-      {
-         SCIP_CALL( SCIPaddVarLocksType(scip, scip->transprob->vars[v], SCIP_LOCKTYPE_MODEL, -1, -1) );
-      }
-   }
-
    if( !reducedfree )
    {
       /* clear the conflict store
@@ -2071,7 +2064,7 @@ SCIP_RETCODE freeTransform(
    else
    {
       /* even if statistics are not completely reset, a partial reset of the primal-dual integral is necessary */
-      SCIPstatResetPrimalDualIntegral(scip->stat, scip->set, TRUE);
+      SCIPstatResetPrimalDualIntegrals(scip->stat, scip->set, TRUE);
    }
 
    /* switch stage to PROBLEM */
@@ -2600,7 +2593,7 @@ SCIP_RETCODE SCIPsolve(
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
          /* reset relaxation solution, so that the objective value is recomputed from scratch next time, using the new
           * fixings which may be produced during the presolving after the restart */
-         SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+         SCIP_CALL( SCIPclearRelaxSolVals(scip, NULL) );
 
          SCIP_CALL( freeSolve(scip, TRUE) );
          assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);

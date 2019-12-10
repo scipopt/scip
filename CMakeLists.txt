@@ -13,9 +13,9 @@ endif()
 
 set(SCIP_VERSION_MAJOR 6)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 3)
-set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 34)
+set(SCIP_VERSION_PATCH 2)
+set(SCIP_VERSION_SUB 4)
+set(SCIP_VERSION_API 52)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
@@ -54,6 +54,7 @@ option(ZLIB "should zlib be linked" ON)
 option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
 option(STATIC_GMP "prefer static gmp library" OFF)
+option(PRESOLVELIB "should presolvelib be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
@@ -195,8 +196,8 @@ add_custom_target(scip_update_githash
 
 set(WITH_SCIPDEF on)
 
-# use C++11 standard
-set(CMAKE_CXX_STANDARD 11)
+# use C++14 standard
+set(CMAKE_CXX_STANDARD 14)
 
 # set function visibility default to hidden
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -234,6 +235,16 @@ if(GMP_FOUND)
     set(SCIP_WITH_GMP on)
 else()
     set(GMP_LIBRARIES "")
+endif()
+
+# look for presolvelib
+if(PRESOLVELIB)
+   find_package(PRESOLVELIB)
+endif()
+if(PRESOLVELIB_FOUND)
+   set(SCIP_WITH_PRESOLVELIB on)
+else()
+   set(PRESOLVELIB_IMPORTED_TARGETS "")
 endif()
 
 #search the selected LP solver library
