@@ -377,15 +377,15 @@ void computeVarRatio(
 /** use the Ratio scoring function to select a branching candidate */
 static
 SCIP_RETCODE selectCandidateUsingRatio(
-   SCIP*                 scip,                 /**< SCIP data structure */
-   SCIP_TREEMODEL*       treemodel,            /**< Treemodel parameter data structure */
-   SCIP_VAR**            branchcands,          /**< branching candidate storage */
-   SCIP_Real*            mingains,             /**< minimum gain of rounding downwards or upwards */
-   SCIP_Real*            maxgains,             /**< maximum gain of rounding downwards or upwards */
-   SCIP_Bool             filterdominated,      /**< whether dominated variables have been filtered */
-   SCIP_Bool*            dominated,            /**< whether each variable is dominated or not */
-   int                   nbranchcands,         /**< the number of branching candidates */
-   int*                  bestcand              /**< the best branching candidate found by SCIP */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_TREEMODEL*       treemodel,          /**< Treemodel parameter data structure */
+   SCIP_VAR**            branchcands,        /**< branching candidate storage */
+   SCIP_Real*            mingains,           /**< minimum gain of rounding downwards or upwards */
+   SCIP_Real*            maxgains,           /**< maximum gain of rounding downwards or upwards */
+   SCIP_Bool             filterdominated,    /**< whether dominated variables have been filtered */
+   SCIP_Bool*            dominated,          /**< whether each variable is dominated or not */
+   int                   nbranchcands,       /**< the number of branching candidates */
+   int*                  bestcand            /**< the best branching candidate found by SCIP */
    )
 {
    int c;
@@ -588,7 +588,10 @@ SCIP_RETCODE selectCandidateUsingSVTS(
 
 /** computes a^b for integer b */
 static
-SCIP_Real integerpow(SCIP_Real a, int b)
+SCIP_Real integerpow(
+   SCIP_Real             a,                  /**< the base */
+   int                   b                   /**< the integer exponent */
+   )
 {
    SCIP_Real ans = 1.0;
 
