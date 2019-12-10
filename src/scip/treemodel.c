@@ -32,31 +32,50 @@
 
 /* Default parameters for the Treemodel branching rules */
 #define DEFAULT_ENABLE         FALSE    /**< should candidate branching variables be scored using the Treemodel rule? */
-#define DEFAULT_HIGHRULE       'r'      /**< scoring function to use at nodes predicted to be high in the tree. ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
-#define DEFAULT_LOWRULE        'r'      /**< scoring function to use at nodes predicted to be low in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
-#define DEFAULT_HEIGHT         10       /**< estimated tree height at which we switch from using the low rule to the high rule */
-#define DEFAULT_FILTERHIGH     'a'      /**< should dominated candidates be filtered before using the high scoring function? ('a'uto, 't'rue, 'f'alse) */
-#define DEFAULT_FILTERLOW      'a'      /**< should dominated candidates be filtered before using the low scoring function? ('a'uto, 't'rue, 'f'alse) */
+#define DEFAULT_HIGHRULE       'r'      /**< scoring function to use at nodes predicted to be high in the tree.
+					  * ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
+#define DEFAULT_LOWRULE        'r'      /**< scoring function to use at nodes predicted to be low in the tree
+					  * ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
+#define DEFAULT_HEIGHT         10       /**< estimated tree height at which we switch from using the low rule to
+					  * the high rule */
+#define DEFAULT_FILTERHIGH     'a'      /**< should dominated candidates be filtered before using the high scoring
+					  * function? ('a'uto, 't'rue, 'f'alse) */
+#define DEFAULT_FILTERLOW      'a'      /**< should dominated candidates be filtered before using the low scoring
+					  * function? ('a'uto, 't'rue, 'f'alse) */
 #define DEFAULT_MAXFPITER      24       /**< maximum number of fixed-point iterations when computing the ratio */
 #define DEFAULT_MAXSVTSHEIGHT  100      /**< maximum height to compute the SVTS score exactly before approximating */
-#define DEFAULT_FALLBACKINF    'r'      /**< which method should be used as a fallback if the tree size estimates are infinite? ('d'efault, 'r'atio) */
-#define DEFAULT_FALLBACKNOPRIM 'r'      /**< which method should be used as a fallback if there is no primal bound available? ('d'efault, 'r'atio) */
-#define DEFAULT_SMALLPSCOST    0.1      /**< threshold at which pseudocosts are considered small, making hybrid scores more likely to be the deciding factor in branching */
+#define DEFAULT_FALLBACKINF    'r'      /**< which method should be used as a fallback if the tree size estimates are
+					  * infinite? ('d'efault, 'r'atio) */
+#define DEFAULT_FALLBACKNOPRIM 'r'      /**< which method should be used as a fallback if there is no primal bound
+					  * available? ('d'efault, 'r'atio) */
+#define DEFAULT_SMALLPSCOST    0.1      /**< threshold at which pseudocosts are considered small, making hybrid scores
+					  * more likely to be the deciding factor in branching */
 
 /** parameters required by the Treemodel branching rules */
 struct SCIP_Treemodel
 {
-   SCIP_Bool            enabled;             /**< should candidate branching variables be scored using the Treemodel rule? */
-   char                 highrule;            /**< scoring function to use at nodes predicted to be high in the tree. ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
-   char                 lowrule;             /**< scoring function to use at nodes predicted to be low in the tree ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
-   int                  height;              /**< estimated tree height at which we switch from using the low rule to the high rule */
-   char                 filterhigh;          /**< should dominated candidates be filtered before using the high scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
-   char                 filterlow;           /**< should dominated candidates be filtered before using the low scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
-   int                  maxfpiter;           /**< maximum number of fixed-point iterations when computing the ratio [ADVANCED] */
-   int                  maxsvtsheight;       /**< maximum height to compute the SVTS score exactly before approximating [ADVANCED] */
-   char                 fallbackinf;         /**< which method should be used as a fallback if the tree size estimates are infinite? ('d'efault, 'r'atio) [ADVANCED] */
-   char                 fallbacknoprim;      /**< which method should be used as a fallback if there is no primal bound available? ('d'efault, 'r'atio) [ADVANCED] */
-   SCIP_Real            smallpscost;         /**< threshold at which pseudocosts are considered small, making hybrid scores more likely to be the deciding factor in branching [ADVANCED] */
+   SCIP_Bool            enabled;             /**< should candidate branching variables be scored using the Treemodel 
+					       * rule? */
+   char                 highrule;            /**< scoring function to use at nodes predicted to be high in the tree. 
+					       * ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
+   char                 lowrule;             /**< scoring function to use at nodes predicted to be low in the tree 
+					       * ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
+   int                  height;              /**< estimated tree height at which we switch from using the low rule to 
+					       * the high rule */
+   char                 filterhigh;          /**< should dominated candidates be filtered before using the high 
+					       * scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
+   char                 filterlow;           /**< should dominated candidates be filtered before using the low 
+					       * scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
+   int                  maxfpiter;           /**< maximum number of fixed-point iterations when computing the ratio
+					       * [ADVANCED] */
+   int                  maxsvtsheight;       /**< maximum height to compute the SVTS score exactly before approximating
+					       * [ADVANCED] */
+   char                 fallbackinf;         /**< which method should be used as a fallback if the tree size estimates
+					       * are infinite? ('d'efault, 'r'atio) [ADVANCED] */
+   char                 fallbacknoprim;      /**< which method should be used as a fallback if there is no primal bound
+					       * available? ('d'efault, 'r'atio) [ADVANCED] */
+   SCIP_Real            smallpscost;         /**< threshold at which pseudocosts are considered small, making hybrid
+					       * scores more likely to be the deciding factor in branching [ADVANCED] */
 };
 
 /** branching encoding of a variable's ratio
@@ -66,7 +85,8 @@ struct SCIP_Treemodel
  * the encoded ratio is valid, i.e. there were no numerical problems when computing it */
 struct SCIP_Ratio
 {
-   SCIP_Real             upratio;           /**< "UnPowered" ratio, i.e. the ratio of the characteristic polynomial with gains (1, rightgain/leftgain) */
+   SCIP_Real             upratio;           /**< "UnPowered" ratio, i.e. the ratio of the characteristic polynomial
+					      * with gains (1, rightgain/leftgain) */
    SCIP_Real             invleft;           /**< "INVerse left gain, i.e. 1/leftgain */
    SCIP_Bool             valid;             /**< True iff the ratio computed is valid */
 };
@@ -106,7 +126,8 @@ SCIP_RETCODE findNonDominatedVars(
    SCIP_Real*            b,                  /**< the second set of values */
    int                   size,               /**< the size of array a (and b) */
    int*                  ndominated,         /**< returns the number of dominated elements */
-   SCIP_Bool*            dominated           /**< returns the array of booleans that determine if an element is dominated */
+   SCIP_Bool*            dominated           /**< returns the array of booleans that determine if an element is
+					       * dominated */
    )
 {
    int* permb;
@@ -128,7 +149,8 @@ SCIP_RETCODE findNonDominatedVars(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcurrents, size) );
 
-   /* we first find the permutation of indices of array b that corresponds to the array of a non-decreasing sort of its values */
+   /* we first find the permutation of indices of array b that corresponds to 
+    * the array of a non-decreasing sort of its values */
    SCIP_CALL( SCIPallocBufferArray(scip, &permb, size) );
    for( origindex=0; origindex<size; ++origindex )
       permb[origindex] = origindex;
@@ -253,7 +275,8 @@ SCIP_Bool hasBetterRatio(
 
    /* We evaluate the characteristic polynomial of the variable on the given ratio. */
    if( leftgain > 0.0 && rightgain > 0.0 )
-      result = pow(branchratio->upratio, rightgain * branchratio->invleft) - pow(branchratio->upratio, (rightgain - leftgain) * branchratio->invleft) - 1;
+      result = pow(branchratio->upratio, rightgain * branchratio->invleft) - 
+	      pow(branchratio->upratio, (rightgain - leftgain) * branchratio->invleft) - 1;
 
    /* If the result is positive, then it has a better ratio. */
    return (result > 0.0);
@@ -323,8 +346,10 @@ void computeVarRatio(
    /* Use Laguerre's method */
    if( r <= LAGUERRE_THRESHOLD )
    {
-      /* We relax the epsilon after 5 iterations since we may not have enough precision to achieve any better convergence */
-      for( iters = 0; ((iters <= 5 && !SCIPisEQ(scip, ratio, newratio)) || (iters > 5 && !SCIPisSumEQ(scip, ratio, newratio)))
+      /* We relax the epsilon after 5 iterations since we may not have enough precision to achieve any better
+       * convergence */
+      for( iters = 0; ((iters <= 5 && !SCIPisEQ(scip, ratio, newratio)) ||
+              (iters > 5 && !SCIPisSumEQ(scip, ratio, newratio)))
               && iters < treemodel->maxfpiter && newratio > 1.0; iters++ )
       {
          double G, H, a, p, p1, p2, phi_r;
@@ -346,8 +371,10 @@ void computeVarRatio(
    /* Use fixed point method */
    else
    {
-      /* We relax the epsilon after 10 iterations since we may not have enough precision to achieve any better convergence */
-      for( iters = 0; ((iters <= 10 && !SCIPisEQ(scip, ratio, newratio)) || (iters > 10 && !SCIPisSumEQ(scip, ratio, newratio)))
+      /* We relax the epsilon after 10 iterations since we may not have enough precision to achieve any better
+       * convergence */
+      for( iters = 0; ((iters <= 10 && !SCIPisEQ(scip, ratio, newratio)) ||
+              (iters > 10 && !SCIPisSumEQ(scip, ratio, newratio)))
               && iters < treemodel->maxfpiter && newratio > 1; iters++ )
       {
          ratio = newratio;
@@ -392,14 +419,15 @@ SCIP_RETCODE selectCandidateUsingRatio(
    int*                  bestcand            /**< the best branching candidate found by SCIP */
    )
 {
-   int c;
    SCIP_RATIO branchratio;
    SCIP_RATIO bestbranchratio;
+   int c;
 
    /* We initialize bestbranchratio at the default bestcand ratio, since it is likely to have
     * a very good ratio and save evaluations of the ratio for many variables */
    int referencevar = *bestcand;
-   computeVarRatio(scip, treemodel, branchcands[referencevar], mingains[referencevar], maxgains[referencevar], &bestbranchratio);
+   computeVarRatio(scip, treemodel, branchcands[referencevar], mingains[referencevar], maxgains[referencevar],
+		   &bestbranchratio);
 
    for( c = 0; c < nbranchcands; ++c )
    {
@@ -523,13 +551,13 @@ SCIP_RETCODE selectCandidateUsingSVTS(
    int*                  bestcand            /**< the best branching candidate found by SCIP */
    )
 {
-   int c;
+   SCIP_Real* treesizes = NULL;
    SCIP_Real referencetreesize;
    SCIP_Real score;
    SCIP_Real bestscore = 0.0;
    SCIP_Real avgtreesize = 0.0;
-   SCIP_Real* treesizes = NULL;
    int besttscand = *bestcand;
+   int c;
 
    /* We will first measure the treesize for scip's default variable. If it is infinite then we don't compute
     * the treesize for other variables (even though it might be finite) and go directly to the fallback strategy */
@@ -537,7 +565,8 @@ SCIP_RETCODE selectCandidateUsingSVTS(
 
    if( !SCIPisInfinity(scip, localabsgap) )
    {
-      referencetreesize = computeSVTS(scip, treemodel, branchcands[referencevar], localabsgap, mingains[referencevar], maxgains[referencevar]);
+      referencetreesize = computeSVTS(scip, treemodel, branchcands[referencevar], localabsgap, mingains[referencevar],
+		             maxgains[referencevar]);
       if( !SCIPisInfinity(scip, referencetreesize) )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &treesizes, nbranchcands) );
@@ -670,13 +699,13 @@ SCIP_RETCODE selectCandidateUsingSampling(
    int*                  bestcand            /**< the best branching candidate found by SCIP */
    )
 {
-   int c;
+   SCIP_Real* treesizes = NULL;
    SCIP_Real referencetreesize;
    SCIP_Real score;
    SCIP_Real bestscore = 0.0;
    SCIP_Real avgtreesize = 0.0;
-   SCIP_Real* treesizes = NULL;
    int besttscand = *bestcand;
+   int c;
 
    /* We will first measure the treesize for scip's default variable. If it is infinite then we don't compute
     * the treesize for other variables (even though it might be finite) and go directly to the fallback strategy */
@@ -684,7 +713,8 @@ SCIP_RETCODE selectCandidateUsingSampling(
 
    if( !SCIPisInfinity(scip, localabsgap) )
    {
-      referencetreesize = computeSampleTreesize(scip, treemodel, branchcands[referencevar], localabsgap, mingains[referencevar], maxgains[referencevar]);
+      referencetreesize = computeSampleTreesize(scip, treemodel, branchcands[referencevar], localabsgap, mingains[referencevar],
+		             maxgains[referencevar]);
 
       if( !SCIPisInfinity(scip, referencetreesize) )
       {
