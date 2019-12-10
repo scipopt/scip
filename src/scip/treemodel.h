@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   branch_treemodel.h
- * @ingroup INTERNALAPI
+/**@file   treemodel.h
+ * @ingroup PUBLICCOREAPI
  * @brief  Branching rules based on the Single-Variable-Branching (SVB) model
  * @author Daniel Anderson
  *
@@ -27,15 +27,15 @@
  * See the following publication for more detail:
  *
  * @par
- * Piere Le Bodic and George Nemhauser@n
+ * Pierre Le Bodic and George Nemhauser@n
  * An abstract model for branching and its application to mixed integer programming@n
  * Mathematical Programming, 2017@n
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_BRANCH_TREEMODEL_H__
-#define __SCIP_BRANCH_TREEMODEL_H__
+#ifndef __SCIP_TREEMODEL_H__
+#define __SCIP_TREEMODEL_H__
 
 
 #include "scip/scip.h"
@@ -79,7 +79,8 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP_Real*            scoresfromothers,   /**< scores from other branching rules */
    SCIP_Real             avgpscostscore,     /**< average pseudocost score of branching candidates */
    int                   nbranchcands,       /**< the number of branching candidates */
-   int*                  bestcand            /**< the best branching candidate found by SCIP */
+   int*                  bestcand            /**< the best branching candidate found before the call, 
+					          and the best candidate after the call (possibly the same) */
 );
 
 #ifdef __cplusplus

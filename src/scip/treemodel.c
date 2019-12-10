@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   branch_treemodel.c
+/**@file   treemodel.c
  * @brief  Branching rules based on the Single-Variable-Branching (SVB) model
  * @author Daniel Anderson
  * @author Pierre Le Bodic
