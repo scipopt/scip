@@ -375,7 +375,7 @@ Interface changes
 
 - new parameter constraints/linear/extractcliques to turn clique extraction off
 
-- new parameter emphasis/numerics to change some of SCIPs parameters to solve numerically unstable instances. Sacrifices a lot of performance.
+- new emphasis setting emphasis/numerics to increase numerical stability of (mostly) presolving operations such as (multi-)aggregations at the cost of performance.
 
 ### Data structures
 
