@@ -274,7 +274,7 @@ while [ $PERM -le $PERMUTE ]; do
     NEWRBID=`cat $OUTPUT | grep "rubberband.zib" |sed -e 's|https://rubberband.zib.de/result/||'`
     echo "${NEWTIMESTAMP} ${NEWRBID} p=${PERM}" >> $RBDB
   else
-    ./evalcheck_cluster.sh -r "-v useshortnames=0" ${EVALFILE} > ${OUTPUT}
+    ./evalcheck_cluster.sh "-v useshortnames=0" ${EVALFILE} > ${OUTPUT}
   fi
   cat ${OUTPUT}
   rm ${OUTPUT}

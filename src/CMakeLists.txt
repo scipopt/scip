@@ -235,6 +235,7 @@ set(scipsources
     scip/sepa_zerohalf.c
     scip/benders_default.c
     scip/benderscut_feas.c
+    scip/benderscut_feasalt.c
     scip/benderscut_int.c
     scip/benderscut_nogood.c
     scip/benderscut_opt.c
@@ -269,6 +270,7 @@ set(scipsources
     scip/mem.c
     scip/misc.c
     scip/misc_linear.c
+    scip/misc_nonlinear.c
     scip/nlp.c
     scip/nodesel.c
     scip/paramset.c
@@ -458,6 +460,7 @@ set(scipheaders
     scip/benders_default.h
     scip/benderscut.h
     scip/benderscut_feas.h
+    scip/benderscut_feasalt.h
     scip/benderscut_int.h
     scip/benderscut_nogood.h
     scip/benderscut_opt.h
@@ -686,6 +689,7 @@ set(scipheaders
     scip/pub_message.h
     scip/pub_misc.h
     scip/pub_misc_linear.h
+    scip/pub_misc_nonlinear.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
     scip/pub_nlp.h
