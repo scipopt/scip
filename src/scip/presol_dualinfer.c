@@ -136,8 +136,8 @@ encodeColPair(
    COLPAIR*              colpair             /**< pointer to colpair */
    )
 {
-   uint64_t a = (uint64_t)colpair->col1idx;
-   uint64_t b = (uint64_t)colpair->col2idx;
+   uint64_t a = (uint64_t)(long)colpair->col1idx;
+   uint64_t b = (uint64_t)(long)colpair->col2idx;
    return (void*)((a << 32) | b);
 }
 
@@ -710,7 +710,6 @@ void getMinMaxActivityResiduals(
    SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index */
    int                   row,                /**< row index */
-   SCIP_Real             val,                /**< coefficient of this variable in this row */
    SCIP_Real*            lbs,                /**< lower bounds */
    SCIP_Real*            ubs,                /**< upper bounds */
    SCIP_Real*            minresactivity,     /**< minimum residual activity of this row */
@@ -829,7 +828,7 @@ void getVarBoundsOfRow(
    *rowlb = -SCIPinfinity(scip);
    *lbfound = FALSE;
 
-   getMinMaxActivityResiduals(scip, matrix, col, row, val, lbs, ubs,
+   getMinMaxActivityResiduals(scip, matrix, col, row, lbs, ubs,
       &minresactivity, &maxresactivity,
       &isminsettoinfinity, &ismaxsettoinfinity);
 
