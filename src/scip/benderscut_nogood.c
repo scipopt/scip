@@ -324,7 +324,9 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecNogood)
       return SCIP_OKAY;
 
    /* it is only possible to generate the no-good cut for pure binary master problems */
-   if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders)) )
+   if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders))
+      && (!SCIPbendersMasterIsNonlinear(benders)
+         || SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders) - 1)) )
    {
       SCIPinfoMessage(scip, NULL, "The no-good cuts can only be applied to problems with a pure binary master problem. "
          "The no-good Benders' decomposition cuts will be disabled.\n");

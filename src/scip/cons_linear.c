@@ -13041,10 +13041,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    scale = COPYSIGN(1.0/consdata->maxabsval, consdata->vals[0]);
 
    /* using only the variable indices as hash, since the values are compared by epsilon */
-   return SCIPhashFour(consdata->nvars,
-                       SCIPcombineTwoInt(minidx, SCIPrealHashCode(consdata->vals[0] * scale)),
-                       SCIPcombineTwoInt(mididx, SCIPrealHashCode(consdata->vals[consdata->nvars / 2] * scale)),
-                       SCIPcombineTwoInt(maxidx, SCIPrealHashCode(consdata->vals[consdata->nvars - 1] * scale))); /*lint !e571*/
+   return SCIPhashSeven(consdata->nvars, minidx, SCIPrealHashCode(consdata->vals[0] * scale),
+                        mididx, SCIPrealHashCode(consdata->vals[consdata->nvars / 2] * scale),
+                        maxidx, SCIPrealHashCode(consdata->vals[consdata->nvars - 1] * scale));
 }
 
 /** returns the key for deciding which of two parallel constraints should be kept (smaller key should be kept);

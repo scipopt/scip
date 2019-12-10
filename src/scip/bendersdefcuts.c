@@ -31,6 +31,7 @@ SCIP_RETCODE SCIPincludeBendersDefaultCuts(
    )
 {
    SCIP_CALL( SCIPincludeBenderscutFeas(scip, benders) );
+   SCIP_CALL( SCIPincludeBenderscutFeasalt(scip, benders) );
    SCIP_CALL( SCIPincludeBenderscutInt(scip, benders) );
    SCIP_CALL( SCIPincludeBenderscutNogood(scip, benders) );
    SCIP_CALL( SCIPincludeBenderscutOpt(scip, benders) );

@@ -16733,6 +16733,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIPcolGetVals
 #undef SCIPcolGetStrongbranchNode
 #undef SCIPcolGetNStrongbranchs
+#undef SCIPcolGetAge
 #undef SCIPboundtypeOpposite
 #undef SCIProwGetNNonz
 #undef SCIProwGetNLPNonz
@@ -17016,6 +17017,16 @@ int SCIPcolGetNStrongbranchs(
    assert(col != NULL);
 
    return col->nsbcalls;
+}
+
+/** gets the age of a column, i.e., the total number of successive times a column was in the LP and was 0.0 in the solution */
+int SCIPcolGetAge(
+   SCIP_COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->age;
 }
 
 /** gets opposite bound type of given bound type */
