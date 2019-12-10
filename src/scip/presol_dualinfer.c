@@ -211,7 +211,7 @@ void findNextBlock(
 
 /**
  * The algorithm described in Belotti P. "Bound reduction using pairs of linear inequalities"
- * tries to derive upper and lower bounds via convex combination for all variables from given rows. // the for all variables seems to reference the via convex combiniation
+ * tries to derive upper and lower bounds for all variables via convex combinations of linear inequalities
  * We apply Belotti's algorithm to pairs of columns of continuous variables.
  */
 static
@@ -463,10 +463,6 @@ SCIP_RETCODE combineCols(
             }
          }
       }
-
-      /* TODO Implement a check that skips all further computation if ninfs >= maxcancel + 2
-       * where maxcancel is the maximum number of variables that can be cancelled at once */
-      // should this be done before merging?
 
       /* Calculate bounds for lambda = 0 */
 #ifdef SCIP_MORE_DEBUG
