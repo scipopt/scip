@@ -53,7 +53,9 @@
  * $(\lambda A_{i\cdot} + (1 - \lambda) A_{k\cdot}) x \geq \lambda b_i + (1 - \lambda) b_k$.
  *
  * Additionally, cliques drawn from the SCIPcliqueTable are used
- * to further strengthen the above bound tightening.
+ * to further strengthen the above bound tightening. Full details can be found in
+ *    - Belotti P. "Bound reduction using pairs of linear inequalities"
+ *    - Chen W. et. al "Two-row and two-column mixed-integer presolve using hashing-based pairing methods"
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1363,7 +1365,7 @@ int calcCliqueMaximums(
       return varinds[cliquevarpos[firstmaxpos]];
 }
 
-/** apply ConvComb with clique extension to given rows */
+/** apply ConvComb with clique extension to given rows (see above) */
 static
 SCIP_RETCODE applyConvComb
 (
