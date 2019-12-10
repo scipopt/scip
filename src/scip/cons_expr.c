@@ -2378,9 +2378,6 @@ SCIP_RETCODE propagateLocks(
             expr->nlockspos += nlockspos;
             expr->nlocksneg += nlocksneg;
 
-            /* there should be no auxiliary variable if we change the locks of an expression */
-            assert(expr->auxvar == NULL);
-
             /* add monotonicity information if expression has been locked for the first time */
             if( expr->nlockspos == nlockspos && expr->nlocksneg == nlocksneg && expr->nchildren > 0
                && expr->exprhdlr->monotonicity != NULL )
