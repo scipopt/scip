@@ -81,8 +81,10 @@ struct SCIP_Treemodel
 /** branching encoding of a variable's ratio
  * A variable's ratio is defined based upon its left and right LP gains, as the unique root > 1 of
  * the polynomial x^r - x^(r-l) -1, where l and r are the left and right LP gains.
- * We store the root as upratio^(invleft), with invleft = 1/l. An extra boolean stores whether
- * the encoded ratio is valid, i.e. there were no numerical problems when computing it */
+ * We store the root as upratio^(invleft), with invleft = 1/l. The value upratio is thus
+ * the ratio of the variable (1, r/l).
+ * An extra boolean stores whether the encoded ratio is valid,
+ * i.e. there were no numerical problems when computing it */
 struct SCIP_Ratio
 {
    SCIP_Real             upratio;           /**< "UnPowered" ratio, i.e. the ratio of the characteristic polynomial
@@ -104,9 +106,9 @@ SCIP_DECL_SORTINDCOMP(sciprealcomp)
 
    diffval = value[ind1] - value[ind2];
    if( diffval < 0.0 )
-      return 1;
-   else if( diffval > 0.0)
       return -1;
+   else if( diffval > 0.0)
+      return 1;
    else
       return 0;
 }
@@ -130,15 +132,15 @@ SCIP_RETCODE findNonDominatedVars(
 					       * dominated */
    )
 {
+   SCIP_Real bestcurrenta;
+   SCIP_Real besta;
+   SCIP_Real currentb;
    int* permb;
    int* bestcurrents;
    int nbestcurrent;
    int indexinpermb;
    int origindex;
    int iterbestcurrent;
-   SCIP_Real bestcurrenta;
-   SCIP_Real besta;
-   SCIP_Real currentb;
 
    assert(scip != NULL);
    assert(a != NULL);
@@ -150,17 +152,12 @@ SCIP_RETCODE findNonDominatedVars(
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcurrents, size) );
 
    /* we first find the permutation of indices of array b that corresponds to 
-    * the array of a non-decreasing sort of its values */
+    * the array of a non-increasing sort of its values */
    SCIP_CALL( SCIPallocBufferArray(scip, &permb, size) );
    for( origindex=0; origindex<size; ++origindex )
       permb[origindex] = origindex;
 
-   /* author gregor
-    *
-    * TODO here you claim that you sort non-decreasingly, but you actually sort the index set non-increasingly.
-    * I suggest to use SCIPsortDownInd instead (and modifying the method sciprealcomp accordingly)
-    */
-   SCIPsortInd(permb, sciprealcomp, (void*)b, size);
+   SCIPsortDownInd(permb, sciprealcomp, (void*)b, size);
 
    *ndominated = 0;
    /* Now we will traverse the pair of arrays a and b by non-decreasing order of values of b *
@@ -254,7 +251,6 @@ SCIP_RETCODE findNonDominatedVars(
 
    SCIPfreeBufferArray(scip, &permb);
    SCIPfreeBufferArray(scip, &bestcurrents);
-
    return SCIP_OKAY;
 }
 
