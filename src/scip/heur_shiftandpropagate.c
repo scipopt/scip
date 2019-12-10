@@ -83,7 +83,7 @@
 #define DEFAULT_NORMALIZE         TRUE  /**< should coefficients and left/right hand sides be normalized by max row coeff? */
 #define DEFAULT_UPDATEWEIGHTS     FALSE /**< should row weight be increased every time the row is violated? */
 #define DEFAULT_IMPLISCONTINUOUS   TRUE /**< should implicit integer variables be treated as continuous variables? */
-#define DEFAULT_MINFIXINGRATELP    0.1  /**< minimum fixing rate over all variables (including continuous) to solve LP */
+#define DEFAULT_MINFIXINGRATELP    0.0  /**< minimum fixing rate over all variables (including continuous) to solve LP */
 
 #define EVENTHDLR_NAME         "eventhdlrshiftandpropagate"
 #define EVENTHDLR_DESC         "event handler to catch bound changes"

@@ -76,7 +76,7 @@
 #define DEFAULT_USEFINALSUBMIP TRUE                      /**< should a final sub-MIP be solved to construct a feasible
                                                           *   solution if the LP was not roundable? */
 #define DEFAULT_RANDSEED      73                         /**< initial random seed */
-#define DEFAULT_MINFIXINGRATELP 0.1                      /**< minimum fixing rate over all variables (including continuous)
+#define DEFAULT_MINFIXINGRATELP 0.0                      /**< minimum fixing rate over all variables (including continuous)
                                                           *   to solve LP */
 
 /** primal heuristic data */
