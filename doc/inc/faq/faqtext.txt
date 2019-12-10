@@ -555,6 +555,16 @@ SECTION: Using SCIP as a standalone solver
         class of optimization problems, you should test which of both methods performs better.
     </p>
 
+    QUESTION: SCIP's incumbent solution is infeasible in the original space. What can I do?
+    LABEL:useemphasisnumericssetting
+    ANSWER:
+    <p>
+        SCIP checks the feasibility of a violation relative to the number. Thus changing the lhs/rhs of constraints can cause solutions for which scip does not directly recognize they violate the original problem.
+    </p>
+    <p>
+       The emphasis/numerics setting disables and enables different settings in scip to prevent violations in the original space. This numerical stability comes at the sacrifice of performance.
+    </p>
+
 
 SECTION: Using SCIP included in another source code
 
