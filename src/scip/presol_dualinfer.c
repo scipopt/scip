@@ -1855,7 +1855,7 @@ SCIP_RETCODE dualBoundStrengthening(
       if( pospm > 0 && posmp > 0 )
       {
          SCIP_Longint maxcombines;
-         int ncombines; // SCIP_Longint
+         SCIP_Longint ncombines;
          SCIP_Bool finished;
          SCIP_Bool success;
          int combinefails;
