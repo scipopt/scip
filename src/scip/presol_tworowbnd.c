@@ -138,8 +138,8 @@ void* encodeRowPair(
    ROWPAIR*              rowpair             /**< pointer to rowpair */
    )
 {
-   uint64_t a = (uint64_t)rowpair->row1idx;
-   uint64_t b = (uint64_t)rowpair->row2idx;
+  uint64_t a = (uint64_t)(long)rowpair->row1idx;
+  uint64_t b = (uint64_t)(long)rowpair->row2idx;
    return (void*)((a << 32) | b);
 }
 
