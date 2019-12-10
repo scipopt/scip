@@ -66,7 +66,7 @@ struct SCIP_Treemodel
  * the encoded ratio is valid, i.e. there were no numerical problems when computing it */
 struct SCIP_Ratio
 {
-   SCIP_Real             upratio;           /**< "UnPowered" ratio, i.e. the ratio of the characteristic polynomia with gains (1, rightgain/leftgain) */
+   SCIP_Real             upratio;           /**< "UnPowered" ratio, i.e. the ratio of the characteristic polynomial with gains (1, rightgain/leftgain) */
    SCIP_Real             invleft;           /**< "INVerse left gain, i.e. 1/leftgain */
    SCIP_Bool             valid;             /**< True iff the ratio computed is valid */
 };
