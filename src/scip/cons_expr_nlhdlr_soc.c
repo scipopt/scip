@@ -118,7 +118,8 @@ SCIP_RETCODE createNlhdlrExprData(
    for( i = 0; i < nvars; ++i )
    {
       assert(vars[i] != NULL);
-      SCIPcaptureVar(scip, vars[i]);
+
+      SCIP_CALL( SCIPcaptureVar(scip, vars[i]) );
    }
 
    return SCIP_OKAY;
@@ -505,7 +506,7 @@ SCIP_RETCODE detectSocNorm(
 
          coefs[nvars] = childcoefs[i];
 
-         SCIPhashsetRemove(linexprs, (void*) squarearg);
+         SCIP_CALL( SCIPhashsetRemove(linexprs, (void*) squarearg) );
          ++nvars;
       }
       else
@@ -676,14 +677,14 @@ SCIP_RETCODE detectSocQuadraticSimple(
    constant = SCIPgetConsExprExprSumConstant(expr);
 
    /* initialize data */
+   lhsidx = -1;
    rhsidx = -1;
-   ishyperbolic = FALSE;
    nposquadterms = 0;
    nnegquadterms = 0;
    nposbilinterms = 0;
    nnegbilinterms = 0;
-   lhs = (conslhs == SCIP_INVALID ? SCIPvarGetLbGlobal(auxvar) : conslhs);
-   rhs = (consrhs == SCIP_INVALID ? SCIPvarGetUbGlobal(auxvar) : consrhs);
+   lhs = (conslhs == SCIP_INVALID ? SCIPvarGetLbGlobal(auxvar) : conslhs); /*lint !e777*/
+   rhs = (consrhs == SCIP_INVALID ? SCIPvarGetUbGlobal(auxvar) : consrhs); /*lint !e777*/
 
    /* check if all children are quadratic or binary linear and count number of positive and negative terms */
    for( i = 0; i < nchildren; ++i )
@@ -762,6 +763,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
    /* detect case and store lhs/rhs information */
    if( nnegquadterms + nnegbilinterms <= 1)
    {
+      assert(rhsidx != -1);
+
       /* if rhs is infinity, it can't be soc */
       if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
          return SCIP_OKAY;
@@ -771,6 +774,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
    }
    else
    {
+      assert(lhsidx != -1);
+
       /* if lhs is infinity, it can't be soc */
       if( SCIPgetConsExprExprNLocksNeg(expr) == 0 )
          return SCIP_OKAY;
@@ -996,8 +1001,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
    nnonzeroes = NULL;
    termbegins = NULL;
    bp = NULL;
-   lhs = (conslhs == SCIP_INVALID ? SCIPvarGetLbGlobal(auxvar) : conslhs);
-   rhs = (consrhs == SCIP_INVALID ? SCIPvarGetUbGlobal(auxvar) : consrhs);
+   lhs = (conslhs == SCIP_INVALID ? SCIPvarGetLbGlobal(auxvar) : conslhs); /*lint !e788*/
+   rhs = (consrhs == SCIP_INVALID ? SCIPvarGetUbGlobal(auxvar) : consrhs); /*lint !e788*/
 
    /* TODO: should we initialize the hashmap with size SCIPgetNVars() so that it never has to be resized? */
    SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), nchildren) );
@@ -1020,7 +1025,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
          {
-            SCIPhashmapInsertInt(var2idx, (void*) argvar, nvars);
+            SCIP_CALL( SCIPhashmapInsertInt(var2idx, (void*) argvar, nvars) );
             ++nvars;
          }
       }
@@ -1031,7 +1036,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
          {
-            SCIPhashmapInsertInt(var2idx, (void*) argvar, nvars);
+            SCIP_CALL( SCIPhashmapInsertInt(var2idx, (void*) argvar, nvars) );
             ++nvars;
          }
       }
@@ -1047,7 +1052,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
          {
-            SCIPhashmapInsertInt(var2idx, (void*) argvar, nvars);
+            SCIP_CALL( SCIPhashmapInsertInt(var2idx, (void*) argvar, nvars) );
             ++nvars;
          }
 
@@ -1055,7 +1060,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
 
          if( !SCIPhashmapExists(var2idx, (void*) argvar) )
          {
-            SCIPhashmapInsertInt(var2idx, (void*) argvar, nvars);
+            SCIP_CALL( SCIPhashmapInsertInt(var2idx, (void*) argvar, nvars) );
             ++nvars;
          }
       }
