@@ -136,8 +136,14 @@ encodeColPair(
    COLPAIR*              colpair             /**< pointer to colpair */
    )
 {
-   uint64_t a = (uint64_t)(long)colpair->col1idx;
-   uint64_t b = (uint64_t)(long)colpair->col2idx;
+   uint64_t a;
+   uint64_t b;
+
+   assert(colpair->col1idx >= 0);
+   assert(colpair->col2idx >= 0);
+
+   a = (uint64_t)(long)colpair->col1idx;
+   b = (uint64_t)(long)colpair->col2idx;
    return (void*)((a << 32) | b);
 }
 
