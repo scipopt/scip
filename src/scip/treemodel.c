@@ -355,7 +355,11 @@ void computeVarRatio(
       }
    }
 
-   /* We think that everything worked */
+   /* We think that everything worked.
+    * Note that the fixed point method is not guaranteed to converge due to numerical precision issues.
+    * In the case that the method fails to converge, a fallback strategy must be used.
+    * For instance, if this method is used for branching, then this variable can be ignored,
+    * or the scores of all variables could be recomputed using a different method. */
    if( iters < treemodel->maxfpiter && newratio > 1.0 )
    {
       branchratio->valid = TRUE;
