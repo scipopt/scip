@@ -373,6 +373,9 @@ Interface changes
 
 - new parameter branching/relpscost/transsympscost to transfer pseudo cost information to orbit
 
+- new parameter constraints/linear/extractcliques to turn clique extraction off
+
+- new parameter emphasis/numerics to change some of SCIPs parameters to solve numerically unstable instances. Sacrifices a lot of performance.
 
 ### Data structures
 
