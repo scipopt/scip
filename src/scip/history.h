@@ -228,25 +228,21 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
    );
 
 /** returns true if the given history contains a valid ratio */
-extern
 SCIP_Bool SCIPhistoryIsRatioValid(
    SCIP_HISTORY*         history             /**< branching and inference history */
 );
 
 /** returns the most recent ratio computed given the variable history */
-extern
 SCIP_Real SCIPhistoryGetLastRatio(
    SCIP_HISTORY*         history             /**< branching and inference history */
 );
 
 /** returns the most recent value of r/l used to compute this variable's ratio */
-extern
 SCIP_Real SCIPhistoryGetLastBalance(
    SCIP_HISTORY*         history             /**< branching and inference history */
 );
 
 /** sets the ratio history for a particular variable */
-extern
 void SCIPhistorySetRatioHistory(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_Bool             valid,              /**< True iff the ratio computed is valid */
