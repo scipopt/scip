@@ -267,7 +267,7 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
          continue;
 
       SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, nlrow, exprinterpreter, -dualsol,
-            &dirderiv, vars, vals, nvars, varssize) );
+            NULL, NULL, &dirderiv, vars, vals, nvars, varssize) );
 
       SCIP_CALL( SCIPgetNlRowActivity(subproblem, nlrow, &activity) );
 

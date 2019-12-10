@@ -1715,7 +1715,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
             if( subproblem != NULL && SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
             {
                /* setting up the subproblem with the best solution to the master problem */
-               SCIP_CALL( SCIPsetupBendersSubproblem(scip, benders[idx], bestsol, subidx) );
+               SCIP_CALL( SCIPsetupBendersSubproblem(scip, benders[idx], bestsol, subidx, SCIP_BENDERSENFOTYPE_CHECK) );
 
                /* solving the subproblem using the best solution to the master problem */
                SCIP_CALL( SCIPsolveBendersSubproblem(scip, benders[idx], bestsol, subidx, &infeasible,
@@ -1727,8 +1727,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
                {
                   SCIPdialogMessage(scip, NULL, "\n");
                   SCIPdialogMessage(scip, NULL, "Subproblem %d\n", subidx);
-                  if( SCIPbendersSubproblemIsConvex(benders[idx], subidx) )
-                     SCIP_CALL( SCIPprintSol(subproblem, NULL, NULL, printzeros) );
+                  if( SCIPbendersGetSubproblemType(benders[idx], subidx) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
+                  {
+                     /* need to check whether the subproblem is an NLP and solved as an NLP */
+                     if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) > 0 )
+                     {
+                        SCIP_SOL* nlpsol;
+                        SCIP_CALL( SCIPcreateNLPSol(subproblem, &nlpsol, NULL) );
+                        SCIP_CALL( SCIPprintSol(subproblem, nlpsol, NULL, FALSE) );
+                        SCIP_CALL( SCIPfreeSol(subproblem, &nlpsol) );
+                     }
+                     else
+                     {
+                        SCIP_CALL( SCIPprintSol(subproblem, NULL, NULL, printzeros) );
+                     }
+                  }
                   else
                      SCIP_CALL( SCIPprintBestSol(subproblem, NULL, printzeros) );
                   SCIPdialogMessage(scip, NULL, "\n");

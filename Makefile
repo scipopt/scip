@@ -507,6 +507,7 @@ SCIPLIBSHORTNAME=	scip
 SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
 SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/benderscut_feas.o \
+			scip/benderscut_feasalt.o \
 			scip/benderscut_int.o \
 			scip/benderscut_nogood.o \
 			scip/benderscut_opt.o \
@@ -734,6 +735,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/mem.o \
 			scip/misc.o \
 			scip/misc_linear.o \
+			scip/misc_nonlinear.o \
 			scip/nlp.o \
 			scip/nodesel.o \
 			scip/paramset.o \
