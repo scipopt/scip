@@ -397,8 +397,8 @@ SCIP_RETCODE decompHorizonCreate(
    nblocks = SCIPdecompGetNBlocks(decomp);
 
    assert(nblocks >= 1);
-   /* account for the border and an additional */
 
+   /* account an additional slot for the border */
    SCIP_CALL( SCIPallocBlockMemory(scip, decomphorizon) );
    decomphorizonptr = *decomphorizon;
    decomphorizonptr->decomp = decomp;
@@ -525,7 +525,6 @@ SCIP_RETCODE decompHorizonInitialize(
    /* loop over blocks, and check if they are suitable or not for the improvement heuristic */
    while( currblockstart < nvars )
    {
-      int ncontvars;
       int blocklabel;
       int currblockend;
       int ndiscretevars;
@@ -535,19 +534,17 @@ SCIP_RETCODE decompHorizonInitialize(
 
       blocklabel = varlabels[currblockstart];
       currblockend = currblockstart;
-      ncontvars = 0;
+      ndiscretevars = 0;
 
       /* determine the block size and the variable types */
       do
       {
-         if( SCIPvarGetType(varscopy[currblockend]) >= SCIP_VARTYPE_IMPLINT )
-            ++ncontvars;
+         if( SCIPvarGetType(varscopy[currblockend]) < SCIP_VARTYPE_IMPLINT )
+            ++ndiscretevars;
 
          currblockend++;
       }
       while (currblockend < nvars && varlabels[currblockend] == blocklabel);
-
-      ndiscretevars = currblockend - currblockstart - ncontvars;
 
       if( heurdata->fixcontvars )
          nfixedvars = nvars - (currblockend - currblockstart);
@@ -612,7 +609,6 @@ int decompHorizonGetFirstPosBestPotential(
    assert(bestsol != NULL);
 
    linkvarsexist = decomphorizon->blocklabels[0] == SCIP_DECOMP_LINKVAR;
-   withlinkvars = FALSE;
    bestpos = 0;
 
    /* recompute potential of blocks */
@@ -621,7 +617,6 @@ int decompHorizonGetFirstPosBestPotential(
       /* unsuitable blocks are left out and should not be contained in an interval */
       if( !decomphorizon->suitable[b] )
       {
-         withlinkvars = FALSE;
          decomphorizon->potential[b] = SCIP_REAL_MIN;
          continue;
       }
@@ -637,6 +632,7 @@ int decompHorizonGetFirstPosBestPotential(
    nintervalvars = 0;
    intervalpotential = 0.0;
    maxpotential = 0.0;
+   withlinkvars = FALSE;
 
    while( b1 < decomphorizon->nblocks - 1 )
    {
@@ -756,14 +752,10 @@ SCIP_Bool decompHorizonNext(
 
    ++decomphorizon->iterations;
    lastblockused = decomphorizon->lastblocklabel;
-   *fixlinkvars = TRUE;
+
    /* get the last block position that was used by the heuristic. Search for it, and continue with the next block. */
    found = SCIPsortedvecFindInt(decomphorizon->blocklabels, lastblockused, decomphorizon->nblocks, &firstpos);
-
    assert(! found || (firstpos >= 0 && firstpos < decomphorizon->nblocks));
-
-   if( ! found )
-      firstpos = -1;
 
    bestsol = SCIPgetBestSol(scip);
 
@@ -790,6 +782,7 @@ SCIP_Bool decompHorizonNext(
 
    assert(pos == firstpos || (0 <= pos && decomphorizon->nblocks > pos && (decomphorizon->suitable[pos] || pos == 0)));
 
+   *fixlinkvars = TRUE;
    /* the next suitable block position has been discovered */
    if( pos != firstpos && decomphorizon->suitable[pos] && !decompHorizonBlockUsedRecently(scip, decomphorizon, pos) )
    {
