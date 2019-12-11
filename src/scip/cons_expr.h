@@ -1230,6 +1230,19 @@ SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
    SCIP_Real*            coef                /**< pointer to store the coefficient */
    );
 
+/** detects nonlinear handlers that can handle the expressions and creates needed auxiliary variables
+ *
+ *  @note this method is only used for testing purposes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
+   );
+
 /** @} */
 
 /**@name Nonlinear Handler Methods */
