@@ -1390,16 +1390,16 @@ END {
 
    if( analyseconf == 1 )
    {
-      tablebottom1 = tablebottom1"--------[NConf]-----------[ConfTime]-----";
-      tablebottom2 = tablebottom2"     total     geom.     total     geom.";
-      tablebottom3 = tablebottom3"-----------------------------------------";
+      tablefooter1 = tablefooter1"--------[NConf]-----------[ConfTime]-----";
+      tablefooter2 = tablefooter2"     total     geom.     total     geom.";
+      tablefooter3 = tablefooter3"-----------------------------------------";
    }
 
    if( printsoltimes )
    {
-      tablebottom1 = tablebottom1"--------[ToFirst]-----------[ToLast]-----";
-      tablebottom2 = tablebottom2"     total     geom.     total     geom.";
-      tablebottom3 = tablebottom3"-----------------------------------------";
+      tablefooter1 = tablefooter1"--------[ToFirst]-----------[ToLast]-----";
+      tablefooter2 = tablefooter2"     total     geom.     total     geom.";
+      tablefooter3 = tablefooter3"-----------------------------------------";
    }
 
    tablefooter1 = tablefooter1"\n";
