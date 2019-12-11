@@ -566,7 +566,7 @@ SECTION: Using SCIP as a standalone solver
        You can enable it in following ways:
        <ul>
             <li>In the interactive shell: <code> SCIP&gt; set emphasis numerics</code>,</li>
-            <li>Through the C API: <code> SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_NUMERICS, quiet) );</code> which is defined in paramset.h</li>
+            <li>Through the C API: <code> SCIP_CALL( SCIPsetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_NUMERICS, quiet) );</code> which is defined in scip_param.h</li>
         </ul>
        If the emphasis setting does not help, consider disabling (multi-)aggregations completely and decreasing the feasibility tolerance.
     </p>
