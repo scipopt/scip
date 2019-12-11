@@ -62,7 +62,7 @@ function setStatusToLimit()
       printf("Warning: Trying to set limit status for problem %s, but no limit was reached.\n", prob);
 
    timeouttime += tottime;
-   timeouts++;
+   nlimits++;
 }
 
 # set a file status and increase timers and counters accordingly
@@ -192,7 +192,7 @@ BEGIN {
    shiftedtimetofirstgeom = timegeomshift;
    shiftedtimetobestgeom = timegeomshift;
    timeouttime = 0.0;
-   timeouts = 0;
+   nlimits = 0;
    failtime = 0.0;
    fail = 0;
    pass = 0;
@@ -1384,9 +1384,9 @@ END {
    printf(tablehead3);
    printf("\n");
 
-   tablefooter1 = "------------------------------[Nodes]---------------[Time]------";
-   tablefooter2 = "  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom.";
-   tablefooter3 = "----------------------------------------------------------------";
+   tablefooter1 = "-------------------------------[Nodes]---------------[Time]------";
+   tablefooter2 = "  Cnt  Pass  Limits  Fail  total(k)     geom.     total     geom.";
+   tablefooter3 = "-----------------------------------------------------------------";
 
    if( analyseconf == 1 )
    {
@@ -1395,7 +1395,8 @@ END {
       tablebottom3 = tablebottom3"-----------------------------------------";
    }
 
-   if( printsoltimes ) {
+   if( printsoltimes )
+   {
       tablebottom1 = tablebottom1"--------[ToFirst]-----------[ToLast]-----";
       tablebottom2 = tablebottom2"     total     geom.     total     geom.";
       tablebottom3 = tablebottom3"-----------------------------------------";
@@ -1409,8 +1410,8 @@ END {
    printf(tablefooter2);
    printf(tablefooter3);
 
-   printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f ",
-          nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
+   printf("%5d %5d %7d %5d %9d %9.1f %9.1f %9.1f ",
+          nprobs, pass, nlimits, fail, sbab / 1000, nodegeom, stottime, timegeom);
 
    if( analyseconf == 1 )
      printf("%9d %9.1f %9.1f %9.1f", sumconfs, confgeom, conftottime, conftimegeom);
@@ -1419,7 +1420,7 @@ END {
       printf("%9.1f %9.1f %9.1f %9.1f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeoconftimem);
 
    printf("\n");
-   printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f ",
+   printf(" shifted geom. [%5d/%5.1f]        %9.1f           %9.1f ",
           nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    if( analyseconf )
       printf("          %9.1f           %9.1f ", shiftedconfgeom, shiftedconftimegeom);
