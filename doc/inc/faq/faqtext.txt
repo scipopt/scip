@@ -559,10 +559,16 @@ SECTION: Using SCIP as a standalone solver
     LABEL:useemphasisnumericssetting
     ANSWER:
     <p>
-        SCIP checks the feasibility of a violation relative to the number. Thus changing the lhs/rhs of constraints can cause solutions for which scip does not directly recognize they violate the original problem.
+        SCIP checks the feasibility of a violation relative to the number. Thus changing the lhs/rhs of constraints in certain computations, can cause solutions for which SCIP does not directly recognize they are violations in the original problem space. Most of the times this is due to (multi-)aggregations, as SCIP can not guarantee that a (multi-)aggregation requested by one constraint handler does not lead to numerical instability of other constraints. This is due to the constraint-based design of SCIP.
     </p>
     <p>
-       The emphasis/numerics setting disables and enables different settings in scip to prevent violations in the original space. This numerical stability comes at the sacrifice of performance.
+       The emphasis/numerics setting disables and enables different settings in SCIP to prevent violations in the original problem space. This numerical stability comes at the sacrifice of performance.
+       You can enable it in following ways:
+       <ul>
+            <li>In the interactive shell: <code> SCIP&gt; set emphasis numerics</code>,</li>
+            <li>Through the C API: <code> SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_NUMERICS, quiet) );</code></li>
+        </ul>
+       If the emphasis setting does not help, disable (multi-)aggregations completely.
     </p>
 
 
