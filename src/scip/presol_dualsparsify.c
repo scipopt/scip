@@ -455,13 +455,13 @@ void getVarBoundsOfRow(
    {
       if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) )
       {
-         *rowub = (rhs - minresactivity)/val;
+         *rowub = (rhs - minresactivity) / val;
          *ubfound = TRUE;
       }
 
       if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) )
       {
-         *rowlb = (lhs - maxresactivity)/val;
+         *rowlb = (lhs - maxresactivity) / val;
          *lbfound = TRUE;
       }
    }
@@ -469,13 +469,13 @@ void getVarBoundsOfRow(
    {
       if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) )
       {
-         *rowub = (lhs - maxresactivity)/val;
+         *rowub = (lhs - maxresactivity) / val;
          *ubfound = TRUE;
       }
 
       if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) )
       {
-         *rowlb = (rhs - minresactivity)/val;
+         *rowlb = (rhs - minresactivity) / val;
          *lbfound = TRUE;
       }
    }
