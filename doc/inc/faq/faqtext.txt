@@ -559,7 +559,7 @@ SECTION: Using SCIP as a standalone solver
     LABEL:useemphasisnumericssetting
     ANSWER:
     <p>
-        SCIP checks the feasibility of a violation relative to the number. Thus changing the lhs/rhs of constraints in certain computations, can cause solutions for which SCIP does not directly recognize they are violations in the original problem space. Most of the times this is due to (multi-)aggregations, as SCIP can not guarantee that a (multi-)aggregation requested by one constraint handler does not lead to numerical instability of other constraints. This is due to the constraint-based design of SCIP.
+        The feasbility tolerance used in SCIP to check for violations is computed relative to the size of the checked number. Thus changing the lhs/rhs of constraints in certain computations, can lead to an increased tolerance while solving, possibly causing solutions which are considered violations in the original problem space, since the feasibility tolarance in the original space is smaller. Most of the times this is due to (multi-)aggregations, as SCIP can not guarantee that a (multi-)aggregation requested by one constraint handler does not lead to numerical instability of other constraints. This is due to the constraint-based design of SCIP.
     </p>
     <p>
        The emphasis/numerics setting disables and enables different settings in SCIP to prevent violations in the original problem space. This numerical stability comes at the sacrifice of performance.
@@ -568,7 +568,7 @@ SECTION: Using SCIP as a standalone solver
             <li>In the interactive shell: <code> SCIP&gt; set emphasis numerics</code>,</li>
             <li>Through the C API: <code> SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_NUMERICS, quiet) );</code></li>
         </ul>
-       If the emphasis setting does not help, disable (multi-)aggregations completely.
+       If the emphasis setting does not help, consider disabling (multi-)aggregations completely and decreasing the feasibility tolerance.
     </p>
 
 
