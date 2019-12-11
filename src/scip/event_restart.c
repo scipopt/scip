@@ -1421,8 +1421,8 @@ SCIP_RETCODE subtreeSumGapUpdate(
 
       /* check if number of new subtrees does not exceed maximum number of subtrees; always split if no split happened, yet */
       if( ssg->nsubtrees <= 1 ||
-               ((ssg->nmaxsubtrees == -1 || nnewsubtrees <= ssg->nmaxsubtrees) &&
-               (nsolvednodes - ssg->nodelastsplit >= ssg->nminnodeslastsplit)) )
+         ((ssg->nmaxsubtrees == -1 || nnewsubtrees <= ssg->nmaxsubtrees) &&
+            (nsolvednodes - ssg->nodelastsplit >= ssg->nminnodeslastsplit)) )
       {
          SCIP_CALL( subtreeSumGapSplit(scip, ssg, addfocusnode) );
 
@@ -1432,11 +1432,15 @@ SCIP_RETCODE subtreeSumGapUpdate(
       else
       {
          if( ssg->nmaxsubtrees != -1 && nnewsubtrees >= ssg->nmaxsubtrees )
+         {
             SCIPdebugMsg(scip, "Keep split into %d subtrees because new split into %d subtrees exceeds limit %d\n",
                ssg->nsubtrees, nnewsubtrees, ssg->nmaxsubtrees);
+         }
          else
+         {
             SCIPdebugMsg(scip, "Keep split into %d subtrees from %" SCIP_LONGINT_FORMAT " nodes ago\n",
                ssg->nsubtrees, nsolvednodes - ssg->nodelastsplit);
+         }
 
          /* no new split has happened; insert the new children to their SSG subtree */
          if( insertchildren )
