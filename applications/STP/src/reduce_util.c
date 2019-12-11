@@ -685,6 +685,15 @@ SCIP_RETCODE reduce_distDataInit(
          continue;
       }
 
+
+      if( g->grad[k] == 0 )
+      {
+         assert(graph_pc_isPcMw(g));
+         assert(graph_pc_knotIsNonLeafTerm(g, k));
+
+         continue;
+      }
+
       assert(g->grad[k] > 0);
 
       if( computeSD )

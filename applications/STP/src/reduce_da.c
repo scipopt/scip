@@ -2227,6 +2227,7 @@ SCIP_RETCODE reduce_da(
             ndeletions += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havenewsol ? result : NULL), upperbound);
          }
 
+         // todo don't call anymore!
          if( extended && !rpc )
          {
             int extfixed = reduce_extendedEdge(scip, graph, vnoi, cost, pathdist, (havenewsol ? result : NULL), minpathcost, daroot, nodearrint, marked, FALSE);
@@ -2234,16 +2235,13 @@ SCIP_RETCODE reduce_da(
        //     printf("newly fixedFIRST =%d \n", extfixed);
          }
 
-         if( extended && !SCIPisZero(scip, minpathcost) && 0 )
+         // todo call this methods only one or two times
+         if( extended && !SCIPisZero(scip, minpathcost) )
          {
-            int todo;
             int extfixed;
 
             REDCOST redcostdata = { .redEdgeCost = cost, .rootToNodeDist = pathdist, .nodeTo3TermsPaths = vnoi,
                .nodeTo3TermsBases = vbase, .cutoff = minpathcost, .redCostRoot = daroot};
-
-            if( rpc )
-               reduce_removeDeg0NonLeafTerms(scip, graph, offsetp);
 
             reduce_extendedEdge2(scip, &redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed);
             ndeletions += extfixed;
