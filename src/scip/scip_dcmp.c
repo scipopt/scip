@@ -546,6 +546,7 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
    SCIP_VAR** vars;
    int* varslabels;
    int requiredsize;
+   int nvars;
    int nconsvars;
    int varbufsize;
    int c;
@@ -555,14 +556,23 @@ SCIP_RETCODE SCIPassignDecompLinkConss(
    assert(scip != NULL);
    assert(decomp != NULL);
 
+   nvars = SCIPgetNVars(scip);
    varbufsize = getVarbufSize(scip);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varslabels, varbufsize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varbufsize) );
 
+   /* get one label as default label */
+   vars = SCIPgetVars(scip);
    SCIPdecompGetVarsLabels(decomp, vars, varslabels, nvars);
-   SCIPsortIntPtr(varslabels, (void **)vars, nvars);
-   defaultlabel = varslabels[nvars-1];
+   for( c = 0; c < nvars; c++ )
+   {
+      if( varslabels[c] != SCIP_DECOMP_LINKVAR )
+      {
+         defaultlabel = varslabels[c];
+         break;
+      }
+   }
 
    nskipconsslocal = 0;
    for( c = 0; c < nconss; c++ )
