@@ -68,12 +68,17 @@ static
 SCIP_RETCODE sepadataAddMinor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_VAR*             x,                  /**< x variable */
+   SCIP_VAR*             y,                  /**< y variable */
    SCIP_VAR*             auxvarxx,           /**< auxiliary variable for x*x */
    SCIP_VAR*             auxvaryy,           /**< auxiliary variable for y*y */
    SCIP_VAR*             auxvarxy            /**< auxiliary variable for x*y */
    )
 {
    assert(sepadata != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
+   assert(x != y);
    assert(auxvarxx != NULL);
    assert(auxvaryy != NULL);
    assert(auxvarxy != NULL);
@@ -81,25 +86,30 @@ SCIP_RETCODE sepadataAddMinor(
    assert(auxvarxx != auxvarxy);
    assert(auxvaryy != auxvarxy);
 
-   SCIPdebugMsg(scip, "store 2x2 minor: %s %s %s\n", SCIPvarGetName(auxvarxx), SCIPvarGetName(auxvaryy), SCIPvarGetName(auxvarxy));
+   SCIPdebugMsg(scip, "store 2x2 minor: %s %s %s for x=%s y=%y\n", SCIPvarGetName(auxvarxx), SCIPvarGetName(auxvaryy),
+      SCIPvarGetName(auxvarxy), SCIPvarGetName(x), SCIPvarGetName(y));
 
    /* reallocate if necessary */
-   if( sepadata->minorssize < 3 * (sepadata->nminors + 1) )
+   if( sepadata->minorssize < 5 * (sepadata->nminors + 1) )
    {
-      int newsize = SCIPcalcMemGrowSize(scip, 3 * (sepadata->nminors + 1));
-      assert(newsize > 3 * (sepadata->nminors + 1));
+      int newsize = SCIPcalcMemGrowSize(scip, 5 * (sepadata->nminors + 1));
+      assert(newsize > 5 * (sepadata->nminors + 1));
 
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(sepadata->minors), sepadata->minorssize, newsize) );
       sepadata->minorssize = newsize;
    }
 
    /* store minor */
-   sepadata->minors[3 * sepadata->nminors] = auxvarxx;
-   sepadata->minors[3 * sepadata->nminors + 1] = auxvaryy;
-   sepadata->minors[3 * sepadata->nminors + 2] = auxvarxy;
+   sepadata->minors[5 * sepadata->nminors] = x;
+   sepadata->minors[5 * sepadata->nminors + 1] = y;
+   sepadata->minors[5 * sepadata->nminors + 2] = auxvarxx;
+   sepadata->minors[5 * sepadata->nminors + 3] = auxvaryy;
+   sepadata->minors[5 * sepadata->nminors + 4] = auxvarxy;
    ++(sepadata->nminors);
 
    /* capture variables */
+   SCIPcaptureVar(scip, x);
+   SCIPcaptureVar(scip, y);
    SCIPcaptureVar(scip, auxvarxx);
    SCIPcaptureVar(scip, auxvaryy);
    SCIPcaptureVar(scip, auxvarxy);
@@ -121,7 +131,7 @@ SCIP_RETCODE sepadataClear(
    SCIPdebugMsg(scip, "clear separation data\n");
 
    /* release captured variables */
-   for( i = 0; i < 3 * sepadata->nminors; ++i )
+   for( i = 0; i < 5 * sepadata->nminors; ++i )
    {
       assert(sepadata->minors[i] != NULL);
       SCIP_CALL( SCIPreleaseVar(scip, &sepadata->minors[i]) );
@@ -133,6 +143,36 @@ SCIP_RETCODE sepadataClear(
    /* reset counters */
    sepadata->nminors = 0;
    sepadata->minorssize = 0;
+
+   return SCIP_OKAY;
+}
+
+/** helper method to get the variables associated to a minor */
+static
+SCIP_RETCODE getMinorVars(
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   int                   idx,                /**< index of the stored minor */
+   SCIP_VAR**            x,                  /**< pointer to store x variable (might be NULL) */
+   SCIP_VAR**            y,                  /**< pointer to store x variable (might be NULL) */
+   SCIP_VAR**            auxvarxx,           /**< pointer to store auxiliary variable for x*x */
+   SCIP_VAR**            auxvaryy,           /**< pointer to store auxiliary variable for y*y */
+   SCIP_VAR**            auxvarxy            /**< pointer to store auxiliary variable for x*y */
+   )
+{
+   assert(sepadata != NULL);
+   assert(idx >= 0 && idx < sepadata->nminors);
+   assert(auxvarxx != NULL);
+   assert(auxvaryy != NULL);
+   assert(auxvarxy != NULL);
+
+   if( x != NULL )
+      *x = sepadata->minors[5 * sepadata->nminors];
+   if( y != NULL )
+      *y = sepadata->minors[5 * sepadata->nminors + 1];
+
+   *auxvarxx = sepadata->minors[5 * sepadata->nminors + 2];
+   *auxvaryy = sepadata->minors[5 * sepadata->nminors + 3];
+   *auxvarxy = sepadata->minors[5 * sepadata->nminors + 4];
 
    return SCIP_OKAY;
 }
@@ -336,7 +376,7 @@ SCIP_RETCODE detectMinors(
          assert(auxvaryy != NULL);
 
          /* store minor into te separation data */
-         SCIP_CALL( sepadataAddMinor(scip, sepadata, auxvarxx, auxvaryy, auxvar) );
+         SCIP_CALL( sepadataAddMinor(scip, sepadata, x, y, auxvarxx, auxvaryy, auxvar) );
       }
    }
    SCIPdebugMsg(scip, "found %d 2x2 minors in total\n", sepadata->nminors);
@@ -364,7 +404,6 @@ SCIP_RETCODE separatePoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
-   SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
@@ -395,16 +434,15 @@ SCIP_RETCODE separatePoint(
       SCIP_Real solxy;
       SCIP_Real determinant;
 
-      xx = sepadata->minors[3*i];
+      /* get variables of the i-th minor */
+      SCIP_CALL( getMinorVars(sepadata, i, NULL, NULL, &xx, &yy, &xy) );
       assert(xx != NULL);
-      solxx = SCIPgetSolVal(scip, sol, xx);
-
-      yy = sepadata->minors[3*i + 1];
       assert(yy != NULL);
-      solyy = SCIPgetSolVal(scip, sol, yy);
-
-      xy = sepadata->minors[3*i + 2];
       assert(xy != NULL);
+
+      /* get current solution values */
+      solxx = SCIPgetSolVal(scip, sol, xx);
+      solyy = SCIPgetSolVal(scip, sol, yy);
       solxy = SCIPgetSolVal(scip, sol, xy);
 
       determinant = solxx * solyy - SQR(solxy);
@@ -606,7 +644,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMinor)
    SCIP_CALL( detectMinors(scip, sepa) );
 
    /* call separation method */
-   SCIP_CALL( separatePoint(scip, sepa, NULL, allowlocal, result) );
+   SCIP_CALL( separatePoint(scip, sepa, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -625,7 +663,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolMinor)
    SCIP_CALL( detectMinors(scip, sepa) );
 
    /* call separation method */
-   SCIP_CALL( separatePoint(scip, sepa, sol, allowlocal, result) );
+   SCIP_CALL( separatePoint(scip, sepa, sol, result) );
 
    return SCIP_OKAY;
 }
