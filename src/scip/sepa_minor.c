@@ -110,11 +110,11 @@ SCIP_RETCODE sepadataAddMinor(
    ++(sepadata->nminors);
 
    /* capture variables */
-   SCIPcaptureVar(scip, x);
-   SCIPcaptureVar(scip, y);
-   SCIPcaptureVar(scip, auxvarxx);
-   SCIPcaptureVar(scip, auxvaryy);
-   SCIPcaptureVar(scip, auxvarxy);
+   SCIP_CALL( SCIPcaptureVar(scip, x) );
+   SCIP_CALL( SCIPcaptureVar(scip, y) );
+   SCIP_CALL( SCIPcaptureVar(scip, auxvarxx) );
+   SCIP_CALL( SCIPcaptureVar(scip, auxvaryy) );
+   SCIP_CALL( SCIPcaptureVar(scip, auxvarxy) );
 
    return SCIP_OKAY;
 }
@@ -401,8 +401,6 @@ SCIP_RETCODE getEigenValues(
    SCIP_Bool*            success             /**< pointer to store whether eigenvalue computation was successful */
    )
 {
-   int i;
-
    assert(eigenvals != NULL);
    assert(eigenvecs != NULL);
    assert(success != NULL);
@@ -466,13 +464,13 @@ SCIP_RETCODE addCut(
    if( !SCIPisFeasLT(scip, eigenval, -mincutviol) )
       return SCIP_OKAY;
 
-    /* the resulting cut reads as v_0^2 + 2v_0v_1 * x + 2v_0v_2 * y + v_1^2 * xx + v_2^2 * yy + 2v_1v_2 * xy */
-    constant = SQR(eigenvec[0]);
-    coefs[0] = 2.0 * eigenvec[0] * eigenvec[1];
-    coefs[1] = 2.0 * eigenvec[0] * eigenvec[2];
-    coefs[2] = SQR(eigenvec[1]);
-    coefs[3] = SQR(eigenvec[2]);
-    coefs[4] = 2.0 * eigenvec[1] * eigenvec[2];
+   /* the resulting cut reads as v_0^2 + 2v_0v_1 * x + 2v_0v_2 * y + v_1^2 * xx + v_2^2 * yy + 2v_1v_2 * xy */
+   constant = SQR(eigenvec[0]);
+   coefs[0] = 2.0 * eigenvec[0] * eigenvec[1];
+   coefs[1] = 2.0 * eigenvec[0] * eigenvec[2];
+   coefs[2] = SQR(eigenvec[1]);
+   coefs[3] = SQR(eigenvec[2]);
+   coefs[4] = 2.0 * eigenvec[1] * eigenvec[2];
 
    /* create rowprep */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, FALSE) );
@@ -551,7 +549,6 @@ SCIP_RETCODE separatePoint(
       SCIP_Real solxx;
       SCIP_Real solyy;
       SCIP_Real solxy;
-      SCIP_Real determinant;
       SCIP_Bool success;
       int k;
 
