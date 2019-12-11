@@ -352,7 +352,11 @@ SCIP_RETCODE copyToSubscip(
    /* copy constraints */
    for( i = 0; i < nconss; ++i )
    {
+      assert(conss[i] != NULL);
       assert(!SCIPconsIsModifiable(conss[i]));
+      assert(SCIPconsIsActive(conss[i]));
+      assert(!SCIPconsIsDeleted(conss[i]));
+      assert(SCIPconsIsChecked(conss[i]));
 
       /* copy the constraint */
       SCIP_CALL( SCIPgetConsCopy(scip, subscip, conss[i], &newcons, SCIPconsGetHdlr(conss[i]), varmap, consmap, NULL,
