@@ -963,6 +963,20 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       goto TERMINATE;
    }
 
+   /* count linking variables */
+   for( i = 0; i < nvars; i++ )
+   {
+      if( varlabels[i] == SCIP_DECOMP_LINKVAR )
+         numlinkvars++;
+   }
+   SCIPdebugMsg(scip, "%d linking variables\n", numlinkvars);
+
+   if( numlinkvars == 0 )
+   {
+      SCIPdebugMsg(scip, "No linking variables\n");
+      goto TERMINATE;
+   }
+
    *result = SCIP_DIDNOTFIND;
 
    /* determine start indices of blocks in sorted conss array */
@@ -988,14 +1002,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIPdebugMsg(scip, "Some subscips could not be created successfully.\n");
       goto TERMINATE;
    }
-
-   /* count linking variables */
-   for( i = 0; i < nvars; i++ )
-   {
-      if( varlabels[i] == SCIP_DECOMP_LINKVAR )
-         numlinkvars++;
-   }
-   SCIPdebugMsg(scip, "%d linking variables\n", numlinkvars);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &linkvartoblocks, numlinkvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &blocktolinkvars, problem->nblocks) );
