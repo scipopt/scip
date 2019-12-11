@@ -131,13 +131,16 @@ void getBoundchangesPcMW(
    SCIP*                 scip,               /**< SCIP structure */
    SCIP_VAR**            vars,               /**< variables */
    const GRAPH*          propgraph,          /**< graph data structure */
-   int*                  nodestate           /**< state */
+   int*                  nodestate,          /**< state */
+   SCIP_Bool*            conflictFound       /**< conflict found? */
 )
 {
    const int nnodes = propgraph->knots;
 
    assert(graph_pc_isPcMw(propgraph));
    assert(propgraph->extended);
+
+   *conflictFound = FALSE;
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -155,14 +158,22 @@ void getBoundchangesPcMW(
          /* root->dummyterm edge fixed to 0? Then take terminal */
          if( SCIPvarGetUbLocal(vars[root2term]) < 0.5 )
          {
-            assert(BRANCH_STP_VERTEX_KILLED != nodestate[k]);
+            if( BRANCH_STP_VERTEX_KILLED == nodestate[k] )
+            {
+               *conflictFound = TRUE;
+               return;
+            }
 
             nodestate[k] = BRANCH_STP_VERTEX_TERM;
          }
          /* root->dummyterm edge fixed to 1? Then delete terminal */
          else if( SCIPvarGetLbLocal(vars[root2term]) > 0.5 )
          {
-            assert(BRANCH_STP_VERTEX_TERM != nodestate[k]);
+            if( BRANCH_STP_VERTEX_TERM == nodestate[k] )
+            {
+               *conflictFound = TRUE;
+               return;
+            }
 
             nodestate[k] = BRANCH_STP_VERTEX_KILLED;
          }
@@ -170,14 +181,22 @@ void getBoundchangesPcMW(
          /* term->dummyterm edge fixed to 0? Then delete terminal */
          if( SCIPvarGetUbLocal(vars[pterm2term]) < 0.5 )
          {
-            assert(BRANCH_STP_VERTEX_TERM != nodestate[k]);
+            if( BRANCH_STP_VERTEX_TERM == nodestate[k] )
+            {
+               *conflictFound = TRUE;
+               return;
+            }
 
             nodestate[k] = BRANCH_STP_VERTEX_KILLED;
          }
          /* term->dummyterm edge fixed to 1? Then take terminal */
          else if( SCIPvarGetLbLocal(vars[pterm2term]) > 0.5 )
          {
-            assert(BRANCH_STP_VERTEX_KILLED != nodestate[k]);
+            if( BRANCH_STP_VERTEX_KILLED == nodestate[k] )
+            {
+               *conflictFound = TRUE;
+               return;
+            }
 
             nodestate[k] = BRANCH_STP_VERTEX_TERM;
          }
@@ -206,6 +225,7 @@ SCIP_RETCODE getBoundchanges(
    const SCIP_Bool pcmw = graph_pc_isPcMw(propgraph);
 
    assert(!pcmw || propgraph->extended);
+   assert(!(*probisinfeas));
 
    for( int k = 0; k < nnodes; k++ )
       nodestate[k] = BRANCH_STP_VERTEX_UNSET;
@@ -252,20 +272,23 @@ SCIP_RETCODE getBoundchanges(
 
    if( pcmw )
    {
-      getBoundchangesPcMW(scip, vars, propgraph, nodestate);
+      SCIP_Bool conflict = FALSE;
+
+      getBoundchangesPcMW(scip, vars, propgraph, nodestate, &conflict);
+
+      if( conflict )
+         *probisinfeas = TRUE;
    }
 
    /* not at root? */
-   if( SCIPgetDepth(scip) > 0 )
+   if( SCIPgetDepth(scip) > 0 && !(*probisinfeas) )
    {
       SCIP_Bool conflict = FALSE;
 
       SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestate, &conflict) );
 
       if( conflict )
-      {
          *probisinfeas = TRUE;
-      }
    }
 
    return SCIP_OKAY;
