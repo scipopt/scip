@@ -147,8 +147,8 @@ Test(minor, eigenvals, .init = setup, .fini = teardown)
    /* check whether A v_i = lambda_i v_i holds */
    for( i = 0; i < 1; ++i )
    {
-      cr_assert(SCIPisFeasEQ(scip, 1.0 * eigenvecs[3*i] +  x * eigenvecs[3*i + 1] +  y * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i]));
-      cr_assert(SCIPisFeasEQ(scip,   x * eigenvecs[3*i] + xx * eigenvecs[3*i + 1] + xy * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 1]));
-      cr_assert(SCIPisFeasEQ(scip,   y * eigenvecs[3*i] + xy * eigenvecs[3*i + 1] + yy * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 2]));
+      cr_assert(SCIPisRelEQ(scip, 1.0 * eigenvecs[3*i] +  x * eigenvecs[3*i + 1] +  y * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i]));
+      cr_assert(SCIPisRelEQ(scip,   x * eigenvecs[3*i] + xx * eigenvecs[3*i + 1] + xy * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 1]));
+      cr_assert(SCIPisRelEQ(scip,   y * eigenvecs[3*i] + xy * eigenvecs[3*i + 1] + yy * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 2]));
    }
 }
