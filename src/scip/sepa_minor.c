@@ -43,6 +43,7 @@
 
 #define DEFAULT_MAXMINORS           100 /**< default maximum number for minors (0: no limit) */
 #define DEFAULT_MINCUTVIOL         1e-4 /**< default minimum required violation of a cut */
+#define DEFAULT_RANDSEED            157 /**< default random seed */
 
 /*
  * Data structures
@@ -57,6 +58,7 @@ struct SCIP_SepaData
    int                   maxminors;          /**< maximum number for minors (0: no limit) */
    SCIP_Bool             detectedminors;     /**< has the minor detection beeing called? */
    SCIP_Real             mincutviol;         /**< minimum required violation of a cut */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
 };
 
 /*
@@ -190,10 +192,9 @@ SCIP_RETCODE getMinorVars(
 static
 SCIP_RETCODE detectMinors(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPA*            sepa                /**< separator */
+   SCIP_SEPADATA*        sepadata            /**< separator data */
    )
 {
-   SCIP_SEPADATA* sepadata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_HASHMAP* exprmap;
@@ -211,9 +212,6 @@ SCIP_RETCODE detectMinors(
    SCIP_Real totaltime = -SCIPgetTotalTime(scip);
 #endif
 
-   assert(sepa != NULL);
-
-   sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
    /* check whether minor detection has been called already */
@@ -325,19 +323,13 @@ SCIP_RETCODE detectMinors(
     */
    if( sepadata->maxminors > 0 && sepadata->maxminors < nbilinterms && sepadata->maxminors < SQR(nquadterms) )
    {
-      SCIP_RANDNUMGEN* randnumgen;
-
-      /* TODO use global seed */
-      SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 0, 0) );
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, nbilinterms) );
 
       for( i = 0; i < nbilinterms; ++i )
          perm[i] = i;
 
       /* permute array */
-      SCIPrandomPermuteIntArray(randnumgen, perm, 0, nbilinterms);
-
-      SCIPfreeRandom(scip, &randnumgen);
+      SCIPrandomPermuteIntArray(sepadata->randnumgen, perm, 0, nbilinterms);
    }
 
    /* store 2x2 principal minors */
@@ -578,33 +570,39 @@ SCIP_DECL_SEPAFREE(sepaFreeMinor)
 
 
 /** initialization method of separator (called after problem was transformed) */
-#if 0
 static
 SCIP_DECL_SEPAINIT(sepaInitMinor)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of minor separator not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_SEPADATA* sepadata;
+
+   /* get separator data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+   assert(sepadata->randnumgen == NULL);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }
-#else
-#define sepaInitMinor NULL
-#endif
 
 
 /** deinitialization method of separator (called before transformed problem is freed) */
-#if 0
 static
 SCIP_DECL_SEPAEXIT(sepaExitMinor)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of minor separator not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_SEPADATA* sepadata;
+
+   /* get separator data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+   assert(sepadata->randnumgen != NULL);
+
+   /* free random number generator */
+   SCIPfreeRandom(scip, &sepadata->randnumgen);
 
    return SCIP_OKAY;
 }
-#else
-#define sepaExitMinor NULL
-#endif
 
 
 /** solving process initialization method of separator (called when branch and bound process is about to begin) */
@@ -641,7 +639,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMinor)
       return SCIP_OKAY;
 
    /* try to detect minors */
-   SCIP_CALL( detectMinors(scip, sepa) );
+   SCIP_CALL( detectMinors(scip, SCIPsepaGetData(sepa)) );
 
    /* call separation method */
    SCIP_CALL( separatePoint(scip, sepa, NULL, result) );
@@ -660,7 +658,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolMinor)
       return SCIP_OKAY;
 
    /* try to detect minors */
-   SCIP_CALL( detectMinors(scip, sepa) );
+   SCIP_CALL( detectMinors(scip, SCIPsepaGetData(sepa)) );
 
    /* call separation method */
    SCIP_CALL( separatePoint(scip, sepa, sol, result) );
