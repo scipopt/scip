@@ -544,7 +544,7 @@ SCIP_RETCODE decompHorizonInitialize(
 
          currblockend++;
       }
-      while (currblockend < nvars && varlabels[currblockend] == blocklabel);
+      while( currblockend < nvars && varlabels[currblockend] == blocklabel );
 
       if( heurdata->fixcontvars )
          nfixedvars = nvars - (currblockend - currblockstart);
@@ -596,7 +596,8 @@ int decompHorizonGetFirstPosBestPotential(
    SCIP_Real intervalpotential;
    int b;
    int nintervalvars;
-   int b1,b2;
+   int b1;
+   int b2;
    int bestpos;
    SCIP_Real maxpotential;
    SCIP_Bool withlinkvars;
@@ -615,7 +616,7 @@ int decompHorizonGetFirstPosBestPotential(
    for( b = 0; b < decomphorizon->nblocks; ++b )
    {
       /* unsuitable blocks are left out and should not be contained in an interval */
-      if( !decomphorizon->suitable[b] )
+      if( ! decomphorizon->suitable[b] )
       {
          decomphorizon->potential[b] = SCIP_REAL_MIN;
          continue;
@@ -736,7 +737,7 @@ SCIP_Bool decompHorizonNext(
    int pos;
    int firstpos;
    SCIP_SOL* bestsol;
-   int  lastblockused;      /**< label of last used block, or INT_MIN if none has been used, yet */
+   int lastblockused;      /**< label of last used block, or INT_MIN if none has been used, yet */
    assert(decomphorizon != NULL);
    assert(blockintervalstart != NULL);
    assert(blockintervalend != NULL);
@@ -1234,7 +1235,8 @@ int countLabel(
    do
    {
       ++end;
-   } while( end < nlabels && labels[end] == label);
+   }
+   while( end < nlabels && labels[end] == label );
 
    return end - start;
 }
@@ -1320,7 +1322,6 @@ SCIP_RETCODE selectInitialVariableDecomposition(
          {
             SCIP_CALL( tabooListAdd(scip, taboolist, labelstokeep[e]) );
          }
-
 
          SCIPfreeBufferArray(scip, &labelstokeep);
       }
@@ -1542,7 +1543,7 @@ SCIP_RETCODE selectInitialVariableRandomly(
             --nintegralvarsleft;
          }
       }
-      while( SCIPvarGetProbindex(choosevar) < 0 && nintegralvarsleft > 0);
+      while( SCIPvarGetProbindex(choosevar) < 0 && nintegralvarsleft > 0 );
 
       /* if there was no variable chosen, there are no active variables left */
       if( SCIPvarGetProbindex(choosevar) < 0 )
@@ -1732,7 +1733,6 @@ SCIP_RETCODE determineVariableFixingsDecomp(
    SCIP_Bool*            success             /**< used to store whether the creation of the subproblem worked */
    )
 {
-
    SCIP_SOL* sol;
    SCIP_Bool hasnext;
    SCIP_Bool fixlinkvars;
@@ -1857,7 +1857,6 @@ SCIP_DECOMP* chooseDecomp(
    {
       if( SCIPdecompGetNBlocks(decomps[currdecomp]) > 0 )
          return decomps[currdecomp];
-
    }
 
    return NULL;
@@ -1872,7 +1871,7 @@ SCIP_RETCODE determineVariableFixings(
    int*                  nfixings,           /**< pointer to store the number of fixed variables */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    ROLLINGHORIZON*       rollinghorizon,     /**< rolling horizon data structure to save relevant information, or NULL if not needed */
-   DECOMPHORIZON*        decomphorizon,      /**< decomposition horizon data structure */
+   DECOMPHORIZON*        decomphorizon,      /**< decomposition horizon data structure, or NULL */
    SCIP_Bool*            success             /**< used to store whether the creation of the subproblem worked */
    )
 {
@@ -2426,7 +2425,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       SCIP_CALL( decompHorizonCreate(scip, &heurdata->decomphorizon, decomp) );
    }
    decomphorizon = heurdata->decomphorizon;
-   /* only create a horizon data structure if we need it */
+   /* only create a rolling horizon data structure if we need it */
    if( decomphorizon == NULL && heurdata->userollinghorizon )
    {
       SCIP_CALL( rollingHorizonCreate(scip, &rollinghorizon) );
